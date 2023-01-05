@@ -31,7 +31,7 @@ import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
-import {ChainEventEmitter, ChainEvent, HeadEventData} from "./emitter.js";
+import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -285,7 +285,6 @@ export class BeaconChain implements IBeaconChain {
     emitter.addListener(ChainEvent.clockEpoch, this.onClockEpoch.bind(this));
     emitter.addListener(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
     emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
-    emitter.addListener(ChainEvent.head, this.onNewHead.bind(this));
   }
 
   async close(): Promise<void> {
@@ -676,24 +675,9 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  private onNewHead(head: HeadEventData): void {
-    const delaySec = this.clock.secFromSlot(head.slot);
-    this.logger.verbose("New chain head", {
-      headSlot: head.slot,
-      headRoot: head.block,
-      delaySec,
-    });
+  protected onNewHead(head: ProtoBlock): void {
     this.syncContributionAndProofPool.prune(head.slot);
     this.seenContributionAndProof.prune(head.slot);
-
-    if (this.metrics) {
-      this.metrics.headSlot.set(head.slot);
-      // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
-      // We want to track recent blocks coming from gossip, unknown block sync, and API.
-      if (delaySec < 64 * this.config.SECONDS_PER_SLOT) {
-        this.metrics.elapsedTimeTillBecomeHead.observe(delaySec);
-      }
-    }
   }
 
   private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithHex): void {

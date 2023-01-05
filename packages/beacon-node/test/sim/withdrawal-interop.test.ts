@@ -4,7 +4,8 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH, ForkName} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
-import {Epoch, capella} from "@lodestar/types";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Epoch, capella, Slot} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ExecutePayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
@@ -15,10 +16,11 @@ import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
 import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
-import {Eth1Provider} from "../../src/index.js";
+import {BeaconNode, Eth1Provider} from "../../src/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
 import {bytesToData, dataToBytes} from "../../src/eth1/provider/utils.js";
 import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
+import {ApiError} from "../../src/api/impl/errors.js";
 import {runEL, ELStartMode, ELClient} from "../utils/runEl.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
@@ -217,6 +219,9 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     const genesisSlotsDelay = 8;
 
+    // TODO for g11tech: Why 4? Provide rationale for the number
+    const expectedWithdrawalBlocks = 4;
+
     const timeout =
       ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
       testParams.SECONDS_PER_SLOT *
@@ -289,9 +294,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       await Promise.all(validators.map((v) => v.close()));
     });
 
-    let withdrawalsStarted = false;
-    let withdrawalsBlocks = 0;
-
     await new Promise<void>((resolve, _reject) => {
       bn.chain.emitter.on(ChainEvent.clockEpoch, (epoch) => {
         // Resolve only if the finalized checkpoint includes execution payload
@@ -300,14 +302,13 @@ describe("executionEngine / ExecutionEngineHttp", function () {
           resolve();
         }
       });
-
-      bn.chain.emitter.on(ChainEvent.block, (block) => {
-        if ((block as capella.SignedBeaconBlock).message.body.executionPayload?.withdrawals.length > 0) {
-          withdrawalsStarted = true;
-          withdrawalsBlocks++;
-        }
-      });
     });
+
+    const withdrawalsBlocks = await retrieveCanonicalWithdrawals(
+      bn,
+      computeStartSlotAtEpoch(capellaEpoch),
+      bn.chain.forkChoice.getHead().slot
+    );
 
     // Stop chain and un-subscribe events so the execution engine won't update it's head
     // Allow some time to broadcast finalized events and complete the importBlock routine
@@ -338,10 +339,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
 
     // Simple check to confirm that withdrawals were mostly processed
-    if (!withdrawalsStarted || withdrawalsBlocks < 4) {
-      throw Error(
-        `Withdrawals not processed withdrawalsStarted=${withdrawalsStarted} withdrawalsBlocks=${withdrawalsBlocks}`
-      );
+    if (withdrawalsBlocks < expectedWithdrawalBlocks) {
+      throw Error(`Withdrawals withdrawalsBlocks ${withdrawalsBlocks} < ${expectedWithdrawalBlocks}`);
     }
 
     // wait for 1 slot to print current epoch stats
@@ -350,3 +349,26 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     console.log("\n\nDone\n\n");
   }
 });
+
+async function retrieveCanonicalWithdrawals(bn: BeaconNode, fromSlot: Slot, toSlot: Slot): Promise<number> {
+  let withdrawalsBlocks = 0;
+
+  for (let slot = fromSlot; slot <= toSlot; slot++) {
+    const block = await bn.api.beacon.getBlock(slot).catch((e) => {
+      if (e instanceof ApiError && e.statusCode === 404) {
+        // Missed slot
+        return null;
+      } else {
+        throw e;
+      }
+    });
+
+    if (block) {
+      if ((block.data as capella.SignedBeaconBlock).message.body.executionPayload?.withdrawals.length > 0) {
+        withdrawalsBlocks++;
+      }
+    }
+  }
+
+  return withdrawalsBlocks;
+}

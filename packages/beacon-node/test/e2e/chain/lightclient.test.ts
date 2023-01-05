@@ -8,11 +8,11 @@ import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/param
 import {Lightclient} from "@lodestar/light-client";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
-import {Api, getClient} from "@lodestar/api";
+import {Api, getClient, routes} from "@lodestar/api";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
-import {ChainEvent, HeadEventData} from "../../../src/chain/index.js";
+import {HeadEventData} from "../../../src/chain/index.js";
 
 describe("chain / lightclient", function () {
   /**
@@ -107,7 +107,7 @@ describe("chain / lightclient", function () {
     //   - If too far behind error the test
     //   - If beacon node reaches the finality slot, resolve test
     const promiseUntilHead = new Promise<HeadEventData>((resolve) => {
-      bn.chain.emitter.on(ChainEvent.head, async (head) => {
+      bn.chain.emitter.on(routes.events.EventType.head, async (head) => {
         // Wait for the second slot so syncCommitteeWitness is available
         if (head.slot > 2) {
           resolve(head);
@@ -136,7 +136,7 @@ describe("chain / lightclient", function () {
       lightclient.start();
 
       return new Promise<void>((resolve, reject) => {
-        bn.chain.emitter.on(ChainEvent.head, async (head) => {
+        bn.chain.emitter.on(routes.events.EventType.head, async (head) => {
           try {
             // Test fetching proofs
             const {proof, header} = await getHeadStateProof(lightclient, api, [["latestBlockHeader", "bodyRoot"]]);
@@ -167,7 +167,7 @@ describe("chain / lightclient", function () {
     });
 
     const promiseTillFinalization = new Promise<void>((resolve) => {
-      bn.chain.emitter.on(ChainEvent.finalized, (checkpoint) => {
+      bn.chain.emitter.on(routes.events.EventType.finalizedCheckpoint, (checkpoint) => {
         loggerNodeA.info("Node A emitted finalized checkpoint event", {epoch: checkpoint.epoch});
         if (checkpoint.epoch >= finalizedEpochToReach) {
           resolve();

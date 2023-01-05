@@ -5,7 +5,7 @@ import {RouteDef, TypeJson} from "../../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export enum EventType {
+export const enum EventType {
   /**
    * The node has finished processing, resulting in a new head. previous_duty_dependent_root is
    * `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)` and
@@ -34,6 +34,20 @@ export enum EventType {
   /** New or better light client update available */
   lightClientUpdate = "light_client_update",
 }
+
+export const eventTypes: {[K in EventType]: K} = {
+  [EventType.head]: EventType.head,
+  [EventType.block]: EventType.block,
+  [EventType.attestation]: EventType.attestation,
+  [EventType.voluntaryExit]: EventType.voluntaryExit,
+  [EventType.blsToExecutionChange]: EventType.blsToExecutionChange,
+  [EventType.finalizedCheckpoint]: EventType.finalizedCheckpoint,
+  [EventType.chainReorg]: EventType.chainReorg,
+  [EventType.contributionAndProof]: EventType.contributionAndProof,
+  [EventType.lightClientOptimisticUpdate]: EventType.lightClientOptimisticUpdate,
+  [EventType.lightClientFinalityUpdate]: EventType.lightClientFinalityUpdate,
+  [EventType.lightClientUpdate]: EventType.lightClientUpdate,
+};
 
 export type EventData = {
   [EventType.head]: {

@@ -1,4 +1,4 @@
-import {altair, ssz} from "@lodestar/types";
+import {altair, capella, ssz} from "@lodestar/types";
 import {MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {
@@ -7,6 +7,7 @@ import {
   computeStartSlotAtEpoch,
   RootCache,
 } from "@lodestar/state-transition";
+import {routes} from "@lodestar/api";
 import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
@@ -130,7 +131,7 @@ export async function importBlock(
         // don't want to log the processed attestations here as there are so many attestations and it takes too much disc space,
         // users may want to keep more log files instead of unnecessary processed attestations log
         // see https://github.com/ChainSafe/lodestar/pull/4032
-        pendingEvents.push(ChainEvent.attestation, attestation);
+        pendingEvents.push(routes.events.EventType.attestation, attestation);
       } catch (e) {
         // a block has a lot of attestations and it may has same error, we don't want to log all of them
         if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
@@ -198,7 +199,6 @@ export async function importBlock(
       const justifiedEpoch = justifiedCheckpoint.epoch;
       const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
       if (justifiedEpoch > preJustifiedEpoch) {
-        this.emitter.emit(ChainEvent.justified, justifiedCheckpoint, checkpointState);
         this.logger.verbose("Checkpoint justified", toCheckpointHex(justifiedCheckpoint));
         this.metrics?.previousJustifiedEpoch.set(checkpointState.previousJustifiedCheckpoint.epoch);
         this.metrics?.currentJustifiedEpoch.set(justifiedCheckpoint.epoch);
@@ -207,7 +207,12 @@ export async function importBlock(
       const finalizedEpoch = finalizedCheckpoint.epoch;
       const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
       if (finalizedEpoch > preFinalizedEpoch) {
-        this.emitter.emit(ChainEvent.finalized, finalizedCheckpoint, checkpointState);
+        this.emitter.emit(routes.events.EventType.finalizedCheckpoint, {
+          block: toHexString(finalizedCheckpoint.root),
+          epoch: finalizedCheckpoint.epoch,
+          state: toHexString(checkpointState.hashTreeRoot()),
+          executionOptimistic: false,
+        });
         this.logger.verbose("Checkpoint finalized", toCheckpointHex(finalizedCheckpoint));
         this.metrics?.finalizedEpoch.set(finalizedCheckpoint.epoch);
       }
@@ -223,7 +228,7 @@ export async function importBlock(
     // new head
     const executionOptimistic = isOptimisticBlock(newHead);
 
-    pendingEvents.push(ChainEvent.head, {
+    pendingEvents.push(routes.events.EventType.head, {
       block: newHead.blockRoot,
       epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
       slot: newHead.slot,
@@ -232,6 +237,24 @@ export async function importBlock(
       currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
       executionOptimistic,
     });
+
+    const delaySec = this.clock.secFromSlot(newHead.slot);
+    this.logger.verbose("New chain head", {
+      slot: newHead.slot,
+      root: newHead.blockRoot,
+      delaySec,
+    });
+
+    if (this.metrics) {
+      this.metrics.headSlot.set(newHead.slot);
+      // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
+      // We want to track recent blocks coming from gossip, unknown block sync, and API.
+      if (delaySec < 64 * this.config.SECONDS_PER_SLOT) {
+        this.metrics.elapsedTimeTillBecomeHead.observe(delaySec);
+      }
+    }
+
+    this.onNewHead(newHead);
 
     this.metrics?.forkChoice.changedHead.inc();
 
@@ -248,7 +271,7 @@ export async function importBlock(
         newSlot: newHead.slot,
       });
 
-      pendingEvents.push(ChainEvent.forkChoiceReorg, {
+      pendingEvents.push(routes.events.EventType.chainReorg, {
         depth: ancestorResult.depth,
         epoch: computeEpochAtSlot(newHead.slot),
         slot: newHead.slot,
@@ -361,10 +384,26 @@ export async function importBlock(
 
   // - Send event after everything is done
 
+  // Send block events
+
+  for (const voluntaryExit of block.message.body.voluntaryExits) {
+    this.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
+  }
+
+  for (const blsToExecutionChange of (block.message.body as capella.BeaconBlockBody).blsToExecutionChanges ?? []) {
+    this.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
+  }
+
+  // TODO: Make forkChoice.onBlock return block summary
   const blockSummary = this.forkChoice.getBlock(blockRoot);
-  const executionOptimistic = blockSummary != null && isOptimisticBlock(blockSummary);
+
+  this.emitter.emit(routes.events.EventType.block, {
+    block: toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),
+    slot: block.message.slot,
+    executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
+  });
+
   // Emit all events at once after fully completing importBlock()
-  this.emitter.emit(ChainEvent.block, block, postState, executionOptimistic);
   pendingEvents.emit();
 
   // Register stat metrics about the block after importing it
