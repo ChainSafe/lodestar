@@ -1,8 +1,8 @@
 FROM prom/prometheus:latest
 
 COPY prometheus.yml /etc/prometheus/prometheus.yml
-COPY --chown=nobody:nobody entrypoint.sh /prometheus/entrypoint.sh
-RUN chmod +x /prometheus/entrypoint.sh
+COPY --chown=nobody:nobody entrypoint.sh /etc/prometheus/entrypoint.sh
+RUN chmod +x /etc/prometheus/entrypoint.sh
 
 # Modified datasource to work with a network_mode: host
 # Docker DNS: "beacon_node:8008"
@@ -10,8 +10,9 @@ RUN chmod +x /prometheus/entrypoint.sh
 # MacOSX: "host.docker.internal:8008"
 ENV BEACON_URL='beacon_node:8008'
 ENV VC_URL='validator'
+VOLUME /prometheus
 
-ENTRYPOINT ["/prometheus/entrypoint.sh"]
+ENTRYPOINT ["/etc/prometheus/entrypoint.sh"]
 
 CMD [ \
   "--config.file=/etc/prometheus/prometheus.yml", \
