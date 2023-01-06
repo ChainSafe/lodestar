@@ -50,14 +50,14 @@ You can load the keys into the secret store using the command `validator import`
 # Plaintext passphrase file input
 ./lodestar validator import --keystore ./validator_keys --passphraseFile ./password.txt
 ```
-
+These will be automatically loaded at runtime.
 
 #### Import Keys at Runtime
 
 To import keys at runtime specify the `--importKeystores` and `--importKeystoresPassword` flags with the `validator` command:
 
 ```bash
-./lodestar validator import --keystore ./validator_keys --passphraseFile ./password.txt
+./lodestar validator --keystore ./validator_keys --passphraseFile ./password.txt
 ```
 
 <!-- prettier-ignore-start -->
