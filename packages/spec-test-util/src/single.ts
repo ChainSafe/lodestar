@@ -95,6 +95,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
   testCaseDirectoryPath: string,
   testFunction: (testCase: TestCase, directoryName: string) => Result | Promise<Result>,
   options: Partial<ISpecTestOptions<TestCase, Result>>
+  skipTests?: string[]
 ): void {
   options = {...defaultOptions, ...options};
   if (!isDirectory(testCaseDirectoryPath)) {
