@@ -71,7 +71,6 @@ export const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllFork
           verifyProposer: verify,
           verifySignatures: verify,
           assertCorrectProgressiveBalances,
-          disabledWithdrawals: fork === ForkName.eip4844,
         });
       }
       return wrappedState;

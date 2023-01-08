@@ -79,7 +79,6 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
           disablePrepareNextSlot: true,
           assertCorrectProgressiveBalances,
           computeUnrealized: false,
-          disabledWithdrawals: fork === ForkName.eip4844,
         },
         {
           config: createIBeaconConfig(config, state.genesisValidatorsRoot),

@@ -57,7 +57,6 @@ export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> =
           verifyProposer: false,
           verifySignatures: false,
           assertCorrectProgressiveBalances,
-          disabledWithdrawals: testConfig.getForkName(signedBlock.message.slot) === ForkName.eip4844,
         });
       }
       return state;

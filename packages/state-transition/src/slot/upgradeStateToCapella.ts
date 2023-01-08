@@ -58,7 +58,8 @@ export function upgradeStateToCapella(stateBellatrix: CachedBeaconStateBellatrix
 
   // nextWithdrawalIndex and nextWithdrawalValidatorIndex are already set to 0 by default
   // latestExecutionPayloadHeader's withdrawalRoot set to zeros by default
-  // historicalRoots should be cloned over and historicalSummaries would be default []
+  // historicalRoots should be cloned over already and historicalSummaries need to be default []
+  stateCapella.historicalSummaries = ssz.capella.BeaconState.fields.historicalSummaries.defaultViewDU();
 
   // Commit new added fields ViewDU to the root node
   stateCapella.commit();
