@@ -44,12 +44,7 @@ specTestIterator(
     shuffling: {type: RunnerType.default, fn: shuffling},
     ssz_static: {
       type: RunnerType.custom,
-      fn: sszStatic([
-        "LightClientUpdate",
-        "LightClientBootstrap",
-        "LightClientFinalityUpdate",
-        "LightClientOptimisticUpdate",
-      ]),
+      fn: sszStatic([]),
     },
     sync: {type: RunnerType.default, fn: forkChoiceTest({onlyPredefinedResponses: true})},
     transition: {type: RunnerType.default, fn: transition},
