@@ -17,12 +17,19 @@ import {shuffling} from "./shuffling.js";
 import {sszStatic} from "./ssz_static.js";
 import {transition} from "./transition.js";
 
-// Just disable all capella tests as well and renable when new vectors are released
-// because the latest withdrawals we implemented are a breaking change
+// NOTE: Comment the minimum set of test necessary to unblock PRs: For example, instead of
+// skipping all `bls_to_execution_change` tests, just skip for a fork setting:
+// ```
+// skippedPrefixes: [
+//    "eip4844/operations/bls_to_execution_change",
+// ],
+// ```
 const skipOpts: SkipOpts = {
-  skippedForks: [],
-  skippedRunners: [],
-  skippedHandlers: ["full_withdrawals", "partial_withdrawals", "bls_to_execution_change", "withdrawals"],
+  skippedPrefixes: [
+    // Skipped since this only test that withdrawals are de-activated
+    "eip4844/operations/bls_to_execution_change",
+    "eip4844/operations/withdrawals",
+  ],
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
