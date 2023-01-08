@@ -35,14 +35,14 @@ type Types = Record<string, Type<any>>;
 // tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
 //
 
-export const sszStatic = (skippedTypes: string[]) => (
+export const sszStatic = (skippedTypes?: string[]) => (
   fork: ForkName,
   typeName: string,
   testSuite: string,
   testSuiteDirpath: string
 ): void => {
   // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-  if (skippedTypes.includes(typeName)) {
+  if (skippedTypes?.includes(typeName)) {
     return;
   }
 
