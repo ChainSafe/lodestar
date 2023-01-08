@@ -35,16 +35,14 @@ const skipOpts: SkipOpts = {
     "eip4844/operations/bls_to_execution_change",
     "eip4844/operations/withdrawals",
 
-    // TODO: Investivate why these tests fail, they error with
-    // TypeError: Cannot read properties of undefined (reading 'toValue')
-    //   at expectEqualBeaconState (file:///home/lion/Code/eth2.0/lodestar/packages/beacon-node/test/spec/utils/expectEqualBeaconState.ts:14:33)
-    //   at Object.expectFunc (file:///home/lion/Code/eth2.0/lodestar/packages/beacon-node/test/spec/presets/epoch_processing.ts:77:9)
-    //   at Context.<anonymous> (file:///home/lion/Code/eth2.0/lodestar/packages/spec-test-util/src/single.ts:142:19)
-    "phase0/epoch_processing/registry_updates",
-    "altair/epoch_processing/registry_updates",
-    "bellatrix/epoch_processing/registry_updates",
-    "capella/epoch_processing/registry_updates",
-    "eip4844/epoch_processing/registry_updates",
+    // TODO: invalid_large_withdrawable_epoch asserts an overflow on a u64 for its exit epoch.
+    // Currently unable to reproduce in Lodestar, skipping for now
+    // https://github.com/ethereum/consensus-specs/blob/3212c419f6335e80ed825b4855a071f76bef70c3/tests/core/pyspec/eth2spec/test/phase0/epoch_processing/test_process_registry_updates.py#L349
+    "phase0/epoch_processing/registry_updates/pyspec_tests/invalid_large_withdrawable_epoch",
+    "altair/epoch_processing/registry_updates/pyspec_tests/invalid_large_withdrawable_epoch",
+    "bellatrix/epoch_processing/registry_updates/pyspec_tests/invalid_large_withdrawable_epoch",
+    "capella/epoch_processing/registry_updates/pyspec_tests/invalid_large_withdrawable_epoch",
+    "eip4844/epoch_processing/registry_updates/pyspec_tests/invalid_large_withdrawable_epoch",
   ],
 };
 

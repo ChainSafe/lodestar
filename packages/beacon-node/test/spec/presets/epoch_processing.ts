@@ -1,3 +1,4 @@
+import {expect} from "chai";
 import {
   CachedBeaconStateAllForks,
   EpochProcess,
@@ -61,7 +62,15 @@ export const epochProcessing = (
       const state = createCachedBeaconStateTest(stateTB, config);
 
       const epochProcess = beforeProcessEpoch(state, {assertCorrectProgressiveBalances});
-      epochProcessFn(state, epochProcess);
+
+      if (testcase.post === undefined) {
+        // If post.ssz_snappy is not value, the sub-transition processing is aborted
+        // https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md#postssz_snappy
+        expect(() => epochProcessFn(state, epochProcess)).to.throw();
+      } else {
+        epochProcessFn(state, epochProcess);
+      }
+
       state.commit();
 
       return state;
