@@ -35,7 +35,9 @@ const skipOpts: SkipOpts = {
     "eip4844/operations/bls_to_execution_change",
     "eip4844/operations/withdrawals",
   ],
-  skippedTests: ["eip4844/transition/core/pyspec_tests/transition_randomized_state"]
+  // This test right now has been escalted as history summary should have been pushed
+  // in the state, but in the expected state as per test, nothing has been pushed
+  skippedTests: ["eip4844/transition/core/pyspec_tests/transition_randomized_state"],
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
