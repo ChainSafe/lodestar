@@ -31,6 +31,7 @@ const epochProcessFns: Record<string, EpochProcessFn> = {
   slashings: epochFns.processSlashings,
   slashings_reset: epochFns.processSlashingsReset,
   sync_committee_updates: epochFns.processSyncCommitteeUpdates as EpochProcessFn,
+  historical_summaries_update: epochFns.processHistoricalSummariesUpdate as EpochProcessFn,
 };
 
 /**

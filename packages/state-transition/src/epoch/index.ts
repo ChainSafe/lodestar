@@ -37,6 +37,7 @@ export {
   processParticipationRecordUpdates,
   processParticipationFlagUpdates,
   processSyncCommitteeUpdates,
+  processHistoricalSummariesUpdate,
 };
 
 export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";

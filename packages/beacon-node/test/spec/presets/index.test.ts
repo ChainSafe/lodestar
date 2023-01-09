@@ -35,9 +35,6 @@ const skipOpts: SkipOpts = {
     "eip4844/operations/bls_to_execution_change",
     "eip4844/operations/withdrawals",
   ],
-  // This test right now has been escalted as history summary should have been pushed
-  // in the state, but in the expected state as per test, nothing has been pushed
-  skippedTests: ["eip4844/transition/core/pyspec_tests/transition_randomized_state"],
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -67,7 +64,14 @@ specTestIterator(
     shuffling: {type: RunnerType.default, fn: shuffling},
     ssz_static: {type: RunnerType.custom, fn: sszStatic()},
     sync: {type: RunnerType.default, fn: forkChoiceTest({onlyPredefinedResponses: true})},
-    transition: {type: RunnerType.default, fn: transition},
+    transition: {
+      type: RunnerType.default,
+      fn: transition([
+        // This test right now has been escalted as history summary should have been pushed
+        // in the state, but in the expected state as per test, nothing has been pushed
+        "eip4844/transition/core/pyspec_tests/transition_randomized_state",
+      ]),
+    },
   },
   skipOpts
 );
