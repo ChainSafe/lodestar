@@ -20,11 +20,11 @@ export const testData: GenericServerTestCases<Api> = {
   },
   getHeader: {
     args: [1, root, fromHexString(pubkeyRand)],
-    res: {version: ForkName.bellatrix, data: ssz.bellatrix.SignedBuilderBid.defaultValue()},
+    res: {version: ForkName.eip4844, data: ssz.eip4844.SignedBuilderBid.defaultValue()},
   },
   submitBlindedBlock: {
-    args: [ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue()],
-    res: {version: ForkName.bellatrix, data: ssz.bellatrix.ExecutionPayload.defaultValue()},
+    args: [ssz.eip4844.SignedBlindedBeaconBlock.defaultValue()],
+    res: {version: ForkName.eip4844, data: ssz.eip4844.ExecutionPayload.defaultValue()},
   },
   submitBlindedBlockV2: {
     args: [ssz.eip4844.SignedBlindedBeaconBlock.defaultValue()],
