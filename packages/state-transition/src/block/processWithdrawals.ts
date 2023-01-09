@@ -35,7 +35,6 @@ export function processWithdrawals(
       if (!ssz.capella.Withdrawal.equals(withdrawal, payload.withdrawals[i])) {
         throw Error(`Withdrawal mismatch at index=${i}`);
       }
-      decreaseBalance(state, withdrawal.validatorIndex, Number(withdrawal.amount));
     }
   }
 
