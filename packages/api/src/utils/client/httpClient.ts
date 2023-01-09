@@ -15,6 +15,8 @@ const URL_SCORE_DELTA_ERROR = 2 * URL_SCORE_DELTA_SUCCESS;
 const URL_SCORE_MAX = 10 * URL_SCORE_DELTA_SUCCESS;
 const URL_SCORE_MIN = 0;
 
+export type HttpStatusCode = number;
+
 export class HttpError extends Error {
   status: number;
   url: string;
@@ -46,7 +48,7 @@ export type FetchOpts = {
 export interface IHttpClient {
   baseUrl: string;
   json<T>(opts: FetchOpts): Promise<T>;
-  request(opts: FetchOpts): Promise<void>;
+  request(opts: FetchOpts): Promise<HttpStatusCode>;
   arrayBuffer(opts: FetchOpts): Promise<ArrayBuffer>;
 }
 
@@ -128,8 +130,8 @@ export class HttpClient implements IHttpClient {
     return await this.requestWithBodyWithRetries<T>(opts, (res) => res.json() as Promise<T>);
   }
 
-  async request(opts: FetchOpts): Promise<void> {
-    return await this.requestWithBodyWithRetries<void>(opts, async (_res) => void 0);
+  async request(opts: FetchOpts): Promise<HttpStatusCode> {
+    return await this.requestWithBodyWithRetries<HttpStatusCode>(opts, async (res) => res.status);
   }
 
   async arrayBuffer(opts: FetchOpts): Promise<ArrayBuffer> {
