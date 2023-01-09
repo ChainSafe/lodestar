@@ -15,7 +15,7 @@ export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): A
   return {
     ...client,
     async getHealth(): Promise<NodeHealth> {
-      return await httpClient.request({...fetchOptsSerializers.getHealth()});
+      return httpClient.request({...fetchOptsSerializers.getHealth()});
     },
   };
 }
