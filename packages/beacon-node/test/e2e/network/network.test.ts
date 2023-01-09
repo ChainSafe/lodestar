@@ -159,9 +159,9 @@ describe("network", function () {
       createTestNode("B"),
     ]);
 
-    if (!netBootnode.discv5) throw Error("discv5 in bootnode is not enabled");
-    if (!netA.discv5) throw Error("discv5 in A is not enabled");
-    if (!netB.discv5) throw Error("discv5 in B is not enabled");
+    if (!netBootnode.discv5()) throw Error("discv5 in bootnode is not enabled");
+    if (!netA.discv5()) throw Error("discv5 in A is not enabled");
+    if (!netB.discv5()) throw Error("discv5 in B is not enabled");
 
     const subscription: CommitteeSubscription = {
       validatorIndex: 2000,
@@ -174,13 +174,14 @@ describe("network", function () {
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
 
     // Add subnets to B ENR
-    netB.discv5.enr.set(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(netB.metadata.attnets));
+    await netB.discv5()?.setEnrValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(netB.metadata.attnets));
 
     // A knows about bootnode
-    netA.discv5.addEnr(netBootnode.discv5.enr);
-    expect(netA.discv5.kadValues()).have.length(1, "wrong netA kad length");
+    // TODO discv5 worker thread no longer allows adding an ENR
+    //netA.discv5.addEnr(netBootnode.discv5.enr);
+    //expect(netA.discv5.kadValues()).have.length(1, "wrong netA kad length");
     // bootnode knows about B
-    netBootnode.discv5.addEnr(netB.discv5.enr);
+    //netBootnode.discv5.addEnr(netB.discv5.enr);
 
     // const enrB = ENR.createFromPeerId(netB.peerId);
     // enrB.set(ENRKey.attnets, Buffer.from(ssz.phase0.AttestationSubnets.serialize(netB.metadata.attnets)));
