@@ -1,15 +1,14 @@
-import crypto from "node:crypto";
-import {promisify} from "node:util";
 import {Libp2p} from "libp2p";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {multiaddr, Multiaddr} from "@multiformats/multiaddr";
+import {Multiaddr} from "@multiformats/multiaddr";
 import {IBeaconConfig} from "@lodestar/config";
 import {ILogger, pruneSetToMax} from "@lodestar/utils";
-import {Discv5, ENR, IDiscv5Metrics, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
+import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {IMetrics} from "../../metrics/index.js";
 import {ENRKey, SubnetType} from "../metadata.js";
 import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
+import {Discv5Worker} from "../discv5/index.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 
@@ -17,8 +16,6 @@ import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubne
 const MAX_CACHED_ENRS = 100;
 /** Max age a cached ENR will be considered for dial */
 const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
-
-const randomBytesAsync = promisify(crypto.randomBytes);
 
 export type PeerDiscoveryOpts = {
   maxPeers: number;
@@ -75,7 +72,7 @@ type CachedENR = {
  * Currently relies on discv5 automatic periodic queries.
  */
 export class PeerDiscovery {
-  readonly discv5: Discv5;
+  readonly discv5: Discv5Worker;
   private libp2p: Libp2p;
   private peerRpcScores: IPeerRpcScoreStore;
   private metrics: IMetrics | null;
@@ -108,17 +105,12 @@ export class PeerDiscovery {
     this.discv5FirstQueryDelayMs = opts.discv5FirstQueryDelayMs;
     this.connectToDiscv5BootnodesOnStart = opts.connectToDiscv5Bootnodes;
 
-    this.discv5 = Discv5.create({
-      enr: opts.discv5.enr,
+    this.discv5 = new Discv5Worker({
+      discv5: opts.discv5,
       peerId: modules.libp2p.peerId,
-      multiaddr: multiaddr(opts.discv5.bindAddr),
-      config: opts.discv5,
-      // TODO: IDiscv5Metrics is not properly defined, should remove the collect() function
-      metrics: (modules.metrics?.discv5 as unknown) as {
-        [K in keyof IMetrics["discv5"]]: IDiscv5Metrics[keyof IDiscv5Metrics];
-      },
+      metrics: Boolean(modules.metrics),
+      logger: this.logger,
     });
-    opts.discv5.bootEnrs.forEach((bootEnr) => this.discv5.addEnr(bootEnr));
 
     if (metrics) {
       metrics.discovery.cachedENRsSize.addCollect(() => {
@@ -136,7 +128,7 @@ export class PeerDiscovery {
       // In devnet scenarios, especially, we want more control over which peers we connect to.
       // Only dial the discv5.bootEnrs if the option
       // network.connectToDiscv5Bootnodes has been set to true.
-      this.discv5.kadValues().forEach((enr) => this.onDiscovered(enr));
+      (await this.discv5.kadValues()).forEach((enr) => this.onDiscovered(enr));
     }
   }
 
@@ -230,12 +222,11 @@ export class PeerDiscovery {
 
     // Use async version to prevent blocking the event loop
     // Time to completion of this function is not critical, in case this async call add extra lag
-    const randomNodeId = await randomBytesAsync(64);
     this.randomNodeQuery = {code: QueryStatusCode.Active, count: 0};
     const timer = this.metrics?.discovery.findNodeQueryTime.startTimer();
 
     try {
-      const enrs = await this.discv5.findNode(randomNodeId.toString("hex"));
+      const enrs = await this.discv5.findRandomNode();
       this.metrics?.discovery.findNodeQueryEnrCount.inc(enrs.length);
     } catch (e) {
       this.logger.error("Error on discv5.findNode()", {}, e as Error);

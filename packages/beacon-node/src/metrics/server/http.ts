@@ -14,15 +14,24 @@ export type HttpMetricsServerOpts = {
 export class HttpMetricsServer {
   private readonly server: http.Server;
   private readonly register: Registry;
+  private readonly getOtherMetrics: () => Promise<string>;
   private readonly logger: ILogger;
   private readonly activeSockets: HttpActiveSocketsTracker;
 
   private readonly httpServerRegister: RegistryMetricCreator;
   private readonly scrapeTimeMetric: HistogramExtra<"status">;
 
-  constructor(private readonly opts: HttpMetricsServerOpts, {register, logger}: {register: Registry; logger: ILogger}) {
+  constructor(
+    private readonly opts: HttpMetricsServerOpts,
+    {
+      register,
+      getOtherMetrics = async () => "",
+      logger,
+    }: {register: Registry; getOtherMetrics?: () => Promise<string>; logger: ILogger}
+  ) {
     this.logger = logger;
     this.register = register;
+    this.getOtherMetrics = getOtherMetrics;
     this.server = http.createServer(this.onRequest.bind(this));
 
     // New registry to metric the metrics. Using the same registry would deadlock the .metrics promise
@@ -81,16 +90,16 @@ export class HttpMetricsServer {
   private async onRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     if (req.method === "GET" && req.url && req.url.includes("/metrics")) {
       const timer = this.scrapeTimeMetric.startTimer();
-      const metricsRes = await wrapError(this.register.metrics());
-      timer({status: metricsRes.err ? "error" : "success"});
+      const metricsRes = await Promise.all([wrapError(this.register.metrics()), this.getOtherMetrics()]);
+      timer({status: metricsRes[0].err ? "error" : "success"});
 
       // Ensure we only writeHead once
-      if (metricsRes.err) {
-        res.writeHead(500, {"content-type": "text/plain"}).end(metricsRes.err.stack);
+      if (metricsRes[0].err) {
+        res.writeHead(500, {"content-type": "text/plain"}).end(metricsRes[0].err.stack);
       } else {
         // Get scrape time metrics
         const httpServerMetrics = await this.httpServerRegister.metrics();
-        const metricsStr = `${metricsRes.result}\n\n${httpServerMetrics}`;
+        const metricsStr = `${metricsRes[0].result}\n\n${metricsRes[1]}\n\n${httpServerMetrics}`;
         res.writeHead(200, {"content-type": this.register.contentType}).end(metricsStr);
       }
     } else {

@@ -240,6 +240,9 @@ export class BeaconNode {
     const metricsServer = metrics
       ? new HttpMetricsServer(opts.metrics, {
           register: metrics.register,
+          getOtherMetrics: async (): Promise<string> => {
+            return (await network.discv5()?.metrics()) ?? "";
+          },
           logger: logger.child({module: LoggerModule.metrics}),
         })
       : undefined;

@@ -8,7 +8,7 @@ import {formatNodePeer, getRevelantConnection} from "./utils.js";
 export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, "network" | "sync">): routes.node.Api {
   return {
     async getNetworkIdentity() {
-      const enr = network.getEnr();
+      const enr = await network.getEnr();
       const keypair = createKeypairFromPeerId(network.peerId);
       const discoveryAddresses = [
         enr?.getLocationMultiaddr("tcp")?.toString() ?? null,

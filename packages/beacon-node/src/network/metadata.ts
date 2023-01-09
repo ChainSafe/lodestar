@@ -1,4 +1,3 @@
-import {ENR} from "@chainsafe/discv5";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {altair, Epoch, phase0, ssz} from "@lodestar/types";
@@ -35,7 +34,7 @@ export interface IMetadataModules {
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#metadata
  */
 export class MetadataController {
-  private enr?: ENR;
+  private setEnrValue?: (key: string, value: Uint8Array) => Promise<void>;
   private config: IBeaconConfig;
   private chain: IBeaconChain;
   private _metadata: altair.Metadata;
@@ -48,19 +47,19 @@ export class MetadataController {
     this._metadata = opts.metadata || ssz.altair.Metadata.defaultValue();
   }
 
-  start(enr: ENR | undefined, currentFork: ForkName): void {
-    this.enr = enr;
-    if (this.enr) {
+  start(setEnrValue: ((key: string, value: Uint8Array) => Promise<void>) | undefined, currentFork: ForkName): void {
+    this.setEnrValue = setEnrValue;
+    if (this.setEnrValue) {
       // updateEth2Field() MUST be called with clock epoch
       this.updateEth2Field(this.chain.clock.currentEpoch);
 
-      this.enr.set(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
+      void this.setEnrValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
       // Any fork after altair included
 
       if (currentFork !== ForkName.phase0) {
         // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
         // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
-        this.enr.set(ENRKey.syncnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
+        void this.setEnrValue(ENRKey.syncnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
       }
     }
   }
@@ -74,8 +73,8 @@ export class MetadataController {
   }
 
   set syncnets(syncnets: BitArray) {
-    if (this.enr) {
-      this.enr.set(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(syncnets));
+    if (this.setEnrValue) {
+      void this.setEnrValue(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(syncnets));
     }
     this._metadata.syncnets = syncnets;
   }
@@ -85,8 +84,8 @@ export class MetadataController {
   }
 
   set attnets(attnets: BitArray) {
-    if (this.enr) {
-      this.enr.set(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(attnets));
+    if (this.setEnrValue) {
+      void this.setEnrValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(attnets));
     }
     this._metadata.seqNumber++;
     this._metadata.attnets = attnets;
@@ -109,10 +108,10 @@ export class MetadataController {
    *    Current Clock implementation ensures no race conditions, epoch is correct if re-fetched
    */
   updateEth2Field(epoch: Epoch): void {
-    if (this.enr) {
+    if (this.setEnrValue) {
       const enrForkId = ssz.phase0.ENRForkID.serialize(getENRForkID(this.config, epoch));
       this.logger.verbose(`Updated ENR.eth2: ${toHexString(enrForkId)}`);
-      this.enr.set(ENRKey.eth2, enrForkId);
+      void this.setEnrValue(ENRKey.eth2, enrForkId);
     }
   }
 }

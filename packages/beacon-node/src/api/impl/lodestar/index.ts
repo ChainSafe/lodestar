@@ -150,8 +150,15 @@ export function getLodestarApi({
     },
 
     async discv5GetKadValues() {
+      const discv5 = network.discv5();
+      if (!discv5) {
+        return {
+          data: [],
+        };
+      }
+
       return {
-        data: network.discv5?.kadValues().map((enr) => enr.encodeTxt()) ?? [],
+        data: (await discv5.kadValues()).map((enr) => enr.encodeTxt()) ?? [],
       };
     },
 
