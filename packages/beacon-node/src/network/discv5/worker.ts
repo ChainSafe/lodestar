@@ -6,6 +6,7 @@ import {Observable, Subject} from "@chainsafe/threads/observable";
 import {createKeypairFromPeerId, Discv5, ENR, IDiscv5Metrics} from "@chainsafe/discv5";
 import {createDiscv5Metrics} from "../../metrics/metrics/discv5.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
+import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 
 // Cloned data from instatiation
@@ -14,6 +15,7 @@ const workerData = worker.workerData as Discv5WorkerData;
 if (!workerData) throw Error("workerData must be defined");
 
 const metricsRegistry = new RegistryMetricCreator();
+collectNodeJSMetrics(metricsRegistry, "discv5_worker_");
 const metrics = createDiscv5Metrics(metricsRegistry);
 
 const peerId = await createFromProtobuf(workerData.peerIdProto);
