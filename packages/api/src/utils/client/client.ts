@@ -78,8 +78,8 @@ export function generateGenericJsonClient<
       } else {
         // We need to avoid parsing the response as the servers might just
         // response status 200 and close the request instead of writing an
-        // empty json response
-        await fetchFn.request(fetchOptsSerializer(...args));
+        // empty json response. We return the status code.
+        return await fetchFn.request(fetchOptsSerializer(...args));
       }
     };
   }) as Api;
