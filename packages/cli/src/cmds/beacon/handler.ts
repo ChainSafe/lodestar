@@ -162,11 +162,7 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
 export function overwriteEnrWithCliArgs(enr: ENR, args: IBeaconArgs): void {
   // TODO: Not sure if we should propagate port/defaultP2pPort options to the ENR
   enr.tcp = args["enr.tcp"] ?? args.port ?? defaultP2pPort;
-  // TODO: add `port`/`defaultP2pPort` port as backup as well once we
-  // fix the below discv5 issue
-  //
-  // See https://github.com/ChainSafe/discv5/issues/201
-  const udpPort = args["enr.udp"] ?? args.discoveryPort;
+  const udpPort = args["enr.udp"] ?? args.discoveryPort ?? args.port ?? defaultP2pPort;
   if (udpPort != null) enr.udp = udpPort;
   if (args["enr.ip"] != null) enr.ip = args["enr.ip"];
   if (args["enr.ip6"] != null) enr.ip6 = args["enr.ip6"];
