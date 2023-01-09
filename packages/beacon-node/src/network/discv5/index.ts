@@ -22,6 +22,9 @@ type Discv5WorkerStatus =
   | {status: "stopped"}
   | {status: "started"; workerApi: Discv5WorkerApi; subscription: {unsubscribe(): void}};
 
+/**
+ * Wrapper class abstracting the details of discv5 worker instantiation and message-passing
+ */
 export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, IDiscv5Events>}) {
   private logger: ILogger;
   private status: Discv5WorkerStatus;
@@ -63,6 +66,8 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
     this.status.subscription.unsubscribe();
     await this.status.workerApi.close();
     await Thread.terminate((this.status.workerApi as unknown) as Thread);
+
+    this.status = {status: "stopped"};
   }
 
   onDiscoveredStr(enrStr: Uint8Array): void {

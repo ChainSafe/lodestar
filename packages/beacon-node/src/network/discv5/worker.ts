@@ -9,11 +9,16 @@ import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 
+// This discv5 worker will start discv5 on initialization (there is no `start` function to call)
+// A consumer _should_ call `close` before terminating the worker to cleanly exit discv5 before destroying the thread
+// A `setEnrValue` function is also provided to update the host ENR key-values shared in the discv5 network.
+
 // Cloned data from instatiation
 const workerData = worker.workerData as Discv5WorkerData;
 // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 if (!workerData) throw Error("workerData must be defined");
 
+// Set up metrics, nodejs and discv5-specific
 const metricsRegistry = new RegistryMetricCreator();
 collectNodeJSMetrics(metricsRegistry, "discv5_worker_");
 const metrics = createDiscv5Metrics(metricsRegistry);
@@ -21,6 +26,7 @@ const metrics = createDiscv5Metrics(metricsRegistry);
 const peerId = await createFromProtobuf(workerData.peerIdProto);
 const keypair = createKeypairFromPeerId(peerId);
 
+// Initialize discv5
 const discv5 = Discv5.create({
   enr: workerData.enrStr,
   peerId,
@@ -33,15 +39,18 @@ const discv5 = Discv5.create({
     : undefined,
 });
 
+// Load boot enrs
 for (const bootEnr of workerData.bootEnrs) {
   discv5.addEnr(bootEnr);
 }
+
 /** Used to push discovered ENRs */
 const subject = new Subject<Uint8Array>();
 
 const onDiscovered = (enr: ENR): void => subject.next(enr.encode());
 discv5.addListener("discovered", onDiscovered);
 
+// Discv5 will now begin accepting request/responses
 await discv5.start();
 
 const module: Discv5WorkerApi = {
