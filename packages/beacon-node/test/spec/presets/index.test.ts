@@ -34,15 +34,6 @@ const skipOpts: SkipOpts = {
     // Enable once spec test v1.3.0 are released and withdrawals are active on eip4844
     "eip4844/operations/bls_to_execution_change",
     "eip4844/operations/withdrawals",
-
-    // TODO: invalid_large_withdrawable_epoch asserts an overflow on a u64 for its exit epoch.
-    // Currently unable to reproduce in Lodestar, skipping for now
-    // https://github.com/ethereum/consensus-specs/blob/3212c419f6335e80ed825b4855a071f76bef70c3/tests/core/pyspec/eth2spec/test/phase0/epoch_processing/test_process_registry_updates.py#L349
-    "phase0/epoch_processing/registry_updates/pyspec_tests/invalid_large_withdrawable_epoch",
-    "altair/epoch_processing/registry_updates/pyspec_tests/invalid_large_withdrawable_epoch",
-    "bellatrix/epoch_processing/registry_updates/pyspec_tests/invalid_large_withdrawable_epoch",
-    "capella/epoch_processing/registry_updates/pyspec_tests/invalid_large_withdrawable_epoch",
-    "eip4844/epoch_processing/registry_updates/pyspec_tests/invalid_large_withdrawable_epoch",
   ],
 };
 
@@ -51,7 +42,15 @@ const skipOpts: SkipOpts = {
 specTestIterator(
   path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET),
   {
-    epoch_processing: {type: RunnerType.default, fn: epochProcessing()},
+    epoch_processing: {
+      type: RunnerType.default,
+      fn: epochProcessing([
+        // TODO: invalid_large_withdrawable_epoch asserts an overflow on a u64 for its exit epoch.
+        // Currently unable to reproduce in Lodestar, skipping for now
+        // https://github.com/ethereum/consensus-specs/blob/3212c419f6335e80ed825b4855a071f76bef70c3/tests/core/pyspec/eth2spec/test/phase0/epoch_processing/test_process_registry_updates.py#L349
+        "invalid_large_withdrawable_epoch",
+      ]),
+    },
     finality: {type: RunnerType.default, fn: finality},
     fork: {type: RunnerType.default, fn: fork},
     fork_choice: {type: RunnerType.default, fn: forkChoiceTest({onlyPredefinedResponses: false})},
