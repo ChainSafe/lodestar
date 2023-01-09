@@ -9,7 +9,7 @@ import {IBeaconChain} from "../../chain/index.js";
 import {INetwork} from "../../network/index.js";
 import {IMetrics} from "../../metrics/index.js";
 import {RangeSyncType, rangeSyncTypes, getRangeSyncTarget} from "../utils/remoteSyncType.js";
-import {ImportBlockOpts} from "../../chain/blocks/index.js";
+import {ImportBlockOpts, AttestationImportOpt} from "../../chain/blocks/index.js";
 import {updateChains} from "./utils/index.js";
 import {ChainTarget, SyncChainFns, SyncChain, SyncChainDebugState} from "./chain.js";
 
@@ -176,7 +176,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       // Only skip importing attestations for finalized sync. For head sync attestation are valuable.
       // Importing attestations also triggers a head update, see https://github.com/ChainSafe/lodestar/issues/3804
       // TODO: Review if this is okay, can we prevent some attacks by importing attestations?
-      skipImportingAttestations: syncType === RangeSyncType.Finalized,
+      importAttestations: syncType === RangeSyncType.Finalized ? AttestationImportOpt.Skip : undefined,
       // Ignores ALREADY_KNOWN or GENESIS_BLOCK errors, and continues with the next block in chain segment
       ignoreIfKnown: true,
       // Ignore WOULD_REVERT_FINALIZED_SLOT error, continue with the next block in chain segment
@@ -198,7 +198,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   /** Convenience method for `SyncChain` */
   private downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peerId, request) => {
-    return await this.network.reqResp.beaconBlocksByRange(peerId, request);
+    return await this.network.beaconBlocksMaybeBlobsByRange(peerId, request);
   };
 
   /** Convenience method for `SyncChain` */

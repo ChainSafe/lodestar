@@ -5,6 +5,7 @@ import {JsonPath} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {altair, RootHex, SyncPeriod} from "@lodestar/types";
 import {notNullish} from "@lodestar/utils";
+import {ForkName} from "@lodestar/params";
 import {BeaconStateAltair} from "../utils/types.js";
 
 export class ProofServerApiMock implements routes.proof.Api {
@@ -17,38 +18,46 @@ export class ProofServerApiMock implements routes.proof.Api {
   }
 }
 
+type VersionedLightClientUpdate = {
+  version: ForkName;
+  data: altair.LightClientUpdate;
+};
+
 export class LightclientServerApiMock implements routes.lightclient.Api {
   readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
-  readonly snapshots = new Map<RootHex, routes.lightclient.LightClientBootstrap>();
+  readonly snapshots = new Map<RootHex, altair.LightClientBootstrap>();
   latestHeadUpdate: altair.LightClientOptimisticUpdate | null = null;
   finalized: altair.LightClientFinalityUpdate | null = null;
 
-  async getUpdates(from: SyncPeriod, to: SyncPeriod): Promise<{data: altair.LightClientUpdate[]}> {
-    const updates: altair.LightClientUpdate[] = [];
+  async getUpdates(from: SyncPeriod, to: SyncPeriod): Promise<VersionedLightClientUpdate[]> {
+    const updates: VersionedLightClientUpdate[] = [];
     for (let period = parseInt(String(from)); period <= parseInt(String(to)); period++) {
       const update = this.updates.get(period);
       if (update) {
-        updates.push(update);
+        updates.push({
+          version: ForkName.bellatrix,
+          data: update,
+        });
       }
     }
-    return {data: updates};
+    return updates;
   }
 
-  async getOptimisticUpdate(): Promise<{data: altair.LightClientOptimisticUpdate}> {
+  async getOptimisticUpdate(): Promise<{version: ForkName; data: altair.LightClientOptimisticUpdate}> {
     if (!this.latestHeadUpdate) throw Error("No latest head update");
-    return {data: this.latestHeadUpdate};
+    return {version: ForkName.bellatrix, data: this.latestHeadUpdate};
   }
 
-  async getFinalityUpdate(): Promise<{data: altair.LightClientFinalityUpdate}> {
+  async getFinalityUpdate(): Promise<{version: ForkName; data: altair.LightClientFinalityUpdate}> {
     if (!this.finalized) throw Error("No finalized head update");
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    return {data: this.finalized};
+    return {version: ForkName.bellatrix, data: this.finalized};
   }
 
-  async getBootstrap(blockRoot: string): Promise<{data: routes.lightclient.LightClientBootstrap}> {
+  async getBootstrap(blockRoot: string): Promise<{version: ForkName; data: altair.LightClientBootstrap}> {
     const snapshot = this.snapshots.get(blockRoot);
     if (!snapshot) throw Error(`snapshot for blockRoot ${blockRoot} not available`);
-    return {data: snapshot};
+    return {version: ForkName.bellatrix, data: snapshot};
   }
 
   async getCommitteeRoot(startPeriod: SyncPeriod, count: number): Promise<{data: Uint8Array[]}> {

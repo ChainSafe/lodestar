@@ -135,10 +135,26 @@ export class SimulationTracker {
       this.initEventStreamForNode(node);
     }
     this.reporter.bootstrap();
+
+    // Start clock loop on current slot or genesis
+    this.clockLoop(Math.max(this.clock.currentSlot, 0)).catch((e) => {
+      console.error("error on clockLoop", e);
+    });
   }
 
   async stop(): Promise<void> {
     // Do nothing;
+  }
+
+  async clockLoop(slot: number): Promise<void> {
+    while (!this.signal.aborted) {
+      // Wait for 2/3 of the slot to consider it missed
+      await this.clock.waitForStartOfSlot(slot + 2 / 3, slot > 0).catch((e) => {
+        console.error("error on waitForStartOfSlot", e);
+      });
+      this.reporter.progress(slot);
+      slot++;
+    }
   }
 
   getErrorCount(): number {

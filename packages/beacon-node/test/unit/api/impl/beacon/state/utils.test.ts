@@ -12,8 +12,8 @@ import {
 } from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {IBeaconChain} from "../../../../../../src/chain/index.js";
 import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/chain/archiver/archiveStates.js";
-import {generateProtoBlock} from "../../../../../utils/block.js";
-import {generateCachedState, generateCachedStateWithPubkeys, generateState} from "../../../../../utils/state.js";
+import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
+import {generateCachedAltairState, generateCachedState, generateState} from "../../../../../utils/state.js";
 import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
 
 use(chaiAsPromised);
@@ -67,7 +67,7 @@ describe("beacon state api utils", function () {
 
     it("resolve state by root", async function () {
       const get = sinon.stub().returns(generateCachedState());
-      const chainStub = ({stateCache: {get}} as unknown) as IBeaconChain;
+      const chainStub = ({stateCache: {get}, forkChoice: {getBlock: sinon.stub()}} as unknown) as IBeaconChain;
 
       const state = await resolveStateId(config, chainStub, dbStub, otherRoot);
       expect(state).to.not.be.null;
@@ -116,7 +116,7 @@ describe("beacon state api utils", function () {
         blockArchive: {valuesStream: blockArchiveValuesStream},
         stateArchive: {get, valuesStream: stateArchiveValuesStream},
       } as StubbedBeaconDb;
-      const state = await resolveStateId(config, chainStub, tempDbStub, requestedSlot.toString(), {
+      const {state} = await resolveStateId(config, chainStub, tempDbStub, requestedSlot.toString(), {
         regenFinalizedState: true,
       });
       expect(state).to.not.be.null;
@@ -222,7 +222,7 @@ describe("beacon state api utils", function () {
   });
 
   describe("getStateValidatorIndex", async function () {
-    const state = await generateCachedStateWithPubkeys({}, config, true);
+    const state = generateCachedAltairState();
     const pubkey2index = state.epochCtx.pubkey2index;
 
     it("should return valid: false on invalid input", () => {

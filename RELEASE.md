@@ -25,7 +25,7 @@ To start a new release, one of the Lodestar developers will communicate this via
 - The team selects a commit from `unstable` as a "release candidate" for a new version release.
 - `yarn release:create-rc 1.1.0 9fceb02`
   - Must be run locally from a write-access account capable of triggering CI.
-  - This script may alternatively be run on the the checked out `HEAD`:
+  - This script may alternatively be run on the checked out `HEAD`:
     - `git checkout 9fceb02`
     - `yarn release:create-rc 1.1.0`
 - Open draft PR from `rc/v1.1.0` to `stable` with title `v1.1.0 release`.
@@ -51,7 +51,7 @@ Tagging a release candidate will trigger CI to publish to NPM, dockerhub, and Gi
 - The team selects a commit from `rc/v1.1.0` as a commit to tag and publish.
 - `yarn release:tag-rc 1.1.0 8ab7cef`
   - Must be run locally from a write-access account capable of triggering CI.
-  - This script may alternatively be run on the the checked out `HEAD`:
+  - This script may alternatively be run on the checked out `HEAD`:
     - `git checkout 8ab7cef`
     - `yarn release:tag-rc 1.1.0`
 
@@ -200,7 +200,7 @@ This section is to guide the Release Manager tasked with the next version releas
 - If there are `rc.x` hot fixes, push to branch and increment the `rc.x` version.
 - Team members conduct Release Candidate Metrics Review
 - A Lodestar team member must mark the release candidate as safe, after personally reviewing and / or testing it
-- Backup `stable` and `unstable` branches locally for restoration incase of accidental use of the incorrect merge method
+- Backup `stable` and `unstable` branches locally for restoration in case of accidental use of the incorrect merge method
 - Temporarily enable "Allow merge commits" under the Lodestar repository settings
 - Release Manager can now complete Step 4: Merge release candidate.
 - Disable "Allow merge commits" under the Lodestar repository settings

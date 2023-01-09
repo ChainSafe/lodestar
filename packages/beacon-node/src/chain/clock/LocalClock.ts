@@ -14,7 +14,7 @@ import {IBeaconClock} from "./interface.js";
 export class LocalClock implements IBeaconClock {
   private readonly config: IChainForkConfig;
   private readonly genesisTime: number;
-  private timeoutId: NodeJS.Timeout;
+  private timeoutId: number | NodeJS.Timeout;
   private readonly emitter: ChainEventEmitter;
   private readonly signal: AbortSignal;
   private _currentSlot: number;

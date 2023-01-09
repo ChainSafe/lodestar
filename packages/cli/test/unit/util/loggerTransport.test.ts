@@ -3,7 +3,7 @@ import path from "node:path";
 import rimraf from "rimraf";
 import {expect} from "chai";
 import {config} from "@lodestar/config/default";
-import {LodestarError, LogData, LogFormat, logFormats, LogLevel} from "@lodestar/utils";
+import {ILogger, LodestarError, LogData, LogFormat, logFormats, LogLevel} from "@lodestar/utils";
 import {getCliLogger, ILogArgs, LOG_FILE_DISABLE_KEYWORD} from "../../../src/util/logger.js";
 
 describe("winston logger format and options", () => {
@@ -138,13 +138,13 @@ describe("winston transport log to file", () => {
   });
 });
 
-function getCliLoggerTest(logArgs: Partial<ILogArgs>): ReturnType<typeof getCliLogger> {
+function getCliLoggerTest(logArgs: Partial<ILogArgs>): ILogger {
   return getCliLogger(
     {logFile: LOG_FILE_DISABLE_KEYWORD, ...logArgs},
     {defaultLogFilepath: "logger_transport_test.log"},
     config,
     {hideTimestamp: true}
-  );
+  ).logger;
 }
 
 /** Wait for file to exist have some content, then return its contents */

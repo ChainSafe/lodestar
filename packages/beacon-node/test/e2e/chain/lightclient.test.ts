@@ -1,15 +1,18 @@
 import {expect} from "chai";
 import {IChainConfig} from "@lodestar/config";
-import {ssz} from "@lodestar/types";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {ssz, phase0} from "@lodestar/types";
+import {JsonPath, toHexString, fromHexString} from "@chainsafe/ssz";
+import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {TimestampFormatCode} from "@lodestar/utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Lightclient} from "@lodestar/light-client";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {LightClientRestTransport} from "@lodestar/light-client/transport";
+import {Api, getClient, routes} from "@lodestar/api";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
-import {ChainEvent, HeadEventData} from "../../../src/chain/index.js";
+import {HeadEventData} from "../../../src/chain/index.js";
 
 describe("chain / lightclient", function () {
   /**
@@ -104,7 +107,7 @@ describe("chain / lightclient", function () {
     //   - If too far behind error the test
     //   - If beacon node reaches the finality slot, resolve test
     const promiseUntilHead = new Promise<HeadEventData>((resolve) => {
-      bn.chain.emitter.on(ChainEvent.head, async (head) => {
+      bn.chain.emitter.on(routes.events.EventType.head, async (head) => {
         // Wait for the second slot so syncCommitteeWitness is available
         if (head.slot > 2) {
           resolve(head);
@@ -113,11 +116,11 @@ describe("chain / lightclient", function () {
     }).then(async (head) => {
       // Initialize lightclient
       loggerLC.info("Initializing lightclient", {slot: head.slot});
-
+      const api = getClient({baseUrl: `http://localhost:${restPort}`}, {config: bn.config});
       const lightclient = await Lightclient.initializeFromCheckpointRoot({
         config: bn.config,
         logger: loggerLC,
-        beaconApiUrl: `http://localhost:${restPort}`,
+        transport: new LightClientRestTransport(api),
         genesisData: {
           genesisTime: bn.chain.genesisTime,
           genesisValidatorsRoot: bn.chain.genesisValidatorsRoot as Uint8Array,
@@ -133,10 +136,10 @@ describe("chain / lightclient", function () {
       lightclient.start();
 
       return new Promise<void>((resolve, reject) => {
-        bn.chain.emitter.on(ChainEvent.head, async (head) => {
+        bn.chain.emitter.on(routes.events.EventType.head, async (head) => {
           try {
             // Test fetching proofs
-            const {proof, header} = await lightclient.getHeadStateProof([["latestBlockHeader", "bodyRoot"]]);
+            const {proof, header} = await getHeadStateProof(lightclient, api, [["latestBlockHeader", "bodyRoot"]]);
             const stateRootHex = toHexString(header.stateRoot);
             const lcHeadState = bn.chain.stateCache.get(stateRootHex);
             if (!lcHeadState) {
@@ -164,7 +167,7 @@ describe("chain / lightclient", function () {
     });
 
     const promiseTillFinalization = new Promise<void>((resolve) => {
-      bn.chain.emitter.on(ChainEvent.finalized, (checkpoint) => {
+      bn.chain.emitter.on(routes.events.EventType.finalizedCheckpoint, (checkpoint) => {
         loggerNodeA.info("Node A emitted finalized checkpoint event", {epoch: checkpoint.epoch});
         if (checkpoint.epoch >= finalizedEpochToReach) {
           resolve();
@@ -179,3 +182,18 @@ describe("chain / lightclient", function () {
     if (!head) throw Error("First beacon node has no head block");
   });
 });
+
+// TODO: Re-incorporate for REST-only light-client
+async function getHeadStateProof(
+  lightclient: Lightclient,
+  api: Api,
+  paths: JsonPath[]
+): Promise<{proof: TreeOffsetProof; header: phase0.BeaconBlockHeader}> {
+  const header = lightclient.getHead();
+  const stateId = toHexString(header.stateRoot);
+  const res = await api.proof.getStateProof(stateId, paths);
+  return {
+    proof: res.data as TreeOffsetProof,
+    header,
+  };
+}

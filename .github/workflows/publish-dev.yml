@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v2
         with:
-          node-version: "lts/gallium"
+          node-version: 18
           registry-url: "https://registry.npmjs.org"
       - name: Node.js version
         id: node
@@ -119,7 +119,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push
+      - name: Build and push lodestar
         run: >
           docker buildx build . --push
           --tag chainsafe/lodestar:next
@@ -130,3 +130,18 @@ jobs:
       # Display history to know byte size of each layer
       # Image is available only because of the previous `docker run` command
       - run: docker image history chainsafe/lodestar:next
+
+      - name: Build and push custom Grafana
+        run: >
+          docker buildx build ./docker/grafana/ --push
+          --file ./docker/grafana/Dockerfile
+          --build-context dashboards=./dashboards
+          --tag chainsafe/lodestar-grafana:next
+          --platform linux/amd64,linux/arm64
+
+      - name: Build and push custom Prometheus
+        run: >
+          docker buildx build ./docker/prometheus/ --push
+          --file ./docker/prometheus/Dockerfile
+          --tag chainsafe/lodestar-prometheus:next
+          --platform linux/amd64,linux/arm64

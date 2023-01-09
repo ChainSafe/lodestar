@@ -6,3 +6,4 @@ export * from "./proposerSlashing.js";
 export * from "./syncCommittee.js";
 export * from "./syncCommitteeContributionAndProof.js";
 export * from "./voluntaryExit.js";
+export * from "./blsToExecutionChange.js";

@@ -4,10 +4,11 @@ import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   computeCheckpointEpochAtStateSlot,
+  computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
 import {phase0, allForks, ssz} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
-import {ILogger} from "@lodestar/utils";
+import {ILogger, toHex} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {GENESIS_SLOT, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -167,6 +168,15 @@ export async function initStateFromAnchorState(
     isCheckpointState,
   }: {isWithinWeakSubjectivityPeriod: boolean; isCheckpointState: boolean}
 ): Promise<BeaconStateAllForks> {
+  const expectedFork = config.getForkInfo(computeStartSlotAtEpoch(anchorState.fork.epoch));
+  const expectedForkVersion = toHex(expectedFork.version);
+  const stateFork = toHex(anchorState.fork.currentVersion);
+  if (stateFork !== expectedForkVersion) {
+    throw Error(
+      `State current fork version ${stateFork} not equal to current config ${expectedForkVersion}. Maybe caused by importing a state from a different network`
+    );
+  }
+
   const stateInfo = isCheckpointState ? "checkpoint" : "db";
   if (isWithinWeakSubjectivityPeriod) {
     logger.info(`Initializing beacon from a valid ${stateInfo} state`, {

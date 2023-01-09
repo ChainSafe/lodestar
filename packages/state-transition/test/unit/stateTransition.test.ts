@@ -5,7 +5,7 @@ import {expect} from "chai";
 import {ssz, capella} from "@lodestar/types";
 import {createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
-import {stateTransition} from "../../src/index.js";
+import {DataAvailableStatus, ExecutionPayloadStatus, stateTransition} from "../../src/index.js";
 import {createCachedBeaconStateTest} from "../utils/state.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -34,6 +34,8 @@ describe("capella withdrawal consensus", () => {
     const signedBlock = ssz.capella.SignedBeaconBlock.fromJson(signedBlockJson.data);
 
     const processedState = stateTransition(preState, signedBlock, {
+      executionPayloadStatus: ExecutionPayloadStatus.valid,
+      dataAvailableStatus: DataAvailableStatus.available,
       verifyStateRoot: true,
       verifyProposer: false,
       verifySignatures: false,

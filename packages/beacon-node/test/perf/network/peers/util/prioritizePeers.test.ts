@@ -91,8 +91,9 @@ describe("prioritizePeers", () => {
          * No peer with no long-lived subnets
          * No peer with bad score
          **/
-        const connectedPeers = seedPeers.map((peer, i) => ({
+        const connectedPeers: Parameters<typeof prioritizePeers>[0] = seedPeers.map((peer, i) => ({
           ...peer,
+          direction: null,
           attnets: getAttnets(
             Array.from({length: Math.floor(attnetPercentage * ATTESTATION_SUBNET_COUNT)}, (_, i) => i)
           ),

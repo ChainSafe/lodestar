@@ -406,6 +406,7 @@ export class PeerManager {
         const peerData = this.connectedPeers.get(peer.toString());
         return {
           id: peer,
+          direction: peerData?.direction ?? null,
           attnets: peerData?.metadata?.attnets ?? null,
           syncnets: peerData?.metadata?.syncnets ?? null,
           score: this.peerRpcScores.getScore(peer),
@@ -459,10 +460,9 @@ export class PeerManager {
     // disconnect is not always called for all peers
     if (this.connectedPeers.size > connectedPeers.length * 2) {
       const actualConnectedPeerIds = new Set(connectedPeers.map((peerId) => peerId.toString()));
-      for (const [peerIdStr, peerData] of this.connectedPeers) {
+      for (const peerIdStr of this.connectedPeers.keys()) {
         if (!actualConnectedPeerIds.has(peerIdStr)) {
           this.connectedPeers.delete(peerIdStr);
-          this.reqResp.pruneOnPeerDisconnect(peerData.peerId);
         }
       }
     }
@@ -579,7 +579,6 @@ export class PeerManager {
 
     this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(peer), direction, status});
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, peer);
-    this.reqResp.pruneOnPeerDisconnect(peer);
     this.metrics?.peerDisconnectedEvent.inc({direction});
   };
 

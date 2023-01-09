@@ -59,7 +59,7 @@ export function createICachedGenesis(chainForkConfig: IChainForkConfig, genesisV
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
       const forkName = forkNameByForkDigest.get(forkDigestHex);
       if (!forkName) {
-        throw Error(`Unknwon forkDigest ${forkDigestHex}`);
+        throw Error(`Unknown forkDigest ${forkDigestHex}`);
       }
       return forkName;
     },

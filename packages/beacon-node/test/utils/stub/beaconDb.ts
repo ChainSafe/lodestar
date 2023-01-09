@@ -13,6 +13,7 @@ import {
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
+  BLSToExecutionChangeRepository,
 } from "../../../src/db/repositories/index.js";
 import {createStubInstance} from "../types.js";
 
@@ -24,6 +25,7 @@ export class StubbedBeaconDb extends BeaconDb {
   stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;
 
   voluntaryExit: SinonStubbedInstance<VoluntaryExitRepository> & VoluntaryExitRepository;
+  blsToExecutionChange: SinonStubbedInstance<BLSToExecutionChangeRepository> & BLSToExecutionChangeRepository;
   proposerSlashing: SinonStubbedInstance<ProposerSlashingRepository> & ProposerSlashingRepository;
   attesterSlashing: SinonStubbedInstance<AttesterSlashingRepository> & AttesterSlashingRepository;
   depositEvent: SinonStubbedInstance<DepositEventRepository> & DepositEventRepository;
@@ -40,6 +42,7 @@ export class StubbedBeaconDb extends BeaconDb {
     this.stateArchive = createStubInstance(StateArchiveRepository);
 
     this.voluntaryExit = createStubInstance(VoluntaryExitRepository);
+    this.blsToExecutionChange = createStubInstance(BLSToExecutionChangeRepository);
     this.proposerSlashing = createStubInstance(ProposerSlashingRepository);
     this.attesterSlashing = createStubInstance(AttesterSlashingRepository);
     this.depositEvent = createStubInstance(DepositEventRepository);

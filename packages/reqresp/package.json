@@ -11,14 +11,14 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.2.1",
+  "version": "1.3.0",
   "type": "module",
   "exports": {
     ".": {
       "import": "./lib/index.js"
     },
-    "./messages": {
-      "import": "./lib/messages/index.js"
+    "./protocols": {
+      "import": "./lib/protocols/index.js"
     },
     "./utils": {
       "import": "./lib/utils/index.js"
@@ -59,14 +59,15 @@
     "@chainsafe/snappy-stream": "5.1.1",
     "@libp2p/interface-connection": "^3.0.2",
     "@libp2p/interface-peer-id": "^1.0.4",
-    "@lodestar/types": "^1.2.1",
-    "@lodestar/utils": "^1.2.1",
-    "@lodestar/params": "^1.2.1",
-    "@lodestar/config": "^1.2.1",
-    "stream-to-it": "^0.2.0",
-    "varint": "^6.0.0",
+    "@lodestar/config": "^1.3.0",
+    "@lodestar/params": "^1.3.0",
+    "@lodestar/types": "^1.3.0",
+    "@lodestar/utils": "^1.3.0",
+    "it-all": "^2.0.0",
     "snappyjs": "^0.7.0",
-    "uint8arraylist": "^2.3.2"
+    "stream-to-it": "^0.2.0",
+    "uint8arraylist": "^2.3.2",
+    "varint": "^6.0.0"
   },
   "peerDependencies": {
     "libp2p": "0.39.2"

@@ -49,7 +49,7 @@ export function toBlockHeader(block: altair.BeaconBlock): BeaconBlockHeader {
 }
 
 function deserializePubkeys(pubkeys: altair.LightClientUpdate["nextSyncCommittee"]["pubkeys"]): PublicKey[] {
-  return Array.from(pubkeys).map((pk) => bls.PublicKey.fromBytes(pk));
+  return pubkeys.map((pk) => bls.PublicKey.fromBytes(pk));
 }
 
 function serializePubkeys(pubkeys: PublicKey[]): altair.LightClientUpdate["nextSyncCommittee"]["pubkeys"] {

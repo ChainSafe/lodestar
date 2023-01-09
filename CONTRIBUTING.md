@@ -4,7 +4,7 @@ Thanks for your contribution to Lodestar. It's people like you that push the Eth
 
 ## Prerequisites
 
-- :gear: [NodeJS](https://nodejs.org/) (LTS/Gallium)
+- :gear: [NodeJS](https://nodejs.org/) (LTS)
 - :toolbox: [Yarn](https://yarnpkg.com/)/[Lerna](https://lerna.js.org/)
 
 ## Getting Started
@@ -12,7 +12,7 @@ Thanks for your contribution to Lodestar. It's people like you that push the Eth
 - :gear: Run `lerna bootstrap` or `yarn install` to install dependencies.
 - :gear: Run `yarn build` to build lib from source.
 - :package: A `lodestar` binary will be bundled in `./packages/cli/bin`.
-- :computer: Run `./lodestar --help` to get a list of available commands and argurments.
+- :computer: Run `./lodestar --help` to get a list of available commands and arguments.
 
 ## Tests
 
@@ -184,7 +184,7 @@ Scope is comparable to Module labels but less strict with the definition of comp
 - `scope-documentation`: All issues related to the Lodestar documentation.
 - `scope-interop`: Issues that fix interop issues between Lodestar and CL, EL or tooling.
 - `scope-light-clients`: All issues regarding light client development.
-- `scope-logging`: Issue about logs: hygeine, format issues, improvements.
+- `scope-logging`: Issue about logs: hygiene, format issues, improvements.
 - `scope-memory`: Issues to reduce and improve memory usage.
 - `scope-metrics`: All issues with regards to the exposed metrics.
 - `scope-networking`: All issues related to networking, gossip, and libp2p.
@@ -211,7 +211,7 @@ Issues that target a specific version of the Ethereum consensus spec, shall be t
 - `spec-altair`: Issues targeting the Altair Ethereum consensus spec version.
 - `spec-bellatrix`: Issues targeting the Bellatrix Ethereum consensus spec version.
 
-###### `meta.*` Meta Labels to organize Miscelaneous Issues
+###### `meta.*` Meta Labels to organize Miscellaneous Issues
 
 - `meta-breaking-change`: Introduces breaking changes to DB, Validator, Beacon Node, or CLI interfaces. Handle with care!
 - `meta-dependencies`: Pull requests that update a dependency.

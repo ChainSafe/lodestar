@@ -14,7 +14,7 @@ export function getProofApi(
 
   return {
     async getStateProof(stateId, jsonPaths) {
-      const state = await resolveStateId(config, chain, db, stateId);
+      const {state} = await resolveStateId(config, chain, db, stateId);
 
       // Commit any changes before computing the state root. In normal cases the state should have no changes here
       state.commit();

@@ -24,7 +24,7 @@ export function getDebugApi({chain, config, db}: Pick<ApiModules, "chain" | "con
     },
 
     async getState(stateId: string, format?: routes.debug.StateFormat) {
-      const state = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
+      const {state} = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
       if (format === "ssz") {
         // Casting to any otherwise Typescript doesn't like the multi-type return
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
@@ -35,7 +35,7 @@ export function getDebugApi({chain, config, db}: Pick<ApiModules, "chain" | "con
     },
 
     async getStateV2(stateId: string, format?: routes.debug.StateFormat) {
-      const state = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
+      const {state} = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
       if (format === "ssz") {
         // Casting to any otherwise Typescript doesn't like the multi-type return
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any

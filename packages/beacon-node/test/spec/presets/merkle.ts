@@ -46,6 +46,7 @@ export const merkle: TestRunnerFn<MerkleTestCase, IProof> = (fork) => {
       expectFunc: (testCase, expected, actual) => {
         expect(actual).to.be.deep.equal(expected, "incorrect proof");
       },
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     },
   };
 };

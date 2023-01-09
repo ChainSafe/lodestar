@@ -23,6 +23,12 @@ export interface IAttnetsService extends ISubnetsService {
   shouldProcess(subnet: number, slot: Slot): boolean;
 }
 
+export type RandBetweenFn = (min: number, max: number) => number;
+export type ShuffleFn = <T>(arr: T[]) => T[];
+
 export type SubnetsServiceOpts = {
   subscribeAllSubnets?: boolean;
+  // For deterministic randomness in unit test after ESM prevents simple import mocking
+  randBetweenFn?: RandBetweenFn;
+  shuffleFn?: ShuffleFn;
 };

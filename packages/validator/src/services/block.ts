@@ -127,7 +127,7 @@ export class BlockProposingService {
       : null;
 
     const fullBlockPromise = this.produceBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
-      this.logger.error("Failed to produce builder block", {}, e as Error);
+      this.logger.error("Failed to produce execution block", {}, e as Error);
       return null;
     });
 

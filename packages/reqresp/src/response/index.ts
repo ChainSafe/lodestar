@@ -8,6 +8,8 @@ import {ProtocolDefinition} from "../types.js";
 import {requestDecode} from "../encoders/requestDecode.js";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
 import {RespStatus} from "../interface.js";
+import {RequestError, RequestErrorCode} from "../request/errors.js";
+import {ReqRespRateLimiter} from "../rate_limiter/ReqRespRateLimiter.js";
 import {ResponseError} from "./errors.js";
 
 export {ResponseError};
@@ -20,6 +22,8 @@ export interface HandleRequestOpts<Req, Resp> {
   stream: Stream;
   peerId: PeerId;
   protocol: ProtocolDefinition<Req, Resp>;
+  protocolID: string;
+  rateLimiter: ReqRespRateLimiter;
   signal?: AbortSignal;
   requestId?: number;
   /** Peer client type for logging and metrics: 'prysm' | 'lighthouse' */
@@ -43,6 +47,8 @@ export async function handleRequest<Req, Resp>({
   stream,
   peerId,
   protocol,
+  protocolID,
+  rateLimiter,
   signal,
   requestId = 0,
   peerClient = "unknown",
@@ -72,6 +78,15 @@ export async function handleRequest<Req, Resp>({
         });
 
         logger.debug("Resp received request", {...logCtx, body: protocol.renderRequestBody?.(requestBody)});
+
+        const requestCount = protocol?.inboundRateLimits?.getRequestCount?.(requestBody) ?? 1;
+
+        if (!rateLimiter.allows(peerId, protocolID, requestCount)) {
+          throw new RequestError(
+            {code: RequestErrorCode.REQUEST_RATE_LIMITED},
+            {peer: peerId.toString(), method: protocol.method, encoding: protocol.encoding}
+          );
+        }
 
         yield* pipe(
           // TODO: Debug the reason for type conversion here

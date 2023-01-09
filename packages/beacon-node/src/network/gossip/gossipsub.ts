@@ -6,7 +6,7 @@ import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
 import {IBeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {allForks, altair, phase0} from "@lodestar/types";
+import {allForks, altair, phase0, capella, eip4844} from "@lodestar/types";
 import {ILogger, Map2d, Map2dArr} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 
@@ -24,7 +24,7 @@ import {
   ValidatorFnsByType,
   GossipHandlers,
 } from "./interface.js";
-import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic.js";
+import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic, getCoreTopicsAtFork} from "./topic.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
 import {createValidatorFnsByType} from "./validation/index.js";
 
@@ -200,6 +200,14 @@ export class Eth2Gossipsub extends GossipSub {
     await this.publishObject<GossipType.beacon_block>({type: GossipType.beacon_block, fork}, signedBlock);
   }
 
+  async publishSignedBeaconBlockAndBlobsSidecar(item: eip4844.SignedBeaconBlockAndBlobsSidecar): Promise<void> {
+    const fork = this.config.getForkName(item.beaconBlock.message.slot);
+    await this.publishObject<GossipType.beacon_block_and_blobs_sidecar>(
+      {type: GossipType.beacon_block_and_blobs_sidecar, fork},
+      item
+    );
+  }
+
   async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number> {
     const fork = this.config.getForkName(aggregateAndProof.message.aggregate.data.slot);
     return await this.publishObject<GossipType.beacon_aggregate_and_proof>(
@@ -219,6 +227,14 @@ export class Eth2Gossipsub extends GossipSub {
   async publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void> {
     const fork = this.config.getForkName(computeStartSlotAtEpoch(voluntaryExit.message.epoch));
     await this.publishObject<GossipType.voluntary_exit>({type: GossipType.voluntary_exit, fork}, voluntaryExit);
+  }
+
+  async publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<void> {
+    const fork = ForkName.capella;
+    await this.publishObject<GossipType.bls_to_execution_change>(
+      {type: GossipType.bls_to_execution_change, fork},
+      blsToExecutionChange
+    );
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
@@ -404,28 +420,12 @@ function attSubnetLabel(subnet: number): string {
 
 function getMetricsTopicStrToLabel(config: IBeaconConfig): TopicStrToLabel {
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
-  const topics: GossipTopic[] = [];
 
   for (const {name: fork} of config.forksAscendingEpochOrder) {
-    for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-      topics.push({fork, type: GossipType.beacon_attestation, subnet});
+    const topics = getCoreTopicsAtFork(fork, {subscribeAllSubnets: true});
+    for (const topic of topics) {
+      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, fork}), topic.type);
     }
-
-    for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
-      topics.push({fork, type: GossipType.sync_committee, subnet});
-    }
-
-    topics.push({fork, type: GossipType.beacon_block});
-    topics.push({fork, type: GossipType.beacon_aggregate_and_proof});
-    topics.push({fork, type: GossipType.voluntary_exit});
-    topics.push({fork, type: GossipType.proposer_slashing});
-    topics.push({fork, type: GossipType.attester_slashing});
-    topics.push({fork, type: GossipType.sync_committee_contribution_and_proof});
   }
-
-  for (const topic of topics) {
-    metricsTopicStrToLabel.set(stringifyGossipTopic(config, topic), topic.type);
-  }
-
   return metricsTopicStrToLabel;
 }

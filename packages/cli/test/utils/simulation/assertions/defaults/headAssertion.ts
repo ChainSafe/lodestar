@@ -1,25 +1,35 @@
+import {RootHex, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {SimulationAssertion} from "../../interfaces.js";
 import {everySlotMatcher} from "../matchers.js";
 
-export const headAssertion: SimulationAssertion<"head", string> = {
+export interface HeadSummary {
+  blockRoot: RootHex;
+  slot: Slot;
+}
+
+export const headAssertion: SimulationAssertion<"head", HeadSummary> = {
   id: "head",
   async capture({node}) {
     const head = await node.cl.api.beacon.getBlockHeader("head");
-    return toHexString(head.data.root);
+
+    return {
+      blockRoot: toHexString(head.data.root),
+      slot: head.data.header.message.slot,
+    };
   },
 
   match: everySlotMatcher,
   async assert({nodes, store, slot}) {
     const errors: string[] = [];
 
-    const headOnFirstNode = store[nodes[0].cl.id][slot];
+    const headRootNode0 = store[nodes[0].cl.id][slot].blockRoot;
 
     for (let i = 1; i < nodes.length; i++) {
-      const headOnNNode = store[nodes[i].cl.id][slot];
+      const headRootNodeN = store[nodes[i].cl.id][slot].blockRoot;
 
-      if (headOnFirstNode !== headOnNNode) {
-        errors.push(`node have different heads. ${JSON.stringify({slot, headOnFirstNode, headOnNNode})}`);
+      if (headRootNode0 !== headRootNodeN) {
+        errors.push(`node have different heads. ${JSON.stringify({slot, headRootNode0, headRootNodeN})}`);
       }
     }
 

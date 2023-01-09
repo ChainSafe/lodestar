@@ -1,5 +1,6 @@
 import {routes} from "@lodestar/api/beacon";
-import {SimulationAssertion} from "../interfaces.js";
+import type {SecretKey} from "@chainsafe/bls/types";
+import {CLClientKeys, SimulationAssertion} from "../interfaces.js";
 import {arrayEquals} from "../utils/index.js";
 import {neverMatcher} from "./matchers.js";
 
@@ -16,18 +17,20 @@ export const nodeAssertion: SimulationAssertion<"node", string> = {
       if (health !== routes.node.NodeHealth.SYNCING && health !== routes.node.NodeHealth.READY) {
         errors.push(`node health is neither READY or SYNCING. ${JSON.stringify({id: node.cl.id})}`);
       }
+      const keys = getAllKeys(node.cl.keys);
 
-      const keyManagerKeys = (await node.cl.keyManager.listKeys()).data.map((k) => k.validatingPubkey).sort();
-      const existingKeys = [
-        ...node.cl.remoteKeys.map((k) => k.toPublicKey().toHex()),
-        ...node.cl.localKeys.map((k) => k.toPublicKey().toHex()),
-      ].sort();
+      if (keys.length === 0) {
+        continue;
+      }
 
-      if (!arrayEquals(keyManagerKeys, existingKeys)) {
+      const keyManagerKeys = (await node.cl.keyManager.listKeys()).data.map((k) => k.validatingPubkey);
+      const expectedPubkeys = keys.map((k) => k.toPublicKey().toHex());
+
+      if (!arrayEquals(keyManagerKeys.sort(), expectedPubkeys.sort())) {
         errors.push(
           `Validator should have correct number of keys loaded. ${JSON.stringify({
             id: node.cl.id,
-            existingKeys,
+            expectedPubkeys,
             keyManagerKeys,
           })}`
         );
@@ -37,3 +40,14 @@ export const nodeAssertion: SimulationAssertion<"node", string> = {
     return errors;
   },
 };
+
+function getAllKeys(keys: CLClientKeys): SecretKey[] {
+  switch (keys.type) {
+    case "local":
+      return keys.secretKeys;
+    case "remote":
+      return keys.secretKeys;
+    case "no-keys":
+      return [];
+  }
+}

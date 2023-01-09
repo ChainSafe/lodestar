@@ -49,7 +49,7 @@ describe("signatureSets", () => {
       },
     };
 
-    const signedBlock: phase0.SignedBeaconBlock = {
+    const signedBlock: capella.SignedBeaconBlock = {
       message: block,
       signature: EMPTY_SIGNATURE,
     };
@@ -172,10 +172,15 @@ function getMockSignedVoluntaryExit(data: ISignedVoluntaryExitData): phase0.Sign
   };
 }
 
-function getMockSignedBlsToExecutionChange(data: ISignedVoluntaryExitData): capella.SignedBLSToExecutionChange {
+interface ISignedBLStoExecutionChange {
+  signature: BLSSignature;
+  validatorIndex: ValidatorIndex;
+}
+
+function getMockSignedBlsToExecutionChange(data: ISignedBLStoExecutionChange): capella.SignedBLSToExecutionChange {
   return {
     message: {
-      validatorIndex: 0,
+      validatorIndex: data.validatorIndex,
       fromBlsPubkey: Buffer.alloc(48),
       toExecutionAddress: Buffer.alloc(20),
     },

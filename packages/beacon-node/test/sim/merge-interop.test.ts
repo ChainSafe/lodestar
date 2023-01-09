@@ -5,11 +5,12 @@ import {isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-t
 import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
+import {routes} from "@lodestar/api";
 import {Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ExecutePayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
-import {ExecutionEngineHttp} from "../../src/execution/engine/http.js";
+import {initializeExecutionEngine} from "../../src/execution/index.js";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
@@ -107,8 +108,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
 
     //const controller = new AbortController();
-    const executionEngine = new ExecutionEngineHttp(
-      {urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay},
+    const executionEngine = initializeExecutionEngine(
+      {mode: "http", urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay},
       {signal: controller.signal}
     );
 
@@ -123,7 +124,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       timestamp: quantityToNum("0x5"),
       prevRandao: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000", 32),
       suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
-      fork: ForkName.bellatrix,
     };
 
     const finalizedBlockHash = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -240,7 +240,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
-    const event = ChainEvent.finalized;
 
     const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
       SECONDS_PER_SLOT: 2,
@@ -398,11 +397,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         }
       });
 
-      bn.chain.emitter.on(ChainEvent.finalized, (checkpoint) => {
+      bn.chain.emitter.on(routes.events.EventType.finalizedCheckpoint, (checkpoint) => {
         // Resolve only if the finalized checkpoint includes execution payload
-        const finalizedBlock = bn.chain.forkChoice.getBlock(checkpoint.root);
+        const finalizedBlock = bn.chain.forkChoice.getBlockHex(checkpoint.block);
         if (finalizedBlock?.executionPayloadBlockHash !== null) {
-          console.log(`\nGot event ${event}, stopping validators and nodes\n`);
+          console.log(`\nGot finalized event, stopping validators and nodes\n`);
           resolve();
         }
       });

@@ -146,6 +146,12 @@ export async function* sendRequest<Req, Resp>(
 
     logger.debug("Req  request sent", logCtx);
 
+    // For goodbye method peers may disconnect before completing the response and trigger multiple errors.
+    // Do not expect them to reply and successfully return early
+    if (protocol.ignoreResponse) {
+      return;
+    }
+
     // - TTFB_TIMEOUT: The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
     // - RESP_TIMEOUT: Requester allows a further RESP_TIMEOUT for each subsequent response_chunk
     // - Max total timeout: This timeout is not required by the spec. It may not be necessary, but it's kept as

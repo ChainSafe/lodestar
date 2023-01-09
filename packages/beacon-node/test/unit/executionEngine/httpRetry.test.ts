@@ -3,9 +3,9 @@ import {fastify} from "fastify";
 import {ForkName} from "@lodestar/params";
 import {fromHexString} from "@chainsafe/ssz";
 
-import {ExecutionEngineHttp, defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
+import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
-import {PayloadAttributes} from "../../../src/execution/index.js";
+import {IExecutionEngine, initializeExecutionEngine, PayloadAttributes} from "../../../src/execution/index.js";
 
 describe("ExecutionEngine / http ", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];
@@ -16,7 +16,7 @@ describe("ExecutionEngine / http ", () => {
     }
   });
 
-  let executionEngine: ExecutionEngineHttp;
+  let executionEngine: IExecutionEngine;
   let returnValue: unknown = {};
   let reqJsonRpcPayload: unknown = {};
   let baseUrl: string;
@@ -45,8 +45,9 @@ describe("ExecutionEngine / http ", () => {
 
     baseUrl = await server.listen(0);
 
-    executionEngine = new ExecutionEngineHttp(
+    executionEngine = initializeExecutionEngine(
       {
+        mode: "http",
         urls: [baseUrl],
         retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
         retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
@@ -100,7 +101,6 @@ describe("ExecutionEngine / http ", () => {
         timestamp: 1647036763,
         prevRandao: fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
         suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
-        fork: ForkName.bellatrix,
       };
 
       const request = {

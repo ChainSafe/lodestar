@@ -3,7 +3,7 @@ import {BLSPubkey, ssz} from "@lodestar/types";
 import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
 import {ILogger} from "@lodestar/utils";
-import {getClient, Api} from "@lodestar/api";
+import {getClient, Api, routes} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Clock, IClock} from "./util/clock.js";
@@ -19,7 +19,7 @@ import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ValidatorStore, Signer, ValidatorProposerConfig} from "./services/validatorStore.js";
 import {ProcessShutdownCallback, PubkeyHex} from "./types.js";
-import {Metrics} from "./metrics.js";
+import {BeaconHealth, Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 
@@ -158,6 +158,14 @@ export class Validator {
       this.state = Status.running;
       this.clock.start(this.controller.signal);
       this.chainHeaderTracker.start(this.controller.signal);
+
+      if (metrics) {
+        this.clock.runEverySlot(() =>
+          this.fetchBeaconHealth()
+            .then((health) => metrics.beaconHealth.set(health))
+            .catch((e) => this.logger.error("Error on fetchBeaconHealth", {}, e))
+        );
+      }
     }
   }
 
@@ -234,6 +242,20 @@ export class Validator {
     await this.api.beacon.submitPoolVoluntaryExit(signedVoluntaryExit);
 
     this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
+  }
+
+  private async fetchBeaconHealth(): Promise<BeaconHealth> {
+    try {
+      const healthCode = await this.api.node.getHealth();
+      if (healthCode === routes.node.NodeHealth.READY) return BeaconHealth.READY;
+      if (healthCode === routes.node.NodeHealth.SYNCING) return BeaconHealth.SYNCING;
+      if (healthCode === routes.node.NodeHealth.NOT_INITIALIZED_OR_ISSUES)
+        return BeaconHealth.NOT_INITIALIZED_OR_ISSUES;
+      else return BeaconHealth.UNKNOWN;
+    } catch (e) {
+      // TODO: Filter by network error type
+      return BeaconHealth.ERROR;
+    }
   }
 }
 

@@ -1,3 +1,5 @@
+import {sleep} from "@lodestar/utils";
+
 export const MS_IN_SEC = 1000;
 
 export class EpochClock {
@@ -65,6 +67,10 @@ export class EpochClock {
     return this.genesisTime + slotGenesisTimeOffset;
   }
 
+  msToGenesis(): number {
+    return this.genesisTime * 1000 - Date.now();
+  }
+
   isFirstSlotOfEpoch(slot: number): boolean {
     return slot % this.slotsPerEpoch === 0;
   }
@@ -73,25 +79,12 @@ export class EpochClock {
     return slot % this.slotsPerEpoch === this.slotsPerEpoch - 1;
   }
 
-  waitForStartOfSlot(slot: number): Promise<this> {
+  async waitForStartOfSlot(slot: number, silent = false): Promise<this> {
     // eslint-disable-next-line no-console
-    console.log("Waiting for start of slot", {target: slot, current: this.currentSlot});
-
-    return new Promise((resolve) => {
-      const slotTime = this.getSlotTime(slot) * MS_IN_SEC - Date.now();
-
-      const timeout = setTimeout(() => {
-        resolve(this);
-      }, slotTime);
-
-      this.signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timeout);
-        },
-        {once: true}
-      );
-    });
+    if (!silent) console.log("Waiting for start of slot", {target: slot, current: this.currentSlot});
+    const slotTime = this.getSlotTime(slot) * MS_IN_SEC - Date.now();
+    await sleep(slotTime, this.signal);
+    return this;
   }
 
   waitForEndOfSlot(slot: number): Promise<this> {

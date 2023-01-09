@@ -35,11 +35,17 @@ type Types = Record<string, Type<any>>;
 // tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
 //
 
-export const sszStatic = (fork: ForkName, typeName: string, testSuite: string, testSuiteDirpath: string): void => {
-  if (["LightClientBootstrap", "LightClientFinalityUpdate", "LightClientOptimisticUpdate"].includes(typeName)) {
-    // We don't have sszTypes for these typeNames yet, renable them as we add
+export const sszStatic = (skippedTypes: string[]) => (
+  fork: ForkName,
+  typeName: string,
+  testSuite: string,
+  testSuiteDirpath: string
+): void => {
+  // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+  if (skippedTypes.includes(typeName)) {
     return;
   }
+
   /* eslint-disable @typescript-eslint/strict-boolean-expressions */
   const sszType =
     (ssz[fork] as Types)[typeName] ||
@@ -54,9 +60,7 @@ export const sszStatic = (fork: ForkName, typeName: string, testSuite: string, t
   const sszTypeNoUint = replaceUintTypeWithUintBigintType(sszType);
 
   for (const testCase of fs.readdirSync(testSuiteDirpath)) {
-    if (testSuiteDirpath.includes("LightClientUpdate")) {
-      continue;
-    }
+    // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
     it(testCase, function () {
       // Mainnet must deal with big full states and hash each one multiple times
       if (ACTIVE_PRESET === "mainnet") {

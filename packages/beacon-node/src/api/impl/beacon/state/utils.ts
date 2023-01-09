@@ -7,6 +7,8 @@ import {
   createCachedBeaconState,
   createEmptyEpochContextImmutableData,
   PubkeyIndexMap,
+  ExecutionPayloadStatus,
+  DataAvailableStatus,
 } from "@lodestar/state-transition";
 import {BLSPubkey, phase0} from "@lodestar/types";
 import {stateTransition, processSlots} from "@lodestar/state-transition";
@@ -19,6 +21,7 @@ import {IBeaconChain} from "../../../../chain/index.js";
 import {StateContextCache} from "../../../../chain/stateCache/index.js";
 import {IBeaconDb} from "../../../../db/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
+import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 
 type ResolveStateIdOpts = {
   /**
@@ -35,13 +38,13 @@ export async function resolveStateId(
   db: IBeaconDb,
   stateId: routes.beacon.StateId,
   opts?: ResolveStateIdOpts
-): Promise<BeaconStateAllForks> {
-  const state = await resolveStateIdOrNull(config, chain, db, stateId, opts);
+): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean}> {
+  const {state, executionOptimistic} = await resolveStateIdOrNull(config, chain, db, stateId, opts);
   if (!state) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
   }
 
-  return state;
+  return {state, executionOptimistic};
 }
 
 async function resolveStateIdOrNull(
@@ -50,14 +53,14 @@ async function resolveStateIdOrNull(
   db: IBeaconDb,
   stateId: routes.beacon.StateId,
   opts?: ResolveStateIdOpts
-): Promise<BeaconStateAllForks | null> {
+): Promise<{state: BeaconStateAllForks | null; executionOptimistic: boolean}> {
   stateId = String(stateId).toLowerCase();
   if (stateId === "head" || stateId === "genesis" || stateId === "finalized" || stateId === "justified") {
     return await stateByName(db, chain.stateCache, chain.forkChoice, stateId);
   }
 
   if (stateId.startsWith("0x")) {
-    return await stateByRoot(db, chain.stateCache, stateId);
+    return await stateByRoot(db, chain.stateCache, chain.forkChoice, stateId);
   }
 
   // state id must be slot
@@ -119,16 +122,35 @@ async function stateByName(
   stateCache: StateContextCache,
   forkChoice: IForkChoice,
   stateId: routes.beacon.StateId
-): Promise<CachedBeaconStateAllForks | BeaconStateAllForks | null> {
+): Promise<{state: BeaconStateAllForks | null; executionOptimistic: boolean}> {
   switch (stateId) {
-    case "head":
-      return stateCache.get(forkChoice.getHead().stateRoot) ?? null;
+    case "head": {
+      const head = forkChoice.getHead();
+      const state = stateCache.get(head.stateRoot) ?? null;
+      if (state) {
+        return {state, executionOptimistic: isOptimisticBlock(head)};
+      }
+      return {state: null, executionOptimistic: false};
+    }
     case "genesis":
-      return await db.stateArchive.get(GENESIS_SLOT);
-    case "finalized":
-      return stateCache.get(forkChoice.getFinalizedBlock().stateRoot) ?? null;
-    case "justified":
-      return stateCache.get(forkChoice.getJustifiedBlock().stateRoot) ?? null;
+      return {
+        state: await db.stateArchive.get(GENESIS_SLOT),
+        executionOptimistic: false,
+      };
+    case "finalized": {
+      const state = stateCache.get(forkChoice.getFinalizedBlock().stateRoot) ?? null;
+      return {
+        state,
+        executionOptimistic: false,
+      };
+    }
+    case "justified": {
+      const justifiedBlock = forkChoice.getJustifiedBlock();
+      const state = stateCache.get(justifiedBlock.stateRoot) ?? null;
+      return state
+        ? {state, executionOptimistic: isOptimisticBlock(justifiedBlock)}
+        : {state: null, executionOptimistic: false};
+    }
     default:
       throw new Error("not a named state id");
   }
@@ -137,13 +159,21 @@ async function stateByName(
 async function stateByRoot(
   db: IBeaconDb,
   stateCache: StateContextCache,
+  forkChoice: IForkChoice,
   stateId: routes.beacon.StateId
-): Promise<BeaconStateAllForks | null> {
+): Promise<{state: BeaconStateAllForks | null; executionOptimistic: boolean}> {
   if (typeof stateId === "string" && stateId.startsWith("0x")) {
     const stateRoot = stateId;
     const cachedStateCtx = stateCache.get(stateRoot);
-    if (cachedStateCtx) return cachedStateCtx;
-    return await db.stateArchive.getByRoot(fromHexString(stateRoot));
+    if (cachedStateCtx) {
+      const blockRoot = cachedStateCtx.latestBlockHeader.hashTreeRoot();
+      const block = forkChoice.getBlock(blockRoot);
+      return {state: cachedStateCtx, executionOptimistic: block != null && isOptimisticBlock(block)};
+    }
+    return {
+      state: await db.stateArchive.getByRoot(fromHexString(stateRoot)),
+      executionOptimistic: false,
+    };
   } else {
     throw new Error("not a root state id");
   }
@@ -156,20 +186,20 @@ async function stateBySlot(
   forkChoice: IForkChoice,
   slot: Slot,
   opts?: ResolveStateIdOpts
-): Promise<BeaconStateAllForks | null> {
+): Promise<{state: BeaconStateAllForks | null; executionOptimistic: boolean}> {
   const blockSummary = forkChoice.getCanonicalBlockAtSlot(slot);
   if (blockSummary) {
     const state = stateCache.get(blockSummary.stateRoot);
     if (state) {
-      return state;
+      return {state, executionOptimistic: isOptimisticBlock(blockSummary)};
     }
   }
 
   if (opts?.regenFinalizedState) {
-    return await getFinalizedState(config, db, forkChoice, slot);
+    return {state: await getFinalizedState(config, db, forkChoice, slot), executionOptimistic: false};
   }
 
-  return await db.stateArchive.get(slot);
+  return {state: await db.stateArchive.get(slot), executionOptimistic: false};
 }
 
 export function filterStateValidatorsByStatus(
@@ -222,6 +252,9 @@ async function getFinalizedState(
   // process blocks up to the requested slot
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
     state = stateTransition(state, block, {
+      // Replaying finalized blocks, all data is considered valid
+      executionPayloadStatus: ExecutionPayloadStatus.valid,
+      dataAvailableStatus: DataAvailableStatus.available,
       verifyStateRoot: false,
       verifyProposer: false,
       verifySignatures: false,

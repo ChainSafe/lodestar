@@ -3,7 +3,7 @@ import {mkdir, writeFile} from "node:fs/promises";
 import {join} from "node:path";
 import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
-import {ELClient, ELClientGenerator, ELNode, JobOptions} from "../interfaces.js";
+import {ELClient, ELClientGenerator, JobOptions} from "../interfaces.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {isDockerRunner} from "../runner/index.js";
 import {getNethermindChainSpec} from "../utils/el_genesis.js";
@@ -46,9 +46,13 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (
   const jwtSecretContainerPath = join(containerDataDir, "jwtsecret");
 
   const startJobOptions: JobOptions = {
+    id,
     bootstrap: async () => {
       await mkdir(dataDir, {recursive: true});
-      await writeFile(chainSpecPath, JSON.stringify(getNethermindChainSpec(mode, {ttd, cliqueSealingPeriod})));
+      await writeFile(
+        chainSpecPath,
+        JSON.stringify(getNethermindChainSpec(mode, {ttd, cliqueSealingPeriod, clientOptions: []}))
+      );
       await writeFile(jwtSecretPath, jwtSecretHex);
     },
     cli: {
@@ -99,12 +103,12 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (
     logs: {
       stdoutFilePath: logFilePath,
     },
-    health: async (): Promise<boolean> => {
+    health: async () => {
       try {
         await got.post(ethRpcUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
-        return true;
-      } catch (e) {
-        return false;
+        return {ok: true};
+      } catch (err) {
+        return {ok: false, reason: (err as Error).message, checkId: "JSON RPC query net_version"};
       }
     },
   };
@@ -122,7 +126,7 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (
     {providerUrls: [ethRpcUrl, engineRpcUrl], jwtSecretHex}
   );
 
-  const node: ELNode = {
+  return {
     client: ELClient.Nethermind,
     id,
     engineRpcUrl,
@@ -130,7 +134,6 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (
     ttd,
     jwtSecretHex,
     provider,
+    job,
   };
-
-  return {job, node};
 };

@@ -17,9 +17,12 @@ import {
   EL_ETH_BASE_PORT,
   EL_P2P_BASE_PORT,
   KEY_MANAGER_BASE_PORT,
+  MOCK_ETH1_GENESIS_HASH,
+  SHARED_JWT_SECRET,
   SIM_TESTS_SECONDS_PER_SLOT,
 } from "./constants.js";
 import {generateGethNode} from "./el_clients/geth.js";
+import {generateMockNode} from "./el_clients/mock.js";
 import {generateNethermindNode} from "./el_clients/nethermind.js";
 import {EpochClock} from "./EpochClock.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
@@ -27,17 +30,13 @@ import {
   AtLeast,
   CLClient,
   CLClientGeneratorOptions,
-  CLClientsOptions,
   CLNode,
   ELClient,
-  ELClientsOptions,
   ELGeneratorClientOptions,
   ELNode,
   ELStartMode,
-  Job,
   NodePair,
   NodePairOptions,
-  NodePairResult,
   SimulationInitOptions,
   SimulationOptions,
 } from "./interfaces.js";
@@ -46,7 +45,9 @@ import {DockerRunner} from "./runner/DockerRunner.js";
 import {SimulationTracker} from "./SimulationTracker.js";
 import {getEstimatedTTD} from "./utils/index.js";
 
-export const SHARED_JWT_SECRET = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
+interface StartOpts {
+  runTimeoutMs: number;
+}
 
 /* eslint-disable no-console */
 
@@ -62,7 +63,6 @@ export class SimulationEnvironment {
   readonly forkConfig: IChainForkConfig;
   readonly options: SimulationOptions;
 
-  private readonly jobs: {cl: Job; el: Job}[] = [];
   private keysCount = 0;
   private nodePairCount = 0;
   private genesisState?: BeaconStateAllForks;
@@ -126,20 +126,37 @@ export class SimulationEnvironment {
     });
 
     for (const client of clients) {
-      const result = env.createNodePair(client);
-      env.jobs.push(result.jobs);
-      env.nodes.push(result.nodePair);
+      env.nodes.push(env.createNodePair(client));
     }
 
     return env;
   }
 
-  async start(timeout: number): Promise<void> {
-    try {
-      setTimeout(async () => {
-        await this.stop(1, "On timeout");
-      }, timeout);
+  async start(opts: StartOpts): Promise<void> {
+    const currentTime = Date.now();
+    setTimeout(() => {
+      const slots = this.clock.getSlotFor(currentTime + opts.runTimeoutMs);
+      const epoch = this.clock.getEpochForSlot(slots);
+      const slot = this.clock.getSlotIndexInEpoch(slots);
 
+      this.stop(1, `Sim run timedout in ${opts.runTimeoutMs}ms (approx. ${epoch}/${slot}).`).catch((e) =>
+        console.error("Error on stop", e)
+      );
+    }, opts.runTimeoutMs);
+
+    const msToGenesis = this.clock.msToGenesis();
+    const startTimeout = setTimeout(() => {
+      const slots = this.clock.getSlotFor(currentTime + msToGenesis);
+      const epoch = this.clock.getEpochForSlot(slots);
+      const slot = this.clock.getSlotIndexInEpoch(slots);
+
+      this.stop(
+        1,
+        `Start sequence not completed before genesis, in ${msToGenesis}ms (approx. ${epoch}/${slot}).`
+      ).catch((e) => console.error("Error on stop", e));
+    }, msToGenesis);
+
+    try {
       process.on("unhandledRejection", async (reason, promise) => {
         console.error("Unhandled Rejection at:", promise, "reason:", reason);
         await this.stop(1, "Unhandled promise rejection");
@@ -160,11 +177,16 @@ export class SimulationEnvironment {
       await mkdir(this.options.rootDir);
 
       await this.dockerRunner.start();
-      await Promise.all(this.jobs.map((j) => j.el.start()));
+      await Promise.all(this.nodes.map((node) => node.el.job.start()));
 
       for (let i = 0; i < this.nodes.length; i++) {
         // Get genesis block hash
-        const eth1Genesis = await this.nodes[i].el.provider.getBlockByNumber(0);
+        const el = this.nodes[i].el;
+
+        // If eth1 is mock then genesis hash would be empty
+        const eth1Genesis =
+          el.provider === null ? {hash: MOCK_ETH1_GENESIS_HASH} : await el.provider.getBlockByNumber(0);
+
         if (!eth1Genesis) {
           throw new Error(`Eth1 genesis not found for node "${this.nodes[i].id}"`);
         }
@@ -183,21 +205,30 @@ export class SimulationEnvironment {
 
       await writeFile(this.genesisStatePath, this.genesisState.serialize());
 
-      await Promise.all(this.jobs.map((j) => j.cl.start()));
+      await Promise.all(this.nodes.map((node) => node.cl.job.start()));
 
-      await this.externalSigner.start();
-      for (const node of this.nodes) {
-        const remoteKeys = node.cl.remoteKeys;
-        this.externalSigner.addKeys(remoteKeys);
-        await node.cl.keyManager.importRemoteKeys(
-          remoteKeys.map((sk) => ({pubkey: sk.toPublicKey().toHex(), url: this.externalSigner.url}))
-        );
+      if (this.nodes.some((node) => node.cl.keys.type === "remote")) {
+        console.log("Starting external signer...");
+        await this.externalSigner.start();
+        console.log("Started external signer");
+
+        for (const node of this.nodes) {
+          if (node.cl.keys.type === "remote") {
+            this.externalSigner.addKeys(node.cl.keys.secretKeys);
+            await node.cl.keyManager.importRemoteKeys(
+              node.cl.keys.secretKeys.map((sk) => ({pubkey: sk.toPublicKey().toHex(), url: this.externalSigner.url}))
+            );
+            console.log(`Imported remote keys for node ${node.id}`);
+          }
+        }
       }
 
       await this.tracker.start();
       await Promise.all(this.nodes.map((node) => this.tracker.track(node)));
     } catch (error) {
-      await this.stop(1, `Caused error in startup. ${(error as Error).message}`);
+      await this.stop(1, `Error in startup. ${(error as Error).stack}`);
+    } finally {
+      clearTimeout(startTimeout);
     }
   }
 
@@ -209,8 +240,8 @@ export class SimulationEnvironment {
     console.log(`Simulation environment "${this.options.id}" is stopping: ${message}`);
     this.options.controller.abort();
     await this.tracker.stop();
-    await Promise.all(this.jobs.map((j) => j.el.stop()));
-    await Promise.all(this.jobs.map((j) => j.cl.stop()));
+    await Promise.all(this.nodes.map((node) => node.el.job.stop()));
+    await Promise.all(this.nodes.map((node) => node.cl.job.stop()));
     await this.externalSigner.stop();
     await this.dockerRunner.stop();
 
@@ -229,7 +260,7 @@ export class SimulationEnvironment {
     id,
     remote,
     mining,
-  }: NodePairOptions<C, E>): NodePairResult {
+  }: NodePairOptions<C, E>): NodePair {
     if (this.genesisState && keysCount > 0) {
       throw new Error("Genesis state already initialized. Can not add more keys to it.");
     }
@@ -241,30 +272,34 @@ export class SimulationEnvironment {
     });
     this.keysCount += keysCount;
 
-    const clClient = this.createCLNode(cl, {
+    const clType = typeof cl === "object" ? cl.type : cl;
+    const clOptions = typeof cl === "object" ? cl.options : {};
+    const clNode = this.createCLNode(clType, {
+      ...clOptions,
       id,
-      remoteKeys: remote ? keys : [],
-      localKeys: remote ? [] : keys,
+      keys:
+        keys.length > 0 && remote
+          ? {type: "remote", secretKeys: keys}
+          : keys.length > 0
+          ? {type: "local", secretKeys: keys}
+          : {type: "no-keys"},
+      engineMock: typeof el === "string" ? el === ELClient.Mock : el.type === ELClient.Mock,
     });
 
-    const elClient = this.createELNode(el, {id, mining});
+    const elType = typeof el === "object" ? el.type : el;
+    const elOptions = typeof el === "object" ? el.options : {};
+    const elNode = this.createELNode(elType, {...elOptions, id, mining});
 
-    return {
-      nodePair: {id, el: elClient.node, cl: clClient.node},
-      jobs: {el: elClient.job, cl: clClient.job},
-    };
+    return {id, el: elNode, cl: clNode};
   }
 
   private createCLNode<C extends CLClient>(
-    client: C | {type: C; options: CLClientsOptions[C]},
-    options?: AtLeast<CLClientGeneratorOptions, "remoteKeys" | "localKeys" | "id">
-  ): {job: Job; node: CLNode} {
-    const clientType = typeof client === "object" ? client.type : client;
-    const clientOptions = typeof client === "object" ? client.options : undefined;
+    client: C,
+    options?: AtLeast<CLClientGeneratorOptions<C>, "keys" | "id">
+  ): CLNode {
+    const clId = `${options?.id}-cl-${client}`;
 
-    const clId = `${options?.id}-cl-${clientType}`;
-
-    switch (clientType) {
+    switch (client) {
       case CLClient.Lodestar: {
         const opts: CLClientGeneratorOptions = {
           id: clId,
@@ -276,12 +311,14 @@ export class SimulationEnvironment {
           keyManagerPort: KEY_MANAGER_BASE_PORT + this.nodePairCount + 1,
           config: this.forkConfig,
           address: "127.0.0.1",
-          remoteKeys: options?.remoteKeys ?? [],
-          localKeys: options?.localKeys ?? [],
+          keys: options?.keys ?? {type: "no-keys"},
           genesisTime: this.options.genesisTime,
-          engineUrl: options?.engineUrl ?? `http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`,
+          engineUrls: options?.engineUrls
+            ? [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`, ...options.engineUrls]
+            : [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`],
+          engineMock: options?.engineMock ?? false,
           jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
-          clientOptions: clientOptions ?? {},
+          clientOptions: options?.clientOptions ?? {},
         };
         return generateLodestarBeaconNode(opts, this.childProcessRunner);
       }
@@ -290,14 +327,8 @@ export class SimulationEnvironment {
     }
   }
 
-  private createELNode<E extends ELClient>(
-    client: E | {type: E; options: ELClientsOptions[E]},
-    options: AtLeast<ELGeneratorClientOptions, "id">
-  ): {job: Job; node: ELNode} {
-    const clientType = typeof client === "object" ? client.type : client;
-    const clientOptions = typeof client === "object" ? client.options : undefined;
-
-    const elId = `${options.id}-el-${clientType}`;
+  private createELNode<E extends ELClient>(client: E, options: AtLeast<ELGeneratorClientOptions<E>, "id">): ELNode {
+    const elId = `${options.id}-el-${client}`;
 
     const opts: ELGeneratorClientOptions<E> = {
       id: elId,
@@ -312,10 +343,13 @@ export class SimulationEnvironment {
       port: options?.port ?? EL_P2P_BASE_PORT + this.nodePairCount + 1,
       address: this.dockerRunner.getNextIp(),
       mining: options?.mining ?? false,
-      clientOptions: clientOptions ?? [],
+      clientOptions: options.clientOptions ?? [],
     };
 
-    switch (clientType) {
+    switch (client) {
+      case ELClient.Mock: {
+        return generateMockNode(opts as ELGeneratorClientOptions<ELClient.Mock>, this.childProcessRunner);
+      }
       case ELClient.Geth: {
         return generateGethNode(opts as ELGeneratorClientOptions<ELClient.Geth>, this.dockerRunner);
       }

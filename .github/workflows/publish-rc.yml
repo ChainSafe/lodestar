@@ -54,7 +54,7 @@ jobs:
           fetch-depth: 0 # Needs full depth for changelog generation
       - uses: actions/setup-node@v2
         with:
-          node-version: "lts/gallium"
+          node-version: 18
       - name: Node.js version
         id: node
         run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
@@ -155,3 +155,18 @@ jobs:
       # Display history to know byte size of each layer
       # Image is available only because of the previous `docker run` command
       - run: docker image history chainsafe/lodestar:${{ needs.tag.outputs.tag }}
+
+      - name: Build and push custom Grafana
+        run: >
+          docker buildx build ./docker/grafana/ --push
+          --file ./docker/grafana/Dockerfile
+          --build-context dashboards=./dashboards
+          --tag chainsafe/lodestar-grafana:${{ needs.tag.outputs.tag }}
+          --platform linux/amd64,linux/arm64
+
+      - name: Build and push custom Prometheus
+        run: >
+          docker buildx build ./docker/prometheus/ --push
+          --file ./docker/prometheus/Dockerfile
+          --tag chainsafe/lodestar-prometheus:${{ needs.tag.outputs.tag }}
+          --platform linux/amd64,linux/arm64

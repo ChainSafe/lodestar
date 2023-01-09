@@ -96,10 +96,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     }),
 
     reqResp: {
-      rateLimitErrors: register.gauge<"tracker">({
+      rateLimitErrors: register.gauge<"method">({
         name: "beacon_reqresp_rate_limiter_errors_total",
         help: "Count rate limiter errors",
-        labelNames: ["tracker"],
+        labelNames: ["method"],
       }),
     },
 
@@ -148,6 +148,10 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     clockSlot: register.gauge({
       name: "beacon_clock_slot",
       help: "Current clock slot",
+    }),
+    clockEpoch: register.gauge({
+      name: "beacon_clock_epoch",
+      help: "Current clock epoch",
     }),
   };
 }

@@ -1,4 +1,15 @@
-import {ReturnTypes, RoutesData, Schema, reqEmpty, ReqSerializers, ReqEmpty, jsonType} from "../utils/index.js";
+import {ContainerType} from "@chainsafe/ssz";
+import {ssz, stringType} from "@lodestar/types";
+import {
+  ReturnTypes,
+  RoutesData,
+  Schema,
+  reqEmpty,
+  ReqSerializers,
+  ReqEmpty,
+  jsonType,
+  ContainerData,
+} from "../utils/index.js";
 
 export enum ImportStatus {
   /** Keystore successfully decrypted and imported to keymanager permanent storage */
@@ -237,7 +248,7 @@ export type ReqTypes = {
   deleteFeeRecipient: {params: {pubkey: string}};
 
   getGasLimit: {params: {pubkey: string}};
-  setGasLimit: {params: {pubkey: string}; body: {gas_limit: string | number}};
+  setGasLimit: {params: {pubkey: string}; body: {gas_limit: string}};
   deleteGasLimit: {params: {pubkey: string}};
 };
 
@@ -298,7 +309,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       },
     },
     setGasLimit: {
-      writeReq: (pubkey, gas_limit) => ({params: {pubkey}, body: {gas_limit}}),
+      writeReq: (pubkey, gasLimit) => ({params: {pubkey}, body: {gas_limit: gasLimit.toString(10)}}),
       parseReq: ({params: {pubkey}, body: {gas_limit}}) => [pubkey, parseGasLimit(gas_limit)],
       schema: {
         params: {pubkey: Schema.StringRequired},
@@ -327,7 +338,15 @@ export function getReturnTypes(): ReturnTypes<Api> {
     deleteRemoteKeys: jsonType("snake"),
 
     listFeeRecipient: jsonType("snake"),
-    getGasLimit: jsonType("snake"),
+    getGasLimit: ContainerData(
+      new ContainerType(
+        {
+          pubkey: stringType,
+          gasLimit: ssz.UintNum64,
+        },
+        {jsonCase: "eth2"}
+      )
+    ),
   };
 }
 
