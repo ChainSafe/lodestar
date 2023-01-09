@@ -2,12 +2,13 @@ import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
   CachedBeaconStateBellatrix,
+  CachedBeaconStateCapella,
   DataAvailableStatus,
   ExecutionPayloadStatus,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
-import {ssz, phase0, altair, bellatrix} from "@lodestar/types";
+import {ssz, phase0, altair, bellatrix, capella} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {ForkName} from "@lodestar/params";
 
@@ -83,6 +84,14 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
       }
     );
   },
+
+  bls_to_execution_change: (state, testCase: {address_change: capella.SignedBLSToExecutionChange}) => {
+    blockFns.processBlsToExecutionChange(state as CachedBeaconStateCapella, testCase.address_change);
+  },
+
+  withdrawals: (state, testCase: {execution_payload: capella.ExecutionPayload}) => {
+    blockFns.processWithdrawals(state as CachedBeaconStateCapella, testCase.execution_payload);
+  },
 };
 
 export type BlockProcessFn<T extends CachedBeaconStateAllForks> = (state: T, testCase: any) => void;
@@ -128,6 +137,8 @@ export const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> =
           fork !== ForkName.phase0 && fork !== ForkName.altair
             ? ssz.allForksExecution[fork as ExecutionFork].ExecutionPayload
             : ssz.bellatrix.ExecutionPayload,
+        // Capella
+        address_change: ssz.capella.SignedBLSToExecutionChange,
       },
       shouldError: (testCase) => testCase.post === undefined,
       getExpected: (testCase) => testCase.post,

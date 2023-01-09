@@ -312,9 +312,9 @@ export class EpochContext {
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 
-    // Allow to create CachedBeaconState for empty states
+    // Allow to create CachedBeaconState for empty states, or no active validators
     const proposers =
-      state.validators.length > 0
+      currentShuffling.activeIndices.length > 0
         ? computeProposers(currentProposerSeed, currentShuffling, effectiveBalanceIncrements)
         : [];
 
