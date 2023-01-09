@@ -224,7 +224,7 @@ export class PeerDiscovery {
     // See https://github.com/ChainSafe/lodestar/issues/3423
     const msSinceDiscv5Start = Date.now() - this.discv5StartMs;
     if (msSinceDiscv5Start <= this.discv5FirstQueryDelayMs) {
-      await sleep(msSinceDiscv5Start);
+      await sleep(this.discv5FirstQueryDelayMs - msSinceDiscv5Start);
     }
 
     // Run a general discv5 query if one is not already in progress
