@@ -91,7 +91,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   const getState: ReqSerializer<Api["getState"], ReqTypes["getState"]> = {
     writeReq: (state_id, format) => ({
       params: {state_id: String(state_id)},
-      headers: {accept: format === "ssz" ? mimeTypeSSZ : ""},
+      headers: {accept: format === "ssz" ? mimeTypeSSZ : "application/json"},
     }),
     parseReq: ({params, headers}) => [params.state_id, headers.accept === mimeTypeSSZ ? "ssz" : "json"],
     schema: {params: {state_id: Schema.StringRequired}},
