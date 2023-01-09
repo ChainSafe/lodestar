@@ -10,7 +10,7 @@ import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
-import {BeaconNodeOptions, exportToJSON, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
+import {BeaconNodeOptions, exportToJSON, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
 import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm, cleanOldLogFiles} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
@@ -23,7 +23,7 @@ import {initBeaconState} from "./initBeaconState.js";
  * Runs a beacon node.
  */
 export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<void> {
-  const {config, options, beaconPaths, network, version, commit, peerId} = await beaconHandlerInit(args);
+  const {config, options, beaconPaths, network, version, commit, peerId, enr} = await beaconHandlerInit(args);
 
   // initialize directories
   mkdir(beaconPaths.dataDir);
@@ -43,6 +43,13 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   }
 
   onGracefulShutdown(async () => {
+    // > 1 enr means enr was modified
+    if (enr.seq > 1) {
+      const enrPath = path.join(beaconPaths.beaconDir, "enr");
+      const keypair = createKeypairFromPeerId(peerId);
+      writeFile600Perm(enrPath, enr.encodeTxt(keypair.privateKey));
+    }
+
     abortController.abort();
   }, logger.info.bind(logger));
 
@@ -143,20 +150,17 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
 
   // Persist ENR and PeerId in beaconDir fixed paths for debugging
   const pIdPath = path.join(beaconPaths.beaconDir, "peer_id.json");
-  const enrPath = path.join(beaconPaths.beaconDir, "enr");
   writeFile600Perm(pIdPath, exportToJSON(peerId));
-  const fileENR = FileENR.initFromENR(enrPath, peerId, enr);
-  fileENR.saveToFile();
 
   // Inject ENR to beacon options
-  beaconNodeOptions.set({network: {discv5: {enr: fileENR, enrUpdate: !enr.ip && !enr.ip6}}});
+  beaconNodeOptions.set({network: {discv5: {enr, enrUpdate: !enr.ip && !enr.ip6}}});
   // Add simple version string for libp2p agent version
   beaconNodeOptions.set({network: {version: version.split("/")[0]}});
 
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
 
-  return {config, options, beaconPaths, network, version, commit, peerId};
+  return {config, options, beaconPaths, network, version, commit, peerId, enr};
 }
 
 export function overwriteEnrWithCliArgs(enr: ENR, args: IBeaconArgs): void {
