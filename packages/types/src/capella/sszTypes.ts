@@ -1,10 +1,5 @@
-import {ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
-import {
-  HISTORICAL_ROOTS_LIMIT,
-  SLOTS_PER_HISTORICAL_ROOT,
-  MAX_WITHDRAWALS_PER_PAYLOAD,
-  MAX_BLS_TO_EXECUTION_CHANGES,
-} from "@lodestar/params";
+import {ContainerType, ListCompositeType} from "@chainsafe/ssz";
+import {HISTORICAL_ROOTS_LIMIT, MAX_WITHDRAWALS_PER_PAYLOAD, MAX_BLS_TO_EXECUTION_CHANGES} from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
@@ -104,16 +99,12 @@ export const SignedBeaconBlock = new ContainerType(
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
 );
 
-// Re-declare with the new expanded type
-export const HistoricalBlockRoots = new VectorCompositeType(Root, SLOTS_PER_HISTORICAL_ROOT);
-export const HistoricalStateRoots = new VectorCompositeType(Root, SLOTS_PER_HISTORICAL_ROOT);
-
-export const HistoricalBatch = new ContainerType(
+export const HistoricalSummary = new ContainerType(
   {
-    blockRoots: HistoricalBlockRoots,
-    stateRoots: HistoricalStateRoots,
+    blockSummaryRoot: Root,
+    stateSummaryRoot: Root,
   },
-  {typeName: "HistoricalBatch", jsonCase: "eth2"}
+  {typeName: "HistoricalSummary", jsonCase: "eth2"}
 );
 
 // we don't reuse bellatrix.BeaconState fields since we need to replace some keys
@@ -126,8 +117,9 @@ export const BeaconState = new ContainerType(
     fork: phase0Ssz.Fork,
     // History
     latestBlockHeader: phase0Ssz.BeaconBlockHeader,
-    blockRoots: HistoricalBlockRoots,
-    stateRoots: HistoricalStateRoots,
+    blockRoots: phase0Ssz.HistoricalBlockRoots,
+    stateRoots: phase0Ssz.HistoricalStateRoots,
+    // historical_roots Frozen in Capella, replaced by historical_summaries
     historicalRoots: new ListCompositeType(Root, HISTORICAL_ROOTS_LIMIT),
     // Eth1
     eth1Data: phase0Ssz.Eth1Data,
@@ -157,6 +149,8 @@ export const BeaconState = new ContainerType(
     // Withdrawals
     nextWithdrawalIndex: WithdrawalIndex, // [New in Capella]
     nextWithdrawalValidatorIndex: ValidatorIndex, // [New in Capella]
+    // Deep history valid from Capella onwards
+    historicalSummaries: new ListCompositeType(HistoricalSummary, HISTORICAL_ROOTS_LIMIT), // [New in Capella]
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

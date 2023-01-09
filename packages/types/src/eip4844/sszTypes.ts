@@ -194,8 +194,9 @@ export const BeaconState = new ContainerType(
     fork: phase0Ssz.Fork,
     // History
     latestBlockHeader: phase0Ssz.BeaconBlockHeader,
-    blockRoots: capellaSsz.HistoricalBlockRoots,
-    stateRoots: capellaSsz.HistoricalStateRoots,
+    blockRoots: phase0Ssz.HistoricalBlockRoots,
+    stateRoots: phase0Ssz.HistoricalStateRoots,
+    // historical_roots Frozen in Capella, replaced by historical_summaries
     historicalRoots: new ListCompositeType(Root, HISTORICAL_ROOTS_LIMIT),
     // Eth1
     eth1Data: phase0Ssz.Eth1Data,
@@ -225,6 +226,8 @@ export const BeaconState = new ContainerType(
     // Withdrawals
     nextWithdrawalIndex: capellaSsz.BeaconState.fields.nextWithdrawalIndex,
     nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,
+    // Deep history valid from Capella onwards
+    historicalSummaries: capellaSsz.BeaconState.fields.historicalSummaries,
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
