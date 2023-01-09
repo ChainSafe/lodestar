@@ -35,4 +35,6 @@ export interface IForkConfig {
   getExecutionForkTypes(slot: Slot): allForks.AllForksExecutionSSZTypes;
   /** Get blinded SSZ types by hard-fork */
   getBlindedForkTypes(slot: Slot): allForks.AllForksBlindedSSZTypes;
+  /** Get blobs SSZ tyoes by hard-fork*/
+  getBlobsForkTypes(slot: Slot): allForks.AllForksBlobsSSZTypes;
 }

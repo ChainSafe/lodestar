@@ -15,6 +15,7 @@ const {
   BLSPubkey,
   ExecutionAddress,
   Gwei,
+  UintBn256,
 } = primitiveSsz;
 
 export const Withdrawal = new ContainerType(
@@ -53,14 +54,6 @@ export const ExecutionPayload = new ContainerType(
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
-export const BlindedExecutionPayload = new ContainerType(
-  {
-    ...bellatrixSsz.ExecutionPayloadHeader.fields,
-    withdrawals: Withdrawals, // New in capella
-  },
-  {typeName: "BlindedExecutionPayload", jsonCase: "eth2"}
-);
-
 export const ExecutionPayloadHeader = new ContainerType(
   {
     ...bellatrixSsz.ExecutionPayloadHeader.fields,
@@ -97,6 +90,23 @@ export const SignedBeaconBlock = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
+);
+
+export const BuilderBid = new ContainerType(
+  {
+    header: ExecutionPayloadHeader,
+    value: UintBn256,
+    pubkey: BLSPubkey,
+  },
+  {typeName: "BuilderBid", jsonCase: "eth2"}
+);
+
+export const SignedBuilderBid = new ContainerType(
+  {
+    message: BuilderBid,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBuilderBid", jsonCase: "eth2"}
 );
 
 export const HistoricalSummary = new ContainerType(
@@ -158,7 +168,7 @@ export const BeaconState = new ContainerType(
 export const BlindedBeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,
-    executionPayloadHeader: BlindedExecutionPayload, // Modified in capella
+    executionPayloadHeader: ExecutionPayloadHeader, // Modified in capella
     blsToExecutionChanges: BLSToExecutionChanges, // New in capella
   },
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
