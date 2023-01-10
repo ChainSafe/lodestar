@@ -104,9 +104,9 @@ export class BlockProposingService {
   }
 
   private publishBlockWrapper = async (signedBlock: allForks.FullOrBlindedSignedBeaconBlock): Promise<void> => {
-    return isBlindedBeaconBlock(signedBlock.message)
-      ? this.api.beacon.publishBlindedBlock(signedBlock as bellatrix.SignedBlindedBeaconBlock)
-      : this.api.beacon.publishBlock(signedBlock as allForks.SignedBeaconBlock);
+    isBlindedBeaconBlock(signedBlock.message)
+      ? await this.api.beacon.publishBlindedBlock(signedBlock as bellatrix.SignedBlindedBeaconBlock)
+      : await this.api.beacon.publishBlock(signedBlock as allForks.SignedBeaconBlock);
   };
 
   private produceBlockWrapper = async (
