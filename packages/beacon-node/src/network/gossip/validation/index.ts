@@ -1,4 +1,4 @@
-import {MessageAcceptance} from "@chainsafe/libp2p-gossipsub/types";
+import {TopicValidatorResult} from "@libp2p/interface-pubsub";
 import {IChainForkConfig} from "@lodestar/config";
 import {ILogger, mapValues} from "@lodestar/utils";
 import {IMetrics} from "../../../metrics/index.js";
@@ -78,19 +78,19 @@ function getGossipValidatorFn<K extends GossipType>(
         gossipObject = sszType.deserialize(msg.data);
       } catch (e) {
         // TODO: Log the error or do something better with it
-        return MessageAcceptance.Reject;
+        return TopicValidatorResult.Reject;
       }
 
       await (gossipHandler as GossipHandlerFn)(gossipObject, topic, propagationSource, seenTimestampSec);
 
       metrics?.gossipValidationAccept.inc({topic: type});
 
-      return MessageAcceptance.Accept;
+      return TopicValidatorResult.Accept;
     } catch (e) {
       if (!(e instanceof GossipActionError)) {
         // not deserve to log error here, it looks too dangerous to users
         logger.debug(`Gossip validation ${type} threw a non-GossipActionError`, {}, e as Error);
-        return MessageAcceptance.Ignore;
+        return TopicValidatorResult.Ignore;
       }
 
       // Metrics on specific error reason
@@ -100,11 +100,11 @@ function getGossipValidatorFn<K extends GossipType>(
       switch (e.action) {
         case GossipAction.IGNORE:
           metrics?.gossipValidationIgnore.inc({topic: type});
-          return MessageAcceptance.Ignore;
+          return TopicValidatorResult.Ignore;
 
         case GossipAction.REJECT:
           metrics?.gossipValidationReject.inc({topic: type});
-          return MessageAcceptance.Reject;
+          return TopicValidatorResult.Reject;
       }
     }
   };

@@ -1,5 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Libp2p} from "libp2p";
+import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/discv5";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
 import {defaultDiscv5Options, defaultNetworkOptions, INetworkOptions} from "../options.js";
@@ -10,6 +11,7 @@ export type NodeJsLibp2pOpts = {
   peerStoreDir?: string;
   disablePeerDiscovery?: boolean;
   metrics?: boolean;
+  metricsRegistry?: Registry;
 };
 
 /**
@@ -73,6 +75,7 @@ export async function createNodeJsLibp2p(
     // If peer discovery is enabled let the default in NodejsNode
     peerDiscovery: disablePeerDiscovery ? [] : undefined,
     metrics: nodeJsLibp2pOpts.metrics,
+    metricsRegistry: nodeJsLibp2pOpts.metricsRegistry,
     lodestarVersion: networkOpts.version,
     mdns: networkOpts.mdns,
   });

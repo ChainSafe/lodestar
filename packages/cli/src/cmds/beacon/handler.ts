@@ -58,6 +58,11 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
 
   // additional metrics registries
   const metricsRegistries: Registry[] = [];
+  let networkRegistry: Registry | undefined;
+  if (options.metrics.enabled) {
+    networkRegistry = new Registry();
+    metricsRegistries.push(networkRegistry);
+  }
   const db = new BeaconDb({
     config,
     controller: new LevelDbController(options.db, {metrics: null}),
@@ -86,6 +91,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       libp2p: await createNodeJsLibp2p(peerId, options.network, {
         peerStoreDir: beaconPaths.peerStoreDir,
         metrics: options.metrics.enabled,
+        metricsRegistry: networkRegistry,
       }),
       anchorState,
       wsCheckpoint,
