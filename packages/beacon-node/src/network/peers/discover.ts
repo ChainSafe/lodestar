@@ -120,7 +120,12 @@ export class PeerDiscovery {
       },
     });
     opts.discv5.bootEnrs.forEach((bootEnr) => this.discv5.addEnr(bootEnr));
-    this.logger.verbose("PeerDiscovery number of bootEnrs", {bootEnrs: opts.discv5.bootEnrs.length});
+    const numBootEnrs = opts.discv5.bootEnrs.length;
+    if (numBootEnrs === 0) {
+      this.logger.error("PeerDiscovery: discv5 has no boot enr");
+    } else {
+      this.logger.verbose("PeerDiscovery: number of bootEnrs", {bootEnrs: numBootEnrs});
+    }
 
     if (metrics) {
       metrics.discovery.cachedENRsSize.addCollect(() => {
