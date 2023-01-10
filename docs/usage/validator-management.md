@@ -40,9 +40,9 @@ Inside the keystore JSON file, you should have an [EIP-2335 conformant keystore 
 
 You will also need the passphrase used the encrypt the keystore. This can be specified interactively, or provided in a plaintext file.
 
-#### Import Keys To Secret Store
+#### Option 1: Import Keys To Lodestar's Keystores Folder
 
-You can load the keys into the secret store using the command `validator import`:
+You can load the keys into the keystore folder using the command `validator import`:
 ```bash
 # Interactive passphrase input
 ./lodestar validator import --keystore ./validator_keys
@@ -50,11 +50,11 @@ You can load the keys into the secret store using the command `validator import`
 # Plaintext passphrase file input
 ./lodestar validator import --keystore ./validator_keys --passphraseFile ./password.txt
 ```
-These will be automatically loaded at runtime.
+These will be automatically loaded when you run the validator.
 
-#### Import Keys at Runtime
+#### Option 2: Import Keys When Starting the Validator
 
-To import keys at runtime specify the `--importKeystores` and `--importKeystoresPassword` flags with the `validator` command:
+To import keys when you start the validator specify the `--importKeystores` and `--importKeystoresPassword` flags with the `validator` command:
 
 ```bash
 ./lodestar validator --keystore ./validator_keys --passphraseFile ./password.txt
