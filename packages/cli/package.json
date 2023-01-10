@@ -37,6 +37,7 @@
     "test:sim:multifork": "LODESTAR_PRESET=minimal ts-node --esm test/sim/multi_fork.test.ts",
     "test:sim:endpoints": "LODESTAR_PRESET=minimal ts-node --esm test/sim/endpoints.test.ts",
     "test:sim:eip4844": "LODESTAR_PRESET=minimal ts-node --esm test/sim/eip4844.test.ts",
+    "test:sim:backup_eth_provider": "LODESTAR_PRESET=minimal ts-node --esm test/sim/backup_eth_provider.test.ts",
     "test": "yarn test:unit && yarn test:e2e",
     "coverage": "codecov -F lodestar",
     "check-readme": "typescript-docs-verifier"

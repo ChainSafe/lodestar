@@ -149,7 +149,7 @@ export class SimulationTracker {
   async clockLoop(slot: number): Promise<void> {
     while (!this.signal.aborted) {
       // Wait for 2/3 of the slot to consider it missed
-      await this.clock.waitForStartOfSlot(slot + 2 / 3).catch((e) => {
+      await this.clock.waitForStartOfSlot(slot + 2 / 3, slot > 0).catch((e) => {
         console.error("error on waitForStartOfSlot", e);
       });
       this.reporter.progress(slot);

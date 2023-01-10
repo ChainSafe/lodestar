@@ -1,3 +1,4 @@
+import {expect} from "chai";
 import {
   CachedBeaconStateAllForks,
   EpochProcess,
@@ -30,6 +31,7 @@ const epochProcessFns: Record<string, EpochProcessFn> = {
   slashings: epochFns.processSlashings,
   slashings_reset: epochFns.processSlashingsReset,
   sync_committee_updates: epochFns.processSyncCommitteeUpdates as EpochProcessFn,
+  historical_summaries_update: epochFns.processHistoricalSummariesUpdate as EpochProcessFn,
 };
 
 /**
@@ -46,7 +48,7 @@ type EpochProcessingTestCase = {
  * @param epochProcessFns Describe with which function to run each directory of tests
  */
 export const epochProcessing = (
-  skipTestNames: string[]
+  skipTestNames?: string[]
 ): TestRunnerFn<EpochProcessingTestCase, BeaconStateAllForks> => (fork, testName) => {
   const config = getConfig(fork);
 
@@ -61,7 +63,15 @@ export const epochProcessing = (
       const state = createCachedBeaconStateTest(stateTB, config);
 
       const epochProcess = beforeProcessEpoch(state, {assertCorrectProgressiveBalances});
-      epochProcessFn(state, epochProcess);
+
+      if (testcase.post === undefined) {
+        // If post.ssz_snappy is not value, the sub-transition processing is aborted
+        // https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md#postssz_snappy
+        expect(() => epochProcessFn(state, epochProcess)).to.throw();
+      } else {
+        epochProcessFn(state, epochProcess);
+      }
+
       state.commit();
 
       return state;
@@ -77,7 +87,8 @@ export const epochProcessing = (
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-      shouldSkip: (_testcase, name, _index) => skipTestNames.some((skipTestName) => name.includes(skipTestName)),
+      shouldSkip: (_testcase, name, _index) =>
+        skipTestNames !== undefined && skipTestNames.some((skipTestName) => name.includes(skipTestName)),
     },
   };
 };

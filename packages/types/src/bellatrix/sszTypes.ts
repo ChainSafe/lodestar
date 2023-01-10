@@ -1,11 +1,10 @@
-import {ByteListType, ByteVectorType, ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
+import {ByteListType, ByteVectorType, ContainerType, ListCompositeType} from "@chainsafe/ssz";
 import {
   BYTES_PER_LOGS_BLOOM,
   HISTORICAL_ROOTS_LIMIT,
   MAX_TRANSACTIONS_PER_PAYLOAD,
   MAX_BYTES_PER_TRANSACTION,
   MAX_EXTRA_DATA_BYTES,
-  SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -112,18 +111,6 @@ export const PowBlock = new ContainerType(
   {typeName: "PowBlock", jsonCase: "eth2"}
 );
 
-// Re-declare with the new expanded type
-export const HistoricalBlockRoots = new VectorCompositeType(Root, SLOTS_PER_HISTORICAL_ROOT);
-export const HistoricalStateRoots = new VectorCompositeType(Root, SLOTS_PER_HISTORICAL_ROOT);
-
-export const HistoricalBatch = new ContainerType(
-  {
-    blockRoots: HistoricalBlockRoots,
-    stateRoots: HistoricalStateRoots,
-  },
-  {typeName: "HistoricalBatch", jsonCase: "eth2"}
-);
-
 // we don't reuse phase0.BeaconState fields since we need to replace some keys
 // and we cannot keep order doing that
 export const BeaconState = new ContainerType(
@@ -134,8 +121,8 @@ export const BeaconState = new ContainerType(
     fork: phase0Ssz.Fork,
     // History
     latestBlockHeader: phase0Ssz.BeaconBlockHeader,
-    blockRoots: HistoricalBlockRoots,
-    stateRoots: HistoricalStateRoots,
+    blockRoots: phase0Ssz.HistoricalBlockRoots,
+    stateRoots: phase0Ssz.HistoricalStateRoots,
     historicalRoots: new ListCompositeType(Root, HISTORICAL_ROOTS_LIMIT),
     // Eth1
     eth1Data: phase0Ssz.Eth1Data,

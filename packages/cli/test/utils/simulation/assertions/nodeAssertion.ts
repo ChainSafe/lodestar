@@ -17,9 +17,14 @@ export const nodeAssertion: SimulationAssertion<"node", string> = {
       if (health !== routes.node.NodeHealth.SYNCING && health !== routes.node.NodeHealth.READY) {
         errors.push(`node health is neither READY or SYNCING. ${JSON.stringify({id: node.cl.id})}`);
       }
+      const keys = getAllKeys(node.cl.keys);
+
+      if (keys.length === 0) {
+        continue;
+      }
 
       const keyManagerKeys = (await node.cl.keyManager.listKeys()).data.map((k) => k.validatingPubkey);
-      const expectedPubkeys = getAllKeys(node.cl.keys).map((k) => k.toPublicKey().toHex());
+      const expectedPubkeys = keys.map((k) => k.toPublicKey().toHex());
 
       if (!arrayEquals(keyManagerKeys.sort(), expectedPubkeys.sort())) {
         errors.push(

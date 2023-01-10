@@ -35,7 +35,7 @@ const env = SimulationEnvironment.initWithDefaults(
   [
     {
       id: "node-1",
-      cl: {type: CLClient.Lodestar, options: {"sync.isSingleNode": true}},
+      cl: {type: CLClient.Lodestar, options: {clientOptions: {"sync.isSingleNode": true}}},
       el: ELClient.Geth,
       keysCount: validatorCount,
       mining: true,

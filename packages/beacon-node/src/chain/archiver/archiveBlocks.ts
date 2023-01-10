@@ -82,7 +82,7 @@ export async function archiveBlocks(
   // Keep only `[max(GENESIS_EPOCH, current_epoch - MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS), current_epoch]`
   if (finalizedPostEIP4844) {
     const blobsSidecarMinEpoch = currentEpoch - config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS;
-    if (blobsSidecarMinEpoch > 0) {
+    if (blobsSidecarMinEpoch >= config.EIP4844_FORK_EPOCH) {
       const slotsToDelete = await db.blobsSidecarArchive.keys({lt: computeStartSlotAtEpoch(blobsSidecarMinEpoch)});
       if (slotsToDelete.length > 0) {
         await db.blobsSidecarArchive.batchDelete(slotsToDelete);

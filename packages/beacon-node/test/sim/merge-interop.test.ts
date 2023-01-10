@@ -5,6 +5,7 @@ import {isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-t
 import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
+import {routes} from "@lodestar/api";
 import {Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
@@ -239,7 +240,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
-    const event = ChainEvent.finalized;
 
     const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
       SECONDS_PER_SLOT: 2,
@@ -397,11 +397,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         }
       });
 
-      bn.chain.emitter.on(ChainEvent.finalized, (checkpoint) => {
+      bn.chain.emitter.on(routes.events.EventType.finalizedCheckpoint, (checkpoint) => {
         // Resolve only if the finalized checkpoint includes execution payload
-        const finalizedBlock = bn.chain.forkChoice.getBlock(checkpoint.root);
+        const finalizedBlock = bn.chain.forkChoice.getBlockHex(checkpoint.block);
         if (finalizedBlock?.executionPayloadBlockHash !== null) {
-          console.log(`\nGot event ${event}, stopping validators and nodes\n`);
+          console.log(`\nGot finalized event, stopping validators and nodes\n`);
           resolve();
         }
       });

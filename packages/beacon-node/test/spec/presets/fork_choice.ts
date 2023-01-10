@@ -6,7 +6,7 @@ import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {phase0, allForks, bellatrix, ssz, RootHex} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createIBeaconConfig} from "@lodestar/config";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
@@ -79,7 +79,6 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
           disablePrepareNextSlot: true,
           assertCorrectProgressiveBalances,
           computeUnrealized: false,
-          disabledWithdrawals: fork === ForkName.eip4844,
         },
         {
           config: createIBeaconConfig(config, state.genesisValidatorsRoot),

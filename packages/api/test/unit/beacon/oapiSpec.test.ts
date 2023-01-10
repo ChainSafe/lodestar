@@ -111,11 +111,11 @@ describe("eventstream event data", () => {
   });
 
   const eventSerdes = routes.events.getEventSerdes();
-  const knownTopics = Object.values(routes.events.EventType) as string[];
+  const knownTopics = new Set<string>(Object.values(routes.events.eventTypes));
 
   for (const [topic, {value}] of Object.entries(eventstreamExamples ?? {})) {
     it(topic, () => {
-      if (!knownTopics.includes(topic)) {
+      if (!knownTopics.has(topic)) {
         throw Error(`topic ${topic} not implemented`);
       }
 

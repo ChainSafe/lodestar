@@ -35,7 +35,15 @@ import {ProtoArray} from "../protoArray/protoArray.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors.js";
-import {IForkChoice, LatestMessage, QueuedAttestation, PowBlockHex, EpochDifference} from "./interface.js";
+import {
+  IForkChoice,
+  LatestMessage,
+  QueuedAttestation,
+  PowBlockHex,
+  EpochDifference,
+  AncestorResult,
+  AncestorStatus,
+} from "./interface.js";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
 
 /* eslint-disable max-len */
@@ -301,7 +309,7 @@ export class ForkChoice implements IForkChoice {
     blockDelaySec: number,
     currentSlot: Slot,
     executionStatus: MaybeValidExecutionStatus
-  ): void {
+  ): ProtoBlock {
     const {parentRoot, slot} = block;
     const parentRootHex = toHexString(parentRoot);
     // Parent block must be known
@@ -458,34 +466,36 @@ export class ForkChoice implements IForkChoice {
 
     const targetSlot = computeStartSlotAtEpoch(blockEpoch);
     const targetRoot = slot === targetSlot ? blockRoot : state.blockRoots.get(targetSlot % SLOTS_PER_HISTORICAL_ROOT);
+
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
     // it can still be identified as the head even if it doesn't have any votes.
-    this.protoArray.onBlock(
-      {
-        slot: slot,
-        blockRoot: blockRootHex,
-        parentRoot: parentRootHex,
-        targetRoot: toHexString(targetRoot),
-        stateRoot: toHexString(block.stateRoot),
+    const protoBlock: ProtoBlock = {
+      slot: slot,
+      blockRoot: blockRootHex,
+      parentRoot: parentRootHex,
+      targetRoot: toHexString(targetRoot),
+      stateRoot: toHexString(block.stateRoot),
 
-        justifiedEpoch: stateJustifiedEpoch,
-        justifiedRoot: toHexString(state.currentJustifiedCheckpoint.root),
-        finalizedEpoch: finalizedCheckpoint.epoch,
-        finalizedRoot: toHexString(state.finalizedCheckpoint.root),
-        unrealizedJustifiedEpoch: unrealizedJustifiedCheckpoint.epoch,
-        unrealizedJustifiedRoot: unrealizedJustifiedCheckpoint.rootHex,
-        unrealizedFinalizedEpoch: unrealizedFinalizedCheckpoint.epoch,
-        unrealizedFinalizedRoot: unrealizedFinalizedCheckpoint.rootHex,
+      justifiedEpoch: stateJustifiedEpoch,
+      justifiedRoot: toHexString(state.currentJustifiedCheckpoint.root),
+      finalizedEpoch: finalizedCheckpoint.epoch,
+      finalizedRoot: toHexString(state.finalizedCheckpoint.root),
+      unrealizedJustifiedEpoch: unrealizedJustifiedCheckpoint.epoch,
+      unrealizedJustifiedRoot: unrealizedJustifiedCheckpoint.rootHex,
+      unrealizedFinalizedEpoch: unrealizedFinalizedCheckpoint.epoch,
+      unrealizedFinalizedRoot: unrealizedFinalizedCheckpoint.rootHex,
 
-        ...(isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
-          ? {
-              executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
-              executionStatus: this.getPostMergeExecStatus(executionStatus),
-            }
-          : {executionPayloadBlockHash: null, executionStatus: this.getPreMergeExecStatus(executionStatus)}),
-      },
-      currentSlot
-    );
+      ...(isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
+        ? {
+            executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
+            executionStatus: this.getPostMergeExecStatus(executionStatus),
+          }
+        : {executionPayloadBlockHash: null, executionStatus: this.getPreMergeExecStatus(executionStatus)}),
+    };
+
+    this.protoArray.onBlock(protoBlock, currentSlot);
+
+    return protoBlock;
   }
 
   /**
@@ -760,22 +770,25 @@ export class ForkChoice implements IForkChoice {
   }
 
   /** Returns the distance of common ancestor of nodes to newNode. Returns null if newNode is descendant of prevNode */
-  getCommonAncestorDistance(prevBlock: ProtoBlock, newBlock: ProtoBlock): number | null {
+  getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult {
     const prevNode = this.protoArray.getNode(prevBlock.blockRoot);
     const newNode = this.protoArray.getNode(newBlock.blockRoot);
-    if (!prevNode) throw Error(`No node if forkChoice for blockRoot ${prevBlock.blockRoot}`);
-    if (!newNode) throw Error(`No node if forkChoice for blockRoot ${newBlock.blockRoot}`);
+    if (!prevNode || !newNode) {
+      return {code: AncestorStatus.BlockUnknown};
+    }
 
     const commonAncestor = this.protoArray.getCommonAncestor(prevNode, newNode);
     // No common ancestor, should never happen. Return null to not throw
-    if (!commonAncestor) return null;
+    if (!commonAncestor) {
+      return {code: AncestorStatus.NoCommonAncenstor};
+    }
 
     // If common node is one of both nodes, then they are direct descendants, return null
     if (commonAncestor.blockRoot === prevNode.blockRoot || commonAncestor.blockRoot === newNode.blockRoot) {
-      return null;
+      return {code: AncestorStatus.Descendant};
     }
 
-    return newNode.slot - commonAncestor.slot;
+    return {code: AncestorStatus.CommonAncestor, depth: newNode.slot - commonAncestor.slot};
   }
 
   /**

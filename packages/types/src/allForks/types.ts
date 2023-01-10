@@ -48,10 +48,6 @@ export type ExecutionPayloadHeader =
   | bellatrix.ExecutionPayloadHeader
   | capella.ExecutionPayloadHeader
   | eip4844.ExecutionPayloadHeader;
-export type BlindedExecutionPayload =
-  | bellatrix.ExecutionPayloadHeader
-  | capella.BlindedExecutionPayload
-  | eip4844.BlindedExecutionPayload;
 
 // Blinded types that will change across forks
 export type BlindedBeaconBlockBody =
@@ -72,6 +68,10 @@ export type FullOrBlindedBeaconBlockBody = BeaconBlockBody | BlindedBeaconBlockB
 export type FullOrBlindedBeaconBlock = BeaconBlock | BlindedBeaconBlock;
 export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | SignedBlindedBeaconBlock;
 
+export type BuilderBid = bellatrix.BuilderBid | capella.BuilderBid | eip4844.BuilderBid;
+export type SignedBuilderBid = bellatrix.SignedBuilderBid | capella.SignedBuilderBid | eip4844.SignedBuilderBid;
+
+export type SignedBeaconBlockAndBlobsSidecar = eip4844.SignedBeaconBlockAndBlobsSidecar;
 /**
  * Types known to change between forks
  */
@@ -83,6 +83,9 @@ export type AllForksTypes = {
   Metadata: Metadata;
   ExecutionPayload: ExecutionPayload;
   ExecutionPayloadHeader: ExecutionPayloadHeader;
+  BuilderBid: BuilderBid;
+  SignedBuilderBid: SignedBuilderBid;
+  SignedBeaconBlockAndBlobsSidecar: SignedBeaconBlockAndBlobsSidecar;
 };
 
 export type AllForksBlindedTypes = {
@@ -173,6 +176,12 @@ export type AllForksExecutionSSZTypes = {
     | typeof capellaSsz.ExecutionPayloadHeader
     | typeof eip4844Ssz.ExecutionPayloadHeader
   >;
+  BuilderBid: AllForksTypeOf<
+    typeof bellatrixSsz.BuilderBid | typeof capellaSsz.BuilderBid | typeof eip4844Ssz.BuilderBid
+  >;
+  SignedBuilderBid: AllForksTypeOf<
+    typeof bellatrixSsz.SignedBuilderBid | typeof capellaSsz.SignedBuilderBid | typeof eip4844Ssz.SignedBuilderBid
+  >;
 };
 
 export type AllForksBlindedSSZTypes = {
@@ -189,4 +198,8 @@ export type AllForksBlindedSSZTypes = {
     | typeof capellaSsz.SignedBlindedBeaconBlock
     | typeof eip4844Ssz.SignedBlindedBeaconBlock
   >;
+};
+
+export type AllForksBlobsSSZTypes = {
+  SignedBeaconBlockAndBlobsSidecar: AllForksTypeOf<typeof eip4844Ssz.SignedBeaconBlockAndBlobsSidecar>;
 };

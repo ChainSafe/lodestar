@@ -104,51 +104,54 @@ const checkpointSync = env.createNodePair({
   id: "checkpoint-sync-node",
   cl: {
     type: CLClient.Lodestar,
-    options: {wssCheckpoint: `${headForCheckpointSync.root}:${headForCheckpointSync.epoch}`},
+    options: {clientOptions: {wssCheckpoint: `${headForCheckpointSync.root}:${headForCheckpointSync.epoch}`}},
   },
   el: ELClient.Geth,
   keysCount: 0,
 });
 
-await rangeSync.jobs.el.start();
-await rangeSync.jobs.cl.start();
-await connectNewNode(rangeSync.nodePair, env.nodes);
+await rangeSync.el.job.start();
+await rangeSync.cl.job.start();
+await connectNewNode(rangeSync, env.nodes);
 
-await checkpointSync.jobs.el.start();
-await checkpointSync.jobs.cl.start();
-await connectNewNode(checkpointSync.nodePair, env.nodes);
+await checkpointSync.el.job.start();
+await checkpointSync.cl.job.start();
+await connectNewNode(checkpointSync, env.nodes);
 
 await Promise.all([
-  await waitForNodeSync(env, rangeSync.nodePair, {
+  await waitForNodeSync(env, rangeSync, {
     head: toHexString(headForRangeSync.data.root),
     slot: headForRangeSync.data.header.message.slot,
   }),
-  await waitForNodeSync(env, checkpointSync.nodePair, {
+  await waitForNodeSync(env, checkpointSync, {
     head: toHexString(headForCheckpointSync.root),
     slot: env.clock.getLastSlotOfEpoch(headForCheckpointSync.epoch),
   }),
 ]);
 
-await rangeSync.jobs.cl.stop();
-await rangeSync.jobs.el.stop();
-await checkpointSync.jobs.cl.stop();
-await checkpointSync.jobs.el.stop();
+await rangeSync.cl.job.stop();
+await rangeSync.el.job.stop();
+await checkpointSync.cl.job.stop();
+await checkpointSync.el.job.stop();
 
 // Unknown block sync
 // ========================================================
 const unknownBlockSync = env.createNodePair({
   id: "unknown-block-sync-node",
-  cl: {type: CLClient.Lodestar, options: {"network.allowPublishToZeroPeers": true, "sync.disableRangeSync": true}},
+  cl: {
+    type: CLClient.Lodestar,
+    options: {clientOptions: {"network.allowPublishToZeroPeers": true, "sync.disableRangeSync": true}},
+  },
   el: ELClient.Geth,
   keysCount: 0,
 });
-await unknownBlockSync.jobs.el.start();
-await unknownBlockSync.jobs.cl.start();
+await unknownBlockSync.el.job.start();
+await unknownBlockSync.cl.job.start();
 const headForUnknownBlockSync = await env.nodes[0].cl.api.beacon.getBlockV2("head");
-await connectNewNode(unknownBlockSync.nodePair, env.nodes);
+await connectNewNode(unknownBlockSync, env.nodes);
 
 try {
-  await unknownBlockSync.nodePair.cl.api.beacon.publishBlock(headForUnknownBlockSync.data);
+  await unknownBlockSync.cl.api.beacon.publishBlock(headForUnknownBlockSync.data);
 
   env.tracker.record({
     message: "Publishing unknown block should fail",
@@ -164,7 +167,7 @@ try {
     });
   }
 }
-await waitForHead(env, unknownBlockSync.nodePair, {
+await waitForHead(env, unknownBlockSync, {
   head: toHexString(
     env.forkConfig
       .getForkTypes(headForUnknownBlockSync.data.message.slot)
