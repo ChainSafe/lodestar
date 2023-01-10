@@ -1,4 +1,5 @@
 import {phase0, altair, capella, CommitteeIndex, Slot, ssz} from "@lodestar/types";
+import {HttpStatusCode} from "../../../utils/client/httpClient.js";
 import {
   RoutesData,
   ReturnTypes,
@@ -9,6 +10,7 @@ import {
   ReqSerializers,
   reqEmpty,
   ReqEmpty,
+  sameType,
 } from "../../../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -73,7 +75,7 @@ export type Api = {
    * @returns any Attestations are stored in pool and broadcast on appropriate subnet
    * @throws ApiError
    */
-  submitPoolAttestations(attestations: phase0.Attestation[]): Promise<void>;
+  submitPoolAttestations(attestations: phase0.Attestation[]): Promise<HttpStatusCode>;
 
   /**
    * Submit AttesterSlashing object to node's pool
@@ -82,7 +84,7 @@ export type Api = {
    * @returns any Success
    * @throws ApiError
    */
-  submitPoolAttesterSlashings(slashing: phase0.AttesterSlashing): Promise<void>;
+  submitPoolAttesterSlashings(slashing: phase0.AttesterSlashing): Promise<HttpStatusCode>;
 
   /**
    * Submit ProposerSlashing object to node's pool
@@ -91,7 +93,7 @@ export type Api = {
    * @returns any Success
    * @throws ApiError
    */
-  submitPoolProposerSlashings(slashing: phase0.ProposerSlashing): Promise<void>;
+  submitPoolProposerSlashings(slashing: phase0.ProposerSlashing): Promise<HttpStatusCode>;
 
   /**
    * Submit SignedVoluntaryExit object to node's pool
@@ -100,7 +102,7 @@ export type Api = {
    * @returns any Voluntary exit is stored in node and broadcasted to network
    * @throws ApiError
    */
-  submitPoolVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void>;
+  submitPoolVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<HttpStatusCode>;
 
   /**
    * Submit SignedBLSToExecutionChange object to node's pool
@@ -109,12 +111,12 @@ export type Api = {
    * @returns any BLSToExecutionChange is stored in node and broadcasted to network
    * @throws ApiError
    */
-  submitPoolBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange[]): Promise<void>;
+  submitPoolBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange[]): Promise<HttpStatusCode>;
 
   /**
    * TODO: Add description
    */
-  submitPoolSyncCommitteeSignatures(signatures: altair.SyncCommitteeMessage[]): Promise<void>;
+  submitPoolSyncCommitteeSignatures(signatures: altair.SyncCommitteeMessage[]): Promise<HttpStatusCode>;
 };
 
 /**
@@ -176,5 +178,11 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getPoolProposerSlashings: ContainerData(ArrayOf(ssz.phase0.ProposerSlashing)),
     getPoolVoluntaryExits: ContainerData(ArrayOf(ssz.phase0.SignedVoluntaryExit)),
     getPoolBlsToExecutionChanges: ContainerData(ArrayOf(ssz.capella.SignedBLSToExecutionChange)),
+    submitPoolAttestations: sameType(),
+    submitPoolAttesterSlashings: sameType(),
+    submitPoolProposerSlashings: sameType(),
+    submitPoolVoluntaryExit: sameType(),
+    submitPoolBlsToExecutionChange: sameType(),
+    submitPoolSyncCommitteeSignatures: sameType(),
   };
 }

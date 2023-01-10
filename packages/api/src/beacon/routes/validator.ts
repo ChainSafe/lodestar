@@ -17,6 +17,7 @@ import {
   RootHex,
   StringType,
 } from "@lodestar/types";
+import {HttpStatusCode} from "../../utils/client/httpClient.js";
 import {
   RoutesData,
   ReturnTypes,
@@ -28,6 +29,7 @@ import {
   ReqSerializers,
   jsonType,
   ContainerDataExecutionOptimistic,
+  sameType,
 } from "../../utils/index.js";
 import {fromU64Str, toU64Str, U64Str} from "../../utils/serdes.js";
 import {ExecutionOptimistic} from "./beacon/block.js";
@@ -204,9 +206,9 @@ export type Api = {
    * @returns any Successful response
    * @throws ApiError
    */
-  publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<void>;
+  publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<HttpStatusCode>;
 
-  publishContributionAndProofs(contributionAndProofs: altair.SignedContributionAndProof[]): Promise<void>;
+  publishContributionAndProofs(contributionAndProofs: altair.SignedContributionAndProof[]): Promise<HttpStatusCode>;
 
   /**
    * Signal beacon node to prepare for a committee subnet
@@ -224,16 +226,16 @@ export type Api = {
    *
    * @throws ApiError
    */
-  prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void>;
+  prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<HttpStatusCode>;
 
-  prepareSyncCommitteeSubnets(subscriptions: SyncCommitteeSubscription[]): Promise<void>;
+  prepareSyncCommitteeSubnets(subscriptions: SyncCommitteeSubscription[]): Promise<HttpStatusCode>;
 
-  prepareBeaconProposer(proposers: ProposerPreparationData[]): Promise<void>;
+  prepareBeaconProposer(proposers: ProposerPreparationData[]): Promise<HttpStatusCode>;
 
   /** Returns validator indices that have been observed to be active on the network */
   getLiveness(indices: ValidatorIndex[], epoch: Epoch): Promise<{data: LivenessResponseData[]}>;
 
-  registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
+  registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<HttpStatusCode>;
 };
 
 /**
@@ -453,5 +455,11 @@ export function getReturnTypes(): ReturnTypes<Api> {
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
     getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),
     getLiveness: jsonType("snake"),
+    publishAggregateAndProofs: sameType(),
+    publishContributionAndProofs: sameType(),
+    prepareBeaconCommitteeSubnet: sameType(),
+    prepareSyncCommitteeSubnets: sameType(),
+    prepareBeaconProposer: sameType(),
+    registerValidator: sameType(),
   };
 }

@@ -16,7 +16,9 @@ import {
   ReqSerializer,
   ContainerDataExecutionOptimistic,
   WithExecutionOptimistic,
+  sameType,
 } from "../../../utils/index.js";
+import {HttpStatusCode} from "../../../utils/client/httpClient.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -103,12 +105,12 @@ export type Api = {
    * @param requestBody The `SignedBeaconBlock` object composed of `BeaconBlock` object (produced by beacon node) and validator signature.
    * @returns any The block was validated successfully and has been broadcast. It has also been integrated into the beacon node's database.
    */
-  publishBlock(block: allForks.SignedBeaconBlock): Promise<void>;
+  publishBlock(block: allForks.SignedBeaconBlock): Promise<HttpStatusCode>;
   /**
    * Publish a signed blinded block by submitting it to the mev relay and patching in the block
    * transactions beacon node gets in response.
    */
-  publishBlindedBlock(block: allForks.SignedBlindedBeaconBlock): Promise<void>;
+  publishBlindedBlock(block: allForks.SignedBlindedBeaconBlock): Promise<HttpStatusCode>;
 };
 
 /**
@@ -201,5 +203,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getBlockHeader: ContainerDataExecutionOptimistic(BeaconHeaderResType),
     getBlockHeaders: ContainerDataExecutionOptimistic(ArrayOf(BeaconHeaderResType)),
     getBlockRoot: ContainerDataExecutionOptimistic(RootContainer),
+    publishBlock: sameType(),
+    publishBlindedBlock: sameType(),
   };
 }

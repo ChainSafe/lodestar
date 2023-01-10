@@ -61,11 +61,11 @@ export const testData: GenericServerTestCases<Api> = {
   },
   setFeeRecipient: {
     args: [pubkeyRand, ethaddressRand],
-    res: undefined,
+    res: 200,
   },
   deleteFeeRecipient: {
     args: [pubkeyRand],
-    res: undefined,
+    res: 204,
   },
 
   getGasLimit: {
@@ -74,10 +74,10 @@ export const testData: GenericServerTestCases<Api> = {
   },
   setGasLimit: {
     args: [pubkeyRand, gasLimitRand],
-    res: undefined,
+    res: 200,
   },
   deleteGasLimit: {
     args: [pubkeyRand],
-    res: undefined,
+    res: 204,
   },
 };

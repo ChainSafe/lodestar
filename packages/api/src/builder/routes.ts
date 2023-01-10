@@ -13,13 +13,15 @@ import {
   ReqEmpty,
   ArrayOf,
   WithVersion,
+  sameType,
 } from "../utils/index.js";
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 import {getReqSerializers as getBeaconReqSerializers} from "../beacon/routes/beacon/block.js";
+import {HttpStatusCode} from "../utils/client/httpClient.js";
 
 export type Api = {
-  status(): Promise<void>;
-  registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
+  status(): Promise<HttpStatusCode>;
+  registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<HttpStatusCode>;
   getHeader(
     slot: Slot,
     parentHash: Root,
@@ -84,5 +86,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
         ? ssz.allForksBlobs[fork].SignedBeaconBlockAndBlobsSidecar
         : ssz.eip4844.SignedBeaconBlockAndBlobsSidecar
     ),
+    status: sameType(),
+    registerValidator: sameType(),
   };
 }

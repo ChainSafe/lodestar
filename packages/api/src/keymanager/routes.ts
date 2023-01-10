@@ -1,5 +1,6 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {ssz, stringType} from "@lodestar/types";
+import {HttpStatusCode} from "../utils/client/httpClient.js";
 import {
   ReturnTypes,
   RoutesData,
@@ -9,6 +10,7 @@ import {
   ReqEmpty,
   jsonType,
   ContainerData,
+  sameType,
 } from "../utils/index.js";
 
 export enum ImportStatus {
@@ -192,16 +194,16 @@ export type Api = {
   ): Promise<{
     data: FeeRecipientData;
   }>;
-  setFeeRecipient(pubkey: string, ethaddress: string): Promise<void>;
-  deleteFeeRecipient(pubkey: string): Promise<void>;
+  setFeeRecipient(pubkey: string, ethaddress: string): Promise<HttpStatusCode>;
+  deleteFeeRecipient(pubkey: string): Promise<HttpStatusCode>;
 
   getGasLimit(
     pubkey: string
   ): Promise<{
     data: GasLimitData;
   }>;
-  setGasLimit(pubkey: string, gasLimit: number): Promise<void>;
-  deleteGasLimit(pubkey: string): Promise<void>;
+  setGasLimit(pubkey: string, gasLimit: number): Promise<HttpStatusCode>;
+  deleteGasLimit(pubkey: string): Promise<HttpStatusCode>;
 };
 
 export const routesData: RoutesData<Api> = {
@@ -347,6 +349,10 @@ export function getReturnTypes(): ReturnTypes<Api> {
         {jsonCase: "eth2"}
       )
     ),
+    setFeeRecipient: sameType(),
+    deleteFeeRecipient: sameType(),
+    setGasLimit: sameType(),
+    deleteGasLimit: sameType(),
   };
 }
 

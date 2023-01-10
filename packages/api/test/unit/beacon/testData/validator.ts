@@ -68,23 +68,23 @@ export const testData: GenericServerTestCases<Api> = {
   },
   publishAggregateAndProofs: {
     args: [[ssz.phase0.SignedAggregateAndProof.defaultValue()]],
-    res: undefined,
+    res: 200,
   },
   publishContributionAndProofs: {
     args: [[ssz.altair.SignedContributionAndProof.defaultValue()]],
-    res: undefined,
+    res: 200,
   },
   prepareBeaconCommitteeSubnet: {
     args: [[{validatorIndex: 1, committeeIndex: 2, committeesAtSlot: 3, slot: 4, isAggregator: true}]],
-    res: undefined,
+    res: 200,
   },
   prepareSyncCommitteeSubnets: {
     args: [[{validatorIndex: 1, syncCommitteeIndices: [2], untilEpoch: 3}]],
-    res: undefined,
+    res: 200,
   },
   prepareBeaconProposer: {
     args: [[{validatorIndex: "1", feeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"}]],
-    res: undefined,
+    res: 200,
   },
   getLiveness: {
     args: [[0], 0],
@@ -92,6 +92,6 @@ export const testData: GenericServerTestCases<Api> = {
   },
   registerValidator: {
     args: [[ssz.bellatrix.SignedValidatorRegistrationV1.defaultValue()]],
-    res: undefined,
+    res: 200,
   },
 };

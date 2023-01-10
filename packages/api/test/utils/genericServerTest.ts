@@ -4,6 +4,7 @@ import {RouteGeneric, ReqGeneric, Resolves} from "../../src/utils/index.js";
 import {FetchOpts, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
 import {ServerRoutes} from "../../src/utils/server/genericJsonServer.js";
 import {registerRoute} from "../../src/utils/server/registerRoute.js";
+import {HttpStatusCode} from "../../lib/utils/client/httpClient.js";
 import {getMockApi, getTestServer} from "./utils.js";
 
 type IgnoreVoid<T> = T extends void ? undefined : T;
@@ -72,5 +73,10 @@ class HttpClientSpy extends HttpClient {
   async arrayBuffer(opts: FetchOpts): Promise<ArrayBuffer> {
     this.opts = opts;
     return super.arrayBuffer(opts);
+  }
+
+  async request(opts: FetchOpts): Promise<HttpStatusCode> {
+    this.opts = opts;
+    return super.request(opts);
   }
 }
