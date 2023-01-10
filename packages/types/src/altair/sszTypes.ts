@@ -4,7 +4,6 @@ import {
   NEXT_SYNC_COMMITTEE_DEPTH,
   SYNC_COMMITTEE_SUBNET_COUNT,
   SYNC_COMMITTEE_SIZE,
-  SLOTS_PER_HISTORICAL_ROOT,
   HISTORICAL_ROOTS_LIMIT,
   VALIDATOR_REGISTRY_LIMIT,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
@@ -101,17 +100,6 @@ export const SyncAggregate = new ContainerType(
   {typeName: "SyncCommitteeBits", jsonCase: "eth2"}
 );
 
-export const HistoricalBlockRoots = new VectorCompositeType(Root, SLOTS_PER_HISTORICAL_ROOT);
-export const HistoricalStateRoots = new VectorCompositeType(Root, SLOTS_PER_HISTORICAL_ROOT);
-
-export const HistoricalBatch = new ContainerType(
-  {
-    blockRoots: HistoricalBlockRoots,
-    stateRoots: HistoricalStateRoots,
-  },
-  {typeName: "HistoricalBatch", jsonCase: "eth2"}
-);
-
 export const BeaconBlockBody = new ContainerType(
   {
     ...phase0Ssz.BeaconBlockBody.fields,
@@ -152,8 +140,8 @@ export const BeaconState = new ContainerType(
     fork: phase0Ssz.Fork,
     // History
     latestBlockHeader: phase0Ssz.BeaconBlockHeader,
-    blockRoots: HistoricalBlockRoots,
-    stateRoots: HistoricalStateRoots,
+    blockRoots: phase0Ssz.HistoricalBlockRoots,
+    stateRoots: phase0Ssz.HistoricalStateRoots,
     historicalRoots: new ListCompositeType(Root, HISTORICAL_ROOTS_LIMIT),
     // Eth1
     eth1Data: phase0Ssz.Eth1Data,

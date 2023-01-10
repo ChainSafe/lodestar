@@ -1,7 +1,7 @@
 import sinon from "sinon";
 
 import {CompositeTypeAny, toHexString, TreeView} from "@chainsafe/ssz";
-import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@lodestar/types";
+import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64, RootHex, eip4844} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus, AncestorStatus} from "@lodestar/fork-choice";
@@ -104,6 +104,8 @@ export class MockBeaconChain implements IBeaconChain {
 
   private readonly state: CachedBeaconStateAllForks;
   private abortController: AbortController;
+
+  readonly producedBlobsSidecarCache = new Map<RootHex, eip4844.BlobsSidecar>();
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
     this.logger = testLogger();

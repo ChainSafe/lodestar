@@ -1,4 +1,4 @@
-import {GENESIS_EPOCH, ForkName, SLOTS_PER_EPOCH, ForkSeq} from "@lodestar/params";
+import {GENESIS_EPOCH, ForkName, SLOTS_PER_EPOCH, ForkSeq, isForkExecution, isForkBlobs} from "@lodestar/params";
 import {Slot, allForks, Version, ssz} from "@lodestar/types";
 import {IChainConfig} from "../chainConfig/index.js";
 import {IForkConfig, IForkInfo} from "./types.js";
@@ -84,17 +84,24 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     },
     getExecutionForkTypes(slot: Slot): allForks.AllForksExecutionSSZTypes {
       const forkName = this.getForkName(slot);
-      if (forkName === ForkName.phase0 || forkName === ForkName.altair) {
-        throw Error(`Invalid slot=${slot} fork=${forkName} for blinded fork types`);
+      if (!isForkExecution(forkName)) {
+        throw Error(`Invalid slot=${slot} fork=${forkName} for execution fork types`);
       }
       return ssz.allForksExecution[forkName] as allForks.AllForksExecutionSSZTypes;
     },
     getBlindedForkTypes(slot: Slot): allForks.AllForksBlindedSSZTypes {
       const forkName = this.getForkName(slot);
-      if (forkName === ForkName.phase0 || forkName === ForkName.altair) {
+      if (!isForkExecution(forkName)) {
         throw Error(`Invalid slot=${slot} fork=${forkName} for blinded fork types`);
       }
       return ssz.allForksBlinded[forkName] as allForks.AllForksBlindedSSZTypes;
+    },
+    getBlobsForkTypes(slot: Slot): allForks.AllForksBlobsSSZTypes {
+      const forkName = this.getForkName(slot);
+      if (!isForkBlobs(forkName)) {
+        throw Error(`Invalid slot=${slot} fork=${forkName} for blobs fork types`);
+      }
+      return ssz.allForksBlobs[forkName] as allForks.AllForksBlobsSSZTypes;
     },
   };
 }

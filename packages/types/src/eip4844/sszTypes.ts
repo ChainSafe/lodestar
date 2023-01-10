@@ -12,7 +12,7 @@ import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 
-const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, Bytes48, Bytes96} = primitiveSsz;
+const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, Bytes48, Bytes96, BLSPubkey} = primitiveSsz;
 
 // Polynomial commitments
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/polynomial-commitments.md
@@ -93,17 +93,6 @@ export const ExecutionPayload = new ContainerType(
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
-export const BlindedExecutionPayload = new ContainerType(
-  {
-    ...bellatrixSsz.CommonExecutionPayloadType.fields,
-    excessDataGas: UintBn256, // New in EIP-4844
-    blockHash: Root,
-    transactionsRoot: Root,
-    withdrawalsRoot: Root,
-  },
-  {typeName: "BlindedExecutionPayload", jsonCase: "eth2"}
-);
-
 export const ExecutionPayloadHeader = new ContainerType(
   {
     ...bellatrixSsz.CommonExecutionPayloadType.fields,
@@ -164,6 +153,7 @@ export const BlindedBeaconBlockBody = new ContainerType(
   {
     ...BeaconBlockBody.fields,
     executionPayloadHeader: ExecutionPayloadHeader, // Modified in EIP-4844
+    blobKzgCommitments: BlobKzgCommitments, // New in EIP-4844
   },
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -184,6 +174,24 @@ export const SignedBlindedBeaconBlock = new ContainerType(
   {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
 );
 
+export const BuilderBid = new ContainerType(
+  {
+    header: ExecutionPayloadHeader,
+    value: UintBn256,
+    pubkey: BLSPubkey,
+    blobKzgCommitments: BlobKzgCommitments,
+  },
+  {typeName: "BuilderBid", jsonCase: "eth2"}
+);
+
+export const SignedBuilderBid = new ContainerType(
+  {
+    message: BuilderBid,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBuilderBid", jsonCase: "eth2"}
+);
+
 // We don't spread capella.BeaconState fields since we need to replace
 // latestExecutionPayloadHeader and we cannot keep order doing that
 export const BeaconState = new ContainerType(
@@ -194,8 +202,9 @@ export const BeaconState = new ContainerType(
     fork: phase0Ssz.Fork,
     // History
     latestBlockHeader: phase0Ssz.BeaconBlockHeader,
-    blockRoots: capellaSsz.HistoricalBlockRoots,
-    stateRoots: capellaSsz.HistoricalStateRoots,
+    blockRoots: phase0Ssz.HistoricalBlockRoots,
+    stateRoots: phase0Ssz.HistoricalStateRoots,
+    // historical_roots Frozen in Capella, replaced by historical_summaries
     historicalRoots: new ListCompositeType(Root, HISTORICAL_ROOTS_LIMIT),
     // Eth1
     eth1Data: phase0Ssz.Eth1Data,
@@ -225,6 +234,8 @@ export const BeaconState = new ContainerType(
     // Withdrawals
     nextWithdrawalIndex: capellaSsz.BeaconState.fields.nextWithdrawalIndex,
     nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,
+    // Deep history valid from Capella onwards
+    historicalSummaries: capellaSsz.BeaconState.fields.historicalSummaries,
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );

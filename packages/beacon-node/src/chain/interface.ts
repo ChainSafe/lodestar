@@ -88,6 +88,7 @@ export interface IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
+  readonly producedBlobsSidecarCache: Map<RootHex, eip4844.BlobsSidecar>;
   readonly opts: IChainOptions;
 
   /** Stop beacon chain processing */

@@ -4,9 +4,10 @@ import {
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
 } from "@lodestar/params";
+import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 
 import {CachedBeaconStateCapella} from "../types.js";
-import {decreaseBalance, hasEth1WithdrawalCredential} from "../util/index.js";
+import {decreaseBalance, hasEth1WithdrawalCredential, isCapellaPayloadHeader} from "../util/index.js";
 
 export function processWithdrawals(
   state: CachedBeaconStateCapella,
@@ -15,14 +16,30 @@ export function processWithdrawals(
   const {withdrawals: expectedWithdrawals} = getExpectedWithdrawals(state);
   const numWithdrawals = expectedWithdrawals.length;
 
-  if (expectedWithdrawals.length !== payload.withdrawals.length) {
-    throw Error(`Invalid withdrawals length expected=${numWithdrawals} actual=${payload.withdrawals.length}`);
+  if (isCapellaPayloadHeader(payload)) {
+    const expectedWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(expectedWithdrawals);
+    const actualWithdrawalsRoot = payload.withdrawalsRoot;
+    if (!byteArrayEquals(expectedWithdrawalsRoot, actualWithdrawalsRoot)) {
+      throw Error(
+        `Invalid withdrawalsRoot of executionPayloadHeader, expected=${toHexString(
+          expectedWithdrawalsRoot
+        )}, actual=${toHexString(actualWithdrawalsRoot)}`
+      );
+    }
+  } else {
+    if (expectedWithdrawals.length !== payload.withdrawals.length) {
+      throw Error(`Invalid withdrawals length expected=${numWithdrawals} actual=${payload.withdrawals.length}`);
+    }
+    for (let i = 0; i < numWithdrawals; i++) {
+      const withdrawal = expectedWithdrawals[i];
+      if (!ssz.capella.Withdrawal.equals(withdrawal, payload.withdrawals[i])) {
+        throw Error(`Withdrawal mismatch at index=${i}`);
+      }
+    }
   }
+
   for (let i = 0; i < numWithdrawals; i++) {
     const withdrawal = expectedWithdrawals[i];
-    if (!ssz.capella.Withdrawal.equals(withdrawal, payload.withdrawals[i])) {
-      throw Error(`Withdrawal mismatch at index=${i}`);
-    }
     decreaseBalance(state, withdrawal.validatorIndex, Number(withdrawal.amount));
   }
 
