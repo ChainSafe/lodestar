@@ -71,7 +71,7 @@ To import keys when you start the validator specify the `--importKeystores` and 
 
 <!-- prettier-ignore-start -->
 !!! warning
-    If you import keys at runtime any keys in the secret store will be ignored.
+    If you import keys using `--importKeystores` at runtime (Option 2) any keys loaded to the keystores folder from Option 1 will be ignored.
 <!-- prettier-ignore-end -->
 
 
