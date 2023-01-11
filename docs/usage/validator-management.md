@@ -42,34 +42,37 @@ You will also need the passphrase used the encrypt the keystore. This can be spe
 
 #### Option 1: Import Keys To Lodestar's Keystores Folder
 
-You can load the keys into the keystore folder using the command `validator import`:
+You can load the keys into the keystore folder using the `validator import` command. There are two methods for importing keystores:
 ```bash
-# Interactive passphrase input
-./lodestar validator import --keystore ./validator_keys
+# Interactive passphrase import
+./lodestar validator import --importKeystores ./validator_keys
 
-# Plaintext passphrase file input
-./lodestar validator import --keystore ./validator_keys --passphraseFile ./password.txt
+# Plaintext passphrase file import
+./lodestar validator import --importKeystores ./validator_keys --importKeystoresPassword ./password.txt
 ```
-These will be automatically loaded when you run the validator.
 
+<!-- prettier-ignore-start -->
+!!! info
+    The interactive passphrase import method will prompt every keystore in the `validator_keys` folder for import and will ask for the individual password for each keystore. **This method will allow you to import multiple keystores with different passwords.**
+
+    The plaintext passphrase file import method will allow  to import all keystores in the `validator_keys` folder with the same password contained in `password.txt` for efficiency. 
+<!-- prettier-ignore-end -->
+
+Once imported with either method, these keystores will be automatically loaded when you start the validator. To list the imported keystores, use the `validator list` command.
+
+---
 #### Option 2: Import Keys When Starting the Validator
 
 To import keys when you start the validator specify the `--importKeystores` and `--importKeystoresPassword` flags with the `validator` command:
 
 ```bash
-./lodestar validator --keystore ./validator_keys --passphraseFile ./password.txt
+./lodestar validator --importKeystores ./validator_keys --importKeystoresPassword ./password.txt
 ```
 
 <!-- prettier-ignore-start -->
 !!! warning
     If you import keys at runtime any keys in the secret store will be ignored.
 <!-- prettier-ignore-end -->
-
-<!-- prettier-ignore-start -->
-!!! info
-    To load multiple keystore files with different passwords you must use the `validator import` command.
-<!-- prettier-ignore-end -->
-
 
 
 ### Configuring the fee recipient address
