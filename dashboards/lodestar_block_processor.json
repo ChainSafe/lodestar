@@ -2757,7 +2757,7 @@
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "beacon_fork_choice_errors_total{group=\"beta\", instance=\"contabo-13\", job=\"beacon\", scrape_location=\"beacon\"}"
+                  "options": "beacon_fork_choice_errors_total{group=\"beta\", instance=\"contabo-13\", job=\"beacon\"}"
                 },
                 "properties": [
                   {
@@ -2993,7 +2993,7 @@
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "{instance=\"beacon_node:8008\", job=\"Lodestar\"}"
+                  "options": "{job=\"beacon\"}"
                 },
                 "properties": [
                   {
