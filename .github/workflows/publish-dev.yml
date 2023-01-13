@@ -24,7 +24,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
       - name: Node.js version
         id: node
-        run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
+        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
@@ -46,7 +46,7 @@ jobs:
           PACKAGE_VERSION=$(node -p "require('./packages/cli/package.json').version")
           NEXT_VERSION=$(npx --yes semver --increment minor $PACKAGE_VERSION)
           export VERSION=${NEXT_VERSION}-dev.${GITHUB_SHA:0:10}
-          echo "::set-output name=version::$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo PACKAGE_VERSION $PACKAGE_VERSION GITHUB_SHA $GITHUB_SHA VERSION $VERSION
 
       - name: Change and commit version

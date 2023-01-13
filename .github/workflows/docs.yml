@@ -16,7 +16,7 @@ jobs:
           node-version: 18
       - name: Node.js version
         id: node
-        run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
+        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps

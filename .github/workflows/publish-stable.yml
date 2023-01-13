@@ -21,7 +21,7 @@ jobs:
 
       - name: Get tag
         id: get_tag
-        run: echo ::set-output name=tag::${GITHUB_REF/refs\/tags\//}
+        run: echo "tag=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
 
       - name: Assert tag == package.json version
         run: .github/workflows/scripts/assert-same-package-version.sh
@@ -40,8 +40,8 @@ jobs:
         run: |
           STABLE_COMMIT=$(git log --pretty="%h" -n 1 refs/remotes/origin/stable)
           TAG_COMMIT=$(git log --pretty="%h" -n 1 $GITHUB_REF)
-          echo ::set-output name=stable_commit::$STABLE_COMMIT
-          echo ::set-output name=tag_commit::$TAG_COMMIT
+          echo "stable_commit=$STABLE_COMMIT" >> $GITHUB_OUTPUT
+          echo "tag_commit=$TAG_COMMIT" >> $GITHUB_OUTPUT
 
     outputs:
       is_stable: ${{ steps.release_type.outputs.stable_commit == steps.release_type.outputs.tag_commit }}
@@ -63,7 +63,7 @@ jobs:
           node-version: 18
       - name: Node.js version
         id: node
-        run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
+        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
