@@ -12,7 +12,7 @@ import {
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, eip4844} from "@lodestar/types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, eip4844, Wei} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {ILogger, pruneSetToMax, toHex} from "@lodestar/utils";
@@ -353,25 +353,27 @@ export class BeaconChain implements IBeaconChain {
     return await this.db.block.get(fromHexString(block.blockRoot));
   }
 
-  produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock> {
+  produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; blockValue: Wei}> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock> {
+  produceBlindedBlock(
+    blockAttributes: BlockAttributes
+  ): Promise<{block: allForks.BlindedBeaconBlock; blockValue: Wei}> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
     {randaoReveal, graffiti, slot}: BlockAttributes
-  ): Promise<AssembledBlockType<T>> {
+  ): Promise<{block: AssembledBlockType<T>; blockValue: Wei}> {
     const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(head.blockRoot, slot, RegenCaller.produceBlock);
     const parentBlockRoot = fromHexString(head.blockRoot);
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
 
-    const {body, blobs} = await produceBlockBody.call(this, blockType, state, {
+    const {body, blobs, blockValue} = await produceBlockBody.call(this, blockType, state, {
       randaoReveal,
       graffiti,
       slot,
@@ -410,7 +412,7 @@ export class BeaconChain implements IBeaconChain {
       );
     }
 
-    return block;
+    return {block, blockValue};
   }
 
   /**

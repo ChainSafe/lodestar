@@ -1,4 +1,4 @@
-import {allForks, capella, eip4844} from "@lodestar/types";
+import {allForks, capella, eip4844, Wei} from "@lodestar/types";
 import {
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
@@ -176,10 +176,22 @@ export function hasBlockValue(response: ExecutionPayloadResponseV2): response is
   return (response as ExecutionPayloadRpcWithBlockValue).blockValue !== undefined;
 }
 
-export function parseExecutionPayload(fork: ForkName, response: ExecutionPayloadResponseV2): allForks.ExecutionPayload {
-  const data: ExecutionPayloadRpc = hasBlockValue(response) ? response.executionPayload : response;
+export function parseExecutionPayload(
+  fork: ForkName,
+  response: ExecutionPayloadResponseV2
+): {executionPayload: allForks.ExecutionPayload; blockValue: Wei} {
+  let data: ExecutionPayloadRpc;
+  let blockValue: Wei;
+  if (hasBlockValue(response)) {
+    blockValue = quantityToBigint(response.blockValue);
+    data = response.executionPayload;
+  } else {
+    data = response;
+    // Just set it to zero as default
+    blockValue = BigInt(0);
+  }
 
-  const payload = {
+  const executionPayload = {
     parentHash: dataToBytes(data.parentHash, 32),
     feeRecipient: dataToBytes(data.feeRecipient, 20),
     stateRoot: dataToBytes(data.stateRoot, 32),
@@ -201,23 +213,23 @@ export function parseExecutionPayload(fork: ForkName, response: ExecutionPayload
     // Geth can also reply with null
     if (withdrawals == null) {
       throw Error(
-        `withdrawals missing for ${fork} >= capella executionPayload number=${payload.blockNumber} hash=${data.blockHash}`
+        `withdrawals missing for ${fork} >= capella executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (payload as capella.ExecutionPayload).withdrawals = withdrawals.map((w) => deserializeWithdrawal(w));
+    (executionPayload as capella.ExecutionPayload).withdrawals = withdrawals.map((w) => deserializeWithdrawal(w));
   }
 
   // EIP-4844 adds excessDataGas to the ExecutionPayload
   if (ForkSeq[fork] >= ForkSeq.eip4844) {
     if (data.excessDataGas == null) {
       throw Error(
-        `excessDataGas missing for ${fork} >= eip4844 executionPayload number=${payload.blockNumber} hash=${data.blockHash}`
+        `excessDataGas missing for ${fork} >= eip4844 executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (payload as eip4844.ExecutionPayload).excessDataGas = quantityToBigint(data.excessDataGas);
+    (executionPayload as eip4844.ExecutionPayload).excessDataGas = quantityToBigint(data.excessDataGas);
   }
 
-  return payload;
+  return {executionPayload, blockValue};
 }
 
 export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttributesRpc {

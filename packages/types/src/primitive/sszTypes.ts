@@ -50,6 +50,7 @@ export const SubcommitteeIndex = UintNum64;
 export const ValidatorIndex = UintNum64;
 export const WithdrawalIndex = UintNum64;
 export const Gwei = UintBn64;
+export const Wei = UintBn256;
 export const Root = new ByteVectorType(32);
 
 export const Version = Bytes4;

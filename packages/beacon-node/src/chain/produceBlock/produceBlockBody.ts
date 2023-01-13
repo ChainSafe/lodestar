@@ -12,6 +12,7 @@ import {
   BLSSignature,
   capella,
   eip4844,
+  Wei,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -89,11 +90,12 @@ export async function produceBlockBody<T extends BlockType>(
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
   }
-): Promise<{body: AssembledBodyType<T>; blobs: BlobsResult}> {
+): Promise<{body: AssembledBodyType<T>; blobs: BlobsResult; blockValue: Wei}> {
   // Type-safe for blobs variable. Translate 'null' value into 'preEIP4844' enum
   // TODO: Not ideal, but better than just using null.
   // TODO: Does not guarantee that preEIP4844 enum goes with a preEIP4844 block
   let blobsResult: BlobsResult;
+  let blockValue: Wei;
 
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there
@@ -170,8 +172,9 @@ export async function produceBlockBody<T extends BlockType>(
         proposerPubKey
       );
       (blockBody as allForks.BlindedBeaconBlockBody).executionPayloadHeader = builderRes.header;
+      blockValue = builderRes.blockValue;
       if (ForkSeq[fork] >= ForkSeq.eip4844) {
-        const {blobKzgCommitments} = builderRes as {blobKzgCommitments: eip4844.BlobKzgCommitments};
+        const {blobKzgCommitments} = builderRes;
         if (blobKzgCommitments === undefined) {
           throw Error(`Invalid builder getHeader response for fork=${fork}, missing blobKzgCommitments`);
         }
@@ -203,6 +206,7 @@ export async function produceBlockBody<T extends BlockType>(
             fork
           ].ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preEIP4844};
+          blockValue = BigInt(0);
         } else {
           const {prepType, payloadId} = prepareRes;
           if (prepType !== PayloadPreparationType.Cached) {
@@ -214,12 +218,14 @@ export async function produceBlockBody<T extends BlockType>(
             await sleep(PAYLOAD_GENERATION_TIME_MS);
           }
 
-          const payload = await this.executionEngine.getPayload(fork, payloadId);
-          (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
+          const engineRes = await this.executionEngine.getPayload(fork, payloadId);
+          const {executionPayload} = engineRes;
+          (blockBody as allForks.ExecutionBlockBody).executionPayload = executionPayload;
+          blockValue = engineRes.blockValue;
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
           this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
-          if (payload.transactions.length === 0) {
+          if (executionPayload.transactions.length === 0) {
             this.metrics?.blockPayload.emptyPayloads.inc({prepType});
           }
 
@@ -231,14 +237,14 @@ export async function produceBlockBody<T extends BlockType>(
             const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
 
             // Sanity check consistency between getPayload() and getBlobsBundle()
-            const blockHash = toHex(payload.blockHash);
+            const blockHash = toHex(executionPayload.blockHash);
             if (blobsBundle.blockHash !== blockHash) {
               throw Error(`blobsBundle incorrect blockHash ${blobsBundle.blockHash} != ${blockHash}`);
             }
 
             // Optionally sanity-check that the KZG commitments match the versioned hashes in the transactions
             if (this.opts.sanityCheckExecutionEngineBlobs) {
-              validateBlobsAndKzgCommitments(payload, blobsBundle);
+              validateBlobsAndKzgCommitments(executionPayload, blobsBundle);
             }
 
             (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs;
@@ -262,6 +268,7 @@ export async function produceBlockBody<T extends BlockType>(
             fork
           ].ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preEIP4844};
+          blockValue = BigInt(0);
         } else {
           // since merge transition is complete, we need a valid payload even if with an
           // empty (transactions) one. defaultValue isn't gonna cut it!
@@ -271,6 +278,7 @@ export async function produceBlockBody<T extends BlockType>(
     }
   } else {
     blobsResult = {type: BlobsResultType.preEIP4844};
+    blockValue = BigInt(0);
   }
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
@@ -278,7 +286,7 @@ export async function produceBlockBody<T extends BlockType>(
     (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = blsToExecutionChanges;
   }
 
-  return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult};
+  return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult, blockValue};
 }
 
 /**
@@ -376,7 +384,11 @@ async function prepareExecutionPayloadHeader(
   fork: ForkExecution,
   state: CachedBeaconStateBellatrix,
   proposerPubKey: BLSPubkey
-): Promise<{header: allForks.ExecutionPayloadHeader; blobKzgCommitments?: eip4844.BlobKzgCommitments}> {
+): Promise<{
+  header: allForks.ExecutionPayloadHeader;
+  blockValue: Wei;
+  blobKzgCommitments?: eip4844.BlobKzgCommitments;
+}> {
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");
   }
