@@ -19,8 +19,6 @@ import {
 } from "../../eth1/provider/utils.js";
 import {ExecutePayloadStatus, TransitionConfigurationV1, BlobsBundle, PayloadAttributes} from "./interface.js";
 
-const GWEI_TO_WEI = BigInt(1000000000);
-
 /* eslint-disable @typescript-eslint/naming-convention */
 
 export type EngineApiRpcParamTypes = {
@@ -263,12 +261,8 @@ export function serializeWithdrawal(withdrawal: capella.Withdrawal): WithdrawalR
     index: numToQuantity(withdrawal.index),
     validatorIndex: numToQuantity(withdrawal.validatorIndex),
     address: bytesToData(withdrawal.address),
-    // Note: the amount value is represented on the beacon chain as a little-endian value in
-    // units of Gwei, whereas the amount in this structure MUST be converted to a big-endian value
-    // in units of Wei
-    //
-    // see: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md
-    amount: numToQuantity(withdrawal.amount * GWEI_TO_WEI),
+    // Both CL and EL now deal in Gwei, just little-endian to big-endian conversion required
+    amount: numToQuantity(withdrawal.amount),
   };
 }
 
@@ -277,7 +271,7 @@ export function deserializeWithdrawal(serialized: WithdrawalRpc): capella.Withdr
     index: quantityToNum(serialized.index),
     validatorIndex: quantityToNum(serialized.validatorIndex),
     address: dataToBytes(serialized.address, 20),
-    // see: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md
-    amount: quantityToBigint(serialized.amount) / GWEI_TO_WEI,
+    // Both CL and EL now deal in Gwei, just big-endian to little-endian conversion required
+    amount: quantityToBigint(serialized.amount),
   } as capella.Withdrawal;
 }
