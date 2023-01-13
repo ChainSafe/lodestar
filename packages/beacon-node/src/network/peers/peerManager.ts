@@ -620,6 +620,11 @@ export class PeerManager {
     metrics.peerLongLivedAttnets.reset();
     metrics.peerConnectionLength.reset();
 
+    // reset client counts _for each client_ to 0
+    for (const client of Object.values(ClientKind)) {
+      peersByClient.set(client, 0);
+    }
+
     for (const connections of getConnectionsMap(this.libp2p.connectionManager).values()) {
       const openCnx = connections.find((cnx) => cnx.stat.status === "OPEN");
       if (openCnx) {
