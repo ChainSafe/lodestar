@@ -51,17 +51,17 @@ export function isVotingKeystore(filename: string): boolean {
   // All formats end with `.json`.
   return (
     filename.endsWith(".json") &&
-    // The eth2.0-deposit-cli tool outputs a deposit_data file in the directory users typically import from.
+    // The staking-deposit-cli tool outputs a deposit_data file in the directory users typically import from.
     // Ignoring that file is very helpful for UX, and it's very unlikely that someone names their keystore that way.
     !/deposit_data-\d+\.json$/gi.test(filename)
-    // Note: Previously this tool only imported the exact naming from the eth2.0-deposit-cli tool.
+    // Note: Previously this tool only imported the exact naming from the staking-deposit-cli tool.
     //       However, that's too restrictive. Guide left here as a reference
     //
-    // The format exported by the `eth2.0-deposit-cli` library.
+    // The format exported by the `staking-deposit-cli` library.
     //
     // Reference to function that generates keystores:
     // eslint-disable-next-line max-len
-    // https://github.com/ethereum/eth2.0-deposit-cli/blob/7cebff15eac299b3b1b090c896dd3410c8463450/eth2deposit/credentials.py#L58-L62
+    // https://github.com/ethereum/staking-deposit-cli/blob/7cebff15eac299b3b1b090c896dd3410c8463450/eth2deposit/credentials.py#L58-L62
     //
     // Since we include the key derivation path of `m/12381/3600/x/0/0` this should only ever match
     // with a voting keystore and never a withdrawal keystore.
