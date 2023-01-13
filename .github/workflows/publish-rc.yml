@@ -21,7 +21,7 @@ jobs:
 
       - name: Get tag
         id: get_tag
-        run: echo ::set-output name=tag::${GITHUB_REF/refs\/tags\//}
+        run: echo "tag=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_OUTPUT
 
       - name: Get previous tag
         id: get_prev_tag
@@ -57,7 +57,7 @@ jobs:
           node-version: 18
       - name: Node.js version
         id: node
-        run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
+        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps

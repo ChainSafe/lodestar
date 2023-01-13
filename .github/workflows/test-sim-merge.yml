@@ -1,8 +1,8 @@
 name: Sim merge execution/builder tests
 
-on: 
+on:
   push:
-    # We intentionally don't run push on feature branches. See PR for rational. 
+    # We intentionally don't run push on feature branches. See PR for rational.
     branches: [unstable, stable]
   pull_request:
   workflow_dispatch:
@@ -27,7 +27,7 @@ jobs:
           node-version: 18
       - name: Node.js version
         id: node
-        run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
+        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
@@ -89,7 +89,7 @@ jobs:
           name: debug-test-logs
           path: packages/beacon-node/test-logs
 
-      - name: Pull geth withdrawals 
+      - name: Pull geth withdrawals
         run: docker pull $GETH_WITHDRAWALS_IMAGE
 
       - name: Test Lodestar <> geth withdrawals
@@ -99,7 +99,7 @@ jobs:
           EL_BINARY_DIR: ${{ env.GETH_WITHDRAWALS_IMAGE }}
           EL_SCRIPT_DIR: gethdocker
 
-      - name: Pull ethereumjs withdrawals 
+      - name: Pull ethereumjs withdrawals
         run: docker pull $ETHEREUMJS_WITHDRAWALS_IMAGE
 
       - name: Test Lodestar <> ethereumjs withdrawals
