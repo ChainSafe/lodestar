@@ -10,6 +10,7 @@ import {
   DOMAIN_BLS_TO_EXECUTION_CHANGE,
   FAR_FUTURE_EPOCH,
   SLOTS_PER_EPOCH,
+  ForkName,
 } from "@lodestar/params";
 import bls from "@chainsafe/bls";
 import {PointFormat} from "@chainsafe/bls/types";
@@ -78,7 +79,7 @@ describe("validate bls to execution change", () => {
   const _state = generateState(stateEmpty, config);
   const state = createCachedBeaconStateTest(_state, createIBeaconConfig(config, _state.genesisValidatorsRoot));
 
-  const signatureFork = config.getForkName(state.slot);
+  const signatureFork = ForkName.phase0;
 
   // Gen a valid blsToExecutionChange for first val
   const blsToExecutionChange = {

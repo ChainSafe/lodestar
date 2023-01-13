@@ -57,15 +57,6 @@ export function isValidBlsToExecutionChangeForBlockInclusion(
 
   // 3. assert validator.withdrawal_credentials[1:] == hash(address_change.from_bls_pubkey)[1:]:
   //    If valid before will always be valid in the future, no need to check
-  //
-  // 4. assert bls.Verify(address_change.from_bls_pubkey, signing_root, signed_address_change.signature):
-  //    May become invalid in the future if the fork changes. No need to check the full BLS signature, but check that
-  //    the fork it was valid, is still the current fork
-  //
-  // TODO CAPELLA: Ensure that the fork at witch the signature was verified is the same as the state's fork
-  if (signedBLSToExecutionChange.signatureForkSeq !== state.config.getForkSeq(state.slot)) {
-    return false;
-  }
 
   return true;
 }
