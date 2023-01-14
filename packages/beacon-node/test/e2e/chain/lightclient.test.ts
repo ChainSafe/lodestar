@@ -132,7 +132,7 @@ describe("chain / lightclient", function () {
         lightclient.stop();
       });
 
-      loggerLC.info("Initialized lightclient", {headSlot: lightclient.getHead().slot});
+      loggerLC.info("Initialized lightclient", {headSlot: lightclient.getHead().beacon.slot});
       lightclient.start();
 
       return new Promise<void>((resolve, reject) => {
@@ -153,7 +153,7 @@ describe("chain / lightclient", function () {
             );
 
             // Stop test if reached target head slot
-            const lcHeadSlot = lightclient.getHead().slot;
+            const lcHeadSlot = lightclient.getHead().beacon.slot;
             if (head.slot - lcHeadSlot > maxLcHeadTrackingDiffSlots) {
               throw Error(`Lightclient head ${lcHeadSlot} is too far behind the beacon node ${head.slot}`);
             } else if (head.slot > targetSlotToReach) {

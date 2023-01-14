@@ -185,7 +185,7 @@ export class LightClientServer {
     this.logger = logger;
 
     this.zero = {
-      finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
+      finalizedHeader: ssz.altair.LightClientHeader.defaultValue(),
       finalityBranch: ssz.altair.LightClientUpdate.fields["finalityBranch"].defaultValue(),
     };
 
@@ -194,13 +194,13 @@ export class LightClientServer {
         if (this.latestHeadUpdate) {
           metrics.lightclientServer.highestSlot.set(
             {item: "latest_head_update"},
-            this.latestHeadUpdate.attestedHeader.slot
+            this.latestHeadUpdate.attestedHeader.beacon.slot
           );
         }
         if (this.finalized) {
           metrics.lightclientServer.highestSlot.set(
             {item: "latest_finalized_update"},
-            this.finalized.attestedHeader.slot
+            this.finalized.attestedHeader.beacon.slot
           );
         }
       });
@@ -276,7 +276,7 @@ export class LightClientServer {
     }
 
     return {
-      header,
+      header: {beacon: header},
       currentSyncCommittee,
       currentSyncCommitteeBranch: getCurrentSyncCommitteeBranch(syncCommitteeWitness),
     };
@@ -303,7 +303,7 @@ export class LightClientServer {
    */
   async getCommitteeRoot(period: number): Promise<Uint8Array> {
     const {attestedHeader} = await this.getUpdate(period);
-    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader);
+    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader.beacon);
 
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
     if (!syncCommitteeWitness) {
@@ -467,7 +467,7 @@ export class LightClientServer {
     }
 
     const headerUpdate: altair.LightClientOptimisticUpdate = {
-      attestedHeader: attestedData.attestedHeader,
+      attestedHeader: {beacon: attestedData.attestedHeader},
       syncAggregate,
       signatureSlot,
     };
@@ -489,7 +489,7 @@ export class LightClientServer {
 
     // Persist latest best update for getLatestHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
-    if (!this.latestHeadUpdate || attestedData.attestedHeader.slot > this.latestHeadUpdate.attestedHeader.slot) {
+    if (!this.latestHeadUpdate || attestedData.attestedHeader.slot > this.latestHeadUpdate.attestedHeader.beacon.slot) {
       this.latestHeadUpdate = headerUpdate;
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_head_update"});
     }
@@ -501,12 +501,12 @@ export class LightClientServer {
       if (
         finalizedHeader &&
         (!this.finalized ||
-          finalizedHeader.slot > this.finalized.finalizedHeader.slot ||
+          finalizedHeader.slot > this.finalized.finalizedHeader.beacon.slot ||
           syncAggregateParticipation > sumBits(this.finalized.syncAggregate.syncCommitteeBits))
       ) {
         this.finalized = {
-          attestedHeader: attestedData.attestedHeader,
-          finalizedHeader,
+          attestedHeader: {beacon: attestedData.attestedHeader},
+          finalizedHeader: {beacon: finalizedHeader},
           syncAggregate,
           finalityBranch: attestedData.finalityBranch,
           signatureSlot,
@@ -579,15 +579,15 @@ export class LightClientServer {
       ? await this.getFinalizedHeader(attestedData.finalizedCheckpoint.root as Uint8Array)
       : null;
 
-    let newUpdate;
+    let newUpdate: altair.LightClientUpdate;
     let isFinalized;
     if (attestedData.isFinalized && finalizedHeader && computeSyncPeriodAtSlot(finalizedHeader.slot) == syncPeriod) {
       isFinalized = true;
       newUpdate = {
-        attestedHeader: attestedData.attestedHeader,
+        attestedHeader: {beacon: attestedData.attestedHeader},
         nextSyncCommittee: nextSyncCommittee,
         nextSyncCommitteeBranch,
-        finalizedHeader,
+        finalizedHeader: {beacon: finalizedHeader},
         finalityBranch: attestedData.finalityBranch,
         syncAggregate,
         signatureSlot,
@@ -595,7 +595,7 @@ export class LightClientServer {
     } else {
       isFinalized = false;
       newUpdate = {
-        attestedHeader: attestedData.attestedHeader,
+        attestedHeader: {beacon: attestedData.attestedHeader},
         nextSyncCommittee: nextSyncCommittee,
         nextSyncCommitteeBranch,
         finalizedHeader: this.zero.finalizedHeader,
@@ -622,7 +622,7 @@ export class LightClientServer {
     });
     this.metrics?.lightclientServer.highestSlot.set(
       {item: isFinalized ? "best_finalized_update" : "best_nonfinalized_update"},
-      newUpdate.attestedHeader.slot
+      newUpdate.attestedHeader.beacon.slot
     );
   }
 

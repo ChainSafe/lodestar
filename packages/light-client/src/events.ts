@@ -1,4 +1,4 @@
-import {phase0} from "@lodestar/types";
+import {altair} from "@lodestar/types";
 
 export enum LightclientEvent {
   lightClientOptimisticUpdate = "light_client_optimistic_update",
@@ -6,8 +6,8 @@ export enum LightclientEvent {
 }
 
 export type LightclientEmitterEvents = {
-  [LightclientEvent.lightClientOptimisticUpdate]: (newHeader: phase0.BeaconBlockHeader) => void;
-  [LightclientEvent.lightClientFinalityUpdate]: (newHeader: phase0.BeaconBlockHeader) => void;
+  [LightclientEvent.lightClientOptimisticUpdate]: (newHeader: altair.LightClientHeader) => void;
+  [LightclientEvent.lightClientFinalityUpdate]: (newHeader: altair.LightClientHeader) => void;
 };
 
 export type LightclientEmitter = MittEmitter<LightclientEmitterEvents>;

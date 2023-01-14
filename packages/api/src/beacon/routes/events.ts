@@ -175,15 +175,15 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
     [EventType.lightClientOptimisticUpdate]: new ContainerType(
       {
         syncAggregate: ssz.altair.SyncAggregate,
-        attestedHeader: ssz.phase0.BeaconBlockHeader,
+        attestedHeader: ssz.altair.LightClientHeader,
         signatureSlot: ssz.Slot,
       },
       {jsonCase: "eth2"}
     ),
     [EventType.lightClientFinalityUpdate]: new ContainerType(
       {
-        attestedHeader: ssz.phase0.BeaconBlockHeader,
-        finalizedHeader: ssz.phase0.BeaconBlockHeader,
+        attestedHeader: ssz.altair.LightClientHeader,
+        finalizedHeader: ssz.altair.LightClientHeader,
         finalityBranch: new VectorCompositeType(ssz.Bytes32, FINALIZED_ROOT_DEPTH),
         syncAggregate: ssz.altair.SyncAggregate,
         signatureSlot: ssz.Slot,

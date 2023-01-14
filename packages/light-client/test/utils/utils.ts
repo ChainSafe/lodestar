@@ -255,7 +255,7 @@ export function committeeUpdateToLatestHeadUpdate(
       syncCommitteeBits: committeeUpdate.syncAggregate.syncCommitteeBits,
       syncCommitteeSignature: committeeUpdate.syncAggregate.syncCommitteeSignature,
     },
-    signatureSlot: committeeUpdate.attestedHeader.slot + 1,
+    signatureSlot: committeeUpdate.attestedHeader.beacon.slot + 1,
   };
 }
 

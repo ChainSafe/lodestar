@@ -59,7 +59,7 @@ describe("Light Client Optimistic Update validation", function () {
     chain.lightClientServer.getOptimisticUpdate = () => {
       const defaultValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
       // make the local slot higher than gossiped
-      defaultValue.attestedHeader.slot = lightclientOptimisticUpdate.attestedHeader.slot + 1;
+      defaultValue.attestedHeader.slot = lightclientOptimisticUpdate.attestedHeader.beacon.slot + 1;
       return defaultValue;
     };
 
