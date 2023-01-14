@@ -47,7 +47,8 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
       announce: options.addresses.announce || [],
     },
     connectionEncryption: [createNoise()],
-    transports: [tcp()],
+    // Reject connections when the server's connection count gets high
+    transports: [tcp({maxConnections: options.maxConnections})],
     streamMuxers: [mplex({maxInboundStreams: 256})],
     peerDiscovery,
     metrics: options.metrics
@@ -65,11 +66,8 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
       dialTimeout: 30_000,
 
       autoDial: false,
-      // DOCS: the maximum number of connections libp2p is willing to have before it starts disconnecting.
-      // If ConnectionManager.size > maxConnections calls _maybeDisconnectOne() which will sort peers disconnect
-      // the one with the least `_peerValues`. That's a custom peer generalized score that's not used, so it always
-      // has the same value in current Lodestar usage.
-      maxConnections: options.maxConnections,
+      // This is the default value, we reject connections based on tcp() option above so this is not important
+      maxConnections: Infinity,
       // DOCS: the minimum number of connections below which libp2p not activate preemptive disconnections.
       // If ConnectionManager.size < minConnections, it won't prune peers in _maybeDisconnectOne(). If autoDial is
       // off it doesn't have any effect in behaviour.
