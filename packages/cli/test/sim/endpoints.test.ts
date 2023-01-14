@@ -92,12 +92,11 @@ await env.tracker.assert(
 await env.tracker.assert(
   "should return the validator when getStateValidator is called with the validator index",
   async () => {
-    const validatorIndex = "0";
+    const validatorIndex = 0;
 
     const response = await node.api.beacon.getStateValidator("head", validatorIndex);
 
-    // TODO: the index in data should be a string instead of an integer
-    expect(response.data.index).to.be.equal(parseInt(validatorIndex));
+    expect(response.data.index).to.be.equal(validatorIndex);
   }
 );
 
