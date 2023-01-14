@@ -1,4 +1,4 @@
-import {altair, phase0, ssz, StringType, SyncPeriod} from "@lodestar/types";
+import {altair, ssz, StringType, SyncPeriod} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {ContainerType} from "@chainsafe/ssz";
 import {
@@ -16,7 +16,7 @@ import {
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export type LightClientBootstrap = {
-  header: phase0.BeaconBlockHeader;
+  header: altair.LightClientHeader;
   currentSyncCommittee: altair.SyncCommittee;
   /** Single branch proof from state root to currentSyncCommittee */
   currentSyncCommitteeBranch: Uint8Array[];

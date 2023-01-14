@@ -93,12 +93,12 @@ export const eventTestData: EventData = {
   }),
   [EventType.lightClientOptimisticUpdate]: {
     syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
-    attestedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
+    attestedHeader: ssz.altair.LightClientHeader.defaultValue(),
     signatureSlot: ssz.Slot.defaultValue(),
   },
   [EventType.lightClientFinalityUpdate]: {
-    attestedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
-    finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
+    attestedHeader: ssz.altair.LightClientHeader.defaultValue(),
+    finalizedHeader: ssz.altair.LightClientHeader.defaultValue(),
     finalityBranch: [root],
     syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
     signatureSlot: ssz.Slot.defaultValue(),

@@ -40,7 +40,7 @@ export class LightclientSpec {
       attestedHeader: optimisticUpdate.attestedHeader,
       nextSyncCommittee: ZERO_SYNC_COMMITTEE,
       nextSyncCommitteeBranch: ZERO_NEXT_SYNC_COMMITTEE_BRANCH,
-      finalizedHeader: ZERO_HEADER,
+      finalizedHeader: {beacon: ZERO_HEADER},
       finalityBranch: ZERO_FINALITY_BRANCH,
       syncAggregate: optimisticUpdate.syncAggregate,
       signatureSlot: optimisticUpdate.signatureSlot,
@@ -49,7 +49,7 @@ export class LightclientSpec {
 
   forceUpdate(currentSlot: Slot): void {
     for (const bestValidUpdate of this.store.bestValidUpdates.values()) {
-      if (currentSlot > bestValidUpdate.update.finalizedHeader.slot + UPDATE_TIMEOUT) {
+      if (currentSlot > bestValidUpdate.update.finalizedHeader.beacon.slot + UPDATE_TIMEOUT) {
         const updatePeriod = computeSyncPeriodAtSlot(bestValidUpdate.update.signatureSlot);
         // Simulate process_light_client_store_force_update() by forcing to apply a bestValidUpdate
         // https://github.com/ethereum/consensus-specs/blob/a57e15636013eeba3610ff3ade41781dba1bb0cd/specs/altair/light-client/sync-protocol.md?plain=1#L394

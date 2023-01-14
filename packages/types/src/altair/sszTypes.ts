@@ -170,9 +170,16 @@ export const BeaconState = new ContainerType(
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
+export const LightClientHeader = new ContainerType(
+  {
+    beacon: phase0Ssz.BeaconBlockHeader,
+  },
+  {typeName: "LightClientHeader", jsonCase: "eth2"}
+);
+
 export const LightClientBootstrap = new ContainerType(
   {
-    header: phase0Ssz.BeaconBlockHeader,
+    header: LightClientHeader,
     currentSyncCommittee: SyncCommittee,
     currentSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH),
   },
@@ -181,10 +188,10 @@ export const LightClientBootstrap = new ContainerType(
 
 export const LightClientUpdate = new ContainerType(
   {
-    attestedHeader: phase0Ssz.BeaconBlockHeader,
+    attestedHeader: LightClientHeader,
     nextSyncCommittee: SyncCommittee,
     nextSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH),
-    finalizedHeader: phase0Ssz.BeaconBlockHeader,
+    finalizedHeader: LightClientHeader,
     finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH),
     syncAggregate: SyncAggregate,
     signatureSlot: Slot,
@@ -194,8 +201,8 @@ export const LightClientUpdate = new ContainerType(
 
 export const LightClientFinalityUpdate = new ContainerType(
   {
-    attestedHeader: phase0Ssz.BeaconBlockHeader,
-    finalizedHeader: phase0Ssz.BeaconBlockHeader,
+    attestedHeader: LightClientHeader,
+    finalizedHeader: LightClientHeader,
     finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH),
     syncAggregate: SyncAggregate,
     signatureSlot: Slot,
@@ -205,7 +212,7 @@ export const LightClientFinalityUpdate = new ContainerType(
 
 export const LightClientOptimisticUpdate = new ContainerType(
   {
-    attestedHeader: phase0Ssz.BeaconBlockHeader,
+    attestedHeader: LightClientHeader,
     syncAggregate: SyncAggregate,
     signatureSlot: Slot,
   },

@@ -54,25 +54,25 @@ describe("syncInMemory", function () {
     const headerBlockSlot = finalizedBlockSlot + 1;
 
     const finalizedState = ssz.altair.BeaconState.defaultValue();
-    const finalizedBlockHeader = ssz.phase0.BeaconBlockHeader.defaultValue();
-    finalizedBlockHeader.slot = finalizedBlockSlot;
-    finalizedBlockHeader.stateRoot = ssz.altair.BeaconState.hashTreeRoot(finalizedState);
+    const finalizedBlockHeader = ssz.altair.LightClientHeader.defaultValue();
+    finalizedBlockHeader.beacon.slot = finalizedBlockSlot;
+    finalizedBlockHeader.beacon.stateRoot = ssz.altair.BeaconState.hashTreeRoot(finalizedState);
 
     // Create a state that has the next sync committee and finalizedState as finalized checkpoint
     const syncAttestedState = ssz.altair.BeaconState.defaultValue();
     syncAttestedState.nextSyncCommittee = getSyncCommittee(syncCommitteesKeys, 0).syncCommittee;
     syncAttestedState.finalizedCheckpoint = {
       epoch: 0, // Checkpoint { epoch, blockRoot }
-      root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedBlockHeader),
+      root: ssz.altair.LightClientHeader.hashTreeRoot(finalizedBlockHeader),
     };
-    const syncAttestedBlockHeader = ssz.phase0.BeaconBlockHeader.defaultValue();
-    syncAttestedBlockHeader.slot = headerBlockSlot;
-    syncAttestedBlockHeader.stateRoot = ssz.altair.BeaconState.hashTreeRoot(syncAttestedState);
+    const syncAttestedBlockHeader = ssz.altair.LightClientHeader.defaultValue();
+    syncAttestedBlockHeader.beacon.slot = headerBlockSlot;
+    syncAttestedBlockHeader.beacon.stateRoot = ssz.altair.BeaconState.hashTreeRoot(syncAttestedState);
 
     // Create a state with the block blockWithSyncAggregate
     const stateWithSyncAggregate = ssz.altair.BeaconState.defaultValue();
     stateWithSyncAggregate.slot = 1;
-    stateWithSyncAggregate.blockRoots[0] = ssz.phase0.BeaconBlockHeader.hashTreeRoot(syncAttestedBlockHeader);
+    stateWithSyncAggregate.blockRoots[0] = ssz.altair.LightClientHeader.hashTreeRoot(syncAttestedBlockHeader);
 
     // Create a signature from current committee to "attest" syncAttestedBlockHeader
     const signingRoot = getSyncAggregateSigningRoot(config, syncAttestedBlockHeader);
@@ -101,7 +101,7 @@ describe("syncInMemory", function () {
     const store: LightClientStoreFast = {
       bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {
-        header: ssz.phase0.BeaconBlockHeader.defaultValue(),
+        header: ssz.altair.LightClientHeader.defaultValue(),
         currentSyncCommittee: getSyncCommittee(syncCommitteesKeys, 0).syncCommitteeFast,
         nextSyncCommittee: getSyncCommittee(syncCommitteesKeys, 0).syncCommitteeFast,
       },

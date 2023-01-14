@@ -107,8 +107,12 @@ export const sync: TestRunnerFn<SyncTestCase, void> = () => {
       }
 
       function runChecks(update: {checks: Checks}): void {
-        assertHeader(lightClient.store.finalizedHeader, update.checks.finalized_header, "wrong finalizedHeader");
-        assertHeader(lightClient.store.optimisticHeader, update.checks.optimistic_header, "wrong optimisticHeader");
+        assertHeader(lightClient.store.finalizedHeader.beacon, update.checks.finalized_header, "wrong finalizedHeader");
+        assertHeader(
+          lightClient.store.optimisticHeader.beacon,
+          update.checks.optimistic_header,
+          "wrong optimisticHeader"
+        );
       }
 
       function renderSlot(currentSlot: Slot): {currentSlot: number; curretPeriod: number} {
@@ -145,8 +149,8 @@ export const sync: TestRunnerFn<SyncTestCase, void> = () => {
           }
 
           logger.debug(
-            `finalizedHeader = ${JSON.stringify(toHeaderSummary(lightClient.store.finalizedHeader))}` +
-              ` optimisticHeader = ${JSON.stringify(toHeaderSummary(lightClient.store.optimisticHeader))}`
+            `finalizedHeader = ${JSON.stringify(toHeaderSummary(lightClient.store.finalizedHeader.beacon))}` +
+              ` optimisticHeader = ${JSON.stringify(toHeaderSummary(lightClient.store.optimisticHeader.beacon))}`
           );
         } catch (e) {
           (e as Error).message = `Error on step ${i}/${stepsLen}: ${(e as Error).message}`;

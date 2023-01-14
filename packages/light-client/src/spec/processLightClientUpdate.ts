@@ -36,7 +36,7 @@ export function processLightClientUpdate(
   // Update the optimistic header
   if (
     syncCommitteeTrueBits > getSafetyThreshold(store.getMaxActiveParticipants(updateSignaturePeriod)) &&
-    update.attestedHeader.slot > store.optimisticHeader.slot
+    update.attestedHeader.beacon.slot > store.optimisticHeader.beacon.slot
   ) {
     store.optimisticHeader = update.attestedHeader;
   }
@@ -44,10 +44,10 @@ export function processLightClientUpdate(
   // Update finalized header
   if (
     syncCommitteeTrueBits * 3 >= SYNC_COMMITTEE_SIZE * 2 &&
-    update.finalizedHeader.slot > store.finalizedHeader.slot
+    update.finalizedHeader.beacon.slot > store.finalizedHeader.beacon.slot
   ) {
     store.finalizedHeader = update.finalizedHeader;
-    if (store.finalizedHeader.slot > store.optimisticHeader.slot) {
+    if (store.finalizedHeader.beacon.slot > store.optimisticHeader.beacon.slot) {
       store.optimisticHeader = store.finalizedHeader;
     }
   }
@@ -86,15 +86,15 @@ export function getSyncCommitteeAtPeriod(
 
       if (opts.updateHeadersOnForcedUpdate) {
         // From https://github.com/ethereum/consensus-specs/blob/a57e15636013eeba3610ff3ade41781dba1bb0cd/specs/altair/light-client/sync-protocol.md?plain=1#L403
-        if (update.finalizedHeader.slot <= store.finalizedHeader.slot) {
+        if (update.finalizedHeader.beacon.slot <= store.finalizedHeader.beacon.slot) {
           update.finalizedHeader = update.attestedHeader;
         }
 
         // From https://github.com/ethereum/consensus-specs/blob/a57e15636013eeba3610ff3ade41781dba1bb0cd/specs/altair/light-client/sync-protocol.md?plain=1#L374
-        if (update.finalizedHeader.slot > store.finalizedHeader.slot) {
+        if (update.finalizedHeader.beacon.slot > store.finalizedHeader.beacon.slot) {
           store.finalizedHeader = update.finalizedHeader;
         }
-        if (store.finalizedHeader.slot > store.optimisticHeader.slot) {
+        if (store.finalizedHeader.beacon.slot > store.optimisticHeader.beacon.slot) {
           store.optimisticHeader = store.finalizedHeader;
         }
       }

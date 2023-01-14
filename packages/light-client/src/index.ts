@@ -122,11 +122,11 @@ export class Lightclient {
         allowForcedUpdates: ALLOW_FORCED_UPDATES,
         onSetFinalizedHeader: (header) => {
           this.emitter.emit(LightclientEvent.lightClientFinalityUpdate, header);
-          this.logger.debug("Updated state.finalizedHeader", {slot: header.slot});
+          this.logger.debug("Updated state.finalizedHeader", {slot: header.beacon.slot});
         },
         onSetOptimisticHeader: (header) => {
           this.emitter.emit(LightclientEvent.lightClientOptimisticUpdate, header);
-          this.logger.debug("Updated state.optimisticHeader", {slot: header.slot});
+          this.logger.debug("Updated state.optimisticHeader", {slot: header.beacon.slot});
         },
       },
       bootstrap
@@ -172,7 +172,7 @@ export class Lightclient {
     this.status = {code: RunStatusCode.stopped};
   }
 
-  getHead(): phase0.BeaconBlockHeader {
+  getHead(): altair.LightClientHeader {
     return this.lightclientSpec.store.optimisticHeader;
   }
 
@@ -190,7 +190,7 @@ export class Lightclient {
       const updates = await this.transport.getUpdates(fromPeriodRng, count);
       for (const update of updates) {
         this.processSyncCommitteeUpdate(update.data);
-        this.logger.debug("processed sync update", {slot: update.data.attestedHeader.slot});
+        this.logger.debug("processed sync update", {slot: update.data.attestedHeader.beacon.slot});
 
         // Yield to the macro queue, verifying updates is somewhat expensive and we want responsiveness
         await new Promise((r) => setTimeout(r, 0));
@@ -217,7 +217,7 @@ export class Lightclient {
 
         // Go into sync mode
         this.status = {code: RunStatusCode.syncing};
-        const headPeriod = computeSyncPeriodAtSlot(this.getHead().slot);
+        const headPeriod = computeSyncPeriodAtSlot(this.getHead().beacon.slot);
         this.logger.debug("Syncing", {lastPeriod: headPeriod, currentPeriod});
 
         try {

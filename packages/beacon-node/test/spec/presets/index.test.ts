@@ -64,16 +64,7 @@ specTestIterator(
     shuffling: {type: RunnerType.default, fn: shuffling},
     ssz_static: {
       type: RunnerType.custom,
-      fn: sszStatic([
-        // The LightClient types are disabled momentarily as there is LightClientHeader introduced
-        // in this spec release and is being addressed in separate PR which will fix and
-        // reenable all these types
-        "LightClientHeader",
-        "LightClientUpdate",
-        "LightClientFinalityUpdate",
-        "LightClientBootstrap",
-        "LightClientOptimisticUpdate",
-      ]),
+      fn: sszStatic(),
     },
     sync: {type: RunnerType.default, fn: forkChoiceTest({onlyPredefinedResponses: true})},
     transition: {
