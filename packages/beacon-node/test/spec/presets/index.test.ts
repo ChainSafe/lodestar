@@ -62,7 +62,16 @@ specTestIterator(
     rewards: {type: RunnerType.default, fn: rewards},
     sanity: {type: RunnerType.default, fn: sanity},
     shuffling: {type: RunnerType.default, fn: shuffling},
-    ssz_static: {type: RunnerType.custom, fn: sszStatic(["LightClientHeader"])},
+    ssz_static: {
+      type: RunnerType.custom,
+      fn: sszStatic([
+        "LightClientHeader",
+        "LightClientUpdate",
+        "LightClientFinalityUpdate",
+        "LightClientBootstrap",
+        "LightClientOptimisticUpdate",
+      ]),
+    },
     sync: {type: RunnerType.default, fn: forkChoiceTest({onlyPredefinedResponses: true})},
     transition: {
       type: RunnerType.default,

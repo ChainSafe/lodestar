@@ -62,7 +62,6 @@ export function getBlockSignatureSets(
   if (fork >= ForkSeq.capella) {
     const blsToExecutionChangeSignatureSets = getBlsToExecutionChangeSignatureSets(
       state.config,
-      state.slot,
       signedBlock as capella.SignedBeaconBlock
     );
     if (blsToExecutionChangeSignatureSets.length > 0) {

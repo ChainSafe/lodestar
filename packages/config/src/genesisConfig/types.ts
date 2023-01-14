@@ -17,6 +17,10 @@ export interface ICachedGenesis extends IForkDigestContext {
    * Note: The configured fork schedule is always used rather than on-chain fork schedule.
    */
   getDomain(stateSlot: Slot, domainType: DomainType, messageSlot?: Slot): Uint8Array;
+  /**
+   * Return the signature domain corresponding to a particular fork version
+   */
+  getDomainAtFork(forkName: ForkName, domainType: DomainType): Uint8Array;
 
   readonly genesisValidatorsRoot: Root;
 }

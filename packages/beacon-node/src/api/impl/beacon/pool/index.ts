@@ -105,7 +105,7 @@ export function getBeaconPoolApi({
       await Promise.all(
         blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
           try {
-            await validateBlsToExecutionChange(chain, blsToExecutionChange, signatureFork);
+            await validateBlsToExecutionChange(chain, blsToExecutionChange);
             chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, signatureFork);
             await network.gossip.publishBlsToExecutionChange(blsToExecutionChange);
           } catch (e) {

@@ -348,7 +348,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
     // blsToExecutionChange is to be generated and validated against GENESIS_FORK_VERSION
     [GossipType.bls_to_execution_change]: async (blsToExecutionChange, _topic) => {
-      await validateBlsToExecutionChange(chain, blsToExecutionChange, ForkName.phase0);
+      await validateBlsToExecutionChange(chain, blsToExecutionChange);
 
       // Handler
       try {

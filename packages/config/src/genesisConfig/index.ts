@@ -55,6 +55,26 @@ export function createICachedGenesis(chainForkConfig: IChainForkConfig, genesisV
       return domain;
     },
 
+    getDomainAtFork(forkName: ForkName, domainType: DomainType): Uint8Array {
+      // For some of the messages, irrespective of which slot they are signed
+      // they need to use a fixed fork name even if other forks are scheduled
+      // at the same fork.
+      // For e.g. BLSToExecutionChange has to be signed using GENESIS_FORK_VERSION
+      // corresponding to phase0
+      const forkInfo = chainForkConfig.forks[forkName];
+      let domainByType = domainCache.get(forkInfo.name);
+      if (!domainByType) {
+        domainByType = new Map<DomainType, Uint8Array>();
+        domainCache.set(forkInfo.name, domainByType);
+      }
+      let domain = domainByType.get(domainType);
+      if (!domain) {
+        domain = computeDomain(domainType, forkInfo.version, genesisValidatorsRoot);
+        domainByType.set(domainType, domain);
+      }
+      return domain;
+    },
+
     forkDigest2ForkName(forkDigest: ForkDigest | ForkDigestHex): ForkName {
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
       const forkName = forkNameByForkDigest.get(forkDigestHex);
