@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {IChainConfig} from "@lodestar/config";
-import {ssz, phase0} from "@lodestar/types";
+import {ssz, altair} from "@lodestar/types";
 import {JsonPath, toHexString, fromHexString} from "@chainsafe/ssz";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {TimestampFormatCode} from "@lodestar/utils";
@@ -140,13 +140,16 @@ describe("chain / lightclient", function () {
           try {
             // Test fetching proofs
             const {proof, header} = await getHeadStateProof(lightclient, api, [["latestBlockHeader", "bodyRoot"]]);
-            const stateRootHex = toHexString(header.stateRoot);
+            const stateRootHex = toHexString(header.beacon.stateRoot);
             const lcHeadState = bn.chain.stateCache.get(stateRootHex);
             if (!lcHeadState) {
               throw Error(`LC head state not in cache ${stateRootHex}`);
             }
 
-            const stateLcFromProof = ssz.altair.BeaconState.createFromProof(proof, header.stateRoot as Uint8Array);
+            const stateLcFromProof = ssz.altair.BeaconState.createFromProof(
+              proof,
+              header.beacon.stateRoot as Uint8Array
+            );
             expect(toHexString(stateLcFromProof.latestBlockHeader.bodyRoot)).to.equal(
               toHexString(lcHeadState.latestBlockHeader.bodyRoot),
               `Recovered 'latestBlockHeader.bodyRoot' from state ${stateRootHex} not correct`
@@ -188,9 +191,9 @@ async function getHeadStateProof(
   lightclient: Lightclient,
   api: Api,
   paths: JsonPath[]
-): Promise<{proof: TreeOffsetProof; header: phase0.BeaconBlockHeader}> {
+): Promise<{proof: TreeOffsetProof; header: altair.LightClientHeader}> {
   const header = lightclient.getHead();
-  const stateId = toHexString(header.stateRoot);
+  const stateId = toHexString(header.beacon.stateRoot);
   const res = await api.proof.getStateProof(stateId, paths);
   return {
     proof: res.data as TreeOffsetProof,

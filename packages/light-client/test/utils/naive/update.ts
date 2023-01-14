@@ -58,7 +58,7 @@ export function processLightClientUpdate(
   const syncCommittee = store.snapshot.nextSyncCommittee;
   assertValidLightClientUpdate(config, syncCommittee, update);
 
-  const syncPeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
+  const syncPeriod = computeSyncPeriodAtSlot(update.attestedHeader.beacon.slot);
   const prevBestUpdate = store.bestUpdates.get(syncPeriod);
   if (!prevBestUpdate || isBetterUpdate(prevBestUpdate, update)) {
     store.bestUpdates.set(syncPeriod, update);
@@ -71,15 +71,15 @@ export function processLightClientUpdate(
   // It may be changed to re-organizable light client design. See the on-going issue https://github.com/ethereum/consensus-specs/issues/2315.
   if (
     sumBits(update.syncAggregate.syncCommitteeBits) * 3 >= update.syncAggregate.syncCommitteeBits.bitLen * 2 &&
-    !isEmptyHeader(update.finalizedHeader)
+    !isEmptyHeader(update.finalizedHeader.beacon)
   ) {
     applyLightClientUpdate(store.snapshot, update);
     store.bestUpdates.delete(syncPeriod);
   }
 
   // Forced best update when the update timeout has elapsed
-  else if (currentSlot > store.snapshot.header.slot + updateTimeout) {
-    const prevSyncPeriod = computeSyncPeriodAtSlot(store.snapshot.header.slot);
+  else if (currentSlot > store.snapshot.header.beacon.slot + updateTimeout) {
+    const prevSyncPeriod = computeSyncPeriodAtSlot(store.snapshot.header.beacon.slot);
     const bestUpdate = store.bestUpdates.get(prevSyncPeriod);
     if (bestUpdate) {
       applyLightClientUpdate(store.snapshot, bestUpdate);
@@ -92,8 +92,8 @@ export function processLightClientUpdate(
  * Spec v1.0.1
  */
 export function applyLightClientUpdate(snapshot: LightClientSnapshotFast, update: altair.LightClientUpdate): void {
-  const snapshotPeriod = computeSyncPeriodAtSlot(snapshot.header.slot);
-  const updatePeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
+  const snapshotPeriod = computeSyncPeriodAtSlot(snapshot.header.beacon.slot);
+  const updatePeriod = computeSyncPeriodAtSlot(update.attestedHeader.beacon.slot);
   if (updatePeriod < snapshotPeriod) {
     throw Error("Cannot rollback sync period");
   }

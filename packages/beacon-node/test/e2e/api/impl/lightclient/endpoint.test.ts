@@ -78,7 +78,7 @@ describe("lightclient api", function () {
     const slot = bn.chain.clock.currentSlot;
     expect(updates.length).to.be.equal(1);
     // at slot 2 we got attestedHeader for slot 1
-    expect(updates[0].data.attestedHeader.slot).to.be.equal(slot - 1);
+    expect(updates[0].data.attestedHeader.beacon.slot).to.be.equal(slot - 1);
     // version is set
     expect(updates[0].version).to.be.equal(ForkName.altair);
   });
@@ -89,7 +89,7 @@ describe("lightclient api", function () {
     const update = await client.getOptimisticUpdate();
     const slot = bn.chain.clock.currentSlot;
     // at slot 2 we got attestedHeader for slot 1
-    expect(update.data.attestedHeader.slot).to.be.equal(slot - 1);
+    expect(update.data.attestedHeader.beacon.slot).to.be.equal(slot - 1);
     // version is set
     expect(update.version).to.be.equal(ForkName.altair);
   });

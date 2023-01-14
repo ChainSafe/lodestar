@@ -1,5 +1,5 @@
 import type {PublicKey} from "@chainsafe/bls/types";
-import {altair, phase0, SyncPeriod} from "@lodestar/types";
+import {altair, SyncPeriod} from "@lodestar/types";
 
 export type LightClientStoreFast = {
   snapshot: LightClientSnapshotFast;
@@ -8,7 +8,7 @@ export type LightClientStoreFast = {
 
 export type LightClientSnapshotFast = {
   /** Beacon block header */
-  header: phase0.BeaconBlockHeader;
+  header: altair.LightClientHeader;
   /** Sync committees corresponding to the header */
   currentSyncCommittee: SyncCommitteeFast;
   nextSyncCommittee: SyncCommitteeFast;

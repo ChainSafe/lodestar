@@ -1,10 +1,10 @@
-import {altair, phase0, Root, ssz} from "@lodestar/types";
+import {altair, Root, ssz} from "@lodestar/types";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {FINALIZED_ROOT_GINDEX, NEXT_SYNC_COMMITTEE_GINDEX, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 
 export interface IBeaconChainLc {
-  getBlockHeaderByRoot(blockRoot: Root): Promise<phase0.BeaconBlockHeader>;
+  getBlockHeaderByRoot(blockRoot: Root): Promise<altair.LightClientHeader>;
   getStateByRoot(stateRoot: Root): Promise<CompositeViewDU<typeof ssz.altair.BeaconState>>;
 }
 
@@ -74,7 +74,7 @@ export async function prepareUpdateNaive(
   const syncAttestedBlockHeader = await chain.getBlockHeaderByRoot(syncAttestedBlockRoot);
 
   // Get the finalized state defined in the block "attested" by the current sync committee
-  const syncAttestedState = await chain.getStateByRoot(syncAttestedBlockHeader.stateRoot);
+  const syncAttestedState = await chain.getStateByRoot(syncAttestedBlockHeader.beacon.stateRoot);
   const finalizedCheckpointBlockHeader = await chain.getBlockHeaderByRoot(syncAttestedState.finalizedCheckpoint.root);
 
   // Prove that the `finalizedCheckpointRoot` belongs in that block
@@ -95,6 +95,6 @@ export async function prepareUpdateNaive(
     finalizedHeader: finalizedCheckpointBlockHeader,
     finalityBranch: finalityBranch,
     syncAggregate,
-    signatureSlot: syncAttestedBlockHeader.slot + 1,
+    signatureSlot: syncAttestedBlockHeader.beacon.slot + 1,
   };
 }

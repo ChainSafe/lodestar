@@ -44,15 +44,15 @@ export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.
 
 export function getSyncAggregateSigningRoot(
   config: IBeaconConfig,
-  syncAttestedBlockHeader: phase0.BeaconBlockHeader
+  syncAttestedBlockHeader: altair.LightClientHeader
 ): Uint8Array {
-  const domain = config.getDomain(syncAttestedBlockHeader.slot, DOMAIN_SYNC_COMMITTEE);
-  return computeSigningRoot(ssz.phase0.BeaconBlockHeader, syncAttestedBlockHeader, domain);
+  const domain = config.getDomain(syncAttestedBlockHeader.beacon.slot, DOMAIN_SYNC_COMMITTEE);
+  return computeSigningRoot(ssz.altair.LightClientHeader, syncAttestedBlockHeader, domain);
 }
 
-export function defaultBeaconBlockHeader(slot: Slot): phase0.BeaconBlockHeader {
-  const header = ssz.phase0.BeaconBlockHeader.defaultValue();
-  header.slot = slot;
+export function defaultBeaconBlockHeader(slot: Slot): altair.LightClientHeader {
+  const header = ssz.altair.LightClientHeader.defaultValue();
+  header.beacon.slot = slot;
   return header;
 }
 
@@ -60,7 +60,7 @@ export type SyncCommitteeKeys = {
   pks: PublicKey[];
   syncCommittee: altair.SyncCommittee;
   syncCommitteeFast: SyncCommitteeFast;
-  signHeader(config: IBeaconConfig, header: phase0.BeaconBlockHeader): altair.SyncAggregate;
+  signHeader(config: IBeaconConfig, header: altair.LightClientHeader): altair.SyncAggregate;
   signAndAggregate(message: Uint8Array): altair.SyncAggregate;
 };
 
@@ -89,7 +89,7 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
     };
   }
 
-  function signHeader(config: IBeaconConfig, header: phase0.BeaconBlockHeader): altair.SyncAggregate {
+  function signHeader(config: IBeaconConfig, header: altair.LightClientHeader): altair.SyncAggregate {
     return signAndAggregate(getSyncAggregateSigningRoot(config, header));
   }
 
@@ -123,12 +123,12 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
 
   // finalized header must have stateRoot to finalizedState
   const finalizedHeader = defaultBeaconBlockHeader(updateSlot);
-  finalizedHeader.stateRoot = finalizedState.hashTreeRoot();
+  finalizedHeader.beacon.stateRoot = finalizedState.hashTreeRoot();
 
   const attestedState = ssz.altair.BeaconState.defaultViewDU();
   attestedState.finalizedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
     epoch: 0,
-    root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader),
+    root: ssz.altair.LightClientHeader.hashTreeRoot(finalizedHeader),
   });
 
   // attested state must contain next sync committees
@@ -136,7 +136,7 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
 
   // attestedHeader must have stateRoot to attestedState
   const attestedHeader = defaultBeaconBlockHeader(updateSlot);
-  attestedHeader.stateRoot = attestedState.hashTreeRoot();
+  attestedHeader.beacon.stateRoot = attestedState.hashTreeRoot();
 
   // Creates proofs for nextSyncCommitteeBranch and finalityBranch rooted in attested state
   const nextSyncCommitteeBranch = new Tree(attestedState.node).getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
@@ -151,7 +151,7 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
     finalizedHeader,
     finalityBranch,
     syncAggregate,
-    signatureSlot: attestedHeader.slot + 1,
+    signatureSlot: attestedHeader.beacon.slot + 1,
   };
 }
 
@@ -172,12 +172,14 @@ export function computeLightClientSnapshot(
     CURRENT_SYNC_COMMITTEE_INDEX
   );
 
-  const header: phase0.BeaconBlockHeader = {
-    slot: period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
-    proposerIndex: 0,
-    parentRoot: SOME_HASH,
-    stateRoot: headerStateRoot,
-    bodyRoot: SOME_HASH,
+  const header: altair.LightClientHeader = {
+    beacon: {
+      slot: period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
+      proposerIndex: 0,
+      parentRoot: SOME_HASH,
+      stateRoot: headerStateRoot,
+      bodyRoot: SOME_HASH,
+    },
   };
 
   return {
@@ -186,7 +188,7 @@ export function computeLightClientSnapshot(
       currentSyncCommittee,
       currentSyncCommitteeBranch,
     },
-    checkpointRoot: ssz.phase0.BeaconBlockHeader.hashTreeRoot(header),
+    checkpointRoot: ssz.altair.LightClientHeader.hashTreeRoot(header),
   };
 }
 
