@@ -35,7 +35,7 @@ describe("validate bls to execution change", () => {
 
   const stateEmpty = ssz.phase0.BeaconState.defaultValue();
   // Validator has to be active for long enough
-  stateEmpty.slot = config.SHARD_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
+  stateEmpty.slot = defaultConfig.SHARD_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
   // A withdrawal key which we will keep same on the two vals we generate
   const wsk = bls.SecretKey.fromKeygen();
 
@@ -76,11 +76,9 @@ describe("validate bls to execution change", () => {
   stateEmpty.validators[1] = validatorTwo;
 
   // Generate the state
+  const _state = generateState(stateEmpty, defaultConfig);
   const config = createIBeaconConfig(defaultConfig, _state.genesisValidatorsRoot);
-  const _state = generateState(stateEmpty, config);
   const state = createCachedBeaconStateTest(_state, config);
-
-  const signatureFork = ForkName.phase0;
 
   // Gen a valid blsToExecutionChange for first val
   const blsToExecutionChange = {
