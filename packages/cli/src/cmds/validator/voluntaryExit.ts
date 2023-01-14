@@ -47,7 +47,8 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     },
 
     pubkeys: {
-      description: "Pubkeys to exit, must be available as local signers",
+      description:
+        "Pubkeys to exit, must be available as local signers. Multiple keys have to be provided as comma-separated values.",
       type: "array",
       string: true, // Ensures the pubkey string is not automatically converted to numbers
       coerce: (pubkeys: string[]): string[] =>
