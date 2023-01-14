@@ -59,6 +59,7 @@ like to choose for BLS To Execution Change.",
     // submitting the signed message
     const {config: chainForkConfig} = getBeaconConfigFromArgs(args);
     const client = getClient({urls: args.beaconNodes}, {config: chainForkConfig});
+    const {genesisValidatorsRoot} = (await client.beacon.getGenesis()).data;
     const config = createIBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 
     const {data: stateValidators} = await client.beacon.getStateValidators("head", {id: [publicKey]});
