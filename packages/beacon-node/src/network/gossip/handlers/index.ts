@@ -346,12 +346,13 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       validateLightClientOptimisticUpdate(config, chain, lightClientOptimisticUpdate);
     },
 
-    [GossipType.bls_to_execution_change]: async (blsToExecutionChange, topic) => {
-      await validateBlsToExecutionChange(chain, blsToExecutionChange, topic.fork);
+    // blsToExecutionChange is to be generated and validated against GENESIS_FORK_VERSION
+    [GossipType.bls_to_execution_change]: async (blsToExecutionChange, _topic) => {
+      await validateBlsToExecutionChange(chain, blsToExecutionChange);
 
       // Handler
       try {
-        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, topic.fork);
+        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, ForkName.phase0);
       } catch (e) {
         logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
       }

@@ -1,5 +1,5 @@
-import {computeSigningRoot, getCurrentSlot} from "@lodestar/state-transition";
-import {DOMAIN_BLS_TO_EXECUTION_CHANGE} from "@lodestar/params";
+import {computeSigningRoot} from "@lodestar/state-transition";
+import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ssz, capella} from "@lodestar/types";
 import {getClient} from "@lodestar/api";
@@ -59,7 +59,7 @@ like to choose for BLS To Execution Change.",
     // submitting the signed message
     const {config: chainForkConfig} = getBeaconConfigFromArgs(args);
     const client = getClient({urls: args.beaconNodes}, {config: chainForkConfig});
-    const {genesisValidatorsRoot, genesisTime} = (await client.beacon.getGenesis()).data;
+    const {genesisValidatorsRoot} = (await client.beacon.getGenesis()).data;
     const config = createIBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 
     const {data: stateValidators} = await client.beacon.getStateValidators("head", {id: [publicKey]});
@@ -77,8 +77,8 @@ like to choose for BLS To Execution Change.",
       toExecutionAddress: fromHexString(args.toExecutionAddress),
     };
 
-    const currentSlot = getCurrentSlot(config, genesisTime);
-    const domain = config.getDomain(currentSlot, DOMAIN_BLS_TO_EXECUTION_CHANGE);
+    const signatureFork = ForkName.phase0;
+    const domain = config.getDomainAtFork(signatureFork, DOMAIN_BLS_TO_EXECUTION_CHANGE);
     const signingRoot = computeSigningRoot(ssz.capella.BLSToExecutionChange, blsToExecutionChange, domain);
     const signedBLSToExecutionChange = {
       message: blsToExecutionChange,
