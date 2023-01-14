@@ -29,13 +29,12 @@ export const voluntaryExit: ICliCommand<VoluntaryExitArgs, IValidatorCliArgs & I
   command: "voluntary-exit",
 
   describe:
-    "Performs a voluntary exit for a given validator (as identified via `publicKey`.  \
-If no `publicKey` is provided, a prompt will ask the user which validator they would \
-like to choose for the voluntary exit.",
+    "Performs a voluntary exit for a given set of validators as identified via `pubkeys`. \
+If no `pubkeys` are provided, it will exit all validators that have been imported.",
 
   examples: [
     {
-      command: "validator voluntary-exit --publicKey 0xF00",
+      command: "validator voluntary-exit --pubkeys 0xF00",
       description: "Perform a voluntary exit for the validator who has a public key 0xF00",
     },
   ],
@@ -48,7 +47,8 @@ like to choose for the voluntary exit.",
     },
 
     pubkeys: {
-      description: "Pubkeys to exit, must be available as local signers",
+      description:
+        "Pubkeys to exit, must be available as local signers. Multiple keys have to be provided as comma-separated values.",
       type: "array",
       string: true, // Ensures the pubkey string is not automatically converted to numbers
       coerce: (pubkeys: string[]): string[] =>
