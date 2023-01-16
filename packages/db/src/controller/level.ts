@@ -1,4 +1,4 @@
-import {Level} from "level";
+import {Iterator, KeyIterator, Level} from "level";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import type {ClassicLevel} from "classic-level";
 import {DbReqOpts, IDatabaseController, IDatabaseOptions, IFilterOptions, IKeyValue} from "./interface.js";
@@ -122,15 +122,15 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
   }
 
   keys(opts: IFilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
-    return this.metricsAll(this.db.keys(opts).all(), opts.bucketId ?? BUCKET_ID_UNKNOWN);
+    return this.metricsAll(this.db.keys(opts), opts.bucketId ?? BUCKET_ID_UNKNOWN);
   }
 
   values(opts: IFilterOptions<Uint8Array> = {}): Promise<Uint8Array[]> {
-    return this.metricsAll(this.db.values(opts).all(), opts.bucketId ?? BUCKET_ID_UNKNOWN);
+    return this.metricsAll(this.db.values(opts), opts.bucketId ?? BUCKET_ID_UNKNOWN);
   }
 
   async entries(opts: IFilterOptions<Uint8Array> = {}): Promise<IKeyValue<Uint8Array, Uint8Array>[]> {
-    const entries = await this.metricsAll(this.db.iterator(opts).all(), opts.bucketId ?? BUCKET_ID_UNKNOWN);
+    const entries = await this.metricsAll(this.db.iterator(opts), opts.bucketId ?? BUCKET_ID_UNKNOWN);
     return entries.map((entry) => ({key: entry[0], value: entry[1]}));
   }
 
@@ -150,9 +150,14 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
   }
 
   /** Capture metrics for db.iterator, db.keys, db.values .all() calls */
-  private async metricsAll<T>(promise: Promise<T[]>, bucket: string): Promise<T[]> {
+  private async metricsAll<T>(iterator: AsyncIterable<T>, bucket: string): Promise<T[]> {
     this.metrics?.dbWriteReq.inc({bucket}, 1);
-    const items = await promise;
+
+    const items = await (iterator as KeyIterator<typeof this, T>).all();
+
+    // forcefully close the iterator, if possible, to free resources
+    void (iterator as KeyIterator<typeof this, T>)?.close();
+
     this.metrics?.dbWriteItems.inc({bucket}, items.length);
     return items;
   }
@@ -173,6 +178,8 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
 
       yield getValue(item);
     }
+    // forcefully close the iterator, if possible, to free resources
+    void (iterator as Iterator<typeof this, T, K>)?.close();
 
     this.metrics?.dbWriteItems.inc({bucket}, itemsRead);
   }
