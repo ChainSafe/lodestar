@@ -10,7 +10,7 @@ import {Discv5, ENR, IDiscv5Metrics, IDiscv5DiscoveryInputOptions} from "@chains
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {IMetrics} from "../../metrics/index.js";
 import {ENRKey, SubnetType} from "../metadata.js";
-import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
+import {getConnectionsMap, getDefaultDialer, prettyPrintPeerId} from "../util.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 
@@ -50,6 +50,7 @@ enum DiscoveredPeerStatus {
   unknown_forkDigest = "unknown_forkDigest",
   bad_score = "bad_score",
   already_connected = "already_connected",
+  already_dialing = "already_dialing",
   error = "error",
   attempt_dial = "attempt_dial",
   cached = "cached",
@@ -82,7 +83,7 @@ export class PeerDiscovery {
   private metrics: IMetrics | null;
   private logger: ILogger;
   private config: IBeaconConfig;
-  private cachedENRs = new Set<CachedENR>();
+  private cachedENRs = new Map<PeerIdStr, CachedENR>();
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};
   private peersToConnect = 0;
   private subnetRequests: Record<SubnetType, Map<number, UnixMs>> = {
@@ -161,16 +162,22 @@ export class PeerDiscovery {
    */
   discoverPeers(peersToConnect: number, subnetRequests: SubnetDiscvQueryMs[] = []): void {
     const subnetsToDiscoverPeers: SubnetDiscvQueryMs[] = [];
-    const cachedENRsToDial = new Set<CachedENR>();
+    const cachedENRsToDial = new Map<PeerIdStr, CachedENR>();
     // Iterate in reverse to consider first the most recent ENRs
     const cachedENRsReverse: CachedENR[] = [];
-    for (const cachedENR of this.cachedENRs) {
-      if (Date.now() - cachedENR.addedUnixMs > MAX_CACHED_ENR_AGE_MS) {
-        this.cachedENRs.delete(cachedENR);
+    for (const [id, cachedENR] of this.cachedENRs.entries()) {
+      if (
+        // time expired or
+        Date.now() - cachedENR.addedUnixMs > MAX_CACHED_ENR_AGE_MS ||
+        // already dialing
+        getDefaultDialer(this.libp2p).pendingDials.has(id)
+      ) {
+        this.cachedENRs.delete(id);
       } else {
-        cachedENRsReverse.unshift(cachedENR);
+        cachedENRsReverse.push(cachedENR);
       }
     }
+    cachedENRsReverse.reverse();
 
     this.peersToConnect += peersToConnect;
 
@@ -185,7 +192,7 @@ export class PeerDiscovery {
       let cachedENRsInSubnet = 0;
       for (const cachedENR of cachedENRsReverse) {
         if (cachedENR.subnets[subnetRequest.type][subnetRequest.subnet]) {
-          cachedENRsToDial.add(cachedENR);
+          cachedENRsToDial.set(cachedENR.peerId.toString(), cachedENR);
 
           if (++cachedENRsInSubnet >= subnetRequest.maxPeersToDiscover) {
             continue subnet;
@@ -200,7 +207,7 @@ export class PeerDiscovery {
     // If subnetRequests won't connect enough peers for peersToConnect, add more
     if (cachedENRsToDial.size < peersToConnect) {
       for (const cachedENR of cachedENRsReverse) {
-        cachedENRsToDial.add(cachedENR);
+        cachedENRsToDial.set(cachedENR.peerId.toString(), cachedENR);
         if (cachedENRsToDial.size >= peersToConnect) {
           break;
         }
@@ -210,8 +217,8 @@ export class PeerDiscovery {
     // Queue an outgoing connection request to the cached peers that are on `s.subnet_id`.
     // If we connect to the cached peers before the discovery query starts, then we potentially
     // save a costly discovery query.
-    for (const cachedENRToDial of cachedENRsToDial) {
-      this.cachedENRs.delete(cachedENRToDial);
+    for (const [id, cachedENRToDial] of cachedENRsToDial) {
+      this.cachedENRs.delete(id);
       void this.dialPeer(cachedENRToDial);
     }
 
@@ -280,6 +287,11 @@ export class PeerDiscovery {
         return DiscoveredPeerStatus.already_connected;
       }
 
+      // Ignore dialing peers
+      if (getDefaultDialer(this.libp2p).pendingDials.has(peerId.toString())) {
+        return DiscoveredPeerStatus.already_dialing;
+      }
+
       const attnets = zeroAttnets;
       const syncnets = zeroSyncnets;
 
@@ -297,7 +309,7 @@ export class PeerDiscovery {
         return DiscoveredPeerStatus.attempt_dial;
       } else {
         // Add to pending good peers with a last seen time
-        this.cachedENRs.add(cachedPeer);
+        this.cachedENRs.set(peerId.toString(), cachedPeer);
         const dropped = pruneSetToMax(this.cachedENRs, MAX_CACHED_ENRS);
         // If the cache was already full, count the peer as dropped
         return dropped > 0 ? DiscoveredPeerStatus.dropped : DiscoveredPeerStatus.cached;
@@ -361,6 +373,11 @@ export class PeerDiscovery {
         return DiscoveredPeerStatus.already_connected;
       }
 
+      // Ignore dialing peers
+      if (getDefaultDialer(this.libp2p).pendingDials.has(peerId.toString())) {
+        return DiscoveredPeerStatus.already_dialing;
+      }
+
       // Are this fields mandatory?
       const attnetsBytes = enr.get(ENRKey.attnets); // 64 bits
       const syncnetsBytes = enr.get(ENRKey.syncnets); // 4 bits
@@ -386,7 +403,7 @@ export class PeerDiscovery {
         return DiscoveredPeerStatus.attempt_dial;
       } else {
         // Add to pending good peers with a last seen time
-        this.cachedENRs.add(cachedPeer);
+        this.cachedENRs.set(peerId.toString(), cachedPeer);
         const dropped = pruneSetToMax(this.cachedENRs, MAX_CACHED_ENRS);
         // If the cache was already full, count the peer as dropped
         return dropped > 0 ? DiscoveredPeerStatus.dropped : DiscoveredPeerStatus.cached;
@@ -494,7 +511,8 @@ export class PeerDiscovery {
  */
 function formatLibp2pDialError(e: Error): void {
   const errorMessage = e.message.trim();
-  e.message = errorMessage.slice(0, errorMessage.indexOf("\n"));
+  const newlineIndex = errorMessage.indexOf("\n");
+  e.message = newlineIndex !== -1 ? errorMessage.slice(0, newlineIndex) : errorMessage;
 
   if (
     e.message.includes("The operation was aborted") ||
