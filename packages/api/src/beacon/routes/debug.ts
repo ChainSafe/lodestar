@@ -3,7 +3,6 @@ import {allForks, Slot, RootHex, ssz, StringType} from "@lodestar/types";
 import {ContainerType} from "@chainsafe/ssz";
 import {
   ArrayOf,
-  ContainerData,
   ReturnTypes,
   RoutesData,
   Schema,
@@ -15,7 +14,10 @@ import {
   ReqSerializer,
   ContainerDataExecutionOptimistic,
   WithExecutionOptimistic,
+  APIClientResponse,
+  ContainerData,
 } from "../../utils/index.js";
+import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {ExecutionOptimistic, StateId} from "./beacon/state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -23,16 +25,28 @@ import {ExecutionOptimistic, StateId} from "./beacon/state.js";
 export type StateFormat = "json" | "ssz";
 export const mimeTypeSSZ = "application/octet-stream";
 
-export type Api = {
+export type Api<ErrorAsResponse extends boolean = false> = {
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
-  getDebugChainHeads(): Promise<{data: {slot: Slot; root: RootHex}[]}>;
+  getDebugChainHeads(): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: {slot: Slot; root: RootHex}[]}},
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
-  getDebugChainHeadsV2(): Promise<{data: {slot: Slot; root: RootHex; executionOptimistic: ExecutionOptimistic}[]}>;
+  getDebugChainHeadsV2(): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: {slot: Slot; root: RootHex; executionOptimistic: ExecutionOptimistic}[]}},
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get full BeaconState object
@@ -45,12 +59,33 @@ export type Api = {
   getState(
     stateId: StateId,
     format?: "json"
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: allForks.BeaconState}>;
-  getState(stateId: StateId, format: "ssz"): Promise<Uint8Array>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
+  getState(
+    stateId: StateId,
+    format: "ssz"
+  ): Promise<
+    APIClientResponse<{[HttpStatusCode.OK]: {data: Uint8Array}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
+  >;
   getState(
     stateId: StateId,
     format?: StateFormat
-  ): Promise<Uint8Array | {executionOptimistic: ExecutionOptimistic; data: allForks.BeaconState}>;
+  ): Promise<
+    APIClientResponse<
+      {
+        [HttpStatusCode.OK]:
+          | {data: Uint8Array}
+          | {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic};
+      },
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get full BeaconState object
@@ -63,12 +98,33 @@ export type Api = {
   getStateV2(
     stateId: StateId,
     format?: "json"
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: allForks.BeaconState; version: ForkName}>;
-  getStateV2(stateId: StateId, format: "ssz"): Promise<Uint8Array>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic; version: ForkName}},
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
+  getStateV2(
+    stateId: StateId,
+    format: "ssz"
+  ): Promise<
+    APIClientResponse<{[HttpStatusCode.OK]: {data: Uint8Array}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
+  >;
   getStateV2(
     stateId: StateId,
     format?: StateFormat
-  ): Promise<Uint8Array | {executionOptimistic: ExecutionOptimistic; data: allForks.BeaconState; version: ForkName}>;
+  ): Promise<
+    APIClientResponse<
+      {
+        [HttpStatusCode.OK]:
+          | {data: Uint8Array; executionOptimistic: never; version: never}
+          | {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic; version: ForkName};
+      },
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 };
 
 export const routesData: RoutesData<Api> = {

@@ -18,16 +18,16 @@ export * as node from "./node.js";
 export * as proof from "./proof.js";
 export * as validator from "./validator.js";
 
-export type Api = {
-  beacon: BeaconApi;
-  config: ConfigApi;
-  debug: DebugApi;
+export type Api<ErrorAsResponse extends boolean = false> = {
+  beacon: BeaconApi<ErrorAsResponse>;
+  config: ConfigApi<ErrorAsResponse>;
+  debug: DebugApi<ErrorAsResponse>;
   events: EventsApi;
-  lightclient: LightclientApi;
-  lodestar: LodestarApi;
-  node: NodeApi;
-  proof: ProofApi;
-  validator: ValidatorApi;
+  lightclient: LightclientApi<ErrorAsResponse>;
+  lodestar: LodestarApi<ErrorAsResponse>;
+  node: NodeApi<ErrorAsResponse>;
+  proof: ProofApi<ErrorAsResponse>;
+  validator: ValidatorApi<ErrorAsResponse>;
 };
 
 // Reasoning of the API definitions

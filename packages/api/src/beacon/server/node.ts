@@ -16,8 +16,8 @@ export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api,
     getHealth: {
       ...serverRoutes.getHealth,
       handler: async (req, res) => {
-        const healthCode = await api.getHealth();
-        res.raw.writeHead(healthCode);
+        const {status} = await api.getHealth();
+        res.raw.writeHead(status);
         res.raw.end();
       },
     },

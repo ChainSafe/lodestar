@@ -19,24 +19,24 @@ export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api,
     getState: {
       ...serverRoutes.getState,
       handler: async (req) => {
-        const data = await api.getState(...reqSerializers.getState.parseReq(req));
-        if (data instanceof Uint8Array) {
+        const {res} = await api.getState(...reqSerializers.getState.parseReq(req));
+        if (res.data instanceof Uint8Array) {
           // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
-          return Buffer.from(data);
+          return Buffer.from(res.data);
         } else {
-          return returnTypes.getState.toJson(data);
+          return returnTypes.getState.toJson(res);
         }
       },
     },
     getStateV2: {
       ...serverRoutes.getStateV2,
       handler: async (req) => {
-        const data = await api.getStateV2(...reqSerializers.getStateV2.parseReq(req));
-        if (data instanceof Uint8Array) {
+        const {res} = await api.getStateV2(...reqSerializers.getStateV2.parseReq(req));
+        if (res.data instanceof Uint8Array) {
           // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
-          return Buffer.from(data);
+          return Buffer.from(res.data);
         } else {
-          return returnTypes.getStateV2.toJson(data);
+          return returnTypes.getStateV2.toJson(res);
         }
       },
     },

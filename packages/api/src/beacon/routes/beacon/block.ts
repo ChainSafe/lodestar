@@ -7,7 +7,6 @@ import {
   RoutesData,
   ReturnTypes,
   ArrayOf,
-  ContainerData,
   Schema,
   WithVersion,
   reqOnlyBody,
@@ -16,9 +15,10 @@ import {
   ReqSerializer,
   ContainerDataExecutionOptimistic,
   WithExecutionOptimistic,
-  sameType,
+  APIClientResponse,
+  ContainerData,
 } from "../../../utils/index.js";
-import {HttpStatusCode} from "../../../utils/client/httpClient.js";
+import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -36,7 +36,7 @@ export type BlockHeaderResponse = {
   header: phase0.SignedBeaconBlockHeader;
 };
 
-export type Api = {
+export type Api<ErrorAsResponse extends boolean = false> = {
   /**
    * Get block
    * Returns the complete `SignedBeaconBlock` for a given block ID.
@@ -45,7 +45,15 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlock(blockId: BlockId): Promise<{data: allForks.SignedBeaconBlock}>;
+  getBlock(
+    blockId: BlockId
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlock}},
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get block
@@ -55,7 +63,19 @@ export type Api = {
    */
   getBlockV2(
     blockId: BlockId
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: allForks.SignedBeaconBlock; version: ForkName}>;
+  ): Promise<
+    APIClientResponse<
+      {
+        [HttpStatusCode.OK]: {
+          data: allForks.SignedBeaconBlock;
+          executionOptimistic: ExecutionOptimistic;
+          version: ForkName;
+        };
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get block attestations
@@ -65,7 +85,18 @@ export type Api = {
    */
   getBlockAttestations(
     blockId: BlockId
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: phase0.Attestation[]}>;
+  ): Promise<
+    APIClientResponse<
+      {
+        [HttpStatusCode.OK]: {
+          data: phase0.Attestation[];
+          executionOptimistic: ExecutionOptimistic;
+        };
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get block header
@@ -73,7 +104,20 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockHeader(blockId: BlockId): Promise<{executionOptimistic: ExecutionOptimistic; data: BlockHeaderResponse}>;
+  getBlockHeader(
+    blockId: BlockId
+  ): Promise<
+    APIClientResponse<
+      {
+        [HttpStatusCode.OK]: {
+          data: BlockHeaderResponse;
+          executionOptimistic: ExecutionOptimistic;
+        };
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get block headers
@@ -83,7 +127,18 @@ export type Api = {
    */
   getBlockHeaders(
     filters: Partial<{slot: Slot; parentRoot: string}>
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: BlockHeaderResponse[]}>;
+  ): Promise<
+    APIClientResponse<
+      {
+        [HttpStatusCode.OK]: {
+          data: BlockHeaderResponse[];
+          executionOptimistic: ExecutionOptimistic;
+        };
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get block root
@@ -91,7 +146,20 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockRoot(blockId: BlockId): Promise<{executionOptimistic: ExecutionOptimistic; data: {root: Root}}>;
+  getBlockRoot(
+    blockId: BlockId
+  ): Promise<
+    APIClientResponse<
+      {
+        [HttpStatusCode.OK]: {
+          data: {root: Root};
+          executionOptimistic: ExecutionOptimistic;
+        };
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Publish a signed block.
@@ -105,12 +173,34 @@ export type Api = {
    * @param requestBody The `SignedBeaconBlock` object composed of `BeaconBlock` object (produced by beacon node) and validator signature.
    * @returns any The block was validated successfully and has been broadcast. It has also been integrated into the beacon node's database.
    */
-  publishBlock(block: allForks.SignedBeaconBlock): Promise<HttpStatusCode>;
+  publishBlock(
+    block: allForks.SignedBeaconBlock
+  ): Promise<
+    APIClientResponse<
+      {
+        [HttpStatusCode.OK]: void;
+        [HttpStatusCode.ACCEPTED]: void;
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
+      ErrorAsResponse
+    >
+  >;
   /**
    * Publish a signed blinded block by submitting it to the mev relay and patching in the block
    * transactions beacon node gets in response.
    */
-  publishBlindedBlock(block: allForks.SignedBlindedBeaconBlock): Promise<HttpStatusCode>;
+  publishBlindedBlock(
+    block: allForks.SignedBlindedBeaconBlock
+  ): Promise<
+    APIClientResponse<
+      {
+        [HttpStatusCode.OK]: void;
+        [HttpStatusCode.ACCEPTED]: void;
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
+      ErrorAsResponse
+    >
+  >;
 };
 
 /**
@@ -185,7 +275,7 @@ export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api,
   };
 }
 
-export function getReturnTypes(): ReturnTypes<Api> {
+export function getReturnTypes(): ReturnTypes<Api<true | false>> {
   const BeaconHeaderResType = new ContainerType({
     root: ssz.Root,
     canonical: ssz.Boolean,
@@ -203,7 +293,5 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getBlockHeader: ContainerDataExecutionOptimistic(BeaconHeaderResType),
     getBlockHeaders: ContainerDataExecutionOptimistic(ArrayOf(BeaconHeaderResType)),
     getBlockRoot: ContainerDataExecutionOptimistic(RootContainer),
-    publishBlock: sameType(),
-    publishBlindedBlock: sameType(),
   };
 }

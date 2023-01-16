@@ -1,5 +1,6 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, ssz, StringType, RootHex} from "@lodestar/types";
+import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {
   RoutesData,
   ReturnTypes,
@@ -8,6 +9,7 @@ import {
   Schema,
   ReqSerializers,
   ReqSerializer,
+  APIClientResponse,
 } from "../../../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -75,7 +77,7 @@ export type EpochSyncCommitteeResponse = {
   validatorAggregates: ValidatorIndex[][];
 };
 
-export type Api = {
+export type Api<ErrorAsResponse extends boolean = false> = {
   /**
    * Get state SSZ HashTreeRoot
    * Calculates HashTreeRoot for state with given 'stateId'. If stateId is root, same value will be returned.
@@ -83,7 +85,15 @@ export type Api = {
    * @param stateId State identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
-  getStateRoot(stateId: StateId): Promise<{executionOptimistic: ExecutionOptimistic; data: {root: Root}}>;
+  getStateRoot(
+    stateId: StateId
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: {root: Root}; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get Fork object for requested state
@@ -91,7 +101,15 @@ export type Api = {
    * @param stateId State identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
-  getStateFork(stateId: StateId): Promise<{executionOptimistic: ExecutionOptimistic; data: phase0.Fork}>;
+  getStateFork(
+    stateId: StateId
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: phase0.Fork; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get state finality checkpoints
@@ -102,7 +120,13 @@ export type Api = {
    */
   getStateFinalityCheckpoints(
     stateId: StateId
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: FinalityCheckpoints}>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: FinalityCheckpoints; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get validators from state
@@ -115,7 +139,13 @@ export type Api = {
   getStateValidators(
     stateId: StateId,
     filters?: ValidatorFilters
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: ValidatorResponse[]}>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: ValidatorResponse[]; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get validator from state by id
@@ -127,7 +157,13 @@ export type Api = {
   getStateValidator(
     stateId: StateId,
     validatorId: ValidatorId
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: ValidatorResponse}>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: ValidatorResponse; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get validator balances from state
@@ -139,7 +175,13 @@ export type Api = {
   getStateValidatorBalances(
     stateId: StateId,
     indices?: ValidatorId[]
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: ValidatorBalance[]}>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: ValidatorBalance[]; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get all committees for a state.
@@ -153,12 +195,24 @@ export type Api = {
   getEpochCommittees(
     stateId: StateId,
     filters?: CommitteesFilters
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: EpochCommitteeResponse[]}>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: EpochCommitteeResponse[]; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   getEpochSyncCommittees(
     stateId: StateId,
     epoch?: Epoch
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: EpochSyncCommitteeResponse}>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: EpochSyncCommitteeResponse; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 };
 
 /**
@@ -248,7 +302,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   };
 }
 
-export function getReturnTypes(): ReturnTypes<Api> {
+export function getReturnTypes(): ReturnTypes<Api<true | false>> {
   const RootContainer = new ContainerType({
     root: ssz.Root,
   });

@@ -71,7 +71,7 @@ export function mapValues<T extends {[K: string]: any}, R>(
   return output;
 }
 
-export function objectToExpectedCase<T extends Record<string, unknown> | Record<string, unknown>[]>(
+export function objectToExpectedCase<T extends Record<string, unknown> | Record<string, unknown>[] | unknown[]>(
   obj: T,
   expectedCase: "snake" | "constant" | "camel" | "param" | "header" | "pascal" | "dot" | "notransform" = "camel"
 ): T {

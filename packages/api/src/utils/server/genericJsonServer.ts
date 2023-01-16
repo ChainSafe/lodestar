@@ -1,7 +1,7 @@
 import {mapValues} from "@lodestar/utils";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {IChainForkConfig} from "@lodestar/config";
-import {ReqGeneric, RouteGeneric, ReturnTypes, TypeJson, Resolves, RouteGroupDefinition} from "../types.js";
+import {ReqGeneric, GenericHandler, ReturnTypes, TypeJson, Resolves, RouteGroupDefinition} from "../types.js";
 import {getFastifySchema} from "../schema.js";
 import {toColonNotationPath} from "../urlFormat.js";
 import {ServerRoute} from "./types.js";
@@ -10,12 +10,15 @@ import {ServerRoute} from "./types.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/naming-convention */
 
-export type ServerRoutes<Api extends Record<string, RouteGeneric>, ReqTypes extends {[K in keyof Api]: ReqGeneric}> = {
+export type ServerRoutes<
+  Api extends Record<string, GenericHandler>,
+  ReqTypes extends {[K in keyof Api]: ReqGeneric}
+> = {
   [K in keyof Api]: ServerRoute<ReqTypes[K]>;
 };
 
 export function getGenericJsonServer<
-  Api extends Record<string, RouteGeneric>,
+  Api extends Record<string, GenericHandler>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 >(
   {routesData, getReqSerializers, getReturnTypes}: RouteGroupDefinition<Api, ReqTypes>,

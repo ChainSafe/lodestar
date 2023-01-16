@@ -1,6 +1,7 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
-import {RoutesData, ReturnTypes, reqEmpty, ContainerData} from "../../../utils/index.js";
+import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
+import {RoutesData, ReturnTypes, reqEmpty, ContainerData, APIClientResponse} from "../../../utils/index.js";
 import * as block from "./block.js";
 import * as pool from "./pool.js";
 import * as state from "./state.js";
@@ -29,10 +30,16 @@ export {
   EpochSyncCommitteeResponse,
 } from "./state.js";
 
-export type Api = block.Api &
-  pool.Api &
-  state.Api & {
-    getGenesis(): Promise<{data: phase0.Genesis}>;
+export type Api<ErrorAsResponse extends boolean = false> = block.Api<ErrorAsResponse> &
+  pool.Api<ErrorAsResponse> &
+  state.Api<ErrorAsResponse> & {
+    getGenesis(): Promise<
+      APIClientResponse<
+        {[HttpStatusCode.OK]: {data: phase0.Genesis}},
+        HttpStatusCode.INTERNAL_SERVER_ERROR,
+        ErrorAsResponse
+      >
+    >;
   };
 
 export const routesData: RoutesData<Api> = {

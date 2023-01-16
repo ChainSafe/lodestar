@@ -2,7 +2,6 @@ import {allForks, ssz, StringType} from "@lodestar/types";
 import {ContainerType} from "@chainsafe/ssz";
 import {
   ArrayOf,
-  ContainerData,
   reqEmpty,
   jsonType,
   ReturnTypes,
@@ -10,8 +9,10 @@ import {
   Schema,
   ReqSerializers,
   ReqEmpty,
-  sameType,
+  APIClientResponse,
+  ContainerData,
 } from "../../utils/index.js";
+import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -62,53 +63,87 @@ export type SyncingStatus = {
 };
 
 export enum NodeHealth {
-  READY = 200,
-  SYNCING = 206,
-  NOT_INITIALIZED_OR_ISSUES = 503,
+  READY = HttpStatusCode.OK,
+  SYNCING = HttpStatusCode.PARTIAL_CONTENT,
+  NOT_INITIALIZED_OR_ISSUES = HttpStatusCode.SERVICE_UNAVAILABLE,
 }
 
 /**
  * Read information about the beacon node.
  */
-export type Api = {
+export type Api<ErrorAsResponse extends boolean = false> = {
   /**
    * Get node network identity
    * Retrieves data about the node's network presence
    */
-  getNetworkIdentity(): Promise<{data: NetworkIdentity}>;
-
+  getNetworkIdentity: () => Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: NetworkIdentity}},
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
   /**
    * Get node network peers
    * Retrieves data about the node's network peers. By default this returns all peers. Multiple query params are combined using AND conditions
    * @param state
    * @param direction
    */
-  getPeers(filters?: FilterGetPeers): Promise<{data: NodePeer[]; meta: {count: number}}>;
-
+  getPeers(
+    filters?: FilterGetPeers
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: NodePeer[]; meta: {count: number}}},
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
   /**
    * Get peer
    * Retrieves data about the given peer
    * @param peerId
    */
-  getPeer(peerId: string): Promise<{data: NodePeer}>;
+  getPeer(
+    peerId: string
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: NodePeer}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get peer count
    * Retrieves number of known peers.
    */
-  getPeerCount(): Promise<{data: PeerCount}>;
+  getPeerCount(): Promise<
+    APIClientResponse<{[HttpStatusCode.OK]: {data: PeerCount}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
+  >;
 
   /**
    * Get version string of the running beacon node.
    * Requests that the beacon node identify information about its implementation in a format similar to a [HTTP User-Agent](https://tools.ietf.org/html/rfc7231#section-5.5.3) field.
    */
-  getNodeVersion(): Promise<{data: {version: string}}>;
+  getNodeVersion(): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: {version: string}}},
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get node syncing status
    * Requests the beacon node to describe if it's currently syncing or not, and if it is, what block it is up to.
    */
-  getSyncingStatus(): Promise<{data: SyncingStatus}>;
+  getSyncingStatus(): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: SyncingStatus}},
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get health check
@@ -116,7 +151,13 @@ export type Api = {
    *
    * NOTE: This route does not return any value
    */
-  getHealth(): Promise<NodeHealth>;
+  getHealth(): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: void; [HttpStatusCode.PARTIAL_CONTENT]: void},
+      HttpStatusCode.SERVICE_UNAVAILABLE | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 };
 
 export const routesData: RoutesData<Api> = {
@@ -163,7 +204,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   };
 }
 
-export function getReturnTypes(): ReturnTypes<Api> {
+export function getReturnTypes(): ReturnTypes<Api<true | false>> {
   const stringType = new StringType();
   const NetworkIdentity = new ContainerType(
     {
@@ -198,6 +239,5 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getPeerCount: ContainerData(PeerCount),
     getNodeVersion: jsonType("snake"),
     getSyncingStatus: jsonType("snake"),
-    getHealth: sameType(),
   };
 }

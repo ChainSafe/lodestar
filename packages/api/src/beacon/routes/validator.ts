@@ -17,12 +17,11 @@ import {
   RootHex,
   StringType,
 } from "@lodestar/types";
-import {HttpStatusCode} from "../../utils/client/httpClient.js";
+import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {
   RoutesData,
   ReturnTypes,
   ArrayOf,
-  ContainerData,
   Schema,
   WithVersion,
   reqOnlyBody,
@@ -30,6 +29,8 @@ import {
   jsonType,
   ContainerDataExecutionOptimistic,
   sameType,
+  APIClientResponse,
+  ContainerData,
 } from "../../utils/index.js";
 import {fromU64Str, toU64Str, U64Str} from "../../utils/serdes.js";
 import {ExecutionOptimistic} from "./beacon/block.js";
@@ -101,7 +102,7 @@ export type LivenessResponseData = {
   isLive: boolean;
 };
 
-export type Api = {
+export type Api<ErrorAsResponse extends boolean = false> = {
   /**
    * Get attester duties
    * Requests the beacon node to provide a set of attestation duties, which should be performed by validators, for a particular epoch.
@@ -118,7 +119,13 @@ export type Api = {
   getAttesterDuties(
     epoch: Epoch,
     validatorIndices: ValidatorIndex[]
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: AttesterDuty[]; dependentRoot: RootHex}>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: AttesterDuty[]; executionOptimistic: ExecutionOptimistic; dependentRoot: RootHex}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get block proposers duties
@@ -133,12 +140,24 @@ export type Api = {
    */
   getProposerDuties(
     epoch: Epoch
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: ProposerDuty[]; dependentRoot: RootHex}>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: ProposerDuty[]; executionOptimistic: ExecutionOptimistic; dependentRoot: RootHex}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
+      ErrorAsResponse
+    >
+  >;
 
   getSyncCommitteeDuties(
     epoch: number,
     validatorIndices: ValidatorIndex[]
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: SyncDuty[]}>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: SyncDuty[]; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Produce a new block, without signature.
@@ -149,7 +168,17 @@ export type Api = {
    * @returns any Success response
    * @throws ApiError
    */
-  produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<{data: allForks.BeaconBlock}>;
+  produceBlock(
+    slot: Slot,
+    randaoReveal: BLSSignature,
+    graffiti: string
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Requests a beacon node to produce a valid block, which can then be signed by a validator.
@@ -165,13 +194,25 @@ export type Api = {
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string
-  ): Promise<{data: allForks.BeaconBlock; version: ForkName}>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock; version: ForkName}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
+      ErrorAsResponse
+    >
+  >;
 
   produceBlindedBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string
-  ): Promise<{data: allForks.BlindedBeaconBlock; version: ForkName}>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.BlindedBeaconBlock; version: ForkName}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Produce an attestation data
@@ -181,13 +222,28 @@ export type Api = {
    * @returns any Success response
    * @throws ApiError
    */
-  produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<{data: phase0.AttestationData}>;
+  produceAttestationData(
+    index: CommitteeIndex,
+    slot: Slot
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: phase0.AttestationData}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
+      ErrorAsResponse
+    >
+  >;
 
   produceSyncCommitteeContribution(
     slot: Slot,
     subcommitteeIndex: number,
     beaconBlockRoot: Root
-  ): Promise<{data: altair.SyncCommitteeContribution}>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: altair.SyncCommitteeContribution}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Get aggregated attestation
@@ -197,7 +253,16 @@ export type Api = {
    * @returns any Returns aggregated `Attestation` object with same `AttestationData` root.
    * @throws ApiError
    */
-  getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<{data: phase0.Attestation}>;
+  getAggregatedAttestation(
+    attestationDataRoot: Root,
+    slot: Slot
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: phase0.Attestation}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Publish multiple aggregate and proofs
@@ -206,9 +271,25 @@ export type Api = {
    * @returns any Successful response
    * @throws ApiError
    */
-  publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<HttpStatusCode>;
+  publishAggregateAndProofs(
+    signedAggregateAndProofs: phase0.SignedAggregateAndProof[]
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: void},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
-  publishContributionAndProofs(contributionAndProofs: altair.SignedContributionAndProof[]): Promise<HttpStatusCode>;
+  publishContributionAndProofs(
+    contributionAndProofs: altair.SignedContributionAndProof[]
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: void},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /**
    * Signal beacon node to prepare for a committee subnet
@@ -226,16 +307,57 @@ export type Api = {
    *
    * @throws ApiError
    */
-  prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<HttpStatusCode>;
+  prepareBeaconCommitteeSubnet(
+    subscriptions: BeaconCommitteeSubscription[]
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: void},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
+      ErrorAsResponse
+    >
+  >;
 
-  prepareSyncCommitteeSubnets(subscriptions: SyncCommitteeSubscription[]): Promise<HttpStatusCode>;
+  prepareSyncCommitteeSubnets(
+    subscriptions: SyncCommitteeSubscription[]
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: void},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
+      ErrorAsResponse
+    >
+  >;
 
-  prepareBeaconProposer(proposers: ProposerPreparationData[]): Promise<HttpStatusCode>;
+  prepareBeaconProposer(
+    proposers: ProposerPreparationData[]
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: void},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
   /** Returns validator indices that have been observed to be active on the network */
-  getLiveness(indices: ValidatorIndex[], epoch: Epoch): Promise<{data: LivenessResponseData[]}>;
+  getLiveness(
+    indices: ValidatorIndex[],
+    epoch: Epoch
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: LivenessResponseData[]}},
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 
-  registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<HttpStatusCode>;
+  registerValidator(
+    registrations: bellatrix.SignedValidatorRegistrationV1[]
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: void},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 };
 
 /**
@@ -455,11 +577,5 @@ export function getReturnTypes(): ReturnTypes<Api> {
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
     getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),
     getLiveness: jsonType("snake"),
-    publishAggregateAndProofs: sameType(),
-    publishContributionAndProofs: sameType(),
-    prepareBeaconCommitteeSubnet: sameType(),
-    prepareSyncCommitteeSubnets: sameType(),
-    prepareBeaconProposer: sameType(),
-    registerValidator: sameType(),
   };
 }

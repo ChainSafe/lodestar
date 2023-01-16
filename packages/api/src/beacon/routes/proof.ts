@@ -1,16 +1,22 @@
 import {JsonPath} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {ReturnTypes, RoutesData, Schema, sameType, ReqSerializers} from "../../utils/index.js";
+import {ReturnTypes, RoutesData, Schema, sameType, ReqSerializers, APIClientResponse} from "../../utils/index.js";
 import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../../utils/serdes.js";
+import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type Api = {
+export type Api<ErrorAsResponse extends boolean = false> = {
   /**
    * Returns a multiproof of `jsonPaths` at the requested `stateId`.
    * The requested `stateId` may not be available. Regular nodes only keep recent states in memory.
    */
-  getStateProof(stateId: string, jsonPaths: JsonPath[]): Promise<{data: Proof}>;
+  getStateProof(
+    stateId: string,
+    jsonPaths: JsonPath[]
+  ): Promise<
+    APIClientResponse<{[HttpStatusCode.OK]: {data: Proof}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
+  >;
 };
 
 /**

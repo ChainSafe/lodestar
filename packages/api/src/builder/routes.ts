@@ -13,26 +13,58 @@ import {
   ReqEmpty,
   ArrayOf,
   WithVersion,
-  sameType,
+  APIClientResponse,
 } from "../utils/index.js";
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 import {getReqSerializers as getBeaconReqSerializers} from "../beacon/routes/beacon/block.js";
-import {HttpStatusCode} from "../utils/client/httpClient.js";
+import {HttpStatusCode} from "../utils/client/httpStatusCode.js";
 
-export type Api = {
-  status(): Promise<HttpStatusCode>;
-  registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<HttpStatusCode>;
+export type Api<ErrorAsResponse extends boolean = false> = {
+  status(): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: void},
+      HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
+      ErrorAsResponse
+    >
+  >;
+  registerValidator(
+    registrations: bellatrix.SignedValidatorRegistrationV1[]
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: void},
+      HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.BAD_REQUEST,
+      ErrorAsResponse
+    >
+  >;
   getHeader(
     slot: Slot,
     parentHash: Root,
     proposerPubKey: BLSPubkey
-  ): Promise<{version: ForkName; data: allForks.SignedBuilderBid}>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.SignedBuilderBid; version: ForkName}},
+      HttpStatusCode.NOT_FOUND | HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
   submitBlindedBlock(
     signedBlock: allForks.SignedBlindedBeaconBlock
-  ): Promise<{version: ForkName; data: allForks.ExecutionPayload}>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.ExecutionPayload; version: ForkName}},
+      HttpStatusCode.SERVICE_UNAVAILABLE | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
   submitBlindedBlockV2(
     signedBlock: allForks.SignedBlindedBeaconBlock
-  ): Promise<{version: ForkName; data: allForks.SignedBeaconBlockAndBlobsSidecar}>;
+  ): Promise<
+    APIClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlockAndBlobsSidecar; version: ForkName}},
+      HttpStatusCode.SERVICE_UNAVAILABLE | HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
+  >;
 };
 
 /**
@@ -86,7 +118,5 @@ export function getReturnTypes(): ReturnTypes<Api> {
         ? ssz.allForksBlobs[fork].SignedBeaconBlockAndBlobsSidecar
         : ssz.eip4844.SignedBeaconBlockAndBlobsSidecar
     ),
-    status: sameType(),
-    registerValidator: sameType(),
   };
 }
