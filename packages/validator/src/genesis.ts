@@ -9,8 +9,8 @@ export async function waitForGenesis(api: Api, logger: ILogger, signal?: AbortSi
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
-      const res = await api.beacon.getGenesis();
-      return res.data;
+      const {response} = await api.beacon.getGenesis();
+      return response.data;
     } catch (e) {
       // TODO: Search for a 404 error which indicates that genesis has not yet occurred.
       // Note: Lodestar API does not become online after genesis is found

@@ -113,7 +113,7 @@ export class SyncCommitteeService {
         await this.api.beacon.getBlockRoot("head").catch((e: Error) => {
           throw extendError(e, "Error producing SyncCommitteeMessage");
         })
-      ).data.root;
+      ).response.data.root;
 
     const signatures: altair.SyncCommitteeMessage[] = [];
 
@@ -180,7 +180,7 @@ export class SyncCommitteeService {
     }
 
     this.logger.verbose("Producing SyncCommitteeContribution", logCtx);
-    const contribution = await this.api.validator
+    const {response: contribution} = await this.api.validator
       .produceSyncCommitteeContribution(slot, subcommitteeIndex, beaconBlockRoot)
       .catch((e: Error) => {
         throw extendError(e, "Error producing SyncCommitteeContribution");

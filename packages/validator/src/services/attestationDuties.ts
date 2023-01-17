@@ -208,7 +208,7 @@ export class AttestationDutiesService {
       return;
     }
 
-    const attesterDuties = await this.api.validator.getAttesterDuties(epoch, indexArr).catch((e: Error) => {
+    const {response: attesterDuties} = await this.api.validator.getAttesterDuties(epoch, indexArr).catch((e: Error) => {
       throw extendError(e, "Failed to obtain attester duty");
     });
 

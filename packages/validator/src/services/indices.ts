@@ -97,7 +97,7 @@ export class IndicesService {
   }
 
   private async fetchValidatorIndices(pubkeysHex: string[]): Promise<ValidatorIndex[]> {
-    const validatorsState = await this.api.beacon.getStateValidators("head", {id: pubkeysHex});
+    const {response: validatorsState} = await this.api.beacon.getStateValidators("head", {id: pubkeysHex});
     const newIndices = [];
     for (const validatorState of validatorsState.data) {
       const pubkeyHex = toHexString(validatorState.validator.pubkey);

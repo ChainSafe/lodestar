@@ -191,7 +191,9 @@ export class Validator {
     const genesis = await waitForGenesis(api, opts.logger, opts.abortController.signal);
     logger.info("Genesis fetched from the beacon node");
 
-    const {data: externalSpecJson} = await api.config.getSpec();
+    const {
+      response: {data: externalSpecJson},
+    } = await api.config.getSpec();
     assertEqualParams(config, externalSpecJson);
     logger.info("Verified connected beacon node and validator have same the config");
 
@@ -228,7 +230,9 @@ export class Validator {
    * Perform a voluntary exit for the given validator by its key.
    */
   async voluntaryExit(publicKey: string, exitEpoch?: number): Promise<void> {
-    const {data: stateValidators} = await this.api.beacon.getStateValidators("head", {id: [publicKey]});
+    const {
+      response: {data: stateValidators},
+    } = await this.api.beacon.getStateValidators("head", {id: [publicKey]});
     const stateValidator = stateValidators[0];
     if (stateValidator === undefined) {
       throw new Error(`Validator pubkey ${publicKey} not found in state`);
@@ -246,10 +250,14 @@ export class Validator {
 
   private async fetchBeaconHealth(): Promise<BeaconHealth> {
     try {
-      const healthCode = await this.api.node.getHealth();
-      if (healthCode === routes.node.NodeHealth.READY) return BeaconHealth.READY;
-      if (healthCode === routes.node.NodeHealth.SYNCING) return BeaconHealth.SYNCING;
-      if (healthCode === routes.node.NodeHealth.NOT_INITIALIZED_OR_ISSUES)
+      const {status: healthCode} = await this.api.node.getHealth();
+      // API always returns http status codes
+      // Need to find a way to return a custom enum type
+      if (((healthCode as unknown) as routes.node.NodeHealth) === routes.node.NodeHealth.READY)
+        return BeaconHealth.READY;
+      if (((healthCode as unknown) as routes.node.NodeHealth) === routes.node.NodeHealth.SYNCING)
+        return BeaconHealth.SYNCING;
+      if (((healthCode as unknown) as routes.node.NodeHealth) === routes.node.NodeHealth.NOT_INITIALIZED_OR_ISSUES)
         return BeaconHealth.NOT_INITIALIZED_OR_ISSUES;
       else return BeaconHealth.UNKNOWN;
     } catch (e) {

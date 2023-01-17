@@ -3,7 +3,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {extendError, prettyBytes} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {Api} from "@lodestar/api";
+import {Api, ApiClientResponseData, ServerApi} from "@lodestar/api";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -139,7 +139,7 @@ export class BlockProposingService {
     // A metric on the choice between blindedBlock and normal block can be applied
     if (blindedBlock) {
       const debugLogCtx = {source: "builder"};
-      return {...blindedBlock, debugLogCtx};
+      return {...blindedBlock.response, debugLogCtx};
     } else {
       const debugLogCtx = {source: "engine"};
       if (!fullBlock) {
@@ -173,18 +173,18 @@ export class BlockProposingService {
   };
 
   /** Wrapper around the API's different methods for producing blocks across forks */
-  private produceBlock: Api["validator"]["produceBlock"] = async (
+  private produceBlock: ServerApi<Api["validator"]>["produceBlock"] = async (
     slot,
     randaoReveal,
     graffiti
   ): Promise<{data: allForks.BeaconBlock}> => {
     switch (this.config.getForkName(slot)) {
       case ForkName.phase0:
-        return this.api.validator.produceBlock(slot, randaoReveal, graffiti);
+        return (await this.api.validator.produceBlock(slot, randaoReveal, graffiti)).response;
       // All subsequent forks are expected to use v2 too
       case ForkName.altair:
       default:
-        return this.api.validator.produceBlockV2(slot, randaoReveal, graffiti);
+        return (await this.api.validator.produceBlockV2(slot, randaoReveal, graffiti)).response;
     }
   };
 }

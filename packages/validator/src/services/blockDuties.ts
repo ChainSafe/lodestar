@@ -152,7 +152,7 @@ export class BlockDutiesService {
       return;
     }
 
-    const proposerDuties = await this.api.validator.getProposerDuties(epoch).catch((e: Error) => {
+    const {response: proposerDuties} = await this.api.validator.getProposerDuties(epoch).catch((e: Error) => {
       throw extendError(e, "Error on getProposerDuties");
     });
     const {dependentRoot} = proposerDuties;

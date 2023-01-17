@@ -102,10 +102,12 @@ export class AttestationService {
    */
   private async produceAttestation(committeeIndex: number, slot: Slot): Promise<phase0.AttestationData> {
     // Produce one attestation data per slot and committeeIndex
-    const attestationRes = await this.api.validator.produceAttestationData(committeeIndex, slot).catch((e: Error) => {
-      this.metrics?.attestaterError.inc({error: "produce"});
-      throw extendError(e, "Error producing attestation");
-    });
+    const {response: attestationRes} = await this.api.validator
+      .produceAttestationData(committeeIndex, slot)
+      .catch((e: Error) => {
+        this.metrics?.attestaterError.inc({error: "produce"});
+        throw extendError(e, "Error producing attestation");
+      });
     return attestationRes.data;
   }
 
@@ -187,7 +189,7 @@ export class AttestationService {
     }
 
     this.logger.verbose("Aggregating attestations", logCtx);
-    const aggregate = await this.api.validator
+    const {response: aggregate} = await this.api.validator
       .getAggregatedAttestation(ssz.phase0.AttestationData.hashTreeRoot(attestation), attestation.slot)
       .catch((e: Error) => {
         throw extendError(e, "Error producing aggregateAndProofs");

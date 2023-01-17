@@ -231,9 +231,11 @@ export class SyncCommitteeDutiesService {
       return;
     }
 
-    const syncDuties = await this.api.validator.getSyncCommitteeDuties(epoch, indexArr).catch((e: Error) => {
-      throw extendError(e, "Failed to obtain SyncDuties");
-    });
+    const {response: syncDuties} = await this.api.validator
+      .getSyncCommitteeDuties(epoch, indexArr)
+      .catch((e: Error) => {
+        throw extendError(e, "Failed to obtain SyncDuties");
+      });
 
     const dutiesByIndex = new Map<ValidatorIndex, DutyAtPeriod>();
     let count = 0;

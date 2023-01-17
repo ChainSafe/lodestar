@@ -140,7 +140,9 @@ export class DoppelgangerService {
     }
 
     try {
-      const {data} = await this.api.validator.getLiveness(indicesToCheck, epoch);
+      const {
+        response: {data},
+      } = await this.api.validator.getLiveness(indicesToCheck, epoch);
       return data;
     } catch (e) {
       this.logger.error(`Error getting liveness data for epoch ${epoch}`, {}, e as Error);
