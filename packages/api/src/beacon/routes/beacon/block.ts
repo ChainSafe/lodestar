@@ -1,7 +1,7 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
-import {phase0, allForks, Slot, Root, ssz, RootHex} from "@lodestar/types";
+import {phase0, allForks, Slot, Root, ssz, RootHex, eip4844} from "@lodestar/types";
 
 import {
   RoutesData,
@@ -109,6 +109,14 @@ export type Api = {
    * transactions beacon node gets in response.
    */
   publishBlindedBlock(block: allForks.SignedBlindedBeaconBlock): Promise<void>;
+
+  /**
+   * Get block BlobsSidecar
+   * Retrieves BlobsSidecar included in requested block.
+   * @param blockId Block identifier.
+   * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
+   */
+  getBlobsSidecar(blockId: BlockId): Promise<{executionOptimistic: ExecutionOptimistic; data: eip4844.BlobsSidecar}>;
 };
 
 /**
@@ -123,6 +131,7 @@ export const routesData: RoutesData<Api> = {
   getBlockRoot: {url: "/eth/v1/beacon/blocks/{block_id}/root", method: "GET"},
   publishBlock: {url: "/eth/v1/beacon/blocks", method: "POST"},
   publishBlindedBlock: {url: "/eth/v1/beacon/blinded_blocks", method: "POST"},
+  getBlobsSidecar: {url: "/eth/v1/beacon/blobs_sidecars/{block_id}", method: "GET"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -138,6 +147,7 @@ export type ReqTypes = {
   getBlockRoot: BlockIdOnlyReq;
   publishBlock: {body: unknown};
   publishBlindedBlock: {body: unknown};
+  getBlobsSidecar: BlockIdOnlyReq;
 };
 
 export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api, ReqTypes> {
@@ -180,6 +190,7 @@ export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api,
     getBlockRoot: blockIdOnlyReq,
     publishBlock: reqOnlyBody(AllForksSignedBeaconBlock, Schema.Object),
     publishBlindedBlock: reqOnlyBody(AllForksSignedBlindedBeaconBlock, Schema.Object),
+    getBlobsSidecar: blockIdOnlyReq,
   };
 }
 
@@ -201,5 +212,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getBlockHeader: ContainerDataExecutionOptimistic(BeaconHeaderResType),
     getBlockHeaders: ContainerDataExecutionOptimistic(ArrayOf(BeaconHeaderResType)),
     getBlockRoot: ContainerDataExecutionOptimistic(RootContainer),
+    getBlobsSidecar: ContainerDataExecutionOptimistic(ssz.eip4844.BlobsSidecar),
   };
 }
