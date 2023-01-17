@@ -139,7 +139,7 @@ export class BlockProposingService {
     // A metric on the choice between blindedBlock and normal block can be applied
     // TODO: compare the blockValue that has been obtained in each of full or blinded block
     if (blindedBlock) {
-      const debugLogCtx = {source: "builder", blockValue: blindedBlock.blockValue.toString()};
+      const debugLogCtx = {source: "builder", blockValue: blindedBlock.response.blockValue.toString()};
       return {...blindedBlock.response, debugLogCtx};
     } else {
       if (!fullBlock) {
