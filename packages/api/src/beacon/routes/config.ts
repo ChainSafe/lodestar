@@ -11,7 +11,7 @@ import {
   ReqSerializers,
   RoutesData,
   sameType,
-  APIClientResponse,
+  ApiClientResponse,
   ContainerData,
 } from "../../utils/index.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
@@ -31,7 +31,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * Retrieve Eth1 deposit contract address and chain ID.
    */
   getDepositContract(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: DepositContract}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -43,7 +43,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * Retrieve all scheduled upcoming forks this node is aware of.
    */
   getForkSchedule(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: phase0.Fork[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -61,7 +61,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * - numeric values are returned as a quoted integer
    */
   getSpec(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: Record<string, string>}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse

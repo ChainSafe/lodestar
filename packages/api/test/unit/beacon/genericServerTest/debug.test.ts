@@ -10,6 +10,7 @@ import {getMockApi, getTestServer} from "../../../utils/utils.js";
 import {registerRoute} from "../../../../src/utils/server/registerRoute.js";
 import {HttpClient} from "../../../../src/utils/client/httpClient.js";
 import {testData} from "../testData/debug.js";
+import {HttpStatusCode} from "../../../../src/utils/client/httpStatusCode.js";
 
 describe("beacon / debug", function () {
   // Extend timeout since states are very big
@@ -37,9 +38,9 @@ describe("beacon / debug", function () {
         const httpClient = new HttpClient({baseUrl});
         const client = getClient(config, httpClient);
 
-        const res = await client[method]("head", "ssz");
+        const {response} = await client[method]("head", "ssz");
 
-        expect(toHexString(res)).to.equal(toHexString(stateSerialized), "returned state value is not equal");
+        expect(toHexString(response)).to.equal(toHexString(stateSerialized), "returned state value is not equal");
       });
     }
   });

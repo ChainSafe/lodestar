@@ -9,7 +9,7 @@ import {
   RoutesData,
   sameType,
   Schema,
-  APIClientResponse,
+  ApiClientResponse,
 } from "../../utils/index.js";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node.js";
 
@@ -78,7 +78,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   writeHeapdump(
     dirpath?: string
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: {filepath: string}}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -86,11 +86,11 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   >;
   /** TODO: description */
   getLatestWeakSubjectivityCheckpointEpoch(): Promise<
-    APIClientResponse<{[HttpStatusCode.OK]: {data: Epoch}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
+    ApiClientResponse<{[HttpStatusCode.OK]: {data: Epoch}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
   >;
   /** TODO: description */
   getSyncChainsDebugState(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: SyncChainDebugState[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -100,7 +100,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getGossipQueueItems(
     gossipType: string
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: GossipQueueItem[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -108,7 +108,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   >;
   /** Dump all items in the regen queue */
   getRegenQueueItems(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: RegenQueueItem[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -116,7 +116,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   >;
   /** Dump all items in the block processor queue */
   getBlockProcessorQueueItems(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: BlockProcessorQueueItem[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -124,7 +124,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   >;
   /** Dump a summary of the states in the StateContextCache */
   getStateCacheItems(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: StateCacheItem[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -132,7 +132,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   >;
   /** Dump a summary of the states in the CheckpointStateCache */
   getCheckpointStateCacheItems(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: StateCacheItem[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -140,7 +140,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   >;
   /** Dump peer gossip stats by peer */
   getGossipPeerScoreStats(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: GossipPeerScoreStat[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -148,7 +148,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   >;
   /** Dump lodestar score stats by peer */
   getLodestarPeerScoreStats(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: PeerScoreStat[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -156,27 +156,27 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   >;
   /** Run GC with `global.gc()` */
   runGC(): Promise<
-    APIClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
+    ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
   >;
   /** Drop all states in the state cache */
   dropStateCache(): Promise<
-    APIClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
+    ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
   >;
 
   /** Connect to peer at this multiaddress */
   connectPeer(
     peerId: string,
     multiaddrStrs: string[]
-  ): Promise<APIClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>>;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>>;
   /** Disconnect peer */
   disconnectPeer(
     peerId: string
-  ): Promise<APIClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>>;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>>;
   /** Same to node api with new fields */
   getPeers(
     filters?: FilterGetPeers
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: LodestarNodePeer[]; meta: {count: number}}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -185,7 +185,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
 
   /** Dump Discv5 Kad values */
   discv5GetKadValues(): Promise<
-    APIClientResponse<{[HttpStatusCode.OK]: {data: string[]}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
+    ApiClientResponse<{[HttpStatusCode.OK]: {data: string[]}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
   >;
 
   /**
@@ -195,12 +195,12 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   dumpDbBucketKeys(
     bucket: string
   ): Promise<
-    APIClientResponse<{[HttpStatusCode.OK]: {data: string[]}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
+    ApiClientResponse<{[HttpStatusCode.OK]: {data: string[]}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
   >;
 
   /** Return all entries in the StateArchive index with bucket index_stateArchiveRootIndex */
   dumpDbStateIndex(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: {root: RootHex; slot: Slot}[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse

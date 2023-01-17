@@ -3,7 +3,7 @@ import {compileRouteUrlFormater} from "../urlFormat.js";
 import {
   RouteDef,
   ReqGeneric,
-  GenericHandler,
+  APIClientHandler,
   ReturnTypes,
   TypeJson,
   ReqSerializer,
@@ -46,7 +46,7 @@ export function getFetchOptsSerializer<Fn extends (...args: any) => any, ReqType
  */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
 export function getFetchOptsSerializers<
-  Api extends Record<string, GenericHandler>,
+  Api extends Record<string, APIClientHandler>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 >(routesData: RoutesData<Api>, reqSerializers: ReqSerializers<Api, ReqTypes>) {
   return mapValues(routesData, (routeDef, routeId) =>
@@ -58,7 +58,7 @@ export function getFetchOptsSerializers<
  * Get a generic JSON client from route definition, request serializer and return types.
  */
 export function generateGenericJsonClient<
-  Api extends Record<string, GenericHandler>,
+  Api extends Record<string, APIClientHandler>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric},
   ErrorAsResponse extends boolean
 >(

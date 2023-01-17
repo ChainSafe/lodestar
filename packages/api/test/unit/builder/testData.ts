@@ -12,11 +12,11 @@ const root = Buffer.alloc(32, 1);
 export const testData: GenericServerTestCases<Api> = {
   status: {
     args: [],
-    res: 200,
+    res: undefined,
   },
   registerValidator: {
     args: [[ssz.bellatrix.SignedValidatorRegistrationV1.defaultValue()]],
-    res: 200,
+    res: undefined,
   },
   getHeader: {
     args: [1, root, fromHexString(pubkeyRand)],

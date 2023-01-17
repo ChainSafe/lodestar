@@ -1,6 +1,6 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {ClientOptions, generateGenericJsonClient, IHttpClient} from "../../utils/client/index.js";
-import {APIServerHandlers} from "../../utils/types.js";
+import {ServerApi} from "../../utils/types.js";
 import {Api, getReqSerializers, getReturnTypes, ReqTypes, routesData} from "../routes/node.js";
 import {defaultClientOptions} from "./index.js";
 

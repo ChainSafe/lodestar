@@ -10,7 +10,7 @@ import {
   reqEmpty,
   ReqEmpty,
   WithVersion,
-  APIClientResponse,
+  ApiClientResponse,
   ContainerData,
 } from "../../utils/index.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
@@ -36,7 +36,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     startPeriod: SyncPeriod,
     count: number
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
           version: ForkName;
@@ -52,7 +52,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
   getOptimisticUpdate(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
           version: ForkName;
@@ -64,7 +64,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     >
   >;
   getFinalityUpdate(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
           version: ForkName;
@@ -83,7 +83,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getBootstrap(
     blockRoot: string
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
           version: ForkName;
@@ -101,7 +101,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     startPeriod: SyncPeriod,
     count: number
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
           data: Uint8Array[];

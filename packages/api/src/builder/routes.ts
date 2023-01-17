@@ -13,7 +13,7 @@ import {
   ReqEmpty,
   ArrayOf,
   WithVersion,
-  APIClientResponse,
+  ApiClientResponse,
 } from "../utils/index.js";
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 import {getReqSerializers as getBeaconReqSerializers} from "../beacon/routes/beacon/block.js";
@@ -21,7 +21,7 @@ import {HttpStatusCode} from "../utils/client/httpStatusCode.js";
 
 export type Api<ErrorAsResponse extends boolean = false> = {
   status(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void},
       HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
       ErrorAsResponse
@@ -30,7 +30,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   registerValidator(
     registrations: bellatrix.SignedValidatorRegistrationV1[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void},
       HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.BAD_REQUEST,
       ErrorAsResponse
@@ -41,7 +41,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     parentHash: Root,
     proposerPubKey: BLSPubkey
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.SignedBuilderBid; version: ForkName}},
       HttpStatusCode.NOT_FOUND | HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -50,7 +50,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   submitBlindedBlock(
     signedBlock: allForks.SignedBlindedBeaconBlock
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.ExecutionPayload; version: ForkName}},
       HttpStatusCode.SERVICE_UNAVAILABLE | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -59,7 +59,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   submitBlindedBlockV2(
     signedBlock: allForks.SignedBlindedBeaconBlock
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlockAndBlobsSidecar; version: ForkName}},
       HttpStatusCode.SERVICE_UNAVAILABLE | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse

@@ -1,10 +1,12 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/node.js";
 import {ServerRoutes, getGenericJsonServer} from "../../utils/server/index.js";
+import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {ServerApi} from "../../utils/types.js";
 
-export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api, ReqTypes> {
+export function getRoutes(config: IChainForkConfig, api: ServerApi<Api>): ServerRoutes<ServerApi<Api>, ReqTypes> {
   // All routes return JSON, use a server auto-generator
-  const serverRoutes = getGenericJsonServer<Api, ReqTypes>(
+  const serverRoutes = getGenericJsonServer<ServerApi<Api>, ReqTypes>(
     {routesData, getReturnTypes, getReqSerializers},
     config,
     api
@@ -16,9 +18,14 @@ export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api,
     getHealth: {
       ...serverRoutes.getHealth,
       handler: async (req, res) => {
-        const {status} = await api.getHealth();
-        res.raw.writeHead(status);
-        res.raw.end();
+        try {
+          await api.getHealth();
+          res.raw.writeHead(HttpStatusCode.OK);
+          res.raw.end();
+        } catch (e) {
+          res.raw.writeHead(HttpStatusCode.INTERNAL_SERVER_ERROR);
+          res.raw.end();
+        }
       },
     },
   };

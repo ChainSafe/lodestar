@@ -9,7 +9,7 @@ import {
   Schema,
   ReqSerializers,
   ReqSerializer,
-  APIClientResponse,
+  ApiClientResponse,
 } from "../../../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -88,7 +88,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getStateRoot(
     stateId: StateId
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: {root: Root}; executionOptimistic: ExecutionOptimistic}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -104,7 +104,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getStateFork(
     stateId: StateId
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: phase0.Fork; executionOptimistic: ExecutionOptimistic}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -121,7 +121,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getStateFinalityCheckpoints(
     stateId: StateId
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: FinalityCheckpoints; executionOptimistic: ExecutionOptimistic}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -140,7 +140,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     stateId: StateId,
     filters?: ValidatorFilters
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: ValidatorResponse[]; executionOptimistic: ExecutionOptimistic}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -158,7 +158,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     stateId: StateId,
     validatorId: ValidatorId
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: ValidatorResponse; executionOptimistic: ExecutionOptimistic}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -176,7 +176,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     stateId: StateId,
     indices?: ValidatorId[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: ValidatorBalance[]; executionOptimistic: ExecutionOptimistic}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -196,7 +196,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     stateId: StateId,
     filters?: CommitteesFilters
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: EpochCommitteeResponse[]; executionOptimistic: ExecutionOptimistic}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -207,7 +207,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     stateId: StateId,
     epoch?: Epoch
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: EpochSyncCommitteeResponse; executionOptimistic: ExecutionOptimistic}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse

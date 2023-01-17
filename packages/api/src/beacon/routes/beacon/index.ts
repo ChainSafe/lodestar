@@ -1,7 +1,7 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
-import {RoutesData, ReturnTypes, reqEmpty, ContainerData, APIClientResponse} from "../../../utils/index.js";
+import {RoutesData, ReturnTypes, reqEmpty, ContainerData, ApiClientResponse} from "../../../utils/index.js";
 import * as block from "./block.js";
 import * as pool from "./pool.js";
 import * as state from "./state.js";
@@ -34,7 +34,7 @@ export type Api<ErrorAsResponse extends boolean = false> = block.Api<ErrorAsResp
   pool.Api<ErrorAsResponse> &
   state.Api<ErrorAsResponse> & {
     getGenesis(): Promise<
-      APIClientResponse<
+      ApiClientResponse<
         {[HttpStatusCode.OK]: {data: phase0.Genesis}},
         HttpStatusCode.INTERNAL_SERVER_ERROR,
         ErrorAsResponse

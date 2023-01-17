@@ -50,11 +50,11 @@ export const testData: GenericServerTestCases<Api> = {
   },
   publishBlock: {
     args: [ssz.phase0.SignedBeaconBlock.defaultValue()],
-    res: 200,
+    res: undefined,
   },
   publishBlindedBlock: {
     args: [getDefaultBlindedBlock(64)],
-    res: 200,
+    res: undefined,
   },
 
   // pool
@@ -81,27 +81,27 @@ export const testData: GenericServerTestCases<Api> = {
   },
   submitPoolAttestations: {
     args: [[ssz.phase0.Attestation.defaultValue()]],
-    res: 200,
+    res: undefined,
   },
   submitPoolAttesterSlashings: {
     args: [ssz.phase0.AttesterSlashing.defaultValue()],
-    res: 200,
+    res: undefined,
   },
   submitPoolProposerSlashings: {
     args: [ssz.phase0.ProposerSlashing.defaultValue()],
-    res: 200,
+    res: undefined,
   },
   submitPoolVoluntaryExit: {
     args: [ssz.phase0.SignedVoluntaryExit.defaultValue()],
-    res: 200,
+    res: undefined,
   },
   submitPoolBlsToExecutionChange: {
     args: [[ssz.capella.SignedBLSToExecutionChange.defaultValue()]],
-    res: 200,
+    res: undefined,
   },
   submitPoolSyncCommitteeSignatures: {
     args: [[ssz.altair.SyncCommitteeMessage.defaultValue()]],
-    res: 200,
+    res: undefined,
   },
 
   // state

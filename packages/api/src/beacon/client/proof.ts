@@ -3,7 +3,7 @@ import {deserializeProof, Proof} from "@chainsafe/persistent-merkle-tree";
 import {Api, ReqTypes, routesData, getReqSerializers} from "../routes/proof.js";
 import {IHttpClient, getFetchOptsSerializers, ClientOptions, HttpError} from "../../utils/client/index.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
-import {APIClientResponse} from "../../utils/types.js";
+import {ApiClientResponse} from "../../utils/types.js";
 
 /**
  * REST HTTP client for lightclient routes
@@ -24,7 +24,7 @@ export function getClient<ErrorAsResponse extends boolean = false>(
         const res = await httpClient.arrayBuffer(fetchOptsSerializers.getStateProof(stateId, paths));
         const proof = deserializeProof(new Uint8Array(res.body));
 
-        return {ok: true, response: {data: proof}, status: HttpStatusCode.OK} as APIClientResponse<
+        return {ok: true, response: {data: proof}, status: HttpStatusCode.OK} as ApiClientResponse<
           {[HttpStatusCode.OK]: {data: Proof}},
           HttpStatusCode.INTERNAL_SERVER_ERROR,
           ErrorAsResponse
@@ -35,7 +35,7 @@ export function getClient<ErrorAsResponse extends boolean = false>(
             ok: false,
             response: {code: err.status, message: err.message},
             status: err.status,
-          } as APIClientResponse<
+          } as ApiClientResponse<
             {[HttpStatusCode.OK]: {data: Proof}},
             HttpStatusCode.INTERNAL_SERVER_ERROR,
             ErrorAsResponse

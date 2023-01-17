@@ -1,8 +1,9 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {Api, ReqTypes, routesData, getEventSerdes} from "../routes/events.js";
 import {ServerRoutes} from "../../utils/server/index.js";
+import {ServerApi} from "../../utils/types.js";
 
-export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api, ReqTypes> {
+export function getRoutes(config: IChainForkConfig, api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
   const eventSerdes = getEventSerdes();
 
   return {
@@ -33,7 +34,7 @@ export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api,
           res.raw.setHeader("X-Accel-Buffering", "no");
 
           await new Promise<void>((resolve, reject) => {
-            api.eventstream(req.query.topics, controller.signal, (event) => {
+            void api.eventstream(req.query.topics, controller.signal, (event) => {
               try {
                 const data = eventSerdes.toJson(event);
                 res.raw.write(serializeSSEEvent({event: event.type, data}));

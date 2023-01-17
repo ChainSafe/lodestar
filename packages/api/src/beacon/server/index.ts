@@ -2,6 +2,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {Api} from "../routes/index.js";
 import {ServerInstance, ServerRoute, RouteConfig, registerRoute} from "../../utils/server/index.js";
 
+import {ServerApi} from "../../utils/types.js";
 import * as beacon from "./beacon.js";
 import * as configApi from "./config.js";
 import * as debug from "./debug.js";
@@ -18,7 +19,7 @@ export {RouteConfig};
 export function registerRoutes(
   server: ServerInstance,
   config: IChainForkConfig,
-  api: Api,
+  api: {[K in keyof Api]: ServerApi<Api[K]>},
   enabledNamespaces: (keyof Api)[]
 ): void {
   const routesByNamespace: {

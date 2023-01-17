@@ -9,7 +9,7 @@ import {
   ReqSerializers,
   ReqEmpty,
   jsonType,
-  APIClientResponse,
+  ApiClientResponse,
   ContainerData,
 } from "../utils/index.js";
 
@@ -111,7 +111,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
    */
   listKeys(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
           data: {
@@ -146,7 +146,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     passwords: string[],
     slashingProtectionStr?: SlashingProtectionData
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: ResponseStatus<ImportStatus>[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -177,7 +177,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   deleteKeys(
     pubkeysHex: string[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: ResponseStatus<DeletionStatus>[]; slashingProtection: SlashingProtectionData}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -188,7 +188,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * List all remote validating pubkeys known to this validator client binary
    */
   listRemoteKeys(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: SignerDefinition[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -201,7 +201,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   importRemoteKeys(
     remoteSigners: Pick<SignerDefinition, "pubkey" | "url">[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: ResponseStatus<ImportRemoteKeyStatus>[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -211,7 +211,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   deleteRemoteKeys(
     pubkeys: PubkeyHex[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: ResponseStatus<DeleteRemoteKeyStatus>[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -221,7 +221,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   listFeeRecipient(
     pubkey: string
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: FeeRecipientData}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -231,7 +231,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     pubkey: string,
     ethaddress: string
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
       | HttpStatusCode.UNAUTHORIZED
       | HttpStatusCode.FORBIDDEN
@@ -243,7 +243,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   deleteFeeRecipient(
     pubkey: string
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
       | HttpStatusCode.UNAUTHORIZED
       | HttpStatusCode.FORBIDDEN
@@ -256,17 +256,13 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getGasLimit(
     pubkey: string
   ): Promise<
-    APIClientResponse<
-      {[HttpStatusCode.OK]: {data: GasLimitData}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{[HttpStatusCode.OK]: {data: GasLimitData}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
   >;
   setGasLimit(
     pubkey: string,
     gasLimit: number
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
       | HttpStatusCode.UNAUTHORIZED
       | HttpStatusCode.FORBIDDEN
@@ -278,7 +274,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   deleteGasLimit(
     pubkey: string
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
       | HttpStatusCode.UNAUTHORIZED
       | HttpStatusCode.FORBIDDEN

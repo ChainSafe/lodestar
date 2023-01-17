@@ -1,6 +1,6 @@
 import {JsonPath} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {ReturnTypes, RoutesData, Schema, sameType, ReqSerializers, APIClientResponse} from "../../utils/index.js";
+import {ReturnTypes, RoutesData, Schema, sameType, ReqSerializers, ApiClientResponse} from "../../utils/index.js";
 import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../../utils/serdes.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 
@@ -15,7 +15,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     stateId: string,
     jsonPaths: JsonPath[]
   ): Promise<
-    APIClientResponse<{[HttpStatusCode.OK]: {data: Proof}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
+    ApiClientResponse<{[HttpStatusCode.OK]: {data: Proof}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
   >;
 };
 

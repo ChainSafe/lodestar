@@ -1,12 +1,13 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/debug.js";
 import {ServerRoutes, getGenericJsonServer} from "../../utils/server/index.js";
+import {ServerApi} from "../../utils/types.js";
 
-export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api, ReqTypes> {
+export function getRoutes(config: IChainForkConfig, api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
   const reqSerializers = getReqSerializers();
   const returnTypes = getReturnTypes();
 
-  const serverRoutes = getGenericJsonServer<Api, ReqTypes>(
+  const serverRoutes = getGenericJsonServer<ServerApi<Api>, ReqTypes>(
     {routesData, getReturnTypes, getReqSerializers},
     config,
     api
@@ -19,24 +20,24 @@ export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api,
     getState: {
       ...serverRoutes.getState,
       handler: async (req) => {
-        const {response: res} = await api.getState(...reqSerializers.getState.parseReq(req));
-        if (res.data instanceof Uint8Array) {
+        const response = await api.getState(...reqSerializers.getState.parseReq(req));
+        if (response instanceof Uint8Array) {
           // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
-          return Buffer.from(res.data);
+          return Buffer.from(response);
         } else {
-          return returnTypes.getState.toJson(res);
+          return returnTypes.getState.toJson(response);
         }
       },
     },
     getStateV2: {
       ...serverRoutes.getStateV2,
       handler: async (req) => {
-        const {response: res} = await api.getStateV2(...reqSerializers.getStateV2.parseReq(req));
-        if (res.data instanceof Uint8Array) {
+        const response = await api.getStateV2(...reqSerializers.getStateV2.parseReq(req));
+        if (response instanceof Uint8Array) {
           // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
-          return Buffer.from(res.data);
+          return Buffer.from(response);
         } else {
-          return returnTypes.getStateV2.toJson(res);
+          return returnTypes.getStateV2.toJson(response);
         }
       },
     },

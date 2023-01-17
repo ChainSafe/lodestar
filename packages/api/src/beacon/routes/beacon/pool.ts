@@ -9,7 +9,7 @@ import {
   ReqSerializers,
   reqEmpty,
   ReqEmpty,
-  APIClientResponse,
+  ApiClientResponse,
   ContainerData,
 } from "../../../utils/index.js";
 
@@ -32,7 +32,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getPoolAttestations(
     filters?: Partial<AttestationFilters>
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: phase0.Attestation[]}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -46,7 +46,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * @throws ApiError
    */
   getPoolAttesterSlashings(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: phase0.AttesterSlashing[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -60,7 +60,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * @throws ApiError
    */
   getPoolProposerSlashings(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: phase0.ProposerSlashing[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -74,7 +74,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * @throws ApiError
    */
   getPoolVoluntaryExits(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: phase0.SignedVoluntaryExit[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -88,7 +88,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * @throws ApiError
    */
   getPoolBlsToExecutionChanges(): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: capella.SignedBLSToExecutionChange[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -110,7 +110,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   submitPoolAttestations(
     attestations: phase0.Attestation[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -127,7 +127,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   submitPoolAttesterSlashings(
     slashing: phase0.AttesterSlashing
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -144,7 +144,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   submitPoolProposerSlashings(
     slashing: phase0.ProposerSlashing
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -161,7 +161,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   submitPoolVoluntaryExit(
     exit: phase0.SignedVoluntaryExit
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -178,7 +178,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   submitPoolBlsToExecutionChange(
     blsToExecutionChange: capella.SignedBLSToExecutionChange[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -191,7 +191,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   submitPoolSyncCommitteeSignatures(
     signatures: altair.SyncCommitteeMessage[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse

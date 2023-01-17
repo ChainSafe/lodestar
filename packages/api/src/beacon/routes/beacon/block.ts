@@ -15,7 +15,7 @@ import {
   ReqSerializer,
   ContainerDataExecutionOptimistic,
   WithExecutionOptimistic,
-  APIClientResponse,
+  ApiClientResponse,
   ContainerData,
 } from "../../../utils/index.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
@@ -48,7 +48,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getBlock(
     blockId: BlockId
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlock}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -64,7 +64,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getBlockV2(
     blockId: BlockId
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
           data: allForks.SignedBeaconBlock;
@@ -86,7 +86,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getBlockAttestations(
     blockId: BlockId
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
           data: phase0.Attestation[];
@@ -107,7 +107,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getBlockHeader(
     blockId: BlockId
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
           data: BlockHeaderResponse;
@@ -128,7 +128,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getBlockHeaders(
     filters: Partial<{slot: Slot; parentRoot: string}>
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
           data: BlockHeaderResponse[];
@@ -149,7 +149,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getBlockRoot(
     blockId: BlockId
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
           data: {root: Root};
@@ -176,7 +176,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   publishBlock(
     block: allForks.SignedBeaconBlock
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {
         [HttpStatusCode.OK]: void;
         [HttpStatusCode.ACCEPTED]: void;
@@ -192,7 +192,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   publishBlindedBlock(
     block: allForks.SignedBlindedBeaconBlock
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {
         [HttpStatusCode.OK]: void;
         [HttpStatusCode.ACCEPTED]: void;

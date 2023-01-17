@@ -29,7 +29,7 @@ import {
   jsonType,
   ContainerDataExecutionOptimistic,
   sameType,
-  APIClientResponse,
+  ApiClientResponse,
   ContainerData,
 } from "../../utils/index.js";
 import {fromU64Str, toU64Str, U64Str} from "../../utils/serdes.js";
@@ -120,7 +120,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     epoch: Epoch,
     validatorIndices: ValidatorIndex[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: AttesterDuty[]; executionOptimistic: ExecutionOptimistic; dependentRoot: RootHex}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
       ErrorAsResponse
@@ -141,7 +141,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getProposerDuties(
     epoch: Epoch
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: ProposerDuty[]; executionOptimistic: ExecutionOptimistic; dependentRoot: RootHex}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
       ErrorAsResponse
@@ -152,7 +152,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     epoch: number,
     validatorIndices: ValidatorIndex[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: SyncDuty[]; executionOptimistic: ExecutionOptimistic}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
       ErrorAsResponse
@@ -173,7 +173,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     randaoReveal: BLSSignature,
     graffiti: string
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.BeaconBlock}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
       ErrorAsResponse
@@ -195,7 +195,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     randaoReveal: BLSSignature,
     graffiti: string
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.BeaconBlock; version: ForkName}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
       ErrorAsResponse
@@ -207,7 +207,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     randaoReveal: BLSSignature,
     graffiti: string
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.BlindedBeaconBlock; version: ForkName}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
       ErrorAsResponse
@@ -226,7 +226,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     index: CommitteeIndex,
     slot: Slot
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: phase0.AttestationData}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
       ErrorAsResponse
@@ -238,7 +238,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     subcommitteeIndex: number,
     beaconBlockRoot: Root
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: altair.SyncCommitteeContribution}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
       ErrorAsResponse
@@ -257,7 +257,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     attestationDataRoot: Root,
     slot: Slot
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: phase0.Attestation}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -274,7 +274,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   publishAggregateAndProofs(
     signedAggregateAndProofs: phase0.SignedAggregateAndProof[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -284,7 +284,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   publishContributionAndProofs(
     contributionAndProofs: altair.SignedContributionAndProof[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -310,7 +310,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   prepareBeaconCommitteeSubnet(
     subscriptions: BeaconCommitteeSubscription[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
       ErrorAsResponse
@@ -320,7 +320,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   prepareSyncCommitteeSubnets(
     subscriptions: SyncCommitteeSubscription[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
       ErrorAsResponse
@@ -330,7 +330,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   prepareBeaconProposer(
     proposers: ProposerPreparationData[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -342,7 +342,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     indices: ValidatorIndex[],
     epoch: Epoch
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: {data: LivenessResponseData[]}},
       HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
@@ -352,7 +352,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   registerValidator(
     registrations: bellatrix.SignedValidatorRegistrationV1[]
   ): Promise<
-    APIClientResponse<
+    ApiClientResponse<
       {[HttpStatusCode.OK]: void},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
       ErrorAsResponse
