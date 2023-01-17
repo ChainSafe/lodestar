@@ -3,8 +3,7 @@ import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {multiaddr} from "@multiformats/multiaddr";
 import {expose} from "@chainsafe/threads/worker";
 import {Observable, Subject} from "@chainsafe/threads/observable";
-import {createKeypairFromPeerId, Discv5, ENR, IDiscv5Metrics} from "@chainsafe/discv5";
-import {createDiscv5Metrics} from "../../metrics/metrics/discv5.js";
+import {createKeypairFromPeerId, Discv5, ENR} from "@chainsafe/discv5";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
@@ -19,9 +18,11 @@ const workerData = worker.workerData as Discv5WorkerData;
 if (!workerData) throw Error("workerData must be defined");
 
 // Set up metrics, nodejs and discv5-specific
-const metricsRegistry = new RegistryMetricCreator();
-collectNodeJSMetrics(metricsRegistry, "discv5_worker_");
-const metrics = createDiscv5Metrics(metricsRegistry);
+let metricsRegistry: RegistryMetricCreator | undefined;
+if (workerData.metrics) {
+  metricsRegistry = new RegistryMetricCreator();
+  collectNodeJSMetrics(metricsRegistry, "discv5_worker_");
+}
 
 const peerId = await createFromProtobuf(workerData.peerIdProto);
 const keypair = createKeypairFromPeerId(peerId);
@@ -32,11 +33,7 @@ const discv5 = Discv5.create({
   peerId,
   multiaddr: multiaddr(workerData.bindAddr),
   config: workerData.config,
-  metrics: workerData.metrics
-    ? ((metrics as unknown) as {
-        [K in keyof typeof metrics]: IDiscv5Metrics[keyof IDiscv5Metrics];
-      })
-    : undefined,
+  metricsRegistry,
 });
 
 // Load boot enrs
@@ -70,7 +67,7 @@ const module: Discv5WorkerApi = {
     return Observable.from(subject);
   },
   async metrics(): Promise<string> {
-    return await metricsRegistry.metrics();
+    return (await metricsRegistry?.metrics()) ?? "";
   },
   async close() {
     discv5.removeListener("discovered", onDiscovered);
