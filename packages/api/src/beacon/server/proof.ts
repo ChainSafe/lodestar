@@ -18,7 +18,7 @@ export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api,
       handler: async (req) => {
         const args = reqSerializers.getStateProof.parseReq(req);
         const {
-          res: {data: proof},
+          response: {data: proof},
         } = await api.getStateProof(...args);
         // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
         return Buffer.from(serializeProof(proof));

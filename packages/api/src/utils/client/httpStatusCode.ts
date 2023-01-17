@@ -390,3 +390,5 @@ export type HttpSuccessCodes =
   | HttpStatusCode.MULTI_STATUS
   | HttpStatusCode.ALREADY_REPORTED
   | HttpStatusCode.IM_USED;
+
+export type HttpErrorCodes = Exclude<HttpStatusCode, HttpSuccessCodes>;

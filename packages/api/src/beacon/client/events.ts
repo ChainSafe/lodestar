@@ -52,7 +52,7 @@ export function getClient(_config: IChainForkConfig, baseUrl: string): Api {
         eventSource.close();
       }
 
-      return {ok: true, res: undefined, status: HttpStatusCode.OK};
+      return {ok: true, response: undefined, status: HttpStatusCode.OK};
     },
   };
 }

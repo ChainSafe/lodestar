@@ -3,7 +3,7 @@ import {ForkName} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
 import {objectToExpectedCase} from "@lodestar/utils";
 import {Schema, SchemaDefinition} from "./schema.js";
-import {HttpStatusCode, HttpSuccessCodes} from "./client/httpStatusCode.js";
+import {HttpErrorCodes, HttpStatusCode, HttpSuccessCodes} from "./client/httpStatusCode.js";
 
 // See /packages/api/src/routes/index.ts for reasoning
 
@@ -204,12 +204,12 @@ export type APIClientResponse<
   E extends Exclude<HttpStatusCode, HttpSuccessCodes> = Exclude<HttpStatusCode, HttpSuccessCodes>,
   IncludeErrorResponse extends boolean = true | false
 > = IncludeErrorResponse extends false
-  ? {[K in keyof S]: {ok: true; status: K; res: S[K]}}[keyof S]
+  ? {[K in keyof S]: {ok: true; status: K; response: S[K]}}[keyof S]
   :
-      | {[K in keyof S]: {ok: true; status: K; res: S[K]}}[keyof S]
-      | {[K in E]: {ok: false; status: K; res: {code: K; message?: string}}}[E];
+      | {[K in keyof S]: {ok: true; status: K; response: S[K]}}[keyof S]
+      | {[K in E]: {ok: false; status: K; response: {code: K; message?: string}}}[E];
 
-export type APIClientResponseData<T extends APIClientResponse> = T extends {ok: true; res: infer R} ? R : never;
+export type APIClientResponseData<T extends APIClientResponse> = T extends {ok: true; response: infer R} ? R : never;
 
 export type APIServerHandlers<T extends Record<string, GenericHandler>> = {
   [K in keyof T]: (...args: Parameters<T[K]>) => Promise<APIClientResponseData<Resolves<T[K]>>>;

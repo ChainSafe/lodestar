@@ -50,7 +50,7 @@ export function getClient<ErrorAsResponse extends boolean = false>(
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
         return {
           ok: true,
-          res: {data: new Uint8Array(res.body)},
+          response: {data: new Uint8Array(res.body)},
           status: 200,
         };
       }
@@ -68,7 +68,7 @@ export function getClient<ErrorAsResponse extends boolean = false>(
         });
         // Casting to any otherwise Typescript doesn't like the multi-type return
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-        return {ok: true, res: {data: new Uint8Array(res.body)}, status: res.status};
+        return {ok: true, response: {data: new Uint8Array(res.body)}, status: res.status};
       }
 
       return client.getStateV2(stateId, format);

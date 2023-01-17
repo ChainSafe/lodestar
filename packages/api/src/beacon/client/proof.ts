@@ -24,7 +24,7 @@ export function getClient<ErrorAsResponse extends boolean = false>(
         const res = await httpClient.arrayBuffer(fetchOptsSerializers.getStateProof(stateId, paths));
         const proof = deserializeProof(new Uint8Array(res.body));
 
-        return {ok: true, res: {data: proof}, status: HttpStatusCode.OK} as APIClientResponse<
+        return {ok: true, response: {data: proof}, status: HttpStatusCode.OK} as APIClientResponse<
           {[HttpStatusCode.OK]: {data: Proof}},
           HttpStatusCode.INTERNAL_SERVER_ERROR,
           ErrorAsResponse
@@ -33,7 +33,7 @@ export function getClient<ErrorAsResponse extends boolean = false>(
         if (err instanceof HttpError && options?.errorAsResponse) {
           return {
             ok: false,
-            res: {code: err.status, message: err.message},
+            response: {code: err.status, message: err.message},
             status: err.status,
           } as APIClientResponse<
             {[HttpStatusCode.OK]: {data: Proof}},

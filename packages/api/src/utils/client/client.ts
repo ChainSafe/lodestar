@@ -77,18 +77,18 @@ export function generateGenericJsonClient<
         if (returnType) {
           const res = await fetchFn.json<unknown>(fetchOptsSerializer(...args));
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          return {ok: true, res: returnType.fromJson(res.body), status: res.status} as ReturnType<Api[keyof Api]>;
+          return {ok: true, response: returnType.fromJson(res.body), status: res.status} as ReturnType<Api[keyof Api]>;
         } else {
           // We need to avoid parsing the response as the servers might just
           // response status 200 and close the request instead of writing an
           // empty json response. We return the status code.
           const res = await fetchFn.request(fetchOptsSerializer(...args));
 
-          return {ok: true, res: undefined, status: res.status} as ReturnType<Api[keyof Api]>;
+          return {ok: true, response: undefined, status: res.status} as ReturnType<Api[keyof Api]>;
         }
       } catch (err) {
         if (err instanceof HttpError && options.errorAsResponse) {
-          return {ok: false, res: {code: err.status, message: err.message}} as ReturnType<Api[keyof Api]>;
+          return {ok: false, response: {code: err.status, message: err.message}} as ReturnType<Api[keyof Api]>;
         }
 
         throw err;
