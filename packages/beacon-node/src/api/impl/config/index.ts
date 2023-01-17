@@ -1,4 +1,4 @@
-import {routes} from "@lodestar/api";
+import {routes, ServerApi} from "@lodestar/api";
 import {chainConfigToJson, IChainConfig, specValuesToJson} from "@lodestar/config";
 import {activePreset, presetToJson} from "@lodestar/params";
 import {ApiModules} from "../types.js";
@@ -21,7 +21,7 @@ export function renderJsonSpec(config: IChainConfig): Record<string, string> {
   return {...configJson, ...presetJson, ...constantsJson};
 }
 
-export function getConfigApi({config}: Pick<ApiModules, "config">): routes.config.Api {
+export function getConfigApi({config}: Pick<ApiModules, "config">): ServerApi<routes.config.Api> {
   return {
     async getForkSchedule() {
       const forkInfos = Object.values(config.forks);

@@ -1,4 +1,4 @@
-import {routes} from "@lodestar/api";
+import {routes, ServerApi} from "@lodestar/api";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -19,7 +19,7 @@ export function getBeaconStateApi({
   chain,
   config,
   db,
-}: Pick<ApiModules, "chain" | "config" | "db">): routes.beacon.state.Api {
+}: Pick<ApiModules, "chain" | "config" | "db">): ServerApi<routes.beacon.state.Api> {
   async function getState(
     stateId: routes.beacon.StateId
   ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean}> {

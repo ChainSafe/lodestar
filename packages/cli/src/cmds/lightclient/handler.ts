@@ -16,7 +16,9 @@ export async function lightclientHandler(args: ILightClientArgs & IGlobalArgs): 
   const {logger} = getCliLogger(args, {defaultLogFilepath: path.join(globalPaths.dataDir, "lightclient.log")}, config);
   const {beaconApiUrl, checkpointRoot} = args;
   const api = getClient({baseUrl: beaconApiUrl}, {config});
-  const {data: genesisData} = await api.beacon.getGenesis();
+  const {
+    response: {data: genesisData},
+  } = await api.beacon.getGenesis();
 
   const client = await Lightclient.initializeFromCheckpointRoot({
     config,

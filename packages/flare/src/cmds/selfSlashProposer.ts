@@ -61,7 +61,9 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
   const client = getClient({baseUrl: args.server}, {config: chainConfig});
 
   // Get genesis data to perform correct signatures
-  const {data: genesis} = await client.beacon.getGenesis();
+  const {
+    response: {data: genesis},
+  } = await client.beacon.getGenesis();
   const config = createIBeaconConfig(chainConfig, genesis.genesisValidatorsRoot);
 
   // TODO: Allow to customize the ProposerSlashing payloads
@@ -78,7 +80,9 @@ export async function selfSlashProposerHandler(args: SelfSlashArgs): Promise<voi
 
     // Retrieve the status all all validators in range at once
     const pksHex = sks.map((sk) => sk.toPublicKey().toHex());
-    const {data: validators} = await client.beacon.getStateValidators("head", {id: pksHex});
+    const {
+      response: {data: validators},
+    } = await client.beacon.getStateValidators("head", {id: pksHex});
 
     // Submit all ProposerSlashing for range at once
     await Promise.all(

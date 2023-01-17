@@ -1,4 +1,4 @@
-import {routes} from "@lodestar/api";
+import {routes, ServerApi} from "@lodestar/api";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
@@ -46,7 +46,14 @@ const SYNC_TOLERANCE_EPOCHS = 1;
  * Server implementation for handling validator duties.
  * See `@lodestar/validator/src/api` for the client implementation).
  */
-export function getValidatorApi({chain, config, logger, metrics, network, sync}: ApiModules): routes.validator.Api {
+export function getValidatorApi({
+  chain,
+  config,
+  logger,
+  metrics,
+  network,
+  sync,
+}: ApiModules): ServerApi<routes.validator.Api> {
   let genesisBlockRoot: Root | null = null;
 
   /**
@@ -177,7 +184,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       );
   }
 
-  const produceBlindedBlock: routes.validator.Api["produceBlindedBlock"] = async function produceBlindedBlock(
+  const produceBlindedBlock: ServerApi<routes.validator.Api>["produceBlindedBlock"] = async function produceBlindedBlock(
     slot,
     randaoReveal,
     graffiti
@@ -215,7 +222,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     }
   };
 
-  const produceBlock: routes.validator.Api["produceBlockV2"] = async function produceBlock(
+  const produceBlock: ServerApi<routes.validator.Api>["produceBlockV2"] = async function produceBlock(
     slot,
     randaoReveal,
     graffiti

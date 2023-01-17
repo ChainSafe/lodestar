@@ -70,7 +70,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     // Do not use known networks cache, it defaults to mainnet for devnets
     const {config: chainForkConfig, network} = getBeaconConfigFromArgs(args);
     const client = getClient({urls: args.beaconNodes}, {config: chainForkConfig});
-    const {genesisValidatorsRoot, genesisTime} = (await client.beacon.getGenesis()).data;
+    const {genesisValidatorsRoot, genesisTime} = (await client.beacon.getGenesis()).response.data;
     const config = createIBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 
     // Set exitEpoch to current epoch if unspecified
@@ -143,7 +143,9 @@ function selectSignersToExit(args: VoluntaryExitArgs, signers: Signer[]): Signer
 async function resolveValidatorIndexes(client: Api, signersToExit: SignerLocalPubkey[]) {
   const pubkeys = signersToExit.map(({pubkey}) => pubkey);
 
-  const {data} = await client.beacon.getStateValidators("head", {id: pubkeys});
+  const {
+    response: {data},
+  } = await client.beacon.getStateValidators("head", {id: pubkeys});
 
   const dataByPubkey = new Map(data.map((item) => [toHex(item.validator.pubkey), item]));
 

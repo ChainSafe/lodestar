@@ -59,10 +59,12 @@ like to choose for BLS To Execution Change.",
     // submitting the signed message
     const {config: chainForkConfig} = getBeaconConfigFromArgs(args);
     const client = getClient({urls: args.beaconNodes}, {config: chainForkConfig});
-    const {genesisValidatorsRoot} = (await client.beacon.getGenesis()).data;
+    const {genesisValidatorsRoot} = (await client.beacon.getGenesis()).response.data;
     const config = createIBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 
-    const {data: stateValidators} = await client.beacon.getStateValidators("head", {id: [publicKey]});
+    const {
+      response: {data: stateValidators},
+    } = await client.beacon.getStateValidators("head", {id: [publicKey]});
     const stateValidator = stateValidators[0];
     if (stateValidator === undefined) {
       throw new Error(`Validator pubkey ${publicKey} not found in state`);

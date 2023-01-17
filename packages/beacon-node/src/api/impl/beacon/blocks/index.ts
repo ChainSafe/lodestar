@@ -1,4 +1,4 @@
-import {routes} from "@lodestar/api";
+import {routes, ServerApi} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
@@ -25,7 +25,7 @@ export function getBeaconBlockApi({
   metrics,
   network,
   db,
-}: Pick<ApiModules, "chain" | "config" | "metrics" | "network" | "db">): routes.beacon.block.Api {
+}: Pick<ApiModules, "chain" | "config" | "metrics" | "network" | "db">): ServerApi<routes.beacon.block.Api> {
   return {
     async getBlockHeaders(filters) {
       // TODO - SLOW CODE: This code seems like it could be improved

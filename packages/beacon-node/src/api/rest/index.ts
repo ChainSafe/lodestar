@@ -1,4 +1,4 @@
-import {Api} from "@lodestar/api";
+import {Api, ServerApi} from "@lodestar/api";
 import {registerRoutes} from "@lodestar/api/beacon/server";
 import {ErrorAborted, ILogger} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";
@@ -25,7 +25,7 @@ export const beaconRestApiServerOpts: BeaconRestApiServerOpts = {
 export type BeaconRestApiServerModules = RestApiServerModules & {
   config: IChainForkConfig;
   logger: ILogger;
-  api: Api;
+  api: {[K in keyof Api]: ServerApi<Api[K]>};
   metrics: RestApiServerMetrics | null;
 };
 

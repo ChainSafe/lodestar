@@ -138,7 +138,9 @@ export async function fetchWeakSubjectivityState(
       wsCheckpoint = getCheckpointFromArg(wssCheckpoint);
     } else {
       const {
-        data: {finalized},
+        response: {
+          data: {finalized},
+        },
       } = await api.beacon.getStateFinalityCheckpoints("head");
       wsCheckpoint = finalized;
     }
@@ -156,7 +158,10 @@ export async function fetchWeakSubjectivityState(
 
     logger.info("Download completed");
 
-    return {wsState: getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes), wsCheckpoint};
+    return {
+      wsState: getStateTypeFromBytes(config, stateBytes.response).deserializeToViewDU(stateBytes.response),
+      wsCheckpoint,
+    };
   } catch (e) {
     throw new Error("Unable to fetch weak subjectivity state: " + (e as Error).message);
   }

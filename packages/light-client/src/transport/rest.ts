@@ -21,7 +21,7 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
     super();
   }
 
-  getUpdates(
+  async getUpdates(
     startPeriod: SyncPeriod,
     count: number
   ): Promise<
@@ -30,23 +30,23 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
       data: altair.LightClientUpdate;
     }[]
   > {
-    return this.api.lightclient.getUpdates(startPeriod, count);
+    return (await this.api.lightclient.getUpdates(startPeriod, count)).response;
   }
 
-  getOptimisticUpdate(): Promise<{version: ForkName; data: altair.LightClientOptimisticUpdate}> {
-    return this.api.lightclient.getOptimisticUpdate();
+  async getOptimisticUpdate(): Promise<{version: ForkName; data: altair.LightClientOptimisticUpdate}> {
+    return (await this.api.lightclient.getOptimisticUpdate()).response;
   }
 
-  getFinalityUpdate(): Promise<{version: ForkName; data: altair.LightClientFinalityUpdate}> {
-    return this.api.lightclient.getFinalityUpdate();
+  async getFinalityUpdate(): Promise<{version: ForkName; data: altair.LightClientFinalityUpdate}> {
+    return (await this.api.lightclient.getFinalityUpdate()).response;
   }
 
-  getBootstrap(blockRoot: string): Promise<{version: ForkName; data: altair.LightClientBootstrap}> {
-    return this.api.lightclient.getBootstrap(blockRoot);
+  async getBootstrap(blockRoot: string): Promise<{version: ForkName; data: altair.LightClientBootstrap}> {
+    return (await this.api.lightclient.getBootstrap(blockRoot)).response;
   }
 
-  fetchBlock(blockRootAsString: string): Promise<{version: ForkName; data: allForks.SignedBeaconBlock}> {
-    return this.api.beacon.getBlockV2(blockRootAsString);
+  async fetchBlock(blockRootAsString: string): Promise<{version: ForkName; data: allForks.SignedBeaconBlock}> {
+    return (await this.api.beacon.getBlockV2(blockRootAsString)).response;
   }
 
   onOptimisticUpdate(handler: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void): void {

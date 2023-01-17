@@ -50,7 +50,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   }
 
   async registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void> {
-    return this.api.registerValidator(registrations);
+    await this.api.registerValidator(registrations);
   }
 
   async getHeader(
@@ -58,12 +58,16 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     parentHash: Root,
     proposerPubKey: BLSPubkey
   ): Promise<{header: allForks.ExecutionPayloadHeader; blobKzgCommitments?: eip4844.BlobKzgCommitments}> {
-    const {data: signedBid} = await this.api.getHeader(slot, parentHash, proposerPubKey);
+    const {
+      response: {data: signedBid},
+    } = await this.api.getHeader(slot, parentHash, proposerPubKey);
     return signedBid.message;
   }
 
   async submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<allForks.SignedBeaconBlock> {
-    const {data: executionPayload} = await this.api.submitBlindedBlock(signedBlock);
+    const {
+      response: {data: executionPayload},
+    } = await this.api.submitBlindedBlock(signedBlock);
     const expectedTransactionsRoot = signedBlock.message.body.executionPayloadHeader.transactionsRoot;
     const actualTransactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(executionPayload.transactions);
     if (!byteArrayEquals(expectedTransactionsRoot, actualTransactionsRoot)) {
@@ -83,7 +87,9 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   async submitBlindedBlockV2(
     signedBlock: allForks.SignedBlindedBeaconBlock
   ): Promise<allForks.SignedBeaconBlockAndBlobsSidecar> {
-    const {data: signedBeaconBlockAndBlobsSidecar} = await this.api.submitBlindedBlockV2(signedBlock);
+    const {
+      response: {data: signedBeaconBlockAndBlobsSidecar},
+    } = await this.api.submitBlindedBlockV2(signedBlock);
     // Since we get the full block back, we can just just compare the hash of blinded to returned
     const {beaconBlock, blobsSidecar} = signedBeaconBlockAndBlobsSidecar;
 

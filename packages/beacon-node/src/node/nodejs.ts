@@ -5,7 +5,7 @@ import {Registry} from "prom-client";
 import {IBeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
-import {Api} from "@lodestar/api";
+import {Api, ServerApi} from "@lodestar/api";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
@@ -31,7 +31,7 @@ export interface IBeaconNodeModules {
   metrics: IMetrics | null;
   network: INetwork;
   chain: IBeaconChain;
-  api: Api;
+  api: {[K in keyof Api]: ServerApi<Api[K]>};
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
   metricsServer?: HttpMetricsServer;
@@ -82,7 +82,7 @@ export class BeaconNode {
   metricsServer?: HttpMetricsServer;
   network: INetwork;
   chain: IBeaconChain;
-  api: Api;
+  api: {[K in keyof Api]: ServerApi<Api[K]>};
   restApi?: BeaconRestApiServer;
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
