@@ -13,11 +13,11 @@ import {
   ReqEmpty,
   ArrayOf,
   WithVersion,
-  ApiClientResponse,
 } from "../utils/index.js";
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 import {getReqSerializers as getBeaconReqSerializers} from "../beacon/routes/beacon/block.js";
 import {HttpStatusCode} from "../utils/client/httpStatusCode.js";
+import {ApiClientResponse} from "../interfaces.js";
 
 export type Api<ErrorAsResponse extends boolean = false> = {
   status(): Promise<

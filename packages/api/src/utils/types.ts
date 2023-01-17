@@ -2,8 +2,8 @@ import {isBasicType, ListBasicType, Type, isCompositeType, ListCompositeType, Ar
 import {ForkName} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
 import {objectToExpectedCase} from "@lodestar/utils";
+import {APIClientHandler, ApiClientResponseData, APIServerHandler, ClientApi} from "../interfaces.js";
 import {Schema, SchemaDefinition} from "./schema.js";
-import {HttpStatusCode, HttpSuccessCodes} from "./client/httpStatusCode.js";
 
 // See /packages/api/src/routes/index.ts for reasoning
 
@@ -35,8 +35,6 @@ export type ReqGeneric = {
 };
 
 export type ReqEmpty = ReqGeneric;
-export type APIClientHandler = (...args: any) => PromiseLike<ApiClientResponse>;
-export type APIServerHandler = (...args: any) => PromiseLike<unknown>;
 export type Resolves<T extends (...args: any) => any> = Awaited<ReturnType<T>>;
 
 export type TypeJson<T> = {
@@ -199,30 +197,6 @@ export function sameType<T>(): TypeJson<T> {
     fromJson: (json) => (json as unknown) as T,
   };
 }
-
-export type ApiClientResponse<
-  S extends Partial<Record<HttpSuccessCodes, unknown>> = {[K in HttpSuccessCodes]: unknown},
-  E extends Exclude<HttpStatusCode, HttpSuccessCodes> = Exclude<HttpStatusCode, HttpSuccessCodes>,
-  IncludeErrorResponse extends boolean = true | false
-> = IncludeErrorResponse extends false
-  ? {[K in keyof S]: {ok: true; status: K; response: S[K]}}[keyof S]
-  :
-      | {[K in keyof S]: {ok: true; status: K; response: S[K]}}[keyof S]
-      | {[K in E]: {ok: false; status: K; response: {code: K; message?: string}}}[E];
-
-export type ApiClientResponseData<T extends ApiClientResponse> = T extends {ok: true; response: infer R} ? R : never;
-
-export type ServerApi<T extends Record<string, APIClientHandler>> = {
-  [K in keyof T]: (...args: Parameters<T[K]>) => Promise<ApiClientResponseData<Resolves<T[K]>>>;
-};
-
-export type ClientApi<T extends Record<string, APIServerHandler>> = {
-  [K in keyof T]: (
-    ...args: Parameters<T[K]>
-  ) => Promise<
-    ApiClientResponse<{[HttpStatusCode.OK]: Resolves<T[K]>}, HttpStatusCode.INTERNAL_SERVER_ERROR, true | false>
-  >;
-};
 
 //
 // RETURN

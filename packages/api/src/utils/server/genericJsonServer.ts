@@ -1,9 +1,10 @@
 import {mapValues} from "@lodestar/utils";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {IChainForkConfig} from "@lodestar/config";
-import {ReqGeneric, TypeJson, Resolves, RouteGroupDefinition, APIServerHandler} from "../types.js";
+import {ReqGeneric, TypeJson, Resolves, RouteGroupDefinition} from "../types.js";
 import {getFastifySchema} from "../schema.js";
 import {toColonNotationPath} from "../urlFormat.js";
+import {APIServerHandler} from "../../interfaces.js";
 import {ServerRoute} from "./types.js";
 
 // See /packages/api/src/routes/index.ts for reasoning

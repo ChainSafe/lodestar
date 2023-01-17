@@ -1,7 +1,7 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/debug.js";
 import {ServerRoutes, getGenericJsonServer} from "../../utils/server/index.js";
-import {ServerApi} from "../../utils/types.js";
+import {ServerApi} from "../../interfaces.js";
 
 export function getRoutes(config: IChainForkConfig, api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
   const reqSerializers = getReqSerializers();

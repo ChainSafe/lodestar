@@ -2,7 +2,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/node.js";
 import {ServerRoutes, getGenericJsonServer} from "../../utils/server/index.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
-import {ServerApi} from "../../utils/types.js";
+import {ServerApi} from "../../interfaces.js";
 
 export function getRoutes(config: IChainForkConfig, api: ServerApi<Api>): ServerRoutes<ServerApi<Api>, ReqTypes> {
   // All routes return JSON, use a server auto-generator

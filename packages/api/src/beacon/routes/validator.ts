@@ -17,6 +17,7 @@ import {
   RootHex,
   StringType,
 } from "@lodestar/types";
+import {ApiClientResponse} from "../../interfaces.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {
   RoutesData,
@@ -28,8 +29,6 @@ import {
   ReqSerializers,
   jsonType,
   ContainerDataExecutionOptimistic,
-  sameType,
-  ApiClientResponse,
   ContainerData,
 } from "../../utils/index.js";
 import {fromU64Str, toU64Str, U64Str} from "../../utils/serdes.js";

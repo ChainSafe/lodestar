@@ -1,5 +1,6 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {ssz, stringType} from "@lodestar/types";
+import {ApiClientResponse} from "../interfaces.js";
 import {HttpStatusCode} from "../utils/client/httpStatusCode.js";
 import {
   ReturnTypes,
@@ -9,7 +10,6 @@ import {
   ReqSerializers,
   ReqEmpty,
   jsonType,
-  ApiClientResponse,
   ContainerData,
 } from "../utils/index.js";
 
@@ -256,7 +256,11 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getGasLimit(
     pubkey: string
   ): Promise<
-    ApiClientResponse<{[HttpStatusCode.OK]: {data: GasLimitData}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: GasLimitData}},
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      ErrorAsResponse
+    >
   >;
   setGasLimit(
     pubkey: string,

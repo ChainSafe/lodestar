@@ -1,8 +1,9 @@
 import {JsonPath} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {ReturnTypes, RoutesData, Schema, sameType, ReqSerializers, ApiClientResponse} from "../../utils/index.js";
+import {ReturnTypes, RoutesData, Schema, sameType, ReqSerializers} from "../../utils/index.js";
 import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../../utils/serdes.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {ApiClientResponse} from "../../interfaces.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

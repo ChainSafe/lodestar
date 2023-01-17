@@ -2,7 +2,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {Api} from "../routes/index.js";
 import {ServerInstance, ServerRoute, RouteConfig, registerRoute} from "../../utils/server/index.js";
 
-import {ServerApi} from "../../utils/types.js";
+import {ServerApi} from "../../interfaces.js";
 import * as beacon from "./beacon.js";
 import * as configApi from "./config.js";
 import * as debug from "./debug.js";

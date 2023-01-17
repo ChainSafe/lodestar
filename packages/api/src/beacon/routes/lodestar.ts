@@ -1,4 +1,5 @@
 import {Epoch, RootHex, Slot} from "@lodestar/types";
+import {ApiClientResponse} from "../../interfaces.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {
   jsonType,
@@ -9,7 +10,6 @@ import {
   RoutesData,
   sameType,
   Schema,
-  ApiClientResponse,
 } from "../../utils/index.js";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node.js";
 

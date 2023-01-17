@@ -1,15 +1,7 @@
 import {mapValues} from "@lodestar/utils";
 import {compileRouteUrlFormater} from "../urlFormat.js";
-import {
-  RouteDef,
-  ReqGeneric,
-  APIClientHandler,
-  ReturnTypes,
-  TypeJson,
-  ReqSerializer,
-  ReqSerializers,
-  RoutesData,
-} from "../types.js";
+import {RouteDef, ReqGeneric, ReturnTypes, TypeJson, ReqSerializer, ReqSerializers, RoutesData} from "../types.js";
+import {APIClientHandler} from "../../interfaces.js";
 import {ClientOptions, FetchOpts, HttpError, IHttpClient} from "./httpClient.js";
 
 // See /packages/api/src/routes/index.ts for reasoning

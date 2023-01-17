@@ -1,4 +1,3 @@
-import {ServerApi} from "../../utils/types.js";
 import {Api as BeaconApi} from "./beacon/index.js";
 import {Api as ConfigApi} from "./config.js";
 import {Api as DebugApi} from "./debug.js";

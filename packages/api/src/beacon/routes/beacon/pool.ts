@@ -1,4 +1,5 @@
 import {phase0, altair, capella, CommitteeIndex, Slot, ssz} from "@lodestar/types";
+import {ApiClientResponse} from "../../../interfaces.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {
   RoutesData,
@@ -9,7 +10,6 @@ import {
   ReqSerializers,
   reqEmpty,
   ReqEmpty,
-  ApiClientResponse,
   ContainerData,
 } from "../../../utils/index.js";
 

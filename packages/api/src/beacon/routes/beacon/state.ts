@@ -1,5 +1,6 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, ssz, StringType, RootHex} from "@lodestar/types";
+import {ApiClientResponse} from "../../../interfaces.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {
   RoutesData,
@@ -9,7 +10,6 @@ import {
   Schema,
   ReqSerializers,
   ReqSerializer,
-  ApiClientResponse,
 } from "../../../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes

@@ -1,4 +1,5 @@
 import {IChainForkConfig} from "@lodestar/config";
+import {ServerApi} from "../../interfaces.js";
 import {
   ServerInstance,
   ServerRoutes,
@@ -6,7 +7,6 @@ import {
   registerRoute,
   RouteConfig,
 } from "../../utils/server/index.js";
-import {ServerApi} from "../../utils/types.js";
 import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes.js";
 
 // Re-export for convenience
