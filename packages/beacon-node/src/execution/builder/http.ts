@@ -1,4 +1,4 @@
-import {allForks, bellatrix, Slot, Root, BLSPubkey, ssz, eip4844} from "@lodestar/types";
+import {allForks, bellatrix, Slot, Root, BLSPubkey, ssz, eip4844, Wei} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
@@ -57,11 +57,15 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     slot: Slot,
     parentHash: Root,
     proposerPubKey: BLSPubkey
-  ): Promise<{header: allForks.ExecutionPayloadHeader; blobKzgCommitments?: eip4844.BlobKzgCommitments}> {
-    const {
-      response: {data: signedBid},
-    } = await this.api.getHeader(slot, parentHash, proposerPubKey);
-    return signedBid.message;
+  ): Promise<{
+    header: allForks.ExecutionPayloadHeader;
+    blockValue: Wei;
+    blobKzgCommitments?: eip4844.BlobKzgCommitments;
+  }> {
+    const {response: {data: signedBid}} = await this.api.getHeader(slot, parentHash, proposerPubKey);
+    const {header, value: blockValue} = signedBid.message;
+    const {blobKzgCommitments} = signedBid.message as {blobKzgCommitments?: eip4844.BlobKzgCommitments};
+    return {header, blockValue, blobKzgCommitments};
   }
 
   async submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<allForks.SignedBeaconBlock> {

@@ -1,4 +1,4 @@
-import {allForks, bellatrix, Root, Slot, BLSPubkey, eip4844} from "@lodestar/types";
+import {allForks, bellatrix, Root, Slot, BLSPubkey, eip4844, Wei} from "@lodestar/types";
 
 export interface IExecutionBuilder {
   /**
@@ -15,7 +15,11 @@ export interface IExecutionBuilder {
     slot: Slot,
     parentHash: Root,
     proposerPubKey: BLSPubkey
-  ): Promise<{header: allForks.ExecutionPayloadHeader; blobKzgCommitments?: eip4844.BlobKzgCommitments}>;
+  ): Promise<{
+    header: allForks.ExecutionPayloadHeader;
+    blockValue: Wei;
+    blobKzgCommitments?: eip4844.BlobKzgCommitments;
+  }>;
   submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<allForks.SignedBeaconBlock>;
   submitBlindedBlockV2(
     signedBlock: allForks.SignedBlindedBeaconBlock

@@ -16,6 +16,7 @@ import {
   ValidatorIndex,
   RootHex,
   StringType,
+  Wei,
 } from "@lodestar/types";
 import {ApiClientResponse} from "../../interfaces.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
@@ -25,6 +26,7 @@ import {
   ArrayOf,
   Schema,
   WithVersion,
+  WithBlockValue,
   reqOnlyBody,
   ReqSerializers,
   jsonType,
@@ -173,7 +175,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     graffiti: string
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock}},
+      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock; blockValue: Wei}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
       ErrorAsResponse
     >
@@ -195,7 +197,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     graffiti: string
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock; version: ForkName}},
+      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock; version: ForkName; blockValue: Wei}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
       ErrorAsResponse
     >
@@ -207,7 +209,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     graffiti: string
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.BlindedBeaconBlock; version: ForkName}},
+      {[HttpStatusCode.OK]: {data: allForks.BlindedBeaconBlock; version: ForkName; blockValue: Wei}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
       ErrorAsResponse
     >
@@ -564,14 +566,16 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getAttesterDuties: WithDependentRootExecutionOptimistic(ArrayOf(AttesterDuty)),
     getProposerDuties: WithDependentRootExecutionOptimistic(ArrayOf(ProposerDuty)),
     getSyncCommitteeDuties: ContainerDataExecutionOptimistic(ArrayOf(SyncDuty)),
-    produceBlock: ContainerData(ssz.phase0.BeaconBlock),
-    produceBlockV2: WithVersion((fork: ForkName) => ssz[fork].BeaconBlock),
-    produceBlindedBlock: WithVersion((fork: ForkName) => {
-      if (fork === ForkName.phase0 || fork === ForkName.altair) {
-        throw Error(`No BlindedBlock for fork ${fork} previous to bellatrix`);
-      }
-      return ssz[fork].BlindedBeaconBlock;
-    }),
+    produceBlock: WithBlockValue(ContainerData(ssz.phase0.BeaconBlock)),
+    produceBlockV2: WithBlockValue(WithVersion((fork: ForkName) => ssz[fork].BeaconBlock)),
+    produceBlindedBlock: WithBlockValue(
+      WithVersion((fork: ForkName) => {
+        if (fork === ForkName.phase0 || fork === ForkName.altair) {
+          throw Error(`No BlindedBlock for fork ${fork} previous to bellatrix`);
+        }
+        return ssz[fork].BlindedBeaconBlock;
+      })
+    ),
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
     getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),
