@@ -27,14 +27,14 @@ export function validateLightClientUpdate(
   }
 
   // Sanity check that slots are in correct order
-  if (update.signatureSlot <= update.attestedHeader.slot) {
+  if (update.signatureSlot <= update.attestedHeader.beacon.slot) {
     throw Error(
-      `signature slot ${update.signatureSlot} must be after attested header slot ${update.attestedHeader.slot}`
+      `signature slot ${update.signatureSlot} must be after attested header slot ${update.attestedHeader.beacon.slot}`
     );
   }
-  if (update.attestedHeader.slot < update.finalizedHeader.slot) {
+  if (update.attestedHeader.beacon.slot < update.finalizedHeader.beacon.slot) {
     throw Error(
-      `attested header slot ${update.signatureSlot} must be after finalized header slot ${update.finalizedHeader.slot}`
+      `attested header slot ${update.signatureSlot} must be after finalized header slot ${update.finalizedHeader.beacon.slot}`
     );
   }
 
@@ -42,19 +42,19 @@ export function validateLightClientUpdate(
   // to match the finalized checkpoint root saved in the state of `attested_header`.
   // Note that the genesis finalized checkpoint root is represented as a zero hash.
   if (!isFinalityUpdate(update)) {
-    if (!isZeroedHeader(update.finalizedHeader)) {
+    if (!isZeroedHeader(update.finalizedHeader.beacon)) {
       throw Error("finalizedHeader must be zero for non-finality update");
     }
   } else {
     let finalizedRoot: Root;
 
-    if (update.finalizedHeader.slot == GENESIS_SLOT) {
-      if (!isZeroedHeader(update.finalizedHeader)) {
+    if (update.finalizedHeader.beacon.slot == GENESIS_SLOT) {
+      if (!isZeroedHeader(update.finalizedHeader.beacon)) {
         throw Error("finalizedHeader must be zero for not finality update");
       }
       finalizedRoot = ZERO_HASH;
     } else {
-      finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader);
+      finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader.beacon);
     }
 
     if (
@@ -63,7 +63,7 @@ export function validateLightClientUpdate(
         update.finalityBranch,
         FINALIZED_ROOT_DEPTH,
         FINALIZED_ROOT_INDEX,
-        update.attestedHeader.stateRoot
+        update.attestedHeader.beacon.stateRoot
       )
     ) {
       throw Error("Invalid finality header merkle branch");
@@ -83,7 +83,7 @@ export function validateLightClientUpdate(
         update.nextSyncCommitteeBranch,
         NEXT_SYNC_COMMITTEE_DEPTH,
         NEXT_SYNC_COMMITTEE_INDEX,
-        update.attestedHeader.stateRoot
+        update.attestedHeader.beacon.stateRoot
       )
     ) {
       throw Error("Invalid next sync committee merkle branch");
@@ -95,7 +95,7 @@ export function validateLightClientUpdate(
   const participantPubkeys = getParticipantPubkeys(syncCommittee.pubkeys, update.syncAggregate.syncCommitteeBits);
 
   const signingRoot = ssz.phase0.SigningData.hashTreeRoot({
-    objectRoot: ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.attestedHeader),
+    objectRoot: ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.attestedHeader.beacon),
     domain: store.config.getDomain(update.signatureSlot, DOMAIN_SYNC_COMMITTEE),
   });
 

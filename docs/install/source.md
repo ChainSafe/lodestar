@@ -5,6 +5,9 @@ Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install).
 <!-- prettier-ignore-start -->
 !!! info
     NodeJS versions older than the current LTS are not supported by Lodestar. We recommend running the latest Node LTS.
+
+!!! note
+    Node Version Manager (NVM) will only install NodeJS for use with the active user. If you intend on setting up Lodestar to run under another user, we recommend using [Nodesource's source for NodeJS](https://github.com/nodesource/distributions/blob/master/README.md#installation-instructions) so you can install NodeJS globally.
 <!-- prettier-ignore-end -->
 
 Clone the repo locally.

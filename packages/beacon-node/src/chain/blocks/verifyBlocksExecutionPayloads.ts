@@ -290,6 +290,8 @@ export async function verifyBlockExecutionPayload(
     executionPayloadEnabled
   );
 
+  chain.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
+
   switch (execResult.status) {
     case ExecutePayloadStatus.VALID: {
       const executionStatus: ExecutionStatus.Valid = ExecutionStatus.Valid;

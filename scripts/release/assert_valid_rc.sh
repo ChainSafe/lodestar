@@ -24,5 +24,5 @@ HEAD_COMMIT=$(git rev-parse refs/remotes/origin/$RC_BRANCH)
 git merge-base --is-ancestor $COMMIT $HEAD_COMMIT
 
 # success
-echo "::set-output name=is_rc::true"
-echo "::set-output name=version::$VERSION"
+echo "is_rc=true" >> $GITHUB_OUTPUT
+echo "version=$VERSION" >> $GITHUB_OUTPUT

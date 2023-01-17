@@ -1,6 +1,6 @@
 import type {PublicKey} from "@chainsafe/bls/types";
 import {IBeaconConfig} from "@lodestar/config";
-import {altair, phase0, SyncPeriod} from "@lodestar/types";
+import {altair, SyncPeriod} from "@lodestar/types";
 import {computeSyncPeriodAtSlot, deserializeSyncCommittee} from "../utils/index.js";
 import {LightClientUpdateSummary} from "./isBetterUpdate.js";
 
@@ -18,23 +18,23 @@ export interface ILightClientStore {
   setActiveParticipants(period: SyncPeriod, activeParticipants: number): void;
 
   // Header that is finalized
-  finalizedHeader: phase0.BeaconBlockHeader;
+  finalizedHeader: altair.LightClientHeader;
 
   // Most recent available reasonably-safe header
-  optimisticHeader: phase0.BeaconBlockHeader;
+  optimisticHeader: altair.LightClientHeader;
 }
 
 export interface LightClientStoreEvents {
-  onSetFinalizedHeader?: (header: phase0.BeaconBlockHeader) => void;
-  onSetOptimisticHeader?: (header: phase0.BeaconBlockHeader) => void;
+  onSetFinalizedHeader?: (header: altair.LightClientHeader) => void;
+  onSetOptimisticHeader?: (header: altair.LightClientHeader) => void;
 }
 
 export class LightClientStore implements ILightClientStore {
   readonly syncCommittees = new Map<SyncPeriod, SyncCommitteeFast>();
   readonly bestValidUpdates = new Map<SyncPeriod, LightClientUpdateWithSummary>();
 
-  private _finalizedHeader: phase0.BeaconBlockHeader;
-  private _optimisticHeader: phase0.BeaconBlockHeader;
+  private _finalizedHeader: altair.LightClientHeader;
+  private _optimisticHeader: altair.LightClientHeader;
 
   private readonly maxActiveParticipants = new Map<SyncPeriod, number>();
 
@@ -43,26 +43,26 @@ export class LightClientStore implements ILightClientStore {
     bootstrap: altair.LightClientBootstrap,
     private readonly events: LightClientStoreEvents
   ) {
-    const bootstrapPeriod = computeSyncPeriodAtSlot(bootstrap.header.slot);
+    const bootstrapPeriod = computeSyncPeriodAtSlot(bootstrap.header.beacon.slot);
     this.syncCommittees.set(bootstrapPeriod, deserializeSyncCommittee(bootstrap.currentSyncCommittee));
     this._finalizedHeader = bootstrap.header;
     this._optimisticHeader = bootstrap.header;
   }
 
-  get finalizedHeader(): phase0.BeaconBlockHeader {
+  get finalizedHeader(): altair.LightClientHeader {
     return this._finalizedHeader;
   }
 
-  set finalizedHeader(value: phase0.BeaconBlockHeader) {
+  set finalizedHeader(value: altair.LightClientHeader) {
     this._finalizedHeader = value;
     this.events.onSetFinalizedHeader?.(value);
   }
 
-  get optimisticHeader(): phase0.BeaconBlockHeader {
+  get optimisticHeader(): altair.LightClientHeader {
     return this._optimisticHeader;
   }
 
-  set optimisticHeader(value: phase0.BeaconBlockHeader) {
+  set optimisticHeader(value: altair.LightClientHeader) {
     this._optimisticHeader = value;
     this.events.onSetOptimisticHeader?.(value);
   }

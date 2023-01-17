@@ -34,7 +34,6 @@ import {shell} from "./shell.js";
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
 const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
-const GWEI_TO_WEI = BigInt(1000000000);
 
 describe("executionEngine / ExecutionEngineHttp", function () {
   if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR) {
@@ -136,7 +135,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       index: testVec.Index,
       validatorIndex: testVec.Validator,
       address: dataToBytes(testVec.Recipient, 20),
-      amount: BigInt(testVec.Amount) / GWEI_TO_WEI,
+      amount: BigInt(testVec.Amount),
     }));
 
     const preparePayloadParams: PayloadAttributes = {
@@ -160,7 +159,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     if (!payloadId) throw Error("InvalidPayloadId");
 
     // 2. Get the payload
-    const payload = await executionEngine.getPayload(ForkName.capella, payloadId);
+    const payloadAndBlockValue = await executionEngine.getPayload(ForkName.capella, payloadId);
+    const payload = payloadAndBlockValue.executionPayload;
     const blockHash = toHexString(payload.blockHash);
     const expectedBlockHash = "0x64707e5574d14103a7f583e702f09e68ca1eb334e8eb0632a4272efe54f2fc7c";
     if (blockHash !== expectedBlockHash) {

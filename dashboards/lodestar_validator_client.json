@@ -261,7 +261,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_version{scrape_location=\"validator\"}",
+          "expr": "lodestar_version{job=\"validator\"}",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -328,7 +328,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "nodejs_version_info{scrape_location=\"validator\"}",
+          "expr": "nodejs_version_info{job=\"validator\"}",
           "instant": true,
           "interval": "",
           "legendFormat": "{{version}}",
@@ -393,7 +393,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_version{scrape_location=\"validator\"}",
+          "expr": "lodestar_version{job=\"validator\"}",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -522,7 +522,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "process_heap_bytes{scrape_location=\"validator\"}",
+          "expr": "process_heap_bytes{job=\"validator\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -586,7 +586,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "nodejs_heap_size_used_bytes{scrape_location=\"validator\"}",
+          "expr": "nodejs_heap_size_used_bytes{job=\"validator\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"

@@ -41,6 +41,14 @@ const STATUS_INBOUND_GRACE_PERIOD = 15 * 1000;
 const CHECK_PING_STATUS_INTERVAL = 10 * 1000;
 /** A peer is considered long connection if it's >= 1 day */
 const LONG_PEER_CONNECTION_MS = 24 * 60 * 60 * 1000;
+/**
+ * Tag peer when it's relevant and connecting to our node.
+ * When node has > maxPeer (55), libp2p randomly prune peers if we don't tag peers in use.
+ * See https://github.com/ChainSafe/lodestar/issues/4623#issuecomment-1374447934
+ **/
+const PEER_RELEVANT_TAG = "relevant";
+/** Tag value of PEER_RELEVANT_TAG */
+const PEER_RELEVANT_TAG_VALUE = 100;
 
 /**
  * Relative factor of peers that are allowed to have a negative gossipsub score without penalizing them in lodestar.
@@ -329,7 +337,13 @@ export class PeerManager {
     // Peer is usable, send it to the rangeSync
     // NOTE: Peer may not be connected anymore at this point, potential race condition
     // libp2p.connectionManager.get() returns not null if there's +1 open connections with `peer`
-    if (peerData) peerData.relevantStatus = RelevantPeerStatus.relevant;
+    if (peerData && peerData.relevantStatus !== RelevantPeerStatus.relevant) {
+      this.libp2p.peerStore
+        // ttl = undefined means it's never expired
+        .tagPeer(peer, PEER_RELEVANT_TAG, {ttl: undefined, value: PEER_RELEVANT_TAG_VALUE})
+        .catch((e) => this.logger.verbose("cannot tag peer", {peerId: peer.toString()}, e as Error));
+      peerData.relevantStatus = RelevantPeerStatus.relevant;
+    }
     if (getConnection(this.libp2p.connectionManager, peer.toString())) {
       this.networkEventBus.emit(NetworkEvent.peerConnected, peer, status);
     }
@@ -580,6 +594,9 @@ export class PeerManager {
     this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(peer), direction, status});
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, peer);
     this.metrics?.peerDisconnectedEvent.inc({direction});
+    this.libp2p.peerStore
+      .unTagPeer(peer, PEER_RELEVANT_TAG)
+      .catch((e) => this.logger.verbose("cannot untag peer", {peerId: peer.toString()}, e as Error));
   };
 
   private async disconnect(peer: PeerId): Promise<void> {
@@ -619,6 +636,11 @@ export class PeerManager {
     // peerLongLivedAttnets metric is a count
     metrics.peerLongLivedAttnets.reset();
     metrics.peerConnectionLength.reset();
+
+    // reset client counts _for each client_ to 0
+    for (const client of Object.values(ClientKind)) {
+      peersByClient.set(client, 0);
+    }
 
     for (const connections of getConnectionsMap(this.libp2p.connectionManager).values()) {
       const openCnx = connections.find((cnx) => cnx.stat.status === "OPEN");

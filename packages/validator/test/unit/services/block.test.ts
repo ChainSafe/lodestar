@@ -48,7 +48,7 @@ describe("BlockDutiesService", function () {
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     validatorStore.signRandao.resolves(signedBlock.message.body.randaoReveal);
     validatorStore.signBlock.callsFake(async (_, block) => ({message: block, signature: signedBlock.signature}));
-    api.validator.produceBlock.resolves({data: signedBlock.message});
+    api.validator.produceBlock.resolves({data: signedBlock.message, blockValue: ssz.Wei.defaultValue()});
     api.beacon.publishBlock.resolves();
 
     // Trigger block production for slot 1

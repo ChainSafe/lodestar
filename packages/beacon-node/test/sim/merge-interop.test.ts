@@ -144,7 +144,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
      * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_getPayloadV1","params":["0xa247243752eb10b4"],"id":67}' http://localhost:8550
      **/
 
-    const payload = await executionEngine.getPayload(ForkName.bellatrix, payloadId);
+    const {executionPayload: payload} = await executionEngine.getPayload(ForkName.bellatrix, payloadId);
     if (TX_SCENARIOS.includes("simple")) {
       if (payload.transactions.length !== 1)
         throw new Error("Expected a simple transaction to be in the fetched payload");

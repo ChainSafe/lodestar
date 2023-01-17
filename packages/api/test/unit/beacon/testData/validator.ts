@@ -44,15 +44,19 @@ export const testData: GenericServerTestCases<Api> = {
   },
   produceBlock: {
     args: [32000, randaoReveal, graffiti],
-    res: {data: ssz.phase0.BeaconBlock.defaultValue()},
+    res: {data: ssz.phase0.BeaconBlock.defaultValue(), blockValue: ssz.Wei.defaultValue()},
   },
   produceBlockV2: {
     args: [32000, randaoReveal, graffiti],
-    res: {data: ssz.altair.BeaconBlock.defaultValue(), version: ForkName.altair},
+    res: {data: ssz.altair.BeaconBlock.defaultValue(), version: ForkName.altair, blockValue: ssz.Wei.defaultValue()},
   },
   produceBlindedBlock: {
     args: [32000, randaoReveal, graffiti],
-    res: {data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(), version: ForkName.bellatrix},
+    res: {
+      data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(),
+      version: ForkName.bellatrix,
+      blockValue: ssz.Wei.defaultValue(),
+    },
   },
   produceAttestationData: {
     args: [2, 32000],

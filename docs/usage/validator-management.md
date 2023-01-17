@@ -36,57 +36,44 @@ Validators are represented by a BLS keypair. Use your generated mnemonic from on
 
 To import a validator keystore that was created via one of the methods described above, you must locate the validator keystore JSONs exported by those tools (ex. `keystore-m_12381_3600_0_0_0-1654128694.json`).
 
-Inside the keystore JSON file, you should have an [EIP-2335 conformant keystore file](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2335.md#json-schema) such as the example below:
+Inside the keystore JSON file, you should have an [EIP-2335 conformant keystore file](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2335.md#json-schema).
 
-```
-{
-  "crypto": {
-    "kdf": {
-      "function": "scrypt",
-      "params": {
-        "dklen": 32,
-        "n": 262144,
-        "r": 8,
-        "p": 1,
-        "salt": "30bb9ef21d9f1f946c3c7ab70e27f453180a49d473a2a3e79ca2bc715ac4e898"
-      },
-      "message": ""
-    },
-    "checksum": {
-      "function": "sha256",
-      "params": {},
-      "message": "ba3cf1c8ba5be4f90c36bcf44ee37a779eac8c54b72121e4755b6722e95164a7"
-    },
-    "cipher": {
-      "function": "aes-128-ctr",
-      "params": {
-        "iv": "90f76d9d4d1b089e89802eac2f80b6b7"
-      },
-      "message": "8de2b0f55da54719822db6c083f0436ff94cd638be96c57b91339b438e9355f6"
-    }
-  },
-  "description": "",
-  "pubkey": "b22690ca679edd5fb9c2545f358da1427b8310e8ccf9e7e4f01ddce9b1d711a0362d35225673cce8f33911a22ae1519e",
-  "path": "m/12381/3600/0/0/0",
-  "uuid": "de83e8dc-8f95-4ea0-b9ba-cfa608ff3483",
-  "version": 4
-}
+You will also need the passphrase used the encrypt the keystore. This can be specified interactively, or provided in a plaintext file.
+
+#### Option 1: Import Keys To Lodestar's Keystores Folder
+
+You can load the keys into the keystore folder using the `validator import` command. There are two methods for importing keystores:
+```bash
+# Interactive passphrase import
+./lodestar validator import --importKeystores ./validator_keys
+
+# Plaintext passphrase file import
+./lodestar validator import --importKeystores ./validator_keys --importKeystoresPassword ./password.txt
 ```
 
-These keystore files can be imported into your Lodestar's keystores folder with the `--importKeystores` command.
+<!-- prettier-ignore-start -->
+!!! info
+    The interactive passphrase import method will prompt every keystore in the `validator_keys` folder for import and will ask for the individual password for each keystore. **This method will allow you to import multiple keystores with different passwords.**
+
+    The plaintext passphrase file import method will allow  to import all keystores in the `validator_keys` folder with the same password contained in `password.txt` for efficiency. 
+<!-- prettier-ignore-end -->
+
+Once imported with either method, these keystores will be automatically loaded when you start the validator. To list the imported keystores, use the `validator list` command.
+
+---
+#### Option 2: Import Keys When Starting the Validator
+
+To import keys when you start the validator specify the `--importKeystores` and `--importKeystoresPassword` flags with the `validator` command:
 
 ```bash
-./lodestar validator \
-  --importKeystores keystore-m_12381_3600_0_0_0-1654128694.json
+./lodestar validator --importKeystores ./validator_keys --importKeystoresPassword ./password.txt
 ```
 
-Similarly, create a `password.txt` file with the password you set for your keystores and import it with the `--importKeystoresPassword` command.
+<!-- prettier-ignore-start -->
+!!! warning
+    If you import keys using `--importKeystores` at runtime (Option 2) any keys loaded to the keystores folder from Option 1 will be ignored.
+<!-- prettier-ignore-end -->
 
-```bash
-./lodestar validator \
-  --importKeystores keystore-m_12381_3600_0_0_0-1654128694.json \
-  --importKeystoresPassword password.txt
-```
 
 ### Configuring the fee recipient address
 

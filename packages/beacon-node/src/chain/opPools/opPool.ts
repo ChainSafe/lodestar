@@ -350,15 +350,7 @@ export class OpPool {
     headState: CachedBeaconStateAllForks,
     finalizedState: CachedBeaconStateAllForks | null
   ): void {
-    const headStateFork = headState.config.getForkSeq(headState.slot);
-
     for (const [key, blsToExecutionChange] of this.blsToExecutionChanges.entries()) {
-      // TODO CAPELLA: Current spec only allows to verify changes from the same fork
-      // https://github.com/ethereum/consensus-specs/pull/3168
-      if (blsToExecutionChange.signatureForkSeq < headStateFork) {
-        this.blsToExecutionChanges.delete(key);
-      }
-
       // TODO CAPELLA: We need the finalizedState to safely prune BlsToExecutionChanges. Finalized state may not be
       // available in the cache, so it can be null. Once there's a head only prunning strategy, change
       if (finalizedState !== null) {

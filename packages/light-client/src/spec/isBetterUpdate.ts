@@ -85,9 +85,9 @@ export function isSafeLightClientUpdate(update: LightClientUpdateSummary): boole
 export function toLightClientUpdateSummary(update: altair.LightClientUpdate): LightClientUpdateSummary {
   return {
     activeParticipants: sumBits(update.syncAggregate.syncCommitteeBits),
-    attestedHeaderSlot: update.attestedHeader.slot,
+    attestedHeaderSlot: update.attestedHeader.beacon.slot,
     signatureSlot: update.signatureSlot,
-    finalizedHeaderSlot: update.finalizedHeader.slot,
+    finalizedHeaderSlot: update.finalizedHeader.beacon.slot,
     isSyncCommitteeUpdate: isSyncCommitteeUpdate(update),
     isFinalityUpdate: isFinalityUpdate(update),
   };

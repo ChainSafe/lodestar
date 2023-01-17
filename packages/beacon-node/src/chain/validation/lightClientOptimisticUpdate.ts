@@ -13,10 +13,10 @@ export function validateLightClientOptimisticUpdate(
   gossipedOptimisticUpdate: altair.LightClientOptimisticUpdate
 ): void {
   // [IGNORE] No other optimistic_update with a lower or equal attested_header.slot was already forwarded on the network
-  const gossipedAttestedSlot = gossipedOptimisticUpdate.attestedHeader.slot;
+  const gossipedAttestedSlot = gossipedOptimisticUpdate.attestedHeader.beacon.slot;
   const localOptimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
 
-  if (localOptimisticUpdate && gossipedAttestedSlot <= localOptimisticUpdate.attestedHeader.slot) {
+  if (localOptimisticUpdate && gossipedAttestedSlot <= localOptimisticUpdate.attestedHeader.beacon.slot) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.OPTIMISTIC_UPDATE_ALREADY_FORWARDED,
     });

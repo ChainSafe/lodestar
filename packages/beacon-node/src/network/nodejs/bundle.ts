@@ -47,7 +47,8 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
       announce: options.addresses.announce || [],
     },
     connectionEncryption: [createNoise()],
-    transports: [tcp()],
+    // Reject connections when the server's connection count gets high
+    transports: [tcp({maxConnections: options.maxConnections})],
     streamMuxers: [mplex({maxInboundStreams: 256})],
     peerDiscovery,
     metrics: options.metrics

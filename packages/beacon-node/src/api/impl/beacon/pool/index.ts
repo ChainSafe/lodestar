@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {Epoch, ssz} from "@lodestar/types";
-import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
+import {SYNC_COMMITTEE_SUBNET_SIZE, ForkName} from "@lodestar/params";
 import {validateGossipAttestation} from "../../../../chain/validation/index.js";
 import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateGossipProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
@@ -99,13 +99,13 @@ export function getBeaconPoolApi({
     async submitPoolBlsToExecutionChange(blsToExecutionChanges) {
       const errors: Error[] = [];
 
-      // TODO CAPELLA: Which fork should assume to validate submitted execution changes?
-      const signatureFork = chain.config.getForkName(chain.clock.currentSlot);
+      // Fork to validate submitted execution changes: phase0 which picks GENESIS_FORK_VERSION
+      const signatureFork = ForkName.phase0;
 
       await Promise.all(
         blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
           try {
-            await validateBlsToExecutionChange(chain, blsToExecutionChange, signatureFork);
+            await validateBlsToExecutionChange(chain, blsToExecutionChange);
             chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, signatureFork);
             await network.gossip.publishBlsToExecutionChange(blsToExecutionChange);
           } catch (e) {

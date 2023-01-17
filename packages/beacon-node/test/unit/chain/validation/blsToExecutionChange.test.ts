@@ -1,7 +1,7 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {digest} from "@chainsafe/as-sha256";
-import {config} from "@lodestar/config/default";
-import {computeDomain, computeSigningRoot} from "@lodestar/state-transition";
+import {config as defaultConfig} from "@lodestar/config/default";
+import {computeSigningRoot} from "@lodestar/state-transition";
 import {ForkChoice} from "@lodestar/fork-choice";
 import {capella, ssz} from "@lodestar/types";
 import {
@@ -10,6 +10,7 @@ import {
   DOMAIN_BLS_TO_EXECUTION_CHANGE,
   FAR_FUTURE_EPOCH,
   SLOTS_PER_EPOCH,
+  ForkName,
 } from "@lodestar/params";
 import bls from "@chainsafe/bls";
 import {PointFormat} from "@chainsafe/bls/types";
@@ -34,7 +35,7 @@ describe("validate bls to execution change", () => {
 
   const stateEmpty = ssz.phase0.BeaconState.defaultValue();
   // Validator has to be active for long enough
-  stateEmpty.slot = config.SHARD_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
+  stateEmpty.slot = defaultConfig.SHARD_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
   // A withdrawal key which we will keep same on the two vals we generate
   const wsk = bls.SecretKey.fromKeygen();
 
@@ -75,10 +76,9 @@ describe("validate bls to execution change", () => {
   stateEmpty.validators[1] = validatorTwo;
 
   // Generate the state
-  const _state = generateState(stateEmpty, config);
-  const state = createCachedBeaconStateTest(_state, createIBeaconConfig(config, _state.genesisValidatorsRoot));
-
-  const signatureFork = config.getForkName(state.slot);
+  const _state = generateState(stateEmpty, defaultConfig);
+  const config = createIBeaconConfig(defaultConfig, _state.genesisValidatorsRoot);
+  const state = createCachedBeaconStateTest(_state, config);
 
   // Gen a valid blsToExecutionChange for first val
   const blsToExecutionChange = {
@@ -86,11 +86,8 @@ describe("validate bls to execution change", () => {
     fromBlsPubkey,
     toExecutionAddress: Buffer.alloc(20),
   };
-  const domain = computeDomain(
-    DOMAIN_BLS_TO_EXECUTION_CHANGE,
-    stateEmpty.fork.currentVersion,
-    stateEmpty.genesisValidatorsRoot
-  );
+  const signatureFork = ForkName.phase0;
+  const domain = config.getDomainAtFork(signatureFork, DOMAIN_BLS_TO_EXECUTION_CHANGE);
   const signingRoot = computeSigningRoot(ssz.capella.BLSToExecutionChange, blsToExecutionChange, domain);
   const signedBlsToExecChange = {message: blsToExecutionChange, signature: wsk.sign(signingRoot).toBytes()};
 
@@ -118,13 +115,13 @@ describe("validate bls to execution change", () => {
     opPool.hasSeenBlsToExecutionChange.returns(true);
 
     await expectRejectedWithLodestarError(
-      validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid, signatureFork),
+      validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
       BlsToExecutionChangeErrorCode.ALREADY_EXISTS
     );
   });
 
   it("should return valid blsToExecutionChange ", async () => {
-    await validateBlsToExecutionChange(chainStub, signedBlsToExecChange, signatureFork);
+    await validateBlsToExecutionChange(chainStub, signedBlsToExecChange);
   });
 
   it("should return invalid bls to execution Change - invalid validatorIndex", async () => {
@@ -138,7 +135,7 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid, signatureFork),
+      validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
       BlsToExecutionChangeErrorCode.INVALID
     );
   });
@@ -153,7 +150,7 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid, signatureFork),
+      validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
       BlsToExecutionChangeErrorCode.INVALID
     );
   });
@@ -169,7 +166,7 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid, signatureFork),
+      validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
       BlsToExecutionChangeErrorCode.INVALID
     );
   });
@@ -185,7 +182,7 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid, signatureFork),
+      validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
       BlsToExecutionChangeErrorCode.INVALID
     );
   });

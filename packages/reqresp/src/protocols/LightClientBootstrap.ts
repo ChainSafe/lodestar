@@ -16,7 +16,10 @@ export const LightClientBootstrap: ProtocolDefinitionGenerator<Root, altair.Ligh
     requestType: () => ssz.Root,
     responseType: () => ssz.altair.LightClientBootstrap,
     renderRequestBody: (req) => toHex(req),
-    contextBytes: getContextBytesLightclient((bootstrap) => modules.config.getForkName(bootstrap.header.slot), modules),
+    contextBytes: getContextBytesLightclient(
+      (bootstrap) => modules.config.getForkName(bootstrap.header.beacon.slot),
+      modules
+    ),
     inboundRateLimits: {
       // As similar in the nature of `Status` protocol so we use the same rate limits.
       byPeer: {quota: 5, quotaTimeMs: 15_000},

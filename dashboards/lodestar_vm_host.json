@@ -641,7 +641,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "{instance=\"beacon_node:8008\", job=\"Lodestar\"}"
+              "options": "{job=\"beacon\"}"
             },
             "properties": [
               {
@@ -2474,7 +2474,7 @@
               "expr": "avg_over_time(scrape_duration_seconds[$rate_interval])",
               "interval": "",
               "intervalFactor": 1,
-              "legendFormat": "{{scrape_location}}",
+              "legendFormat": "{{job}}",
               "refId": "A"
             },
             {
@@ -2486,7 +2486,7 @@
               "expr": "rate(lodestar_metrics_scrape_seconds_sum[$rate_interval])\n/\nrate(lodestar_metrics_scrape_seconds_count[$rate_interval])",
               "hide": false,
               "interval": "",
-              "legendFormat": "{{scrape_location}} internal",
+              "legendFormat": "{{job}} internal",
               "refId": "B"
             }
           ],
@@ -2562,7 +2562,7 @@
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "{instance=\"beacon_node:8008\", job=\"Lodestar\"}"
+                  "options": "{job=\"beacon\"}"
                 },
                 "properties": [
                   {
@@ -2605,7 +2605,7 @@
               "exemplar": false,
               "expr": "1-up",
               "interval": "",
-              "legendFormat": "{{scrape_location}}",
+              "legendFormat": "{{job}}",
               "refId": "A"
             }
           ],

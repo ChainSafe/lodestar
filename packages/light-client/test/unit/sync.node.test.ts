@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {init} from "@chainsafe/bls/switchable";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, BeaconStateAltair} from "@lodestar/state-transition";
-import {altair, phase0, ssz} from "@lodestar/types";
+import {altair, ssz} from "@lodestar/types";
 import {routes, Api, getClient} from "@lodestar/api";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
@@ -108,7 +108,7 @@ describe("sync", () => {
     // Sync periods to current
     await new Promise<void>((resolve) => {
       lightclient.emitter.on(LightclientEvent.lightClientFinalityUpdate, (header) => {
-        if (computeSyncPeriodAtSlot(header.slot) >= targetPeriod) {
+        if (computeSyncPeriodAtSlot(header.beacon.slot) >= targetPeriod) {
           resolve();
         }
       });
@@ -130,7 +130,7 @@ describe("sync", () => {
     const syncCommittee = getInteropSyncCommittee(targetPeriod);
     await new Promise<void>((resolve) => {
       lightclient.emitter.on(LightclientEvent.lightClientOptimisticUpdate, (header) => {
-        if (header.slot === targetSlot) {
+        if (header.beacon.slot === targetSlot) {
           resolve();
         }
       });
@@ -146,18 +146,20 @@ describe("sync", () => {
         }
 
         // Emit a new head update with the custom state root
-        const header: phase0.BeaconBlockHeader = {
-          slot,
-          proposerIndex: 0,
-          parentRoot: SOME_HASH,
-          stateRoot: stateRoot,
-          bodyRoot: SOME_HASH,
+        const header: altair.LightClientHeader = {
+          beacon: {
+            slot,
+            proposerIndex: 0,
+            parentRoot: SOME_HASH,
+            stateRoot: stateRoot,
+            bodyRoot: SOME_HASH,
+          },
         };
 
         const headUpdate: altair.LightClientOptimisticUpdate = {
           attestedHeader: header,
           syncAggregate: syncCommittee.signHeader(config, header),
-          signatureSlot: header.slot + 1,
+          signatureSlot: header.beacon.slot + 1,
         };
 
         lightclientServerApi.latestHeadUpdate = headUpdate;
@@ -167,12 +169,12 @@ describe("sync", () => {
     });
 
     // Ensure that the lightclient head is correct
-    expect(lightclient.getHead().slot).to.equal(targetSlot, "lightclient.head is not the targetSlot head");
+    expect(lightclient.getHead().beacon.slot).to.equal(targetSlot, "lightclient.head is not the targetSlot head");
 
     // Fetch proof of "latestExecutionPayloadHeader.stateRoot"
     const {proof, header} = await getHeadStateProof(lightclient, api, [["latestExecutionPayloadHeader", "stateRoot"]]);
 
-    const recoveredState = ssz.bellatrix.BeaconState.createFromProof(proof, header.stateRoot);
+    const recoveredState = ssz.bellatrix.BeaconState.createFromProof(proof, header.beacon.stateRoot);
     expect(toHexString(recoveredState.latestExecutionPayloadHeader.stateRoot)).to.equal(
       toHexString(executionStateRoot),
       "Recovered executionStateRoot from getHeadStateProof() not correct"
@@ -185,9 +187,9 @@ async function getHeadStateProof(
   lightclient: Lightclient,
   api: Api,
   paths: JsonPath[]
-): Promise<{proof: TreeOffsetProof; header: phase0.BeaconBlockHeader}> {
+): Promise<{proof: TreeOffsetProof; header: altair.LightClientHeader}> {
   const header = lightclient.getHead();
-  const stateId = toHexString(header.stateRoot);
+  const stateId = toHexString(header.beacon.stateRoot);
   const res = await api.proof.getStateProof(stateId, paths);
   return {
     proof: res.data as TreeOffsetProof,

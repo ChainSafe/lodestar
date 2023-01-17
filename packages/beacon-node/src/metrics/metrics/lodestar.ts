@@ -645,7 +645,11 @@ export function createLodestarMetrics(
       help: "Time elapsed between block slot time and the time block becomes head",
       buckets: [0.5, 1, 2, 4, 6, 12],
     }),
-
+    engineNotifyNewPayloadResult: register.gauge<"result">({
+      name: "lodestar_execution_engine_notify_new_payload_result_total",
+      help: "The total result of calling notifyNewPayload execution engine api",
+      labelNames: ["result"],
+    }),
     backfillSync: {
       backfilledTillSlot: register.gauge({
         name: "lodestar_backfill_till_slot",
