@@ -75,7 +75,8 @@ describe("ExecutionEngine / http", () => {
     };
     returnValue = response;
 
-    const payload = await executionEngine.getPayload(ForkName.bellatrix, "0x0");
+    const payloadAndBlockValue = await executionEngine.getPayload(ForkName.bellatrix, "0x0");
+    const payload = payloadAndBlockValue.executionPayload;
 
     expect(serializeExecutionPayload(ForkName.bellatrix, payload)).to.deep.equal(
       response.result,
@@ -120,7 +121,7 @@ describe("ExecutionEngine / http", () => {
 
     const {status} = await executionEngine.notifyNewPayload(
       ForkName.bellatrix,
-      parseExecutionPayload(ForkName.bellatrix, request.params[0])
+      parseExecutionPayload(ForkName.bellatrix, request.params[0]).executionPayload
     );
 
     expect(status).to.equal("VALID", "Wrong returned execute payload result");

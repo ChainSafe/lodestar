@@ -16,6 +16,7 @@ import {
   ValidatorIndex,
   RootHex,
   StringType,
+  Wei,
 } from "@lodestar/types";
 import {
   RoutesData,
@@ -24,6 +25,7 @@ import {
   ContainerData,
   Schema,
   WithVersion,
+  WithBlockValue,
   reqOnlyBody,
   ReqSerializers,
   jsonType,
@@ -147,7 +149,11 @@ export type Api = {
    * @returns any Success response
    * @throws ApiError
    */
-  produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<{data: allForks.BeaconBlock}>;
+  produceBlock(
+    slot: Slot,
+    randaoReveal: BLSSignature,
+    graffiti: string
+  ): Promise<{data: allForks.BeaconBlock; blockValue: Wei}>;
 
   /**
    * Requests a beacon node to produce a valid block, which can then be signed by a validator.
@@ -163,13 +169,13 @@ export type Api = {
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string
-  ): Promise<{data: allForks.BeaconBlock; version: ForkName}>;
+  ): Promise<{data: allForks.BeaconBlock; version: ForkName; blockValue: Wei}>;
 
   produceBlindedBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string
-  ): Promise<{data: allForks.BlindedBeaconBlock; version: ForkName}>;
+  ): Promise<{data: allForks.BlindedBeaconBlock; version: ForkName; blockValue: Wei}>;
 
   /**
    * Produce an attestation data
@@ -441,14 +447,16 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getAttesterDuties: WithDependentRootExecutionOptimistic(ArrayOf(AttesterDuty)),
     getProposerDuties: WithDependentRootExecutionOptimistic(ArrayOf(ProposerDuty)),
     getSyncCommitteeDuties: ContainerDataExecutionOptimistic(ArrayOf(SyncDuty)),
-    produceBlock: ContainerData(ssz.phase0.BeaconBlock),
-    produceBlockV2: WithVersion((fork: ForkName) => ssz[fork].BeaconBlock),
-    produceBlindedBlock: WithVersion((fork: ForkName) => {
-      if (fork === ForkName.phase0 || fork === ForkName.altair) {
-        throw Error(`No BlindedBlock for fork ${fork} previous to bellatrix`);
-      }
-      return ssz[fork].BlindedBeaconBlock;
-    }),
+    produceBlock: WithBlockValue(ContainerData(ssz.phase0.BeaconBlock)),
+    produceBlockV2: WithBlockValue(WithVersion((fork: ForkName) => ssz[fork].BeaconBlock)),
+    produceBlindedBlock: WithBlockValue(
+      WithVersion((fork: ForkName) => {
+        if (fork === ForkName.phase0 || fork === ForkName.altair) {
+          throw Error(`No BlindedBlock for fork ${fork} previous to bellatrix`);
+        }
+        return ssz[fork].BlindedBeaconBlock;
+      })
+    ),
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
     getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),

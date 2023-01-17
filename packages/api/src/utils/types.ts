@@ -195,6 +195,22 @@ export function WithExecutionOptimistic<T extends {data: unknown}>(
   };
 }
 
+/**
+ * SSZ factory helper to wrap an existing type with `{blockValue: Wei}`
+ */
+export function WithBlockValue<T extends {data: unknown}>(type: TypeJson<T>): TypeJson<T & {blockValue: bigint}> {
+  return {
+    toJson: ({blockValue, ...data}) => ({
+      ...(type.toJson((data as unknown) as T) as Record<string, unknown>),
+      block_value: blockValue.toString(),
+    }),
+    fromJson: ({block_value, ...data}: T & {block_value: string}) => ({
+      ...type.fromJson(data),
+      blockValue: BigInt(block_value),
+    }),
+  };
+}
+
 type JsonCase = "snake" | "constant" | "camel" | "param" | "header" | "pascal" | "dot" | "notransform";
 
 /** Helper to only translate casing */

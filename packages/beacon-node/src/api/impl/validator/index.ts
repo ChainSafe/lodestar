@@ -203,13 +203,13 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       chain.forkChoice.updateHead();
 
       timer = metrics?.blockProductionTime.startTimer();
-      const block = await chain.produceBlindedBlock({
+      const {block, blockValue} = await chain.produceBlindedBlock({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
       });
       metrics?.blockProductionSuccess.inc();
-      return {data: block, version: config.getForkName(block.slot)};
+      return {data: block, version: config.getForkName(block.slot), blockValue};
     } finally {
       if (timer) timer();
     }
@@ -233,14 +233,14 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       chain.recomputeForkChoiceHead();
 
       timer = metrics?.blockProductionTime.startTimer();
-      const block = await chain.produceBlock({
+      const {block, blockValue} = await chain.produceBlock({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
       });
       metrics?.blockProductionSuccess.inc();
       metrics?.blockProductionNumAggregated.observe(block.body.attestations.length);
-      return {data: block, version: config.getForkName(block.slot)};
+      return {data: block, version: config.getForkName(block.slot), blockValue};
     } finally {
       if (timer) timer();
     }

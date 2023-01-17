@@ -159,7 +159,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     if (!payloadId) throw Error("InvalidPayloadId");
 
     // 2. Get the payload
-    const payload = await executionEngine.getPayload(ForkName.capella, payloadId);
+    const payloadAndBlockValue = await executionEngine.getPayload(ForkName.capella, payloadId);
+    const payload = payloadAndBlockValue.executionPayload;
     const blockHash = toHexString(payload.blockHash);
     const expectedBlockHash = "0x64707e5574d14103a7f583e702f09e68ca1eb334e8eb0632a4272efe54f2fc7c";
     if (blockHash !== expectedBlockHash) {
