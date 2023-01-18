@@ -104,28 +104,24 @@ export type SlashingProtectionData = string;
  */
 export type PubkeyHex = string;
 
-export type Api<ErrorAsResponse extends boolean = false> = {
+export type Api = {
   /**
    * List all validating pubkeys known to and decrypted by this keymanager binary
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
    */
   listKeys(): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: {
-          data: {
-            validatingPubkey: PubkeyHex;
-            /** The derivation path (if present in the imported keystore) */
-            derivationPath?: string;
-            /** The key associated with this pubkey cannot be deleted from the API */
-            readonly?: boolean;
-          }[];
-        };
-      },
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {
+        data: {
+          validatingPubkey: PubkeyHex;
+          /** The derivation path (if present in the imported keystore) */
+          derivationPath?: string;
+          /** The key associated with this pubkey cannot be deleted from the API */
+          readonly?: boolean;
+        }[];
+      };
+    }>
   >;
 
   /**
@@ -145,13 +141,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     keystoresStr: KeystoreStr[],
     passwords: string[],
     slashingProtectionStr?: SlashingProtectionData
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: ResponseStatus<ImportStatus>[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: ResponseStatus<ImportStatus>[]}}>>;
 
   /**
    * DELETE must delete all keys from `request.pubkeys` that are known to the keymanager and exist in its
@@ -177,67 +167,35 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   deleteKeys(
     pubkeysHex: string[]
   ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: ResponseStatus<DeletionStatus>[]; slashingProtection: SlashingProtectionData}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {data: ResponseStatus<DeletionStatus>[]; slashingProtection: SlashingProtectionData};
+    }>
   >;
 
   /**
    * List all remote validating pubkeys known to this validator client binary
    */
-  listRemoteKeys(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: SignerDefinition[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  listRemoteKeys(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: SignerDefinition[]}}>>;
 
   /**
    * Import remote keys for the validator client to request duties for
    */
   importRemoteKeys(
     remoteSigners: Pick<SignerDefinition, "pubkey" | "url">[]
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: ResponseStatus<ImportRemoteKeyStatus>[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: ResponseStatus<ImportRemoteKeyStatus>[]}}>>;
 
   deleteRemoteKeys(
     pubkeys: PubkeyHex[]
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: ResponseStatus<DeleteRemoteKeyStatus>[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: ResponseStatus<DeleteRemoteKeyStatus>[]}}>>;
 
-  listFeeRecipient(
-    pubkey: string
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: FeeRecipientData}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  listFeeRecipient(pubkey: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: FeeRecipientData}}>>;
   setFeeRecipient(
     pubkey: string,
     ethaddress: string
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
-      | HttpStatusCode.UNAUTHORIZED
-      | HttpStatusCode.FORBIDDEN
-      | HttpStatusCode.NOT_FOUND
-      | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
     >
   >;
   deleteFeeRecipient(
@@ -245,34 +203,18 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
-      | HttpStatusCode.UNAUTHORIZED
-      | HttpStatusCode.FORBIDDEN
-      | HttpStatusCode.NOT_FOUND
-      | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
     >
   >;
 
-  getGasLimit(
-    pubkey: string
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: GasLimitData}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getGasLimit(pubkey: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: GasLimitData}}>>;
   setGasLimit(
     pubkey: string,
     gasLimit: number
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
-      | HttpStatusCode.UNAUTHORIZED
-      | HttpStatusCode.FORBIDDEN
-      | HttpStatusCode.NOT_FOUND
-      | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
     >
   >;
   deleteGasLimit(
@@ -280,11 +222,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: void; [HttpStatusCode.NO_CONTENT]: void},
-      | HttpStatusCode.UNAUTHORIZED
-      | HttpStatusCode.FORBIDDEN
-      | HttpStatusCode.NOT_FOUND
-      | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.UNAUTHORIZED | HttpStatusCode.FORBIDDEN | HttpStatusCode.NOT_FOUND
     >
   >;
 };

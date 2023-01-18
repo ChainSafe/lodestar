@@ -51,10 +51,6 @@ export interface IHttpClient {
   arrayBuffer(opts: FetchOpts): Promise<{status: HttpStatusCode; body: ArrayBuffer}>;
 }
 
-export interface ClientOptions<E extends boolean> {
-  errorAsResponse: E;
-}
-
 export type HttpClientOptions = ({baseUrl: string} | {urls: (string | URLOpts)[]}) & {
   timeoutMs?: number;
   bearerToken?: string;

@@ -20,7 +20,7 @@ export type AttestationFilters = {
   committeeIndex: CommitteeIndex;
 };
 
-export type Api<ErrorAsResponse extends boolean = false> = {
+export type Api = {
   /**
    * Get Attestations from operations pool
    * Retrieves attestations known by the node but not necessarily incorporated into any block
@@ -31,13 +31,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    */
   getPoolAttestations(
     filters?: Partial<AttestationFilters>
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: phase0.Attestation[]}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.Attestation[]}}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
    * Get AttesterSlashings from operations pool
@@ -45,13 +39,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * @returns any Successful response
    * @throws ApiError
    */
-  getPoolAttesterSlashings(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: phase0.AttesterSlashing[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getPoolAttesterSlashings(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.AttesterSlashing[]}}>>;
 
   /**
    * Get ProposerSlashings from operations pool
@@ -59,13 +47,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * @returns any Successful response
    * @throws ApiError
    */
-  getPoolProposerSlashings(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: phase0.ProposerSlashing[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getPoolProposerSlashings(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.ProposerSlashing[]}}>>;
 
   /**
    * Get SignedVoluntaryExit from operations pool
@@ -73,13 +55,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * @returns any Successful response
    * @throws ApiError
    */
-  getPoolVoluntaryExits(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: phase0.SignedVoluntaryExit[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getPoolVoluntaryExits(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.SignedVoluntaryExit[]}}>>;
 
   /**
    * Get SignedBLSToExecutionChange from operations pool
@@ -88,11 +64,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * @throws ApiError
    */
   getPoolBlsToExecutionChanges(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: capella.SignedBLSToExecutionChange[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{[HttpStatusCode.OK]: {data: capella.SignedBLSToExecutionChange[]}}>
   >;
 
   /**
@@ -109,13 +81,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    */
   submitPoolAttestations(
     attestations: phase0.Attestation[]
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
    * Submit AttesterSlashing object to node's pool
@@ -126,13 +92,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    */
   submitPoolAttesterSlashings(
     slashing: phase0.AttesterSlashing
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
    * Submit ProposerSlashing object to node's pool
@@ -143,13 +103,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    */
   submitPoolProposerSlashings(
     slashing: phase0.ProposerSlashing
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
    * Submit SignedVoluntaryExit object to node's pool
@@ -160,13 +114,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    */
   submitPoolVoluntaryExit(
     exit: phase0.SignedVoluntaryExit
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
    * Submit SignedBLSToExecutionChange object to node's pool
@@ -177,26 +125,14 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    */
   submitPoolBlsToExecutionChange(
     blsToExecutionChange: capella.SignedBLSToExecutionChange[]
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
    * TODO: Add description
    */
   submitPoolSyncCommitteeSignatures(
     signatures: altair.SyncCommitteeMessage[]
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 };
 
 /**
@@ -251,7 +187,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   };
 }
 
-export function getReturnTypes(): ReturnTypes<Api<true | false>> {
+export function getReturnTypes(): ReturnTypes<Api> {
   return {
     getPoolAttestations: ContainerData(ArrayOf(ssz.phase0.Attestation)),
     getPoolAttesterSlashings: ContainerData(ArrayOf(ssz.phase0.AttesterSlashing)),

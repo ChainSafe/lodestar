@@ -73,139 +73,52 @@ export type LodestarNodePeer = NodePeer & {
   agentVersion: string;
 };
 
-export type Api<ErrorAsResponse extends boolean = false> = {
+export type Api = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
-  writeHeapdump(
-    dirpath?: string
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: {filepath: string}}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  writeHeapdump(dirpath?: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
   /** TODO: description */
-  getLatestWeakSubjectivityCheckpointEpoch(): Promise<
-    ApiClientResponse<{[HttpStatusCode.OK]: {data: Epoch}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
-  >;
+  getLatestWeakSubjectivityCheckpointEpoch(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: Epoch}}>>;
   /** TODO: description */
-  getSyncChainsDebugState(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: SyncChainDebugState[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getSyncChainsDebugState(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: SyncChainDebugState[]}}>>;
   /** Dump all items in a gossip queue, by gossipType */
-  getGossipQueueItems(
-    gossipType: string
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: GossipQueueItem[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getGossipQueueItems(gossipType: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: GossipQueueItem[]}}>>;
   /** Dump all items in the regen queue */
-  getRegenQueueItems(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: RegenQueueItem[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getRegenQueueItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: RegenQueueItem[]}}>>;
   /** Dump all items in the block processor queue */
-  getBlockProcessorQueueItems(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: BlockProcessorQueueItem[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getBlockProcessorQueueItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: BlockProcessorQueueItem[]}}>>;
   /** Dump a summary of the states in the StateContextCache */
-  getStateCacheItems(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: StateCacheItem[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getStateCacheItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: StateCacheItem[]}}>>;
   /** Dump a summary of the states in the CheckpointStateCache */
-  getCheckpointStateCacheItems(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: StateCacheItem[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getCheckpointStateCacheItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: StateCacheItem[]}}>>;
   /** Dump peer gossip stats by peer */
-  getGossipPeerScoreStats(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: GossipPeerScoreStat[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getGossipPeerScoreStats(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: GossipPeerScoreStat[]}}>>;
   /** Dump lodestar score stats by peer */
-  getLodestarPeerScoreStats(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: PeerScoreStat[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getLodestarPeerScoreStats(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: PeerScoreStat[]}}>>;
   /** Run GC with `global.gc()` */
-  runGC(): Promise<
-    ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
-  >;
+  runGC(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
   /** Drop all states in the state cache */
-  dropStateCache(): Promise<
-    ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
-  >;
+  dropStateCache(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
 
   /** Connect to peer at this multiaddress */
-  connectPeer(
-    peerId: string,
-    multiaddrStrs: string[]
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>>;
+  connectPeer(peerId: string, multiaddrStrs: string[]): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
   /** Disconnect peer */
-  disconnectPeer(
-    peerId: string
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>>;
+  disconnectPeer(peerId: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
   /** Same to node api with new fields */
   getPeers(
     filters?: FilterGetPeers
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: LodestarNodePeer[]; meta: {count: number}}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: LodestarNodePeer[]; meta: {count: number}}}>>;
 
   /** Dump Discv5 Kad values */
-  discv5GetKadValues(): Promise<
-    ApiClientResponse<{[HttpStatusCode.OK]: {data: string[]}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
-  >;
+  discv5GetKadValues(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: string[]}}>>;
 
   /**
    * Dump level-db entry keys for a given Bucket declared in code, or for all buckets.
    * @param bucket must be the string name of a bucket entry: `allForks_blockArchive`
    */
-  dumpDbBucketKeys(
-    bucket: string
-  ): Promise<
-    ApiClientResponse<{[HttpStatusCode.OK]: {data: string[]}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
-  >;
+  dumpDbBucketKeys(bucket: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: string[]}}>>;
 
   /** Return all entries in the StateArchive index with bucket index_stateArchiveRootIndex */
-  dumpDbStateIndex(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: {root: RootHex; slot: Slot}[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  dumpDbStateIndex(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {root: RootHex; slot: Slot}[]}}>>;
 };
 
 /**

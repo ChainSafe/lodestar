@@ -19,23 +19,11 @@ import {getReqSerializers as getBeaconReqSerializers} from "../beacon/routes/bea
 import {HttpStatusCode} from "../utils/client/httpStatusCode.js";
 import {ApiClientResponse} from "../interfaces.js";
 
-export type Api<ErrorAsResponse extends boolean = false> = {
-  status(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void},
-      HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
-      ErrorAsResponse
-    >
-  >;
+export type Api = {
+  status(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.SERVICE_UNAVAILABLE>>;
   registerValidator(
     registrations: bellatrix.SignedValidatorRegistrationV1[]
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void},
-      HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.BAD_REQUEST,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
   getHeader(
     slot: Slot,
     parentHash: Root,
@@ -43,8 +31,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.SignedBuilderBid; version: ForkName}},
-      HttpStatusCode.NOT_FOUND | HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.NOT_FOUND | HttpStatusCode.BAD_REQUEST
     >
   >;
   submitBlindedBlock(
@@ -52,8 +39,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.ExecutionPayload; version: ForkName}},
-      HttpStatusCode.SERVICE_UNAVAILABLE | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
   submitBlindedBlockV2(
@@ -61,8 +47,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlockAndBlobsSidecar; version: ForkName}},
-      HttpStatusCode.SERVICE_UNAVAILABLE | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
 };

@@ -1,14 +1,10 @@
 import {IChainForkConfig} from "@lodestar/config";
-import {
-  ClientOptions,
-  generateGenericJsonClient,
-  getFetchOptsSerializers,
-  IHttpClient,
-} from "../../utils/client/index.js";
+import {ApiClientResponse} from "../../interfaces.js";
+import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {generateGenericJsonClient, getFetchOptsSerializers, IHttpClient} from "../../utils/client/index.js";
 import {ReturnTypes} from "../../utils/types.js";
 import {StateId} from "../routes/beacon/state.js";
 import {Api, getReqSerializers, getReturnTypes, ReqTypes, routesData, StateFormat} from "../routes/debug.js";
-import {defaultClientOptions} from "./index.js";
 
 // As Jul 2022, it takes up to 3 mins to download states so make this 5 mins for reservation
 const GET_STATE_TIMEOUT_MS = 5 * 60 * 1000;
@@ -16,20 +12,15 @@ const GET_STATE_TIMEOUT_MS = 5 * 60 * 1000;
 /**
  * REST HTTP client for debug routes
  */
-export function getClient<ErrorAsResponse extends boolean = false>(
-  _config: IChainForkConfig,
-  httpClient: IHttpClient,
-  options?: ClientOptions<ErrorAsResponse>
-): Api<ErrorAsResponse> {
+export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): Api {
   const reqSerializers = getReqSerializers();
   const returnTypes = getReturnTypes();
   // Some routes return JSON, use a client auto-generator
-  const client = generateGenericJsonClient<Api<ErrorAsResponse>, ReqTypes, ErrorAsResponse>(
+  const client = generateGenericJsonClient<Api, ReqTypes>(
     routesData,
     reqSerializers,
-    returnTypes as ReturnTypes<Api<ErrorAsResponse>>,
-    httpClient,
-    options ?? (defaultClientOptions as ClientOptions<ErrorAsResponse>)
+    returnTypes as ReturnTypes<Api>,
+    httpClient
   );
   // For `getState()` generate request serializer
   const fetchOptsSerializers = getFetchOptsSerializers<Api, ReqTypes>(routesData, reqSerializers);
@@ -52,7 +43,7 @@ export function getClient<ErrorAsResponse extends boolean = false>(
           ok: true,
           response: new Uint8Array(res.body),
           status: res.status,
-        };
+        } as ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>;
       }
       return client.getState(stateId, format);
     },
@@ -68,7 +59,9 @@ export function getClient<ErrorAsResponse extends boolean = false>(
         });
         // Casting to any otherwise Typescript doesn't like the multi-type return
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
-        return {ok: true, response: new Uint8Array(res.body), status: res.status};
+        return {ok: true, response: new Uint8Array(res.body), status: res.status} as ApiClientResponse<{
+          [HttpStatusCode.OK]: Uint8Array;
+        }>;
       }
 
       return client.getStateV2(stateId, format);

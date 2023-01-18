@@ -24,7 +24,7 @@ export type LightClientBootstrap = {
   currentSyncCommitteeBranch: Uint8Array[];
 };
 
-export type Api<ErrorAsResponse extends boolean = false> = {
+export type Api = {
   /**
    * Returns an array of best updates given a `startPeriod` and `count` number of sync committee period to return.
    * Best is defined by (in order of priority):
@@ -36,44 +36,32 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     startPeriod: SyncPeriod,
     count: number
   ): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: {
-          version: ForkName;
-          data: altair.LightClientUpdate;
-        }[];
-      },
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {
+        version: ForkName;
+        data: altair.LightClientUpdate;
+      }[];
+    }>
   >;
   /**
    * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
   getOptimisticUpdate(): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: {
-          version: ForkName;
-          data: altair.LightClientOptimisticUpdate;
-        };
-      },
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {
+        version: ForkName;
+        data: altair.LightClientOptimisticUpdate;
+      };
+    }>
   >;
   getFinalityUpdate(): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: {
-          version: ForkName;
-          data: altair.LightClientFinalityUpdate;
-        };
-      },
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {
+        version: ForkName;
+        data: altair.LightClientFinalityUpdate;
+      };
+    }>
   >;
   /**
    * Fetch a bootstrapping state with a proof to a trusted block root.
@@ -83,16 +71,12 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getBootstrap(
     blockRoot: string
   ): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: {
-          version: ForkName;
-          data: altair.LightClientBootstrap;
-        };
-      },
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {
+        version: ForkName;
+        data: altair.LightClientBootstrap;
+      };
+    }>
   >;
   /**
    * Returns an array of sync committee hashes based on the provided period and count
@@ -101,15 +85,11 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     startPeriod: SyncPeriod,
     count: number
   ): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: {
-          data: Uint8Array[];
-        };
-      },
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {
+        data: Uint8Array[];
+      };
+    }>
   >;
 };
 

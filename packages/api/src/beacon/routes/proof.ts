@@ -7,7 +7,7 @@ import {ApiClientResponse} from "../../interfaces.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type Api<ErrorAsResponse extends boolean = false> = {
+export type Api = {
   /**
    * Returns a multiproof of `jsonPaths` at the requested `stateId`.
    * The requested `stateId` may not be available. Regular nodes only keep recent states in memory.
@@ -15,9 +15,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getStateProof(
     stateId: string,
     jsonPaths: JsonPath[]
-  ): Promise<
-    ApiClientResponse<{[HttpStatusCode.OK]: {data: Proof}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: Proof}}>>;
 };
 
 /**

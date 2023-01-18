@@ -25,27 +25,19 @@ import {ExecutionOptimistic, StateId} from "./beacon/state.js";
 export type StateFormat = "json" | "ssz";
 export const mimeTypeSSZ = "application/octet-stream";
 
-export type Api<ErrorAsResponse extends boolean = false> = {
+export type Api = {
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
-  getDebugChainHeads(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: {slot: Slot; root: RootHex}[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getDebugChainHeads(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {slot: Slot; root: RootHex}[]}}>>;
 
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
   getDebugChainHeadsV2(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: {slot: Slot; root: RootHex; executionOptimistic: ExecutionOptimistic}[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {data: {slot: Slot; root: RootHex; executionOptimistic: ExecutionOptimistic}[]};
+    }>
   >;
 
   /**
@@ -60,29 +52,16 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     stateId: StateId,
     format?: "json"
   ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{[HttpStatusCode.OK]: {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic}}>
   >;
-  getState(
-    stateId: StateId,
-    format: "ssz"
-  ): Promise<
-    ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
-  >;
+  getState(stateId: StateId, format: "ssz"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>>;
   getState(
     stateId: StateId,
     format?: StateFormat
   ): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]: Uint8Array | {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic};
-      },
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: Uint8Array | {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic};
+    }>
   >;
 
   /**
@@ -97,31 +76,20 @@ export type Api<ErrorAsResponse extends boolean = false> = {
     stateId: StateId,
     format?: "json"
   ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic; version: ForkName}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic; version: ForkName};
+    }>
   >;
-  getStateV2(
-    stateId: StateId,
-    format: "ssz"
-  ): Promise<
-    ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
-  >;
+  getStateV2(stateId: StateId, format: "ssz"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>>;
   getStateV2(
     stateId: StateId,
     format?: StateFormat
   ): Promise<
-    ApiClientResponse<
-      {
-        [HttpStatusCode.OK]:
-          | Uint8Array
-          | {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic; version: ForkName};
-      },
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{
+      [HttpStatusCode.OK]:
+        | Uint8Array
+        | {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic; version: ForkName};
+    }>
   >;
 };
 

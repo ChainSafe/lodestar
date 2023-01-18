@@ -37,9 +37,13 @@ describe("beacon / debug", function () {
         const httpClient = new HttpClient({baseUrl});
         const client = getClient(config, httpClient);
 
-        const {response} = await client[method]("head", "ssz");
+        const res = await client[method]("head", "ssz");
 
-        expect(toHexString(response)).to.equal(toHexString(stateSerialized), "returned state value is not equal");
+        expect(res.ok).to.be.true;
+
+        if (res.ok) {
+          expect(toHexString(res.response)).to.equal(toHexString(stateSerialized), "returned state value is not equal");
+        }
       });
     }
   });

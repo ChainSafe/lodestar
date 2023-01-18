@@ -1,18 +1,14 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {deserializeProof, Proof} from "@chainsafe/persistent-merkle-tree";
 import {Api, ReqTypes, routesData, getReqSerializers} from "../routes/proof.js";
-import {IHttpClient, getFetchOptsSerializers, ClientOptions, HttpError} from "../../utils/client/index.js";
+import {IHttpClient, getFetchOptsSerializers, HttpError} from "../../utils/client/index.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {ApiClientResponse} from "../../interfaces.js";
 
 /**
  * REST HTTP client for lightclient routes
  */
-export function getClient<ErrorAsResponse extends boolean = false>(
-  _config: IChainForkConfig,
-  httpClient: IHttpClient,
-  options?: ClientOptions<ErrorAsResponse>
-): Api<ErrorAsResponse> {
+export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): Api {
   const reqSerializers = getReqSerializers();
 
   // For `getStateProof()` generate request serializer
@@ -26,16 +22,12 @@ export function getClient<ErrorAsResponse extends boolean = false>(
 
         return {ok: true, response: {data: proof}, status: HttpStatusCode.OK};
       } catch (err) {
-        if (err instanceof HttpError && options?.errorAsResponse) {
+        if (err instanceof HttpError) {
           return {
             ok: false,
-            response: {code: err.status, message: err.message},
+            error: {code: err.status, message: err.message},
             status: err.status,
-          } as ApiClientResponse<
-            {[HttpStatusCode.OK]: {data: Proof}},
-            HttpStatusCode.INTERNAL_SERVER_ERROR,
-            ErrorAsResponse
-          >;
+          } as ApiClientResponse<{[HttpStatusCode.OK]: {data: Proof}}>;
         }
         throw err;
       }

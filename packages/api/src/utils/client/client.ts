@@ -2,7 +2,7 @@ import {mapValues} from "@lodestar/utils";
 import {compileRouteUrlFormater} from "../urlFormat.js";
 import {RouteDef, ReqGeneric, ReturnTypes, TypeJson, ReqSerializer, ReqSerializers, RoutesData} from "../types.js";
 import {APIClientHandler} from "../../interfaces.js";
-import {ClientOptions, FetchOpts, HttpError, IHttpClient} from "./httpClient.js";
+import {FetchOpts, HttpError, IHttpClient} from "./httpClient.js";
 
 // See /packages/api/src/routes/index.ts for reasoning
 
@@ -51,14 +51,12 @@ export function getFetchOptsSerializers<
  */
 export function generateGenericJsonClient<
   Api extends Record<string, APIClientHandler>,
-  ReqTypes extends {[K in keyof Api]: ReqGeneric},
-  ErrorAsResponse extends boolean
+  ReqTypes extends {[K in keyof Api]: ReqGeneric}
 >(
   routesData: RoutesData<Api>,
   reqSerializers: ReqSerializers<Api, ReqTypes>,
   returnTypes: ReturnTypes<Api>,
-  fetchFn: IHttpClient,
-  options: ClientOptions<ErrorAsResponse>
+  fetchFn: IHttpClient
 ): Api {
   return (mapValues(routesData, (routeDef, routeId) => {
     const fetchOptsSerializer = getFetchOptsSerializer(routeDef, reqSerializers[routeId], routeId as string);
@@ -79,8 +77,8 @@ export function generateGenericJsonClient<
           return {ok: true, response: undefined, status: res.status} as ReturnType<Api[keyof Api]>;
         }
       } catch (err) {
-        if (err instanceof HttpError && options.errorAsResponse) {
-          return {ok: false, response: {code: err.status, message: err.message}} as ReturnType<Api[keyof Api]>;
+        if (err instanceof HttpError) {
+          return {ok: false, error: {code: err.status, message: err.message}} as ReturnType<Api[keyof Api]>;
         }
 
         throw err;

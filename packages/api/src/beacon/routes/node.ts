@@ -71,18 +71,12 @@ export enum NodeHealth {
 /**
  * Read information about the beacon node.
  */
-export type Api<ErrorAsResponse extends boolean = false> = {
+export type Api = {
   /**
    * Get node network identity
    * Retrieves data about the node's network presence
    */
-  getNetworkIdentity: () => Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: NetworkIdentity}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getNetworkIdentity: () => Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: NetworkIdentity}}>>;
   /**
    * Get node network peers
    * Retrieves data about the node's network peers. By default this returns all peers. Multiple query params are combined using AND conditions
@@ -91,13 +85,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    */
   getPeers(
     filters?: FilterGetPeers
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: NodePeer[]; meta: {count: number}}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: NodePeer[]; meta: {count: number}}}>>;
   /**
    * Get peer
    * Retrieves data about the given peer
@@ -106,44 +94,26 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getPeer(
     peerId: string
   ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: NodePeer}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{[HttpStatusCode.OK]: {data: NodePeer}}, HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND>
   >;
 
   /**
    * Get peer count
    * Retrieves number of known peers.
    */
-  getPeerCount(): Promise<
-    ApiClientResponse<{[HttpStatusCode.OK]: {data: PeerCount}}, HttpStatusCode.INTERNAL_SERVER_ERROR, ErrorAsResponse>
-  >;
+  getPeerCount(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: PeerCount}}>>;
 
   /**
    * Get version string of the running beacon node.
    * Requests that the beacon node identify information about its implementation in a format similar to a [HTTP User-Agent](https://tools.ietf.org/html/rfc7231#section-5.5.3) field.
    */
-  getNodeVersion(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: {version: string}}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getNodeVersion(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {version: string}}}>>;
 
   /**
    * Get node syncing status
    * Requests the beacon node to describe if it's currently syncing or not, and if it is, what block it is up to.
    */
-  getSyncingStatus(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: SyncingStatus}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getSyncingStatus(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: SyncingStatus}}>>;
 
   /**
    * Get health check
@@ -154,8 +124,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   getHealth(): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: void; [HttpStatusCode.PARTIAL_CONTENT]: void},
-      HttpStatusCode.SERVICE_UNAVAILABLE | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
 };
@@ -204,7 +173,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   };
 }
 
-export function getReturnTypes(): ReturnTypes<Api<true | false>> {
+export function getReturnTypes(): ReturnTypes<Api> {
   const stringType = new StringType();
   const NetworkIdentity = new ContainerType(
     {

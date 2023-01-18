@@ -25,30 +25,18 @@ export type DepositContract = {
 
 export type Spec = BeaconPreset & IChainConfig;
 
-export type Api<ErrorAsResponse extends boolean = false> = {
+export type Api = {
   /**
    * Get deposit contract address.
    * Retrieve Eth1 deposit contract address and chain ID.
    */
-  getDepositContract(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: DepositContract}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getDepositContract(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: DepositContract}}>>;
 
   /**
    * Get scheduled upcoming forks.
    * Retrieve all scheduled upcoming forks this node is aware of.
    */
-  getForkSchedule(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: phase0.Fork[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getForkSchedule(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.Fork[]}}>>;
 
   /**
    * Retrieve specification configuration used on this node.  The configuration should include:
@@ -60,13 +48,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * - any value starting with 0x in the spec is returned as a hex string
    * - numeric values are returned as a quoted integer
    */
-  getSpec(): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: Record<string, string>}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  getSpec(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: Record<string, string>}}>>;
 };
 
 /**

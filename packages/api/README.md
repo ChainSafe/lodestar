@@ -11,36 +11,13 @@ Typescript REST client for the [Ethereum Consensus API spec](https://github.com/
 
 ## Usage
 
-There are two ways to initiate the client. In first approach you the client will throw any error occurred.
+We use more typesafe approach for the API client, where all the errors are returned not thrown. This approach is more easy to document and better to handle all possible error cases.
 
 ```typescript
 import {getClient, HttpError} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 
 const api = getClient({baseUrl: "http://localhost:9596"}, {config});
-
-try {
-  api.beacon
-    .getStateValidator(
-      "head",
-      "0x933ad9491b62059dd065b560d256d8957a8c402cc6e8d8ee7290ae11e8f7329267a8811c397529dac52ae1342ba58c95"
-    )
-    .then((res) => console.log("Your balance is:", res.response.data.balance, res.ok, res.status));
-} catch(error) {
-  if(error instanceof HttpError) {
-    console.error(error.status, error.message);
-  }
-  throw error;
-}
-```
-
-In second approach you can tell client to return error as response. This approach is more typesafe but require more handling on user side.
-
-```typescript
-import {getClient, HttpError} from "@lodestar/api";
-import {config} from "@lodestar/config/default";
-
-const api = getClient({baseUrl: "http://localhost:9596"}, {config}, {errorAsResponse: true});
 
 api.beacon
   .getStateValidator(
@@ -51,7 +28,7 @@ api.beacon
     if(res.ok) {
       console.log("Your balance is:", res.response.data.balance, res.ok, res.status);
     } else {
-      console.error(res.status, res.response.code, res.response.message);
+      console.error(res.status, res.error.code, res.error.message);
     }
   });
 ```

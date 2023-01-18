@@ -31,16 +31,10 @@ export {
   EpochSyncCommitteeResponse,
 } from "./state.js";
 
-export type Api<ErrorAsResponse extends boolean = false> = block.Api<ErrorAsResponse> &
-  pool.Api<ErrorAsResponse> &
-  state.Api<ErrorAsResponse> & {
-    getGenesis(): Promise<
-      ApiClientResponse<
-        {[HttpStatusCode.OK]: {data: phase0.Genesis}},
-        HttpStatusCode.INTERNAL_SERVER_ERROR,
-        ErrorAsResponse
-      >
-    >;
+export type Api = block.Api &
+  pool.Api &
+  state.Api & {
+    getGenesis(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.Genesis}}>>;
   };
 
 export const routesData: RoutesData<Api> = {

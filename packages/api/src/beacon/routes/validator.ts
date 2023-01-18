@@ -103,7 +103,7 @@ export type LivenessResponseData = {
   isLive: boolean;
 };
 
-export type Api<ErrorAsResponse extends boolean = false> = {
+export type Api = {
   /**
    * Get attester duties
    * Requests the beacon node to provide a set of attestation duties, which should be performed by validators, for a particular epoch.
@@ -123,8 +123,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: AttesterDuty[]; executionOptimistic: ExecutionOptimistic; dependentRoot: RootHex}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
 
@@ -144,8 +143,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: ProposerDuty[]; executionOptimistic: ExecutionOptimistic; dependentRoot: RootHex}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
 
@@ -155,8 +153,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: SyncDuty[]; executionOptimistic: ExecutionOptimistic}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
 
@@ -176,8 +173,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.BeaconBlock; blockValue: Wei}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
 
@@ -198,8 +194,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.BeaconBlock; version: ForkName; blockValue: Wei}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
 
@@ -210,8 +205,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.BlindedBeaconBlock; version: ForkName; blockValue: Wei}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
 
@@ -229,8 +223,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: phase0.AttestationData}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
 
@@ -241,8 +234,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: altair.SyncCommitteeContribution}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
 
@@ -260,8 +252,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: phase0.Attestation}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
 
@@ -274,23 +265,11 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    */
   publishAggregateAndProofs(
     signedAggregateAndProofs: phase0.SignedAggregateAndProof[]
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   publishContributionAndProofs(
     contributionAndProofs: altair.SignedContributionAndProof[]
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
    * Signal beacon node to prepare for a committee subnet
@@ -311,54 +290,28 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   prepareBeaconCommitteeSubnet(
     subscriptions: BeaconCommitteeSubscription[]
   ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE>
   >;
 
   prepareSyncCommitteeSubnets(
     subscriptions: SyncCommitteeSubscription[]
   ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR | HttpStatusCode.SERVICE_UNAVAILABLE,
-      ErrorAsResponse
-    >
+    ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE>
   >;
 
   prepareBeaconProposer(
     proposers: ProposerPreparationData[]
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /** Returns validator indices that have been observed to be active on the network */
   getLiveness(
     indices: ValidatorIndex[],
     epoch: Epoch
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: LivenessResponseData[]}},
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: LivenessResponseData[]}}>>;
 
   registerValidator(
     registrations: bellatrix.SignedValidatorRegistrationV1[]
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: void},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
-    >
-  >;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 };
 
 /**

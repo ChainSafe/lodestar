@@ -77,7 +77,7 @@ export type EpochSyncCommitteeResponse = {
   validatorAggregates: ValidatorIndex[][];
 };
 
-export type Api<ErrorAsResponse extends boolean = false> = {
+export type Api = {
   /**
    * Get state SSZ HashTreeRoot
    * Calculates HashTreeRoot for state with given 'stateId'. If stateId is root, same value will be returned.
@@ -90,8 +90,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: {root: Root}; executionOptimistic: ExecutionOptimistic}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
 
@@ -106,8 +105,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: phase0.Fork; executionOptimistic: ExecutionOptimistic}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
 
@@ -123,8 +121,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: FinalityCheckpoints; executionOptimistic: ExecutionOptimistic}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
 
@@ -142,8 +139,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: ValidatorResponse[]; executionOptimistic: ExecutionOptimistic}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
 
@@ -160,8 +156,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: ValidatorResponse; executionOptimistic: ExecutionOptimistic}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
 
@@ -178,8 +173,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: ValidatorBalance[]; executionOptimistic: ExecutionOptimistic}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST
     >
   >;
 
@@ -198,8 +192,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: EpochCommitteeResponse[]; executionOptimistic: ExecutionOptimistic}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
 
@@ -209,8 +202,7 @@ export type Api<ErrorAsResponse extends boolean = false> = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: EpochSyncCommitteeResponse; executionOptimistic: ExecutionOptimistic}},
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND | HttpStatusCode.INTERNAL_SERVER_ERROR,
-      ErrorAsResponse
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
   >;
 };
@@ -302,7 +294,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   };
 }
 
-export function getReturnTypes(): ReturnTypes<Api<true | false>> {
+export function getReturnTypes(): ReturnTypes<Api> {
   const RootContainer = new ContainerType({
     root: ssz.Root,
   });
