@@ -3,7 +3,7 @@ import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {phase0} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {getClient} from "@lodestar/api";
+import {getClient, HttpStatusCode} from "@lodestar/api";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../utils/node/beacon.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
@@ -67,13 +67,17 @@ describe("api / impl / validator", function () {
 
       await expect(client.validator.getLiveness([1, 2, 3, 4, 5], 0)).to.eventually.deep.equal(
         {
-          data: [
-            {index: 1, epoch: 0, isLive: true},
-            {index: 2, epoch: 0, isLive: true},
-            {index: 3, epoch: 0, isLive: true},
-            {index: 4, epoch: 0, isLive: true},
-            {index: 5, epoch: 0, isLive: false},
-          ],
+          response: {
+            data: [
+              {index: 1, epoch: 0, isLive: true},
+              {index: 2, epoch: 0, isLive: true},
+              {index: 3, epoch: 0, isLive: true},
+              {index: 4, epoch: 0, isLive: true},
+              {index: 5, epoch: 0, isLive: false},
+            ],
+          },
+          ok: true,
+          status: HttpStatusCode.OK,
         },
         "Wrong liveness data returned"
       );
