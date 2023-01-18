@@ -10,7 +10,6 @@ import {getMockApi, getTestServer} from "../../../utils/utils.js";
 import {registerRoute} from "../../../../src/utils/server/registerRoute.js";
 import {HttpClient} from "../../../../src/utils/client/httpClient.js";
 import {testData} from "../testData/debug.js";
-import {HttpStatusCode} from "../../../../src/utils/client/httpStatusCode.js";
 
 describe("beacon / debug", function () {
   // Extend timeout since states are very big

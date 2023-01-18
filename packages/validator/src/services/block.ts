@@ -3,7 +3,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {extendError, prettyBytes} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {Api, ApiClientResponseData, ServerApi} from "@lodestar/api";
+import {Api, ServerApi} from "@lodestar/api";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";

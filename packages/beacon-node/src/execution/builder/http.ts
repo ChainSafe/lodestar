@@ -62,7 +62,9 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     blockValue: Wei;
     blobKzgCommitments?: eip4844.BlobKzgCommitments;
   }> {
-    const {response: {data: signedBid}} = await this.api.getHeader(slot, parentHash, proposerPubKey);
+    const {
+      response: {data: signedBid},
+    } = await this.api.getHeader(slot, parentHash, proposerPubKey);
     const {header, value: blockValue} = signedBid.message;
     const {blobKzgCommitments} = signedBid.message as {blobKzgCommitments?: eip4844.BlobKzgCommitments};
     return {header, blockValue, blobKzgCommitments};

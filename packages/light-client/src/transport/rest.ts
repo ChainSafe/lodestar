@@ -64,7 +64,7 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
       return;
     }
 
-    this.api.events.eventstream(
+    void this.api.events.eventstream(
       [routes.events.EventType.lightClientOptimisticUpdate, routes.events.EventType.lightClientFinalityUpdate],
       this.controller.signal,
       (event) => {

@@ -207,7 +207,9 @@ export type Api<ErrorAsResponse extends boolean = false> = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlobsSidecar(blockId: BlockId): Promise<
+  getBlobsSidecar(
+    blockId: BlockId
+  ): Promise<
     ApiClientResponse<
       {
         [HttpStatusCode.OK]: {executionOptimistic: ExecutionOptimistic; data: eip4844.BlobsSidecar};
