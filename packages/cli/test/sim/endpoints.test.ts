@@ -126,9 +126,9 @@ await env.tracker.assert("BN Not Synced", async () => {
 });
 
 await env.tracker.assert("Return READY pre genesis", async () => {
-  const response = await node.api.node.getHealth();
+  const {status} = await node.api.node.getHealth();
 
-  expect(response).to.be.equal(routes.node.NodeHealth.READY);
+  expect(status).to.be.equal(routes.node.NodeHealth.READY);
 });
 
 await env.stop();
