@@ -77,7 +77,7 @@ export function getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, d
 export async function expectKeys(keymanagerClient: Api, expectedPubkeys: string[], message: string): Promise<void> {
   const keys = await keymanagerClient.listKeys();
   expectDeepEquals(
-    keys.data,
+    keys.response.data,
     expectedPubkeys.map((pubkey) => ({validatingPubkey: pubkey, derivationPath: "", readonly: false})),
     message
   );

@@ -231,7 +231,7 @@ export class SimulationTracker {
           const value = await assertion.capture({
             fork: this.forkConfig.getForkName(slot),
             slot,
-            block: block.data,
+            block: block.response.data,
             clock: this.clock,
             node,
             forkConfig: this.forkConfig,
@@ -334,7 +334,7 @@ export class SimulationTracker {
     ],
     signal?: AbortSignal
   ): void {
-    node.cl.api.events.eventstream(events, signal ?? this.signal, async (event) => {
+    void node.cl.api.events.eventstream(events, signal ?? this.signal, async (event) => {
       switch (event.type) {
         case routes.events.EventType.block:
           await this.processOnBlock(event.message, node);

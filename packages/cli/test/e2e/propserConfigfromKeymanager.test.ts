@@ -58,7 +58,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
 
       let feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
       expectDeepEquals(
-        feeRecipient0.data,
+        feeRecipient0.response.data,
         {pubkey: pubkeys[0], ethaddress: defaultOptions.suggestedFeeRecipient},
         "FeeRecipient Check default"
       );
@@ -67,7 +67,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
       await keymanagerClient.setFeeRecipient(pubkeys[0], updatedOptions.suggestedFeeRecipient);
       feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
       expectDeepEquals(
-        feeRecipient0.data,
+        feeRecipient0.response.data,
         {pubkey: pubkeys[0], ethaddress: updatedOptions.suggestedFeeRecipient},
         "FeeRecipient Check updated"
       );
@@ -77,7 +77,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
       let gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
 
       expectDeepEquals(
-        gasLimit0.data,
+        gasLimit0.response.data,
         {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
         "gasLimit Check default"
       );
@@ -86,7 +86,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
       await keymanagerClient.setGasLimit(pubkeys[0], updatedOptions.gasLimit);
       gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
       expectDeepEquals(
-        gasLimit0.data,
+        gasLimit0.response.data,
         {pubkey: pubkeys[0], gasLimit: updatedOptions.gasLimit},
         "gasLimit Check updated"
       );
@@ -99,7 +99,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
       // next time check edited feeRecipient persists
       let feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
       expectDeepEquals(
-        feeRecipient0.data,
+        feeRecipient0.response.data,
         {pubkey: pubkeys[0], ethaddress: updatedOptions.suggestedFeeRecipient},
         "FeeRecipient Check default persists"
       );
@@ -108,7 +108,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
       await keymanagerClient.deleteFeeRecipient(pubkeys[0]);
       feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
       expectDeepEquals(
-        feeRecipient0.data,
+        feeRecipient0.response.data,
         {pubkey: pubkeys[0], ethaddress: defaultOptions.suggestedFeeRecipient},
         "FeeRecipient Check default after delete"
       );
@@ -116,7 +116,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
       // gasLimit persists
       let gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
       expectDeepEquals(
-        gasLimit0.data,
+        gasLimit0.response.data,
         {pubkey: pubkeys[0], gasLimit: updatedOptions.gasLimit},
         "gasLimit Check updated persists"
       );
@@ -124,7 +124,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
       await keymanagerClient.deleteGasLimit(pubkeys[0]);
       gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
       expectDeepEquals(
-        gasLimit0.data,
+        gasLimit0.response.data,
         {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
         "gasLimit Check default after  delete"
       );
@@ -136,7 +136,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
     async function (keymanagerClient) {
       const feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
       expectDeepEquals(
-        feeRecipient0.data,
+        feeRecipient0.response.data,
         {pubkey: pubkeys[0], ethaddress: defaultOptions.suggestedFeeRecipient},
         "FeeRecipient Check default persists"
       );
@@ -147,7 +147,7 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
       gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
 
       expectDeepEquals(
-        gasLimit0.data,
+        gasLimit0.response.data,
         {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
         "gasLimit Check default after  delete"
       );

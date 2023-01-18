@@ -3,7 +3,7 @@ import {init} from "@chainsafe/bls/switchable";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, BeaconStateAltair} from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
-import {routes, Api, getClient} from "@lodestar/api";
+import {routes, Api, getClient, ServerApi} from "@lodestar/api";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {JsonPath, toHexString} from "@chainsafe/ssz";
@@ -68,7 +68,7 @@ describe("sync", () => {
       lightclient: lightclientServerApi,
       events: eventsServerApi,
       proof: proofServerApi,
-    } as Partial<Api>) as Api);
+    } as Partial<{[K in keyof Api]: ServerApi<Api[K]>}>) as {[K in keyof Api]: ServerApi<Api[K]>});
 
     // Populate initial snapshot
     const {snapshot, checkpointRoot} = computeLightClientSnapshot(initialPeriod);
@@ -192,7 +192,7 @@ async function getHeadStateProof(
   const stateId = toHexString(header.beacon.stateRoot);
   const res = await api.proof.getStateProof(stateId, paths);
   return {
-    proof: res.data as TreeOffsetProof,
+    proof: res.response.data as TreeOffsetProof,
     header,
   };
 }

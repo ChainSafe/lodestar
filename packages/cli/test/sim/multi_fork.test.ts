@@ -98,7 +98,9 @@ const rangeSync = env.createNodePair({
 // Checkpoint sync involves Weak Subjectivity Checkpoint
 // ========================================================
 const {
-  data: {finalized: headForCheckpointSync},
+  response: {
+    data: {finalized: headForCheckpointSync},
+  },
 } = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
 const checkpointSync = env.createNodePair({
   id: "checkpoint-sync-node",
@@ -120,8 +122,8 @@ await connectNewNode(checkpointSync, env.nodes);
 
 await Promise.all([
   await waitForNodeSync(env, rangeSync, {
-    head: toHexString(headForRangeSync.data.root),
-    slot: headForRangeSync.data.header.message.slot,
+    head: toHexString(headForRangeSync.response.data.root),
+    slot: headForRangeSync.response.data.header.message.slot,
   }),
   await waitForNodeSync(env, checkpointSync, {
     head: toHexString(headForCheckpointSync.root),
@@ -151,7 +153,7 @@ const headForUnknownBlockSync = await env.nodes[0].cl.api.beacon.getBlockV2("hea
 await connectNewNode(unknownBlockSync, env.nodes);
 
 try {
-  await unknownBlockSync.cl.api.beacon.publishBlock(headForUnknownBlockSync.data);
+  await unknownBlockSync.cl.api.beacon.publishBlock(headForUnknownBlockSync.response.data);
 
   env.tracker.record({
     message: "Publishing unknown block should fail",
@@ -170,10 +172,10 @@ try {
 await waitForHead(env, unknownBlockSync, {
   head: toHexString(
     env.forkConfig
-      .getForkTypes(headForUnknownBlockSync.data.message.slot)
-      .BeaconBlock.hashTreeRoot(headForUnknownBlockSync.data.message)
+      .getForkTypes(headForUnknownBlockSync.response.data.message.slot)
+      .BeaconBlock.hashTreeRoot(headForUnknownBlockSync.response.data.message)
   ),
-  slot: headForUnknownBlockSync.data.message.slot,
+  slot: headForUnknownBlockSync.response.data.message.slot,
 });
 
 await env.stop();

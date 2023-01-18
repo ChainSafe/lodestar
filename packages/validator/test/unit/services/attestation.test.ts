@@ -3,6 +3,7 @@ import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
+import {HttpStatusCode} from "@lodestar/api";
 import {AttestationService} from "../../../src/services/attestation.js";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
@@ -68,16 +69,32 @@ describe("AttestationService", function () {
     ];
 
     // Return empty replies to duties service
-    api.beacon.getStateValidators.resolves({executionOptimistic: false, data: []});
-    api.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH_HEX, executionOptimistic: false, data: []});
+    api.beacon.getStateValidators.resolves({
+      response: {executionOptimistic: false, data: []},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
+    api.validator.getAttesterDuties.resolves({
+      response: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false, data: []},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
 
     // Mock duties service to return some duties directly
     attestationService["dutiesService"].getDutiesAtSlot = sinon.stub().returns(duties);
 
     // Mock beacon's attestation and aggregates endpoints
 
-    api.validator.produceAttestationData.resolves({data: attestation.data});
-    api.validator.getAggregatedAttestation.resolves({data: attestation});
+    api.validator.produceAttestationData.resolves({
+      response: {data: attestation.data},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
+    api.validator.getAggregatedAttestation.resolves({
+      response: {data: attestation},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
     api.beacon.submitPoolAttestations.resolves();
     api.validator.publishAggregateAndProofs.resolves();
 

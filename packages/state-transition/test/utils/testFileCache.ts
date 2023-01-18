@@ -47,8 +47,8 @@ export async function getNetworkCachedState(
       () => {
         const client = getClient({baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000}, {config});
         return computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
-          ? client.debug.getState(String(slot), "ssz")
-          : client.debug.getStateV2(String(slot), "ssz");
+          ? client.debug.getState(String(slot), "ssz").then((r) => r.response)
+          : client.debug.getStateV2(String(slot), "ssz").then((r) => r.response);
       },
     ]);
 
@@ -83,7 +83,7 @@ export async function getNetworkCachedBlock(
           computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
             ? await client.beacon.getBlock(String(slot))
             : await client.beacon.getBlockV2(String(slot));
-        return config.getForkTypes(slot).SignedBeaconBlock.serialize(res.data);
+        return config.getForkTypes(slot).SignedBeaconBlock.serialize(res.response.data);
       },
     ]);
 

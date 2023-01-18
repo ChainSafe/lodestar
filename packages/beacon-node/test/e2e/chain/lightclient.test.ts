@@ -196,7 +196,7 @@ async function getHeadStateProof(
   const stateId = toHexString(header.beacon.stateRoot);
   const res = await api.proof.getStateProof(stateId, paths);
   return {
-    proof: res.data as TreeOffsetProof,
+    proof: res.response.data as TreeOffsetProof,
     header,
   };
 }

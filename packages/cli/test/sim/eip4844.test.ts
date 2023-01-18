@@ -81,7 +81,9 @@ const rangeSync = env.createNodePair({
 // Checkpoint sync involves Weak Subjectivity Checkpoint
 // ========================================================
 const {
-  data: {finalized: headForCheckpointSync},
+  response: {
+    data: {finalized: headForCheckpointSync},
+  },
 } = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
 const checkpointSync = env.createNodePair({
   id: "checkpoint-sync-node",
@@ -103,8 +105,8 @@ await connectNewNode(checkpointSync, env.nodes);
 
 await Promise.all([
   await waitForNodeSync(env, rangeSync, {
-    head: toHexString(headForRangeSync.data.root),
-    slot: headForRangeSync.data.header.message.slot,
+    head: toHexString(headForRangeSync.response.data.root),
+    slot: headForRangeSync.response.data.header.message.slot,
   }),
   await waitForNodeSync(env, checkpointSync, {
     head: toHexString(headForCheckpointSync.root),

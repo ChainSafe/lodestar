@@ -19,7 +19,9 @@ const network = "mainnet";
 const client = getClient({baseUrl: getInfuraBeaconUrl(network)}, {config});
 
 async function run(): Promise<void> {
-  const {data: headBlock} = await client.beacon.getBlockHeader("head");
+  const {
+    response: {data: headBlock},
+  } = await client.beacon.getBlockHeader("head");
 
   // Count operations
   let blocks = 0;
@@ -49,7 +51,7 @@ async function run(): Promise<void> {
         continue;
       }
 
-      const block = result.value.data;
+      const block = result.value.response.data;
 
       blocks++;
       attestations += block.message.body.attestations.length;

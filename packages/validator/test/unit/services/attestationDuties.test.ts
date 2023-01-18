@@ -4,7 +4,7 @@ import sinon from "sinon";
 import {chainConfig} from "@lodestar/config/default";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
-import {routes} from "@lodestar/api";
+import {HttpStatusCode, routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {AttestationDutiesService} from "../../../src/services/attestationDuties.js";
@@ -53,7 +53,11 @@ describe("AttestationDutiesService", function () {
       index,
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
-    api.beacon.getStateValidators.resolves({data: [validatorResponse], executionOptimistic: false});
+    api.beacon.getStateValidators.resolves({
+      response: {data: [validatorResponse], executionOptimistic: false},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
 
     // Reply with some duties
     const slot = 1;
@@ -67,7 +71,11 @@ describe("AttestationDutiesService", function () {
       validatorIndex: index,
       pubkey: pubkeys[0],
     };
-    api.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH_HEX, data: [duty], executionOptimistic: false});
+    api.validator.getAttesterDuties.resolves({
+      response: {dependentRoot: ZERO_HASH_HEX, data: [duty], executionOptimistic: false},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
 
     // Accept all subscriptions
     api.validator.prepareBeaconCommitteeSubnet.resolves();
@@ -121,7 +129,11 @@ describe("AttestationDutiesService", function () {
       index,
       validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
     };
-    api.beacon.getStateValidators.resolves({data: [validatorResponse], executionOptimistic: false});
+    api.beacon.getStateValidators.resolves({
+      response: {data: [validatorResponse], executionOptimistic: false},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
 
     // Reply with some duties
     const slot = 1;
@@ -134,7 +146,11 @@ describe("AttestationDutiesService", function () {
       validatorIndex: index,
       pubkey: pubkeys[0],
     };
-    api.validator.getAttesterDuties.resolves({data: [duty], dependentRoot: ZERO_HASH_HEX, executionOptimistic: false});
+    api.validator.getAttesterDuties.resolves({
+      response: {data: [duty], dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
 
     // Accept all subscriptions
     api.validator.prepareBeaconCommitteeSubnet.resolves();

@@ -74,7 +74,7 @@ describe("lightclient api", function () {
   it("getUpdates()", async function () {
     await sleep(2 * SECONDS_PER_SLOT * 1000);
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
-    const updates = await client.getUpdates(0, 1);
+    const {response: updates} = await client.getUpdates(0, 1);
     const slot = bn.chain.clock.currentSlot;
     expect(updates.length).to.be.equal(1);
     // at slot 2 we got attestedHeader for slot 1
@@ -86,7 +86,7 @@ describe("lightclient api", function () {
   it("getOptimisticUpdate()", async function () {
     await sleep(2 * SECONDS_PER_SLOT * 1000);
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
-    const update = await client.getOptimisticUpdate();
+    const {response: update} = await client.getOptimisticUpdate();
     const slot = bn.chain.clock.currentSlot;
     // at slot 2 we got attestedHeader for slot 1
     expect(update.data.attestedHeader.beacon.slot).to.be.equal(slot - 1);
@@ -99,7 +99,9 @@ describe("lightclient api", function () {
     await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, routes.events.EventType.finalizedCheckpoint, 240000);
     await sleep(SECONDS_PER_SLOT * 1000);
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
-    const {data: update} = await client.getFinalityUpdate();
+    const {
+      response: {data: update},
+    } = await client.getFinalityUpdate();
     expect(update).to.be.not.undefined;
   });
 
@@ -108,9 +110,13 @@ describe("lightclient api", function () {
     await sleep(2 * SECONDS_PER_SLOT * 1000);
 
     const lightclient = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
-    const {data: syncCommitteeHash} = await lightclient.getCommitteeRoot(0, 1);
+    const {
+      response: {data: syncCommitteeHash},
+    } = await lightclient.getCommitteeRoot(0, 1);
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
-    const {data: validatorResponses} = await client.getStateValidators("head");
+    const {
+      response: {data: validatorResponses},
+    } = await client.getStateValidators("head");
     const pubkeys = validatorResponses.map((v) => v.validator.pubkey);
     expect(pubkeys.length).to.be.equal(validatorCount);
     // only 2 validators spreading to 512 committee slots

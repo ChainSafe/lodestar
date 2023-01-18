@@ -28,7 +28,7 @@ export const attestationParticipationAssertion: SimulationAssertion<
       return null;
     }
 
-    const state = (await node.cl.api.debug.getStateV2("head")).data as altair.BeaconState;
+    const state = (await node.cl.api.debug.getStateV2("head")).response.data as altair.BeaconState;
 
     // Attestation to be computed at the end of epoch. At that time the "currentEpochParticipation" is all set to zero
     // and we have to use "previousEpochParticipation" instead.

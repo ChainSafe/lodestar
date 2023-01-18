@@ -39,7 +39,7 @@ describeCliTest("bLSToExecutionChange cmd", function ({spawnCli}) {
     await retry(
       async () => {
         const head = await client.beacon.getBlockHeader("head");
-        if (head.data.header.message.slot < 1) throw Error("pre-genesis");
+        if (head.response.data.header.message.slot < 1) throw Error("pre-genesis");
       },
       {retryDelay: 1000, retries: 60}
     );
@@ -68,7 +68,7 @@ describeCliTest("bLSToExecutionChange cmd", function ({spawnCli}) {
     ]);
 
     const pooledBlsChanges = await client.beacon.getPoolBlsToExecutionChanges();
-    const message = pooledBlsChanges.data[0].message;
+    const message = pooledBlsChanges.response.data[0].message;
     const {validatorIndex, toExecutionAddress, fromBlsPubkey} = message;
     if (
       validatorIndex !== 0 ||

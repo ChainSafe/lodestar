@@ -40,7 +40,7 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
     await retry(
       async () => {
         const head = await client.beacon.getBlockHeader("head");
-        if (head.data.header.message.slot < 1) throw Error("pre-genesis");
+        if (head.response.data.header.message.slot < 1) throw Error("pre-genesis");
       },
       {retryDelay: 1000, retries: 20}
     );
@@ -68,7 +68,9 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
     for (const pubkey of pubkeysToExit) {
       await retry(
         async () => {
-          const {data} = await client.beacon.getStateValidator("head", pubkey);
+          const {
+            response: {data},
+          } = await client.beacon.getStateValidator("head", pubkey);
           if (data.status !== "active_exiting") {
             throw Error("Validator not exiting");
           } else {

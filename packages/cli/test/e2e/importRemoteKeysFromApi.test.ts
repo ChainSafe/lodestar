@@ -30,7 +30,7 @@ describeCliTest("import remoteKeys from api", function ({spawnCli}) {
     // Import test keys
     const importRes = await keymanagerClient.importRemoteKeys(pubkeysToAdd.map((pubkey) => ({pubkey, url})));
     expectDeepEquals(
-      importRes.data,
+      importRes.response.data,
       pubkeysToAdd.map(() => ({status: ImportRemoteKeyStatus.imported})),
       "Wrong importRemoteKeys response"
     );
@@ -41,7 +41,7 @@ describeCliTest("import remoteKeys from api", function ({spawnCli}) {
     // Attempt to import the same keys again
     const importAgainRes = await keymanagerClient.importRemoteKeys(pubkeysToAdd.map((pubkey) => ({pubkey, url})));
     expectDeepEquals(
-      importAgainRes.data,
+      importAgainRes.response.data,
       pubkeysToAdd.map(() => ({status: ImportRemoteKeyStatus.duplicate})),
       "Wrong importRemoteKeys again response"
     );
@@ -54,7 +54,7 @@ describeCliTest("import remoteKeys from api", function ({spawnCli}) {
     // Delete keys
     const deleteRes = await keymanagerClient.deleteRemoteKeys(pubkeysToAdd);
     expectDeepEquals(
-      deleteRes.data,
+      deleteRes.response.data,
       pubkeysToAdd.map(() => ({status: DeleteRemoteKeyStatus.deleted})),
       "Wrong deleteRemoteKeys response"
     );
@@ -71,7 +71,7 @@ describeCliTest("import remoteKeys from api", function ({spawnCli}) {
   async function expectKeys(keymanagerClient: Api, expectedPubkeys: string[], message: string): Promise<void> {
     const remoteKeys = await keymanagerClient.listRemoteKeys();
     expectDeepEquals(
-      remoteKeys.data,
+      remoteKeys.response.data,
       expectedPubkeys.map((pubkey) => ({pubkey, url, readonly: false})),
       message
     );

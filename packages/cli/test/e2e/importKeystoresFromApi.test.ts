@@ -64,7 +64,7 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
     // Import test keys
     const importRes = await keymanagerClient.importKeystores(keystoresStr, passphrases, slashingProtectionStr);
     expectDeepEquals(
-      importRes.data,
+      importRes.response.data,
       pubkeys.map(() => ({status: ImportStatus.imported})),
       "Wrong importKeystores response"
     );
@@ -75,7 +75,7 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
     // Attempt to import the same keys again
     const importAgainRes = await keymanagerClient.importKeystores(keystoresStr, passphrases, slashingProtectionStr);
     expectDeepEquals(
-      importAgainRes.data,
+      importAgainRes.response.data,
       pubkeys.map(() => ({status: ImportStatus.duplicate})),
       "Wrong importKeystores again response"
     );
@@ -115,7 +115,7 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
     // Delete keys
     const deleteRes = await keymanagerClient.deleteKeys(pubkeys);
     expectDeepEquals(
-      deleteRes.data,
+      deleteRes.response.data,
       pubkeys.map(() => ({status: DeletionStatus.deleted})),
       "Wrong deleteKeys response"
     );

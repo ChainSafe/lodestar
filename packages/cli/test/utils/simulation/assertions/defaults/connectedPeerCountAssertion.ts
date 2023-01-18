@@ -5,7 +5,7 @@ export const connectedPeerCountAssertion: SimulationAssertion<"connectedPeerCoun
   id: "connectedPeerCount",
   match: everySlotMatcher,
   async capture({node}) {
-    return (await node.cl.api.node.getPeerCount()).data.connected;
+    return (await node.cl.api.node.getPeerCount()).response.data.connected;
   },
   async assert({nodes, store, clock, epoch, slot}) {
     const errors: string[] = [];

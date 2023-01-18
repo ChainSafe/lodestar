@@ -112,7 +112,9 @@ async function writePubkeys(): Promise<void> {
 
   const client = getClient({baseUrl}, {config});
 
-  const {data: state} = await client.debug.getStateV2("finalized");
+  const {
+    response: {data: state},
+  } = await client.debug.getStateV2("finalized");
 
   const pubkeys = Array.from(state.validators).map((validator) =>
     Buffer.from(validator.pubkey as Uint8Array).toString("hex")

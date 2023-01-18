@@ -12,7 +12,7 @@ export async function connectAllNodes(nodes: NodePair[]): Promise<void> {
 }
 
 export async function connectNewNode(newNode: NodePair, nodes: NodePair[]): Promise<void> {
-  const clIdentity = (await newNode.cl.api.node.getNetworkIdentity()).data;
+  const clIdentity = (await newNode.cl.api.node.getNetworkIdentity()).response.data;
   if (!clIdentity.peerId) return;
 
   const elIdentity = newNode.el.provider === null ? null : await newNode.el.provider.admin.nodeInfo();
@@ -48,7 +48,7 @@ export async function waitForNodeSyncStatus(env: SimulationEnvironment, node: No
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const result = await node.cl.api.node.getSyncingStatus();
-    if (!result.data.isSyncing) {
+    if (!result.response.data.isSyncing) {
       break;
     } else {
       await sleep(1000, env.options.controller.signal);

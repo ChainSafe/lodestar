@@ -16,7 +16,9 @@ async function getGenesisData(): Promise<void> {
   for (const network of networksInInfura) {
     const baseUrl = getInfuraBeaconUrl(network);
     const api = getClient({baseUrl}, {config});
-    const {data: genesis} = await api.beacon.getGenesis();
+    const {
+      response: {data: genesis},
+    } = await api.beacon.getGenesis();
     console.log(network, {
       genesisTime: Number(genesis.genesisTime),
       genesisValidatorsRoot: "0x" + Buffer.from(genesis.genesisValidatorsRoot as Uint8Array).toString("hex"),

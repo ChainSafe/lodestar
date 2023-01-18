@@ -3,6 +3,8 @@ import {LevelDbController} from "@lodestar/db";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {SlashingProtection, Validator, Signer, SignerType, ValidatorProposerConfig} from "@lodestar/validator";
 import type {SecretKey} from "@chainsafe/bls/types";
+import {ServerApi, Api, HttpStatusCode, APIServerHandler} from "@lodestar/api";
+import {mapValues} from "@lodestar/utils";
 import {BeaconNode} from "../../../src/index.js";
 import {testLogger, TestLoggerOpts} from "../logger.js";
 
@@ -63,7 +65,7 @@ export async function getAndInitDevValidators({
     validators.push(
       Validator.initializeFromBeaconNode({
         dbOps,
-        api: useRestApi ? getNodeApiUrl(node) : node.api,
+        api: useRestApi ? getNodeApiUrl(node) : getApiFromServerHandlers(node.api),
         slashingProtection,
         logger,
         // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -81,6 +83,28 @@ export async function getAndInitDevValidators({
     // Return secretKeys to start the externalSigner
     secretKeys,
   };
+}
+
+export function getApiFromServerHandlers(api: {[K in keyof Api]: ServerApi<Api[K]>}): Api {
+  return mapValues(api, (module) =>
+    mapValues(module, (api: APIServerHandler) => {
+      return async (...args: any) => {
+        let code: HttpStatusCode = HttpStatusCode.OK;
+        const response = await api(
+          ...args,
+          // request object
+          {},
+          // response object
+          {
+            code: (i: number) => {
+              code = i;
+            },
+          }
+        );
+        return {response, ok: true, status: code};
+      };
+    })
+  ) as Api;
 }
 
 export function getNodeApiUrl(node: BeaconNode): string {

@@ -1,10 +1,11 @@
 import {expect} from "chai";
 import {IChainForkConfig} from "@lodestar/config";
-import {ApiClientResponseData, APIClientHandler, ReqGeneric, Resolves, ServerApi} from "../../src/utils/index.js";
+import {ReqGeneric, Resolves} from "../../src/utils/index.js";
 import {FetchOpts, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
 import {ServerRoutes} from "../../src/utils/server/genericJsonServer.js";
 import {registerRoute} from "../../src/utils/server/registerRoute.js";
 import {HttpStatusCode} from "../../src/utils/client/httpStatusCode.js";
+import {APIClientHandler, ApiClientResponseData, ServerApi} from "../../src/interfaces.js";
 import {getMockApi, getTestServer} from "./utils.js";
 
 type IgnoreVoid<T> = T extends void ? undefined : T;
@@ -42,6 +43,7 @@ export function runGenericServerTest<
 
     it(routeId as string, async () => {
       // Register mock data for this route
+      // TODO: Look for the type error
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       mockApi[routeId].resolves(testCases[routeId].res);
