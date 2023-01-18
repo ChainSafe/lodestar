@@ -77,7 +77,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     const exitEpoch = args.exitEpoch ?? computeEpochAtSlot(getCurrentSlot(config, genesisTime));
 
     // Select signers to exit
-    const signers = await getSignersFromArgs(args, network);
+    const signers = await getSignersFromArgs(args, network, {logger: console, signal: new AbortController().signal});
     const signersToExit = selectSignersToExit(args, signers);
     const validatorsToExit = await resolveValidatorIndexes(client, signersToExit);
 

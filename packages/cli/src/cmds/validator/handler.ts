@@ -61,13 +61,16 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     process.kill(process.pid, "SIGINT");
   };
 
+  // This AbortController interrupts various validators ops: genesis req, clients call, clock etc
+  const abortController = new AbortController();
+
   /**
    * For rationale and documentation of how signers are loaded from args and disk,
    * see {@link PersistedKeysBackend} and {@link getSignersFromArgs}
    *
    * Note: local signers are already locked once returned from this function.
    */
-  const signers = await getSignersFromArgs(args, network);
+  const signers = await getSignersFromArgs(args, network, {logger, signal: abortController.signal});
 
   // Ensure the validator has at least one key
   if (signers.length === 0) {
@@ -81,9 +84,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   }
 
   logSigners(logger, signers);
-
-  // This AbortController interrupts various validators ops: genesis req, clients call, clock etc
-  const abortController = new AbortController();
 
   // We set infinity for abort controller used for validator operations,
   // to prevent MaxListenersExceededWarning which get logged when listeners > 10

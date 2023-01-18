@@ -248,11 +248,11 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
 
 export async function decryptKeystoreDefinitions(
   keystoreDefinitions: LocalKeystoreDefinition[],
-  opts: {force?: boolean}
+  opts: {force?: boolean; onDecrypt?: (index: number, signer: Signer) => void}
 ): Promise<Signer[]> {
   const signers: Signer[] = [];
 
-  for (const {keystorePath, password} of keystoreDefinitions) {
+  for (const [index, {keystorePath, password}] of keystoreDefinitions.entries()) {
     try {
       lockFilepath(keystorePath);
     } catch (e) {
@@ -281,10 +281,16 @@ export async function decryptKeystoreDefinitions(
     //
     const secretKeyBytes = await keystore.decrypt(password);
 
-    signers.push({
+    const signer: Signer = {
       type: SignerType.Local,
       secretKey: bls.SecretKey.fromBytes(secretKeyBytes),
-    });
+    };
+
+    signers.push(signer);
+
+    if (opts?.onDecrypt) {
+      opts?.onDecrypt(index, signer);
+    }
   }
 
   return signers;
