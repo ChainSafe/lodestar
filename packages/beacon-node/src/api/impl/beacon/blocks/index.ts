@@ -11,6 +11,7 @@ import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
 import {OpSource} from "../../../../metrics/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
 import {ApiModules} from "../../types.js";
+import {ckzg} from "../../../../util/kzg.js";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
 
 /**
@@ -237,6 +238,29 @@ export function getBeaconBlockApi({
             throw e;
           }),
       ]);
+    },
+
+    async getBlobsSidecar(blockId) {
+      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+
+      const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+
+      let blobsSidecar = await db.blobsSidecar.get(blockRoot);
+      if (!blobsSidecar) {
+        blobsSidecar = await db.blobsSidecarArchive.get(block.message.slot);
+        if (!blobsSidecar) {
+          blobsSidecar = {
+            beaconBlockRoot: blockRoot,
+            beaconBlockSlot: block.message.slot,
+            blobs: [] as eip4844.Blobs,
+            kzgAggregatedProof: ckzg.computeAggregateKzgProof([]),
+          };
+        }
+      }
+      return {
+        executionOptimistic,
+        data: blobsSidecar,
+      };
     },
   };
 }
