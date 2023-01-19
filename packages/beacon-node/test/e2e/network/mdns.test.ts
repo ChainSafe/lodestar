@@ -3,7 +3,7 @@ import {expect} from "chai";
 
 import {PeerId} from "@libp2p/interface-peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
-import {ENR} from "@chainsafe/discv5";
+import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
 import {createIBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
@@ -44,6 +44,7 @@ describe("mdns", function () {
     const bindAddrUdp = `/ip4/0.0.0.0/udp/${port++}`;
     const enr = ENR.createFromPeerId(peerId);
     enr.setLocationMultiaddr(multiaddr(bindAddrUdp));
+    enr.encode(createKeypairFromPeerId(peerId).privateKey);
 
     return {
       ...defaultNetworkOptions,
