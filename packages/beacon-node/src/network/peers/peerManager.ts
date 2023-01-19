@@ -454,19 +454,20 @@ export class PeerManager {
       }
     }
 
+    // disconnect first to have more slots before we dial new peers
+    for (const [reason, peers] of peersToDisconnect) {
+      this.metrics?.peersRequestedToDisconnect.inc({reason}, peers.length);
+      for (const peer of peers) {
+        void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.TOO_MANY_PEERS);
+      }
+    }
+
     if (this.discovery) {
       try {
         this.metrics?.peersRequestedToConnect.inc(peersToConnect);
         this.discovery.discoverPeers(peersToConnect, queriesMerged);
       } catch (e) {
         this.logger.error("Error on discoverPeers", {}, e as Error);
-      }
-    }
-
-    for (const [reason, peers] of peersToDisconnect) {
-      this.metrics?.peersRequestedToDisconnect.inc({reason}, peers.length);
-      for (const peer of peers) {
-        void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.TOO_MANY_PEERS);
       }
     }
 
