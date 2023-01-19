@@ -90,18 +90,30 @@ export function getApiFromServerHandlers(api: {[K in keyof Api]: ServerApi<Api[K
     mapValues(module, (api: APIServerHandler) => {
       return async (...args: any) => {
         let code: HttpStatusCode = HttpStatusCode.OK;
-        const response = await api(
-          ...args,
-          // request object
-          {},
-          // response object
-          {
-            code: (i: number) => {
-              code = i;
+        try {
+          const response = await api(
+            ...args,
+            // request object
+            {},
+            // response object
+            {
+              code: (i: number) => {
+                code = i;
+              },
+            }
+          );
+          return {response, ok: true, status: code};
+        } catch (err) {
+          return {
+            ok: false,
+            status: code ?? HttpStatusCode.INTERNAL_SERVER_ERROR,
+            error: {
+              code: code ?? HttpStatusCode.INTERNAL_SERVER_ERROR,
+              message: (err as Error).message,
+              operationId: `${module}.${api.name}`,
             },
-          }
-        );
-        return {response, ok: true, status: code};
+          };
+        }
       };
     })
   ) as Api;
