@@ -1,6 +1,6 @@
 import {Genesis} from "@lodestar/types/phase0";
 import {ILogger, sleep} from "@lodestar/utils";
-import {Api} from "@lodestar/api";
+import {Api, ApiError} from "@lodestar/api";
 
 /** The time between polls when waiting for genesis */
 const WAITING_FOR_GENESIS_POLL_MS = 12 * 1000;
@@ -9,8 +9,9 @@ export async function waitForGenesis(api: Api, logger: ILogger, signal?: AbortSi
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
-      const {response} = await api.beacon.getGenesis();
-      return response.data;
+      const res = await api.beacon.getGenesis();
+      ApiError.assert(res, "Can not fetch genesis data from beacon node");
+      return res.response.data;
     } catch (e) {
       // TODO: Search for a 404 error which indicates that genesis has not yet occurred.
       // Note: Lodestar API does not become online after genesis is found

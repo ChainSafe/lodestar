@@ -1,6 +1,7 @@
 import {fetch} from "cross-fetch";
 import {ErrorAborted, ILogger, TimeoutError} from "@lodestar/utils";
 import {ReqGeneric, RouteDef} from "../index.js";
+import {ApiClientResponse, ApiClientSuccessResponse} from "../../interfaces.js";
 import {stringifyQuery, urlJoin} from "./format.js";
 import {Metrics} from "./metrics.js";
 import {HttpStatusCode} from "./httpStatusCode.js";
@@ -24,6 +25,28 @@ export class HttpError extends Error {
     super(message);
     this.status = status;
     this.url = url;
+  }
+}
+
+export class ApiError extends Error {
+  status: number;
+  operationId: string;
+
+  constructor(message: string, status: number, operationId: string) {
+    super(message);
+    this.status = status;
+    this.operationId = operationId;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static assert(res: ApiClientResponse, message?: string): asserts res is ApiClientSuccessResponse<any, unknown> {
+    if (!res.ok) {
+      throw new ApiError([message, res.error.message].join(" - "), res.error.code, res.error.operationId);
+    }
+  }
+
+  toString(): string {
+    return `${this.message} (status=${this.status}, operationId=${this.operationId})`;
   }
 }
 

@@ -1,6 +1,6 @@
 import bls from "@chainsafe/bls";
 import type {SecretKey} from "@chainsafe/bls/types";
-import {getClient} from "@lodestar/api";
+import {ApiError, getClient} from "@lodestar/api";
 import {phase0, ssz} from "@lodestar/types";
 import {config as chainConfig} from "@lodestar/config/default";
 import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
@@ -63,10 +63,10 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
   const client = getClient({baseUrl: args.server}, {config: chainConfig});
 
   // Get genesis data to perform correct signatures
-  const {
-    response: {data: genesis},
-  } = await client.beacon.getGenesis();
-  const config = createIBeaconConfig(chainConfig, genesis.genesisValidatorsRoot);
+  const res = await client.beacon.getGenesis();
+  ApiError.assert(res, "Can not fetch genesis data from beacon node");
+
+  const config = createIBeaconConfig(chainConfig, res.response.data.genesisValidatorsRoot);
 
   // TODO: Allow to customize the ProposerSlashing payloads
 
@@ -82,11 +82,11 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
 
     // Retrieve the status all all validators in range at once
     const pksHex = sks.map((sk) => sk.toPublicKey().toHex());
-    const {
-      response: {data: validators},
-    } = await client.beacon.getStateValidators("head", {id: pksHex});
+    const res = await client.beacon.getStateValidators("head", {id: pksHex});
+    ApiError.assert(res, "Can not fetch state validators from beacon node");
 
     // All validators in the batch will be part of the same AttesterSlashing
+    const validators = res.response.data;
     const attestingIndices = validators.map((v) => v.index);
 
     // Submit all ProposerSlashing for range at once
@@ -135,7 +135,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
       },
     };
 
-    await client.beacon.submitPoolAttesterSlashings(attesterSlashing);
+    ApiError.assert(await client.beacon.submitPoolAttesterSlashings(attesterSlashing));
 
     successCount += attestingIndices.length;
     const indexesStr = attestingIndices.join(",");

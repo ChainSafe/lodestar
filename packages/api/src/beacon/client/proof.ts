@@ -1,9 +1,8 @@
 import {IChainForkConfig} from "@lodestar/config";
-import {deserializeProof, Proof} from "@chainsafe/persistent-merkle-tree";
+import {deserializeProof} from "@chainsafe/persistent-merkle-tree";
 import {Api, ReqTypes, routesData, getReqSerializers} from "../routes/proof.js";
 import {IHttpClient, getFetchOptsSerializers, HttpError} from "../../utils/client/index.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
-import {ApiClientResponse} from "../../interfaces.js";
 
 /**
  * REST HTTP client for lightclient routes
@@ -25,9 +24,9 @@ export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): A
         if (err instanceof HttpError) {
           return {
             ok: false,
-            error: {code: err.status, message: err.message},
+            error: {code: err.status, message: err.message, operationId: "proof.getStateProof"},
             status: err.status,
-          } as ApiClientResponse<{[HttpStatusCode.OK]: {data: Proof}}>;
+          };
         }
         throw err;
       }

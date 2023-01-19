@@ -1,6 +1,6 @@
 import path from "node:path";
 import {sleep, retry} from "@lodestar/utils";
-import {getClient} from "@lodestar/api";
+import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {testFilesDir} from "../utils.js";
@@ -40,6 +40,7 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
     await retry(
       async () => {
         const head = await client.beacon.getBlockHeader("head");
+        ApiError.assert(head);
         if (head.response.data.header.message.slot < 1) throw Error("pre-genesis");
       },
       {retryDelay: 1000, retries: 20}
@@ -68,14 +69,13 @@ describeCliTest("voluntaryExit cmd", function ({spawnCli}) {
     for (const pubkey of pubkeysToExit) {
       await retry(
         async () => {
-          const {
-            response: {data},
-          } = await client.beacon.getStateValidator("head", pubkey);
-          if (data.status !== "active_exiting") {
+          const res = await client.beacon.getStateValidator("head", pubkey);
+          ApiError.assert(res);
+          if (res.response.data.status !== "active_exiting") {
             throw Error("Validator not exiting");
           } else {
             // eslint-disable-next-line no-console
-            console.log(`Confirmed validator ${pubkey} = ${data.status}`);
+            console.log(`Confirmed validator ${pubkey} = ${res.response.data.status}`);
           }
         },
         {retryDelay: 1000, retries: 20}

@@ -3,6 +3,7 @@ import {join} from "node:path";
 import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
+import {ApiError} from "@lodestar/api/src/utils/client/httpClient.js";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {getEstimatedTimeInSecForRun, logFilesDir} from "../utils/simulation/utils/index.js";
@@ -47,7 +48,9 @@ await env.start({runTimeoutMs});
 const node = env.nodes[0].cl;
 await waitForSlot(2, env.nodes, {env, silent: true});
 
-const stateValidators = (await node.api.beacon.getStateValidators("head")).response.data;
+const res = await node.api.beacon.getStateValidators("head");
+ApiError.assert(res);
+const stateValidators = res.response.data;
 
 await env.tracker.assert("should have correct validators count called without filters", async () => {
   expect(stateValidators.length).to.be.equal(validatorCount);
@@ -67,11 +70,12 @@ await env.tracker.assert(
     const filterPubKey =
       "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c";
 
-    const response = await node.api.beacon.getStateValidators("head", {
+    const res = await node.api.beacon.getStateValidators("head", {
       id: [filterPubKey],
     });
+    ApiError.assert(res);
 
-    expect(response.response.data.length).to.be.equal(1);
+    expect(res.response.data.length).to.be.equal(1);
   }
 );
 
@@ -81,11 +85,12 @@ await env.tracker.assert(
     const filterPubKey =
       "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c";
 
-    const response = await node.api.beacon.getStateValidators("head", {
+    const res = await node.api.beacon.getStateValidators("head", {
       id: [filterPubKey],
     });
+    ApiError.assert(res);
 
-    expect(toHexString(response.response.data[0].validator.pubkey)).to.be.equal(filterPubKey);
+    expect(toHexString(res.response.data[0].validator.pubkey)).to.be.equal(filterPubKey);
   }
 );
 
@@ -94,9 +99,10 @@ await env.tracker.assert(
   async () => {
     const validatorIndex = 0;
 
-    const response = await node.api.beacon.getStateValidator("head", validatorIndex);
+    const res = await node.api.beacon.getStateValidator("head", validatorIndex);
+    ApiError.assert(res);
 
-    expect(response.response.data.index).to.be.equal(validatorIndex);
+    expect(res.response.data.index).to.be.equal(validatorIndex);
   }
 );
 
@@ -106,9 +112,10 @@ await env.tracker.assert(
     const hexPubKey =
       "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c";
 
-    const response = await node.api.beacon.getStateValidator("head", hexPubKey);
+    const res = await node.api.beacon.getStateValidator("head", hexPubKey);
+    ApiError.assert(res);
 
-    expect(toHexString(response.response.data.validator.pubkey)).to.be.equal(hexPubKey);
+    expect(toHexString(res.response.data.validator.pubkey)).to.be.equal(hexPubKey);
   }
 );
 
@@ -120,9 +127,10 @@ await env.tracker.assert("BN Not Synced", async () => {
     isOptimistic: false,
   };
 
-  const response = await node.api.node.getSyncingStatus();
+  const res = await node.api.node.getSyncingStatus();
+  ApiError.assert(res);
 
-  expect(response.response.data).to.be.deep.equal(expectedSyncStatus);
+  expect(res.response.data).to.be.deep.equal(expectedSyncStatus);
 });
 
 await env.tracker.assert("Return READY pre genesis", async () => {

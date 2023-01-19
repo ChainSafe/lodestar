@@ -3,6 +3,7 @@ import rimraf from "rimraf";
 import {expect} from "chai";
 import {Api, DeleteRemoteKeyStatus, getClient, ImportRemoteKeyStatus} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
+import {ApiError} from "@lodestar/api";
 import {testFilesDir} from "../utils.js";
 import {describeCliTest} from "../utils/childprocRunner.js";
 import {cachedPubkeysHex} from "../utils/cachedKeys.js";
@@ -29,6 +30,7 @@ describeCliTest("import remoteKeys from api", function ({spawnCli}) {
 
     // Import test keys
     const importRes = await keymanagerClient.importRemoteKeys(pubkeysToAdd.map((pubkey) => ({pubkey, url})));
+    ApiError.assert(importRes);
     expectDeepEquals(
       importRes.response.data,
       pubkeysToAdd.map(() => ({status: ImportRemoteKeyStatus.imported})),
@@ -40,6 +42,7 @@ describeCliTest("import remoteKeys from api", function ({spawnCli}) {
 
     // Attempt to import the same keys again
     const importAgainRes = await keymanagerClient.importRemoteKeys(pubkeysToAdd.map((pubkey) => ({pubkey, url})));
+    ApiError.assert(importAgainRes);
     expectDeepEquals(
       importAgainRes.response.data,
       pubkeysToAdd.map(() => ({status: ImportRemoteKeyStatus.duplicate})),
@@ -53,6 +56,7 @@ describeCliTest("import remoteKeys from api", function ({spawnCli}) {
 
     // Delete keys
     const deleteRes = await keymanagerClient.deleteRemoteKeys(pubkeysToAdd);
+    ApiError.assert(deleteRes);
     expectDeepEquals(
       deleteRes.response.data,
       pubkeysToAdd.map(() => ({status: DeleteRemoteKeyStatus.deleted})),
@@ -70,6 +74,7 @@ describeCliTest("import remoteKeys from api", function ({spawnCli}) {
 
   async function expectKeys(keymanagerClient: Api, expectedPubkeys: string[], message: string): Promise<void> {
     const remoteKeys = await keymanagerClient.listRemoteKeys();
+    ApiError.assert(remoteKeys);
     expectDeepEquals(
       remoteKeys.response.data,
       expectedPubkeys.map((pubkey) => ({pubkey, url, readonly: false})),

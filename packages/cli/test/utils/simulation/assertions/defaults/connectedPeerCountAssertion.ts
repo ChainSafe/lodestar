@@ -1,3 +1,4 @@
+import {ApiError} from "@lodestar/api";
 import {SimulationAssertion} from "../../interfaces.js";
 import {everySlotMatcher} from "../matchers.js";
 
@@ -5,7 +6,9 @@ export const connectedPeerCountAssertion: SimulationAssertion<"connectedPeerCoun
   id: "connectedPeerCount",
   match: everySlotMatcher,
   async capture({node}) {
-    return (await node.cl.api.node.getPeerCount()).response.data.connected;
+    const res = await node.cl.api.node.getPeerCount();
+    ApiError.assert(res);
+    return res.response.data.connected;
   },
   async assert({nodes, store, clock, epoch, slot}) {
     const errors: string[] = [];

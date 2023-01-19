@@ -1,5 +1,6 @@
 import {routes} from "@lodestar/api/beacon";
 import type {SecretKey} from "@chainsafe/bls/types";
+import {ApiError} from "@lodestar/api";
 import {CLClientKeys, SimulationAssertion} from "../interfaces.js";
 import {arrayEquals} from "../utils/index.js";
 import {neverMatcher} from "./matchers.js";
@@ -26,7 +27,9 @@ export const nodeAssertion: SimulationAssertion<"node", string> = {
         continue;
       }
 
-      const keyManagerKeys = (await node.cl.keyManager.listKeys()).response.data.map((k) => k.validatingPubkey);
+      const res = await node.cl.keyManager.listKeys();
+      ApiError.assert(res);
+      const keyManagerKeys = res.response.data.map((k) => k.validatingPubkey);
       const expectedPubkeys = keys.map((k) => k.toPublicKey().toHex());
 
       if (!arrayEquals(keyManagerKeys.sort(), expectedPubkeys.sort())) {

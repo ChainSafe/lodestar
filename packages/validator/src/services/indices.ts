@@ -1,7 +1,7 @@
 import {ValidatorIndex} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {Api} from "@lodestar/api";
+import {Api, ApiError} from "@lodestar/api";
 import {batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 
@@ -97,9 +97,11 @@ export class IndicesService {
   }
 
   private async fetchValidatorIndices(pubkeysHex: string[]): Promise<ValidatorIndex[]> {
-    const {response: validatorsState} = await this.api.beacon.getStateValidators("head", {id: pubkeysHex});
+    const res = await this.api.beacon.getStateValidators("head", {id: pubkeysHex});
+    ApiError.assert(res, "Can not fetch state validators from beacon node");
+
     const newIndices = [];
-    for (const validatorState of validatorsState.data) {
+    for (const validatorState of res.response.data) {
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
       if (!this.pubkey2index.has(pubkeyHex)) {
         this.logger.debug("Discovered validator", {pubkey: pubkeyHex, index: validatorState.index});

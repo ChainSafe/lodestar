@@ -3,7 +3,7 @@ import {BLSPubkey, ssz} from "@lodestar/types";
 import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
 import {ILogger} from "@lodestar/utils";
-import {getClient, Api, routes} from "@lodestar/api";
+import {getClient, Api, routes, ApiError} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Clock, IClock} from "./util/clock.js";
@@ -191,10 +191,9 @@ export class Validator {
     const genesis = await waitForGenesis(api, opts.logger, opts.abortController.signal);
     logger.info("Genesis fetched from the beacon node");
 
-    const {
-      response: {data: externalSpecJson},
-    } = await api.config.getSpec();
-    assertEqualParams(config, externalSpecJson);
+    const res = await api.config.getSpec();
+    ApiError.assert(res, "Can not fetch spec from beacon node");
+    assertEqualParams(config, res.response.data);
     logger.info("Verified connected beacon node and validator have same the config");
 
     await assertEqualGenesis(opts, genesis);
@@ -230,9 +229,10 @@ export class Validator {
    * Perform a voluntary exit for the given validator by its key.
    */
   async voluntaryExit(publicKey: string, exitEpoch?: number): Promise<void> {
-    const {
-      response: {data: stateValidators},
-    } = await this.api.beacon.getStateValidators("head", {id: [publicKey]});
+    const res = await this.api.beacon.getStateValidators("head", {id: [publicKey]});
+    ApiError.assert(res, "Can not fetch state validators from beacon node");
+
+    const stateValidators = res.response.data;
     const stateValidator = stateValidators[0];
     if (stateValidator === undefined) {
       throw new Error(`Validator pubkey ${publicKey} not found in state`);
@@ -243,7 +243,7 @@ export class Validator {
     }
 
     const signedVoluntaryExit = await this.validatorStore.signVoluntaryExit(publicKey, stateValidator.index, exitEpoch);
-    await this.api.beacon.submitPoolVoluntaryExit(signedVoluntaryExit);
+    ApiError.assert(await this.api.beacon.submitPoolVoluntaryExit(signedVoluntaryExit));
 
     this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
   }

@@ -1,3 +1,4 @@
+import {ApiError} from "@lodestar/api";
 import {BeaconStateAllForks, isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
 import {SimulationAssertion} from "../interfaces.js";
 import {neverMatcher} from "./matchers.js";
@@ -10,7 +11,9 @@ export const mergeAssertion: SimulationAssertion<"merge", string> = {
     const errors: string[] = [];
 
     for (const node of nodes) {
-      const state = ((await node.cl.api.debug.getStateV2("head")).response.data as unknown) as BeaconStateAllForks;
+      const res = await node.cl.api.debug.getStateV2("head");
+      ApiError.assert(res);
+      const state = (res.response.data as unknown) as BeaconStateAllForks;
 
       if (!(isExecutionStateType(state) && isMergeTransitionComplete(state))) {
         errors.push(

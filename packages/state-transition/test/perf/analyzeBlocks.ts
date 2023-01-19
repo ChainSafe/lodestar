@@ -1,4 +1,4 @@
-import {getClient} from "@lodestar/api";
+import {getClient, ApiError} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {getInfuraBeaconUrl} from "../utils/infura.js";
 
@@ -19,9 +19,9 @@ const network = "mainnet";
 const client = getClient({baseUrl: getInfuraBeaconUrl(network)}, {config});
 
 async function run(): Promise<void> {
-  const {
-    response: {data: headBlock},
-  } = await client.beacon.getBlockHeader("head");
+  const res = await client.beacon.getBlockHeader("head");
+  ApiError.assert(res);
+  const headBlock = res.response.data;
 
   // Count operations
   let blocks = 0;
@@ -50,6 +50,7 @@ async function run(): Promise<void> {
         // Missed block
         continue;
       }
+      ApiError.assert(result.value);
 
       const block = result.value.response.data;
 

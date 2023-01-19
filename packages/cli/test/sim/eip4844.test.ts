@@ -2,6 +2,7 @@
 import {join} from "node:path";
 import {activePreset} from "@lodestar/params";
 import {toHexString} from "@lodestar/utils";
+import {ApiError} from "@lodestar/api";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
@@ -71,6 +72,7 @@ await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePrese
 // Range Sync
 // ========================================================
 const headForRangeSync = await env.nodes[0].cl.api.beacon.getBlockHeader("head");
+ApiError.assert(headForRangeSync);
 const rangeSync = env.createNodePair({
   id: "range-sync-node",
   cl: CLClient.Lodestar,
@@ -80,11 +82,9 @@ const rangeSync = env.createNodePair({
 
 // Checkpoint sync involves Weak Subjectivity Checkpoint
 // ========================================================
-const {
-  response: {
-    data: {finalized: headForCheckpointSync},
-  },
-} = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
+const res = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
+ApiError.assert(res);
+const headForCheckpointSync = res.response.data.finalized;
 const checkpointSync = env.createNodePair({
   id: "checkpoint-sync-node",
   cl: {

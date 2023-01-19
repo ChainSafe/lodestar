@@ -78,7 +78,9 @@ export function generateGenericJsonClient<
         }
       } catch (err) {
         if (err instanceof HttpError) {
-          return {ok: false, error: {code: err.status, message: err.message}} as ReturnType<Api[keyof Api]>;
+          return {ok: false, error: {code: err.status, message: err.message, operationId: routeId}} as ReturnType<
+            Api[keyof Api]
+          >;
         }
 
         throw err;

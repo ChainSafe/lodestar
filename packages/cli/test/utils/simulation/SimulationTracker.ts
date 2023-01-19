@@ -2,6 +2,7 @@ import EventEmitter from "node:events";
 import {routes} from "@lodestar/api/beacon";
 import {IChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot} from "@lodestar/types";
+import {ApiError} from "@lodestar/api";
 import {EpochClock} from "./EpochClock.js";
 import {
   AtLeast,
@@ -225,6 +226,7 @@ export class SimulationTracker {
 
     try {
       const block = await node.cl.api.beacon.getBlockV2(slot);
+      ApiError.assert(block);
 
       for (const assertion of this.assertions) {
         if (assertion.capture) {

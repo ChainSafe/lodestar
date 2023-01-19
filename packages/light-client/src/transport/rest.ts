@@ -1,7 +1,7 @@
 import EventEmitter from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {allForks, altair, SyncPeriod} from "@lodestar/types";
-import {Api, routes} from "@lodestar/api";
+import {Api, ApiError, routes} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
 import {LightClientTransport} from "./interface.js";
 
@@ -30,23 +30,33 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
       data: altair.LightClientUpdate;
     }[]
   > {
-    return (await this.api.lightclient.getUpdates(startPeriod, count)).response;
+    const res = await this.api.lightclient.getUpdates(startPeriod, count);
+    ApiError.assert(res);
+    return res.response;
   }
 
   async getOptimisticUpdate(): Promise<{version: ForkName; data: altair.LightClientOptimisticUpdate}> {
-    return (await this.api.lightclient.getOptimisticUpdate()).response;
+    const res = await this.api.lightclient.getOptimisticUpdate();
+    ApiError.assert(res);
+    return res.response;
   }
 
   async getFinalityUpdate(): Promise<{version: ForkName; data: altair.LightClientFinalityUpdate}> {
-    return (await this.api.lightclient.getFinalityUpdate()).response;
+    const res = await this.api.lightclient.getFinalityUpdate();
+    ApiError.assert(res);
+    return res.response;
   }
 
   async getBootstrap(blockRoot: string): Promise<{version: ForkName; data: altair.LightClientBootstrap}> {
-    return (await this.api.lightclient.getBootstrap(blockRoot)).response;
+    const res = await this.api.lightclient.getBootstrap(blockRoot);
+    ApiError.assert(res);
+    return res.response;
   }
 
   async fetchBlock(blockRootAsString: string): Promise<{version: ForkName; data: allForks.SignedBeaconBlock}> {
-    return (await this.api.beacon.getBlockV2(blockRootAsString)).response;
+    const res = await this.api.beacon.getBlockV2(blockRootAsString);
+    ApiError.assert(res);
+    return res.response;
   }
 
   onOptimisticUpdate(handler: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void): void {

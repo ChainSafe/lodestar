@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import got from "got";
-import {getClient} from "@lodestar/api";
+import {ApiError, getClient} from "@lodestar/api";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {createIChainForkConfig, IChainForkConfig} from "@lodestar/config";
 import {allForks} from "@lodestar/types";
@@ -47,8 +47,14 @@ export async function getNetworkCachedState(
       () => {
         const client = getClient({baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000}, {config});
         return computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
-          ? client.debug.getState(String(slot), "ssz").then((r) => r.response)
-          : client.debug.getStateV2(String(slot), "ssz").then((r) => r.response);
+          ? client.debug.getState(String(slot), "ssz").then((r) => {
+              ApiError.assert(r);
+              return r.response;
+            })
+          : client.debug.getStateV2(String(slot), "ssz").then((r) => {
+              ApiError.assert(r);
+              return r.response;
+            });
       },
     ]);
 
@@ -83,6 +89,7 @@ export async function getNetworkCachedBlock(
           computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
             ? await client.beacon.getBlock(String(slot))
             : await client.beacon.getBlockV2(String(slot));
+        ApiError.assert(res);
         return config.getForkTypes(slot).SignedBeaconBlock.serialize(res.response.data);
       },
     ]);

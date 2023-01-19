@@ -10,7 +10,7 @@ import {createIBeaconConfig} from "@lodestar/config";
 import {ssz, phase0} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {Signer, SignerLocal, SignerType} from "@lodestar/validator";
-import {Api, getClient} from "@lodestar/api";
+import {Api, ApiError, getClient} from "@lodestar/api";
 import {ensure0xPrefix, ICliCommand, YargsError} from "../../util/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
@@ -70,7 +70,9 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     // Do not use known networks cache, it defaults to mainnet for devnets
     const {config: chainForkConfig, network} = getBeaconConfigFromArgs(args);
     const client = getClient({urls: args.beaconNodes}, {config: chainForkConfig});
-    const {genesisValidatorsRoot, genesisTime} = (await client.beacon.getGenesis()).response.data;
+    const genesisRes = await client.beacon.getGenesis();
+    ApiError.assert(genesisRes, "Unable to fetch genesisValidatorsRoot from beacon node");
+    const {genesisValidatorsRoot, genesisTime} = genesisRes.response.data;
     const config = createIBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 
     // Set exitEpoch to current epoch if unspecified
@@ -100,10 +102,12 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
       const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex: index};
       const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
 
-      await client.beacon.submitPoolVoluntaryExit({
-        message: voluntaryExit,
-        signature: signer.secretKey.sign(signingRoot).toBytes(),
-      });
+      ApiError.assert(
+        await client.beacon.submitPoolVoluntaryExit({
+          message: voluntaryExit,
+          signature: signer.secretKey.sign(signingRoot).toBytes(),
+        })
+      );
 
       console.log(`Submitted voluntary exit for ${pubkey} ${i + 1}/${signersToExit.length}`);
     }
@@ -143,11 +147,10 @@ function selectSignersToExit(args: VoluntaryExitArgs, signers: Signer[]): Signer
 async function resolveValidatorIndexes(client: Api, signersToExit: SignerLocalPubkey[]) {
   const pubkeys = signersToExit.map(({pubkey}) => pubkey);
 
-  const {
-    response: {data},
-  } = await client.beacon.getStateValidators("head", {id: pubkeys});
+  const res = await client.beacon.getStateValidators("head", {id: pubkeys});
+  ApiError.assert(res, "Can not fetch state validators from beacon node");
 
-  const dataByPubkey = new Map(data.map((item) => [toHex(item.validator.pubkey), item]));
+  const dataByPubkey = new Map(res.response.data.map((item) => [toHex(item.validator.pubkey), item]));
 
   return signersToExit.map(({signer, pubkey}) => {
     const item = dataByPubkey.get(pubkey);
