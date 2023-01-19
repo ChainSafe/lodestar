@@ -28,11 +28,12 @@ export function showProgress({
 
   const processProgress = (): void => {
     const currentTime = Date.now();
+    const processTime = currentTime - lastProcessTime;
 
     progress({
       current,
       total,
-      ratePerSec: ((current - last) / (currentTime - lastProcessTime)) * 1000,
+      ratePerSec: processTime === 0 ? 0 : ((current - last) / processTime) * 1000,
       percentage: (current / total) * 100,
     });
 
