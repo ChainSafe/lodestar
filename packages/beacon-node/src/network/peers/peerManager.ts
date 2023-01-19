@@ -533,51 +533,53 @@ export class PeerManager {
     const libp2pConnection = evt.detail;
     const {direction, status} = libp2pConnection.stat;
     const peer = libp2pConnection.remotePeer;
-
-    if (!this.connectedPeers.has(peer.toString())) {
-      // On connection:
-      // - Outbound connections: send a STATUS and PING request
-      // - Inbound connections: expect to be STATUS'd, schedule STATUS and PING for latter
-      // NOTE: libp2p may emit two "peer:connect" events: One for inbound, one for outbound
-      // If that happens, it's okay. Only the "outbound" connection triggers immediate action
-      const now = Date.now();
-      const peerData: PeerData = {
-        lastReceivedMsgUnixTsMs: direction === "outbound" ? 0 : now,
-        // If inbound, request after STATUS_INBOUND_GRACE_PERIOD
-        lastStatusUnixTsMs: direction === "outbound" ? 0 : now - STATUS_INTERVAL_MS + STATUS_INBOUND_GRACE_PERIOD,
-        connectedUnixTsMs: now,
-        relevantStatus: RelevantPeerStatus.Unknown,
-        direction,
-        peerId: peer,
-        metadata: null,
-        agentVersion: null,
-        agentClient: null,
-        encodingPreference: null,
-      };
-      this.connectedPeers.set(peer.toString(), peerData);
-
-      if (direction === "outbound") {
-        //this.pingAndStatusTimeouts();
-        void this.requestPing(peer);
-        void this.requestStatus(peer, this.chain.getStatus());
-      }
-
-      // AgentVersion was set in libp2p IdentifyService, 'peer:connect' event handler
-      // since it's not possible to handle it async, we have to wait for a while to set AgentVersion
-      // See https://github.com/libp2p/js-libp2p/pull/1168
-      setTimeout(async () => {
-        const agentVersionBytes = await this.libp2p.peerStore.metadataBook.getValue(peerData.peerId, "AgentVersion");
-        if (agentVersionBytes) {
-          const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
-          peerData.agentVersion = agentVersion;
-          peerData.agentClient = clientFromAgentVersion(agentVersion);
-        }
-      }, 1000);
-    }
-
     this.logger.verbose("peer connected", {peer: prettyPrintPeerId(peer), direction, status});
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
-    this.metrics?.peerConnectedEvent.inc({direction});
+    this.metrics?.peerConnectedEvent.inc({direction, status});
+    // libp2p may emit closed connection, we don't want to handle it
+    // see https://github.com/libp2p/js-libp2p/issues/1565
+    if (this.connectedPeers.has(peer.toString()) || status !== "OPEN") {
+      return;
+    }
+
+    // On connection:
+    // - Outbound connections: send a STATUS and PING request
+    // - Inbound connections: expect to be STATUS'd, schedule STATUS and PING for latter
+    // NOTE: libp2p may emit two "peer:connect" events: One for inbound, one for outbound
+    // If that happens, it's okay. Only the "outbound" connection triggers immediate action
+    const now = Date.now();
+    const peerData: PeerData = {
+      lastReceivedMsgUnixTsMs: direction === "outbound" ? 0 : now,
+      // If inbound, request after STATUS_INBOUND_GRACE_PERIOD
+      lastStatusUnixTsMs: direction === "outbound" ? 0 : now - STATUS_INTERVAL_MS + STATUS_INBOUND_GRACE_PERIOD,
+      connectedUnixTsMs: now,
+      relevantStatus: RelevantPeerStatus.Unknown,
+      direction,
+      peerId: peer,
+      metadata: null,
+      agentVersion: null,
+      agentClient: null,
+      encodingPreference: null,
+    };
+    this.connectedPeers.set(peer.toString(), peerData);
+
+    if (direction === "outbound") {
+      //this.pingAndStatusTimeouts();
+      void this.requestPing(peer);
+      void this.requestStatus(peer, this.chain.getStatus());
+    }
+
+    // AgentVersion was set in libp2p IdentifyService, 'peer:connect' event handler
+    // since it's not possible to handle it async, we have to wait for a while to set AgentVersion
+    // See https://github.com/libp2p/js-libp2p/pull/1168
+    setTimeout(async () => {
+      const agentVersionBytes = await this.libp2p.peerStore.metadataBook.getValue(peerData.peerId, "AgentVersion");
+      if (agentVersionBytes) {
+        const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
+        peerData.agentVersion = agentVersion;
+        peerData.agentClient = clientFromAgentVersion(agentVersion);
+      }
+    }, 1000);
   };
 
   /**
