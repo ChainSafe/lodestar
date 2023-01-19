@@ -12,7 +12,7 @@ import {decryptKeystoreDefinitions, PersistedKeysBackend} from "../keymanager/pe
 import {showProgress} from "../../../util/progress.js";
 import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./importExternalKeystores.js";
 
-const KEYSTORE_IMPORT_PROGRESS_MS = 1000;
+const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 
 /**
  * Options processing heriarchy
@@ -84,7 +84,11 @@ export async function getSignersFromArgs(
       frequencyMs: KEYSTORE_IMPORT_PROGRESS_MS,
       signal: signal,
       progress: ({ratePerSec, percentage, current, total}) => {
-        logger.info(`${percentage.toFixed(0)}% of keystores imported. ${current} of ${total}. ${ratePerSec} keys/s`);
+        logger.info(
+          `${percentage.toFixed(0)}% of keystores imported. current=${current} total=${total}${current} rate=${(
+            ratePerSec * 60
+          ).toFixed(2)}keys/m`
+        );
       },
     });
     return await decryptKeystoreDefinitions(keystoreDefinitions, {...args, onDecrypt: needle});
@@ -109,7 +113,9 @@ export async function getSignersFromArgs(
       signal: signal,
       progress: ({ratePerSec, percentage, current, total}) => {
         logger.info(
-          `${percentage.toFixed(0)}% of local keystores imported. ${current} of ${total}. ${ratePerSec} keys/s`
+          `${percentage.toFixed(0)}% of local keystores imported. current=${current} total=${total}${current} rate=${(
+            ratePerSec * 60
+          ).toFixed(2)}keys/m`
         );
       },
     });
