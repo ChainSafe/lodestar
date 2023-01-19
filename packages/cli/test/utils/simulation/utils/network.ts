@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import {ApiError} from "@lodestar/api/src/utils/client/httpClient.js";
+import {ApiError} from "@lodestar/api";
 import {Slot} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {ELClient, NodePair} from "../interfaces.js";

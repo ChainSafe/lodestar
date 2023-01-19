@@ -4,7 +4,7 @@ import {expect} from "chai";
 import {DeletionStatus, getClient, ImportStatus} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
 import {Interchange} from "@lodestar/validator";
-import {ApiError} from "@lodestar/api";
+import {ApiError, HttpStatusCode} from "@lodestar/api";
 import {testFilesDir} from "../utils.js";
 import {bufferStderr, describeCliTest} from "../utils/childprocRunner.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
@@ -135,6 +135,8 @@ describeCliTest("import keystores from api", function ({spawnCli}) {
 
   itKeymanagerStep("reject calls without bearerToken", async function (_, {keymanagerUrl}) {
     const keymanagerClientNoAuth = getClient({baseUrl: keymanagerUrl, bearerToken: undefined}, {config});
-    await expect(keymanagerClientNoAuth.listRemoteKeys()).to.rejectedWith("Unauthorized");
+    const res = await keymanagerClientNoAuth.listRemoteKeys();
+    expect(res.ok).to.be.false;
+    expect(res.error?.code).to.be.eql(HttpStatusCode.UNAUTHORIZED);
   });
 });
