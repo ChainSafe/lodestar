@@ -22,7 +22,7 @@ export const list: ICliCommand<IValidatorCliArgs, IGlobalArgs, ReturnType> = {
   handler: async (args) => {
     const {network} = getBeaconConfigFromArgs(args);
 
-    const signers = await getSignersFromArgs(args, network);
+    const signers = await getSignersFromArgs(args, network, {logger: console, signal: new AbortController().signal});
 
     logSigners(console, signers);
 
