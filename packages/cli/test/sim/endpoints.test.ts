@@ -3,7 +3,7 @@ import {join} from "node:path";
 import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
-import {ApiError} from "@lodestar/api/src/utils/client/httpClient.js";
+import {ApiError} from "@lodestar/api";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {getEstimatedTimeInSecForRun, logFilesDir} from "../utils/simulation/utils/index.js";

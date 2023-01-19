@@ -123,11 +123,15 @@ describe("api / impl / validator", function () {
       // previous epoch is fine
       await expect(client.validator.getLiveness([1], previousEpoch)).to.not.be.rejected;
       // more than next epoch is not fine
-      await expect(client.validator.getLiveness([1], currentEpoch + 2)).to.be.rejectedWith(
+      const res1 = await client.validator.getLiveness([1], currentEpoch + 2);
+      expect(res1.ok).to.be.false;
+      expect(res1.error?.message).to.include(
         `Request epoch ${currentEpoch + 2} is more than one epoch before or after the current epoch ${currentEpoch}`
       );
       // more than previous epoch is not fine
-      await expect(client.validator.getLiveness([1], currentEpoch - 2)).to.be.rejectedWith(
+      const res2 = await client.validator.getLiveness([1], currentEpoch - 2);
+      expect(res2.ok).to.be.false;
+      expect(res2.error?.message).to.include(
         `Request epoch ${currentEpoch - 2} is more than one epoch before or after the current epoch ${currentEpoch}`
       );
     });
