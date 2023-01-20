@@ -7,8 +7,8 @@ import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 /**
  * REST HTTP client for events routes
  */
-export function getClient(_config: IChainForkConfig, baseUrl: string): Api {
-  const eventSerdes = getEventSerdes();
+export function getClient(config: IChainForkConfig, baseUrl: string): Api {
+  const eventSerdes = getEventSerdes(config);
 
   return {
     eventstream: async (topics, signal, onEvent) => {

@@ -1,6 +1,8 @@
-import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64} from "@lodestar/types";
-import {ContainerType, Type, VectorCompositeType} from "@chainsafe/ssz";
+import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64, allForks} from "@lodestar/types";
+import {ContainerType, VectorCompositeType} from "@chainsafe/ssz";
 import {FINALIZED_ROOT_DEPTH} from "@lodestar/params";
+import {IChainForkConfig} from "@lodestar/config";
+
 import {RouteDef, TypeJson} from "../../utils/index.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {ApiClientResponse} from "../../interfaces.js";
@@ -86,9 +88,9 @@ export type EventData = {
     executionOptimistic: boolean;
   };
   [EventType.contributionAndProof]: altair.SignedContributionAndProof;
-  [EventType.lightClientOptimisticUpdate]: altair.LightClientOptimisticUpdate;
-  [EventType.lightClientFinalityUpdate]: altair.LightClientFinalityUpdate;
-  [EventType.lightClientUpdate]: altair.LightClientUpdate;
+  [EventType.lightClientOptimisticUpdate]: allForks.LightClientOptimisticUpdate;
+  [EventType.lightClientFinalityUpdate]: allForks.LightClientFinalityUpdate;
+  [EventType.lightClientUpdate]: allForks.LightClientUpdate;
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
@@ -123,8 +125,13 @@ export type ReqTypes = {
 // It doesn't make sense to define a getReqSerializers() here given the exotic argument of eventstream()
 // The request is very simple: (topics) => {query: {topics}}, and the test will ensure compatibility server - client
 
-export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
+export function getTypeByEvent(config: IChainForkConfig): {[K in EventType]: TypeJson<EventData[K]>} {
   const stringType = new StringType();
+  const getLightClientOptimisticUpdateType = (
+    data: allForks.LightClientOptimisticUpdate
+  ): allForks.AllForksLightClientSSZTypes["LightClientOptimisticUpdate"] =>
+    config.getLightClientForkTypes(data.attestedHeader.beacon.slot).LightClientOptimisticUpdate;
+
   return {
     [EventType.head]: new ContainerType(
       {
@@ -178,14 +185,12 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
 
     [EventType.contributionAndProof]: ssz.altair.SignedContributionAndProof,
 
-    [EventType.lightClientOptimisticUpdate]: new ContainerType(
-      {
-        syncAggregate: ssz.altair.SyncAggregate,
-        attestedHeader: ssz.altair.LightClientHeader,
-        signatureSlot: ssz.Slot,
-      },
-      {jsonCase: "eth2"}
-    ),
+    [EventType.lightClientOptimisticUpdate]: {
+      toJson: (data) =>
+        getLightClientOptimisticUpdateType((data as unknown) as allForks.LightClientOptimisticUpdate).toJson(data),
+      fromJson: (data) =>
+        getLightClientOptimisticUpdateType((data as unknown) as allForks.LightClientOptimisticUpdate).fromJson(data),
+    },
     [EventType.lightClientFinalityUpdate]: new ContainerType(
       {
         attestedHeader: ssz.altair.LightClientHeader,
@@ -201,8 +206,8 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export function getEventSerdes() {
-  const typeByEvent = getTypeByEvent();
+export function getEventSerdes(config: IChainForkConfig) {
+  const typeByEvent = getTypeByEvent(config);
 
   return {
     toJson: (event: BeaconEvent): unknown => {
