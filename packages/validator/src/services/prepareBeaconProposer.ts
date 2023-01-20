@@ -1,5 +1,5 @@
 import {Epoch, bellatrix} from "@lodestar/types";
-import {Api, routes} from "@lodestar/api";
+import {Api, ApiError, routes} from "@lodestar/api";
 import {IBeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
@@ -44,7 +44,7 @@ export function pollPrepareBeaconProposer(
             feeRecipient: validatorStore.getFeeRecipientByIndex(index),
           })
         );
-        await api.validator.prepareBeaconProposer(proposers);
+        ApiError.assert(await api.validator.prepareBeaconProposer(proposers));
       } catch (e) {
         logger.error("Failed to register proposers with beacon", {epoch}, e as Error);
       }
@@ -107,7 +107,7 @@ export function pollBuilderValidatorRegistration(
               }
             )
           );
-          await api.validator.registerValidator(registrations);
+          ApiError.assert(await api.validator.registerValidator(registrations));
         } catch (e) {
           logger.error("Failed to register validator registrations with builder", {epoch}, e as Error);
         }

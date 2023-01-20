@@ -2,6 +2,8 @@ import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum6
 import {ContainerType, Type, VectorCompositeType} from "@chainsafe/ssz";
 import {FINALIZED_ROOT_DEPTH} from "@lodestar/params";
 import {RouteDef, TypeJson} from "../../utils/index.js";
+import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {ApiClientResponse} from "../../interfaces.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -101,7 +103,11 @@ export type Api = {
    * @param topics Event types to subscribe to
    * @returns Opened SSE stream.
    */
-  eventstream(topics: EventType[], signal: AbortSignal, onEvent: (event: BeaconEvent) => void): void;
+  eventstream(
+    topics: EventType[],
+    signal: AbortSignal,
+    onEvent: (event: BeaconEvent) => void
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
 };
 
 export const routesData: {[K in keyof Api]: RouteDef} = {

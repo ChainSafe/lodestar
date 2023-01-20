@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Api} from "@lodestar/api";
+import {Api, HttpStatusCode} from "@lodestar/api";
 import {DoppelgangerService, DoppelgangerStatus} from "../../../src/services/doppelgangerService.js";
 import {IndicesService} from "../../../src/services/indices.js";
 import {testLogger} from "../../utils/logger.js";
@@ -82,7 +82,7 @@ describe("doppelganger service", () => {
       const index = 0;
       const pubkeyHex = "0x" + "aa".repeat(48);
 
-      const beaconApi = getMockBeaconApiServer(livenessMap);
+      const beaconApi = getMockBeaconApi(livenessMap);
 
       const logger = testLogger();
       const controller = new AbortController();
@@ -142,18 +142,22 @@ class MapDef<K, V> extends Map<K, V> {
 
 type LivenessMap = Map<Epoch, Map<ValidatorIndex, boolean>>;
 
-function getMockBeaconApiServer(livenessMap: LivenessMap): Api {
+function getMockBeaconApi(livenessMap: LivenessMap): Api {
   return ({
     validator: {
       async getLiveness(indices, epoch) {
         return {
-          data: indices.map((index) => {
-            const livenessEpoch = livenessMap.get(epoch);
-            if (!livenessEpoch) throw Error(`Unknown epoch ${epoch}`);
-            const isLive = livenessEpoch.get(index);
-            if (isLive === undefined) throw Error(`No liveness for epoch ${epoch} index ${index}`);
-            return {index, epoch, isLive};
-          }),
+          response: {
+            data: indices.map((index) => {
+              const livenessEpoch = livenessMap.get(epoch);
+              if (!livenessEpoch) throw Error(`Unknown epoch ${epoch}`);
+              const isLive = livenessEpoch.get(index);
+              if (isLive === undefined) throw Error(`No liveness for epoch ${epoch} index ${index}`);
+              return {index, epoch, isLive};
+            }),
+          },
+          ok: true,
+          status: HttpStatusCode.OK,
         };
       },
     } as Partial<Api["validator"]>,

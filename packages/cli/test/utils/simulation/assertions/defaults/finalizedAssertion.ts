@@ -1,3 +1,4 @@
+import {ApiError} from "@lodestar/api";
 import {Slot} from "@lodestar/types";
 import {SimulationAssertion} from "../../interfaces.js";
 import {everySlotMatcher} from "../matchers.js";
@@ -7,7 +8,8 @@ export const finalizedAssertion: SimulationAssertion<"finalized", Slot> = {
   match: everySlotMatcher,
   async capture({node}) {
     const finalized = await node.cl.api.beacon.getBlockHeader("finalized");
-    return finalized.data.header.message.slot ?? 0;
+    ApiError.assert(finalized);
+    return finalized.response.data.header.message.slot ?? 0;
   },
   async assert({nodes, store, slot, clock, epoch}) {
     const errors: string[] = [];

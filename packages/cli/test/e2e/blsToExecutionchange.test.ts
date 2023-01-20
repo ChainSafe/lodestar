@@ -1,6 +1,6 @@
 import path from "node:path";
 import {sleep, retry} from "@lodestar/utils";
-import {getClient} from "@lodestar/api";
+import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
@@ -39,7 +39,8 @@ describeCliTest("bLSToExecutionChange cmd", function ({spawnCli}) {
     await retry(
       async () => {
         const head = await client.beacon.getBlockHeader("head");
-        if (head.data.header.message.slot < 1) throw Error("pre-genesis");
+        ApiError.assert(head);
+        if (head.response.data.header.message.slot < 1) throw Error("pre-genesis");
       },
       {retryDelay: 1000, retries: 60}
     );
@@ -68,7 +69,8 @@ describeCliTest("bLSToExecutionChange cmd", function ({spawnCli}) {
     ]);
 
     const pooledBlsChanges = await client.beacon.getPoolBlsToExecutionChanges();
-    const message = pooledBlsChanges.data[0].message;
+    ApiError.assert(pooledBlsChanges);
+    const message = pooledBlsChanges.response.data[0].message;
     const {validatorIndex, toExecutionAddress, fromBlsPubkey} = message;
     if (
       validatorIndex !== 0 ||

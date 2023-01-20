@@ -1,4 +1,4 @@
-import {routes} from "@lodestar/api";
+import {routes, ServerApi} from "@lodestar/api";
 import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
 import {ApiModules} from "../types.js";
 import {resolveStateId} from "../beacon/state/utils.js";
@@ -7,7 +7,7 @@ import {IApiOptions} from "../../options.js";
 export function getProofApi(
   opts: IApiOptions,
   {chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">
-): routes.proof.Api {
+): ServerApi<routes.proof.Api> {
   // It's currently possible to request gigantic proofs (eg: a proof of the entire beacon state)
   // We want some some sort of resistance against this DoS vector.
   const maxGindicesInProof = opts.maxGindicesInProof ?? 512;

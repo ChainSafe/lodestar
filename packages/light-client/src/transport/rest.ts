@@ -1,7 +1,7 @@
 import EventEmitter from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {allForks, altair, SyncPeriod} from "@lodestar/types";
-import {Api, routes} from "@lodestar/api";
+import {Api, ApiError, routes} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
 import {LightClientTransport} from "./interface.js";
 
@@ -21,7 +21,7 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
     super();
   }
 
-  getUpdates(
+  async getUpdates(
     startPeriod: SyncPeriod,
     count: number
   ): Promise<
@@ -30,23 +30,33 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
       data: altair.LightClientUpdate;
     }[]
   > {
-    return this.api.lightclient.getUpdates(startPeriod, count);
+    const res = await this.api.lightclient.getUpdates(startPeriod, count);
+    ApiError.assert(res);
+    return res.response;
   }
 
-  getOptimisticUpdate(): Promise<{version: ForkName; data: altair.LightClientOptimisticUpdate}> {
-    return this.api.lightclient.getOptimisticUpdate();
+  async getOptimisticUpdate(): Promise<{version: ForkName; data: altair.LightClientOptimisticUpdate}> {
+    const res = await this.api.lightclient.getOptimisticUpdate();
+    ApiError.assert(res);
+    return res.response;
   }
 
-  getFinalityUpdate(): Promise<{version: ForkName; data: altair.LightClientFinalityUpdate}> {
-    return this.api.lightclient.getFinalityUpdate();
+  async getFinalityUpdate(): Promise<{version: ForkName; data: altair.LightClientFinalityUpdate}> {
+    const res = await this.api.lightclient.getFinalityUpdate();
+    ApiError.assert(res);
+    return res.response;
   }
 
-  getBootstrap(blockRoot: string): Promise<{version: ForkName; data: altair.LightClientBootstrap}> {
-    return this.api.lightclient.getBootstrap(blockRoot);
+  async getBootstrap(blockRoot: string): Promise<{version: ForkName; data: altair.LightClientBootstrap}> {
+    const res = await this.api.lightclient.getBootstrap(blockRoot);
+    ApiError.assert(res);
+    return res.response;
   }
 
-  fetchBlock(blockRootAsString: string): Promise<{version: ForkName; data: allForks.SignedBeaconBlock}> {
-    return this.api.beacon.getBlockV2(blockRootAsString);
+  async fetchBlock(blockRootAsString: string): Promise<{version: ForkName; data: allForks.SignedBeaconBlock}> {
+    const res = await this.api.beacon.getBlockV2(blockRootAsString);
+    ApiError.assert(res);
+    return res.response;
   }
 
   onOptimisticUpdate(handler: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void): void {
@@ -64,7 +74,7 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
       return;
     }
 
-    this.api.events.eventstream(
+    void this.api.events.eventstream(
       [routes.events.EventType.lightClientOptimisticUpdate, routes.events.EventType.lightClientFinalityUpdate],
       this.controller.signal,
       (event) => {

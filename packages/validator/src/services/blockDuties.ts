@@ -1,8 +1,7 @@
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {Api, routes} from "@lodestar/api";
-import {extendError} from "@lodestar/utils";
+import {Api, ApiError, routes} from "@lodestar/api";
 import {IClock, differenceHex, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -152,9 +151,9 @@ export class BlockDutiesService {
       return;
     }
 
-    const proposerDuties = await this.api.validator.getProposerDuties(epoch).catch((e: Error) => {
-      throw extendError(e, "Error on getProposerDuties");
-    });
+    const res = await this.api.validator.getProposerDuties(epoch);
+    ApiError.assert(res, "Error on getProposerDuties");
+    const proposerDuties = res.response;
     const {dependentRoot} = proposerDuties;
     const relevantDuties = proposerDuties.data.filter((duty) => {
       const pubkeyHex = toHexString(duty.pubkey);

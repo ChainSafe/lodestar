@@ -53,6 +53,6 @@ export const testData: GenericServerTestCases<Api> = {
   },
   getHealth: {
     args: [],
-    res: 200,
+    res: undefined,
   },
 };

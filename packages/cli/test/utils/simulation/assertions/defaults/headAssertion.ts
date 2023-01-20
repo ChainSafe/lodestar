@@ -1,3 +1,4 @@
+import {ApiError} from "@lodestar/api";
 import {RootHex, Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {SimulationAssertion} from "../../interfaces.js";
@@ -12,10 +13,11 @@ export const headAssertion: SimulationAssertion<"head", HeadSummary> = {
   id: "head",
   async capture({node}) {
     const head = await node.cl.api.beacon.getBlockHeader("head");
+    ApiError.assert(head);
 
     return {
-      blockRoot: toHexString(head.data.root),
-      slot: head.data.header.message.slot,
+      blockRoot: toHexString(head.response.data.root),
+      slot: head.response.data.header.message.slot,
     };
   },
 

@@ -3,6 +3,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 
+import {ApiError} from "@lodestar/api";
 import {validateBlobsAndKzgCommitments} from "../../chain/produceBlock/validateBlobsAndKzgCommitments.js";
 import {IExecutionBuilder} from "./interface.js";
 
@@ -50,7 +51,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   }
 
   async registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void> {
-    return this.api.registerValidator(registrations);
+    ApiError.assert(await this.api.registerValidator(registrations));
   }
 
   async getHeader(
@@ -62,16 +63,19 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     blockValue: Wei;
     blobKzgCommitments?: eip4844.BlobKzgCommitments;
   }> {
-    const {data: signedBid} = await this.api.getHeader(slot, parentHash, proposerPubKey);
-    const {header, value: blockValue} = signedBid.message;
-    const {blobKzgCommitments} = signedBid.message as {blobKzgCommitments?: eip4844.BlobKzgCommitments};
+    const res = await this.api.getHeader(slot, parentHash, proposerPubKey);
+    ApiError.assert(res, "execution.builder.getheader");
+    const {header, value: blockValue} = res.response.data.message;
+    const {blobKzgCommitments} = res.response.data.message as {blobKzgCommitments?: eip4844.BlobKzgCommitments};
     return {header, blockValue, blobKzgCommitments};
   }
 
   async submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<allForks.SignedBeaconBlock> {
-    const {data: executionPayload} = await this.api.submitBlindedBlock(signedBlock);
+    const res = await this.api.submitBlindedBlock(signedBlock);
+    ApiError.assert(res, "execution.builder.submitBlindedBlock");
+    const executionPayload = res.response.data;
     const expectedTransactionsRoot = signedBlock.message.body.executionPayloadHeader.transactionsRoot;
-    const actualTransactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(executionPayload.transactions);
+    const actualTransactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(res.response.data.transactions);
     if (!byteArrayEquals(expectedTransactionsRoot, actualTransactionsRoot)) {
       throw Error(
         `Invalid transactionsRoot of the builder payload, expected=${toHexString(
@@ -89,7 +93,9 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   async submitBlindedBlockV2(
     signedBlock: allForks.SignedBlindedBeaconBlock
   ): Promise<allForks.SignedBeaconBlockAndBlobsSidecar> {
-    const {data: signedBeaconBlockAndBlobsSidecar} = await this.api.submitBlindedBlockV2(signedBlock);
+    const res = await this.api.submitBlindedBlockV2(signedBlock);
+    ApiError.assert(res, "execution.builder.submitBlindedBlockV2");
+    const signedBeaconBlockAndBlobsSidecar = res.response.data;
     // Since we get the full block back, we can just just compare the hash of blinded to returned
     const {beaconBlock, blobsSidecar} = signedBeaconBlockAndBlobsSidecar;
 

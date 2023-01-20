@@ -1,3 +1,4 @@
+import {ApiError} from "@lodestar/api";
 import {TIMELY_HEAD_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@lodestar/params";
 import {isActiveValidator} from "@lodestar/state-transition";
 import {altair} from "@lodestar/types";
@@ -28,7 +29,9 @@ export const attestationParticipationAssertion: SimulationAssertion<
       return null;
     }
 
-    const state = (await node.cl.api.debug.getStateV2("head")).data as altair.BeaconState;
+    const res = await node.cl.api.debug.getStateV2("head");
+    ApiError.assert(res);
+    const state = res.response.data as altair.BeaconState;
 
     // Attestation to be computed at the end of epoch. At that time the "currentEpochParticipation" is all set to zero
     // and we have to use "previousEpochParticipation" instead.

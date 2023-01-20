@@ -1,6 +1,7 @@
 import {IChainForkConfig} from "@lodestar/config";
-import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes} from "../routes/config.js";
-import {IHttpClient, generateGenericJsonClient} from "../../utils/client/index.js";
+import {generateGenericJsonClient, IHttpClient} from "../../utils/client/index.js";
+import {ReturnTypes} from "../../utils/types.js";
+import {Api, getReqSerializers, getReturnTypes, ReqTypes, routesData} from "../routes/config.js";
 
 /**
  * REST HTTP client for config routes
@@ -9,5 +10,10 @@ export function getClient(config: IChainForkConfig, httpClient: IHttpClient): Ap
   const reqSerializers = getReqSerializers();
   const returnTypes = getReturnTypes();
   // All routes return JSON, use a client auto-generator
-  return generateGenericJsonClient<Api, ReqTypes>(routesData, reqSerializers, returnTypes, httpClient);
+  return generateGenericJsonClient<Api, ReqTypes>(
+    routesData,
+    reqSerializers,
+    returnTypes as ReturnTypes<Api>,
+    httpClient
+  );
 }

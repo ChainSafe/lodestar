@@ -1,4 +1,4 @@
-import {routes} from "@lodestar/api";
+import {routes, ServerApi} from "@lodestar/api";
 import {Epoch, ssz} from "@lodestar/types";
 import {SYNC_COMMITTEE_SUBNET_SIZE, ForkName} from "@lodestar/params";
 import {validateGossipAttestation} from "../../../../chain/validation/index.js";
@@ -15,7 +15,7 @@ export function getBeaconPoolApi({
   logger,
   metrics,
   network,
-}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): routes.beacon.pool.Api {
+}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): ServerApi<routes.beacon.pool.Api> {
   return {
     async getPoolAttestations(filters) {
       // Already filtered by slot

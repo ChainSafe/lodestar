@@ -1,8 +1,8 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {Slot, CommitteeIndex, altair, Root} from "@lodestar/types";
-import {extendError, sleep} from "@lodestar/utils";
+import {sleep} from "@lodestar/utils";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Api} from "@lodestar/api";
+import {Api, ApiError} from "@lodestar/api";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -107,13 +107,12 @@ export class SyncCommitteeService {
     // Spec: the validator should prepare a SyncCommitteeMessage for the previous slot (slot - 1)
     // as soon as they have determined the head block of slot - 1
 
-    const blockRoot =
+    const blockRoot: Uint8Array =
       this.chainHeaderTracker.getCurrentChainHead(slot) ??
-      (
-        await this.api.beacon.getBlockRoot("head").catch((e: Error) => {
-          throw extendError(e, "Error producing SyncCommitteeMessage");
-        })
-      ).data.root;
+      (await this.api.beacon.getBlockRoot("head").then((res) => {
+        ApiError.assert(res, "Error producing SyncCommitteeMessage");
+        return res.response.data.root;
+      }));
 
     const signatures: altair.SyncCommitteeMessage[] = [];
 
@@ -145,7 +144,7 @@ export class SyncCommitteeService {
 
     if (signatures.length > 0) {
       try {
-        await this.api.beacon.submitPoolSyncCommitteeSignatures(signatures);
+        ApiError.assert(await this.api.beacon.submitPoolSyncCommitteeSignatures(signatures));
         this.logger.info("Published SyncCommitteeMessage", {...logCtx, count: signatures.length});
         this.metrics?.publishedSyncCommitteeMessage.inc(signatures.length);
       } catch (e) {
@@ -180,11 +179,8 @@ export class SyncCommitteeService {
     }
 
     this.logger.verbose("Producing SyncCommitteeContribution", logCtx);
-    const contribution = await this.api.validator
-      .produceSyncCommitteeContribution(slot, subcommitteeIndex, beaconBlockRoot)
-      .catch((e: Error) => {
-        throw extendError(e, "Error producing SyncCommitteeContribution");
-      });
+    const res = await this.api.validator.produceSyncCommitteeContribution(slot, subcommitteeIndex, beaconBlockRoot);
+    ApiError.assert(res, "Error producing sync committee contribution during produceAndPublishAggregates");
 
     const signedContributions: altair.SignedContributionAndProof[] = [];
 
@@ -195,7 +191,7 @@ export class SyncCommitteeService {
           // Produce signed contributions only for validators that are subscribed aggregators.
           if (selectionProof !== null) {
             signedContributions.push(
-              await this.validatorStore.signContributionAndProof(duty, selectionProof, contribution.data)
+              await this.validatorStore.signContributionAndProof(duty, selectionProof, res.response.data)
             );
             this.logger.debug("Signed SyncCommitteeContribution", logCtxValidator);
           }
@@ -209,7 +205,8 @@ export class SyncCommitteeService {
 
     if (signedContributions.length > 0) {
       try {
-        await this.api.validator.publishContributionAndProofs(signedContributions);
+        const res = await this.api.validator.publishContributionAndProofs(signedContributions);
+        ApiError.assert(res);
         this.logger.info("Published SyncCommitteeContribution", {...logCtx, count: signedContributions.length});
         this.metrics?.publishedSyncCommitteeContribution.inc(signedContributions.length);
       } catch (e) {

@@ -1,5 +1,7 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, ssz, StringType, RootHex} from "@lodestar/types";
+import {ApiClientResponse} from "../../../interfaces.js";
+import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {
   RoutesData,
   ReturnTypes,
@@ -83,7 +85,14 @@ export type Api = {
    * @param stateId State identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
-  getStateRoot(stateId: StateId): Promise<{executionOptimistic: ExecutionOptimistic; data: {root: Root}}>;
+  getStateRoot(
+    stateId: StateId
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: {root: Root}; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
 
   /**
    * Get Fork object for requested state
@@ -91,7 +100,14 @@ export type Api = {
    * @param stateId State identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", "justified", \<slot\>, \<hex encoded stateRoot with 0x prefix\>.
    */
-  getStateFork(stateId: StateId): Promise<{executionOptimistic: ExecutionOptimistic; data: phase0.Fork}>;
+  getStateFork(
+    stateId: StateId
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: phase0.Fork; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
 
   /**
    * Get state finality checkpoints
@@ -102,7 +118,12 @@ export type Api = {
    */
   getStateFinalityCheckpoints(
     stateId: StateId
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: FinalityCheckpoints}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: FinalityCheckpoints; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
 
   /**
    * Get validators from state
@@ -115,7 +136,12 @@ export type Api = {
   getStateValidators(
     stateId: StateId,
     filters?: ValidatorFilters
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: ValidatorResponse[]}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: ValidatorResponse[]; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
 
   /**
    * Get validator from state by id
@@ -127,7 +153,12 @@ export type Api = {
   getStateValidator(
     stateId: StateId,
     validatorId: ValidatorId
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: ValidatorResponse}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: ValidatorResponse; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
 
   /**
    * Get validator balances from state
@@ -139,7 +170,12 @@ export type Api = {
   getStateValidatorBalances(
     stateId: StateId,
     indices?: ValidatorId[]
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: ValidatorBalance[]}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: ValidatorBalance[]; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST
+    >
+  >;
 
   /**
    * Get all committees for a state.
@@ -153,12 +189,22 @@ export type Api = {
   getEpochCommittees(
     stateId: StateId,
     filters?: CommitteesFilters
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: EpochCommitteeResponse[]}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: EpochCommitteeResponse[]; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
 
   getEpochSyncCommittees(
     stateId: StateId,
     epoch?: Epoch
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: EpochSyncCommitteeResponse}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: EpochSyncCommitteeResponse; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
 };
 
 /**

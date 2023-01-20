@@ -7,7 +7,6 @@ import {
   RoutesData,
   ReturnTypes,
   ArrayOf,
-  ContainerData,
   Schema,
   WithVersion,
   reqOnlyBody,
@@ -16,7 +15,10 @@ import {
   ReqSerializer,
   ContainerDataExecutionOptimistic,
   WithExecutionOptimistic,
+  ContainerData,
 } from "../../../utils/index.js";
+import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
+import {ApiClientResponse} from "../../../interfaces.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -43,7 +45,7 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlock(blockId: BlockId): Promise<{data: allForks.SignedBeaconBlock}>;
+  getBlock(blockId: BlockId): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlock}}>>;
 
   /**
    * Get block
@@ -53,7 +55,18 @@ export type Api = {
    */
   getBlockV2(
     blockId: BlockId
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: allForks.SignedBeaconBlock; version: ForkName}>;
+  ): Promise<
+    ApiClientResponse<
+      {
+        [HttpStatusCode.OK]: {
+          data: allForks.SignedBeaconBlock;
+          executionOptimistic: ExecutionOptimistic;
+          version: ForkName;
+        };
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
 
   /**
    * Get block attestations
@@ -63,7 +76,17 @@ export type Api = {
    */
   getBlockAttestations(
     blockId: BlockId
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: phase0.Attestation[]}>;
+  ): Promise<
+    ApiClientResponse<
+      {
+        [HttpStatusCode.OK]: {
+          data: phase0.Attestation[];
+          executionOptimistic: ExecutionOptimistic;
+        };
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
 
   /**
    * Get block header
@@ -71,7 +94,19 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockHeader(blockId: BlockId): Promise<{executionOptimistic: ExecutionOptimistic; data: BlockHeaderResponse}>;
+  getBlockHeader(
+    blockId: BlockId
+  ): Promise<
+    ApiClientResponse<
+      {
+        [HttpStatusCode.OK]: {
+          data: BlockHeaderResponse;
+          executionOptimistic: ExecutionOptimistic;
+        };
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
 
   /**
    * Get block headers
@@ -81,7 +116,17 @@ export type Api = {
    */
   getBlockHeaders(
     filters: Partial<{slot: Slot; parentRoot: string}>
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: BlockHeaderResponse[]}>;
+  ): Promise<
+    ApiClientResponse<
+      {
+        [HttpStatusCode.OK]: {
+          data: BlockHeaderResponse[];
+          executionOptimistic: ExecutionOptimistic;
+        };
+      },
+      HttpStatusCode.BAD_REQUEST
+    >
+  >;
 
   /**
    * Get block root
@@ -89,7 +134,19 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockRoot(blockId: BlockId): Promise<{executionOptimistic: ExecutionOptimistic; data: {root: Root}}>;
+  getBlockRoot(
+    blockId: BlockId
+  ): Promise<
+    ApiClientResponse<
+      {
+        [HttpStatusCode.OK]: {
+          data: {root: Root};
+          executionOptimistic: ExecutionOptimistic;
+        };
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
 
   /**
    * Publish a signed block.
@@ -103,20 +160,45 @@ export type Api = {
    * @param requestBody The `SignedBeaconBlock` object composed of `BeaconBlock` object (produced by beacon node) and validator signature.
    * @returns any The block was validated successfully and has been broadcast. It has also been integrated into the beacon node's database.
    */
-  publishBlock(block: allForks.SignedBeaconBlock): Promise<void>;
+  publishBlock(
+    block: allForks.SignedBeaconBlock
+  ): Promise<
+    ApiClientResponse<
+      {
+        [HttpStatusCode.OK]: void;
+        [HttpStatusCode.ACCEPTED]: void;
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
   /**
    * Publish a signed blinded block by submitting it to the mev relay and patching in the block
    * transactions beacon node gets in response.
    */
-  publishBlindedBlock(block: allForks.SignedBlindedBeaconBlock): Promise<void>;
-
+  publishBlindedBlock(
+    block: allForks.SignedBlindedBeaconBlock
+  ): Promise<
+    ApiClientResponse<
+      {
+        [HttpStatusCode.OK]: void;
+        [HttpStatusCode.ACCEPTED]: void;
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
   /**
    * Get block BlobsSidecar
    * Retrieves BlobsSidecar included in requested block.
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlobsSidecar(blockId: BlockId): Promise<{executionOptimistic: ExecutionOptimistic; data: eip4844.BlobsSidecar}>;
+  getBlobsSidecar(
+    blockId: BlockId
+  ): Promise<
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {executionOptimistic: ExecutionOptimistic; data: eip4844.BlobsSidecar};
+    }>
+  >;
 };
 
 /**

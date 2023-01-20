@@ -1,4 +1,6 @@
 import {Epoch, RootHex, Slot} from "@lodestar/types";
+import {ApiClientResponse} from "../../interfaces.js";
+import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {
   jsonType,
   ReqEmpty,
@@ -73,48 +75,50 @@ export type LodestarNodePeer = NodePeer & {
 
 export type Api = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
-  writeHeapdump(dirpath?: string): Promise<{data: {filepath: string}}>;
+  writeHeapdump(dirpath?: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
   /** TODO: description */
-  getLatestWeakSubjectivityCheckpointEpoch(): Promise<{data: Epoch}>;
+  getLatestWeakSubjectivityCheckpointEpoch(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: Epoch}}>>;
   /** TODO: description */
-  getSyncChainsDebugState(): Promise<{data: SyncChainDebugState[]}>;
+  getSyncChainsDebugState(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: SyncChainDebugState[]}}>>;
   /** Dump all items in a gossip queue, by gossipType */
-  getGossipQueueItems(gossipType: string): Promise<GossipQueueItem[]>;
+  getGossipQueueItems(gossipType: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: GossipQueueItem[]}}>>;
   /** Dump all items in the regen queue */
-  getRegenQueueItems(): Promise<RegenQueueItem[]>;
+  getRegenQueueItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: RegenQueueItem[]}}>>;
   /** Dump all items in the block processor queue */
-  getBlockProcessorQueueItems(): Promise<BlockProcessorQueueItem[]>;
+  getBlockProcessorQueueItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: BlockProcessorQueueItem[]}}>>;
   /** Dump a summary of the states in the StateContextCache */
-  getStateCacheItems(): Promise<StateCacheItem[]>;
+  getStateCacheItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: StateCacheItem[]}}>>;
   /** Dump a summary of the states in the CheckpointStateCache */
-  getCheckpointStateCacheItems(): Promise<StateCacheItem[]>;
+  getCheckpointStateCacheItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: StateCacheItem[]}}>>;
   /** Dump peer gossip stats by peer */
-  getGossipPeerScoreStats(): Promise<GossipPeerScoreStat[]>;
+  getGossipPeerScoreStats(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: GossipPeerScoreStat[]}}>>;
   /** Dump lodestar score stats by peer */
-  getLodestarPeerScoreStats(): Promise<PeerScoreStat[]>;
+  getLodestarPeerScoreStats(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: PeerScoreStat[]}}>>;
   /** Run GC with `global.gc()` */
-  runGC(): Promise<void>;
+  runGC(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
   /** Drop all states in the state cache */
-  dropStateCache(): Promise<void>;
+  dropStateCache(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
 
   /** Connect to peer at this multiaddress */
-  connectPeer(peerId: string, multiaddrStrs: string[]): Promise<void>;
+  connectPeer(peerId: string, multiaddrStrs: string[]): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
   /** Disconnect peer */
-  disconnectPeer(peerId: string): Promise<void>;
+  disconnectPeer(peerId: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
   /** Same to node api with new fields */
-  getPeers(filters?: FilterGetPeers): Promise<{data: LodestarNodePeer[]; meta: {count: number}}>;
+  getPeers(
+    filters?: FilterGetPeers
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: LodestarNodePeer[]; meta: {count: number}}}>>;
 
   /** Dump Discv5 Kad values */
-  discv5GetKadValues(): Promise<{data: string[]}>;
+  discv5GetKadValues(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: string[]}}>>;
 
   /**
    * Dump level-db entry keys for a given Bucket declared in code, or for all buckets.
    * @param bucket must be the string name of a bucket entry: `allForks_blockArchive`
    */
-  dumpDbBucketKeys(bucket: string): Promise<string[]>;
+  dumpDbBucketKeys(bucket: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: string[]}}>>;
 
   /** Return all entries in the StateArchive index with bucket index_stateArchiveRootIndex */
-  dumpDbStateIndex(): Promise<{root: RootHex; slot: Slot}[]>;
+  dumpDbStateIndex(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {root: RootHex; slot: Slot}[]}}>>;
 };
 
 /**

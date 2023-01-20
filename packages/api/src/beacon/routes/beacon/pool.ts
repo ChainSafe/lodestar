@@ -1,14 +1,16 @@
 import {phase0, altair, capella, CommitteeIndex, Slot, ssz} from "@lodestar/types";
+import {ApiClientResponse} from "../../../interfaces.js";
+import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {
   RoutesData,
   ReturnTypes,
   ArrayOf,
-  ContainerData,
   Schema,
   reqOnlyBody,
   ReqSerializers,
   reqEmpty,
   ReqEmpty,
+  ContainerData,
 } from "../../../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -27,7 +29,9 @@ export type Api = {
    * @returns any Successful response
    * @throws ApiError
    */
-  getPoolAttestations(filters?: Partial<AttestationFilters>): Promise<{data: phase0.Attestation[]}>;
+  getPoolAttestations(
+    filters?: Partial<AttestationFilters>
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.Attestation[]}}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
    * Get AttesterSlashings from operations pool
@@ -35,7 +39,7 @@ export type Api = {
    * @returns any Successful response
    * @throws ApiError
    */
-  getPoolAttesterSlashings(): Promise<{data: phase0.AttesterSlashing[]}>;
+  getPoolAttesterSlashings(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.AttesterSlashing[]}}>>;
 
   /**
    * Get ProposerSlashings from operations pool
@@ -43,7 +47,7 @@ export type Api = {
    * @returns any Successful response
    * @throws ApiError
    */
-  getPoolProposerSlashings(): Promise<{data: phase0.ProposerSlashing[]}>;
+  getPoolProposerSlashings(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.ProposerSlashing[]}}>>;
 
   /**
    * Get SignedVoluntaryExit from operations pool
@@ -51,7 +55,7 @@ export type Api = {
    * @returns any Successful response
    * @throws ApiError
    */
-  getPoolVoluntaryExits(): Promise<{data: phase0.SignedVoluntaryExit[]}>;
+  getPoolVoluntaryExits(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.SignedVoluntaryExit[]}}>>;
 
   /**
    * Get SignedBLSToExecutionChange from operations pool
@@ -59,7 +63,9 @@ export type Api = {
    * @returns any Successful response
    * @throws ApiError
    */
-  getPoolBlsToExecutionChanges(): Promise<{data: capella.SignedBLSToExecutionChange[]}>;
+  getPoolBlsToExecutionChanges(): Promise<
+    ApiClientResponse<{[HttpStatusCode.OK]: {data: capella.SignedBLSToExecutionChange[]}}>
+  >;
 
   /**
    * Submit Attestation objects to node
@@ -73,7 +79,9 @@ export type Api = {
    * @returns any Attestations are stored in pool and broadcast on appropriate subnet
    * @throws ApiError
    */
-  submitPoolAttestations(attestations: phase0.Attestation[]): Promise<void>;
+  submitPoolAttestations(
+    attestations: phase0.Attestation[]
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
    * Submit AttesterSlashing object to node's pool
@@ -82,7 +90,9 @@ export type Api = {
    * @returns any Success
    * @throws ApiError
    */
-  submitPoolAttesterSlashings(slashing: phase0.AttesterSlashing): Promise<void>;
+  submitPoolAttesterSlashings(
+    slashing: phase0.AttesterSlashing
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
    * Submit ProposerSlashing object to node's pool
@@ -91,7 +101,9 @@ export type Api = {
    * @returns any Success
    * @throws ApiError
    */
-  submitPoolProposerSlashings(slashing: phase0.ProposerSlashing): Promise<void>;
+  submitPoolProposerSlashings(
+    slashing: phase0.ProposerSlashing
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
    * Submit SignedVoluntaryExit object to node's pool
@@ -100,7 +112,9 @@ export type Api = {
    * @returns any Voluntary exit is stored in node and broadcasted to network
    * @throws ApiError
    */
-  submitPoolVoluntaryExit(exit: phase0.SignedVoluntaryExit): Promise<void>;
+  submitPoolVoluntaryExit(
+    exit: phase0.SignedVoluntaryExit
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
    * Submit SignedBLSToExecutionChange object to node's pool
@@ -109,12 +123,16 @@ export type Api = {
    * @returns any BLSToExecutionChange is stored in node and broadcasted to network
    * @throws ApiError
    */
-  submitPoolBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange[]): Promise<void>;
+  submitPoolBlsToExecutionChange(
+    blsToExecutionChange: capella.SignedBLSToExecutionChange[]
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
    * TODO: Add description
    */
-  submitPoolSyncCommitteeSignatures(signatures: altair.SyncCommitteeMessage[]): Promise<void>;
+  submitPoolSyncCommitteeSignatures(
+    signatures: altair.SyncCommitteeMessage[]
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 };
 
 /**

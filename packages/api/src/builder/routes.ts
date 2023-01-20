@@ -16,21 +16,40 @@ import {
 } from "../utils/index.js";
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 import {getReqSerializers as getBeaconReqSerializers} from "../beacon/routes/beacon/block.js";
+import {HttpStatusCode} from "../utils/client/httpStatusCode.js";
+import {ApiClientResponse} from "../interfaces.js";
 
 export type Api = {
-  status(): Promise<void>;
-  registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
+  status(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.SERVICE_UNAVAILABLE>>;
+  registerValidator(
+    registrations: bellatrix.SignedValidatorRegistrationV1[]
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
   getHeader(
     slot: Slot,
     parentHash: Root,
     proposerPubKey: BLSPubkey
-  ): Promise<{version: ForkName; data: allForks.SignedBuilderBid}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.SignedBuilderBid; version: ForkName}},
+      HttpStatusCode.NOT_FOUND | HttpStatusCode.BAD_REQUEST
+    >
+  >;
   submitBlindedBlock(
     signedBlock: allForks.SignedBlindedBeaconBlock
-  ): Promise<{version: ForkName; data: allForks.ExecutionPayload}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.ExecutionPayload; version: ForkName}},
+      HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
   submitBlindedBlockV2(
     signedBlock: allForks.SignedBlindedBeaconBlock
-  ): Promise<{version: ForkName; data: allForks.SignedBeaconBlockAndBlobsSidecar}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlockAndBlobsSidecar; version: ForkName}},
+      HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
 };
 
 /**

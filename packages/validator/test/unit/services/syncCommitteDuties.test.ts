@@ -5,7 +5,7 @@ import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
-import {routes} from "@lodestar/api";
+import {HttpStatusCode, routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
 import {
   SyncCommitteeDutiesService,
@@ -61,7 +61,11 @@ describe("SyncCommitteeDutiesService", function () {
       index: indices[i],
       validator: {...defaultValidator.validator, pubkey: pubkeys[i]},
     }));
-    api.beacon.getStateValidators.resolves({data: validatorResponses, executionOptimistic: false});
+    api.beacon.getStateValidators.resolves({
+      response: {data: validatorResponses, executionOptimistic: false},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
   });
   afterEach(() => controller.abort());
 
@@ -73,7 +77,11 @@ describe("SyncCommitteeDutiesService", function () {
       validatorIndex: indices[0],
       validatorSyncCommitteeIndices: [7],
     };
-    api.validator.getSyncCommitteeDuties.resolves({data: [duty], executionOptimistic: false});
+    api.validator.getSyncCommitteeDuties.resolves({
+      response: {data: [duty], executionOptimistic: false},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
 
     // Accept all subscriptions
     api.validator.prepareSyncCommitteeSubnets.resolves();
@@ -133,14 +141,14 @@ describe("SyncCommitteeDutiesService", function () {
     };
     api.validator.getSyncCommitteeDuties
       .withArgs(0, sinon.match.any)
-      .resolves({data: [duty], executionOptimistic: false});
+      .resolves({response: {data: [duty], executionOptimistic: false}, ok: true, status: HttpStatusCode.OK});
     // sync period 1 should all return empty
     api.validator.getSyncCommitteeDuties
       .withArgs(256, sinon.match.any)
-      .resolves({data: [], executionOptimistic: false});
+      .resolves({response: {data: [], executionOptimistic: false}, ok: true, status: HttpStatusCode.OK});
     api.validator.getSyncCommitteeDuties
       .withArgs(257, sinon.match.any)
-      .resolves({data: [], executionOptimistic: false});
+      .resolves({response: {data: [], executionOptimistic: false}, ok: true, status: HttpStatusCode.OK});
     const duty2: routes.validator.SyncDuty = {
       pubkey: pubkeys[1],
       validatorIndex: indices[1],
@@ -148,7 +156,7 @@ describe("SyncCommitteeDutiesService", function () {
     };
     api.validator.getSyncCommitteeDuties
       .withArgs(1, sinon.match.any)
-      .resolves({data: [duty2], executionOptimistic: false});
+      .resolves({response: {data: [duty2], executionOptimistic: false}, ok: true, status: HttpStatusCode.OK});
 
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
@@ -203,7 +211,7 @@ describe("SyncCommitteeDutiesService", function () {
     };
     api.validator.getSyncCommitteeDuties
       .withArgs(sinon.match.any, sinon.match.any)
-      .resolves({data: [duty1, duty2], executionOptimistic: false});
+      .resolves({response: {data: [duty1, duty2], executionOptimistic: false}, ok: true, status: HttpStatusCode.OK});
 
     // Accept all subscriptions
     api.validator.prepareSyncCommitteeSubnets.resolves();

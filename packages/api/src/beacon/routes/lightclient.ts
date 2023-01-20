@@ -6,12 +6,14 @@ import {
   ReturnTypes,
   RoutesData,
   Schema,
-  ContainerData,
   ReqSerializers,
   reqEmpty,
   ReqEmpty,
   WithVersion,
+  ContainerData,
 } from "../../utils/index.js";
+import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {ApiClientResponse} from "../../interfaces.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -34,27 +36,61 @@ export type Api = {
     startPeriod: SyncPeriod,
     count: number
   ): Promise<
-    {
-      version: ForkName;
-      data: altair.LightClientUpdate;
-    }[]
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {
+        version: ForkName;
+        data: altair.LightClientUpdate;
+      }[];
+    }>
   >;
   /**
    * Returns the latest optimistic head update available. Clients should use the SSE type `light_client_optimistic_update`
    * unless to get the very first head update after syncing, or if SSE are not supported by the server.
    */
-  getOptimisticUpdate(): Promise<{version: ForkName; data: altair.LightClientOptimisticUpdate}>;
-  getFinalityUpdate(): Promise<{version: ForkName; data: altair.LightClientFinalityUpdate}>;
+  getOptimisticUpdate(): Promise<
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {
+        version: ForkName;
+        data: altair.LightClientOptimisticUpdate;
+      };
+    }>
+  >;
+  getFinalityUpdate(): Promise<
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {
+        version: ForkName;
+        data: altair.LightClientFinalityUpdate;
+      };
+    }>
+  >;
   /**
    * Fetch a bootstrapping state with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
    */
-  getBootstrap(blockRoot: string): Promise<{version: ForkName; data: altair.LightClientBootstrap}>;
+  getBootstrap(
+    blockRoot: string
+  ): Promise<
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {
+        version: ForkName;
+        data: altair.LightClientBootstrap;
+      };
+    }>
+  >;
   /**
    * Returns an array of sync committee hashes based on the provided period and count
    */
-  getCommitteeRoot(startPeriod: SyncPeriod, count: number): Promise<{data: Uint8Array[]}>;
+  getCommitteeRoot(
+    startPeriod: SyncPeriod,
+    count: number
+  ): Promise<
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {
+        data: Uint8Array[];
+      };
+    }>
+  >;
 };
 
 /**
