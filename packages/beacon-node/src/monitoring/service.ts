@@ -24,6 +24,7 @@ export class MonitoringService {
   private readonly register: Registry;
   private readonly logger: ILogger;
 
+  private remoteServerUrl: URL;
   private sendDataInterval?: NodeJS.Timeout;
 
   constructor(
@@ -35,7 +36,11 @@ export class MonitoringService {
       throw new Error("Monitoring endpoint must be provided");
     }
 
-    // TODO: validate if URL is properly formatted?
+    try {
+      this.remoteServerUrl = new URL(opts.endpoint);
+    } catch {
+      throw new Error("Monitoring endpoint must be a valid URL");
+    }
 
     this.logger = logger;
     this.register = register;
@@ -46,8 +51,7 @@ export class MonitoringService {
       throw new Error("Monitoring service is already started");
     }
 
-    const {endpoint, interval} = this.opts;
-    const updateInterval = interval ?? MONITORING_UPDATE_INTERVAL_SECONDS;
+    const updateInterval = this.opts.interval ?? MONITORING_UPDATE_INTERVAL_SECONDS;
 
     sleep(delaySeconds * 1000).finally(async () => {
       await this.sendData();
@@ -57,8 +61,10 @@ export class MonitoringService {
       }, updateInterval * 1000);
     });
 
-    // TODO: endpoint contains sensitive API key and should probably not be logged
-    this.logger.info("Started monitoring service", {endpoint, interval: `${updateInterval}s`});
+    this.logger.info("Started monitoring service", {
+      remote: this.remoteServerUrl.host,
+      interval: `${updateInterval}s`,
+    });
   }
 
   stop(): void {
@@ -73,7 +79,7 @@ export class MonitoringService {
       const data = await this.collectData();
 
       // TODO: add AbortController? see JsonRpcHttpCLient
-      const res = await fetch(this.opts.endpoint, {
+      const res = await fetch(this.remoteServerUrl, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(data),
