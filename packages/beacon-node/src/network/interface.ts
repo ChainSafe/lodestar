@@ -1,7 +1,7 @@
 import {Connection} from "@libp2p/interface-connection";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Discv5, ENR} from "@chainsafe/discv5";
+import {ENR} from "@chainsafe/discv5";
 import {phase0} from "@lodestar/types";
 import {BlockInput} from "../chain/blocks/types.js";
 import {INetworkEventBus} from "./events.js";
@@ -10,6 +10,7 @@ import {MetadataController} from "./metadata.js";
 import {IPeerRpcScoreStore, PeerAction} from "./peers/index.js";
 import {IReqRespBeaconNode} from "./reqresp/ReqRespBeaconNode.js";
 import {IAttnetsService, ISubnetsService, CommitteeSubscription} from "./subnets/index.js";
+import {Discv5Worker} from "./discv5/index.js";
 
 export type PeerSearchOptions = {
   supportsProtocols?: string[];
@@ -22,13 +23,13 @@ export interface INetwork {
   attnetsService: IAttnetsService;
   syncnetsService: ISubnetsService;
   gossip: Eth2Gossipsub;
-  discv5?: Discv5;
+  discv5(): Discv5Worker | undefined;
   metadata: MetadataController;
   peerRpcScores: IPeerRpcScoreStore;
   /** Our network identity */
   peerId: PeerId;
   localMultiaddrs: Multiaddr[];
-  getEnr(): ENR | undefined;
+  getEnr(): Promise<ENR | undefined>;
   getConnectionsByPeer(): Map<string, Connection[]>;
   getConnectedPeers(): PeerId[];
   hasSomeConnectedPeer(): boolean;

@@ -11,7 +11,7 @@ export function getNodeApi(
 ): ServerApi<routes.node.Api> {
   return {
     async getNetworkIdentity() {
-      const enr = network.getEnr();
+      const enr = await network.getEnr();
       const keypair = createKeypairFromPeerId(network.peerId);
       const discoveryAddresses = [
         enr?.getLocationMultiaddr("tcp")?.toString() ?? null,

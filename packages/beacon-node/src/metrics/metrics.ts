@@ -1,5 +1,4 @@
-import {collectDefaultMetrics, Metric, Registry} from "prom-client";
-import gcStats from "prometheus-gc-stats";
+import {Metric, Registry} from "prom-client";
 import {ILogger} from "@lodestar/utils";
 import {BeaconStateAllForks, getCurrentSlot} from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
@@ -8,6 +7,7 @@ import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar.js";
 import {MetricsOptions} from "./options.js";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
 import {createValidatorMonitor, IValidatorMonitor} from "./validatorMonitor.js";
+import {collectNodeJSMetrics} from "./nodeJsMetrics.js";
 
 export type IMetrics = IBeaconMetrics & ILodestarMetrics & IValidatorMonitor & {register: RegistryMetricCreator};
 
@@ -48,18 +48,4 @@ export function createMetrics(
     ...validatorMonitor,
     register,
   };
-}
-
-export function collectNodeJSMetrics(register: Registry): void {
-  collectDefaultMetrics({
-    register,
-    // eventLoopMonitoringPrecision with sampling rate in milliseconds
-    eventLoopMonitoringPrecision: 10,
-  });
-
-  // Collects GC metrics using a native binding module
-  // - nodejs_gc_runs_total: Counts the number of time GC is invoked
-  // - nodejs_gc_pause_seconds_total: Time spent in GC in seconds
-  // - nodejs_gc_reclaimed_bytes_total: The number of bytes GC has freed
-  gcStats(register)();
 }

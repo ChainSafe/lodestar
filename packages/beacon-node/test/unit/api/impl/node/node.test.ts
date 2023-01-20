@@ -53,7 +53,7 @@ describe("node api implementation", function () {
       const keypair = createKeypairFromPeerId(peerId);
       const enr = ENR.createV4(keypair.publicKey);
       enr.setLocationMultiaddr(multiaddr("/ip4/127.0.0.1/tcp/36001"));
-      networkStub.getEnr.returns(enr);
+      networkStub.getEnr.returns(Promise.resolve(enr));
       networkStub.metadata = {
         get json(): altair.Metadata {
           return {
@@ -74,7 +74,7 @@ describe("node api implementation", function () {
     });
 
     it("should get node identity - no enr", async function () {
-      networkStub.getEnr.returns((null as unknown) as ENR);
+      networkStub.getEnr.returns(Promise.resolve(undefined));
       const {data: identity} = await api.getNetworkIdentity();
       expect(identity.enr).equal("");
     });

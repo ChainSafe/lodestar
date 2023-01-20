@@ -6,7 +6,7 @@ import {Multiaddr} from "@multiformats/multiaddr";
 import {IBeaconConfig} from "@lodestar/config";
 import {ILogger, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {Discv5, ENR} from "@chainsafe/discv5";
+import {ENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {altair, eip4844, Epoch, phase0} from "@lodestar/types";
 import {routes} from "@lodestar/api";
@@ -32,6 +32,7 @@ import {INetworkEventBus, NetworkEventBus} from "./events.js";
 import {AttnetsService, CommitteeSubscription, SyncnetsService} from "./subnets/index.js";
 import {PeersData} from "./peers/peersData.js";
 import {getConnectionsMap, isPublishToZeroPeersError} from "./util.js";
+import {Discv5Worker} from "./discv5/index.js";
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -157,10 +158,11 @@ export class Network implements INetwork {
     await this.reqResp.start();
     this.reqResp.registerProtocolsAtFork(forkCurrentSlot);
 
-    // Initialize ENR with clock's fork
-    this.metadata.start(this.getEnr(), forkCurrentSlot);
-
     await this.peerManager.start();
+    const discv5 = this.discv5();
+    const setEnrValue = discv5?.setEnrValue.bind(discv5);
+    // Initialize ENR with clock's fork
+    this.metadata.start(setEnrValue, this.config.getForkName(this.clock.currentSlot));
     await this.gossip.start();
     this.attnetsService.start();
     this.syncnetsService.start();
@@ -185,7 +187,7 @@ export class Network implements INetwork {
     await this.libp2p.stop();
   }
 
-  get discv5(): Discv5 | undefined {
+  discv5(): Discv5Worker | undefined {
     return this.peerManager["discovery"]?.discv5;
   }
 
@@ -197,8 +199,8 @@ export class Network implements INetwork {
     return this.libp2p.peerId;
   }
 
-  getEnr(): ENR | undefined {
-    return this.peerManager["discovery"]?.discv5.enr;
+  async getEnr(): Promise<ENR | undefined> {
+    return await this.peerManager["discovery"]?.discv5.enr();
   }
 
   getConnectionsByPeer(): Map<string, Connection[]> {
