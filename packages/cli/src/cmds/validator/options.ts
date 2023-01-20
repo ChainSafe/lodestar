@@ -17,6 +17,10 @@ export const validatorMetricsDefaultOptions = {
   address: "127.0.0.1",
 };
 
+export const validatorMonitoringDefaultOptions = {
+  interval: 60,
+};
+
 // Defined as variable to not set yargs.default to an array
 export const DEFAULT_BEACON_NODE_URL = "";
 
@@ -50,6 +54,9 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     metrics?: boolean;
     "metrics.port"?: number;
     "metrics.address"?: string;
+
+    "monitoring.endpoint": string;
+    "monitoring.interval": number;
   };
 
 export type KeymanagerArgs = {
@@ -276,6 +283,23 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     description: "Listen address for the Prometheus metrics HTTP server",
     defaultDescription: String(validatorMetricsDefaultOptions.address),
     group: "metrics",
+  },
+
+  // Monitoring
+
+  "monitoring.endpoint": {
+    type: "string",
+    description:
+      "Enables monitoring service for sending clients stats to the specified endpoint of a remote server (e.g. beaconcha.in). It is required that metrics are enabled by supplying the --metrics flag.",
+    group: "monitoring",
+  },
+
+  "monitoring.interval": {
+    type: "number",
+    description: "Interval in seconds between sending client stats to the remote server",
+    defaultDescription: String(validatorMonitoringDefaultOptions.interval),
+    group: "monitoring",
+    hidden: true,
   },
 
   // For testing only

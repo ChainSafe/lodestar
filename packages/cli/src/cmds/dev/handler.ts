@@ -80,6 +80,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     // Note: recycle entire validator handler:
     // - keystore handling
     // - metrics
+    // - monitoring
     // - keymanager server
     await validatorHandler(args);
   }
