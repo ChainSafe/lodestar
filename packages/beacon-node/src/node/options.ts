@@ -3,6 +3,7 @@ import {defaultChainOptions, IChainOptions} from "../chain/options.js";
 import {defaultDbOptions, IDatabaseOptions} from "../db/options.js";
 import {defaultEth1Options, Eth1Options} from "../eth1/options.js";
 import {defaultMetricsOptions, MetricsOptions} from "../metrics/options.js";
+import {defaultMonitoringOptions, MonitoringOptions} from "../monitoring/options.js";
 import {defaultNetworkOptions, INetworkOptions} from "../network/options.js";
 import {defaultSyncOptions, SyncOptions} from "../sync/options.js";
 import {
@@ -22,6 +23,7 @@ export interface IBeaconNodeOptions {
   executionEngine: ExecutionEngineOpts;
   executionBuilder: ExecutionBuilderOpts;
   metrics: MetricsOptions;
+  monitoring: MonitoringOptions;
   network: INetworkOptions;
   sync: SyncOptions;
 }
@@ -34,6 +36,7 @@ export const defaultOptions: IBeaconNodeOptions = {
   executionEngine: defaultExecutionEngineOpts,
   executionBuilder: defaultExecutionBuilderOpts,
   metrics: defaultMetricsOptions,
+  monitoring: defaultMonitoringOptions,
   network: defaultNetworkOptions,
   sync: defaultSyncOptions,
 };
