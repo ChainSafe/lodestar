@@ -27,7 +27,7 @@ export class GaugeExtra<T extends string> extends Gauge<T> implements IGauge {
   /**
    * @override Metric.collect
    */
-  private collect(): void {
+  collect(): void {
     for (const collectFn of this.collectFns) {
       collectFn(this);
     }
