@@ -109,15 +109,35 @@ export const allForksBlinded = {
 export const allForksLightClient = {
   altair: {
     LightClientHeader: altair.LightClientHeader,
+    LightClientBootstrap: altair.LightClientBootstrap,
+    LightClientUpdate: altair.LightClientUpdate,
+    LightClientFinalityUpdate: altair.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: altair.LightClientOptimisticUpdate,
+    LightClientStore: altair.LightClientStore,
   },
   bellatrix: {
     LightClientHeader: altair.LightClientHeader,
+    LightClientBootstrap: altair.LightClientBootstrap,
+    LightClientUpdate: altair.LightClientUpdate,
+    LightClientFinalityUpdate: altair.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: altair.LightClientOptimisticUpdate,
+    LightClientStore: altair.LightClientStore,
   },
   capella: {
     LightClientHeader: capella.LightClientHeader,
+    LightClientBootstrap: capella.LightClientBootstrap,
+    LightClientUpdate: capella.LightClientUpdate,
+    LightClientFinalityUpdate: capella.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: capella.LightClientOptimisticUpdate,
+    LightClientStore: capella.LightClientStore,
   },
   eip4844: {
     LightClientHeader: eip4844.LightClientHeader,
+    LightClientBootstrap: eip4844.LightClientBootstrap,
+    LightClientUpdate: eip4844.LightClientUpdate,
+    LightClientFinalityUpdate: eip4844.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: eip4844.LightClientOptimisticUpdate,
+    LightClientStore: eip4844.LightClientStore,
   },
 };
 

@@ -49,8 +49,6 @@ export type ExecutionPayloadHeader =
   | capella.ExecutionPayloadHeader
   | deneb.ExecutionPayloadHeader;
 
-export type LightClientHeader = altair.LightClientHeader | capella.LightClientHeader;
-
 // Blinded types that will change across forks
 export type BlindedBeaconBlockBody =
   | bellatrix.BlindedBeaconBlockBody
@@ -72,6 +70,22 @@ export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | SignedBlindedBe
 
 export type BuilderBid = bellatrix.BuilderBid | capella.BuilderBid | deneb.BuilderBid;
 export type SignedBuilderBid = bellatrix.SignedBuilderBid | capella.SignedBuilderBid | deneb.SignedBuilderBid;
+
+export type LightClientHeader = altair.LightClientHeader | capella.LightClientHeader | deneb.LightClientHeader;
+export type LightClientBootstrap =
+  | altair.LightClientBootstrap
+  | capella.LightClientBootstrap
+  | deneb.LightClientBootstrap;
+export type LightClientUpdate = altair.LightClientUpdate | capella.LightClientUpdate | deneb.LightClientUpdate;
+export type LightClientFinalityUpdate =
+  | altair.LightClientFinalityUpdate
+  | capella.LightClientFinalityUpdate
+  | deneb.LightClientFinalityUpdate;
+export type LightClientOptimisticUpdate =
+  | altair.LightClientOptimisticUpdate
+  | capella.LightClientOptimisticUpdate
+  | deneb.LightClientOptimisticUpdate;
+export type LightClientStore = altair.LightClientStore | capella.LightClientStore | deneb.LightClientStore;
 
 export type SignedBeaconBlockAndBlobsSidecar = deneb.SignedBeaconBlockAndBlobsSidecar;
 /**
@@ -208,7 +222,30 @@ export type AllForksBlindedSSZTypes = {
 };
 
 export type AllForksLightClientSSZTypes = {
-  LightClientHeader: AllForksTypeOf<typeof altairSsz.LightClientHeader | typeof capellaSsz.LightClientHeader>;
+  LightClientHeader: AllForksTypeOf<
+    typeof altairSsz.LightClientHeader | typeof capellaSsz.LightClientHeader | typeof denebSsz.LightClientHeader
+  >;
+  LightClientBootstrap: AllForksTypeOf<
+    | typeof altairSsz.LightClientBootstrap
+    | typeof capellaSsz.LightClientBootstrap
+    | typeof denebSsz.LightClientBootstrap
+  >;
+  LightClientUpdate: AllForksTypeOf<
+    typeof altairSsz.LightClientUpdate | typeof capellaSsz.LightClientUpdate | typeof denebSsz.LightClientUpdate
+  >;
+  LightClientFinalityUpdate: AllForksTypeOf<
+    | typeof altairSsz.LightClientFinalityUpdate
+    | typeof capellaSsz.LightClientFinalityUpdate
+    | typeof denebSsz.LightClientFinalityUpdate
+  >;
+  LightClientOptimisticUpdate: AllForksTypeOf<
+    | typeof altairSsz.LightClientOptimisticUpdate
+    | typeof capellaSsz.LightClientOptimisticUpdate
+    | typeof denebSsz.LightClientOptimisticUpdate
+  >;
+  LightClientStore: AllForksTypeOf<
+    typeof altairSsz.LightClientStore | typeof capellaSsz.LightClientStore | typeof denebSsz.LightClientStore
+  >;
 };
 
 export type AllForksBlobsSSZTypes = {

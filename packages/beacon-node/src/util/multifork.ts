@@ -53,3 +53,25 @@ export function getStateTypeFromBytes(
   const slot = bytesToInt(bytes.subarray(SLOT_BYTES_POSITION_IN_STATE, SLOT_BYTES_POSITION_IN_STATE + SLOT_BYTE_COUNT));
   return config.getForkTypes(slot).BeaconState;
 }
+
+/**
+ * TODO: find correct position
+ * 8 + 32 = 40
+ * ```
+ * class BeaconState(Container):
+ *   genesis_time: uint64 [fixed - 8 bytes]
+ *   genesis_validators_root: Root [fixed - 32 bytes]
+ *   slot: Slot [fixed - 8 bytes]
+ *   ...
+ * ```
+ */
+const SLOT_BYTES_POSITION_IN_LIGHTCLIENTUPDATE = 40;
+export function getLightClientUpdateTypeFromBytes(
+  config: IChainForkConfig,
+  bytes: Buffer | Uint8Array
+): allForks.AllForksLightClientSSZTypes["LightClientUpdate"] {
+  const slot = bytesToInt(
+    bytes.subarray(SLOT_BYTES_POSITION_IN_LIGHTCLIENTUPDATE, SLOT_BYTES_POSITION_IN_LIGHTCLIENTUPDATE + SLOT_BYTE_COUNT)
+  );
+  return config.getLightClientForkTypes(slot).LightClientUpdate;
+}
