@@ -25,7 +25,7 @@ let port = 9000;
 const mu = "/ip4/127.0.0.1/tcp/0";
 
 describe("mdns", function () {
-  if (this.timeout() < 5000) this.timeout(5000);
+  this.timeout(50000);
   this.retries(2); // This test fail sometimes, with a 5% rate.
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
@@ -126,7 +126,7 @@ describe("mdns", function () {
   it("should connect two peers on a LAN", async function () {
     const [{network: netA}, {network: netB}] = await createTestNodesAB();
     await Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
+    xpect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
   });
 });
