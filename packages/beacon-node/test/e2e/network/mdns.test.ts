@@ -126,7 +126,7 @@ describe("mdns", function () {
   it("should connect two peers on a LAN", async function () {
     const [{network: netA}, {network: netB}] = await createTestNodesAB();
     await Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
-    xpect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
+    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
   });
 });
