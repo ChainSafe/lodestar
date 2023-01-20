@@ -6,7 +6,15 @@ import {presetStatus} from "./presetStatus.js";
 import {userSelectedPreset, userOverrides} from "./setPreset.js";
 
 export {BeaconPreset} from "./interface.js";
-export {ForkName, ForkSeq, ForkExecution, ForkBlobs, isForkExecution, isForkBlobs} from "./forkName.js";
+export {
+  ForkName,
+  ForkSeq,
+  ForkExecution,
+  ForkBlobs,
+  isForkExecution,
+  isForkBlobs,
+  isForkLightClient,
+} from "./forkName.js";
 export {presetToJson} from "./json.js";
 export {PresetName};
 

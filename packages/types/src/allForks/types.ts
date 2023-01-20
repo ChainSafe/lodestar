@@ -208,9 +208,7 @@ export type AllForksBlindedSSZTypes = {
 };
 
 export type AllForksLightClientSSZTypes = {
-  BeaconBlockBody: AllForksTypeOf<
-    typeof bellatrixSsz.BeaconBlockBody | typeof capellaSsz.BeaconBlockBody | typeof eip4844Ssz.BeaconBlockBody
-  >;
+  LightClientHeader: AllForksTypeOf<typeof altairSsz.LightClientHeader | typeof capellaSsz.LightClientHeader>;
 };
 
 export type AllForksBlobsSSZTypes = {

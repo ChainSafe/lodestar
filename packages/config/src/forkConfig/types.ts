@@ -30,10 +30,12 @@ export interface IForkConfig {
   getForkVersion(slot: Slot): Version;
   /** Get SSZ types by hard-fork */
   getForkTypes(slot: Slot): allForks.AllForksSSZTypes;
-  /** Get execution SSZ tyoes by hard-fork*/
+  /** Get lightclient SSZ types by hard-fork*/
+  getLightClientForkTypes(slot: Slot): allForks.AllForksLightClientSSZTypes;
+  /** Get execution SSZ types by hard-fork*/
   getExecutionForkTypes(slot: Slot): allForks.AllForksExecutionSSZTypes;
   /** Get blinded SSZ types by hard-fork */
   getBlindedForkTypes(slot: Slot): allForks.AllForksBlindedSSZTypes;
-  /** Get blobs SSZ tyoes by hard-fork*/
+  /** Get blobs SSZ types by hard-fork*/
   getBlobsForkTypes(slot: Slot): allForks.AllForksBlobsSSZTypes;
 }
