@@ -1,6 +1,9 @@
+import {Libp2p as ILibp2p} from "libp2p";
 import {Connection} from "@libp2p/interface-connection";
+import {Registrar} from "@libp2p/interface-registrar";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {PeerId} from "@libp2p/interface-peer-id";
+import {ConnectionManager} from "@libp2p/interface-connection-manager";
 import {ENR} from "@chainsafe/discv5";
 import {phase0} from "@lodestar/types";
 import {BlockInput} from "../chain/blocks/types.js";
@@ -63,3 +66,5 @@ export interface INetwork {
 
 export type PeerDirection = Connection["stat"]["direction"];
 export type PeerStatus = Connection["stat"]["status"];
+
+export type Libp2p = ILibp2p & {connectionManager: ConnectionManager; registrar: Registrar};

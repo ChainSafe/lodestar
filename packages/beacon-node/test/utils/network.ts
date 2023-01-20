@@ -1,11 +1,11 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
-import {Libp2p} from "libp2p";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
 import {INetwork, Network} from "../../src/network/index.js";
 import {createNodejsLibp2p, ILibp2pOptions} from "../../src/network/nodejs/index.js";
+import {Libp2p} from "../../src/network/interface.js";
 import {Libp2pEvent} from "../../src/constants/index.js";
 
 export async function createNode(

@@ -1,4 +1,4 @@
-import {createLibp2p, Libp2p} from "libp2p";
+import {createLibp2p} from "libp2p";
 import {tcp} from "@libp2p/tcp";
 import {mplex} from "@libp2p/mplex";
 import {bootstrap} from "@libp2p/bootstrap";
@@ -9,6 +9,7 @@ import type {PeerDiscovery} from "@libp2p/interface-peer-discovery";
 import type {Components} from "libp2p/components";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {Registry} from "prom-client";
+import {Libp2p} from "../interface.js";
 import {createNoise} from "./noise.js";
 
 export interface ILibp2pOptions {
@@ -40,7 +41,7 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
       peerDiscovery.push(mdns());
     }
   }
-  return await createLibp2p({
+  return (await createLibp2p({
     peerId: options.peerId,
     addresses: {
       listen: options.addresses.listen,
@@ -104,5 +105,5 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
         agentVersion: options.lodestarVersion ? `lodestar/${options.lodestarVersion}` : "lodestar",
       },
     },
-  });
+  })) as Libp2p;
 }

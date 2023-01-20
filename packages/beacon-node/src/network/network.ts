@@ -1,4 +1,3 @@
-import {Libp2p} from "libp2p";
 import {DefaultConnectionManager} from "libp2p/connection-manager";
 import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
@@ -14,7 +13,7 @@ import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {BlockInput, BlockInputType, getBlockInput} from "../chain/blocks/types.js";
 import {INetworkOptions} from "./options.js";
-import {INetwork} from "./interface.js";
+import {INetwork, Libp2p} from "./interface.js";
 import {ReqRespBeaconNode, ReqRespHandlers, doBeaconBlocksMaybeBlobsByRange} from "./reqresp/index.js";
 import {
   Eth2Gossipsub,
