@@ -6,8 +6,8 @@ import {ForkName} from "@lodestar/params";
 import {LightClientTransport} from "./interface.js";
 
 export type LightClientRestEvents = {
-  [routes.events.EventType.lightClientFinalityUpdate]: altair.LightClientFinalityUpdate;
-  [routes.events.EventType.lightClientOptimisticUpdate]: altair.LightClientOptimisticUpdate;
+  [routes.events.EventType.lightClientFinalityUpdate]: allForks.LightClientFinalityUpdate;
+  [routes.events.EventType.lightClientOptimisticUpdate]: allForks.LightClientOptimisticUpdate;
 };
 
 type RestEvents = StrictEventEmitter<EventEmitter, LightClientRestEvents>;
@@ -27,7 +27,7 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
   ): Promise<
     {
       version: ForkName;
-      data: altair.LightClientUpdate;
+      data: allForks.LightClientUpdate;
     }[]
   > {
     const res = await this.api.lightclient.getUpdates(startPeriod, count);
@@ -35,19 +35,19 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
     return res.response;
   }
 
-  async getOptimisticUpdate(): Promise<{version: ForkName; data: altair.LightClientOptimisticUpdate}> {
+  async getOptimisticUpdate(): Promise<{version: ForkName; data: allForks.LightClientOptimisticUpdate}> {
     const res = await this.api.lightclient.getOptimisticUpdate();
     ApiError.assert(res);
     return res.response;
   }
 
-  async getFinalityUpdate(): Promise<{version: ForkName; data: altair.LightClientFinalityUpdate}> {
+  async getFinalityUpdate(): Promise<{version: ForkName; data: allForks.LightClientFinalityUpdate}> {
     const res = await this.api.lightclient.getFinalityUpdate();
     ApiError.assert(res);
     return res.response;
   }
 
-  async getBootstrap(blockRoot: string): Promise<{version: ForkName; data: altair.LightClientBootstrap}> {
+  async getBootstrap(blockRoot: string): Promise<{version: ForkName; data: allForks.LightClientBootstrap}> {
     const res = await this.api.lightclient.getBootstrap(blockRoot);
     ApiError.assert(res);
     return res.response;
@@ -59,12 +59,12 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
     return res.response;
   }
 
-  onOptimisticUpdate(handler: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void): void {
+  onOptimisticUpdate(handler: (optimisticUpdate: allForks.LightClientOptimisticUpdate) => void): void {
     this.subscribeEventstream();
     this.eventEmitter.on(routes.events.EventType.lightClientOptimisticUpdate, handler);
   }
 
-  onFinalityUpdate(handler: (finalityUpdate: altair.LightClientFinalityUpdate) => void): void {
+  onFinalityUpdate(handler: (finalityUpdate: allForks.LightClientFinalityUpdate) => void): void {
     this.subscribeEventstream();
     this.eventEmitter.on(routes.events.EventType.lightClientFinalityUpdate, handler);
   }
