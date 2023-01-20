@@ -108,6 +108,7 @@ export const allForksBlinded = {
 
 export const allForksLightClient = {
   altair: {
+    BeaconBlock: altair.BeaconBlock,
     LightClientHeader: altair.LightClientHeader,
     LightClientBootstrap: altair.LightClientBootstrap,
     LightClientUpdate: altair.LightClientUpdate,
@@ -116,6 +117,7 @@ export const allForksLightClient = {
     LightClientStore: altair.LightClientStore,
   },
   bellatrix: {
+    BeaconBlock: bellatrix.BeaconBlock,
     LightClientHeader: altair.LightClientHeader,
     LightClientBootstrap: altair.LightClientBootstrap,
     LightClientUpdate: altair.LightClientUpdate,
@@ -124,6 +126,7 @@ export const allForksLightClient = {
     LightClientStore: altair.LightClientStore,
   },
   capella: {
+    BeaconBlock: capella.BeaconBlock,
     LightClientHeader: capella.LightClientHeader,
     LightClientBootstrap: capella.LightClientBootstrap,
     LightClientUpdate: capella.LightClientUpdate,
@@ -132,6 +135,7 @@ export const allForksLightClient = {
     LightClientStore: capella.LightClientStore,
   },
   eip4844: {
+    BeaconBlock: eip4844.BeaconBlock,
     LightClientHeader: eip4844.LightClientHeader,
     LightClientBootstrap: eip4844.LightClientBootstrap,
     LightClientUpdate: eip4844.LightClientUpdate,

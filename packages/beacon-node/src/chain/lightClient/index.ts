@@ -1,4 +1,4 @@
-import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod} from "@lodestar/types";
+import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod, allForks} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {
   CachedBeaconStateAltair,
@@ -212,7 +212,11 @@ export class LightClientServer {
    * - Persist state witness
    * - Use block's syncAggregate
    */
-  onImportBlockHead(block: altair.BeaconBlock, postState: CachedBeaconStateAltair, parentBlockSlot: Slot): void {
+  onImportBlockHead(
+    block: allForks.AllForksLightClient["BeaconBlock"],
+    postState: CachedBeaconStateAltair,
+    parentBlockSlot: Slot
+  ): void {
     // TEMP: To disable this functionality for fork_choice spec tests.
     // Since the tests have deep-reorgs attested data is not available often printing lots of error logs.
     // While this function is only called for head blocks, best to disable.

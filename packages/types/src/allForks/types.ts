@@ -112,7 +112,13 @@ export type AllForksBlindedTypes = {
 };
 
 export type AllForksLightClient = {
+  BeaconBlock: altair.BeaconBlock | bellatrix.BeaconBlock | capella.BeaconBlock | eip4844.BeaconBlock;
   LightClientHeader: LightClientHeader;
+  LightClientBootstrap: LightClientBootstrap;
+  LightClientUpdate: LightClientUpdate;
+  LightClientFinalityUpdate: LightClientFinalityUpdate;
+  LightClientOptimisticUpdate: LightClientOptimisticUpdate;
+  LightClientStore: LightClientStore;
 };
 
 /**
@@ -222,6 +228,9 @@ export type AllForksBlindedSSZTypes = {
 };
 
 export type AllForksLightClientSSZTypes = {
+  BeaconBlock: AllForksTypeOf<
+    typeof altairSsz.BeaconBlock | typeof capellaSsz.BeaconBlock | typeof eip4844Ssz.BeaconBlock
+  >;
   LightClientHeader: AllForksTypeOf<
     typeof altairSsz.LightClientHeader | typeof capellaSsz.LightClientHeader | typeof denebSsz.LightClientHeader
   >;
