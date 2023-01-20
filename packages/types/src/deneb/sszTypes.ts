@@ -1,10 +1,11 @@
-import {ContainerType, ListCompositeType, ByteVectorType} from "@chainsafe/ssz";
+import {ContainerType, ListCompositeType, ByteVectorType, VectorCompositeType} from "@chainsafe/ssz";
 import {
   HISTORICAL_ROOTS_LIMIT,
   FIELD_ELEMENTS_PER_BLOB,
   MAX_BLOBS_PER_BLOCK,
   MAX_REQUEST_BLOCKS,
   BYTES_PER_FIELD_ELEMENT,
+  EXECUTION_PAYLOAD_DEPTH,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -238,4 +239,13 @@ export const BeaconState = new ContainerType(
     historicalSummaries: capellaSsz.BeaconState.fields.historicalSummaries,
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
+);
+
+export const LightClientHeader = new ContainerType(
+  {
+    beacon: phase0Ssz.BeaconBlockHeader,
+    execution: ExecutionPayloadHeader,
+    executionBranch: new VectorCompositeType(Bytes32, EXECUTION_PAYLOAD_DEPTH),
+  },
+  {typeName: "LightClientHeader", jsonCase: "eth2"}
 );

@@ -106,6 +106,21 @@ export const allForksBlinded = {
   },
 };
 
+export const allForksLightClient = {
+  altair: {
+    LightClientHeader: altair.LightClientHeader,
+  },
+  bellatrix: {
+    LightClientHeader: altair.LightClientHeader,
+  },
+  capella: {
+    LightClientHeader: capella.LightClientHeader,
+  },
+  eip4844: {
+    LightClientHeader: eip4844.LightClientHeader,
+  },
+};
+
 export const allForksBlobs = {
   deneb: {
     SignedBeaconBlockAndBlobsSidecar: deneb.SignedBeaconBlockAndBlobsSidecar,

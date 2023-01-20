@@ -49,6 +49,8 @@ export type ExecutionPayloadHeader =
   | capella.ExecutionPayloadHeader
   | deneb.ExecutionPayloadHeader;
 
+export type LightClientHeader = altair.LightClientHeader | capella.LightClientHeader;
+
 // Blinded types that will change across forks
 export type BlindedBeaconBlockBody =
   | bellatrix.BlindedBeaconBlockBody
@@ -83,6 +85,7 @@ export type AllForksTypes = {
   Metadata: Metadata;
   ExecutionPayload: ExecutionPayload;
   ExecutionPayloadHeader: ExecutionPayloadHeader;
+  LightClientHeader: LightClientHeader;
   BuilderBid: BuilderBid;
   SignedBuilderBid: SignedBuilderBid;
   SignedBeaconBlockAndBlobsSidecar: SignedBeaconBlockAndBlobsSidecar;
@@ -92,6 +95,10 @@ export type AllForksBlindedTypes = {
   BeaconBlockBody: BlindedBeaconBlockBody;
   BeaconBlock: BlindedBeaconBlock;
   SignedBeaconBlock: SignedBlindedBeaconBlock;
+};
+
+export type AllForksLightClient = {
+  LightClientHeader: LightClientHeader;
 };
 
 /**
@@ -197,6 +204,12 @@ export type AllForksBlindedSSZTypes = {
     | typeof bellatrixSsz.SignedBlindedBeaconBlock
     | typeof capellaSsz.SignedBlindedBeaconBlock
     | typeof denebSsz.SignedBlindedBeaconBlock
+  >;
+};
+
+export type AllForksLightClientSSZTypes = {
+  BeaconBlockBody: AllForksTypeOf<
+    typeof bellatrixSsz.BeaconBlockBody | typeof capellaSsz.BeaconBlockBody | typeof eip4844Ssz.BeaconBlockBody
   >;
 };
 

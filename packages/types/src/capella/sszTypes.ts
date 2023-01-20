@@ -1,5 +1,10 @@
-import {ContainerType, ListCompositeType} from "@chainsafe/ssz";
-import {HISTORICAL_ROOTS_LIMIT, MAX_WITHDRAWALS_PER_PAYLOAD, MAX_BLS_TO_EXECUTION_CHANGES} from "@lodestar/params";
+import {ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
+import {
+  HISTORICAL_ROOTS_LIMIT,
+  MAX_WITHDRAWALS_PER_PAYLOAD,
+  MAX_BLS_TO_EXECUTION_CHANGES,
+  EXECUTION_PAYLOAD_DEPTH,
+} from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
@@ -16,6 +21,7 @@ const {
   ExecutionAddress,
   Gwei,
   UintBn256,
+  Bytes32,
 } = primitiveSsz;
 
 export const Withdrawal = new ContainerType(
@@ -163,6 +169,15 @@ export const BeaconState = new ContainerType(
     historicalSummaries: new ListCompositeType(HistoricalSummary, HISTORICAL_ROOTS_LIMIT), // [New in Capella]
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
+);
+
+export const LightClientHeader = new ContainerType(
+  {
+    beacon: phase0Ssz.BeaconBlockHeader,
+    execution: ExecutionPayloadHeader,
+    executionBranch: new VectorCompositeType(Bytes32, EXECUTION_PAYLOAD_DEPTH),
+  },
+  {typeName: "LightClientHeader", jsonCase: "eth2"}
 );
 
 export const BlindedBeaconBlockBody = new ContainerType(
