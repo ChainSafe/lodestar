@@ -35,6 +35,9 @@
     "./metrics": {
       "import": "./lib/metrics/index.js"
     },
+    "./monitoring": {
+      "import": "./lib/monitoring/index.js"
+    },
     "./network": {
       "import": "./lib/network/index.js"
     },
