@@ -12,13 +12,10 @@ import {
   MAX_VOLUNTARY_EXITS,
   MAX_BLS_TO_EXECUTION_CHANGES,
   BLS_WITHDRAWAL_PREFIX,
-  ForkSeq,
-  ForkName,
 } from "@lodestar/params";
 import {Epoch, phase0, capella, ssz, ValidatorIndex} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../db/index.js";
-import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
 
 type HexRoot = string;
@@ -37,7 +34,7 @@ export class OpPool {
   /** Set of seen attester slashing indexes. No need to prune */
   private readonly attesterSlashingIndexes = new Set<ValidatorIndex>();
   /** Map of validator index -> SignedBLSToExecutionChange */
-  private readonly blsToExecutionChanges = new Map<ValidatorIndex, SignedBLSToExecutionChangeVersioned>();
+  private readonly blsToExecutionChanges = new Map<ValidatorIndex, capella.SignedBLSToExecutionChange>();
 
   // Getters for metrics
 
@@ -72,7 +69,7 @@ export class OpPool {
       this.insertVoluntaryExit(voluntaryExit);
     }
     for (const item of blsToExecutionChanges) {
-      this.blsToExecutionChanges.set(item.data.message.validatorIndex, item);
+      this.blsToExecutionChanges.set(item.message.validatorIndex, item);
     }
   }
 
@@ -153,11 +150,8 @@ export class OpPool {
   }
 
   /** Must be validated beforehand */
-  insertBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange, signatureFork: ForkName): void {
-    this.blsToExecutionChanges.set(blsToExecutionChange.message.validatorIndex, {
-      data: blsToExecutionChange,
-      signatureForkSeq: ForkSeq[signatureFork],
-    });
+  insertBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): void {
+    this.blsToExecutionChanges.set(blsToExecutionChange.message.validatorIndex, blsToExecutionChange);
   }
 
   /**
@@ -240,7 +234,7 @@ export class OpPool {
     const blsToExecutionChanges: capella.SignedBLSToExecutionChange[] = [];
     for (const blsToExecutionChange of this.blsToExecutionChanges.values()) {
       if (isValidBlsToExecutionChangeForBlockInclusion(state as CachedBeaconStateCapella, blsToExecutionChange)) {
-        blsToExecutionChanges.push(blsToExecutionChange.data);
+        blsToExecutionChanges.push(blsToExecutionChange);
         if (blsToExecutionChanges.length >= MAX_BLS_TO_EXECUTION_CHANGES) {
           break;
         }
@@ -267,7 +261,7 @@ export class OpPool {
 
   /** For beacon pool API */
   getAllBlsToExecutionChanges(): capella.SignedBLSToExecutionChange[] {
-    return Array.from(this.blsToExecutionChanges.values()).map(({data}) => data);
+    return Array.from(this.blsToExecutionChanges.values());
   }
 
   /**
@@ -354,7 +348,7 @@ export class OpPool {
       // TODO CAPELLA: We need the finalizedState to safely prune BlsToExecutionChanges. Finalized state may not be
       // available in the cache, so it can be null. Once there's a head only prunning strategy, change
       if (finalizedState !== null) {
-        const validator = finalizedState.validators.getReadonly(blsToExecutionChange.data.message.validatorIndex);
+        const validator = finalizedState.validators.getReadonly(blsToExecutionChange.message.validatorIndex);
         if (validator.withdrawalCredentials[0] !== BLS_WITHDRAWAL_PREFIX) {
           this.blsToExecutionChanges.delete(key);
         }

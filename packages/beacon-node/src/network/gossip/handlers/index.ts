@@ -352,7 +352,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       // Handler
       try {
-        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, ForkName.phase0);
+        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
       } catch (e) {
         logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
       }
