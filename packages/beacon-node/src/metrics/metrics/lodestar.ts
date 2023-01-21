@@ -257,6 +257,17 @@ export function createLodestarMetrics(
       buckets: [0.1, 1, 10, 100],
     }),
 
+    discv5: {
+      decodeEnrAttemptCount: register.counter({
+        name: "lodestar_discv5_decode_enr_attempt_count",
+        help: "Count of total attempts to decode enrs",
+      }),
+      decodeEnrErrorCount: register.counter({
+        name: "lodestar_discv5_decode_enr_error_count",
+        help: "Count of total errors attempting to decode enrs",
+      }),
+    },
+
     attnetsService: {
       committeeSubnets: register.gauge({
         name: "lodestar_attnets_service_committee_subnets_total",

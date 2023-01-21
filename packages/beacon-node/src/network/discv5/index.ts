@@ -5,13 +5,14 @@ import {exportToProtobuf} from "@libp2p/peer-id-factory";
 import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {ILogger} from "@lodestar/utils";
+import {IMetrics} from "../../metrics/metrics.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 
 export type Discv5Opts = {
   peerId: PeerId;
   discv5: Omit<IDiscv5DiscoveryInputOptions, "metrics" | "searchInterval" | "enabled">;
   logger: ILogger;
-  metrics: boolean;
+  metrics?: IMetrics;
 };
 
 export interface IDiscv5Events {
@@ -45,7 +46,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       bindAddr: this.opts.discv5.bindAddr,
       config: this.opts.discv5,
       bootEnrs: this.opts.discv5.bootEnrs as string[],
-      metrics: this.opts.metrics,
+      metrics: Boolean(this.opts.metrics),
     };
     const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
 
@@ -70,18 +71,20 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
     this.status = {status: "stopped"};
   }
 
-  onDiscoveredStr(enrStr: Uint8Array): void {
-    try {
-      this.emit("discovered", ENR.decode(Buffer.from(enrStr)));
-    } catch (e) {
-      // TODO there is a bug in enr encoding(?) that causes many enrs to be incorrectly encoded (and thus incorrectly decoded)
-      // this.logger.error("Unable to decode enr", {enr: Buffer.from(enrStr).toString("hex")}, e as Error);
+  onDiscoveredStr(enrBuf: Uint8Array): void {
+    const enr = this.decodeEnr(enrBuf);
+    if (enr !== undefined) {
+      this.emit("discovered", enr);
     }
   }
 
   async enr(): Promise<ENR> {
     if (this.status.status === "started") {
-      return ENR.decode(Buffer.from(await this.status.workerApi.enrBuf()));
+      const enr = this.decodeEnr(await this.status.workerApi.enrBuf());
+      if (enr === undefined) {
+        throw new Error("unable to decode self ENR");
+      }
+      return enr;
     } else {
       throw new Error("Cannot get enr before module is started");
     }
@@ -97,7 +100,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
 
   async kadValues(): Promise<ENR[]> {
     if (this.status.status === "started") {
-      return (await this.status.workerApi.kadValuesBuf()).map((enrBuf) => ENR.decode(Buffer.from(enrBuf)));
+      return this.decodeEnrs(await this.status.workerApi.kadValuesBuf());
     } else {
       return [];
     }
@@ -105,7 +108,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
 
   async findRandomNode(): Promise<ENR[]> {
     if (this.status.status === "started") {
-      return (await this.status.workerApi.findRandomNodeBuf()).map((enrBuf) => ENR.decode(Buffer.from(enrBuf)));
+      return this.decodeEnrs(await this.status.workerApi.findRandomNodeBuf());
     } else {
       return [];
     }
@@ -117,5 +120,33 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
     } else {
       return "";
     }
+  }
+
+  private decodeEnrs(enrBufs: Uint8Array[]): ENR[] {
+    let errors = 0;
+    const enrs: ENR[] = [];
+    for (const enrBuf of enrBufs) {
+      try {
+        enrs.push(ENR.decode(Buffer.from(enrBuf)));
+      } catch (e) {
+        errors++;
+      }
+    }
+
+    this.opts.metrics?.discv5.decodeEnrErrorCount.inc(errors);
+    this.opts.metrics?.discv5.decodeEnrAttemptCount.inc(enrBufs.length);
+
+    return enrs;
+  }
+
+  private decodeEnr(enrBuf: Uint8Array): ENR | undefined {
+    try {
+      return ENR.decode(Buffer.from(enrBuf));
+    } catch (e) {
+      this.opts.metrics?.discv5.decodeEnrErrorCount.inc(1);
+    } finally {
+      this.opts.metrics?.discv5.decodeEnrAttemptCount.inc(1);
+    }
+    return undefined;
   }
 }
