@@ -38,8 +38,7 @@ function createProcessStats(process: ProcessType): ClientStats {
     ...createCommonStats(process),
     cpuProcessSecondsTotal: new MetricProperty({
       jsonKey: "cpu_process_seconds_total",
-      // TODO: only collected if /metrics API is called?? might be related to counter
-      metricName: "process_cpu_seconds_total",
+      metricName: "process_cpu_user_seconds_total",
       jsonType: JsonType.Number,
       defaultValue: 0,
     }),
