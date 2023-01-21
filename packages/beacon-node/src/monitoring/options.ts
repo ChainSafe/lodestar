@@ -1,13 +1,14 @@
-import {MONITORING_UPDATE_INTERVAL_SECONDS} from "./service.js";
-
 export type MonitoringOptions = {
-  /** Remote endpoint where client stats are sent */
+  /** Remote endpoint URL where client stats are sent */
   endpoint: string;
   /** Interval in seconds between sending client stats */
   interval?: number;
+  /** Initial delay in seconds before client stats are sent */
+  initialDelay?: number;
 };
 
-export const defaultMonitoringOptions: MonitoringOptions = {
+export const defaultMonitoringOptions: Required<MonitoringOptions> = {
   endpoint: "",
-  interval: MONITORING_UPDATE_INTERVAL_SECONDS,
+  interval: 60,
+  initialDelay: 30,
 };

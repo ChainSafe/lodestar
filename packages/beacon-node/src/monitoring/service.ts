@@ -1,14 +1,8 @@
 import {Registry} from "prom-client";
 import {ILogger, sleep} from "@lodestar/utils";
-import {MonitoringOptions} from "./options.js";
+import {defaultMonitoringOptions, MonitoringOptions} from "./options.js";
 import {createClientStats} from "./clientStats.js";
 import {ProcessType} from "./types.js";
-
-/** Interval between sending client stats */
-export const MONITORING_UPDATE_INTERVAL_SECONDS = 60;
-
-/** Initial delay before client stats are sent */
-export const MONITORING_INITIAL_DELAY_SECONDS = 30;
 
 type MonitoringData = Record<string, string | number | boolean>;
 
@@ -21,49 +15,43 @@ type RemoteServerError = {
  * Service for sending clients stats to a remote server (e.g. beaconcha.in)
  */
 export class MonitoringService {
+  private readonly remoteHost: string;
+  private readonly remoteServerUrl: URL;
+  private readonly options: Required<MonitoringOptions>;
   private readonly register: Registry;
   private readonly logger: ILogger;
 
-  private remoteServerUrl: URL;
   private sendDataInterval?: NodeJS.Timeout;
 
   constructor(
     private readonly processes: ProcessType[],
-    private readonly opts: MonitoringOptions,
+    options: MonitoringOptions,
     {register, logger}: {register: Registry; logger: ILogger}
   ) {
-    if (!opts.endpoint) {
-      throw new Error("Monitoring endpoint must be provided");
-    }
-
-    try {
-      this.remoteServerUrl = new URL(opts.endpoint);
-    } catch {
-      throw new Error("Monitoring endpoint must be a valid URL");
-    }
-
+    this.options = {...defaultMonitoringOptions, ...options};
     this.logger = logger;
     this.register = register;
+    this.remoteServerUrl = this.parseMonitoringEndpoint(this.options.endpoint);
+    this.remoteHost = this.remoteServerUrl.host;
   }
 
-  start(delaySeconds = MONITORING_INITIAL_DELAY_SECONDS): void {
+  start(): void {
     if (this.sendDataInterval) {
-      throw new Error("Monitoring service is already started");
+      // monitoring service is already started
+      return;
     }
 
-    const updateInterval = this.opts.interval ?? MONITORING_UPDATE_INTERVAL_SECONDS;
-
-    sleep(delaySeconds * 1000).finally(async () => {
+    sleep(this.options.initialDelay * 1000).finally(async () => {
       await this.sendData();
 
       this.sendDataInterval = setInterval(async () => {
         await this.sendData();
-      }, updateInterval * 1000);
+      }, this.options.interval * 1000);
     });
 
     this.logger.info("Started monitoring service", {
-      remote: this.remoteServerUrl.host,
-      interval: `${updateInterval}s`,
+      remote: this.remoteHost,
+      interval: `${this.options.interval}s`,
     });
   }
 
@@ -89,10 +77,10 @@ export class MonitoringService {
         const error = (await res.json()) as RemoteServerError;
         this.logger.error(error.status);
       } else {
-        this.logger.info(`Sent client stats to remote server: ${JSON.stringify(data)}`);
+        this.logger.debug(`Sent client stats to ${this.remoteHost}: ${JSON.stringify(data)}`);
       }
     } catch (e) {
-      this.logger.error("Error sending client stats", {}, e as Error);
+      this.logger.error(`Failed to send client stats to ${this.remoteHost}`, {}, e as Error);
     }
   }
 
@@ -116,5 +104,29 @@ export class MonitoringService {
     await Promise.all(recordPromises);
 
     return data;
+  }
+
+  private parseMonitoringEndpoint(endpoint: string): URL {
+    if (!endpoint) {
+      throw new Error("Monitoring endpoint must be provided");
+    }
+
+    try {
+      const remoteServerUrl = new URL(endpoint);
+
+      if (!["http:", "https:"].includes(remoteServerUrl.protocol)) {
+        throw new Error();
+      }
+
+      if (remoteServerUrl.protocol === "http:") {
+        this.logger.warn(
+          "Insecure monitoring endpoint, please make sure to always use a HTTPS connection in production"
+        );
+      }
+
+      return remoteServerUrl;
+    } catch {
+      throw new Error("Monitoring endpoint must be a valid URL");
+    }
   }
 }
