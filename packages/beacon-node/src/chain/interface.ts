@@ -20,6 +20,7 @@ import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {IMetrics} from "../metrics/metrics.js";
+import {IBeaconDb} from "../db/index.js";
 import {IBeaconClock} from "./clock/interface.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {IStateRegenerator} from "./regen/index.js";
@@ -102,6 +103,7 @@ export interface IBeaconChain {
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly producedBlobsSidecarCache: Map<RootHex, eip4844.BlobsSidecar>;
   readonly opts: IChainOptions;
+  readonly db: IBeaconDb;
 
   /** Stop beacon chain processing */
   close(): Promise<void>;

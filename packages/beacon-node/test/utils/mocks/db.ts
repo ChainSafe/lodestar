@@ -17,6 +17,7 @@ import {
   BlobsSidecarRepository,
   BlobsSidecarArchiveRepository,
   BLSToExecutionChangeRepository,
+  BLSToExecutionChangeCacheRepository,
 } from "../../../src/db/repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "../../../src/db/single/index.js";
 import {createStubInstance} from "../types.js";
@@ -45,6 +46,7 @@ export function getStubbedBeaconDb(): IBeaconDb {
     attesterSlashing: createStubInstance(AttesterSlashingRepository),
     depositEvent: createStubInstance(DepositEventRepository),
     blsToExecutionChange: createStubInstance(BLSToExecutionChangeRepository),
+    blsToExecutionChangeCache: createStubInstance(BLSToExecutionChangeCacheRepository),
 
     // eth1 processing
     preGenesisState: createStubInstance(PreGenesisState),

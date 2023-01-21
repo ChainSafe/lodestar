@@ -63,6 +63,7 @@ export class Network implements INetwork {
   private readonly signal: AbortSignal;
 
   private subscribedForks = new Set<ForkName>();
+  private cachedBlsChangesPromise: Promise<void> | null = null;
 
   constructor(private readonly opts: INetworkOptions, modules: INetworkModules) {
     const {config, libp2p, logger, metrics, chain, reqRespHandlers, gossipHandlers, signal} = modules;
@@ -411,6 +412,17 @@ export class Network implements INetwork {
           }
         }
       }
+
+      // If we are subscribed and post capella fork epoch, try gossiping the cached bls changes
+      if (
+        this.isSubscribedToGossipCoreTopics() &&
+        epoch >= this.config.CAPELLA_FORK_EPOCH &&
+        !this.cachedBlsChangesPromise
+      ) {
+        this.cachedBlsChangesPromise = this.gossipCachedBlsChanges().then(() => {
+          this.cachedBlsChangesPromise = null;
+        });
+      }
     } catch (e) {
       this.logger.error("Error on BeaconGossipHandler.onEpoch", {epoch}, e as Error);
     }
@@ -480,6 +492,20 @@ export class Network implements INetwork {
     }
 
     return topics;
+  }
+
+  private async gossipCachedBlsChanges(): Promise<void> {
+    const gossipedKeys = [];
+    try {
+      for await (const {key, value} of this.chain.db.blsToExecutionChangeCache.entriesStream()) {
+        await this.gossip.publishBlsToExecutionChange(value);
+        gossipedKeys.push(key);
+      }
+    } finally {
+      await this.chain.db.blsToExecutionChangeCache.batchDelete(gossipedKeys).catch((e) => {
+        this.logger.error("Could not clear gossiped blsChanges from blsToExecutionChangeCache", {}, e as Error);
+      });
+    }
   }
 
   private onLightClientFinalityUpdate = async (finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> => {

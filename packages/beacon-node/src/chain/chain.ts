@@ -134,9 +134,9 @@ export class BeaconChain implements IBeaconChain {
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
   readonly producedBlobsSidecarCache = new Map<RootHex, eip4844.BlobsSidecar>();
   readonly opts: IChainOptions;
+  readonly db: IBeaconDb;
 
   protected readonly blockProcessor: BlockProcessor;
-  protected readonly db: IBeaconDb;
   private readonly archiver: Archiver;
   private abortController = new AbortController();
   private successfulExchangeTransition = false;
