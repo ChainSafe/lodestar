@@ -85,7 +85,7 @@ export class MonitoringService {
             throw new Error(error.status);
           }
 
-          this.logger.debug(`Sent client stats to ${this.remoteHost}: ${JSON.stringify(data)}`);
+          this.logger.debug(`Sent client stats to ${this.remoteHost}`, {data: JSON.stringify(data)});
         } catch (e) {
           this.logger.error(`Failed to send client stats to ${this.remoteHost}`, {}, e as Error);
         } finally {
@@ -159,19 +159,17 @@ export class MonitoringService {
     }
 
     try {
-      const remoteServerUrl = new URL(endpoint);
+      const url = new URL(endpoint);
 
-      if (!["http:", "https:"].includes(remoteServerUrl.protocol)) {
-        throw new Error();
-      }
-
-      if (remoteServerUrl.protocol === "http:") {
+      if (url.protocol === "http:") {
         this.logger.warn(
           "Insecure monitoring endpoint, please make sure to always use a HTTPS connection in production"
         );
+      } else if (url.protocol !== "https:") {
+        throw new Error();
       }
 
-      return remoteServerUrl;
+      return url;
     } catch {
       throw new Error("Monitoring endpoint must be a valid URL");
     }
