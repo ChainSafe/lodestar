@@ -1,5 +1,5 @@
 import {Registry} from "prom-client";
-import {ILogger, sleep} from "@lodestar/utils";
+import {ErrorAborted, ILogger, sleep, TimeoutError} from "@lodestar/utils";
 import {defaultMonitoringOptions, MonitoringOptions} from "./options.js";
 import {createClientStats} from "./clientStats.js";
 import {ProcessType} from "./types.js";
@@ -10,6 +10,11 @@ type RemoteServerError = {
   status: string;
   data: null;
 };
+
+enum FetchAbortReason {
+  Stop = "stop",
+  Timeout = "timeout",
+}
 
 /**
  * Service for sending clients stats to a remote server (e.g. beaconcha.in)
@@ -22,6 +27,7 @@ export class MonitoringService {
   private readonly logger: ILogger;
 
   private sendDataInterval?: NodeJS.Timeout;
+  private fetchAbortController?: AbortController;
 
   constructor(
     private readonly processes: ProcessType[],
@@ -60,18 +66,17 @@ export class MonitoringService {
       clearInterval(this.sendDataInterval);
       this.sendDataInterval = undefined;
     }
+    if (this.fetchAbortController) {
+      this.fetchAbortController.abort(FetchAbortReason.Stop);
+      this.fetchAbortController = undefined;
+    }
   }
 
   private async sendData(): Promise<void> {
     try {
       const data = await this.collectData();
 
-      // TODO: add AbortController? see JsonRpcHttpCLient
-      const res = await fetch(this.remoteServerUrl, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(data),
-      });
+      const res = await this.fetchRemoteServerUrl(this.remoteServerUrl, data);
 
       if (!res.ok) {
         const error = (await res.json()) as RemoteServerError;
@@ -104,6 +109,41 @@ export class MonitoringService {
     await Promise.all(recordPromises);
 
     return data;
+  }
+
+  private async fetchRemoteServerUrl(url: URL, data: MonitoringData[]): Promise<Response> {
+    this.fetchAbortController = new AbortController();
+
+    const timeout = setTimeout(
+      () => this.fetchAbortController?.abort(FetchAbortReason.Timeout),
+      this.options.requestTimeout * 1000
+    );
+
+    try {
+      return await fetch(url, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data),
+        signal: this.fetchAbortController.signal,
+      });
+    } catch (e) {
+      const {signal} = this.fetchAbortController;
+
+      if (signal.aborted) {
+        if (signal.reason === FetchAbortReason.Stop) {
+          throw new ErrorAborted("fetch");
+        } else if (signal.reason === FetchAbortReason.Timeout) {
+          throw new TimeoutError("fetch");
+        } else {
+          throw e;
+        }
+      } else {
+        throw e;
+      }
+    } finally {
+      clearTimeout(timeout);
+      this.fetchAbortController = undefined;
+    }
   }
 
   private parseMonitoringEndpoint(endpoint: string): URL {

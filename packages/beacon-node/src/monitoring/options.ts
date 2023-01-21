@@ -5,10 +5,13 @@ export type MonitoringOptions = {
   interval?: number;
   /** Initial delay in seconds before client stats are sent */
   initialDelay?: number;
+  /** Timeout in seconds for sending client stats */
+  requestTimeout?: number;
 };
 
 export const defaultMonitoringOptions: Required<MonitoringOptions> = {
   endpoint: "",
   interval: 60,
   initialDelay: 30,
+  requestTimeout: 30,
 };
