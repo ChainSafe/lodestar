@@ -26,7 +26,7 @@ export class MonitoringService {
   private readonly register: Registry;
   private readonly logger: ILogger;
 
-  private sendDataInterval?: NodeJS.Timeout;
+  private sendDataInterval?: NodeJS.Timer;
   private fetchAbortController?: AbortController;
   private pendingRequest?: Promise<void>;
 
@@ -82,10 +82,10 @@ export class MonitoringService {
 
           if (!res.ok) {
             const error = (await res.json()) as RemoteServerError;
-            this.logger.error(error.status);
-          } else {
-            this.logger.debug(`Sent client stats to ${this.remoteHost}: ${JSON.stringify(data)}`);
+            throw new Error(error.status);
           }
+
+          this.logger.debug(`Sent client stats to ${this.remoteHost}: ${JSON.stringify(data)}`);
         } catch (e) {
           this.logger.error(`Failed to send client stats to ${this.remoteHost}`, {}, e as Error);
         } finally {
@@ -98,12 +98,12 @@ export class MonitoringService {
   }
 
   private async collectData(): Promise<MonitoringData[]> {
-    const stats = createClientStats(this.processes);
+    const clientStats = createClientStats(this.processes);
     const data: MonitoringData[] = [];
 
     const recordPromises = [];
 
-    for (const [i, s] of stats.entries()) {
+    for (const [i, s] of clientStats.entries()) {
       data[i] = {};
 
       recordPromises.push(
