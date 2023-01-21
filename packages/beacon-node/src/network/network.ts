@@ -1,4 +1,3 @@
-import {DefaultConnectionManager} from "libp2p/connection-manager";
 import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
