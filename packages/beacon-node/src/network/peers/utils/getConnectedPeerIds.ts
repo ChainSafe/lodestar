@@ -1,7 +1,7 @@
-import {Libp2p} from "libp2p";
 import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
 import type {ConnectionManager} from "@libp2p/interface-connection-manager";
+import {Libp2p} from "../../interface.js";
 import {getConnectionsMap} from "../../util.js";
 
 /**

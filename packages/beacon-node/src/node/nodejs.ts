@@ -1,5 +1,4 @@
 import {setMaxListeners} from "node:events";
-import {Libp2p} from "libp2p";
 import {Registry} from "prom-client";
 
 import {IBeaconConfig} from "@lodestar/config";
@@ -10,7 +9,7 @@ import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IBeaconDb} from "../db/index.js";
-import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
+import {Libp2p, INetwork, Network, getReqRespHandlers} from "../network/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
