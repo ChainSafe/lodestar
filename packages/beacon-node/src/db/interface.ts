@@ -17,6 +17,7 @@ import {
   BlobsSidecarRepository,
   BlobsSidecarArchiveRepository,
   BLSToExecutionChangeRepository,
+  BLSToExecutionChangeCacheRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
@@ -43,6 +44,7 @@ export interface IBeaconDb {
   attesterSlashing: AttesterSlashingRepository;
   depositEvent: DepositEventRepository;
   blsToExecutionChange: BLSToExecutionChangeRepository;
+  blsToExecutionChangeCache: BLSToExecutionChangeCacheRepository;
 
   // eth1 processing
   preGenesisState: PreGenesisState;

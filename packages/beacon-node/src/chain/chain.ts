@@ -12,7 +12,19 @@ import {
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, eip4844, Wei} from "@lodestar/types";
+import {
+  allForks,
+  UintNum64,
+  Root,
+  phase0,
+  Slot,
+  RootHex,
+  Epoch,
+  ValidatorIndex,
+  eip4844,
+  Wei,
+  capella,
+} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {ILogger, pruneSetToMax, toHex} from "@lodestar/utils";
@@ -778,5 +790,10 @@ export class BeaconChain implements IBeaconChain {
         });
       }
     }
+  }
+
+  /** Must be validated beforehand */
+  async cacheBlsToExecutionChanges(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<void> {
+    return this.db.blsToExecutionChangeCache.add(blsToExecutionChange);
   }
 }

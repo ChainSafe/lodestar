@@ -104,7 +104,11 @@ export function getBeaconPoolApi({
           try {
             await validateBlsToExecutionChange(chain, blsToExecutionChange);
             chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
-            await network.gossip.publishBlsToExecutionChange(blsToExecutionChange);
+            try {
+              await network.gossip.publishBlsToExecutionChange(blsToExecutionChange);
+            } catch (e) {
+              await chain.cacheBlsToExecutionChanges(blsToExecutionChange);
+            }
           } catch (e) {
             errors.push(e as Error);
             logger.error(
