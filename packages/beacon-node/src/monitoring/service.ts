@@ -28,6 +28,7 @@ export class MonitoringService {
 
   private sendDataInterval?: NodeJS.Timeout;
   private fetchAbortController?: AbortController;
+  private pendingRequest?: Promise<void>;
 
   constructor(
     private readonly processes: ProcessType[],
@@ -66,27 +67,34 @@ export class MonitoringService {
       clearInterval(this.sendDataInterval);
       this.sendDataInterval = undefined;
     }
-    if (this.fetchAbortController) {
-      this.fetchAbortController.abort(FetchAbortReason.Stop);
-      this.fetchAbortController = undefined;
+    if (this.pendingRequest) {
+      this.fetchAbortController?.abort(FetchAbortReason.Stop);
     }
   }
 
   private async sendData(): Promise<void> {
-    try {
-      const data = await this.collectData();
+    if (!this.pendingRequest) {
+      this.pendingRequest = (async () => {
+        try {
+          const data = await this.collectData();
 
-      const res = await this.fetchRemoteServerUrl(this.remoteServerUrl, data);
+          const res = await this.fetchRemoteServerUrl(this.remoteServerUrl, data);
 
-      if (!res.ok) {
-        const error = (await res.json()) as RemoteServerError;
-        this.logger.error(error.status);
-      } else {
-        this.logger.debug(`Sent client stats to ${this.remoteHost}: ${JSON.stringify(data)}`);
-      }
-    } catch (e) {
-      this.logger.error(`Failed to send client stats to ${this.remoteHost}`, {}, e as Error);
+          if (!res.ok) {
+            const error = (await res.json()) as RemoteServerError;
+            this.logger.error(error.status);
+          } else {
+            this.logger.debug(`Sent client stats to ${this.remoteHost}: ${JSON.stringify(data)}`);
+          }
+        } catch (e) {
+          this.logger.error(`Failed to send client stats to ${this.remoteHost}`, {}, e as Error);
+        } finally {
+          this.pendingRequest = undefined;
+        }
+      })();
     }
+
+    await this.pendingRequest;
   }
 
   private async collectData(): Promise<MonitoringData[]> {
@@ -142,7 +150,6 @@ export class MonitoringService {
       }
     } finally {
       clearTimeout(timeout);
-      this.fetchAbortController = undefined;
     }
   }
 
