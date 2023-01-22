@@ -502,6 +502,8 @@ export class Network implements INetwork {
         await this.gossip.publishBlsToExecutionChange(value);
         gossipedKeys.push(key);
       }
+    } catch (e) {
+      this.logger.error("Failed to gossip all cached bls changes", {}, e as Error);
     } finally {
       this.logger.info("Gossiped cached blsChanges", {size: gossipedKeys.length});
       await this.chain.db.blsToExecutionChangeCache.batchDelete(gossipedKeys).catch((e) => {
