@@ -163,5 +163,86 @@ function createValidatorStats(): ClientStats {
 }
 
 function createSystemStats(): ClientStats {
-  return {};
+  return {
+    ...createCommonStats(ProcessType.System),
+    cpuCores: new DynamicProperty({
+      jsonKey: "cpu_cores",
+      provider: () => 0,
+      cacheResult: true,
+    }),
+    cpuThreads: new DynamicProperty({
+      jsonKey: "cpu_threads",
+      provider: () => 0,
+      cacheResult: true,
+    }),
+    cpuNodeSystemSecondsTotal: new DynamicProperty({
+      jsonKey: "cpu_node_system_seconds_total",
+      provider: () => 0,
+    }),
+    cpuNodeUserSecondsTotal: new DynamicProperty({
+      jsonKey: "cpu_node_user_seconds_total",
+      provider: () => 0,
+    }),
+    cpuNodeIOWaitSecondsTotal: new DynamicProperty({
+      jsonKey: "cpu_node_iowait_seconds_total",
+      provider: () => 0,
+    }),
+    cpuNodeIdleSecondsTotal: new DynamicProperty({
+      jsonKey: "cpu_node_idle_seconds_total",
+      provider: () => 0,
+    }),
+    memoryNodeBytesTotal: new DynamicProperty({
+      jsonKey: "memory_node_bytes_total",
+      provider: () => 0,
+      cacheResult: true,
+    }),
+    memoryNodeBytesFree: new DynamicProperty({
+      jsonKey: "memory_node_bytes_free",
+      provider: () => 0,
+    }),
+    memoryNodeBytesCached: new DynamicProperty({
+      jsonKey: "memory_node_bytes_cached",
+      provider: () => 0,
+    }),
+    memoryNodeBytesBuffers: new DynamicProperty({
+      jsonKey: "memory_node_bytes_buffers",
+      provider: () => 0,
+    }),
+    diskNodeBytesTotal: new DynamicProperty({
+      jsonKey: "disk_node_bytes_total",
+      provider: () => 0,
+    }),
+    diskNodeBytesFree: new DynamicProperty({
+      jsonKey: "disk_node_bytes_free",
+      provider: () => 0,
+    }),
+    diskNodeIOSeconds: new DynamicProperty({
+      jsonKey: "disk_node_io_seconds",
+      provider: () => 0,
+    }),
+    diskNodeReadsTotal: new DynamicProperty({
+      jsonKey: "disk_node_reads_total",
+      provider: () => 0,
+    }),
+    diskNodeWritesTotal: new DynamicProperty({
+      jsonKey: "disk_node_writes_total",
+      provider: () => 0,
+    }),
+    networkNodeBytesTotalReceive: new DynamicProperty({
+      jsonKey: "network_node_bytes_total_receive",
+      provider: () => 0,
+    }),
+    networkNodeBytesTotalTransmit: new DynamicProperty({
+      jsonKey: "network_node_bytes_total_transmit",
+      provider: () => 0,
+    }),
+    miscNodeBootTsSeconds: new DynamicProperty({
+      jsonKey: "misc_node_boot_ts_seconds",
+      provider: () => 0,
+    }),
+    miscOs: new DynamicProperty({
+      jsonKey: "misc_os",
+      provider: () => "unk",
+    }),
+  };
 }
