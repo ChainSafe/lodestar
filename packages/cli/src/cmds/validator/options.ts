@@ -19,6 +19,7 @@ export const validatorMetricsDefaultOptions = {
 
 export const validatorMonitoringDefaultOptions = {
   interval: 60,
+  collectSystemStats: false,
 };
 
 // Defined as variable to not set yargs.default to an array
@@ -57,6 +58,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     "monitoring.endpoint": string;
     "monitoring.interval": number;
+    "monitoring.collectSystemStats": boolean;
   };
 
 export type KeymanagerArgs = {
@@ -298,6 +300,15 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     type: "number",
     description: "Interval in seconds between sending client stats to the remote server",
     defaultDescription: String(validatorMonitoringDefaultOptions.interval),
+    group: "monitoring",
+    hidden: true,
+  },
+
+  "monitoring.collectSystemStats": {
+    type: "boolean",
+    description:
+      "Enable collecting system stats. This should only be enabled if validator client and beacon node are running on different hosts.",
+    defaultDescription: String(validatorMonitoringDefaultOptions.collectSystemStats),
     group: "monitoring",
     hidden: true,
   },

@@ -3,13 +3,7 @@ import {setMaxListeners} from "node:events";
 import {LevelDbController} from "@lodestar/db";
 import {ProcessShutdownCallback, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
-import {
-  RegistryMetricCreator,
-  collectNodeJSMetrics,
-  HttpMetricsServer,
-  MonitoringService,
-  ProcessType,
-} from "@lodestar/beacon-node";
+import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer, MonitoringService} from "@lodestar/beacon-node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger, cleanOldLogFiles} from "../../util/index.js";
@@ -129,9 +123,17 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       throw new Error("Metrics must be enabled to use monitoring");
     }
 
-    const endpoint = args["monitoring.endpoint"];
-    const interval = args["monitoring.interval"] ?? validatorMonitoringDefaultOptions.interval;
-    const monitoring = new MonitoringService([ProcessType.Validator], {endpoint, interval}, {register, logger});
+    const {interval, collectSystemStats} = validatorMonitoringDefaultOptions;
+
+    const monitoring = new MonitoringService(
+      "validator",
+      {
+        endpoint: args["monitoring.endpoint"],
+        interval: args["monitoring.interval"] ?? interval,
+        collectSystemStats: args["monitoring.collectSystemStats"] ?? collectSystemStats,
+      },
+      {register, logger}
+    );
 
     onGracefulShutdownCbs.push(() => monitoring.stop());
     monitoring.start();

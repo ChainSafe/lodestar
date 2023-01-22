@@ -14,7 +14,7 @@ import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics/index.js";
-import {MonitoringService, ProcessType} from "../monitoring/index.js";
+import {MonitoringService} from "../monitoring/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
@@ -179,7 +179,7 @@ export class BeaconNode {
       if (metrics == null) {
         throw new Error("Metrics must be enabled to use monitoring");
       }
-      monitoring = new MonitoringService([ProcessType.BeaconNode], opts.monitoring, {
+      monitoring = new MonitoringService("beacon", opts.monitoring, {
         register: metrics.register,
         logger: logger.child({module: LoggerModule.monitoring}),
       });

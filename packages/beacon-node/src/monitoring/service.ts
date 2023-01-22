@@ -2,7 +2,7 @@ import {Registry} from "prom-client";
 import {ErrorAborted, ILogger, sleep, TimeoutError} from "@lodestar/utils";
 import {defaultMonitoringOptions, MonitoringOptions} from "./options.js";
 import {createClientStats} from "./clientStats.js";
-import {ProcessType} from "./types.js";
+import {Client, ClientStats} from "./types.js";
 
 type MonitoringData = Record<string, string | number | boolean>;
 
@@ -20,6 +20,7 @@ enum FetchAbortReason {
  * Service for sending clients stats to a remote server (e.g. beaconcha.in)
  */
 export class MonitoringService {
+  private readonly clientStats: ClientStats[];
   private readonly remoteHost: string;
   private readonly remoteServerUrl: URL;
   private readonly options: Required<MonitoringOptions>;
@@ -30,16 +31,13 @@ export class MonitoringService {
   private fetchAbortController?: AbortController;
   private pendingRequest?: Promise<void>;
 
-  constructor(
-    private readonly processes: ProcessType[],
-    options: MonitoringOptions,
-    {register, logger}: {register: Registry; logger: ILogger}
-  ) {
+  constructor(client: Client, options: MonitoringOptions, {register, logger}: {register: Registry; logger: ILogger}) {
     this.options = {...defaultMonitoringOptions, ...options};
     this.logger = logger;
     this.register = register;
     this.remoteServerUrl = this.parseMonitoringEndpoint(this.options.endpoint);
     this.remoteHost = this.remoteServerUrl.host;
+    this.clientStats = createClientStats(client, this.options.collectSystemStats);
   }
 
   start(): void {
@@ -98,12 +96,11 @@ export class MonitoringService {
   }
 
   private async collectData(): Promise<MonitoringData[]> {
-    const clientStats = createClientStats(this.processes);
     const data: MonitoringData[] = [];
 
     const recordPromises = [];
 
-    for (const [i, s] of clientStats.entries()) {
+    for (const [i, s] of this.clientStats.entries()) {
       data[i] = {};
 
       recordPromises.push(

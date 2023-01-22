@@ -7,6 +7,8 @@ export type MonitoringOptions = {
   initialDelay?: number;
   /** Timeout in seconds for sending client stats */
   requestTimeout?: number;
+  /** Enable collecting system stats */
+  collectSystemStats?: boolean;
 };
 
 export const defaultMonitoringOptions: Required<MonitoringOptions> = {
@@ -14,4 +16,5 @@ export const defaultMonitoringOptions: Required<MonitoringOptions> = {
   interval: 60,
   initialDelay: 30,
   requestTimeout: 30,
+  collectSystemStats: true,
 };

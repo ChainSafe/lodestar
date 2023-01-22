@@ -1,19 +1,25 @@
 import {DynamicProperty, MetricProperty, StaticProperty} from "./properties.js";
-import {ClientStats, JsonType, ProcessType} from "./types.js";
+import {Client, ClientStats, JsonType, ProcessType} from "./types.js";
 
 // Definition of client stats based on specification
 // see https://docs.google.com/document/d/1qPWAVRjPCENlyAjUBwGkHMvz9qLdd_6u9DPZcNxDBpc
 
 const CLIENT_STATS_SPEC_VERSION = 1;
 
-export function createClientStats(processes: ProcessType[]): ClientStats[] {
-  const processToStats = {
-    [ProcessType.BeaconNode]: createBeaconNodeStats,
-    [ProcessType.Validator]: createValidatorStats,
-    [ProcessType.System]: createSystemStats,
-  };
+export function createClientStats(client: Client, collectSystemStats?: boolean): ClientStats[] {
+  const clientStats: ClientStats[] = [];
 
-  return processes.map((p) => processToStats[p]());
+  if (client === "beacon") {
+    clientStats.push(createBeaconNodeStats());
+  } else if (client === "validator") {
+    clientStats.push(createValidatorStats());
+  }
+
+  if (collectSystemStats) {
+    clientStats.push(createSystemStats());
+  }
+
+  return clientStats;
 }
 
 function createCommonStats(process: ProcessType): ClientStats {

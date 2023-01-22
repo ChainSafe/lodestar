@@ -8,7 +8,7 @@ export * from "./node/index.js";
 export {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "./metrics/index.js";
 
 // Export monitoring service to make it usable by validator
-export {MonitoringService, ProcessType} from "./monitoring/index.js";
+export {MonitoringService} from "./monitoring/index.js";
 
 // Export generic RestApi server for CLI
 export {RestApiServer, RestApiServerOpts, RestApiServerModules, RestApiServerMetrics} from "./api/rest/base.js";
