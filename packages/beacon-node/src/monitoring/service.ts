@@ -46,17 +46,22 @@ export class MonitoringService {
       return;
     }
 
-    sleep(this.options.initialDelay * 1000).finally(async () => {
+    const {interval, initialDelay, requestTimeout, collectSystemStats} = this.options;
+
+    sleep(initialDelay * 1000).finally(async () => {
       await this.sendData();
 
       this.sendDataInterval = setInterval(async () => {
         await this.sendData();
-      }, this.options.interval * 1000);
+      }, interval * 1000);
     });
 
     this.logger.info("Started monitoring service", {
       remote: this.remoteHost,
-      interval: `${this.options.interval}s`,
+      interval: `${interval}s`,
+      initialDelay: `${initialDelay}s`,
+      requestTimeout: `${requestTimeout}s`,
+      collectSystemStats,
     });
   }
 
