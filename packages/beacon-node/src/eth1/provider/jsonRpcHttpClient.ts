@@ -144,6 +144,18 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       rpcPayloadArr.map(({method, params}) => ({jsonrpc: "2.0", method, params, id: this.id++})),
       opts
     );
+
+    if (!Array.isArray(resArr)) {
+      let resArrStr;
+      try {
+        resArrStr = JSON.stringify(resArr);
+      } catch (e) {
+        resArrStr = `resArr is not serializable: ${(e as Error).message}`;
+      }
+
+      throw Error(`expected array of results, got ${resArr} - ${resArrStr}`);
+    }
+
     return resArr.map((res, i) => parseRpcResponse(res, rpcPayloadArr[i]));
   }
 
