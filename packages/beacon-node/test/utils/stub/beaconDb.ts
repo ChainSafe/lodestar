@@ -52,6 +52,7 @@ export class StubbedBeaconDb extends BeaconDb {
 
     this.voluntaryExit = createStubInstance(VoluntaryExitRepository);
     this.blsToExecutionChange = createStubInstance(BLSToExecutionChangeRepository);
+    this.blsToExecutionChangeCache = createStubInstance(BLSToExecutionChangeCacheRepository);
     this.proposerSlashing = createStubInstance(ProposerSlashingRepository);
     this.attesterSlashing = createStubInstance(AttesterSlashingRepository);
     this.depositEvent = createStubInstance(DepositEventRepository);
