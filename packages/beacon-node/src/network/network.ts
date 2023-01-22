@@ -497,11 +497,13 @@ export class Network implements INetwork {
   private async gossipCachedBlsChanges(): Promise<void> {
     const gossipedKeys = [];
     try {
+      this.logger.info("Re-gossiping the cached bls changes");
       for await (const {key, value} of this.chain.db.blsToExecutionChangeCache.entriesStream()) {
         await this.gossip.publishBlsToExecutionChange(value);
         gossipedKeys.push(key);
       }
     } finally {
+      this.logger.info("Gossiped cached blsChanges", {size: gossipedKeys.length});
       await this.chain.db.blsToExecutionChangeCache.batchDelete(gossipedKeys).catch((e) => {
         this.logger.error("Could not clear gossiped blsChanges from blsToExecutionChangeCache", {}, e as Error);
       });
