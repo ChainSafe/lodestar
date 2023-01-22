@@ -8,7 +8,7 @@ import {ClientStats, JsonType, ProcessType} from "./types.js";
 const CLIENT_STATS_SPEC_VERSION = 1;
 
 export function createClientStats(client: Client, collectSystemStats?: boolean): ClientStats[] {
-  const clientStats: ClientStats[] = [];
+  const clientStats = [];
 
   if (client === "beacon") {
     clientStats.push(createBeaconNodeStats());

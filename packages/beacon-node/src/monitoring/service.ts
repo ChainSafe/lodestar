@@ -6,7 +6,7 @@ import {ClientStats} from "./types.js";
 
 type MonitoringData = Record<string, string | number | boolean>;
 
-type RemoteServerError = {
+type RemoteServiceError = {
   status: string;
   data: null;
 };
@@ -23,8 +23,8 @@ export type Client = "beacon" | "validator";
  */
 export class MonitoringService {
   private readonly clientStats: ClientStats[];
-  private readonly remoteHost: string;
-  private readonly remoteServerUrl: URL;
+  private readonly remoteServiceUrl: URL;
+  private readonly remoteServiceHost: string;
   private readonly options: Required<MonitoringOptions>;
   private readonly register: Registry;
   private readonly logger: ILogger;
@@ -37,8 +37,8 @@ export class MonitoringService {
     this.options = {...defaultMonitoringOptions, ...options};
     this.logger = logger;
     this.register = register;
-    this.remoteServerUrl = this.parseMonitoringEndpoint(this.options.endpoint);
-    this.remoteHost = this.remoteServerUrl.host;
+    this.remoteServiceUrl = this.parseMonitoringEndpoint(this.options.endpoint);
+    this.remoteServiceHost = this.remoteServiceUrl.host;
     this.clientStats = createClientStats(client, this.options.collectSystemStats);
   }
 
@@ -59,7 +59,7 @@ export class MonitoringService {
     });
 
     this.logger.info("Started monitoring service", {
-      remote: this.remoteHost,
+      remote: this.remoteServiceHost,
       interval: `${interval}s`,
       initialDelay: `${initialDelay}s`,
       requestTimeout: `${requestTimeout}s`,
@@ -83,16 +83,16 @@ export class MonitoringService {
         try {
           const data = await this.collectData();
 
-          const res = await this.fetchRemoteServerUrl(this.remoteServerUrl, data);
+          const res = await this.invokeRemoteService(data);
 
           if (!res.ok) {
-            const error = (await res.json()) as RemoteServerError;
+            const error = (await res.json()) as RemoteServiceError;
             throw new Error(error.status);
           }
 
-          this.logger.debug(`Sent client stats to ${this.remoteHost}`, {data: JSON.stringify(data)});
+          this.logger.debug(`Sent client stats to ${this.remoteServiceHost}`, {data: JSON.stringify(data)});
         } catch (e) {
-          this.logger.error(`Failed to send client stats to ${this.remoteHost}`, {}, e as Error);
+          this.logger.error(`Failed to send client stats to ${this.remoteServiceHost}`, {}, e as Error);
         } finally {
           this.pendingRequest = undefined;
         }
@@ -123,7 +123,7 @@ export class MonitoringService {
     return data;
   }
 
-  private async fetchRemoteServerUrl(url: URL, data: MonitoringData[]): Promise<Response> {
+  private async invokeRemoteService(data: MonitoringData[]): Promise<Response> {
     this.fetchAbortController = new AbortController();
 
     const timeout = setTimeout(
@@ -132,7 +132,7 @@ export class MonitoringService {
     );
 
     try {
-      return await fetch(url, {
+      return await fetch(this.remoteServiceUrl, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(data),
