@@ -104,9 +104,9 @@ export function getBeaconPoolApi({
           try {
             await validateBlsToExecutionChange(chain, blsToExecutionChange);
             chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
-            try {
+            if (chain.clock.currentEpoch >= chain.config.CAPELLA_FORK_EPOCH) {
               await network.gossip.publishBlsToExecutionChange(blsToExecutionChange);
-            } catch (e) {
+            } else {
               await chain.cacheBlsToExecutionChanges(blsToExecutionChange);
             }
           } catch (e) {
