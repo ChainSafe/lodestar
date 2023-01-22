@@ -19,7 +19,7 @@ export const options: ICliCommandOptions<IMonitoringArgs> = {
   "monitoring.endpoint": {
     type: "string",
     description:
-      "Enables monitoring service for sending clients stats to the specified endpoint of a remote service (e.g. beaconcha.in). It is required that metrics are enabled by supplying the --metrics flag.",
+      "Enables monitoring service for sending clients stats to the specified endpoint of a remote service (e.g. beaconcha.in). It is required that metrics are also enabled by supplying the --metrics flag.",
     group: "monitoring",
   },
 
@@ -34,7 +34,7 @@ export const options: ICliCommandOptions<IMonitoringArgs> = {
   "monitoring.collectSystemStats": {
     type: "boolean",
     description:
-      "Enable collecting system stats. By default, the beacon node will collect the system stats but it can also be handled by the validator client.",
+      "Enable collecting system stats. By default, the beacon node will collect system stats but this can also be handled by the validator client.",
     defaultDescription: String(defaultOptions.monitoring.collectSystemStats),
     group: "monitoring",
     hidden: true,
