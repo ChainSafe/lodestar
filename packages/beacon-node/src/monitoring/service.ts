@@ -17,7 +17,7 @@ enum FetchAbortReason {
 }
 
 /**
- * Service for sending clients stats to a remote server (e.g. beaconcha.in)
+ * Service for sending clients stats to a remote service (e.g. beaconcha.in)
  */
 export class MonitoringService {
   private readonly clientStats: ClientStats[];

@@ -2,7 +2,7 @@ import {Registry} from "prom-client";
 import {JsonRecord, JsonType, MetricObject, MetricValue, MetricWithGetter, RecordValue} from "./types.js";
 
 interface PropertyDefinition {
-  /** Key of value to be sent to remote server */
+  /** Key of value to be sent to remote service */
   jsonKey: string;
 }
 
@@ -19,7 +19,7 @@ interface DynamicPropertyDefinition<T extends RecordValue> extends PropertyDefin
 }
 
 interface MetricPropertyDefinition<T extends RecordValue> extends PropertyDefinition {
-  /** Type of value to be sent to remote server */
+  /** Type of value to be sent to remote service */
   jsonType: JsonType;
   /** Name of the metric */
   metricName: string;

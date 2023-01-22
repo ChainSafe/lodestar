@@ -292,13 +292,13 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   "monitoring.endpoint": {
     type: "string",
     description:
-      "Enables monitoring service for sending clients stats to the specified endpoint of a remote server (e.g. beaconcha.in). It is required that metrics are enabled by supplying the --metrics flag.",
+      "Enables monitoring service for sending clients stats to the specified endpoint of a remote service (e.g. beaconcha.in). It is required that metrics are enabled by supplying the --metrics flag.",
     group: "monitoring",
   },
 
   "monitoring.interval": {
     type: "number",
-    description: "Interval in seconds between sending client stats to the remote server",
+    description: "Interval in seconds between sending client stats to the remote service",
     defaultDescription: String(validatorMonitoringDefaultOptions.interval),
     group: "monitoring",
     hidden: true,
