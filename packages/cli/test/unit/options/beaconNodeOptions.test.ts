@@ -52,6 +52,10 @@ describe("options / beaconNodeOptions", () => {
       "metrics.port": 8765,
       "metrics.address": "0.0.0.0",
 
+      "monitoring.endpoint": "https://beaconcha.in/api/v1/client/metrics?apikey=secretKey&machine=machine1",
+      "monitoring.interval": 60,
+      "monitoring.collectSystemStats": true,
+
       discv5: true,
       listenAddress: "127.0.0.1",
       port: 9001,
@@ -131,6 +135,11 @@ describe("options / beaconNodeOptions", () => {
         enabled: true,
         port: 8765,
         address: "0.0.0.0",
+      },
+      monitoring: {
+        endpoint: "https://beaconcha.in/api/v1/client/metrics?apikey=secretKey&machine=machine1",
+        interval: 60,
+        collectSystemStats: true,
       },
       network: {
         discv5: {
