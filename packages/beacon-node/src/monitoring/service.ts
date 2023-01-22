@@ -2,7 +2,7 @@ import {Registry} from "prom-client";
 import {ErrorAborted, ILogger, sleep, TimeoutError} from "@lodestar/utils";
 import {defaultMonitoringOptions, MonitoringOptions} from "./options.js";
 import {createClientStats} from "./clientStats.js";
-import {Client, ClientStats} from "./types.js";
+import {ClientStats} from "./types.js";
 
 type MonitoringData = Record<string, string | number | boolean>;
 
@@ -15,6 +15,8 @@ enum FetchAbortReason {
   Stop = "stop",
   Timeout = "timeout",
 }
+
+export type Client = "beacon" | "validator";
 
 /**
  * Service for sending clients stats to a remote service (e.g. beaconcha.in)

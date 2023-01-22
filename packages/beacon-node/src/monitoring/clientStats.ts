@@ -1,8 +1,9 @@
 import {DynamicProperty, MetricProperty, StaticProperty} from "./properties.js";
-import {Client, ClientStats, JsonType, ProcessType} from "./types.js";
+import {Client} from "./service.js";
+import {ClientStats, JsonType, ProcessType} from "./types.js";
 
 // Definition of client stats based on specification
-// see https://docs.google.com/document/d/1qPWAVRjPCENlyAjUBwGkHMvz9qLdd_6u9DPZcNxDBpc
+// See https://docs.google.com/document/d/1qPWAVRjPCENlyAjUBwGkHMvz9qLdd_6u9DPZcNxDBpc
 
 const CLIENT_STATS_SPEC_VERSION = 1;
 

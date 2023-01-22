@@ -14,7 +14,7 @@ interface StaticPropertyDefinition<T extends RecordValue> extends PropertyDefini
 interface DynamicPropertyDefinition<T extends RecordValue> extends PropertyDefinition {
   /** Value provider function */
   provider: () => T | Promise<T>;
-  /** Only call provider once and then use cached value */
+  /** Only call provider function once and then use cached value */
   cacheResult?: boolean;
 }
 

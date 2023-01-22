@@ -30,5 +30,3 @@ export enum JsonType {
   Number,
   Boolean,
 }
-
-export type Client = "beacon" | "validator";
