@@ -129,6 +129,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       try {
         enrs.push(ENR.decode(Buffer.from(enrBuf)));
       } catch (e) {
+        this.logger.debug("ENR decode error", {enr: Buffer.from(enrBuf).toString("base64url")});
         errors++;
       }
     }
@@ -145,6 +146,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
     } catch (e) {
       this.opts.metrics?.discv5.decodeEnrErrorCount.inc(1);
     } finally {
+      this.logger.debug("ENR decode error", {enr: Buffer.from(enrBuf).toString("base64url")});
       this.opts.metrics?.discv5.decodeEnrAttemptCount.inc(1);
     }
     return undefined;
