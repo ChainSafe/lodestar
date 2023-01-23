@@ -19,7 +19,7 @@ interface IRpcResponse<R> extends IRpcResponseError {
 interface IRpcResponseError {
   jsonrpc: "2.0";
   id: number;
-  error?: {
+  error: {
     code: number; // -32601;
     message: string; // "The method eth_none does not exist/is not available"
   };
@@ -146,14 +146,12 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     );
 
     if (!Array.isArray(resArr)) {
-      let resArrStr;
-      try {
-        resArrStr = JSON.stringify(resArr);
-      } catch (e) {
-        resArrStr = `resArr is not serializable: ${(e as Error).message}`;
+      // Nethermind may reply to batch request with a JSON RPC error
+      if ((resArr as IRpcResponseError).error !== undefined) {
+        throw new ErrorJsonRpcResponse(resArr as IRpcResponseError, "batch");
       }
 
-      throw Error(`expected array of results, got ${resArr} - ${resArrStr}`);
+      throw Error(`expected array of results, got ${resArr} - ${jsonSerializeTry(resArr)}`);
     }
 
     return resArr.map((res, i) => parseRpcResponse(res, rpcPayloadArr[i]));
@@ -266,8 +264,10 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 function parseRpcResponse<R, P>(res: IRpcResponse<R>, payload: IRpcPayload<P>): R {
   if (res.result !== undefined) {
     return res.result;
+  } else if (res.error !== undefined) {
+    throw new ErrorJsonRpcResponse(res, payload.method);
   } else {
-    throw new ErrorJsonRpcResponse(res, payload);
+    throw Error(`Invalid JSON RPC response, no result or error property: ${jsonSerializeTry(res)}`);
   }
 }
 
@@ -291,22 +291,22 @@ export class ErrorParseJson extends Error {
 }
 
 /** JSON RPC endpoint returned status code == 200, but with error property set */
-export class ErrorJsonRpcResponse<P> extends Error {
+export class ErrorJsonRpcResponse extends Error {
   response: IRpcResponseError;
-  payload: IRpcPayload<P>;
-  constructor(res: IRpcResponseError, payload: IRpcPayload<P>) {
-    const errorMessage = res.error
-      ? typeof res.error.message === "string"
-        ? res.error.message
-        : typeof res.error.code === "number"
-        ? parseJsonRpcErrorCode(res.error.code)
-        : JSON.stringify(res.error)
-      : "no result";
 
-    super(`JSON RPC error: ${errorMessage}, ${payload.method}`);
+  constructor(res: IRpcResponseError, payloadMethod: string) {
+    const errorMessage =
+      typeof res.error === "object"
+        ? typeof res.error.message === "string"
+          ? res.error.message
+          : typeof res.error.code === "number"
+          ? parseJsonRpcErrorCode(res.error.code)
+          : JSON.stringify(res.error)
+        : String(res.error);
+
+    super(`JSON RPC error: ${errorMessage}, ${payloadMethod}`);
 
     this.response = res;
-    this.payload = payload;
   }
 }
 
@@ -328,4 +328,12 @@ function parseJsonRpcErrorCode(code: number): string {
   if (code === -32603) return "Internal error";
   if (code <= -32000 && code >= -32099) return "Server error";
   return `Unknown error code ${code}`;
+}
+
+function jsonSerializeTry(obj: unknown): string {
+  try {
+    return JSON.stringify(obj);
+  } catch (e) {
+    return `Unable to serialize ${String(obj)}: ${(e as Error).message}`;
+  }
 }
