@@ -20,6 +20,11 @@ if (preset) {
   process.env.LODESTAR_PRESET = preset;
 }
 
+// If ENV is set overrides, network (otherwise can not override network --dev in mainnet mode)
+else if (process.env.LODESTAR_PRESET) {
+  // break
+}
+
 // Translate network to preset
 else if (network) {
   if (network === "dev") {
