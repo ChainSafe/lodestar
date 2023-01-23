@@ -12,7 +12,11 @@ export function showProgress({
   signal: AbortSignal;
   frequencyMs: number;
   progress: ProgressFunc;
-}): NeedleFunc {
+}): NeedleFunc | void {
+  if (total === 0) {
+    return;
+  }
+
   let current = 0;
   let last = 0;
   let lastProcessTime: number = Date.now();

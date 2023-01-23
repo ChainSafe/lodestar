@@ -14,6 +14,7 @@ import {
 } from "../../../util/index.js";
 import {lockFilepath} from "../../../util/lockfile.js";
 import {IPersistedKeysBackend} from "./interface.js";
+import {loadKeystoreCache, writeKeystoreCache} from "./keystoreCache.js";
 
 export {ImportStatus, DeletionStatus};
 
@@ -246,11 +247,40 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
   }
 }
 
+type KeystoreDecryptOptions = {
+  force?: boolean;
+  onDecrypt?: (index: number, signer: Signer) => void;
+  // Try to use the cache file if it exists
+  cacheFilePath?: string;
+};
+
 export async function decryptKeystoreDefinitions(
   keystoreDefinitions: LocalKeystoreDefinition[],
-  opts: {force?: boolean; onDecrypt?: (index: number, signer: Signer) => void}
+  opts: KeystoreDecryptOptions
 ): Promise<Signer[]> {
+  if (opts.cacheFilePath) {
+    const keystores: Keystore[] = [];
+    const passwords: string[] = [];
+    for (const {keystorePath, password} of keystoreDefinitions) {
+      keystores.push(Keystore.parse(fs.readFileSync(keystorePath, "utf8")));
+      passwords.push(password);
+    }
+    try {
+      const signers = await loadKeystoreCache(opts.cacheFilePath, keystores, passwords);
+      if (opts?.onDecrypt) {
+        opts?.onDecrypt(signers.length - 1, signers[signers.length - 1]);
+      }
+      return signers;
+    } catch (e) {
+      // Some error loading the cache, ignore and invalidate cache
+      fs.unlinkSync(opts.cacheFilePath);
+    }
+  }
+
   const signers: Signer[] = [];
+  const keystores: Keystore[] = [];
+  const passwords: string[] = [];
+  const secretKeys: Buffer[] = [];
 
   for (const [index, {keystorePath, password}] of keystoreDefinitions.entries()) {
     try {
@@ -287,10 +317,17 @@ export async function decryptKeystoreDefinitions(
     };
 
     signers.push(signer);
+    keystores.push(keystore);
+    passwords.push(password);
+    secretKeys.push(secretKeyBytes);
 
     if (opts?.onDecrypt) {
       opts?.onDecrypt(index, signer);
     }
+  }
+
+  if (opts.cacheFilePath) {
+    await writeKeystoreCache(opts.cacheFilePath, keystores, passwords, secretKeys);
   }
 
   return signers;

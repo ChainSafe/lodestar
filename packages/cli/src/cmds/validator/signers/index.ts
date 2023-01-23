@@ -91,7 +91,11 @@ export async function getSignersFromArgs(
         );
       },
     });
-    return await decryptKeystoreDefinitions(keystoreDefinitions, {...args, onDecrypt: needle});
+    return await decryptKeystoreDefinitions(keystoreDefinitions, {
+      ...args,
+      onDecrypt: needle ?? undefined,
+      cacheFilePath: `${args.importKeystores[0]}.cache`,
+    });
   }
 
   // Remote keys declared manually with --externalSignerPublicKeys
@@ -119,7 +123,11 @@ export async function getSignersFromArgs(
         );
       },
     });
-    const keystoreSigners = await decryptKeystoreDefinitions(keystoreDefinitions, {...args, onDecrypt: needle});
+    const keystoreSigners = await decryptKeystoreDefinitions(keystoreDefinitions, {
+      ...args,
+      onDecrypt: needle ?? undefined,
+      cacheFilePath: `${accountPaths.keystoresDir}.cache`,
+    });
 
     // Read local remote keys, imported via keymanager api
     const signerDefinitions = persistedKeysBackend.readAllRemoteKeys();
