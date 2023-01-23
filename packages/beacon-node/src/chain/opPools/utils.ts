@@ -1,7 +1,7 @@
 import bls from "@chainsafe/bls";
 import {CoordType, Signature} from "@chainsafe/bls/types";
 import {BLS_WITHDRAWAL_PREFIX} from "@lodestar/params";
-import {CachedBeaconStateCapella} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Slot, capella} from "@lodestar/types";
 
 /**
@@ -38,7 +38,7 @@ export function signatureFromBytesNoCheck(signature: Uint8Array): Signature {
  * can become invalid for certain forks.
  */
 export function isValidBlsToExecutionChangeForBlockInclusion(
-  state: CachedBeaconStateCapella,
+  state: CachedBeaconStateAllForks,
   signedBLSToExecutionChange: capella.SignedBLSToExecutionChange
 ): boolean {
   // For each condition from https://github.com/ethereum/consensus-specs/blob/dev/specs/capella/beacon-chain.md#new-process_bls_to_execution_change

@@ -1,6 +1,5 @@
 import {
   CachedBeaconStateAllForks,
-  CachedBeaconStateCapella,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
@@ -233,7 +232,7 @@ export class OpPool {
 
     const blsToExecutionChanges: capella.SignedBLSToExecutionChange[] = [];
     for (const blsToExecutionChange of this.blsToExecutionChanges.values()) {
-      if (isValidBlsToExecutionChangeForBlockInclusion(state as CachedBeaconStateCapella, blsToExecutionChange)) {
+      if (isValidBlsToExecutionChangeForBlockInclusion(state, blsToExecutionChange)) {
         blsToExecutionChanges.push(blsToExecutionChange);
         if (blsToExecutionChanges.length >= MAX_BLS_TO_EXECUTION_CHANGES) {
           break;

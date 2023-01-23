@@ -11,6 +11,7 @@ import {routes} from "@lodestar/api";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {BlockInput, BlockInputType, getBlockInput} from "../chain/blocks/types.js";
+import {isValidBlsToExecutionChangeForBlockInclusion} from "../chain/opPools/utils.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork, Libp2p} from "./interface.js";
 import {ReqRespBeaconNode, ReqRespHandlers, doBeaconBlocksMaybeBlobsByRange} from "./reqresp/index.js";
@@ -499,25 +500,41 @@ export class Network implements INetwork {
 
   private async gossipCachedBlsChanges(): Promise<void> {
     let gossipedKeys: number[];
+    let includedKeys: number[];
+    let processedKeys: number;
+    let totalProcessed = 0;
+    this.logger.info("Re-gossiping the cached bls changes");
     do {
       gossipedKeys = [];
+      includedKeys = [];
       try {
-        this.logger.info("Re-gossiping the cached bls changes");
+        const headState = this.chain.getHeadState();
         for await (const {key, value} of this.chain.db.blsToExecutionChangeCache.entriesStream({
           limit: CACHED_BLS_BATCH_GOSSIP_LIMIT,
         })) {
-          await this.gossip.publishBlsToExecutionChange(value);
-          gossipedKeys.push(key);
+          if (isValidBlsToExecutionChangeForBlockInclusion(headState, value)) {
+            await this.gossip.publishBlsToExecutionChange(value);
+            gossipedKeys.push(value.message.validatorIndex);
+          } else {
+            includedKeys.push(value.message.validatorIndex);
+          }
         }
       } catch (e) {
-        this.logger.error("Failed to gossip all cached bls changes", {}, e as Error);
+        this.logger.error("Failed to gossip all cached bls changes", {totalProcessed}, e as Error);
       } finally {
-        this.logger.info("Gossiped cached blsChanges", {validatorIndexs: `${gossipedKeys}`, size: gossipedKeys.length});
+        processedKeys = gossipedKeys.length + includedKeys.length;
+        totalProcessed += processedKeys;
+        this.logger.info("Gossiped cached blsChanges", {
+          gossipedIndexes: `${gossipedKeys}`,
+          alreadyIncludedIndexes: `${includedKeys}`,
+          processedKeys,
+        });
         // If this fails promise will not be set to null and hence gossipCachedBlsChanges will not be
         // triggered till reboot
         await this.chain.db.blsToExecutionChangeCache.batchDelete(gossipedKeys);
       }
-    } while (gossipedKeys.length === CACHED_BLS_BATCH_GOSSIP_LIMIT);
+    } while (processedKeys === CACHED_BLS_BATCH_GOSSIP_LIMIT);
+    this.logger.info("Processed cached blsChanges", {totalProcessed});
   }
 
   private onLightClientFinalityUpdate = async (finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> => {
