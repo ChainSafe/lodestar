@@ -32,6 +32,9 @@ import {PeersData} from "./peers/peersData.js";
 import {getConnectionsMap, isPublishToZeroPeersError} from "./util.js";
 import {Discv5Worker} from "./discv5/index.js";
 
+// How many changes to batch
+const CACHED_BLS_BATCH_GOSSIP_LIMIT = 10;
+
 interface INetworkModules {
   config: IBeaconConfig;
   libp2p: Libp2p;
@@ -495,21 +498,26 @@ export class Network implements INetwork {
   }
 
   private async gossipCachedBlsChanges(): Promise<void> {
-    const gossipedKeys = [];
-    try {
-      this.logger.info("Re-gossiping the cached bls changes");
-      for await (const {key, value} of this.chain.db.blsToExecutionChangeCache.entriesStream()) {
-        await this.gossip.publishBlsToExecutionChange(value);
-        gossipedKeys.push(key);
+    let gossipedKeys: number[];
+    do {
+      gossipedKeys = [];
+      try {
+        this.logger.info("Re-gossiping the cached bls changes");
+        for await (const {key, value} of this.chain.db.blsToExecutionChangeCache.entriesStream({
+          limit: CACHED_BLS_BATCH_GOSSIP_LIMIT,
+        })) {
+          await this.gossip.publishBlsToExecutionChange(value);
+          gossipedKeys.push(key);
+        }
+      } catch (e) {
+        this.logger.error("Failed to gossip all cached bls changes", {}, e as Error);
+      } finally {
+        this.logger.info("Gossiped cached blsChanges", {validatorIndexs: `${gossipedKeys}`, size: gossipedKeys.length});
+        // If this fails promise will not be set to null and hence gossipCachedBlsChanges will not be
+        // triggered till reboot
+        await this.chain.db.blsToExecutionChangeCache.batchDelete(gossipedKeys);
       }
-    } catch (e) {
-      this.logger.error("Failed to gossip all cached bls changes", {}, e as Error);
-    } finally {
-      this.logger.info("Gossiped cached blsChanges", {size: gossipedKeys.length});
-      await this.chain.db.blsToExecutionChangeCache.batchDelete(gossipedKeys).catch((e) => {
-        this.logger.error("Could not clear gossiped blsChanges from blsToExecutionChangeCache", {}, e as Error);
-      });
-    }
+    } while (gossipedKeys.length === CACHED_BLS_BATCH_GOSSIP_LIMIT);
   }
 
   private onLightClientFinalityUpdate = async (finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> => {
