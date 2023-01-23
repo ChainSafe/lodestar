@@ -226,7 +226,10 @@ export class MockBeaconChain implements IBeaconChain {
 
   async updateBeaconProposerData(): Promise<void> {}
   updateBuilderStatus(): void {}
-  async cacheBlsToExecutionChanges(): Promise<void> {}
+
+  async cacheBlsToExecutionChanges(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<void> {
+    return this.db.blsToExecutionChangeCache.add(blsToExecutionChange);
+  }
 }
 
 const root = ssz.Root.defaultValue() as Uint8Array;

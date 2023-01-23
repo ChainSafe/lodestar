@@ -532,6 +532,7 @@ export class Network implements INetwork {
         // If this fails promise will not be set to null and hence gossipCachedBlsChanges will not be
         // triggered till reboot
         await this.chain.db.blsToExecutionChangeCache.batchDelete(gossipedKeys);
+        await this.chain.db.blsToExecutionChangeCache.batchDelete(includedKeys);
       }
     } while (processedKeys === CACHED_BLS_BATCH_GOSSIP_LIMIT);
     this.logger.info("Processed cached blsChanges", {totalProcessed});
