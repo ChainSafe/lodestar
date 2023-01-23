@@ -1,7 +1,20 @@
 import sinon from "sinon";
 
 import {CompositeTypeAny, toHexString, TreeView} from "@chainsafe/ssz";
-import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64, RootHex, eip4844, Wei} from "@lodestar/types";
+import {
+  phase0,
+  allForks,
+  UintNum64,
+  Root,
+  Slot,
+  ssz,
+  Uint16,
+  UintBn64,
+  RootHex,
+  eip4844,
+  Wei,
+  capella,
+} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus, AncestorStatus} from "@lodestar/fork-choice";
