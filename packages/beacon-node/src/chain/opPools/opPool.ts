@@ -68,7 +68,7 @@ export class OpPool {
       this.insertVoluntaryExit(voluntaryExit);
     }
     for (const item of blsToExecutionChanges) {
-      this.blsToExecutionChanges.set(item.message.validatorIndex, item);
+      this.insertBlsToExecutionChange(item);
     }
   }
 

@@ -104,7 +104,12 @@ export function getBeaconPoolApi({
           try {
             await validateBlsToExecutionChange(chain, blsToExecutionChange);
             chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
-            if (chain.clock.currentEpoch >= chain.config.CAPELLA_FORK_EPOCH) {
+            if (
+              chain.clock.currentEpoch >= chain.config.CAPELLA_FORK_EPOCH &&
+              // TODO: Remove below condition
+              // Only used for testing in devnet-3 of withdrawals
+              network.isSubscribedToGossipCoreTopics()
+            ) {
               await network.gossip.publishBlsToExecutionChange(blsToExecutionChange);
             } else {
               await chain.cacheBlsToExecutionChanges(blsToExecutionChange);

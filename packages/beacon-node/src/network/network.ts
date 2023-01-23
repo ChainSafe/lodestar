@@ -509,7 +509,7 @@ export class Network implements INetwork {
       includedKeys = [];
       try {
         const headState = this.chain.getHeadState();
-        for await (const {key, value} of this.chain.db.blsToExecutionChangeCache.entriesStream({
+        for await (const value of this.chain.db.blsToExecutionChangeCache.valuesStream({
           limit: CACHED_BLS_BATCH_GOSSIP_LIMIT,
         })) {
           if (isValidBlsToExecutionChangeForBlockInclusion(headState, value)) {
