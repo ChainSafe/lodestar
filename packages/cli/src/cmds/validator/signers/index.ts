@@ -93,7 +93,7 @@ export async function getSignersFromArgs(
     });
     return await decryptKeystoreDefinitions(keystoreDefinitions, {
       ...args,
-      onDecrypt: needle ?? undefined,
+      onDecrypt: needle,
       cacheFilePath: `${args.importKeystores[0]}.cache`,
     });
   }
@@ -125,7 +125,7 @@ export async function getSignersFromArgs(
     });
     const keystoreSigners = await decryptKeystoreDefinitions(keystoreDefinitions, {
       ...args,
-      onDecrypt: needle ?? undefined,
+      onDecrypt: needle,
       cacheFilePath: `${accountPaths.keystoresDir}.cache`,
     });
 

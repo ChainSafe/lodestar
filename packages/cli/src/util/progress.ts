@@ -12,14 +12,11 @@ export function showProgress({
   signal: AbortSignal;
   frequencyMs: number;
   progress: ProgressFunc;
-}): NeedleFunc | void {
-  if (total === 0) {
-    return;
-  }
-
+}): NeedleFunc {
   let current = 0;
   let last = 0;
   let lastProcessTime: number = Date.now();
+  let internalId: NodeJS.Timeout;
 
   const needle: NeedleFunc = (needle: number) => {
     // zero is considered first index in the range
@@ -38,7 +35,7 @@ export function showProgress({
       current,
       total,
       ratePerSec: processTime === 0 ? 0 : ((current - last) / processTime) * 1000,
-      percentage: (current / total) * 100,
+      percentage: current && total ? (current / total) * 100 : 100,
     });
 
     last = current;
@@ -49,7 +46,9 @@ export function showProgress({
     }
   };
 
-  const internalId = setInterval(processProgress, frequencyMs);
+  if (total > 0) {
+    internalId = setInterval(processProgress, frequencyMs);
+  }
 
   signal.addEventListener("abort", () => {
     clearInterval(internalId);
