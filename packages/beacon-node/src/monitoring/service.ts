@@ -60,7 +60,7 @@ export class MonitoringService {
       name: "lodestar_monitoring_send_data_seconds",
       help: "Time spent to send monitoring data to remote service in seconds",
       labelNames: ["status"],
-      buckets: [0.1, 0.5, 1, 10, this.options.requestTimeout],
+      buckets: [0.1, 0.3, 0.5, 1, 10, this.options.requestTimeout],
     });
   }
 
