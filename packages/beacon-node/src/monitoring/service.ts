@@ -1,5 +1,7 @@
 import {Registry} from "prom-client";
 import {ErrorAborted, ILogger, sleep, TimeoutError} from "@lodestar/utils";
+import {RegistryMetricCreator} from "../metrics/index.js";
+import {HistogramExtra} from "../metrics/utils/histogram.js";
 import {defaultMonitoringOptions, MonitoringOptions} from "./options.js";
 import {createClientStats} from "./clientStats.js";
 import {ClientStats} from "./types.js";
@@ -29,21 +31,41 @@ export class MonitoringService {
   private readonly register: Registry;
   private readonly logger: ILogger;
 
-  private sendDataInterval?: NodeJS.Timer;
+  private readonly collectDataMetric: HistogramExtra<string>;
+  private readonly sendDataMetric: HistogramExtra<"status">;
+
+  private monitoringInterval?: NodeJS.Timer;
   private fetchAbortController?: AbortController;
   private pendingRequest?: Promise<void>;
 
-  constructor(client: Client, options: MonitoringOptions, {register, logger}: {register: Registry; logger: ILogger}) {
+  constructor(
+    client: Client,
+    options: MonitoringOptions,
+    {register, logger}: {register: RegistryMetricCreator; logger: ILogger}
+  ) {
     this.options = {...defaultMonitoringOptions, ...options};
     this.logger = logger;
     this.register = register;
     this.remoteServiceUrl = this.parseMonitoringEndpoint(this.options.endpoint);
     this.remoteServiceHost = this.remoteServiceUrl.host;
     this.clientStats = createClientStats(client, this.options.collectSystemStats);
+
+    this.collectDataMetric = register.histogram({
+      name: "lodestar_monitoring_collect_data_seconds",
+      help: "Time spent to collect monitoring data in seconds",
+      buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 1],
+    });
+
+    this.sendDataMetric = register.histogram({
+      name: "lodestar_monitoring_send_data_seconds",
+      help: "Time spent to send monitoring data to remote service in seconds",
+      labelNames: ["status"],
+      buckets: [0.1, 0.5, 1, 10, this.options.requestTimeout],
+    });
   }
 
   start(): void {
-    if (this.sendDataInterval) {
+    if (this.monitoringInterval) {
       // monitoring service is already started
       return;
     }
@@ -51,10 +73,10 @@ export class MonitoringService {
     const {interval, initialDelay, requestTimeout, collectSystemStats} = this.options;
 
     sleep(initialDelay * 1000).finally(async () => {
-      await this.sendData();
+      await this.executeMonitoring();
 
-      this.sendDataInterval = setInterval(async () => {
-        await this.sendData();
+      this.monitoringInterval = setInterval(async () => {
+        await this.executeMonitoring();
       }, interval * 1000);
     });
 
@@ -68,22 +90,22 @@ export class MonitoringService {
   }
 
   stop(): void {
-    if (this.sendDataInterval) {
-      clearInterval(this.sendDataInterval);
-      this.sendDataInterval = undefined;
+    if (this.monitoringInterval) {
+      clearInterval(this.monitoringInterval);
+      this.monitoringInterval = undefined;
     }
     if (this.pendingRequest) {
       this.fetchAbortController?.abort(FetchAbortReason.Stop);
     }
   }
 
-  private async sendData(): Promise<void> {
+  private async executeMonitoring(): Promise<void> {
     if (!this.pendingRequest) {
       this.pendingRequest = (async () => {
         try {
           const data = await this.collectData();
 
-          const res = await this.invokeRemoteService(data);
+          const res = await this.sendData(data);
 
           if (!res.ok) {
             const error = (await res.json()) as RemoteServiceError;
@@ -103,8 +125,8 @@ export class MonitoringService {
   }
 
   private async collectData(): Promise<MonitoringData[]> {
+    const timer = this.collectDataMetric.startTimer();
     const data: MonitoringData[] = [];
-
     const recordPromises = [];
 
     for (const [i, s] of this.clientStats.entries()) {
@@ -118,12 +140,13 @@ export class MonitoringService {
       );
     }
 
-    await Promise.all(recordPromises);
+    await Promise.all(recordPromises).finally(timer);
 
     return data;
   }
 
-  private async invokeRemoteService(data: MonitoringData[]): Promise<Response> {
+  private async sendData(data: MonitoringData[]): Promise<Response> {
+    const timer = this.sendDataMetric.startTimer();
     this.fetchAbortController = new AbortController();
 
     const timeout = setTimeout(
@@ -131,13 +154,17 @@ export class MonitoringService {
       this.options.requestTimeout * 1000
     );
 
+    let res: Response | undefined;
+
     try {
-      return await fetch(this.remoteServiceUrl, {
+      res = await fetch(this.remoteServiceUrl, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(data),
         signal: this.fetchAbortController.signal,
       });
+
+      return res;
     } catch (e) {
       const {signal} = this.fetchAbortController;
 
@@ -153,6 +180,7 @@ export class MonitoringService {
         throw e;
       }
     } finally {
+      timer({status: res?.ok ? "success" : "error"});
       clearTimeout(timeout);
     }
   }
