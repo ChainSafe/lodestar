@@ -7,7 +7,7 @@ import {ApiClientResponse} from "../../interfaces.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export const enum EventType {
+export enum EventType {
   /**
    * The node has finished processing, resulting in a new head. previous_duty_dependent_root is
    * `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)` and
