@@ -506,21 +506,30 @@ export class Network implements INetwork {
 
     try {
       const headState = this.chain.getHeadState();
-      for await (const value of this.chain.db.blsToExecutionChangeCache.valuesStream()) {
-        if (isValidBlsToExecutionChangeForBlockInclusion(headState, value)) {
-          await this.gossip.publishBlsToExecutionChange(value);
-          gossipedKeys.push(value.message.validatorIndex);
-        } else {
-          // No need to gossip if its already been in the headState
-          // TODO: Should use final state?
-          includedKeys.push(value.message.validatorIndex);
+      for (const poolData of this.chain.opPool.getAllBlsToExecutionChanges()) {
+        const {data: value, preCapella} = poolData;
+        if (preCapella) {
+          if (isValidBlsToExecutionChangeForBlockInclusion(headState, value)) {
+            await this.gossip.publishBlsToExecutionChange(value);
+            gossipedKeys.push(value.message.validatorIndex);
+          } else {
+            // No need to gossip if its already been in the headState
+            // TODO: Should use final state?
+            includedKeys.push(value.message.validatorIndex);
+          }
+          totalProcessed += 1;
+          // Should directly update in the pool set, but for the persitance to disk
+          // we will need to batch delete from db so new version can be persisted
+          // in persistDiff
+          poolData.preCapella = false;
         }
-        totalProcessed += 1;
 
         // Cleanup in small batches
         if (totalProcessed % CACHED_BLS_BATCH_CLEANUP_LIMIT === 0) {
-          await this.chain.db.blsToExecutionChangeCache.batchDelete(gossipedKeys);
-          await this.chain.db.blsToExecutionChangeCache.batchDelete(includedKeys);
+          // Deleting the preCapella versions from db will lead to write of
+          // preCapella = false versions
+          await this.chain.db.blsToExecutionChange.batchDelete(gossipedKeys);
+          await this.chain.db.blsToExecutionChange.batchDelete(includedKeys);
           includedKeys = [];
           gossipedKeys = [];
         }
@@ -534,8 +543,8 @@ export class Network implements INetwork {
         totalProcessed,
       });
       // Cleanup whatever was in the last batch
-      await this.chain.db.blsToExecutionChangeCache.batchDelete(gossipedKeys);
-      await this.chain.db.blsToExecutionChangeCache.batchDelete(includedKeys);
+      await this.chain.db.blsToExecutionChange.batchDelete(gossipedKeys);
+      await this.chain.db.blsToExecutionChange.batchDelete(includedKeys);
     }
     this.logger.info("Processed cached blsChanges", {totalProcessed});
   }

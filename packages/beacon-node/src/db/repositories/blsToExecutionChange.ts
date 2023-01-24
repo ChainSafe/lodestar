@@ -1,26 +1,14 @@
-import {ValidatorIndex, capella, ssz} from "@lodestar/types";
+import {ValidatorIndex} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {Db, Bucket, Repository} from "@lodestar/db";
+import {SignedBLSToExecutionChangeVersioned, signedBLSToExecutionChangeVersionedType} from "../../util/types.js";
 
-export class BLSToExecutionChangeRepository extends Repository<ValidatorIndex, capella.SignedBLSToExecutionChange> {
+export class BLSToExecutionChangeRepository extends Repository<ValidatorIndex, SignedBLSToExecutionChangeVersioned> {
   constructor(config: IChainForkConfig, db: Db) {
-    super(config, db, Bucket.capella_blsToExecutionChange, ssz.capella.SignedBLSToExecutionChange);
+    super(config, db, Bucket.capella_blsToExecutionChange, signedBLSToExecutionChangeVersionedType);
   }
 
-  getId(value: capella.SignedBLSToExecutionChange): ValidatorIndex {
-    return value.message.validatorIndex;
-  }
-}
-
-export class BLSToExecutionChangeCacheRepository extends Repository<
-  ValidatorIndex,
-  capella.SignedBLSToExecutionChange
-> {
-  constructor(config: IChainForkConfig, db: Db) {
-    super(config, db, Bucket.capella_blsToExecutionChangeCache, ssz.capella.SignedBLSToExecutionChange);
-  }
-
-  getId(value: capella.SignedBLSToExecutionChange): ValidatorIndex {
-    return value.message.validatorIndex;
+  getId(value: SignedBLSToExecutionChangeVersioned): ValidatorIndex {
+    return value.data.message.validatorIndex;
   }
 }

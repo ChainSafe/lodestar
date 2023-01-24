@@ -18,7 +18,6 @@ import {
   BlobsSidecarRepository,
   BlobsSidecarArchiveRepository,
   BLSToExecutionChangeRepository,
-  BLSToExecutionChangeCacheRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
@@ -34,7 +33,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   attesterSlashing: AttesterSlashingRepository;
   depositEvent: DepositEventRepository;
   blsToExecutionChange: BLSToExecutionChangeRepository;
-  blsToExecutionChangeCache: BLSToExecutionChangeCacheRepository;
 
   depositDataRoot: DepositDataRootRepository;
   eth1Data: Eth1DataRepository;
@@ -60,7 +58,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.stateArchive = new StateArchiveRepository(this.config, this.db);
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
     this.blsToExecutionChange = new BLSToExecutionChangeRepository(this.config, this.db);
-    this.blsToExecutionChangeCache = new BLSToExecutionChangeCacheRepository(this.config, this.db);
     this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db);
     this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db);
     this.depositEvent = new DepositEventRepository(this.config, this.db);
