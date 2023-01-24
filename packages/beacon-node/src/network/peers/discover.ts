@@ -110,7 +110,7 @@ export class PeerDiscovery {
     this.discv5 = new Discv5Worker({
       discv5: opts.discv5,
       peerId: modules.libp2p.peerId,
-      metrics: Boolean(modules.metrics),
+      metrics: modules.metrics ?? undefined,
       logger: this.logger,
     });
     const numBootEnrs = opts.discv5.bootEnrs.length;
