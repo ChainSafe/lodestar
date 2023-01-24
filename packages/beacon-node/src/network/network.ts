@@ -506,9 +506,7 @@ export class Network implements INetwork {
 
     try {
       const headState = this.chain.getHeadState();
-      for await (const value of this.chain.db.blsToExecutionChangeCache.valuesStream({
-        limit: CACHED_BLS_BATCH_GOSSIP_LIMIT,
-      })) {
+      for await (const value of this.chain.db.blsToExecutionChangeCache.valuesStream()) {
         if (isValidBlsToExecutionChangeForBlockInclusion(headState, value)) {
           await this.gossip.publishBlsToExecutionChange(value);
           gossipedKeys.push(value.message.validatorIndex);
