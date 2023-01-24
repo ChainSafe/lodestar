@@ -33,8 +33,8 @@ import {PeersData} from "./peers/peersData.js";
 import {getConnectionsMap, isPublishToZeroPeersError} from "./util.js";
 import {Discv5Worker} from "./discv5/index.js";
 
-// How many changes to batch
-const CACHED_BLS_BATCH_GOSSIP_LIMIT = 10;
+// How many changes to batch cleanup
+const CACHED_BLS_BATCH_CLEANUP_LIMIT = 10;
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -499,42 +499,46 @@ export class Network implements INetwork {
   }
 
   private async gossipCachedBlsChanges(): Promise<void> {
-    let gossipedKeys: number[];
-    let includedKeys: number[];
-    let processedKeys: number;
+    let gossipedKeys: number[] = [];
+    let includedKeys: number[] = [];
     let totalProcessed = 0;
     this.logger.info("Re-gossiping the cached bls changes");
-    do {
-      gossipedKeys = [];
-      includedKeys = [];
-      try {
-        const headState = this.chain.getHeadState();
-        for await (const value of this.chain.db.blsToExecutionChangeCache.valuesStream({
-          limit: CACHED_BLS_BATCH_GOSSIP_LIMIT,
-        })) {
-          if (isValidBlsToExecutionChangeForBlockInclusion(headState, value)) {
-            await this.gossip.publishBlsToExecutionChange(value);
-            gossipedKeys.push(value.message.validatorIndex);
-          } else {
-            includedKeys.push(value.message.validatorIndex);
-          }
+
+    try {
+      const headState = this.chain.getHeadState();
+      for await (const value of this.chain.db.blsToExecutionChangeCache.valuesStream({
+        limit: CACHED_BLS_BATCH_GOSSIP_LIMIT,
+      })) {
+        if (isValidBlsToExecutionChangeForBlockInclusion(headState, value)) {
+          await this.gossip.publishBlsToExecutionChange(value);
+          gossipedKeys.push(value.message.validatorIndex);
+        } else {
+          // No need to gossip if its already been in the headState
+          // TODO: Should use final state?
+          includedKeys.push(value.message.validatorIndex);
         }
-      } catch (e) {
-        this.logger.error("Failed to gossip all cached bls changes", {totalProcessed}, e as Error);
-      } finally {
-        processedKeys = gossipedKeys.length + includedKeys.length;
-        totalProcessed += processedKeys;
-        this.logger.info("Gossiped cached blsChanges", {
-          gossipedIndexes: `${gossipedKeys}`,
-          alreadyIncludedIndexes: `${includedKeys}`,
-          processedKeys,
-        });
-        // If this fails promise will not be set to null and hence gossipCachedBlsChanges will not be
-        // triggered till reboot
-        await this.chain.db.blsToExecutionChangeCache.batchDelete(gossipedKeys);
-        await this.chain.db.blsToExecutionChangeCache.batchDelete(includedKeys);
+        totalProcessed += 1;
+
+        // Cleanup in small batches
+        if (totalProcessed % CACHED_BLS_BATCH_CLEANUP_LIMIT === 0) {
+          await this.chain.db.blsToExecutionChangeCache.batchDelete(gossipedKeys);
+          await this.chain.db.blsToExecutionChangeCache.batchDelete(includedKeys);
+          includedKeys = [];
+          gossipedKeys = [];
+        }
       }
-    } while (processedKeys === CACHED_BLS_BATCH_GOSSIP_LIMIT);
+    } catch (e) {
+      this.logger.error("Failed to gossip all cached bls changes", {totalProcessed}, e as Error);
+    } finally {
+      this.logger.info("Gossiped cached blsChanges", {
+        gossipedIndexes: `${gossipedKeys}`,
+        alreadyIncludedIndexes: `${includedKeys}`,
+        totalProcessed,
+      });
+      // Cleanup whatever was in the last batch
+      await this.chain.db.blsToExecutionChangeCache.batchDelete(gossipedKeys);
+      await this.chain.db.blsToExecutionChangeCache.batchDelete(includedKeys);
+    }
     this.logger.info("Processed cached blsChanges", {totalProcessed});
   }
 
