@@ -18,7 +18,7 @@ export function getEventsApi({chain}: Pick<ApiModules, "chain" | "config">): Ser
         const handler = (data: any): void => {
           // TODO: What happens if this handler throws? Does it break the other chain.emitter listeners?
 
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           onEvent({type: topic, message: data});
         };
 

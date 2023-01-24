@@ -83,7 +83,7 @@ export type LodestarGitData = {
 /**
  * A collection of metrics used throughout the Gossipsub behaviour.
  */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) {
   // Using function style instead of class to prevent having to re-declare all MetricsPrometheus types.
 

@@ -53,13 +53,11 @@ export const startChildProcess = async (jobOptions: JobOptions): Promise<ChildPr
               } else {
                 const timeSinceHealthCheckStart = Date.now() - startHealthCheckMs;
                 if (timeSinceHealthCheckStart > logHealthChecksAfterMs) {
-                  // eslint-disable-next-line no-console
                   console.log(`Health check unsuccessful '${jobOptions.id}' after ${timeSinceHealthCheckStart} ms`);
                 }
               }
             })
             .catch((e) => {
-              // eslint-disable-next-line no-console
               console.error("error on health check, health functions must never throw", e);
             });
         }, childProcessHealthCheckInterval);

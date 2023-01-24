@@ -6,8 +6,6 @@ import {parseSszGenericInvalidTestcase, parseSszGenericValidTestcase} from "../u
 import {runValidSszTest} from "../utils/runValidSszTest.js";
 import {getTestType} from "./ssz_generic_types.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 // Mapping of sszGeneric() fn arguments to the path in spec tests
 //
 //       / config  / fork   / test runner      / test handler / test suite   / test case

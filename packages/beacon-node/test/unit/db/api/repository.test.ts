@@ -7,7 +7,6 @@ import {Bytes32, ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {Db, LevelDbController, Repository, Bucket} from "@lodestar/db";
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 interface TestType {
   bool: boolean;
   bytes: Bytes32;

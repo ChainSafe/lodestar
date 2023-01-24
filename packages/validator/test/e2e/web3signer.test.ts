@@ -19,7 +19,7 @@ import {testLogger} from "../utils/logger.js";
 
 const web3signerVersion = "22.8.1";
 
-/* eslint-disable no-console, @typescript-eslint/naming-convention */
+/* eslint-disable no-console */
 
 describe("web3signer signature test", function () {
   this.timeout("60s");

@@ -4,7 +4,6 @@ import {ArchiverOpts} from "./archiver/index.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
 
-// eslint-disable-next-line @typescript-eslint/ban-types
 export type IChainOptions = BlockProcessOpts &
   ForkChoiceOpts &
   ArchiverOpts &

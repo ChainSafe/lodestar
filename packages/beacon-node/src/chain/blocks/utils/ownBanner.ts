@@ -1,4 +1,3 @@
-/* eslint-disable no-useless-escape */
 export const CAPELLA_OWL_BANNER = String.raw`
 
                                       /^----^\

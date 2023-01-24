@@ -49,7 +49,6 @@ export function runGenericServerTest<
       mockApi[routeId].resolves(testCases[routeId].res);
 
       // Do the call
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const res = await (client[routeId] as APIClientHandler)(...(testCase.args as any[]));
 
       // Use spy to assert argument serialization

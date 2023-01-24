@@ -69,7 +69,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getGossipSSZType(topic: GossipTopic) {
   switch (topic.type) {
     case GossipType.beacon_block:

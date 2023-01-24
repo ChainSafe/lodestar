@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {unlinkSync, writeFileSync} from "node:fs";
 import path, {join} from "node:path";
 import {fileURLToPath} from "node:url";

@@ -18,7 +18,6 @@ const BeaconBlocksByRangeCommon: Pick<
   },
 };
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const BeaconBlocksByRange: ProtocolDefinitionGenerator<
   phase0.BeaconBlocksByRangeRequest,
   allForks.SignedBeaconBlock
@@ -32,7 +31,6 @@ export const BeaconBlocksByRange: ProtocolDefinitionGenerator<
   };
 };
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const BeaconBlocksByRangeV2: ProtocolDefinitionGenerator<
   phase0.BeaconBlocksByRangeRequest,
   allForks.SignedBeaconBlock

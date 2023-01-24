@@ -645,8 +645,6 @@ export class EpochContext {
         for (let j = 0, committeeLength = slotCommittees[i].length; j < committeeLength; j++) {
           const validatorIndex = slotCommittees[i][j];
           if (requestedValidatorIndicesSet.has(validatorIndex)) {
-            // no-non-null-assertion: We know that if index is in set there must exist an entry in the map
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             duties.set(validatorIndex, {
               validatorIndex,
               committeeLength,

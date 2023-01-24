@@ -78,9 +78,7 @@ describe.skip("get proposers api impl", function () {
     const stubGetNextBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposersNextEpoch");
     const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
     stubGetNextBeaconProposer.returns([1]);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
     const {data: result} = await api.getProposerDuties(1);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(result.length).to.be.equal(SLOTS_PER_EPOCH, "result should be equals to slots per epoch");
     expect(stubGetNextBeaconProposer, "stubGetBeaconProposer function should not have been called").to.be.called;
     expect(stubGetBeaconProposer, "stubGetBeaconProposer function should have been called").not.to.be.called;

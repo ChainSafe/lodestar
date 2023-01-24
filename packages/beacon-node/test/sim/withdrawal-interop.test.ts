@@ -29,7 +29,7 @@ import {shell} from "./shell.js";
 // EL_BINARY_DIR=g11tech/geth:withdrawals EL_SCRIPT_DIR=gethdocker yarn mocha test/sim/withdrawal-interop.test.ts
 // ```
 
-/* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
+/* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;

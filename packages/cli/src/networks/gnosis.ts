@@ -1,7 +1,5 @@
 export {gnosisChainConfig as chainConfig} from "@lodestar/config/networks";
 
-/* eslint-disable max-len */
-
 // eth1.providerUrls suggestion: https://rpc.gnosischain.com
 export const depositContractDeployBlock = 19469077;
 export const genesisFileUrl = "https://raw.githubusercontent.com/gnosischain/configs/main/mainnet/genesis.ssz";
