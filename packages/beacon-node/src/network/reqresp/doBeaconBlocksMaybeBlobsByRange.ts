@@ -8,6 +8,15 @@ import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
 import {ckzg} from "../../util/kzg.js";
 import {IReqRespBeaconNode} from "./interface.js";
 
+// Cache empty KZG proof, compute once lazily if needed
+let emptyKzgAggregatedProof: Uint8Array | null = null;
+function getEmptyKzgAggregatedProof(): Uint8Array {
+  if (!emptyKzgAggregatedProof) {
+    emptyKzgAggregatedProof = ckzg.computeAggregateKzgProof([]);
+  }
+  return emptyKzgAggregatedProof;
+}
+
 export async function doBeaconBlocksMaybeBlobsByRange(
   config: IBeaconConfig,
   reqResp: IReqRespBeaconNode,
@@ -31,8 +40,6 @@ export async function doBeaconBlocksMaybeBlobsByRange(
     const blockInputs: BlockInput[] = [];
     let blobSideCarIndex = 0;
     let lastMatchedSlot = -1;
-
-    const emptyKzgAggregatedProof = ckzg.computeAggregateKzgProof([]);
 
     // Match blobSideCar with the block as some blocks would have no blobs and hence
     // would be omitted from the response. If there are any inconsitencies in the
@@ -60,7 +67,7 @@ export async function doBeaconBlocksMaybeBlobsByRange(
           beaconBlockRoot: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
           beaconBlockSlot: block.message.slot,
           blobs: [],
-          kzgAggregatedProof: emptyKzgAggregatedProof,
+          kzgAggregatedProof: getEmptyKzgAggregatedProof(),
         };
       }
       blockInputs.push(getBlockInput.postDeneb(config, block, blobsSidecar));
