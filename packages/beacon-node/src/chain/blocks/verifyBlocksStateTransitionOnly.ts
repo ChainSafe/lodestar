@@ -128,9 +128,5 @@ function maybeValidateBlobs(
 
     case BlockInputType.preDeneb:
       return DataAvailableStatus.preDeneb;
-
-    // TODO: Ok to assume old data available?
-    case BlockInputType.postDenebOldBlobs:
-      return DataAvailableStatus.available;
   }
 }

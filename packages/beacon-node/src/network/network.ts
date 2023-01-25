@@ -328,9 +328,6 @@ export class Network implements INetwork {
           beaconBlock: blockInput.block as deneb.SignedBeaconBlock,
           blobsSidecar: blockInput.blobs,
         });
-
-      case BlockInputType.postDenebOldBlobs:
-        throw Error(`Attempting to broadcast old BlockInput slot ${blockInput.block.message.slot}`);
     }
   }
 

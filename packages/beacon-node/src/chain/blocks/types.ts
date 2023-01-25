@@ -7,13 +7,11 @@ import {IChainForkConfig} from "@lodestar/config";
 export enum BlockInputType {
   preDeneb = "preDeneb",
   postDeneb = "postDeneb",
-  postDenebOldBlobs = "postDenebOldBlobs",
 }
 
 export type BlockInput =
   | {type: BlockInputType.preDeneb; block: allForks.SignedBeaconBlock}
-  | {type: BlockInputType.postDeneb; block: allForks.SignedBeaconBlock; blobs: deneb.BlobsSidecar}
-  | {type: BlockInputType.postDenebOldBlobs; block: allForks.SignedBeaconBlock};
+  | {type: BlockInputType.postDeneb; block: allForks.SignedBeaconBlock; blobs: deneb.BlobsSidecar};
 
 export function blockRequiresBlobs(config: IChainForkConfig, blockSlot: Slot, clockSlot: Slot): boolean {
   return (
@@ -42,16 +40,6 @@ export const getBlockInput = {
       type: BlockInputType.postDeneb,
       block,
       blobs,
-    };
-  },
-
-  postDenebOldBlobs(config: IChainForkConfig, block: allForks.SignedBeaconBlock): BlockInput {
-    if (config.getForkSeq(block.message.slot) < ForkSeq.deneb) {
-      throw Error(`Pre Deneb block slot ${block.message.slot}`);
-    }
-    return {
-      type: BlockInputType.postDenebOldBlobs,
-      block,
     };
   },
 };

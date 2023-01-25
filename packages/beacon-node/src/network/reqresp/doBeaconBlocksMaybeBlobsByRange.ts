@@ -5,17 +5,8 @@ import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
 import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
-import {ckzg} from "../../util/kzg.js";
+import {getEmptyBlobsSidecar} from "../../util/blobs.js";
 import {IReqRespBeaconNode} from "./interface.js";
-
-// Cache empty KZG proof, compute once lazily if needed
-let emptyKzgAggregatedProof: Uint8Array | null = null;
-function getEmptyKzgAggregatedProof(): Uint8Array {
-  if (!emptyKzgAggregatedProof) {
-    emptyKzgAggregatedProof = ckzg.computeAggregateKzgProof([]);
-  }
-  return emptyKzgAggregatedProof;
-}
 
 export async function doBeaconBlocksMaybeBlobsByRange(
   config: IBeaconConfig,
@@ -64,12 +55,7 @@ export async function doBeaconBlocksMaybeBlobsByRange(
             `Missing blobsSidecar for blockSlot=${block.message.slot} with blobKzgCommitmentsLen=${blobKzgCommitmentsLen}`
           );
         }
-        blobsSidecar = {
-          beaconBlockRoot: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
-          beaconBlockSlot: block.message.slot,
-          blobs: [],
-          kzgAggregatedProof: getEmptyKzgAggregatedProof(),
-        };
+        blobsSidecar = getEmptyBlobsSidecar(config, block);
       }
       blockInputs.push(getBlockInput.postDeneb(config, block, blobsSidecar));
     }
@@ -90,7 +76,6 @@ export async function doBeaconBlocksMaybeBlobsByRange(
 
   // Post Deneb but old blobs
   else {
-    const blocks = await reqResp.beaconBlocksByRange(peerId, request);
-    return blocks.map((block) => getBlockInput.postDenebOldBlobs(config, block));
+    throw Error("Cannot sync blobs outside of blobs prune window");
   }
 }
