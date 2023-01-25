@@ -15,8 +15,15 @@ export async function beaconBlocksMaybeBlobsByRange(
   request: phase0.BeaconBlocksByRangeRequest,
   currentEpoch: Epoch
 ): Promise<BlockInput[]> {
-  // TODO Deneb: Assumes all blocks in the same epoch
-  // TODO Deneb: Ensure all blocks are in the same epoch
+  // Code below assumes the request is in the same epoch
+  // Range sync satisfies this condition, but double check here for sanity
+  const startEpoch = computeEpochAtSlot(request.startSlot);
+  const endEpoch = computeEpochAtSlot(request.startSlot + request.count);
+  if (startEpoch !== endEpoch) {
+    throw Error(`BeaconBlocksByRangeRequest must be in the same epoch ${startEpoch} != ${endEpoch}`);
+  }
+
+  // Note: Assumes all blocks in the same epoch
   if (config.getForkSeq(request.startSlot) < ForkSeq.deneb) {
     const blocks = await reqResp.beaconBlocksByRange(peerId, request);
     return blocks.map((block) => getBlockInput.preDeneb(config, block));
