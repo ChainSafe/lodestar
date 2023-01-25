@@ -107,7 +107,12 @@ export function getBeaconPoolApi({
             // Only used for testing in devnet-3 of withdrawals
             chain.opPool.insertBlsToExecutionChange(
               blsToExecutionChange,
-              !(chain.clock.currentEpoch >= chain.config.CAPELLA_FORK_EPOCH && network.isSubscribedToGossipCoreTopics())
+              // true if pre capella else false
+              !(
+                chain.clock.currentEpoch >= chain.config.CAPELLA_FORK_EPOCH &&
+                // TODO: Remove this condition once testing is done
+                network.isSubscribedToGossipCoreTopics()
+              )
             );
           } catch (e) {
             errors.push(e as Error);

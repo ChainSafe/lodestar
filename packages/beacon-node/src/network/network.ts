@@ -499,11 +499,11 @@ export class Network implements INetwork {
   }
 
   private async gossipCachedBlsChanges(): Promise<void> {
-    let gossipedKeys: number[] = [];
-    let includedKeys: number[] = [];
+    let gossipedIndexes = [];
+    let includedIndexes = [];
     let totalProcessed = 0;
-    this.logger.info("Re-gossiping the cached bls changes");
 
+    this.logger.info("Re-gossiping the cached bls changes");
     try {
       const headState = this.chain.getHeadState();
       for (const poolData of this.chain.opPool.getAllBlsToExecutionChanges()) {
@@ -511,40 +511,39 @@ export class Network implements INetwork {
         if (preCapella) {
           if (isValidBlsToExecutionChangeForBlockInclusion(headState, value)) {
             await this.gossip.publishBlsToExecutionChange(value);
-            gossipedKeys.push(value.message.validatorIndex);
+            gossipedIndexes.push(value.message.validatorIndex);
           } else {
             // No need to gossip if its already been in the headState
             // TODO: Should use final state?
-            includedKeys.push(value.message.validatorIndex);
+            includedIndexes.push(value.message.validatorIndex);
           }
+
+          this.chain.opPool.insertBlsToExecutionChange(value, false);
           totalProcessed += 1;
-          // Should directly update in the pool set, but for the persitance to disk
-          // we will need to batch delete from db so new version can be persisted
-          // in persistDiff
-          poolData.preCapella = false;
         }
 
         // Cleanup in small batches
         if (totalProcessed % CACHED_BLS_BATCH_CLEANUP_LIMIT === 0) {
-          // Deleting the preCapella versions from db will lead to write of
-          // preCapella = false versions
-          await this.chain.db.blsToExecutionChange.batchDelete(gossipedKeys);
-          await this.chain.db.blsToExecutionChange.batchDelete(includedKeys);
-          includedKeys = [];
-          gossipedKeys = [];
+          this.logger.info("Gossiped cached blsChanges", {
+            gossipedIndexes: `${gossipedIndexes}`,
+            includedIndexes: `${includedIndexes}`,
+            totalProcessed,
+          });
+          gossipedIndexes = [];
+          includedIndexes = [];
         }
+      }
+
+      // Log any remaining changes
+      if (totalProcessed % CACHED_BLS_BATCH_CLEANUP_LIMIT !== 0) {
+        this.logger.info("Gossiped cached blsChanges", {
+          gossipedIndexes: `${gossipedIndexes}`,
+          includedIndexes: `${includedIndexes}`,
+          totalProcessed,
+        });
       }
     } catch (e) {
       this.logger.error("Failed to gossip all cached bls changes", {totalProcessed}, e as Error);
-    } finally {
-      this.logger.info("Gossiped cached blsChanges", {
-        gossipedIndexes: `${gossipedKeys}`,
-        alreadyIncludedIndexes: `${includedKeys}`,
-        totalProcessed,
-      });
-      // Cleanup whatever was in the last batch
-      await this.chain.db.blsToExecutionChange.batchDelete(gossipedKeys);
-      await this.chain.db.blsToExecutionChange.batchDelete(includedKeys);
     }
     this.logger.info("Processed cached blsChanges", {totalProcessed});
   }
