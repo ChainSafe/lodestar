@@ -9,8 +9,8 @@ import type {PeerDiscovery} from "@libp2p/interface-peer-discovery";
 import type {Components} from "libp2p/components";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {Registry} from "prom-client";
-import {Libp2p} from "../interface.js";
 import {yamux} from "@chainsafe/libp2p-yamux";
+import {Libp2p} from "../interface.js";
 import {createNoise} from "./noise.js";
 
 export interface ILibp2pOptions {
@@ -46,7 +46,7 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
   const yamuxInstance = yamux();
   const mplexInstance = mplex({maxInboundStreams: 256});
 
-  return await createLibp2p({
+  return (await createLibp2p({
     peerId: options.peerId,
     addresses: {
       listen: options.addresses.listen,
@@ -123,5 +123,5 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
         agentVersion: options.lodestarVersion ? `lodestar/${options.lodestarVersion}` : "lodestar",
       },
     },
-  }) as Libp2p;
+  })) as Libp2p;
 }
