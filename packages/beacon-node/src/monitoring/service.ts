@@ -82,6 +82,7 @@ export class MonitoringService {
 
     this.logger.info("Started monitoring service", {
       remote: this.remoteServiceHost,
+      machine: this.remoteServiceUrl.searchParams.get("machine"),
       interval: `${interval}s`,
       initialDelay: `${initialDelay}s`,
       requestTimeout: `${requestTimeout}s`,
