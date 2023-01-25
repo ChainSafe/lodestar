@@ -22,7 +22,7 @@ export {RequestError, RequestErrorCode};
 export const DEFAULT_DIAL_TIMEOUT = 5 * 1000; // 5 sec
 export const DEFAULT_REQUEST_TIMEOUT = 5 * 1000; // 5 sec
 export const DEFAULT_TTFB_TIMEOUT = 5 * 1000; // 5 sec
-export const DEFAULT_RESP_TIMEOUT = 10 * 1000; // 10 sec
+export const DEFAULT_RESP_TIMEOUT = 30 * 1000; // 10 sec
 
 export interface SendRequestOpts {
   /** The maximum time for complete response transfer. */
