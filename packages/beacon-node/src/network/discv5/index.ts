@@ -73,18 +73,14 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
 
   onDiscoveredStr(enrBuf: Uint8Array): void {
     const enr = this.decodeEnr(enrBuf);
-    if (enr !== undefined) {
+    if (enr) {
       this.emit("discovered", enr);
     }
   }
 
   async enr(): Promise<ENR> {
     if (this.status.status === "started") {
-      const enr = this.decodeEnr(await this.status.workerApi.enrBuf());
-      if (enr === undefined) {
-        throw new Error("unable to decode self ENR");
-      }
-      return enr;
+      return ENR.decode(Buffer.from(await this.status.workerApi.enrBuf()));
     } else {
       throw new Error("Cannot get enr before module is started");
     }
@@ -123,32 +119,28 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
   }
 
   private decodeEnrs(enrBufs: Uint8Array[]): ENR[] {
-    let errors = 0;
     const enrs: ENR[] = [];
     for (const enrBuf of enrBufs) {
-      try {
-        enrs.push(ENR.decode(Buffer.from(enrBuf)));
-      } catch (e) {
-        this.logger.debug("ENR decode error", {enr: Buffer.from(enrBuf).toString("base64url")});
-        errors++;
+      const enr = this.decodeEnr(enrBuf);
+      if (enr) {
+        enrs.push(enr);
       }
     }
-
-    this.opts.metrics?.discv5.decodeEnrErrorCount.inc(errors);
-    this.opts.metrics?.discv5.decodeEnrAttemptCount.inc(enrBufs.length);
-
     return enrs;
   }
 
-  private decodeEnr(enrBuf: Uint8Array): ENR | undefined {
+  private decodeEnr(enrBuf: Uint8Array): ENR | null {
     try {
+      this.opts.metrics?.discv5.decodeEnrAttemptCount.inc(1);
       return ENR.decode(Buffer.from(enrBuf));
     } catch (e) {
       this.opts.metrics?.discv5.decodeEnrErrorCount.inc(1);
-    } finally {
-      this.logger.debug("ENR decode error", {enr: Buffer.from(enrBuf).toString("base64url")});
-      this.opts.metrics?.discv5.decodeEnrAttemptCount.inc(1);
+      // Log to recover ENR from logs and debug why it is invalid
+      this.logger.debug("ENR decode error", {
+        enr: Buffer.from(enrBuf).toString("base64url"),
+        error: (e as Error).message,
+      });
+      return null;
     }
-    return undefined;
   }
 }
