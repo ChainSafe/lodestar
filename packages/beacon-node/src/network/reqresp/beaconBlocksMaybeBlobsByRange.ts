@@ -8,7 +8,7 @@ import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
 import {getEmptyBlobsSidecar} from "../../util/blobs.js";
 import {IReqRespBeaconNode} from "./interface.js";
 
-export async function doBeaconBlocksMaybeBlobsByRange(
+export async function beaconBlocksMaybeBlobsByRange(
   config: IBeaconConfig,
   reqResp: IReqRespBeaconNode,
   peerId: PeerId,
@@ -55,7 +55,7 @@ export async function doBeaconBlocksMaybeBlobsByRange(
             `Missing blobsSidecar for blockSlot=${block.message.slot} with blobKzgCommitmentsLen=${blobKzgCommitmentsLen}`
           );
         }
-        blobsSidecar = getEmptyBlobsSidecar(config, block);
+        blobsSidecar = getEmptyBlobsSidecar(config, block as eip4844.SignedBeaconBlock);
       }
       blockInputs.push(getBlockInput.postDeneb(config, block, blobsSidecar));
     }
