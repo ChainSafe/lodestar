@@ -33,9 +33,10 @@ export async function doBeaconBlocksMaybeBlobsByRange(
 
   // Only request blobs if they are recent enough
   else if (computeEpochAtSlot(request.startSlot) >= currentEpoch - config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS) {
-    // TODO Deneb: Do two requests at once for blocks and blobs
-    const blocks = await reqResp.beaconBlocksByRange(peerId, request);
-    const blobsSidecars = await reqResp.blobsSidecarsByRange(peerId, request);
+    const [blocks, blobsSidecars] = await Promise.all([
+      reqResp.beaconBlocksByRange(peerId, request),
+      reqResp.blobsSidecarsByRange(peerId, request),
+    ]);
 
     const blockInputs: BlockInput[] = [];
     let blobSideCarIndex = 0;
