@@ -37,7 +37,6 @@ export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): A
           ...fetchOptsSerializers.getState(stateId, format),
           timeoutMs: GET_STATE_TIMEOUT_MS,
         });
-        // Casting to any otherwise Typescript doesn't like the multi-type return
         return {
           ok: true,
           response: new Uint8Array(res.body),
@@ -56,7 +55,6 @@ export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): A
           ...fetchOptsSerializers.getStateV2(stateId, format),
           timeoutMs: GET_STATE_TIMEOUT_MS,
         });
-        // Casting to any otherwise Typescript doesn't like the multi-type return
         return {ok: true, response: new Uint8Array(res.body), status: res.status} as ApiClientResponse<{
           [HttpStatusCode.OK]: Uint8Array;
         }>;
