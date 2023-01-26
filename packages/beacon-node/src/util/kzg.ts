@@ -48,6 +48,7 @@ export async function initCKZG(): Promise<void> {
   /* eslint-disable import/no-extraneous-dependencies, @typescript-eslint/ban-ts-comment */
   // @ts-ignore
   ckzg = (await import("c-kzg")) as typeof ckzg;
+  /* eslint-enable import/no-extraneous-dependencies, @typescript-eslint/ban-ts-comment */
 }
 
 /**
