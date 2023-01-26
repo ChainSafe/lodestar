@@ -42,7 +42,6 @@ import {CheckpointBalancesCache} from "../../../../src/chain/balancesCache.js";
 import {IChainOptions} from "../../../../src/chain/options.js";
 import {BlockAttributes} from "../../../../src/chain/produceBlock/produceBlockBody.js";
 import {ReqRespBlockResponse} from "../../../../src/network/index.js";
-import {IBeaconDb} from "../../../../src/db/index.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -68,7 +67,6 @@ export class MockBeaconChain implements IBeaconChain {
     safeSlotsToImportOptimistically: 0,
     suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
   };
-  readonly db: IBeaconDb;
   readonly anchorStateLatestBlockSlot: Slot;
 
   readonly bls: IBlsVerifier;
@@ -130,13 +128,13 @@ export class MockBeaconChain implements IBeaconChain {
     this.forkChoice = mockForkChoice();
     this.stateCache = new StateContextCache({});
     this.checkpointStateCache = new CheckpointStateCache({});
-    this.db = new StubbedBeaconDb();
+    const db = new StubbedBeaconDb();
     this.regen = new StateRegenerator({
       config: this.config,
       forkChoice: this.forkChoice,
       stateCache: this.stateCache,
       checkpointStateCache: this.checkpointStateCache,
-      db: this.db,
+      db,
       metrics: null,
       emitter: this.emitter,
     });
@@ -144,7 +142,7 @@ export class MockBeaconChain implements IBeaconChain {
       {},
       {
         config: this.config,
-        db: this.db,
+        db,
         metrics: null,
         emitter: this.emitter,
         logger: this.logger,
