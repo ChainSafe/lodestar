@@ -67,7 +67,7 @@ export class Network implements INetwork {
   private readonly signal: AbortSignal;
 
   private subscribedForks = new Set<ForkName>();
-  private cachedBlsChangesPromise: Promise<void> | null = null;
+  private regossipBlsChangesPromise: Promise<void> | null = null;
 
   constructor(private readonly opts: INetworkOptions, modules: INetworkModules) {
     const {config, libp2p, logger, metrics, chain, reqRespHandlers, gossipHandlers, signal} = modules;
@@ -421,11 +421,14 @@ export class Network implements INetwork {
       if (
         this.isSubscribedToGossipCoreTopics() &&
         epoch >= this.config.CAPELLA_FORK_EPOCH &&
-        !this.cachedBlsChangesPromise
+        !this.regossipBlsChangesPromise
       ) {
-        this.cachedBlsChangesPromise = this.gossipCachedBlsChanges().then(() => {
-          this.cachedBlsChangesPromise = null;
-        });
+        this.regossipBlsChangesPromise = this.regossipCachedBlsChanges()
+          // If the processing fails for e.g. because of lack of peers set the promise
+          // to be null again to be retried
+          .catch((_e) => {
+            this.regossipBlsChangesPromise = null;
+          });
       }
     } catch (e) {
       this.logger.error("Error on BeaconGossipHandler.onEpoch", {epoch}, e as Error);
@@ -498,7 +501,7 @@ export class Network implements INetwork {
     return topics;
   }
 
-  private async gossipCachedBlsChanges(): Promise<void> {
+  private async regossipCachedBlsChanges(): Promise<void> {
     let gossipedIndexes = [];
     let includedIndexes = [];
     let totalProcessed = 0;
@@ -543,10 +546,14 @@ export class Network implements INetwork {
         });
       }
     } catch (e) {
-      this.logger.error("Failed to gossip unsubmitted cached bls changes", {totalProcessed}, e as Error);
+      this.logger.error("Failed to completely gossip unsubmitted cached bls changes", {totalProcessed}, e as Error);
+      // Throw error so that the promise can be set null to be retied
+      throw e;
     }
     if (totalProcessed > 0) {
-      this.logger.info("Processed unsubmitted blsChanges", {totalProcessed});
+      this.logger.info("Regossiped unsubmitted blsChanges", {totalProcessed});
+    } else {
+      this.logger.debug("No unsubmitted blsChanges to gossip", {totalProcessed});
     }
   }
 
