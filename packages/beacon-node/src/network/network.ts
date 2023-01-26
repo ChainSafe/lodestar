@@ -503,7 +503,7 @@ export class Network implements INetwork {
     let includedIndexes = [];
     let totalProcessed = 0;
 
-    this.logger.info("Re-gossiping the cached bls changes");
+    this.logger.debug("Re-gossiping unsubmitted cached bls changes");
     try {
       const headState = this.chain.getHeadState();
       for (const poolData of this.chain.opPool.getAllBlsToExecutionChanges()) {
@@ -520,32 +520,34 @@ export class Network implements INetwork {
 
           this.chain.opPool.insertBlsToExecutionChange(value, false);
           totalProcessed += 1;
-        }
 
-        // Cleanup in small batches
-        if (totalProcessed % CACHED_BLS_BATCH_CLEANUP_LIMIT === 0) {
-          this.logger.info("Gossiped cached blsChanges", {
-            gossipedIndexes: `${gossipedIndexes}`,
-            includedIndexes: `${includedIndexes}`,
-            totalProcessed,
-          });
-          gossipedIndexes = [];
-          includedIndexes = [];
+          // Cleanup in small batches
+          if (totalProcessed % CACHED_BLS_BATCH_CLEANUP_LIMIT === 0) {
+            this.logger.debug("Gossiped cached blsChanges", {
+              gossipedIndexes: `${gossipedIndexes}`,
+              includedIndexes: `${includedIndexes}`,
+              totalProcessed,
+            });
+            gossipedIndexes = [];
+            includedIndexes = [];
+          }
         }
       }
 
       // Log any remaining changes
       if (totalProcessed % CACHED_BLS_BATCH_CLEANUP_LIMIT !== 0) {
-        this.logger.info("Gossiped cached blsChanges", {
+        this.logger.debug("Gossiped cached blsChanges", {
           gossipedIndexes: `${gossipedIndexes}`,
           includedIndexes: `${includedIndexes}`,
           totalProcessed,
         });
       }
     } catch (e) {
-      this.logger.error("Failed to gossip all cached bls changes", {totalProcessed}, e as Error);
+      this.logger.error("Failed to gossip unsubmitted cached bls changes", {totalProcessed}, e as Error);
     }
-    this.logger.info("Processed cached blsChanges", {totalProcessed});
+    if (totalProcessed > 0) {
+      this.logger.info("Processed unsubmitted blsChanges", {totalProcessed});
+    }
   }
 
   private onLightClientFinalityUpdate = async (finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> => {
