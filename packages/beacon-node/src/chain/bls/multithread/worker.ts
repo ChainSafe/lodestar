@@ -16,8 +16,6 @@ import {chunkifyMaximizeChunkSize} from "./utils.js";
  */
 const BATCHABLE_MIN_PER_CHUNK = 16;
 
-/* eslint-disable no-console */
-
 // Cloned data from instatiation
 const workerData = worker.workerData as WorkerData;
 if (!workerData) throw Error("workerData must be defined");

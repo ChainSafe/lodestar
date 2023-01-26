@@ -5,8 +5,6 @@ import {activePreset, presetToJson} from "@lodestar/params";
 import {Api} from "../../../../src/beacon/routes/config.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 const configJson = chainConfigToJson(chainConfig);
 const presetJson = presetToJson(activePreset);
 const jsonSpec = {...configJson, ...presetJson};

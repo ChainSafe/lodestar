@@ -82,7 +82,6 @@ describe("sync", () => {
 
     // So the first call to getLatestHeadUpdate() doesn't error, store the latest snapshot as latest header update
     lightclientServerApi.latestHeadUpdate = committeeUpdateToLatestHeadUpdate(lastInMap(lightclientServerApi.updates));
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     lightclientServerApi.finalized = committeeUpdateToLatestFinalizedHeadUpdate(
       lastInMap(lightclientServerApi.updates),
       targetSlot

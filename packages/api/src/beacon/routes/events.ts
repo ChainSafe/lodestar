@@ -200,7 +200,7 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getEventSerdes() {
   const typeByEvent = getTypeByEvent();
 

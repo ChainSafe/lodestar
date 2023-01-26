@@ -9,8 +9,6 @@ import type {DefaultDialer} from "libp2p/connection-manager/dialer/index.js";
 import type {SignableENR} from "@chainsafe/discv5";
 import type {Libp2p} from "./interface.js";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 // peers
 
 /**

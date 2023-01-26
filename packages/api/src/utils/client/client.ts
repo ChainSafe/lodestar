@@ -12,7 +12,7 @@ import {FetchOpts, HttpError, IHttpClient} from "./httpClient.js";
  * Format FetchFn opts from Fn arguments given a route definition and request serializer.
  * For routes that return only JSOn use @see getGenericJsonClient
  */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getFetchOptsSerializer<Fn extends (...args: any) => any, ReqType extends ReqGeneric>(
   routeDef: RouteDef,
   reqSerializer: ReqSerializer<Fn, ReqType>,
@@ -36,7 +36,7 @@ export function getFetchOptsSerializer<Fn extends (...args: any) => any, ReqType
 /**
  * Generate `getFetchOptsSerializer()` functions for all routes in `Api`
  */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getFetchOptsSerializers<
   Api extends Record<string, APIClientHandler>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}

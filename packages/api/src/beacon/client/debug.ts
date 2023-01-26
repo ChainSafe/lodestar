@@ -38,7 +38,6 @@ export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): A
           timeoutMs: GET_STATE_TIMEOUT_MS,
         });
         // Casting to any otherwise Typescript doesn't like the multi-type return
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
         return {
           ok: true,
           response: new Uint8Array(res.body),
@@ -58,7 +57,6 @@ export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): A
           timeoutMs: GET_STATE_TIMEOUT_MS,
         });
         // Casting to any otherwise Typescript doesn't like the multi-type return
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
         return {ok: true, response: new Uint8Array(res.body), status: res.status} as ApiClientResponse<{
           [HttpStatusCode.OK]: Uint8Array;
         }>;

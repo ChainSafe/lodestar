@@ -1,9 +1,7 @@
 import type {TAlgorithm} from "jwt-simple";
 // TODO: fix jwt-simple types
-// eslint-disable-next-line import/default
 import jwt from "jwt-simple";
 
-// eslint-disable-next-line import/no-named-as-default-member
 const {encode, decode} = jwt;
 
 /** jwt token has iat which is issued at unix timestamp, and an optional exp for expiry */

@@ -17,15 +17,6 @@ import {runValidSszTest} from "../utils/runValidSszTest.js";
 //
 // Docs: https://github.com/ethereum/consensus-specs/blob/master/tests/formats/ssz_static/core.md
 
-/* eslint-disable
-  @typescript-eslint/naming-convention,
-  @typescript-eslint/no-unsafe-assignment,
-  @typescript-eslint/no-unsafe-call,
-  @typescript-eslint/no-unsafe-member-access,
-  no-console
-*/
-
-// eslint-disable-next-line
 type Types = Record<string, Type<any>>;
 
 // Mapping of sszGeneric() fn arguments to the path in spec tests

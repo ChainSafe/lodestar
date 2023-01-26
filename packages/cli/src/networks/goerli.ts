@@ -1,7 +1,5 @@
 export {goerliChainConfig as chainConfig} from "@lodestar/config/networks";
 
-/* eslint-disable max-len */
-
 export const depositContractDeployBlock = 4367322;
 export const genesisFileUrl =
   "https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/prater/genesis.ssz";

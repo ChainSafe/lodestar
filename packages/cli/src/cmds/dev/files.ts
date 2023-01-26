@@ -7,7 +7,7 @@ import {interopSecretKey} from "@lodestar/state-transition";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {PersistedKeysBackend} from "../validator/keymanager/persistedKeys.js";
 
-/* eslint-disable @typescript-eslint/naming-convention, no-console */
+/* eslint-disable no-console */
 
 export async function writeTestnetFiles(
   config: IChainForkConfig,

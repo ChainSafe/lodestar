@@ -1,7 +1,7 @@
 import {HttpStatusCode, HttpSuccessCodes} from "./utils/client/httpStatusCode.js";
 import {Resolves} from "./utils/types.js";
 
-/* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export type APIClientHandler = (...args: any) => PromiseLike<ApiClientResponse>;
 export type APIServerHandler = (...args: any) => PromiseLike<unknown>;
