@@ -3,8 +3,6 @@ import {fromHexString as b} from "@chainsafe/ssz";
 import {IChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../presets/mainnet.js";
 
-/* eslint-disable max-len */
-
 export const goerliChainConfig: IChainConfig = {
   ...mainnet,
 

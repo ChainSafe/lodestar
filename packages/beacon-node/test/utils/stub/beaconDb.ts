@@ -39,7 +39,6 @@ export class StubbedBeaconDb extends BeaconDb {
   depositDataRoot: SinonStubbedInstance<DepositDataRootRepository> & DepositDataRootRepository;
   eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(config = minimalConfig) {
     // eslint-disable-next-line
     super({config, controller: {} as any});

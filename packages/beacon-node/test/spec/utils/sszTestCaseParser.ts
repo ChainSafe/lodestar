@@ -4,10 +4,7 @@ import {uncompress} from "snappyjs";
 import jsyaml from "js-yaml";
 import {loadYaml} from "@lodestar/utils";
 
-/* eslint-disable
-  @typescript-eslint/explicit-module-boundary-types,
-  @typescript-eslint/explicit-function-return-type
-*/
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 
 export type ValidTestCaseData = {
   root: string;

@@ -19,8 +19,6 @@ import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePha
 import {computeBaseRewardPerIncrement} from "../util/altair.js";
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 export type EpochProcessOpts = {
   /**
    * Assert progressive balances the same to EpochProcess

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {allForks, Epoch, Slot, Version} from "@lodestar/types";
 

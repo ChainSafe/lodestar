@@ -1,4 +1,3 @@
-/* eslint-disable import/namespace */
 import {allForks, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";

@@ -10,8 +10,6 @@ import {getValidatorPaths} from "../paths.js";
 import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
 
-/* eslint-disable no-console */
-
 interface IImportArgs {
   file: string;
 }

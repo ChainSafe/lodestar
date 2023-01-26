@@ -3,8 +3,6 @@ import {bytesToBigInt, bigIntToBytes} from "@lodestar/utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ErrorParseJson} from "./jsonRpcHttpClient.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
 export type QUANTITY = string;
 /** DATA as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */

@@ -20,8 +20,6 @@ import {getLcLoggerConsole} from "../../src/utils/logger.js";
 const CURRENT_SYNC_COMMITTEE_INDEX = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 /**
  * To enable debug logs run with
  * ```

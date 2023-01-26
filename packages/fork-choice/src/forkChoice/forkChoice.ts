@@ -46,8 +46,6 @@ import {
 } from "./interface.js";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
 
-/* eslint-disable max-len */
-
 export type ForkChoiceOpts = {
   proposerBoostEnabled?: boolean;
   computeUnrealized?: boolean;

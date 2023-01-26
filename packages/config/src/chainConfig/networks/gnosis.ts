@@ -4,8 +4,6 @@ import {PresetName} from "@lodestar/params";
 import {IChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../presets/mainnet.js";
 
-/* eslint-disable max-len */
-
 export const gnosisChainConfig: IChainConfig = {
   ...mainnet,
 

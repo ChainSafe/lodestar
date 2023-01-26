@@ -162,7 +162,6 @@ describe("network / peers / PeerManager", function () {
     const {chain, libp2p, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
@@ -179,7 +178,6 @@ describe("network / peers / PeerManager", function () {
     const {chain, libp2p, reqResp, peerManager, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
@@ -193,7 +191,6 @@ describe("network / peers / PeerManager", function () {
     reqResp.metadata.resolves(remoteMetadata);
 
     // Simualate a peer connection, get() should return truthy
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
     (libp2p.connectionManager as DefaultConnectionManager).dispatchEvent(
       new CustomEvent("peer:connect", {detail: libp2pConnectionOutboud})
