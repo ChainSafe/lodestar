@@ -18,7 +18,6 @@ const numberOfSigners = 10;
 describe("keystoreCache", () => {
   let definitions: LocalKeystoreDefinition[];
   let signers: SignerLocal[];
-  let keystores: Keystore[];
   let secretKeys: Uint8Array[];
   let passwords: string[];
   let keystoreCacheFile: string;
