@@ -208,7 +208,7 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
 
   "builder.selection": {
     type: "string",
-    description: "Default builder block selection strategy: maxprofit or builderprefered",
+    description: "Default builder block selection strategy: maxprofit or builderalways",
     defaultDescription: `${defaultOptions.builderSelection}`,
     group: "builder",
   },

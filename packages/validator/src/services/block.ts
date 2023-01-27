@@ -151,31 +151,31 @@ export class BlockProposingService {
             this.logger.debug(
               "Returning Fullblock as fullblock.blockValue > blindedBlock.blockValue and BuilderSelection = MaxProfit "
             );
-            return this.getFullorBlindedBlockBundle(fullBlock, "engine", feeRecipientCheck);
+            return this.getBlockWithDebugLog(fullBlock, "engine", feeRecipientCheck);
           } else {
             this.logger.debug("Returning blindedBlock");
-            return this.getFullorBlindedBlockBundle(blindedBlock, "builder", feeRecipientCheck);
+            return this.getBlockWithDebugLog(blindedBlock, "builder", feeRecipientCheck);
           }
           break;
         }
         case BuilderSelection.BuilderAlways:
         default: {
           this.logger.debug("Returning blindedBlock");
-          return this.getFullorBlindedBlockBundle(blindedBlock, "builder", feeRecipientCheck);
+          return this.getBlockWithDebugLog(blindedBlock, "builder", feeRecipientCheck);
         }
       }
     } else if (fullBlock && !blindedBlock) {
       this.logger.debug("Returning fullBlock - No builder block produced");
-      return this.getFullorBlindedBlockBundle(fullBlock, "engine", feeRecipientCheck);
+      return this.getBlockWithDebugLog(fullBlock, "engine", feeRecipientCheck);
     } else if (blindedBlock && !fullBlock) {
       this.logger.debug("Returning blindedBlock - No execution block produced");
-      return this.getFullorBlindedBlockBundle(blindedBlock, "builder", feeRecipientCheck);
+      return this.getBlockWithDebugLog(blindedBlock, "builder", feeRecipientCheck);
     } else {
       throw Error("Failed to produce engine or builder block");
     }
   };
 
-  private getFullorBlindedBlockBundle(
+  private getBlockWithDebugLog(
     fullOrBlindedBlock: {data: allForks.FullOrBlindedBeaconBlock; blockValue: Wei},
     source: string,
     {expectedFeeRecipient, strictFeeRecipientCheck}: {expectedFeeRecipient: string; strictFeeRecipientCheck: boolean}

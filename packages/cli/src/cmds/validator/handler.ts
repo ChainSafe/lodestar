@@ -220,7 +220,7 @@ function parseBuilderSelection(builderSelection?: string): BuilderSelection | un
     switch (builderSelection) {
       case "maxprofit":
         break;
-      case "builderprefered":
+      case "builderalways":
         break;
       default:
         throw Error("Invalid input for builder selection, check help.");
