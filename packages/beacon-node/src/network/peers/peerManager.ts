@@ -638,6 +638,7 @@ export class PeerManager {
 
     // peerLongLivedAttnets metric is a count
     metrics.peerLongLivedAttnets.reset();
+    metrics.peerScore.reset();
     metrics.peerConnectionLength.reset();
 
     // reset client counts _for each client_ to 0
