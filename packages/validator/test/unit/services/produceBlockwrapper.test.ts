@@ -34,8 +34,16 @@ describe("Produce Block with BuilderSelection", function () {
 
   // Testcase: BuilderSelection, builderBlockValue, engineBlockValue, selection
   // null blockValue means the block was not produced
-  const testCases: [BuilderSelection, number | null, number, string][] = [
+  const testCases: [BuilderSelection, number | null, number | null, string][] = [
     [BuilderSelection.MaxProfit, 1, 0, "builder"],
+    [BuilderSelection.MaxProfit, 1, 2, "engine"],
+    [BuilderSelection.MaxProfit, null, 0, "engine"],
+    [BuilderSelection.MaxProfit, 0, null, "builder"],
+
+    [BuilderSelection.BuilderAlways, 1, 2, "builder"],
+    [BuilderSelection.BuilderAlways, 1, 0, "builder"],
+    [BuilderSelection.BuilderAlways, null, 0, "engine"],
+    [BuilderSelection.BuilderAlways, 0, null, "builder"],
   ];
   testCases.forEach(([builderSelection, builderBlockValue, engineBlockValue, finalSelection]) => {
     it(`builder selection = ${builderSelection}, builder blockValue = ${builderBlockValue}, engine blockValue = ${engineBlockValue} - expected selection = ${finalSelection} `, async function () {
@@ -87,121 +95,4 @@ describe("Produce Block with BuilderSelection", function () {
       expect(source).to.equal(finalSelection, "blindedBlock must be returned");
     });
   });
-
-  // it("2. BuilderSelection = MaxProfit - fullBlock blockValue > BlindedBlock blockValue - return FullBlock", async function () {
-  //   const signedBlock = ssz.bellatrix.BlindedBeaconBlock.defaultValue();
-  //   const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
-
-  //   api.validator.produceBlindedBlock.resolves({
-  //     data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(),
-  //     version: ForkName.bellatrix,
-  //     blockValue: ssz.Wei.defaultValue(),
-  //   });
-  //   api.validator.produceBlock.resolves({data: fullBlock, blockValue: BigInt(1)});
-  //   api.validator.produceBlockV2.resolves({data: fullBlock, version: ForkName.bellatrix, blockValue: BigInt(1)});
-
-  //   const produceBlockOpts = {
-  //     strictFeeRecipientCheck: false,
-  //     expectedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  //     isBuilderEnabled: true,
-  //     builderSelection: BuilderSelection.MaxProfit,
-  //   };
-  //   const returnedBlock = await produceBlockWrapper(144900, signedBlock.body.randaoReveal, "", produceBlockOpts);
-  //   expect(returnedBlock.data).to.deep.equal(fullBlock, "fullBlock must be returned");
-  // });
-  // it("3. BuilderSelection = BuilderAlways - return BlindedBlock", async function () {
-  //   const signedBlock = ssz.bellatrix.BlindedBeaconBlock.defaultValue();
-  //   const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
-
-  //   api.validator.produceBlindedBlock.resolves({
-  //     data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(),
-  //     version: ForkName.bellatrix,
-  //     blockValue: ssz.Wei.defaultValue(),
-  //   });
-  //   api.validator.produceBlock.resolves({data: fullBlock, blockValue: BigInt(1)});
-  //   api.validator.produceBlockV2.resolves({data: fullBlock, version: ForkName.bellatrix, blockValue: BigInt(1)});
-
-  //   const produceBlockOpts = {
-  //     strictFeeRecipientCheck: false,
-  //     expectedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  //     isBuilderEnabled: true,
-  //     builderSelection: BuilderSelection.BuilderAlways,
-  //   };
-  //   const returnedBlock = await produceBlockWrapper(144900, signedBlock.body.randaoReveal, "", produceBlockOpts);
-  //   expect(returnedBlock.data).to.deep.equal(signedBlock, "blindedBlock must be returned");
-  // });
-  // it("4. fullBlock - null, BlindedBlock !=null return blindedBlock", async function () {
-  //   const signedBlock = ssz.bellatrix.BlindedBeaconBlock.defaultValue();
-  //   //const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
-
-  //   api.validator.produceBlindedBlock.resolves({
-  //     data: ssz.bellatrix.BlindedBeaconBlock.defaultValue(),
-  //     version: ForkName.bellatrix,
-  //     blockValue: ssz.Wei.defaultValue(),
-  //   });
-  //   api.validator.produceBlock.resolves();
-  //   api.validator.produceBlockV2.resolves();
-
-  //   let produceBlockOpts = {
-  //     strictFeeRecipientCheck: false,
-  //     expectedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  //     isBuilderEnabled: true,
-  //     builderSelection: BuilderSelection.BuilderAlways,
-  //   };
-  //   let returnedBlock = await produceBlockWrapper(144900, signedBlock.body.randaoReveal, "", produceBlockOpts);
-  //   expect(returnedBlock.data).to.deep.equal(signedBlock, "blindedBlock must be returned");
-  //   produceBlockOpts = {
-  //     strictFeeRecipientCheck: false,
-  //     expectedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  //     isBuilderEnabled: true,
-  //     builderSelection: BuilderSelection.MaxProfit,
-  //   };
-  //   returnedBlock = await produceBlockWrapper(144900, signedBlock.body.randaoReveal, "", produceBlockOpts);
-  //   expect(returnedBlock.data).to.deep.equal(signedBlock, "blindedBlock must be returned");
-  // });
-  // it("5. fullBlock != null, BlindedBlock =null return fullBlock", async function () {
-  //   const signedBlock = ssz.bellatrix.BlindedBeaconBlock.defaultValue();
-  //   const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
-
-  //   api.validator.produceBlindedBlock.resolves();
-  //   api.validator.produceBlock.resolves({data: fullBlock, blockValue: BigInt(1)});
-  //   api.validator.produceBlockV2.resolves({data: fullBlock, version: ForkName.bellatrix, blockValue: BigInt(1)});
-
-  //   let produceBlockOpts = {
-  //     strictFeeRecipientCheck: false,
-  //     expectedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  //     isBuilderEnabled: true,
-  //     builderSelection: BuilderSelection.BuilderAlways,
-  //   };
-  //   let returnedBlock = await produceBlockWrapper(144900, signedBlock.body.randaoReveal, "", produceBlockOpts);
-  //   expect(returnedBlock.data).to.deep.equal(fullBlock, "fullBlock must be returned");
-  //   produceBlockOpts = {
-  //     strictFeeRecipientCheck: false,
-  //     expectedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  //     isBuilderEnabled: true,
-  //     builderSelection: BuilderSelection.MaxProfit,
-  //   };
-  //   returnedBlock = await produceBlockWrapper(144900, signedBlock.body.randaoReveal, "", produceBlockOpts);
-  //   expect(returnedBlock.data).to.deep.equal(fullBlock, "fullBlock must be returned");
-  // });
-  // it("6. !fullBlock, !BlindedBlock, throw error", async function () {
-  //   const signedBlock = ssz.bellatrix.BlindedBeaconBlock.defaultValue();
-
-  //   api.validator.produceBlindedBlock.resolves();
-  //   api.validator.produceBlock.resolves();
-  //   api.validator.produceBlockV2.resolves();
-
-  //   const produceBlockOpts = {
-  //     strictFeeRecipientCheck: false,
-  //     expectedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  //     isBuilderEnabled: true,
-  //     builderSelection: BuilderSelection.MaxProfit,
-  //   };
-
-  //   try {
-  //     await produceBlockWrapper(144900, signedBlock.body.randaoReveal, "", produceBlockOpts);
-  //   } catch (e) {
-  //     expect(e).to.be.instanceOf(Error);
-  //   }
-  // });
 });
