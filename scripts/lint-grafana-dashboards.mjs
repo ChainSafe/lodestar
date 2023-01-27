@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 // USAGE:
-// node validate-grafana-dashboard.mjs ./dashboards
+// node lint-grafana-dashboards.mjs ./dashboards
 
 /* eslint-disable
 @typescript-eslint/no-unsafe-assignment,

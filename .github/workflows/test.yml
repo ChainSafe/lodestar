@@ -53,7 +53,7 @@ jobs:
 
       # Misc sanity checks
       - name: Lint Grafana dashboards
-        run: node scripts/validate-grafana-dashboard.mjs ./dashboards
+        run: scripts/validate-grafana-dashboards.sh
       - name: Test root binary exists
         run: ./lodestar --version
       - name: Reject yarn.lock changes
