@@ -126,7 +126,7 @@ export class BlockProposingService {
     {expectedFeeRecipient, strictFeeRecipientCheck, isBuilderEnabled, builderSelection}: ProduceBlockOpts
   ): Promise<{data: allForks.FullOrBlindedBeaconBlock} & {debugLogCtx: Record<string, string>}> => {
     const blindedBlockPromise = isBuilderEnabled
-      ? this.api.validator.produceBlindedBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
+      ? this.produceBlindedBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
           this.logger.error("Failed to produce builder block", {}, e as Error);
           return null;
         })
@@ -200,11 +200,7 @@ export class BlockProposingService {
   }
 
   /** Wrapper around the API's different methods for producing blocks across forks */
-  private produceBlock: ServerApi<Api["validator"]>["produceBlock"] = async (
-    slot,
-    randaoReveal,
-    graffiti
-  ): Promise<{data: allForks.BeaconBlock; blockValue: Wei}> => {
+  private produceBlock: ServerApi<Api["validator"]>["produceBlock"] = async (slot, randaoReveal, graffiti) => {
     switch (this.config.getForkName(slot)) {
       case ForkName.phase0: {
         const res = await this.api.validator.produceBlock(slot, randaoReveal, graffiti);
@@ -219,5 +215,15 @@ export class BlockProposingService {
         return res.response;
       }
     }
+  };
+
+  private produceBlindedBlock: ServerApi<Api["validator"]>["produceBlindedBlock"] = async (
+    slot,
+    randaoReveal,
+    graffiti
+  ) => {
+    const res = await this.api.validator.produceBlindedBlock(slot, randaoReveal, graffiti);
+    ApiError.assert(res, "Failed to produce block: validator.produceBlindedBlock");
+    return res.response;
   };
 }
