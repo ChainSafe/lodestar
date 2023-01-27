@@ -41,7 +41,7 @@ export function getBeaconPoolApi({
     },
 
     async getPoolBlsToExecutionChanges() {
-      return {data: chain.opPool.getAllBlsToExecutionChanges()};
+      return {data: chain.opPool.getAllBlsToExecutionChanges().map(({data}) => data)};
     },
 
     async submitPoolAttestations(attestations) {
@@ -103,12 +103,21 @@ export function getBeaconPoolApi({
         blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
           try {
             await validateBlsToExecutionChange(chain, blsToExecutionChange);
-            chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
-            await network.gossip.publishBlsToExecutionChange(blsToExecutionChange);
+            // TODO: Remove below condition
+            // Only used for testing in devnet-3 of withdrawals
+            chain.opPool.insertBlsToExecutionChange(
+              blsToExecutionChange,
+              // true if pre capella else false
+              !(
+                chain.clock.currentEpoch >= chain.config.CAPELLA_FORK_EPOCH &&
+                // TODO: Remove this condition once testing is done
+                network.isSubscribedToGossipCoreTopics()
+              )
+            );
           } catch (e) {
             errors.push(e as Error);
             logger.error(
-              `Error on submitPoolSyncCommitteeSignatures [${i}]`,
+              `Error on submitPoolBlsToExecutionChange [${i}]`,
               {validatorIndex: blsToExecutionChange.message.validatorIndex},
               e as Error
             );

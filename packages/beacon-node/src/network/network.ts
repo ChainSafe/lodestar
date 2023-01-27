@@ -11,6 +11,7 @@ import {routes} from "@lodestar/api";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {BlockInput, BlockInputType, getBlockInput} from "../chain/blocks/types.js";
+import {isValidBlsToExecutionChangeForBlockInclusion} from "../chain/opPools/utils.js";
 import {INetworkOptions} from "./options.js";
 import {INetwork, Libp2p} from "./interface.js";
 import {ReqRespBeaconNode, ReqRespHandlers, doBeaconBlocksMaybeBlobsByRange} from "./reqresp/index.js";
@@ -31,6 +32,9 @@ import {AttnetsService, CommitteeSubscription, SyncnetsService} from "./subnets/
 import {PeersData} from "./peers/peersData.js";
 import {getConnectionsMap, isPublishToZeroPeersError} from "./util.js";
 import {Discv5Worker} from "./discv5/index.js";
+
+// How many changes to batch cleanup
+const CACHED_BLS_BATCH_CLEANUP_LIMIT = 10;
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -63,6 +67,7 @@ export class Network implements INetwork {
   private readonly signal: AbortSignal;
 
   private subscribedForks = new Set<ForkName>();
+  private regossipBlsChangesPromise: Promise<void> | null = null;
 
   constructor(private readonly opts: INetworkOptions, modules: INetworkModules) {
     const {config, libp2p, logger, metrics, chain, reqRespHandlers, gossipHandlers, signal} = modules;
@@ -411,6 +416,20 @@ export class Network implements INetwork {
           }
         }
       }
+
+      // If we are subscribed and post capella fork epoch, try gossiping the cached bls changes
+      if (
+        this.isSubscribedToGossipCoreTopics() &&
+        epoch >= this.config.CAPELLA_FORK_EPOCH &&
+        !this.regossipBlsChangesPromise
+      ) {
+        this.regossipBlsChangesPromise = this.regossipCachedBlsChanges()
+          // If the processing fails for e.g. because of lack of peers set the promise
+          // to be null again to be retried
+          .catch((_e) => {
+            this.regossipBlsChangesPromise = null;
+          });
+      }
     } catch (e) {
       this.logger.error("Error on BeaconGossipHandler.onEpoch", {epoch}, e as Error);
     }
@@ -480,6 +499,62 @@ export class Network implements INetwork {
     }
 
     return topics;
+  }
+
+  private async regossipCachedBlsChanges(): Promise<void> {
+    let gossipedIndexes = [];
+    let includedIndexes = [];
+    let totalProcessed = 0;
+
+    this.logger.debug("Re-gossiping unsubmitted cached bls changes");
+    try {
+      const headState = this.chain.getHeadState();
+      for (const poolData of this.chain.opPool.getAllBlsToExecutionChanges()) {
+        const {data: value, preCapella} = poolData;
+        if (preCapella) {
+          if (isValidBlsToExecutionChangeForBlockInclusion(headState, value)) {
+            await this.gossip.publishBlsToExecutionChange(value);
+            gossipedIndexes.push(value.message.validatorIndex);
+          } else {
+            // No need to gossip if its already been in the headState
+            // TODO: Should use final state?
+            includedIndexes.push(value.message.validatorIndex);
+          }
+
+          this.chain.opPool.insertBlsToExecutionChange(value, false);
+          totalProcessed += 1;
+
+          // Cleanup in small batches
+          if (totalProcessed % CACHED_BLS_BATCH_CLEANUP_LIMIT === 0) {
+            this.logger.debug("Gossiped cached blsChanges", {
+              gossipedIndexes: `${gossipedIndexes}`,
+              includedIndexes: `${includedIndexes}`,
+              totalProcessed,
+            });
+            gossipedIndexes = [];
+            includedIndexes = [];
+          }
+        }
+      }
+
+      // Log any remaining changes
+      if (totalProcessed % CACHED_BLS_BATCH_CLEANUP_LIMIT !== 0) {
+        this.logger.debug("Gossiped cached blsChanges", {
+          gossipedIndexes: `${gossipedIndexes}`,
+          includedIndexes: `${includedIndexes}`,
+          totalProcessed,
+        });
+      }
+    } catch (e) {
+      this.logger.error("Failed to completely gossip unsubmitted cached bls changes", {totalProcessed}, e as Error);
+      // Throw error so that the promise can be set null to be retied
+      throw e;
+    }
+    if (totalProcessed > 0) {
+      this.logger.info("Regossiped unsubmitted blsChanges", {totalProcessed});
+    } else {
+      this.logger.debug("No unsubmitted blsChanges to gossip", {totalProcessed});
+    }
   }
 
   private onLightClientFinalityUpdate = async (finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> => {

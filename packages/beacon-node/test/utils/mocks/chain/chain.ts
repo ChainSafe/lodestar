@@ -142,7 +142,7 @@ export class MockBeaconChain implements IBeaconChain {
       {},
       {
         config: this.config,
-        db: db,
+        db,
         metrics: null,
         emitter: this.emitter,
         logger: this.logger,
