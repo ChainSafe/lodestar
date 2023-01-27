@@ -85,6 +85,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
           peerRpcScores.applyAction(peerId, PeerAction.Fatal, "rate_limit_rpc");
           metrics?.reqResp.rateLimitErrors.inc({method});
         },
+        getPeerLogMetadata(peerId) {
+          return peersData.getPeerKind(peerId);
+        },
       }
     );
 
