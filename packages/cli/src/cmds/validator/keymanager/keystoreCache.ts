@@ -5,12 +5,19 @@ import {SignerLocal, SignerType} from "@lodestar/validator";
 import {fromHex, toHex} from "@lodestar/utils";
 import {PointFormat} from "@chainsafe/bls/types";
 import {lockFilepath, unlockFilepath} from "../../../util/lockfile.js";
+import {LocalKeystoreDefinition} from "./interface.js";
 
 export async function loadKeystoreCache(
   cacheFilepath: string,
-  keystores: Pick<Keystore, "uuid" | "pubkey">[],
-  passwords: string[]
+  keystoreDefinitions: LocalKeystoreDefinition[]
 ): Promise<SignerLocal[]> {
+  const keystores: Keystore[] = [];
+  const passwords: string[] = [];
+  for (const {keystorePath, password} of keystoreDefinitions) {
+    keystores.push(Keystore.parse(fs.readFileSync(keystorePath, "utf8")));
+    passwords.push(password);
+  }
+
   if (keystores.length !== passwords.length) {
     throw new Error(
       `Number of keystores and passwords must be equal. keystores=${keystores.length}, passwords=${passwords.length}`
@@ -55,25 +62,27 @@ export async function loadKeystoreCache(
 
 export async function writeKeystoreCache(
   cacheFilepath: string,
-  keystores: Pick<Keystore, "uuid" | "pubkey">[],
-  passwords: string[],
-  secretKeys: Uint8Array[]
+  signers: SignerLocal[],
+  passwords: string[]
 ): Promise<void> {
-  if (keystores.length !== passwords.length) {
+  if (signers.length !== passwords.length) {
     throw new Error(
-      `Number of keystores and passwords must be equal. keystores=${keystores.length}, passwords=${passwords.length}`
+      `Number of signers and passwords must be equal. signers=${signers.length}, passwords=${passwords.length}`
     );
   }
-
-  if (keystores.length !== secretKeys.length) {
-    throw new Error(
-      `Number of keystores and secretkeys must be equal. keystores=${keystores.length}, secretKeys=${secretKeys.length}`
-    );
-  }
-
+  const secretKeys = signers.map((s) => s.secretKey.toBytes());
+  const publicKeys = signers.map((s) => s.secretKey.toPublicKey().toBytes());
   const password = passwords.join("");
   const secretKeyConcatenatedBytes = Buffer.concat(secretKeys);
-  const publicConcatenatedBytes = Buffer.concat(keystores.map((k) => fromHex(k.pubkey)));
+  const publicConcatenatedBytes = Buffer.concat(publicKeys);
   const keystore = await Keystore.create(password, secretKeyConcatenatedBytes, publicConcatenatedBytes, cacheFilepath);
+  lockFilepath(cacheFilepath);
   fs.writeFileSync(cacheFilepath, keystore.stringify());
+  unlockFilepath(cacheFilepath);
+}
+
+export async function clearKeystoreCache(cacheFilepath: string): Promise<void> {
+  if (fs.existsSync(cacheFilepath)) {
+    fs.unlinkSync(cacheFilepath);
+  }
 }
