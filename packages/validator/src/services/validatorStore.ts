@@ -62,6 +62,11 @@ export type SignerRemote = {
   pubkey: PubkeyHex;
 };
 
+export enum BuilderSelection {
+  BuilderAlways = "builderprefered",
+  MaxProfit = "maxprofit",
+}
+
 type DefaultProposerConfig = {
   graffiti: string;
   strictFeeRecipientCheck: boolean;
@@ -69,6 +74,7 @@ type DefaultProposerConfig = {
   builder: {
     enabled: boolean;
     gasLimit: number;
+    selection: BuilderSelection;
   };
 };
 
@@ -79,6 +85,7 @@ export type ProposerConfig = {
   builder?: {
     enabled?: boolean;
     gasLimit?: number;
+    selection?: BuilderSelection;
   };
 };
 
@@ -113,6 +120,7 @@ type ValidatorData = ProposerConfig & {
 export const defaultOptions = {
   suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
   defaultGasLimit: 30_000_000,
+  builderSelection: BuilderSelection.MaxProfit,
 };
 
 /**
@@ -142,6 +150,7 @@ export class ValidatorStore {
       builder: {
         enabled: defaultConfig.builder?.enabled ?? false,
         gasLimit: defaultConfig.builder?.gasLimit ?? defaultOptions.defaultGasLimit,
+        selection: defaultConfig.builder?.selection ?? defaultOptions.builderSelection,
       },
     };
 
@@ -206,7 +215,11 @@ export class ValidatorStore {
   }
 
   isBuilderEnabled(pubkeyHex: PubkeyHex): boolean {
-    return (this.validators.get(pubkeyHex)?.builder || {}).enabled ?? this.defaultProposerConfig?.builder.enabled;
+    return (this.validators.get(pubkeyHex)?.builder || {}).enabled ?? this.defaultProposerConfig.builder.enabled;
+  }
+
+  getBuilderSelection(pubkeyHex: PubkeyHex): BuilderSelection {
+    return (this.validators.get(pubkeyHex)?.builder || {}).selection ?? this.defaultProposerConfig.builder.selection;
   }
 
   strictFeeRecipientCheck(pubkeyHex: PubkeyHex): boolean {

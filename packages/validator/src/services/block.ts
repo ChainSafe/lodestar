@@ -7,9 +7,15 @@ import {Api, ApiError, ServerApi} from "@lodestar/api";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
-import {ValidatorStore} from "./validatorStore.js";
+import {ValidatorStore, BuilderSelection} from "./validatorStore.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 
+type ProduceBlockOpts = {
+  expectedFeeRecipient: string;
+  strictFeeRecipientCheck: boolean;
+  isBuilderEnabled: boolean;
+  builderSelection: BuilderSelection;
+};
 /**
  * Service that sets up and handles validator block proposal duties.
  */
@@ -74,12 +80,14 @@ export class BlockProposingService {
 
       const strictFeeRecipientCheck = this.validatorStore.strictFeeRecipientCheck(pubkeyHex);
       const isBuilderEnabled = this.validatorStore.isBuilderEnabled(pubkeyHex);
+      const builderSelection = this.validatorStore.getBuilderSelection(pubkeyHex);
       const expectedFeeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
 
       const block = await this.produceBlockWrapper(slot, randaoReveal, graffiti, {
         expectedFeeRecipient,
         strictFeeRecipientCheck,
         isBuilderEnabled,
+        builderSelection,
       }).catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "produce"});
         throw extendError(e, "Failed to produce block");
@@ -115,11 +123,7 @@ export class BlockProposingService {
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string,
-    {
-      expectedFeeRecipient,
-      strictFeeRecipientCheck,
-      isBuilderEnabled,
-    }: {expectedFeeRecipient: string; strictFeeRecipientCheck: boolean; isBuilderEnabled: boolean}
+    {expectedFeeRecipient, strictFeeRecipientCheck, isBuilderEnabled, builderSelection}: ProduceBlockOpts
   ): Promise<{data: allForks.FullOrBlindedBeaconBlock} & {debugLogCtx: Record<string, string>}> => {
     const blindedBlockPromise = isBuilderEnabled
       ? this.api.validator.produceBlindedBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
@@ -138,42 +142,62 @@ export class BlockProposingService {
     const blindedBlock = await blindedBlockPromise;
     const fullBlock = await fullBlockPromise;
 
-    // A metric on the choice between blindedBlock and normal block can be applied
-    // TODO: compare the blockValue that has been obtained in each of full or blinded block
-    if (blindedBlock && blindedBlock.ok) {
-      const debugLogCtx = {source: "builder", blockValue: blindedBlock.response.blockValue.toString()};
-      return {...blindedBlock.response, debugLogCtx};
-    } else {
-      if (!fullBlock) {
-        throw Error("Failed to produce engine or builder block");
+    const feeRecipientCheck = {expectedFeeRecipient, strictFeeRecipientCheck};
+
+    if (fullBlock && blindedBlock) {
+      switch (builderSelection) {
+        case BuilderSelection.MaxProfit: {
+          if (fullBlock.blockValue > blindedBlock.blockValue) {
+            this.logger.debug(
+              "Returning Fullblock as fullblock.blockValue > blindedBlock.blockValue and BuilderSelection = MaxProfit "
+            );
+            return this.getFullorBlindedBlockBundle(fullBlock, "engine", feeRecipientCheck);
+          } else {
+            this.logger.debug("Returning blindedBlock");
+            return this.getFullorBlindedBlockBundle(blindedBlock, "builder", feeRecipientCheck);
+          }
+          break;
+        }
+        case BuilderSelection.BuilderAlways:
+        default: {
+          this.logger.debug("Returning blindedBlock");
+          return this.getFullorBlindedBlockBundle(blindedBlock, "builder", feeRecipientCheck);
+        }
       }
-      const debugLogCtx = {source: "engine", blockValue: fullBlock.blockValue.toString()};
-      const blockFeeRecipient = (fullBlock.data as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
-      const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
+    } else if (fullBlock && !blindedBlock) {
+      this.logger.debug("Returning fullBlock - No builder block produced");
+      return this.getFullorBlindedBlockBundle(fullBlock, "engine", feeRecipientCheck);
+    } else if (blindedBlock && !fullBlock) {
+      this.logger.debug("Returning blindedBlock - No execution block produced");
+      return this.getFullorBlindedBlockBundle(blindedBlock, "builder", feeRecipientCheck);
+    } else {
+      throw Error("Failed to produce engine or builder block");
+    }
+  };
+
+  private getFullorBlindedBlockBundle(
+    fullOrBlindedBlock: {data: allForks.FullOrBlindedBeaconBlock; blockValue: Wei},
+    source: string,
+    {expectedFeeRecipient, strictFeeRecipientCheck}: {expectedFeeRecipient: string; strictFeeRecipientCheck: boolean}
+  ): {data: allForks.FullOrBlindedBeaconBlock} & {debugLogCtx: Record<string, string>} {
+    const debugLogCtx = {source: source, blockValue: fullOrBlindedBlock.blockValue.toString()};
+    const blockFeeRecipient = (fullOrBlindedBlock.data as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
+    const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
+
+    if (source === "engine") {
       if (feeRecipient !== undefined) {
-        // In Mev Builder, the feeRecipient could differ and rewards to the feeRecipient
-        // might be included in the block transactions as indicated by the BuilderBid
-        // Address this appropriately in the Mev boost PR
-        //
-        // Even for engine, there could be divergence of feeRecipient the argument being
-        // that the bn <> engine setup has implied trust and are user-agents of the same entity.
-        // A better approach would be to have engine also provide something akin to BuilderBid
-        //
-        // The following conversation in the interop R&D channel can provide some context
-        // https://discord.com/channels/595666850260713488/892088344438255616/978374892678426695
-        //
-        // For now providing a strick check flag to enable disable this
         if (feeRecipient !== expectedFeeRecipient && strictFeeRecipientCheck) {
           throw Error(`Invalid feeRecipient=${feeRecipient}, expected=${expectedFeeRecipient}`);
         }
-        const transactions = (fullBlock.data as bellatrix.BeaconBlock).body.executionPayload?.transactions.length;
-        const withdrawals = (fullBlock.data as capella.BeaconBlock).body.executionPayload?.withdrawals?.length;
-        Object.assign(debugLogCtx, {feeRecipient, transactions}, withdrawals !== undefined ? {withdrawals} : {});
       }
-      return {...fullBlock, debugLogCtx};
-      // throw Error("random")
     }
-  };
+
+    const transactions = (fullOrBlindedBlock.data as bellatrix.BeaconBlock).body.executionPayload?.transactions.length;
+    const withdrawals = (fullOrBlindedBlock.data as capella.BeaconBlock).body.executionPayload?.withdrawals?.length;
+    Object.assign(debugLogCtx, {feeRecipient, transactions}, withdrawals !== undefined ? {withdrawals} : {});
+
+    return {...fullOrBlindedBlock, debugLogCtx};
+  }
 
   /** Wrapper around the API's different methods for producing blocks across forks */
   private produceBlock: ServerApi<Api["validator"]>["produceBlock"] = async (

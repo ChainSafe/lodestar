@@ -1,7 +1,13 @@
 import path from "node:path";
 import {setMaxListeners} from "node:events";
 import {LevelDbController} from "@lodestar/db";
-import {ProcessShutdownCallback, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
+import {
+  ProcessShutdownCallback,
+  SlashingProtection,
+  Validator,
+  ValidatorProposerConfig,
+  BuilderSelection,
+} from "@lodestar/validator";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@lodestar/beacon-node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
@@ -179,7 +185,11 @@ function getProposerConfigFromArgs(
     graffiti: args.graffiti || getDefaultGraffiti(),
     strictFeeRecipientCheck: args.strictFeeRecipientCheck,
     feeRecipient: args.suggestedFeeRecipient ? parseFeeRecipient(args.suggestedFeeRecipient) : undefined,
-    builder: {enabled: args.builder, gasLimit: args.defaultGasLimit},
+    builder: {
+      enabled: args.builder,
+      gasLimit: args.defaultGasLimit,
+      selection: parseBuilderSelection(args["builder.selection"]),
+    },
   };
 
   let valProposerConfig: ValidatorProposerConfig;
@@ -203,4 +213,18 @@ function getProposerConfigFromArgs(
     }
   }
   return valProposerConfig;
+}
+
+function parseBuilderSelection(builderSelection?: string): BuilderSelection | undefined {
+  if (builderSelection) {
+    switch (builderSelection) {
+      case "maxprofit":
+        break;
+      case "builderprefered":
+        break;
+      default:
+        throw Error("Invalid input for builder selection, check help.");
+    }
+  }
+  return builderSelection as BuilderSelection;
 }
