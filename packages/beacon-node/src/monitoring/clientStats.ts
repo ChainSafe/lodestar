@@ -7,6 +7,8 @@ import {ClientStats, JsonType, ProcessType} from "./types.js";
 
 const CLIENT_STATS_SPEC_VERSION = 1;
 
+const CLIENT_NAME = "lodestar";
+
 export function createClientStats(client: Client, collectSystemStats?: boolean): ClientStats[] {
   const clientStats = [];
 
@@ -57,7 +59,7 @@ function createProcessStats(process: ProcessType): ClientStats {
     }),
     clientName: new StaticProperty({
       jsonKey: "client_name",
-      value: "lodestar",
+      value: CLIENT_NAME,
     }),
     clientVersion: new MetricProperty({
       jsonKey: "client_version",

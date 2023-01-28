@@ -15,6 +15,6 @@ export const defaultMonitoringOptions: Required<MonitoringOptions> = {
   endpoint: "",
   interval: 60,
   initialDelay: 30,
-  requestTimeout: 30,
+  requestTimeout: 10,
   collectSystemStats: true,
 };

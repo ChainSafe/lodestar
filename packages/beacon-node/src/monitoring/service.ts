@@ -1,3 +1,4 @@
+import fetch from "cross-fetch";
 import {Registry} from "prom-client";
 import {ErrorAborted, ILogger, sleep, TimeoutError} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../metrics/index.js";
@@ -8,7 +9,7 @@ import {ClientStats} from "./types.js";
 
 type MonitoringData = Record<string, string | number | boolean>;
 
-type RemoteServiceError = {
+export type RemoteServiceError = {
   status: string;
   data: null;
 };
@@ -53,17 +54,20 @@ export class MonitoringService {
     this.collectDataMetric = register.histogram({
       name: "lodestar_monitoring_collect_data_seconds",
       help: "Time spent to collect monitoring data in seconds",
-      buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 1],
+      buckets: [0.001, 0.01, 0.1, 1],
     });
 
     this.sendDataMetric = register.histogram({
       name: "lodestar_monitoring_send_data_seconds",
       help: "Time spent to send monitoring data to remote service in seconds",
       labelNames: ["status"],
-      buckets: [0.1, 0.3, 0.5, 1, 10, this.options.requestTimeout],
+      buckets: [0.3, 0.5, 1, this.options.requestTimeout],
     });
   }
 
+  /**
+   * Start sending client stats based on configured interval
+   */
   start(): void {
     if (this.monitoringInterval) {
       // monitoring service is already started
@@ -73,10 +77,10 @@ export class MonitoringService {
     const {interval, initialDelay, requestTimeout, collectSystemStats} = this.options;
 
     sleep(initialDelay * 1000).finally(async () => {
-      await this.executeMonitoring();
+      await this.send();
 
       this.monitoringInterval = setInterval(async () => {
-        await this.executeMonitoring();
+        await this.send();
       }, interval * 1000);
     });
 
@@ -90,6 +94,9 @@ export class MonitoringService {
     });
   }
 
+  /**
+   * Stop sending client stats
+   */
   stop(): void {
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
@@ -100,7 +107,10 @@ export class MonitoringService {
     }
   }
 
-  private async executeMonitoring(): Promise<void> {
+  /**
+   * Collect and send client stats
+   */
+  async send(): Promise<void> {
     if (!this.pendingRequest) {
       this.pendingRequest = (async () => {
         try {
@@ -169,14 +179,16 @@ export class MonitoringService {
     } catch (e) {
       const {signal} = this.fetchAbortController;
 
-      if (signal.aborted) {
-        if (signal.reason === FetchAbortReason.Stop) {
-          throw new ErrorAborted("fetch");
-        } else if (signal.reason === FetchAbortReason.Timeout) {
-          throw new TimeoutError("fetch");
-        } else {
-          throw e;
-        }
+      if (!signal.aborted) {
+        // error was thrown by fetch
+        throw e;
+      }
+
+      // error was thrown by abort signal
+      if (signal.reason === FetchAbortReason.Stop) {
+        throw new ErrorAborted(`request to ${this.remoteServiceHost}`);
+      } else if (signal.reason === FetchAbortReason.Timeout) {
+        throw new TimeoutError(`reached of request to ${this.remoteServiceHost}`);
       } else {
         throw e;
       }

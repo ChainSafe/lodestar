@@ -38,11 +38,13 @@ interface MetricPropertyDefinition<T extends RecordValue> extends PropertyDefini
 }
 
 export interface ClientStatsProperty<T extends RecordValue> {
+  readonly definition: PropertyDefinition;
+
   getRecord(register: Registry): JsonRecord<T> | Promise<JsonRecord<T>>;
 }
 
 export class StaticProperty<T extends RecordValue> implements ClientStatsProperty<T> {
-  constructor(private readonly definition: StaticPropertyDefinition<T>) {}
+  constructor(readonly definition: StaticPropertyDefinition<T>) {}
 
   getRecord(): JsonRecord<T> {
     return {key: this.definition.jsonKey, value: this.definition.value};
@@ -52,7 +54,7 @@ export class StaticProperty<T extends RecordValue> implements ClientStatsPropert
 export class DynamicProperty<T extends RecordValue> implements ClientStatsProperty<T> {
   private cachedValue?: T;
 
-  constructor(private readonly definition: DynamicPropertyDefinition<T>) {}
+  constructor(readonly definition: DynamicPropertyDefinition<T>) {}
 
   async getRecord(): Promise<JsonRecord<T>> {
     if (this.cachedValue != null) {
@@ -72,7 +74,7 @@ export class DynamicProperty<T extends RecordValue> implements ClientStatsProper
 export class MetricProperty<T extends RecordValue> implements ClientStatsProperty<T> {
   private cachedValue?: T;
 
-  constructor(private readonly definition: MetricPropertyDefinition<T>) {}
+  constructor(readonly definition: MetricPropertyDefinition<T>) {}
 
   async getRecord(register: Registry): Promise<JsonRecord<T>> {
     if (this.cachedValue != null) {
