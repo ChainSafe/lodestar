@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {ENR, generateKeypair, KeypairType, SignableENR} from "@chainsafe/discv5";
+import {generateKeypair, KeypairType, SignableENR} from "@chainsafe/discv5";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
 import {createNodeJsLibp2p, isLocalMultiAddr} from "../../../src/network/index.js";
 import {getCurrentAndNextFork} from "../../../src/network/forks.js";
