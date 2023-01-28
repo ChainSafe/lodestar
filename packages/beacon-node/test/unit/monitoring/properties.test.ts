@@ -226,6 +226,33 @@ describe("monitoring / properties", () => {
       expect((await metricProperty.getRecord(metrics.register)).value).to.equal(true);
     });
 
+    it("should convert the metric value to true if value is greater than or equal to threshold", async () => {
+      const metricName = "metric_test_threshold";
+      const threshold = 2;
+
+      const metric = metrics.register.gauge({name: metricName, help: "threshold test"});
+
+      const metricProperty = new MetricProperty({
+        jsonKey,
+        metricName,
+        threshold,
+        jsonType: JsonType.Boolean,
+        defaultValue: false,
+      });
+
+      metric.set(threshold - 1);
+      // value is below threshold and should be converted to false
+      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(false);
+
+      metric.set(threshold);
+      // value is equal to threshold and should be converted to true
+      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(true);
+
+      metric.set(threshold + 1);
+      // value is greater than threshold and should be converted to true
+      expect((await metricProperty.getRecord(metrics.register)).value).to.equal(true);
+    });
+
     it("should apply the defined formatter to the metric value", async () => {
       const metricName = "metric_test_formatting";
       const metricValue = 10;

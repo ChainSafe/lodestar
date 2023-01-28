@@ -29,6 +29,8 @@ interface MetricPropertyDefinition<T extends RecordValue> extends PropertyDefini
   fromLabel?: string;
   /** Range value to evaluate to true */
   rangeValue?: number;
+  /** Evaluate to true if value is greater than or equal to threshold */
+  threshold?: number;
   /** Function to format retrieved metric value */
   formatter?: (value: MetricValue) => MetricValue;
   /** Only fetch metric once and then use cached value */
@@ -136,7 +138,13 @@ export class MetricProperty<T extends RecordValue> implements ClientStatsPropert
         case JsonType.Number:
           return Math.round(value);
         case JsonType.Boolean:
-          return this.definition.rangeValue != null ? value === this.definition.rangeValue : value > 0;
+          if (this.definition.rangeValue != null) {
+            return value === this.definition.rangeValue;
+          } else if (this.definition.threshold != null) {
+            return value >= this.definition.threshold;
+          } else {
+            return value > 0;
+          }
       }
     }
     return value;

@@ -115,9 +115,11 @@ function createBeaconNodeStats(): ClientStats {
       jsonType: JsonType.Number,
       defaultValue: 0,
     }),
-    syncEth1Connected: new StaticProperty({
+    syncEth1Connected: new MetricProperty({
       jsonKey: "sync_eth1_connected",
-      value: true,
+      metricName: "lodestar_execution_engine_http_client_config_urls_count",
+      jsonType: JsonType.Boolean,
+      defaultValue: false,
     }),
     syncEth2Synced: new MetricProperty({
       jsonKey: "sync_eth2_synced",
@@ -132,9 +134,12 @@ function createBeaconNodeStats(): ClientStats {
       jsonType: JsonType.Number,
       defaultValue: 0,
     }),
-    syncEth1FallbackConfigured: new StaticProperty({
+    syncEth1FallbackConfigured: new MetricProperty({
       jsonKey: "sync_eth1_fallback_configured",
-      value: false,
+      metricName: "lodestar_execution_engine_http_client_config_urls_count",
+      threshold: 2,
+      jsonType: JsonType.Boolean,
+      defaultValue: false,
     }),
     syncEth1FallbackConnected: new StaticProperty({
       jsonKey: "sync_eth1_fallback_connected",
