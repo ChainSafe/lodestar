@@ -2,7 +2,14 @@ import EventEmitter from "events";
 import {PeerId} from "@libp2p/interface-peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
-import {createKeypairFromPeerId, ENR, ENRData, IDiscv5DiscoveryInputOptions, IKeypair, SignableENR} from "@chainsafe/discv5";
+import {
+  createKeypairFromPeerId,
+  ENR,
+  ENRData,
+  IDiscv5DiscoveryInputOptions,
+  IKeypair,
+  SignableENR,
+} from "@chainsafe/discv5";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {ILogger} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/metrics.js";
@@ -42,7 +49,6 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
   async start(): Promise<void> {
     if (this.status.status === "started") return;
 
-    const keypair = createKeypairFromPeerId(this.opts.peerId);
     const workerData: Discv5WorkerData = {
       enr: (this.opts.discv5.enr as SignableENR).toObject(),
       peerIdProto: exportToProtobuf(this.opts.peerId),
