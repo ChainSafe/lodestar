@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {ENR} from "@chainsafe/discv5";
+import {ENR, generateKeypair, KeypairType, SignableENR} from "@chainsafe/discv5";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
 import {createNodeJsLibp2p, isLocalMultiAddr} from "../../../src/network/index.js";
 import {getCurrentAndNextFork} from "../../../src/network/forks.js";
@@ -63,7 +63,7 @@ describe("createNodeJsLibp2p", () => {
         connectToDiscv5Bootnodes: true,
         discv5: {
           enabled: false,
-          enr: new ENR(),
+          enr: SignableENR.createV4(generateKeypair(KeypairType.Secp256k1)),
           bindAddr: "/ip4/127.0.0.1/udp/0",
           bootEnrs: enrWithTcp,
         },
@@ -93,7 +93,7 @@ describe("createNodeJsLibp2p", () => {
         connectToDiscv5Bootnodes: true,
         discv5: {
           enabled: false,
-          enr: new ENR(),
+          enr: SignableENR.createV4(generateKeypair(KeypairType.Secp256k1)),
           bindAddr: "/ip4/127.0.0.1/udp/0",
           bootEnrs: enrWithoutTcp,
         },

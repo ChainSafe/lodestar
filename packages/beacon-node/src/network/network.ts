@@ -4,7 +4,7 @@ import {Multiaddr} from "@multiformats/multiaddr";
 import {IBeaconConfig} from "@lodestar/config";
 import {ILogger, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {ENR} from "@chainsafe/discv5";
+import {SignableENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {altair, eip4844, Epoch, phase0} from "@lodestar/types";
 import {routes} from "@lodestar/api";
@@ -199,7 +199,7 @@ export class Network implements INetwork {
     return this.libp2p.peerId;
   }
 
-  async getEnr(): Promise<ENR | undefined> {
+  async getEnr(): Promise<SignableENR | undefined> {
     return await this.peerManager["discovery"]?.discv5.enr();
   }
 

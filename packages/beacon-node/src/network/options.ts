@@ -1,4 +1,4 @@
-import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
+import {ENR, generateKeypair, IDiscv5DiscoveryInputOptions, KeypairType, SignableENR} from "@chainsafe/discv5";
 import {Eth2GossipsubOpts} from "./gossip/gossipsub.js";
 import {defaultGossipHandlerOpts, GossipHandlerOpts} from "./gossip/handlers/index.js";
 import {PeerManagerOpts} from "./peers/index.js";
@@ -15,7 +15,7 @@ export interface INetworkOptions extends PeerManagerOpts, ReqRespBeaconNodeOpts,
 
 export const defaultDiscv5Options: IDiscv5DiscoveryInputOptions = {
   bindAddr: "/ip4/0.0.0.0/udp/9000",
-  enr: new ENR(),
+  enr: SignableENR.createV4(generateKeypair(KeypairType.Secp256k1)),
   bootEnrs: [],
   enrUpdate: true,
   enabled: true,

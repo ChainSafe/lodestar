@@ -3,7 +3,7 @@ import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {multiaddr} from "@multiformats/multiaddr";
 import {expose} from "@chainsafe/threads/worker";
 import {Observable, Subject} from "@chainsafe/threads/observable";
-import {createKeypairFromPeerId, Discv5, ENR} from "@chainsafe/discv5";
+import {createKeypairFromPeerId, Discv5, ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/discv5";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
@@ -29,7 +29,7 @@ const keypair = createKeypairFromPeerId(peerId);
 
 // Initialize discv5
 const discv5 = Discv5.create({
-  enr: workerData.enrStr,
+  enr: new SignableENR(workerData.enr.kvs, workerData.enr.seq, keypair),
   peerId,
   multiaddr: multiaddr(workerData.bindAddr),
   config: workerData.config,
@@ -42,28 +42,28 @@ for (const bootEnr of workerData.bootEnrs) {
 }
 
 /** Used to push discovered ENRs */
-const subject = new Subject<Uint8Array>();
+const subject = new Subject<ENRData>();
 
-const onDiscovered = (enr: ENR): void => subject.next(enr.encode());
+const onDiscovered = (enr: ENR): void => subject.next(enr.toObject());
 discv5.addListener("discovered", onDiscovered);
 
 // Discv5 will now begin accepting request/responses
 await discv5.start();
 
 const module: Discv5WorkerApi = {
-  async enrBuf(): Promise<Uint8Array> {
-    return discv5.enr.encode(keypair.privateKey);
+  async enr(): Promise<SignableENRData> {
+    return discv5.enr.toObject();
   },
   async setEnrValue(key: string, value: Uint8Array): Promise<void> {
     discv5.enr.set(key, value);
   },
-  async kadValuesBuf(): Promise<Uint8Array[]> {
-    return discv5.kadValues().map((enr) => enr.encode());
+  async kadValues(): Promise<ENRData[]> {
+    return discv5.kadValues().map((enr) => enr.toObject());
   },
-  async findRandomNodeBuf(): Promise<Uint8Array[]> {
-    return (await discv5.findRandomNode()).map((enr) => enr.encode());
+  async findRandomNode(): Promise<ENRData[]> {
+    return (await discv5.findRandomNode()).map((enr) => enr.toObject());
   },
-  discoveredBuf() {
+  discovered() {
     return Observable.from(subject);
   },
   async metrics(): Promise<string> {

@@ -4,7 +4,7 @@ import {Registrar} from "@libp2p/interface-registrar";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {ConnectionManager} from "@libp2p/interface-connection-manager";
-import {ENR} from "@chainsafe/discv5";
+import {SignableENR} from "@chainsafe/discv5";
 import {phase0} from "@lodestar/types";
 import {BlockInput} from "../chain/blocks/types.js";
 import {INetworkEventBus} from "./events.js";
@@ -32,7 +32,7 @@ export interface INetwork {
   /** Our network identity */
   peerId: PeerId;
   localMultiaddrs: Multiaddr[];
-  getEnr(): Promise<ENR | undefined>;
+  getEnr(): Promise<SignableENR | undefined>;
   getConnectionsByPeer(): Map<string, Connection[]>;
   getConnectedPeers(): PeerId[];
   hasSomeConnectedPeer(): boolean;
