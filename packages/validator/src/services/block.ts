@@ -170,13 +170,24 @@ export class BlockProposingService {
           selectedBlock = blindedBlock;
         }
       }
-      this.logger.debug(`Selected ${selectedSource} block`, {builderSelection, engineBlockValue, builderBlockValue});
+      this.logger.debug(`Selected ${selectedSource} block`, {
+        builderSelection,
+        // winston logger doesn't like bigint
+        engineBlockValue: `${engineBlockValue}`,
+        builderBlockValue: `${builderBlockValue}`,
+      });
       return this.getBlockWithDebugLog(selectedBlock, selectedSource, feeRecipientCheck);
     } else if (fullBlock && !blindedBlock) {
-      this.logger.debug("Selected engine block: no builder block produced", {engineBlockValue});
+      this.logger.debug("Selected engine block: no builder block produced", {
+        // winston logger doesn't like bigint
+        engineBlockValue: `${engineBlockValue}`,
+      });
       return this.getBlockWithDebugLog(fullBlock, "engine", feeRecipientCheck);
     } else if (blindedBlock && !fullBlock) {
-      this.logger.debug("Selected builder block: no engine block produced", {builderBlockValue});
+      this.logger.debug("Selected builder block: no engine block produced", {
+        // winston logger doesn't like bigint
+        builderBlockValue: `${builderBlockValue}`,
+      });
       return this.getBlockWithDebugLog(blindedBlock, "builder", feeRecipientCheck);
     } else {
       throw Error("Failed to produce engine or builder block");
@@ -188,7 +199,11 @@ export class BlockProposingService {
     source: string,
     {expectedFeeRecipient, strictFeeRecipientCheck}: {expectedFeeRecipient: string; strictFeeRecipientCheck: boolean}
   ): {data: allForks.FullOrBlindedBeaconBlock} & {debugLogCtx: Record<string, string>} {
-    const debugLogCtx = {source: source, "blockValue(eth)": (fullOrBlindedBlock.blockValue / ETH_TO_WEI).toString()};
+    const debugLogCtx = {
+      source: source,
+      // winston logger doesn't like bigint
+      "blockValue(eth)": `${fullOrBlindedBlock.blockValue / ETH_TO_WEI}`,
+    };
     const blockFeeRecipient = (fullOrBlindedBlock.data as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
     const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
 
