@@ -1,6 +1,6 @@
 import fetch from "cross-fetch";
 import {Registry} from "prom-client";
-import {ErrorAborted, ILogger, sleep, TimeoutError} from "@lodestar/utils";
+import {ErrorAborted, ILogger, TimeoutError} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../metrics/index.js";
 import {HistogramExtra} from "../metrics/utils/histogram.js";
 import {defaultMonitoringOptions, MonitoringOptions} from "./options.js";
@@ -35,6 +35,7 @@ export class MonitoringService {
   private readonly collectDataMetric: HistogramExtra<string>;
   private readonly sendDataMetric: HistogramExtra<"status">;
 
+  private initialDelayTimeout?: NodeJS.Timeout;
   private monitoringInterval?: NodeJS.Timer;
   private fetchAbortController?: AbortController;
   private pendingRequest?: Promise<void>;
@@ -69,20 +70,20 @@ export class MonitoringService {
    * Start sending client stats based on configured interval
    */
   start(): void {
-    if (this.monitoringInterval) {
+    if (this.initialDelayTimeout || this.monitoringInterval) {
       // monitoring service is already started
       return;
     }
 
     const {interval, initialDelay, requestTimeout, collectSystemStats} = this.options;
 
-    sleep(initialDelay * 1000).finally(async () => {
+    this.initialDelayTimeout = setTimeout(async () => {
       await this.send();
 
       this.monitoringInterval = setInterval(async () => {
         await this.send();
       }, interval * 1000);
-    });
+    }, initialDelay * 1000);
 
     this.logger.info("Started monitoring service", {
       remote: this.remoteServiceHost,
@@ -98,6 +99,10 @@ export class MonitoringService {
    * Stop sending client stats
    */
   stop(): void {
+    if (this.initialDelayTimeout) {
+      clearTimeout(this.initialDelayTimeout);
+      this.initialDelayTimeout = undefined;
+    }
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
       this.monitoringInterval = undefined;

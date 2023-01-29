@@ -1,11 +1,12 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {ErrorAborted, ILogger, sleep, TimeoutError} from "@lodestar/utils";
+import {ErrorAborted, ILogger, TimeoutError} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../../src/index.js";
 import {HistogramExtra} from "../../../src/metrics/utils/histogram.js";
 import {MonitoringService} from "../../../src/monitoring/service.js";
 import {createStubbedLogger} from "../../utils/mocks/logger.js";
 import {MonitoringOptions} from "../../../src/monitoring/options.js";
+import {sleep} from "../../utils/sleep.js";
 import {startRemoteService, remoteServiceRoutes, remoteServiceError} from "./remoteService.js";
 
 describe("monitoring / service", () => {
@@ -114,6 +115,17 @@ describe("monitoring / service", () => {
 
       expect(clearInterval).to.have.been.calledOnce;
       expect(service["monitoringInterval"]).to.be.undefined;
+    });
+
+    it("should clear the initial delay timeout", async () => {
+      const clearTimeout = sandbox.spy(global, "clearTimeout");
+
+      const service = await startedMonitoringService({initialDelay: 10});
+
+      service.stop();
+
+      expect(clearTimeout).to.have.been.calledOnce;
+      expect(service["initialDelayTimeout"]).to.be.undefined;
     });
 
     it("should abort pending requests", async () => {
