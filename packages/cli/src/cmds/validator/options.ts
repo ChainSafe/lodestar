@@ -18,7 +18,9 @@ export const validatorMetricsDefaultOptions = {
 };
 
 export const validatorMonitoringDefaultOptions = {
-  interval: 60,
+  interval: 60_000,
+  initialDelay: 30_000,
+  requestTimeout: 10_000,
   collectSystemStats: false,
 };
 
@@ -56,9 +58,11 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     "metrics.port"?: number;
     "metrics.address"?: string;
 
-    "monitoring.endpoint": string;
-    "monitoring.interval": number;
-    "monitoring.collectSystemStats": boolean;
+    "monitoring.endpoint"?: string;
+    "monitoring.interval"?: number;
+    "monitoring.initialDelay"?: number;
+    "monitoring.requestTimeout"?: number;
+    "monitoring.collectSystemStats"?: boolean;
   };
 
 export type KeymanagerArgs = {
@@ -298,8 +302,24 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
 
   "monitoring.interval": {
     type: "number",
-    description: "Interval in seconds between sending client stats to the remote service",
+    description: "Interval in milliseconds between sending client stats to the remote service",
     defaultDescription: String(validatorMonitoringDefaultOptions.interval),
+    group: "monitoring",
+    hidden: true,
+  },
+
+  "monitoring.initialDelay": {
+    type: "number",
+    description: "Initial delay in milliseconds before client stats are sent to the remote service",
+    defaultDescription: String(validatorMonitoringDefaultOptions.initialDelay),
+    group: "monitoring",
+    hidden: true,
+  },
+
+  "monitoring.requestTimeout": {
+    type: "number",
+    description: "Timeout in milliseconds for sending client stats to the remote service",
+    defaultDescription: String(validatorMonitoringDefaultOptions.requestTimeout),
     group: "monitoring",
     hidden: true,
   },

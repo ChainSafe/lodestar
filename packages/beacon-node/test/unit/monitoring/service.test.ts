@@ -11,13 +11,13 @@ import {startRemoteService, remoteServiceRoutes, remoteServiceError} from "./rem
 
 describe("monitoring / service", () => {
   const sandbox = sinon.createSandbox();
-  const endpoint = "https://test.example.com:3000/api/v1/client/metrics";
+  const endpoint = "https://test.example.com/api/v1/client/metrics";
 
   let register: RegistryMetricCreator;
   let logger: ILogger;
 
   beforeEach(() => {
-    // re-create to avoid "metric has already been registered" errors
+    // recreate to avoid "metric has already been registered" errors
     register = new RegistryMetricCreator();
     logger = createStubbedLogger();
   });
@@ -39,7 +39,7 @@ describe("monitoring / service", () => {
     });
 
     it("should log a warning message if insecure monitoring endpoint is provided ", () => {
-      const insecureEndpoint = "http://localhost:3000/api/v1/client/metrics";
+      const insecureEndpoint = "http://test.example.com/api/v1/client/metrics";
 
       new MonitoringService("beacon", {endpoint: insecureEndpoint}, {register, logger});
 
@@ -78,12 +78,12 @@ describe("monitoring / service", () => {
     });
 
     it("should send client stats after interval", async () => {
-      const interval = 0.01;
+      const interval = 10;
 
       const service = await startedMonitoringService({interval});
 
       // wait for interval to be executed
-      await sleep(interval * 1000);
+      await sleep(interval);
 
       expect(service.send).to.have.been.calledTwice;
     });
@@ -120,7 +120,7 @@ describe("monitoring / service", () => {
     it("should clear the initial delay timeout", async () => {
       const clearTimeout = sandbox.spy(global, "clearTimeout");
 
-      const service = await startedMonitoringService({initialDelay: 10});
+      const service = await startedMonitoringService({initialDelay: 1000});
 
       service.stop();
 
@@ -185,13 +185,13 @@ describe("monitoring / service", () => {
       const endpoint = `${baseUrl}${remoteServiceRoutes.pending}`;
       const service = new MonitoringService(
         "beacon",
-        {endpoint, requestTimeout: 0.01, collectSystemStats: false},
+        {endpoint, requestTimeout: 10, collectSystemStats: false},
         {register, logger}
       );
 
       await service.send();
 
-      assertError({message: new TimeoutError(`reached of request to ${remoteServiceUrl.host}`).message});
+      assertError({message: new TimeoutError(`reached for request to ${remoteServiceUrl.host}`).message});
     });
 
     it("should abort pending requests if monitoring service is stopped", (done) => {

@@ -62,7 +62,7 @@ export class MonitoringService {
       name: "lodestar_monitoring_send_data_seconds",
       help: "Time spent to send monitoring data to remote service in seconds",
       labelNames: ["status"],
-      buckets: [0.3, 0.5, 1, this.options.requestTimeout],
+      buckets: [0.3, 0.5, 1, Math.floor(this.options.requestTimeout / 1000)],
     });
   }
 
@@ -82,15 +82,15 @@ export class MonitoringService {
 
       this.monitoringInterval = setInterval(async () => {
         await this.send();
-      }, interval * 1000);
-    }, initialDelay * 1000);
+      }, interval);
+    }, initialDelay);
 
     this.logger.info("Started monitoring service", {
       remote: this.remoteServiceHost,
       machine: this.remoteServiceUrl.searchParams.get("machine"),
-      interval: `${interval}s`,
-      initialDelay: `${initialDelay}s`,
-      requestTimeout: `${requestTimeout}s`,
+      interval: `${interval}ms`,
+      initialDelay: `${initialDelay}ms`,
+      requestTimeout: `${requestTimeout}ms`,
       collectSystemStats,
     });
   }
@@ -167,7 +167,7 @@ export class MonitoringService {
 
     const timeout = setTimeout(
       () => this.fetchAbortController?.abort(FetchAbortReason.Timeout),
-      this.options.requestTimeout * 1000
+      this.options.requestTimeout
     );
 
     let res: Response | undefined;
@@ -193,7 +193,7 @@ export class MonitoringService {
       if (signal.reason === FetchAbortReason.Stop) {
         throw new ErrorAborted(`request to ${this.remoteServiceHost}`);
       } else if (signal.reason === FetchAbortReason.Timeout) {
-        throw new TimeoutError(`reached of request to ${this.remoteServiceHost}`);
+        throw new TimeoutError(`reached for request to ${this.remoteServiceHost}`);
       } else {
         throw e;
       }

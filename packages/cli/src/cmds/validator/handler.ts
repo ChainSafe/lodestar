@@ -123,13 +123,15 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       throw new Error("Metrics must be enabled to use monitoring");
     }
 
-    const {interval, collectSystemStats} = validatorMonitoringDefaultOptions;
+    const {interval, initialDelay, requestTimeout, collectSystemStats} = validatorMonitoringDefaultOptions;
 
     const monitoring = new MonitoringService(
       "validator",
       {
         endpoint: args["monitoring.endpoint"],
         interval: args["monitoring.interval"] ?? interval,
+        initialDelay: args["monitoring.initialDelay"] ?? initialDelay,
+        requestTimeout: args["monitoring.requestTimeout"] ?? requestTimeout,
         collectSystemStats: args["monitoring.collectSystemStats"] ?? collectSystemStats,
       },
       {register, logger}
