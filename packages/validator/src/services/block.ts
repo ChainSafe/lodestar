@@ -10,6 +10,8 @@ import {Metrics} from "../metrics.js";
 import {ValidatorStore, BuilderSelection} from "./validatorStore.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 
+const ETH_TO_WEI = BigInt("1000000000000000000");
+
 type ProduceBlockOpts = {
   expectedFeeRecipient: string;
   strictFeeRecipientCheck: boolean;
@@ -140,35 +142,41 @@ export class BlockProposingService {
     await Promise.all([blindedBlockPromise, fullBlockPromise]);
 
     const blindedBlock = await blindedBlockPromise;
+    const builderBlockValue = blindedBlock?.blockValue ?? BigInt(0);
+
     const fullBlock = await fullBlockPromise;
+    const engineBlockValue = fullBlock?.blockValue ?? BigInt(0);
 
     const feeRecipientCheck = {expectedFeeRecipient, strictFeeRecipientCheck};
 
     if (fullBlock && blindedBlock) {
+      let selectedSource: string;
+      let selectedBlock;
       switch (builderSelection) {
         case BuilderSelection.MaxProfit: {
-          if (fullBlock.blockValue > blindedBlock.blockValue) {
-            this.logger.debug(
-              "Returning Fullblock as fullblock.blockValue > blindedBlock.blockValue and BuilderSelection = MaxProfit "
-            );
-            return this.getBlockWithDebugLog(fullBlock, "engine", feeRecipientCheck);
+          if (engineBlockValue >= builderBlockValue) {
+            selectedSource = "engine";
+            selectedBlock = fullBlock;
           } else {
-            this.logger.debug("Returning blindedBlock");
-            return this.getBlockWithDebugLog(blindedBlock, "builder", feeRecipientCheck);
+            selectedSource = "builder";
+            selectedBlock = blindedBlock;
           }
           break;
         }
+
         case BuilderSelection.BuilderAlways:
         default: {
-          this.logger.debug("Returning blindedBlock");
-          return this.getBlockWithDebugLog(blindedBlock, "builder", feeRecipientCheck);
+          selectedSource = "builder";
+          selectedBlock = blindedBlock;
         }
       }
+      this.logger.debug(`Selected ${selectedSource} block`, {builderSelection, engineBlockValue, builderBlockValue});
+      return this.getBlockWithDebugLog(selectedBlock, selectedSource, feeRecipientCheck);
     } else if (fullBlock && !blindedBlock) {
-      this.logger.debug("Returning fullBlock - No builder block produced");
+      this.logger.debug("Selected engine block: no builder block produced", {engineBlockValue});
       return this.getBlockWithDebugLog(fullBlock, "engine", feeRecipientCheck);
     } else if (blindedBlock && !fullBlock) {
-      this.logger.debug("Returning blindedBlock - No execution block produced");
+      this.logger.debug("Selected builder block: no engine block produced", {builderBlockValue});
       return this.getBlockWithDebugLog(blindedBlock, "builder", feeRecipientCheck);
     } else {
       throw Error("Failed to produce engine or builder block");
@@ -180,7 +188,7 @@ export class BlockProposingService {
     source: string,
     {expectedFeeRecipient, strictFeeRecipientCheck}: {expectedFeeRecipient: string; strictFeeRecipientCheck: boolean}
   ): {data: allForks.FullOrBlindedBeaconBlock} & {debugLogCtx: Record<string, string>} {
-    const debugLogCtx = {source: source, blockValue: fullOrBlindedBlock.blockValue.toString()};
+    const debugLogCtx = {source: source, "blockValue(eth)": (fullOrBlindedBlock.blockValue / ETH_TO_WEI).toString()};
     const blockFeeRecipient = (fullOrBlindedBlock.data as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
     const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
 
