@@ -19,7 +19,7 @@
         <link rel="next" href="../../libraries/">
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-9.0.1">
+      <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-9.0.8">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.3bd4f189.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.0d440cfe.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.2505c338.min.css">
@@ -164,7 +164,7 @@
           <div class="md-search-result__meta">
             Initializing search
           </div>
-          <ol class="md-search-result__list"></ol>
+          <ol class="md-search-result__list" role="presentation"></ol>
         </div>
       </div>
     </div>
@@ -256,17 +256,18 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
       
       
       
-      
-        <label class="md-nav__link" for="__nav_2">
+        <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
           Installation
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" aria-label="Installation" data-md-level="1">
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
           Installation
@@ -332,17 +333,18 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
       
       
       
-      
-        <label class="md-nav__link" for="__nav_3">
+        <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
           Using Lodestar
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" aria-label="Using Lodestar" data-md-level="1">
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
         <label class="md-nav__title" for="__nav_3">
           <span class="md-nav__icon md-icon"></span>
           Using Lodestar
@@ -438,17 +440,18 @@
     <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" checked>
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
       
       
       
-      
-        <label class="md-nav__link" for="__nav_4">
+        <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
           Reference
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" aria-label="Reference" data-md-level="1">
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
         <label class="md-nav__title" for="__nav_4">
           <span class="md-nav__icon md-icon"></span>
           Reference
@@ -464,7 +467,7 @@
   
     <li class="md-nav__item md-nav__item--active">
       
-      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
         
@@ -564,6 +567,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#validator-bls-to-execution-change" class="md-nav__link">
+    validator bls-to-execution-change
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -624,17 +634,18 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
       
       
       
-      
-        <label class="md-nav__link" for="__nav_6">
+        <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
           Design
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" aria-label="Design" data-md-level="1">
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
         <label class="md-nav__title" for="__nav_6">
           <span class="md-nav__icon md-icon"></span>
           Design
@@ -768,6 +779,13 @@
           <li class="md-nav__item">
   <a href="#validator-voluntary-exit" class="md-nav__link">
     validator voluntary-exit
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validator-bls-to-execution-change" class="md-nav__link">
+    validator bls-to-execution-change
   </a>
   
 </li>
@@ -1396,7 +1414,7 @@
 <p>Imports one or more EIP-2335 keystores into a Lodestar validator client directory, requesting passwords interactively. The directory flag provides a convenient method for importing a directory of keys generated by the eth2-deposit-cli Ethereum Foundation utility.</p>
 <p><strong>Examples</strong></p>
 <p>Import validator keystores generated with the Ethereum Foundation Staking Launchpad</p>
-<div class="highlight"><pre><span></span><code>validator import --network goerli --keystores $HOME/eth2.0-deposit-cli/validator_keys
+<div class="highlight"><pre><span></span><code>validator import --network goerli --importKeystores $HOME/staking-deposit-cli/validator_keys
 </code></pre></div>
 <p><strong>Options</strong></p>
 <table>
@@ -1571,13 +1589,13 @@
 <p>Lists the public keys of all validators</p>
 <p><strong>Examples</strong></p>
 <p>List all validator pubkeys previously imported</p>
-<div class="highlight"><pre><span></span><code>account validator list
+<div class="highlight"><pre><span></span><code>validator list
 </code></pre></div>
 <h3 id="validator-voluntary-exit"><code>validator voluntary-exit</code><a class="headerlink" href="#validator-voluntary-exit" title="Permanent link">&para;</a></h3>
-<p>Performs a voluntary exit for a given validator (as identified via <code>publicKey</code>.  If no <code>publicKey</code> is provided, a prompt will ask the user which validator they would like to choose for the voluntary exit.</p>
+<p>Performs a voluntary exit for a given set of validators as identified via <code>pubkeys</code>. If no <code>pubkeys</code> are provided, it will exit all validators that have been imported.</p>
 <p><strong>Examples</strong></p>
 <p>Perform a voluntary exit for the validator who has a public key 0xF00</p>
-<div class="highlight"><pre><span></span><code>account validator voluntary-exit --publicKey 0xF00
+<div class="highlight"><pre><span></span><code>validator voluntary-exit --pubkeys 0xF00
 </code></pre></div>
 <p><strong>Options</strong></p>
 <table>
@@ -1599,13 +1617,50 @@
 <tr>
 <td><code>--pubkeys</code></td>
 <td>array</td>
-<td>Pubkeys to exit, must be available as local signers</td>
+<td>Pubkeys to exit, must be available as local signers. Multiple keys have to be provided as comma-separated values.</td>
 <td></td>
 </tr>
 <tr>
 <td><code>--yes</code></td>
 <td>boolean</td>
 <td>Skip confirmation prompt</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="validator-bls-to-execution-change"><code>validator bls-to-execution-change</code><a class="headerlink" href="#validator-bls-to-execution-change" title="Permanent link">&para;</a></h3>
+<p>Performs BLS To Execution Change for a given validator (as identified via <code>publicKey</code>.  If no <code>publicKey</code> is provided, a prompt will ask the user which validator they would like to choose for BLS To Execution Change.</p>
+<p><strong>Examples</strong></p>
+<p>Perform BLS To Execution Change for the validator who has a public key 0xF00</p>
+<div class="highlight"><pre><span></span><code>validator bls-to-execution-change --publicKey 0xF00 --fromBlsPrivkey ... --toExecutionAddress ...
+</code></pre></div>
+<p><strong>Options</strong></p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--publicKey</code></td>
+<td>string</td>
+<td>Validator pubkey for which to set withdrawal address hence enabling withdrawals</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--fromBlsPrivkey</code></td>
+<td>string</td>
+<td>Bls withdrawals private key to sign the message</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--toExecutionAddress</code></td>
+<td>string</td>
+<td>Address to which the validator's balances will be set to be withdrawn.</td>
 <td></td>
 </tr>
 </tbody>
@@ -1821,6 +1876,12 @@
 <td>To delete chain and validator directories</td>
 <td></td>
 </tr>
+<tr>
+<td><code>--dumpTestnetFiles</code></td>
+<td>string</td>
+<td>Dump testnet files and exit</td>
+<td></td>
+</tr>
 </tbody>
 </table>
 
@@ -1900,10 +1961,10 @@
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
-    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.12658920.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.db81ec45.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.5cf534bf.min.js"></script>
+      <script src="../../assets/javascripts/bundle.a00a7c5e.min.js"></script>
       
     
   </body>

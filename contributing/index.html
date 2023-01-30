@@ -17,7 +17,7 @@
       
       
       <link rel="icon" href="../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-9.0.1">
+      <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-9.0.8">
     
     
       
@@ -25,7 +25,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.3bd4f189.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.0d440cfe.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.2505c338.min.css">
@@ -162,7 +162,7 @@
           <div class="md-search-result__meta">
             Initializing search
           </div>
-          <ol class="md-search-result__list"></ol>
+          <ol class="md-search-result__list" role="presentation"></ol>
         </div>
       </div>
     </div>
@@ -254,17 +254,18 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
       
       
       
-      
-        <label class="md-nav__link" for="__nav_2">
+        <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
           Installation
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" aria-label="Installation" data-md-level="1">
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
           Installation
@@ -330,17 +331,18 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
       
       
       
-      
-        <label class="md-nav__link" for="__nav_3">
+        <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
           Using Lodestar
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" aria-label="Using Lodestar" data-md-level="1">
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
         <label class="md-nav__title" for="__nav_3">
           <span class="md-nav__icon md-icon"></span>
           Using Lodestar
@@ -434,17 +436,18 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
       
       
       
-      
-        <label class="md-nav__link" for="__nav_4">
+        <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
           Reference
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" aria-label="Reference" data-md-level="1">
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
         <label class="md-nav__title" for="__nav_4">
           <span class="md-nav__icon md-icon"></span>
           Reference
@@ -497,17 +500,18 @@
     <li class="md-nav__item md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
       
       
       
-      
-        <label class="md-nav__link" for="__nav_6">
+        <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
           Design
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" aria-label="Design" data-md-level="1">
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
         <label class="md-nav__title" for="__nav_6">
           <span class="md-nav__icon md-icon"></span>
           Design
@@ -545,7 +549,7 @@
   
     <li class="md-nav__item md-nav__item--active">
       
-      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
         
@@ -729,8 +733,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#meta-meta-labels-to-organize-miscelaneous-issues" class="md-nav__link">
-    meta.* Meta Labels to organize Miscelaneous Issues
+  <a href="#meta-meta-labels-to-organize-miscellaneous-issues" class="md-nav__link">
+    meta.* Meta Labels to organize Miscellaneous Issues
   </a>
   
 </li>
@@ -935,8 +939,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#meta-meta-labels-to-organize-miscelaneous-issues" class="md-nav__link">
-    meta.* Meta Labels to organize Miscelaneous Issues
+  <a href="#meta-meta-labels-to-organize-miscellaneous-issues" class="md-nav__link">
+    meta.* Meta Labels to organize Miscellaneous Issues
   </a>
   
 </li>
@@ -984,7 +988,7 @@
 <li>:gear: Run <code>lerna bootstrap</code> or <code>yarn install</code> to install dependencies.</li>
 <li>:gear: Run <code>yarn build</code> to build lib from source.</li>
 <li>:package: A <code>lodestar</code> binary will be bundled in <code>./packages/cli/bin</code>.</li>
-<li>:computer: Run <code>./lodestar --help</code> to get a list of available commands and argurments.</li>
+<li>:computer: Run <code>./lodestar --help</code> to get a list of available commands and arguments.</li>
 </ul>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1130,7 +1134,7 @@
 <li><code>scope-documentation</code>: All issues related to the Lodestar documentation.</li>
 <li><code>scope-interop</code>: Issues that fix interop issues between Lodestar and CL, EL or tooling.</li>
 <li><code>scope-light-clients</code>: All issues regarding light client development.</li>
-<li><code>scope-logging</code>: Issue about logs: hygeine, format issues, improvements.</li>
+<li><code>scope-logging</code>: Issue about logs: hygiene, format issues, improvements.</li>
 <li><code>scope-memory</code>: Issues to reduce and improve memory usage.</li>
 <li><code>scope-metrics</code>: All issues with regards to the exposed metrics.</li>
 <li><code>scope-networking</code>: All issues related to networking, gossip, and libp2p.</li>
@@ -1155,7 +1159,7 @@
 <li><code>spec-altair</code>: Issues targeting the Altair Ethereum consensus spec version.</li>
 <li><code>spec-bellatrix</code>: Issues targeting the Bellatrix Ethereum consensus spec version.</li>
 </ul>
-<h6 id="meta-meta-labels-to-organize-miscelaneous-issues"><code>meta.*</code> Meta Labels to organize Miscelaneous Issues<a class="headerlink" href="#meta-meta-labels-to-organize-miscelaneous-issues" title="Permanent link">&para;</a></h6>
+<h6 id="meta-meta-labels-to-organize-miscellaneous-issues"><code>meta.*</code> Meta Labels to organize Miscellaneous Issues<a class="headerlink" href="#meta-meta-labels-to-organize-miscellaneous-issues" title="Permanent link">&para;</a></h6>
 <ul>
 <li><code>meta-breaking-change</code>: Introduces breaking changes to DB, Validator, Beacon Node, or CLI interfaces. Handle with care!</li>
 <li><code>meta-dependencies</code>: Pull requests that update a dependency.</li>
@@ -1245,10 +1249,10 @@
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
-    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.12658920.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.db81ec45.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.5cf534bf.min.js"></script>
+      <script src="../assets/javascripts/bundle.a00a7c5e.min.js"></script>
       
     
   </body>
