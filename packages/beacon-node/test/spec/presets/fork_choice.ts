@@ -148,9 +148,9 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
             });
 
             const blockImport =
-              config.getForkSeq(slot) < ForkSeq.eip4844
-                ? getBlockInput.preEIP4844(config, signedBlock)
-                : getBlockInput.postEIP4844OldBlobs(config, signedBlock);
+              config.getForkSeq(slot) < ForkSeq.deneb
+                ? getBlockInput.preDeneb(config, signedBlock)
+                : getBlockInput.postDenebOldBlobs(config, signedBlock);
 
             try {
               await chain.processBlock(blockImport, {

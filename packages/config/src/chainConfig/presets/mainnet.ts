@@ -41,7 +41,7 @@ export const chainConfig: IChainConfig = {
   CAPELLA_FORK_VERSION: b("0x03000000"),
   CAPELLA_FORK_EPOCH: Infinity,
 
-  // EIP-4844
+  // DENEB
   EIP4844_FORK_VERSION: b("0x04000000"),
   EIP4844_FORK_EPOCH: Infinity,
 

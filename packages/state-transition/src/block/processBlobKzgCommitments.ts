@@ -1,4 +1,4 @@
-import {eip4844} from "@lodestar/types";
+import {deneb} from "@lodestar/types";
 import {verifyKzgCommitmentsAgainstTransactions} from "../util/index.js";
 
 /**
@@ -10,7 +10,7 @@ import {verifyKzgCommitmentsAgainstTransactions} from "../util/index.js";
  *     body.blob_kzg_commitments
  *   )
  */
-export function processBlobKzgCommitments(body: eip4844.BeaconBlockBody): void {
+export function processBlobKzgCommitments(body: deneb.BeaconBlockBody): void {
   if (!verifyKzgCommitmentsAgainstTransactions(body.executionPayload.transactions, body.blobKzgCommitments)) {
     throw Error("Invalid KZG commitments against transactions");
   }

@@ -9,7 +9,7 @@ export {
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
-  CachedBeaconStateEip4844,
+  CachedBeaconStateDeneb,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   // Non-cached states
@@ -17,7 +17,7 @@ export {
   BeaconStateAltair,
   BeaconStateBellatrix,
   BeaconStateCapella,
-  BeaconStateEip4844,
+  BeaconStateDeneb,
   BeaconStateAllForks,
   BeaconStateExecutions,
 } from "./types.js";

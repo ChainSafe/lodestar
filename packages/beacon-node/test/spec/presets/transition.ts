@@ -52,7 +52,7 @@ export const transition = (skipTestNames?: string[]): TestRunnerFn<TransitionTes
       for (let i = 0; i < meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
         state = stateTransition(state, signedBlock, {
-          // TODO EIP-4844: Should assume valid and available for this test?
+          // TODO DENEB: Should assume valid and available for this test?
           executionPayloadStatus: ExecutionPayloadStatus.valid,
           dataAvailableStatus: DataAvailableStatus.available,
           verifyStateRoot: true,
@@ -97,7 +97,7 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<IChainC
       return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: forkEpoch};
     case ForkName.capella:
       return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: forkEpoch};
-    case ForkName.eip4844:
+    case ForkName.deneb:
       return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: 0, EIP4844_FORK_EPOCH: forkEpoch};
   }
 }

@@ -17,7 +17,7 @@ import {
   upgradeStateToAltair,
   upgradeStateToBellatrix,
   upgradeStateToCapella,
-  upgradeStateTo4844,
+  upgradeStateToDeneb,
 } from "./slot/index.js";
 import {processBlock} from "./block/index.js";
 import {processEpoch} from "./epoch/index.js";
@@ -26,7 +26,7 @@ import {ProcessBlockOpts} from "./block/types.js";
 
 // Multifork capable state transition
 
-// NOTE EIP-4844: Mandatory BlockExternalData to decide if block is available or not
+// NOTE DENEB: Mandatory BlockExternalData to decide if block is available or not
 export type StateTransitionOpts = BlockExternalData &
   EpochProcessOpts &
   ProcessBlockOpts & {
@@ -42,7 +42,7 @@ export function stateTransition(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
   options: StateTransitionOpts = {
-    // TODO EIP-4844: Review what default values make sense
+    // TODO DENEB: Review what default values make sense
     executionPayloadStatus: ExecutionPayloadStatus.valid,
     dataAvailableStatus: DataAvailableStatus.available,
   },
@@ -177,7 +177,7 @@ function processSlotsWithTransientCache(
         postState = upgradeStateToCapella(postState as CachedBeaconStateBellatrix) as CachedBeaconStateAllForks;
       }
       if (stateSlot === config.EIP4844_FORK_EPOCH) {
-        postState = upgradeStateTo4844(postState as CachedBeaconStateCapella) as CachedBeaconStateAllForks;
+        postState = upgradeStateToDeneb(postState as CachedBeaconStateCapella) as CachedBeaconStateAllForks;
       }
     } else {
       postState.slot++;
