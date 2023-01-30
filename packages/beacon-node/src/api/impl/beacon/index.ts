@@ -1,5 +1,4 @@
 import {routes, ServerApi} from "@lodestar/api";
-import {GENESIS_SLOT} from "@lodestar/params";
 import {ApiModules} from "../types.js";
 import {getBeaconBlockApi} from "./blocks/index.js";
 import {getBeaconPoolApi} from "./pool/index.js";
