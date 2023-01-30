@@ -85,7 +85,7 @@ export async function getSignersFromArgs(
       signal: signal,
       progress: ({ratePerSec, percentage, current, total}) => {
         logger.info(
-          `${percentage.toFixed(0)}% of keystores imported. current=${current} total=${total}${current} rate=${(
+          `${percentage.toFixed(0)}% of keystores imported. current=${current} total=${total} rate=${(
             ratePerSec * 60
           ).toFixed(2)}keys/m`
         );
@@ -113,7 +113,7 @@ export async function getSignersFromArgs(
       signal: signal,
       progress: ({ratePerSec, percentage, current, total}) => {
         logger.info(
-          `${percentage.toFixed(0)}% of local keystores imported. current=${current} total=${total}${current} rate=${(
+          `${percentage.toFixed(0)}% of local keystores imported. current=${current} total=${total} rate=${(
             ratePerSec * 60
           ).toFixed(2)}keys/m`
         );
