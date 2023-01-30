@@ -96,7 +96,7 @@ export function processExecutionPayload(
       | deneb.ExecutionPayload).excessDataGas;
   }
 
-  // TODO DENEB: Types are not happy by default. Since it's a generic allForks type going through ViewDU
+  // TODO Deneb: Types are not happy by default. Since it's a generic allForks type going through ViewDU
   // transformation then into allForks, probably some weird intersection incompatibility happens
   state.latestExecutionPayloadHeader = state.config
     .getExecutionForkTypes(state.slot)
