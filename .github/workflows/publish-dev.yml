@@ -15,10 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: 18
           registry-url: "https://registry.npmjs.org"
@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: npm
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
