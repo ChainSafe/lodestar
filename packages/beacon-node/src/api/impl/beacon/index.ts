@@ -20,10 +20,9 @@ export function getBeaconApi(
     ...state,
 
     async getGenesis() {
-      const genesisForkVersion = config.getForkVersion(GENESIS_SLOT);
       return {
         data: {
-          genesisForkVersion,
+          genesisForkVersion: config.GENESIS_FORK_VERSION,
           genesisTime: chain.genesisTime,
           genesisValidatorsRoot: chain.genesisValidatorsRoot,
         },
