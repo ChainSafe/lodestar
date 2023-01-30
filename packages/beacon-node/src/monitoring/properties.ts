@@ -4,6 +4,8 @@ import {JsonRecord, JsonType, MetricObject, MetricValue, MetricWithGetter, Recor
 interface PropertyDefinition {
   /** Key of value to be sent to remote service */
   jsonKey: string;
+  /** Description of the property */
+  description?: string;
 }
 
 interface StaticPropertyDefinition<T extends RecordValue> extends PropertyDefinition {
