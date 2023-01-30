@@ -1,41 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__elements": [],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "8.4.2"
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "text",
-      "name": "Text",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -58,15 +21,17 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
-  "iteration": 1661341516327,
+  "id": 35,
+  "iteration": 1672991883959,
   "links": [
     {
       "asDropdown": true,
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
-      "tags": ["lodestar"],
+      "tags": [
+        "lodestar"
+      ],
       "targetBlank": false,
       "title": "Lodestar dashboards",
       "tooltip": "",
@@ -365,7 +330,7 @@
         "graph": {},
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
+          "displayMode": "list",
           "placement": "bottom"
         },
         "tooltip": {
@@ -381,13 +346,61 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "process_heap_bytes",
+          "expr": "process_heap_bytes{job=\"beacon\"}",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "process_heap_bytes",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
+          "exemplar": false,
+          "expr": "nodejs_heap_size_total_bytes{job=\"beacon\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "heap_total",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
+          "exemplar": false,
+          "expr": "nodejs_heap_size_used_bytes{job=\"beacon\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "heap_used",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
+          "exemplar": false,
+          "expr": "nodejs_external_memory_bytes{job=\"beacon\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "external_memory",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
+          "exemplar": false,
+          "expr": "process_resident_memory_bytes{job=\"beacon\"}",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "rss",
+          "refId": "E"
         }
       ],
-      "title": "Process heap bytes",
+      "title": "Memory Usage",
       "type": "timeseries"
     },
     {
@@ -628,7 +641,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "{instance=\"beacon_node:8008\", job=\"Lodestar\"}"
+              "options": "{job=\"beacon\"}"
             },
             "properties": [
               {
@@ -987,8 +1000,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1098,8 +1110,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1185,8 +1196,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1312,8 +1322,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1399,8 +1408,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1485,8 +1493,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1586,8 +1593,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2103,8 +2109,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2201,8 +2206,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2316,8 +2320,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2471,7 +2474,7 @@
               "expr": "avg_over_time(scrape_duration_seconds[$rate_interval])",
               "interval": "",
               "intervalFactor": 1,
-              "legendFormat": "{{scrape_location}}",
+              "legendFormat": "{{job}}",
               "refId": "A"
             },
             {
@@ -2483,7 +2486,7 @@
               "expr": "rate(lodestar_metrics_scrape_seconds_sum[$rate_interval])\n/\nrate(lodestar_metrics_scrape_seconds_count[$rate_interval])",
               "hide": false,
               "interval": "",
-              "legendFormat": "{{scrape_location}} internal",
+              "legendFormat": "{{job}} internal",
               "refId": "B"
             }
           ],
@@ -2559,7 +2562,7 @@
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "{instance=\"beacon_node:8008\", job=\"Lodestar\"}"
+                  "options": "{job=\"beacon\"}"
                 },
                 "properties": [
                   {
@@ -2602,7 +2605,7 @@
               "exemplar": false,
               "expr": "1-up",
               "interval": "",
-              "legendFormat": "{{scrape_location}}",
+              "legendFormat": "{{job}}",
               "refId": "A"
             }
           ],
@@ -2662,8 +2665,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2751,8 +2753,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2838,8 +2839,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2936,8 +2936,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -3021,8 +3020,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -3106,8 +3104,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -3529,7 +3526,9 @@
   "refresh": "10s",
   "schemaVersion": 35,
   "style": "dark",
-  "tags": ["lodestar"],
+  "tags": [
+    "lodestar"
+  ],
   "templating": {
     "list": [
       {
@@ -3651,11 +3650,22 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
   },
   "timezone": "",
   "title": "Lodestar - VM + host",
   "uid": "lodestar_vm_host",
-  "version": 3,
+  "version": 6,
   "weekStart": ""
 }

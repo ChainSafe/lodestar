@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {Libp2p} from "libp2p";
 import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
 import {IBeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {allForks, altair, phase0, eip4844} from "@lodestar/types";
+import {allForks, altair, phase0, capella, eip4844} from "@lodestar/types";
 import {ILogger, Map2d, Map2dArr} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 
@@ -15,6 +14,7 @@ import {Eth2Context} from "../../chain/index.js";
 import {PeersData} from "../peers/peersData.js";
 import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
+import {Libp2p} from "../interface.js";
 import {
   GossipJobQueues,
   GossipTopic,
@@ -24,7 +24,7 @@ import {
   ValidatorFnsByType,
   GossipHandlers,
 } from "./interface.js";
-import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic.js";
+import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic, getCoreTopicsAtFork} from "./topic.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
 import {createValidatorFnsByType} from "./validation/index.js";
 
@@ -95,7 +95,7 @@ export class Eth2Gossipsub extends GossipSub {
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
-    super({
+    super(modules.libp2p, {
       globalSignaturePolicy: SignaturePolicy.StrictNoSign,
       allowPublishToZeroPeers: allowPublishToZeroPeers,
       D: gossipsubD ?? GOSSIP_D,
@@ -227,6 +227,14 @@ export class Eth2Gossipsub extends GossipSub {
   async publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void> {
     const fork = this.config.getForkName(computeStartSlotAtEpoch(voluntaryExit.message.epoch));
     await this.publishObject<GossipType.voluntary_exit>({type: GossipType.voluntary_exit, fork}, voluntaryExit);
+  }
+
+  async publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<void> {
+    const fork = ForkName.capella;
+    await this.publishObject<GossipType.bls_to_execution_change>(
+      {type: GossipType.bls_to_execution_change, fork},
+      blsToExecutionChange
+    );
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
@@ -412,33 +420,12 @@ function attSubnetLabel(subnet: number): string {
 
 function getMetricsTopicStrToLabel(config: IBeaconConfig): TopicStrToLabel {
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
-  const topics: GossipTopic[] = [];
 
   for (const {name: fork} of config.forksAscendingEpochOrder) {
-    for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-      topics.push({fork, type: GossipType.beacon_attestation, subnet});
-    }
-
-    for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
-      topics.push({fork, type: GossipType.sync_committee, subnet});
-    }
-
-    topics.push({fork, type: GossipType.beacon_block});
-    topics.push({fork, type: GossipType.beacon_aggregate_and_proof});
-    topics.push({fork, type: GossipType.voluntary_exit});
-    topics.push({fork, type: GossipType.proposer_slashing});
-    topics.push({fork, type: GossipType.attester_slashing});
-    topics.push({fork, type: GossipType.sync_committee_contribution_and_proof});
-
-    // TODO EIP-4844: It's an issue to pre-declare the topic here before the fork?
-    if (config.EIP4844_FORK_EPOCH < Infinity) {
-      topics.push({fork, type: GossipType.beacon_block_and_blobs_sidecar});
+    const topics = getCoreTopicsAtFork(fork, {subscribeAllSubnets: true});
+    for (const topic of topics) {
+      metricsTopicStrToLabel.set(stringifyGossipTopic(config, {...topic, fork}), topic.type);
     }
   }
-
-  for (const topic of topics) {
-    metricsTopicStrToLabel.set(stringifyGossipTopic(config, topic), topic.type);
-  }
-
   return metricsTopicStrToLabel;
 }

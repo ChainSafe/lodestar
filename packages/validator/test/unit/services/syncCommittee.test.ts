@@ -5,6 +5,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
+import {HttpStatusCode} from "@lodestar/api";
 import {SyncCommitteeService} from "../../../src/services/syncCommittee.js";
 import {SyncDutyAndProofs} from "../../../src/services/syncCommitteeDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
@@ -77,8 +78,16 @@ describe("SyncCommitteeService", function () {
     ];
 
     // Return empty replies to duties service
-    api.beacon.getStateValidators.resolves({data: [], executionOptimistic: false});
-    api.validator.getSyncCommitteeDuties.resolves({data: [], executionOptimistic: false});
+    api.beacon.getStateValidators.resolves({
+      response: {data: [], executionOptimistic: false},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
+    api.validator.getSyncCommitteeDuties.resolves({
+      response: {data: [], executionOptimistic: false},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
 
     // Mock duties service to return some duties directly
     syncCommitteeService["dutiesService"].getDutiesAtSlot = sinon.stub().returns(duties);
@@ -87,7 +96,11 @@ describe("SyncCommitteeService", function () {
 
     chainHeaderTracker.getCurrentChainHead.returns(beaconBlockRoot);
     api.beacon.submitPoolSyncCommitteeSignatures.resolves();
-    api.validator.produceSyncCommitteeContribution.resolves({data: contribution});
+    api.validator.produceSyncCommitteeContribution.resolves({
+      response: {data: contribution},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
     api.validator.publishContributionAndProofs.resolves();
 
     // Mock signing service

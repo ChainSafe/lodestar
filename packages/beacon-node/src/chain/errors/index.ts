@@ -6,3 +6,4 @@ export * from "./gossipValidation.js";
 export * from "./proposerSlashingError.js";
 export * from "./syncCommitteeError.js";
 export * from "./voluntaryExitError.js";
+export * from "./blsToExecutionChangeError.js";

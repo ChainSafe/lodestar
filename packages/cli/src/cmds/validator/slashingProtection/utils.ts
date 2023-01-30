@@ -1,10 +1,9 @@
 import {Root} from "@lodestar/types";
-import {getClient} from "@lodestar/api";
+import {ApiError, getClient} from "@lodestar/api";
 import {fromHex} from "@lodestar/utils";
 import {genesisData, NetworkName} from "@lodestar/config/networks";
 import {SlashingProtection, MetaDataRepository} from "@lodestar/validator";
 import {IDatabaseApiOptions, LevelDbController} from "@lodestar/db";
-import {YargsError} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
 import {getValidatorPaths} from "../paths.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
@@ -47,13 +46,14 @@ export async function getGenesisValidatorsRoot(args: IGlobalArgs & ISlashingProt
   const api = getClient({baseUrl: server}, {config});
   const genesis = await api.beacon.getGenesis();
 
-  if (genesis !== undefined) {
-    return genesis.data.genesisValidatorsRoot;
-  } else {
+  try {
+    ApiError.assert(genesis, "Can not fetch genesis data");
+  } catch (e) {
     if (args.force) {
       return Buffer.alloc(32, 0);
-    } else {
-      throw new YargsError(`Can't get genesisValidatorsRoot from Beacon node at ${server}`);
     }
+    throw e;
   }
+
+  return genesis.response.data.genesisValidatorsRoot;
 }

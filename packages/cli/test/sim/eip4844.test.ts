@@ -2,6 +2,7 @@
 import {join} from "node:path";
 import {activePreset} from "@lodestar/params";
 import {toHexString} from "@lodestar/utils";
+import {ApiError} from "@lodestar/api";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
@@ -17,7 +18,7 @@ const additionalSlotsForTTD = activePreset.SLOTS_PER_EPOCH - 2;
 const runTillEpoch = 6;
 const syncWaitEpoch = 2;
 
-const timeout =
+const runTimeoutMs =
   getEstimatedTimeInSecForRun({
     genesisSlotDelay: genesisSlotsDelay,
     secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
@@ -58,7 +59,7 @@ env.tracker.register({
   },
 });
 
-await env.start(timeout);
+await env.start({runTimeoutMs});
 await connectAllNodes(env.nodes);
 
 // The `TTD` will be reach around `start of bellatrixForkEpoch + additionalSlotsForMerge` slot
@@ -71,6 +72,7 @@ await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePrese
 // Range Sync
 // ========================================================
 const headForRangeSync = await env.nodes[0].cl.api.beacon.getBlockHeader("head");
+ApiError.assert(headForRangeSync);
 const rangeSync = env.createNodePair({
   id: "range-sync-node",
   cl: CLClient.Lodestar,
@@ -80,41 +82,41 @@ const rangeSync = env.createNodePair({
 
 // Checkpoint sync involves Weak Subjectivity Checkpoint
 // ========================================================
-const {
-  data: {finalized: headForCheckpointSync},
-} = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
+const res = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
+ApiError.assert(res);
+const headForCheckpointSync = res.response.data.finalized;
 const checkpointSync = env.createNodePair({
   id: "checkpoint-sync-node",
   cl: {
     type: CLClient.Lodestar,
-    options: {wssCheckpoint: `${headForCheckpointSync.root}:${headForCheckpointSync.epoch}`},
+    options: {clientOptions: {wssCheckpoint: `${headForCheckpointSync.root}:${headForCheckpointSync.epoch}`}},
   },
   el: ELClient.Geth,
   keysCount: 0,
 });
 
-await rangeSync.jobs.el.start();
-await rangeSync.jobs.cl.start();
-await connectNewNode(rangeSync.nodePair, env.nodes);
+await rangeSync.el.job.start();
+await rangeSync.cl.job.start();
+await connectNewNode(rangeSync, env.nodes);
 
-await checkpointSync.jobs.el.start();
-await checkpointSync.jobs.cl.start();
-await connectNewNode(checkpointSync.nodePair, env.nodes);
+await checkpointSync.el.job.start();
+await checkpointSync.cl.job.start();
+await connectNewNode(checkpointSync, env.nodes);
 
 await Promise.all([
-  await waitForNodeSync(env, rangeSync.nodePair, {
-    head: toHexString(headForRangeSync.data.root),
-    slot: headForRangeSync.data.header.message.slot,
+  await waitForNodeSync(env, rangeSync, {
+    head: toHexString(headForRangeSync.response.data.root),
+    slot: headForRangeSync.response.data.header.message.slot,
   }),
-  await waitForNodeSync(env, checkpointSync.nodePair, {
+  await waitForNodeSync(env, checkpointSync, {
     head: toHexString(headForCheckpointSync.root),
     slot: env.clock.getLastSlotOfEpoch(headForCheckpointSync.epoch),
   }),
 ]);
 
-await rangeSync.jobs.cl.stop();
-await rangeSync.jobs.el.stop();
-await checkpointSync.jobs.cl.stop();
-await checkpointSync.jobs.el.stop();
+await rangeSync.cl.job.stop();
+await rangeSync.el.job.stop();
+await checkpointSync.cl.job.stop();
+await checkpointSync.el.job.stop();
 
 await env.stop();

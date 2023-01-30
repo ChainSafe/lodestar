@@ -16,6 +16,7 @@ import {
   BackfilledRanges,
   BlobsSidecarRepository,
   BlobsSidecarArchiveRepository,
+  BLSToExecutionChangeRepository,
 } from "../../../src/db/repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "../../../src/db/single/index.js";
 import {createStubInstance} from "../types.js";
@@ -43,6 +44,7 @@ export function getStubbedBeaconDb(): IBeaconDb {
     proposerSlashing: createStubInstance(ProposerSlashingRepository),
     attesterSlashing: createStubInstance(AttesterSlashingRepository),
     depositEvent: createStubInstance(DepositEventRepository),
+    blsToExecutionChange: createStubInstance(BLSToExecutionChangeRepository),
 
     // eth1 processing
     preGenesisState: createStubInstance(PreGenesisState),

@@ -26,6 +26,7 @@ const BEACON_AGGREGATE_PROOF_WEIGHT = 0.5;
 const VOLUNTARY_EXIT_WEIGHT = 0.05;
 const PROPOSER_SLASHING_WEIGHT = 0.05;
 const ATTESTER_SLASHING_WEIGHT = 0.05;
+const BLS_TO_EXECUTION_CHANGE_WEIGHT = 0.05;
 
 const beaconAttestationSubnetWeight = 1 / ATTESTATION_SUBNET_COUNT;
 const maxPositiveScore =
@@ -35,7 +36,8 @@ const maxPositiveScore =
     beaconAttestationSubnetWeight * ATTESTATION_SUBNET_COUNT +
     VOLUNTARY_EXIT_WEIGHT +
     PROPOSER_SLASHING_WEIGHT +
-    ATTESTER_SLASHING_WEIGHT);
+    ATTESTER_SLASHING_WEIGHT +
+    BLS_TO_EXECUTION_CHANGE_WEIGHT);
 
 /**
  * The following params is implemented by Lighthouse at
@@ -132,6 +134,18 @@ function getAllTopicsScoreParams(
       expectedMessageRate: 4 / SLOTS_PER_EPOCH,
       firstMessageDecayTime: epochDurationMs * 100,
     });
+
+    topicsParams[
+      stringifyGossipTopic(config, {
+        type: GossipType.bls_to_execution_change,
+        fork,
+      })
+    ] = getTopicScoreParams(config, precomputedParams, {
+      topicWeight: BLS_TO_EXECUTION_CHANGE_WEIGHT,
+      expectedMessageRate: 4 / SLOTS_PER_EPOCH,
+      firstMessageDecayTime: epochDurationMs * 100,
+    });
+
     topicsParams[
       stringifyGossipTopic(config, {
         type: GossipType.attester_slashing,

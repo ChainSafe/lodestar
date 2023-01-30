@@ -106,6 +106,7 @@ async function getGenesisBlockHash(
     console.log(`fetching genesisBlock hash, try: ${i}`);
     try {
       const genesisBlock = await eth1Provider.getBlockByNumber(0);
+      console.log({genesisBlock});
       if (!genesisBlock) {
         throw Error("No genesis block available");
       }

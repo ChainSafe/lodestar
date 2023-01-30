@@ -1,7 +1,7 @@
 import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {
-  Api,
+  Api as KeyManagerClientApi,
   DeleteRemoteKeyStatus,
   DeletionStatus,
   ImportStatus,
@@ -14,9 +14,12 @@ import {
 } from "@lodestar/api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";
+import {ServerApi} from "@lodestar/api";
 import {getPubkeyHexFromKeystore, isValidatePubkeyHex, isValidHttpUrl} from "../../../util/format.js";
 import {parseFeeRecipient} from "../../../util/index.js";
 import {IPersistedKeysBackend} from "./interface.js";
+
+type Api = ServerApi<KeyManagerClientApi>;
 
 export class KeymanagerApi implements Api {
   constructor(
@@ -272,7 +275,9 @@ export class KeymanagerApi implements Api {
   /**
    * Import remote keys for the validator client to request duties for
    */
-  async importRemoteKeys(remoteSigners: SignerDefinition[]): ReturnType<Api["importRemoteKeys"]> {
+  async importRemoteKeys(
+    remoteSigners: Pick<SignerDefinition, "pubkey" | "url">[]
+  ): ReturnType<Api["importRemoteKeys"]> {
     const results = remoteSigners.map(
       ({pubkey, url}): ResponseStatus<ImportRemoteKeyStatus> => {
         try {

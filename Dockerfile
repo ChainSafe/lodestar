@@ -30,7 +30,8 @@ COPY --from=build_src /usr/app .
 # Do yarn --force to trigger a rebuild of the native packages
 # Emmulates `yarn rebuild` which is not available in v1 https://yarnpkg.com/cli/rebuild 
 RUN yarn install --non-interactive --frozen-lockfile --production --force
-
+# Rebuild leveldb bindings (required for arm64 build)
+RUN cd node_modules/classic-level && yarn rebuild
 
 # Copy built src + node_modules to a new layer to prune unnecessary fs
 # Previous layer weights 7.25GB, while this final 488MB (as of Oct 2020)

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {ELClient, ELClientGenerator, ELGeneratorClientOptions, ELNode, Runner, RunnerType} from "../interfaces.js";
+import {ELClient, ELClientGenerator, ELGeneratorClientOptions, Runner, RunnerType} from "../interfaces.js";
 
 export const generateMockNode: ELClientGenerator<ELClient.Mock> = (
   {id, ethPort, enginePort, ttd, jwtSecretHex}: ELGeneratorClientOptions,
@@ -10,7 +10,7 @@ export const generateMockNode: ELClientGenerator<ELClient.Mock> = (
 
   const job = runner.create(id, []);
 
-  const node: ELNode = {
+  return {
     client: ELClient.Mock,
     id,
     engineRpcUrl,
@@ -18,7 +18,6 @@ export const generateMockNode: ELClientGenerator<ELClient.Mock> = (
     ttd,
     jwtSecretHex,
     provider: null,
+    job,
   };
-
-  return {job, node};
 };

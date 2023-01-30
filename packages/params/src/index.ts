@@ -6,7 +6,7 @@ import {presetStatus} from "./presetStatus.js";
 import {userSelectedPreset, userOverrides} from "./setPreset.js";
 
 export {BeaconPreset} from "./interface.js";
-export {ForkName, ForkSeq} from "./forkName.js";
+export {ForkName, ForkSeq, ForkExecution, ForkBlobs, isForkExecution, isForkBlobs} from "./forkName.js";
 export {presetToJson} from "./json.js";
 export {PresetName};
 
@@ -86,6 +86,7 @@ export const {
 
   MAX_BLS_TO_EXECUTION_CHANGES,
   MAX_WITHDRAWALS_PER_PAYLOAD,
+  MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
 
   FIELD_ELEMENTS_PER_BLOB,
   MAX_BLOBS_PER_BLOCK,

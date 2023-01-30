@@ -1,16 +1,15 @@
 import {setMaxListeners} from "node:events";
-import {Libp2p} from "libp2p";
 import {Registry} from "prom-client";
 
 import {IBeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
-import {Api} from "@lodestar/api";
+import {Api, ServerApi} from "@lodestar/api";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IBeaconDb} from "../db/index.js";
-import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
+import {Libp2p, INetwork, Network, getReqRespHandlers} from "../network/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
@@ -19,7 +18,6 @@ import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {initCKZG, loadEthereumTrustedSetup} from "../util/kzg.js";
-import {createLibp2pMetrics} from "../metrics/metrics/libp2p.js";
 import {IBeaconNodeOptions} from "./options.js";
 import {runNodeNotifier} from "./notifier.js";
 
@@ -32,7 +30,7 @@ export interface IBeaconNodeModules {
   metrics: IMetrics | null;
   network: INetwork;
   chain: IBeaconChain;
-  api: Api;
+  api: {[K in keyof Api]: ServerApi<Api[K]>};
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
   metricsServer?: HttpMetricsServer;
@@ -83,7 +81,7 @@ export class BeaconNode {
   metricsServer?: HttpMetricsServer;
   network: INetwork;
   chain: IBeaconChain;
-  api: Api;
+  api: {[K in keyof Api]: ServerApi<Api[K]>};
   restApi?: BeaconRestApiServer;
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
@@ -168,7 +166,6 @@ export class BeaconNode {
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db);
-      createLibp2pMetrics(libp2p, metrics.register);
     }
 
     const chain = new BeaconChain(opts.chain, {
@@ -246,6 +243,9 @@ export class BeaconNode {
     const metricsServer = metrics
       ? new HttpMetricsServer(opts.metrics, {
           register: metrics.register,
+          getOtherMetrics: async (): Promise<string> => {
+            return (await network.discv5()?.metrics()) ?? "";
+          },
           logger: logger.child({module: LoggerModule.metrics}),
         })
       : undefined;

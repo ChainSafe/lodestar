@@ -15,7 +15,9 @@ import {TestRunnerFn} from "../utils/types.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {getPreviousFork} from "./fork.js";
 
-export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> = (forkNext) => {
+export const transition = (skipTestNames?: string[]): TestRunnerFn<TransitionTestCase, BeaconStateAllForks> => (
+  forkNext
+) => {
   if (forkNext === ForkName.phase0) {
     throw Error("fork phase0 not supported");
   }
@@ -77,6 +79,8 @@ export const transition: TestRunnerFn<TransitionTestCase, BeaconStateAllForks> =
         expectEqualBeaconState(forkNext, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+      shouldSkip: (_testcase, name, _index) =>
+        skipTestNames !== undefined && skipTestNames.some((skipTestName) => name.includes(skipTestName)),
     },
   };
 };

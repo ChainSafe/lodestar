@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {getClient} from "@lodestar/api";
+import {ApiError, getClient, routes} from "@lodestar/api";
 import {sleep} from "@lodestar/utils";
 import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {Validator} from "@lodestar/validator";
@@ -12,7 +12,6 @@ import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
 import {BeaconNode} from "../../../../../src/node/nodejs.js";
 import {waitForEvent} from "../../../../utils/events/resolver.js";
-import {ChainEvent} from "../../../../../src/chain/emitter.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("lightclient api", function () {
@@ -75,11 +74,13 @@ describe("lightclient api", function () {
   it("getUpdates()", async function () {
     await sleep(2 * SECONDS_PER_SLOT * 1000);
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
-    const updates = await client.getUpdates(0, 1);
+    const res = await client.getUpdates(0, 1);
+    ApiError.assert(res);
+    const updates = res.response;
     const slot = bn.chain.clock.currentSlot;
     expect(updates.length).to.be.equal(1);
     // at slot 2 we got attestedHeader for slot 1
-    expect(updates[0].data.attestedHeader.slot).to.be.equal(slot - 1);
+    expect(updates[0].data.attestedHeader.beacon.slot).to.be.equal(slot - 1);
     // version is set
     expect(updates[0].version).to.be.equal(ForkName.altair);
   });
@@ -87,21 +88,24 @@ describe("lightclient api", function () {
   it("getOptimisticUpdate()", async function () {
     await sleep(2 * SECONDS_PER_SLOT * 1000);
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
-    const update = await client.getOptimisticUpdate();
+    const res = await client.getOptimisticUpdate();
+    ApiError.assert(res);
+    const update = res.response;
     const slot = bn.chain.clock.currentSlot;
     // at slot 2 we got attestedHeader for slot 1
-    expect(update.data.attestedHeader.slot).to.be.equal(slot - 1);
+    expect(update.data.attestedHeader.beacon.slot).to.be.equal(slot - 1);
     // version is set
     expect(update.version).to.be.equal(ForkName.altair);
   });
 
   it.skip("getFinalityUpdate()", async function () {
     // TODO: not sure how this causes subsequent tests failed
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
+    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, routes.events.EventType.finalizedCheckpoint, 240000);
     await sleep(SECONDS_PER_SLOT * 1000);
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
-    const {data: update} = await client.getFinalityUpdate();
-    expect(update).to.be.not.undefined;
+    const res = await client.getFinalityUpdate();
+    ApiError.assert(res);
+    expect(res.response).to.be.not.undefined;
   });
 
   it("getCommitteeRoot() for the 1st period", async function () {
@@ -109,10 +113,12 @@ describe("lightclient api", function () {
     await sleep(2 * SECONDS_PER_SLOT * 1000);
 
     const lightclient = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
-    const {data: syncCommitteeHash} = await lightclient.getCommitteeRoot(0, 1);
+    const committeeRes = await lightclient.getCommitteeRoot(0, 1);
+    ApiError.assert(committeeRes);
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
-    const {data: validatorResponses} = await client.getStateValidators("head");
-    const pubkeys = validatorResponses.map((v) => v.validator.pubkey);
+    const validatorResponse = await client.getStateValidators("head");
+    ApiError.assert(validatorResponse);
+    const pubkeys = validatorResponse.response.data.map((v) => v.validator.pubkey);
     expect(pubkeys.length).to.be.equal(validatorCount);
     // only 2 validators spreading to 512 committee slots
     const committeePubkeys = Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) =>
@@ -120,7 +126,7 @@ describe("lightclient api", function () {
     );
     const aggregatePubkey = bls.aggregatePublicKeys(committeePubkeys);
     // single committe hash since we requested for the first period
-    expect(syncCommitteeHash).to.be.deep.equal([
+    expect(committeeRes.response.data).to.be.deep.equal([
       ssz.altair.SyncCommittee.hashTreeRoot({
         pubkeys: committeePubkeys,
         aggregatePubkey,

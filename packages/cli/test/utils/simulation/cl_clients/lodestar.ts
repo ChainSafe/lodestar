@@ -26,11 +26,10 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     id,
     config,
     genesisStateFilePath,
-    remoteKeys,
-    localKeys,
+    keys,
     keyManagerPort,
     genesisTime,
-    engineUrl,
+    engineUrls,
     engineMock,
     jwtSecretHex,
     clientOptions,
@@ -74,11 +73,11 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
   } else {
     rcConfig["eth1"] = true;
     rcConfig["execution.engineMock"] = false;
-    rcConfig["execution.urls"] = [engineUrl];
+    rcConfig["execution.urls"] = [...engineUrls];
   }
 
   const validatorClientsJobs: JobOptions[] = [];
-  if (opts.localKeys.length > 0 || opts.remoteKeys.length > 0) {
+  if (keys.type !== "no-keys") {
     validatorClientsJobs.push(
       generateLodestarValidatorJobs(
         {
@@ -94,6 +93,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
 
   const job = runner.create(id, [
     {
+      id,
       bootstrap: async () => {
         await mkdir(dataDir, {recursive: true});
         await writeFile(rcConfigPath, JSON.stringify(rcConfig, null, 2));
@@ -104,7 +104,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
         command: LODESTAR_BINARY_PATH,
         args: ["beacon", "--rcConfig", rcConfigPath, "--paramsFile", paramsPath],
         env: {
-          DEBUG: "*,-winston:*",
+          DEBUG: process.env.DISABLE_DEBUG_LOGS ? "" : "*,-winston:*",
         },
       },
       logs: {
@@ -113,26 +113,24 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
       health: async () => {
         try {
           await got.get(`http://${address}:${restPort}/eth/v1/node/health`);
-          return true;
-        } catch {
-          return false;
+          return {ok: true};
+        } catch (err) {
+          return {ok: false, reason: (err as Error).message, checkId: "eth/v1/node/health query"};
         }
       },
       children: validatorClientsJobs,
     },
   ]);
 
-  const node = {
+  return {
     id,
     client: CLClient.Lodestar,
     url: `http://${address}:${restPort}`,
-    localKeys,
-    remoteKeys,
+    keys,
     api: getClient({baseUrl: `http://${address}:${restPort}`}, {config}),
     keyManager: keyManagerGetClient({baseUrl: `http://${address}:${keyManagerPort}`}, {config}),
+    job,
   };
-
-  return {job, node};
 };
 
 export const generateLodestarValidatorJobs = (
@@ -143,7 +141,11 @@ export const generateLodestarValidatorJobs = (
     throw new Error(`Runner "${runner.type}" not yet supported.`);
   }
 
-  const {dataDir: rootDir, id, address, keyManagerPort, localKeys, restPort, config, genesisTime} = opts;
+  const {dataDir: rootDir, id, address, keyManagerPort, restPort, keys, config, genesisTime} = opts;
+
+  if (keys.type === "no-keys") {
+    throw Error("Attempting to run a vc with keys.type == 'no-keys'");
+  }
 
   const rcConfig = ({
     network: "dev",
@@ -163,6 +165,7 @@ export const generateLodestarValidatorJobs = (
   } as unknown) as IValidatorCliArgs & IGlobalArgs;
 
   return {
+    id,
     bootstrap: async () => {
       await mkdir(rootDir);
       await mkdir(`${rootDir}/keystores`);
@@ -170,19 +173,21 @@ export const generateLodestarValidatorJobs = (
       await writeFile(join(rootDir, "rc_config.json"), JSON.stringify(rcConfig, null, 2));
       await writeFile(join(rootDir, "params.json"), JSON.stringify(chainConfigToJson(config), null, 2));
 
-      for (const key of localKeys) {
-        const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
-        await writeFile(
-          join(rootDir, "keystores", `${key.toPublicKey().toHex()}.json`),
-          JSON.stringify(keystore.toObject(), null, 2)
-        );
+      if (keys.type === "local") {
+        for (const key of keys.secretKeys) {
+          const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
+          await writeFile(
+            join(rootDir, "keystores", `${key.toPublicKey().toHex()}.json`),
+            JSON.stringify(keystore.toObject(), null, 2)
+          );
+        }
       }
     },
     cli: {
       command: LODESTAR_BINARY_PATH,
       args: ["validator", "--rcConfig", join(rootDir, "rc_config.json"), "--paramsFile", join(rootDir, "params.json")],
       env: {
-        DEBUG: "*,-winston:*",
+        DEBUG: process.env.DISABLE_DEBUG_LOGS ? "" : "*,-winston:*",
       },
     },
     logs: {
@@ -191,9 +196,9 @@ export const generateLodestarValidatorJobs = (
     health: async () => {
       try {
         await got.get(`http://${address}:${keyManagerPort}/eth/v1/keystores`);
-        return true;
+        return {ok: true};
       } catch (err) {
-        return false;
+        return {ok: false, reason: (err as Error).message, checkId: "eth/v1/keystores query"};
       }
     },
   };

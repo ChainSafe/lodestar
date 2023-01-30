@@ -1,5 +1,5 @@
 import {Epoch, ValidatorIndex} from "@lodestar/types";
-import {Api} from "@lodestar/api";
+import {Api, ApiError} from "@lodestar/api";
 import {ILogger, sleep} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ProcessShutdownCallback, PubkeyHex} from "../types.js";
@@ -139,13 +139,16 @@ export class DoppelgangerService {
       return [];
     }
 
-    try {
-      const {data} = await this.api.validator.getLiveness(indicesToCheck, epoch);
-      return data;
-    } catch (e) {
-      this.logger.error(`Error getting liveness data for epoch ${epoch}`, {}, e as Error);
+    const res = await this.api.validator.getLiveness(indicesToCheck, epoch);
+    if (!res.ok) {
+      this.logger.error(
+        `Error getting liveness data for epoch ${epoch}`,
+        {},
+        new ApiError(res.error.message ?? "", res.error.code, "validator.getLiveness")
+      );
       return [];
     }
+    return res.response.data;
   }
 
   private detectDoppelganger(

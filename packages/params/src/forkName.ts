@@ -19,3 +19,13 @@ export enum ForkSeq {
   capella = 3,
   eip4844 = 4,
 }
+
+export type ForkExecution = Exclude<ForkName, ForkName.phase0 | ForkName.altair>;
+export function isForkExecution(fork: ForkName): fork is ForkExecution {
+  return fork !== ForkName.phase0 && fork !== ForkName.altair;
+}
+
+export type ForkBlobs = Exclude<ForkExecution, ForkName.bellatrix | ForkName.capella>;
+export function isForkBlobs(fork: ForkName): fork is ForkBlobs {
+  return isForkExecution(fork) && fork !== ForkName.bellatrix && fork !== ForkName.capella;
+}

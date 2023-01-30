@@ -1,15 +1,17 @@
-import {routes} from "@lodestar/api";
+import {routes, ServerApi} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
-import {eip4844} from "@lodestar/types";
+import {eip4844, allForks} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {getBlockInput} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
+import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
 import {OpSource} from "../../../../metrics/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
-import {ApiModules, IS_OPTIMISTIC_TEMP} from "../../types.js";
+import {ApiModules} from "../../types.js";
+import {ckzg} from "../../../../util/kzg.js";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
 
 /**
@@ -24,10 +26,13 @@ export function getBeaconBlockApi({
   metrics,
   network,
   db,
-}: Pick<ApiModules, "chain" | "config" | "metrics" | "network" | "db">): routes.beacon.block.Api {
+}: Pick<ApiModules, "chain" | "config" | "metrics" | "network" | "db">): ServerApi<routes.beacon.block.Api> {
   return {
     async getBlockHeaders(filters) {
       // TODO - SLOW CODE: This code seems like it could be improved
+
+      // If one block in the response contains an optimistic block, mark the entire response as optimistic
+      let executionOptimistic = false;
 
       const result: routes.beacon.BlockHeaderResponse[] = [];
       if (filters.parentRoot) {
@@ -44,12 +49,15 @@ export function getBeaconBlockApi({
               const cannonical = chain.forkChoice.getCanonicalBlockAtSlot(block.message.slot);
               if (cannonical) {
                 result.push(toBeaconHeaderResponse(config, block, cannonical.blockRoot === summary.blockRoot));
+                if (isOptimisticBlock(cannonical)) {
+                  executionOptimistic = true;
+                }
               }
             }
           })
         );
         return {
-          executionOptimistic: IS_OPTIMISTIC_TEMP,
+          executionOptimistic,
           data: result.filter(
             (item) =>
               // skip if no slot filter
@@ -83,6 +91,10 @@ export function getBeaconBlockApi({
         // TODO: What is this logic?
         await Promise.all(
           chain.forkChoice.getBlockSummariesAtSlot(filters.slot).map(async (summary) => {
+            if (isOptimisticBlock(summary)) {
+              executionOptimistic = true;
+            }
+
             if (summary.blockRoot !== toHexString(canonicalRoot)) {
               const block = await db.block.get(fromHexString(summary.blockRoot));
               if (block) {
@@ -94,38 +106,39 @@ export function getBeaconBlockApi({
       }
 
       return {
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        executionOptimistic,
         data: result,
       };
     },
 
     async getBlockHeader(blockId) {
-      const block = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
       return {
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        executionOptimistic,
         data: toBeaconHeaderResponse(config, block, true),
       };
     },
 
     async getBlock(blockId) {
+      const {block} = await resolveBlockId(chain.forkChoice, db, blockId);
       return {
-        data: await resolveBlockId(chain.forkChoice, db, blockId),
+        data: block,
       };
     },
 
     async getBlockV2(blockId) {
-      const block = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
       return {
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        executionOptimistic,
         data: block,
         version: config.getForkName(block.message.slot),
       };
     },
 
     async getBlockAttestations(blockId) {
-      const block = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
       return {
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        executionOptimistic,
         data: Array.from(block.message.body.attestations),
       };
     },
@@ -138,7 +151,7 @@ export function getBeaconBlockApi({
 
         if (slot === head.slot) {
           return {
-            executionOptimistic: IS_OPTIMISTIC_TEMP,
+            executionOptimistic: isOptimisticBlock(head),
             data: {root: fromHexString(head.blockRoot)},
           };
         }
@@ -146,22 +159,22 @@ export function getBeaconBlockApi({
         if (slot < head.slot && head.slot <= slot + SLOTS_PER_HISTORICAL_ROOT) {
           const state = chain.getHeadState();
           return {
-            executionOptimistic: IS_OPTIMISTIC_TEMP,
+            executionOptimistic: isOptimisticBlock(head),
             data: {root: state.blockRoots.get(slot % SLOTS_PER_HISTORICAL_ROOT)},
           };
         }
       } else if (blockId === "head") {
         const head = chain.forkChoice.getHead();
         return {
-          executionOptimistic: IS_OPTIMISTIC_TEMP,
+          executionOptimistic: isOptimisticBlock(head),
           data: {root: fromHexString(head.blockRoot)},
         };
       }
 
       // Slow path
-      const block = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
       return {
-        executionOptimistic: IS_OPTIMISTIC_TEMP,
+        executionOptimistic,
         data: {root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)},
       };
     },
@@ -169,7 +182,21 @@ export function getBeaconBlockApi({
     async publishBlindedBlock(signedBlindedBlock) {
       const executionBuilder = chain.executionBuilder;
       if (!executionBuilder) throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
-      const signedBlock = await executionBuilder.submitBlindedBlock(signedBlindedBlock);
+      let signedBlock: allForks.SignedBeaconBlock;
+      if (config.getForkSeq(signedBlindedBlock.message.slot) >= ForkSeq.eip4844) {
+        const {beaconBlock, blobsSidecar} = await executionBuilder.submitBlindedBlockV2(signedBlindedBlock);
+        signedBlock = beaconBlock;
+        // add this blobs to the map for access & broadcasting in publishBlock
+        const {blockHash} = signedBlindedBlock.message.body.executionPayloadHeader;
+        chain.producedBlobsSidecarCache.set(toHexString(blockHash), blobsSidecar);
+        // TODO: Do we need to prune here ? prune will anyway be called in local execution flow
+        // pruneSetToMax(
+        //   chain.producedBlobsSidecarCache,
+        //   chain.opts.maxCachedBlobsSidecar ?? DEFAULT_MAX_CACHED_BLOBS_SIDECAR
+        // );
+      } else {
+        signedBlock = await executionBuilder.submitBlindedBlock(signedBlindedBlock);
+      }
       return await this.publishBlock(signedBlock);
     },
 
@@ -211,6 +238,29 @@ export function getBeaconBlockApi({
             throw e;
           }),
       ]);
+    },
+
+    async getBlobsSidecar(blockId) {
+      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+
+      const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+
+      let blobsSidecar = await db.blobsSidecar.get(blockRoot);
+      if (!blobsSidecar) {
+        blobsSidecar = await db.blobsSidecarArchive.get(block.message.slot);
+        if (!blobsSidecar) {
+          blobsSidecar = {
+            beaconBlockRoot: blockRoot,
+            beaconBlockSlot: block.message.slot,
+            blobs: [] as eip4844.Blobs,
+            kzgAggregatedProof: ckzg.computeAggregateKzgProof([]),
+          };
+        }
+      }
+      return {
+        executionOptimistic,
+        data: blobsSidecar,
+      };
     },
   };
 }

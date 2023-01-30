@@ -1,10 +1,5 @@
-import {ContainerType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
-import {
-  HISTORICAL_ROOTS_LIMIT,
-  SLOTS_PER_HISTORICAL_ROOT,
-  MAX_WITHDRAWALS_PER_PAYLOAD,
-  MAX_BLS_TO_EXECUTION_CHANGES,
-} from "@lodestar/params";
+import {ContainerType, ListCompositeType} from "@chainsafe/ssz";
+import {HISTORICAL_ROOTS_LIMIT, MAX_WITHDRAWALS_PER_PAYLOAD, MAX_BLS_TO_EXECUTION_CHANGES} from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
@@ -20,6 +15,7 @@ const {
   BLSPubkey,
   ExecutionAddress,
   Gwei,
+  UintBn256,
 } = primitiveSsz;
 
 export const Withdrawal = new ContainerType(
@@ -56,14 +52,6 @@ export const ExecutionPayload = new ContainerType(
     withdrawals: Withdrawals, // New in capella
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
-);
-
-export const BlindedExecutionPayload = new ContainerType(
-  {
-    ...bellatrixSsz.ExecutionPayloadHeader.fields,
-    withdrawals: Withdrawals, // New in capella
-  },
-  {typeName: "BlindedExecutionPayload", jsonCase: "eth2"}
 );
 
 export const ExecutionPayloadHeader = new ContainerType(
@@ -104,16 +92,29 @@ export const SignedBeaconBlock = new ContainerType(
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
 );
 
-// Re-declare with the new expanded type
-export const HistoricalBlockRoots = new VectorCompositeType(Root, SLOTS_PER_HISTORICAL_ROOT);
-export const HistoricalStateRoots = new VectorCompositeType(Root, SLOTS_PER_HISTORICAL_ROOT);
-
-export const HistoricalBatch = new ContainerType(
+export const BuilderBid = new ContainerType(
   {
-    blockRoots: HistoricalBlockRoots,
-    stateRoots: HistoricalStateRoots,
+    header: ExecutionPayloadHeader,
+    value: UintBn256,
+    pubkey: BLSPubkey,
   },
-  {typeName: "HistoricalBatch", jsonCase: "eth2"}
+  {typeName: "BuilderBid", jsonCase: "eth2"}
+);
+
+export const SignedBuilderBid = new ContainerType(
+  {
+    message: BuilderBid,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBuilderBid", jsonCase: "eth2"}
+);
+
+export const HistoricalSummary = new ContainerType(
+  {
+    blockSummaryRoot: Root,
+    stateSummaryRoot: Root,
+  },
+  {typeName: "HistoricalSummary", jsonCase: "eth2"}
 );
 
 // we don't reuse bellatrix.BeaconState fields since we need to replace some keys
@@ -126,8 +127,9 @@ export const BeaconState = new ContainerType(
     fork: phase0Ssz.Fork,
     // History
     latestBlockHeader: phase0Ssz.BeaconBlockHeader,
-    blockRoots: HistoricalBlockRoots,
-    stateRoots: HistoricalStateRoots,
+    blockRoots: phase0Ssz.HistoricalBlockRoots,
+    stateRoots: phase0Ssz.HistoricalStateRoots,
+    // historical_roots Frozen in Capella, replaced by historical_summaries
     historicalRoots: new ListCompositeType(Root, HISTORICAL_ROOTS_LIMIT),
     // Eth1
     eth1Data: phase0Ssz.Eth1Data,
@@ -157,6 +159,8 @@ export const BeaconState = new ContainerType(
     // Withdrawals
     nextWithdrawalIndex: WithdrawalIndex, // [New in Capella]
     nextWithdrawalValidatorIndex: ValidatorIndex, // [New in Capella]
+    // Deep history valid from Capella onwards
+    historicalSummaries: new ListCompositeType(HistoricalSummary, HISTORICAL_ROOTS_LIMIT), // [New in Capella]
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
@@ -164,7 +168,7 @@ export const BeaconState = new ContainerType(
 export const BlindedBeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,
-    executionPayloadHeader: BlindedExecutionPayload, // Modified in capella
+    executionPayloadHeader: ExecutionPayloadHeader, // Modified in capella
     blsToExecutionChanges: BLSToExecutionChanges, // New in capella
   },
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}

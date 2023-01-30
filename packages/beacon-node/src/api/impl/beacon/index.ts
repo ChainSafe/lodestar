@@ -1,4 +1,4 @@
-import {routes} from "@lodestar/api";
+import {routes, ServerApi} from "@lodestar/api";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {ApiModules} from "../types.js";
 import {getBeaconBlockApi} from "./blocks/index.js";
@@ -7,7 +7,7 @@ import {getBeaconStateApi} from "./state/index.js";
 
 export function getBeaconApi(
   modules: Pick<ApiModules, "chain" | "config" | "logger" | "metrics" | "network" | "db">
-): routes.beacon.Api {
+): ServerApi<routes.beacon.Api> {
   const block = getBeaconBlockApi(modules);
   const pool = getBeaconPoolApi(modules);
   const state = getBeaconStateApi(modules);

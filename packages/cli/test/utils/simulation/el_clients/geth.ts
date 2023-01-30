@@ -7,7 +7,6 @@ import {
   ELClient,
   ELClientGenerator,
   ELGeneratorClientOptions,
-  ELNode,
   ELStartMode,
   JobOptions,
   Runner,
@@ -67,9 +66,13 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
   const jwtSecretGethPath = join(gethDataDir, "jwtsecret");
 
   const initJobOptions: JobOptions = {
+    id: `${id}-init`,
     bootstrap: async () => {
       await mkdir(dataDir, {recursive: true});
-      await writeFile(genesisPath, JSON.stringify(getGethGenesisBlock(mode, {ttd, cliqueSealingPeriod})));
+      await writeFile(
+        genesisPath,
+        JSON.stringify(getGethGenesisBlock(mode, {ttd, cliqueSealingPeriod, clientOptions: []}))
+      );
     },
     cli: {
       command: binaryPath,
@@ -82,6 +85,7 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
   };
 
   const importJobOptions: JobOptions = {
+    id: `${id}-import`,
     bootstrap: async () => {
       await writeFile(skPath, SECRET_KEY);
       await writeFile(passwordPath, PASSWORD);
@@ -108,6 +112,7 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
   };
 
   const startJobOptions: JobOptions = {
+    id,
     cli: {
       command: binaryPath,
       args: [
@@ -151,12 +156,12 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
     logs: {
       stdoutFilePath: logFilePath,
     },
-    health: async (): Promise<boolean> => {
+    health: async () => {
       try {
         await got.post(ethRpcUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
-        return true;
-      } catch (e) {
-        return false;
+        return {ok: true};
+      } catch (err) {
+        return {ok: false, reason: (err as Error).message, checkId: "JSON RPC query net_version"};
       }
     },
   };
@@ -176,7 +181,7 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
     {providerUrls: [ethRpcUrl, engineRpcUrl], jwtSecretHex}
   );
 
-  const node: ELNode = {
+  return {
     client: ELClient.Geth,
     id,
     engineRpcUrl,
@@ -184,7 +189,6 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
     ttd,
     jwtSecretHex,
     provider,
+    job,
   };
-
-  return {job, node};
 };

@@ -16,18 +16,22 @@ import {
   ValidatorIndex,
   RootHex,
   StringType,
+  Wei,
 } from "@lodestar/types";
+import {ApiClientResponse} from "../../interfaces.js";
+import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {
   RoutesData,
   ReturnTypes,
   ArrayOf,
-  ContainerData,
   Schema,
   WithVersion,
+  WithBlockValue,
   reqOnlyBody,
   ReqSerializers,
   jsonType,
   ContainerDataExecutionOptimistic,
+  ContainerData,
 } from "../../utils/index.js";
 import {fromU64Str, toU64Str, U64Str} from "../../utils/serdes.js";
 import {ExecutionOptimistic} from "./beacon/block.js";
@@ -116,7 +120,12 @@ export type Api = {
   getAttesterDuties(
     epoch: Epoch,
     validatorIndices: ValidatorIndex[]
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: AttesterDuty[]; dependentRoot: RootHex}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: AttesterDuty[]; executionOptimistic: ExecutionOptimistic; dependentRoot: RootHex}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
 
   /**
    * Get block proposers duties
@@ -131,12 +140,22 @@ export type Api = {
    */
   getProposerDuties(
     epoch: Epoch
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: ProposerDuty[]; dependentRoot: RootHex}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: ProposerDuty[]; executionOptimistic: ExecutionOptimistic; dependentRoot: RootHex}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
 
   getSyncCommitteeDuties(
     epoch: number,
     validatorIndices: ValidatorIndex[]
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: SyncDuty[]}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: SyncDuty[]; executionOptimistic: ExecutionOptimistic}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
 
   /**
    * Produce a new block, without signature.
@@ -147,7 +166,16 @@ export type Api = {
    * @returns any Success response
    * @throws ApiError
    */
-  produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<{data: allForks.BeaconBlock}>;
+  produceBlock(
+    slot: Slot,
+    randaoReveal: BLSSignature,
+    graffiti: string
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock; blockValue: Wei}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
 
   /**
    * Requests a beacon node to produce a valid block, which can then be signed by a validator.
@@ -163,13 +191,23 @@ export type Api = {
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string
-  ): Promise<{data: allForks.BeaconBlock; version: ForkName}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock; version: ForkName; blockValue: Wei}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
 
   produceBlindedBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
     graffiti: string
-  ): Promise<{data: allForks.BlindedBeaconBlock; version: ForkName}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.BlindedBeaconBlock; version: ForkName; blockValue: Wei}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
 
   /**
    * Produce an attestation data
@@ -179,13 +217,26 @@ export type Api = {
    * @returns any Success response
    * @throws ApiError
    */
-  produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<{data: phase0.AttestationData}>;
+  produceAttestationData(
+    index: CommitteeIndex,
+    slot: Slot
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: phase0.AttestationData}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
 
   produceSyncCommitteeContribution(
     slot: Slot,
     subcommitteeIndex: number,
     beaconBlockRoot: Root
-  ): Promise<{data: altair.SyncCommitteeContribution}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: altair.SyncCommitteeContribution}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
 
   /**
    * Get aggregated attestation
@@ -195,7 +246,15 @@ export type Api = {
    * @returns any Returns aggregated `Attestation` object with same `AttestationData` root.
    * @throws ApiError
    */
-  getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<{data: phase0.Attestation}>;
+  getAggregatedAttestation(
+    attestationDataRoot: Root,
+    slot: Slot
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: phase0.Attestation}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+    >
+  >;
 
   /**
    * Publish multiple aggregate and proofs
@@ -204,9 +263,13 @@ export type Api = {
    * @returns any Successful response
    * @throws ApiError
    */
-  publishAggregateAndProofs(signedAggregateAndProofs: phase0.SignedAggregateAndProof[]): Promise<void>;
+  publishAggregateAndProofs(
+    signedAggregateAndProofs: phase0.SignedAggregateAndProof[]
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
-  publishContributionAndProofs(contributionAndProofs: altair.SignedContributionAndProof[]): Promise<void>;
+  publishContributionAndProofs(
+    contributionAndProofs: altair.SignedContributionAndProof[]
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /**
    * Signal beacon node to prepare for a committee subnet
@@ -224,16 +287,31 @@ export type Api = {
    *
    * @throws ApiError
    */
-  prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void>;
+  prepareBeaconCommitteeSubnet(
+    subscriptions: BeaconCommitteeSubscription[]
+  ): Promise<
+    ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE>
+  >;
 
-  prepareSyncCommitteeSubnets(subscriptions: SyncCommitteeSubscription[]): Promise<void>;
+  prepareSyncCommitteeSubnets(
+    subscriptions: SyncCommitteeSubscription[]
+  ): Promise<
+    ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE>
+  >;
 
-  prepareBeaconProposer(proposers: ProposerPreparationData[]): Promise<void>;
+  prepareBeaconProposer(
+    proposers: ProposerPreparationData[]
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
   /** Returns validator indices that have been observed to be active on the network */
-  getLiveness(indices: ValidatorIndex[], epoch: Epoch): Promise<{data: LivenessResponseData[]}>;
+  getLiveness(
+    indices: ValidatorIndex[],
+    epoch: Epoch
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: LivenessResponseData[]}}>>;
 
-  registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
+  registerValidator(
+    registrations: bellatrix.SignedValidatorRegistrationV1[]
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 };
 
 /**
@@ -441,14 +519,16 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getAttesterDuties: WithDependentRootExecutionOptimistic(ArrayOf(AttesterDuty)),
     getProposerDuties: WithDependentRootExecutionOptimistic(ArrayOf(ProposerDuty)),
     getSyncCommitteeDuties: ContainerDataExecutionOptimistic(ArrayOf(SyncDuty)),
-    produceBlock: ContainerData(ssz.phase0.BeaconBlock),
-    produceBlockV2: WithVersion((fork: ForkName) => ssz[fork].BeaconBlock),
-    produceBlindedBlock: WithVersion((fork: ForkName) => {
-      if (fork === ForkName.phase0 || fork === ForkName.altair) {
-        throw Error(`No BlindedBlock for fork ${fork} previous to bellatrix`);
-      }
-      return ssz[fork].BlindedBeaconBlock;
-    }),
+    produceBlock: WithBlockValue(ContainerData(ssz.phase0.BeaconBlock)),
+    produceBlockV2: WithBlockValue(WithVersion((fork: ForkName) => ssz[fork].BeaconBlock)),
+    produceBlindedBlock: WithBlockValue(
+      WithVersion((fork: ForkName) => {
+        if (fork === ForkName.phase0 || fork === ForkName.altair) {
+          throw Error(`No BlindedBlock for fork ${fork} previous to bellatrix`);
+        }
+        return ssz[fork].BlindedBeaconBlock;
+      })
+    ),
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
     getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),

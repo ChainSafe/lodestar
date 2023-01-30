@@ -56,9 +56,14 @@ export interface NodePairOptions<C extends CLClient = CLClient, E extends ELClie
   remote?: boolean;
   mining?: boolean;
   id: string;
-  cl: C | {type: C; options: CLClientsOptions[C]};
-  el: E | {type: E; options: ELClientsOptions[E]};
+  cl: C | {type: C; options: Partial<CLClientGeneratorOptions<C>>};
+  el: E | {type: E; options: Partial<ELGeneratorGenesisOptions<E>>};
 }
+
+export type CLClientKeys =
+  | {type: "local"; secretKeys: SecretKey[]}
+  | {type: "remote"; secretKeys: SecretKey[]}
+  | {type: "no-keys"};
 
 export interface CLClientGeneratorOptions<C extends CLClient = CLClient> {
   id: string;
@@ -70,18 +75,18 @@ export interface CLClientGeneratorOptions<C extends CLClient = CLClient> {
   port: number;
   keyManagerPort: number;
   config: IChainForkConfig;
-  localKeys: SecretKey[];
-  remoteKeys: SecretKey[];
+  keys: CLClientKeys;
   genesisTime: number;
-  engineUrl: string;
+  engineUrls: string[];
   engineMock: boolean;
   jwtSecretHex: string;
   clientOptions: CLClientsOptions[C];
 }
 
-export interface ELGeneratorGenesisOptions {
+export interface ELGeneratorGenesisOptions<E extends ELClient = ELClient> {
   ttd: bigint;
   cliqueSealingPeriod: number;
+  clientOptions: ELClientsOptions[E];
 }
 
 export interface ELGeneratorClientOptions<E extends ELClient = ELClient> extends ELGeneratorGenesisOptions {
@@ -104,8 +109,8 @@ export interface CLNode {
   readonly url: string;
   readonly api: Api;
   readonly keyManager: KeyManagerApi;
-  readonly localKeys: SecretKey[];
-  readonly remoteKeys: SecretKey[];
+  readonly keys: CLClientKeys;
+  readonly job: Job;
 }
 
 export interface ELNode<E extends ELClient = ELClient> {
@@ -116,6 +121,7 @@ export interface ELNode<E extends ELClient = ELClient> {
   readonly ethRpcUrl: string;
   readonly jwtSecretHex: string;
   readonly provider: E extends ELClient.Mock ? null : Eth1ProviderWithAdmin;
+  readonly job: Job;
 }
 
 export interface NodePair {
@@ -124,26 +130,20 @@ export interface NodePair {
   readonly el: ELNode;
 }
 
-export interface JobPair {
-  el: Job;
-  cl: Job;
-}
-
-export interface NodePairResult {
-  nodePair: NodePair;
-  jobs: JobPair;
-}
-
 export type CLClientGenerator<C extends CLClient> = (
   opts: CLClientGeneratorOptions<C>,
   runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
-) => {job: Job; node: CLNode};
+) => CLNode;
 export type ELClientGenerator<E extends ELClient> = (
   opts: ELGeneratorClientOptions<E>,
   runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
-) => {job: Job; node: ELNode};
+) => ELNode;
+
+export type HealthStatus = {ok: true} | {ok: false; reason: string; checkId: string};
 
 export interface JobOptions {
+  readonly id: string;
+
   readonly cli: {
     readonly command: string;
     readonly args: string[];
@@ -159,7 +159,7 @@ export interface JobOptions {
 
   // Will be called frequently to check the health of job startup
   // If not present then wait for the job to exit
-  health?(): Promise<boolean>;
+  health?(): Promise<HealthStatus>;
 
   // Called once before the `job.start` is called
   bootstrap?(): Promise<void>;

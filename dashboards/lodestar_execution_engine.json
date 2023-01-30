@@ -1,46 +1,12 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__elements": [],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "8.4.2"
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "stat",
-      "name": "Stat",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -59,7 +25,6 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": 37,
-  "iteration": 1670296815485,
   "links": [
     {
       "asDropdown": true,
@@ -80,6 +45,10 @@
   "panels": [
     {
       "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -88,16 +57,31 @@
       },
       "id": 25,
       "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Engine job processor stats",
       "type": "row"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -153,8 +137,9 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -164,6 +149,10 @@
       "pluginVersion": "8.4.0-beta1",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "rate(lodestar_engine_http_processor_queue_job_time_seconds_sum[$rate_interval])",
           "instant": false,
@@ -176,12 +165,18 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -239,8 +234,9 @@
         "graph": {},
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -266,12 +262,18 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -329,8 +331,9 @@
         "graph": {},
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -340,6 +343,10 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "delta(lodestar_engine_http_processor_queue_job_time_seconds_sum[$rate_interval])/delta(lodestar_engine_http_processor_queue_job_time_seconds_count[$rate_interval])",
           "instant": false,
@@ -352,12 +359,18 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -415,8 +428,9 @@
         "graph": {},
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -426,6 +440,10 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "delta(lodestar_engine_http_processor_queue_dropped_jobs_total[$rate_interval])/(delta(lodestar_engine_http_processor_queue_job_time_seconds_count[$rate_interval])+delta(lodestar_engine_http_processor_queue_dropped_jobs_total[$rate_interval]))",
           "instant": false,
@@ -438,12 +456,18 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -501,8 +525,9 @@
         "graph": {},
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -512,6 +537,10 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "delta(lodestar_engine_http_processor_queue_job_wait_time_seconds_sum[$rate_interval])/delta(lodestar_engine_http_processor_queue_job_wait_time_seconds_count[$rate_interval])",
           "instant": false,
@@ -524,12 +553,18 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -587,8 +622,9 @@
         "graph": {},
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -598,6 +634,10 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "lodestar_engine_http_processor_queue_length",
           "instant": false,
@@ -611,6 +651,10 @@
     },
     {
       "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -619,16 +663,31 @@
       },
       "id": 388,
       "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Execution Metrics",
       "type": "row"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -686,7 +745,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -700,11 +760,13 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "12*rate(lodestar_execution_engine_http_client_request_time_seconds_count[32m])",
           "hide": false,
           "interval": "",
           "legendFormat": "{{routeId}}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -712,6 +774,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -749,9 +815,13 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "9.3.2",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "lodestar_execution_engine_http_client_config_urls_count",
           "hide": false,
@@ -764,12 +834,18 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -827,7 +903,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -837,6 +914,10 @@
       "pluginVersion": "8.2.2",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "lodestar_execution_engine_http_client_active_requests",
           "hide": false,
@@ -849,12 +930,18 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -912,7 +999,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -922,6 +1010,10 @@
       "pluginVersion": "8.4.2",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "rate(lodestar_execution_engine_http_client_request_retries_total[$rate_interval])",
           "hide": false,
@@ -934,12 +1026,18 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -997,7 +1095,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1024,12 +1123,18 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1087,7 +1192,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -1125,12 +1231,18 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1187,7 +1299,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -1211,7 +1324,103 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 42
+      },
+      "id": 480,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
+          "editorMode": "builder",
+          "expr": "rate(lodestar_execution_engine_notify_new_payload_result_total[1h])",
+          "legendFormat": "{{result}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "notifyNewPayload result",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1220,16 +1429,31 @@
       },
       "id": 380,
       "panels": [],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Eth1 Stats",
       "type": "row"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1287,7 +1511,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -1297,6 +1522,10 @@
       "pluginVersion": "8.2.2",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "lodestar_eth1_remote_highest_block",
           "hide": false,
@@ -1305,6 +1534,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "lodestar_eth1_last_processed_deposit_block_number",
           "hide": false,
@@ -1313,6 +1546,10 @@
           "refId": "D"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "lodestar_eth1_last_fetched_block_block_number",
           "hide": false,
@@ -1325,6 +1562,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -1377,9 +1618,13 @@
         "text": {},
         "textMode": "value"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "9.3.2",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "lodestar_eth1_deposit_tracker_is_caughtup",
           "interval": "",
@@ -1391,6 +1636,10 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -1428,9 +1677,13 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "9.3.2",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "lodestar_eth1_http_client_config_urls_count",
           "hide": false,
@@ -1443,6 +1696,10 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -1481,9 +1738,13 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "9.3.2",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "lodestar_eth1_follow_distance_seconds_config",
           "hide": false,
@@ -1496,6 +1757,10 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -1534,9 +1799,13 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "9.3.2",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "lodestar_eth1_last_fetched_block_timestamp",
           "format": "time_series",
@@ -1551,12 +1820,18 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1614,7 +1889,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -1624,6 +1900,10 @@
       "pluginVersion": "8.2.2",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "lodestar_eth1_follow_distance_dynamic",
           "hide": false,
@@ -1632,6 +1912,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "lodestar_eth1_blocks_batch_size_dynamic",
           "hide": false,
@@ -1640,6 +1924,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "exemplar": false,
           "expr": "lodestar_eth1_logs_batch_size_dynamic",
           "hide": false,
@@ -1652,12 +1940,18 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1715,7 +2009,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1742,12 +2037,18 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1805,7 +2106,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -1854,6 +2156,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1893,8 +2199,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1917,7 +2222,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1942,6 +2248,10 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1981,8 +2291,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -2005,7 +2314,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
@@ -2044,6 +2354,10 @@
     },
     {
       "collapsed": true,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -2053,6 +2367,10 @@
       "id": 437,
       "panels": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "fieldConfig": {
             "defaults": {
               "mappings": [
@@ -2082,8 +2400,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   }
                 ]
               },
@@ -2095,7 +2412,7 @@
             "h": 3,
             "w": 2,
             "x": 0,
-            "y": 44
+            "y": 52
           },
           "id": 439,
           "options": {
@@ -2116,6 +2433,10 @@
           "pluginVersion": "8.4.2",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
               "exemplar": false,
               "expr": "lodestar_eth1_merge_status",
               "hide": false,
@@ -2128,6 +2449,10 @@
           "type": "stat"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2138,8 +2463,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2154,7 +2478,7 @@
             "h": 3,
             "w": 2,
             "x": 2,
-            "y": 44
+            "y": 52
           },
           "id": 459,
           "options": {
@@ -2175,6 +2499,10 @@
           "pluginVersion": "8.4.2",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
               "exemplar": false,
               "expr": "lodestar_eth1_merge_ttd",
               "format": "time_series",
@@ -2188,6 +2516,10 @@
           "type": "stat"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2198,8 +2530,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2215,7 +2546,7 @@
             "h": 3,
             "w": 4,
             "x": 4,
-            "y": 44
+            "y": 52
           },
           "id": 475,
           "options": {
@@ -2252,6 +2583,10 @@
           "type": "stat"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2262,8 +2597,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2279,7 +2613,7 @@
             "h": 6,
             "w": 4,
             "x": 8,
-            "y": 44
+            "y": 52
           },
           "id": 476,
           "options": {
@@ -2316,6 +2650,10 @@
           "type": "stat"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "fieldConfig": {
             "defaults": {
               "mappings": [],
@@ -2323,8 +2661,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   }
                 ]
               },
@@ -2336,7 +2673,7 @@
             "h": 3,
             "w": 4,
             "x": 12,
-            "y": 44
+            "y": 52
           },
           "id": 462,
           "options": {
@@ -2357,6 +2694,10 @@
           "pluginVersion": "8.4.2",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
               "exemplar": false,
               "expr": "lodestar_eth1_parent_blocks_fetched_total",
               "hide": false,
@@ -2369,6 +2710,10 @@
           "type": "stat"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2379,8 +2724,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2395,7 +2739,7 @@
             "h": 3,
             "w": 4,
             "x": 16,
-            "y": 44
+            "y": 52
           },
           "id": 456,
           "options": {
@@ -2416,6 +2760,10 @@
           "pluginVersion": "8.4.2",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
               "exemplar": false,
               "expr": "lodestar_eth1_merge_block_details",
               "format": "time_series",
@@ -2429,6 +2777,10 @@
           "type": "stat"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2439,8 +2791,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2455,7 +2806,7 @@
             "h": 3,
             "w": 4,
             "x": 20,
-            "y": 44
+            "y": 52
           },
           "id": 464,
           "options": {
@@ -2476,6 +2827,10 @@
           "pluginVersion": "8.4.2",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
               "exemplar": false,
               "expr": "lodestar_eth1_merge_block_details",
               "format": "time_series",
@@ -2489,6 +2844,10 @@
           "type": "stat"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "fieldConfig": {
             "defaults": {
               "mappings": [],
@@ -2496,8 +2855,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   }
                 ]
               }
@@ -2508,7 +2866,7 @@
             "h": 3,
             "w": 2,
             "x": 0,
-            "y": 47
+            "y": 55
           },
           "id": 460,
           "options": {
@@ -2529,6 +2887,10 @@
           "pluginVersion": "8.4.2",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
               "exemplar": false,
               "expr": "lodestar_eth1_merge_td_factor",
               "hide": false,
@@ -2541,6 +2903,10 @@
           "type": "stat"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "fieldConfig": {
             "defaults": {
               "mappings": [],
@@ -2548,8 +2914,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   }
                 ]
               }
@@ -2560,7 +2925,7 @@
             "h": 3,
             "w": 2,
             "x": 2,
-            "y": 47
+            "y": 55
           },
           "id": 450,
           "options": {
@@ -2581,6 +2946,10 @@
           "pluginVersion": "8.4.2",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
               "exemplar": false,
               "expr": "lodestar_eth1_latest_block_ttd",
               "hide": false,
@@ -2593,6 +2962,10 @@
           "type": "stat"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "fieldConfig": {
             "defaults": {
               "mappings": [],
@@ -2600,8 +2973,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   }
                 ]
               },
@@ -2613,7 +2985,7 @@
             "h": 3,
             "w": 2,
             "x": 4,
-            "y": 47
+            "y": 55
           },
           "id": 463,
           "options": {
@@ -2634,6 +3006,10 @@
           "pluginVersion": "8.4.2",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
               "exemplar": false,
               "expr": "lodestar_eth1_latest_block_timestamp * 1000",
               "hide": false,
@@ -2646,6 +3022,10 @@
           "type": "stat"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "fieldConfig": {
             "defaults": {
               "mappings": [],
@@ -2653,8 +3033,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   }
                 ]
               }
@@ -2665,7 +3044,7 @@
             "h": 3,
             "w": 2,
             "x": 6,
-            "y": 47
+            "y": 55
           },
           "id": 461,
           "options": {
@@ -2686,6 +3065,10 @@
           "pluginVersion": "8.4.2",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
               "exemplar": false,
               "expr": "lodestar_eth1_latest_block_number",
               "hide": false,
@@ -2698,6 +3081,10 @@
           "type": "stat"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "fieldConfig": {
             "defaults": {
               "mappings": [],
@@ -2705,8 +3092,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   }
                 ]
               }
@@ -2717,7 +3103,7 @@
             "h": 3,
             "w": 4,
             "x": 12,
-            "y": 47
+            "y": 55
           },
           "id": 467,
           "options": {
@@ -2738,6 +3124,10 @@
           "pluginVersion": "8.4.2",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
               "exemplar": false,
               "expr": "lodestar_eth1_get_terminal_pow_block_promise_cache_hit_total",
               "hide": false,
@@ -2750,6 +3140,10 @@
           "type": "stat"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2760,8 +3154,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2776,7 +3169,7 @@
             "h": 3,
             "w": 8,
             "x": 16,
-            "y": 47
+            "y": 55
           },
           "id": 455,
           "options": {
@@ -2797,6 +3190,10 @@
           "pluginVersion": "8.4.2",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
               "exemplar": false,
               "expr": "lodestar_eth1_merge_block_details",
               "format": "time_series",
@@ -2810,6 +3207,10 @@
           "type": "stat"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2849,8 +3250,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2866,14 +3266,15 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 50
+            "y": 58
           },
           "id": 458,
           "options": {
             "legend": {
               "calcs": [],
               "displayMode": "list",
-              "placement": "bottom"
+              "placement": "bottom",
+              "showLegend": true
             },
             "tooltip": {
               "mode": "single",
@@ -2883,6 +3284,10 @@
           "pluginVersion": "8.2.2",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
               "exemplar": false,
               "expr": "lodestar_eth1_latest_block_ttd",
               "hide": false,
@@ -2891,6 +3296,10 @@
               "refId": "A"
             },
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
               "exemplar": false,
               "expr": "lodestar_eth1_merge_ttd",
               "hide": false,
@@ -2903,6 +3312,10 @@
           "type": "timeseries"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2942,8 +3355,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2959,14 +3371,15 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 50
+            "y": 58
           },
           "id": 444,
           "options": {
             "legend": {
               "calcs": [],
               "displayMode": "list",
-              "placement": "bottom"
+              "placement": "bottom",
+              "showLegend": true
             },
             "tooltip": {
               "mode": "single",
@@ -2976,6 +3389,10 @@
           "pluginVersion": "8.2.2",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
               "exemplar": false,
               "expr": "rate(lodestar_eth1_poll_merge_block_errors_total[$rate_interval])",
               "hide": false,
@@ -2988,12 +3405,21 @@
           "type": "timeseries"
         }
       ],
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
+          "refId": "A"
+        }
+      ],
       "title": "Merge Tracking",
       "type": "row"
     }
   ],
   "refresh": "10s",
-  "schemaVersion": 35,
+  "schemaVersion": 37,
   "style": "dark",
   "tags": [
     "lodestar"
@@ -3025,8 +3451,8 @@
         "auto_min": "10s",
         "current": {
           "selected": false,
-          "text": "6h",
-          "value": "6h"
+          "text": "30m",
+          "value": "30m"
         },
         "hide": 0,
         "label": "rate() interval",
@@ -3048,7 +3474,7 @@
             "value": "10m"
           },
           {
-            "selected": false,
+            "selected": true,
             "text": "30m",
             "value": "30m"
           },
@@ -3058,7 +3484,7 @@
             "value": "1h"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "6h",
             "value": "6h"
           },
@@ -3104,7 +3530,7 @@
             "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "unstable-lg1k-hzax41"
+            "value": "nogroup-ctvpss-0"
           }
         ],
         "hide": 0,
@@ -3135,6 +3561,6 @@
   "timezone": "",
   "title": "Lodestar - execution engine",
   "uid": "lodestar_execution_engine",
-  "version": 6,
+  "version": 7,
   "weekStart": ""
 }

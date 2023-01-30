@@ -11,20 +11,16 @@ import {testData} from "./testData.js";
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const skip = true;
-const version = "v1.0.0-alpha";
-const commit = "e718c8503b1c65b9b9bd9a4f8f37da9f0001850c";
+const version = "v1.0.0";
 const openApiFile: OpenApiFile = {
-  url: `https://github.com/ethereum/keymanager-APIs/blob/${commit}/keymanager-oapi.yaml`,
-  filepath: path.join(__dirname, "../../../oapi-schemas/builder-oapi.json"),
+  url: `https://github.com/ethereum/keymanager-APIs/releases/download/${version}/keymanager-oapi.json`,
+  filepath: path.join(__dirname, "../../../oapi-schemas/keymanager-oapi.json"),
   version: RegExp(version),
 };
 
 // TODO: un-skip in follow-up PR, this PR only adds basic infra for spec testing
-if (!skip) {
-  const reqSerializers = getReqSerializers();
-  const returnTypes = getReturnTypes();
+const reqSerializers = getReqSerializers();
+const returnTypes = getReturnTypes();
 
-  const openApiJson = await fetchOpenApiSpec(openApiFile);
-  runTestCheckAgainstSpec(openApiJson, routesData, reqSerializers, returnTypes, testData);
-}
+const openApiJson = await fetchOpenApiSpec(openApiFile);
+runTestCheckAgainstSpec(openApiJson, routesData, reqSerializers, returnTypes, testData);

@@ -39,13 +39,9 @@ export class StateContextCache {
 
   get(rootHex: RootHex): CachedBeaconStateAllForks | null {
     this.metrics?.lookups.inc();
-    const item = this.cache.get(rootHex);
+    const item = this.head?.stateRoot === rootHex ? this.head.state : this.cache.get(rootHex);
     if (!item) {
       return null;
-    }
-
-    if (this.head?.stateRoot === rootHex) {
-      return this.head.state;
     }
 
     this.metrics?.hits.inc();

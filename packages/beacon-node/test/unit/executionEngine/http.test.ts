@@ -1,12 +1,9 @@
 import {expect} from "chai";
 import {fastify} from "fastify";
 import {ForkName} from "@lodestar/params";
-import {
-  ExecutionEngineHttp,
-  parseExecutionPayload,
-  serializeExecutionPayload,
-  defaultExecutionEngineHttpOpts,
-} from "../../../src/execution/engine/http.js";
+import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
+import {IExecutionEngine, initializeExecutionEngine} from "../../../src/execution/index.js";
+import {parseExecutionPayload, serializeExecutionPayload} from "../../../src/execution/engine/types.js";
 
 describe("ExecutionEngine / http", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];
@@ -17,7 +14,7 @@ describe("ExecutionEngine / http", () => {
     }
   });
 
-  let executionEngine: ExecutionEngineHttp;
+  let executionEngine: IExecutionEngine;
   let returnValue: unknown = {};
   let reqJsonRpcPayload: unknown = {};
 
@@ -38,8 +35,9 @@ describe("ExecutionEngine / http", () => {
 
     const baseUrl = await server.listen(0);
 
-    executionEngine = new ExecutionEngineHttp(
+    executionEngine = initializeExecutionEngine(
       {
+        mode: "http",
         urls: [baseUrl],
         retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
         retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
@@ -77,7 +75,8 @@ describe("ExecutionEngine / http", () => {
     };
     returnValue = response;
 
-    const payload = await executionEngine.getPayload(ForkName.bellatrix, "0x0");
+    const payloadAndBlockValue = await executionEngine.getPayload(ForkName.bellatrix, "0x0");
+    const payload = payloadAndBlockValue.executionPayload;
 
     expect(serializeExecutionPayload(ForkName.bellatrix, payload)).to.deep.equal(
       response.result,
@@ -122,7 +121,7 @@ describe("ExecutionEngine / http", () => {
 
     const {status} = await executionEngine.notifyNewPayload(
       ForkName.bellatrix,
-      parseExecutionPayload(ForkName.bellatrix, request.params[0])
+      parseExecutionPayload(ForkName.bellatrix, request.params[0]).executionPayload
     );
 
     expect(status).to.equal("VALID", "Wrong returned execute payload result");

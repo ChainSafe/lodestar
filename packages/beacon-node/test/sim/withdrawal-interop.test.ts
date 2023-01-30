@@ -4,21 +4,23 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH, ForkName} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
-import {Epoch, capella} from "@lodestar/types";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {Epoch, capella, Slot} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ExecutePayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
-import {ExecutionEngineHttp} from "../../src/execution/engine/http.js";
+import {initializeExecutionEngine} from "../../src/execution/index.js";
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
 import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
-import {Eth1Provider} from "../../src/index.js";
+import {BeaconNode, Eth1Provider} from "../../src/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
 import {bytesToData, dataToBytes} from "../../src/eth1/provider/utils.js";
 import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
+import {ApiError} from "../../src/api/impl/errors.js";
 import {runEL, ELStartMode, ELClient} from "../utils/runEl.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
@@ -32,7 +34,6 @@ import {shell} from "./shell.js";
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
 const retryDelay = defaultExecutionEngineHttpOpts.retryDelay;
-const GWEI_TO_WEI = BigInt(1000000000);
 
 describe("executionEngine / ExecutionEngineHttp", function () {
   if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR) {
@@ -79,8 +80,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     console.log({genesisBlockHash});
 
     //const controller = new AbortController();
-    const executionEngine = new ExecutionEngineHttp(
-      {urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay},
+    const executionEngine = initializeExecutionEngine(
+      {mode: "http", urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay},
       {signal: controller.signal}
     );
 
@@ -134,7 +135,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       index: testVec.Index,
       validatorIndex: testVec.Validator,
       address: dataToBytes(testVec.Recipient, 20),
-      amount: BigInt(testVec.Amount) / GWEI_TO_WEI,
+      amount: BigInt(testVec.Amount),
     }));
 
     const preparePayloadParams: PayloadAttributes = {
@@ -143,7 +144,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       prevRandao: dataToBytes("0xff00000000000000000000000000000000000000000000000000000000000000", 32),
       suggestedFeeRecipient: "0xaa00000000000000000000000000000000000000",
       withdrawals,
-      fork: ForkName.capella,
     };
     const finalizedBlockHash = "0xfe950635b1bd2a416ff6283b0bbd30176e1b1125ad06fa729da9f3f4c1c61710";
 
@@ -159,7 +159,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     if (!payloadId) throw Error("InvalidPayloadId");
 
     // 2. Get the payload
-    const payload = await executionEngine.getPayload(ForkName.capella, payloadId);
+    const payloadAndBlockValue = await executionEngine.getPayload(ForkName.capella, payloadId);
+    const payload = payloadAndBlockValue.executionPayload;
     const blockHash = toHexString(payload.blockHash);
     const expectedBlockHash = "0x64707e5574d14103a7f583e702f09e68ca1eb334e8eb0632a4272efe54f2fc7c";
     if (blockHash !== expectedBlockHash) {
@@ -209,8 +210,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       SECONDS_PER_SLOT: 2,
     };
 
-    // Should reach justification in 6 epochs max.
-    // Merge block happens at epoch 2 slot 4. Then 4 epochs to finalize
+    // Just finish the run within first epoch as we only need to test if withdrawals started
     const expectedEpochsToFinish = 1;
     // 1 epoch of margin of error
     const epochsOfMargin = 1;
@@ -218,6 +218,9 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     const genesisSlotsDelay = 8;
+
+    // TODO for g11tech: Why 4? Provide rationale for the number
+    const expectedWithdrawalBlocks = 4;
 
     const timeout =
       ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
@@ -291,9 +294,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       await Promise.all(validators.map((v) => v.close()));
     });
 
-    let withdrawalsStarted = false;
-    let withdrawalsBlocks = 0;
-
     await new Promise<void>((resolve, _reject) => {
       bn.chain.emitter.on(ChainEvent.clockEpoch, (epoch) => {
         // Resolve only if the finalized checkpoint includes execution payload
@@ -302,14 +302,13 @@ describe("executionEngine / ExecutionEngineHttp", function () {
           resolve();
         }
       });
-
-      bn.chain.emitter.on(ChainEvent.block, (block) => {
-        if ((block as capella.SignedBeaconBlock).message.body.executionPayload?.withdrawals.length > 0) {
-          withdrawalsStarted = true;
-          withdrawalsBlocks++;
-        }
-      });
     });
+
+    const withdrawalsBlocks = await retrieveCanonicalWithdrawals(
+      bn,
+      computeStartSlotAtEpoch(capellaEpoch),
+      bn.chain.forkChoice.getHead().slot
+    );
 
     // Stop chain and un-subscribe events so the execution engine won't update it's head
     // Allow some time to broadcast finalized events and complete the importBlock routine
@@ -340,10 +339,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
 
     // Simple check to confirm that withdrawals were mostly processed
-    if (!withdrawalsStarted || withdrawalsBlocks < 4) {
-      throw Error(
-        `Withdrawals not processed withdrawalsStarted=${withdrawalsStarted} withdrawalsBlocks=${withdrawalsBlocks}`
-      );
+    if (withdrawalsBlocks < expectedWithdrawalBlocks) {
+      throw Error(`Withdrawals withdrawalsBlocks ${withdrawalsBlocks} < ${expectedWithdrawalBlocks}`);
     }
 
     // wait for 1 slot to print current epoch stats
@@ -352,3 +349,26 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     console.log("\n\nDone\n\n");
   }
 });
+
+async function retrieveCanonicalWithdrawals(bn: BeaconNode, fromSlot: Slot, toSlot: Slot): Promise<number> {
+  let withdrawalsBlocks = 0;
+
+  for (let slot = fromSlot; slot <= toSlot; slot++) {
+    const block = await bn.api.beacon.getBlock(slot).catch((e) => {
+      if (e instanceof ApiError && e.statusCode === 404) {
+        // Missed slot
+        return null;
+      } else {
+        throw e;
+      }
+    });
+
+    if (block) {
+      if ((block.data as capella.SignedBeaconBlock).message.body.executionPayload?.withdrawals.length > 0) {
+        withdrawalsBlocks++;
+      }
+    }
+  }
+
+  return withdrawalsBlocks;
+}

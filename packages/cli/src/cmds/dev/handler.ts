@@ -11,12 +11,18 @@ import {getValidatorPaths} from "../validator/paths.js";
 import {beaconHandler} from "../beacon/handler.js";
 import {validatorHandler} from "../validator/handler.js";
 import {IDevArgs} from "./options.js";
+import {writeTestnetFiles} from "./files.js";
 
 /**
  * Run a beacon node with validator
  */
 export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   const {config} = getBeaconConfigFromArgs(args);
+
+  if (args.dumpTestnetFiles) {
+    await writeTestnetFiles(config, args.dumpTestnetFiles, args.genesisValidators);
+    return;
+  }
 
   // TODO: Is this necessary?
   const network = "dev";

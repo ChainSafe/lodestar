@@ -3,8 +3,7 @@ import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, isSyncCommitteeAggreg
 import {IChainForkConfig} from "@lodestar/config";
 import {BLSSignature, Epoch, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {Api, routes} from "@lodestar/api";
-import {extendError} from "@lodestar/utils";
+import {Api, ApiError, routes} from "@lodestar/api";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -216,9 +215,8 @@ export class SyncCommitteeDutiesService {
     // If there are any subscriptions, push them out to the beacon node.
     if (syncCommitteeSubscriptions.length > 0) {
       // TODO: Should log or throw?
-      await this.api.validator.prepareSyncCommitteeSubnets(syncCommitteeSubscriptions).catch((e: Error) => {
-        throw extendError(e, "Failed to subscribe to sync committee subnets");
-      });
+      const res = await this.api.validator.prepareSyncCommitteeSubnets(syncCommitteeSubscriptions);
+      ApiError.assert(res, "Failed to subscribe to sync committee subnets");
     }
   }
 
@@ -231,14 +229,13 @@ export class SyncCommitteeDutiesService {
       return;
     }
 
-    const syncDuties = await this.api.validator.getSyncCommitteeDuties(epoch, indexArr).catch((e: Error) => {
-      throw extendError(e, "Failed to obtain SyncDuties");
-    });
+    const res = await this.api.validator.getSyncCommitteeDuties(epoch, indexArr);
+    ApiError.assert(res, "Failed to obtain SyncDuties");
 
     const dutiesByIndex = new Map<ValidatorIndex, DutyAtPeriod>();
     let count = 0;
 
-    for (const duty of syncDuties.data) {
+    for (const duty of res.response.data) {
       const {validatorIndex} = duty;
       if (!this.validatorStore.hasValidatorIndex(validatorIndex)) {
         continue;

@@ -2,7 +2,6 @@ import {allForks, ssz, StringType} from "@lodestar/types";
 import {ContainerType} from "@chainsafe/ssz";
 import {
   ArrayOf,
-  ContainerData,
   reqEmpty,
   jsonType,
   ReturnTypes,
@@ -10,8 +9,10 @@ import {
   Schema,
   ReqSerializers,
   ReqEmpty,
-  sameType,
+  ContainerData,
 } from "../../utils/index.js";
+import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {ApiClientResponse} from "../../interfaces.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -62,9 +63,9 @@ export type SyncingStatus = {
 };
 
 export enum NodeHealth {
-  READY = 200,
-  SYNCING = 206,
-  NOT_INITIALIZED_OR_ISSUES = 503,
+  READY = HttpStatusCode.OK,
+  SYNCING = HttpStatusCode.PARTIAL_CONTENT,
+  NOT_INITIALIZED_OR_ISSUES = HttpStatusCode.SERVICE_UNAVAILABLE,
 }
 
 /**
@@ -75,40 +76,44 @@ export type Api = {
    * Get node network identity
    * Retrieves data about the node's network presence
    */
-  getNetworkIdentity(): Promise<{data: NetworkIdentity}>;
-
+  getNetworkIdentity: () => Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: NetworkIdentity}}>>;
   /**
    * Get node network peers
    * Retrieves data about the node's network peers. By default this returns all peers. Multiple query params are combined using AND conditions
    * @param state
    * @param direction
    */
-  getPeers(filters?: FilterGetPeers): Promise<{data: NodePeer[]; meta: {count: number}}>;
-
+  getPeers(
+    filters?: FilterGetPeers
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: NodePeer[]; meta: {count: number}}}>>;
   /**
    * Get peer
    * Retrieves data about the given peer
    * @param peerId
    */
-  getPeer(peerId: string): Promise<{data: NodePeer}>;
+  getPeer(
+    peerId: string
+  ): Promise<
+    ApiClientResponse<{[HttpStatusCode.OK]: {data: NodePeer}}, HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND>
+  >;
 
   /**
    * Get peer count
    * Retrieves number of known peers.
    */
-  getPeerCount(): Promise<{data: PeerCount}>;
+  getPeerCount(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: PeerCount}}>>;
 
   /**
    * Get version string of the running beacon node.
    * Requests that the beacon node identify information about its implementation in a format similar to a [HTTP User-Agent](https://tools.ietf.org/html/rfc7231#section-5.5.3) field.
    */
-  getNodeVersion(): Promise<{data: {version: string}}>;
+  getNodeVersion(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {version: string}}}>>;
 
   /**
    * Get node syncing status
    * Requests the beacon node to describe if it's currently syncing or not, and if it is, what block it is up to.
    */
-  getSyncingStatus(): Promise<{data: SyncingStatus}>;
+  getSyncingStatus(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: SyncingStatus}}>>;
 
   /**
    * Get health check
@@ -116,7 +121,12 @@ export type Api = {
    *
    * NOTE: This route does not return any value
    */
-  getHealth(): Promise<NodeHealth>;
+  getHealth(): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: void; [HttpStatusCode.PARTIAL_CONTENT]: void},
+      HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
 };
 
 export const routesData: RoutesData<Api> = {
@@ -198,6 +208,5 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getPeerCount: ContainerData(PeerCount),
     getNodeVersion: jsonType("snake"),
     getSyncingStatus: jsonType("snake"),
-    getHealth: sameType(),
   };
 }

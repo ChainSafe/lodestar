@@ -31,7 +31,6 @@ const lodestarCrypto: ICryptoInterface = {
   },
 };
 
-export function createNoise(): ConnectionEncrypter {
-  const factory = noise({crypto: lodestarCrypto});
-  return factory() as ConnectionEncrypter;
+export function createNoise(): () => ConnectionEncrypter {
+  return noise({crypto: lodestarCrypto});
 }

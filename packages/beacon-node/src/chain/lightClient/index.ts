@@ -1,12 +1,19 @@
 import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
-import {CachedBeaconStateAltair, computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@lodestar/state-transition";
+import {
+  CachedBeaconStateAltair,
+  computeStartSlotAtEpoch,
+  computeSyncPeriodAtEpoch,
+  computeSyncPeriodAtSlot,
+} from "@lodestar/state-transition";
+import {isBetterUpdate, toLightClientUpdateSummary, LightClientUpdateSummary} from "@lodestar/light-client/spec";
 import {ILogger, MapDef, pruneSetToMax} from "@lodestar/utils";
+import {routes} from "@lodestar/api";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {MIN_SYNC_COMMITTEE_PARTICIPANTS, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {IBeaconDb} from "../../db/index.js";
 import {IMetrics} from "../../metrics/index.js";
-import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {ChainEventEmitter} from "../emitter.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {ZERO_HASH} from "../../constants/index.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
@@ -24,7 +31,7 @@ export type LightClientServerOpts = {
 type DependantRootHex = RootHex;
 type BlockRooHex = RootHex;
 
-type SyncAttestedData = {
+export type SyncAttestedData = {
   attestedHeader: phase0.BeaconBlockHeader;
   /** Precomputed root to prevent re-hashing */
   blockRoot: Uint8Array;
@@ -178,7 +185,7 @@ export class LightClientServer {
     this.logger = logger;
 
     this.zero = {
-      finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
+      finalizedHeader: ssz.altair.LightClientHeader.defaultValue(),
       finalityBranch: ssz.altair.LightClientUpdate.fields["finalityBranch"].defaultValue(),
     };
 
@@ -187,13 +194,13 @@ export class LightClientServer {
         if (this.latestHeadUpdate) {
           metrics.lightclientServer.highestSlot.set(
             {item: "latest_head_update"},
-            this.latestHeadUpdate.attestedHeader.slot
+            this.latestHeadUpdate.attestedHeader.beacon.slot
           );
         }
         if (this.finalized) {
           metrics.lightclientServer.highestSlot.set(
             {item: "latest_finalized_update"},
-            this.finalized.attestedHeader.slot
+            this.finalized.attestedHeader.beacon.slot
           );
         }
       });
@@ -269,7 +276,7 @@ export class LightClientServer {
     }
 
     return {
-      header,
+      header: {beacon: header},
       currentSyncCommittee,
       currentSyncCommitteeBranch: getCurrentSyncCommitteeBranch(syncCommitteeWitness),
     };
@@ -296,7 +303,7 @@ export class LightClientServer {
    */
   async getCommitteeRoot(period: number): Promise<Uint8Array> {
     const {attestedHeader} = await this.getUpdate(period);
-    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader);
+    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader.beacon);
 
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
     if (!syncCommitteeWitness) {
@@ -460,7 +467,7 @@ export class LightClientServer {
     }
 
     const headerUpdate: altair.LightClientOptimisticUpdate = {
-      attestedHeader: attestedData.attestedHeader,
+      attestedHeader: {beacon: attestedData.attestedHeader},
       syncAggregate,
       signatureSlot,
     };
@@ -478,11 +485,11 @@ export class LightClientServer {
 
     // Emit update
     // Note: Always emit optimistic update even if we have emitted one with higher or equal attested_header.slot
-    this.emitter.emit(ChainEvent.lightClientOptimisticUpdate, headerUpdate);
+    this.emitter.emit(routes.events.EventType.lightClientOptimisticUpdate, headerUpdate);
 
     // Persist latest best update for getLatestHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
-    if (!this.latestHeadUpdate || attestedData.attestedHeader.slot > this.latestHeadUpdate.attestedHeader.slot) {
+    if (!this.latestHeadUpdate || attestedData.attestedHeader.slot > this.latestHeadUpdate.attestedHeader.beacon.slot) {
       this.latestHeadUpdate = headerUpdate;
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_head_update"});
     }
@@ -494,12 +501,12 @@ export class LightClientServer {
       if (
         finalizedHeader &&
         (!this.finalized ||
-          finalizedHeader.slot > this.finalized.finalizedHeader.slot ||
+          finalizedHeader.slot > this.finalized.finalizedHeader.beacon.slot ||
           syncAggregateParticipation > sumBits(this.finalized.syncAggregate.syncCommitteeBits))
       ) {
         this.finalized = {
-          attestedHeader: attestedData.attestedHeader,
-          finalizedHeader,
+          attestedHeader: {beacon: attestedData.attestedHeader},
+          finalizedHeader: {beacon: finalizedHeader},
           syncAggregate,
           finalityBranch: attestedData.finalityBranch,
           signatureSlot,
@@ -507,7 +514,7 @@ export class LightClientServer {
         this.metrics?.lightclientServer.onSyncAggregate.inc({event: "update_latest_finalized_update"});
 
         // Note: Ignores gossip rule to always emit finaly_update with higher finalized_header.slot, for simplicity
-        this.emitter.emit(ChainEvent.lightClientFinalityUpdate, this.finalized);
+        this.emitter.emit(routes.events.EventType.lightClientFinalityUpdate, this.finalized);
       }
     }
 
@@ -534,9 +541,29 @@ export class LightClientServer {
     attestedData: SyncAttestedData
   ): Promise<void> {
     const prevBestUpdate = await this.db.bestLightClientUpdate.get(syncPeriod);
-    if (prevBestUpdate && !isBetterUpdate(prevBestUpdate, syncAggregate, attestedData)) {
-      this.metrics?.lightclientServer.updateNotBetter.inc();
-      return;
+
+    if (prevBestUpdate) {
+      const prevBestUpdateSummary = toLightClientUpdateSummary(prevBestUpdate);
+
+      const nextBestUpdate: LightClientUpdateSummary = {
+        activeParticipants: sumBits(syncAggregate.syncCommitteeBits),
+        attestedHeaderSlot: attestedData.attestedHeader.slot,
+        signatureSlot,
+        // The actual finalizedHeader is fetched below. To prevent a DB read we approximate the actual slot.
+        // If update is not finalized finalizedHeaderSlot does not matter (see is_better_update), so setting
+        // to zero to set it some number.
+        finalizedHeaderSlot: attestedData.isFinalized
+          ? computeStartSlotAtEpoch(attestedData.finalizedCheckpoint.epoch)
+          : 0,
+        // All updates include a valid `nextSyncCommitteeBranch`, see below code
+        isSyncCommitteeUpdate: true,
+        isFinalityUpdate: attestedData.isFinalized,
+      };
+
+      if (!isBetterUpdate(prevBestUpdateSummary, nextBestUpdate)) {
+        this.metrics?.lightclientServer.updateNotBetter.inc();
+        return;
+      }
     }
 
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(attestedData.blockRoot);
@@ -552,15 +579,15 @@ export class LightClientServer {
       ? await this.getFinalizedHeader(attestedData.finalizedCheckpoint.root as Uint8Array)
       : null;
 
-    let newUpdate;
+    let newUpdate: altair.LightClientUpdate;
     let isFinalized;
     if (attestedData.isFinalized && finalizedHeader && computeSyncPeriodAtSlot(finalizedHeader.slot) == syncPeriod) {
       isFinalized = true;
       newUpdate = {
-        attestedHeader: attestedData.attestedHeader,
+        attestedHeader: {beacon: attestedData.attestedHeader},
         nextSyncCommittee: nextSyncCommittee,
         nextSyncCommitteeBranch,
-        finalizedHeader,
+        finalizedHeader: {beacon: finalizedHeader},
         finalityBranch: attestedData.finalityBranch,
         syncAggregate,
         signatureSlot,
@@ -568,7 +595,7 @@ export class LightClientServer {
     } else {
       isFinalized = false;
       newUpdate = {
-        attestedHeader: attestedData.attestedHeader,
+        attestedHeader: {beacon: attestedData.attestedHeader},
         nextSyncCommittee: nextSyncCommittee,
         nextSyncCommitteeBranch,
         finalizedHeader: this.zero.finalizedHeader,
@@ -595,7 +622,7 @@ export class LightClientServer {
     });
     this.metrics?.lightclientServer.highestSlot.set(
       {item: isFinalized ? "best_finalized_update" : "best_nonfinalized_update"},
-      newUpdate.attestedHeader.slot
+      newUpdate.attestedHeader.beacon.slot
     );
   }
 
@@ -634,42 +661,6 @@ export class LightClientServer {
 
     return finalizedHeader;
   }
-}
-
-/**
- * Returns the update with more bits. On ties, prevUpdate is the better
- *
- * Spec v1.0.1
- * ```python
- * max(store.valid_updates, key=lambda update: sum(update.sync_committee_bits)))
- * ```
- */
-export function isBetterUpdate(
-  prevUpdate: altair.LightClientUpdate,
-  nextSyncAggregate: altair.SyncAggregate,
-  nextSyncAttestedData: SyncAttestedData
-): boolean {
-  const nextBitCount = sumBits(nextSyncAggregate.syncCommitteeBits);
-
-  // Finalized if participation is over 66%
-  if (
-    ssz.altair.LightClientUpdate.fields["finalityBranch"].equals(
-      ssz.altair.LightClientUpdate.fields["finalityBranch"].defaultValue(),
-      prevUpdate.finalityBranch
-    ) &&
-    nextSyncAttestedData.isFinalized &&
-    nextBitCount * 3 > SYNC_COMMITTEE_SIZE * 2
-  ) {
-    return true;
-  }
-
-  // Higher bit count
-  const prevBitCount = sumBits(prevUpdate.syncAggregate.syncCommitteeBits);
-  if (prevBitCount > nextBitCount) return false;
-  if (prevBitCount < nextBitCount) return true;
-
-  // else keep the oldest, lowest chance or re-org and requires less updating
-  return prevUpdate.attestedHeader.slot > nextSyncAttestedData.attestedHeader.slot;
 }
 
 export function sumBits(bits: BitArray): number {

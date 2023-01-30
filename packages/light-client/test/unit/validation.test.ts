@@ -60,13 +60,13 @@ describe("validation", function () {
 
     // finalized header must have stateRoot to finalizedState
     const finalizedHeader = defaultBeaconBlockHeader(updateHeaderSlot);
-    finalizedHeader.stateRoot = finalizedState.hashTreeRoot();
+    finalizedHeader.beacon.stateRoot = finalizedState.hashTreeRoot();
 
     // attestedState must have `finalizedHeader` as finalizedCheckpoint
     const attestedState = ssz.altair.BeaconState.defaultViewDU();
     attestedState.finalizedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
       epoch: 0,
-      root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader),
+      root: ssz.altair.LightClientHeader.hashTreeRoot(finalizedHeader),
     });
 
     // attested state must contain next sync committees
@@ -74,7 +74,7 @@ describe("validation", function () {
 
     // attestedHeader must have stateRoot to attestedState
     const attestedHeader = defaultBeaconBlockHeader(attestedHeaderSlot);
-    attestedHeader.stateRoot = attestedState.hashTreeRoot();
+    attestedHeader.beacon.stateRoot = attestedState.hashTreeRoot();
 
     // Creates proofs for nextSyncCommitteeBranch and finalityBranch rooted in attested state
     const nextSyncCommitteeBranch = new Tree(attestedState.node).getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));

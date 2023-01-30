@@ -23,7 +23,7 @@ jobs:
           node-version: 18
       - name: Node.js version
         id: node
-        run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
+        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
@@ -50,6 +50,10 @@ jobs:
 
       - name: Sim tests eip4844
         run: yarn test:sim:eip4844
+        working-directory: packages/cli
+
+      - name: Sim tests backup eth provider
+        run: yarn test:sim:backup_eth_provider
         working-directory: packages/cli
 
       - name: Upload debug log test files for "packages/cli"

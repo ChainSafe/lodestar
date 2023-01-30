@@ -63,3 +63,10 @@ export const arrayGroupBy = <T>(
     (acc[predicate(value, index, array)] ||= []).push(value);
     return acc;
   }, {} as {[key: string]: T[]});
+
+export function strFixedSize(str: string, width: number): string {
+  return str.padEnd(width).slice(0, width);
+}
+
+export const arrayIsUnique = <T>(arr: T[], predicate?: (val: T) => unknown): boolean =>
+  arr.length === new Set(predicate ? arr.map(predicate) : arr).size;

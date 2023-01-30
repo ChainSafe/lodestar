@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {getClient} from "@lodestar/api";
+import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {newZeroedArray} from "@lodestar/state-transition";
 import {digest} from "@chainsafe/as-sha256";
@@ -112,9 +112,10 @@ async function writePubkeys(): Promise<void> {
 
   const client = getClient({baseUrl}, {config});
 
-  const {data: state} = await client.debug.getStateV2("finalized");
+  const res = await client.debug.getStateV2("finalized");
+  ApiError.assert(res);
 
-  const pubkeys = Array.from(state.validators).map((validator) =>
+  const pubkeys = Array.from(res.response.data.validators).map((validator) =>
     Buffer.from(validator.pubkey as Uint8Array).toString("hex")
   );
 

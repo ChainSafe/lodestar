@@ -1,9 +1,9 @@
-import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, capella, isBlindedBeaconBlock} from "@lodestar/types";
+import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, capella, isBlindedBeaconBlock, Wei} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {extendError, prettyBytes} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {Api} from "@lodestar/api";
+import {Api, ApiError, ServerApi} from "@lodestar/api";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -104,9 +104,11 @@ export class BlockProposingService {
   }
 
   private publishBlockWrapper = async (signedBlock: allForks.FullOrBlindedSignedBeaconBlock): Promise<void> => {
-    return isBlindedBeaconBlock(signedBlock.message)
-      ? this.api.beacon.publishBlindedBlock(signedBlock as bellatrix.SignedBlindedBeaconBlock)
-      : this.api.beacon.publishBlock(signedBlock as allForks.SignedBeaconBlock);
+    ApiError.assert(
+      isBlindedBeaconBlock(signedBlock.message)
+        ? await this.api.beacon.publishBlindedBlock(signedBlock as bellatrix.SignedBlindedBeaconBlock)
+        : await this.api.beacon.publishBlock(signedBlock as allForks.SignedBeaconBlock)
+    );
   };
 
   private produceBlockWrapper = async (
@@ -137,14 +139,15 @@ export class BlockProposingService {
     const fullBlock = await fullBlockPromise;
 
     // A metric on the choice between blindedBlock and normal block can be applied
-    if (blindedBlock) {
-      const debugLogCtx = {source: "builder"};
-      return {...blindedBlock, debugLogCtx};
+    // TODO: compare the blockValue that has been obtained in each of full or blinded block
+    if (blindedBlock && blindedBlock.ok) {
+      const debugLogCtx = {source: "builder", blockValue: blindedBlock.response.blockValue.toString()};
+      return {...blindedBlock.response, debugLogCtx};
     } else {
-      const debugLogCtx = {source: "engine"};
       if (!fullBlock) {
         throw Error("Failed to produce engine or builder block");
       }
+      const debugLogCtx = {source: "engine", blockValue: fullBlock.blockValue.toString()};
       const blockFeeRecipient = (fullBlock.data as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
       const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
       if (feeRecipient !== undefined) {
@@ -173,18 +176,24 @@ export class BlockProposingService {
   };
 
   /** Wrapper around the API's different methods for producing blocks across forks */
-  private produceBlock: Api["validator"]["produceBlock"] = async (
+  private produceBlock: ServerApi<Api["validator"]>["produceBlock"] = async (
     slot,
     randaoReveal,
     graffiti
-  ): Promise<{data: allForks.BeaconBlock}> => {
+  ): Promise<{data: allForks.BeaconBlock; blockValue: Wei}> => {
     switch (this.config.getForkName(slot)) {
-      case ForkName.phase0:
-        return this.api.validator.produceBlock(slot, randaoReveal, graffiti);
+      case ForkName.phase0: {
+        const res = await this.api.validator.produceBlock(slot, randaoReveal, graffiti);
+        ApiError.assert(res, "Failed to produce block: validator.produceBlock");
+        return res.response;
+      }
       // All subsequent forks are expected to use v2 too
       case ForkName.altair:
-      default:
-        return this.api.validator.produceBlockV2(slot, randaoReveal, graffiti);
+      default: {
+        const res = await this.api.validator.produceBlockV2(slot, randaoReveal, graffiti);
+        ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
+        return res.response;
+      }
     }
   };
 }

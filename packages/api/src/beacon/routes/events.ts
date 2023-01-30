@@ -1,7 +1,9 @@
-import {Epoch, phase0, Slot, ssz, StringType, RootHex, altair, UintNum64} from "@lodestar/types";
+import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64} from "@lodestar/types";
 import {ContainerType, Type, VectorCompositeType} from "@chainsafe/ssz";
 import {FINALIZED_ROOT_DEPTH} from "@lodestar/params";
 import {RouteDef, TypeJson} from "../../utils/index.js";
+import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {ApiClientResponse} from "../../interfaces.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -19,6 +21,8 @@ export enum EventType {
   attestation = "attestation",
   /** The node has received a valid voluntary exit (from P2P or API) */
   voluntaryExit = "voluntary_exit",
+  /** The node has received a valid blsToExecutionChange (from P2P or API) */
+  blsToExecutionChange = "bls_to_execution_change",
   /** Finalized checkpoint has been updated */
   finalizedCheckpoint = "finalized_checkpoint",
   /** The node has reorganized its chain */
@@ -32,6 +36,20 @@ export enum EventType {
   /** New or better light client update available */
   lightClientUpdate = "light_client_update",
 }
+
+export const eventTypes: {[K in EventType]: K} = {
+  [EventType.head]: EventType.head,
+  [EventType.block]: EventType.block,
+  [EventType.attestation]: EventType.attestation,
+  [EventType.voluntaryExit]: EventType.voluntaryExit,
+  [EventType.blsToExecutionChange]: EventType.blsToExecutionChange,
+  [EventType.finalizedCheckpoint]: EventType.finalizedCheckpoint,
+  [EventType.chainReorg]: EventType.chainReorg,
+  [EventType.contributionAndProof]: EventType.contributionAndProof,
+  [EventType.lightClientOptimisticUpdate]: EventType.lightClientOptimisticUpdate,
+  [EventType.lightClientFinalityUpdate]: EventType.lightClientFinalityUpdate,
+  [EventType.lightClientUpdate]: EventType.lightClientUpdate,
+};
 
 export type EventData = {
   [EventType.head]: {
@@ -50,6 +68,7 @@ export type EventData = {
   };
   [EventType.attestation]: phase0.Attestation;
   [EventType.voluntaryExit]: phase0.SignedVoluntaryExit;
+  [EventType.blsToExecutionChange]: capella.SignedBLSToExecutionChange;
   [EventType.finalizedCheckpoint]: {
     block: RootHex;
     state: RootHex;
@@ -84,7 +103,11 @@ export type Api = {
    * @param topics Event types to subscribe to
    * @returns Opened SSE stream.
    */
-  eventstream(topics: EventType[], signal: AbortSignal, onEvent: (event: BeaconEvent) => void): void;
+  eventstream(
+    topics: EventType[],
+    signal: AbortSignal,
+    onEvent: (event: BeaconEvent) => void
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
 };
 
 export const routesData: {[K in keyof Api]: RouteDef} = {
@@ -127,6 +150,7 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
 
     [EventType.attestation]: ssz.phase0.Attestation,
     [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit,
+    [EventType.blsToExecutionChange]: ssz.capella.SignedBLSToExecutionChange,
 
     [EventType.finalizedCheckpoint]: new ContainerType(
       {
@@ -157,15 +181,15 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
     [EventType.lightClientOptimisticUpdate]: new ContainerType(
       {
         syncAggregate: ssz.altair.SyncAggregate,
-        attestedHeader: ssz.phase0.BeaconBlockHeader,
+        attestedHeader: ssz.altair.LightClientHeader,
         signatureSlot: ssz.Slot,
       },
       {jsonCase: "eth2"}
     ),
     [EventType.lightClientFinalityUpdate]: new ContainerType(
       {
-        attestedHeader: ssz.phase0.BeaconBlockHeader,
-        finalizedHeader: ssz.phase0.BeaconBlockHeader,
+        attestedHeader: ssz.altair.LightClientHeader,
+        finalizedHeader: ssz.altair.LightClientHeader,
         finalityBranch: new VectorCompositeType(ssz.Bytes32, FINALIZED_ROOT_DEPTH),
         syncAggregate: ssz.altair.SyncAggregate,
         signatureSlot: ssz.Slot,

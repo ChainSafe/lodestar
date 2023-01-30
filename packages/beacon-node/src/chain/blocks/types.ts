@@ -56,11 +56,16 @@ export const getBlockInput = {
   },
 };
 
+export enum AttestationImportOpt {
+  Skip,
+  Force,
+}
+
 export type ImportBlockOpts = {
   /**
    * TEMP: Review if this is safe, Lighthouse always imports attestations even in finalized sync.
    */
-  skipImportingAttestations?: boolean;
+  importAttestations?: AttestationImportOpt;
   /**
    * If error would trigger BlockErrorCode ALREADY_KNOWN or GENESIS_BLOCK, just ignore the block and don't verify nor
    * import the block and return void | Promise<void>.

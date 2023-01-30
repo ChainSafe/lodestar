@@ -42,7 +42,11 @@ export const exportCmd: ICliCommand<
     const {config, network} = getBeaconConfigFromArgs(args);
     const validatorPaths = getValidatorPaths(args, network);
     // slashingProtection commands are fast so do not require logFile feature
-    const logger = getCliLogger(args, {defaultLogFilepath: path.join(validatorPaths.dataDir, "validator.log")}, config);
+    const {logger} = getCliLogger(
+      args,
+      {defaultLogFilepath: path.join(validatorPaths.dataDir, "validator.log")},
+      config
+    );
 
     const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 

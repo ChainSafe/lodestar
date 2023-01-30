@@ -1,4 +1,5 @@
 import {PeerId} from "@libp2p/interface-peer-id";
+import {Direction} from "@libp2p/interface-connection";
 import {altair, phase0} from "@lodestar/types";
 import {BitArray} from "@chainsafe/ssz";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
@@ -30,6 +31,11 @@ const LOW_SCORE_TO_PRUNE_IF_TOO_MANY_PEERS = -2;
  */
 const PEERS_TO_CONNECT_OVERSHOOT_FACTOR = 3;
 
+/**
+ * Keep at least 10% of outbound peers. For rationale, see https://github.com/ChainSafe/lodestar/issues/2215
+ */
+const OUTBOUND_PEERS_RATIO = 0.1;
+
 const attnetsZero = BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT);
 const syncnetsZero = BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT);
 
@@ -37,12 +43,20 @@ type SubnetDiscvQuery = {subnet: number; toSlot: number; maxPeersToDiscover: num
 
 type PeerInfo = {
   id: PeerId;
+  direction: Direction | null;
   attnets: phase0.AttestationSubnets;
   syncnets: altair.SyncSubnets;
   attnetsTrueBitIndices: number[];
   syncnetsTrueBitIndices: number[];
   score: number;
 };
+
+export interface PrioritizePeersOpts {
+  targetPeers: number;
+  maxPeers: number;
+  outboundPeersRatio?: number;
+  targetSubnetPeers?: number;
+}
 
 export enum ExcessPeerDisconnectReason {
   LOW_SCORE = "low_score",
@@ -60,21 +74,22 @@ export enum ExcessPeerDisconnectReason {
 export function prioritizePeers(
   connectedPeersInfo: {
     id: PeerId;
+    direction: Direction | null;
     attnets: phase0.AttestationSubnets | null;
     syncnets: altair.SyncSubnets | null;
     score: number;
   }[],
   activeAttnets: RequestedSubnet[],
   activeSyncnets: RequestedSubnet[],
-  {targetPeers, maxPeers}: {targetPeers: number; maxPeers: number},
-  targetSubnetPeers = TARGET_SUBNET_PEERS
+  opts: PrioritizePeersOpts
 ): {
   peersToConnect: number;
   peersToDisconnect: Map<ExcessPeerDisconnectReason, PeerId[]>;
   attnetQueries: SubnetDiscvQuery[];
   syncnetQueries: SubnetDiscvQuery[];
-  targetSubnetPeers?: number;
 } {
+  const {targetPeers, maxPeers} = opts;
+
   let peersToConnect = 0;
   const peersToDisconnect = new MapDef<ExcessPeerDisconnectReason, PeerId[]>(() => []);
 
@@ -82,6 +97,7 @@ export function prioritizePeers(
   const connectedPeers = connectedPeersInfo.map(
     (peer): PeerInfo => ({
       id: peer.id,
+      direction: peer.direction,
       attnets: peer.attnets ?? attnetsZero,
       syncnets: peer.syncnets ?? syncnetsZero,
       attnetsTrueBitIndices: peer.attnets?.getTrueBitIndexes() ?? [],
@@ -94,7 +110,7 @@ export function prioritizePeers(
     connectedPeers,
     activeAttnets,
     activeSyncnets,
-    targetSubnetPeers
+    opts
   );
 
   const connectedPeerCount = connectedPeers.length;
@@ -110,14 +126,7 @@ export function prioritizePeers(
       maxPeers - connectedPeerCount
     );
   } else if (connectedPeerCount > targetPeers) {
-    pruneExcessPeers({
-      connectedPeers,
-      peerHasDuty,
-      targetPeers,
-      targetSubnetPeers,
-      activeAttnets,
-      peersToDisconnect,
-    });
+    pruneExcessPeers(connectedPeers, peerHasDuty, activeAttnets, peersToDisconnect, opts);
   }
 
   return {
@@ -135,12 +144,13 @@ function requestAttnetPeers(
   connectedPeers: PeerInfo[],
   activeAttnets: RequestedSubnet[],
   activeSyncnets: RequestedSubnet[],
-  targetSubnetPeers: number
+  opts: PrioritizePeersOpts
 ): {
   attnetQueries: SubnetDiscvQuery[];
   syncnetQueries: SubnetDiscvQuery[];
   peerHasDuty: Map<PeerInfo, boolean>;
 } {
+  const {targetSubnetPeers = TARGET_SUBNET_PEERS} = opts;
   const attnetQueries: SubnetDiscvQuery[] = [];
   const syncnetQueries: SubnetDiscvQuery[] = [];
 
@@ -217,33 +227,57 @@ function requestAttnetPeers(
  *
  * Although the logic looks complicated, we'd prune 5 peers max per heartbeat based on the mainnet config.
  */
-function pruneExcessPeers({
-  connectedPeers,
-  peerHasDuty,
-  targetPeers,
-  targetSubnetPeers,
-  activeAttnets,
-  peersToDisconnect,
-}: {
-  connectedPeers: PeerInfo[];
-  peerHasDuty: Map<PeerInfo, boolean>;
-  targetPeers: number;
-  targetSubnetPeers: number;
-  activeAttnets: RequestedSubnet[];
-  peersToDisconnect: MapDef<ExcessPeerDisconnectReason, PeerId[]>;
-}): void {
+function pruneExcessPeers(
+  connectedPeers: PeerInfo[],
+  peerHasDuty: Map<PeerInfo, boolean>,
+  activeAttnets: RequestedSubnet[],
+  peersToDisconnect: MapDef<ExcessPeerDisconnectReason, PeerId[]>,
+  opts: PrioritizePeersOpts
+): void {
+  const {targetPeers, targetSubnetPeers = TARGET_SUBNET_PEERS, outboundPeersRatio = OUTBOUND_PEERS_RATIO} = opts;
   const connectedPeerCount = connectedPeers.length;
-  const connectedPeersWithoutDuty = connectedPeers.filter((peer) => !peerHasDuty.get(peer));
-  // sort from least score to high
-  const worstPeers = sortBy(shuffle(connectedPeersWithoutDuty), (peer) => peer.score);
+  const outboundPeersTarget = Math.round(outboundPeersRatio * connectedPeerCount);
+
+  // Count outbound peers
+  let outboundPeers = 0;
+  for (const peer of connectedPeers) {
+    if (peer.direction === "outbound") {
+      outboundPeers++;
+    }
+  }
+
+  let outboundPeersEligibleForPruning = 0;
+
+  // Sort by score ascending, shuffling first to break ties.
+  const peersEligibleForPruning = sortBy(shuffle(connectedPeers), (peer) => peer.score)
+    // Then, iterate from highest score to lowest doing a manual filter for duties and outbound ratio
+    .filter((peer) => {
+      // Peers with duties are not eligible for pruning
+      if (peerHasDuty.get(peer)) {
+        return false;
+      }
+
+      // outbound peers up to OUTBOUND_PEER_RATIO sorted by highest score and not eligible for pruning
+      if (peer.direction === "outbound") {
+        if (outboundPeers - outboundPeersEligibleForPruning > outboundPeersTarget) {
+          outboundPeersEligibleForPruning++;
+        } else {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
   let peersToDisconnectCount = 0;
   const noLongLivedSubnetPeersToDisconnect: PeerId[] = [];
+
   const peersToDisconnectTarget = connectedPeerCount - targetPeers;
 
   // 1. Lodestar prefers disconnecting peers that does not have long lived subnets
   // See https://github.com/ChainSafe/lodestar/issues/3940
   // peers with low score will be disconnected through heartbeat in the end
-  for (const peer of worstPeers) {
+  for (const peer of peersEligibleForPruning) {
     const hasLongLivedSubnet = peer.attnetsTrueBitIndices.length > 0 || peer.syncnetsTrueBitIndices.length > 0;
     if (!hasLongLivedSubnet && peersToDisconnectCount < peersToDisconnectTarget) {
       noLongLivedSubnetPeersToDisconnect.push(peer.id);
@@ -254,7 +288,7 @@ function pruneExcessPeers({
 
   // 2. Disconnect peers that have score < LOW_SCORE_TO_PRUNE_IF_TOO_MANY_PEERS
   const badScorePeersToDisconnect: PeerId[] = [];
-  for (const peer of worstPeers) {
+  for (const peer of peersEligibleForPruning) {
     if (
       peer.score < LOW_SCORE_TO_PRUNE_IF_TOO_MANY_PEERS &&
       peersToDisconnectCount < peersToDisconnectTarget &&

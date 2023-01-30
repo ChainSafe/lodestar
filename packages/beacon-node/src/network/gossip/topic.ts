@@ -1,6 +1,8 @@
 import {ssz} from "@lodestar/types";
 import {IForkDigestContext} from "@lodestar/config";
-import {GossipEncoding, GossipTopic, GossipType} from "./interface.js";
+import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+
+import {GossipEncoding, GossipTopic, GossipType, GossipTopicTypeMap} from "./interface.js";
 import {DEFAULT_ENCODING} from "./constants.js";
 
 export interface IGossipTopicCache {
@@ -59,6 +61,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.sync_committee_contribution_and_proof:
     case GossipType.light_client_finality_update:
     case GossipType.light_client_optimistic_update:
+    case GossipType.bls_to_execution_change:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
@@ -92,6 +95,8 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz.altair.LightClientOptimisticUpdate;
     case GossipType.light_client_finality_update:
       return ssz.altair.LightClientFinalityUpdate;
+    case GossipType.bls_to_execution_change:
+      return ssz.capella.SignedBLSToExecutionChange;
   }
 }
 
@@ -129,6 +134,7 @@ export function parseGossipTopic(forkDigestContext: IForkDigestContext, topicStr
       case GossipType.sync_committee_contribution_and_proof:
       case GossipType.light_client_finality_update:
       case GossipType.light_client_optimistic_update:
+      case GossipType.bls_to_execution_change:
         return {type: gossipTypeStr, fork, encoding};
     }
 
@@ -146,6 +152,55 @@ export function parseGossipTopic(forkDigestContext: IForkDigestContext, topicStr
     (e as Error).message = `Invalid gossip topic ${topicStr}: ${(e as Error).message}`;
     throw e;
   }
+}
+
+/**
+ * De-duplicate logic to pick fork topics between subscribeCoreTopicsAtFork and unsubscribeCoreTopicsAtFork
+ */
+export function getCoreTopicsAtFork(
+  fork: ForkName,
+  opts: {subscribeAllSubnets?: boolean}
+): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
+  // Common topics for all forks
+  const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [
+    // {type: GossipType.beacon_block}, // Handled below
+    {type: GossipType.beacon_aggregate_and_proof},
+    {type: GossipType.voluntary_exit},
+    {type: GossipType.proposer_slashing},
+    {type: GossipType.attester_slashing},
+  ];
+
+  // After EIP4844 only track beacon_block_and_blobs_sidecar topic
+  if (ForkSeq[fork] < ForkSeq.eip4844) {
+    topics.push({type: GossipType.beacon_block});
+  } else {
+    topics.push({type: GossipType.beacon_block_and_blobs_sidecar});
+  }
+
+  // capella
+  if (ForkSeq[fork] >= ForkSeq.capella) {
+    topics.push({type: GossipType.bls_to_execution_change});
+  }
+
+  // Any fork after altair included
+  if (ForkSeq[fork] >= ForkSeq.altair) {
+    topics.push({type: GossipType.sync_committee_contribution_and_proof});
+    topics.push({type: GossipType.light_client_optimistic_update});
+    topics.push({type: GossipType.light_client_finality_update});
+  }
+
+  if (opts.subscribeAllSubnets) {
+    for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+      topics.push({type: GossipType.beacon_attestation, subnet});
+    }
+    if (ForkSeq[fork] >= ForkSeq.altair) {
+      for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
+        topics.push({type: GossipType.sync_committee, subnet});
+      }
+    }
+  }
+
+  return topics;
 }
 
 /**

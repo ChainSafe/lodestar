@@ -1,4 +1,19 @@
-export {minimalChainConfig as chainConfig} from "@lodestar/config/presets";
+import {minimalChainConfig, mainnetChainConfig} from "@lodestar/config/presets";
+import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
+
+let chainConfig;
+switch (ACTIVE_PRESET) {
+  case PresetName.mainnet:
+    chainConfig = mainnetChainConfig;
+    break;
+  case PresetName.minimal:
+    chainConfig = minimalChainConfig;
+    break;
+  default:
+    throw Error(`Preset ${ACTIVE_PRESET} not supported with dev command`);
+}
+
+export {chainConfig};
 
 /* eslint-disable max-len */
 

@@ -10,9 +10,9 @@ import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
-import {BeaconNodeOptions, exportToJSON, FileENR, getBeaconConfigFromArgs} from "../../config/index.js";
-import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm} from "../../util/index.js";
-import {getNetworkBootnodes, getNetworkData, readBootnodes} from "../../networks/index.js";
+import {BeaconNodeOptions, exportToJSON, getBeaconConfigFromArgs} from "../../config/index.js";
+import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
+import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm, cleanOldLogFiles} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {defaultP2pPort} from "../../options/beaconNodeOptions/network.js";
 import {IBeaconArgs} from "./options.js";
@@ -31,7 +31,16 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   mkdir(beaconPaths.dbDir);
 
   const abortController = new AbortController();
-  const logger = getCliLogger(args, {defaultLogFilepath: path.join(beaconPaths.dataDir, "beacon.log")}, config);
+  const {logger, logParams} = getCliLogger(
+    args,
+    {defaultLogFilepath: path.join(beaconPaths.dataDir, "beacon.log")},
+    config
+  );
+  try {
+    cleanOldLogFiles(logParams.filename, logParams.rotateMaxFiles);
+  } catch (e) {
+    logger.debug("Not able to delete log files", logParams, e as Error);
+  }
 
   onGracefulShutdown(async () => {
     abortController.abort();
@@ -49,6 +58,11 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
 
   // additional metrics registries
   const metricsRegistries: Registry[] = [];
+  let networkRegistry: Registry | undefined;
+  if (options.metrics.enabled) {
+    networkRegistry = new Registry();
+    metricsRegistries.push(networkRegistry);
+  }
   const db = new BeaconDb({
     config,
     controller: new LevelDbController(options.db, {metrics: null}),
@@ -77,6 +91,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       libp2p: await createNodeJsLibp2p(peerId, options.network, {
         peerStoreDir: beaconPaths.peerStoreDir,
         metrics: options.metrics.enabled,
+        metricsRegistry: networkRegistry,
       }),
       anchorState,
       wsCheckpoint,
@@ -117,13 +132,13 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
   // Fetch extra bootnodes
   const extraBootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
     args.bootnodesFile ? readBootnodes(args.bootnodesFile) : [],
-    args.network ? await getNetworkBootnodes(args.network) : []
+    isKnownNetworkName(network) ? await getNetworkBootnodes(network) : []
   );
   beaconNodeOptions.set({network: {discv5: {bootEnrs: extraBootnodes}}});
 
   // Set known depositContractDeployBlock
-  if (args.network) {
-    const {depositContractDeployBlock} = getNetworkData(args.network);
+  if (isKnownNetworkName(network)) {
+    const {depositContractDeployBlock} = getNetworkData(network);
     beaconNodeOptions.set({eth1: {depositContractDeployBlock}});
   }
 
@@ -136,11 +151,10 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
   const pIdPath = path.join(beaconPaths.beaconDir, "peer_id.json");
   const enrPath = path.join(beaconPaths.beaconDir, "enr");
   writeFile600Perm(pIdPath, exportToJSON(peerId));
-  const fileENR = FileENR.initFromENR(enrPath, peerId, enr);
-  fileENR.saveToFile();
+  writeFile600Perm(enrPath, enr.encodeTxt(createKeypairFromPeerId(peerId).privateKey));
 
   // Inject ENR to beacon options
-  beaconNodeOptions.set({network: {discv5: {enr: fileENR, enrUpdate: !enr.ip && !enr.ip6}}});
+  beaconNodeOptions.set({network: {discv5: {enr, enrUpdate: !enr.ip && !enr.ip6}}});
   // Add simple version string for libp2p agent version
   beaconNodeOptions.set({network: {version: version.split("/")[0]}});
 
@@ -153,11 +167,7 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
 export function overwriteEnrWithCliArgs(enr: ENR, args: IBeaconArgs): void {
   // TODO: Not sure if we should propagate port/defaultP2pPort options to the ENR
   enr.tcp = args["enr.tcp"] ?? args.port ?? defaultP2pPort;
-  // TODO: add `port`/`defaultP2pPort` port as backup as well once we
-  // fix the below discv5 issue
-  //
-  // See https://github.com/ChainSafe/discv5/issues/201
-  const udpPort = args["enr.udp"] ?? args.discoveryPort;
+  const udpPort = args["enr.udp"] ?? args.discoveryPort ?? args.port ?? defaultP2pPort;
   if (udpPort != null) enr.udp = udpPort;
   if (args["enr.ip"] != null) enr.ip = args["enr.ip"];
   if (args["enr.ip6"] != null) enr.ip6 = args["enr.ip6"];

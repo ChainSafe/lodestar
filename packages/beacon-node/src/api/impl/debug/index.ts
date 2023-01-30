@@ -1,9 +1,13 @@
-import {routes} from "@lodestar/api";
+import {routes, ServerApi} from "@lodestar/api";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 
-export function getDebugApi({chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">): routes.debug.Api {
+export function getDebugApi({
+  chain,
+  config,
+  db,
+}: Pick<ApiModules, "chain" | "config" | "db">): ServerApi<routes.debug.Api> {
   return {
     async getDebugChainHeads() {
       const heads = chain.forkChoice.getHeads();
@@ -23,8 +27,8 @@ export function getDebugApi({chain, config, db}: Pick<ApiModules, "chain" | "con
       };
     },
 
-    async getState(stateId: string, format?: routes.debug.StateFormat) {
-      const state = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
+    async getState(stateId: string | number, format?: routes.debug.StateFormat) {
+      const {state} = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
       if (format === "ssz") {
         // Casting to any otherwise Typescript doesn't like the multi-type return
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
@@ -34,8 +38,8 @@ export function getDebugApi({chain, config, db}: Pick<ApiModules, "chain" | "con
       }
     },
 
-    async getStateV2(stateId: string, format?: routes.debug.StateFormat) {
-      const state = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
+    async getStateV2(stateId: string | number, format?: routes.debug.StateFormat) {
+      const {state} = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
       if (format === "ssz") {
         // Casting to any otherwise Typescript doesn't like the multi-type return
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any

@@ -12,6 +12,8 @@ const testCases: {name: string; items: [IChainConfig, Record<string, string>]}[]
   {name: "nimbus", items: [networksChainConfig.ropsten, nimbusRopstenConfig]},
 ];
 
+/* eslint-disable @typescript-eslint/naming-convention */
+
 describe("utils / params / assertEqualParams", () => {
   it("default == default", () => {
     const chainConfigJson = chainConfigToJson(chainConfig);
@@ -19,13 +21,14 @@ describe("utils / params / assertEqualParams", () => {
   });
 
   it("default != other", () => {
-    const chainConfigJson = chainConfigToJson(chainConfig);
+    const ALTAIR_FORK_EPOCH = 10;
+    const localConfig: typeof chainConfig = {...chainConfig, ALTAIR_FORK_EPOCH};
+    const chainConfigJson = chainConfigToJson(localConfig);
 
     // Force ALTAIR_FORK_EPOCH value to be different
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    const otherConfig = {...chainConfigJson, ALTAIR_FORK_EPOCH: String(chainConfig.ALTAIR_FORK_EPOCH + 1)};
+    const otherConfig = {...chainConfigJson, ALTAIR_FORK_EPOCH: String(ALTAIR_FORK_EPOCH + 1)};
 
-    expect(() => assertEqualParams(chainConfig, otherConfig)).to.throw(NotEqualParamsError);
+    expect(() => assertEqualParams(localConfig, otherConfig)).to.throw(NotEqualParamsError);
   });
 
   it("should fill missing remote values with default and be equal", () => {

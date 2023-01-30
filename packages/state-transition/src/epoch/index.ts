@@ -1,8 +1,15 @@
 import {ForkSeq} from "@lodestar/params";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0, EpochProcess} from "../types.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateCapella,
+  CachedBeaconStateAltair,
+  CachedBeaconStatePhase0,
+  EpochProcess,
+} from "../types.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
 import {processHistoricalRootsUpdate} from "./processHistoricalRootsUpdate.js";
+import {processHistoricalSummariesUpdate} from "./processHistoricalSummariesUpdate.js";
 import {processInactivityUpdates} from "./processInactivityUpdates.js";
 import {processJustificationAndFinalization} from "./processJustificationAndFinalization.js";
 import {processParticipationFlagUpdates} from "./processParticipationFlagUpdates.js";
@@ -30,6 +37,7 @@ export {
   processParticipationRecordUpdates,
   processParticipationFlagUpdates,
   processSyncCommitteeUpdates,
+  processHistoricalSummariesUpdate,
 };
 
 export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
@@ -46,7 +54,13 @@ export function processEpoch(fork: ForkSeq, state: CachedBeaconStateAllForks, ep
   processEffectiveBalanceUpdates(state, epochProcess);
   processSlashingsReset(state, epochProcess);
   processRandaoMixesReset(state, epochProcess);
-  processHistoricalRootsUpdate(state, epochProcess);
+
+  if (fork >= ForkSeq.capella) {
+    processHistoricalSummariesUpdate(state as CachedBeaconStateCapella, epochProcess);
+  } else {
+    processHistoricalRootsUpdate(state, epochProcess);
+  }
+
   if (fork === ForkSeq.phase0) {
     processParticipationRecordUpdates(state as CachedBeaconStatePhase0);
   } else {

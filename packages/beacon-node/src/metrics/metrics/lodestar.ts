@@ -66,10 +66,10 @@ export function createLodestarMetrics(
       name: "lodestar_peers_sync_count",
       help: "Current count of peers useful for sync",
     }),
-    peerConnectedEvent: register.gauge<"direction">({
+    peerConnectedEvent: register.gauge<"direction" | "status">({
       name: "lodestar_peer_connected_total",
       help: "Total number of peer:connected event, labeled by direction",
-      labelNames: ["direction"],
+      labelNames: ["direction", "status"],
     }),
     peerDisconnectedEvent: register.gauge<"direction">({
       name: "lodestar_peer_disconnected_total",
@@ -160,43 +160,6 @@ export function createLodestarMetrics(
         help: "Time to dial peers in seconds",
         labelNames: ["status"],
         buckets: [0.1, 5, 60],
-      }),
-    },
-
-    discv5: {
-      kadTableSize: register.gauge({
-        name: "lodestar_discv5_kad_table_size",
-        help: "Total size of the discv5 kad table",
-      }),
-      lookupCount: register.gauge({
-        name: "lodestar_discv5_lookup_count",
-        help: "Total count of discv5 lookups",
-      }),
-      activeSessionCount: register.gauge({
-        name: "lodestar_discv5_active_session_count",
-        help: "Count of the discv5 active sessions",
-      }),
-      connectedPeerCount: register.gauge({
-        name: "lodestar_discv5_connected_peer_count",
-        help: "Count of the discv5 connected peers",
-      }),
-      sentMessageCount: register.gauge<"type">({
-        name: "lodestar_discv5_sent_message_count",
-        help: "Count of the discv5 messages sent by message type",
-        labelNames: ["type"],
-      }),
-      rcvdMessageCount: register.gauge<"type">({
-        name: "lodestar_discv5_rcvd_message_count",
-        help: "Count of the discv5 messages received by message type",
-        labelNames: ["type"],
-      }),
-      rateLimitHitIP: register.gauge({
-        name: "lodestar_discv5_rate_limit_hit_ip",
-        help: "Total count of rate limit hits by IP",
-      }),
-      rateLimitHitTotal: register.gauge({
-        name: "lodestar_discv5_rate_limit_hit_total",
-        help: "Total count of rate limit hits by total requests",
       }),
     },
 
@@ -293,6 +256,17 @@ export function createLodestarMetrics(
       labelNames: ["topic"],
       buckets: [0.1, 1, 10, 100],
     }),
+
+    discv5: {
+      decodeEnrAttemptCount: register.counter({
+        name: "lodestar_discv5_decode_enr_attempt_count",
+        help: "Count of total attempts to decode enrs",
+      }),
+      decodeEnrErrorCount: register.counter({
+        name: "lodestar_discv5_decode_enr_error_count",
+        help: "Count of total errors attempting to decode enrs",
+      }),
+    },
 
     attnetsService: {
       committeeSubnets: register.gauge({
@@ -682,7 +656,11 @@ export function createLodestarMetrics(
       help: "Time elapsed between block slot time and the time block becomes head",
       buckets: [0.5, 1, 2, 4, 6, 12],
     }),
-
+    engineNotifyNewPayloadResult: register.gauge<"result">({
+      name: "lodestar_execution_engine_notify_new_payload_result_total",
+      help: "The total result of calling notifyNewPayload execution engine api",
+      labelNames: ["result"],
+    }),
     backfillSync: {
       backfilledTillSlot: register.gauge({
         name: "lodestar_backfill_till_slot",
@@ -739,6 +717,10 @@ export function createLodestarMetrics(
       voluntaryExitPoolSize: register.gauge({
         name: "lodestar_oppool_voluntary_exit_pool_size",
         help: "Current size of the VoluntaryExitPool",
+      }),
+      blsToExecutionChangePoolSize: register.gauge({
+        name: "lodestar_oppool_bls_to_execution_change_pool_size",
+        help: "Current size of the blsToExecutionChangePool",
       }),
       syncCommitteeMessagePoolSize: register.gauge({
         name: "lodestar_oppool_sync_committee_message_pool_size",

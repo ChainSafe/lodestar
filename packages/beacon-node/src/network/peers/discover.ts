@@ -1,16 +1,15 @@
-import crypto from "node:crypto";
-import {promisify} from "node:util";
-import {Libp2p} from "libp2p";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {multiaddr, Multiaddr} from "@multiformats/multiaddr";
+import {Multiaddr} from "@multiformats/multiaddr";
 import {PeerInfo} from "@libp2p/interface-peer-info";
 import {IBeaconConfig} from "@lodestar/config";
-import {ILogger, pruneSetToMax} from "@lodestar/utils";
-import {Discv5, ENR, IDiscv5Metrics, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
+import {ILogger, pruneSetToMax, sleep} from "@lodestar/utils";
+import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {IMetrics} from "../../metrics/index.js";
+import {Libp2p} from "../interface.js";
 import {ENRKey, SubnetType} from "../metadata.js";
-import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
+import {getConnectionsMap, getDefaultDialer, prettyPrintPeerId} from "../util.js";
+import {Discv5Worker} from "../discv5/index.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 
@@ -18,8 +17,6 @@ import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubne
 const MAX_CACHED_ENRS = 100;
 /** Max age a cached ENR will be considered for dial */
 const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
-
-const randomBytesAsync = promisify(crypto.randomBytes);
 
 export type PeerDiscoveryOpts = {
   maxPeers: number;
@@ -50,6 +47,7 @@ enum DiscoveredPeerStatus {
   unknown_forkDigest = "unknown_forkDigest",
   bad_score = "bad_score",
   already_connected = "already_connected",
+  already_dialing = "already_dialing",
   error = "error",
   attempt_dial = "attempt_dial",
   cached = "cached",
@@ -76,13 +74,13 @@ type CachedENR = {
  * Currently relies on discv5 automatic periodic queries.
  */
 export class PeerDiscovery {
-  readonly discv5: Discv5;
+  readonly discv5: Discv5Worker;
   private libp2p: Libp2p;
   private peerRpcScores: IPeerRpcScoreStore;
   private metrics: IMetrics | null;
   private logger: ILogger;
   private config: IBeaconConfig;
-  private cachedENRs = new Set<CachedENR>();
+  private cachedENRs = new Map<PeerIdStr, CachedENR>();
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};
   private peersToConnect = 0;
   private subnetRequests: Record<SubnetType, Map<number, UnixMs>> = {
@@ -109,17 +107,18 @@ export class PeerDiscovery {
     this.discv5FirstQueryDelayMs = opts.discv5FirstQueryDelayMs;
     this.connectToDiscv5BootnodesOnStart = opts.connectToDiscv5Bootnodes;
 
-    this.discv5 = Discv5.create({
-      enr: opts.discv5.enr,
+    this.discv5 = new Discv5Worker({
+      discv5: opts.discv5,
       peerId: modules.libp2p.peerId,
-      multiaddr: multiaddr(opts.discv5.bindAddr),
-      config: opts.discv5,
-      // TODO: IDiscv5Metrics is not properly defined, should remove the collect() function
-      metrics: (modules.metrics?.discv5 as unknown) as {
-        [K in keyof IMetrics["discv5"]]: IDiscv5Metrics[keyof IDiscv5Metrics];
-      },
+      metrics: modules.metrics ?? undefined,
+      logger: this.logger,
     });
-    opts.discv5.bootEnrs.forEach((bootEnr) => this.discv5.addEnr(bootEnr));
+    const numBootEnrs = opts.discv5.bootEnrs.length;
+    if (numBootEnrs === 0) {
+      this.logger.error("PeerDiscovery: discv5 has no boot enr");
+    } else {
+      this.logger.verbose("PeerDiscovery: number of bootEnrs", {bootEnrs: numBootEnrs});
+    }
 
     if (metrics) {
       metrics.discovery.cachedENRsSize.addCollect(() => {
@@ -140,7 +139,7 @@ export class PeerDiscovery {
       // In devnet scenarios, especially, we want more control over which peers we connect to.
       // Only dial the discv5.bootEnrs if the option
       // network.connectToDiscv5Bootnodes has been set to true.
-      this.discv5.kadValues().forEach((enr) => this.onDiscoveredENR(enr));
+      (await this.discv5.kadValues()).forEach((enr) => this.onDiscoveredENR(enr));
     }
   }
 
@@ -155,16 +154,22 @@ export class PeerDiscovery {
    */
   discoverPeers(peersToConnect: number, subnetRequests: SubnetDiscvQueryMs[] = []): void {
     const subnetsToDiscoverPeers: SubnetDiscvQueryMs[] = [];
-    const cachedENRsToDial = new Set<CachedENR>();
+    const cachedENRsToDial = new Map<PeerIdStr, CachedENR>();
     // Iterate in reverse to consider first the most recent ENRs
     const cachedENRsReverse: CachedENR[] = [];
-    for (const cachedENR of this.cachedENRs) {
-      if (Date.now() - cachedENR.addedUnixMs > MAX_CACHED_ENR_AGE_MS) {
-        this.cachedENRs.delete(cachedENR);
+    for (const [id, cachedENR] of this.cachedENRs.entries()) {
+      if (
+        // time expired or
+        Date.now() - cachedENR.addedUnixMs > MAX_CACHED_ENR_AGE_MS ||
+        // already dialing
+        getDefaultDialer(this.libp2p).pendingDials.has(id)
+      ) {
+        this.cachedENRs.delete(id);
       } else {
-        cachedENRsReverse.unshift(cachedENR);
+        cachedENRsReverse.push(cachedENR);
       }
     }
+    cachedENRsReverse.reverse();
 
     this.peersToConnect += peersToConnect;
 
@@ -179,7 +184,7 @@ export class PeerDiscovery {
       let cachedENRsInSubnet = 0;
       for (const cachedENR of cachedENRsReverse) {
         if (cachedENR.subnets[subnetRequest.type][subnetRequest.subnet]) {
-          cachedENRsToDial.add(cachedENR);
+          cachedENRsToDial.set(cachedENR.peerId.toString(), cachedENR);
 
           if (++cachedENRsInSubnet >= subnetRequest.maxPeersToDiscover) {
             continue subnet;
@@ -194,7 +199,7 @@ export class PeerDiscovery {
     // If subnetRequests won't connect enough peers for peersToConnect, add more
     if (cachedENRsToDial.size < peersToConnect) {
       for (const cachedENR of cachedENRsReverse) {
-        cachedENRsToDial.add(cachedENR);
+        cachedENRsToDial.set(cachedENR.peerId.toString(), cachedENR);
         if (cachedENRsToDial.size >= peersToConnect) {
           break;
         }
@@ -204,8 +209,8 @@ export class PeerDiscovery {
     // Queue an outgoing connection request to the cached peers that are on `s.subnet_id`.
     // If we connect to the cached peers before the discovery query starts, then we potentially
     // save a costly discovery query.
-    for (const cachedENRToDial of cachedENRsToDial) {
-      this.cachedENRs.delete(cachedENRToDial);
+    for (const [id, cachedENRToDial] of cachedENRsToDial) {
+      this.cachedENRs.delete(id);
       void this.dialPeer(cachedENRToDial);
     }
 
@@ -221,8 +226,9 @@ export class PeerDiscovery {
   private async runFindRandomNodeQuery(): Promise<void> {
     // Delay the 1st query after starting discv5
     // See https://github.com/ChainSafe/lodestar/issues/3423
-    if (Date.now() - this.discv5StartMs <= this.discv5FirstQueryDelayMs) {
-      return;
+    const msSinceDiscv5Start = Date.now() - this.discv5StartMs;
+    if (msSinceDiscv5Start <= this.discv5FirstQueryDelayMs) {
+      await sleep(this.discv5FirstQueryDelayMs - msSinceDiscv5Start);
     }
 
     // Run a general discv5 query if one is not already in progress
@@ -235,12 +241,11 @@ export class PeerDiscovery {
 
     // Use async version to prevent blocking the event loop
     // Time to completion of this function is not critical, in case this async call add extra lag
-    const randomNodeId = await randomBytesAsync(64);
     this.randomNodeQuery = {code: QueryStatusCode.Active, count: 0};
     const timer = this.metrics?.discovery.findNodeQueryTime.startTimer();
 
     try {
-      const enrs = await this.discv5.findNode(randomNodeId.toString("hex"));
+      const enrs = await this.discv5.findRandomNode();
       this.metrics?.discovery.findNodeQueryEnrCount.inc(enrs.length);
     } catch (e) {
       this.logger.error("Error on discv5.findNode()", {}, e as Error);
@@ -273,6 +278,11 @@ export class PeerDiscovery {
         return DiscoveredPeerStatus.already_connected;
       }
 
+      // Ignore dialing peers
+      if (getDefaultDialer(this.libp2p).pendingDials.has(peerId.toString())) {
+        return DiscoveredPeerStatus.already_dialing;
+      }
+
       const attnets = zeroAttnets;
       const syncnets = zeroSyncnets;
 
@@ -290,7 +300,7 @@ export class PeerDiscovery {
         return DiscoveredPeerStatus.attempt_dial;
       } else {
         // Add to pending good peers with a last seen time
-        this.cachedENRs.add(cachedPeer);
+        this.cachedENRs.set(peerId.toString(), cachedPeer);
         const dropped = pruneSetToMax(this.cachedENRs, MAX_CACHED_ENRS);
         // If the cache was already full, count the peer as dropped
         return dropped > 0 ? DiscoveredPeerStatus.dropped : DiscoveredPeerStatus.cached;
@@ -354,6 +364,11 @@ export class PeerDiscovery {
         return DiscoveredPeerStatus.already_connected;
       }
 
+      // Ignore dialing peers
+      if (getDefaultDialer(this.libp2p).pendingDials.has(peerId.toString())) {
+        return DiscoveredPeerStatus.already_dialing;
+      }
+
       // Are this fields mandatory?
       const attnetsBytes = enr.get(ENRKey.attnets); // 64 bits
       const syncnetsBytes = enr.get(ENRKey.syncnets); // 4 bits
@@ -379,7 +394,7 @@ export class PeerDiscovery {
         return DiscoveredPeerStatus.attempt_dial;
       } else {
         // Add to pending good peers with a last seen time
-        this.cachedENRs.add(cachedPeer);
+        this.cachedENRs.set(peerId.toString(), cachedPeer);
         const dropped = pruneSetToMax(this.cachedENRs, MAX_CACHED_ENRS);
         // If the cache was already full, count the peer as dropped
         return dropped > 0 ? DiscoveredPeerStatus.dropped : DiscoveredPeerStatus.cached;
@@ -487,7 +502,8 @@ export class PeerDiscovery {
  */
 function formatLibp2pDialError(e: Error): void {
   const errorMessage = e.message.trim();
-  e.message = errorMessage.slice(0, errorMessage.indexOf("\n"));
+  const newlineIndex = errorMessage.indexOf("\n");
+  e.message = newlineIndex !== -1 ? errorMessage.slice(0, newlineIndex) : errorMessage;
 
   if (
     e.message.includes("The operation was aborted") ||

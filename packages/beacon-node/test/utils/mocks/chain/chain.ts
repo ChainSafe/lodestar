@@ -1,10 +1,10 @@
 import sinon from "sinon";
 
 import {CompositeTypeAny, toHexString, TreeView} from "@chainsafe/ssz";
-import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@lodestar/types";
+import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64, RootHex, eip4844, Wei} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus, AncestorStatus} from "@lodestar/fork-choice";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {ILogger} from "@lodestar/utils";
 
@@ -105,6 +105,8 @@ export class MockBeaconChain implements IBeaconChain {
   private readonly state: CachedBeaconStateAllForks;
   private abortController: AbortController;
 
+  readonly producedBlobsSidecarCache = new Map<RootHex, eip4844.BlobsSidecar>();
+
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
     this.logger = testLogger();
     this.genesisTime = genesisTime ?? state.genesisTime;
@@ -171,10 +173,12 @@ export class MockBeaconChain implements IBeaconChain {
     throw Error("Not implemented");
   }
 
-  async produceBlock(_blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock> {
+  async produceBlock(_blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; blockValue: Wei}> {
     throw Error("Not implemented");
   }
-  async produceBlindedBlock(_blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock> {
+  async produceBlindedBlock(
+    _blockAttributes: BlockAttributes
+  ): Promise<{block: allForks.BlindedBeaconBlock; blockValue: Wei}> {
     throw Error("Not implemented");
   }
 
@@ -258,7 +262,7 @@ function mockForkChoice(): IForkChoice {
     getHeads: () => [block],
     getFinalizedCheckpoint: () => checkpoint,
     getJustifiedCheckpoint: () => checkpoint,
-    onBlock: () => {},
+    onBlock: () => block,
     onAttestation: () => {},
     onAttesterSlashing: () => {},
     getLatestMessage: () => undefined,
@@ -283,7 +287,7 @@ function mockForkChoice(): IForkChoice {
     forwardIterateDescendants: emptyGenerator,
     getBlockSummariesByParentRoot: () => [block],
     getBlockSummariesAtSlot: () => [block],
-    getCommonAncestorDistance: () => null,
+    getCommonAncestorDepth: () => ({code: AncestorStatus.NoCommonAncenstor}),
     validateLatestHash: () => {},
     getDependentRoot: () => rootHex,
   };

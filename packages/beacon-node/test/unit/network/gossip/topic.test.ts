@@ -39,6 +39,12 @@ describe("network / gossip / topic", function () {
         topicStr: "/eth2/18ae4ccb/voluntary_exit/ssz_snappy",
       },
     ],
+    [GossipType.bls_to_execution_change]: [
+      {
+        topic: {type: GossipType.bls_to_execution_change, fork: ForkName.capella, encoding},
+        topicStr: "/eth2/63f1741c/bls_to_execution_change/ssz_snappy",
+      },
+    ],
     [GossipType.proposer_slashing]: [
       {
         topic: {type: GossipType.proposer_slashing, fork: ForkName.phase0, encoding},

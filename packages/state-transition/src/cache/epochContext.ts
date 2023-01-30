@@ -312,9 +312,9 @@ export class EpochContext {
 
     const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 
-    // Allow to create CachedBeaconState for empty states
+    // Allow to create CachedBeaconState for empty states, or no active validators
     const proposers =
-      state.validators.length > 0
+      currentShuffling.activeIndices.length > 0
         ? computeProposers(currentProposerSeed, currentShuffling, effectiveBalanceIncrements)
         : [];
 
@@ -516,8 +516,9 @@ export class EpochContext {
   }
 
   beforeEpochTransition(): void {
-    // Clone before being mutated in processEffectiveBalanceUpdates
-    this.effectiveBalanceIncrements = this.effectiveBalanceIncrements.slice(0);
+    // Clone (copy) before being mutated in processEffectiveBalanceUpdates
+    // NOTE: Force to use Uint8Array.slice (copy) instead of Buffer.call (not copy)
+    this.effectiveBalanceIncrements = Uint8Array.prototype.slice.call(this.effectiveBalanceIncrements, 0);
   }
 
   /**

@@ -56,7 +56,12 @@ export function getEffectiveBalanceIncrementsZeroInactive(
   const validatorCount = justifiedState.validators.length;
   const {effectiveBalanceIncrements} = justifiedState.epochCtx;
   // Slice up to `validatorCount` since it won't be mutated, nor accessed beyond `validatorCount`
-  const effectiveBalanceIncrementsZeroInactive = effectiveBalanceIncrements.slice(0, validatorCount);
+  // NOTE: Force to use Uint8Array.slice (copy) instead of Buffer.call (not copy)
+  const effectiveBalanceIncrementsZeroInactive = Uint8Array.prototype.slice.call(
+    effectiveBalanceIncrements,
+    0,
+    validatorCount
+  );
 
   let j = 0;
   for (let i = 0; i < validatorCount; i++) {

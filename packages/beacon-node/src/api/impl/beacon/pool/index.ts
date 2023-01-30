@@ -1,10 +1,11 @@
-import {routes} from "@lodestar/api";
+import {routes, ServerApi} from "@lodestar/api";
 import {Epoch, ssz} from "@lodestar/types";
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {validateGossipAttestation} from "../../../../chain/validation/index.js";
 import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateGossipProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
 import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
+import {validateBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
 import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCommittee.js";
 import {ApiModules} from "../../types.js";
 import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors/index.js";
@@ -14,7 +15,7 @@ export function getBeaconPoolApi({
   logger,
   metrics,
   network,
-}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): routes.beacon.pool.Api {
+}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): ServerApi<routes.beacon.pool.Api> {
   return {
     async getPoolAttestations(filters) {
       // Already filtered by slot
@@ -37,6 +38,10 @@ export function getBeaconPoolApi({
 
     async getPoolVoluntaryExits() {
       return {data: chain.opPool.getAllVoluntaryExits()};
+    },
+
+    async getPoolBlsToExecutionChanges() {
+      return {data: chain.opPool.getAllBlsToExecutionChanges()};
     },
 
     async submitPoolAttestations(attestations) {
@@ -89,6 +94,33 @@ export function getBeaconPoolApi({
       await validateGossipVoluntaryExit(chain, voluntaryExit);
       chain.opPool.insertVoluntaryExit(voluntaryExit);
       await network.gossip.publishVoluntaryExit(voluntaryExit);
+    },
+
+    async submitPoolBlsToExecutionChange(blsToExecutionChanges) {
+      const errors: Error[] = [];
+
+      await Promise.all(
+        blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
+          try {
+            await validateBlsToExecutionChange(chain, blsToExecutionChange);
+            chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+            await network.gossip.publishBlsToExecutionChange(blsToExecutionChange);
+          } catch (e) {
+            errors.push(e as Error);
+            logger.error(
+              `Error on submitPoolSyncCommitteeSignatures [${i}]`,
+              {validatorIndex: blsToExecutionChange.message.validatorIndex},
+              e as Error
+            );
+          }
+        })
+      );
+
+      if (errors.length > 1) {
+        throw Error("Multiple errors on submitPoolBlsToExecutionChange\n" + errors.map((e) => e.message).join("\n"));
+      } else if (errors.length === 1) {
+        throw errors[0];
+      }
     },
 
     /**

@@ -1,28 +1,16 @@
-import {phase0, SyncPeriod} from "@lodestar/types";
+import {altair} from "@lodestar/types";
 
 export enum LightclientEvent {
-  /**
-   * New head
-   */
-  head = "head",
-  /**
-   * New finalized
-   */
-  finalized = "finalized",
-  /**
-   * Stored nextSyncCommittee from an update at period `period`.
-   * Note: the SyncCommittee is stored for `period + 1`.
-   */
-  committee = "committee",
+  lightClientOptimisticUpdate = "light_client_optimistic_update",
+  lightClientFinalityUpdate = "light_client_finality_update",
 }
 
-export type LightclientEvents = {
-  [LightclientEvent.head]: (newHeader: phase0.BeaconBlockHeader) => void;
-  [LightclientEvent.finalized]: (newHeader: phase0.BeaconBlockHeader) => void;
-  [LightclientEvent.committee]: (updatePeriod: SyncPeriod) => void;
+export type LightclientEmitterEvents = {
+  [LightclientEvent.lightClientOptimisticUpdate]: (newHeader: altair.LightClientHeader) => void;
+  [LightclientEvent.lightClientFinalityUpdate]: (newHeader: altair.LightClientHeader) => void;
 };
 
-export type LightclientEmitter = MittEmitter<LightclientEvents>;
+export type LightclientEmitter = MittEmitter<LightclientEmitterEvents>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type MittEmitter<T extends Record<string, (...args: any[]) => void>> = {

@@ -48,6 +48,16 @@ export const eventTestData: EventData = {
     signature:
       "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
   }),
+  [EventType.blsToExecutionChange]: ssz.capella.SignedBLSToExecutionChange.fromJson({
+    message: {
+      validator_index: "1",
+      from_bls_pubkey:
+        "0x9048a71944feba4695ef870dfb5745c934d81c5efd934c0250a12942fcc2a2dfd6b20d53314379dec7aae5ca5fe9e9c4",
+      to_execution_address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    },
+    signature:
+      "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+  }),
   [EventType.finalizedCheckpoint]: {
     block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
     state: "0x600e852a08c1200654ddf11025f1ceacb3c2e74bdd5c630cde0838b2591b69f9",
@@ -83,12 +93,12 @@ export const eventTestData: EventData = {
   }),
   [EventType.lightClientOptimisticUpdate]: {
     syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
-    attestedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
+    attestedHeader: ssz.altair.LightClientHeader.defaultValue(),
     signatureSlot: ssz.Slot.defaultValue(),
   },
   [EventType.lightClientFinalityUpdate]: {
-    attestedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
-    finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
+    attestedHeader: ssz.altair.LightClientHeader.defaultValue(),
+    finalizedHeader: ssz.altair.LightClientHeader.defaultValue(),
     finalityBranch: [root],
     syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
     signatureSlot: ssz.Slot.defaultValue(),

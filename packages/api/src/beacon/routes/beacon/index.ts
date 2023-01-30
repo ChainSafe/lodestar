@@ -1,5 +1,7 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
+import {ApiClientResponse} from "../../../interfaces.js";
+import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
 import {RoutesData, ReturnTypes, reqEmpty, ContainerData} from "../../../utils/index.js";
 import * as block from "./block.js";
 import * as pool from "./pool.js";
@@ -32,7 +34,7 @@ export {
 export type Api = block.Api &
   pool.Api &
   state.Api & {
-    getGenesis(): Promise<{data: phase0.Genesis}>;
+    getGenesis(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.Genesis}}>>;
   };
 
 export const routesData: RoutesData<Api> = {

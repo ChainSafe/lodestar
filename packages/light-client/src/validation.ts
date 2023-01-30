@@ -35,7 +35,7 @@ export function assertValidLightClientUpdate(
   // }
 
   // Verify update header root is the finalized root of the finality header, if specified
-  const isFinalized = !isEmptyHeader(update.finalizedHeader);
+  const isFinalized = !isEmptyHeader(update.finalizedHeader.beacon);
   if (isFinalized) {
     assertValidFinalityProof(update);
   } else {
@@ -48,8 +48,8 @@ export function assertValidLightClientUpdate(
   assertValidSyncCommitteeProof(update);
 
   const {attestedHeader} = update;
-  const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader);
-  assertValidSignedHeader(config, syncCommittee, update.syncAggregate, headerBlockRoot, attestedHeader.slot);
+  const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader.beacon);
+  assertValidSignedHeader(config, syncCommittee, update.syncAggregate, headerBlockRoot, attestedHeader.beacon.slot);
 }
 
 /**
@@ -67,18 +67,18 @@ export function assertValidLightClientUpdate(
 export function assertValidFinalityProof(update: altair.LightClientFinalityUpdate): void {
   if (
     !isValidMerkleBranch(
-      ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader),
+      ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader.beacon),
       update.finalityBranch,
       FINALIZED_ROOT_DEPTH,
       FINALIZED_ROOT_INDEX,
-      update.attestedHeader.stateRoot
+      update.attestedHeader.beacon.stateRoot
     )
   ) {
     throw Error("Invalid finality header merkle branch");
   }
 
-  const updatePeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
-  const updateFinalityPeriod = computeSyncPeriodAtSlot(update.finalizedHeader.slot);
+  const updatePeriod = computeSyncPeriodAtSlot(update.attestedHeader.beacon.slot);
+  const updateFinalityPeriod = computeSyncPeriodAtSlot(update.finalizedHeader.beacon.slot);
   if (updateFinalityPeriod !== updatePeriod) {
     throw Error(`finalityHeader period ${updateFinalityPeriod} != header period ${updatePeriod}`);
   }
@@ -101,7 +101,7 @@ export function assertValidSyncCommitteeProof(update: altair.LightClientUpdate):
       update.nextSyncCommitteeBranch,
       NEXT_SYNC_COMMITTEE_DEPTH,
       NEXT_SYNC_COMMITTEE_INDEX,
-      update.attestedHeader.stateRoot
+      update.attestedHeader.beacon.stateRoot
     )
   ) {
     throw Error("Invalid next sync committee merkle branch");

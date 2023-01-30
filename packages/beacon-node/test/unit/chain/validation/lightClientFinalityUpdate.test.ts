@@ -52,13 +52,13 @@ describe("Light Client Finality Update validation", function () {
 
   it("should return invalid - finality update already forwarded", async () => {
     const lightclientFinalityUpdate: altair.LightClientFinalityUpdate = ssz.altair.LightClientFinalityUpdate.defaultValue();
-    lightclientFinalityUpdate.finalizedHeader.slot = 2;
+    lightclientFinalityUpdate.finalizedHeader.beacon.slot = 2;
 
     const chain = mockChain();
     chain.lightClientServer.getFinalityUpdate = () => {
       const defaultValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
       // make the local slot higher than gossiped
-      defaultValue.finalizedHeader.slot = lightclientFinalityUpdate.finalizedHeader.slot + 1;
+      defaultValue.finalizedHeader.beacon.slot = lightclientFinalityUpdate.finalizedHeader.beacon.slot + 1;
       return defaultValue;
     };
 
@@ -71,15 +71,15 @@ describe("Light Client Finality Update validation", function () {
   });
 
   it("should return invalid - finality update received too early", async () => {
-    //No other optimistic_update with a lower or equal attested_header.slot was already forwarded on the network
+    //No other optimistic_update with a lower or equal attested_header.beacon.slot was already forwarded on the network
     const lightClientFinalityUpdate: altair.LightClientFinalityUpdate = ssz.altair.LightClientFinalityUpdate.defaultValue();
-    lightClientFinalityUpdate.finalizedHeader.slot = 2;
+    lightClientFinalityUpdate.finalizedHeader.beacon.slot = 2;
     lightClientFinalityUpdate.signatureSlot = 4;
 
     const chain = mockChain();
     chain.lightClientServer.getFinalityUpdate = () => {
       const defaultValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
-      defaultValue.finalizedHeader.slot = 1;
+      defaultValue.finalizedHeader.beacon.slot = 1;
       return defaultValue;
     };
 
@@ -93,15 +93,15 @@ describe("Light Client Finality Update validation", function () {
 
   it("should return invalid - finality update not matching local", async () => {
     const lightClientFinalityUpdate: altair.LightClientFinalityUpdate = ssz.altair.LightClientFinalityUpdate.defaultValue();
-    lightClientFinalityUpdate.finalizedHeader.slot = 2;
-    lightClientFinalityUpdate.signatureSlot = lightClientFinalityUpdate.finalizedHeader.slot + 1;
+    lightClientFinalityUpdate.finalizedHeader.beacon.slot = 2;
+    lightClientFinalityUpdate.signatureSlot = lightClientFinalityUpdate.finalizedHeader.beacon.slot + 1;
 
     const chain = mockChain();
 
     // make lightclientserver return another update with different value from gossiped
     chain.lightClientServer.getFinalityUpdate = () => {
       const defaultValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
-      defaultValue.finalizedHeader.slot = 1;
+      defaultValue.finalizedHeader.beacon.slot = 1;
       return defaultValue;
     };
 
@@ -120,8 +120,8 @@ describe("Light Client Finality Update validation", function () {
 
   it("should return invalid - not matching local when no local finality update yet", async () => {
     const lightClientFinalityUpdate: altair.LightClientFinalityUpdate = ssz.altair.LightClientFinalityUpdate.defaultValue();
-    lightClientFinalityUpdate.finalizedHeader.slot = 2;
-    lightClientFinalityUpdate.signatureSlot = lightClientFinalityUpdate.finalizedHeader.slot + 1;
+    lightClientFinalityUpdate.finalizedHeader.beacon.slot = 2;
+    lightClientFinalityUpdate.signatureSlot = lightClientFinalityUpdate.finalizedHeader.beacon.slot + 1;
 
     const chain = mockChain();
 
@@ -147,12 +147,12 @@ describe("Light Client Finality Update validation", function () {
     const chain = mockChain();
 
     // satisfy:
-    // No other finality_update with a lower or equal finalized_header.slot was already forwarded on the network
-    lightClientFinalityUpdate.finalizedHeader.slot = 2;
+    // No other finality_update with a lower or equal finalized_header.beacon.slot was already forwarded on the network
+    lightClientFinalityUpdate.finalizedHeader.beacon.slot = 2;
 
     chain.lightClientServer.getFinalityUpdate = () => {
       const defaultValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
-      defaultValue.finalizedHeader.slot = 1;
+      defaultValue.finalizedHeader.beacon.slot = 1;
       return defaultValue;
     };
 

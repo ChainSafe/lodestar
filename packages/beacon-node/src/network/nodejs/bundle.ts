@@ -1,10 +1,15 @@
-import {createLibp2p, Libp2p} from "libp2p";
-import {TCP} from "@libp2p/tcp";
-import {Mplex} from "@libp2p/mplex";
-import {Bootstrap} from "@libp2p/bootstrap";
-import {MulticastDNS} from "@libp2p/mdns";
+import {createLibp2p} from "libp2p";
+import {tcp} from "@libp2p/tcp";
+import {mplex} from "@libp2p/mplex";
+import {bootstrap} from "@libp2p/bootstrap";
+import {mdns} from "@libp2p/mdns";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Datastore} from "interface-datastore";
+import type {PeerDiscovery} from "@libp2p/interface-peer-discovery";
+import type {Components} from "libp2p/components";
+import {prometheusMetrics} from "@libp2p/prometheus-metrics";
+import {Registry} from "prom-client";
+import {Libp2p} from "../interface.js";
 import {createNoise} from "./noise.js";
 
 export interface ILibp2pOptions {
@@ -14,11 +19,12 @@ export interface ILibp2pOptions {
     announce?: string[];
   };
   datastore?: Datastore;
-  peerDiscovery?: (Bootstrap | MulticastDNS)[];
+  peerDiscovery?: ((components: Components) => PeerDiscovery)[];
   bootMultiaddrs?: string[];
   maxConnections?: number;
   minConnections?: number;
   metrics?: boolean;
+  metricsRegistry?: Registry;
   lodestarVersion?: string;
   mdns?: boolean;
 }
@@ -29,27 +35,38 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
     peerDiscovery.push(...options.peerDiscovery);
   } else {
     if ((options.bootMultiaddrs?.length ?? 0) > 0) {
-      peerDiscovery.push(new Bootstrap({interval: 2000, list: options.bootMultiaddrs ?? []}));
+      peerDiscovery.push(bootstrap({list: options.bootMultiaddrs ?? []}));
     }
     if (options.mdns) {
-      peerDiscovery.push(new MulticastDNS());
+      peerDiscovery.push(mdns());
     }
   }
-  return await createLibp2p({
+  return (await createLibp2p({
     peerId: options.peerId,
     addresses: {
       listen: options.addresses.listen,
       announce: options.addresses.announce || [],
     },
     connectionEncryption: [createNoise()],
-    transports: [new TCP()],
-    streamMuxers: [new Mplex({maxInboundStreams: 256})],
+    // Reject connections when the server's connection count gets high
+    transports: [
+      tcp({
+        maxConnections: options.maxConnections,
+        closeServerOnMaxConnections: {
+          closeAbove: options.maxConnections ?? Infinity,
+          listenBelow: options.maxConnections ?? Infinity,
+        },
+      }),
+    ],
+    streamMuxers: [mplex({maxInboundStreams: 256})],
     peerDiscovery,
-    metrics: {
-      // temporarily disable since there is a performance issue with it
-      // see https://github.com/ChainSafe/lodestar/issues/4698
-      enabled: false,
-    },
+    metrics: options.metrics
+      ? prometheusMetrics({
+          collectDefaultMetrics: false,
+          preserveExistingMetrics: true,
+          registry: options.metricsRegistry,
+        })
+      : undefined,
     connectionManager: {
       // dialer config
       maxParallelDials: 100,
@@ -96,5 +113,5 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
         agentVersion: options.lodestarVersion ? `lodestar/${options.lodestarVersion}` : "lodestar",
       },
     },
-  });
+  })) as Libp2p;
 }

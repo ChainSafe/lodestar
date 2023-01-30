@@ -8,7 +8,7 @@ const root = Uint8Array.from(Buffer.alloc(32, 1));
 
 const lightClientUpdate = ssz.altair.LightClientUpdate.defaultValue();
 const syncAggregate = ssz.altair.SyncAggregate.defaultValue();
-const header = ssz.phase0.BeaconBlockHeader.defaultValue();
+const header = ssz.altair.LightClientHeader.defaultValue();
 const signatureSlot = ssz.Slot.defaultValue();
 
 export const testData: GenericServerTestCases<Api> = {
@@ -29,7 +29,7 @@ export const testData: GenericServerTestCases<Api> = {
         attestedHeader: header,
         finalizedHeader: lightClientUpdate.finalizedHeader,
         finalityBranch: lightClientUpdate.finalityBranch,
-        signatureSlot: lightClientUpdate.attestedHeader.slot + 1,
+        signatureSlot: lightClientUpdate.attestedHeader.beacon.slot + 1,
       },
     },
   },

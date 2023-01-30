@@ -9,6 +9,7 @@ import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {allForks, Epoch, Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {ILogger, mapValues} from "@lodestar/utils";
+import {routes} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconNode} from "../../../src/index.js";
 import {ChainEvent, HeadEventData} from "../../../src/chain/index.js";
@@ -72,11 +73,11 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
     logParticipation(lastState);
   }
 
-  bn.chain.emitter.on(ChainEvent.head, onHead);
+  bn.chain.emitter.on(routes.events.EventType.head, onHead);
   bn.chain.emitter.on(ChainEvent.checkpoint, onCheckpoint);
 
   return function stop() {
-    bn.chain.emitter.off(ChainEvent.head, onHead);
+    bn.chain.emitter.off(routes.events.EventType.head, onHead);
     bn.chain.emitter.off(ChainEvent.checkpoint, onCheckpoint);
 
     // Write report

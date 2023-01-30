@@ -1,7 +1,7 @@
 import {phase0, Slot, ssz} from "@lodestar/types";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {extendError, sleep} from "@lodestar/utils";
-import {Api} from "@lodestar/api";
+import {sleep} from "@lodestar/utils";
+import {Api, ApiError} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {IClock, ILoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
@@ -102,11 +102,9 @@ export class AttestationService {
    */
   private async produceAttestation(committeeIndex: number, slot: Slot): Promise<phase0.AttestationData> {
     // Produce one attestation data per slot and committeeIndex
-    const attestationRes = await this.api.validator.produceAttestationData(committeeIndex, slot).catch((e: Error) => {
-      this.metrics?.attestaterError.inc({error: "produce"});
-      throw extendError(e, "Error producing attestation");
-    });
-    return attestationRes.data;
+    const res = await this.api.validator.produceAttestationData(committeeIndex, slot);
+    ApiError.assert(res, "Error producing attestation");
+    return res.response.data;
   }
 
   /**
@@ -155,7 +153,7 @@ export class AttestationService {
 
     // Step 2. Publish all `Attestations` in one go
     try {
-      await this.api.beacon.submitPoolAttestations(signedAttestations);
+      ApiError.assert(await this.api.beacon.submitPoolAttestations(signedAttestations));
       this.logger.info("Published attestations", {slot, count: signedAttestations.length});
       this.metrics?.publishedAttestations.inc(signedAttestations.length);
     } catch (e) {
@@ -187,11 +185,12 @@ export class AttestationService {
     }
 
     this.logger.verbose("Aggregating attestations", logCtx);
-    const aggregate = await this.api.validator
-      .getAggregatedAttestation(ssz.phase0.AttestationData.hashTreeRoot(attestation), attestation.slot)
-      .catch((e: Error) => {
-        throw extendError(e, "Error producing aggregateAndProofs");
-      });
+    const res = await this.api.validator.getAggregatedAttestation(
+      ssz.phase0.AttestationData.hashTreeRoot(attestation),
+      attestation.slot
+    );
+    ApiError.assert(res, "Error producing aggregateAndProofs");
+    const aggregate = res.response;
     this.metrics?.numParticipantsInAggregate.observe(aggregate.data.aggregationBits.getTrueBitIndexes().length);
 
     const signedAggregateAndProofs: phase0.SignedAggregateAndProof[] = [];
@@ -217,7 +216,8 @@ export class AttestationService {
 
     if (signedAggregateAndProofs.length > 0) {
       try {
-        await this.api.validator.publishAggregateAndProofs(signedAggregateAndProofs);
+        const res = await this.api.validator.publishAggregateAndProofs(signedAggregateAndProofs);
+        ApiError.assert(res);
         this.logger.info("Published aggregateAndProofs", {...logCtx, count: signedAggregateAndProofs.length});
         this.metrics?.publishedAggregates.inc(signedAggregateAndProofs.length);
       } catch (e) {

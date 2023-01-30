@@ -31,7 +31,7 @@ export class ChainHeaderTracker {
   ) {}
 
   start(signal: AbortSignal): void {
-    this.api.events.eventstream([EventType.head], signal, this.onHeadUpdate);
+    void this.api.events.eventstream([EventType.head], signal, this.onHeadUpdate);
     this.logger.verbose("Subscribed to head event");
   }
 

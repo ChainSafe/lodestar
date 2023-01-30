@@ -2,13 +2,13 @@ import {concat} from "uint8arrays";
 import {digest} from "@chainsafe/as-sha256";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
 import {JsonPath} from "@chainsafe/ssz";
-import {routes} from "@lodestar/api";
+import {routes, ServerApi} from "@lodestar/api";
 import {altair, RootHex, SyncPeriod} from "@lodestar/types";
 import {notNullish} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {BeaconStateAltair} from "../utils/types.js";
 
-export class ProofServerApiMock implements routes.proof.Api {
+export class ProofServerApiMock implements ServerApi<routes.proof.Api> {
   readonly states = new Map<RootHex, BeaconStateAltair>();
 
   async getStateProof(stateId: string, paths: JsonPath[]): Promise<{data: Proof}> {
@@ -23,7 +23,7 @@ type VersionedLightClientUpdate = {
   data: altair.LightClientUpdate;
 };
 
-export class LightclientServerApiMock implements routes.lightclient.Api {
+export class LightclientServerApiMock implements ServerApi<routes.lightclient.Api> {
   readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
   readonly snapshots = new Map<RootHex, altair.LightClientBootstrap>();
   latestHeadUpdate: altair.LightClientOptimisticUpdate | null = null;

@@ -27,7 +27,7 @@ services:
     network_mode: host
     volumes:
       - "grafana:/var/lib/grafana"
-      - "../dashboards:/dashboards"
+      - "grafana-dashboards:/dashboards"
     environment:
       # Linux:  http://localhost:9090
       # MacOSX: http://host.docker.internal:9090
@@ -36,3 +36,4 @@ services:
 volumes:
   prometheus:
   grafana:
+  grafana-dashboards:

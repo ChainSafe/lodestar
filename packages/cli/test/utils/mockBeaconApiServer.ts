@@ -1,6 +1,6 @@
 import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@lodestar/beacon-node";
 import {registerRoutes} from "@lodestar/api/beacon/server";
-import {Api, allNamespaces} from "@lodestar/api";
+import {Api as ClientApi, allNamespaces, ServerApi} from "@lodestar/api";
 import {IChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
@@ -8,6 +8,11 @@ import {fromHex, toHex} from "@lodestar/utils";
 import {testLogger} from "../../../beacon-node/test/utils/logger.js";
 
 const ZERO_HASH_HEX = toHex(Buffer.alloc(32, 0));
+
+type Api = {[K in keyof ClientApi]: ServerApi<ClientApi[K]>};
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
+};
 
 export type MockBeaconApiOpts = {
   genesisValidatorsRoot?: string;
@@ -23,7 +28,7 @@ class MockBeaconRestApiServer extends RestApiServer {
 }
 
 export function getMockBeaconApiServer(opts: RestApiServerOpts, apiOpts?: MockBeaconApiOpts): MockBeaconRestApiServer {
-  const api = ({
+  const api = {
     beacon: {
       // Return random genesis data, for genesisValidatorsRoot
       async getGenesis() {
@@ -38,14 +43,14 @@ export function getMockBeaconApiServer(opts: RestApiServerOpts, apiOpts?: MockBe
       async getStateValidators() {
         return {data: [], executionOptimistic: false};
       },
-    } as Partial<Api["beacon"]>,
+    },
 
     config: {
       // Return empty spec to skip config validation
       async getSpec() {
         return {data: {}};
       },
-    } as Partial<Api["config"]>,
+    },
 
     events: {
       eventstream() {
@@ -60,11 +65,11 @@ export function getMockBeaconApiServer(opts: RestApiServerOpts, apiOpts?: MockBe
       async prepareBeaconProposer() {
         // Do nothing
       },
-    } as Partial<Api["validator"]>,
-  } as Partial<Api>) as Api;
+    },
+  } as DeepPartial<Api>;
 
   const logger = testLogger("mock-beacon-api");
-  const restApiServer = new MockBeaconRestApiServer(opts, {logger, metrics: null}, config, api);
+  const restApiServer = new MockBeaconRestApiServer(opts, {logger, metrics: null}, config, api as Api);
 
   return restApiServer;
 }

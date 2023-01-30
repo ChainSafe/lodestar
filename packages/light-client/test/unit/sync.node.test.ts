@@ -2,11 +2,12 @@ import {expect} from "chai";
 import {init} from "@chainsafe/bls/switchable";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, BeaconStateAltair} from "@lodestar/state-transition";
-import {altair, phase0, ssz} from "@lodestar/types";
-import {routes, Api} from "@lodestar/api";
+import {altair, ssz} from "@lodestar/types";
+import {routes, Api, getClient, ServerApi, ApiError} from "@lodestar/api";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
-import {toHexString} from "@chainsafe/ssz";
+import {JsonPath, toHexString} from "@chainsafe/ssz";
+import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {Lightclient, LightclientEvent} from "../../src/index.js";
 import {LightclientServerApiMock, ProofServerApiMock} from "../mocks/LightclientServerApiMock.js";
 import {EventsServerApiMock} from "../mocks/EventsServerApiMock.js";
@@ -21,6 +22,8 @@ import {
 } from "../utils/utils.js";
 import {startServer, ServerOpts} from "../utils/server.js";
 import {isNode} from "../../src/utils/utils.js";
+import {computeSyncPeriodAtSlot} from "../../src/utils/clock.js";
+import {LightClientRestTransport} from "../../src/transport/rest.js";
 
 const SOME_HASH = Buffer.alloc(32, 0xff);
 
@@ -65,7 +68,7 @@ describe("sync", () => {
       lightclient: lightclientServerApi,
       events: eventsServerApi,
       proof: proofServerApi,
-    } as Partial<Api>) as Api);
+    } as Partial<{[K in keyof Api]: ServerApi<Api[K]>}>) as {[K in keyof Api]: ServerApi<Api[K]>});
 
     // Populate initial snapshot
     const {snapshot, checkpointRoot} = computeLightClientSnapshot(initialPeriod);
@@ -85,20 +88,27 @@ describe("sync", () => {
       targetSlot
     );
 
+    const api = getClient({baseUrl: `http://${opts.host}:${opts.port}`}, {config});
+
     // Initialize from snapshot
     const lightclient = await Lightclient.initializeFromCheckpointRoot({
       config,
       logger: testLogger,
-      beaconApiUrl: `http://${opts.host}:${opts.port}`,
+      transport: new LightClientRestTransport(api),
       genesisData: {genesisTime, genesisValidatorsRoot},
       checkpointRoot: checkpointRoot,
+      opts: {
+        // Trigger `LightclientEvent.finalized` events for the Promise below
+        allowForcedUpdates: true,
+        updateHeadersOnForcedUpdate: true,
+      },
     });
     afterEachCbs.push(() => lightclient.stop());
 
     // Sync periods to current
     await new Promise<void>((resolve) => {
-      lightclient.emitter.on(LightclientEvent.committee, (updatePeriod) => {
-        if (updatePeriod === targetPeriod) {
+      lightclient.emitter.on(LightclientEvent.lightClientFinalityUpdate, (header) => {
+        if (computeSyncPeriodAtSlot(header.beacon.slot) >= targetPeriod) {
           resolve();
         }
       });
@@ -107,7 +117,7 @@ describe("sync", () => {
 
     // Wait for lightclient to subscribe to header updates
     while (!eventsServerApi.hasSubscriptions()) {
-      await new Promise((r) => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 100));
     }
 
     // Test fetching a proof
@@ -119,8 +129,8 @@ describe("sync", () => {
     // Track head + reference states with some known data
     const syncCommittee = getInteropSyncCommittee(targetPeriod);
     await new Promise<void>((resolve) => {
-      lightclient.emitter.on(LightclientEvent.head, (header) => {
-        if (header.slot === targetSlot) {
+      lightclient.emitter.on(LightclientEvent.lightClientOptimisticUpdate, (header) => {
+        if (header.beacon.slot === targetSlot) {
           resolve();
         }
       });
@@ -136,34 +146,55 @@ describe("sync", () => {
         }
 
         // Emit a new head update with the custom state root
-        const header: phase0.BeaconBlockHeader = {
-          slot,
-          proposerIndex: 0,
-          parentRoot: SOME_HASH,
-          stateRoot: stateRoot,
-          bodyRoot: SOME_HASH,
+        const header: altair.LightClientHeader = {
+          beacon: {
+            slot,
+            proposerIndex: 0,
+            parentRoot: SOME_HASH,
+            stateRoot: stateRoot,
+            bodyRoot: SOME_HASH,
+          },
         };
 
         const headUpdate: altair.LightClientOptimisticUpdate = {
           attestedHeader: header,
           syncAggregate: syncCommittee.signHeader(config, header),
-          signatureSlot: header.slot + 1,
+          signatureSlot: header.beacon.slot + 1,
         };
 
         lightclientServerApi.latestHeadUpdate = headUpdate;
         eventsServerApi.emit({type: routes.events.EventType.lightClientOptimisticUpdate, message: headUpdate});
+        testLogger.debug("Emitted EventType.lightClientOptimisticUpdate", {slot});
       }
     });
 
     // Ensure that the lightclient head is correct
-    expect(lightclient.getHead().slot).to.equal(targetSlot, "lightclient.head is not the targetSlot head");
+    expect(lightclient.getHead().beacon.slot).to.equal(targetSlot, "lightclient.head is not the targetSlot head");
 
     // Fetch proof of "latestExecutionPayloadHeader.stateRoot"
-    const {proof, header} = await lightclient.getHeadStateProof([["latestExecutionPayloadHeader", "stateRoot"]]);
-    const recoveredState = ssz.bellatrix.BeaconState.createFromProof(proof, header.stateRoot);
+    const {proof, header} = await getHeadStateProof(lightclient, api, [["latestExecutionPayloadHeader", "stateRoot"]]);
+
+    const recoveredState = ssz.bellatrix.BeaconState.createFromProof(proof, header.beacon.stateRoot);
     expect(toHexString(recoveredState.latestExecutionPayloadHeader.stateRoot)).to.equal(
       toHexString(executionStateRoot),
       "Recovered executionStateRoot from getHeadStateProof() not correct"
     );
   });
 });
+
+// TODO: Re-incorporate for REST-only light-client
+async function getHeadStateProof(
+  lightclient: Lightclient,
+  api: Api,
+  paths: JsonPath[]
+): Promise<{proof: TreeOffsetProof; header: altair.LightClientHeader}> {
+  const header = lightclient.getHead();
+  const stateId = toHexString(header.beacon.stateRoot);
+  const res = await api.proof.getStateProof(stateId, paths);
+  ApiError.assert(res);
+
+  return {
+    proof: res.response.data as TreeOffsetProof,
+    header,
+  };
+}

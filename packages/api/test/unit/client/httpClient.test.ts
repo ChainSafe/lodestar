@@ -3,6 +3,7 @@ import {expect} from "chai";
 import fastify, {RouteOptions} from "fastify";
 import {ErrorAborted, TimeoutError} from "@lodestar/utils";
 import {HttpClient, HttpError} from "../../../src/utils/client/index.js";
+import {HttpStatusCode} from "../../../src/utils/client/httpStatusCode.js";
 
 interface IUser {
   id?: number;
@@ -47,8 +48,9 @@ describe("httpClient json client", () => {
       handler: async () => ({test: 1}),
     });
 
-    const resBody: IUser = await httpClient.json<IUser>({url, method: "GET"});
+    const {body: resBody, status} = await httpClient.json<IUser>({url, method: "GET"});
 
+    expect(status).to.equal(HttpStatusCode.OK);
     expect(resBody).to.deep.equal({test: 1}, "Wrong res body");
   });
 
@@ -70,8 +72,9 @@ describe("httpClient json client", () => {
       },
     });
 
-    const resBodyReceived: IUser = await httpClient.json<IUser>({url, method: "POST", query, body});
+    const {body: resBodyReceived, status} = await httpClient.json<IUser>({url, method: "POST", query, body});
 
+    expect(status).to.equal(HttpStatusCode.OK);
     expect(resBodyReceived).to.deep.equal(resBody, "Wrong resBody");
     expect(queryReceived).to.deep.equal(query, "Wrong query");
     expect(bodyReceived).to.deep.equal(body, "Wrong body");

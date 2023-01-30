@@ -12,7 +12,7 @@ import {
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, eip4844} from "@lodestar/types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, eip4844, Wei} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {ILogger, pruneSetToMax, toHex} from "@lodestar/utils";
@@ -31,7 +31,7 @@ import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {IBeaconClock, LocalClock} from "./clock/index.js";
-import {ChainEventEmitter, ChainEvent, HeadEventData} from "./emitter.js";
+import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -118,6 +118,9 @@ export class BeaconChain implements IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
+  // TODO EIP-4844: Prune data structure every time period, for both old entries
+  /** Map keyed by executionPayload.blockHash of the block for those blobs */
+  readonly producedBlobsSidecarCache = new Map<RootHex, eip4844.BlobsSidecar>();
   readonly opts: IChainOptions;
 
   protected readonly blockProcessor: BlockProcessor;
@@ -126,10 +129,6 @@ export class BeaconChain implements IBeaconChain {
   private abortController = new AbortController();
   private successfulExchangeTransition = false;
   private readonly exchangeTransitionConfigurationEverySlots: number;
-
-  // TODO EIP-4844: Prune data structure every time period, for both old entries
-  /** Map keyed by executionPayload.blockHash of the block for those blobs */
-  private readonly producedBlobsSidecarCache = new Map<RootHex, eip4844.BlobsSidecar>();
 
   private readonly faultInspectionWindow: number;
   private readonly allowedFaults: number;
@@ -285,7 +284,6 @@ export class BeaconChain implements IBeaconChain {
     emitter.addListener(ChainEvent.clockEpoch, this.onClockEpoch.bind(this));
     emitter.addListener(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
     emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
-    emitter.addListener(ChainEvent.head, this.onNewHead.bind(this));
   }
 
   async close(): Promise<void> {
@@ -330,7 +328,9 @@ export class BeaconChain implements IBeaconChain {
     const head = this.forkChoice.getHead();
     const headState =
       this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
-    if (!headState) throw Error("headState does not exist");
+    if (!headState) {
+      throw Error(`headState does not exist for head root=${head.blockRoot} slot=${head.slot}`);
+    }
     return headState;
   }
 
@@ -353,25 +353,27 @@ export class BeaconChain implements IBeaconChain {
     return await this.db.block.get(fromHexString(block.blockRoot));
   }
 
-  async produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock> {
+  produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; blockValue: Wei}> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  async produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock> {
+  produceBlindedBlock(
+    blockAttributes: BlockAttributes
+  ): Promise<{block: allForks.BlindedBeaconBlock; blockValue: Wei}> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
     {randaoReveal, graffiti, slot}: BlockAttributes
-  ): Promise<AssembledBlockType<T>> {
+  ): Promise<{block: AssembledBlockType<T>; blockValue: Wei}> {
     const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(head.blockRoot, slot, RegenCaller.produceBlock);
     const parentBlockRoot = fromHexString(head.blockRoot);
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
 
-    const {body, blobs} = await produceBlockBody.call(this, blockType, state, {
+    const {body, blobs, blockValue} = await produceBlockBody.call(this, blockType, state, {
       randaoReveal,
       graffiti,
       slot,
@@ -392,6 +394,9 @@ export class BeaconChain implements IBeaconChain {
     block.stateRoot = computeNewStateRoot(this.metrics, state, block);
 
     // Cache for latter broadcasting
+    //
+    // blinded blobs will be fetched and added to this cache later before finally
+    // publishing the blinded block's full version
     if (blobs.type === BlobsResultType.produced) {
       // TODO EIP-4844: Prune data structure for max entries
       this.producedBlobsSidecarCache.set(blobs.blockHash, {
@@ -407,7 +412,7 @@ export class BeaconChain implements IBeaconChain {
       );
     }
 
-    return block;
+    return {block, blockValue};
   }
 
   /**
@@ -616,6 +621,7 @@ export class BeaconChain implements IBeaconChain {
     this.metrics?.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
     this.metrics?.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
     this.metrics?.opPool.syncContributionAndProofPoolSize.set(this.syncContributionAndProofPool.size);
+    this.metrics?.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
   }
 
   private onClockSlot(slot: Slot): void {
@@ -673,24 +679,9 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  private onNewHead(head: HeadEventData): void {
-    const delaySec = this.clock.secFromSlot(head.slot);
-    this.logger.verbose("New chain head", {
-      headSlot: head.slot,
-      headRoot: head.block,
-      delaySec,
-    });
+  protected onNewHead(head: ProtoBlock): void {
     this.syncContributionAndProofPool.prune(head.slot);
     this.seenContributionAndProof.prune(head.slot);
-
-    if (this.metrics) {
-      this.metrics.headSlot.set(head.slot);
-      // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
-      // We want to track recent blocks coming from gossip, unknown block sync, and API.
-      if (delaySec < 64 * this.config.SECONDS_PER_SLOT) {
-        this.metrics.elapsedTimeTillBecomeHead.observe(delaySec);
-      }
-    }
   }
 
   private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithHex): void {
@@ -703,8 +694,9 @@ export class BeaconChain implements IBeaconChain {
 
     // TODO: Improve using regen here
     const headState = this.stateCache.get(this.forkChoice.getHead().stateRoot);
+    const finalizedState = this.checkpointStateCache.get(cp);
     if (headState) {
-      this.opPool.pruneAll(headState);
+      this.opPool.pruneAll(headState, finalizedState);
     }
   }
 

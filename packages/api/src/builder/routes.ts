@@ -1,6 +1,6 @@
 import {ssz, allForks, bellatrix, Slot, Root, BLSPubkey} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkExecution, isForkBlobs} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
 
 import {
@@ -16,18 +16,40 @@ import {
 } from "../utils/index.js";
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 import {getReqSerializers as getBeaconReqSerializers} from "../beacon/routes/beacon/block.js";
+import {HttpStatusCode} from "../utils/client/httpStatusCode.js";
+import {ApiClientResponse} from "../interfaces.js";
 
 export type Api = {
-  status(): Promise<void>;
-  registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void>;
+  status(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.SERVICE_UNAVAILABLE>>;
+  registerValidator(
+    registrations: bellatrix.SignedValidatorRegistrationV1[]
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
   getHeader(
     slot: Slot,
     parentHash: Root,
     proposerPubKey: BLSPubkey
-  ): Promise<{version: ForkName; data: bellatrix.SignedBuilderBid}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.SignedBuilderBid; version: ForkName}},
+      HttpStatusCode.NOT_FOUND | HttpStatusCode.BAD_REQUEST
+    >
+  >;
   submitBlindedBlock(
     signedBlock: allForks.SignedBlindedBeaconBlock
-  ): Promise<{version: ForkName; data: allForks.ExecutionPayload}>;
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.ExecutionPayload; version: ForkName}},
+      HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
+  submitBlindedBlockV2(
+    signedBlock: allForks.SignedBlindedBeaconBlock
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlockAndBlobsSidecar; version: ForkName}},
+      HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
 };
 
 /**
@@ -38,6 +60,7 @@ export const routesData: RoutesData<Api> = {
   registerValidator: {url: "/eth/v1/builder/validators", method: "POST"},
   getHeader: {url: "/eth/v1/builder/header/{slot}/{parent_hash}/{pubkey}", method: "GET"},
   submitBlindedBlock: {url: "/eth/v1/builder/blinded_blocks", method: "POST"},
+  submitBlindedBlockV2: {url: "/eth/v2/builder/blinded_blocks", method: "POST"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -46,6 +69,7 @@ export type ReqTypes = {
   registerValidator: {body: unknown};
   getHeader: {params: {slot: Slot; parent_hash: string; pubkey: string}};
   submitBlindedBlock: {body: unknown};
+  submitBlindedBlockV2: {body: unknown};
 };
 
 export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api, ReqTypes> {
@@ -62,13 +86,22 @@ export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api,
       },
     },
     submitBlindedBlock: getBeaconReqSerializers(config)["publishBlindedBlock"],
+    submitBlindedBlockV2: getBeaconReqSerializers(config)["publishBlindedBlock"],
   };
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
   return {
-    // TODO: Generalize to allForks
-    getHeader: WithVersion(() => ssz.bellatrix.SignedBuilderBid),
-    submitBlindedBlock: WithVersion(() => ssz.bellatrix.ExecutionPayload),
+    getHeader: WithVersion((fork: ForkName) =>
+      isForkExecution(fork) ? ssz.allForksExecution[fork].SignedBuilderBid : ssz.bellatrix.SignedBuilderBid
+    ),
+    submitBlindedBlock: WithVersion((fork: ForkName) =>
+      isForkExecution(fork) ? ssz.allForksExecution[fork].ExecutionPayload : ssz.bellatrix.ExecutionPayload
+    ),
+    submitBlindedBlockV2: WithVersion((fork: ForkName) =>
+      isForkBlobs(fork)
+        ? ssz.allForksBlobs[fork].SignedBeaconBlockAndBlobsSidecar
+        : ssz.eip4844.SignedBeaconBlockAndBlobsSidecar
+    ),
   };
 }
