@@ -30,7 +30,7 @@
       "import": "./lib/bellatrix/index.js"
     },
     "./eip4844": {
-      "import": "./lib/eip4844/index.js"
+      "import": "./lib/deneb/index.js"
     },
     "./phase0": {
       "import": "./lib/phase0/index.js"
