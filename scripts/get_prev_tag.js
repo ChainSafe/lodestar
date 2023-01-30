@@ -30,7 +30,9 @@ async function run() {
   const tags = stdout.trim().split("\n");
   for (const tag of tags) {
     if (tag !== CURRENT_TAG && !tag.includes(IGNORE_PATTERN)) {
-      console.log(`::set-output name=prev_tag::${tag}`);
+      const cmd = `echo "prev_tag=${tag}" >> ${process.env.GITHUB_OUTPUT}`;
+      console.log("Execute command on shell", cmd);
+      await promisify(exec)(cmd);
       return;
     }
   }

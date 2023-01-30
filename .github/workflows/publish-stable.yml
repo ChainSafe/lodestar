@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -55,10 +55,10 @@ jobs:
     if: needs.tag.outputs.is_stable == 'true'
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Needs full depth for changelog generation
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: 18
       - name: Node.js version
@@ -120,7 +120,7 @@ jobs:
     needs: [tag, npm]
     if: needs.tag.outputs.is_stable == 'true'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: scripts/await-release.sh ${{ needs.tag.outputs.tag }} latest 900
       # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU
