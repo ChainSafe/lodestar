@@ -14,7 +14,7 @@ env:
 jobs:
   tests-sim:
     name: Sim tests
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
