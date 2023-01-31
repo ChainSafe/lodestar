@@ -1,15 +1,9 @@
-import {ropstenChainConfig as chainConfig} from "@lodestar/config/networks";
-import {NetworkData} from "./index.js";
+export {ropstenChainConfig as chainConfig} from "@lodestar/config/networks";
 
-export function getNetworkData(): NetworkData {
-  return {
-    chainConfig,
-    depositContractDeployBlock: 12269949,
-    genesisFileUrl:
-      "https://raw.githubusercontent.com/eth-clients/merge-testnets/main/ropsten-beacon-chain/genesis.ssz",
-    bootnodesFileUrl:
-      "https://raw.githubusercontent.com/eth-clients/merge-testnets/main/ropsten-beacon-chain/bootstrap_nodes.txt",
+export const depositContractDeployBlock = 12269949;
+export const genesisFileUrl =
+  "https://raw.githubusercontent.com/eth-clients/merge-testnets/main/ropsten-beacon-chain/genesis.ssz";
+export const bootnodesFileUrl =
+  "https://raw.githubusercontent.com/eth-clients/merge-testnets/main/ropsten-beacon-chain/bootstrap_nodes.txt";
 
-    bootEnrs: [],
-  };
-}
+export const bootEnrs = [];

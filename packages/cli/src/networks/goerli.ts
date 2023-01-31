@@ -1,13 +1,9 @@
-import {goerliChainConfig as chainConfig} from "@lodestar/config/networks";
-import {NetworkData} from "./index.js";
+export {goerliChainConfig as chainConfig} from "@lodestar/config/networks";
 
-export function getNetworkData(): NetworkData {
-  return {
-    chainConfig,
-    depositContractDeployBlock: 4367322,
-    genesisFileUrl: "https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/prater/genesis.ssz",
-    bootnodesFileUrl:
-      "https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/prater/bootstrap_nodes.txt",
-    bootEnrs: [],
-  };
-}
+export const depositContractDeployBlock = 4367322;
+export const genesisFileUrl =
+  "https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/prater/genesis.ssz";
+export const bootnodesFileUrl =
+  "https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/prater/bootstrap_nodes.txt";
+
+export const bootEnrs = [];

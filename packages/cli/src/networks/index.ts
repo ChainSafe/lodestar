@@ -39,24 +39,31 @@ export type WeakSubjectivityFetchOptions = {
 // log to screen every 30s when downloading state from a lodestar node
 const GET_STATE_LOG_INTERVAL = 30 * 1000;
 
-export type NetworkData = {
+export function getNetworkData(
+  network: NetworkName
+): {
   chainConfig: IChainConfig;
   depositContractDeployBlock: number;
   genesisFileUrl: string | null;
   bootnodesFileUrl: string | null;
   bootEnrs: string[];
-};
-
-export function getNetworkData(network: NetworkName): NetworkData {
-  const networks = {mainnet, dev, gnosis, goerli, ropsten, sepolia};
-
-  const data = networks[network]?.getNetworkData();
-
-  if (data == null) {
-    throw Error(`Network not supported: ${network}`);
+} {
+  switch (network) {
+    case "mainnet":
+      return mainnet;
+    case "dev":
+      return dev;
+    case "gnosis":
+      return gnosis;
+    case "goerli":
+      return goerli;
+    case "ropsten":
+      return ropsten;
+    case "sepolia":
+      return sepolia;
+    default:
+      throw Error(`Network not supported: ${network}`);
   }
-
-  return data;
 }
 
 export function getNetworkBeaconParams(network: NetworkName): IChainConfig {
