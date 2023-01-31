@@ -33,6 +33,7 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
   constructor(opts: ILevelDBOptions, {metrics}: LevelDbControllerModules) {
     this.opts = opts;
     this.metrics = metrics ?? null;
+    if (metrics) this.addDbSizeMetricCollector(metrics);
     this.db = opts.db || new Level(opts.name || "beaconchain", {keyEncoding: "binary", valueEncoding: "binary"});
   }
 
@@ -56,6 +57,7 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
       throw Error("metrics can only be set once");
     } else {
       this.metrics = metrics;
+      this.addDbSizeMetricCollector(metrics);
     }
   }
 
@@ -174,6 +176,17 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
     }
 
     this.metrics?.dbWriteItems.inc({bucket}, itemsRead);
+  }
+
+  /** Add collect function to capture metric for db size */
+  private addDbSizeMetricCollector(metrics: ILevelDbControllerMetrics): void {
+    const minKey = Buffer.from([0x00]);
+    const maxKey = Buffer.from([0xff]);
+
+    metrics.dbSizeTotal.addCollect(async () => {
+      const dbSize = await this.approximateSize(minKey, maxKey);
+      metrics.dbSizeTotal.set(dbSize);
+    });
   }
 }
 
