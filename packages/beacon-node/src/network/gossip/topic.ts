@@ -76,7 +76,7 @@ export function getGossipSSZType(topic: GossipTopic) {
       // beacon_block is updated in altair to support the updated SignedBeaconBlock type
       return ssz[topic.fork].SignedBeaconBlock;
     case GossipType.beacon_block_and_blobs_sidecar:
-      return ssz.eip4844.SignedBeaconBlockAndBlobsSidecar;
+      return ssz.deneb.SignedBeaconBlockAndBlobsSidecar;
     case GossipType.beacon_aggregate_and_proof:
       return ssz.phase0.SignedAggregateAndProof;
     case GossipType.beacon_attestation:
@@ -170,8 +170,8 @@ export function getCoreTopicsAtFork(
     {type: GossipType.attester_slashing},
   ];
 
-  // After EIP4844 only track beacon_block_and_blobs_sidecar topic
-  if (ForkSeq[fork] < ForkSeq.eip4844) {
+  // After Deneb only track beacon_block_and_blobs_sidecar topic
+  if (ForkSeq[fork] < ForkSeq.deneb) {
     topics.push({type: GossipType.beacon_block});
   } else {
     topics.push({type: GossipType.beacon_block_and_blobs_sidecar});

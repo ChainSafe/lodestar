@@ -1,4 +1,4 @@
-import {ssz, allForks, capella, eip4844} from "@lodestar/types";
+import {ssz, allForks, capella, deneb} from "@lodestar/types";
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
 import {ForkSeq} from "@lodestar/params";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
@@ -89,14 +89,14 @@ export function processExecutionPayload(
     );
   }
 
-  if (fork >= ForkSeq.eip4844) {
+  if (fork >= ForkSeq.deneb) {
     // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
-    (bellatrixPayloadFields as eip4844.ExecutionPayloadHeader).excessDataGas = (payload as
-      | eip4844.ExecutionPayloadHeader
-      | eip4844.ExecutionPayload).excessDataGas;
+    (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).excessDataGas = (payload as
+      | deneb.ExecutionPayloadHeader
+      | deneb.ExecutionPayload).excessDataGas;
   }
 
-  // TODO EIP-4844: Types are not happy by default. Since it's a generic allForks type going through ViewDU
+  // TODO Deneb: Types are not happy by default. Since it's a generic allForks type going through ViewDU
   // transformation then into allForks, probably some weird intersection incompatibility happens
   state.latestExecutionPayloadHeader = state.config
     .getExecutionForkTypes(state.slot)

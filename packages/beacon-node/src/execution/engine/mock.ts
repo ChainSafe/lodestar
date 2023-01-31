@@ -4,7 +4,7 @@ import {
   OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET,
   OPAQUE_TX_MESSAGE_OFFSET,
 } from "@lodestar/state-transition";
-import {bellatrix, eip4844, RootHex, ssz} from "@lodestar/types";
+import {bellatrix, deneb, RootHex, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {
   BYTES_PER_FIELD_ELEMENT,
@@ -37,7 +37,7 @@ export type ExecutionEngineMockOpts = {
   genesisBlockHash: string;
   onlyPredefinedResponses?: boolean;
   capellaForkTimestamp?: number;
-  eip4844ForkTimestamp?: number;
+  denebForkTimestamp?: number;
 };
 
 type ExecutionBlock = {
@@ -292,13 +292,13 @@ export class ExecutionEngineMockBackend implements IJsonRpcBackend {
         executionPayload.transactions.push(tx);
       }
 
-      const kzgs: eip4844.KZGCommitment[] = [];
-      const blobs: eip4844.Blob[] = [];
+      const kzgs: deneb.KZGCommitment[] = [];
+      const blobs: deneb.Blob[] = [];
 
-      // if post eip4844, add between 0 and 2 blob transactions
-      if (ForkSeq[fork] >= ForkSeq.eip4844) {
-        const eip4844TxCount = Math.round(2 * Math.random());
-        for (let i = 0; i < eip4844TxCount; i++) {
+      // if post deneb, add between 0 and 2 blob transactions
+      if (ForkSeq[fork] >= ForkSeq.deneb) {
+        const denebTxCount = Math.round(2 * Math.random());
+        for (let i = 0; i < denebTxCount; i++) {
           const blob = generateRandomBlob();
           const kzg = ckzg.blobToKzgCommitment(blob);
           executionPayload.transactions.push(transactionForKzgCommitment(kzg));
@@ -391,13 +391,13 @@ export class ExecutionEngineMockBackend implements IJsonRpcBackend {
   }
 
   private timestampToFork(timestamp: number): ForkExecution {
-    if (timestamp > (this.opts.eip4844ForkTimestamp ?? Infinity)) return ForkName.eip4844;
+    if (timestamp > (this.opts.denebForkTimestamp ?? Infinity)) return ForkName.deneb;
     if (timestamp > (this.opts.capellaForkTimestamp ?? Infinity)) return ForkName.capella;
     return ForkName.bellatrix;
   }
 }
 
-function transactionForKzgCommitment(kzgCommitment: eip4844.KZGCommitment): bellatrix.Transaction {
+function transactionForKzgCommitment(kzgCommitment: deneb.KZGCommitment): bellatrix.Transaction {
   // Some random value that after the offset's position
   const blobVersionedHashesOffset = OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET + 64;
 
@@ -423,7 +423,7 @@ function transactionForKzgCommitment(kzgCommitment: eip4844.KZGCommitment): bell
 /**
  * Generate random blob of sequential integers such that each element is < BLS_MODULUS
  */
-function generateRandomBlob(): eip4844.Blob {
+function generateRandomBlob(): deneb.Blob {
   const blob = new Uint8Array(FIELD_ELEMENTS_PER_BLOB * BYTES_PER_FIELD_ELEMENT);
   const dv = new DataView(blob.buffer, blob.byteOffset, blob.byteLength);
   for (let i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++) {

@@ -6,7 +6,7 @@ import {ILogger, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SignableENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
-import {altair, eip4844, Epoch, phase0} from "@lodestar/types";
+import {altair, deneb, Epoch, phase0} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
@@ -217,16 +217,16 @@ export class Network implements INetwork {
 
   publishBeaconBlockMaybeBlobs(blockInput: BlockInput): Promise<void> {
     switch (blockInput.type) {
-      case BlockInputType.preEIP4844:
+      case BlockInputType.preDeneb:
         return this.gossip.publishBeaconBlock(blockInput.block);
 
-      case BlockInputType.postEIP4844:
+      case BlockInputType.postDeneb:
         return this.gossip.publishSignedBeaconBlockAndBlobsSidecar({
-          beaconBlock: blockInput.block as eip4844.SignedBeaconBlock,
+          beaconBlock: blockInput.block as deneb.SignedBeaconBlock,
           blobsSidecar: blockInput.blobs,
         });
 
-      case BlockInputType.postEIP4844OldBlobs:
+      case BlockInputType.postDenebOldBlobs:
         throw Error(`Attempting to broadcast old BlockInput slot ${blockInput.block.message.slot}`);
     }
   }
@@ -239,22 +239,22 @@ export class Network implements INetwork {
   }
 
   async beaconBlocksMaybeBlobsByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<BlockInput[]> {
-    // Assume all requests are post EIP-4844
-    if (this.config.getForkSeq(this.chain.forkChoice.getFinalizedBlock().slot) >= ForkSeq.eip4844) {
+    // Assume all requests are post Deneb
+    if (this.config.getForkSeq(this.chain.forkChoice.getFinalizedBlock().slot) >= ForkSeq.deneb) {
       const blocksAndBlobs = await this.reqResp.beaconBlockAndBlobsSidecarByRoot(peerId, request);
       return blocksAndBlobs.map(({beaconBlock, blobsSidecar}) =>
-        getBlockInput.postEIP4844(this.config, beaconBlock, blobsSidecar)
+        getBlockInput.postDeneb(this.config, beaconBlock, blobsSidecar)
       );
     }
 
-    // Assume all request are pre EIP-4844
-    else if (this.config.getForkSeq(this.clock.currentSlot) < ForkSeq.eip4844) {
+    // Assume all request are pre Deneb
+    else if (this.config.getForkSeq(this.clock.currentSlot) < ForkSeq.deneb) {
       const blocks = await this.reqResp.beaconBlocksByRoot(peerId, request);
-      return blocks.map((block) => getBlockInput.preEIP4844(this.config, block));
+      return blocks.map((block) => getBlockInput.preDeneb(this.config, block));
     }
 
-    // NOTE: Consider blocks may be post or pre EIP-4844
-    // TODO EIP-4844: Request either blocks, or blocks+blobs
+    // NOTE: Consider blocks may be post or pre Deneb
+    // TODO Deneb: Request either blocks, or blocks+blobs
     else {
       const results = await Promise.all(
         request.map(
@@ -266,7 +266,7 @@ export class Network implements INetwork {
 
             if (resultBlockBlobs.status === "fulfilled" && resultBlockBlobs.value.length === 1) {
               const {beaconBlock, blobsSidecar} = resultBlockBlobs.value[0];
-              return getBlockInput.postEIP4844(this.config, beaconBlock, blobsSidecar);
+              return getBlockInput.postDeneb(this.config, beaconBlock, blobsSidecar);
             }
 
             if (resultBlocks.status === "rejected") {
@@ -280,20 +280,20 @@ export class Network implements INetwork {
 
             const block = resultBlocks.value[0];
 
-            if (this.config.getForkSeq(block.message.slot) >= ForkSeq.eip4844) {
+            if (this.config.getForkSeq(block.message.slot) >= ForkSeq.deneb) {
               // beaconBlockAndBlobsSidecarByRoot should have succeeded
               if (resultBlockBlobs.status === "rejected") {
                 // Recycle existing error for beaconBlockAndBlobsSidecarByRoot if any
                 return Promise.reject(resultBlockBlobs.reason);
               } else {
                 throw Error(
-                  `Received post EIP-4844 ${beaconBlockRoot} over beaconBlocksByRoot not beaconBlockAndBlobsSidecarByRoot`
+                  `Received post Deneb ${beaconBlockRoot} over beaconBlocksByRoot not beaconBlockAndBlobsSidecarByRoot`
                 );
               }
             }
 
-            // Block is pre EIP-4844
-            return getBlockInput.preEIP4844(this.config, block);
+            // Block is pre Deneb
+            return getBlockInput.preDeneb(this.config, block);
           }
         )
       );
@@ -468,8 +468,8 @@ export class Network implements INetwork {
       {type: GossipType.attester_slashing},
     ];
 
-    // After EIP4844 only track beacon_block_and_blobs_sidecar topic
-    if (ForkSeq[fork] < ForkSeq.eip4844) {
+    // After Deneb only track beacon_block_and_blobs_sidecar topic
+    if (ForkSeq[fork] < ForkSeq.deneb) {
       topics.push({type: GossipType.beacon_block});
     } else {
       topics.push({type: GossipType.beacon_block_and_blobs_sidecar});

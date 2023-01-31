@@ -217,7 +217,7 @@ export function initializeBeaconStateFromEth1(
   executionPayloadHeader?: CompositeViewDU<
     | typeof ssz.bellatrix.ExecutionPayloadHeader
     | typeof ssz.capella.ExecutionPayloadHeader
-    | typeof ssz.eip4844.ExecutionPayloadHeader
+    | typeof ssz.deneb.ExecutionPayloadHeader
   >
 ): CachedBeaconStateAllForks {
   const stateView = getGenesisBeaconState(
@@ -280,12 +280,12 @@ export function initializeBeaconStateFromEth1(
   }
 
   if (GENESIS_SLOT >= config.EIP4844_FORK_EPOCH) {
-    const stateEip4844 = state as CompositeViewDU<typeof ssz.eip4844.BeaconState>;
-    stateEip4844.fork.previousVersion = config.EIP4844_FORK_VERSION;
-    stateEip4844.fork.currentVersion = config.EIP4844_FORK_VERSION;
-    stateEip4844.latestExecutionPayloadHeader =
-      (executionPayloadHeader as CompositeViewDU<typeof ssz.eip4844.ExecutionPayloadHeader>) ??
-      ssz.eip4844.ExecutionPayloadHeader.defaultViewDU();
+    const stateDeneb = state as CompositeViewDU<typeof ssz.deneb.BeaconState>;
+    stateDeneb.fork.previousVersion = config.EIP4844_FORK_VERSION;
+    stateDeneb.fork.currentVersion = config.EIP4844_FORK_VERSION;
+    stateDeneb.latestExecutionPayloadHeader =
+      (executionPayloadHeader as CompositeViewDU<typeof ssz.deneb.ExecutionPayloadHeader>) ??
+      ssz.deneb.ExecutionPayloadHeader.defaultViewDU();
   }
 
   state.commit();

@@ -1,6 +1,6 @@
 import {IChainForkConfig} from "@lodestar/config";
 import {Db, Repository, IKeyValue, IFilterOptions, Bucket} from "@lodestar/db";
-import {Slot, Root, ssz, eip4844} from "@lodestar/types";
+import {Slot, Root, ssz, deneb} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 
 export interface IBlockFilterOptions extends IFilterOptions<Slot> {
@@ -16,14 +16,14 @@ export type BlockArchiveBatchPutBinaryItem = IKeyValue<Slot, Uint8Array> & {
 /**
  * Stores finalized blocks. Block slot is identifier.
  */
-export class BlobsSidecarArchiveRepository extends Repository<Slot, eip4844.BlobsSidecar> {
+export class BlobsSidecarArchiveRepository extends Repository<Slot, deneb.BlobsSidecar> {
   constructor(config: IChainForkConfig, db: Db) {
-    super(config, db, Bucket.allForks_blobsSidecarArchive, ssz.eip4844.BlobsSidecar);
+    super(config, db, Bucket.allForks_blobsSidecarArchive, ssz.deneb.BlobsSidecar);
   }
 
   // Handle key as slot
 
-  getId(value: eip4844.BlobsSidecar): Slot {
+  getId(value: deneb.BlobsSidecar): Slot {
     return value.beaconBlockSlot;
   }
 

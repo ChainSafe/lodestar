@@ -1,6 +1,6 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS} from "@lodestar/params";
 import {ContextBytesType, EncodedPayloadBytes, EncodedPayloadType, ResponseError, RespStatus} from "@lodestar/reqresp";
-import {eip4844, phase0} from "@lodestar/types";
+import {deneb, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -19,7 +19,7 @@ export function onBeaconBlocksByRange(
 }
 
 export async function* onBlocksOrBlobsSidecarsByRange(
-  request: eip4844.BlobsSidecarsByRangeRequest,
+  request: deneb.BlobsSidecarsByRangeRequest,
   chain: IBeaconChain,
   db: {
     finalized: Pick<IBeaconDb["blockArchive"], "binaryEntriesStream" | "decodeKey">;
@@ -37,7 +37,7 @@ export async function* onBlocksOrBlobsSidecarsByRange(
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
 
   // Finalized range of blobs
-  // TODO EIP-4844: Should the finalized block be included here or below?
+  // TODO DENEB: Should the finalized block be included here or below?
 
   if (startSlot <= finalizedSlot) {
     // Chain of blobs won't change
@@ -57,7 +57,7 @@ export async function* onBlocksOrBlobsSidecarsByRange(
 
   if (endSlot > finalizedSlot) {
     const headRoot = chain.forkChoice.getHeadRoot();
-    // TODO EIP-4844: forkChoice should mantain an array of canonical blocks, and change only on reorg
+    // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
 
     // Iterate head chain with ascending block numbers
@@ -96,8 +96,8 @@ export async function* onBlocksOrBlobsSidecarsByRange(
 }
 
 export function validateBeaconBlocksByRangeRequest(
-  request: eip4844.BlobsSidecarsByRangeRequest
-): eip4844.BlobsSidecarsByRangeRequest {
+  request: deneb.BlobsSidecarsByRangeRequest
+): deneb.BlobsSidecarsByRangeRequest {
   const {startSlot} = request;
   let {count} = request;
 

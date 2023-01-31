@@ -132,7 +132,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async notifyNewPayload(fork: ForkName, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
     const method =
-      ForkSeq[fork] >= ForkSeq.eip4844
+      ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_newPayloadV3"
         : ForkSeq[fork] >= ForkSeq.capella
         ? "engine_newPayloadV2"
@@ -289,7 +289,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     payloadId: PayloadId
   ): Promise<{executionPayload: allForks.ExecutionPayload; blockValue: Wei}> {
     const method =
-      ForkSeq[fork] >= ForkSeq.eip4844
+      ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_getPayloadV3"
         : ForkSeq[fork] >= ForkSeq.capella
         ? "engine_getPayloadV2"

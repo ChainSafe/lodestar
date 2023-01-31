@@ -2,7 +2,7 @@ import {routes, ServerApi} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
-import {eip4844, allForks} from "@lodestar/types";
+import {deneb, allForks} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {getBlockInput} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
@@ -183,7 +183,7 @@ export function getBeaconBlockApi({
       const executionBuilder = chain.executionBuilder;
       if (!executionBuilder) throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
       let signedBlock: allForks.SignedBeaconBlock;
-      if (config.getForkSeq(signedBlindedBlock.message.slot) >= ForkSeq.eip4844) {
+      if (config.getForkSeq(signedBlindedBlock.message.slot) >= ForkSeq.deneb) {
         const {beaconBlock, blobsSidecar} = await executionBuilder.submitBlindedBlockV2(signedBlindedBlock);
         signedBlock = beaconBlock;
         // add this blobs to the map for access & broadcasting in publishBlock
@@ -215,15 +215,15 @@ export function getBeaconBlockApi({
 
       metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
 
-      // TODO EIP-4844: Open question if broadcast to both block topic + block_and_blobs topic
+      // TODO Deneb: Open question if broadcast to both block topic + block_and_blobs topic
       const blockForImport =
-        config.getForkSeq(signedBlock.message.slot) >= ForkSeq.eip4844
-          ? getBlockInput.postEIP4844(
+        config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb
+          ? getBlockInput.postDeneb(
               config,
               signedBlock,
-              chain.getBlobsSidecar(signedBlock.message as eip4844.BeaconBlock)
+              chain.getBlobsSidecar(signedBlock.message as deneb.BeaconBlock)
             )
-          : getBlockInput.preEIP4844(config, signedBlock);
+          : getBlockInput.preDeneb(config, signedBlock);
 
       await promiseAllMaybeAsync([
         // Send the block, regardless of whether or not it is valid. The API
@@ -252,7 +252,7 @@ export function getBeaconBlockApi({
           blobsSidecar = {
             beaconBlockRoot: blockRoot,
             beaconBlockSlot: block.message.slot,
-            blobs: [] as eip4844.Blobs,
+            blobs: [] as deneb.Blobs,
             kzgAggregatedProof: ckzg.computeAggregateKzgProof([]),
           };
         }
