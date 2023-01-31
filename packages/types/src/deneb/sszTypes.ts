@@ -84,7 +84,7 @@ export const BeaconBlockAndBlobsSidecarByRootRequest = new ListCompositeType(Roo
 export const ExecutionPayload = new ContainerType(
   {
     ...bellatrixSsz.CommonExecutionPayloadType.fields,
-    excessDataGas: UintBn256, // New in EIP-4844
+    excessDataGas: UintBn256, // New in DENEB
     // Extra payload fields
     blockHash: Root,
     transactions: bellatrixSsz.Transactions,
@@ -96,7 +96,7 @@ export const ExecutionPayload = new ContainerType(
 export const ExecutionPayloadHeader = new ContainerType(
   {
     ...bellatrixSsz.CommonExecutionPayloadType.fields,
-    excessDataGas: UintBn256, // New in EIP-4844
+    excessDataGas: UintBn256, // New in DENEB
     blockHash: Root,
     transactionsRoot: Root,
     withdrawalsRoot: Root,
@@ -108,9 +108,9 @@ export const ExecutionPayloadHeader = new ContainerType(
 export const BeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,
-    executionPayload: ExecutionPayload, // Modified in EIP-4844
+    executionPayload: ExecutionPayload, // Modified in DENEB
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
-    blobKzgCommitments: BlobKzgCommitments, // New in EIP-4844
+    blobKzgCommitments: BlobKzgCommitments, // New in DENEB
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -118,14 +118,14 @@ export const BeaconBlockBody = new ContainerType(
 export const BeaconBlock = new ContainerType(
   {
     ...capellaSsz.BeaconBlock.fields,
-    body: BeaconBlockBody, // Modified in EIP-4844
+    body: BeaconBlockBody, // Modified in DENEB
   },
   {typeName: "BeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const SignedBeaconBlock = new ContainerType(
   {
-    message: BeaconBlock, // Modified in EIP-4844
+    message: BeaconBlock, // Modified in DENEB
     signature: BLSSignature,
   },
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
@@ -152,8 +152,8 @@ export const SignedBeaconBlockAndBlobsSidecar = new ContainerType(
 export const BlindedBeaconBlockBody = new ContainerType(
   {
     ...BeaconBlockBody.fields,
-    executionPayloadHeader: ExecutionPayloadHeader, // Modified in EIP-4844
-    blobKzgCommitments: BlobKzgCommitments, // New in EIP-4844
+    executionPayloadHeader: ExecutionPayloadHeader, // Modified in DENEB
+    blobKzgCommitments: BlobKzgCommitments, // New in DENEB
   },
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -161,14 +161,14 @@ export const BlindedBeaconBlockBody = new ContainerType(
 export const BlindedBeaconBlock = new ContainerType(
   {
     ...capellaSsz.BlindedBeaconBlock.fields,
-    body: BlindedBeaconBlockBody, // Modified in EIP-4844
+    body: BlindedBeaconBlockBody, // Modified in DENEB
   },
   {typeName: "BlindedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const SignedBlindedBeaconBlock = new ContainerType(
   {
-    message: BlindedBeaconBlock, // Modified in EIP-4844
+    message: BlindedBeaconBlock, // Modified in DENEB
     signature: BLSSignature,
   },
   {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
@@ -230,7 +230,7 @@ export const BeaconState = new ContainerType(
     currentSyncCommittee: altairSsz.SyncCommittee,
     nextSyncCommittee: altairSsz.SyncCommittee,
     // Execution
-    latestExecutionPayloadHeader: ExecutionPayloadHeader, // Modified in EIP-4844
+    latestExecutionPayloadHeader: ExecutionPayloadHeader, // Modified in DENEB
     // Withdrawals
     nextWithdrawalIndex: capellaSsz.BeaconState.fields.nextWithdrawalIndex,
     nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,

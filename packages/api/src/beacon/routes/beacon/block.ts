@@ -1,7 +1,7 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
-import {phase0, allForks, Slot, Root, ssz, RootHex, eip4844} from "@lodestar/types";
+import {phase0, allForks, Slot, Root, ssz, RootHex, deneb} from "@lodestar/types";
 
 import {
   RoutesData,
@@ -196,7 +196,7 @@ export type Api = {
     blockId: BlockId
   ): Promise<
     ApiClientResponse<{
-      [HttpStatusCode.OK]: {executionOptimistic: ExecutionOptimistic; data: eip4844.BlobsSidecar};
+      [HttpStatusCode.OK]: {executionOptimistic: ExecutionOptimistic; data: deneb.BlobsSidecar};
     }>
   >;
 };
@@ -294,6 +294,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getBlockHeader: ContainerDataExecutionOptimistic(BeaconHeaderResType),
     getBlockHeaders: ContainerDataExecutionOptimistic(ArrayOf(BeaconHeaderResType)),
     getBlockRoot: ContainerDataExecutionOptimistic(RootContainer),
-    getBlobsSidecar: ContainerDataExecutionOptimistic(ssz.eip4844.BlobsSidecar),
+    getBlobsSidecar: ContainerDataExecutionOptimistic(ssz.deneb.BlobsSidecar),
   };
 }

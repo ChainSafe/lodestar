@@ -48,8 +48,8 @@ jobs:
         run: yarn test:sim:endpoints
         working-directory: packages/cli
 
-      - name: Sim tests eip4844
-        run: yarn test:sim:eip4844
+      - name: Sim tests deneb
+        run: yarn test:sim:deneb
         working-directory: packages/cli
 
       - name: Sim tests backup eth provider

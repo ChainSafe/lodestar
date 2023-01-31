@@ -66,7 +66,7 @@ export async function importBlock(
     root: blockRootHex,
   });
 
-  if (blockInput.type === BlockInputType.postEIP4844) {
+  if (blockInput.type === BlockInputType.postDeneb) {
     const {blobs} = blockInput;
     // NOTE: Old blobs are pruned on archive
     await this.db.blobsSidecar.add(blobs);

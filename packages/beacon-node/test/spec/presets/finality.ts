@@ -23,7 +23,7 @@ export const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fo
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
 
         state = stateTransition(state, signedBlock, {
-          // TODO EIP-4844: Should assume valid and available for this test?
+          // TODO DENEB: Should assume valid and available for this test?
           executionPayloadStatus: ExecutionPayloadStatus.valid,
           dataAvailableStatus: DataAvailableStatus.available,
           verifyStateRoot: false,

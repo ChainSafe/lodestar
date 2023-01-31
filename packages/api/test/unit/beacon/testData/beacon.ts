@@ -58,7 +58,7 @@ export const testData: GenericServerTestCases<Api> = {
   },
   getBlobsSidecar: {
     args: ["head"],
-    res: {executionOptimistic: true, data: ssz.eip4844.BlobsSidecar.defaultValue()},
+    res: {executionOptimistic: true, data: ssz.deneb.BlobsSidecar.defaultValue()},
   },
 
   // pool

@@ -5,7 +5,7 @@ export type BeaconStatePhase0 = CompositeViewDU<typeof ssz.phase0.BeaconState>;
 export type BeaconStateAltair = CompositeViewDU<typeof ssz.altair.BeaconState>;
 export type BeaconStateBellatrix = CompositeViewDU<typeof ssz.bellatrix.BeaconState>;
 export type BeaconStateCapella = CompositeViewDU<typeof ssz.capella.BeaconState>;
-export type BeaconStateEip4844 = CompositeViewDU<typeof ssz.eip4844.BeaconState>;
+export type BeaconStateDeneb = CompositeViewDU<typeof ssz.deneb.BeaconState>;
 
 // Union at the TreeViewDU level
 // - Works well as function argument and as generic type for allForks functions
@@ -17,6 +17,6 @@ export type BeaconStateAllForks =
   | BeaconStateAltair
   | BeaconStateBellatrix
   | BeaconStateCapella
-  | BeaconStateEip4844;
+  | BeaconStateDeneb;
 
-export type BeaconStateExecutions = BeaconStateBellatrix | BeaconStateCapella | BeaconStateEip4844;
+export type BeaconStateExecutions = BeaconStateBellatrix | BeaconStateCapella | BeaconStateDeneb;

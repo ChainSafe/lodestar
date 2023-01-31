@@ -37,7 +37,7 @@ export type IChainConfig = {
   // Capella
   CAPELLA_FORK_VERSION: Uint8Array;
   CAPELLA_FORK_EPOCH: number;
-  // EIP-4844
+  // DENEB
   EIP4844_FORK_VERSION: Uint8Array;
   EIP4844_FORK_EPOCH: number;
 
@@ -63,7 +63,7 @@ export type IChainConfig = {
   DEPOSIT_NETWORK_ID: number;
   DEPOSIT_CONTRACT_ADDRESS: Uint8Array;
 
-  // EIP-4844
+  // DENEB
   // https://github.com/ethereum/consensus-specs/blob/11a037fd9227e29ee809c9397b09f8cc3383a8c0/specs/eip4844/p2p-interface.md#configuration
   MAX_REQUEST_BLOBS_SIDECARS: number;
   /** The minimum epoch range over which a node must serve blobs sidecars */
@@ -95,7 +95,7 @@ export const chainConfigTypes: SpecTypes<IChainConfig> = {
   // Capella
   CAPELLA_FORK_VERSION: "bytes",
   CAPELLA_FORK_EPOCH: "number",
-  // EIP-4844
+  // DENEB
   EIP4844_FORK_VERSION: "bytes",
   EIP4844_FORK_EPOCH: "number",
 

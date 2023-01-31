@@ -8,13 +8,13 @@ function getForkConfig({
   altair,
   bellatrix,
   capella,
-  eip4844,
+  deneb,
 }: {
   phase0: number;
   altair: number;
   bellatrix: number;
   capella: number;
-  eip4844: number;
+  deneb: number;
 }): IBeaconConfig {
   const forks: Record<ForkName, IForkInfo> = {
     phase0: {
@@ -49,10 +49,10 @@ function getForkConfig({
       prevVersion: Buffer.from([0, 0, 0, 2]),
       prevForkName: ForkName.bellatrix,
     },
-    eip4844: {
-      name: ForkName.eip4844,
-      seq: ForkSeq.eip4844,
-      epoch: eip4844,
+    deneb: {
+      name: ForkName.deneb,
+      seq: ForkSeq.deneb,
+      epoch: deneb,
       version: Buffer.from([0, 0, 0, 4]),
       prevVersion: Buffer.from([0, 0, 0, 3]),
       prevForkName: ForkName.capella,
@@ -132,11 +132,11 @@ const testScenarios = [
 
 for (const testScenario of testScenarios) {
   const {phase0, altair, bellatrix, capella, testCases} = testScenario;
-  // TODO EIP-4844: Is it necessary to test?
-  const eip4844 = Infinity;
+  // TODO DENEB: Is it necessary to test?
+  const deneb = Infinity;
 
   describe(`network / fork: phase0: ${phase0}, altair: ${altair}, bellatrix: ${bellatrix} capella: ${capella}`, () => {
-    const forkConfig = getForkConfig({phase0, altair, bellatrix, capella, eip4844});
+    const forkConfig = getForkConfig({phase0, altair, bellatrix, capella, deneb});
     const forks = forkConfig.forks;
     for (const testCase of testCases) {
       const {epoch, currentFork, nextFork, activeForks} = testCase;

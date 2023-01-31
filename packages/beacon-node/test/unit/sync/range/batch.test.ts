@@ -12,7 +12,7 @@ describe("sync / range / batch", async () => {
   // Common mock data
   const startEpoch = 0;
   const peer = await createSecp256k1PeerId();
-  const blocksDownloaded = [getBlockInput.preEIP4844(config, ssz.phase0.SignedBeaconBlock.defaultValue())];
+  const blocksDownloaded = [getBlockInput.preDeneb(config, ssz.phase0.SignedBeaconBlock.defaultValue())];
 
   it("Should return correct blockByRangeRequest", () => {
     const batch = new Batch(startEpoch, config);

@@ -140,9 +140,9 @@ export class BeaconNode {
     setMaxListeners(Infinity, controller.signal);
     const signal = controller.signal;
 
-    // TODO EIP-4844, where is the best place to do this?
+    // TODO DENEB, where is the best place to do this?
     if (config.EIP4844_FORK_EPOCH < Infinity) {
-      // TODO EIP-4844: "c-kzg" is not installed by default, so if the library is not installed this will throw
+      // TODO DENEB: "c-kzg" is not installed by default, so if the library is not installed this will throw
       // See "Not able to build lodestar from source" https://github.com/ChainSafe/lodestar/issues/4886
       await initCKZG();
       loadEthereumTrustedSetup();
