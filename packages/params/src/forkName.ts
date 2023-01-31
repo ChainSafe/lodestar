@@ -6,8 +6,7 @@ export enum ForkName {
   altair = "altair",
   bellatrix = "bellatrix",
   capella = "capella",
-  // Since the spec paths still refer as eip4844
-  deneb = "eip4844",
+  deneb = "deneb",
 }
 
 /**

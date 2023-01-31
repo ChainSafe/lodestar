@@ -29,7 +29,7 @@
     "./bellatrix": {
       "import": "./lib/bellatrix/index.js"
     },
-    "./eip4844": {
+    "./deneb": {
       "import": "./lib/deneb/index.js"
     },
     "./phase0": {
