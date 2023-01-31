@@ -1,8 +1,8 @@
 import worker from "worker_threads";
+import {parentPort} from "worker_threads";
 import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {multiaddr} from "@multiformats/multiaddr";
 import {expose} from "@chainsafe/threads/worker";
-import {Observable, Subject} from "@chainsafe/threads/observable";
 import {createKeypairFromPeerId, Discv5, ENR} from "@chainsafe/discv5";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
@@ -42,9 +42,7 @@ for (const bootEnr of workerData.bootEnrs) {
 }
 
 /** Used to push discovered ENRs */
-const subject = new Subject<Uint8Array>();
-
-const onDiscovered = (enr: ENR): void => subject.next(enr.encode());
+const onDiscovered = (enr: ENR): void => parentPort?.postMessage({type: "discv5-enr", data: enr.encode()});
 discv5.addListener("discovered", onDiscovered);
 
 // Discv5 will now begin accepting request/responses
@@ -63,15 +61,11 @@ const module: Discv5WorkerApi = {
   async findRandomNodeBuf(): Promise<Uint8Array[]> {
     return (await discv5.findRandomNode()).map((enr) => enr.encode());
   },
-  discoveredBuf() {
-    return Observable.from(subject);
-  },
   async metrics(): Promise<string> {
     return (await metricsRegistry?.metrics()) ?? "";
   },
   async close() {
     discv5.removeListener("discovered", onDiscovered);
-    subject.complete();
     await discv5.stop();
   },
 };

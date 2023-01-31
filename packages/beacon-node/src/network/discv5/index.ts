@@ -6,7 +6,7 @@ import {createKeypairFromPeerId, ENR, IDiscv5DiscoveryInputOptions} from "@chain
 import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {ILogger} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/metrics.js";
-import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
+import {Discv5EventData, Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 
 export type Discv5Opts = {
   peerId: PeerId;
@@ -19,9 +19,7 @@ export interface IDiscv5Events {
   discovered: (enr: ENR) => void;
 }
 
-type Discv5WorkerStatus =
-  | {status: "stopped"}
-  | {status: "started"; workerApi: Discv5WorkerApi; subscription: {unsubscribe(): void}};
+type Discv5WorkerStatus = {status: "stopped"} | {status: "started"; workerApi: Discv5WorkerApi; worker: Worker};
 
 /**
  * Wrapper class abstracting the details of discv5 worker instantiation and message-passing
@@ -57,22 +55,29 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       timeout: 5 * 60 * 1000,
     });
 
-    const subscription = workerApi.discoveredBuf().subscribe((enrStr) => this.onDiscoveredStr(enrStr));
+    worker.addEventListener("message", this.onMessage);
 
-    this.status = {status: "started", workerApi, subscription};
+    this.status = {status: "started", workerApi, worker};
   }
 
   async stop(): Promise<void> {
     if (this.status.status === "stopped") return;
 
-    this.status.subscription.unsubscribe();
+    this.status.worker.removeEventListener("message", this.onMessage);
     await this.status.workerApi.close();
     await Thread.terminate((this.status.workerApi as unknown) as Thread);
 
     this.status = {status: "stopped"};
   }
 
-  onDiscoveredStr(enrBuf: Uint8Array): void {
+  onMessage = (msg: Event): void => {
+    const messageData = ((msg as unknown) as {data?: unknown})?.data as Discv5EventData | undefined;
+    if (messageData && messageData.type === "discv5-enr") {
+      this.onDiscovered(messageData.data);
+    }
+  };
+
+  onDiscovered(enrBuf: Uint8Array): void {
     const enr = this.decodeEnr(enrBuf);
     if (enr) {
       this.emit("discovered", enr);

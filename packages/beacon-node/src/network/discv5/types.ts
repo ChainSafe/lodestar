@@ -1,5 +1,4 @@
 import {Discv5} from "@chainsafe/discv5";
-import {Observable} from "@chainsafe/threads/observable";
 
 // TODO export IDiscv5Config so we don't need this convoluted type
 type Discv5Config = Parameters<typeof Discv5["create"]>[0]["config"];
@@ -12,6 +11,11 @@ export interface Discv5WorkerData {
   config: Discv5Config;
   bootEnrs: string[];
   metrics: boolean;
+}
+
+export interface Discv5EventData {
+  type: "discv5-enr";
+  data: Uint8Array;
 }
 
 /**
@@ -29,8 +33,6 @@ export type Discv5WorkerApi = {
   kadValuesBuf(): Promise<Uint8Array[]>;
   /** Begin a random search through the DHT, return discovered ENRs */
   findRandomNodeBuf(): Promise<Uint8Array[]>;
-  /** Stream of discovered ENRs */
-  discoveredBuf(): Observable<Uint8Array>;
 
   /** Prometheus metrics string */
   metrics(): Promise<string>;
