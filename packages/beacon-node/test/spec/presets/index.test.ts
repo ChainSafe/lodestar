@@ -28,14 +28,7 @@ import {transition} from "./transition.js";
 //    "eip4844/operations/bls_to_execution_change",
 // ],
 // ```
-const skipOpts: SkipOpts = {
-  skippedPrefixes: [
-    // Skipped since this only test that withdrawals are de-activated.
-    // Enable once spec test v1.3.0 are released and withdrawals are active on eip488
-    "eip4844/operations/bls_to_execution_change",
-    "eip4844/operations/withdrawals",
-  ],
-};
+const skipOpts: SkipOpts = {};
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
