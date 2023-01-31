@@ -1,7 +1,7 @@
 import {Gauge, GaugeConfiguration} from "prom-client";
 import {IGauge} from "../interface.js";
 
-type CollectFn<T extends string> = (metric: IGauge<T>) => void;
+type CollectFn<T extends string> = (metric: IGauge<T>) => void | Promise<void>;
 type Labels<T extends string> = Partial<Record<T, string | number>>;
 
 /**
@@ -27,10 +27,8 @@ export class GaugeExtra<T extends string> extends Gauge<T> implements IGauge {
   /**
    * @override Metric.collect
    */
-  collect(): void {
-    for (const collectFn of this.collectFns) {
-      collectFn(this);
-    }
+  async collect(): Promise<void> {
+    await Promise.all(this.collectFns.map((collectFn) => collectFn(this)));
   }
 }
 

@@ -1,7 +1,7 @@
 import {Gauge, Histogram} from "prom-client";
 
 export type IGauge<T extends string = string> = Pick<Gauge<T>, "inc" | "dec" | "set"> & {
-  addCollect: (collectFn: () => void) => void;
+  addCollect: (collectFn: () => void | Promise<void>) => void;
 };
 
 export type IHistogram<T extends string = string> = Pick<Histogram<T>, "observe" | "startTimer">;
