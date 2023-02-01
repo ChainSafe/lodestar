@@ -7,6 +7,11 @@ Thanks for your contribution to Lodestar. It's people like you that push the Eth
 - :gear: [NodeJS](https://nodejs.org/) (LTS)
 - :toolbox: [Yarn](https://yarnpkg.com/)/[Lerna](https://lerna.js.org/)
 
+ ### For windows
+ `npm install --g lerna`
+ 
+ `yarn global add lerna`
+
 ## Getting Started
 
 - :gear: Run `lerna bootstrap` or `yarn install` to install dependencies.
