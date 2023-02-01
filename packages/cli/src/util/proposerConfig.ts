@@ -2,7 +2,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import {ValidatorProposerConfig} from "@lodestar/validator";
+import {ValidatorProposerConfig, BuilderSelection} from "@lodestar/validator";
 import {parseFeeRecipient} from "./feeRecipient.js";
 
 import {readFile} from "./file.js";
@@ -18,6 +18,7 @@ type ProposerConfigFileSection = {
     // for js-yaml
     enabled?: string;
     gas_limit?: number;
+    selection?: BuilderSelection;
   };
 };
 
@@ -55,7 +56,7 @@ function parseProposerConfigSection(
   overrideConfig?: ProposerConfig
 ): ProposerConfig {
   const {graffiti, strict_fee_recipient_check, fee_recipient, builder} = proposerFileSection;
-  const {enabled, gas_limit} = builder || {};
+  const {enabled, gas_limit, selection: builderSelection} = builder || {};
 
   if (graffiti !== undefined && typeof graffiti !== "string") {
     throw Error("graffiti is not 'string");
@@ -90,6 +91,7 @@ function parseProposerConfigSection(
     builder: {
       enabled: overrideConfig?.builder?.enabled ?? (enabled ? stringtoBool(enabled) : undefined),
       gasLimit: overrideConfig?.builder?.gasLimit ?? (gas_limit !== undefined ? Number(gas_limit) : undefined),
+      selection: overrideConfig?.builder?.selection ?? builderSelection,
     },
   };
 }
