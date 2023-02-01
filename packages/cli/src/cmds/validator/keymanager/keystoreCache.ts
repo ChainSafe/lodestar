@@ -83,6 +83,7 @@ export async function writeKeystoreCache(
 
 export async function clearKeystoreCache(cacheFilepath: string): Promise<void> {
   if (fs.existsSync(cacheFilepath)) {
+    unlockFilepath(cacheFilepath);
     fs.unlinkSync(cacheFilepath);
   }
 }
