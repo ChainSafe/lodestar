@@ -477,10 +477,10 @@
     node-fetch "^2.6.1"
     node-gyp "^8.4.0"
 
-"@chainsafe/discv5@^2.1.1":
-  version "2.1.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-2.1.1.tgz#272526058e98c17515dfc209ed03efe2a83387cd"
-  integrity sha512-jKLpMAhx4/jXmUzrKIzMa9jDdXf5DFhnOwhw7ouRln9STzb5MbBDUKI98gqSglF1XdnJQZ4OBspGb9N9+4AnTg==
+"@chainsafe/discv5@^3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-3.0.0.tgz#ee9c7d1631c95382ee381831c2c87c5cf1dd75c2"
+  integrity sha512-NqRjJ9tfD8bbxCo6oI2y+Ih1fBlHmIs8l19f5ca5lY61nfISLKMUO+uCvJ6mguqcSzz0zxSsp5dmzhJ0E+J+HA==
   dependencies:
     "@libp2p/crypto" "^1.0.0"
     "@libp2p/interface-peer-discovery" "^1.0.1"

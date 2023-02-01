@@ -97,7 +97,7 @@ export const specConstants = {
   // ## Capella domain types
   DOMAIN_BLS_TO_EXECUTION_CHANGE,
 
-  // EIP4844 types
+  // Deneb types
   BLOB_TX_TYPE,
   VERSIONED_HASH_VERSION_KZG,
 };

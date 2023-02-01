@@ -106,7 +106,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       return chain;
     },
     fn: async (chain) => {
-      const blocksImport = blocks.value.map((block) => getBlockInput.preEIP4844(chain.config, block));
+      const blocksImport = blocks.value.map((block) => getBlockInput.preDeneb(chain.config, block));
 
       await chain.processChainSegment(blocksImport, {
         // Only skip importing attestations for finalized sync. For head sync attestation are valuable.

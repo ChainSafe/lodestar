@@ -18,11 +18,11 @@ env:
 jobs:
   sim-merge-tests:
     name: Sim merge tests
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
           node-version: 18
       - name: Node.js version
@@ -89,7 +89,7 @@ jobs:
           name: debug-test-logs
           path: packages/beacon-node/test-logs
 
-      # - name: Pull geth withdrawals 
+      # - name: Pull geth withdrawals
       #   run: docker pull $GETH_WITHDRAWALS_IMAGE
 
       # - name: Test Lodestar <> geth withdrawals
@@ -99,7 +99,7 @@ jobs:
       #     EL_BINARY_DIR: ${{ env.GETH_WITHDRAWALS_IMAGE }}
       #     EL_SCRIPT_DIR: gethdocker
 
-      # - name: Pull ethereumjs withdrawals 
+      # - name: Pull ethereumjs withdrawals
       #   run: docker pull $ETHEREUMJS_WITHDRAWALS_IMAGE
 
       # - name: Test Lodestar <> ethereumjs withdrawals
@@ -128,4 +128,3 @@ jobs:
         with:
           name: debug-test-logs
           path: packages/beacon-node/test-logs
-

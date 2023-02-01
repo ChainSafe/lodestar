@@ -101,7 +101,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     submitBlindedBlockV2: WithVersion((fork: ForkName) =>
       isForkBlobs(fork)
         ? ssz.allForksBlobs[fork].SignedBeaconBlockAndBlobsSidecar
-        : ssz.eip4844.SignedBeaconBlockAndBlobsSidecar
+        : ssz.deneb.SignedBeaconBlockAndBlobsSidecar
     ),
   };
 }

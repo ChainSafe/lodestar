@@ -17,7 +17,7 @@ export async function validateGossipVoluntaryExit(
 
   // What state should the voluntaryExit validate against?
   //
-  // The only condtion that is time sensitive and may require a non-head state is
+  // The only condition that is time sensitive and may require a non-head state is
   // -> Validator is active && validator has not initiated exit
   // The voluntaryExit.epoch must be in the past but the validator's status may change in recent epochs.
   // We dial the head state to the current epoch to get the current status of the validator. This is
