@@ -1,5 +1,4 @@
 import {routes, ServerApi} from "@lodestar/api";
-import {createKeypairFromPeerId} from "@chainsafe/discv5";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {IApiOptions} from "../../options.js";
@@ -12,7 +11,6 @@ export function getNodeApi(
   return {
     async getNetworkIdentity() {
       const enr = await network.getEnr();
-      const keypair = createKeypairFromPeerId(network.peerId);
       const discoveryAddresses = [
         enr?.getLocationMultiaddr("tcp")?.toString() ?? null,
         enr?.getLocationMultiaddr("udp")?.toString() ?? null,
@@ -21,7 +19,7 @@ export function getNodeApi(
       return {
         data: {
           peerId: network.peerId.toString(),
-          enr: enr?.encodeTxt(keypair.privateKey) || "",
+          enr: enr?.encodeTxt() || "",
           discoveryAddresses,
           p2pAddresses: network.localMultiaddrs.map((m) => m.toString()),
           metadata: network.metadata,
