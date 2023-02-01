@@ -22,6 +22,10 @@ describe("monitoring / service", () => {
     logger = createStubbedLogger();
   });
 
+  after(() => {
+    sandbox.restore();
+  });
+
   describe("MonitoringService - constructor", () => {
     it("should return an instance of the monitoring service", () => {
       const service = new MonitoringService("beacon", {endpoint}, {register, logger});
