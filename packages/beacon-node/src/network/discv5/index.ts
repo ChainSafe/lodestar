@@ -65,7 +65,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       timeout: 5 * 60 * 1000,
     });
 
-    const subscription = workerApi.discovered().subscribe((enrStr) => this.onDiscovered(enrStr));
+    const subscription = workerApi.discovered().subscribe((enrObj) => this.onDiscovered(enrObj));
 
     this.status = {status: "started", workerApi, subscription};
   }
