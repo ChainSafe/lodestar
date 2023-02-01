@@ -72,8 +72,8 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
 
   onMessage = (msg: Event): void => {
     const messageData = ((msg as unknown) as {data?: unknown})?.data as Discv5EventData | undefined;
-    if (messageData && messageData.type === "discv5-enr") {
-      this.onDiscovered(messageData.data);
+    if (messageData && messageData.type === "discv5-enr-result") {
+      this.onDiscovered(messageData.payload);
     }
   };
 

@@ -14,8 +14,9 @@ export interface Discv5WorkerData {
 }
 
 export interface Discv5EventData {
-  type: "discv5-enr";
-  data: Uint8Array;
+  // threads library has different type, we define a specific type for Discv5
+  type: "discv5-enr-result";
+  payload: Uint8Array;
 }
 
 /**

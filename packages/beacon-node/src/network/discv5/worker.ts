@@ -6,7 +6,7 @@ import {expose} from "@chainsafe/threads/worker";
 import {createKeypairFromPeerId, Discv5, ENR} from "@chainsafe/discv5";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
-import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
+import {Discv5EventData, Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 
 // This discv5 worker will start discv5 on initialization (there is no `start` function to call)
 // A consumer _should_ call `close` before terminating the worker to cleanly exit discv5 before destroying the thread
@@ -41,8 +41,17 @@ for (const bootEnr of workerData.bootEnrs) {
   discv5.addEnr(bootEnr);
 }
 
-/** Used to push discovered ENRs */
-const onDiscovered = (enr: ENR): void => parentPort?.postMessage({type: "discv5-enr", data: enr.encode()});
+/**
+ * Observable has performance issue so we use postMessage to push discovered ENRs.
+ * See https://github.com/ChainSafe/lodestar/issues/5084
+ **/
+const onDiscovered = (enr: ENR): void => {
+  const message: Discv5EventData = {
+    type: "discv5-enr-result",
+    payload: enr.encode(),
+  };
+  parentPort?.postMessage(message);
+};
 discv5.addListener("discovered", onDiscovered);
 
 // Discv5 will now begin accepting request/responses
