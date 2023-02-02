@@ -112,13 +112,13 @@ const checkpointSync = env.createNodePair({
   keysCount: 0,
 });
 
-await rangeSync.el.job.start();
-await rangeSync.cl.job.start();
-await connectNewNode(rangeSync, env.nodes);
-
 await checkpointSync.el.job.start();
 await checkpointSync.cl.job.start();
 await connectNewNode(checkpointSync, env.nodes);
+
+await rangeSync.el.job.start();
+await rangeSync.cl.job.start();
+await connectNewNode(rangeSync, env.nodes);
 
 await Promise.all([
   await waitForNodeSync(env, rangeSync, {
