@@ -55,7 +55,8 @@ export function specTestIterator(
       continue;
     }
 
-    const fork = ForkName[forkStr as ForkName];
+    // TODO eip4844: restore the following line as soon as spec tests reflect new name
+    const fork = ForkName[(forkStr === "eip4844" ? "deneb" : forkStr) as ForkName];
 
     const forkDirpath = path.join(configDirpath, forkStr);
     for (const testRunnerName of readdirSyncSpec(forkDirpath)) {

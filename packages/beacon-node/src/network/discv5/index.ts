@@ -2,7 +2,14 @@ import EventEmitter from "events";
 import {PeerId} from "@libp2p/interface-peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
-import {createKeypairFromPeerId, ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
+import {
+  createKeypairFromPeerId,
+  ENR,
+  ENRData,
+  IDiscv5DiscoveryInputOptions,
+  IKeypair,
+  SignableENR,
+} from "@chainsafe/discv5";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {ILogger} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/metrics.js";
@@ -29,20 +36,21 @@ type Discv5WorkerStatus =
 export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, IDiscv5Events>}) {
   private logger: ILogger;
   private status: Discv5WorkerStatus;
+  private keypair: IKeypair;
 
   constructor(private opts: Discv5Opts) {
     super();
 
     this.logger = opts.logger;
     this.status = {status: "stopped"};
+    this.keypair = createKeypairFromPeerId(this.opts.peerId);
   }
 
   async start(): Promise<void> {
     if (this.status.status === "started") return;
 
-    const keypair = createKeypairFromPeerId(this.opts.peerId);
     const workerData: Discv5WorkerData = {
-      enrStr: (this.opts.discv5.enr as ENR).encodeTxt(keypair.privateKey),
+      enr: (this.opts.discv5.enr as SignableENR).toObject(),
       peerIdProto: exportToProtobuf(this.opts.peerId),
       bindAddr: this.opts.discv5.bindAddr,
       config: this.opts.discv5,
@@ -57,7 +65,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       timeout: 5 * 60 * 1000,
     });
 
-    const subscription = workerApi.discoveredBuf().subscribe((enrStr) => this.onDiscoveredStr(enrStr));
+    const subscription = workerApi.discovered().subscribe((enrObj) => this.onDiscovered(enrObj));
 
     this.status = {status: "started", workerApi, subscription};
   }
@@ -72,16 +80,17 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
     this.status = {status: "stopped"};
   }
 
-  onDiscoveredStr(enrBuf: Uint8Array): void {
-    const enr = this.decodeEnr(enrBuf);
+  onDiscovered(obj: ENRData): void {
+    const enr = this.decodeEnr(obj);
     if (enr) {
       this.emit("discovered", enr);
     }
   }
 
-  async enr(): Promise<ENR> {
+  async enr(): Promise<SignableENR> {
     if (this.status.status === "started") {
-      return ENR.decode(Buffer.from(await this.status.workerApi.enrBuf()));
+      const obj = await this.status.workerApi.enr();
+      return new SignableENR(obj.kvs, obj.seq, this.keypair);
     } else {
       throw new Error("Cannot get enr before module is started");
     }
@@ -97,7 +106,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
 
   async kadValues(): Promise<ENR[]> {
     if (this.status.status === "started") {
-      return this.decodeEnrs(await this.status.workerApi.kadValuesBuf());
+      return this.decodeEnrs(await this.status.workerApi.kadValues());
     } else {
       return [];
     }
@@ -105,7 +114,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
 
   async findRandomNode(): Promise<ENR[]> {
     if (this.status.status === "started") {
-      return this.decodeEnrs(await this.status.workerApi.findRandomNodeBuf());
+      return this.decodeEnrs(await this.status.workerApi.findRandomNode());
     } else {
       return [];
     }
@@ -119,10 +128,10 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
     }
   }
 
-  private decodeEnrs(enrBufs: Uint8Array[]): ENR[] {
+  private decodeEnrs(objs: ENRData[]): ENR[] {
     const enrs: ENR[] = [];
-    for (const enrBuf of enrBufs) {
-      const enr = this.decodeEnr(enrBuf);
+    for (const obj of objs) {
+      const enr = this.decodeEnr(obj);
       if (enr) {
         enrs.push(enr);
       }
@@ -130,18 +139,8 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
     return enrs;
   }
 
-  private decodeEnr(enrBuf: Uint8Array): ENR | null {
-    try {
-      this.opts.metrics?.discv5.decodeEnrAttemptCount.inc(1);
-      return ENR.decode(Buffer.from(enrBuf));
-    } catch (e) {
-      this.opts.metrics?.discv5.decodeEnrErrorCount.inc(1);
-      // Log to recover ENR from logs and debug why it is invalid
-      this.logger.debug("ENR decode error", {
-        enr: Buffer.from(enrBuf).toString("base64url"),
-        error: (e as Error).message,
-      });
-      return null;
-    }
+  private decodeEnr(obj: ENRData): ENR | null {
+    this.opts.metrics?.discv5.decodeEnrAttemptCount.inc(1);
+    return new ENR(obj.kvs, obj.seq, obj.signature);
   }
 }

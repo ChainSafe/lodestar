@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {KZGCommitment, Blob} from "@lodestar/types/eip4844";
+import {KZGCommitment, Blob} from "@lodestar/types/deneb";
 import {RootHex, allForks, capella, Wei} from "@lodestar/types";
 
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";

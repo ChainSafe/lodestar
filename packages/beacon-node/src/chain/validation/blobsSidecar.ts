@@ -1,6 +1,6 @@
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
-import {eip4844, Root, ssz} from "@lodestar/types";
+import {deneb, Root, ssz} from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
 import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
 import {verifyKzgCommitmentsAgainstTransactions} from "@lodestar/state-transition";
@@ -12,8 +12,8 @@ import {ckzg} from "../../util/kzg.js";
 const BLS_MODULUS = BigInt("52435875175126190479447740508185965837690552500527637822603658699938581184513");
 
 export function validateGossipBlobsSidecar(
-  signedBlock: eip4844.SignedBeaconBlock,
-  blobsSidecar: eip4844.BlobsSidecar
+  signedBlock: deneb.SignedBeaconBlock,
+  blobsSidecar: deneb.BlobsSidecar
 ): void {
   const block = signedBlock.message;
 
@@ -72,8 +72,8 @@ export function validateGossipBlobsSidecar(
 export function validateBlobsSidecar(
   slot: number,
   beaconBlockRoot: Root,
-  expectedKzgCommitments: eip4844.KZGCommitment[],
-  blobsSidecar: eip4844.BlobsSidecar
+  expectedKzgCommitments: deneb.KZGCommitment[],
+  blobsSidecar: deneb.BlobsSidecar
 ): void {
   // assert slot == blobs_sidecar.beacon_block_slot
   if (slot != blobsSidecar.beaconBlockSlot) {
@@ -106,12 +106,12 @@ export function validateBlobsSidecar(
     try {
       isProofValid = ckzg.verifyAggregateKzgProof(blobs, expectedKzgCommitments, kzgAggregatedProof);
     } catch (e) {
-      // TODO EIP-4844: TEMP Nov17: May always throw error -- we need to fix Geth's KZG to match C-KZG and the trusted setup used here
+      // TODO DENEB: TEMP Nov17: May always throw error -- we need to fix Geth's KZG to match C-KZG and the trusted setup used here
       (e as Error).message = `Error on verifyAggregateKzgProof: ${(e as Error).message}`;
       throw e;
     }
 
-    // TODO EIP-4844: TEMP Nov17: May always throw error -- we need to fix Geth's KZG to match C-KZG and the trusted setup used here
+    // TODO DENEB: TEMP Nov17: May always throw error -- we need to fix Geth's KZG to match C-KZG and the trusted setup used here
     if (!isProofValid) {
       throw Error("Invalid AggregateKzgProof");
     }
@@ -137,7 +137,7 @@ function blsKeyValidate(g1Point: Uint8Array): boolean {
  * ```
  * Check that each FIELD_ELEMENT as a uint256 < BLS_MODULUS
  */
-function blobIsValidRange(blob: eip4844.Blob): boolean {
+function blobIsValidRange(blob: deneb.Blob): boolean {
   for (let i = 0; i < FIELD_ELEMENTS_PER_BLOB; i++) {
     const fieldElement = blob.subarray(i * BYTES_PER_FIELD_ELEMENT, (i + 1) * BYTES_PER_FIELD_ELEMENT);
     const fieldElementBN = bytesToBigInt(fieldElement, "be");

@@ -1,4 +1,4 @@
-import {allForks, bellatrix, Slot, Root, BLSPubkey, ssz, eip4844, Wei} from "@lodestar/types";
+import {allForks, bellatrix, Slot, Root, BLSPubkey, ssz, deneb, Wei} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
@@ -61,12 +61,12 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   ): Promise<{
     header: allForks.ExecutionPayloadHeader;
     blockValue: Wei;
-    blobKzgCommitments?: eip4844.BlobKzgCommitments;
+    blobKzgCommitments?: deneb.BlobKzgCommitments;
   }> {
     const res = await this.api.getHeader(slot, parentHash, proposerPubKey);
     ApiError.assert(res, "execution.builder.getheader");
     const {header, value: blockValue} = res.response.data.message;
-    const {blobKzgCommitments} = res.response.data.message as {blobKzgCommitments?: eip4844.BlobKzgCommitments};
+    const {blobKzgCommitments} = res.response.data.message as {blobKzgCommitments?: deneb.BlobKzgCommitments};
     return {header, blockValue, blobKzgCommitments};
   }
 
@@ -124,7 +124,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
       throw Error(`blobsSidecar incorrect blockHash expected=${blockHash}, actual=${blobsBlockHash}`);
     }
     // Sanity-check that the KZG commitments match the versioned hashes in the transactions
-    const {blobKzgCommitments: kzgs} = beaconBlock.message.body as eip4844.BeaconBlockBody;
+    const {blobKzgCommitments: kzgs} = beaconBlock.message.body as deneb.BeaconBlockBody;
     if (kzgs === undefined) {
       throw Error("Missing blobKzgCommitments on beaconBlock's body");
     }

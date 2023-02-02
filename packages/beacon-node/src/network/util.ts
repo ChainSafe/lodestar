@@ -6,7 +6,7 @@ import type {ConnectionManager} from "@libp2p/interface-connection-manager";
 import type {Components} from "libp2p/components.js";
 import type {DefaultDialer} from "libp2p/connection-manager/dialer/index.js";
 import {peerIdFromString} from "@libp2p/peer-id";
-import type {ENR} from "@chainsafe/discv5";
+import type {SignableENR} from "@chainsafe/discv5";
 import type {Libp2p} from "./interface.js";
 
 // peers
@@ -53,7 +53,7 @@ export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
   return false;
 }
 
-export function clearMultiaddrUDP(enr: ENR): void {
+export function clearMultiaddrUDP(enr: SignableENR): void {
   // enr.multiaddrUDP = undefined in new version
   enr.delete("ip");
   enr.delete("udp");

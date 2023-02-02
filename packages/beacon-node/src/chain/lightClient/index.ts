@@ -560,7 +560,7 @@ export class LightClientServer {
         isFinalityUpdate: attestedData.isFinalized,
       };
 
-      if (!isBetterUpdate(prevBestUpdateSummary, nextBestUpdate)) {
+      if (!isBetterUpdate(nextBestUpdate, prevBestUpdateSummary)) {
         this.metrics?.lightclientServer.updateNotBetter.inc();
         return;
       }

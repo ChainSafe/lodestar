@@ -6,7 +6,7 @@ export enum ForkName {
   altair = "altair",
   bellatrix = "bellatrix",
   capella = "capella",
-  eip4844 = "eip4844",
+  deneb = "deneb",
 }
 
 /**
@@ -17,7 +17,7 @@ export enum ForkSeq {
   altair = 1,
   bellatrix = 2,
   capella = 3,
-  eip4844 = 4,
+  deneb = 4,
 }
 
 export type ForkExecution = Exclude<ForkName, ForkName.phase0 | ForkName.altair>;

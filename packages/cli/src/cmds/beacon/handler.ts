@@ -1,7 +1,7 @@
 import path from "node:path";
 import {Registry} from "prom-client";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
-import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
+import {createKeypairFromPeerId, SignableENR} from "@chainsafe/discv5";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@lodestar/beacon-node";
@@ -144,14 +144,14 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
 
   // Create new PeerId everytime by default, unless peerIdFile is provided
   const peerId = await createSecp256k1PeerId();
-  const enr = ENR.createV4(createKeypairFromPeerId(peerId).publicKey);
+  const enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
   overwriteEnrWithCliArgs(enr, args);
 
   // Persist ENR and PeerId in beaconDir fixed paths for debugging
   const pIdPath = path.join(beaconPaths.beaconDir, "peer_id.json");
   const enrPath = path.join(beaconPaths.beaconDir, "enr");
   writeFile600Perm(pIdPath, exportToJSON(peerId));
-  writeFile600Perm(enrPath, enr.encodeTxt(createKeypairFromPeerId(peerId).privateKey));
+  writeFile600Perm(enrPath, enr.encodeTxt());
 
   // Inject ENR to beacon options
   beaconNodeOptions.set({network: {discv5: {enr, enrUpdate: !enr.ip && !enr.ip6}}});
@@ -164,7 +164,7 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
   return {config, options, beaconPaths, network, version, commit, peerId};
 }
 
-export function overwriteEnrWithCliArgs(enr: ENR, args: IBeaconArgs): void {
+export function overwriteEnrWithCliArgs(enr: SignableENR, args: IBeaconArgs): void {
   // TODO: Not sure if we should propagate port/defaultP2pPort options to the ENR
   enr.tcp = args["enr.tcp"] ?? args.port ?? defaultP2pPort;
   const udpPort = args["enr.udp"] ?? args.discoveryPort ?? args.port ?? defaultP2pPort;

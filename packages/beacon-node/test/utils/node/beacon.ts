@@ -10,7 +10,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {isPlainObject} from "@lodestar/utils";
-import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
+import {createKeypairFromPeerId, SignableENR} from "@chainsafe/discv5";
 import {BeaconNode} from "../../../src/index.js";
 import {createNodeJsLibp2p} from "../../../src/network/nodejs/index.js";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
@@ -92,8 +92,8 @@ export async function getDevBeaconNode(
     block.message.stateRoot = state.hashTreeRoot();
     await db.blockArchive.add(block);
 
-    if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.eip4844) {
-      const blobsSidecar = ssz.eip4844.BlobsSidecar.defaultValue();
+    if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.deneb) {
+      const blobsSidecar = ssz.deneb.BlobsSidecar.defaultValue();
       blobsSidecar.beaconBlockRoot = config.getForkTypes(GENESIS_SLOT).BeaconBlock.hashTreeRoot(block.message);
       await db.blobsSidecar.add(blobsSidecar);
     }
@@ -113,9 +113,9 @@ export async function getDevBeaconNode(
   });
 }
 
-function createEnr(peerId: PeerId): ENR {
+function createEnr(peerId: PeerId): SignableENR {
   const keypair = createKeypairFromPeerId(peerId);
-  return ENR.createV4(keypair.publicKey);
+  return SignableENR.createV4(keypair);
 }
 
 function overwriteTargetArrayIfItems(target: unknown[], source: unknown[]): unknown[] {

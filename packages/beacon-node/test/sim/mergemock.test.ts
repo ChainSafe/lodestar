@@ -5,7 +5,7 @@ import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
-import {ValidatorProposerConfig} from "@lodestar/validator";
+import {ValidatorProposerConfig, BuilderSelection} from "@lodestar/validator";
 
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
@@ -163,6 +163,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         builder: {
           enabled: true,
           gasLimit: 30000000,
+          selection: BuilderSelection.BuilderAlways,
         },
       },
     } as ValidatorProposerConfig;

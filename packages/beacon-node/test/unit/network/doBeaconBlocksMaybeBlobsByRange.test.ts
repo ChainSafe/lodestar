@@ -1,7 +1,7 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import {peerIdFromString} from "@libp2p/peer-id";
-import {ssz, eip4844} from "@lodestar/types";
+import {ssz, deneb} from "@lodestar/types";
 import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
 import {doBeaconBlocksMaybeBlobsByRange, ReqRespBeaconNode} from "../../../src/network/reqresp/index.js";
@@ -32,18 +32,18 @@ describe("doBeaconBlocksMaybeBlobsByRange", () => {
   const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
   const rangeRequest = ssz.phase0.BeaconBlocksByRangeRequest.defaultValue();
 
-  const block1 = ssz.eip4844.SignedBeaconBlock.defaultValue();
+  const block1 = ssz.deneb.SignedBeaconBlock.defaultValue();
   block1.message.slot = 1;
-  const block2 = ssz.eip4844.SignedBeaconBlock.defaultValue();
+  const block2 = ssz.deneb.SignedBeaconBlock.defaultValue();
   block2.message.slot = 2;
 
-  const blobsSidecar1 = ssz.eip4844.BlobsSidecar.defaultValue();
+  const blobsSidecar1 = ssz.deneb.BlobsSidecar.defaultValue();
   blobsSidecar1.beaconBlockSlot = 1;
-  const blobsSidecar2 = ssz.eip4844.BlobsSidecar.defaultValue();
+  const blobsSidecar2 = ssz.deneb.BlobsSidecar.defaultValue();
   blobsSidecar2.beaconBlockSlot = 2;
 
   // Array of testcases which are array of matched blocks with/without (if empty) sidecars
-  const testCases: [string, [eip4844.SignedBeaconBlock, eip4844.BlobsSidecar | undefined][]][] = [
+  const testCases: [string, [deneb.SignedBeaconBlock, deneb.BlobsSidecar | undefined][]][] = [
     ["one block with sidecar", [[block1, blobsSidecar1]]],
     [
       "two blocks with sidecar",
@@ -56,9 +56,9 @@ describe("doBeaconBlocksMaybeBlobsByRange", () => {
   ];
   testCases.map(([testName, blocksWithBlobs]) => {
     it(testName, async () => {
-      const blocks = blocksWithBlobs.map(([block, _blobs]) => block as eip4844.SignedBeaconBlock);
+      const blocks = blocksWithBlobs.map(([block, _blobs]) => block as deneb.SignedBeaconBlock);
       const blobsSidecars = blocksWithBlobs
-        .map(([_block, blobs]) => blobs as eip4844.BlobsSidecar)
+        .map(([_block, blobs]) => blobs as deneb.BlobsSidecar)
         .filter((blobs) => blobs !== undefined);
       const emptyKzgAggregatedProof = ckzg.computeAggregateKzgProof([]);
       const expectedResponse = blocksWithBlobs.map(([block, blobsSidecar]) => {
@@ -66,13 +66,13 @@ describe("doBeaconBlocksMaybeBlobsByRange", () => {
           blobsSidecar !== undefined
             ? blobsSidecar
             : {
-                beaconBlockRoot: ssz.eip4844.BeaconBlock.hashTreeRoot(block.message),
+                beaconBlockRoot: ssz.deneb.BeaconBlock.hashTreeRoot(block.message),
                 beaconBlockSlot: block.message.slot,
                 blobs: [],
                 kzgAggregatedProof: emptyKzgAggregatedProof,
               };
         return {
-          type: BlockInputType.postEIP4844,
+          type: BlockInputType.postDeneb,
           block,
           blobs,
         };

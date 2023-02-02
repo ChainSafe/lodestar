@@ -10,7 +10,7 @@ on:
 jobs:
   tests-spec:
     name: Spec tests
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       # As of October 2020, runner has +8GB of free space w/out this script (takes 1m30s to run)
       # - run: ./scripts/free-disk-space.sh

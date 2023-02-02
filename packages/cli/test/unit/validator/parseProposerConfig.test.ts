@@ -2,6 +2,8 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {expect} from "chai";
+import {BuilderSelection} from "@lodestar/validator";
+
 import {parseProposerConfig} from "../../../src/util/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -15,6 +17,7 @@ const testValue = {
       builder: {
         enabled: true,
         gasLimit: 30000000,
+        selection: undefined,
       },
     },
     "0xa4855c83d868f772a579133d9f23818008417b743e8447e235d8eb78b1d8f8a9f63f98c551beb7de254400f89592314d": {
@@ -24,6 +27,7 @@ const testValue = {
       builder: {
         enabled: true,
         gasLimit: 35000000,
+        selection: BuilderSelection.MaxProfit,
       },
     },
   },
@@ -34,6 +38,7 @@ const testValue = {
     builder: {
       enabled: true,
       gasLimit: 30000000,
+      selection: BuilderSelection.BuilderAlways,
     },
   },
 };

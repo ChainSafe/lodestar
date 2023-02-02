@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {IBeaconConfig} from "@lodestar/config";
-import {eip4844, Epoch, phase0} from "@lodestar/types";
+import {deneb, Epoch, phase0} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
@@ -15,16 +15,16 @@ export async function doBeaconBlocksMaybeBlobsByRange(
   request: phase0.BeaconBlocksByRangeRequest,
   currentEpoch: Epoch
 ): Promise<BlockInput[]> {
-  // TODO EIP-4844: Assumes all blocks in the same epoch
-  // TODO EIP-4844: Ensure all blocks are in the same epoch
-  if (config.getForkSeq(request.startSlot) < ForkSeq.eip4844) {
+  // TODO Deneb: Assumes all blocks in the same epoch
+  // TODO Deneb: Ensure all blocks are in the same epoch
+  if (config.getForkSeq(request.startSlot) < ForkSeq.deneb) {
     const blocks = await reqResp.beaconBlocksByRange(peerId, request);
-    return blocks.map((block) => getBlockInput.preEIP4844(config, block));
+    return blocks.map((block) => getBlockInput.preDeneb(config, block));
   }
 
   // Only request blobs if they are recent enough
   else if (computeEpochAtSlot(request.startSlot) >= currentEpoch - config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS) {
-    // TODO EIP-4844: Do two requests at once for blocks and blobs
+    // TODO Deneb: Do two requests at once for blocks and blobs
     const blocks = await reqResp.beaconBlocksByRange(peerId, request);
     const blobsSidecars = await reqResp.blobsSidecarsByRange(peerId, request);
 
@@ -42,7 +42,7 @@ export async function doBeaconBlocksMaybeBlobsByRange(
     // Assuming that the blocks and blobs will come in same sorted order
     for (let i = 0; i < blocks.length; i++) {
       const block = blocks[i];
-      let blobsSidecar: eip4844.BlobsSidecar;
+      let blobsSidecar: deneb.BlobsSidecar;
 
       if (blobsSidecars[blobSideCarIndex]?.beaconBlockSlot === block.message.slot) {
         blobsSidecar = blobsSidecars[blobSideCarIndex];
@@ -50,7 +50,7 @@ export async function doBeaconBlocksMaybeBlobsByRange(
         blobSideCarIndex++;
       } else {
         // Quick inspect if the blobsSidecar was expected
-        const blobKzgCommitmentsLen = (block.message.body as eip4844.BeaconBlockBody).blobKzgCommitments.length;
+        const blobKzgCommitmentsLen = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
         if (blobKzgCommitmentsLen !== 0) {
           throw Error(
             `Missing blobsSidecar for blockSlot=${block.message.slot} with blobKzgCommitmentsLen=${blobKzgCommitmentsLen}`
@@ -63,7 +63,7 @@ export async function doBeaconBlocksMaybeBlobsByRange(
           kzgAggregatedProof: emptyKzgAggregatedProof,
         };
       }
-      blockInputs.push(getBlockInput.postEIP4844(config, block, blobsSidecar));
+      blockInputs.push(getBlockInput.postDeneb(config, block, blobsSidecar));
     }
 
     // If there are still unconsumed blobs this means that the response was inconsistent
@@ -80,9 +80,9 @@ export async function doBeaconBlocksMaybeBlobsByRange(
     return blockInputs;
   }
 
-  // Post EIP-4844 but old blobs
+  // Post Deneb but old blobs
   else {
     const blocks = await reqResp.beaconBlocksByRange(peerId, request);
-    return blocks.map((block) => getBlockInput.postEIP4844OldBlobs(config, block));
+    return blocks.map((block) => getBlockInput.postDenebOldBlobs(config, block));
   }
 }

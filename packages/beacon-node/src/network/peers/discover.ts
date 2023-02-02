@@ -335,7 +335,7 @@ export class PeerDiscovery {
       }
 
       // Check if the ENR.eth2 field matches and is of interest
-      const eth2 = enr.get(ENRKey.eth2);
+      const eth2 = enr.kvs.get(ENRKey.eth2);
       if (!eth2) {
         return DiscoveredPeerStatus.no_eth2;
       }
@@ -370,8 +370,8 @@ export class PeerDiscovery {
       }
 
       // Are this fields mandatory?
-      const attnetsBytes = enr.get(ENRKey.attnets); // 64 bits
-      const syncnetsBytes = enr.get(ENRKey.syncnets); // 4 bits
+      const attnetsBytes = enr.kvs.get(ENRKey.attnets); // 64 bits
+      const syncnetsBytes = enr.kvs.get(ENRKey.syncnets); // 4 bits
 
       // Use faster version than ssz's implementation that leverages pre-cached.
       // Some nodes don't serialize the bitfields properly, encoding the syncnets as attnets,

@@ -1,4 +1,4 @@
-import {allForks, bellatrix, Root, Slot, BLSPubkey, eip4844, Wei} from "@lodestar/types";
+import {allForks, bellatrix, Root, Slot, BLSPubkey, deneb, Wei} from "@lodestar/types";
 
 export interface IExecutionBuilder {
   /**
@@ -18,7 +18,7 @@ export interface IExecutionBuilder {
   ): Promise<{
     header: allForks.ExecutionPayloadHeader;
     blockValue: Wei;
-    blobKzgCommitments?: eip4844.BlobKzgCommitments;
+    blobKzgCommitments?: deneb.BlobKzgCommitments;
   }>;
   submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<allForks.SignedBeaconBlock>;
   submitBlindedBlockV2(
