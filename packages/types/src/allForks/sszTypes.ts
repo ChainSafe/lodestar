@@ -134,14 +134,14 @@ export const allForksLightClient = {
     LightClientOptimisticUpdate: capella.LightClientOptimisticUpdate,
     LightClientStore: capella.LightClientStore,
   },
-  eip4844: {
-    BeaconBlock: eip4844.BeaconBlock,
-    LightClientHeader: eip4844.LightClientHeader,
-    LightClientBootstrap: eip4844.LightClientBootstrap,
-    LightClientUpdate: eip4844.LightClientUpdate,
-    LightClientFinalityUpdate: eip4844.LightClientFinalityUpdate,
-    LightClientOptimisticUpdate: eip4844.LightClientOptimisticUpdate,
-    LightClientStore: eip4844.LightClientStore,
+  deneb: {
+    BeaconBlock: deneb.BeaconBlock,
+    LightClientHeader: deneb.LightClientHeader,
+    LightClientBootstrap: deneb.LightClientBootstrap,
+    LightClientUpdate: deneb.LightClientUpdate,
+    LightClientFinalityUpdate: deneb.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: deneb.LightClientOptimisticUpdate,
+    LightClientStore: deneb.LightClientStore,
   },
 };
 

@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {allForks, altair, SyncPeriod} from "@lodestar/types";
+import {allForks, SyncPeriod} from "@lodestar/types";
 import {Api, ApiError, routes} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
 import {LightClientTransport} from "./interface.js";

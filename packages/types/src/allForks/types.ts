@@ -112,7 +112,7 @@ export type AllForksBlindedTypes = {
 };
 
 export type AllForksLightClient = {
-  BeaconBlock: altair.BeaconBlock | bellatrix.BeaconBlock | capella.BeaconBlock | eip4844.BeaconBlock;
+  BeaconBlock: altair.BeaconBlock | bellatrix.BeaconBlock | capella.BeaconBlock | deneb.BeaconBlock;
   LightClientHeader: LightClientHeader;
   LightClientBootstrap: LightClientBootstrap;
   LightClientUpdate: LightClientUpdate;
@@ -229,7 +229,7 @@ export type AllForksBlindedSSZTypes = {
 
 export type AllForksLightClientSSZTypes = {
   BeaconBlock: AllForksTypeOf<
-    typeof altairSsz.BeaconBlock | typeof capellaSsz.BeaconBlock | typeof eip4844Ssz.BeaconBlock
+    typeof altairSsz.BeaconBlock | typeof capellaSsz.BeaconBlock | typeof denebSsz.BeaconBlock
   >;
   LightClientHeader: AllForksTypeOf<
     typeof altairSsz.LightClientHeader | typeof capellaSsz.LightClientHeader | typeof denebSsz.LightClientHeader
