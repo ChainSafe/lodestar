@@ -128,9 +128,10 @@ export type ReqTypes = {
 export function getTypeByEvent(config: IChainForkConfig): {[K in EventType]: TypeJson<EventData[K]>} {
   const stringType = new StringType();
   const getLightClientOptimisticUpdateType = (
-    data: allForks.LightClientOptimisticUpdate
-  ): allForks.AllForksLightClientSSZTypes["LightClientOptimisticUpdate"] =>
-    config.getLightClientForkTypes(data.attestedHeader.beacon.slot).LightClientOptimisticUpdate;
+    data: allForks.LightClientHeader
+  ): allForks.AllForksLightClientSSZTypes["LightClientOptimisticUpdate"] => {
+    return config.getLightClientForkTypes(data.beacon.slot).LightClientOptimisticUpdate;
+  };
 
   return {
     [EventType.head]: new ContainerType(
@@ -187,9 +188,14 @@ export function getTypeByEvent(config: IChainForkConfig): {[K in EventType]: Typ
 
     [EventType.lightClientOptimisticUpdate]: {
       toJson: (data) =>
-        getLightClientOptimisticUpdateType((data as unknown) as allForks.LightClientOptimisticUpdate).toJson(data),
+        getLightClientOptimisticUpdateType(
+          ((data as unknown) as allForks.LightClientOptimisticUpdate).attestedHeader
+        ).toJson(data),
       fromJson: (data) =>
-        getLightClientOptimisticUpdateType((data as unknown) as allForks.LightClientOptimisticUpdate).fromJson(data),
+        getLightClientOptimisticUpdateType(
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          ((data as unknown) as {attested_header: allForks.LightClientHeader}).attested_header
+        ).fromJson(data),
     },
     [EventType.lightClientFinalityUpdate]: new ContainerType(
       {
