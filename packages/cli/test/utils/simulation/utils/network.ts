@@ -106,7 +106,7 @@ export async function waitForSlot(
 
   for (const node of nodes) {
     const head = await node.cl.api.beacon.getBlockHeader("head");
-    const headSlot = head.data.header.message.slot;
+    const headSlot = head.response.data.header.message.slot;
     if (headSlot > slot) {
       throw Error(`waitForSlot error, node ${node.id} head.slot ${headSlot} > target slot ${slot}`);
     }

@@ -9,7 +9,6 @@ import {
   BuilderSelection,
 } from "@lodestar/validator";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
-import {chainConfigToJson} from "@lodestar/config";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@lodestar/beacon-node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IGlobalArgs} from "../../options/index.js";
@@ -53,7 +52,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const {version, commit} = getVersionData();
   logger.info("Lodestar", {network, version, commit});
   logger.info("Connecting to LevelDB database", {path: validatorPaths.validatorsDbDir});
-  logger.debug(`chain config: ${JSON.stringify(chainConfigToJson(config))}`);
 
   const dbPath = validatorPaths.validatorsDbDir;
   mkdir(dbPath);
