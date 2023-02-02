@@ -198,7 +198,7 @@ export class PeerScore {
     // Using exponential decay based on a constant half life.
     const sinceLastUpdateMs = nowMs - this.lastUpdate;
     // If peer was banned, lastUpdate will be in the future
-    if (sinceLastUpdateMs > 0 && this.lodestarScore !== 0) {
+    if (sinceLastUpdateMs > 0) {
       this.lastUpdate = nowMs;
       // e^(-ln(2)/HL*t)
       const decayFactor = Math.exp(HALFLIFE_DECAY_MS * sinceLastUpdateMs);
