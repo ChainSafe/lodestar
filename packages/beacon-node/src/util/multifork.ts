@@ -55,17 +55,18 @@ export function getStateTypeFromBytes(
 }
 
 /**
- * TODO: find correct position
- * 8 + 32 = 40
- * ```
- * class BeaconState(Container):
- *   genesis_time: uint64 [fixed - 8 bytes]
- *   genesis_validators_root: Root [fixed - 32 bytes]
- *   slot: Slot [fixed - 8 bytes]
+ * First field in update is beacon, first field in beacon is slot
+ *
+ * update = {
+ *  beacon: {
+ *   slot
  *   ...
- * ```
+ *  }
+ *  ...
+ * }
+ *   ...
  */
-const SLOT_BYTES_POSITION_IN_LIGHTCLIENTUPDATE = 40;
+const SLOT_BYTES_POSITION_IN_LIGHTCLIENTUPDATE = 0;
 export function getLightClientUpdateTypeFromBytes(
   config: IChainForkConfig,
   bytes: Buffer | Uint8Array

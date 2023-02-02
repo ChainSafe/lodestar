@@ -195,15 +195,19 @@ export const FINALIZED_ROOT_GINDEX = 105;
 export const FINALIZED_ROOT_DEPTH = 6;
 export const FINALIZED_ROOT_INDEX = 41;
 
-// TODO: add correct values here
-export const EXECUTION_PAYLOAD_GINDEX = 105;
+/**
+ * ```ts
+ * types.ssz.capella.BeaconBlockBody.getPathInfo(['executionPayload']).gindex
+ * ```
+ */
+export const BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX = 25;
 /**
  * ```ts
  * Math.floor(Math.log2(EXECUTION_PAYLOAD_GINDEX))
  * ```
  */
-export const EXECUTION_PAYLOAD_DEPTH = 6;
-export const EXECUTION_PAYLOAD_INDEX = 41;
+export const BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH = 4;
+export const BLOCK_BODY_EXECUTION_PAYLOAD_INDEX = 12;
 
 /**
  * ```ts
