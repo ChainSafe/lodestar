@@ -3,7 +3,7 @@ export interface ILevelDbControllerMetrics {
   dbReadItems: ICounter<"bucket">;
   dbWriteReq: ICounter<"bucket">;
   dbWriteItems: ICounter<"bucket">;
-  dbSizeTotal: IGauge<string>;
+  dbSizeTotal: IGauge;
 }
 
 type Labels<T extends string> = Partial<Record<T, string | number>>;
@@ -14,7 +14,7 @@ interface ICounter<T extends string> {
   inc(arg1?: Labels<T> | number, arg2?: number): void;
 }
 
-interface IGauge<T extends string> {
+interface IGauge<T extends string = string> {
   set(value: number): void;
   set(labels: Labels<T>, value: number): void;
   addCollect: (collectFn: () => void | Promise<void>) => void;
