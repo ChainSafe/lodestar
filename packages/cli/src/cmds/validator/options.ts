@@ -305,7 +305,6 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     description: "Interval in milliseconds between sending client stats to the remote service",
     defaultDescription: String(validatorMonitoringDefaultOptions.interval),
     group: "monitoring",
-    hidden: true,
   },
 
   "monitoring.initialDelay": {

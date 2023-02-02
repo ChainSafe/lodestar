@@ -32,7 +32,6 @@ export const options: ICliCommandOptions<IMonitoringArgs> = {
     description: "Interval in milliseconds between sending client stats to the remote service",
     defaultDescription: String(defaultOptions.monitoring.interval),
     group: "monitoring",
-    hidden: true,
   },
 
   "monitoring.initialDelay": {
