@@ -52,6 +52,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     "network.allowPublishToZeroPeers": false,
     discv5: true,
     "network.connectToDiscv5Bootnodes": true,
+    "network.rateLimitMultiplier": 0,
     listenAddress: address,
     port: port,
     metrics: false,
