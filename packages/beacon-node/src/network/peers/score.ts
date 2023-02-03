@@ -78,6 +78,7 @@ type PeerIdStr = string;
 
 export interface IPeerRpcScoreStore {
   getScore(peer: PeerId): number;
+  getGossipScore(peer: PeerId): number;
   getScoreState(peer: PeerId): ScoreState;
   dumpPeerScoreStats(): PeerScoreStats;
   applyAction(peer: PeerId, action: PeerAction, actionName: string): void;
@@ -116,6 +117,10 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
 
   getScore(peer: PeerId): number {
     return this.scores.get(peer.toString())?.getScore() ?? DEFAULT_SCORE;
+  }
+
+  getGossipScore(peer: PeerId): number {
+    return this.scores.get(peer.toString())?.getGossipScore() ?? DEFAULT_SCORE;
   }
 
   getScoreState(peer: PeerId): ScoreState {
@@ -174,6 +179,10 @@ export class PeerScore {
 
   getScore(): number {
     return this.score;
+  }
+
+  getGossipScore(): number {
+    return this.gossipScore;
   }
 
   add(scoreDelta: number): void {

@@ -49,11 +49,12 @@ export function createLodestarMetrics(
       help: "Histogram of current count of long lived attnets of connected peers",
       buckets: [0, 4, 16, 32, 64],
     }),
-    peerScore: register.histogram({
+    peerScoreByClient: register.histogram<"client">({
       name: "lodestar_app_peer_score",
       help: "Current peer score at lodestar app side",
       // Min score = -100, max score = 100, disconnect = -20, ban = -50
       buckets: [-100, -50, -20, 0, 25],
+      labelNames: ["client"],
     }),
     peerConnectionLength: register.histogram({
       name: "lodestar_peer_connection_seconds",
@@ -173,6 +174,13 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_mesh_peers_by_client_count",
         help: "number of mesh peers, labeled by client",
         labelNames: ["client"],
+      }),
+      scoreByClient: register.histogram<"client">({
+        name: "lodestar_gossip_score_by_client",
+        help: "Gossip peer score by client",
+        labelNames: ["client"],
+        // based on gossipScoreThresholds and negativeGossipScoreIgnoreThreshold
+        buckets: [-16000, -8000, -4000, -1000, 0, 5, 100],
       }),
       score: register.avgMinMax({
         name: "lodestar_gossip_score_avg_min_max",
