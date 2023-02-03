@@ -640,6 +640,7 @@ export class PeerManager {
     metrics.peerLongLivedAttnets.reset();
     metrics.peerScoreByClient.reset();
     metrics.peerConnectionLength.reset();
+    metrics.gossipPeer.scoreByClient.reset();
 
     // reset client counts _for each client_ to 0
     for (const client of Object.values(ClientKind)) {
