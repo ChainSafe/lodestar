@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {MapDef, pruneSetToMax} from "@lodestar/utils";
-import {gossipScoreThresholds} from "../gossip/scoringParameters.js";
+import {gossipScoreThresholds, negativeGossipScoreIgnoreThreshold} from "../gossip/scoringParameters.js";
 import {IMetrics} from "../../metrics/index.js";
 
 /** The default score for new peers */
@@ -107,7 +107,6 @@ export type PeerScoreStat = {
 export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   private readonly scores = new MapDef<PeerIdStr, PeerScore>(() => new PeerScore());
   private readonly metrics: IMetrics | null;
-  private readonly lastUpdate = new Map<string, number>();
 
   // TODO: Persist scores, at least BANNED status to disk
 
@@ -284,7 +283,7 @@ export function updateGossipsubScores(
     const gossipsubScore = gossipsubScores.get(peerId);
     if (gossipsubScore !== undefined) {
       let ignore = false;
-      if (gossipsubScore < 0 && toIgnoreNegativePeers > 0) {
+      if (gossipsubScore < 0 && gossipsubScore > negativeGossipScoreIgnoreThreshold && toIgnoreNegativePeers > 0) {
         // We ignore the negative score for the best negative peers so that their
         // gossipsub score can recover without getting disconnected.
         ignore = true;
