@@ -11,6 +11,7 @@ import {
   SignableENR,
 } from "@chainsafe/discv5";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
+import {IBeaconConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/metrics.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
@@ -19,6 +20,7 @@ export type Discv5Opts = {
   peerId: PeerId;
   discv5: Omit<IDiscv5DiscoveryInputOptions, "metrics" | "searchInterval" | "enabled">;
   logger: ILogger;
+  config: IBeaconConfig;
   metrics?: IMetrics;
 };
 
@@ -56,6 +58,8 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       config: this.opts.discv5,
       bootEnrs: this.opts.discv5.bootEnrs as string[],
       metrics: Boolean(this.opts.metrics),
+      chainConfig: this.opts.config,
+      genesisValidatorsRoot: this.opts.config.genesisValidatorsRoot,
     };
     const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
 
@@ -109,6 +113,12 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       return this.decodeEnrs(await this.status.workerApi.kadValues());
     } else {
       return [];
+    }
+  }
+
+  async discoverKadValues(): Promise<void> {
+    if (this.status.status === "started") {
+      await this.status.workerApi.discoverKadValues();
     }
   }
 

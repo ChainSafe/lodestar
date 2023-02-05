@@ -42,9 +42,6 @@ enum QueryStatusCode {
 type QueryStatus = {code: QueryStatusCode.NotActive} | {code: QueryStatusCode.Active; count: number};
 
 enum DiscoveredPeerStatus {
-  no_tcp = "no_tcp",
-  no_eth2 = "no_eth2",
-  unknown_forkDigest = "unknown_forkDigest",
   bad_score = "bad_score",
   already_connected = "already_connected",
   already_dialing = "already_dialing",
@@ -112,6 +109,7 @@ export class PeerDiscovery {
       peerId: modules.libp2p.peerId,
       metrics: modules.metrics ?? undefined,
       logger: this.logger,
+      config: this.config,
     });
     const numBootEnrs = opts.discv5.bootEnrs.length;
     if (numBootEnrs === 0) {
@@ -139,7 +137,7 @@ export class PeerDiscovery {
       // In devnet scenarios, especially, we want more control over which peers we connect to.
       // Only dial the discv5.bootEnrs if the option
       // network.connectToDiscv5Bootnodes has been set to true.
-      (await this.discv5.kadValues()).forEach((enr) => this.onDiscoveredENR(enr));
+      await this.discv5.discoverKadValues();
     }
   }
 
@@ -260,100 +258,53 @@ export class PeerDiscovery {
    */
   private onDiscoveredPeer = async (evt: CustomEvent<PeerInfo>): Promise<void> => {
     const {id, multiaddrs} = evt.detail;
-    const status = await this.handleDiscoveredPeer(id, multiaddrs[0]);
+    const attnets = zeroAttnets;
+    const syncnets = zeroSyncnets;
+    const status = await this.handleDiscoveredPeer(id, multiaddrs[0], attnets, syncnets);
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
-  /**
-   * Progressively called by libp2p peer discovery as a result of any query.
-   */
-  private async handleDiscoveredPeer(peerId: PeerId, multiaddrTCP: Multiaddr): Promise<DiscoveredPeerStatus> {
-    try {
-      // Check if peer is not banned or disconnected
-      if (this.peerRpcScores.getScoreState(peerId) !== ScoreState.Healthy) {
-        return DiscoveredPeerStatus.bad_score;
-      }
-
-      // Ignore connected peers. TODO: Is this check necessary?
-      if (this.isPeerConnected(peerId.toString())) {
-        return DiscoveredPeerStatus.already_connected;
-      }
-
-      // Ignore dialing peers
-      if (getDefaultDialer(this.libp2p).pendingDials.has(peerId.toString())) {
-        return DiscoveredPeerStatus.already_dialing;
-      }
-
-      const attnets = zeroAttnets;
-      const syncnets = zeroSyncnets;
-
-      // Should dial peer?
-      const cachedPeer: CachedENR = {
-        peerId,
-        multiaddrTCP,
-        subnets: {attnets, syncnets},
-        addedUnixMs: Date.now(),
-      };
-
-      // Only dial peer if necessary
-      if (this.shouldDialPeer(cachedPeer)) {
-        void this.dialPeer(cachedPeer);
-        return DiscoveredPeerStatus.attempt_dial;
-      } else {
-        // Add to pending good peers with a last seen time
-        this.cachedENRs.set(peerId.toString(), cachedPeer);
-        const dropped = pruneSetToMax(this.cachedENRs, MAX_CACHED_ENRS);
-        // If the cache was already full, count the peer as dropped
-        return dropped > 0 ? DiscoveredPeerStatus.dropped : DiscoveredPeerStatus.cached;
-      }
-    } catch (e) {
-      this.logger.error("Error onDiscovered", {}, e as Error);
-      return DiscoveredPeerStatus.error;
-    }
-  }
 
   /**
    * Progressively called by discv5 as a result of any query.
    */
   private onDiscoveredENR = async (enr: ENR): Promise<void> => {
-    const status = await this.handleDiscoveredENR(enr);
+    if (this.randomNodeQuery.code === QueryStatusCode.Active) {
+      this.randomNodeQuery.count++;
+    }
+    // async due to some crypto that's no longer necessary
+    const peerId = await enr.peerId();
+    // tcp multiaddr is known to be be present, checked inside the worker
+    const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
+    if (!multiaddrTCP) {
+      this.logger.error("Discv5 worker sent enr without tcp multiaddr", {enr: enr.encodeTxt()});
+      this.metrics?.discovery.discoveredStatus.inc({status: DiscoveredPeerStatus.error});
+      return;
+    }
+    // Are this fields mandatory?
+    const attnetsBytes = enr.kvs.get(ENRKey.attnets); // 64 bits
+    const syncnetsBytes = enr.kvs.get(ENRKey.syncnets); // 4 bits
+
+    // Use faster version than ssz's implementation that leverages pre-cached.
+    // Some nodes don't serialize the bitfields properly, encoding the syncnets as attnets,
+    // which cause the ssz implementation to throw on validation. deserializeEnrSubnets() will
+    // never throw and treat too long or too short bitfields as zero-ed
+    const attnets = attnetsBytes ? deserializeEnrSubnets(attnetsBytes, ATTESTATION_SUBNET_COUNT) : zeroAttnets;
+    const syncnets = syncnetsBytes ? deserializeEnrSubnets(syncnetsBytes, SYNC_COMMITTEE_SUBNET_COUNT) : zeroSyncnets;
+
+    const status = await this.handleDiscoveredPeer(peerId, multiaddrTCP, attnets, syncnets);
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
 
   /**
-   * Progressively called by discv5 as a result of any query.
+   * Progressively called by peer discovery as a result of any query.
    */
-  private async handleDiscoveredENR(enr: ENR): Promise<DiscoveredPeerStatus> {
+  private async handleDiscoveredPeer(
+    peerId: PeerId,
+    multiaddrTCP: Multiaddr,
+    attnets: boolean[],
+    syncnets: boolean[]
+  ): Promise<DiscoveredPeerStatus> {
     try {
-      if (this.randomNodeQuery.code === QueryStatusCode.Active) {
-        this.randomNodeQuery.count++;
-      }
-
-      // We are not interested in peers that don't advertise their tcp addr
-      const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
-      if (!multiaddrTCP) {
-        return DiscoveredPeerStatus.no_tcp;
-      }
-
-      // Check if the ENR.eth2 field matches and is of interest
-      const eth2 = enr.kvs.get(ENRKey.eth2);
-      if (!eth2) {
-        return DiscoveredPeerStatus.no_eth2;
-      }
-
-      // Fast de-serialization without SSZ
-      const forkDigest = eth2.slice(0, 4);
-      // Check if forkDigest matches any of our known forks.
-      const forkName = this.config.forkDigest2ForkNameOption(forkDigest);
-      if (!forkName) {
-        return DiscoveredPeerStatus.unknown_forkDigest;
-      }
-
-      // TODO: Then check if the next fork info matches ours
-      // const enrForkId = ssz.phase0.ENRForkID.deserialize(eth2);
-
-      // async due to some crypto that's no longer necessary
-      const peerId = await enr.peerId();
-
       // Check if peer is not banned or disconnected
       if (this.peerRpcScores.getScoreState(peerId) !== ScoreState.Healthy) {
         return DiscoveredPeerStatus.bad_score;
@@ -368,17 +319,6 @@ export class PeerDiscovery {
       if (getDefaultDialer(this.libp2p).pendingDials.has(peerId.toString())) {
         return DiscoveredPeerStatus.already_dialing;
       }
-
-      // Are this fields mandatory?
-      const attnetsBytes = enr.kvs.get(ENRKey.attnets); // 64 bits
-      const syncnetsBytes = enr.kvs.get(ENRKey.syncnets); // 4 bits
-
-      // Use faster version than ssz's implementation that leverages pre-cached.
-      // Some nodes don't serialize the bitfields properly, encoding the syncnets as attnets,
-      // which cause the ssz implementation to throw on validation. deserializeEnrSubnets() will
-      // never throw and treat too long or too short bitfields as zero-ed
-      const attnets = attnetsBytes ? deserializeEnrSubnets(attnetsBytes, ATTESTATION_SUBNET_COUNT) : zeroAttnets;
-      const syncnets = syncnetsBytes ? deserializeEnrSubnets(syncnetsBytes, SYNC_COMMITTEE_SUBNET_COUNT) : zeroSyncnets;
 
       // Should dial peer?
       const cachedPeer: CachedENR = {
