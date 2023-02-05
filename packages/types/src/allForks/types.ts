@@ -121,6 +121,11 @@ export type AllForksLightClient = {
   LightClientStore: LightClientStore;
 };
 
+export type AllForksExecution = {
+  BeaconBlock: bellatrix.BeaconBlock | capella.BeaconBlock | deneb.BeaconBlock;
+  BeaconBlockBody: bellatrix.BeaconBlockBody | capella.BeaconBlockBody | deneb.BeaconBlockBody;
+};
+
 /**
  * An AllForks type must accept as any parameter the UNION of all fork types.
  * The generic argument of `AllForksTypeOf` must be the union of the fork types:
@@ -230,6 +235,9 @@ export type AllForksBlindedSSZTypes = {
 export type AllForksLightClientSSZTypes = {
   BeaconBlock: AllForksTypeOf<
     typeof altairSsz.BeaconBlock | typeof capellaSsz.BeaconBlock | typeof denebSsz.BeaconBlock
+  >;
+  BeaconBlockBody: AllForksTypeOf<
+    typeof altairSsz.BeaconBlockBody | typeof capellaSsz.BeaconBlockBody | typeof denebSsz.BeaconBlockBody
   >;
   LightClientHeader: AllForksTypeOf<
     typeof altairSsz.LightClientHeader | typeof capellaSsz.LightClientHeader | typeof denebSsz.LightClientHeader
