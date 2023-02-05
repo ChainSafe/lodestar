@@ -66,6 +66,12 @@ describe("monitoring / service", () => {
   });
 
   describe("MonitoringService - start", () => {
+    it("should set the status to started", async () => {
+      const service = await startedMonitoringService();
+
+      expect(service["status"]).to.equal("started");
+    });
+
     it("should set interval to continuously send client stats", async () => {
       const setInterval = sandbox.spy(global, "setInterval");
 
@@ -110,6 +116,14 @@ describe("monitoring / service", () => {
   });
 
   describe("MonitoringService - stop", () => {
+    it("should set the status to stopped", async () => {
+      const service = await startedMonitoringService();
+
+      service.stop();
+
+      expect(service["status"]).to.equal("stopped");
+    });
+
     it("should clear the monitoring interval", async () => {
       const clearInterval = sandbox.spy(global, "clearInterval");
 
@@ -117,8 +131,7 @@ describe("monitoring / service", () => {
 
       service.stop();
 
-      expect(clearInterval).to.have.been.calledOnce;
-      expect(service["monitoringInterval"]).to.be.undefined;
+      expect(clearInterval).to.have.been.calledOnceWith(service["monitoringInterval"]);
     });
 
     it("should clear the initial delay timeout", async () => {
@@ -128,8 +141,7 @@ describe("monitoring / service", () => {
 
       service.stop();
 
-      expect(clearTimeout).to.have.been.calledOnce;
-      expect(service["initialDelayTimeout"]).to.be.undefined;
+      expect(clearTimeout).to.have.been.calledOnceWith(service["initialDelayTimeout"]);
     });
 
     it("should abort pending requests", async () => {
@@ -201,6 +213,7 @@ describe("monitoring / service", () => {
     it("should abort pending requests if monitoring service is stopped", (done) => {
       const endpoint = `${baseUrl}${remoteServiceRoutes.pending}`;
       const service = new MonitoringService("beacon", {endpoint, collectSystemStats: false}, {register, logger});
+      service.start();
 
       service.send().finally(() => {
         try {

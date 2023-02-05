@@ -19,6 +19,11 @@ enum FetchAbortReason {
   Timeout = "timeout",
 }
 
+enum Status {
+  Started = "started",
+  Stopped = "stopped",
+}
+
 export type Client = "beacon" | "validator";
 
 /**
@@ -35,6 +40,7 @@ export class MonitoringService {
   private readonly collectDataMetric: HistogramExtra<string>;
   private readonly sendDataMetric: HistogramExtra<"status">;
 
+  private status = Status.Stopped;
   private initialDelayTimeout?: NodeJS.Timeout;
   private monitoringInterval?: NodeJS.Timer;
   private fetchAbortController?: AbortController;
@@ -70,10 +76,8 @@ export class MonitoringService {
    * Start sending client stats based on configured interval
    */
   start(): void {
-    if (this.initialDelayTimeout || this.monitoringInterval) {
-      // monitoring service is already started
-      return;
-    }
+    if (this.status === Status.Started) return;
+    this.status = Status.Started;
 
     const {interval, initialDelay, requestTimeout, collectSystemStats} = this.options;
 
@@ -99,13 +103,14 @@ export class MonitoringService {
    * Stop sending client stats
    */
   stop(): void {
+    if (this.status === Status.Stopped) return;
+    this.status = Status.Stopped;
+
     if (this.initialDelayTimeout) {
       clearTimeout(this.initialDelayTimeout);
-      this.initialDelayTimeout = undefined;
     }
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
-      this.monitoringInterval = undefined;
     }
     if (this.pendingRequest) {
       this.fetchAbortController?.abort(FetchAbortReason.Stop);
