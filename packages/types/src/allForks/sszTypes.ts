@@ -109,6 +109,7 @@ export const allForksBlinded = {
 export const allForksLightClient = {
   altair: {
     BeaconBlock: altair.BeaconBlock,
+    BeaconBlockBody: altair.BeaconBlockBody,
     LightClientHeader: altair.LightClientHeader,
     LightClientBootstrap: altair.LightClientBootstrap,
     LightClientUpdate: altair.LightClientUpdate,
@@ -118,6 +119,7 @@ export const allForksLightClient = {
   },
   bellatrix: {
     BeaconBlock: bellatrix.BeaconBlock,
+    BeaconBlockBody: bellatrix.BeaconBlockBody,
     LightClientHeader: altair.LightClientHeader,
     LightClientBootstrap: altair.LightClientBootstrap,
     LightClientUpdate: altair.LightClientUpdate,
@@ -127,6 +129,7 @@ export const allForksLightClient = {
   },
   capella: {
     BeaconBlock: capella.BeaconBlock,
+    BeaconBlockBody: capella.BeaconBlockBody,
     LightClientHeader: capella.LightClientHeader,
     LightClientBootstrap: capella.LightClientBootstrap,
     LightClientUpdate: capella.LightClientUpdate,
@@ -136,6 +139,7 @@ export const allForksLightClient = {
   },
   deneb: {
     BeaconBlock: deneb.BeaconBlock,
+    BeaconBlockBody: deneb.BeaconBlockBody,
     LightClientHeader: deneb.LightClientHeader,
     LightClientBootstrap: deneb.LightClientBootstrap,
     LightClientUpdate: deneb.LightClientUpdate,

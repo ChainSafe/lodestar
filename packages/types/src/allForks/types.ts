@@ -234,10 +234,16 @@ export type AllForksBlindedSSZTypes = {
 
 export type AllForksLightClientSSZTypes = {
   BeaconBlock: AllForksTypeOf<
-    typeof altairSsz.BeaconBlock | typeof capellaSsz.BeaconBlock | typeof denebSsz.BeaconBlock
+    | typeof altairSsz.BeaconBlock
+    | typeof bellatrixSsz.BeaconBlock
+    | typeof capellaSsz.BeaconBlock
+    | typeof denebSsz.BeaconBlock
   >;
   BeaconBlockBody: AllForksTypeOf<
-    typeof altairSsz.BeaconBlockBody | typeof capellaSsz.BeaconBlockBody | typeof denebSsz.BeaconBlockBody
+    | typeof altairSsz.BeaconBlockBody
+    | typeof bellatrixSsz.BeaconBlockBody
+    | typeof capellaSsz.BeaconBlockBody
+    | typeof denebSsz.BeaconBlockBody
   >;
   LightClientHeader: AllForksTypeOf<
     typeof altairSsz.LightClientHeader | typeof capellaSsz.LightClientHeader | typeof denebSsz.LightClientHeader
