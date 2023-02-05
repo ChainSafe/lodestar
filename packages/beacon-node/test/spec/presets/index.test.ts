@@ -1,5 +1,8 @@
 import path from "node:path";
 import {ACTIVE_PRESET} from "@lodestar/params";
+import {Type} from "@chainsafe/ssz";
+import {ssz} from "@lodestar/types";
+
 import {RunnerType} from "../utils/types.js";
 import {SkipOpts, specTestIterator} from "../utils/specTestIterator.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
@@ -32,6 +35,33 @@ const skipOpts: SkipOpts = {};
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
+// TODO: capella
+// Map all lightclient types to altair for addressing the specs
+// which are are to be updated in separate PR
+const overrideSSZTypes: Record<string, Record<string, Type<any>>> = {
+  deneb: {
+    LightClientHeader: ssz.altair.LightClientHeader,
+    LightClientUpdate: ssz.altair.LightClientUpdate,
+    LightClientOptimisticUpdate: ssz.altair.LightClientOptimisticUpdate,
+    LightClientFinalityUpdate: ssz.altair.LightClientFinalityUpdate,
+    LightClientBootstrap: ssz.altair.LightClientBootstrap,
+  },
+  capella: {
+    LightClientHeader: ssz.altair.LightClientHeader,
+    LightClientUpdate: ssz.altair.LightClientUpdate,
+    LightClientOptimisticUpdate: ssz.altair.LightClientOptimisticUpdate,
+    LightClientFinalityUpdate: ssz.altair.LightClientFinalityUpdate,
+    LightClientBootstrap: ssz.altair.LightClientBootstrap,
+  },
+  bellatrix: {
+    LightClientHeader: ssz.altair.LightClientHeader,
+    LightClientUpdate: ssz.altair.LightClientUpdate,
+    LightClientOptimisticUpdate: ssz.altair.LightClientOptimisticUpdate,
+    LightClientFinalityUpdate: ssz.altair.LightClientFinalityUpdate,
+    LightClientBootstrap: ssz.altair.LightClientBootstrap,
+  },
+};
+
 specTestIterator(
   path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET),
   {
@@ -57,7 +87,7 @@ specTestIterator(
     shuffling: {type: RunnerType.default, fn: shuffling},
     ssz_static: {
       type: RunnerType.custom,
-      fn: sszStatic(),
+      fn: sszStatic(undefined, overrideSSZTypes),
     },
     sync: {type: RunnerType.default, fn: forkChoiceTest({onlyPredefinedResponses: true})},
     transition: {
