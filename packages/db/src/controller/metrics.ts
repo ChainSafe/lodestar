@@ -17,5 +17,5 @@ interface ICounter<T extends string> {
 interface IGauge<T extends string = string> {
   set(value: number): void;
   set(labels: Labels<T>, value: number): void;
-  addCollect: (collectFn: () => void | Promise<void>) => void;
+  addCollect: (collectFn: () => void) => void;
 }

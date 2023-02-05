@@ -12,7 +12,7 @@ export enum BeaconHealth {
 }
 
 type LabelsGeneric = Record<string, string | undefined>;
-type CollectFn<Labels extends LabelsGeneric> = (metric: Gauge<Labels>) => void | Promise<void>;
+type CollectFn<Labels extends LabelsGeneric> = (metric: Gauge<Labels>) => void;
 
 interface Gauge<Labels extends LabelsGeneric = never> {
   // Sorry for this mess, `prom-client` API choices are not great

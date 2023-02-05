@@ -6,7 +6,7 @@ export type Metrics = {
 };
 
 type LabelValues<T extends string> = Partial<Record<T, string | number>>;
-type CollectFn<T extends string> = (metric: IGauge<T>) => void | Promise<void>;
+type CollectFn<T extends string> = (metric: IGauge<T>) => void;
 
 export interface IGauge<T extends string> {
   /**

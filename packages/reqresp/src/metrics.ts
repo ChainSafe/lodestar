@@ -15,7 +15,7 @@ interface Gauge<T extends string = string> {
   set(labels: LabelValues<T>, value: number): void;
   set(arg1?: LabelValues<T> | number, arg2?: number): void;
 
-  addCollect: (collectFn: () => void | Promise<void>) => void;
+  addCollect: (collectFn: () => void) => void;
 }
 
 interface Histogram<T extends string = string> {
