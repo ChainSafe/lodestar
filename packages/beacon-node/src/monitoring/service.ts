@@ -79,7 +79,7 @@ export class MonitoringService {
     if (this.status === Status.Started) return;
     this.status = Status.Started;
 
-    const {interval, initialDelay, requestTimeout, collectSystemStats} = this.options;
+    const {interval, initialDelay} = this.options;
 
     this.initialDelayTimeout = setTimeout(async () => {
       await this.send();
@@ -92,10 +92,7 @@ export class MonitoringService {
     this.logger.info("Started monitoring service", {
       remote: this.remoteServiceHost,
       machine: this.remoteServiceUrl.searchParams.get("machine"),
-      interval: `${interval}ms`,
-      initialDelay: `${initialDelay}ms`,
-      requestTimeout: `${requestTimeout}ms`,
-      collectSystemStats,
+      interval,
     });
   }
 
