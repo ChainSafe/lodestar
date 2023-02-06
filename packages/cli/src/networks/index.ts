@@ -14,14 +14,16 @@ import * as gnosis from "./gnosis.js";
 import * as goerli from "./goerli.js";
 import * as ropsten from "./ropsten.js";
 import * as sepolia from "./sepolia.js";
+import * as chiado from "./chiado.js";
 
-export type NetworkName = "mainnet" | "dev" | "gnosis" | "goerli" | "ropsten" | "sepolia";
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "goerli" | "ropsten" | "sepolia" | "chiado";
 export const networkNames: NetworkName[] = [
   "mainnet",
   "gnosis",
   "goerli",
   "ropsten",
   "sepolia",
+  "chiado",
 
   // Leave always as last network. The order matters for the --help printout
   "dev",
@@ -61,6 +63,8 @@ export function getNetworkData(
       return ropsten;
     case "sepolia":
       return sepolia;
+    case "chiado":
+      return chiado;
     default:
       throw Error(`Network not supported: ${network}`);
   }
