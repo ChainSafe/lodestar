@@ -148,12 +148,13 @@ const unknownBlockSync = env.createNodePair({
   keysCount: 0,
 });
 await unknownBlockSync.el.job.start();
-// Wait for EL node to start and sync
-await sleep(5000);
 await unknownBlockSync.cl.job.start();
 const headForUnknownBlockSync = await env.nodes[0].cl.api.beacon.getBlockV2("head");
 ApiError.assert(headForUnknownBlockSync);
 await connectNewNode(unknownBlockSync, env.nodes);
+
+// Wait for EL node to start and sync
+await sleep(5000);
 
 try {
   ApiError.assert(await unknownBlockSync.cl.api.beacon.publishBlock(headForUnknownBlockSync.response.data));
