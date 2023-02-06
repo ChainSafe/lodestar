@@ -1,4 +1,4 @@
-import {JsonPath} from "@chainsafe/ssz";
+import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
 
 /**
  * Serialize proof path to JSON.
@@ -65,4 +65,26 @@ export function fromU64StrOpt(u64Str: U64Str | undefined): U64 | undefined {
 
 export function toU64StrOpt(u64: U64 | undefined): U64Str | undefined {
   return u64 !== undefined ? toU64Str(u64) : undefined;
+}
+
+const GRAFFITI_HEX_LENGTH = 66;
+
+export function toGraffitiHex(utf8: string): string {
+  const hex = toHexString(new TextEncoder().encode(utf8));
+
+  if (hex.length > GRAFFITI_HEX_LENGTH) {
+    // remove characters from the end if hex string is too long
+    return hex.slice(0, GRAFFITI_HEX_LENGTH);
+  }
+
+  if (hex.length < GRAFFITI_HEX_LENGTH) {
+    // left-pad with zeros if hex string is too short
+    return "0x" + hex.slice(2).padStart(GRAFFITI_HEX_LENGTH - 2, "0");
+  }
+
+  return hex;
+}
+
+export function fromGraffitiHex(hex: string): string {
+  return new TextDecoder("utf8").decode(fromHexString(hex));
 }
