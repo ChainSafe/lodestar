@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "node:path";
 import {activePreset} from "@lodestar/params";
-import {toHexString} from "@lodestar/utils";
+import {sleep, toHexString} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
@@ -148,6 +148,8 @@ const unknownBlockSync = env.createNodePair({
   keysCount: 0,
 });
 await unknownBlockSync.el.job.start();
+// Wait for EL node to start and sync
+await sleep(5000);
 await unknownBlockSync.cl.job.start();
 const headForUnknownBlockSync = await env.nodes[0].cl.api.beacon.getBlockV2("head");
 ApiError.assert(headForUnknownBlockSync);
