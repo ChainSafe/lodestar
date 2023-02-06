@@ -102,6 +102,9 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     config,
     controller: new LevelDbController({name: dbPath}, {metrics: null}),
   };
+  onGracefulShutdownCbs.push(() => dbOps.controller.stop());
+  await dbOps.controller.start();
+
   const slashingProtection = new SlashingProtection(dbOps);
 
   // Create metrics registry if metrics are enabled
