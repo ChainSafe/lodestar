@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@lodestar/config";
 import {UPDATE_TIMEOUT} from "@lodestar/params";
-import {altair, Slot} from "@lodestar/types";
+import {Slot, allForks} from "@lodestar/types";
 import {computeSyncPeriodAtSlot} from "../utils/index.js";
 import {getSyncCommitteeAtPeriod, processLightClientUpdate, ProcessUpdateOpts} from "./processLightClientUpdate.js";
 import {ILightClientStore, LightClientStore, LightClientStoreEvents} from "./store.js";
@@ -14,16 +14,16 @@ export class LightclientSpec {
   constructor(
     config: IBeaconConfig,
     private readonly opts: ProcessUpdateOpts & LightClientStoreEvents,
-    bootstrap: altair.LightClientBootstrap
+    bootstrap: allForks.LightClientBootstrap
   ) {
     this.store = new LightClientStore(config, bootstrap, opts);
   }
 
-  onUpdate(currentSlot: Slot, update: altair.LightClientUpdate): void {
+  onUpdate(currentSlot: Slot, update: allForks.LightClientUpdate): void {
     processLightClientUpdate(this.store, currentSlot, this.opts, update);
   }
 
-  onFinalityUpdate(currentSlot: Slot, finalityUpdate: altair.LightClientFinalityUpdate): void {
+  onFinalityUpdate(currentSlot: Slot, finalityUpdate: allForks.LightClientFinalityUpdate): void {
     this.onUpdate(currentSlot, {
       attestedHeader: finalityUpdate.attestedHeader,
       nextSyncCommittee: ZERO_SYNC_COMMITTEE,
@@ -35,7 +35,7 @@ export class LightclientSpec {
     });
   }
 
-  onOptimisticUpdate(currentSlot: Slot, optimisticUpdate: altair.LightClientOptimisticUpdate): void {
+  onOptimisticUpdate(currentSlot: Slot, optimisticUpdate: allForks.LightClientOptimisticUpdate): void {
     this.onUpdate(currentSlot, {
       attestedHeader: optimisticUpdate.attestedHeader,
       nextSyncCommittee: ZERO_SYNC_COMMITTEE,

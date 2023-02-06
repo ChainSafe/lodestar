@@ -18,13 +18,13 @@ export interface IReqRespBeaconNode {
     peerId: PeerId,
     request: deneb.BeaconBlockAndBlobsSidecarByRootRequest
   ): Promise<deneb.SignedBeaconBlockAndBlobsSidecar[]>;
-  lightClientBootstrap(peerId: PeerId, request: Uint8Array): Promise<altair.LightClientBootstrap>;
-  lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate>;
-  lightClientFinalityUpdate(peerId: PeerId): Promise<altair.LightClientFinalityUpdate>;
+  lightClientBootstrap(peerId: PeerId, request: Uint8Array): Promise<allForks.LightClientBootstrap>;
+  lightClientOptimisticUpdate(peerId: PeerId): Promise<allForks.LightClientOptimisticUpdate>;
+  lightClientFinalityUpdate(peerId: PeerId): Promise<allForks.LightClientFinalityUpdate>;
   lightClientUpdatesByRange(
     peerId: PeerId,
     request: altair.LightClientUpdatesByRange
-  ): Promise<altair.LightClientUpdate[]>;
+  ): Promise<allForks.LightClientUpdate[]>;
 }
 
 /**

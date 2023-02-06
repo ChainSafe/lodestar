@@ -174,7 +174,7 @@ export class LightClientServer {
    */
   private readonly prevHeadData = new Map<BlockRooHex, SyncAttestedData>();
   private checkpointHeaders = new Map<BlockRooHex, allForks.LightClientHeader>();
-  private latestHeadUpdate: altair.LightClientOptimisticUpdate | null = null;
+  private latestHeadUpdate: allForks.LightClientOptimisticUpdate | null = null;
 
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
   private finalized: allForks.LightClientFinalityUpdate | null = null;
@@ -251,7 +251,7 @@ export class LightClientServer {
   /**
    * API ROUTE to get `currentSyncCommittee` and `nextSyncCommittee` from a trusted state root
    */
-  async getBootstrap(blockRoot: Uint8Array): Promise<altair.LightClientBootstrap> {
+  async getBootstrap(blockRoot: Uint8Array): Promise<allForks.LightClientBootstrap> {
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
     if (!syncCommitteeWitness) {
       throw new LightClientServerError(
@@ -296,7 +296,7 @@ export class LightClientServer {
    * - Has the most bits
    * - Signed header at the oldest slot
    */
-  async getUpdate(period: number): Promise<altair.LightClientUpdate> {
+  async getUpdate(period: number): Promise<allForks.LightClientUpdate> {
     // Signature data
     const update = await this.db.bestLightClientUpdate.get(period);
     if (!update) {
@@ -327,11 +327,11 @@ export class LightClientServer {
    * API ROUTE to poll LightclientHeaderUpdate.
    * Clients should use the SSE type `light_client_optimistic_update` if available
    */
-  getOptimisticUpdate(): altair.LightClientOptimisticUpdate | null {
+  getOptimisticUpdate(): allForks.LightClientOptimisticUpdate | null {
     return this.latestHeadUpdate;
   }
 
-  getFinalityUpdate(): altair.LightClientFinalityUpdate | null {
+  getFinalityUpdate(): allForks.LightClientFinalityUpdate | null {
     return this.finalized;
   }
 
@@ -467,7 +467,7 @@ export class LightClientServer {
       return;
     }
 
-    const headerUpdate: altair.LightClientOptimisticUpdate = {
+    const headerUpdate: allForks.LightClientOptimisticUpdate = {
       attestedHeader,
       syncAggregate,
       signatureSlot,
@@ -581,7 +581,7 @@ export class LightClientServer {
       ? await this.getFinalizedHeader(attestedData.finalizedCheckpoint.root as Uint8Array)
       : null;
 
-    let newUpdate: altair.LightClientUpdate;
+    let newUpdate: allForks.LightClientUpdate;
     let isFinalized;
     if (
       attestedData.isFinalized &&

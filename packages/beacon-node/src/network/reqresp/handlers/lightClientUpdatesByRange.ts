@@ -1,4 +1,4 @@
-import {altair} from "@lodestar/types";
+import {altair, allForks} from "@lodestar/types";
 import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {
   EncodedPayload,
@@ -13,7 +13,7 @@ import {IBeaconChain} from "../../../chain/index.js";
 export async function* onLightClientUpdatesByRange(
   requestBody: altair.LightClientUpdatesByRange,
   chain: IBeaconChain
-): AsyncIterable<EncodedPayload<altair.LightClientUpdate>> {
+): AsyncIterable<EncodedPayload<allForks.LightClientUpdate>> {
   const count = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, requestBody.count);
   for (let period = requestBody.startPeriod; period < requestBody.startPeriod + count; period++) {
     try {
