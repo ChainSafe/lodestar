@@ -116,6 +116,7 @@ export class UnknownBlockSync {
     // If the node loses all peers with pending unknown blocks, the sync will stall
     const connectedPeers = this.network.getConnectedPeers();
     if (connectedPeers.length === 0) {
+      this.logger.debug("No connected peers, skipping unknown block search.");
       return;
     }
 
