@@ -1,6 +1,5 @@
 import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64, allForks} from "@lodestar/types";
-import {ContainerType, VectorCompositeType} from "@chainsafe/ssz";
-import {FINALIZED_ROOT_DEPTH} from "@lodestar/params";
+import {ContainerType} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@lodestar/config";
 
 import {RouteDef, TypeJson} from "../../utils/index.js";
@@ -127,10 +126,8 @@ export type ReqTypes = {
 
 export function getTypeByEvent(config: IChainForkConfig): {[K in EventType]: TypeJson<EventData[K]>} {
   const stringType = new StringType();
-  const getLightClientOptimisticUpdateType = (
-    data: allForks.LightClientHeader
-  ): allForks.AllForksLightClientSSZTypes["LightClientOptimisticUpdate"] => {
-    return config.getLightClientForkTypes(data.beacon.slot).LightClientOptimisticUpdate;
+  const getLightClientTypeFromHeader = (data: allForks.LightClientHeader): allForks.AllForksLightClientSSZTypes => {
+    return config.getLightClientForkTypes(data.beacon.slot);
   };
 
   return {
@@ -188,26 +185,37 @@ export function getTypeByEvent(config: IChainForkConfig): {[K in EventType]: Typ
 
     [EventType.lightClientOptimisticUpdate]: {
       toJson: (data) =>
-        getLightClientOptimisticUpdateType(
-          ((data as unknown) as allForks.LightClientOptimisticUpdate).attestedHeader
-        ).toJson(data),
+        getLightClientTypeFromHeader(((data as unknown) as allForks.LightClientOptimisticUpdate).attestedHeader)[
+          "LightClientOptimisticUpdate"
+        ].toJson(data),
       fromJson: (data) =>
-        getLightClientOptimisticUpdateType(
+        getLightClientTypeFromHeader(
           // eslint-disable-next-line @typescript-eslint/naming-convention
           ((data as unknown) as {attested_header: allForks.LightClientHeader}).attested_header
-        ).fromJson(data),
+        )["LightClientOptimisticUpdate"].fromJson(data),
     },
-    [EventType.lightClientFinalityUpdate]: new ContainerType(
-      {
-        attestedHeader: ssz.altair.LightClientHeader,
-        finalizedHeader: ssz.altair.LightClientHeader,
-        finalityBranch: new VectorCompositeType(ssz.Bytes32, FINALIZED_ROOT_DEPTH),
-        syncAggregate: ssz.altair.SyncAggregate,
-        signatureSlot: ssz.Slot,
-      },
-      {jsonCase: "eth2"}
-    ),
-    [EventType.lightClientUpdate]: ssz.altair.LightClientUpdate,
+    [EventType.lightClientFinalityUpdate]: {
+      toJson: (data) =>
+        getLightClientTypeFromHeader(((data as unknown) as allForks.LightClientFinalityUpdate).attestedHeader)[
+          "LightClientFinalityUpdate"
+        ].toJson(data),
+      fromJson: (data) =>
+        getLightClientTypeFromHeader(
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          ((data as unknown) as {attested_header: allForks.LightClientHeader}).attested_header
+        )["LightClientFinalityUpdate"].fromJson(data),
+    },
+    [EventType.lightClientUpdate]: {
+      toJson: (data) =>
+        getLightClientTypeFromHeader(((data as unknown) as allForks.LightClientUpdate).attestedHeader)[
+          "LightClientUpdate"
+        ].toJson(data),
+      fromJson: (data) =>
+        getLightClientTypeFromHeader(
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          ((data as unknown) as {attested_header: allForks.LightClientHeader}).attested_header
+        )["LightClientUpdate"].fromJson(data),
+    },
   };
 }
 
