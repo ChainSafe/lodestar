@@ -64,9 +64,12 @@ export async function waitForNodeSyncStatus(env: SimulationEnvironment, node: No
 export async function waitForHead(
   env: SimulationEnvironment,
   node: NodePair,
-  options: {slot: Slot; head: string}
+  options: {slot: Slot; head: string; silent?: boolean}
 ): Promise<void> {
   return new Promise<void>((resolve) => {
+    if (!options.silent) {
+      console.log(`\nWaiting for head=${options.head} slot=${options.slot} on node=${node.id}.`);
+    }
     let firstHeadEventSlot: number;
 
     const cb = (event: {block: string; slot: Slot}): void => {

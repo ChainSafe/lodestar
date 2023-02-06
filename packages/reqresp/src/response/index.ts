@@ -77,7 +77,7 @@ export async function handleRequest<Req, Resp>({
           }
         });
 
-        logger.debug("Resp received request", {...logCtx, body: protocol.renderRequestBody?.(requestBody)});
+        logger.debug("Req  received", {...logCtx, body: protocol.renderRequestBody?.(requestBody)});
 
         const requestCount = protocol?.inboundRateLimits?.getRequestCount?.(requestBody) ?? 1;
 

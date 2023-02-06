@@ -40,8 +40,11 @@ export class UnknownBlockSync {
     opts?: SyncOptions
   ) {
     if (!opts?.disableUnknownBlockSync) {
+      this.logger.debug("UnknownBlockSync enabled.");
       this.network.events.on(NetworkEvent.unknownBlockParent, this.onUnknownBlock);
       this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
+    } else {
+      this.logger.debug("UnknownBlockSync disabled.");
     }
 
     if (metrics) {
@@ -113,12 +116,13 @@ export class UnknownBlockSync {
     // If the node loses all peers with pending unknown blocks, the sync will stall
     const connectedPeers = this.network.getConnectedPeers();
     if (connectedPeers.length === 0) {
+      this.logger.debug("No connected peers, skipping unknown block search.");
       return;
     }
 
     for (const block of getLowestPendingUnknownParents(this.pendingBlocks)) {
       this.downloadParentBlock(block, connectedPeers).catch((e) => {
-        this.logger.error("Unexpect error - downloadParentBlock", {}, e);
+        this.logger.error("Unexpected error - downloadParentBlock", {}, e);
       });
     }
   };
@@ -142,7 +146,7 @@ export class UnknownBlockSync {
       if (this.chain.forkChoice.hasBlock(blockInput.block.message.parentRoot)) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
         this.processBlock(this.addToPendingBlocks(blockInput, peerIdStr)).catch((e) => {
-          this.logger.error("Unexpect error - processBlock", {}, e);
+          this.logger.error("Unexpected error - processBlock", {}, e);
         });
       } else if (parentSlot <= finalizedSlot) {
         // the common ancestor of the downloading chain and canonical chain should be at least the finalized slot and
@@ -205,7 +209,7 @@ export class UnknownBlockSync {
       // Send child blocks to the processor
       for (const descendantBlock of getDescendantBlocks(pendingBlock.blockRootHex, this.pendingBlocks)) {
         this.processBlock(descendantBlock).catch((e) => {
-          this.logger.error("Unexpect error - processBlock", {}, e);
+          this.logger.error("Unexpected error - processBlock", {}, e);
         });
       }
     } else {
@@ -301,7 +305,7 @@ export class UnknownBlockSync {
    * referenced more than one bad block.
    */
   private removeAndDownscoreAllDescendants(block: PendingBlock): void {
-    // Get all blocks that are a descendat of this one
+    // Get all blocks that are a descendant of this one
     const badPendingBlocks = this.removeAllDescendants(block);
 
     for (const block of badPendingBlocks) {
@@ -323,7 +327,7 @@ export class UnknownBlockSync {
   }
 
   private removeAllDescendants(block: PendingBlock): PendingBlock[] {
-    // Get all blocks that are a descendat of this one
+    // Get all blocks that are a descendant of this one
     const badPendingBlocks = [block, ...getAllDescendantBlocks(block.blockRootHex, this.pendingBlocks)];
 
     this.metrics?.syncUnknownBlock.removedBlocks.inc(badPendingBlocks.length);
