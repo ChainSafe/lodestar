@@ -638,8 +638,9 @@ export class PeerManager {
 
     // peerLongLivedAttnets metric is a count
     metrics.peerLongLivedAttnets.reset();
-    metrics.peerScore.reset();
+    metrics.peerScoreByClient.reset();
     metrics.peerConnectionLength.reset();
+    metrics.gossipPeer.scoreByClient.reset();
 
     // reset client counts _for each client_ to 0
     for (const client of Object.values(ClientKind)) {
@@ -660,7 +661,8 @@ export class PeerManager {
 
         // TODO: Consider optimizing by doing observe in batch
         metrics.peerLongLivedAttnets.observe(attnets ? attnets.getTrueBitIndexes().length : 0);
-        metrics.peerScore.observe(this.peerRpcScores.getScore(peerId));
+        metrics.peerScoreByClient.observe({client}, this.peerRpcScores.getScore(peerId));
+        metrics.gossipPeer.scoreByClient.observe({client}, this.peerRpcScores.getGossipScore(peerId));
         metrics.peerConnectionLength.observe((now - openCnx.stat.timeline.open) / 1000);
         total++;
       }
