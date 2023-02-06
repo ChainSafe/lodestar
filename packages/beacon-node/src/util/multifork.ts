@@ -57,32 +57,7 @@ export function getStateTypeFromBytes(
 /**
  * First field in update is beacon, first field in beacon is slot
  *
- * update = {
- * attestedHeader: {
- *  beacon: {
- *   slot
- *   ...
- *  }
- * }
- *  ...
- * }
- *   ...
- */
-const SLOT_BYTES_POSITION_IN_LIGHTCLIENTUPDATE = 0;
-export function getLightClientUpdateTypeFromBytes(
-  config: IChainForkConfig,
-  bytes: Buffer | Uint8Array
-): allForks.AllForksLightClientSSZTypes["LightClientUpdate"] {
-  const slot = bytesToInt(
-    bytes.subarray(SLOT_BYTES_POSITION_IN_LIGHTCLIENTUPDATE, SLOT_BYTES_POSITION_IN_LIGHTCLIENTUPDATE + SLOT_BYTE_COUNT)
-  );
-  return config.getLightClientForkTypes(slot).LightClientUpdate;
-}
-
-/**
- * First field in update is beacon, first field in beacon is slot
- *
- * update = {
+ * header = {
  *  beacon: {
  *   slot
  *   ...

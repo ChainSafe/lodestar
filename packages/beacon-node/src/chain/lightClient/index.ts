@@ -1,4 +1,4 @@
-import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod, allForks} from "@lodestar/types";
+import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod, allForks, capella} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {
   CachedBeaconStateAltair,
@@ -11,7 +11,14 @@ import {isBetterUpdate, toLightClientUpdateSummary, LightClientUpdateSummary} fr
 import {ILogger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
-import {MIN_SYNC_COMMITTEE_PARTICIPANTS, SYNC_COMMITTEE_SIZE, ForkName, ForkSeq, ForkExecution} from "@lodestar/params";
+import {
+  MIN_SYNC_COMMITTEE_PARTICIPANTS,
+  SYNC_COMMITTEE_SIZE,
+  ForkName,
+  ForkSeq,
+  ForkExecution,
+  isForkLightClient,
+} from "@lodestar/params";
 
 import {IBeaconDb} from "../../db/index.js";
 import {IMetrics} from "../../metrics/index.js";
@@ -577,39 +584,43 @@ export class LightClientServer {
       throw Error("nextSyncCommittee not available");
     }
     const nextSyncCommitteeBranch = getNextSyncCommitteeBranch(syncCommitteeWitness);
-    const finalizedHeader = attestedData.isFinalized
+    const finalizedHeaderAttested = attestedData.isFinalized
       ? await this.getFinalizedHeader(attestedData.finalizedCheckpoint.root as Uint8Array)
       : null;
 
-    let newUpdate: allForks.LightClientUpdate;
-    let isFinalized;
+    let isFinalized, finalityBranch, finalizedHeader;
+
     if (
       attestedData.isFinalized &&
-      finalizedHeader &&
-      computeSyncPeriodAtSlot(finalizedHeader.beacon.slot) == syncPeriod
+      finalizedHeaderAttested &&
+      computeSyncPeriodAtSlot(finalizedHeaderAttested.beacon.slot) == syncPeriod
     ) {
       isFinalized = true;
-      newUpdate = {
-        attestedHeader,
-        nextSyncCommittee: nextSyncCommittee,
-        nextSyncCommitteeBranch,
-        finalizedHeader,
-        finalityBranch: attestedData.finalityBranch,
-        syncAggregate,
-        signatureSlot,
-      };
+      finalityBranch = attestedData.finalityBranch;
+      finalizedHeader = finalizedHeaderAttested;
     } else {
       isFinalized = false;
-      newUpdate = {
-        attestedHeader,
-        nextSyncCommittee: nextSyncCommittee,
-        nextSyncCommitteeBranch,
-        finalizedHeader: this.zero.finalizedHeader,
-        finalityBranch: this.zero.finalityBranch,
-        syncAggregate,
-        signatureSlot,
-      };
+      finalityBranch = this.zero.finalityBranch;
+      finalizedHeader = this.zero.finalizedHeader;
     }
+
+    // TODO capella: have a more graceful upgradtion condition and code
+    if (
+      (attestedHeader as capella.LightClientHeader).execution !== undefined &&
+      (finalizedHeader as capella.LightClientHeader).execution === undefined
+    ) {
+      finalizedHeader = upgradeLightClientHeader(this.config.getForkName(attestedHeader.beacon.slot), finalizedHeader);
+    }
+
+    const newUpdate = {
+      attestedHeader,
+      nextSyncCommittee: nextSyncCommittee,
+      nextSyncCommitteeBranch,
+      finalizedHeader,
+      finalityBranch,
+      syncAggregate,
+      signatureSlot,
+    } as allForks.LightClientUpdate;
 
     // attestedData and the block of syncAggregate may not be in same sync period
     // should not use attested data slot as sync period
@@ -698,4 +709,13 @@ export function blockToLightClientHeader(
   } else {
     return {beacon};
   }
+}
+
+export function upgradeLightClientHeader(fork: ForkName, header: altair.LightClientHeader): allForks.LightClientHeader {
+  const upgradedHeader = (isForkLightClient(fork)
+    ? ssz.allForksLightClient[fork].LightClientHeader
+    : ssz.altair.LightClientHeader
+  ).defaultValue();
+  upgradedHeader.beacon = header.beacon;
+  return upgradedHeader;
 }
