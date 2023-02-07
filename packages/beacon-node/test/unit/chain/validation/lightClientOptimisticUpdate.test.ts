@@ -1,7 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {createIBeaconConfig} from "@lodestar/config";
-import {config} from "@lodestar/config/default";
+import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {altair, ssz} from "@lodestar/types";
 
 import {computeTimeAtSlot} from "@lodestar/state-transition";
@@ -14,6 +13,15 @@ import {IBeaconChain} from "../../../../src/chain/index.js";
 describe("Light Client Optimistic Update validation", function () {
   let fakeClock: sinon.SinonFakeTimers;
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  const config = createIChainForkConfig({
+    ...defaultChainConfig,
+    /* eslint-disable @typescript-eslint/naming-convention */
+    ALTAIR_FORK_EPOCH: 1,
+    BELLATRIX_FORK_EPOCH: 3,
+    CAPELLA_FORK_EPOCH: Infinity,
+  });
+
   beforeEach(() => {
     fakeClock = sinon.useFakeTimers();
   });
@@ -93,7 +101,7 @@ describe("Light Client Optimistic Update validation", function () {
 
   it("should return invalid - optimistic update not matching local", async () => {
     const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
-    lightclientOptimisticUpdate.attestedHeader.beacon.slot = 2;
+    lightclientOptimisticUpdate.attestedHeader.beacon.slot = 42;
 
     const chain = mockChain();
 
@@ -118,7 +126,7 @@ describe("Light Client Optimistic Update validation", function () {
 
   it("should return invalid - not matching local when no local optimistic update yet", async () => {
     const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
-    lightclientOptimisticUpdate.attestedHeader.beacon.slot = 2;
+    lightclientOptimisticUpdate.attestedHeader.beacon.slot = 42;
 
     const chain = mockChain();
 
@@ -144,12 +152,6 @@ describe("Light Client Optimistic Update validation", function () {
     // satisfy:
     // No other optimistic_update with a lower or equal attested_header.beacon.slot was already forwarded on the network
     lightclientOptimisticUpdate.attestedHeader.beacon.slot = 2;
-
-    chain.lightClientServer.getOptimisticUpdate = () => {
-      const defaultValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
-      defaultValue.attestedHeader.beacon.slot = 1;
-      return defaultValue;
-    };
 
     // satisfy:
     // [IGNORE] The optimistic_update is received after the block at signature_slot was given enough time to propagate
