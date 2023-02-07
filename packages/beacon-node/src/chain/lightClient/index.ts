@@ -1,4 +1,4 @@
-import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod, allForks, capella} from "@lodestar/types";
+import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod, allForks} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {
   CachedBeaconStateAltair,
@@ -604,12 +604,9 @@ export class LightClientServer {
       finalizedHeader = this.zero.finalizedHeader;
     }
 
-    // TODO capella: have a more graceful upgradtion condition and code
-    if (
-      (attestedHeader as capella.LightClientHeader).execution !== undefined &&
-      (finalizedHeader as capella.LightClientHeader).execution === undefined
-    ) {
-      finalizedHeader = upgradeLightClientHeader(this.config.getForkName(attestedHeader.beacon.slot), finalizedHeader);
+    const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
+    if (this.config.getForkName(finalizedHeader.beacon.slot) !== attestedFork) {
+      finalizedHeader = upgradeLightClientHeader(attestedFork, finalizedHeader);
     }
 
     const newUpdate = {
@@ -711,6 +708,7 @@ export function blockToLightClientHeader(
   }
 }
 
+// TODO: Correctly upgrade through multi fork, right now it effectively does pre capella -> capella fork
 export function upgradeLightClientHeader(fork: ForkName, header: altair.LightClientHeader): allForks.LightClientHeader {
   const upgradedHeader = (isForkLightClient(fork)
     ? ssz.allForksLightClient[fork].LightClientHeader
