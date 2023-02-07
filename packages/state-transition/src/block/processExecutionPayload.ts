@@ -61,10 +61,20 @@ export function processExecutionPayload(
     }
   }
 
-  // For blinded or full payload -> return common header
-  const transactionsRoot = isExecutionPayload(payload)
-    ? ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions)
-    : payload.transactionsRoot;
+  const payloadHeader = isExecutionPayload(payload) ? executionPayloadToPayloadHeader(fork, payload) : payload;
+
+  // TODO Deneb: Types are not happy by default. Since it's a generic allForks type going through ViewDU
+  // transformation then into allForks, probably some weird intersection incompatibility happens
+  state.latestExecutionPayloadHeader = state.config
+    .getExecutionForkTypes(state.slot)
+    .ExecutionPayloadHeader.toViewDU(payloadHeader) as typeof state.latestExecutionPayloadHeader;
+}
+
+export function executionPayloadToPayloadHeader(
+  fork: ForkSeq,
+  payload: allForks.ExecutionPayload
+): allForks.ExecutionPayloadHeader {
+  const transactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions);
 
   const bellatrixPayloadFields: allForks.ExecutionPayloadHeader = {
     parentHash: payload.parentHash,
@@ -96,9 +106,5 @@ export function processExecutionPayload(
       | deneb.ExecutionPayload).excessDataGas;
   }
 
-  // TODO Deneb: Types are not happy by default. Since it's a generic allForks type going through ViewDU
-  // transformation then into allForks, probably some weird intersection incompatibility happens
-  state.latestExecutionPayloadHeader = state.config
-    .getExecutionForkTypes(state.slot)
-    .ExecutionPayloadHeader.toViewDU(bellatrixPayloadFields) as typeof state.latestExecutionPayloadHeader;
+  return bellatrixPayloadFields;
 }
