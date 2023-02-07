@@ -51,6 +51,12 @@ export const gossipScoreThresholds: PeerScoreThresholds = {
   opportunisticGraftThreshold: 5,
 };
 
+/**
+ * Peer may sometimes has negative gossipsub score and we give it time to recover, however gossipsub score comes below this we need to take into account.
+ * Given gossipsubThresold = -4000, it's comfortable to only ignore negative score gossip peer score > -1000
+ */
+export const negativeGossipScoreIgnoreThreshold = -1000;
+
 type MeshMessageInfo = {
   decaySlots: number;
   capFactor: number;

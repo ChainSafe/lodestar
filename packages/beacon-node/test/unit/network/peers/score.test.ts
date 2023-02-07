@@ -64,28 +64,54 @@ describe("simple block provider score tracking", function () {
 
 describe("updateGossipsubScores", function () {
   const sandbox = sinon.createSandbox();
-  const peerRpcScoresStub = sandbox.createStubInstance(PeerRpcScoreStore);
+  let peerRpcScoresStub: PeerRpcScoreStore;
+  beforeEach(() => {
+    peerRpcScoresStub = sandbox.createStubInstance(PeerRpcScoreStore);
+  });
 
   this.afterEach(() => {
     sandbox.restore();
   });
 
-  it("should update gossipsub peer scores", () => {
-    updateGossipsubScores(
-      peerRpcScoresStub,
-      new Map([
-        ["a", 10],
-        ["b", -10],
-        ["c", -20],
-        ["d", -5],
-      ]),
-      2
-    );
-    expect(peerRpcScoresStub.updateGossipsubScore).to.be.calledWith("a", 10, false);
-    // should ignore b d since they are 2 biggest negative scores
-    expect(peerRpcScoresStub.updateGossipsubScore).to.be.calledWith("b", -10, true);
-    expect(peerRpcScoresStub.updateGossipsubScore).to.be.calledWith("d", -5, true);
-    // should not ignore c as it's lowest negative scores
-    expect(peerRpcScoresStub.updateGossipsubScore).to.be.calledWith("c", -20, false);
-  });
+  const testCases: {name: string; peerScores: [string, number, boolean][]; maxIgnore: number}[] = [
+    {
+      name: "Should NOT ignore negative score of <= -1000",
+      peerScores: [
+        ["a", 10, false],
+        // ignore the next 3 because maxIgnore is 5
+        ["b", -10, true],
+        ["c", -20, true],
+        ["d", -5, true],
+        // not ignore because score is low
+        ["e", -1000, false],
+      ],
+      maxIgnore: 5,
+    },
+    {
+      name: "Should NOT ignore last negative score",
+      peerScores: [
+        ["a", 10, false],
+        // ignore the next 3 because maxIgnore is 5
+        ["b", -10, true],
+        ["c", -20, true],
+        ["d", -5, true],
+        // not ignore because maxIgnore is 3
+        ["e", -30, false],
+      ],
+      maxIgnore: 3,
+    },
+  ];
+
+  for (const {name, peerScores, maxIgnore} of testCases) {
+    it(name, () => {
+      const peerScoreMap = new Map<string, number>();
+      for (const [key, value] of peerScores) {
+        peerScoreMap.set(key, value);
+      }
+      updateGossipsubScores(peerRpcScoresStub, peerScoreMap, maxIgnore);
+      for (const [key, value, ignore] of peerScores) {
+        expect(peerRpcScoresStub.updateGossipsubScore).to.be.calledWith(key, value, ignore);
+      }
+    });
+  }
 });
