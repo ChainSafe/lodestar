@@ -53,6 +53,26 @@ describe("progress", () => {
       expect(progress.secondCall.args[0]).to.eql({total, current: total, ratePerSec: 0, percentage: 100});
     });
 
+    it("should call progress with correct values directly reaches to total", () => {
+      const progress = sandbox.spy();
+      const frequencyMs = 50;
+      const total = 8;
+      const needle = showProgress({total, signal: new AbortController().signal, frequencyMs, progress});
+      needle(7);
+
+      expect(progress).to.be.calledOnce;
+      expect(progress.firstCall.args[0]).to.eql({total, current: total, ratePerSec: 0, percentage: 100});
+    });
+
+    it("should not call progress when initiated with zero total", () => {
+      const progress = sandbox.spy();
+      const frequencyMs = 50;
+      const total = 0;
+      showProgress({total, signal: new AbortController().signal, frequencyMs, progress});
+
+      expect(progress).to.be.not.be.called;
+    });
+
     it("should not call progress further when abort signal is called", () => {
       const progress = sandbox.spy();
       const frequencyMs = 50;
