@@ -96,7 +96,7 @@
     "@chainsafe/as-sha256": "^0.3.1",
     "@chainsafe/bls": "7.1.1",
     "@chainsafe/discv5": "^3.0.0",
-    "@chainsafe/libp2p-gossipsub": "^6.1.0",
+    "@chainsafe/libp2p-gossipsub": "maschad/js-libp2p-gossipsub.git#fix/tag-peers-on-graft",
     "@chainsafe/libp2p-noise": "^11.0.0",
     "@chainsafe/persistent-merkle-tree": "^0.4.2",
     "@chainsafe/snappy-stream": "^5.1.2",

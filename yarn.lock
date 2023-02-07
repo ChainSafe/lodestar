@@ -524,10 +524,9 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/is-ip/-/is-ip-2.0.1.tgz#62cb285669d91f88fd9fa285048dde3882f0993b"
   integrity sha512-nqSJ8u2a1Rv9FYbyI8qpDhTYujaKEyLknNrTejLYoSWmdeg+2WB7R6BZqPZYfrJzDxVi3rl6ZQuoaEvpKRZWgQ==
 
-"@chainsafe/libp2p-gossipsub@^6.1.0":
+"@chainsafe/libp2p-gossipsub@maschad/js-libp2p-gossipsub.git#fix/tag-peers-on-graft":
   version "6.1.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-6.1.0.tgz#70b34bb507d365ebc9dcd64071ccb0f4452a57f5"
-  integrity sha512-+zIPRGf2T+Qd+Hef/XbJx66FL+hbmth9sk6sr3PvQ2eolHGFwPwxSeM7fVdGWoZ7sMndUoGKUNPmO2GzbPsVQg==
+  resolved "https://codeload.github.com/maschad/js-libp2p-gossipsub/tar.gz/57ab5173bb86b5ac029e0b6af78e2e7936a4ba7f"
   dependencies:
     "@libp2p/crypto" "^1.0.3"
     "@libp2p/interface-connection" "^3.0.1"
