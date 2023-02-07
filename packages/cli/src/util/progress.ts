@@ -16,7 +16,7 @@ export function showProgress({
   let current = 0;
   let last = 0;
   let lastProcessTime: number = Date.now();
-  let internalId: NodeJS.Timeout;
+  let progressIntervalId: NodeJS.Timeout;
 
   const needle: NeedleFunc = (needle: number) => {
     // zero is considered first index in the range
@@ -42,16 +42,16 @@ export function showProgress({
     lastProcessTime = currentTime;
 
     if (current >= total) {
-      clearInterval(internalId);
+      clearInterval(progressIntervalId);
     }
   };
 
   if (total > 0) {
-    internalId = setInterval(processProgress, frequencyMs);
+    progressIntervalId = setInterval(processProgress, frequencyMs);
   }
 
   signal.addEventListener("abort", () => {
-    clearInterval(internalId);
+    clearInterval(progressIntervalId);
   });
 
   return needle;

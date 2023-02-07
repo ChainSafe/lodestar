@@ -91,7 +91,7 @@ export async function getSignersFromArgs(
         );
       },
     });
-    return await decryptKeystoreDefinitions(keystoreDefinitions, {
+    return decryptKeystoreDefinitions(keystoreDefinitions, {
       ...args,
       onDecrypt: needle,
       cacheFilePath: `${args.importKeystores[0]}.cache`,

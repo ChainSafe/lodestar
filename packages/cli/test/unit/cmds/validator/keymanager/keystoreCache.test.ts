@@ -21,7 +21,6 @@ describe("keystoreCache", () => {
   let secretKeys: Uint8Array[];
   let passwords: string[];
   let keystoreCacheFile: string;
-  // tmp.setGracefulCleanup();
 
   beforeEach(async function setup() {
     this.timeout(50000);
