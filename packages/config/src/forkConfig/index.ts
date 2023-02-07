@@ -107,7 +107,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     getLightClientForkTypes(slot: Slot): allForks.AllForksLightClientSSZTypes {
       const forkName = this.getForkName(slot);
       if (!isForkLightClient(forkName)) {
-        throw Error(`Invalid slot=${slot} fork=${forkName} for execution fork types`);
+        throw Error(`Invalid slot=${slot} fork=${forkName} for lightclient fork types`);
       }
       return ssz.allForksLightClient[forkName] as allForks.AllForksLightClientSSZTypes;
     },
