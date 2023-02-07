@@ -504,7 +504,7 @@ export class LightClientServer {
 
     if (isFinalized) {
       const finalizedCheckpointRoot = attestedData.finalizedCheckpoint.root as Uint8Array;
-      const finalizedHeader = await this.getFinalizedHeader(finalizedCheckpointRoot);
+      let finalizedHeader = await this.getFinalizedHeader(finalizedCheckpointRoot);
 
       if (
         finalizedHeader &&
@@ -512,6 +512,11 @@ export class LightClientServer {
           finalizedHeader.beacon.slot > this.finalized.finalizedHeader.beacon.slot ||
           syncAggregateParticipation > sumBits(this.finalized.syncAggregate.syncCommitteeBits))
       ) {
+        // Fork of LightClientFinalityUpdate is based off on attested header's fork
+        const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
+        if (this.config.getForkName(finalizedHeader.beacon.slot) !== attestedFork) {
+          finalizedHeader = upgradeLightClientHeader(attestedFork, finalizedHeader);
+        }
         this.finalized = {
           attestedHeader,
           finalizedHeader,
@@ -604,6 +609,7 @@ export class LightClientServer {
       finalizedHeader = this.zero.finalizedHeader;
     }
 
+    // Fork of LightClientUpdate is based off on attested header's fork
     const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
     if (this.config.getForkName(finalizedHeader.beacon.slot) !== attestedFork) {
       finalizedHeader = upgradeLightClientHeader(attestedFork, finalizedHeader);
