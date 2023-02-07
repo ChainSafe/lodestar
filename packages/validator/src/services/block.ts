@@ -106,7 +106,7 @@ export class BlockProposingService {
         this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
       });
-      this.logger.info("Published block", {...logCtx, graffiti, ...block.debugLogCtx});
+      this.logger.info("Published block", {...logCtx, graffiti: graffiti.substring(0, 32), ...block.debugLogCtx});
       this.metrics?.blocksPublished.inc();
     } catch (e) {
       this.logger.error("Error proposing block", logCtx, e as Error);
