@@ -30,7 +30,7 @@ export type Discv5WorkerApi = {
 
   /** Return the ENRs currently in the kad table */
   kadValues(): Promise<ENRData[]>;
-  /** emit thethe ENRs currently in the kad table */
+  /** emit the ENRs currently in the kad table */
   discoverKadValues(): Promise<void>;
   /** Begin a random search through the DHT, return discovered ENRs */
   findRandomNode(): Promise<ENRData[]>;
