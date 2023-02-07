@@ -265,7 +265,7 @@ export async function decryptKeystoreDefinitions(
         opts?.onDecrypt(signers.length - 1, signers[signers.length - 1]);
       }
       return signers;
-    } catch (e) {
+    } catch {
       // Some error loading the cache, ignore and invalidate cache
       await clearKeystoreCache(opts.cacheFilePath);
     }
