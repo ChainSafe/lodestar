@@ -56,11 +56,11 @@ async function resolveStateIdOrNull(
 ): Promise<{state: BeaconStateAllForks | null; executionOptimistic: boolean}> {
   stateId = String(stateId).toLowerCase();
   if (stateId === "head" || stateId === "genesis" || stateId === "finalized" || stateId === "justified") {
-    return await stateByName(db, chain.stateCache, chain.forkChoice, stateId);
+    return stateByName(db, chain.stateCache, chain.forkChoice, stateId);
   }
 
   if (stateId.startsWith("0x")) {
-    return await stateByRoot(db, chain.stateCache, chain.forkChoice, stateId);
+    return stateByRoot(db, chain.stateCache, chain.forkChoice, stateId);
   }
 
   // state id must be slot
@@ -68,7 +68,7 @@ async function resolveStateIdOrNull(
   if (isNaN(slot) && isNaN(slot - 0)) {
     throw new ValidationError(`Invalid state id '${stateId}'`, "stateId");
   }
-  return await stateBySlot(config, db, chain.stateCache, chain.forkChoice, slot, opts);
+  return stateBySlot(config, db, chain.stateCache, chain.forkChoice, slot, opts);
 }
 
 /**

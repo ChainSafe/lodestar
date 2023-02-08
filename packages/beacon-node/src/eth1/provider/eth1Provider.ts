@@ -104,7 +104,7 @@ export class Eth1Provider implements IEth1Provider {
   async getBlockByNumber(blockNumber: number | "latest"): Promise<EthJsonRpcBlockRaw | null> {
     const method = "eth_getBlockByNumber";
     const blockNumberHex = typeof blockNumber === "string" ? blockNumber : numToQuantity(blockNumber);
-    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
+    return this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
       // false = include only transaction roots, not full objects
       {method, params: [blockNumberHex, false]},
       getBlockByNumberOpts
@@ -113,7 +113,7 @@ export class Eth1Provider implements IEth1Provider {
 
   async getBlockByHash(blockHashHex: string): Promise<EthJsonRpcBlockRaw | null> {
     const method = "eth_getBlockByHash";
-    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
+    return this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
       // false = include only transaction roots, not full objects
       {method, params: [blockHashHex, false]},
       getBlockByHashOpts
@@ -131,7 +131,7 @@ export class Eth1Provider implements IEth1Provider {
 
   async getCode(address: string): Promise<string> {
     const method = "eth_getCode";
-    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>({method, params: [address, "latest"]});
+    return this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>({method, params: [address, "latest"]});
   }
 
   async getLogs(options: {

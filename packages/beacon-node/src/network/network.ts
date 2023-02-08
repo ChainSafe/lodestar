@@ -200,7 +200,7 @@ export class Network implements INetwork {
   }
 
   async getEnr(): Promise<SignableENR | undefined> {
-    return await this.peerManager["discovery"]?.discv5.enr();
+    return this.peerManager["discovery"]?.discv5.enr();
   }
 
   getConnectionsByPeer(): Map<string, Connection[]> {

@@ -71,7 +71,7 @@ async function resolveBlockIdOrNull(
   if (blockId.startsWith("0x")) {
     const blockHash = fromHexString(blockId);
     blockSummary = forkChoice.getBlock(blockHash);
-    getBlockByBlockArchive = async () => await db.blockArchive.getByRoot(blockHash);
+    getBlockByBlockArchive = async () => db.blockArchive.getByRoot(blockHash);
   } else {
     // block id must be slot
     const blockSlot = parseInt(blockId, 10);
@@ -79,7 +79,7 @@ async function resolveBlockIdOrNull(
       throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
     }
     blockSummary = forkChoice.getCanonicalBlockAtSlot(blockSlot);
-    getBlockByBlockArchive = async () => await db.blockArchive.get(blockSlot);
+    getBlockByBlockArchive = async () => db.blockArchive.get(blockSlot);
   }
 
   if (blockSummary) {

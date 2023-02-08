@@ -144,7 +144,7 @@ export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array>
     const res = await got.get(pathOrUrl, {encoding: "binary"});
     return res.rawBody;
   } else {
-    return await fs.promises.readFile(pathOrUrl);
+    return fs.promises.readFile(pathOrUrl);
   }
 }
 

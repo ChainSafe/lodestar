@@ -60,11 +60,11 @@ export class StateRegenerator implements IStateRegenerator {
     // We may have the checkpoint state with parent root inside the checkpoint state cache
     // through gossip validation.
     if (parentEpoch < blockEpoch) {
-      return await this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch}, rCaller);
+      return this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch}, rCaller);
     }
 
     // Otherwise, get the state normally.
-    return await this.getState(parentBlock.stateRoot, rCaller);
+    return this.getState(parentBlock.stateRoot, rCaller);
   }
 
   /**
@@ -72,7 +72,7 @@ export class StateRegenerator implements IStateRegenerator {
    */
   async getCheckpointState(cp: phase0.Checkpoint, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
     const checkpointStartSlot = computeStartSlotAtEpoch(cp.epoch);
-    return await this.getBlockSlotState(toHexString(cp.root), checkpointStartSlot, rCaller);
+    return this.getBlockSlotState(toHexString(cp.root), checkpointStartSlot, rCaller);
   }
 
   /**
@@ -100,14 +100,14 @@ export class StateRegenerator implements IStateRegenerator {
     // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
     // or needs to have empty slots processed until the requested epoch
     if (latestCheckpointStateCtx) {
-      return await processSlotsByCheckpoint(this.modules, latestCheckpointStateCtx, slot);
+      return processSlotsByCheckpoint(this.modules, latestCheckpointStateCtx, slot);
     }
 
     // Otherwise, use the fork choice to get the stateRoot from block at the checkpoint root
     // regenerate that state,
     // then process empty slots until the requested epoch
     const blockStateCtx = await this.getState(block.stateRoot, rCaller);
-    return await processSlotsByCheckpoint(this.modules, blockStateCtx, slot);
+    return processSlotsByCheckpoint(this.modules, blockStateCtx, slot);
   }
 
   /**

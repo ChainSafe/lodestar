@@ -35,7 +35,7 @@ export class Eth1ProviderWithAdmin extends Eth1Provider {
     nodeInfo: async (): Promise<EthJsonRpcAdminReturnTypes["admin_nodeInfo"]> => {
       const method = "admin_nodeInfo";
 
-      return await this.getRpc().fetch<EthJsonRpcAdminReturnTypes[typeof method]>(
+      return this.getRpc().fetch<EthJsonRpcAdminReturnTypes[typeof method]>(
         // false = include only transaction roots, not full objects
         {method, params: []}
       );
@@ -44,7 +44,7 @@ export class Eth1ProviderWithAdmin extends Eth1Provider {
     addPeer: async (enode: string): Promise<EthJsonRpcAdminReturnTypes["admin_addPeer"]> => {
       const method = "admin_addPeer";
 
-      return await this.getRpc().fetch<EthJsonRpcAdminReturnTypes[typeof method]>(
+      return this.getRpc().fetch<EthJsonRpcAdminReturnTypes[typeof method]>(
         // false = include only transaction roots, not full objects
         {method, params: [enode]}
       );

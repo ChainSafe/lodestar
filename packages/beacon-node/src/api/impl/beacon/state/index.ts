@@ -23,7 +23,7 @@ export function getBeaconStateApi({
   async function getState(
     stateId: routes.beacon.StateId
   ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean}> {
-    return await resolveStateId(config, chain, db, stateId);
+    return resolveStateId(config, chain, db, stateId);
   }
 
   return {

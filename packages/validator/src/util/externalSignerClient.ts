@@ -110,7 +110,7 @@ export async function externalSignerGetKeys(externalSignerUrl: string): Promise<
     headers: {"Content-Type": "application/json"},
   });
 
-  return await handlerExternalSignerResponse<string[]>(res);
+  return handlerExternalSignerResponse<string[]>(res);
 }
 
 /**

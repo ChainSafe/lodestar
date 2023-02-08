@@ -114,7 +114,7 @@ export async function initBeaconState(
 
   // See if we can sync state using checkpoint sync args or else start from genesis
   if (args.checkpointState) {
-    return await readWSState(
+    return readWSState(
       lastDbState,
       {checkpointState: args.checkpointState, wssCheckpoint: args.wssCheckpoint},
       chainForkConfig,
@@ -122,7 +122,7 @@ export async function initBeaconState(
       logger
     );
   } else if (args.checkpointSyncUrl) {
-    return await fetchWSStateFromBeaconApi(
+    return fetchWSStateFromBeaconApi(
       lastDbState,
       {checkpointSyncUrl: args.checkpointSyncUrl, wssCheckpoint: args.wssCheckpoint},
       chainForkConfig,

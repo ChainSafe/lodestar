@@ -153,7 +153,7 @@ export class Eth1DepositDataTracker {
 
     // Eth1 data may change due to the vote included in this block
     const newEth1Data = becomesNewEth1Data(state, eth1DataVoteView) ? eth1DataVoteView : state.eth1Data;
-    return await getDeposits(state, newEth1Data, this.depositsCache.get.bind(this.depositsCache));
+    return getDeposits(state, newEth1Data, this.depositsCache.get.bind(this.depositsCache));
   }
 
   /**
