@@ -7,18 +7,16 @@ import {
   computeSyncPeriodAtSlot,
   executionPayloadToPayloadHeader,
 } from "@lodestar/state-transition";
-import {isBetterUpdate, toLightClientUpdateSummary, LightClientUpdateSummary} from "@lodestar/light-client/spec";
+import {
+  isBetterUpdate,
+  toLightClientUpdateSummary,
+  LightClientUpdateSummary,
+  upgradeLightClientHeader,
+} from "@lodestar/light-client/spec";
 import {ILogger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
-import {
-  MIN_SYNC_COMMITTEE_PARTICIPANTS,
-  SYNC_COMMITTEE_SIZE,
-  ForkName,
-  ForkSeq,
-  ForkExecution,
-  isForkLightClient,
-} from "@lodestar/params";
+import {MIN_SYNC_COMMITTEE_PARTICIPANTS, SYNC_COMMITTEE_SIZE, ForkName, ForkSeq, ForkExecution} from "@lodestar/params";
 
 import {IBeaconDb} from "../../db/index.js";
 import {IMetrics} from "../../metrics/index.js";
@@ -515,7 +513,7 @@ export class LightClientServer {
         // Fork of LightClientFinalityUpdate is based off on attested header's fork
         const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
         if (this.config.getForkName(finalizedHeader.beacon.slot) !== attestedFork) {
-          finalizedHeader = upgradeLightClientHeader(attestedFork, finalizedHeader);
+          finalizedHeader = upgradeLightClientHeader(this.config, attestedFork, finalizedHeader);
         }
         this.finalized = {
           attestedHeader,
@@ -612,7 +610,7 @@ export class LightClientServer {
     // Fork of LightClientUpdate is based off on attested header's fork
     const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
     if (this.config.getForkName(finalizedHeader.beacon.slot) !== attestedFork) {
-      finalizedHeader = upgradeLightClientHeader(attestedFork, finalizedHeader);
+      finalizedHeader = upgradeLightClientHeader(this.config, attestedFork, finalizedHeader);
     }
 
     const newUpdate = {
@@ -712,14 +710,4 @@ export function blockToLightClientHeader(
   } else {
     return {beacon};
   }
-}
-
-// TODO: Correctly upgrade through multi fork, right now it effectively does pre capella -> capella fork
-export function upgradeLightClientHeader(fork: ForkName, header: altair.LightClientHeader): allForks.LightClientHeader {
-  const upgradedHeader = (isForkLightClient(fork)
-    ? ssz.allForksLightClient[fork].LightClientHeader
-    : ssz.altair.LightClientHeader
-  ).defaultValue();
-  upgradedHeader.beacon = header.beacon;
-  return upgradedHeader;
 }

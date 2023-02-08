@@ -1,6 +1,7 @@
 import {BitArray, byteArrayEquals} from "@chainsafe/ssz";
-import {FINALIZED_ROOT_DEPTH, NEXT_SYNC_COMMITTEE_DEPTH} from "@lodestar/params";
-import {altair, phase0, ssz, allForks} from "@lodestar/types";
+import {FINALIZED_ROOT_DEPTH, NEXT_SYNC_COMMITTEE_DEPTH, ForkSeq, ForkName} from "@lodestar/params";
+import {altair, phase0, ssz, allForks, capella, deneb} from "@lodestar/types";
+import {IChainForkConfig} from "@lodestar/config";
 
 export const GENESIS_SLOT = 0;
 export const ZERO_HASH = new Uint8Array(32);
@@ -44,4 +45,40 @@ export function isZeroedHeader(header: phase0.BeaconBlockHeader): boolean {
 export function isZeroedSyncCommittee(syncCommittee: altair.SyncCommittee): boolean {
   // Fast return for when constructing full LightClientUpdate from partial updates
   return syncCommittee === ZERO_SYNC_COMMITTEE || byteArrayEquals(syncCommittee.pubkeys[0], ZERO_PUBKEY);
+}
+
+export function upgradeLightClientHeader(
+  config: IChainForkConfig,
+  targetFork: ForkName,
+  header: altair.LightClientHeader
+): allForks.LightClientHeader {
+  const upgradedHeader = header;
+
+  const headerFork = config.getForkName(header.beacon.slot);
+  switch (headerFork) {
+    case ForkName.phase0:
+      throw Error(`Invalid target fork=${headerFork} for LightClientHeader`);
+
+    case ForkName.altair:
+    case ForkName.bellatrix:
+      // Break if no further upgradation is required else fall through
+      if (ForkSeq[targetFork] <= ForkSeq.bellatrix) break;
+    // eslint-disable-next-line no-fallthrough
+
+    case ForkName.capella:
+      (upgradedHeader as capella.LightClientHeader).execution = ssz.capella.LightClientHeader.fields.execution.defaultValue();
+      (upgradedHeader as capella.LightClientHeader).executionBranch = ssz.capella.LightClientHeader.fields.executionBranch.defaultValue();
+
+      // Break if no further upgradation is required else fall through
+      if (ForkSeq[targetFork] <= ForkSeq.capella) break;
+    // eslint-disable-next-line no-fallthrough
+
+    case ForkName.deneb:
+      (upgradedHeader as deneb.LightClientHeader).execution.excessDataGas = ssz.deneb.LightClientHeader.fields.execution.fields.excessDataGas.defaultValue();
+
+      // Break if no further upgradation is required else fall through
+      if (ForkSeq[targetFork] <= ForkSeq.deneb) break;
+    // eslint-disable-next-line no-fallthrough
+  }
+  return upgradedHeader;
 }

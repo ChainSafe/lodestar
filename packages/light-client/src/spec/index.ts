@@ -7,6 +7,7 @@ import {ILightClientStore, LightClientStore, LightClientStoreEvents} from "./sto
 import {ZERO_FINALITY_BRANCH, ZERO_HEADER, ZERO_NEXT_SYNC_COMMITTEE_BRANCH, ZERO_SYNC_COMMITTEE} from "./utils.js";
 
 export {isBetterUpdate, toLightClientUpdateSummary, LightClientUpdateSummary} from "./isBetterUpdate.js";
+export {upgradeLightClientHeader} from "./utils.js";
 
 export class LightclientSpec {
   readonly store: ILightClientStore;
