@@ -185,7 +185,7 @@ function getProposerConfigFromArgs(
   }: {persistedKeysBackend: IPersistedKeysBackend; accountPaths: {proposerDir: string}}
 ): ValidatorProposerConfig {
   const defaultConfig = {
-    graffiti: args.graffiti || getDefaultGraffiti(),
+    graffiti: args.graffiti ?? getDefaultGraffiti(),
     strictFeeRecipientCheck: args.strictFeeRecipientCheck,
     feeRecipient: args.suggestedFeeRecipient ? parseFeeRecipient(args.suggestedFeeRecipient) : undefined,
     builder: {
