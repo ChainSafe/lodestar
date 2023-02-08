@@ -1,6 +1,6 @@
 # Contribution Guidelines
 
-Thanks for your interest in contributing to Lodestar. It's people like you that push the Ethereum ecosystem forward. Please review this dcocument thoroghly.
+Thanks for your interest in contributing to Lodestar. It's people like you that push the Ethereum ecosystem forward.
 
 ## Prerequisites
 
