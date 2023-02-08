@@ -8,6 +8,7 @@
 // However this prevents dynamic configuration changes which is exactly what the CLI required before.
 // - The dev command can't apply the minimal preset dynamically
 // - `--network gnosis` can't apply a different preset dynamically
+// - `--network chiado` can't apply a different preset dynamically
 //
 // Running this file allows us to keep a static export strategy while NOT requiring users to
 // set LODESTAR_PRESET manually every time.
@@ -29,7 +30,7 @@ else if (process.env.LODESTAR_PRESET) {
 else if (network) {
   if (network === "dev") {
     process.env.LODESTAR_PRESET = "minimal";
-  } else if (network === "gnosis") {
+  } else if (network === "gnosis" || network === "chiado") {
     process.env.LODESTAR_PRESET = "gnosis";
   }
 }
