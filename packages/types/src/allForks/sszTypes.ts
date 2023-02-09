@@ -106,6 +106,49 @@ export const allForksBlinded = {
   },
 };
 
+export const allForksLightClient = {
+  altair: {
+    BeaconBlock: altair.BeaconBlock,
+    BeaconBlockBody: altair.BeaconBlockBody,
+    LightClientHeader: altair.LightClientHeader,
+    LightClientBootstrap: altair.LightClientBootstrap,
+    LightClientUpdate: altair.LightClientUpdate,
+    LightClientFinalityUpdate: altair.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: altair.LightClientOptimisticUpdate,
+    LightClientStore: altair.LightClientStore,
+  },
+  bellatrix: {
+    BeaconBlock: bellatrix.BeaconBlock,
+    BeaconBlockBody: bellatrix.BeaconBlockBody,
+    LightClientHeader: altair.LightClientHeader,
+    LightClientBootstrap: altair.LightClientBootstrap,
+    LightClientUpdate: altair.LightClientUpdate,
+    LightClientFinalityUpdate: altair.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: altair.LightClientOptimisticUpdate,
+    LightClientStore: altair.LightClientStore,
+  },
+  capella: {
+    BeaconBlock: capella.BeaconBlock,
+    BeaconBlockBody: capella.BeaconBlockBody,
+    LightClientHeader: capella.LightClientHeader,
+    LightClientBootstrap: capella.LightClientBootstrap,
+    LightClientUpdate: capella.LightClientUpdate,
+    LightClientFinalityUpdate: capella.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: capella.LightClientOptimisticUpdate,
+    LightClientStore: capella.LightClientStore,
+  },
+  deneb: {
+    BeaconBlock: deneb.BeaconBlock,
+    BeaconBlockBody: deneb.BeaconBlockBody,
+    LightClientHeader: deneb.LightClientHeader,
+    LightClientBootstrap: deneb.LightClientBootstrap,
+    LightClientUpdate: deneb.LightClientUpdate,
+    LightClientFinalityUpdate: deneb.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: deneb.LightClientOptimisticUpdate,
+    LightClientStore: deneb.LightClientStore,
+  },
+};
+
 export const allForksBlobs = {
   deneb: {
     SignedBeaconBlockAndBlobsSidecar: deneb.SignedBeaconBlockAndBlobsSidecar,

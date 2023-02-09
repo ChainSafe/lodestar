@@ -1,4 +1,4 @@
-import {altair, capella, ssz} from "@lodestar/types";
+import {capella, ssz, allForks} from "@lodestar/types";
 import {MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {
@@ -275,7 +275,7 @@ export async function importBlock(
     if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
       try {
         this.lightClientServer.onImportBlockHead(
-          block.message as altair.BeaconBlock,
+          block.message as allForks.AllForksLightClient["BeaconBlock"],
           postState as CachedBeaconStateAltair,
           parentBlockSlot
         );

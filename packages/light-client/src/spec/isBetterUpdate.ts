@@ -1,5 +1,5 @@
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {altair, Slot} from "@lodestar/types";
+import {Slot, allForks} from "@lodestar/types";
 import {computeSyncPeriodAtSlot} from "../utils/index.js";
 import {isFinalityUpdate, isSyncCommitteeUpdate, sumBits} from "./utils.js";
 
@@ -82,7 +82,7 @@ export function isSafeLightClientUpdate(update: LightClientUpdateSummary): boole
   );
 }
 
-export function toLightClientUpdateSummary(update: altair.LightClientUpdate): LightClientUpdateSummary {
+export function toLightClientUpdateSummary(update: allForks.LightClientUpdate): LightClientUpdateSummary {
   return {
     activeParticipants: sumBits(update.syncAggregate.syncCommitteeBits),
     attestedHeaderSlot: update.attestedHeader.beacon.slot,

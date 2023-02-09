@@ -1,4 +1,12 @@
-import {GENESIS_EPOCH, ForkName, SLOTS_PER_EPOCH, ForkSeq, isForkExecution, isForkBlobs} from "@lodestar/params";
+import {
+  GENESIS_EPOCH,
+  ForkName,
+  SLOTS_PER_EPOCH,
+  ForkSeq,
+  isForkLightClient,
+  isForkExecution,
+  isForkBlobs,
+} from "@lodestar/params";
 import {Slot, allForks, Version, ssz} from "@lodestar/types";
 import {IChainConfig} from "../chainConfig/index.js";
 import {IForkConfig, IForkInfo} from "./types.js";
@@ -95,6 +103,13 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
         throw Error(`Invalid slot=${slot} fork=${forkName} for blinded fork types`);
       }
       return ssz.allForksBlinded[forkName] as allForks.AllForksBlindedSSZTypes;
+    },
+    getLightClientForkTypes(slot: Slot): allForks.AllForksLightClientSSZTypes {
+      const forkName = this.getForkName(slot);
+      if (!isForkLightClient(forkName)) {
+        throw Error(`Invalid slot=${slot} fork=${forkName} for lightclient fork types`);
+      }
+      return ssz.allForksLightClient[forkName] as allForks.AllForksLightClientSSZTypes;
     },
     getBlobsForkTypes(slot: Slot): allForks.AllForksBlobsSSZTypes {
       const forkName = this.getForkName(slot);

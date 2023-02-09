@@ -201,9 +201,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     );
   }
 
-  async lightClientBootstrap(peerId: PeerId, request: Root): Promise<altair.LightClientBootstrap> {
+  async lightClientBootstrap(peerId: PeerId, request: Root): Promise<allForks.LightClientBootstrap> {
     return collectExactOne(
-      this.sendRequest<Root, altair.LightClientBootstrap>(
+      this.sendRequest<Root, allForks.LightClientBootstrap>(
         peerId,
         ReqRespMethod.LightClientBootstrap,
         [Version.V1],
@@ -212,9 +212,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     );
   }
 
-  async lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate> {
+  async lightClientOptimisticUpdate(peerId: PeerId): Promise<allForks.LightClientOptimisticUpdate> {
     return collectExactOne(
-      this.sendRequest<null, altair.LightClientOptimisticUpdate>(
+      this.sendRequest<null, allForks.LightClientOptimisticUpdate>(
         peerId,
         ReqRespMethod.LightClientOptimisticUpdate,
         [Version.V1],
@@ -223,9 +223,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     );
   }
 
-  async lightClientFinalityUpdate(peerId: PeerId): Promise<altair.LightClientFinalityUpdate> {
+  async lightClientFinalityUpdate(peerId: PeerId): Promise<allForks.LightClientFinalityUpdate> {
     return collectExactOne(
-      this.sendRequest<null, altair.LightClientFinalityUpdate>(
+      this.sendRequest<null, allForks.LightClientFinalityUpdate>(
         peerId,
         ReqRespMethod.LightClientFinalityUpdate,
         [Version.V1],
@@ -237,9 +237,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   async lightClientUpdatesByRange(
     peerId: PeerId,
     request: altair.LightClientUpdatesByRange
-  ): Promise<altair.LightClientUpdate[]> {
+  ): Promise<allForks.LightClientUpdate[]> {
     return collectMaxResponse(
-      this.sendRequest<altair.LightClientUpdatesByRange, altair.LightClientUpdate>(
+      this.sendRequest<altair.LightClientUpdatesByRange, allForks.LightClientUpdate>(
         peerId,
         ReqRespMethod.LightClientUpdatesByRange,
         [Version.V1],

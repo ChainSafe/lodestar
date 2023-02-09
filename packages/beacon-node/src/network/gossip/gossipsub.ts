@@ -265,7 +265,7 @@ export class Eth2Gossipsub extends GossipSub {
     );
   }
 
-  async publishLightClientFinalityUpdate(lightClientFinalityUpdate: altair.LightClientFinalityUpdate): Promise<void> {
+  async publishLightClientFinalityUpdate(lightClientFinalityUpdate: allForks.LightClientFinalityUpdate): Promise<void> {
     const fork = this.config.getForkName(lightClientFinalityUpdate.signatureSlot);
     await this.publishObject<GossipType.light_client_finality_update>(
       {type: GossipType.light_client_finality_update, fork},
@@ -274,7 +274,7 @@ export class Eth2Gossipsub extends GossipSub {
   }
 
   async publishLightClientOptimisticUpdate(
-    lightClientOptimisitcUpdate: altair.LightClientOptimisticUpdate
+    lightClientOptimisitcUpdate: allForks.LightClientOptimisticUpdate
   ): Promise<void> {
     const fork = this.config.getForkName(lightClientOptimisitcUpdate.signatureSlot);
     await this.publishObject<GossipType.light_client_optimistic_update>(

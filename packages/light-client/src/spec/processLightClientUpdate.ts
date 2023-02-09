@@ -1,5 +1,5 @@
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {altair, Slot, SyncPeriod} from "@lodestar/types";
+import {Slot, SyncPeriod, allForks} from "@lodestar/types";
 import {pruneSetToMax} from "@lodestar/utils";
 import {computeSyncPeriodAtSlot, deserializeSyncCommittee, sumBits} from "../utils/index.js";
 import {isBetterUpdate, LightClientUpdateSummary, toLightClientUpdateSummary} from "./isBetterUpdate.js";
@@ -16,7 +16,7 @@ export function processLightClientUpdate(
   store: ILightClientStore,
   currentSlot: Slot,
   opts: ProcessUpdateOpts,
-  update: altair.LightClientUpdate
+  update: allForks.LightClientUpdate
 ): void {
   if (update.signatureSlot > currentSlot) {
     throw Error(`update slot ${update.signatureSlot} must not be in the future, current slot ${currentSlot}`);

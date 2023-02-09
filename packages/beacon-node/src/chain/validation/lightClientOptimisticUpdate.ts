@@ -1,4 +1,4 @@
-import {altair, ssz} from "@lodestar/types";
+import {allForks} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {IBeaconChain} from "../interface.js";
@@ -10,7 +10,7 @@ import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
 export function validateLightClientOptimisticUpdate(
   config: IChainForkConfig,
   chain: IBeaconChain,
-  gossipedOptimisticUpdate: altair.LightClientOptimisticUpdate
+  gossipedOptimisticUpdate: allForks.LightClientOptimisticUpdate
 ): void {
   // [IGNORE] No other optimistic_update with a lower or equal attested_header.slot was already forwarded on the network
   const gossipedAttestedSlot = gossipedOptimisticUpdate.attestedHeader.beacon.slot;
@@ -32,10 +32,10 @@ export function validateLightClientOptimisticUpdate(
   }
 
   // [IGNORE] The received optimistic_update matches the locally computed one exactly
-  if (
-    localOptimisticUpdate === null ||
-    !ssz.altair.LightClientOptimisticUpdate.equals(gossipedOptimisticUpdate, localOptimisticUpdate)
-  ) {
+  const sszType = config.getLightClientForkTypes(gossipedOptimisticUpdate.attestedHeader.beacon.slot)[
+    "LightClientOptimisticUpdate"
+  ];
+  if (localOptimisticUpdate === null || !sszType.equals(gossipedOptimisticUpdate, localOptimisticUpdate)) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.OPTIMISTIC_UPDATE_NOT_MATCHING_LOCAL,
     });
@@ -56,7 +56,7 @@ export function validateLightClientOptimisticUpdate(
 export function updateReceivedTooEarly(
   config: IChainForkConfig,
   genesisTime: number,
-  update: Pick<altair.LightClientOptimisticUpdate, "signatureSlot">
+  update: Pick<allForks.LightClientOptimisticUpdate, "signatureSlot">
 ): boolean {
   const signatureSlot13TimestampMs = computeTimeAtSlot(config, update.signatureSlot + 1 / 3, genesisTime) * 1000;
   const earliestAllowedTimestampMs = signatureSlot13TimestampMs - MAXIMUM_GOSSIP_CLOCK_DISPARITY;
