@@ -47,10 +47,6 @@ describe("ForkChoice", () => {
         checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
         balances,
       },
-      bestJustified: {
-        checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
-        balances,
-      },
       unrealizedJustified: {
         checkpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
         balances,
