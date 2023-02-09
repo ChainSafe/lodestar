@@ -12,7 +12,7 @@ import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, Runne
 import {isChildProcessRunner} from "../runner/index.js";
 
 export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse> = (opts, runner) => {
-  const binaryPath = isChildProcessRunner(runner) ? `${process.env.LIGHTHOUSE_BINARY_PATH}` : "";
+  const binaryPath = isChildProcessRunner(runner) ? `${process.env.LIGHTHOUSE_BINARY_PATH}` : "lighthouse";
 
   const {
     dataDir,
@@ -152,7 +152,7 @@ export const generateLighthouseValidatorJobs = (
   opts: CLClientGeneratorOptions,
   runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
 ): JobOptions => {
-  const binaryPath = isChildProcessRunner(runner) ? `${process.env.LIGHTHOUSE_BINARY_PATH}` : "";
+  const binaryPath = isChildProcessRunner(runner) ? `${process.env.LIGHTHOUSE_BINARY_PATH}` : "lighthouse";
   const {dataDir, id, address, keyManagerPort, restPort, keys} = opts;
 
   if (keys.type === "no-keys") {
