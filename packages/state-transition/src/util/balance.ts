@@ -64,12 +64,15 @@ export function getEffectiveBalanceIncrementsZeroInactive(
   );
 
   const validators = justifiedState.validators.getAllReadonly();
-
   let j = 0;
   for (let i = 0; i < validatorCount; i++) {
-    if (i === activeIndices[j] && !validators[i].slashed) {
+    if (i === activeIndices[j]) {
       // active validator
       j++;
+      if (validators[i].slashed) {
+        // slashed validator
+        effectiveBalanceIncrementsZeroInactive[i] = 0;
+      }
     } else {
       // inactive validator
       effectiveBalanceIncrementsZeroInactive[i] = 0;
