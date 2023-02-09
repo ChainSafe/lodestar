@@ -1,58 +1,12 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__elements": [],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "8.4.2"
-    },
-    {
-      "type": "panel",
-      "id": "heatmap",
-      "name": "Heatmap",
-      "version": ""
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "stat",
-      "name": "Stat",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "table",
-      "name": "Table",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -70,8 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
-  "iteration": 1662553871403,
+  "id": 31,
   "links": [
     {
       "asDropdown": true,
@@ -91,6 +44,10 @@
   "liveNow": false,
   "panels": [
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -135,7 +92,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "9.3.2",
       "targets": [
         {
           "datasource": {
@@ -154,6 +111,10 @@
       "type": "stat"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -161,7 +122,8 @@
           },
           "custom": {
             "align": "auto",
-            "displayMode": "auto"
+            "displayMode": "auto",
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -198,7 +160,7 @@
         "frameIndex": 0,
         "showHeader": true
       },
-      "pluginVersion": "8.4.2",
+      "pluginVersion": "9.3.2",
       "targets": [
         {
           "datasource": {
@@ -245,12 +207,18 @@
       "type": "table"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -302,8 +270,9 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -341,55 +310,23 @@
       "type": "timeseries"
     },
     {
-      "description": "Percent of attestations having correct head.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
+      "description": "",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
           "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
             }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "percentunit"
+          }
         },
         "overrides": []
       },
@@ -399,41 +336,75 @@
         "x": 0,
         "y": 8
       },
-      "id": 8,
+      "id": 27,
       "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-orange",
+          "mode": "scheme",
+          "reverse": false,
+          "scale": "exponential",
+          "scheme": "Oranges",
+          "steps": 4
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-9
+        },
         "legend": {
-          "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "show": false
+        },
+        "rowsFrame": {
+          "layout": "auto"
         },
         "tooltip": {
-          "mode": "single",
-          "sort": "none"
+          "show": true,
+          "yHistogram": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "reverse": false,
+          "unit": "s"
         }
       },
+      "pluginVersion": "9.3.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "rate(validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total[$rate_interval])\n/\nrate(validator_monitor_prev_epoch_on_chain_attester_hit_total[$rate_interval])",
+          "expr": "rate(validator_monitor_beacon_block_delay_seconds_bucket[$rate_interval])",
+          "format": "heatmap",
+          "instant": false,
           "interval": "",
-          "legendFormat": "ratio",
+          "legendFormat": "__auto",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Wrong head ratio",
-      "type": "timeseries"
+      "title": "Publish Block Delay",
+      "type": "heatmap"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -489,8 +460,9 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -527,32 +499,38 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Percent of attestations having correct head.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 17,
-            "gradientMode": "opacity",
+            "fillOpacity": 0,
+            "gradientMode": "none",
             "hideFrom": {
-              "graph": false,
               "legend": false,
               "tooltip": false,
               "viz": false
             },
             "lineInterpolation": "linear",
             "lineWidth": 1,
-            "pointSize": 4,
+            "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
             "showPoints": "auto",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -585,20 +563,19 @@
         "x": 0,
         "y": 16
       },
-      "id": 12,
+      "id": 8,
       "options": {
-        "graph": {},
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
-          "mode": "multi",
+          "mode": "single",
           "sort": "none"
         }
       },
-      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -606,40 +583,20 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss_total[$rate_interval]))\n/\n(\n  sum(delta(validator_monitor_prev_epoch_on_chain_attester_hit_total[$rate_interval]))\n  +\n  sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss_total[$rate_interval]))\n) > 0",
+          "expr": "rate(validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total[$rate_interval])\n/\nrate(validator_monitor_prev_epoch_on_chain_attester_hit_total[$rate_interval])",
           "interval": "",
-          "legendFormat": "attester",
+          "legendFormat": "ratio",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_target_attester_miss_total[$rate_interval]))\n/\n(\n  sum(delta(validator_monitor_prev_epoch_on_chain_target_attester_hit_total[$rate_interval]))\n  +\n  sum(delta(validator_monitor_prev_epoch_on_chain_target_attester_miss_total[$rate_interval]))\n) > 0",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "target",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_miss_total[$rate_interval]))\n/\n(\n  sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_hit_total[$rate_interval]))\n  +\n  sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_miss_total[$rate_interval]))\n) > 0",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "head",
-          "refId": "C"
         }
       ],
-      "title": "prev epoch miss ratio",
+      "title": "Wrong head ratio",
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "description": "Min delay from when the validator should send an object and when it was received",
       "fieldConfig": {
         "defaults": {
@@ -647,6 +604,8 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -703,7 +662,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -752,30 +712,85 @@
       "type": "timeseries"
     },
     {
-      "cards": {},
-      "color": {
-        "cardColor": "#b4ff00",
-        "colorScale": "sqrt",
-        "colorScheme": "interpolateMagma",
-        "exponent": 0.5,
-        "mode": "spectrum"
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
       },
-      "dataFormat": "tsbuckets",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 17,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 4,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
         "y": 24
       },
-      "heatmap": {},
-      "hideZeroBuckets": false,
-      "highlightCards": true,
-      "id": 24,
-      "legend": {
-        "show": true
+      "id": 12,
+      "options": {
+        "graph": {},
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       },
-      "pluginVersion": "8.4.0-beta1",
-      "reverseYBuckets": false,
+      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -783,38 +798,52 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "32*12*rate(validator_monitor_prev_epoch_on_chain_inclusion_distance_bucket [$rate_interval])",
-          "format": "heatmap",
+          "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss_total[$rate_interval]))\n/\n(\n  sum(delta(validator_monitor_prev_epoch_on_chain_attester_hit_total[$rate_interval]))\n  +\n  sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss_total[$rate_interval]))\n) > 0",
+          "interval": "",
+          "legendFormat": "attester",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_target_attester_miss_total[$rate_interval]))\n/\n(\n  sum(delta(validator_monitor_prev_epoch_on_chain_target_attester_hit_total[$rate_interval]))\n  +\n  sum(delta(validator_monitor_prev_epoch_on_chain_target_attester_miss_total[$rate_interval]))\n) > 0",
           "hide": false,
           "interval": "",
-          "intervalFactor": 10,
-          "legendFormat": "{{le}}",
-          "refId": "D"
+          "legendFormat": "target",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_miss_total[$rate_interval]))\n/\n(\n  sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_hit_total[$rate_interval]))\n  +\n  sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_miss_total[$rate_interval]))\n) > 0",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "head",
+          "refId": "C"
         }
       ],
-      "title": "Inclusion distance distribution",
-      "tooltip": {
-        "show": true,
-        "showHistogram": false
-      },
-      "type": "heatmap",
-      "xAxis": {
-        "show": true
-      },
-      "yAxis": {
-        "format": "short",
-        "logBase": 1,
-        "show": true
-      },
-      "yBucketBound": "auto"
+      "title": "prev epoch miss ratio",
+      "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -870,8 +899,9 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -953,6 +983,25 @@
         "mode": "spectrum"
       },
       "dataFormat": "tsbuckets",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -962,11 +1011,48 @@
       "heatmap": {},
       "hideZeroBuckets": false,
       "highlightCards": true,
-      "id": 25,
+      "id": 24,
       "legend": {
         "show": true
       },
-      "pluginVersion": "8.4.0-beta1",
+      "options": {
+        "calculate": false,
+        "calculation": {},
+        "cellGap": 2,
+        "cellValues": {},
+        "color": {
+          "exponent": 0.5,
+          "fill": "#b4ff00",
+          "mode": "scheme",
+          "reverse": false,
+          "scale": "exponential",
+          "scheme": "Magma",
+          "steps": 128
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-9
+        },
+        "legend": {
+          "show": true
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "showValue": "never",
+        "tooltip": {
+          "show": true,
+          "yHistogram": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "reverse": false,
+          "unit": "short"
+        }
+      },
+      "pluginVersion": "9.3.2",
       "reverseYBuckets": false,
       "targets": [
         {
@@ -975,7 +1061,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "32*12*rate(validator_monitor_prev_epoch_on_chain_inclusion_distance_bucket [$rate_interval]) - 10000",
+          "expr": "32*12*rate(validator_monitor_prev_epoch_on_chain_inclusion_distance_bucket [$rate_interval])",
           "format": "heatmap",
           "hide": false,
           "interval": "",
@@ -984,7 +1070,7 @@
           "refId": "D"
         }
       ],
-      "title": "Inclusion distance distribution > 1",
+      "title": "Inclusion distance distribution",
       "tooltip": {
         "show": true,
         "showHistogram": false
@@ -1001,12 +1087,18 @@
       "yBucketBound": "auto"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1064,7 +1156,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1101,55 +1194,31 @@
       "type": "timeseries"
     },
     {
+      "cards": {},
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateMagma",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
           "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 8,
-            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
             "scaleDistribution": {
-              "log": 2,
-              "type": "log"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
+              "type": "linear"
             }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
+          }
         },
         "overrides": []
       },
@@ -1159,19 +1228,52 @@
         "x": 0,
         "y": 40
       },
-      "id": 16,
+      "heatmap": {},
+      "hideZeroBuckets": false,
+      "highlightCards": true,
+      "id": 25,
+      "legend": {
+        "show": true
+      },
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
+        "calculate": false,
+        "calculation": {},
+        "cellGap": 2,
+        "cellValues": {},
+        "color": {
+          "exponent": 0.5,
+          "fill": "#b4ff00",
+          "mode": "scheme",
+          "reverse": false,
+          "scale": "exponential",
+          "scheme": "Magma",
+          "steps": 128
         },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-9
+        },
+        "legend": {
+          "show": true
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "showValue": "never",
         "tooltip": {
-          "mode": "multi",
-          "sort": "none"
+          "show": true,
+          "yHistogram": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "reverse": false,
+          "unit": "short"
         }
       },
-      "pluginVersion": "8.4.0-beta1",
+      "pluginVersion": "9.3.2",
+      "reverseYBuckets": false,
       "targets": [
         {
           "datasource": {
@@ -1179,59 +1281,44 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "avg(validator_monitor_prev_epoch_attestation_block_inclusions_total)",
+          "expr": "32*12*rate(validator_monitor_prev_epoch_on_chain_inclusion_distance_bucket [$rate_interval]) - 10000",
+          "format": "heatmap",
           "hide": false,
           "interval": "",
-          "legendFormat": "block_inclusions",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "avg(validator_monitor_prev_epoch_attestation_aggregate_inclusions_total)",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "aggregate_inclusions",
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "validator_monitor_prev_epoch_attestation_block_inclusions_sum\n/\nvalidator_monitor_prev_epoch_attestation_block_inclusions_count",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "block_inclusions new",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "validator_monitor_prev_epoch_attestation_aggregate_inclusions_sum\n/\nvalidator_monitor_prev_epoch_attestation_aggregate_inclusions_count",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "aggregate_inclusions new",
+          "intervalFactor": 10,
+          "legendFormat": "{{le}}",
           "refId": "D"
         }
       ],
-      "title": "Attestation inclusions epoch per validator",
-      "type": "timeseries"
+      "title": "Inclusion distance distribution > 1",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "yAxis": {
+        "format": "short",
+        "logBase": 1,
+        "show": true
+      },
+      "yBucketBound": "auto"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "Gwei",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1350,7 +1437,8 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1409,10 +1497,142 @@
       ],
       "title": "Block proposer balance delta",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "log": 2,
+              "type": "log"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 48
+      },
+      "id": 16,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.0-beta1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "avg(validator_monitor_prev_epoch_attestation_block_inclusions_total)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "block_inclusions",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "avg(validator_monitor_prev_epoch_attestation_aggregate_inclusions_total)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "aggregate_inclusions",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "validator_monitor_prev_epoch_attestation_block_inclusions_sum\n/\nvalidator_monitor_prev_epoch_attestation_block_inclusions_count",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "block_inclusions new",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "validator_monitor_prev_epoch_attestation_aggregate_inclusions_sum\n/\nvalidator_monitor_prev_epoch_attestation_aggregate_inclusions_count",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "aggregate_inclusions new",
+          "refId": "D"
+        }
+      ],
+      "title": "Attestation inclusions epoch per validator",
+      "type": "timeseries"
     }
   ],
   "refresh": "10s",
-  "schemaVersion": 35,
+  "schemaVersion": 37,
   "style": "dark",
   "tags": [
     "lodestar"
@@ -1554,6 +1774,6 @@
   "timezone": "utc",
   "title": "Lodestar - validator monitor",
   "uid": "lodestar_validator_monitor",
-  "version": 2,
+  "version": 11,
   "weekStart": "monday"
 }
