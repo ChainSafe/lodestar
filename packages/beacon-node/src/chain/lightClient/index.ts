@@ -193,7 +193,8 @@ export class LightClientServer {
     this.logger = logger;
 
     this.zero = {
-      finalizedHeader: ssz.altair.LightClientHeader.defaultValue(),
+      // Assign the hightest fork's default value because it can always be typecasted down to correct fork
+      finalizedHeader: Object.values(ssz.allForksLightClient).slice(-1)[0].LightClientHeader.defaultValue(),
       finalityBranch: ssz.altair.LightClientUpdate.fields["finalityBranch"].defaultValue(),
     };
 
