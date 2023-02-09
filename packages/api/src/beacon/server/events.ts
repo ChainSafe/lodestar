@@ -4,7 +4,7 @@ import {ServerRoutes} from "../../utils/server/index.js";
 import {ServerApi} from "../../interfaces.js";
 
 export function getRoutes(config: IChainForkConfig, api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
-  const eventSerdes = getEventSerdes();
+  const eventSerdes = getEventSerdes(config);
 
   return {
     // Non-JSON route. Server Sent Events (SSE)

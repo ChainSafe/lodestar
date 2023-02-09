@@ -75,8 +75,8 @@ export type GossipTypeMap = {
   [GossipType.attester_slashing]: phase0.AttesterSlashing;
   [GossipType.sync_committee_contribution_and_proof]: altair.SignedContributionAndProof;
   [GossipType.sync_committee]: altair.SyncCommitteeMessage;
-  [GossipType.light_client_finality_update]: altair.LightClientFinalityUpdate;
-  [GossipType.light_client_optimistic_update]: altair.LightClientOptimisticUpdate;
+  [GossipType.light_client_finality_update]: allForks.LightClientFinalityUpdate;
+  [GossipType.light_client_optimistic_update]: allForks.LightClientOptimisticUpdate;
   [GossipType.bls_to_execution_change]: capella.SignedBLSToExecutionChange;
 };
 
@@ -95,10 +95,10 @@ export type GossipFnByType = {
   ) => Promise<void> | void;
   [GossipType.sync_committee]: (syncCommittee: altair.SyncCommitteeMessage) => Promise<void> | void;
   [GossipType.light_client_finality_update]: (
-    lightClientFinalityUpdate: altair.LightClientFinalityUpdate
+    lightClientFinalityUpdate: allForks.LightClientFinalityUpdate
   ) => Promise<void> | void;
   [GossipType.light_client_optimistic_update]: (
-    lightClientOptimisticUpdate: altair.LightClientOptimisticUpdate
+    lightClientOptimisticUpdate: allForks.LightClientOptimisticUpdate
   ) => Promise<void> | void;
   [GossipType.bls_to_execution_change]: (
     blsToExecutionChange: capella.SignedBLSToExecutionChange

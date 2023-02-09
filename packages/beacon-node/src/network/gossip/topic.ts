@@ -1,6 +1,12 @@
 import {ssz} from "@lodestar/types";
 import {IForkDigestContext} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  ForkName,
+  ForkSeq,
+  SYNC_COMMITTEE_SUBNET_COUNT,
+  isForkLightClient,
+} from "@lodestar/params";
 
 import {GossipEncoding, GossipTopic, GossipType, GossipTopicTypeMap} from "./interface.js";
 import {DEFAULT_ENCODING} from "./constants.js";
@@ -92,9 +98,13 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.sync_committee:
       return ssz.altair.SyncCommitteeMessage;
     case GossipType.light_client_optimistic_update:
-      return ssz.altair.LightClientOptimisticUpdate;
+      return isForkLightClient(topic.fork)
+        ? ssz.allForksLightClient[topic.fork].LightClientOptimisticUpdate
+        : ssz.altair.LightClientOptimisticUpdate;
     case GossipType.light_client_finality_update:
-      return ssz.altair.LightClientFinalityUpdate;
+      return isForkLightClient(topic.fork)
+        ? ssz.allForksLightClient[topic.fork].LightClientFinalityUpdate
+        : ssz.altair.LightClientFinalityUpdate;
     case GossipType.bls_to_execution_change:
       return ssz.capella.SignedBLSToExecutionChange;
   }

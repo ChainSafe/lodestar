@@ -1,6 +1,5 @@
-import {altair, ssz, StringType, SyncPeriod} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
-import {ContainerType} from "@chainsafe/ssz";
+import {ssz, SyncPeriod, allForks} from "@lodestar/types";
+import {ForkName, isForkLightClient} from "@lodestar/params";
 import {
   ArrayOf,
   ReturnTypes,
@@ -17,13 +16,6 @@ import {ApiClientResponse} from "../../interfaces.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type LightClientBootstrap = {
-  header: altair.LightClientHeader;
-  currentSyncCommittee: altair.SyncCommittee;
-  /** Single branch proof from state root to currentSyncCommittee */
-  currentSyncCommitteeBranch: Uint8Array[];
-};
-
 export type Api = {
   /**
    * Returns an array of best updates given a `startPeriod` and `count` number of sync committee period to return.
@@ -39,7 +31,7 @@ export type Api = {
     ApiClientResponse<{
       [HttpStatusCode.OK]: {
         version: ForkName;
-        data: altair.LightClientUpdate;
+        data: allForks.LightClientUpdate;
       }[];
     }>
   >;
@@ -51,7 +43,7 @@ export type Api = {
     ApiClientResponse<{
       [HttpStatusCode.OK]: {
         version: ForkName;
-        data: altair.LightClientOptimisticUpdate;
+        data: allForks.LightClientOptimisticUpdate;
       };
     }>
   >;
@@ -59,7 +51,7 @@ export type Api = {
     ApiClientResponse<{
       [HttpStatusCode.OK]: {
         version: ForkName;
-        data: altair.LightClientFinalityUpdate;
+        data: allForks.LightClientFinalityUpdate;
       };
     }>
   >;
@@ -74,7 +66,7 @@ export type Api = {
     ApiClientResponse<{
       [HttpStatusCode.OK]: {
         version: ForkName;
-        data: altair.LightClientBootstrap;
+        data: allForks.LightClientBootstrap;
       };
     }>
   >;
@@ -138,16 +130,31 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
+  // Form a TypeJson convertor for getUpdates
+  const VersionedUpdate = WithVersion((fork: ForkName) =>
+    isForkLightClient(fork) ? ssz.allForksLightClient[fork].LightClientUpdate : ssz.altair.LightClientUpdate
+  );
+  const getUpdates = {
+    toJson: (updates: {version: ForkName; data: allForks.LightClientUpdate}[]) =>
+      updates.map((data) => VersionedUpdate.toJson(data)),
+    fromJson: (updates: unknown[]) => updates.map((data) => VersionedUpdate.fromJson(data)),
+  };
+
   return {
-    getUpdates: ArrayOf(
-      new ContainerType({
-        version: new StringType<ForkName>(),
-        data: ssz.altair.LightClientUpdate,
-      })
+    getUpdates,
+    getOptimisticUpdate: WithVersion((fork: ForkName) =>
+      isForkLightClient(fork)
+        ? ssz.allForksLightClient[fork].LightClientOptimisticUpdate
+        : ssz.altair.LightClientOptimisticUpdate
     ),
-    getOptimisticUpdate: WithVersion(() => ssz.altair.LightClientOptimisticUpdate),
-    getFinalityUpdate: WithVersion(() => ssz.altair.LightClientFinalityUpdate),
-    getBootstrap: WithVersion(() => ssz.altair.LightClientBootstrap),
+    getFinalityUpdate: WithVersion((fork: ForkName) =>
+      isForkLightClient(fork)
+        ? ssz.allForksLightClient[fork].LightClientFinalityUpdate
+        : ssz.altair.LightClientFinalityUpdate
+    ),
+    getBootstrap: WithVersion((fork: ForkName) =>
+      isForkLightClient(fork) ? ssz.allForksLightClient[fork].LightClientBootstrap : ssz.altair.LightClientBootstrap
+    ),
     getCommitteeRoot: ContainerData(ArrayOf(ssz.Root)),
   };
 }

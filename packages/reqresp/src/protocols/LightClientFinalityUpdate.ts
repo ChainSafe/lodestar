@@ -1,9 +1,10 @@
-import {altair, ssz} from "@lodestar/types";
+import {ssz, allForks} from "@lodestar/types";
+import {isForkLightClient} from "@lodestar/params";
 import {Encoding, ProtocolDefinitionGenerator} from "../types.js";
 import {getContextBytesLightclient} from "./utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const LightClientFinalityUpdate: ProtocolDefinitionGenerator<null, altair.LightClientFinalityUpdate> = (
+export const LightClientFinalityUpdate: ProtocolDefinitionGenerator<null, allForks.LightClientFinalityUpdate> = (
   modules,
   handler
 ) => {
@@ -13,7 +14,10 @@ export const LightClientFinalityUpdate: ProtocolDefinitionGenerator<null, altair
     encoding: Encoding.SSZ_SNAPPY,
     handler,
     requestType: () => null,
-    responseType: () => ssz.altair.LightClientFinalityUpdate,
+    responseType: (forkName) =>
+      isForkLightClient(forkName)
+        ? ssz.allForksLightClient[forkName].LightClientFinalityUpdate
+        : ssz.altair.LightClientFinalityUpdate,
     contextBytes: getContextBytesLightclient((update) => modules.config.getForkName(update.signatureSlot), modules),
     inboundRateLimits: {
       // Finality updates should not be requested more than once per epoch.

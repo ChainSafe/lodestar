@@ -6,7 +6,7 @@ import {ILogger, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SignableENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
-import {altair, deneb, Epoch, phase0} from "@lodestar/types";
+import {deneb, Epoch, phase0, allForks} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
@@ -557,7 +557,7 @@ export class Network implements INetwork {
     }
   }
 
-  private onLightClientFinalityUpdate = async (finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> => {
+  private onLightClientFinalityUpdate = async (finalityUpdate: allForks.LightClientFinalityUpdate): Promise<void> => {
     if (this.hasAttachedSyncCommitteeMember()) {
       try {
         // messages SHOULD be broadcast after one-third of slot has transpired
@@ -575,7 +575,7 @@ export class Network implements INetwork {
   };
 
   private onLightClientOptimisticUpdate = async (
-    optimisticUpdate: altair.LightClientOptimisticUpdate
+    optimisticUpdate: allForks.LightClientOptimisticUpdate
   ): Promise<void> => {
     if (this.hasAttachedSyncCommitteeMember()) {
       try {

@@ -1,12 +1,12 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {altair, Root, ssz} from "@lodestar/types";
+import {Root, ssz, allForks} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {isValidMerkleBranch} from "../utils/verifyMerkleBranch.js";
 
 const CURRENT_SYNC_COMMITTEE_INDEX = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
 
-export function validateLightClientBootstrap(trustedBlockRoot: Root, bootstrap: altair.LightClientBootstrap): void {
+export function validateLightClientBootstrap(trustedBlockRoot: Root, bootstrap: allForks.LightClientBootstrap): void {
   const headerRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(bootstrap.header.beacon);
   if (!byteArrayEquals(headerRoot, trustedBlockRoot)) {
     throw Error(`bootstrap header root ${toHex(headerRoot)} != trusted root ${toHex(trustedBlockRoot)}`);

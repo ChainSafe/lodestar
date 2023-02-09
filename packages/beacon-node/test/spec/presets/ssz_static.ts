@@ -26,7 +26,7 @@ type Types = Record<string, Type<any>>;
 // tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
 //
 
-export const sszStatic = (skippedTypes?: string[]) => (
+export const sszStatic = (skippedTypes?: string[], overrideSSZTypes?: Record<string, Types>) => (
   fork: ForkName,
   typeName: string,
   testSuite: string,
@@ -39,6 +39,7 @@ export const sszStatic = (skippedTypes?: string[]) => (
 
   /* eslint-disable @typescript-eslint/strict-boolean-expressions */
   const sszType =
+    (((overrideSSZTypes ?? {})[fork] ?? {}) as Types)[typeName] ||
     (ssz[fork] as Types)[typeName] ||
     (ssz.capella as Types)[typeName] ||
     (ssz.bellatrix as Types)[typeName] ||

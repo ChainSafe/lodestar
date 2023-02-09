@@ -6,7 +6,15 @@ import {presetStatus} from "./presetStatus.js";
 import {userSelectedPreset, userOverrides} from "./setPreset.js";
 
 export {BeaconPreset} from "./interface.js";
-export {ForkName, ForkSeq, ForkExecution, ForkBlobs, isForkExecution, isForkBlobs} from "./forkName.js";
+export {
+  ForkName,
+  ForkSeq,
+  ForkExecution,
+  ForkBlobs,
+  isForkExecution,
+  isForkBlobs,
+  isForkLightClient,
+} from "./forkName.js";
 export {presetToJson} from "./json.js";
 export {PresetName};
 
@@ -186,6 +194,21 @@ export const FINALIZED_ROOT_GINDEX = 105;
  */
 export const FINALIZED_ROOT_DEPTH = 6;
 export const FINALIZED_ROOT_INDEX = 41;
+
+/**
+ * ```ts
+ * types.ssz.capella.BeaconBlockBody.getPathInfo(['executionPayload']).gindex
+ * ```
+ */
+export const BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX = 25;
+/**
+ * ```ts
+ * Math.floor(Math.log2(EXECUTION_PAYLOAD_GINDEX))
+ * ```
+ */
+export const BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH = 4;
+export const BLOCK_BODY_EXECUTION_PAYLOAD_INDEX = 9;
+
 /**
  * ```ts
  * config.types.altair.BeaconState.getPathGindex(["nextSyncCommittee"])
