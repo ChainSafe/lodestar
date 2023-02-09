@@ -1,9 +1,10 @@
 import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {GENESIS_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 
 import {ForkChoiceOpts} from "../forkChoice/forkChoice.js";
+import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
 import {ProtoBlock, ProtoNode, HEX_ZERO_HASH, ExecutionStatus, LVHExecResponse} from "./interface.js";
 import {ProtoArrayError, ProtoArrayErrorCode, LVHExecError, LVHExecErrorCode} from "./errors.js";
 
@@ -743,21 +744,72 @@ export class ProtoArray {
     const isFromPrevEpoch = computeEpochAtSlot(node.slot) < currentEpoch;
     const nodeJustifiedEpoch = isFromPrevEpoch ? node.unrealizedJustifiedEpoch : node.justifiedEpoch;
     const nodeJustifiedRoot = isFromPrevEpoch ? node.unrealizedJustifiedRoot : node.justifiedRoot;
-    const nodeFinalizedEpoch = isFromPrevEpoch ? node.unrealizedFinalizedEpoch : node.finalizedEpoch;
-    const nodeFinalizedRoot = isFromPrevEpoch ? node.unrealizedFinalizedRoot : node.finalizedRoot;
 
-    // If previous epoch is justified, pull up all tips to at least the previous epoch
-    if (this.countUnrealizedFull && currentEpoch > GENESIS_EPOCH && this.justifiedEpoch === previousEpoch) {
-      return node.unrealizedJustifiedEpoch >= previousEpoch;
-      // If previous epoch is not justified, pull up only tips from past epochs up to the current epoch
-    } else {
-      const correctJustified =
-        (nodeJustifiedEpoch === this.justifiedEpoch && nodeJustifiedRoot === this.justifiedRoot) ||
-        this.justifiedEpoch === 0;
+    // The voting source should be at the same height as the store's justified checkpoint
+    let correctJustified =
+      (nodeJustifiedEpoch === this.justifiedEpoch && nodeJustifiedRoot === this.justifiedRoot) ||
+      this.justifiedEpoch === 0;
+
+    // If this is a pulled-up block from the current epoch, also check that
+    // the unrealized justification is higher than the store's justified checkpoint, and
+    // the voting source is not more than two epochs ago.
+    if (
+      !correctJustified &&
+      this.countUnrealizedFull &&
+      currentEpoch > GENESIS_EPOCH &&
+      this.justifiedEpoch === previousEpoch
+    ) {
+      correctJustified = node.unrealizedJustifiedEpoch >= previousEpoch && nodeJustifiedEpoch + 2 >= currentEpoch;
+    }
+
+    try {
+      const finalizedSlot = computeStartSlotAtEpoch(this.finalizedEpoch);
       const correctFinalized =
-        (nodeFinalizedEpoch === this.finalizedEpoch && nodeFinalizedRoot === this.finalizedRoot) ||
-        this.finalizedEpoch === 0;
+        this.finalizedRoot === this.getAncestor(node.blockRoot, finalizedSlot) || this.finalizedEpoch === 0;
       return correctJustified && correctFinalized;
+    } catch (_) {
+      // getAncestor may throw here, just return false
+      return false;
+    }
+  }
+
+  /**
+   * Returns the block root of an ancestor of `blockRoot` at the given `slot`.
+   * (Note: `slot` refers to the block that is *returned*, not the one that is supplied.)
+   *
+   * NOTE: May be expensive: potentially walks through the entire fork of head to finalized block
+   *
+   * ### Specification
+   *
+   * Equivalent to:
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_ancestor
+   */
+  getAncestor(blockRoot: RootHex, ancestorSlot: Slot): RootHex {
+    const block = this.getBlock(blockRoot);
+    if (!block) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
+        root: blockRoot,
+      });
+    }
+
+    if (block.slot > ancestorSlot) {
+      // Search for a slot that is lte the target slot.
+      // We check for lower slots to account for skip slots.
+      for (const node of this.iterateAncestorNodes(blockRoot)) {
+        if (node.slot <= ancestorSlot) {
+          return node.blockRoot;
+        }
+      }
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.UNKNOWN_ANCESTOR,
+        descendantRoot: blockRoot,
+        ancestorSlot,
+      });
+    } else {
+      // Root is older or equal than queried slot, thus a skip slot. Return most recent root prior to slot.
+      return blockRoot;
     }
   }
 

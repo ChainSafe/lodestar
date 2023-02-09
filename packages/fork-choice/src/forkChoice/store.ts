@@ -38,7 +38,6 @@ export type JustifiedBalancesGetter = (
 export interface IForkChoiceStore {
   currentSlot: Slot;
   justified: CheckpointHexWithBalance;
-  bestJustified: CheckpointHexWithBalance;
   unrealizedJustified: CheckpointHexWithBalance;
   finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
@@ -51,7 +50,6 @@ export interface IForkChoiceStore {
  */
 export class ForkChoiceStore implements IForkChoiceStore {
   private _justified: CheckpointHexWithBalance;
-  bestJustified: CheckpointHexWithBalance;
   unrealizedJustified: CheckpointHexWithBalance;
   private _finalizedCheckpoint: CheckpointWithHex;
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
@@ -73,7 +71,6 @@ export class ForkChoiceStore implements IForkChoiceStore {
       balances: justifiedBalances,
     };
     this._justified = justified;
-    this.bestJustified = justified;
     this.unrealizedJustified = justified;
     this._finalizedCheckpoint = toCheckpointWithHex(finalizedCheckpoint);
     this.unrealizedFinalizedCheckpoint = this._finalizedCheckpoint;

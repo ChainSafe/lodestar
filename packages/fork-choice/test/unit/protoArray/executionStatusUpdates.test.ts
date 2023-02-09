@@ -47,7 +47,8 @@ const expectedPreValidationFC1: TestCase[] = [
   ["3A", undefined, undefined, ExecutionStatus.Syncing],
   ["2B", "3B", "3B", ExecutionStatus.Syncing],
   ["3B", undefined, undefined, ExecutionStatus.Syncing],
-  ["2C", "3C", "3C", ExecutionStatus.Syncing],
+  // this branch is not a child of finalized node
+  ["2C", undefined, undefined, ExecutionStatus.Syncing],
   ["3C", undefined, undefined, ExecutionStatus.Syncing],
 ];
 const expectedPreValidationFC: ValidationTestCase[] = toFcTestCase(expectedPreValidationFC1);
@@ -267,7 +268,7 @@ describe("executionStatus / invalidate all postmerge chain", () => {
         ["3A", undefined, undefined, ExecutionStatus.Invalid],
         ["2B", undefined, undefined, ExecutionStatus.Invalid],
         ["3B", undefined, undefined, ExecutionStatus.Invalid],
-        ["2C", "3C", "3C", ExecutionStatus.Syncing],
+        ["2C", undefined, undefined, ExecutionStatus.Syncing],
         ["3C", undefined, undefined, ExecutionStatus.Syncing],
       ])
     );
@@ -318,7 +319,7 @@ describe("executionStatus / poision forkchoice if we invalidate previous valid",
         ["3A", undefined, undefined, ExecutionStatus.Syncing],
         ["2B", "3B", "3B", ExecutionStatus.Valid],
         ["3B", undefined, undefined, ExecutionStatus.Valid],
-        ["2C", "3C", "3C", ExecutionStatus.Syncing],
+        ["2C", undefined, undefined, ExecutionStatus.Syncing],
         ["3C", undefined, undefined, ExecutionStatus.Syncing],
       ])
     );
@@ -381,7 +382,7 @@ describe("executionStatus / poision forkchoice if we validate previous invalid",
         ["3A", undefined, undefined, ExecutionStatus.Invalid],
         ["2B", undefined, undefined, ExecutionStatus.Invalid],
         ["3B", undefined, undefined, ExecutionStatus.Invalid],
-        ["2C", "3C", "3C", ExecutionStatus.Syncing],
+        ["2C", undefined, undefined, ExecutionStatus.Syncing],
         ["3C", undefined, undefined, ExecutionStatus.Syncing],
       ])
     );
