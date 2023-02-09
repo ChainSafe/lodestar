@@ -11,12 +11,9 @@ import {chainConfigToJson} from "@lodestar/config";
 import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, Runner, RunnerType} from "../interfaces.js";
 import {isChildProcessRunner} from "../runner/index.js";
 
-export const LIGHTHOUSE_BINARY_PATH = "/Users/nazar/.asdf/installs/rust/1.65.0/bin/lighthouse";
-
 export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse> = (opts, runner) => {
-  if (!isChildProcessRunner(runner)) {
-    throw new Error(`Runner "${runner.type}" not yet supported.`);
-  }
+  const binaryPath = isChildProcessRunner(runner) ? `${process.env.LIGHTHOUSE_BINARY_PATH}` : "";
+
   const {
     dataDir,
     address,
@@ -80,6 +77,42 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
     cliParams["execution-endpoint"] = [...engineUrls].join(",");
   }
 
+  const beaconNodeJob: JobOptions = {
+    id,
+    bootstrap: async () => {
+      await mkdir(dataDir, {recursive: true});
+      await writeFile(jwtSecretPath, jwtSecretHex);
+      await writeFile(join(dataDir, "config.yaml"), yaml.dump(chainConfigToJson(config)));
+      // await writeFile(join(dataDir, "boot_enr.yaml"), "[]");
+      await writeFile(join(dataDir, "deploy_block.txt"), "0");
+      await cp(genesisStateFilePath, join(dataDir, "genesis.ssz"));
+    },
+    cli: {
+      command: binaryPath,
+      args: [
+        "beacon_node",
+        ...Object.entries(cliParams).flatMap(([key, value]) =>
+          value === null ? [`--${key}`] : [`--${key}`, String(value)]
+        ),
+      ],
+      env: {},
+    },
+    logs: {
+      stdoutFilePath: opts.logFilePath,
+    },
+    health: async () => {
+      try {
+        await got.get(`http://${address}:${restPort}/eth/v1/node/health`);
+        return {ok: true};
+      } catch (err) {
+        if (err instanceof RequestError && err.code !== "ECONNREFUSED") {
+          return {ok: true};
+        }
+        return {ok: false, reason: (err as Error).message, checkId: "/eth/v1/node/health query"};
+      }
+    },
+  };
+
   const validatorClientsJobs: JobOptions[] = [];
   if (keys.type !== "no-keys") {
     validatorClientsJobs.push(
@@ -95,44 +128,14 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
     );
   }
 
-  const job = runner.create(id, [
-    {
-      id,
-      bootstrap: async () => {
-        await mkdir(dataDir, {recursive: true});
-        await writeFile(jwtSecretPath, jwtSecretHex);
-        await writeFile(join(dataDir, "config.yaml"), yaml.dump(chainConfigToJson(config)));
-        // await writeFile(join(dataDir, "boot_enr.yaml"), "[]");
-        await writeFile(join(dataDir, "deploy_block.txt"), "0");
-        await cp(genesisStateFilePath, join(dataDir, "genesis.ssz"));
-      },
-      cli: {
-        command: LIGHTHOUSE_BINARY_PATH,
-        args: [
-          "beacon_node",
-          ...Object.entries(cliParams).flatMap(([key, value]) =>
-            value === null ? [`--${key}`] : [`--${key}`, String(value)]
-          ),
-        ],
-        env: {},
-      },
-      logs: {
-        stdoutFilePath: opts.logFilePath,
-      },
-      health: async () => {
-        try {
-          await got.get(`http://${address}:${restPort}/eth/v1/node/health`);
-          return {ok: true};
-        } catch (err) {
-          if (err instanceof RequestError && err.code !== "ECONNREFUSED") {
-            return {ok: true};
-          }
-          return {ok: false, reason: (err as Error).message, checkId: "/eth/v1/node/health query"};
-        }
-      },
-      children: validatorClientsJobs,
-    },
-  ]);
+  const job = isChildProcessRunner(runner)
+    ? runner.create(id, [{...beaconNodeJob, children: [...validatorClientsJobs]}])
+    : runner.create(id, [{...beaconNodeJob, children: [...validatorClientsJobs]}], {
+        image: process.env.LIGHTHOUSE_DOCKER_IMAGE as string,
+        dataVolumePath: dataDir,
+        exposePorts: [restPort, port],
+        dockerNetworkIp: address,
+      });
 
   return {
     id,
@@ -149,10 +152,7 @@ export const generateLighthouseValidatorJobs = (
   opts: CLClientGeneratorOptions,
   runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
 ): JobOptions => {
-  if (runner.type !== RunnerType.ChildProcess) {
-    throw new Error(`Runner "${runner.type}" not yet supported.`);
-  }
-
+  const binaryPath = isChildProcessRunner(runner) ? `${process.env.LIGHTHOUSE_BINARY_PATH}` : "";
   const {dataDir, id, address, keyManagerPort, restPort, keys} = opts;
 
   if (keys.type === "no-keys") {
@@ -217,7 +217,7 @@ export const generateLighthouseValidatorJobs = (
       }
     },
     cli: {
-      command: LIGHTHOUSE_BINARY_PATH,
+      command: binaryPath,
       args: [
         "validator_client",
         ...Object.entries(params).flatMap(([key, value]) =>

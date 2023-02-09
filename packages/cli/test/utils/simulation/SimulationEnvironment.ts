@@ -347,7 +347,7 @@ export class SimulationEnvironment {
           jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
           clientOptions: options?.clientOptions ?? {},
         };
-        return generateLighthouseBeaconNode(opts, this.childProcessRunner);
+        return generateLighthouseBeaconNode(opts, this.dockerRunner);
       }
       default:
         throw new Error(`CL Client "${client}" not supported`);
