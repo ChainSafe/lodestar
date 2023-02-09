@@ -19,12 +19,14 @@ import {
   KEY_MANAGER_BASE_PORT,
   MOCK_ETH1_GENESIS_HASH,
   SHARED_JWT_SECRET,
+  SIM_ENV_CHAIN_ID,
+  SIM_ENV_NETWORK_ID,
   SIM_TESTS_SECONDS_PER_SLOT,
 } from "./constants.js";
 import {generateGethNode} from "./el_clients/geth.js";
 import {generateMockNode} from "./el_clients/mock.js";
 import {generateNethermindNode} from "./el_clients/nethermind.js";
-import {EpochClock} from "./EpochClock.js";
+import {EpochClock, MS_IN_SEC} from "./EpochClock.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
 import {
   AtLeast,
@@ -44,6 +46,7 @@ import {ChildProcessRunner} from "./runner/ChildProcessRunner.js";
 import {DockerRunner} from "./runner/DockerRunner.js";
 import {SimulationTracker} from "./SimulationTracker.js";
 import {getEstimatedTTD} from "./utils/index.js";
+import {generateLighthouseBeaconNode} from "./cl_clients/lighthouse.js";
 
 interface StartOpts {
   runTimeoutMs: number;
@@ -115,6 +118,8 @@ export class SimulationEnvironment {
       ...chainConfig,
       SECONDS_PER_SLOT: secondsPerSlot,
       TERMINAL_TOTAL_DIFFICULTY: ttd,
+      DEPOSIT_CHAIN_ID: SIM_ENV_CHAIN_ID,
+      DEPOSIT_NETWORK_ID: SIM_ENV_NETWORK_ID,
     });
 
     const env = new SimulationEnvironment(forkConfig, {
@@ -135,7 +140,7 @@ export class SimulationEnvironment {
   async start(opts: StartOpts): Promise<void> {
     const currentTime = Date.now();
     setTimeout(() => {
-      const slots = this.clock.getSlotFor(currentTime + opts.runTimeoutMs);
+      const slots = this.clock.getSlotFor((currentTime + opts.runTimeoutMs) / MS_IN_SEC);
       const epoch = this.clock.getEpochForSlot(slots);
       const slot = this.clock.getSlotIndexInEpoch(slots);
 
@@ -146,7 +151,7 @@ export class SimulationEnvironment {
 
     const msToGenesis = this.clock.msToGenesis();
     const startTimeout = setTimeout(() => {
-      const slots = this.clock.getSlotFor(currentTime + msToGenesis);
+      const slots = this.clock.getSlotFor((currentTime + msToGenesis) / MS_IN_SEC);
       const epoch = this.clock.getEpochForSlot(slots);
       const slot = this.clock.getSlotIndexInEpoch(slots);
 
@@ -301,7 +306,7 @@ export class SimulationEnvironment {
 
     switch (client) {
       case CLClient.Lodestar: {
-        const opts: CLClientGeneratorOptions = {
+        const opts: CLClientGeneratorOptions<CLClient.Lodestar> = {
           id: clId,
           dataDir: join(this.options.rootDir, clId),
           logFilePath: join(this.options.logsDir, `${clId}.log`),
@@ -321,6 +326,28 @@ export class SimulationEnvironment {
           clientOptions: options?.clientOptions ?? {},
         };
         return generateLodestarBeaconNode(opts, this.childProcessRunner);
+      }
+      case CLClient.Lighthouse: {
+        const opts: CLClientGeneratorOptions<CLClient.Lighthouse> = {
+          id: clId,
+          dataDir: join(this.options.rootDir, clId),
+          logFilePath: join(this.options.logsDir, `${clId}.log`),
+          genesisStateFilePath: this.genesisStatePath,
+          restPort: BN_REST_BASE_PORT + this.nodePairCount + 1,
+          port: BN_P2P_BASE_PORT + this.nodePairCount + 1,
+          keyManagerPort: KEY_MANAGER_BASE_PORT + this.nodePairCount + 1,
+          config: this.forkConfig,
+          address: "127.0.0.1",
+          keys: options?.keys ?? {type: "no-keys"},
+          genesisTime: this.options.genesisTime,
+          engineUrls: options?.engineUrls
+            ? [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`, ...options.engineUrls]
+            : [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`],
+          engineMock: options?.engineMock ?? false,
+          jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
+          clientOptions: options?.clientOptions ?? {},
+        };
+        return generateLighthouseBeaconNode(opts, this.childProcessRunner);
       }
       default:
         throw new Error(`CL Client "${client}" not supported`);

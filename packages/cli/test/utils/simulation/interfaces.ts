@@ -28,6 +28,7 @@ export type SimulationOptions = {
 
 export enum CLClient {
   Lodestar = "lodestar",
+  Lighthouse = "lighthouse",
 }
 
 export enum ELClient {
@@ -43,6 +44,7 @@ export enum ELStartMode {
 
 export type CLClientsOptions = {
   [CLClient.Lodestar]: Partial<BeaconArgs & GlobalArgs>;
+  [CLClient.Lighthouse]: Record<string, unknown>;
 };
 
 export type ELClientsOptions = {
@@ -103,11 +105,14 @@ export interface ELGeneratorClientOptions<E extends ELClient = ELClient> extends
   clientOptions: ELClientsOptions[E];
 }
 
-export interface CLNode {
-  readonly client: CLClient;
+export type LodestarAPI = Api;
+export type LighthouseAPI = Omit<Api, "lodestar">;
+
+export interface CLNode<C extends CLClient = CLClient> {
+  readonly client: C;
   readonly id: string;
   readonly url: string;
-  readonly api: Api;
+  readonly api: C extends CLClient.Lodestar ? LodestarAPI : LighthouseAPI;
   readonly keyManager: KeyManagerApi;
   readonly keys: CLClientKeys;
   readonly job: Job;

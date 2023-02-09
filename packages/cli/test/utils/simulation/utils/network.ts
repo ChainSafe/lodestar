@@ -2,7 +2,7 @@
 import {ApiError} from "@lodestar/api";
 import {Slot} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {ELClient, NodePair} from "../interfaces.js";
+import {CLClient, CLNode, ELClient, NodePair} from "../interfaces.js";
 import {SimulationEnvironment} from "../SimulationEnvironment.js";
 import {SimulationTrackerEvent} from "../SimulationTracker.js";
 
@@ -30,8 +30,13 @@ export async function connectNewNode(newNode: NodePair, nodes: NodePair[]): Prom
       await node.el.provider.admin.addPeer(elIdentity.enode);
     }
 
-    const res = await node.cl.api.lodestar.connectPeer(clIdentity.peerId, clIdentity.p2pAddresses);
-    ApiError.assert(res);
+    if (node.cl.client === CLClient.Lodestar) {
+      const res = await (node.cl as CLNode<CLClient.Lodestar>).api.lodestar.connectPeer(
+        clIdentity.peerId,
+        clIdentity.p2pAddresses
+      );
+      ApiError.assert(res);
+    }
   }
 }
 
