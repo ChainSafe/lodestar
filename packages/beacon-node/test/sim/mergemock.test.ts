@@ -5,7 +5,7 @@ import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
-import {ValidatorProposerConfig} from "@lodestar/validator";
+import {ValidatorProposerConfig, BuilderSelection} from "@lodestar/validator";
 
 import {ChainEvent} from "../../src/chain/index.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
@@ -24,7 +24,7 @@ import {shell} from "./shell.js";
 // ETH_PORT=8661 ENGINE_PORT=8551 yarn mocha test/sim/mergemock.test.ts
 // ```
 
-/* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
+/* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
@@ -163,6 +163,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         builder: {
           enabled: true,
           gasLimit: 30000000,
+          selection: BuilderSelection.BuilderAlways,
         },
       },
     } as ValidatorProposerConfig;

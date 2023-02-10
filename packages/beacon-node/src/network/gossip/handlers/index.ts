@@ -165,25 +165,25 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
   return {
     [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
-      // TODO EIP-4844: Can blocks be received by this topic?
-      if (config.getForkSeq(signedBlock.message.slot) >= ForkSeq.eip4844) {
-        throw new GossipActionError(GossipAction.REJECT, {code: "POST_EIP4844_BLOCK"});
+      // TODO Deneb: Can blocks be received by this topic?
+      if (config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb) {
+        throw new GossipActionError(GossipAction.REJECT, {code: "POST_DENEB_BLOCK"});
       }
 
-      const blockInput = getBlockInput.preEIP4844(config, signedBlock);
+      const blockInput = getBlockInput.preDeneb(config, signedBlock);
       await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
       handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_block_and_blobs_sidecar]: async (blockAndBlocks, topic, peerIdStr, seenTimestampSec) => {
       const {beaconBlock, blobsSidecar} = blockAndBlocks;
-      // TODO EIP-4844: Should throw for pre fork blocks?
-      if (config.getForkSeq(beaconBlock.message.slot) < ForkSeq.eip4844) {
-        throw new GossipActionError(GossipAction.REJECT, {code: "PRE_EIP4844_BLOCK"});
+      // TODO Deneb: Should throw for pre fork blocks?
+      if (config.getForkSeq(beaconBlock.message.slot) < ForkSeq.deneb) {
+        throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
       }
 
       // Validate block + blob. Then forward, then handle both
-      const blockInput = getBlockInput.postEIP4844(config, beaconBlock, blobsSidecar);
+      const blockInput = getBlockInput.postDeneb(config, beaconBlock, blobsSidecar);
       await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
       validateGossipBlobsSidecar(beaconBlock, blobsSidecar);
       handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
@@ -352,7 +352,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       // Handler
       try {
-        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, ForkName.phase0);
+        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
       } catch (e) {
         logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
       }

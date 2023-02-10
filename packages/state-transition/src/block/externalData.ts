@@ -14,7 +14,7 @@ export enum ExecutionPayloadStatus {
 }
 
 export enum DataAvailableStatus {
-  preEIP4844 = "preEIP4844",
+  preDeneb = "preDeneb",
   notAvailable = "notAvailable",
   available = "available",
 }

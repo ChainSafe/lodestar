@@ -4,7 +4,6 @@ import {ContainerType, Type} from "@chainsafe/ssz";
 import {LodestarValidatorDatabaseController} from "../../types.js";
 
 // Only used locally here
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface SlashingProtectionLowerBound {
   minSourceEpoch: Epoch;
   minTargetEpoch: Epoch;

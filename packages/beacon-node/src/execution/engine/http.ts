@@ -1,4 +1,4 @@
-import {RootHex, allForks} from "@lodestar/types";
+import {RootHex, allForks, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 
 import {ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
@@ -132,7 +132,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async notifyNewPayload(fork: ForkName, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
     const method =
-      ForkSeq[fork] >= ForkSeq.eip4844
+      ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_newPayloadV3"
         : ForkSeq[fork] >= ForkSeq.capella
         ? "engine_newPayloadV2"
@@ -284,9 +284,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 2. The call MUST be responded with 5: Unavailable payload error if the building process identified by the payloadId doesn't exist.
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
-  async getPayload(fork: ForkName, payloadId: PayloadId): Promise<allForks.ExecutionPayload> {
+  async getPayload(
+    fork: ForkName,
+    payloadId: PayloadId
+  ): Promise<{executionPayload: allForks.ExecutionPayload; blockValue: Wei}> {
     const method =
-      ForkSeq[fork] >= ForkSeq.eip4844
+      ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_getPayloadV3"
         : ForkSeq[fork] >= ForkSeq.capella
         ? "engine_getPayloadV2"

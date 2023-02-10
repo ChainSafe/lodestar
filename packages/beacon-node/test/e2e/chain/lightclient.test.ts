@@ -8,7 +8,7 @@ import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/param
 import {Lightclient} from "@lodestar/light-client";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
-import {Api, getClient, routes} from "@lodestar/api";
+import {Api, ApiError, getClient, routes} from "@lodestar/api";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
@@ -195,8 +195,9 @@ async function getHeadStateProof(
   const header = lightclient.getHead();
   const stateId = toHexString(header.beacon.stateRoot);
   const res = await api.proof.getStateProof(stateId, paths);
+  ApiError.assert(res);
   return {
-    proof: res.data as TreeOffsetProof,
+    proof: res.response.data as TreeOffsetProof,
     header,
   };
 }

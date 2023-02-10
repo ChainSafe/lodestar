@@ -7,7 +7,7 @@ export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 /**
  * Extra Lodestar custom metrics
  */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function createLodestarMetrics(
   register: RegistryMetricCreator,
   metadata?: LodestarMetadata,
@@ -49,11 +49,12 @@ export function createLodestarMetrics(
       help: "Histogram of current count of long lived attnets of connected peers",
       buckets: [0, 4, 16, 32, 64],
     }),
-    peerScore: register.histogram({
+    peerScoreByClient: register.histogram<"client">({
       name: "lodestar_app_peer_score",
       help: "Current peer score at lodestar app side",
       // Min score = -100, max score = 100, disconnect = -20, ban = -50
       buckets: [-100, -50, -20, 0, 25],
+      labelNames: ["client"],
     }),
     peerConnectionLength: register.histogram({
       name: "lodestar_peer_connection_seconds",
@@ -66,10 +67,10 @@ export function createLodestarMetrics(
       name: "lodestar_peers_sync_count",
       help: "Current count of peers useful for sync",
     }),
-    peerConnectedEvent: register.gauge<"direction">({
+    peerConnectedEvent: register.gauge<"direction" | "status">({
       name: "lodestar_peer_connected_total",
       help: "Total number of peer:connected event, labeled by direction",
-      labelNames: ["direction"],
+      labelNames: ["direction", "status"],
     }),
     peerDisconnectedEvent: register.gauge<"direction">({
       name: "lodestar_peer_disconnected_total",
@@ -163,43 +164,6 @@ export function createLodestarMetrics(
       }),
     },
 
-    discv5: {
-      kadTableSize: register.gauge({
-        name: "lodestar_discv5_kad_table_size",
-        help: "Total size of the discv5 kad table",
-      }),
-      lookupCount: register.gauge({
-        name: "lodestar_discv5_lookup_count",
-        help: "Total count of discv5 lookups",
-      }),
-      activeSessionCount: register.gauge({
-        name: "lodestar_discv5_active_session_count",
-        help: "Count of the discv5 active sessions",
-      }),
-      connectedPeerCount: register.gauge({
-        name: "lodestar_discv5_connected_peer_count",
-        help: "Count of the discv5 connected peers",
-      }),
-      sentMessageCount: register.gauge<"type">({
-        name: "lodestar_discv5_sent_message_count",
-        help: "Count of the discv5 messages sent by message type",
-        labelNames: ["type"],
-      }),
-      rcvdMessageCount: register.gauge<"type">({
-        name: "lodestar_discv5_rcvd_message_count",
-        help: "Count of the discv5 messages received by message type",
-        labelNames: ["type"],
-      }),
-      rateLimitHitIP: register.gauge({
-        name: "lodestar_discv5_rate_limit_hit_ip",
-        help: "Total count of rate limit hits by IP",
-      }),
-      rateLimitHitTotal: register.gauge({
-        name: "lodestar_discv5_rate_limit_hit_total",
-        help: "Total count of rate limit hits by total requests",
-      }),
-    },
-
     gossipPeer: {
       scoreByThreshold: register.gauge<"threshold">({
         name: "lodestar_gossip_peer_score_by_threshold_count",
@@ -210,6 +174,13 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_mesh_peers_by_client_count",
         help: "number of mesh peers, labeled by client",
         labelNames: ["client"],
+      }),
+      scoreByClient: register.histogram<"client">({
+        name: "lodestar_gossip_score_by_client",
+        help: "Gossip peer score by client",
+        labelNames: ["client"],
+        // based on gossipScoreThresholds and negativeGossipScoreIgnoreThreshold
+        buckets: [-16000, -8000, -4000, -1000, 0, 5, 100],
       }),
       score: register.avgMinMax({
         name: "lodestar_gossip_score_avg_min_max",
@@ -293,6 +264,17 @@ export function createLodestarMetrics(
       labelNames: ["topic"],
       buckets: [0.1, 1, 10, 100],
     }),
+
+    discv5: {
+      decodeEnrAttemptCount: register.counter({
+        name: "lodestar_discv5_decode_enr_attempt_count",
+        help: "Count of total attempts to decode enrs",
+      }),
+      decodeEnrErrorCount: register.counter({
+        name: "lodestar_discv5_decode_enr_error_count",
+        help: "Count of total errors attempting to decode enrs",
+      }),
+    },
 
     attnetsService: {
       committeeSubnets: register.gauge({

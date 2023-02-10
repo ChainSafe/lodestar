@@ -1,16 +1,15 @@
 import {setMaxListeners} from "node:events";
-import {Libp2p} from "libp2p";
 import {Registry} from "prom-client";
 
 import {IBeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
-import {Api} from "@lodestar/api";
+import {Api, ServerApi} from "@lodestar/api";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IBeaconDb} from "../db/index.js";
-import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
+import {Libp2p, INetwork, Network, getReqRespHandlers} from "../network/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
@@ -31,7 +30,7 @@ export interface IBeaconNodeModules {
   metrics: IMetrics | null;
   network: INetwork;
   chain: IBeaconChain;
-  api: Api;
+  api: {[K in keyof Api]: ServerApi<Api[K]>};
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
   metricsServer?: HttpMetricsServer;
@@ -82,7 +81,7 @@ export class BeaconNode {
   metricsServer?: HttpMetricsServer;
   network: INetwork;
   chain: IBeaconChain;
-  api: Api;
+  api: {[K in keyof Api]: ServerApi<Api[K]>};
   restApi?: BeaconRestApiServer;
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
@@ -141,9 +140,9 @@ export class BeaconNode {
     setMaxListeners(Infinity, controller.signal);
     const signal = controller.signal;
 
-    // TODO EIP-4844, where is the best place to do this?
+    // TODO DENEB, where is the best place to do this?
     if (config.EIP4844_FORK_EPOCH < Infinity) {
-      // TODO EIP-4844: "c-kzg" is not installed by default, so if the library is not installed this will throw
+      // TODO DENEB: "c-kzg" is not installed by default, so if the library is not installed this will throw
       // See "Not able to build lodestar from source" https://github.com/ChainSafe/lodestar/issues/4886
       await initCKZG();
       loadEthereumTrustedSetup();
@@ -244,6 +243,9 @@ export class BeaconNode {
     const metricsServer = metrics
       ? new HttpMetricsServer(opts.metrics, {
           register: metrics.register,
+          getOtherMetrics: async (): Promise<string> => {
+            return (await network.discv5()?.metrics()) ?? "";
+          },
           logger: logger.child({module: LoggerModule.metrics}),
         })
       : undefined;

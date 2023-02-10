@@ -3,7 +3,7 @@ import {expect} from "chai";
 
 import {PeerId} from "@libp2p/interface-peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
-import {ENR} from "@chainsafe/discv5";
+import {SignableENR} from "@chainsafe/discv5";
 import {createIBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";
@@ -29,7 +29,7 @@ let port = 9000;
 const mu = "/ip4/127.0.0.1/tcp/0";
 
 describe("network", function () {
-  if (this.timeout() < 5000) this.timeout(5000);
+  this.timeout(50000);
   this.retries(2); // This test fail sometimes, with a 5% rate.
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
@@ -46,7 +46,7 @@ describe("network", function () {
 
   async function getOpts(peerId: PeerId): Promise<INetworkOptions> {
     const bindAddrUdp = `/ip4/0.0.0.0/udp/${port++}`;
-    const enr = ENR.createFromPeerId(peerId);
+    const enr = SignableENR.createFromPeerId(peerId);
     enr.setLocationMultiaddr(multiaddr(bindAddrUdp));
 
     return {
@@ -159,9 +159,9 @@ describe("network", function () {
       createTestNode("B"),
     ]);
 
-    if (!netBootnode.discv5) throw Error("discv5 in bootnode is not enabled");
-    if (!netA.discv5) throw Error("discv5 in A is not enabled");
-    if (!netB.discv5) throw Error("discv5 in B is not enabled");
+    if (!netBootnode.discv5()) throw Error("discv5 in bootnode is not enabled");
+    if (!netA.discv5()) throw Error("discv5 in A is not enabled");
+    if (!netB.discv5()) throw Error("discv5 in B is not enabled");
 
     const subscription: CommitteeSubscription = {
       validatorIndex: 2000,
@@ -174,13 +174,14 @@ describe("network", function () {
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
 
     // Add subnets to B ENR
-    netB.discv5.enr.set(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(netB.metadata.attnets));
+    await netB.discv5()?.setEnrValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(netB.metadata.attnets));
 
     // A knows about bootnode
-    netA.discv5.addEnr(netBootnode.discv5.enr);
-    expect(netA.discv5.kadValues()).have.length(1, "wrong netA kad length");
+    // TODO discv5 worker thread no longer allows adding an ENR
+    //netA.discv5.addEnr(netBootnode.discv5.enr);
+    //expect(netA.discv5.kadValues()).have.length(1, "wrong netA kad length");
     // bootnode knows about B
-    netBootnode.discv5.addEnr(netB.discv5.enr);
+    //netBootnode.discv5.addEnr(netB.discv5.enr);
 
     // const enrB = ENR.createFromPeerId(netB.peerId);
     // enrB.set(ENRKey.attnets, Buffer.from(ssz.phase0.AttestationSubnets.serialize(netB.metadata.attnets)));

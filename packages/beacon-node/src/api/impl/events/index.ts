@@ -1,12 +1,12 @@
-import {routes} from "@lodestar/api";
+import {routes, ServerApi} from "@lodestar/api";
 import {ApiModules} from "../types.js";
 import {ApiError} from "../errors.js";
 
-export function getEventsApi({chain}: Pick<ApiModules, "chain" | "config">): routes.events.Api {
+export function getEventsApi({chain}: Pick<ApiModules, "chain" | "config">): ServerApi<routes.events.Api> {
   const validTopics = new Set(Object.values(routes.events.eventTypes));
 
   return {
-    eventstream(topics, signal, onEvent) {
+    async eventstream(topics, signal, onEvent) {
       const onAbortFns: (() => void)[] = [];
 
       for (const topic of topics) {
@@ -18,7 +18,7 @@ export function getEventsApi({chain}: Pick<ApiModules, "chain" | "config">): rou
         const handler = (data: any): void => {
           // TODO: What happens if this handler throws? Does it break the other chain.emitter listeners?
 
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           onEvent({type: topic, message: data});
         };
 

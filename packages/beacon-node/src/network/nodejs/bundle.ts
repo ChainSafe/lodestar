@@ -1,4 +1,4 @@
-import {createLibp2p, Libp2p} from "libp2p";
+import {createLibp2p} from "libp2p";
 import {tcp} from "@libp2p/tcp";
 import {mplex} from "@libp2p/mplex";
 import {bootstrap} from "@libp2p/bootstrap";
@@ -10,6 +10,7 @@ import type {Components} from "libp2p/components";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {Registry} from "prom-client";
 import {yamux} from "@chainsafe/libp2p-yamux";
+import {Libp2p} from "../interface.js";
 import {createNoise} from "./noise.js";
 
 export interface ILibp2pOptions {
@@ -41,8 +42,7 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
       peerDiscovery.push(mdns());
     }
   }
-
-  return await createLibp2p({
+  return (await createLibp2p({
     peerId: options.peerId,
     addresses: {
       listen: options.addresses.listen,
@@ -50,12 +50,16 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
     },
     connectionEncryption: [createNoise()],
     // Reject connections when the server's connection count gets high
-    transports: [tcp({maxConnections: options.maxConnections})],
-    streamMuxers: [
-      // Cast because yamux.StreamMuxerFactory is different than libp2p.StreamMuxerFactory
-      yamux(),
-      mplex({maxInboundStreams: 256}),
+    transports: [
+      tcp({
+        maxConnections: options.maxConnections,
+        closeServerOnMaxConnections: {
+          closeAbove: options.maxConnections ?? Infinity,
+          listenBelow: options.maxConnections ?? Infinity,
+        },
+      }),
     ],
+    streamMuxers: [yamux(), mplex({maxInboundStreams: 256})],
     peerDiscovery,
     metrics: options.metrics
       ? prometheusMetrics({
@@ -110,5 +114,5 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
         agentVersion: options.lodestarVersion ? `lodestar/${options.lodestarVersion}` : "lodestar",
       },
     },
-  });
+  })) as Libp2p;
 }

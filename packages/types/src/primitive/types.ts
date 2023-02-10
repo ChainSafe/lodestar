@@ -30,6 +30,7 @@ export type SubcommitteeIndex = UintNum64;
 export type ValidatorIndex = UintNum64;
 export type WithdrawalIndex = UintNum64;
 export type Gwei = UintBn64;
+export type Wei = UintBn256;
 export type Root = Bytes32;
 export type Version = Bytes4;
 export type DomainType = Bytes4;

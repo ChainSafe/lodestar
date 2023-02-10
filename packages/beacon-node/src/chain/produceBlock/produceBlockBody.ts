@@ -11,7 +11,8 @@ import {
   BLSPubkey,
   BLSSignature,
   capella,
-  eip4844,
+  deneb,
+  Wei,
 } from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -62,14 +63,14 @@ export type AssembledBlockType<T extends BlockType> = T extends BlockType.Full
   : allForks.BlindedBeaconBlock;
 
 export enum BlobsResultType {
-  preEIP4844,
+  preDeneb,
   produced,
   blinded,
 }
 
 export type BlobsResult =
-  | {type: BlobsResultType.preEIP4844 | BlobsResultType.blinded}
-  | {type: BlobsResultType.produced; blobs: eip4844.Blobs; blockHash: RootHex};
+  | {type: BlobsResultType.preDeneb | BlobsResultType.blinded}
+  | {type: BlobsResultType.produced; blobs: deneb.Blobs; blockHash: RootHex};
 
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
@@ -89,11 +90,12 @@ export async function produceBlockBody<T extends BlockType>(
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
   }
-): Promise<{body: AssembledBodyType<T>; blobs: BlobsResult}> {
-  // Type-safe for blobs variable. Translate 'null' value into 'preEIP4844' enum
+): Promise<{body: AssembledBodyType<T>; blobs: BlobsResult; blockValue: Wei}> {
+  // Type-safe for blobs variable. Translate 'null' value into 'preDeneb' enum
   // TODO: Not ideal, but better than just using null.
-  // TODO: Does not guarantee that preEIP4844 enum goes with a preEIP4844 block
+  // TODO: Does not guarantee that preDeneb enum goes with a preDeneb block
   let blobsResult: BlobsResult;
+  let blockValue: Wei;
 
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there
@@ -170,15 +172,16 @@ export async function produceBlockBody<T extends BlockType>(
         proposerPubKey
       );
       (blockBody as allForks.BlindedBeaconBlockBody).executionPayloadHeader = builderRes.header;
-      if (ForkSeq[fork] >= ForkSeq.eip4844) {
-        const {blobKzgCommitments} = builderRes as {blobKzgCommitments: eip4844.BlobKzgCommitments};
+      blockValue = builderRes.blockValue;
+      if (ForkSeq[fork] >= ForkSeq.deneb) {
+        const {blobKzgCommitments} = builderRes;
         if (blobKzgCommitments === undefined) {
           throw Error(`Invalid builder getHeader response for fork=${fork}, missing blobKzgCommitments`);
         }
-        (blockBody as eip4844.BlindedBeaconBlockBody).blobKzgCommitments = blobKzgCommitments;
+        (blockBody as deneb.BlindedBeaconBlockBody).blobKzgCommitments = blobKzgCommitments;
         blobsResult = {type: BlobsResultType.blinded};
       } else {
-        blobsResult = {type: BlobsResultType.preEIP4844};
+        blobsResult = {type: BlobsResultType.preDeneb};
       }
     }
 
@@ -202,7 +205,8 @@ export async function produceBlockBody<T extends BlockType>(
           (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
             fork
           ].ExecutionPayload.defaultValue();
-          blobsResult = {type: BlobsResultType.preEIP4844};
+          blobsResult = {type: BlobsResultType.preDeneb};
+          blockValue = BigInt(0);
         } else {
           const {prepType, payloadId} = prepareRes;
           if (prepType !== PayloadPreparationType.Cached) {
@@ -214,37 +218,39 @@ export async function produceBlockBody<T extends BlockType>(
             await sleep(PAYLOAD_GENERATION_TIME_MS);
           }
 
-          const payload = await this.executionEngine.getPayload(fork, payloadId);
-          (blockBody as allForks.ExecutionBlockBody).executionPayload = payload;
+          const engineRes = await this.executionEngine.getPayload(fork, payloadId);
+          const {executionPayload} = engineRes;
+          (blockBody as allForks.ExecutionBlockBody).executionPayload = executionPayload;
+          blockValue = engineRes.blockValue;
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
           this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
-          if (payload.transactions.length === 0) {
+          if (executionPayload.transactions.length === 0) {
             this.metrics?.blockPayload.emptyPayloads.inc({prepType});
           }
 
-          if (ForkSeq[fork] >= ForkSeq.eip4844) {
+          if (ForkSeq[fork] >= ForkSeq.deneb) {
             // SPEC: https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#blob-kzg-commitments
             // After retrieving the execution payload from the execution engine as specified in Bellatrix, use the
             // payload_id to retrieve blobs and blob_kzg_commitments via get_blobs_and_kzg_commitments(payload_id)
-            // TODO EIP-4844: getBlobsBundle and getPayload must be either coupled or called in parallel to save time.
+            // TODO Deneb: getBlobsBundle and getPayload must be either coupled or called in parallel to save time.
             const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
 
             // Sanity check consistency between getPayload() and getBlobsBundle()
-            const blockHash = toHex(payload.blockHash);
+            const blockHash = toHex(executionPayload.blockHash);
             if (blobsBundle.blockHash !== blockHash) {
               throw Error(`blobsBundle incorrect blockHash ${blobsBundle.blockHash} != ${blockHash}`);
             }
 
             // Optionally sanity-check that the KZG commitments match the versioned hashes in the transactions
             if (this.opts.sanityCheckExecutionEngineBlobs) {
-              validateBlobsAndKzgCommitments(payload, blobsBundle);
+              validateBlobsAndKzgCommitments(executionPayload, blobsBundle);
             }
 
-            (blockBody as eip4844.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs;
+            (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs;
             blobsResult = {type: BlobsResultType.produced, blobs: blobsBundle.blobs, blockHash};
           } else {
-            blobsResult = {type: BlobsResultType.preEIP4844};
+            blobsResult = {type: BlobsResultType.preDeneb};
           }
         }
       } catch (e) {
@@ -261,7 +267,8 @@ export async function produceBlockBody<T extends BlockType>(
           (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
             fork
           ].ExecutionPayload.defaultValue();
-          blobsResult = {type: BlobsResultType.preEIP4844};
+          blobsResult = {type: BlobsResultType.preDeneb};
+          blockValue = BigInt(0);
         } else {
           // since merge transition is complete, we need a valid payload even if with an
           // empty (transactions) one. defaultValue isn't gonna cut it!
@@ -270,7 +277,8 @@ export async function produceBlockBody<T extends BlockType>(
       }
     }
   } else {
-    blobsResult = {type: BlobsResultType.preEIP4844};
+    blobsResult = {type: BlobsResultType.preDeneb};
+    blockValue = BigInt(0);
   }
 
   if (ForkSeq[fork] >= ForkSeq.capella) {
@@ -278,7 +286,7 @@ export async function produceBlockBody<T extends BlockType>(
     (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = blsToExecutionChanges;
   }
 
-  return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult};
+  return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult, blockValue};
 }
 
 /**
@@ -376,7 +384,11 @@ async function prepareExecutionPayloadHeader(
   fork: ForkExecution,
   state: CachedBeaconStateBellatrix,
   proposerPubKey: BLSPubkey
-): Promise<{header: allForks.ExecutionPayloadHeader; blobKzgCommitments?: eip4844.BlobKzgCommitments}> {
+): Promise<{
+  header: allForks.ExecutionPayloadHeader;
+  blockValue: Wei;
+  blobKzgCommitments?: deneb.BlobKzgCommitments;
+}> {
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");
   }

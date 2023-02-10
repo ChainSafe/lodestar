@@ -1,6 +1,6 @@
 # Contribution Guidelines
 
-Thanks for your contribution to Lodestar. It's people like you that push the Ethereum ecosystem forward.
+Thanks for your interest in contributing to Lodestar. It's people like you that push the Ethereum ecosystem forward.
 
 ## Prerequisites
 
@@ -96,7 +96,7 @@ Pull request titles must be:
 
 - Short and descriptive summary
 - Should be capitalized and written in imperative present tense
-- Not end with period
+- Not end with a period
 
 For example:
 

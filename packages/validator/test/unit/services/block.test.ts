@@ -6,6 +6,7 @@ import {createIChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {sleep} from "@lodestar/utils";
 import {ssz} from "@lodestar/types";
+import {HttpStatusCode} from "@lodestar/api";
 import {BlockProposingService} from "../../../src/services/block.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
@@ -37,9 +38,13 @@ describe("BlockDutiesService", function () {
     // Reply with some duties
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
     api.validator.getProposerDuties.resolves({
-      dependentRoot: ZERO_HASH_HEX,
-      executionOptimistic: false,
-      data: [{slot: slot, validatorIndex: 0, pubkey: pubkeys[0]}],
+      response: {
+        dependentRoot: ZERO_HASH_HEX,
+        executionOptimistic: false,
+        data: [{slot: slot, validatorIndex: 0, pubkey: pubkeys[0]}],
+      },
+      ok: true,
+      status: HttpStatusCode.OK,
     });
 
     const clock = new ClockMock();
@@ -48,7 +53,11 @@ describe("BlockDutiesService", function () {
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     validatorStore.signRandao.resolves(signedBlock.message.body.randaoReveal);
     validatorStore.signBlock.callsFake(async (_, block) => ({message: block, signature: signedBlock.signature}));
-    api.validator.produceBlock.resolves({data: signedBlock.message});
+    api.validator.produceBlock.resolves({
+      response: {data: signedBlock.message, blockValue: ssz.Wei.defaultValue()},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
     api.beacon.publishBlock.resolves();
 
     // Trigger block production for slot 1

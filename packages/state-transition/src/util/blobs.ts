@@ -1,10 +1,10 @@
 import SHA256 from "@chainsafe/as-sha256";
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {BLOB_TX_TYPE, VERSIONED_HASH_VERSION_KZG} from "@lodestar/params";
-import {bellatrix, eip4844} from "@lodestar/types";
+import {bellatrix, deneb} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 
-// TODO EIP-4844: Move to params
+// TODO DENEB: Move to params
 const BYTES_PER_HASH = 32;
 
 /**
@@ -28,12 +28,12 @@ type VersionHash = Uint8Array;
  */
 export function verifyKzgCommitmentsAgainstTransactions(
   transactions: bellatrix.Transaction[],
-  blobKzgCommitments: eip4844.KZGCommitment[]
+  blobKzgCommitments: deneb.KZGCommitment[]
 ): boolean {
   const allVersionedHashes: VersionHash[] = [];
   for (const tx of transactions) {
     if (tx[0] === BLOB_TX_TYPE) {
-      // TODO EIP-4844: Optimize array manipulation
+      // TODO DENEB: Optimize array manipulation
       allVersionedHashes.push(...txPeekBlobVersionedHashes(tx));
     }
   }
@@ -51,7 +51,7 @@ export function verifyKzgCommitmentsAgainstTransactions(
     }
   }
 
-  // TODO EIP-4844: Use proper API, either throw error or return boolean
+  // TODO DENEB: Use proper API, either throw error or return boolean
   return true;
 }
 
@@ -86,7 +86,7 @@ function txPeekBlobVersionedHashes(opaqueTx: bellatrix.Transaction): VersionHash
   return versionedHashes;
 }
 
-export function kzgCommitmentToVersionedHash(kzgCommitment: eip4844.KZGCommitment): VersionHash {
+export function kzgCommitmentToVersionedHash(kzgCommitment: deneb.KZGCommitment): VersionHash {
   const hash = SHA256.digest(kzgCommitment);
   // Equivalent to `VERSIONED_HASH_VERSION_KZG + hash(kzg_commitment)[1:]`
   hash[0] = VERSIONED_HASH_VERSION_KZG;

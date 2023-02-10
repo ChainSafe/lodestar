@@ -1,20 +1,19 @@
-import {Libp2p} from "libp2p";
-import {DefaultConnectionManager} from "libp2p/connection-manager";
 import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {IBeaconConfig} from "@lodestar/config";
 import {ILogger, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {Discv5, ENR} from "@chainsafe/discv5";
+import {SignableENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
-import {altair, eip4844, Epoch, phase0} from "@lodestar/types";
+import {deneb, Epoch, phase0, allForks} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
 import {BlockInput, BlockInputType, getBlockInput} from "../chain/blocks/types.js";
+import {isValidBlsToExecutionChangeForBlockInclusion} from "../chain/opPools/utils.js";
 import {INetworkOptions} from "./options.js";
-import {INetwork} from "./interface.js";
+import {INetwork, Libp2p} from "./interface.js";
 import {ReqRespBeaconNode, ReqRespHandlers, doBeaconBlocksMaybeBlobsByRange} from "./reqresp/index.js";
 import {
   Eth2Gossipsub,
@@ -32,6 +31,10 @@ import {INetworkEventBus, NetworkEventBus} from "./events.js";
 import {AttnetsService, CommitteeSubscription, SyncnetsService} from "./subnets/index.js";
 import {PeersData} from "./peers/peersData.js";
 import {getConnectionsMap, isPublishToZeroPeersError} from "./util.js";
+import {Discv5Worker} from "./discv5/index.js";
+
+// How many changes to batch cleanup
+const CACHED_BLS_BATCH_CLEANUP_LIMIT = 10;
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -64,6 +67,7 @@ export class Network implements INetwork {
   private readonly signal: AbortSignal;
 
   private subscribedForks = new Set<ForkName>();
+  private regossipBlsChangesPromise: Promise<void> | null = null;
 
   constructor(private readonly opts: INetworkOptions, modules: INetworkModules) {
     const {config, libp2p, logger, metrics, chain, reqRespHandlers, gossipHandlers, signal} = modules;
@@ -146,9 +150,6 @@ export class Network implements INetwork {
 
   async start(): Promise<void> {
     await this.libp2p.start();
-    // Stop latency monitor since we handle disconnects here and don't want additional load on the event loop
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    ((this.libp2p.connectionManager as unknown) as DefaultConnectionManager)["latencyMonitor"].stop();
 
     // Network spec decides version changes based on clock fork, not head fork
     const forkCurrentSlot = this.config.getForkName(this.clock.currentSlot);
@@ -157,10 +158,11 @@ export class Network implements INetwork {
     await this.reqResp.start();
     this.reqResp.registerProtocolsAtFork(forkCurrentSlot);
 
-    // Initialize ENR with clock's fork
-    this.metadata.start(this.getEnr(), forkCurrentSlot);
-
     await this.peerManager.start();
+    const discv5 = this.discv5();
+    const setEnrValue = discv5?.setEnrValue.bind(discv5);
+    // Initialize ENR with clock's fork
+    this.metadata.start(setEnrValue, this.config.getForkName(this.clock.currentSlot));
     await this.gossip.start();
     this.attnetsService.start();
     this.syncnetsService.start();
@@ -185,7 +187,7 @@ export class Network implements INetwork {
     await this.libp2p.stop();
   }
 
-  get discv5(): Discv5 | undefined {
+  discv5(): Discv5Worker | undefined {
     return this.peerManager["discovery"]?.discv5;
   }
 
@@ -197,8 +199,8 @@ export class Network implements INetwork {
     return this.libp2p.peerId;
   }
 
-  getEnr(): ENR | undefined {
-    return this.peerManager["discovery"]?.discv5.enr;
+  async getEnr(): Promise<SignableENR | undefined> {
+    return await this.peerManager["discovery"]?.discv5.enr();
   }
 
   getConnectionsByPeer(): Map<string, Connection[]> {
@@ -215,16 +217,16 @@ export class Network implements INetwork {
 
   publishBeaconBlockMaybeBlobs(blockInput: BlockInput): Promise<void> {
     switch (blockInput.type) {
-      case BlockInputType.preEIP4844:
+      case BlockInputType.preDeneb:
         return this.gossip.publishBeaconBlock(blockInput.block);
 
-      case BlockInputType.postEIP4844:
+      case BlockInputType.postDeneb:
         return this.gossip.publishSignedBeaconBlockAndBlobsSidecar({
-          beaconBlock: blockInput.block as eip4844.SignedBeaconBlock,
+          beaconBlock: blockInput.block as deneb.SignedBeaconBlock,
           blobsSidecar: blockInput.blobs,
         });
 
-      case BlockInputType.postEIP4844OldBlobs:
+      case BlockInputType.postDenebOldBlobs:
         throw Error(`Attempting to broadcast old BlockInput slot ${blockInput.block.message.slot}`);
     }
   }
@@ -237,22 +239,22 @@ export class Network implements INetwork {
   }
 
   async beaconBlocksMaybeBlobsByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<BlockInput[]> {
-    // Assume all requests are post EIP-4844
-    if (this.config.getForkSeq(this.chain.forkChoice.getFinalizedBlock().slot) >= ForkSeq.eip4844) {
+    // Assume all requests are post Deneb
+    if (this.config.getForkSeq(this.chain.forkChoice.getFinalizedBlock().slot) >= ForkSeq.deneb) {
       const blocksAndBlobs = await this.reqResp.beaconBlockAndBlobsSidecarByRoot(peerId, request);
       return blocksAndBlobs.map(({beaconBlock, blobsSidecar}) =>
-        getBlockInput.postEIP4844(this.config, beaconBlock, blobsSidecar)
+        getBlockInput.postDeneb(this.config, beaconBlock, blobsSidecar)
       );
     }
 
-    // Assume all request are pre EIP-4844
-    else if (this.config.getForkSeq(this.clock.currentSlot) < ForkSeq.eip4844) {
+    // Assume all request are pre Deneb
+    else if (this.config.getForkSeq(this.clock.currentSlot) < ForkSeq.deneb) {
       const blocks = await this.reqResp.beaconBlocksByRoot(peerId, request);
-      return blocks.map((block) => getBlockInput.preEIP4844(this.config, block));
+      return blocks.map((block) => getBlockInput.preDeneb(this.config, block));
     }
 
-    // NOTE: Consider blocks may be post or pre EIP-4844
-    // TODO EIP-4844: Request either blocks, or blocks+blobs
+    // NOTE: Consider blocks may be post or pre Deneb
+    // TODO Deneb: Request either blocks, or blocks+blobs
     else {
       const results = await Promise.all(
         request.map(
@@ -264,7 +266,7 @@ export class Network implements INetwork {
 
             if (resultBlockBlobs.status === "fulfilled" && resultBlockBlobs.value.length === 1) {
               const {beaconBlock, blobsSidecar} = resultBlockBlobs.value[0];
-              return getBlockInput.postEIP4844(this.config, beaconBlock, blobsSidecar);
+              return getBlockInput.postDeneb(this.config, beaconBlock, blobsSidecar);
             }
 
             if (resultBlocks.status === "rejected") {
@@ -278,20 +280,20 @@ export class Network implements INetwork {
 
             const block = resultBlocks.value[0];
 
-            if (this.config.getForkSeq(block.message.slot) >= ForkSeq.eip4844) {
+            if (this.config.getForkSeq(block.message.slot) >= ForkSeq.deneb) {
               // beaconBlockAndBlobsSidecarByRoot should have succeeded
               if (resultBlockBlobs.status === "rejected") {
                 // Recycle existing error for beaconBlockAndBlobsSidecarByRoot if any
                 return Promise.reject(resultBlockBlobs.reason);
               } else {
                 throw Error(
-                  `Received post EIP-4844 ${beaconBlockRoot} over beaconBlocksByRoot not beaconBlockAndBlobsSidecarByRoot`
+                  `Received post Deneb ${beaconBlockRoot} over beaconBlocksByRoot not beaconBlockAndBlobsSidecarByRoot`
                 );
               }
             }
 
-            // Block is pre EIP-4844
-            return getBlockInput.preEIP4844(this.config, block);
+            // Block is pre Deneb
+            return getBlockInput.preDeneb(this.config, block);
           }
         )
       );
@@ -414,6 +416,20 @@ export class Network implements INetwork {
           }
         }
       }
+
+      // If we are subscribed and post capella fork epoch, try gossiping the cached bls changes
+      if (
+        this.isSubscribedToGossipCoreTopics() &&
+        epoch >= this.config.CAPELLA_FORK_EPOCH &&
+        !this.regossipBlsChangesPromise
+      ) {
+        this.regossipBlsChangesPromise = this.regossipCachedBlsChanges()
+          // If the processing fails for e.g. because of lack of peers set the promise
+          // to be null again to be retried
+          .catch((_e) => {
+            this.regossipBlsChangesPromise = null;
+          });
+      }
     } catch (e) {
       this.logger.error("Error on BeaconGossipHandler.onEpoch", {epoch}, e as Error);
     }
@@ -452,8 +468,8 @@ export class Network implements INetwork {
       {type: GossipType.attester_slashing},
     ];
 
-    // After EIP4844 only track beacon_block_and_blobs_sidecar topic
-    if (ForkSeq[fork] < ForkSeq.eip4844) {
+    // After Deneb only track beacon_block_and_blobs_sidecar topic
+    if (ForkSeq[fork] < ForkSeq.deneb) {
       topics.push({type: GossipType.beacon_block});
     } else {
       topics.push({type: GossipType.beacon_block_and_blobs_sidecar});
@@ -485,7 +501,63 @@ export class Network implements INetwork {
     return topics;
   }
 
-  private onLightClientFinalityUpdate = async (finalityUpdate: altair.LightClientFinalityUpdate): Promise<void> => {
+  private async regossipCachedBlsChanges(): Promise<void> {
+    let gossipedIndexes = [];
+    let includedIndexes = [];
+    let totalProcessed = 0;
+
+    this.logger.debug("Re-gossiping unsubmitted cached bls changes");
+    try {
+      const headState = this.chain.getHeadState();
+      for (const poolData of this.chain.opPool.getAllBlsToExecutionChanges()) {
+        const {data: value, preCapella} = poolData;
+        if (preCapella) {
+          if (isValidBlsToExecutionChangeForBlockInclusion(headState, value)) {
+            await this.gossip.publishBlsToExecutionChange(value);
+            gossipedIndexes.push(value.message.validatorIndex);
+          } else {
+            // No need to gossip if its already been in the headState
+            // TODO: Should use final state?
+            includedIndexes.push(value.message.validatorIndex);
+          }
+
+          this.chain.opPool.insertBlsToExecutionChange(value, false);
+          totalProcessed += 1;
+
+          // Cleanup in small batches
+          if (totalProcessed % CACHED_BLS_BATCH_CLEANUP_LIMIT === 0) {
+            this.logger.debug("Gossiped cached blsChanges", {
+              gossipedIndexes: `${gossipedIndexes}`,
+              includedIndexes: `${includedIndexes}`,
+              totalProcessed,
+            });
+            gossipedIndexes = [];
+            includedIndexes = [];
+          }
+        }
+      }
+
+      // Log any remaining changes
+      if (totalProcessed % CACHED_BLS_BATCH_CLEANUP_LIMIT !== 0) {
+        this.logger.debug("Gossiped cached blsChanges", {
+          gossipedIndexes: `${gossipedIndexes}`,
+          includedIndexes: `${includedIndexes}`,
+          totalProcessed,
+        });
+      }
+    } catch (e) {
+      this.logger.error("Failed to completely gossip unsubmitted cached bls changes", {totalProcessed}, e as Error);
+      // Throw error so that the promise can be set null to be retied
+      throw e;
+    }
+    if (totalProcessed > 0) {
+      this.logger.info("Regossiped unsubmitted blsChanges", {totalProcessed});
+    } else {
+      this.logger.debug("No unsubmitted blsChanges to gossip", {totalProcessed});
+    }
+  }
+
+  private onLightClientFinalityUpdate = async (finalityUpdate: allForks.LightClientFinalityUpdate): Promise<void> => {
     if (this.hasAttachedSyncCommitteeMember()) {
       try {
         // messages SHOULD be broadcast after one-third of slot has transpired
@@ -503,7 +575,7 @@ export class Network implements INetwork {
   };
 
   private onLightClientOptimisticUpdate = async (
-    optimisticUpdate: altair.LightClientOptimisticUpdate
+    optimisticUpdate: allForks.LightClientOptimisticUpdate
   ): Promise<void> => {
     if (this.hasAttachedSyncCommitteeMember()) {
       try {

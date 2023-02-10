@@ -24,7 +24,6 @@ enum ReprocessStatus {
 
 type AwaitingAttestationPromise = {
   resolve: (foundBlock: boolean) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   promise: Promise<boolean>;
   // there are multiple subnet/aggregated attestations waiting for same promise
   awaitingAttestationsCount: number;

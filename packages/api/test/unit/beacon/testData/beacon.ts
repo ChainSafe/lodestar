@@ -56,6 +56,10 @@ export const testData: GenericServerTestCases<Api> = {
     args: [getDefaultBlindedBlock(64)],
     res: undefined,
   },
+  getBlobsSidecar: {
+    args: ["head"],
+    res: {executionOptimistic: true, data: ssz.deneb.BlobsSidecar.defaultValue()},
+  },
 
   // pool
 

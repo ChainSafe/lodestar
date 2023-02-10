@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+import {ApiError} from "@lodestar/api";
 import {Slot} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {ELClient, NodePair} from "../interfaces.js";
@@ -12,7 +13,9 @@ export async function connectAllNodes(nodes: NodePair[]): Promise<void> {
 }
 
 export async function connectNewNode(newNode: NodePair, nodes: NodePair[]): Promise<void> {
-  const clIdentity = (await newNode.cl.api.node.getNetworkIdentity()).data;
+  const res = await newNode.cl.api.node.getNetworkIdentity();
+  ApiError.assert(res);
+  const clIdentity = res.response.data;
   if (!clIdentity.peerId) return;
 
   const elIdentity = newNode.el.provider === null ? null : await newNode.el.provider.admin.nodeInfo();
@@ -27,7 +30,8 @@ export async function connectNewNode(newNode: NodePair, nodes: NodePair[]): Prom
       await node.el.provider.admin.addPeer(elIdentity.enode);
     }
 
-    await node.cl.api.lodestar.connectPeer(clIdentity.peerId, clIdentity.p2pAddresses);
+    const res = await node.cl.api.lodestar.connectPeer(clIdentity.peerId, clIdentity.p2pAddresses);
+    ApiError.assert(res);
   }
 }
 
@@ -48,7 +52,8 @@ export async function waitForNodeSyncStatus(env: SimulationEnvironment, node: No
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const result = await node.cl.api.node.getSyncingStatus();
-    if (!result.data.isSyncing) {
+    ApiError.assert(result);
+    if (!result.response.data.isSyncing) {
       break;
     } else {
       await sleep(1000, env.options.controller.signal);
@@ -59,9 +64,12 @@ export async function waitForNodeSyncStatus(env: SimulationEnvironment, node: No
 export async function waitForHead(
   env: SimulationEnvironment,
   node: NodePair,
-  options: {slot: Slot; head: string}
+  options: {slot: Slot; head: string; silent?: boolean}
 ): Promise<void> {
   return new Promise<void>((resolve) => {
+    if (!options.silent) {
+      console.log(`\nWaiting for head=${options.head} slot=${options.slot} on node=${node.id}.`);
+    }
     let firstHeadEventSlot: number;
 
     const cb = (event: {block: string; slot: Slot}): void => {

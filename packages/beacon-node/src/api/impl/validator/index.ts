@@ -1,4 +1,4 @@
-import {routes} from "@lodestar/api";
+import {routes, ServerApi} from "@lodestar/api";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
@@ -46,7 +46,14 @@ const SYNC_TOLERANCE_EPOCHS = 1;
  * Server implementation for handling validator duties.
  * See `@lodestar/validator/src/api` for the client implementation).
  */
-export function getValidatorApi({chain, config, logger, metrics, network, sync}: ApiModules): routes.validator.Api {
+export function getValidatorApi({
+  chain,
+  config,
+  logger,
+  metrics,
+  network,
+  sync,
+}: ApiModules): ServerApi<routes.validator.Api> {
   let genesisBlockRoot: Root | null = null;
 
   /**
@@ -177,7 +184,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       );
   }
 
-  const produceBlindedBlock: routes.validator.Api["produceBlindedBlock"] = async function produceBlindedBlock(
+  const produceBlindedBlock: ServerApi<routes.validator.Api>["produceBlindedBlock"] = async function produceBlindedBlock(
     slot,
     randaoReveal,
     graffiti
@@ -203,19 +210,19 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       chain.forkChoice.updateHead();
 
       timer = metrics?.blockProductionTime.startTimer();
-      const block = await chain.produceBlindedBlock({
+      const {block, blockValue} = await chain.produceBlindedBlock({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
       });
       metrics?.blockProductionSuccess.inc();
-      return {data: block, version: config.getForkName(block.slot)};
+      return {data: block, version: config.getForkName(block.slot), blockValue};
     } finally {
       if (timer) timer();
     }
   };
 
-  const produceBlock: routes.validator.Api["produceBlockV2"] = async function produceBlock(
+  const produceBlock: ServerApi<routes.validator.Api>["produceBlockV2"] = async function produceBlock(
     slot,
     randaoReveal,
     graffiti
@@ -233,14 +240,14 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       chain.recomputeForkChoiceHead();
 
       timer = metrics?.blockProductionTime.startTimer();
-      const block = await chain.produceBlock({
+      const {block, blockValue} = await chain.produceBlock({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
       });
       metrics?.blockProductionSuccess.inc();
       metrics?.blockProductionNumAggregated.observe(block.body.attestations.length);
-      return {data: block, version: config.getForkName(block.slot)};
+      return {data: block, version: config.getForkName(block.slot), blockValue};
     } finally {
       if (timer) timer();
     }

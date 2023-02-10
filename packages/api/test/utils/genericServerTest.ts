@@ -1,28 +1,30 @@
 import {expect} from "chai";
 import {IChainForkConfig} from "@lodestar/config";
-import {RouteGeneric, ReqGeneric, Resolves} from "../../src/utils/index.js";
+import {ReqGeneric, Resolves} from "../../src/utils/index.js";
 import {FetchOpts, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
 import {ServerRoutes} from "../../src/utils/server/genericJsonServer.js";
 import {registerRoute} from "../../src/utils/server/registerRoute.js";
+import {HttpStatusCode} from "../../src/utils/client/httpStatusCode.js";
+import {APIClientHandler, ApiClientResponseData, ServerApi} from "../../src/interfaces.js";
 import {getMockApi, getTestServer} from "./utils.js";
 
 type IgnoreVoid<T> = T extends void ? undefined : T;
 
-export type GenericServerTestCases<Api extends Record<string, RouteGeneric>> = {
+export type GenericServerTestCases<Api extends Record<string, APIClientHandler>> = {
   [K in keyof Api]: {
     args: Parameters<Api[K]>;
-    res: IgnoreVoid<Resolves<Api[K]>>;
+    res: IgnoreVoid<ApiClientResponseData<Resolves<Api[K]>>>;
     query?: FetchOpts["query"];
   };
 };
 
 export function runGenericServerTest<
-  Api extends Record<string, RouteGeneric>,
+  Api extends Record<string, APIClientHandler>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 >(
   config: IChainForkConfig,
   getClient: (config: IChainForkConfig, https: IHttpClient) => Api,
-  getRoutes: (config: IChainForkConfig, api: Api) => ServerRoutes<Api, ReqTypes>,
+  getRoutes: (config: IChainForkConfig, api: ServerApi<Api>) => ServerRoutes<ServerApi<Api>, ReqTypes>,
   testCases: GenericServerTestCases<Api>
 ): void {
   const mockApi = getMockApi<Api>(testCases);
@@ -41,11 +43,13 @@ export function runGenericServerTest<
 
     it(routeId as string, async () => {
       // Register mock data for this route
-      mockApi[routeId].resolves(testCases[routeId].res as any);
+      // TODO: Look for the type error
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      mockApi[routeId].resolves(testCases[routeId].res);
 
       // Do the call
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const res = await (client[routeId] as RouteGeneric)(...(testCase.args as any[]));
+      const res = await (client[routeId] as APIClientHandler)(...(testCase.args as any[]));
 
       // Use spy to assert argument serialization
       if (testCase.query) {
@@ -57,7 +61,7 @@ export function runGenericServerTest<
       expect(mockApi[routeId].getCall(0).args).to.deep.equal(testCase.args, `mockApi[${routeId as string}] wrong args`);
 
       // Assert returned value is correct
-      expect(res).to.deep.equal(testCase.res, "Wrong returned value");
+      expect(res.response).to.deep.equal(testCase.res, "Wrong returned value");
     });
   }
 }
@@ -65,12 +69,17 @@ export function runGenericServerTest<
 class HttpClientSpy extends HttpClient {
   opts: FetchOpts | null = null;
 
-  async json<T>(opts: FetchOpts): Promise<T> {
+  async json<T>(opts: FetchOpts): Promise<{status: HttpStatusCode; body: T}> {
     this.opts = opts;
     return super.json(opts);
   }
-  async arrayBuffer(opts: FetchOpts): Promise<ArrayBuffer> {
+  async arrayBuffer(opts: FetchOpts): Promise<{status: HttpStatusCode; body: ArrayBuffer}> {
     this.opts = opts;
     return super.arrayBuffer(opts);
+  }
+
+  async request(opts: FetchOpts): Promise<{status: HttpStatusCode; body: void}> {
+    this.opts = opts;
+    return super.request(opts);
   }
 }

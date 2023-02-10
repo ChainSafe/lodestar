@@ -1,5 +1,6 @@
 import {routes} from "@lodestar/api/beacon";
 import type {SecretKey} from "@chainsafe/bls/types";
+import {ApiError} from "@lodestar/api";
 import {CLClientKeys, SimulationAssertion} from "../interfaces.js";
 import {arrayEquals} from "../utils/index.js";
 import {neverMatcher} from "./matchers.js";
@@ -12,9 +13,12 @@ export const nodeAssertion: SimulationAssertion<"node", string> = {
     const errors: string[] = [];
 
     for (const node of nodes) {
-      const health = await node.cl.api.node.getHealth();
+      const {status: health} = await node.cl.api.node.getHealth();
 
-      if (health !== routes.node.NodeHealth.SYNCING && health !== routes.node.NodeHealth.READY) {
+      if (
+        ((health as unknown) as routes.node.NodeHealth) !== routes.node.NodeHealth.SYNCING &&
+        ((health as unknown) as routes.node.NodeHealth) !== routes.node.NodeHealth.READY
+      ) {
         errors.push(`node health is neither READY or SYNCING. ${JSON.stringify({id: node.cl.id})}`);
       }
       const keys = getAllKeys(node.cl.keys);
@@ -23,7 +27,9 @@ export const nodeAssertion: SimulationAssertion<"node", string> = {
         continue;
       }
 
-      const keyManagerKeys = (await node.cl.keyManager.listKeys()).data.map((k) => k.validatingPubkey);
+      const res = await node.cl.keyManager.listKeys();
+      ApiError.assert(res);
+      const keyManagerKeys = res.response.data.map((k) => k.validatingPubkey);
       const expectedPubkeys = keys.map((k) => k.toPublicKey().toHex());
 
       if (!arrayEquals(keyManagerKeys.sort(), expectedPubkeys.sort())) {

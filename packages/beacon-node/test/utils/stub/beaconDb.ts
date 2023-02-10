@@ -14,6 +14,8 @@ import {
   StateArchiveRepository,
   VoluntaryExitRepository,
   BLSToExecutionChangeRepository,
+  BlobsSidecarRepository,
+  BlobsSidecarArchiveRepository,
 } from "../../../src/db/repositories/index.js";
 import {createStubInstance} from "../types.js";
 
@@ -22,6 +24,10 @@ export class StubbedBeaconDb extends BeaconDb {
 
   block: SinonStubbedInstance<BlockRepository> & BlockRepository;
   blockArchive: SinonStubbedInstance<BlockArchiveRepository> & BlockArchiveRepository;
+
+  blobsSidecar: SinonStubbedInstance<BlobsSidecarRepository> & BlobsSidecarRepository;
+  blobsSidecarArchive: SinonStubbedInstance<BlobsSidecarArchiveRepository> & BlobsSidecarArchiveRepository;
+
   stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;
 
   voluntaryExit: SinonStubbedInstance<VoluntaryExitRepository> & VoluntaryExitRepository;
@@ -33,7 +39,6 @@ export class StubbedBeaconDb extends BeaconDb {
   depositDataRoot: SinonStubbedInstance<DepositDataRootRepository> & DepositDataRootRepository;
   eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(config = minimalConfig) {
     // eslint-disable-next-line
     super({config, controller: {} as any});
@@ -49,5 +54,7 @@ export class StubbedBeaconDb extends BeaconDb {
 
     this.depositDataRoot = createStubInstance(DepositDataRootRepository);
     this.eth1Data = createStubInstance(Eth1DataRepository);
+    this.blobsSidecar = createStubInstance(BlobsSidecarRepository);
+    this.blobsSidecarArchive = createStubInstance(BlobsSidecarArchiveRepository);
   }
 }

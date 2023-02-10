@@ -1,6 +1,7 @@
 import path from "node:path";
 import rimraf from "rimraf";
 import {Interchange} from "@lodestar/validator";
+import {ApiError} from "@lodestar/api";
 import {testFilesDir} from "../utils.js";
 import {describeCliTest} from "../utils/childprocRunner.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
@@ -9,7 +10,7 @@ import {getKeymanagerTestRunner} from "../utils/keymanagerTestRunners.js";
 import {getKeystoresStr} from "../utils/keystores.js";
 
 describeCliTest("import keystores from api, test DefaultProposerConfig", function ({spawnCli}) {
-  const dataDir = path.join(testFilesDir, "import-keystores-test");
+  const dataDir = path.join(testFilesDir, "proposer-config-test");
 
   const defaultOptions = {
     suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
@@ -57,17 +58,19 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
       //////////////// Fee Recipient
 
       let feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
+      ApiError.assert(feeRecipient0);
       expectDeepEquals(
-        feeRecipient0.data,
+        feeRecipient0.response.data,
         {pubkey: pubkeys[0], ethaddress: defaultOptions.suggestedFeeRecipient},
         "FeeRecipient Check default"
       );
 
       // Set feeClient to updatedOptions
-      await keymanagerClient.setFeeRecipient(pubkeys[0], updatedOptions.suggestedFeeRecipient);
+      ApiError.assert(await keymanagerClient.setFeeRecipient(pubkeys[0], updatedOptions.suggestedFeeRecipient));
       feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
+      ApiError.assert(feeRecipient0);
       expectDeepEquals(
-        feeRecipient0.data,
+        feeRecipient0.response.data,
         {pubkey: pubkeys[0], ethaddress: updatedOptions.suggestedFeeRecipient},
         "FeeRecipient Check updated"
       );
@@ -75,18 +78,19 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
       /////////// GasLimit
 
       let gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
-
+      ApiError.assert(gasLimit0);
       expectDeepEquals(
-        gasLimit0.data,
+        gasLimit0.response.data,
         {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
         "gasLimit Check default"
       );
 
       // Set GasLimit to updatedOptions
-      await keymanagerClient.setGasLimit(pubkeys[0], updatedOptions.gasLimit);
+      ApiError.assert(await keymanagerClient.setGasLimit(pubkeys[0], updatedOptions.gasLimit));
       gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
+      ApiError.assert(gasLimit0);
       expectDeepEquals(
-        gasLimit0.data,
+        gasLimit0.response.data,
         {pubkey: pubkeys[0], gasLimit: updatedOptions.gasLimit},
         "gasLimit Check updated"
       );
@@ -98,33 +102,37 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
     async function (keymanagerClient) {
       // next time check edited feeRecipient persists
       let feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
+      ApiError.assert(feeRecipient0);
       expectDeepEquals(
-        feeRecipient0.data,
+        feeRecipient0.response.data,
         {pubkey: pubkeys[0], ethaddress: updatedOptions.suggestedFeeRecipient},
         "FeeRecipient Check default persists"
       );
 
       // after deletion  feeRecipient restored to default
-      await keymanagerClient.deleteFeeRecipient(pubkeys[0]);
+      ApiError.assert(await keymanagerClient.deleteFeeRecipient(pubkeys[0]));
       feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
+      ApiError.assert(feeRecipient0);
       expectDeepEquals(
-        feeRecipient0.data,
+        feeRecipient0.response.data,
         {pubkey: pubkeys[0], ethaddress: defaultOptions.suggestedFeeRecipient},
         "FeeRecipient Check default after delete"
       );
 
       // gasLimit persists
       let gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
+      ApiError.assert(gasLimit0);
       expectDeepEquals(
-        gasLimit0.data,
+        gasLimit0.response.data,
         {pubkey: pubkeys[0], gasLimit: updatedOptions.gasLimit},
         "gasLimit Check updated persists"
       );
 
-      await keymanagerClient.deleteGasLimit(pubkeys[0]);
+      ApiError.assert(await keymanagerClient.deleteGasLimit(pubkeys[0]));
       gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
+      ApiError.assert(gasLimit0);
       expectDeepEquals(
-        gasLimit0.data,
+        gasLimit0.response.data,
         {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
         "gasLimit Check default after  delete"
       );
@@ -135,19 +143,20 @@ describeCliTest("import keystores from api, test DefaultProposerConfig", functio
     "3 . run 'validator' FeeRecipient and GasLimit should be default after delete",
     async function (keymanagerClient) {
       const feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
+      ApiError.assert(feeRecipient0);
       expectDeepEquals(
-        feeRecipient0.data,
+        feeRecipient0.response.data,
         {pubkey: pubkeys[0], ethaddress: defaultOptions.suggestedFeeRecipient},
         "FeeRecipient Check default persists"
       );
 
       let gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
 
-      await keymanagerClient.deleteGasLimit(pubkeys[0]);
+      ApiError.assert(await keymanagerClient.deleteGasLimit(pubkeys[0]));
       gasLimit0 = await keymanagerClient.getGasLimit(pubkeys[0]);
-
+      ApiError.assert(gasLimit0);
       expectDeepEquals(
-        gasLimit0.data,
+        gasLimit0.response.data,
         {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
         "gasLimit Check default after  delete"
       );

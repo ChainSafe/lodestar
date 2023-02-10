@@ -1,6 +1,6 @@
-import {routes} from "@lodestar/api";
+import {routes, ServerApi} from "@lodestar/api";
 import {Epoch, ssz} from "@lodestar/types";
-import {SYNC_COMMITTEE_SUBNET_SIZE, ForkName} from "@lodestar/params";
+import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {validateGossipAttestation} from "../../../../chain/validation/index.js";
 import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateGossipProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
@@ -15,7 +15,7 @@ export function getBeaconPoolApi({
   logger,
   metrics,
   network,
-}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): routes.beacon.pool.Api {
+}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): ServerApi<routes.beacon.pool.Api> {
   return {
     async getPoolAttestations(filters) {
       // Already filtered by slot
@@ -41,7 +41,7 @@ export function getBeaconPoolApi({
     },
 
     async getPoolBlsToExecutionChanges() {
-      return {data: chain.opPool.getAllBlsToExecutionChanges()};
+      return {data: chain.opPool.getAllBlsToExecutionChanges().map(({data}) => data)};
     },
 
     async submitPoolAttestations(attestations) {
@@ -99,19 +99,25 @@ export function getBeaconPoolApi({
     async submitPoolBlsToExecutionChange(blsToExecutionChanges) {
       const errors: Error[] = [];
 
-      // Fork to validate submitted execution changes: phase0 which picks GENESIS_FORK_VERSION
-      const signatureFork = ForkName.phase0;
-
       await Promise.all(
         blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
           try {
             await validateBlsToExecutionChange(chain, blsToExecutionChange);
-            chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, signatureFork);
-            await network.gossip.publishBlsToExecutionChange(blsToExecutionChange);
+            // TODO: Remove below condition
+            // Only used for testing in devnet-3 of withdrawals
+            chain.opPool.insertBlsToExecutionChange(
+              blsToExecutionChange,
+              // true if pre capella else false
+              !(
+                chain.clock.currentEpoch >= chain.config.CAPELLA_FORK_EPOCH &&
+                // TODO: Remove this condition once testing is done
+                network.isSubscribedToGossipCoreTopics()
+              )
+            );
           } catch (e) {
             errors.push(e as Error);
             logger.error(
-              `Error on submitPoolSyncCommitteeSignatures [${i}]`,
+              `Error on submitPoolBlsToExecutionChange [${i}]`,
               {validatorIndex: blsToExecutionChange.message.validatorIndex},
               e as Error
             );

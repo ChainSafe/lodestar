@@ -2,7 +2,7 @@ import {ssz as phase0} from "../phase0/index.js";
 import {ssz as altair} from "../altair/index.js";
 import {ssz as bellatrix} from "../bellatrix/index.js";
 import {ssz as capella} from "../capella/index.js";
-import {ssz as eip4844} from "../eip4844/index.js";
+import {ssz as deneb} from "../deneb/index.js";
 
 /**
  * Index the ssz types that differ by fork
@@ -37,11 +37,11 @@ export const allForks = {
     BeaconState: capella.BeaconState,
     Metadata: altair.Metadata,
   },
-  eip4844: {
-    BeaconBlockBody: eip4844.BeaconBlockBody,
-    BeaconBlock: eip4844.BeaconBlock,
-    SignedBeaconBlock: eip4844.SignedBeaconBlock,
-    BeaconState: eip4844.BeaconState,
+  deneb: {
+    BeaconBlockBody: deneb.BeaconBlockBody,
+    BeaconBlock: deneb.BeaconBlock,
+    SignedBeaconBlock: deneb.SignedBeaconBlock,
+    BeaconState: deneb.BeaconState,
     Metadata: altair.Metadata,
   },
 };
@@ -72,15 +72,15 @@ export const allForksExecution = {
     BuilderBid: capella.BuilderBid,
     SignedBuilderBid: capella.SignedBuilderBid,
   },
-  eip4844: {
-    BeaconBlockBody: eip4844.BeaconBlockBody,
-    BeaconBlock: eip4844.BeaconBlock,
-    SignedBeaconBlock: eip4844.SignedBeaconBlock,
-    BeaconState: eip4844.BeaconState,
-    ExecutionPayload: eip4844.ExecutionPayload,
-    ExecutionPayloadHeader: eip4844.ExecutionPayloadHeader,
-    BuilderBid: eip4844.BuilderBid,
-    SignedBuilderBid: eip4844.SignedBuilderBid,
+  deneb: {
+    BeaconBlockBody: deneb.BeaconBlockBody,
+    BeaconBlock: deneb.BeaconBlock,
+    SignedBeaconBlock: deneb.SignedBeaconBlock,
+    BeaconState: deneb.BeaconState,
+    ExecutionPayload: deneb.ExecutionPayload,
+    ExecutionPayloadHeader: deneb.ExecutionPayloadHeader,
+    BuilderBid: deneb.BuilderBid,
+    SignedBuilderBid: deneb.SignedBuilderBid,
   },
 };
 
@@ -99,15 +99,58 @@ export const allForksBlinded = {
     BeaconBlock: capella.BlindedBeaconBlock,
     SignedBeaconBlock: capella.SignedBlindedBeaconBlock,
   },
-  eip4844: {
-    BeaconBlockBody: eip4844.BlindedBeaconBlockBody,
-    BeaconBlock: eip4844.BlindedBeaconBlock,
-    SignedBeaconBlock: eip4844.SignedBlindedBeaconBlock,
+  deneb: {
+    BeaconBlockBody: deneb.BlindedBeaconBlockBody,
+    BeaconBlock: deneb.BlindedBeaconBlock,
+    SignedBeaconBlock: deneb.SignedBlindedBeaconBlock,
+  },
+};
+
+export const allForksLightClient = {
+  altair: {
+    BeaconBlock: altair.BeaconBlock,
+    BeaconBlockBody: altair.BeaconBlockBody,
+    LightClientHeader: altair.LightClientHeader,
+    LightClientBootstrap: altair.LightClientBootstrap,
+    LightClientUpdate: altair.LightClientUpdate,
+    LightClientFinalityUpdate: altair.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: altair.LightClientOptimisticUpdate,
+    LightClientStore: altair.LightClientStore,
+  },
+  bellatrix: {
+    BeaconBlock: bellatrix.BeaconBlock,
+    BeaconBlockBody: bellatrix.BeaconBlockBody,
+    LightClientHeader: altair.LightClientHeader,
+    LightClientBootstrap: altair.LightClientBootstrap,
+    LightClientUpdate: altair.LightClientUpdate,
+    LightClientFinalityUpdate: altair.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: altair.LightClientOptimisticUpdate,
+    LightClientStore: altair.LightClientStore,
+  },
+  capella: {
+    BeaconBlock: capella.BeaconBlock,
+    BeaconBlockBody: capella.BeaconBlockBody,
+    LightClientHeader: capella.LightClientHeader,
+    LightClientBootstrap: capella.LightClientBootstrap,
+    LightClientUpdate: capella.LightClientUpdate,
+    LightClientFinalityUpdate: capella.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: capella.LightClientOptimisticUpdate,
+    LightClientStore: capella.LightClientStore,
+  },
+  deneb: {
+    BeaconBlock: deneb.BeaconBlock,
+    BeaconBlockBody: deneb.BeaconBlockBody,
+    LightClientHeader: deneb.LightClientHeader,
+    LightClientBootstrap: deneb.LightClientBootstrap,
+    LightClientUpdate: deneb.LightClientUpdate,
+    LightClientFinalityUpdate: deneb.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: deneb.LightClientOptimisticUpdate,
+    LightClientStore: deneb.LightClientStore,
   },
 };
 
 export const allForksBlobs = {
-  eip4844: {
-    SignedBeaconBlockAndBlobsSidecar: eip4844.SignedBeaconBlockAndBlobsSidecar,
+  deneb: {
+    SignedBeaconBlockAndBlobsSidecar: deneb.SignedBeaconBlockAndBlobsSidecar,
   },
 };

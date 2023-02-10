@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
-
 /**
  * For more info on some of these constants:
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#configuration
@@ -28,7 +26,6 @@ export enum GoodByeReasonCode {
   BANNED = 251,
 }
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export const GOODBYE_KNOWN_CODES: Record<string, string> = {
   0: "Unknown",
 

@@ -1,12 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {Connection} from "@libp2p/interface-connection";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {expect} from "chai";
 import {multiaddr} from "@multiformats/multiaddr";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
-import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5";
+import {createKeypairFromPeerId, SignableENR} from "@chainsafe/discv5";
 import {BitArray} from "@chainsafe/ssz";
 import {altair} from "@lodestar/types";
 import {routes} from "@lodestar/api";
@@ -51,9 +49,9 @@ describe("node api implementation", function () {
   describe("getNetworkIdentity", function () {
     it("should get node identity", async function () {
       const keypair = createKeypairFromPeerId(peerId);
-      const enr = ENR.createV4(keypair.publicKey);
+      const enr = SignableENR.createV4(keypair);
       enr.setLocationMultiaddr(multiaddr("/ip4/127.0.0.1/tcp/36001"));
-      networkStub.getEnr.returns(enr);
+      networkStub.getEnr.returns(Promise.resolve(enr));
       networkStub.metadata = {
         get json(): altair.Metadata {
           return {
@@ -74,7 +72,7 @@ describe("node api implementation", function () {
     });
 
     it("should get node identity - no enr", async function () {
-      networkStub.getEnr.returns((null as unknown) as ENR);
+      networkStub.getEnr.returns(Promise.resolve(undefined));
       const {data: identity} = await api.getNetworkIdentity();
       expect(identity.enr).equal("");
     });

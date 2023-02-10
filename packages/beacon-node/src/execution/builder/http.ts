@@ -1,8 +1,9 @@
-import {allForks, bellatrix, Slot, Root, BLSPubkey, ssz, eip4844} from "@lodestar/types";
+import {allForks, bellatrix, Slot, Root, BLSPubkey, ssz, deneb, Wei} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 
+import {ApiError} from "@lodestar/api";
 import {validateBlobsAndKzgCommitments} from "../../chain/produceBlock/validateBlobsAndKzgCommitments.js";
 import {IExecutionBuilder} from "./interface.js";
 
@@ -50,22 +51,31 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   }
 
   async registerValidator(registrations: bellatrix.SignedValidatorRegistrationV1[]): Promise<void> {
-    return this.api.registerValidator(registrations);
+    ApiError.assert(await this.api.registerValidator(registrations));
   }
 
   async getHeader(
     slot: Slot,
     parentHash: Root,
     proposerPubKey: BLSPubkey
-  ): Promise<{header: allForks.ExecutionPayloadHeader; blobKzgCommitments?: eip4844.BlobKzgCommitments}> {
-    const {data: signedBid} = await this.api.getHeader(slot, parentHash, proposerPubKey);
-    return signedBid.message;
+  ): Promise<{
+    header: allForks.ExecutionPayloadHeader;
+    blockValue: Wei;
+    blobKzgCommitments?: deneb.BlobKzgCommitments;
+  }> {
+    const res = await this.api.getHeader(slot, parentHash, proposerPubKey);
+    ApiError.assert(res, "execution.builder.getheader");
+    const {header, value: blockValue} = res.response.data.message;
+    const {blobKzgCommitments} = res.response.data.message as {blobKzgCommitments?: deneb.BlobKzgCommitments};
+    return {header, blockValue, blobKzgCommitments};
   }
 
   async submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<allForks.SignedBeaconBlock> {
-    const {data: executionPayload} = await this.api.submitBlindedBlock(signedBlock);
+    const res = await this.api.submitBlindedBlock(signedBlock);
+    ApiError.assert(res, "execution.builder.submitBlindedBlock");
+    const executionPayload = res.response.data;
     const expectedTransactionsRoot = signedBlock.message.body.executionPayloadHeader.transactionsRoot;
-    const actualTransactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(executionPayload.transactions);
+    const actualTransactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(res.response.data.transactions);
     if (!byteArrayEquals(expectedTransactionsRoot, actualTransactionsRoot)) {
       throw Error(
         `Invalid transactionsRoot of the builder payload, expected=${toHexString(
@@ -83,7 +93,9 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   async submitBlindedBlockV2(
     signedBlock: allForks.SignedBlindedBeaconBlock
   ): Promise<allForks.SignedBeaconBlockAndBlobsSidecar> {
-    const {data: signedBeaconBlockAndBlobsSidecar} = await this.api.submitBlindedBlockV2(signedBlock);
+    const res = await this.api.submitBlindedBlockV2(signedBlock);
+    ApiError.assert(res, "execution.builder.submitBlindedBlockV2");
+    const signedBeaconBlockAndBlobsSidecar = res.response.data;
     // Since we get the full block back, we can just just compare the hash of blinded to returned
     const {beaconBlock, blobsSidecar} = signedBeaconBlockAndBlobsSidecar;
 
@@ -112,7 +124,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
       throw Error(`blobsSidecar incorrect blockHash expected=${blockHash}, actual=${blobsBlockHash}`);
     }
     // Sanity-check that the KZG commitments match the versioned hashes in the transactions
-    const {blobKzgCommitments: kzgs} = beaconBlock.message.body as eip4844.BeaconBlockBody;
+    const {blobKzgCommitments: kzgs} = beaconBlock.message.body as deneb.BeaconBlockBody;
     if (kzgs === undefined) {
       throw Error("Missing blobKzgCommitments on beaconBlock's body");
     }

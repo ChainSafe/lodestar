@@ -1,4 +1,3 @@
-import {Libp2p} from "libp2p";
 import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
@@ -11,6 +10,7 @@ import {IBeaconChain} from "../../chain/index.js";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
 import {IMetrics} from "../../metrics/index.js";
 import {NetworkEvent, INetworkEventBus} from "../events.js";
+import {Libp2p} from "../interface.js";
 import {IReqRespBeaconNode, ReqRespMethod, RequestTypedContainer} from "../reqresp/ReqRespBeaconNode.js";
 import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {ISubnetsService} from "../subnets/index.js";
@@ -454,19 +454,20 @@ export class PeerManager {
       }
     }
 
+    // disconnect first to have more slots before we dial new peers
+    for (const [reason, peers] of peersToDisconnect) {
+      this.metrics?.peersRequestedToDisconnect.inc({reason}, peers.length);
+      for (const peer of peers) {
+        void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.TOO_MANY_PEERS);
+      }
+    }
+
     if (this.discovery) {
       try {
         this.metrics?.peersRequestedToConnect.inc(peersToConnect);
         this.discovery.discoverPeers(peersToConnect, queriesMerged);
       } catch (e) {
         this.logger.error("Error on discoverPeers", {}, e as Error);
-      }
-    }
-
-    for (const [reason, peers] of peersToDisconnect) {
-      this.metrics?.peersRequestedToDisconnect.inc({reason}, peers.length);
-      for (const peer of peers) {
-        void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.TOO_MANY_PEERS);
       }
     }
 
@@ -533,51 +534,53 @@ export class PeerManager {
     const libp2pConnection = evt.detail;
     const {direction, status} = libp2pConnection.stat;
     const peer = libp2pConnection.remotePeer;
-
-    if (!this.connectedPeers.has(peer.toString())) {
-      // On connection:
-      // - Outbound connections: send a STATUS and PING request
-      // - Inbound connections: expect to be STATUS'd, schedule STATUS and PING for latter
-      // NOTE: libp2p may emit two "peer:connect" events: One for inbound, one for outbound
-      // If that happens, it's okay. Only the "outbound" connection triggers immediate action
-      const now = Date.now();
-      const peerData: PeerData = {
-        lastReceivedMsgUnixTsMs: direction === "outbound" ? 0 : now,
-        // If inbound, request after STATUS_INBOUND_GRACE_PERIOD
-        lastStatusUnixTsMs: direction === "outbound" ? 0 : now - STATUS_INTERVAL_MS + STATUS_INBOUND_GRACE_PERIOD,
-        connectedUnixTsMs: now,
-        relevantStatus: RelevantPeerStatus.Unknown,
-        direction,
-        peerId: peer,
-        metadata: null,
-        agentVersion: null,
-        agentClient: null,
-        encodingPreference: null,
-      };
-      this.connectedPeers.set(peer.toString(), peerData);
-
-      if (direction === "outbound") {
-        //this.pingAndStatusTimeouts();
-        void this.requestPing(peer);
-        void this.requestStatus(peer, this.chain.getStatus());
-      }
-
-      // AgentVersion was set in libp2p IdentifyService, 'peer:connect' event handler
-      // since it's not possible to handle it async, we have to wait for a while to set AgentVersion
-      // See https://github.com/libp2p/js-libp2p/pull/1168
-      setTimeout(async () => {
-        const agentVersionBytes = await this.libp2p.peerStore.metadataBook.getValue(peerData.peerId, "AgentVersion");
-        if (agentVersionBytes) {
-          const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
-          peerData.agentVersion = agentVersion;
-          peerData.agentClient = clientFromAgentVersion(agentVersion);
-        }
-      }, 1000);
-    }
-
     this.logger.verbose("peer connected", {peer: prettyPrintPeerId(peer), direction, status});
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
-    this.metrics?.peerConnectedEvent.inc({direction});
+    this.metrics?.peerConnectedEvent.inc({direction, status});
+    // libp2p may emit closed connection, we don't want to handle it
+    // see https://github.com/libp2p/js-libp2p/issues/1565
+    if (this.connectedPeers.has(peer.toString()) || status !== "OPEN") {
+      return;
+    }
+
+    // On connection:
+    // - Outbound connections: send a STATUS and PING request
+    // - Inbound connections: expect to be STATUS'd, schedule STATUS and PING for latter
+    // NOTE: libp2p may emit two "peer:connect" events: One for inbound, one for outbound
+    // If that happens, it's okay. Only the "outbound" connection triggers immediate action
+    const now = Date.now();
+    const peerData: PeerData = {
+      lastReceivedMsgUnixTsMs: direction === "outbound" ? 0 : now,
+      // If inbound, request after STATUS_INBOUND_GRACE_PERIOD
+      lastStatusUnixTsMs: direction === "outbound" ? 0 : now - STATUS_INTERVAL_MS + STATUS_INBOUND_GRACE_PERIOD,
+      connectedUnixTsMs: now,
+      relevantStatus: RelevantPeerStatus.Unknown,
+      direction,
+      peerId: peer,
+      metadata: null,
+      agentVersion: null,
+      agentClient: null,
+      encodingPreference: null,
+    };
+    this.connectedPeers.set(peer.toString(), peerData);
+
+    if (direction === "outbound") {
+      //this.pingAndStatusTimeouts();
+      void this.requestPing(peer);
+      void this.requestStatus(peer, this.chain.getStatus());
+    }
+
+    // AgentVersion was set in libp2p IdentifyService, 'peer:connect' event handler
+    // since it's not possible to handle it async, we have to wait for a while to set AgentVersion
+    // See https://github.com/libp2p/js-libp2p/pull/1168
+    setTimeout(async () => {
+      const agentVersionBytes = await this.libp2p.peerStore.metadataBook.getValue(peerData.peerId, "AgentVersion");
+      if (agentVersionBytes) {
+        const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
+        peerData.agentVersion = agentVersion;
+        peerData.agentClient = clientFromAgentVersion(agentVersion);
+      }
+    }, 1000);
   };
 
   /**
@@ -635,7 +638,9 @@ export class PeerManager {
 
     // peerLongLivedAttnets metric is a count
     metrics.peerLongLivedAttnets.reset();
+    metrics.peerScoreByClient.reset();
     metrics.peerConnectionLength.reset();
+    metrics.gossipPeer.scoreByClient.reset();
 
     // reset client counts _for each client_ to 0
     for (const client of Object.values(ClientKind)) {
@@ -656,7 +661,8 @@ export class PeerManager {
 
         // TODO: Consider optimizing by doing observe in batch
         metrics.peerLongLivedAttnets.observe(attnets ? attnets.getTrueBitIndexes().length : 0);
-        metrics.peerScore.observe(this.peerRpcScores.getScore(peerId));
+        metrics.peerScoreByClient.observe({client}, this.peerRpcScores.getScore(peerId));
+        metrics.gossipPeer.scoreByClient.observe({client}, this.peerRpcScores.getGossipScore(peerId));
         metrics.peerConnectionLength.observe((now - openCnx.stat.timeline.open) / 1000);
         total++;
       }

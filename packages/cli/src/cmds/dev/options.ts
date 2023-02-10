@@ -7,10 +7,11 @@ import {IValidatorCliArgs, validatorOptions} from "../validator/options.js";
 
 type IDevOwnArgs = {
   genesisEth1Hash?: string;
-  genesisValidators?: number;
+  genesisValidators: number;
   startValidators?: string;
   genesisTime?: number;
   reset?: boolean;
+  dumpTestnetFiles?: string;
 };
 
 const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
@@ -45,6 +46,12 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
     description: "To delete chain and validator directories",
     alias: ["r"],
     type: "boolean",
+    group: "dev",
+  },
+
+  dumpTestnetFiles: {
+    description: "Dump testnet files and exit",
+    type: "string",
     group: "dev",
   },
 };

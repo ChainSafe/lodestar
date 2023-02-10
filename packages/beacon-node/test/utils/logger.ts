@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import winston from "winston";
 import {createWinstonLogger, ILogger, LogLevel, TimestampFormat} from "@lodestar/utils";
 export {LogLevel};

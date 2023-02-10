@@ -1,11 +1,14 @@
-import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64} from "@lodestar/types";
-import {ContainerType, Type, VectorCompositeType} from "@chainsafe/ssz";
-import {FINALIZED_ROOT_DEPTH} from "@lodestar/params";
+import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64, allForks} from "@lodestar/types";
+import {ContainerType} from "@chainsafe/ssz";
+import {IChainForkConfig} from "@lodestar/config";
+
 import {RouteDef, TypeJson} from "../../utils/index.js";
+import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {ApiClientResponse} from "../../interfaces.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export const enum EventType {
+export enum EventType {
   /**
    * The node has finished processing, resulting in a new head. previous_duty_dependent_root is
    * `get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)` and
@@ -84,9 +87,9 @@ export type EventData = {
     executionOptimistic: boolean;
   };
   [EventType.contributionAndProof]: altair.SignedContributionAndProof;
-  [EventType.lightClientOptimisticUpdate]: altair.LightClientOptimisticUpdate;
-  [EventType.lightClientFinalityUpdate]: altair.LightClientFinalityUpdate;
-  [EventType.lightClientUpdate]: altair.LightClientUpdate;
+  [EventType.lightClientOptimisticUpdate]: allForks.LightClientOptimisticUpdate;
+  [EventType.lightClientFinalityUpdate]: allForks.LightClientFinalityUpdate;
+  [EventType.lightClientUpdate]: allForks.LightClientUpdate;
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
@@ -101,7 +104,11 @@ export type Api = {
    * @param topics Event types to subscribe to
    * @returns Opened SSE stream.
    */
-  eventstream(topics: EventType[], signal: AbortSignal, onEvent: (event: BeaconEvent) => void): void;
+  eventstream(
+    topics: EventType[],
+    signal: AbortSignal,
+    onEvent: (event: BeaconEvent) => void
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}>>;
 };
 
 export const routesData: {[K in keyof Api]: RouteDef} = {
@@ -117,8 +124,12 @@ export type ReqTypes = {
 // It doesn't make sense to define a getReqSerializers() here given the exotic argument of eventstream()
 // The request is very simple: (topics) => {query: {topics}}, and the test will ensure compatibility server - client
 
-export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
+export function getTypeByEvent(config: IChainForkConfig): {[K in EventType]: TypeJson<EventData[K]>} {
   const stringType = new StringType();
+  const getLightClientTypeFromHeader = (data: allForks.LightClientHeader): allForks.AllForksLightClientSSZTypes => {
+    return config.getLightClientForkTypes(data.beacon.slot);
+  };
+
   return {
     [EventType.head]: new ContainerType(
       {
@@ -172,31 +183,45 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
 
     [EventType.contributionAndProof]: ssz.altair.SignedContributionAndProof,
 
-    [EventType.lightClientOptimisticUpdate]: new ContainerType(
-      {
-        syncAggregate: ssz.altair.SyncAggregate,
-        attestedHeader: ssz.altair.LightClientHeader,
-        signatureSlot: ssz.Slot,
-      },
-      {jsonCase: "eth2"}
-    ),
-    [EventType.lightClientFinalityUpdate]: new ContainerType(
-      {
-        attestedHeader: ssz.altair.LightClientHeader,
-        finalizedHeader: ssz.altair.LightClientHeader,
-        finalityBranch: new VectorCompositeType(ssz.Bytes32, FINALIZED_ROOT_DEPTH),
-        syncAggregate: ssz.altair.SyncAggregate,
-        signatureSlot: ssz.Slot,
-      },
-      {jsonCase: "eth2"}
-    ),
-    [EventType.lightClientUpdate]: ssz.altair.LightClientUpdate,
+    [EventType.lightClientOptimisticUpdate]: {
+      toJson: (data) =>
+        getLightClientTypeFromHeader(((data as unknown) as allForks.LightClientOptimisticUpdate).attestedHeader)[
+          "LightClientOptimisticUpdate"
+        ].toJson(data),
+      fromJson: (data) =>
+        getLightClientTypeFromHeader(
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          ((data as unknown) as {attested_header: allForks.LightClientHeader}).attested_header
+        )["LightClientOptimisticUpdate"].fromJson(data),
+    },
+    [EventType.lightClientFinalityUpdate]: {
+      toJson: (data) =>
+        getLightClientTypeFromHeader(((data as unknown) as allForks.LightClientFinalityUpdate).attestedHeader)[
+          "LightClientFinalityUpdate"
+        ].toJson(data),
+      fromJson: (data) =>
+        getLightClientTypeFromHeader(
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          ((data as unknown) as {attested_header: allForks.LightClientHeader}).attested_header
+        )["LightClientFinalityUpdate"].fromJson(data),
+    },
+    [EventType.lightClientUpdate]: {
+      toJson: (data) =>
+        getLightClientTypeFromHeader(((data as unknown) as allForks.LightClientUpdate).attestedHeader)[
+          "LightClientUpdate"
+        ].toJson(data),
+      fromJson: (data) =>
+        getLightClientTypeFromHeader(
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          ((data as unknown) as {attested_header: allForks.LightClientHeader}).attested_header
+        )["LightClientUpdate"].fromJson(data),
+    },
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getEventSerdes() {
-  const typeByEvent = getTypeByEvent();
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export function getEventSerdes(config: IChainForkConfig) {
+  const typeByEvent = getTypeByEvent(config);
 
   return {
     toJson: (event: BeaconEvent): unknown => {

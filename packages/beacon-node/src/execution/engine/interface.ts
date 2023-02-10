@@ -1,6 +1,6 @@
 import {ForkName} from "@lodestar/params";
-import {KZGCommitment, Blob} from "@lodestar/types/eip4844";
-import {RootHex, allForks, capella} from "@lodestar/types";
+import {KZGCommitment, Blob} from "@lodestar/types/deneb";
+import {RootHex, allForks, capella, Wei} from "@lodestar/types";
 
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
@@ -115,7 +115,10 @@ export interface IExecutionEngine {
    * Required for block producing
    * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
    */
-  getPayload(fork: ForkName, payloadId: PayloadId): Promise<allForks.ExecutionPayload>;
+  getPayload(
+    fork: ForkName,
+    payloadId: PayloadId
+  ): Promise<{executionPayload: allForks.ExecutionPayload; blockValue: Wei}>;
 
   /**
    * "After retrieving the execution payload from the execution engine as specified in Bellatrix,

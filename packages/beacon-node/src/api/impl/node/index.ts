@@ -1,15 +1,16 @@
-import {routes} from "@lodestar/api";
-import {createKeypairFromPeerId} from "@chainsafe/discv5";
+import {routes, ServerApi} from "@lodestar/api";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {IApiOptions} from "../../options.js";
 import {formatNodePeer, getRevelantConnection} from "./utils.js";
 
-export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, "network" | "sync">): routes.node.Api {
+export function getNodeApi(
+  opts: IApiOptions,
+  {network, sync}: Pick<ApiModules, "network" | "sync">
+): ServerApi<routes.node.Api> {
   return {
     async getNetworkIdentity() {
-      const enr = network.getEnr();
-      const keypair = createKeypairFromPeerId(network.peerId);
+      const enr = await network.getEnr();
       const discoveryAddresses = [
         enr?.getLocationMultiaddr("tcp")?.toString() ?? null,
         enr?.getLocationMultiaddr("udp")?.toString() ?? null,
@@ -18,7 +19,7 @@ export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, 
       return {
         data: {
           peerId: network.peerId.toString(),
-          enr: enr?.encodeTxt(keypair.privateKey) || "",
+          enr: enr?.encodeTxt() || "",
           discoveryAddresses,
           p2pAddresses: network.localMultiaddrs.map((m) => m.toString()),
           metadata: network.metadata,
@@ -96,13 +97,13 @@ export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, 
       return {data: sync.getSyncStatus()};
     },
 
-    async getHealth() {
+    async getHealth(_req, res) {
       if (sync.getSyncStatus().isSyncing) {
         // 206: Node is syncing but can serve incomplete data
-        return routes.node.NodeHealth.SYNCING;
+        res?.code(routes.node.NodeHealth.SYNCING);
       } else {
         // 200: Node is ready
-        return routes.node.NodeHealth.READY;
+        res?.code(routes.node.NodeHealth.READY);
       }
       // else {
       //   503: Node not initialized or having issues

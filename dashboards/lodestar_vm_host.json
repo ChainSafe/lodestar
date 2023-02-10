@@ -346,7 +346,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "process_heap_bytes{scrape_location=\"beacon\"}",
+          "expr": "process_heap_bytes{job=\"beacon\"}",
           "interval": "",
           "legendFormat": "process_heap_bytes",
           "refId": "A"
@@ -354,10 +354,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "nodejs_heap_size_total_bytes{scrape_location=\"beacon\"}",
+          "expr": "nodejs_heap_size_total_bytes{job=\"beacon\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "heap_total",
@@ -366,10 +366,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "nodejs_heap_size_used_bytes{scrape_location=\"beacon\"}",
+          "expr": "nodejs_heap_size_used_bytes{job=\"beacon\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "heap_used",
@@ -378,10 +378,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "nodejs_external_memory_bytes{scrape_location=\"beacon\"}",
+          "expr": "nodejs_external_memory_bytes{job=\"beacon\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "external_memory",
@@ -390,10 +390,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "process_resident_memory_bytes{scrape_location=\"beacon\"}",
+          "expr": "process_resident_memory_bytes{job=\"beacon\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "rss",
@@ -3556,8 +3556,8 @@
         "auto_min": "10s",
         "current": {
           "selected": false,
-          "text": "30m",
-          "value": "30m"
+          "text": "1h",
+          "value": "1h"
         },
         "hide": 0,
         "label": "rate() interval",
@@ -3579,12 +3579,12 @@
             "value": "10m"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "30m",
             "value": "30m"
           },
           {
-            "selected": false,
+            "selected": true,
             "text": "1h",
             "value": "1h"
           },
@@ -3663,9 +3663,9 @@
       "1d"
     ]
   },
-  "timezone": "",
+  "timezone": "utc",
   "title": "Lodestar - VM + host",
   "uid": "lodestar_vm_host",
   "version": 6,
-  "weekStart": ""
+  "weekStart": "monday"
 }

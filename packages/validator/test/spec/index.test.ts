@@ -10,8 +10,6 @@ import {
   InvalidAttestationError,
 } from "../../src/slashingProtection/index.js";
 
-/* eslint-disable no-console */
-
 describe("slashing-protection custom tests", () => {
   const dbLocation = "./.__testdb_2";
   const controller = new LevelDbController({name: dbLocation}, {});

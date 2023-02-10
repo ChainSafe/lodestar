@@ -1,7 +1,5 @@
 import {BasicType} from "@chainsafe/ssz";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 export class StringType<T extends string = string> extends BasicType<T> {
   readonly typeName = "string";
   byteLength = 0;

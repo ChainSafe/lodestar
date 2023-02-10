@@ -1,7 +1,13 @@
 import path from "node:path";
 import {setMaxListeners} from "node:events";
 import {LevelDbController} from "@lodestar/db";
-import {ProcessShutdownCallback, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
+import {
+  ProcessShutdownCallback,
+  SlashingProtection,
+  Validator,
+  ValidatorProposerConfig,
+  BuilderSelection,
+} from "@lodestar/validator";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@lodestar/beacon-node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
@@ -61,13 +67,16 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     process.kill(process.pid, "SIGINT");
   };
 
+  // This AbortController interrupts various validators ops: genesis req, clients call, clock etc
+  const abortController = new AbortController();
+
   /**
    * For rationale and documentation of how signers are loaded from args and disk,
    * see {@link PersistedKeysBackend} and {@link getSignersFromArgs}
    *
    * Note: local signers are already locked once returned from this function.
    */
-  const signers = await getSignersFromArgs(args, network);
+  const signers = await getSignersFromArgs(args, network, {logger, signal: abortController.signal});
 
   // Ensure the validator has at least one key
   if (signers.length === 0) {
@@ -82,9 +91,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   logSigners(logger, signers);
 
-  // This AbortController interrupts various validators ops: genesis req, clients call, clock etc
-  const abortController = new AbortController();
-
   // We set infinity for abort controller used for validator operations,
   // to prevent MaxListenersExceededWarning which get logged when listeners > 10
   // Since it is perfectly fine to have listeners > 10
@@ -96,6 +102,9 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     config,
     controller: new LevelDbController({name: dbPath}, {metrics: null}),
   };
+  onGracefulShutdownCbs.push(() => dbOps.controller.stop());
+  await dbOps.controller.start();
+
   const slashingProtection = new SlashingProtection(dbOps);
 
   // Create metrics registry if metrics are enabled
@@ -176,10 +185,14 @@ function getProposerConfigFromArgs(
   }: {persistedKeysBackend: IPersistedKeysBackend; accountPaths: {proposerDir: string}}
 ): ValidatorProposerConfig {
   const defaultConfig = {
-    graffiti: args.graffiti || getDefaultGraffiti(),
+    graffiti: args.graffiti ?? getDefaultGraffiti(),
     strictFeeRecipientCheck: args.strictFeeRecipientCheck,
     feeRecipient: args.suggestedFeeRecipient ? parseFeeRecipient(args.suggestedFeeRecipient) : undefined,
-    builder: {enabled: args.builder, gasLimit: args.defaultGasLimit},
+    builder: {
+      enabled: args.builder,
+      gasLimit: args.defaultGasLimit,
+      selection: parseBuilderSelection(args["builder.selection"]),
+    },
   };
 
   let valProposerConfig: ValidatorProposerConfig;
@@ -203,4 +216,18 @@ function getProposerConfigFromArgs(
     }
   }
   return valProposerConfig;
+}
+
+function parseBuilderSelection(builderSelection?: string): BuilderSelection | undefined {
+  if (builderSelection) {
+    switch (builderSelection) {
+      case "maxprofit":
+        break;
+      case "builderalways":
+        break;
+      default:
+        throw Error("Invalid input for builder selection, check help.");
+    }
+  }
+  return builderSelection as BuilderSelection;
 }

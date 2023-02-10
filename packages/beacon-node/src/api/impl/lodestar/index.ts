@@ -1,6 +1,6 @@
 import {peerIdFromString} from "@libp2p/peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
-import {routes} from "@lodestar/api";
+import {routes, ServerApi} from "@lodestar/api";
 import {Bucket, Repository} from "@lodestar/db";
 import {toHex} from "@lodestar/utils";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "@lodestar/state-transition";
@@ -20,7 +20,7 @@ export function getLodestarApi({
   db,
   network,
   sync,
-}: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): routes.lodestar.Api {
+}: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): ServerApi<routes.lodestar.Api> {
   let writingHeapdump = false;
 
   return {
@@ -59,61 +59,66 @@ export function getLodestarApi({
       return {data: sync.getSyncChainsDebugState()};
     },
 
-    async getGossipQueueItems(gossipType: GossipType) {
-      const jobQueue = network.gossip.jobQueues[gossipType];
+    async getGossipQueueItems(gossipType: GossipType | string) {
+      const jobQueue = network.gossip.jobQueues[gossipType as GossipType];
       if (jobQueue === undefined) {
         throw Error(`Unknown gossipType ${gossipType}, known values: ${Object.keys(jobQueue).join(", ")}`);
       }
 
-      return jobQueue.getItems().map((item) => {
-        const [topic, message, propagationSource, seenTimestampSec] = item.args;
-        return {
-          topic: topic,
-          propagationSource,
-          data: message.data,
-          addedTimeMs: item.addedTimeMs,
-          seenTimestampSec,
-        };
-      });
+      return {
+        data: jobQueue.getItems().map((item) => {
+          const [topic, message, propagationSource, seenTimestampSec] = item.args;
+          return {
+            topic: topic,
+            propagationSource,
+            data: message.data,
+            addedTimeMs: item.addedTimeMs,
+            seenTimestampSec,
+          };
+        }),
+      };
     },
 
     async getRegenQueueItems() {
-      return (chain.regen as QueuedStateRegenerator).jobQueue.getItems().map((item) => ({
-        key: item.args[0].key,
-        args: regenRequestToJson(config, item.args[0]),
-        addedTimeMs: item.addedTimeMs,
-      }));
+      return {
+        data: (chain.regen as QueuedStateRegenerator).jobQueue.getItems().map((item) => ({
+          key: item.args[0].key,
+          args: regenRequestToJson(config, item.args[0]),
+          addedTimeMs: item.addedTimeMs,
+        })),
+      };
     },
 
     async getBlockProcessorQueueItems() {
-      return (chain as BeaconChain)["blockProcessor"].jobQueue.getItems().map((item) => {
-        const [blockInputs, opts] = item.args;
-        return {
-          blockSlots: blockInputs.map((blockInput) => blockInput.block.message.slot),
-          jobOpts: opts,
-          addedTimeMs: item.addedTimeMs,
-        };
-      });
+      return {
+        data: (chain as BeaconChain)["blockProcessor"].jobQueue.getItems().map((item) => {
+          const [blockInputs, opts] = item.args;
+          return {
+            blockSlots: blockInputs.map((blockInput) => blockInput.block.message.slot),
+            jobOpts: opts,
+            addedTimeMs: item.addedTimeMs,
+          };
+        }),
+      };
     },
 
     async getStateCacheItems() {
-      return (chain as BeaconChain)["stateCache"].dumpSummary();
+      return {data: (chain as BeaconChain)["stateCache"].dumpSummary()};
     },
 
     async getCheckpointStateCacheItems() {
-      return (chain as BeaconChain)["checkpointStateCache"].dumpSummary();
+      return {data: (chain as BeaconChain)["checkpointStateCache"].dumpSummary()};
     },
 
     async getGossipPeerScoreStats() {
-      return Object.entries(network.gossip.dumpPeerScoreStats()).map(([peerId, stats]) => ({peerId, ...stats}));
+      return {data: Object.entries(network.gossip.dumpPeerScoreStats()).map(([peerId, stats]) => ({peerId, ...stats}))};
     },
 
     async getLodestarPeerScoreStats() {
-      return network.peerRpcScores.dumpPeerScoreStats();
+      return {data: network.peerRpcScores.dumpPeerScoreStats()};
     },
 
     async runGC() {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!global.gc) throw Error("You must expose GC running the Node.js process with 'node --expose_gc'");
       global.gc();
     },
@@ -154,8 +159,15 @@ export function getLodestarApi({
     },
 
     async discv5GetKadValues() {
+      const discv5 = network.discv5();
+      if (!discv5) {
+        return {
+          data: [],
+        };
+      }
+
       return {
-        data: network.discv5?.kadValues().map((enr) => enr.encodeTxt()) ?? [],
+        data: (await discv5.kadValues()).map((enr) => enr.encodeTxt()) ?? [],
       };
     },
 
@@ -164,7 +176,7 @@ export function getLodestarApi({
         if (repo instanceof Repository) {
           const bucket = (repo as RepositoryAny)["bucket"];
           if (bucket === bucket || Bucket[bucket] === bucketReq) {
-            return stringifyKeys(await repo.keys());
+            return {data: stringifyKeys(await repo.keys())};
           }
         }
       }
@@ -173,7 +185,7 @@ export function getLodestarApi({
     },
 
     async dumpDbStateIndex() {
-      return db.stateArchive.dumpRootIndexEntries();
+      return {data: await db.stateArchive.dumpRootIndexEntries()};
     },
   };
 }

@@ -4,7 +4,7 @@ import {Message, TopicValidatorResult} from "@libp2p/interface-pubsub";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
-import {allForks, altair, capella, eip4844, phase0} from "@lodestar/types";
+import {allForks, altair, capella, deneb, phase0} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
 import {ILogger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
@@ -67,7 +67,7 @@ export type GossipTopic = GossipTopicMap[keyof GossipTopicMap];
 
 export type GossipTypeMap = {
   [GossipType.beacon_block]: allForks.SignedBeaconBlock;
-  [GossipType.beacon_block_and_blobs_sidecar]: eip4844.SignedBeaconBlockAndBlobsSidecar;
+  [GossipType.beacon_block_and_blobs_sidecar]: deneb.SignedBeaconBlockAndBlobsSidecar;
   [GossipType.beacon_aggregate_and_proof]: phase0.SignedAggregateAndProof;
   [GossipType.beacon_attestation]: phase0.Attestation;
   [GossipType.voluntary_exit]: phase0.SignedVoluntaryExit;
@@ -75,15 +75,15 @@ export type GossipTypeMap = {
   [GossipType.attester_slashing]: phase0.AttesterSlashing;
   [GossipType.sync_committee_contribution_and_proof]: altair.SignedContributionAndProof;
   [GossipType.sync_committee]: altair.SyncCommitteeMessage;
-  [GossipType.light_client_finality_update]: altair.LightClientFinalityUpdate;
-  [GossipType.light_client_optimistic_update]: altair.LightClientOptimisticUpdate;
+  [GossipType.light_client_finality_update]: allForks.LightClientFinalityUpdate;
+  [GossipType.light_client_optimistic_update]: allForks.LightClientOptimisticUpdate;
   [GossipType.bls_to_execution_change]: capella.SignedBLSToExecutionChange;
 };
 
 export type GossipFnByType = {
   [GossipType.beacon_block]: (signedBlock: allForks.SignedBeaconBlock) => Promise<void> | void;
   [GossipType.beacon_block_and_blobs_sidecar]: (
-    signedBeaconBlockAndBlobsSidecar: eip4844.SignedBeaconBlockAndBlobsSidecar
+    signedBeaconBlockAndBlobsSidecar: deneb.SignedBeaconBlockAndBlobsSidecar
   ) => Promise<void> | void;
   [GossipType.beacon_aggregate_and_proof]: (aggregateAndProof: phase0.SignedAggregateAndProof) => Promise<void> | void;
   [GossipType.beacon_attestation]: (attestation: phase0.Attestation) => Promise<void> | void;
@@ -95,10 +95,10 @@ export type GossipFnByType = {
   ) => Promise<void> | void;
   [GossipType.sync_committee]: (syncCommittee: altair.SyncCommitteeMessage) => Promise<void> | void;
   [GossipType.light_client_finality_update]: (
-    lightClientFinalityUpdate: altair.LightClientFinalityUpdate
+    lightClientFinalityUpdate: allForks.LightClientFinalityUpdate
   ) => Promise<void> | void;
   [GossipType.light_client_optimistic_update]: (
-    lightClientOptimisticUpdate: altair.LightClientOptimisticUpdate
+    lightClientOptimisticUpdate: allForks.LightClientOptimisticUpdate
   ) => Promise<void> | void;
   [GossipType.bls_to_execution_change]: (
     blsToExecutionChange: capella.SignedBLSToExecutionChange

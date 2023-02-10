@@ -1,7 +1,7 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Libp2p} from "libp2p";
 import {Registry} from "prom-client";
-import {ENR} from "@chainsafe/discv5";
+import {ENR, SignableENR} from "@chainsafe/discv5";
+import {Libp2p} from "../interface.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
 import {defaultDiscv5Options, defaultNetworkOptions, INetworkOptions} from "../options.js";
 import {isLocalMultiAddr, clearMultiaddrUDP} from "../util.js";
@@ -32,7 +32,7 @@ export async function createNodeJsLibp2p(
   const {peerStoreDir, disablePeerDiscovery} = nodeJsLibp2pOpts;
 
   if (enr !== undefined && typeof enr !== "string") {
-    if (enr instanceof ENR) {
+    if (enr instanceof SignableENR) {
       if (enr.getLocationMultiaddr("udp") && !isLocalMultiAddr(enr.getLocationMultiaddr("udp"))) {
         clearMultiaddrUDP(enr);
       }

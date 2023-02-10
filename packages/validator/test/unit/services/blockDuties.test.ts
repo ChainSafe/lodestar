@@ -4,7 +4,7 @@ import {toBufferBE} from "bigint-buffer";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {RootHex} from "@lodestar/types";
-import {routes} from "@lodestar/api";
+import {HttpStatusCode, routes} from "@lodestar/api";
 import {toHex} from "@lodestar/utils";
 import {BlockDutiesService} from "../../../src/services/blockDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
@@ -40,7 +40,11 @@ describe("BlockDutiesService", function () {
       dependentRoot: ZERO_HASH_HEX,
       data: [{slot: slot, validatorIndex: 0, pubkey: pubkeys[0]}],
     };
-    api.validator.getProposerDuties.resolves({...duties, executionOptimistic: false});
+    api.validator.getProposerDuties.resolves({
+      response: {...duties, executionOptimistic: false},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
 
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 
@@ -83,11 +87,19 @@ describe("BlockDutiesService", function () {
     const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, null, notifyBlockProductionFn);
 
     // Trigger clock onSlot for slot 0
-    api.validator.getProposerDuties.resolves({...dutiesBeforeReorg, executionOptimistic: false});
+    api.validator.getProposerDuties.resolves({
+      response: {...dutiesBeforeReorg, executionOptimistic: false},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
     await clock.tickSlotFns(0, controller.signal);
 
     // Trigger clock onSlot for slot 1 - Return different duties for slot 1
-    api.validator.getProposerDuties.resolves({...dutiesAfterReorg, executionOptimistic: false});
+    api.validator.getProposerDuties.resolves({
+      response: {...dutiesAfterReorg, executionOptimistic: false},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
     await clock.tickSlotFns(1, controller.signal);
 
     // Should persist the dutiesAfterReorg
@@ -130,7 +142,11 @@ describe("BlockDutiesService", function () {
         {slot: 33, validatorIndex: 2, pubkey: pubkeys[2]},
       ],
     };
-    api.validator.getProposerDuties.resolves({...duties, executionOptimistic: false});
+    api.validator.getProposerDuties.resolves({
+      response: {...duties, executionOptimistic: false},
+      ok: true,
+      status: HttpStatusCode.OK,
+    });
 
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 

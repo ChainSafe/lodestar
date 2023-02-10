@@ -2,6 +2,7 @@ import {isBasicType, ListBasicType, Type, isCompositeType, ListCompositeType, Ar
 import {ForkName} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
 import {objectToExpectedCase} from "@lodestar/utils";
+import {APIClientHandler, ApiClientResponseData, APIServerHandler, ClientApi} from "../interfaces.js";
 import {Schema, SchemaDefinition} from "./schema.js";
 
 // See /packages/api/src/routes/index.ts for reasoning
@@ -12,12 +13,12 @@ import {Schema, SchemaDefinition} from "./schema.js";
 const codeCase = "camel" as const;
 
 export type RouteGroupDefinition<
-  Api extends Record<string, RouteGeneric>,
+  Api extends Record<string, APIServerHandler>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 > = {
   routesData: RoutesData<Api>;
   getReqSerializers: (config: IChainForkConfig) => ReqSerializers<Api, ReqTypes>;
-  getReturnTypes: (config: IChainForkConfig) => ReturnTypes<Api>;
+  getReturnTypes: (config: IChainForkConfig) => ReturnTypes<ClientApi<Api>>;
 };
 
 export type RouteDef = {
@@ -34,11 +35,7 @@ export type ReqGeneric = {
 };
 
 export type ReqEmpty = ReqGeneric;
-
-export type RouteGeneric = (...args: any) => PromiseLike<any> | any;
-
-type ThenArg<T> = T extends PromiseLike<infer U> ? U : T;
-export type Resolves<T extends (...args: any) => any> = ThenArg<ReturnType<T>>;
+export type Resolves<T extends (...args: any) => any> = Awaited<ReturnType<T>>;
 
 export type TypeJson<T> = {
   toJson(val: T): unknown;
@@ -56,7 +53,7 @@ export type ReqSerializer<Fn extends (...args: any) => any, ReqType extends ReqG
 };
 
 export type ReqSerializers<
-  Api extends Record<string, RouteGeneric>,
+  Api extends Record<string, APIServerHandler>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 > = {
   [K in keyof Api]: ReqSerializer<Api[K], ReqTypes[K]>;
@@ -64,20 +61,6 @@ export type ReqSerializers<
 
 /** Curried definition to infer only one of the two generic types */
 export type ReqGenArg<Fn extends (...args: any) => any, ReqType extends ReqGeneric> = ReqSerializer<Fn, ReqType>;
-
-//
-// RETURN
-//
-
-export type KeysOfNonVoidResolveValues<Api extends Record<string, RouteGeneric>> = {
-  [K in keyof Api]: Resolves<Api[K]> extends void ? never : K;
-}[keyof Api];
-
-export type ReturnTypes<Api extends Record<string, RouteGeneric>> = {
-  [K in keyof Pick<Api, KeysOfNonVoidResolveValues<Api>>]: TypeJson<Resolves<Api[K]>>;
-};
-
-export type RoutesData<Api extends Record<string, RouteGeneric>> = {[K in keyof Api]: RouteDef};
 
 //
 // Helpers
@@ -195,14 +178,30 @@ export function WithExecutionOptimistic<T extends {data: unknown}>(
   };
 }
 
+/**
+ * SSZ factory helper to wrap an existing type with `{blockValue: Wei}`
+ */
+export function WithBlockValue<T extends {data: unknown}>(type: TypeJson<T>): TypeJson<T & {blockValue: bigint}> {
+  return {
+    toJson: ({blockValue, ...data}) => ({
+      ...(type.toJson((data as unknown) as T) as Record<string, unknown>),
+      block_value: blockValue.toString(),
+    }),
+    fromJson: ({block_value, ...data}: T & {block_value: string}) => ({
+      ...type.fromJson(data),
+      blockValue: BigInt(block_value),
+    }),
+  };
+}
+
 type JsonCase = "snake" | "constant" | "camel" | "param" | "header" | "pascal" | "dot" | "notransform";
 
 /** Helper to only translate casing */
-export function jsonType<T extends Record<string, unknown> | Record<string, unknown>[]>(
+export function jsonType<T extends Record<string, unknown> | Record<string, unknown>[] | unknown[]>(
   jsonCase: JsonCase
 ): TypeJson<T> {
   return {
-    toJson: (val) => objectToExpectedCase(val, jsonCase) as unknown,
+    toJson: (val: T) => objectToExpectedCase(val as Record<string, unknown>, jsonCase),
     fromJson: (json) => objectToExpectedCase(json as Record<string, unknown>, codeCase) as T,
   };
 }
@@ -214,3 +213,16 @@ export function sameType<T>(): TypeJson<T> {
     fromJson: (json) => (json as unknown) as T,
   };
 }
+
+//
+// RETURN
+//
+export type KeysOfNonVoidResolveValues<Api extends Record<string, APIClientHandler>> = {
+  [K in keyof Api]: ApiClientResponseData<Resolves<Api[K]>> extends void ? never : K;
+}[keyof Api];
+
+export type ReturnTypes<Api extends Record<string, APIClientHandler>> = {
+  [K in keyof Pick<Api, KeysOfNonVoidResolveValues<Api>>]: TypeJson<ApiClientResponseData<Resolves<Api[K]>>>;
+};
+
+export type RoutesData<Api extends Record<string, APIServerHandler>> = {[K in keyof Api]: RouteDef};

@@ -3,7 +3,6 @@ import {allForks, Slot, RootHex, ssz, StringType} from "@lodestar/types";
 import {ContainerType} from "@chainsafe/ssz";
 import {
   ArrayOf,
-  ContainerData,
   ReturnTypes,
   RoutesData,
   Schema,
@@ -15,7 +14,10 @@ import {
   ReqSerializer,
   ContainerDataExecutionOptimistic,
   WithExecutionOptimistic,
+  ContainerData,
 } from "../../utils/index.js";
+import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {ApiClientResponse} from "../../interfaces.js";
 import {ExecutionOptimistic, StateId} from "./beacon/state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -27,12 +29,16 @@ export type Api = {
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
-  getDebugChainHeads(): Promise<{data: {slot: Slot; root: RootHex}[]}>;
+  getDebugChainHeads(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {slot: Slot; root: RootHex}[]}}>>;
 
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
-  getDebugChainHeadsV2(): Promise<{data: {slot: Slot; root: RootHex; executionOptimistic: ExecutionOptimistic}[]}>;
+  getDebugChainHeadsV2(): Promise<
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {data: {slot: Slot; root: RootHex; executionOptimistic: ExecutionOptimistic}[]};
+    }>
+  >;
 
   /**
    * Get full BeaconState object
@@ -45,12 +51,18 @@ export type Api = {
   getState(
     stateId: StateId,
     format?: "json"
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: allForks.BeaconState}>;
-  getState(stateId: StateId, format: "ssz"): Promise<Uint8Array>;
+  ): Promise<
+    ApiClientResponse<{[HttpStatusCode.OK]: {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic}}>
+  >;
+  getState(stateId: StateId, format: "ssz"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>>;
   getState(
     stateId: StateId,
     format?: StateFormat
-  ): Promise<Uint8Array | {executionOptimistic: ExecutionOptimistic; data: allForks.BeaconState}>;
+  ): Promise<
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: Uint8Array | {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic};
+    }>
+  >;
 
   /**
    * Get full BeaconState object
@@ -63,12 +75,22 @@ export type Api = {
   getStateV2(
     stateId: StateId,
     format?: "json"
-  ): Promise<{executionOptimistic: ExecutionOptimistic; data: allForks.BeaconState; version: ForkName}>;
-  getStateV2(stateId: StateId, format: "ssz"): Promise<Uint8Array>;
+  ): Promise<
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic; version: ForkName};
+    }>
+  >;
+  getStateV2(stateId: StateId, format: "ssz"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>>;
   getStateV2(
     stateId: StateId,
     format?: StateFormat
-  ): Promise<Uint8Array | {executionOptimistic: ExecutionOptimistic; data: allForks.BeaconState; version: ForkName}>;
+  ): Promise<
+    ApiClientResponse<{
+      [HttpStatusCode.OK]:
+        | Uint8Array
+        | {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic; version: ForkName};
+    }>
+  >;
 };
 
 export const routesData: RoutesData<Api> = {

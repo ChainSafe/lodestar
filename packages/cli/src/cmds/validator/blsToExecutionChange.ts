@@ -2,7 +2,7 @@ import {computeSigningRoot} from "@lodestar/state-transition";
 import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ssz, capella} from "@lodestar/types";
-import {getClient} from "@lodestar/api";
+import {ApiError, getClient} from "@lodestar/api";
 import {fromHexString} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 import {PointFormat} from "@chainsafe/bls/types";
@@ -59,10 +59,14 @@ like to choose for BLS To Execution Change.",
     // submitting the signed message
     const {config: chainForkConfig} = getBeaconConfigFromArgs(args);
     const client = getClient({urls: args.beaconNodes}, {config: chainForkConfig});
-    const {genesisValidatorsRoot} = (await client.beacon.getGenesis()).data;
+    const genesisRes = await client.beacon.getGenesis();
+    ApiError.assert(genesisRes, "Can not fetch genesis data");
+    const {genesisValidatorsRoot} = genesisRes.response.data;
     const config = createIBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 
-    const {data: stateValidators} = await client.beacon.getStateValidators("head", {id: [publicKey]});
+    const stateValidatorRes = await client.beacon.getStateValidators("head", {id: [publicKey]});
+    ApiError.assert(stateValidatorRes, "Can not fetch state validators");
+    const stateValidators = stateValidatorRes.response.data;
     const stateValidator = stateValidators[0];
     if (stateValidator === undefined) {
       throw new Error(`Validator pubkey ${publicKey} not found in state`);
@@ -85,7 +89,10 @@ like to choose for BLS To Execution Change.",
       signature: fromBlsPrivkey.sign(signingRoot).toBytes(),
     };
 
-    await client.beacon.submitPoolBlsToExecutionChange([signedBLSToExecutionChange]);
+    ApiError.assert(
+      await client.beacon.submitPoolBlsToExecutionChange([signedBLSToExecutionChange]),
+      "Can not submit bls to execution change"
+    );
     console.log(`Submitted bls to execution change for ${publicKey}`);
   },
 };

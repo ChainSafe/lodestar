@@ -3,6 +3,7 @@ import rimraf from "rimraf";
 import {expect} from "chai";
 import {Api, DeleteRemoteKeyStatus, getClient, ImportRemoteKeyStatus} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
+import {ApiError, HttpStatusCode} from "@lodestar/api";
 import {testFilesDir} from "../utils.js";
 import {describeCliTest} from "../utils/childprocRunner.js";
 import {cachedPubkeysHex} from "../utils/cachedKeys.js";
@@ -29,8 +30,9 @@ describeCliTest("import remoteKeys from api", function ({spawnCli}) {
 
     // Import test keys
     const importRes = await keymanagerClient.importRemoteKeys(pubkeysToAdd.map((pubkey) => ({pubkey, url})));
+    ApiError.assert(importRes);
     expectDeepEquals(
-      importRes.data,
+      importRes.response.data,
       pubkeysToAdd.map(() => ({status: ImportRemoteKeyStatus.imported})),
       "Wrong importRemoteKeys response"
     );
@@ -40,8 +42,9 @@ describeCliTest("import remoteKeys from api", function ({spawnCli}) {
 
     // Attempt to import the same keys again
     const importAgainRes = await keymanagerClient.importRemoteKeys(pubkeysToAdd.map((pubkey) => ({pubkey, url})));
+    ApiError.assert(importAgainRes);
     expectDeepEquals(
-      importAgainRes.data,
+      importAgainRes.response.data,
       pubkeysToAdd.map(() => ({status: ImportRemoteKeyStatus.duplicate})),
       "Wrong importRemoteKeys again response"
     );
@@ -53,8 +56,9 @@ describeCliTest("import remoteKeys from api", function ({spawnCli}) {
 
     // Delete keys
     const deleteRes = await keymanagerClient.deleteRemoteKeys(pubkeysToAdd);
+    ApiError.assert(deleteRes);
     expectDeepEquals(
-      deleteRes.data,
+      deleteRes.response.data,
       pubkeysToAdd.map(() => ({status: DeleteRemoteKeyStatus.deleted})),
       "Wrong deleteRemoteKeys response"
     );
@@ -65,13 +69,16 @@ describeCliTest("import remoteKeys from api", function ({spawnCli}) {
 
   itKeymanagerStep("reject calls without bearerToken", async function (_, {keymanagerUrl}) {
     const keymanagerClientNoAuth = getClient({baseUrl: keymanagerUrl, bearerToken: undefined}, {config});
-    await expect(keymanagerClientNoAuth.listRemoteKeys()).to.rejectedWith("Unauthorized");
+    const res = await keymanagerClientNoAuth.listRemoteKeys();
+    expect(res.ok).to.be.false;
+    expect(res.error?.code).to.be.eql(HttpStatusCode.UNAUTHORIZED);
   });
 
   async function expectKeys(keymanagerClient: Api, expectedPubkeys: string[], message: string): Promise<void> {
     const remoteKeys = await keymanagerClient.listRemoteKeys();
+    ApiError.assert(remoteKeys);
     expectDeepEquals(
-      remoteKeys.data,
+      remoteKeys.response.data,
       expectedPubkeys.map((pubkey) => ({pubkey, url, readonly: false})),
       message
     );

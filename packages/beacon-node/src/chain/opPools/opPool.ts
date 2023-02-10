@@ -1,6 +1,5 @@
 import {
   CachedBeaconStateAllForks,
-  CachedBeaconStateCapella,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
@@ -12,8 +11,6 @@ import {
   MAX_VOLUNTARY_EXITS,
   MAX_BLS_TO_EXECUTION_CHANGES,
   BLS_WITHDRAWAL_PREFIX,
-  ForkSeq,
-  ForkName,
 } from "@lodestar/params";
 import {Epoch, phase0, capella, ssz, ValidatorIndex} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
@@ -72,7 +69,7 @@ export class OpPool {
       this.insertVoluntaryExit(voluntaryExit);
     }
     for (const item of blsToExecutionChanges) {
-      this.blsToExecutionChanges.set(item.data.message.validatorIndex, item);
+      this.insertBlsToExecutionChange(item.data, item.preCapella);
     }
   }
 
@@ -153,10 +150,10 @@ export class OpPool {
   }
 
   /** Must be validated beforehand */
-  insertBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange, signatureFork: ForkName): void {
+  insertBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange, preCapella = false): void {
     this.blsToExecutionChanges.set(blsToExecutionChange.message.validatorIndex, {
       data: blsToExecutionChange,
-      signatureForkSeq: ForkSeq[signatureFork],
+      preCapella,
     });
   }
 
@@ -239,7 +236,7 @@ export class OpPool {
 
     const blsToExecutionChanges: capella.SignedBLSToExecutionChange[] = [];
     for (const blsToExecutionChange of this.blsToExecutionChanges.values()) {
-      if (isValidBlsToExecutionChangeForBlockInclusion(state as CachedBeaconStateCapella, blsToExecutionChange)) {
+      if (isValidBlsToExecutionChangeForBlockInclusion(state, blsToExecutionChange.data)) {
         blsToExecutionChanges.push(blsToExecutionChange.data);
         if (blsToExecutionChanges.length >= MAX_BLS_TO_EXECUTION_CHANGES) {
           break;
@@ -266,8 +263,8 @@ export class OpPool {
   }
 
   /** For beacon pool API */
-  getAllBlsToExecutionChanges(): capella.SignedBLSToExecutionChange[] {
-    return Array.from(this.blsToExecutionChanges.values()).map(({data}) => data);
+  getAllBlsToExecutionChanges(): SignedBLSToExecutionChangeVersioned[] {
+    return Array.from(this.blsToExecutionChanges.values());
   }
 
   /**

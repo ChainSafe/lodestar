@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {Signer, SignerType, ProposerConfig} from "@lodestar/validator";
+import {Signer, SignerType, ProposerConfig, SignerLocal} from "@lodestar/validator";
 import {DeletionStatus, ImportStatus, PubkeyHex, SignerDefinition} from "@lodestar/api/keymanager";
 import {
   getPubkeyHexFromKeystore,
@@ -14,6 +14,7 @@ import {
 } from "../../../util/index.js";
 import {lockFilepath} from "../../../util/lockfile.js";
 import {IPersistedKeysBackend} from "./interface.js";
+import {clearKeystoreCache, loadKeystoreCache, writeKeystoreCache} from "./keystoreCache.js";
 
 export {ImportStatus, DeletionStatus};
 
@@ -246,13 +247,34 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
   }
 }
 
+type KeystoreDecryptOptions = {
+  force?: boolean;
+  onDecrypt?: (index: number, signer: Signer) => void;
+  // Try to use the cache file if it exists
+  cacheFilePath?: string;
+};
+
 export async function decryptKeystoreDefinitions(
   keystoreDefinitions: LocalKeystoreDefinition[],
-  opts: {force?: boolean}
+  opts: KeystoreDecryptOptions
 ): Promise<Signer[]> {
-  const signers: Signer[] = [];
+  if (opts.cacheFilePath) {
+    try {
+      const signers = await loadKeystoreCache(opts.cacheFilePath, keystoreDefinitions);
+      if (opts?.onDecrypt) {
+        opts?.onDecrypt(signers.length - 1, signers[signers.length - 1]);
+      }
+      return signers;
+    } catch {
+      // Some error loading the cache, ignore and invalidate cache
+      await clearKeystoreCache(opts.cacheFilePath);
+    }
+  }
 
-  for (const {keystorePath, password} of keystoreDefinitions) {
+  const signers: SignerLocal[] = [];
+  const passwords: string[] = [];
+
+  for (const [index, {keystorePath, password}] of keystoreDefinitions.entries()) {
     try {
       lockFilepath(keystorePath);
     } catch (e) {
@@ -281,10 +303,21 @@ export async function decryptKeystoreDefinitions(
     //
     const secretKeyBytes = await keystore.decrypt(password);
 
-    signers.push({
+    const signer: SignerLocal = {
       type: SignerType.Local,
       secretKey: bls.SecretKey.fromBytes(secretKeyBytes),
-    });
+    };
+
+    signers.push(signer);
+    passwords.push(password);
+
+    if (opts?.onDecrypt) {
+      opts?.onDecrypt(index, signer);
+    }
+  }
+
+  if (opts.cacheFilePath) {
+    await writeKeystoreCache(opts.cacheFilePath, signers, passwords);
   }
 
   return signers;

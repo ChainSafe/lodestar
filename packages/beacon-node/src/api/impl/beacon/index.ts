@@ -1,5 +1,4 @@
-import {routes} from "@lodestar/api";
-import {GENESIS_SLOT} from "@lodestar/params";
+import {routes, ServerApi} from "@lodestar/api";
 import {ApiModules} from "../types.js";
 import {getBeaconBlockApi} from "./blocks/index.js";
 import {getBeaconPoolApi} from "./pool/index.js";
@@ -7,7 +6,7 @@ import {getBeaconStateApi} from "./state/index.js";
 
 export function getBeaconApi(
   modules: Pick<ApiModules, "chain" | "config" | "logger" | "metrics" | "network" | "db">
-): routes.beacon.Api {
+): ServerApi<routes.beacon.Api> {
   const block = getBeaconBlockApi(modules);
   const pool = getBeaconPoolApi(modules);
   const state = getBeaconStateApi(modules);
@@ -20,10 +19,9 @@ export function getBeaconApi(
     ...state,
 
     async getGenesis() {
-      const genesisForkVersion = config.getForkVersion(GENESIS_SLOT);
       return {
         data: {
-          genesisForkVersion,
+          genesisForkVersion: config.GENESIS_FORK_VERSION,
           genesisTime: chain.genesisTime,
           genesisValidatorsRoot: chain.genesisValidatorsRoot,
         },

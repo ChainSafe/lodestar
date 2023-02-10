@@ -1,6 +1,12 @@
 import {ssz} from "@lodestar/types";
 import {IForkDigestContext} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  ForkName,
+  ForkSeq,
+  SYNC_COMMITTEE_SUBNET_COUNT,
+  isForkLightClient,
+} from "@lodestar/params";
 
 import {GossipEncoding, GossipTopic, GossipType, GossipTopicTypeMap} from "./interface.js";
 import {DEFAULT_ENCODING} from "./constants.js";
@@ -69,14 +75,14 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getGossipSSZType(topic: GossipTopic) {
   switch (topic.type) {
     case GossipType.beacon_block:
       // beacon_block is updated in altair to support the updated SignedBeaconBlock type
       return ssz[topic.fork].SignedBeaconBlock;
     case GossipType.beacon_block_and_blobs_sidecar:
-      return ssz.eip4844.SignedBeaconBlockAndBlobsSidecar;
+      return ssz.deneb.SignedBeaconBlockAndBlobsSidecar;
     case GossipType.beacon_aggregate_and_proof:
       return ssz.phase0.SignedAggregateAndProof;
     case GossipType.beacon_attestation:
@@ -92,9 +98,13 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.sync_committee:
       return ssz.altair.SyncCommitteeMessage;
     case GossipType.light_client_optimistic_update:
-      return ssz.altair.LightClientOptimisticUpdate;
+      return isForkLightClient(topic.fork)
+        ? ssz.allForksLightClient[topic.fork].LightClientOptimisticUpdate
+        : ssz.altair.LightClientOptimisticUpdate;
     case GossipType.light_client_finality_update:
-      return ssz.altair.LightClientFinalityUpdate;
+      return isForkLightClient(topic.fork)
+        ? ssz.allForksLightClient[topic.fork].LightClientFinalityUpdate
+        : ssz.altair.LightClientFinalityUpdate;
     case GossipType.bls_to_execution_change:
       return ssz.capella.SignedBLSToExecutionChange;
   }
@@ -170,8 +180,8 @@ export function getCoreTopicsAtFork(
     {type: GossipType.attester_slashing},
   ];
 
-  // After EIP4844 only track beacon_block_and_blobs_sidecar topic
-  if (ForkSeq[fork] < ForkSeq.eip4844) {
+  // After Deneb only track beacon_block_and_blobs_sidecar topic
+  if (ForkSeq[fork] < ForkSeq.deneb) {
     topics.push({type: GossipType.beacon_block});
   } else {
     topics.push({type: GossipType.beacon_block_and_blobs_sidecar});

@@ -1,4 +1,4 @@
-import {altair, Root, ssz} from "@lodestar/types";
+import {Root, ssz, allForks} from "@lodestar/types";
 import bls from "@chainsafe/bls/switchable";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
 import {
@@ -18,7 +18,7 @@ import {ILightClientStore} from "./store.js";
 
 export function validateLightClientUpdate(
   store: ILightClientStore,
-  update: altair.LightClientUpdate,
+  update: allForks.LightClientUpdate,
   syncCommittee: SyncCommitteeFast
 ): void {
   // Verify sync committee has sufficient participants

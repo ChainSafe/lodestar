@@ -12,7 +12,7 @@ import {
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, eip4844} from "@lodestar/types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {ILogger, pruneSetToMax, toHex} from "@lodestar/utils";
@@ -118,9 +118,9 @@ export class BeaconChain implements IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
-  // TODO EIP-4844: Prune data structure every time period, for both old entries
+  // TODO DENEB: Prune data structure every time period, for both old entries
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
-  readonly producedBlobsSidecarCache = new Map<RootHex, eip4844.BlobsSidecar>();
+  readonly producedBlobsSidecarCache = new Map<RootHex, deneb.BlobsSidecar>();
   readonly opts: IChainOptions;
 
   protected readonly blockProcessor: BlockProcessor;
@@ -353,25 +353,27 @@ export class BeaconChain implements IBeaconChain {
     return await this.db.block.get(fromHexString(block.blockRoot));
   }
 
-  produceBlock(blockAttributes: BlockAttributes): Promise<allForks.BeaconBlock> {
+  produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; blockValue: Wei}> {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  produceBlindedBlock(blockAttributes: BlockAttributes): Promise<allForks.BlindedBeaconBlock> {
+  produceBlindedBlock(
+    blockAttributes: BlockAttributes
+  ): Promise<{block: allForks.BlindedBeaconBlock; blockValue: Wei}> {
     return this.produceBlockWrapper<BlockType.Blinded>(BlockType.Blinded, blockAttributes);
   }
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
     {randaoReveal, graffiti, slot}: BlockAttributes
-  ): Promise<AssembledBlockType<T>> {
+  ): Promise<{block: AssembledBlockType<T>; blockValue: Wei}> {
     const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(head.blockRoot, slot, RegenCaller.produceBlock);
     const parentBlockRoot = fromHexString(head.blockRoot);
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
 
-    const {body, blobs} = await produceBlockBody.call(this, blockType, state, {
+    const {body, blobs, blockValue} = await produceBlockBody.call(this, blockType, state, {
       randaoReveal,
       graffiti,
       slot,
@@ -396,9 +398,9 @@ export class BeaconChain implements IBeaconChain {
     // blinded blobs will be fetched and added to this cache later before finally
     // publishing the blinded block's full version
     if (blobs.type === BlobsResultType.produced) {
-      // TODO EIP-4844: Prune data structure for max entries
+      // TODO DENEB: Prune data structure for max entries
       this.producedBlobsSidecarCache.set(blobs.blockHash, {
-        // TODO EIP-4844: Optimize, hashing the full block is not free.
+        // TODO DENEB: Optimize, hashing the full block is not free.
         beaconBlockRoot: this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block),
         beaconBlockSlot: block.slot,
         blobs: blobs.blobs,
@@ -410,7 +412,7 @@ export class BeaconChain implements IBeaconChain {
       );
     }
 
-    return block;
+    return {block, blockValue};
   }
 
   /**
@@ -423,7 +425,7 @@ export class BeaconChain implements IBeaconChain {
    *       kzg_aggregated_proof=compute_proof_from_blobs(blobs),
    *   )
    */
-  getBlobsSidecar(beaconBlock: eip4844.BeaconBlock): eip4844.BlobsSidecar {
+  getBlobsSidecar(beaconBlock: deneb.BeaconBlock): deneb.BlobsSidecar {
     const blockHash = toHex(beaconBlock.body.executionPayload.blockHash);
     const blobsSidecar = this.producedBlobsSidecarCache.get(blockHash);
     if (!blobsSidecar) {
@@ -647,7 +649,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     // Prune old blobsSidecar for block production, those are only useful on their slot
-    if (this.config.getForkSeq(slot) >= ForkSeq.eip4844 && this.producedBlobsSidecarCache.size > 0) {
+    if (this.config.getForkSeq(slot) >= ForkSeq.deneb && this.producedBlobsSidecarCache.size > 0) {
       for (const [key, blobsSidecar] of this.producedBlobsSidecarCache) {
         if (slot > blobsSidecar.beaconBlockSlot + MAX_RETAINED_SLOTS_CACHED_BLOBS_SIDECAR) {
           this.producedBlobsSidecarCache.delete(key);
