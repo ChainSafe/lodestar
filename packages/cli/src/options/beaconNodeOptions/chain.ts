@@ -13,7 +13,6 @@ export interface IChainArgs {
   "chain.proposerBoostEnabled": boolean;
   "chain.disableImportExecutionFcU": boolean;
   "chain.computeUnrealized": boolean;
-  "chain.countUnrealizedFull": boolean;
   "chain.assertCorrectProgressiveBalances": boolean;
   "chain.maxSkipSlots": number;
   "safe-slots-to-import-optimistically": number;
@@ -31,7 +30,6 @@ export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
     proposerBoostEnabled: args["chain.proposerBoostEnabled"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     computeUnrealized: args["chain.computeUnrealized"],
-    countUnrealizedFull: args["chain.countUnrealizedFull"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
@@ -99,14 +97,6 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "boolean",
     description: "Compute unrealized checkpoints and use it in fork choice or not",
-    defaultDescription: String(defaultOptions.chain.computeUnrealized),
-    group: "chain",
-  },
-
-  "chain.countUnrealizedFull": {
-    hidden: true,
-    type: "boolean",
-    description: "Compute unrealized checkpoints and fully use it",
     defaultDescription: String(defaultOptions.chain.computeUnrealized),
     group: "chain",
   },

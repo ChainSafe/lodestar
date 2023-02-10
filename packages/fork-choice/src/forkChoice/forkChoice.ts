@@ -46,7 +46,6 @@ import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalan
 export type ForkChoiceOpts = {
   proposerBoostEnabled?: boolean;
   computeUnrealized?: boolean;
-  countUnrealizedFull?: boolean;
 };
 
 /**
