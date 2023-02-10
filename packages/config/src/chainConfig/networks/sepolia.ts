@@ -27,6 +27,9 @@ export const sepoliaChainConfig: IChainConfig = {
   BELLATRIX_FORK_VERSION: b("0x90000071"),
   BELLATRIX_FORK_EPOCH: 100,
   TERMINAL_TOTAL_DIFFICULTY: BigInt("17000000000000000"),
+  // Capella
+  CAPELLA_FORK_VERSION: b("0x90000072"),
+  CAPELLA_FORK_EPOCH: 56832,
 
   // Deposit contract
   // ---------------------------------------------------------------
