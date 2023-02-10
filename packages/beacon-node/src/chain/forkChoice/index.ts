@@ -85,8 +85,7 @@ export function initializeForkChoice(
             }
           : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
       },
-      currentSlot,
-      opts
+      currentSlot
     ),
 
     opts

@@ -3,7 +3,6 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-trans
 import {GENESIS_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 
-import {ForkChoiceOpts} from "../forkChoice/forkChoice.js";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
 import {ProtoBlock, ProtoNode, HEX_ZERO_HASH, ExecutionStatus, LVHExecResponse} from "./interface.js";
 import {ProtoArrayError, ProtoArrayErrorCode, LVHExecError, LVHExecErrorCode} from "./errors.js";
@@ -26,43 +25,35 @@ export class ProtoArray {
   lvhError?: LVHExecError;
 
   private previousProposerBoost: ProposerBoost | null = null;
-  private countUnrealizedFull = false;
 
-  constructor(
-    {
-      pruneThreshold,
-      justifiedEpoch,
-      justifiedRoot,
-      finalizedEpoch,
-      finalizedRoot,
-    }: {
-      pruneThreshold: number;
-      justifiedEpoch: Epoch;
-      justifiedRoot: RootHex;
-      finalizedEpoch: Epoch;
-      finalizedRoot: RootHex;
-    },
-    opts?: ForkChoiceOpts
-  ) {
+  constructor({
+    pruneThreshold,
+    justifiedEpoch,
+    justifiedRoot,
+    finalizedEpoch,
+    finalizedRoot,
+  }: {
+    pruneThreshold: number;
+    justifiedEpoch: Epoch;
+    justifiedRoot: RootHex;
+    finalizedEpoch: Epoch;
+    finalizedRoot: RootHex;
+  }) {
     this.pruneThreshold = pruneThreshold;
     this.justifiedEpoch = justifiedEpoch;
     this.justifiedRoot = justifiedRoot;
     this.finalizedEpoch = finalizedEpoch;
     this.finalizedRoot = finalizedRoot;
-    this.countUnrealizedFull = opts?.countUnrealizedFull ?? false;
   }
 
-  static initialize(block: Omit<ProtoBlock, "targetRoot">, currentSlot: Slot, opts?: ForkChoiceOpts): ProtoArray {
-    const protoArray = new ProtoArray(
-      {
-        pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
-        justifiedEpoch: block.justifiedEpoch,
-        justifiedRoot: block.justifiedRoot,
-        finalizedEpoch: block.finalizedEpoch,
-        finalizedRoot: block.finalizedRoot,
-      },
-      opts
-    );
+  static initialize(block: Omit<ProtoBlock, "targetRoot">, currentSlot: Slot): ProtoArray {
+    const protoArray = new ProtoArray({
+      pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
+      justifiedEpoch: block.justifiedEpoch,
+      justifiedRoot: block.justifiedRoot,
+      finalizedEpoch: block.finalizedEpoch,
+      finalizedRoot: block.finalizedRoot,
+    });
     protoArray.onBlock(
       {
         ...block,
@@ -750,12 +741,7 @@ export class ProtoArray {
     // If this is a pulled-up block from the current epoch, also check that
     // the unrealized justification is higher than the store's justified checkpoint, and
     // the voting source is not more than two epochs ago.
-    if (
-      !correctJustified &&
-      this.countUnrealizedFull &&
-      currentEpoch > GENESIS_EPOCH &&
-      this.justifiedEpoch === previousEpoch
-    ) {
+    if (!correctJustified && currentEpoch > GENESIS_EPOCH && this.justifiedEpoch === previousEpoch) {
       correctJustified = node.unrealizedJustifiedEpoch >= previousEpoch && votingSourceEpoch + 2 >= currentEpoch;
     }
 
