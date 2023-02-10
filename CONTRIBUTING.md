@@ -7,14 +7,9 @@ Thanks for your contribution to Lodestar. It's people like you that push the Eth
 - :gear: [NodeJS](https://nodejs.org/) (LTS)
 - :toolbox: [Yarn](https://yarnpkg.com/)/[Lerna](https://lerna.js.org/)
 
- ### For windows
- `npm install --g lerna`
- 
- `yarn global add lerna`
-
 ## Getting Started
 
-- :gear: Run `lerna bootstrap` or `yarn install` to install dependencies.
+- :gear: Run `yarn` to install dependencies.
 - :gear: Run `yarn build` to build lib from source.
 - :package: A `lodestar` binary will be bundled in `./packages/cli/bin`.
 - :computer: Run `./lodestar --help` to get a list of available commands and arguments.
