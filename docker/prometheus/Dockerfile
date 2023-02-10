@@ -9,7 +9,7 @@ RUN chmod +x /etc/prometheus/entrypoint.sh
 # net host: "localhost:8008"
 # MacOSX: "host.docker.internal:8008"
 ENV BEACON_URL='beacon_node:8008'
-ENV VC_URL='validator'
+ENV VC_URL='validator:5064'
 VOLUME /prometheus
 
 ENTRYPOINT ["/etc/prometheus/entrypoint.sh"]
@@ -17,4 +17,4 @@ ENTRYPOINT ["/etc/prometheus/entrypoint.sh"]
 CMD [ \
   "--config.file=/etc/prometheus/prometheus.yml", \
   "--storage.tsdb.path=/prometheus" \
-]
+  ]
