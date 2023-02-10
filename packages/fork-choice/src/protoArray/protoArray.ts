@@ -742,13 +742,10 @@ export class ProtoArray {
     // If block is from a previous epoch, filter using unrealized justification & finalization information
     // If block is from the current epoch, filter using the head state's justification & finalization information
     const isFromPrevEpoch = computeEpochAtSlot(node.slot) < currentEpoch;
-    const nodeJustifiedEpoch = isFromPrevEpoch ? node.unrealizedJustifiedEpoch : node.justifiedEpoch;
-    const nodeJustifiedRoot = isFromPrevEpoch ? node.unrealizedJustifiedRoot : node.justifiedRoot;
+    const votingSourceEpoch = isFromPrevEpoch ? node.unrealizedJustifiedEpoch : node.justifiedEpoch;
 
     // The voting source should be at the same height as the store's justified checkpoint
-    let correctJustified =
-      (nodeJustifiedEpoch === this.justifiedEpoch && nodeJustifiedRoot === this.justifiedRoot) ||
-      this.justifiedEpoch === 0;
+    let correctJustified = votingSourceEpoch === this.justifiedEpoch || this.justifiedEpoch === 0;
 
     // If this is a pulled-up block from the current epoch, also check that
     // the unrealized justification is higher than the store's justified checkpoint, and
@@ -759,7 +756,7 @@ export class ProtoArray {
       currentEpoch > GENESIS_EPOCH &&
       this.justifiedEpoch === previousEpoch
     ) {
-      correctJustified = node.unrealizedJustifiedEpoch >= previousEpoch && nodeJustifiedEpoch + 2 >= currentEpoch;
+      correctJustified = node.unrealizedJustifiedEpoch >= previousEpoch && votingSourceEpoch + 2 >= currentEpoch;
     }
 
     try {
