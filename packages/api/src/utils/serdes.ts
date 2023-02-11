@@ -78,8 +78,8 @@ export function toGraffitiHex(utf8: string): string {
   }
 
   if (hex.length < GRAFFITI_HEX_LENGTH) {
-    // left-pad with zeros if hex string is too short
-    return "0x" + hex.slice(2).padStart(GRAFFITI_HEX_LENGTH - 2, "0");
+    // right-pad with zeros if hex string is too short
+    return hex.padEnd(GRAFFITI_HEX_LENGTH, "0");
   }
 
   return hex;
