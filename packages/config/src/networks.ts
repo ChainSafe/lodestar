@@ -5,6 +5,7 @@ import {goerliChainConfig} from "./chainConfig/networks/goerli.js";
 import {ropstenChainConfig} from "./chainConfig/networks/ropsten.js";
 import {sepoliaChainConfig} from "./chainConfig/networks/sepolia.js";
 import {chiadoChainConfig} from "./chainConfig/networks/chiado.js";
+import {zhejiangChainConfig} from "./chainConfig/networks/zhejiang.js";
 
 export {
   mainnetChainConfig,
@@ -13,9 +14,10 @@ export {
   ropstenChainConfig,
   sepoliaChainConfig,
   chiadoChainConfig,
+  zhejiangChainConfig,
 };
 
-export type NetworkName = "mainnet" | "gnosis" | "goerli" | "ropsten" | "sepolia" | "chiado";
+export type NetworkName = "mainnet" | "gnosis" | "goerli" | "ropsten" | "sepolia" | "chiado" | "zhejiang";
 export const networksChainConfig: Record<NetworkName, IChainConfig> = {
   mainnet: mainnetChainConfig,
   gnosis: gnosisChainConfig,
@@ -23,6 +25,7 @@ export const networksChainConfig: Record<NetworkName, IChainConfig> = {
   ropsten: ropstenChainConfig,
   sepolia: sepoliaChainConfig,
   chiado: chiadoChainConfig,
+  zhejiang: zhejiangChainConfig,
 };
 
 export type GenesisData = {
@@ -54,5 +57,9 @@ export const genesisData: Record<NetworkName, GenesisData> = {
   chiado: {
     genesisTime: 1665396300,
     genesisValidatorsRoot: "0x9d642dac73058fbf39c0ae41ab1e34e4d889043cb199851ded7095bc99eb4c1e",
+  },
+  zhejiang: {
+    genesisTime: 1675263600,
+    genesisValidatorsRoot: "0x53a92d8f2bb1d85f62d16a156e6ebcd1bcaba652d0900b2c2f387826f3481f6f",
   },
 };

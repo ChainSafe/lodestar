@@ -15,8 +15,9 @@ import * as goerli from "./goerli.js";
 import * as ropsten from "./ropsten.js";
 import * as sepolia from "./sepolia.js";
 import * as chiado from "./chiado.js";
+import * as zhejiang from "./zhejiang.js";
 
-export type NetworkName = "mainnet" | "dev" | "gnosis" | "goerli" | "ropsten" | "sepolia" | "chiado";
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "goerli" | "ropsten" | "sepolia" | "chiado" | "zhejiang";
 export const networkNames: NetworkName[] = [
   "mainnet",
   "gnosis",
@@ -24,6 +25,7 @@ export const networkNames: NetworkName[] = [
   "ropsten",
   "sepolia",
   "chiado",
+  "zhejiang",
 
   // Leave always as last network. The order matters for the --help printout
   "dev",
@@ -65,6 +67,8 @@ export function getNetworkData(
       return sepolia;
     case "chiado":
       return chiado;
+    case "zhejiang":
+      return zhejiang;
     default:
       throw Error(`Network not supported: ${network}`);
   }
