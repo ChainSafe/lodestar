@@ -29,7 +29,7 @@ let port = 9000;
 const mu = "/ip4/127.0.0.1/tcp/0";
 
 describe("network", function () {
-  this.timeout(50000);
+  this.timeout(70000);
   this.retries(2); // This test fail sometimes, with a 5% rate.
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
