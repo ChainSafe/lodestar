@@ -11,7 +11,7 @@ import {Epoch, Slot, ssz} from "@lodestar/types";
 import {ILogger, randBetween} from "@lodestar/utils";
 import {shuffle} from "../../util/shuffle.js";
 import {ChainEvent, IBeaconChain} from "../../chain/index.js";
-import {Eth2Gossipsub, GossipType} from "../gossip/index.js";
+import {GossipTopic, GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {SubnetMap, RequestedSubnet} from "../peers/utils/index.js";
 import {getActiveForks} from "../forks.js";
@@ -59,7 +59,10 @@ export class AttnetsService implements IAttnetsService {
   constructor(
     private readonly config: IChainForkConfig,
     private readonly chain: IBeaconChain,
-    private readonly gossip: Eth2Gossipsub,
+    private readonly gossip: {
+      subscribeTopic: (topic: GossipTopic) => void;
+      unsubscribeTopic: (topic: GossipTopic) => void;
+    },
     private readonly metadata: MetadataController,
     private readonly logger: ILogger,
     private readonly metrics: IMetrics | null,

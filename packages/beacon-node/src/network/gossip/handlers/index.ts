@@ -29,13 +29,13 @@ import {
   validateGossipVoluntaryExit,
   validateBlsToExecutionChange,
 } from "../../../chain/validation/index.js";
-import {INetwork} from "../../interface.js";
-import {NetworkEvent} from "../../events.js";
-import {PeerAction} from "../../peers/index.js";
+import {NetworkEvent, NetworkEventBus} from "../../events.js";
+import {PeerAction, PeerRpcScoreStore} from "../../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipBlobsSidecar} from "../../../chain/validation/blobsSidecar.js";
 import {BlockInput, getBlockInput} from "../../../chain/blocks/types.js";
+import {AttnetsService} from "../../subnets/attnetsService.js";
 
 /**
  * Gossip handler options as part of network options
@@ -53,11 +53,13 @@ export const defaultGossipHandlerOpts = {
 };
 
 type ValidatorFnsModules = {
+  attnetsService: AttnetsService;
   chain: IBeaconChain;
   config: IBeaconConfig;
   logger: ILogger;
-  network: INetwork;
   metrics: IMetrics | null;
+  networkEventBus: NetworkEventBus;
+  peerRpcScores: PeerRpcScoreStore;
 };
 
 const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
@@ -77,7 +79,7 @@ const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
  * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
-  const {chain, config, metrics, network, logger} = modules;
+  const {attnetsService, chain, config, metrics, networkEventBus, peerRpcScores, logger} = modules;
 
   async function validateBeaconBlock(
     blockInput: BlockInput,
@@ -107,7 +109,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       if (e instanceof BlockGossipError) {
         if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
           logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
-          network.events.emit(NetworkEvent.unknownBlockParent, blockInput, peerIdStr);
+          networkEventBus.emit(NetworkEvent.unknownBlockParent, blockInput, peerIdStr);
         }
       }
 
@@ -156,7 +158,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
             case BlockErrorCode.EXECUTION_ENGINE_ERROR:
               break;
             default:
-              network.reportPeer(peerIdFromString(peerIdStr), PeerAction.LowToleranceError, "BadGossipBlock");
+              peerRpcScores.applyAction(peerIdFromString(peerIdStr), PeerAction.LowToleranceError, "BadGossipBlock");
           }
         }
         logger.error("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
@@ -241,7 +243,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
       // but don't import them, to save CPU and RAM
-      if (!network.attnetsService.shouldProcess(subnet, attestation.data.slot)) {
+      if (!attnetsService.shouldProcess(subnet, attestation.data.slot)) {
         return;
       }
 

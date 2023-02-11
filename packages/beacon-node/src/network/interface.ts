@@ -54,9 +54,7 @@ export interface INetwork {
   isSubscribedToGossipCoreTopics(): boolean;
 
   // Service
-  start(): Promise<void>;
-  stop(): Promise<void>;
-  close(): void;
+  close(): Promise<void>;
 
   // Debug
   connectToPeer(peer: PeerId, multiaddr: Multiaddr[]): Promise<void>;

@@ -10,10 +10,9 @@ import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/optio
 import {GossipType, GossipHandlers} from "../../../src/network/gossip/index.js";
 
 import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
-import {createNode} from "../../utils/network.js";
+import {createNetworkModules, connect, onPeerConnect} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
-import {connect, onPeerConnect} from "../../utils/network.js";
 import {testLogger} from "../../utils/logger.js";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
@@ -84,7 +83,6 @@ describe("gossipsub", function () {
     const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = gossipHandlersPartial as GossipHandlers;
 
-    const [libp2pA, libp2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr)]);
     const loggerA = testLogger("A");
     const loggerB = testLogger("B");
 
@@ -97,15 +95,21 @@ describe("gossipsub", function () {
       signal: controller.signal,
       metrics: null,
     };
-    const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: loggerA});
-    const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: loggerB});
-
-    await Promise.all([netA.start(), netB.start()]);
+    const netA = await Network.init({
+      ...modules,
+      ...(await createNetworkModules(multiaddr, undefined, opts)),
+      logger: loggerA,
+    });
+    const netB = await Network.init({
+      ...modules,
+      ...(await createNetworkModules(multiaddr, undefined, opts)),
+      logger: loggerB,
+    });
 
     afterEachCallbacks.push(async () => {
       await chain.close();
       controller.abort();
-      await Promise.all([netA.stop(), netB.stop()]);
+      await Promise.all([netA.close(), netB.close()]);
       sinon.restore();
     });
 

@@ -3,6 +3,7 @@ import {expect} from "chai";
 
 import {PeerId} from "@libp2p/interface-peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {SignableENR} from "@chainsafe/discv5";
 import {createIBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
@@ -15,10 +16,9 @@ import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/optio
 import {GoodByeReasonCode} from "../../../src/constants/index.js";
 
 import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
-import {createNode} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
-import {connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/network.js";
+import {createNetworkModules, connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/network.js";
 import {testLogger} from "../../utils/logger.js";
 import {CommitteeSubscription} from "../../../src/network/subnets/index.js";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
@@ -93,10 +93,10 @@ describe("network", function () {
     const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = {} as GossipHandlers;
 
-    const libp2p = await createNode(mu);
+    const peerId = await createSecp256k1PeerId();
     const logger = testLogger(nodeName);
 
-    const opts = await getOpts(libp2p.peerId);
+    const opts = await getOpts(peerId);
 
     const modules = {
       config,
@@ -108,13 +108,12 @@ describe("network", function () {
       metrics: null,
     };
 
-    const network = new Network(opts, {...modules, libp2p, logger});
-    await network.start();
+    const network = await Network.init({...modules, ...(await createNetworkModules(mu, peerId, opts)), logger});
 
     afterEachCallbacks.push(async () => {
       await chain.close();
       controller.abort();
-      await network.stop();
+      await network.close();
       sinon.restore();
     });
 
@@ -217,7 +216,7 @@ describe("network", function () {
       if (request.method === ReqRespMethod.Goodbye) onGoodbyeNetB(request.body, peer);
     });
 
-    await netA.stop();
+    await netA.close();
     await sleep(500, controller.signal);
 
     expect(onGoodbyeNetB.callCount).to.equal(1, "netB must receive 1 goodbye");
@@ -234,6 +233,6 @@ describe("network", function () {
     expect(netA.gossip.getTopics().length).to.equal(13);
     netA.unsubscribeGossipCoreTopics();
     expect(netA.gossip.getTopics().length).to.equal(0);
-    netA.close();
+    await netA.close();
   });
 });

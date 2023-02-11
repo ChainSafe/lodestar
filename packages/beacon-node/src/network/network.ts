@@ -22,6 +22,7 @@ import {
   GossipTopicTypeMap,
   GossipType,
   getCoreTopicsAtFork,
+  GossipTopic,
 } from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "./forks.js";
@@ -32,13 +33,34 @@ import {AttnetsService, CommitteeSubscription, SyncnetsService} from "./subnets/
 import {PeersData} from "./peers/peersData.js";
 import {getConnectionsMap, isPublishToZeroPeersError} from "./util.js";
 import {Discv5Worker} from "./discv5/index.js";
+import {createNodeJsLibp2p} from "./nodejs/util.js";
 
 // How many changes to batch cleanup
 const CACHED_BLS_BATCH_CLEANUP_LIMIT = 10;
 
 interface INetworkModules {
+  opts: INetworkOptions;
   config: IBeaconConfig;
   libp2p: Libp2p;
+  logger: ILogger;
+  chain: IBeaconChain;
+  signal: AbortSignal;
+  peersData: PeersData;
+  networkEventBus: NetworkEventBus;
+  metadata: MetadataController;
+  peerRpcScores: PeerRpcScoreStore;
+  reqResp: ReqRespBeaconNode;
+  gossip: Eth2Gossipsub;
+  attnetsService: AttnetsService;
+  syncnetsService: SyncnetsService;
+  peerManager: PeerManager;
+}
+
+export interface INetworkInitModules {
+  opts: INetworkOptions;
+  config: IBeaconConfig;
+  peerId: PeerId;
+  peerStoreDir?: string;
   logger: ILogger;
   metrics: IMetrics | null;
   chain: IBeaconChain;
@@ -56,6 +78,7 @@ export class Network implements INetwork {
   gossip: Eth2Gossipsub;
   metadata: MetadataController;
   readonly peerRpcScores: IPeerRpcScoreStore;
+  private readonly opts: INetworkOptions;
   private readonly peersData: PeersData;
 
   private readonly peerManager: PeerManager;
@@ -68,23 +91,74 @@ export class Network implements INetwork {
 
   private subscribedForks = new Set<ForkName>();
   private regossipBlsChangesPromise: Promise<void> | null = null;
+  private closed = false;
 
-  constructor(private readonly opts: INetworkOptions, modules: INetworkModules) {
-    const {config, libp2p, logger, metrics, chain, reqRespHandlers, gossipHandlers, signal} = modules;
+  constructor(modules: INetworkModules) {
+    const {
+      opts,
+      config,
+      libp2p,
+      logger,
+      chain,
+      signal,
+      peersData,
+      networkEventBus,
+      metadata,
+      peerRpcScores,
+      reqResp,
+      gossip,
+      attnetsService,
+      syncnetsService,
+      peerManager,
+    } = modules;
+    this.opts = opts;
+    this.config = config;
     this.libp2p = libp2p;
     this.logger = logger;
-    this.config = config;
-    this.signal = signal;
-    this.clock = chain.clock;
     this.chain = chain;
-    this.peersData = new PeersData();
-    const networkEventBus = new NetworkEventBus();
-    const metadata = new MetadataController({}, {config, chain, logger});
-    const peerRpcScores = new PeerRpcScoreStore(metrics);
+    this.clock = chain.clock;
+    this.signal = signal;
+    this.peersData = peersData;
     this.events = networkEventBus;
     this.metadata = metadata;
     this.peerRpcScores = peerRpcScores;
-    this.reqResp = new ReqRespBeaconNode(
+    this.reqResp = reqResp;
+    this.gossip = gossip;
+    this.attnetsService = attnetsService;
+    this.syncnetsService = syncnetsService;
+    this.peerManager = peerManager;
+
+    this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
+    this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
+    this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
+    modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
+  }
+
+  static async init({
+    opts,
+    config,
+    logger,
+    metrics,
+    peerId,
+    peerStoreDir,
+    chain,
+    reqRespHandlers,
+    gossipHandlers,
+    signal,
+  }: INetworkInitModules): Promise<Network> {
+    const clock = chain.clock;
+    const peersData = new PeersData();
+    const networkEventBus = new NetworkEventBus();
+    const metadata = new MetadataController({}, {config, chain, logger});
+    const peerRpcScores = new PeerRpcScoreStore(metrics);
+
+    const libp2p = await createNodeJsLibp2p(peerId, opts, {
+      peerStoreDir: peerStoreDir,
+      metrics: Boolean(metrics),
+      metricsRegistry: metrics?.register,
+    });
+
+    const reqResp = new ReqRespBeaconNode(
       {
         config,
         libp2p,
@@ -94,86 +168,113 @@ export class Network implements INetwork {
         logger,
         networkEventBus,
         metrics,
-        peersData: this.peersData,
+        peersData,
       },
       opts
     );
 
-    this.gossip = new Eth2Gossipsub(opts, {
+    // resolve the circular dependency between getGossipHandlers and attnetsService
+    // eslint-disable-next-line prefer-const
+    let gossip: Eth2Gossipsub;
+
+    const _gossip = {
+      subscribeTopic(topic: GossipTopic): void {
+        gossip.subscribeTopic(topic);
+      },
+      unsubscribeTopic(topic: GossipTopic): void {
+        gossip.unsubscribeTopic(topic);
+      },
+    };
+
+    const attnetsService = new AttnetsService(config, chain, _gossip, metadata, logger, metrics, opts);
+
+    gossip = new Eth2Gossipsub(opts, {
       config,
       libp2p,
       logger,
       metrics,
       signal,
-      gossipHandlers: gossipHandlers ?? getGossipHandlers({chain, config, logger, network: this, metrics}, opts),
+      gossipHandlers:
+        gossipHandlers ??
+        getGossipHandlers({chain, config, logger, attnetsService, peerRpcScores, networkEventBus, metrics}, opts),
       eth2Context: {
         activeValidatorCount: chain.getHeadState().epochCtx.currentShuffling.activeIndices.length,
-        currentSlot: this.clock.currentSlot,
-        currentEpoch: this.clock.currentEpoch,
+        currentSlot: clock.currentSlot,
+        currentEpoch: clock.currentEpoch,
       },
-      peersData: this.peersData,
+      peersData,
     });
 
-    this.attnetsService = new AttnetsService(config, chain, this.gossip, metadata, logger, metrics, opts);
-    this.syncnetsService = new SyncnetsService(config, chain, this.gossip, metadata, logger, metrics, opts);
+    const syncnetsService = new SyncnetsService(config, chain, gossip, metadata, logger, metrics, opts);
 
-    this.peerManager = new PeerManager(
+    const peerManager = new PeerManager(
       {
         libp2p,
-        reqResp: this.reqResp,
-        gossip: this.gossip,
-        attnetsService: this.attnetsService,
-        syncnetsService: this.syncnetsService,
+        reqResp,
+        gossip,
+        attnetsService,
+        syncnetsService,
         logger,
         metrics,
         chain,
         config,
         peerRpcScores,
         networkEventBus,
-        peersData: this.peersData,
+        peersData,
       },
       opts
     );
 
-    this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
-    this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
-    this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
-    modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
-  }
-
-  /** Destroy this instance. Can only be called once. */
-  close(): void {
-    this.chain.emitter.off(ChainEvent.clockEpoch, this.onEpoch);
-    this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
-    this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
-  }
-
-  async start(): Promise<void> {
-    await this.libp2p.start();
+    await libp2p.start();
 
     // Network spec decides version changes based on clock fork, not head fork
-    const forkCurrentSlot = this.config.getForkName(this.clock.currentSlot);
+    const forkCurrentSlot = config.getForkName(clock.currentSlot);
 
     // Register only ReqResp protocols relevant to clock's fork
-    await this.reqResp.start();
-    this.reqResp.registerProtocolsAtFork(forkCurrentSlot);
+    await reqResp.start();
+    reqResp.registerProtocolsAtFork(forkCurrentSlot);
 
-    await this.peerManager.start();
-    const discv5 = this.discv5();
+    await peerManager.start();
+    const discv5 = peerManager["discovery"]?.discv5;
     const setEnrValue = discv5?.setEnrValue.bind(discv5);
     // Initialize ENR with clock's fork
-    this.metadata.start(setEnrValue, this.config.getForkName(this.clock.currentSlot));
-    await this.gossip.start();
-    this.attnetsService.start();
-    this.syncnetsService.start();
-    const multiaddresses = this.libp2p
+    metadata.start(setEnrValue, config.getForkName(clock.currentSlot));
+    await gossip.start();
+    attnetsService.start();
+    syncnetsService.start();
+    const multiaddresses = libp2p
       .getMultiaddrs()
       .map((m) => m.toString())
       .join(",");
-    this.logger.info(`PeerId ${this.libp2p.peerId.toString()}, Multiaddrs ${multiaddresses}`);
+    logger.info(`PeerId ${libp2p.peerId.toString()}, Multiaddrs ${multiaddresses}`);
+
+    return new Network({
+      opts,
+      config,
+      libp2p,
+      logger,
+      chain,
+      signal,
+      peersData,
+      networkEventBus,
+      metadata,
+      peerRpcScores,
+      reqResp,
+      gossip,
+      attnetsService,
+      syncnetsService,
+      peerManager,
+    });
   }
 
-  async stop(): Promise<void> {
+  /** Destroy this instance. Can only be called once. */
+  async close(): Promise<void> {
+    if (this.closed) return;
+
+    this.chain.emitter.off(ChainEvent.clockEpoch, this.onEpoch);
+    this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
+    this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
+
     // Must goodbye and disconnect before stopping libp2p
     await this.peerManager.goodbyeAndDisconnectAllPeers();
     await this.peerManager.stop();
@@ -185,6 +286,8 @@ export class Network implements INetwork {
     this.attnetsService.stop();
     this.syncnetsService.stop();
     await this.libp2p.stop();
+
+    this.closed = true;
   }
 
   discv5(): Discv5Worker | undefined {
