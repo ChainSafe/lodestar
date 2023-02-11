@@ -1,5 +1,5 @@
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {ICliCommandOptions} from "../../util/index.js";
+import {ICliCommandOptions, YargsError} from "../../util/index.js";
 
 const defaultListenAddress = "0.0.0.0";
 export const defaultP2pPort = 9000;
@@ -39,6 +39,11 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
   const udpPort = args.discoveryPort ?? args.port ?? defaultP2pPort;
   const tcpPort = args.port ?? defaultP2pPort;
 
+  const targetPeers = args["targetPeers"];
+  const maxPeers = args["network.maxPeers"] ?? (targetPeers !== undefined ? Math.floor(targetPeers * 1.1) : undefined);
+  if (targetPeers != null && maxPeers != null && targetPeers > maxPeers) {
+    throw new YargsError("network.maxPeers must be greater than or equal to targetPeers");
+  }
   return {
     discv5: {
       enabled: args["discv5"] ?? true,
@@ -48,10 +53,8 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
       enr: undefined as any,
     },
-    maxPeers:
-      args["network.maxPeers"] ??
-      (args["targetPeers"] !== undefined ? Math.floor(args["targetPeers"] * 1.1) : undefined),
-    targetPeers: args["targetPeers"],
+    maxPeers,
+    targetPeers,
     localMultiaddrs: [`/ip4/${listenAddress}/tcp/${tcpPort}`],
     subscribeAllSubnets: args["subscribeAllSubnets"],
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
