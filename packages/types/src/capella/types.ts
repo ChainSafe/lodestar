@@ -2,6 +2,7 @@ import {ValueOf} from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
 
 export type Withdrawal = ValueOf<typeof ssz.Withdrawal>;
+export type Withdrawals = ValueOf<typeof ssz.Withdrawals>;
 export type BLSToExecutionChange = ValueOf<typeof ssz.BLSToExecutionChange>;
 export type BLSToExecutionChanges = ValueOf<typeof ssz.BLSToExecutionChanges>;
 export type SignedBLSToExecutionChange = ValueOf<typeof ssz.SignedBLSToExecutionChange>;

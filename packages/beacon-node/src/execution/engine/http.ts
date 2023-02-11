@@ -6,6 +6,7 @@ import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient
 import {IMetrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
+import {numToQuantity} from "../../eth1/provider/utils.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -23,6 +24,9 @@ import {
   parseExecutionPayload,
   serializeExecutionPayload,
   serializePayloadAttributes,
+  ExecutionPayloadBody,
+  assertReqSizeLimit,
+  deserializeExecutionPayloadBody,
 } from "./types.js";
 
 export type ExecutionEngineModules = {
@@ -347,6 +351,37 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   async prunePayloadIdCache(): Promise<void> {
     this.payloadIdCache.prune();
+  }
+
+  async getPayloadBodiesByHash(blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
+    const method = "engine_getPayloadBodiesByHashV1";
+    assertReqSizeLimit(blockHashes.length, 32);
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >({
+      method,
+      params: blockHashes,
+    });
+    return response.map(deserializeExecutionPayloadBody);
+  }
+
+  async getPayloadBodiesByRange(
+    startBlockNumber: number,
+    blockCount: number
+  ): Promise<(ExecutionPayloadBody | null)[]> {
+    const method = "engine_getPayloadBodiesByRangeV1";
+    assertReqSizeLimit(blockCount, 32);
+    const start = numToQuantity(startBlockNumber);
+    const count = numToQuantity(blockCount);
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >({
+      method,
+      params: [start, count],
+    });
+    return response.map(deserializeExecutionPayloadBody);
   }
 }
 
