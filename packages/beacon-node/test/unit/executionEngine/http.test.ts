@@ -3,7 +3,12 @@ import {fastify} from "fastify";
 import {ForkName} from "@lodestar/params";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 import {IExecutionEngine, initializeExecutionEngine} from "../../../src/execution/index.js";
-import {parseExecutionPayload, serializeExecutionPayload} from "../../../src/execution/engine/types.js";
+import {
+  parseExecutionPayload,
+  serializeExecutionPayload,
+  serializeExecutionPayloadBody,
+} from "../../../src/execution/engine/types.js";
+import {numToQuantity} from "../../../src/eth1/provider/utils.js";
 
 describe("ExecutionEngine / http", () => {
   const afterCallbacks: (() => Promise<void> | void)[] = [];
@@ -157,6 +162,111 @@ describe("ExecutionEngine / http", () => {
     );
 
     expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
+  });
+
+  it("getPayloadBodiesByHash", async () => {
+    /**
+     *  curl -X GET -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_getPayloadBodiesByHashV1","params":[
+        "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+        "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+      ],"id":67}' http://localhost:8545
+     */
+    const response = {
+      jsonrpc: "2.0",
+      id: 67,
+      result: [
+        {
+          transactions: [
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+          ],
+          withdrawals: [
+            {
+              index: "0x0",
+              validatorIndex: "0xffff",
+              address: "0x0200000000000000000000000000000000000000",
+              amount: "0x7b",
+            },
+          ],
+        },
+        null, // null returned for missing blocks
+        {
+          transactions: [
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+          ],
+          withdrawals: null, // withdrawals is null pre-capella
+        },
+      ],
+    };
+
+    const reqBlockHashes = [
+      "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+      "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed111",
+      "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed000",
+    ];
+
+    const request = {
+      jsonrpc: "2.0",
+      method: "engine_getPayloadBodiesByHashV1",
+      params: reqBlockHashes,
+    };
+
+    returnValue = response;
+
+    const res = await executionEngine.getPayloadBodiesByHash(reqBlockHashes);
+
+    expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
+    expect(res.map(serializeExecutionPayloadBody)).to.deep.equal(response.result, "Wrong returned payload");
+  });
+
+  it("getPayloadBodiesByRange", async () => {
+    /**
+     *  curl -X GET -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_getPayloadBodiesByRangeV1","params":[ QUANTITY, QUANTITY],"id":67}' http://localhost:8545
+     */
+    const startBlockNumber = 2;
+    const blockCount = 3;
+    const response = {
+      jsonrpc: "2.0",
+      id: 67,
+      result: [
+        {
+          transactions: [
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+          ],
+          withdrawals: [
+            {
+              index: "0x0",
+              validatorIndex: "0xffff",
+              address: "0x0200000000000000000000000000000000000000",
+              amount: "0x7b",
+            },
+          ],
+        },
+        null, // null returned for missing blocks
+        {
+          transactions: [
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+            "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+          ],
+          withdrawals: null, // withdrawals is null pre-capella
+        },
+      ],
+    };
+
+    const request = {
+      jsonrpc: "2.0",
+      method: "engine_getPayloadBodiesByRangeV1",
+      params: [numToQuantity(startBlockNumber), numToQuantity(blockCount)],
+    };
+
+    returnValue = response;
+
+    const res = await executionEngine.getPayloadBodiesByRange(startBlockNumber, blockCount);
+
+    expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
+    expect(res.map(serializeExecutionPayloadBody)).to.deep.equal(response.result, "Wrong returned payload");
   });
 
   it("error - unknown payload", async () => {
