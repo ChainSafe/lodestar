@@ -912,7 +912,8 @@ export function createLodestarMetrics(
         name: "validator_monitor_beacon_block_delay_seconds",
         help: "The delay between when the validator should send the block and when it was received",
         labelNames: ["src"],
-        buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
+        // we also want other nodes to received our published before 4s so add bucket 3 and 3.5
+        buckets: [0.1, 0.25, 0.5, 1, 2, 3, 4, 6, 10],
       }),
 
       // Only for known
