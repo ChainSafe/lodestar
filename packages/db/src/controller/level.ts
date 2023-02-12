@@ -20,6 +20,9 @@ export type LevelDbControllerModules = {
 
 const BUCKET_ID_UNKNOWN = "unknown";
 
+/** Time between capturing metric for db size, every few minutes is sufficient */
+const DB_SIZE_METRIC_INTERVAL_MS = 5 * 60 * 1000;
+
 /**
  * The LevelDB implementation of DB
  */
@@ -29,11 +32,11 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
 
   private readonly opts: ILevelDBOptions;
   private metrics: ILevelDbControllerMetrics | null;
+  private dbSizeMetricInterval?: NodeJS.Timer;
 
   constructor(opts: ILevelDBOptions, {metrics}: LevelDbControllerModules) {
     this.opts = opts;
     this.metrics = metrics ?? null;
-    if (metrics) this.addDbSizeMetricCollector(metrics);
     this.db = opts.db || new Level(opts.name || "beaconchain", {keyEncoding: "binary", valueEncoding: "binary"});
   }
 
@@ -42,11 +45,19 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
     this.status = Status.started;
 
     await this.db.open();
+
+    if (this.metrics) {
+      this.collectDbSizeMetric();
+    }
   }
 
   async stop(): Promise<void> {
     if (this.status === Status.stopped) return;
     this.status = Status.stopped;
+
+    if (this.dbSizeMetricInterval) {
+      clearInterval(this.dbSizeMetricInterval);
+    }
 
     await this.db.close();
   }
@@ -57,7 +68,9 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
       throw Error("metrics can only be set once");
     } else {
       this.metrics = metrics;
-      this.addDbSizeMetricCollector(metrics);
+      if (this.status === Status.started) {
+        this.collectDbSizeMetric();
+      }
     }
   }
 
@@ -178,15 +191,24 @@ export class LevelDbController implements IDatabaseController<Uint8Array, Uint8A
     this.metrics?.dbWriteItems.inc({bucket}, itemsRead);
   }
 
-  /** Add collect function to capture metric for db size */
-  private addDbSizeMetricCollector(metrics: ILevelDbControllerMetrics): void {
+  /** Start interval to capture metric for db size */
+  private collectDbSizeMetric(): void {
+    this.dbSizeMetric();
+    this.dbSizeMetricInterval = setInterval(this.dbSizeMetric.bind(this), DB_SIZE_METRIC_INTERVAL_MS);
+  }
+
+  /** Capture metric for db size */
+  private dbSizeMetric(): void {
     const minKey = Buffer.from([0x00]);
     const maxKey = Buffer.from([0xff]);
 
-    metrics.dbSizeTotal.addCollect(async () => {
-      const dbSize = await this.approximateSize(minKey, maxKey);
-      metrics.dbSizeTotal.set(dbSize);
-    });
+    this.approximateSize(minKey, maxKey)
+      .then((dbSize) => {
+        this.metrics?.dbSizeTotal.set(dbSize);
+      })
+      .catch(() => {
+        // ignore errors
+      });
   }
 }
 
