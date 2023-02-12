@@ -913,7 +913,7 @@ export function createLodestarMetrics(
         help: "The delay between when the validator should send the block and when it was received",
         labelNames: ["src"],
         // we also want other nodes to received our published before 4s so add bucket 3 and 3.5
-        buckets: [0.1, 0.25, 0.5, 1, 2, 3, 3.5, 4, 6, 10],
+        buckets: [0.1, 0.25, 0.5, 1, 2, 3, 4, 6, 10],
       }),
 
       // Only for known
