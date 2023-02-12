@@ -25,7 +25,7 @@ import {ReqRespMethod} from "../../../src/network/reqresp/types.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {testLogger} from "../../utils/logger.js";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
-import {connect, createNode, onPeerConnect} from "../../utils/network.js";
+import {connect, createNetworkModules, onPeerConnect} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
 import {arrToSource} from "../../unit/network/reqresp/utils.js";
@@ -80,8 +80,8 @@ describe("network / ReqResp", function () {
     reqRespOpts?: ReqRespBeaconNodeOpts
   ): Promise<[Network, Network]> {
     const controller = new AbortController();
+    const peerIdA = await createSecp256k1PeerId();
     const peerIdB = await createSecp256k1PeerId();
-    const [libp2pA, libp2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr, peerIdB)]);
 
     const notImplemented = async function* <T>(): AsyncIterable<T> {
       throw Error("not implemented");
@@ -116,9 +116,16 @@ describe("network / ReqResp", function () {
       signal: controller.signal,
       metrics: null,
     };
-    const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: testLogger("A")});
-    const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: testLogger("B")});
-    await Promise.all([netA.start(), netB.start()]);
+    const netA = await Network.init({
+      ...modules,
+      ...(await createNetworkModules(multiaddr, peerIdA, opts)),
+      logger: testLogger("A"),
+    });
+    const netB = await Network.init({
+      ...modules,
+      ...(await createNetworkModules(multiaddr, peerIdB, opts)),
+      logger: testLogger("B"),
+    });
 
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
     await connect(netA, netB.peerId, netB.localMultiaddrs);
@@ -127,7 +134,7 @@ describe("network / ReqResp", function () {
     afterEachCallbacks.push(async () => {
       await chain.close();
       controller.abort();
-      await Promise.all([netA.stop(), netB.stop()]);
+      await Promise.all([netA.close(), netB.close()]);
     });
 
     return [netA, netB];

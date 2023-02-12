@@ -4,7 +4,7 @@ import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {createKeypairFromPeerId, SignableENR} from "@chainsafe/discv5";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
-import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@lodestar/beacon-node";
+import {BeaconNode, BeaconDb} from "@lodestar/beacon-node";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -88,11 +88,8 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       db,
       logger,
       processShutdownCallback,
-      libp2p: await createNodeJsLibp2p(peerId, options.network, {
-        peerStoreDir: beaconPaths.peerStoreDir,
-        metrics: options.metrics.enabled,
-        metricsRegistry: networkRegistry,
-      }),
+      peerId,
+      peerStoreDir: beaconPaths.peerStoreDir,
       anchorState,
       wsCheckpoint,
       metricsRegistries,

@@ -3,6 +3,7 @@ import {expect} from "chai";
 
 import {PeerId} from "@libp2p/interface-peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
+import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {SignableENR} from "@chainsafe/discv5";
 import {createIBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
@@ -13,10 +14,9 @@ import {Network, getReqRespHandlers} from "../../../src/network/index.js";
 import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
 
 import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
-import {createNode} from "../../utils/network.js";
+import {createNetworkModules, onPeerConnect} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
-import {onPeerConnect} from "../../utils/network.js";
 import {testLogger} from "../../utils/logger.js";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
 import {memoOnce} from "../../utils/cache.js";
@@ -89,10 +89,10 @@ describe("mdns", function () {
     const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = {} as GossipHandlers;
 
-    const libp2p = await createNode(mu, undefined, {mdns: true});
+    const peerId = await createSecp256k1PeerId();
     const logger = testLogger(nodeName);
 
-    const opts = await getOpts(libp2p.peerId);
+    const opts = await getOpts(peerId);
 
     const modules = {
       config,
@@ -104,13 +104,16 @@ describe("mdns", function () {
       metrics: null,
     };
 
-    const network = new Network(opts, {...modules, libp2p, logger});
-    await network.start();
+    const network = await Network.init({
+      ...modules,
+      ...(await createNetworkModules(mu, peerId, {...opts, mdns: true})),
+      logger,
+    });
 
     afterEachCallbacks.push(async () => {
       await chain.close();
+      await network.close();
       controller.abort();
-      await network.stop();
       sinon.restore();
     });
 

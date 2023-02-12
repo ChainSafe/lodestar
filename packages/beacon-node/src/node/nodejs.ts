@@ -1,6 +1,7 @@
 import {setMaxListeners} from "node:events";
 import {Registry} from "prom-client";
 
+import {PeerId} from "@libp2p/interface-peer-id";
 import {IBeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
@@ -9,7 +10,7 @@ import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IBeaconDb} from "../db/index.js";
-import {Libp2p, INetwork, Network, getReqRespHandlers} from "../network/index.js";
+import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
@@ -44,7 +45,8 @@ export interface IBeaconNodeInitModules {
   db: IBeaconDb;
   logger: ILogger;
   processShutdownCallback: ProcessShutdownCallback;
-  libp2p: Libp2p;
+  peerId: PeerId;
+  peerStoreDir?: string;
   anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
@@ -129,7 +131,8 @@ export class BeaconNode {
     db,
     logger,
     processShutdownCallback,
-    libp2p,
+    peerId,
+    peerStoreDir,
     anchorState,
     wsCheckpoint,
     metricsRegistries = [],
@@ -191,19 +194,19 @@ export class BeaconNode {
     // Load persisted data from disk to in-memory caches
     await chain.loadFromDisk();
 
-    const network = new Network(opts.network, {
+    // Network needs to be initialized before the sync
+    // See https://github.com/ChainSafe/lodestar/issues/4543
+    const network = await Network.init({
+      opts: opts.network,
       config,
-      libp2p,
       logger: logger.child({module: LoggerModule.network}),
       metrics,
       chain,
+      peerId,
+      peerStoreDir,
       reqRespHandlers: getReqRespHandlers({db, chain}),
       signal,
     });
-
-    // Network needs to start before the sync
-    // See https://github.com/ChainSafe/lodestar/issues/4543
-    await network.start();
 
     const sync = new BeaconSync(opts.sync, {
       config,
@@ -289,7 +292,7 @@ export class BeaconNode {
       this.status = BeaconNodeStatus.closing;
       this.sync.close();
       this.backfillSync?.close();
-      await this.network.stop();
+      await this.network.close();
       if (this.metricsServer) await this.metricsServer.stop();
       if (this.restApi) await this.restApi.close();
 

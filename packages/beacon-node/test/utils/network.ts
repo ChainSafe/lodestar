@@ -7,6 +7,7 @@ import {INetwork, Network} from "../../src/network/index.js";
 import {createNodejsLibp2p, ILibp2pOptions} from "../../src/network/nodejs/index.js";
 import {Libp2p} from "../../src/network/interface.js";
 import {Libp2pEvent} from "../../src/constants/index.js";
+import {defaultNetworkOptions, INetworkOptions} from "../../src/network/options.js";
 
 export async function createNode(
   multiaddr: string,
@@ -19,6 +20,17 @@ export async function createNode(
     addresses: {listen: [multiaddr]},
     ...opts,
   });
+}
+
+export async function createNetworkModules(
+  multiaddr: string,
+  peerId?: PeerId,
+  opts?: Partial<INetworkOptions>
+): Promise<{opts: INetworkOptions; peerId: PeerId}> {
+  return {
+    peerId: peerId ?? (await createSecp256k1PeerId()),
+    opts: {...defaultNetworkOptions, ...opts, localMultiaddrs: [multiaddr]},
+  };
 }
 
 /**
