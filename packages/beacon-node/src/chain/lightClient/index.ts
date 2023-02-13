@@ -602,16 +602,16 @@ export class LightClientServer {
       isFinalized = true;
       finalityBranch = attestedData.finalityBranch;
       finalizedHeader = finalizedHeaderAttested;
+      // Fork of LightClientUpdate is based off on attested header's fork
+      const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
+      if (this.config.getForkName(finalizedHeader.beacon.slot) !== attestedFork) {
+        finalizedHeader = upgradeLightClientHeader(this.config, attestedFork, finalizedHeader);
+      }
     } else {
       isFinalized = false;
       finalityBranch = this.zero.finalityBranch;
+      // No need to upgrade finalizedHeader because its anyway set to zero of highest fork
       finalizedHeader = this.zero.finalizedHeader;
-    }
-
-    // Fork of LightClientUpdate is based off on attested header's fork
-    const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
-    if (this.config.getForkName(finalizedHeader.beacon.slot) !== attestedFork) {
-      finalizedHeader = upgradeLightClientHeader(this.config, attestedFork, finalizedHeader);
     }
 
     const newUpdate = {
