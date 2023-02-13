@@ -55,9 +55,11 @@ export function upgradeLightClientHeader(
   const upgradedHeader = header;
 
   const headerFork = config.getForkName(header.beacon.slot);
-  switch (headerFork) {
-    case ForkName.phase0:
-      throw Error(`Invalid headerFork=${headerFork} for upgradeLightClientHeader`);
+  const startUpgradeFromFork = Object.values(ForkName)[ForkSeq[headerFork]+1];
+
+  switch (startUpgradeFromFork) {
+    default:
+      throw Error(`Invalid startUpgradeFromFork=${startUpgradeFromFork} for headerFork=${headerFork} in upgradeLightClientHeader to targetFork=${targetFork}`);
 
     case ForkName.altair:
     case ForkName.bellatrix:
