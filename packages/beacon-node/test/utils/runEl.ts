@@ -194,7 +194,7 @@ async function waitForELOffline(ENGINE_PORT: string): Promise<void> {
 }
 
 async function isPortInUse(port: number): Promise<boolean> {
-  return await new Promise<boolean>((resolve, reject) => {
+  return new Promise<boolean>((resolve, reject) => {
     const server = net.createServer();
     server.once("error", function (err) {
       if (((err as unknown) as {code: string}).code === "EADDRINUSE") {

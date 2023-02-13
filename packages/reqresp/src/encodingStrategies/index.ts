@@ -21,7 +21,7 @@ export async function readEncodedPayload<T>(
 ): Promise<T> {
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:
-      return await readSszSnappyPayload(bufferedSource, type);
+      return readSszSnappyPayload(bufferedSource, type);
 
     default:
       throw Error("Unsupported encoding");

@@ -120,7 +120,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
 
   async getByRoot(root: Root): Promise<allForks.SignedBeaconBlock | null> {
     const slot = await this.getSlotByRoot(root);
-    return slot !== null ? await this.get(slot) : null;
+    return slot !== null ? this.get(slot) : null;
   }
 
   async getBinaryEntryByRoot(root: Root): Promise<IKeyValue<Slot, Buffer> | null> {
@@ -130,7 +130,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
 
   async getByParentRoot(root: Root): Promise<allForks.SignedBeaconBlock | null> {
     const slot = await this.getSlotByParentRoot(root);
-    return slot !== null ? await this.get(slot) : null;
+    return slot !== null ? this.get(slot) : null;
   }
 
   async getSlotByRoot(root: Root): Promise<Slot | null> {

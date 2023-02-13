@@ -209,7 +209,7 @@ export class Eth2Gossipsub extends GossipSub {
 
   async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number> {
     const fork = this.config.getForkName(aggregateAndProof.message.aggregate.data.slot);
-    return await this.publishObject<GossipType.beacon_aggregate_and_proof>(
+    return this.publishObject<GossipType.beacon_aggregate_and_proof>(
       {type: GossipType.beacon_aggregate_and_proof, fork},
       aggregateAndProof
     );
@@ -217,7 +217,7 @@ export class Eth2Gossipsub extends GossipSub {
 
   async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number> {
     const fork = this.config.getForkName(attestation.data.slot);
-    return await this.publishObject<GossipType.beacon_attestation>(
+    return this.publishObject<GossipType.beacon_attestation>(
       {type: GossipType.beacon_attestation, fork, subnet},
       attestation
     );

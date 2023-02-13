@@ -132,7 +132,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
 
   async metrics(): Promise<string> {
     if (this.status.status === "started") {
-      return await this.status.workerApi.metrics();
+      return this.status.workerApi.metrics();
     } else {
       return "";
     }

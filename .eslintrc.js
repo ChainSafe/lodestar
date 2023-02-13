@@ -134,6 +134,7 @@ module.exports = {
     "no-consecutive-blank-lines": 0,
     "no-console": "error",
     "no-var": "error",
+    "no-return-await": "error",
     "object-curly-spacing": ["error", "never"],
     "object-literal-sort-keys": 0,
     "no-prototype-builtins": 0,

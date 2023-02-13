@@ -116,7 +116,7 @@ export class Eth1DepositsCache {
     lastProcessedDepositBlockNumber: number | null
   ): Promise<(phase0.Eth1Data & Eth1Block)[]> {
     const highestBlock = blocks[blocks.length - 1]?.blockNumber;
-    return await getEth1DataForBlocks(
+    return getEth1DataForBlocks(
       blocks,
       this.db.depositEvent.valuesStream({lte: highestBlock, reverse: true}),
       await this.db.depositDataRoot.getDepositRootTree(),

@@ -252,7 +252,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       throw this.workers[0].status.error;
     }
 
-    return await new Promise<boolean>((resolve, reject) => {
+    return new Promise<boolean>((resolve, reject) => {
       const job = {resolve, reject, addedTimeMs: Date.now(), workReq};
 
       // Append batchable sets to `bufferedJobs`, starting a timeout to push them into `jobs`.

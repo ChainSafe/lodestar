@@ -365,7 +365,7 @@ export class ValidatorStore {
       data: {epoch},
     };
 
-    return await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
+    return this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
   }
 
   async signAttestation(
@@ -497,7 +497,7 @@ export class ValidatorStore {
       data: {slot},
     };
 
-    return await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
+    return this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
   }
 
   async signSyncCommitteeSelectionProof(
@@ -519,7 +519,7 @@ export class ValidatorStore {
       data: {slot, subcommitteeIndex},
     };
 
-    return await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
+    return this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
   }
 
   async signVoluntaryExit(

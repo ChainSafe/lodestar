@@ -12,7 +12,7 @@ export class Eth1DataCache {
   }
 
   async get({timestampRange}: {timestampRange: {gte: number; lte: number}}): Promise<phase0.Eth1DataOrdered[]> {
-    return await this.db.eth1Data.values(timestampRange);
+    return this.db.eth1Data.values(timestampRange);
   }
 
   async add(eth1Datas: (phase0.Eth1DataOrdered & {timestamp: number})[]): Promise<void> {

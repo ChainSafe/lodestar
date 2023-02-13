@@ -338,7 +338,7 @@ export class BeaconChain implements IBeaconChain {
     const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
     const head = this.forkChoice.getHead();
     const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
-    return await this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getDuties);
+    return this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getDuties);
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
@@ -350,7 +350,7 @@ export class BeaconChain implements IBeaconChain {
     if (!block) {
       return null;
     }
-    return await this.db.block.get(fromHexString(block.blockRoot));
+    return this.db.block.get(fromHexString(block.blockRoot));
   }
 
   produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; blockValue: Wei}> {
@@ -436,11 +436,11 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void> {
-    return await this.blockProcessor.processBlocksJob([block], opts);
+    return this.blockProcessor.processBlocksJob([block], opts);
   }
 
   async processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void> {
-    return await this.blockProcessor.processBlocksJob(blocks, opts);
+    return this.blockProcessor.processBlocksJob(blocks, opts);
   }
 
   getStatus(): phase0.Status {
