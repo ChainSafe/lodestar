@@ -52,12 +52,21 @@ export function upgradeLightClientHeader(
   targetFork: ForkName,
   header: altair.LightClientHeader
 ): allForks.LightClientHeader {
-  const upgradedHeader = header;
-
   const headerFork = config.getForkName(header.beacon.slot);
-  switch (headerFork) {
-    case ForkName.phase0:
-      throw Error(`Invalid target fork=${headerFork} for LightClientHeader`);
+  if (ForkSeq[headerFork] >= ForkSeq[targetFork]) {
+    throw Error(`Invalid upgrade request from headerFork=${headerFork} to targetFork=${targetFork}`);
+  }
+
+  // We are modifying the same header object, may be we could create a copy, but its
+  // not required as of now
+  const upgradedHeader = header as allForks.LightClientHeader;
+  const startUpgradeFromFork = Object.values(ForkName)[ForkSeq[headerFork] + 1];
+
+  switch (startUpgradeFromFork) {
+    default:
+      throw Error(
+        `Invalid startUpgradeFromFork=${startUpgradeFromFork} for headerFork=${headerFork} in upgradeLightClientHeader to targetFork=${targetFork}`
+      );
 
     case ForkName.altair:
     case ForkName.bellatrix:
