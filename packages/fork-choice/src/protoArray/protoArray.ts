@@ -745,14 +745,20 @@ export class ProtoArray {
       correctJustified = node.unrealizedJustifiedEpoch >= previousEpoch && votingSourceEpoch + 2 >= currentEpoch;
     }
 
+    const finalizedSlot = computeStartSlotAtEpoch(this.finalizedEpoch);
+    const correctFinalized =
+      this.finalizedRoot === this.getAncestorOrNull(node.blockRoot, finalizedSlot) || this.finalizedEpoch === 0;
+    return correctJustified && correctFinalized;
+  }
+
+  /**
+   * Same to getAncestor but it may return null instead of throwing error
+   */
+  getAncestorOrNull(blockRoot: RootHex, ancestorSlot: Slot): RootHex | null {
     try {
-      const finalizedSlot = computeStartSlotAtEpoch(this.finalizedEpoch);
-      const correctFinalized =
-        this.finalizedRoot === this.getAncestor(node.blockRoot, finalizedSlot) || this.finalizedEpoch === 0;
-      return correctJustified && correctFinalized;
+      return this.getAncestor(blockRoot, ancestorSlot);
     } catch (_) {
-      // getAncestor may throw here, just return false
-      return false;
+      return null;
     }
   }
 
