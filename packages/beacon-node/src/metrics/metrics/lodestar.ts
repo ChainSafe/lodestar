@@ -746,7 +746,11 @@ export function createLodestarMetrics(
       validatorsConnected: register.gauge({
         name: "validator_monitor_validators",
         help: "Count of validators that are specifically monitored by this beacon node",
-        labelNames: ["index"],
+      }),
+
+      validatorsInSyncCommittee: register.gauge({
+        name: "validator_monitor_validators_in_sync_committee",
+        help: "Count of validators monitored by this beacon node that are part of sync committee",
       }),
 
       // Validator Monitor Metrics (per-epoch summaries)

@@ -20,6 +20,7 @@ export enum OpSource {
 
 export interface IValidatorMonitor {
   registerLocalValidator(index: number): void;
+  registerLocalValidatorInSyncCommittee(index: number, untilEpoch: number): void;
   registerValidatorStatuses(currentEpoch: Epoch, statuses: IAttesterStatus[], balances?: number[]): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
   registerImportedBlock(block: allForks.BeaconBlock, data: {proposerBalanceDelta: number}): void;
@@ -160,6 +161,7 @@ type MonitoredValidator = {
   index: number;
   /// A history of the validator over time. */
   summaries: Map<Epoch, EpochSummary>;
+  inSyncCommitteeUntilEpoch: number;
 };
 
 export function createValidatorMonitor(
@@ -176,7 +178,14 @@ export function createValidatorMonitor(
   return {
     registerLocalValidator(index) {
       if (!validators.has(index)) {
-        validators.set(index, {index, summaries: new Map<Epoch, EpochSummary>()});
+        validators.set(index, {index, summaries: new Map<Epoch, EpochSummary>(), inSyncCommitteeUntilEpoch: -1});
+      }
+    },
+
+    registerLocalValidatorInSyncCommittee(index, untilEpoch) {
+      const validator = validators.get(index);
+      if (validator) {
+        validator.inSyncCommitteeUntilEpoch = Math.max(untilEpoch, validator.inSyncCommitteeUntilEpoch ?? -1);
       }
     },
 
@@ -445,6 +454,8 @@ export function createValidatorMonitor(
       metrics.validatorMonitor.prevEpochAttestationBlockInclusions.reset();
       metrics.validatorMonitor.prevEpochAttestationBlockMinInclusionDistance.reset();
 
+      let validatorsInSyncCommittee = 0;
+
       for (const validator of validators.values()) {
         const summary = validator.summaries.get(previousEpoch);
         if (!summary) {
@@ -472,7 +483,14 @@ export function createValidatorMonitor(
         metrics.validatorMonitor.prevEpochAggregatesTotal.observe(summary.aggregates);
         if (summary.aggregateMinDelay !== null)
           metrics.validatorMonitor.prevEpochAggregatesMinDelaySeconds.observe(summary.aggregateMinDelay);
+
+        // Sync committee
+        if (validator.inSyncCommitteeUntilEpoch >= epoch) {
+          validatorsInSyncCommittee++;
+        }
       }
+
+      metrics.validatorMonitor.validatorsInSyncCommittee.set(validatorsInSyncCommittee);
     },
   };
 }

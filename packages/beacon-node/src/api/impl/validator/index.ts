@@ -647,6 +647,12 @@ export function getValidatorApi({
       }
 
       network.prepareSyncCommitteeSubnets(subs);
+
+      if (metrics) {
+        for (const subscription of subscriptions) {
+          metrics.registerLocalValidatorInSyncCommittee(subscription.validatorIndex, subscription.untilEpoch);
+        }
+      }
     },
 
     async prepareBeaconProposer(proposers) {
