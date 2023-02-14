@@ -1,6 +1,6 @@
 import {computeEpochAtSlot, IAttesterStatus, parseAttesterFlags} from "@lodestar/state-transition";
 import {ILogger} from "@lodestar/utils";
-import {allForks} from "@lodestar/types";
+import {allForks, altair} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
@@ -20,10 +20,15 @@ export enum OpSource {
 
 export interface IValidatorMonitor {
   registerLocalValidator(index: number): void;
-  registerLocalValidatorInSyncCommittee(index: number, untilEpoch: number): void;
+  registerLocalValidatorInSyncCommittee(index: number, untilEpoch: Epoch): void;
   registerValidatorStatuses(currentEpoch: Epoch, statuses: IAttesterStatus[], balances?: number[]): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
   registerImportedBlock(block: allForks.BeaconBlock, data: {proposerBalanceDelta: number}): void;
+  registerImportedBlockSyncAggregate(
+    epoch: Epoch,
+    syncAggregate: altair.SyncAggregate,
+    syncCommitteeIndices: number[]
+  ): void;
   submitUnaggregatedAttestation(
     seenTimestampSec: number,
     indexedAttestation: IndexedAttestation,
@@ -122,6 +127,10 @@ type EpochSummary = {
   aggregates: number;
   /** The delay between when the aggregate should have been produced and when it was observed. */
   aggregateMinDelay: Seconds | null;
+  /** Count of times validator expected in sync aggregate participated */
+  syncCommitteeHits: number;
+  /** Count of times validator expected in sync aggregate failed to participate */
+  syncCommitteeMisses: number;
 };
 
 function withEpochSummary(validator: MonitoredValidator, epoch: Epoch, fn: (summary: EpochSummary) => void): void {
@@ -138,6 +147,8 @@ function withEpochSummary(validator: MonitoredValidator, epoch: Epoch, fn: (summ
       aggregates: 0,
       aggregateMinDelay: null,
       attestationCorrectHead: null,
+      syncCommitteeHits: 0,
+      syncCommitteeMisses: 0,
     };
     validator.summaries.set(epoch, summary);
   }
@@ -288,6 +299,21 @@ export function createValidatorMonitor(
     registerImportedBlock(block, {proposerBalanceDelta}) {
       if (validators.has(block.proposerIndex)) {
         metrics.validatorMonitor.proposerBalanceDeltaKnown.observe(proposerBalanceDelta);
+      }
+    },
+
+    registerImportedBlockSyncAggregate(epoch, syncAggregate, syncCommitteeIndices) {
+      for (let i = 0; i < syncCommitteeIndices.length; i++) {
+        const validator = validators.get(syncCommitteeIndices[i]);
+        if (validator) {
+          withEpochSummary(validator, epoch, (summary) => {
+            if (syncAggregate.syncCommitteeBits.get(i)) {
+              summary.syncCommitteeHits++;
+            } else {
+              summary.syncCommitteeMisses++;
+            }
+          });
+        }
       }
     },
 
@@ -455,8 +481,16 @@ export function createValidatorMonitor(
       metrics.validatorMonitor.prevEpochAttestationBlockMinInclusionDistance.reset();
 
       let validatorsInSyncCommittee = 0;
+      let prevEpochSyncCommitteeHits = 0;
+      let prevEpochSyncCommitteeMisses = 0;
 
       for (const validator of validators.values()) {
+        // Participation in sync committee
+        if (validator.inSyncCommitteeUntilEpoch >= epoch) {
+          validatorsInSyncCommittee++;
+        }
+
+        // Prev-epoch summary
         const summary = validator.summaries.get(previousEpoch);
         if (!summary) {
           continue;
@@ -485,12 +519,13 @@ export function createValidatorMonitor(
           metrics.validatorMonitor.prevEpochAggregatesMinDelaySeconds.observe(summary.aggregateMinDelay);
 
         // Sync committee
-        if (validator.inSyncCommitteeUntilEpoch >= epoch) {
-          validatorsInSyncCommittee++;
-        }
+        prevEpochSyncCommitteeHits += summary.syncCommitteeHits;
+        prevEpochSyncCommitteeMisses += summary.syncCommitteeMisses;
       }
 
       metrics.validatorMonitor.validatorsInSyncCommittee.set(validatorsInSyncCommittee);
+      metrics.validatorMonitor.prevEpochSyncCommitteeHits.set(prevEpochSyncCommitteeHits);
+      metrics.validatorMonitor.prevEpochSyncCommitteeMisses.set(prevEpochSyncCommitteeMisses);
     },
   };
 }

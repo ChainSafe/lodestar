@@ -1,5 +1,5 @@
-import {capella, ssz, allForks} from "@lodestar/types";
-import {MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {capella, ssz, allForks, altair} from "@lodestar/types";
+import {ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAltair,
@@ -384,6 +384,13 @@ export async function importBlock(
   this.metrics?.parentBlockDistance.observe(block.message.slot - parentBlockSlot);
   this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
   this.metrics?.registerImportedBlock(block.message, fullyVerifiedBlock);
+  if (this.config.getForkSeq(block.message.slot) >= ForkSeq.altair) {
+    this.metrics?.registerImportedBlockSyncAggregate(
+      blockEpoch,
+      (block as altair.SignedBeaconBlock).message.body.syncAggregate,
+      fullyVerifiedBlock.postState.epochCtx.currentSyncCommitteeIndexed.validatorIndices
+    );
+  }
 
   const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
 

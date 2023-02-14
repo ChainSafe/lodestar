@@ -854,6 +854,14 @@ export function createLodestarMetrics(
         help: "The min delay between when the validator should send the aggregate and when it was received",
         buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
       }),
+      prevEpochSyncCommitteeHits: register.gauge({
+        name: "validator_monitor_prev_epoch_sync_committee_hits",
+        help: "Count of times in prev epoch connected validators participated in imported block's syncAggregate",
+      }),
+      prevEpochSyncCommitteeMisses: register.gauge({
+        name: "validator_monitor_prev_epoch_sync_committee_misses",
+        help: "Count of times in prev epoch connected validators fail to participate in imported block's syncAggregate",
+      }),
 
       // Validator Monitor Metrics (real-time)
 
