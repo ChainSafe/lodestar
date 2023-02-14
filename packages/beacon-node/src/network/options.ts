@@ -4,7 +4,13 @@ import {defaultGossipHandlerOpts, GossipHandlerOpts} from "./gossip/handlers/ind
 import {PeerManagerOpts} from "./peers/index.js";
 import {ReqRespBeaconNodeOpts} from "./reqresp/ReqRespBeaconNode.js";
 
-export interface INetworkOptions extends PeerManagerOpts, ReqRespBeaconNodeOpts, GossipHandlerOpts, Eth2GossipsubOpts {
+// Since Network is eventually intended to be run in a separate thread, ensure that all options are cloneable using structuredClone
+export interface INetworkOptions
+  extends PeerManagerOpts,
+    // remove all Functions
+    Omit<ReqRespBeaconNodeOpts, "getPeerLogMetadata" | "onRateLimit">,
+    GossipHandlerOpts,
+    Eth2GossipsubOpts {
   localMultiaddrs: string[];
   bootMultiaddrs?: string[];
   subscribeAllSubnets?: boolean;
