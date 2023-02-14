@@ -40,10 +40,6 @@ export const syncStateMetric: {[K in SyncState]: number} = {
   [SyncState.Synced]: 3,
 };
 
-export interface ISyncModule {
-  getHighestBlock(): Slot;
-}
-
 export interface ISlotRange {
   start: Slot;
   end: Slot;
