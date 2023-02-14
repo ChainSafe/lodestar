@@ -301,7 +301,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     },
 
     [GossipType.sync_committee_contribution_and_proof]: async (contributionAndProof) => {
-      const {syncCommitteeParticipants} = await validateSyncCommitteeGossipContributionAndProof(
+      const {syncCommitteeParticipantIndices} = await validateSyncCommitteeGossipContributionAndProof(
         chain,
         contributionAndProof
       ).catch((e) => {
@@ -312,9 +312,10 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       });
 
       // Handler
+      metrics?.registerGossipSyncContributionAndProof(contributionAndProof.message, syncCommitteeParticipantIndices);
 
       try {
-        chain.syncContributionAndProofPool.add(contributionAndProof.message, syncCommitteeParticipants);
+        chain.syncContributionAndProofPool.add(contributionAndProof.message, syncCommitteeParticipantIndices.length);
       } catch (e) {
         logger.error("Error adding to contributionAndProof pool", {}, e as Error);
       }

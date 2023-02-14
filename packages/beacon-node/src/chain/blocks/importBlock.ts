@@ -385,7 +385,7 @@ export async function importBlock(
   this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
   this.metrics?.registerImportedBlock(block.message, fullyVerifiedBlock);
   if (this.config.getForkSeq(block.message.slot) >= ForkSeq.altair) {
-    this.metrics?.registerImportedBlockSyncAggregate(
+    this.metrics?.registerSyncAggregateInBlock(
       blockEpoch,
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,
       fullyVerifiedBlock.postState.epochCtx.currentSyncCommitteeIndexed.validatorIndices

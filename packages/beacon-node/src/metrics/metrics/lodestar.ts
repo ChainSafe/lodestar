@@ -862,6 +862,11 @@ export function createLodestarMetrics(
         name: "validator_monitor_prev_epoch_sync_committee_misses",
         help: "Count of times in prev epoch connected validators fail to participate in imported block's syncAggregate",
       }),
+      prevEpochSyncSignatureAggregateInclusions: register.histogram({
+        name: "validator_monitor_prev_epoch_sync_signature_aggregate_inclusions",
+        help: "The count of times a sync signature was seen inside an aggregate",
+        buckets: [0, 1, 2, 3, 5, 10],
+      }),
 
       // Validator Monitor Metrics (real-time)
 
@@ -914,6 +919,10 @@ export function createLodestarMetrics(
         name: "validator_monitor_attestation_in_block_delay_slots",
         help: "The excess slots (beyond the minimum delay) between the attestation slot and the block slot",
         buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
+      }),
+      syncSignatureInAggregateTotal: register.gauge({
+        name: "validator_monitor_sync_signature_in_aggregate_total",
+        help: "Number of times a sync signature has been seen in an aggregate",
       }),
       beaconBlockTotal: register.gauge<"src">({
         name: "validator_monitor_beacon_block_total",
