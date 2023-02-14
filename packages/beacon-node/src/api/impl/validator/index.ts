@@ -564,12 +564,15 @@ export function getValidatorApi({
         contributionAndProofs.map(async (contributionAndProof, i) => {
           try {
             // TODO: Validate in batch
-            const {syncCommitteeParticipants} = await validateSyncCommitteeGossipContributionAndProof(
+            const {syncCommitteeParticipantIndices} = await validateSyncCommitteeGossipContributionAndProof(
               chain,
               contributionAndProof,
               true // skip known participants check
             );
-            chain.syncContributionAndProofPool.add(contributionAndProof.message, syncCommitteeParticipants);
+            chain.syncContributionAndProofPool.add(
+              contributionAndProof.message,
+              syncCommitteeParticipantIndices.length
+            );
             await network.gossip.publishContributionAndProof(contributionAndProof);
           } catch (e) {
             errors.push(e as Error);
@@ -647,6 +650,12 @@ export function getValidatorApi({
       }
 
       network.prepareSyncCommitteeSubnets(subs);
+
+      if (metrics) {
+        for (const subscription of subscriptions) {
+          metrics.registerLocalValidatorInSyncCommittee(subscription.validatorIndex, subscription.untilEpoch);
+        }
+      }
     },
 
     async prepareBeaconProposer(proposers) {
