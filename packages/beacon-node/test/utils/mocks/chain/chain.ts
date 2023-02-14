@@ -66,6 +66,7 @@ export class MockBeaconChain implements IBeaconChain {
     proposerBoostEnabled: false,
     safeSlotsToImportOptimistically: 0,
     suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
+    archiveStateEpochFrequency: 1024,
   };
   readonly anchorStateLatestBlockSlot: Slot;
 

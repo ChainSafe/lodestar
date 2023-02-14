@@ -60,4 +60,5 @@ export const defaultChainOptions: IChainOptions = {
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   assertCorrectProgressiveBalances: false,
+  archiveStateEpochFrequency: 1024,
 };

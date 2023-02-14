@@ -86,6 +86,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           disableArchiveOnCheckpoint: true,
           suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
           skipCreateStateCacheIfAvailable: true,
+          archiveStateEpochFrequency: 1024,
         },
         {
           config: state.config,
