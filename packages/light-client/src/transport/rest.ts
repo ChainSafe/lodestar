@@ -15,7 +15,7 @@ type RestEvents = StrictEventEmitter<EventEmitter, LightClientRestEvents>;
 export class LightClientRestTransport extends (EventEmitter as {new (): RestEvents}) implements LightClientTransport {
   private controller = new AbortController();
   private readonly eventEmitter: StrictEventEmitter<EventEmitter, LightClientRestEvents> = new EventEmitter();
-  private subscribedEventstream = false;
+  private subscribedEventStream = false;
 
   constructor(private readonly api: Api) {
     super();
@@ -60,17 +60,17 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
   }
 
   onOptimisticUpdate(handler: (optimisticUpdate: altair.LightClientOptimisticUpdate) => void): void {
-    this.subscribeEventstream();
+    this.subscribeEventStream();
     this.eventEmitter.on(routes.events.EventType.lightClientOptimisticUpdate, handler);
   }
 
   onFinalityUpdate(handler: (finalityUpdate: altair.LightClientFinalityUpdate) => void): void {
-    this.subscribeEventstream();
+    this.subscribeEventStream();
     this.eventEmitter.on(routes.events.EventType.lightClientFinalityUpdate, handler);
   }
 
-  private subscribeEventstream(): void {
-    if (this.subscribedEventstream) {
+  private subscribeEventStream(): void {
+    if (this.subscribedEventStream) {
       return;
     }
 
@@ -89,5 +89,6 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
         }
       }
     );
+    this.subscribedEventStream = true;
   }
 }
