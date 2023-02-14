@@ -27,6 +27,13 @@ export function getDebugApi({
       };
     },
 
+    async getProtoArrayNodes() {
+      const nodes = chain.forkChoice
+        .getAllNodes()
+        .map((node) => ({...node, executionPayloadBlockHash: node.executionPayloadBlockHash ?? ""}));
+      return {data: nodes};
+    },
+
     async getState(stateId: string | number, format?: routes.debug.StateFormat) {
       const {state} = await resolveStateId(config, chain, db, stateId, {regenFinalizedState: true});
       if (format === "ssz") {

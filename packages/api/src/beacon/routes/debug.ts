@@ -1,6 +1,7 @@
 import {ForkName} from "@lodestar/params";
 import {allForks, Slot, RootHex, ssz, StringType} from "@lodestar/types";
 import {ContainerType} from "@chainsafe/ssz";
+import {ProtoNode} from "@lodestar/fork-choice";
 import {
   ArrayOf,
   ReturnTypes,
@@ -25,6 +26,11 @@ import {ExecutionOptimistic, StateId} from "./beacon/state.js";
 export type StateFormat = "json" | "ssz";
 export const mimeTypeSSZ = "application/octet-stream";
 
+type ProtoNodeApiType = Omit<ProtoNode, "executionPayloadBlockHash" | "executionStatus"> & {
+  executionPayloadBlockHash: string;
+  executionStatus: string;
+};
+
 export type Api = {
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
@@ -39,6 +45,11 @@ export type Api = {
       [HttpStatusCode.OK]: {data: {slot: Slot; root: RootHex; executionOptimistic: ExecutionOptimistic}[]};
     }>
   >;
+
+  /**
+   * Dump all ProtoArray's nodes to debug
+   */
+  getProtoArrayNodes(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: ProtoNodeApiType[]}}>>;
 
   /**
    * Get full BeaconState object
@@ -96,6 +107,7 @@ export type Api = {
 export const routesData: RoutesData<Api> = {
   getDebugChainHeads: {url: "/eth/v1/debug/beacon/heads", method: "GET"},
   getDebugChainHeadsV2: {url: "/eth/v2/debug/beacon/heads", method: "GET"},
+  getProtoArrayNodes: {url: "/eth/v0/debug/forkchoice", method: "GET"},
   getState: {url: "/eth/v1/debug/beacon/states/{state_id}", method: "GET"},
   getStateV2: {url: "/eth/v2/debug/beacon/states/{state_id}", method: "GET"},
 };
@@ -105,6 +117,7 @@ export const routesData: RoutesData<Api> = {
 export type ReqTypes = {
   getDebugChainHeads: ReqEmpty;
   getDebugChainHeadsV2: ReqEmpty;
+  getProtoArrayNodes: ReqEmpty;
   getState: {params: {state_id: string}; headers: {accept?: string}};
   getStateV2: {params: {state_id: string}; headers: {accept?: string}};
 };
@@ -122,6 +135,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   return {
     getDebugChainHeads: reqEmpty,
     getDebugChainHeadsV2: reqEmpty,
+    getProtoArrayNodes: reqEmpty,
     getState: getState,
     getStateV2: getState,
   };
@@ -146,9 +160,35 @@ export function getReturnTypes(): ReturnTypes<Api> {
     {jsonCase: "eth2"}
   );
 
+  const ProtoNodeSszType = new ContainerType(
+    {
+      executionPayloadBlockHash: stringType,
+      executionStatus: stringType,
+      slot: ssz.Slot,
+      blockRoot: stringType,
+      parentRoot: stringType,
+      stateRoot: stringType,
+      targetRoot: stringType,
+      justifiedEpoch: ssz.Epoch,
+      justifiedRoot: stringType,
+      finalizedEpoch: ssz.Epoch,
+      finalizedRoot: stringType,
+      unrealizedJustifiedEpoch: ssz.Epoch,
+      unrealizedJustifiedRoot: stringType,
+      unrealizedFinalizedEpoch: ssz.Epoch,
+      unrealizedFinalizedRoot: stringType,
+      parent: ssz.Uint32,
+      weight: ssz.Uint32,
+      bestChild: ssz.Uint32,
+      bestDescendant: ssz.Uint32,
+    },
+    {jsonCase: "eth2"}
+  );
+
   return {
     getDebugChainHeads: ContainerData(ArrayOf(SlotRoot)),
     getDebugChainHeadsV2: ContainerData(ArrayOf(SlotRootExecutionOptimistic)),
+    getProtoArrayNodes: ContainerData(ArrayOf(ProtoNodeSszType)),
     getState: ContainerDataExecutionOptimistic(ssz.phase0.BeaconState),
     getStateV2: WithExecutionOptimistic(
       // Teku returns fork as UPPERCASE
