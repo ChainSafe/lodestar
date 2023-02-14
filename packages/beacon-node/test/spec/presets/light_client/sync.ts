@@ -32,6 +32,7 @@ type SyncTestCase = {
   };
 
   // Injected after parsing
+  // However updates are multifork and need config and step access to deserialize inside test
   updates: Map<string, Uint8Array>;
 };
 
