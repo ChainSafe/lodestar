@@ -89,5 +89,6 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
         }
       }
     );
+    this.subscribedEventstream = true;
   }
 }
