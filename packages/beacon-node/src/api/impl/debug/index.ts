@@ -28,9 +28,13 @@ export function getDebugApi({
     },
 
     async getProtoArrayNodes() {
-      const nodes = chain.forkChoice
-        .getAllNodes()
-        .map((node) => ({...node, executionPayloadBlockHash: node.executionPayloadBlockHash ?? ""}));
+      const nodes = chain.forkChoice.getAllNodes().map((node) => ({
+        ...node,
+        executionPayloadBlockHash: node.executionPayloadBlockHash ?? "",
+        parent: String(node.parent),
+        bestChild: String(node.bestChild),
+        bestDescendant: String(node.bestDescendant),
+      }));
       return {data: nodes};
     },
 

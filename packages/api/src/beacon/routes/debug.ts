@@ -26,9 +26,15 @@ import {ExecutionOptimistic, StateId} from "./beacon/state.js";
 export type StateFormat = "json" | "ssz";
 export const mimeTypeSSZ = "application/octet-stream";
 
-type ProtoNodeApiType = Omit<ProtoNode, "executionPayloadBlockHash" | "executionStatus"> & {
+type ProtoNodeApiType = Omit<
+  ProtoNode,
+  "executionPayloadBlockHash" | "executionStatus" | "parent" | "bestChild" | "bestDescendant"
+> & {
   executionPayloadBlockHash: string;
   executionStatus: string;
+  parent: string;
+  bestChild: string;
+  bestDescendant: string;
 };
 
 export type Api = {
@@ -177,10 +183,10 @@ export function getReturnTypes(): ReturnTypes<Api> {
       unrealizedJustifiedRoot: stringType,
       unrealizedFinalizedEpoch: ssz.Epoch,
       unrealizedFinalizedRoot: stringType,
-      parent: ssz.Uint32,
+      parent: stringType,
       weight: ssz.Uint32,
-      bestChild: ssz.Uint32,
-      bestDescendant: ssz.Uint32,
+      bestChild: stringType,
+      bestDescendant: stringType,
     },
     {jsonCase: "eth2"}
   );
