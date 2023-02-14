@@ -89,7 +89,7 @@ export function fromGraffitiHex(hex: string): string {
   try {
     return new TextDecoder("utf8").decode(fromHexString(hex));
   } catch {
-    // allow malformed graffiti
-    return "";
+    // allow malformed graffiti hex string
+    return hex;
   }
 }
