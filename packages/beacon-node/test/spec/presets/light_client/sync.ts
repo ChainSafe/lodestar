@@ -1,4 +1,5 @@
 import {expect} from "chai";
+import {isForkLightClient} from "@lodestar/params";
 import {altair, phase0, RootHex, Slot, ssz} from "@lodestar/types";
 import {init} from "@chainsafe/bls/switchable";
 import {InputType} from "@lodestar/spec-test-util";
@@ -31,7 +32,8 @@ type SyncTestCase = {
   };
 
   // Injected after parsing
-  updates: Map<string, altair.LightClientUpdate>;
+  // However updates are multifork and need config and step access to deserialize inside test
+  updates: Map<string, Uint8Array>;
 };
 
 type CheckHeader = {
@@ -73,7 +75,7 @@ type LightclientSyncSteps = ProcessUpdateStep | ForceUpdateStep;
 const logger = testLogger("spec-test");
 const UPDATE_FILE_NAME = "^(update)_([0-9a-zA-Z_]+)$";
 
-export const sync: TestRunnerFn<SyncTestCase, void> = () => {
+export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
   return {
     testFunction: async (testcase) => {
       await init("blst-native");
@@ -125,10 +127,13 @@ export const sync: TestRunnerFn<SyncTestCase, void> = () => {
             const currentSlot = Number(step.process_update.current_slot as bigint);
             logger.debug(`Step ${i}/${stepsLen} process_update`, renderSlot(currentSlot));
 
-            const update = testcase.updates.get(step.process_update.update);
-            if (!update) {
+            const updateBytes = testcase.updates.get(step.process_update.update);
+            if (!updateBytes) {
               throw Error(`update ${step.process_update.update} not found`);
             }
+
+            const headerSlot = Number(step.process_update.checks.optimistic_header.slot);
+            const update = config.getLightClientForkTypes(headerSlot)["LightClientUpdate"].deserialize(updateBytes);
 
             logger.debug(`LightclientUpdateSummary: ${JSON.stringify(toLightClientUpdateSummary(update))}`);
 
@@ -165,12 +170,15 @@ export const sync: TestRunnerFn<SyncTestCase, void> = () => {
         config: InputType.YAML,
       },
       sszTypes: {
-        bootstrap: ssz.altair.LightClientBootstrap,
-        [UPDATE_FILE_NAME]: ssz.altair.LightClientUpdate,
+        bootstrap: isForkLightClient(fork)
+          ? ssz.allForksLightClient[fork].LightClientBootstrap
+          : ssz.altair.LightClientBootstrap,
+        // The updates are multifork and need config and step info to be deserialized within the test
+        [UPDATE_FILE_NAME]: {typeName: "LightClientUpdate", deserialize: (bytes: Uint8Array) => bytes},
       },
       mapToTestCase: (t: Record<string, any>) => {
         // t has input file name as key
-        const updates = new Map<string, altair.LightClientUpdate>();
+        const updates = new Map<string, Uint8Array>();
         for (const key in t) {
           const updateMatch = key.match(UPDATE_FILE_NAME);
           if (updateMatch) {
