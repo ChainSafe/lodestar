@@ -86,5 +86,10 @@ export function toGraffitiHex(utf8: string): string {
 }
 
 export function fromGraffitiHex(hex: string): string {
-  return new TextDecoder("utf8").decode(fromHexString(hex));
+  try {
+    return new TextDecoder("utf8").decode(fromHexString(hex));
+  } catch {
+    // allow malformed graffiti
+    return "";
+  }
 }
