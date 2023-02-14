@@ -1,5 +1,6 @@
 import {expect} from "chai";
-import {altair, ssz} from "@lodestar/types";
+import {altair, ssz, allForks} from "@lodestar/types";
+import {isForkLightClient} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {isBetterUpdate, LightClientUpdateSummary, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
 import {TestRunnerFn} from "../../utils/types.js";
@@ -16,12 +17,12 @@ type UpdateRankingTestCase = {
 // updates_<index>.ssz_snappy
 const UPDATES_FILE_NAME = "^updates_([0-9]+)$";
 
-export const updateRanking: TestRunnerFn<UpdateRankingTestCase, void> = () => {
+export const updateRanking: TestRunnerFn<UpdateRankingTestCase, void> = (fork) => {
   return {
     testFunction: (testcase) => {
       // Parse update files
       const updatesCount = Number(testcase.meta.updates_count as bigint);
-      const updates: altair.LightClientUpdate[] = [];
+      const updates: allForks.LightClientUpdate[] = [];
 
       for (let i = 0; i < updatesCount; i++) {
         const update = ((testcase as unknown) as Record<string, altair.LightClientUpdate>)[`updates_${i}`];
@@ -52,7 +53,9 @@ newUpdate = ${renderUpdate(newUpdate)}
         meta: InputType.YAML,
       },
       sszTypes: {
-        [UPDATES_FILE_NAME]: ssz.altair.LightClientUpdate,
+        [UPDATES_FILE_NAME]: isForkLightClient(fork)
+          ? ssz.allForksLightClient[fork].LightClientUpdate
+          : ssz.altair.LightClientUpdate,
       },
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       expectFunc: () => {},
