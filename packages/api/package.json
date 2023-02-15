@@ -74,7 +74,6 @@
     "@lodestar/params": "^1.4.3",
     "@lodestar/types": "^1.4.3",
     "@lodestar/utils": "^1.4.3",
-    "@lodestar/fork-choice": "1.4.3",
     "cross-fetch": "^3.1.4",
     "eventsource": "^2.0.2",
     "qs": "^6.10.1"

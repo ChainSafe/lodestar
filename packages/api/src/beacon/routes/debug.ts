@@ -1,7 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {allForks, Slot, RootHex, ssz, StringType} from "@lodestar/types";
-import {ContainerType} from "@chainsafe/ssz";
-import {ProtoNode} from "@lodestar/fork-choice";
+import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {
   ArrayOf,
   ReturnTypes,
@@ -26,16 +25,33 @@ import {ExecutionOptimistic, StateId} from "./beacon/state.js";
 export type StateFormat = "json" | "ssz";
 export const mimeTypeSSZ = "application/octet-stream";
 
-type ProtoNodeApiType = Omit<
-  ProtoNode,
-  "executionPayloadBlockHash" | "executionStatus" | "parent" | "bestChild" | "bestDescendant"
-> & {
-  executionPayloadBlockHash: string;
-  executionStatus: string;
-  parent: string;
-  bestChild: string;
-  bestDescendant: string;
-};
+const stringType = new StringType();
+const protoNodeSszType = new ContainerType(
+  {
+    executionPayloadBlockHash: stringType,
+    executionStatus: stringType,
+    slot: ssz.Slot,
+    blockRoot: stringType,
+    parentRoot: stringType,
+    stateRoot: stringType,
+    targetRoot: stringType,
+    justifiedEpoch: ssz.Epoch,
+    justifiedRoot: stringType,
+    finalizedEpoch: ssz.Epoch,
+    finalizedRoot: stringType,
+    unrealizedJustifiedEpoch: ssz.Epoch,
+    unrealizedJustifiedRoot: stringType,
+    unrealizedFinalizedEpoch: ssz.Epoch,
+    unrealizedFinalizedRoot: stringType,
+    parent: stringType,
+    weight: ssz.Uint32,
+    bestChild: stringType,
+    bestDescendant: stringType,
+  },
+  {jsonCase: "eth2"}
+);
+
+type ProtoNodeApiType = ValueOf<typeof protoNodeSszType>;
 
 export type Api = {
   /**
@@ -148,7 +164,6 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
-  const stringType = new StringType();
   const SlotRoot = new ContainerType(
     {
       slot: ssz.Slot,
@@ -166,35 +181,10 @@ export function getReturnTypes(): ReturnTypes<Api> {
     {jsonCase: "eth2"}
   );
 
-  const ProtoNodeSszType = new ContainerType(
-    {
-      executionPayloadBlockHash: stringType,
-      executionStatus: stringType,
-      slot: ssz.Slot,
-      blockRoot: stringType,
-      parentRoot: stringType,
-      stateRoot: stringType,
-      targetRoot: stringType,
-      justifiedEpoch: ssz.Epoch,
-      justifiedRoot: stringType,
-      finalizedEpoch: ssz.Epoch,
-      finalizedRoot: stringType,
-      unrealizedJustifiedEpoch: ssz.Epoch,
-      unrealizedJustifiedRoot: stringType,
-      unrealizedFinalizedEpoch: ssz.Epoch,
-      unrealizedFinalizedRoot: stringType,
-      parent: stringType,
-      weight: ssz.Uint32,
-      bestChild: stringType,
-      bestDescendant: stringType,
-    },
-    {jsonCase: "eth2"}
-  );
-
   return {
     getDebugChainHeads: ContainerData(ArrayOf(SlotRoot)),
     getDebugChainHeadsV2: ContainerData(ArrayOf(SlotRootExecutionOptimistic)),
-    getProtoArrayNodes: ContainerData(ArrayOf(ProtoNodeSszType)),
+    getProtoArrayNodes: ContainerData(ArrayOf(protoNodeSszType)),
     getState: ContainerDataExecutionOptimistic(ssz.phase0.BeaconState),
     getStateV2: WithExecutionOptimistic(
       // Teku returns fork as UPPERCASE
