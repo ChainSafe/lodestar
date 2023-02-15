@@ -33,7 +33,7 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (
   const binaryPath = "";
   const containerDataDir = "/data";
   const ethRpcUrl = `http://127.0.0.1:${ethPort}`;
-  const engineRpcUrl = `http://127.0.0.1:${enginePort}`;
+  const engineRpcUrl = `http://${address}:${enginePort}`;
 
   const chainSpecPath = join(dataDir, "chain.json");
   const chainSpecContainerPath = join(containerDataDir, "chain.json");
