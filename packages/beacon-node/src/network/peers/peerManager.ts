@@ -579,8 +579,8 @@ export class PeerManager {
         const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
         peerData.agentVersion = agentVersion;
         peerData.agentClient = clientFromAgentVersion(agentVersion);
-        // test ignoring Nimbus
-        if (peerData.agentClient === ClientKind.Nimbus) {
+        // test gossiping with Nimbus
+        if (peerData.agentClient !== ClientKind.Nimbus) {
           void this.goodbyeAndDisconnect(peerData.peerId, GoodByeReasonCode.TOO_MANY_PEERS);
         }
       }
