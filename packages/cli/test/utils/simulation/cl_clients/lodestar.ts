@@ -5,19 +5,15 @@ import got from "got";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {getClient} from "@lodestar/api/beacon";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
-import {LogLevel} from "@lodestar/utils";
 import {chainConfigToJson} from "@lodestar/config";
+import {LogLevel} from "@lodestar/utils";
 import {BeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../../src/options/globalOptions.js";
-import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, Runner, RunnerType} from "../interfaces.js";
 import {LODESTAR_BINARY_PATH} from "../constants.js";
-import {isChildProcessRunner} from "../runner/index.js";
+import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, RunnerType} from "../interfaces.js";
 
 export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = (opts, runner) => {
-  if (!isChildProcessRunner(runner)) {
-    throw new Error(`Runner "${runner.type}" not yet supported.`);
-  }
   const {
     dataDir,
     address,
@@ -80,19 +76,16 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
   const validatorClientsJobs: JobOptions[] = [];
   if (keys.type !== "no-keys") {
     validatorClientsJobs.push(
-      generateLodestarValidatorJobs(
-        {
-          ...opts,
-          dataDir: join(dataDir, "validator"),
-          id: `${id}-validator`,
-          logFilePath: join(dirname(opts.logFilePath), `${id}-validator.log`),
-        },
-        runner
-      )
+      generateLodestarValidatorJobs({
+        ...opts,
+        dataDir: join(dataDir, "validator"),
+        id: `${id}-validator`,
+        logFilePath: join(dirname(opts.logFilePath), `${id}-validator.log`),
+      })
     );
   }
 
-  const job = runner.create(id, [
+  const job = runner.create([
     {
       id,
       bootstrap: async () => {
@@ -101,6 +94,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
         await writeFile(jwtSecretPath, jwtSecretHex);
         await writeFile(paramsPath, JSON.stringify(chainConfigToJson(config), null, 2));
       },
+      type: RunnerType.ChildProcess,
       cli: {
         command: LODESTAR_BINARY_PATH,
         args: ["beacon", "--rcConfig", rcConfigPath, "--paramsFile", paramsPath],
@@ -134,14 +128,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
   };
 };
 
-export const generateLodestarValidatorJobs = (
-  opts: CLClientGeneratorOptions,
-  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
-): JobOptions => {
-  if (runner.type !== RunnerType.ChildProcess) {
-    throw new Error(`Runner "${runner.type}" not yet supported.`);
-  }
-
+export const generateLodestarValidatorJobs = (opts: CLClientGeneratorOptions): JobOptions => {
   const {dataDir: rootDir, id, address, keyManagerPort, restPort, keys, config, genesisTime} = opts;
 
   if (keys.type === "no-keys") {
@@ -167,6 +154,7 @@ export const generateLodestarValidatorJobs = (
 
   return {
     id,
+    type: RunnerType.ChildProcess,
     bootstrap: async () => {
       await mkdir(rootDir);
       await mkdir(`${rootDir}/keystores`);

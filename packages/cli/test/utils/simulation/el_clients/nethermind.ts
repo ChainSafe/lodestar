@@ -3,9 +3,8 @@ import {mkdir, writeFile} from "node:fs/promises";
 import {join} from "node:path";
 import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
-import {ELClient, ELClientGenerator, JobOptions} from "../interfaces.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
-import {isDockerRunner} from "../runner/index.js";
+import {ELClient, ELClientGenerator, JobOptions, RunnerType} from "../interfaces.js";
 import {getNethermindChainSpec} from "../utils/el_genesis.js";
 
 export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (
@@ -26,10 +25,6 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (
   },
   runner
 ) => {
-  if (!isDockerRunner(runner)) {
-    throw new Error("Nethermind client only supports docker runner");
-  }
-
   if (!process.env.NETHERMIND_DOCKER_IMAGE) {
     throw Error(`EL ENV must be provided, NETHERMIND_DOCKER_IMAGE: ${process.env.NETHERMIND_DOCKER_IMAGE}`);
   }
@@ -45,8 +40,15 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (
   const jwtSecretPath = join(dataDir, "jwtsecret");
   const jwtSecretContainerPath = join(containerDataDir, "jwtsecret");
 
-  const startJobOptions: JobOptions = {
+  const startJobOptions: JobOptions<RunnerType.Docker> = {
     id,
+    type: RunnerType.Docker,
+    options: {
+      image: process.env.NETHERMIND_DOCKER_IMAGE as string,
+      dataVolumePath: dataDir,
+      exposePorts: [enginePort, ethPort, port],
+      dockerNetworkIp: address,
+    },
     bootstrap: async () => {
       await mkdir(dataDir, {recursive: true});
       await writeFile(
@@ -113,12 +115,7 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (
     },
   };
 
-  const job = runner.create(id, [startJobOptions], {
-    image: process.env.NETHERMIND_DOCKER_IMAGE as string,
-    dataVolumePath: dataDir,
-    exposePorts: [enginePort, ethPort, port],
-    dockerNetworkIp: address,
-  });
+  const job = runner.create([startJobOptions]);
 
   const provider = new Eth1ProviderWithAdmin(
     {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},

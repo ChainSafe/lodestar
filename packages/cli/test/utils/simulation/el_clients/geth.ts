@@ -3,19 +3,10 @@ import {mkdir, writeFile} from "node:fs/promises";
 import {join} from "node:path";
 import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
-import {
-  ELClient,
-  ELClientGenerator,
-  ELGeneratorClientOptions,
-  ELStartMode,
-  JobOptions,
-  Runner,
-  RunnerType,
-} from "../interfaces.js";
-import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
-import {isChildProcessRunner, isDockerRunner} from "../runner/index.js";
-import {getGethGenesisBlock} from "../utils/el_genesis.js";
 import {SIM_ENV_NETWORK_ID} from "../constants.js";
+import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
+import {ELClient, ELClientGenerator, ELStartMode, JobOptions, RunnerType} from "../interfaces.js";
+import {getGethGenesisBlock} from "../utils/el_genesis.js";
 
 const SECRET_KEY = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8";
 const PASSWORD = "12345678";
@@ -36,25 +27,18 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
     address,
     mining,
     clientOptions,
-  }: ELGeneratorClientOptions,
-  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
+  },
+  runner
 ) => {
-  if (isChildProcessRunner(runner)) {
-    if (!process.env.GETH_BINARY_DIR) {
-      throw Error(`EL ENV must be provided, GETH_BINARY_DIR: ${process.env.GETH_BINARY_DIR}`);
-    }
+  if (!process.env.GETH_BINARY_DIR && !process.env.GETH_DOCKER_IMAGE) {
+    throw new Error("GETH_BINARY_DIR or GETH_DOCKER_IMAGE must be provided");
   }
 
-  if (isDockerRunner(runner)) {
-    if (!process.env.GETH_DOCKER_IMAGE) {
-      throw Error(`EL ENV must be provided, GETH_DOCKER_IMAGE: ${process.env.GETH_DOCKER_IMAGE}`);
-    }
-  }
-
-  const binaryPath = isChildProcessRunner(runner) ? `${process.env.GETH_BINARY_DIR}/geth` : "";
-  const gethDataDir = isChildProcessRunner(runner) ? dataDir : "/data";
+  const isDocker = process.env.GETH_DOCKER_IMAGE !== undefined;
+  const binaryPath = isDocker ? "" : `${process.env.GETH_BINARY_DIR}/geth`;
+  const gethDataDir = isDocker ? "/data" : dataDir;
   const ethRpcUrl = `http://127.0.0.1:${ethPort}`;
-  const engineRpcUrl = `http://127.0.0.1:${enginePort}`;
+  const engineRpcUrl = `http://${address}:${enginePort}`;
 
   const skPath = join(dataDir, "sk.json");
   const skGethPath = join(gethDataDir, "sk.json");
@@ -67,6 +51,15 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
 
   const initJobOptions: JobOptions = {
     id: `${id}-init`,
+    type: isDocker ? RunnerType.Docker : RunnerType.ChildProcess,
+    options: isDocker
+      ? {
+          image: process.env.GETH_DOCKER_IMAGE as string,
+          exposePorts: [],
+          dataVolumePath: dataDir,
+          dockerNetworkIp: address,
+        }
+      : undefined,
     bootstrap: async () => {
       await mkdir(dataDir, {recursive: true});
       await writeFile(
@@ -86,6 +79,15 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
 
   const importJobOptions: JobOptions = {
     id: `${id}-import`,
+    type: isDocker ? RunnerType.Docker : RunnerType.ChildProcess,
+    options: isDocker
+      ? {
+          image: process.env.GETH_DOCKER_IMAGE as string,
+          exposePorts: [],
+          dataVolumePath: dataDir,
+          dockerNetworkIp: address,
+        }
+      : undefined,
     bootstrap: async () => {
       await writeFile(skPath, SECRET_KEY);
       await writeFile(passwordPath, PASSWORD);
@@ -113,6 +115,15 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
 
   const startJobOptions: JobOptions = {
     id,
+    type: isDocker ? RunnerType.Docker : RunnerType.ChildProcess,
+    options: isDocker
+      ? {
+          image: process.env.GETH_DOCKER_IMAGE as string,
+          dataVolumePath: dataDir,
+          exposePorts: [enginePort, ethPort, port],
+          dockerNetworkIp: address,
+        }
+      : undefined,
     cli: {
       command: binaryPath,
       args: [
@@ -166,14 +177,7 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
     },
   };
 
-  const job = isChildProcessRunner(runner)
-    ? runner.create(id, [{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}])
-    : runner.create(id, [{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}], {
-        image: process.env.GETH_DOCKER_IMAGE as string,
-        dataVolumePath: dataDir,
-        exposePorts: [enginePort, ethPort, port],
-        dockerNetworkIp: address,
-      });
+  const job = runner.create([{...initJobOptions, children: [{...importJobOptions, children: [startJobOptions]}]}]);
 
   const provider = new Eth1ProviderWithAdmin(
     {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},

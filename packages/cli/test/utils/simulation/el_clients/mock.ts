@@ -1,13 +1,13 @@
-import {ELClient, ELClientGenerator, ELGeneratorClientOptions, Runner, RunnerType} from "../interfaces.js";
+import {ELClient, ELClientGenerator} from "../interfaces.js";
 
 export const generateMockNode: ELClientGenerator<ELClient.Mock> = (
-  {id, ethPort, enginePort, ttd, jwtSecretHex}: ELGeneratorClientOptions,
-  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
+  {id, ethPort, enginePort, ttd, jwtSecretHex},
+  runner
 ) => {
   const ethRpcUrl = `http://127.0.0.1:${ethPort}`;
   const engineRpcUrl = `http://127.0.0.1:${enginePort}`;
 
-  const job = runner.create(id, []);
+  const job = runner.create([]);
 
   return {
     client: ELClient.Mock,

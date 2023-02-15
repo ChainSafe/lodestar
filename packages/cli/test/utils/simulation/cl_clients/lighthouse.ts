@@ -8,11 +8,14 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import {getClient} from "@lodestar/api/beacon";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
-import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, Runner, RunnerType} from "../interfaces.js";
-import {isChildProcessRunner} from "../runner/index.js";
+import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, RunnerType} from "../interfaces.js";
 
 export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse> = (opts, runner) => {
-  const binaryPath = isChildProcessRunner(runner) ? `${process.env.LIGHTHOUSE_BINARY_PATH}` : "lighthouse";
+  if (!process.env.LIGHTHOUSE_BINARY_PATH && !process.env.LIGHTHOUSE_DOCKER_IMAGE) {
+    throw new Error("LIGHTHOUSE_BINARY_PATH or LIGHTHOUSE_DOCKER_IMAGE must be provided");
+  }
+
+  const isDocker = process.env.LIGHTHOUSE_DOCKER_IMAGE !== undefined;
 
   const {
     dataDir,
@@ -30,12 +33,13 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
     clientOptions,
   } = opts;
 
+  const dataDirParam = isDocker ? "/data" : dataDir;
   const jwtSecretPath = join(dataDir, "jwtsecret.txt");
 
   const cliParams: Record<string, unknown> = {
     // network: "mainnet",
-    "testnet-dir": dataDir,
-    datadir: dataDir,
+    "testnet-dir": dataDirParam,
+    datadir: dataDirParam,
     // genesisStateFile: genesisStateFilePath,
     // rest: true,
     // "rest.namespace": "*",
@@ -63,7 +67,7 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
     "enable-private-discovery": null,
     // logPrefix: id,
     // logFormatGenesisTime: `${genesisTime}`,
-    "debug-level": "trace",
+    "debug-level": "debug",
     // logFileDailyRotate: 0,
     // logFile: "none",
     // paramsFile: paramsPath,
@@ -73,12 +77,21 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
   if (engineMock) {
     cliParams["dummy-eth1"] = null;
   } else {
-    cliParams["execution-jwt"] = jwtSecretPath;
+    cliParams["execution-jwt"] = join(dataDirParam, "jwtsecret.txt");
     cliParams["execution-endpoint"] = [...engineUrls].join(",");
   }
 
   const beaconNodeJob: JobOptions = {
     id,
+    type: isDocker ? RunnerType.Docker : RunnerType.ChildProcess,
+    options: isDocker
+      ? {
+          image: process.env.LIGHTHOUSE_DOCKER_IMAGE as string,
+          dataVolumePath: dataDir,
+          exposePorts: [restPort, port],
+          dockerNetworkIp: address,
+        }
+      : undefined,
     bootstrap: async () => {
       await mkdir(dataDir, {recursive: true});
       await writeFile(jwtSecretPath, jwtSecretHex);
@@ -88,7 +101,7 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
       await cp(genesisStateFilePath, join(dataDir, "genesis.ssz"));
     },
     cli: {
-      command: binaryPath,
+      command: isDocker ? "lighthouse" : (process.env.LIGHTHOUSE_BINARY_PATH as string),
       args: [
         "beacon_node",
         ...Object.entries(cliParams).flatMap(([key, value]) =>
@@ -116,26 +129,14 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
   const validatorClientsJobs: JobOptions[] = [];
   if (keys.type !== "no-keys") {
     validatorClientsJobs.push(
-      generateLighthouseValidatorJobs(
-        {
-          ...opts,
-          dataDir: join(dataDir, "validator"),
-          id: `${id}-validator`,
-          logFilePath: join(dirname(opts.logFilePath), `${id}-validator.log`),
-        },
-        runner
-      )
+      generateLighthouseValidatorJobs({
+        ...opts,
+        dataDir: join(dataDir, "validator"),
+        id: `${id}-validator`,
+        logFilePath: join(dirname(opts.logFilePath), `${id}-validator.log`),
+      })
     );
   }
-
-  const job = isChildProcessRunner(runner)
-    ? runner.create(id, [{...beaconNodeJob, children: [...validatorClientsJobs]}])
-    : runner.create(id, [{...beaconNodeJob, children: [...validatorClientsJobs]}], {
-        image: process.env.LIGHTHOUSE_DOCKER_IMAGE as string,
-        dataVolumePath: dataDir,
-        exposePorts: [restPort, port],
-        dockerNetworkIp: address,
-      });
 
   return {
     id,
@@ -144,16 +145,16 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
     keys,
     api: getClient({baseUrl: `http://${address}:${restPort}`}, {config}),
     keyManager: keyManagerGetClient({baseUrl: `http://${address}:${keyManagerPort}`}, {config}),
-    job,
+    job: runner.create([{...beaconNodeJob, children: [...validatorClientsJobs]}]),
   };
 };
 
-export const generateLighthouseValidatorJobs = (
-  opts: CLClientGeneratorOptions,
-  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
-): JobOptions => {
-  const binaryPath = isChildProcessRunner(runner) ? `${process.env.LIGHTHOUSE_BINARY_PATH}` : "lighthouse";
+export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions): JobOptions => {
+  const isDocker = process.env.LIGHTHOUSE_DOCKER_IMAGE !== undefined;
+
+  const binaryPath = isDocker ? "lighthouse" : `${process.env.LIGHTHOUSE_BINARY_PATH}`;
   const {dataDir, id, address, keyManagerPort, restPort, keys} = opts;
+  const dataDirParam = isDocker ? "/data" : join(dataDir, "../");
 
   if (keys.type === "no-keys") {
     throw Error("Attempting to run a vc with keys.type == 'no-keys'");
@@ -162,8 +163,8 @@ export const generateLighthouseValidatorJobs = (
   const params = {
     // network: "mainnet",
     spec: "minimal",
-    "testnet-dir": join(dataDir, "../"),
-    datadir: dataDir,
+    "testnet-dir": dataDirParam,
+    datadir: dataDirParam,
     "beacon-nodes": `http://${address}:${restPort}/`,
     "debug-level": "debug",
     "init-slashing-protection": null,
@@ -181,6 +182,15 @@ export const generateLighthouseValidatorJobs = (
 
   return {
     id,
+    type: isDocker ? RunnerType.Docker : RunnerType.ChildProcess,
+    options: isDocker
+      ? {
+          image: process.env.LIGHTHOUSE_DOCKER_IMAGE as string,
+          dataVolumePath: join(dataDir, "../"),
+          exposePorts: [],
+          dockerNetworkIp: address,
+        }
+      : undefined,
     bootstrap: async () => {
       await mkdir(dataDir);
       await mkdir(`${dataDir}/validators`);

@@ -37,16 +37,16 @@ import {
   ELGeneratorClientOptions,
   ELNode,
   ELStartMode,
+  IRunner,
   NodePair,
   NodePairOptions,
   SimulationInitOptions,
   SimulationOptions,
 } from "./interfaces.js";
-import {ChildProcessRunner} from "./runner/ChildProcessRunner.js";
-import {DockerRunner} from "./runner/DockerRunner.js";
 import {SimulationTracker} from "./SimulationTracker.js";
 import {getEstimatedTTD} from "./utils/index.js";
 import {generateLighthouseBeaconNode} from "./cl_clients/lighthouse.js";
+import {Runner} from "./runner/index.js";
 
 interface StartOpts {
   runTimeoutMs: number;
@@ -59,8 +59,7 @@ export class SimulationEnvironment {
   readonly clock: EpochClock;
   readonly tracker: SimulationTracker;
   readonly emitter: EventEmitter;
-  readonly childProcessRunner: ChildProcessRunner;
-  readonly dockerRunner: DockerRunner;
+  readonly runner: IRunner;
   readonly externalSigner: ExternalSignerServer;
 
   readonly forkConfig: ChainForkConfig;
@@ -85,10 +84,7 @@ export class SimulationEnvironment {
 
     this.emitter = new EventEmitter();
     this.externalSigner = new ExternalSignerServer([]);
-
-    this.childProcessRunner = new ChildProcessRunner();
-    this.dockerRunner = new DockerRunner(join(this.options.logsDir, "docker_runner.log"));
-
+    this.runner = new Runner({logsDir: this.options.logsDir});
     this.tracker = SimulationTracker.initWithDefaultAssertions({
       nodes: [],
       config: this.forkConfig,
@@ -181,7 +177,7 @@ export class SimulationEnvironment {
 
       await mkdir(this.options.rootDir);
 
-      await this.dockerRunner.start();
+      await this.runner.start();
       await Promise.all(this.nodes.map((node) => node.el.job.start()));
 
       for (let i = 0; i < this.nodes.length; i++) {
@@ -248,7 +244,7 @@ export class SimulationEnvironment {
     await Promise.all(this.nodes.map((node) => node.el.job.stop()));
     await Promise.all(this.nodes.map((node) => node.cl.job.stop()));
     await this.externalSigner.stop();
-    await this.dockerRunner.stop();
+    await this.runner.stop();
 
     if (this.tracker.getErrorCount() > 0) {
       this.tracker.reporter.summary();
@@ -277,6 +273,12 @@ export class SimulationEnvironment {
     });
     this.keysCount += keysCount;
 
+    const elType = typeof el === "object" ? el.type : el;
+    const elOptions = typeof el === "object" ? el.options : {};
+    const elNode = this.createELNode(elType, {...elOptions, id, mining});
+
+    console.log("%%%%%%% elNode: ", elNode.id, elNode.engineRpcUrl);
+
     const clType = typeof cl === "object" ? cl.type : cl;
     const clOptions = typeof cl === "object" ? cl.options : {};
     const clNode = this.createCLNode(clType, {
@@ -289,11 +291,8 @@ export class SimulationEnvironment {
           ? {type: "local", secretKeys: keys}
           : {type: "no-keys"},
       engineMock: typeof el === "string" ? el === ELClient.Mock : el.type === ELClient.Mock,
+      engineUrls: [elNode.engineRpcUrl],
     });
-
-    const elType = typeof el === "object" ? el.type : el;
-    const elOptions = typeof el === "object" ? el.options : {};
-    const elNode = this.createELNode(elType, {...elOptions, id, mining});
 
     return {id, el: elNode, cl: clNode};
   }
@@ -325,7 +324,7 @@ export class SimulationEnvironment {
           jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
           clientOptions: options?.clientOptions ?? {},
         };
-        return generateLodestarBeaconNode(opts, this.childProcessRunner);
+        return generateLodestarBeaconNode(opts, this.runner);
       }
       case CLClient.Lighthouse: {
         const opts: CLClientGeneratorOptions<CLClient.Lighthouse> = {
@@ -337,17 +336,17 @@ export class SimulationEnvironment {
           port: BN_P2P_BASE_PORT + this.nodePairCount + 1,
           keyManagerPort: KEY_MANAGER_BASE_PORT + this.nodePairCount + 1,
           config: this.forkConfig,
-          address: "127.0.0.1",
+          address: this.runner.getNextIp(),
           keys: options?.keys ?? {type: "no-keys"},
           genesisTime: this.options.genesisTime,
           engineUrls: options?.engineUrls
-            ? [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`, ...options.engineUrls]
+            ? [...options.engineUrls]
             : [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`],
           engineMock: options?.engineMock ?? false,
           jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
           clientOptions: options?.clientOptions ?? {},
         };
-        return generateLighthouseBeaconNode(opts, this.dockerRunner);
+        return generateLighthouseBeaconNode(opts, this.runner);
       }
       default:
         throw new Error(`CL Client "${client}" not supported`);
@@ -368,20 +367,20 @@ export class SimulationEnvironment {
       enginePort: options?.enginePort ?? EL_ENGINE_BASE_PORT + this.nodePairCount + 1,
       ethPort: options?.ethPort ?? EL_ETH_BASE_PORT + this.nodePairCount + 1,
       port: options?.port ?? EL_P2P_BASE_PORT + this.nodePairCount + 1,
-      address: this.dockerRunner.getNextIp(),
+      address: this.runner.getNextIp(),
       mining: options?.mining ?? false,
       clientOptions: options.clientOptions ?? [],
     };
 
     switch (client) {
       case ELClient.Mock: {
-        return generateMockNode(opts as ELGeneratorClientOptions<ELClient.Mock>, this.childProcessRunner);
+        return generateMockNode(opts as ELGeneratorClientOptions<ELClient.Mock>, this.runner);
       }
       case ELClient.Geth: {
-        return generateGethNode(opts as ELGeneratorClientOptions<ELClient.Geth>, this.dockerRunner);
+        return generateGethNode(opts as ELGeneratorClientOptions<ELClient.Geth>, this.runner);
       }
       case ELClient.Nethermind: {
-        return generateNethermindNode(opts as ELGeneratorClientOptions<ELClient.Nethermind>, this.dockerRunner);
+        return generateNethermindNode(opts as ELGeneratorClientOptions<ELClient.Nethermind>, this.runner);
       }
       default:
         throw new Error(`EL Client "${client}" not supported`);

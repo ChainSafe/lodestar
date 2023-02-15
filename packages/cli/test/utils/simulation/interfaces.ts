@@ -135,18 +135,12 @@ export interface NodePair {
   readonly el: ELNode;
 }
 
-export type CLClientGenerator<C extends CLClient> = (
-  opts: CLClientGeneratorOptions<C>,
-  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
-) => CLNode;
-export type ELClientGenerator<E extends ELClient> = (
-  opts: ELGeneratorClientOptions<E>,
-  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
-) => ELNode;
+export type CLClientGenerator<C extends CLClient> = (opts: CLClientGeneratorOptions<C>, runner: IRunner) => CLNode;
+export type ELClientGenerator<E extends ELClient> = (opts: ELGeneratorClientOptions<E>, runner: IRunner) => ELNode;
 
 export type HealthStatus = {ok: true} | {ok: false; reason: string; checkId: string};
 
-export interface JobOptions {
+export type JobOptions<T extends RunnerType = RunnerType.ChildProcess | RunnerType.Docker> = {
   readonly id: string;
 
   readonly cli: {
@@ -159,8 +153,11 @@ export interface JobOptions {
     readonly stdoutFilePath: string;
   };
 
+  // The job is meant to run with following runner
+  readonly type: T;
+
   // Nested children runs in sequence, while the array of jobs runs in parallel
-  readonly children?: JobOptions[];
+  readonly children?: JobOptions<RunnerType>[];
 
   // Will be called frequently to check the health of job startup
   // If not present then wait for the job to exit
@@ -171,10 +168,13 @@ export interface JobOptions {
 
   // Called once before the `job.stop` is called
   teardown?(): Promise<void>;
-}
+
+  // Runner specific options
+} & {
+  [T2 in T]: RunnerOptions[T2] extends never ? {readonly options?: undefined} : {readonly options: RunnerOptions[T2]};
+}[T];
 
 export interface Job {
-  type: RunnerType;
   id: string;
   start(): Promise<void>;
   stop(): Promise<void>;
@@ -195,14 +195,17 @@ export type RunnerOptions = {
   };
 };
 
-export interface Runner<T extends RunnerType> {
-  type: T;
-  create: (
-    id: string,
-    jobOptions: JobOptions[],
-    ...options: RunnerOptions[T] extends never ? [undefined?] : [RunnerOptions[T]]
-  ) => Job;
+export interface IRunner {
+  create: (jobOptions: JobOptions[]) => Job;
   on(event: RunnerEvent, cb: () => void | Promise<void>): void;
+  start(): Promise<void>;
+  stop(): Promise<void>;
+  getNextIp(): string;
+}
+
+export interface RunnerEnv<T extends RunnerType> {
+  type: T;
+  create: (jobOption: Omit<JobOptions<T>, "children">) => Job;
 }
 
 export type RunnerEvent = "starting" | "started" | "stopping" | "stop";

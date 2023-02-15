@@ -1,79 +1,15 @@
 /* eslint-disable no-console */
-import EventEmitter from "node:events";
+import {ChildProcess} from "node:child_process";
 import {sleep} from "@lodestar/utils";
-import {
-  ChildProcessWithJobOptions,
-  Job,
-  JobOptions,
-  Runner,
-  RunnerEvent,
-  RunnerOptions,
-  RunnerType,
-} from "../interfaces.js";
-import {startChildProcess, startJobs, stopChildProcess} from "../utils/child_process.js";
+import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
+import {startChildProcess, stopChildProcess} from "../utils/child_process.js";
 
 const dockerNetworkIpRange = "192.168.0";
 const dockerNetworkName = "sim-env-net";
 
-const convertJobOptionsToDocker = (
-  jobOptions: JobOptions[],
-  name: string,
-  {image, dataVolumePath, exposePorts, dockerNetworkIp}: RunnerOptions[RunnerType.Docker]
-): JobOptions[] => {
-  const dockerJobOptions: JobOptions[] = [];
-
-  for (const jobOption of jobOptions) {
-    const jobArgs = ["run", "--rm", "--name", name, "-v", `${dataVolumePath}:/data`];
-
-    if (jobOption.cli.env && Object.keys(jobOption.cli.env).length > 0) {
-      jobArgs.push("-e");
-      jobArgs.push(Object.keys(jobOption.cli.env).filter(Boolean).join(" "));
-    }
-
-    for (const port of exposePorts) {
-      jobArgs.push("-p");
-      jobArgs.push(`${port}:${port}`);
-    }
-
-    jobArgs.push(image);
-    if (jobOption.cli.command !== "") {
-      jobArgs.push(jobOption.cli.command);
-    }
-    jobArgs.push(...jobOption.cli.args);
-
-    dockerJobOptions.push({
-      ...jobOption,
-      cli: {
-        ...jobOption.cli,
-        command: "docker",
-        args: jobArgs,
-      },
-      children: jobOption.children
-        ? convertJobOptionsToDocker(jobOption.children, name, {image, dataVolumePath, exposePorts, dockerNetworkIp})
-        : [],
-    });
-  }
-
-  return dockerJobOptions;
-};
-
-const connectContainerToNetwork = async (container: string, ip: string, logFilePath: string): Promise<void> => {
-  await startChildProcess({
-    id: `connect ${container} to network ${dockerNetworkName}`,
-    cli: {
-      command: "docker",
-      args: ["network", "connect", dockerNetworkName, container, "--ip", ip],
-    },
-    logs: {
-      stdoutFilePath: logFilePath,
-    },
-  });
-};
-
-export class DockerRunner implements Runner<RunnerType.Docker> {
+export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
   type = RunnerType.Docker as const;
 
-  private emitter = new EventEmitter({captureRejections: true});
   private ipIndex = 2;
   private logFilePath: string;
 
@@ -93,9 +29,8 @@ export class DockerRunner implements Runner<RunnerType.Docker> {
           stdoutFilePath: this.logFilePath,
         },
       });
-    } catch (e) {
+    } catch {
       // During multiple sim tests files the network might already exist
-      console.error(e);
     }
   }
 
@@ -124,52 +59,50 @@ export class DockerRunner implements Runner<RunnerType.Docker> {
     return `${dockerNetworkIpRange}.${this.ipIndex++}`;
   }
 
-  on(event: RunnerEvent, cb: () => void | Promise<void>): void {
-    this.emitter.on(event, cb);
-  }
+  create(jobOption: Omit<JobOptions<RunnerType.Docker>, "children">): Job {
+    const jobArgs = ["run", "--rm", "--name", jobOption.id];
 
-  create(
-    id: string,
-    jobs: JobOptions[],
-    {image, dataVolumePath, exposePorts, dockerNetworkIp}: RunnerOptions[RunnerType.Docker]
-  ): Job {
-    const childProcesses: ChildProcessWithJobOptions[] = [];
+    jobArgs.push("--network", dockerNetworkName, "--ip", jobOption.options.dockerNetworkIp);
 
-    const dockerJobOptions = convertJobOptionsToDocker(jobs, id, {image, dataVolumePath, exposePorts, dockerNetworkIp});
+    // Mount volumes
+    jobArgs.push("-v", `${jobOption.options.dataVolumePath}:/data`);
 
-    const stop = async (): Promise<void> => {
-      console.log(`DockerRunner stopping '${id}'...`);
-      this.emitter.emit("stopping");
-      for (const {jobOptions, childProcess} of childProcesses) {
-        if (jobOptions.teardown) {
-          await jobOptions.teardown();
+    // Pass ENV variables
+    if (jobOption.cli.env && Object.keys(jobOption.cli.env).length > 0) {
+      jobArgs.push("-e");
+      jobArgs.push(Object.keys(jobOption.cli.env).filter(Boolean).join(" "));
+    }
+
+    // Expose ports
+    for (const port of jobOption.options.exposePorts) {
+      jobArgs.push("-p");
+      jobArgs.push(`${port}:${port}`);
+    }
+
+    jobArgs.push(jobOption.options.image);
+    if (jobOption.cli.command !== "") {
+      jobArgs.push(jobOption.cli.command);
+    }
+    jobArgs.push(...jobOption.cli.args);
+
+    let childProcess: ChildProcess;
+
+    return {
+      id: jobOption.id,
+      start: async () => {
+        childProcess = await startChildProcess({
+          id: jobOption.id,
+          logs: jobOption.logs,
+          cli: {...jobOption.cli, command: "docker", args: jobArgs},
+          health: jobOption.health,
+        });
+      },
+      stop: async () => {
+        if (childProcess === undefined) {
+          return;
         }
         await stopChildProcess(childProcess);
-      }
-
-      console.log(`DockerRunner stopped '${id}'`);
-      this.emitter.emit("stopped");
+      },
     };
-
-    const start = (): Promise<void> =>
-      new Promise<void>((resolve, reject) => {
-        void (async () => {
-          try {
-            console.log(`Starting "${id}"...`);
-            this.emitter.emit("starting");
-            childProcesses.push(...(await startJobs(dockerJobOptions)));
-            console.log(`Started "${id}"...`);
-            this.emitter.emit("started");
-
-            await connectContainerToNetwork(id, dockerNetworkIp, this.logFilePath);
-            console.log(`DockerRunner connected container to network '${id}'`);
-            resolve();
-          } catch (err) {
-            reject(err);
-          }
-        })();
-      });
-
-    return {id, start, stop, type: this.type};
   }
 }
