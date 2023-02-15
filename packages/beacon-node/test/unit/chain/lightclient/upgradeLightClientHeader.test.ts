@@ -36,9 +36,7 @@ describe("UpgradeLightClientHeader", function () {
 
   for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
     for (let j = i + 1; j < Object.values(ForkName).length; j++) {
-      it(`Successful upgrade ${ForkName[ForkSeq[i] as ForkName]}=>${
-        ForkName[ForkSeq[j] as ForkName]
-      }`, async function () {
+      it(`Successful upgrade ${ForkName[ForkSeq[i] as ForkName]}=>${ForkName[ForkSeq[j] as ForkName]}`, function () {
         update[i].beacon.slot = testSlots[i];
         update[j].beacon.slot = testSlots[i];
 
@@ -53,9 +51,7 @@ describe("UpgradeLightClientHeader", function () {
 
   for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
     for (let j = i; j > 0; j--) {
-      it(`Throw upgrade error ${ForkName[ForkSeq[i] as ForkName]}=>${
-        ForkName[ForkSeq[j] as ForkName]
-      }`, async function () {
+      it(`Throw upgrade error ${ForkName[ForkSeq[i] as ForkName]}=>${ForkName[ForkSeq[j] as ForkName]}`, function () {
         update[i].beacon.slot = testSlots[i];
         update[j].beacon.slot = testSlots[i];
 
