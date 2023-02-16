@@ -786,7 +786,7 @@ export class ForkChoice implements IForkChoice {
       return {code: AncestorStatus.Descendant};
     }
 
-    return {code: AncestorStatus.CommonAncestor, depth: newNode.slot - commonAncestor.slot};
+    return {code: AncestorStatus.CommonAncestor, depth: Math.max(newNode.slot, prevNode.slot) - commonAncestor.slot};
   }
 
   /**
