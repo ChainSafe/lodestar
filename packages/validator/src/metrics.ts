@@ -407,6 +407,10 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
         help: "Total count of db write items",
         labelNames: ["bucket"],
       }),
+      dbSizeTotal: register.gauge({
+        name: "validator_db_size_bytes_total",
+        help: "Approximate number of bytes of file system space used by db",
+      }),
     },
 
     doppelganger: {
