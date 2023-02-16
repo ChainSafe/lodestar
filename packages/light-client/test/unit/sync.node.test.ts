@@ -7,7 +7,7 @@ import {routes, Api, getClient, ServerApi, ApiError} from "@lodestar/api";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
 import {JsonPath, toHexString} from "@chainsafe/ssz";
-import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
+import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {Lightclient, LightclientEvent} from "../../src/index.js";
 import {LightclientServerApiMock, ProofServerApiMock} from "../mocks/LightclientServerApiMock.js";
 import {EventsServerApiMock} from "../mocks/EventsServerApiMock.js";
@@ -189,7 +189,9 @@ async function getHeadStateProof(
 ): Promise<{proof: TreeOffsetProof; header: altair.LightClientHeader}> {
   const header = lightclient.getHead();
   const stateId = toHexString(header.beacon.stateRoot);
-  const res = await api.proof.getStateProof(stateId, paths);
+  const gindices = paths.map((path) => ssz.bellatrix.BeaconState.getPathInfo(path).gindex);
+  const descriptor = computeDescriptor(gindices);
+  const res = await api.proof.getStateProof(stateId, descriptor);
   ApiError.assert(res);
 
   return {
