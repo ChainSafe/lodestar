@@ -773,7 +773,7 @@ export class ForkChoice implements IForkChoice {
     return blocksAtSlot;
   }
 
-  /** Returns the distance of common ancestor of nodes to newNode. Returns null if newNode is descendant of prevNode */
+  /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */
   getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult {
     const prevNode = this.protoArray.getNode(prevBlock.blockRoot);
     const newNode = this.protoArray.getNode(newBlock.blockRoot);
@@ -792,7 +792,7 @@ export class ForkChoice implements IForkChoice {
       return {code: AncestorStatus.Descendant};
     }
 
-    return {code: AncestorStatus.CommonAncestor, depth: newNode.slot - commonAncestor.slot};
+    return {code: AncestorStatus.CommonAncestor, depth: Math.max(newNode.slot, prevNode.slot) - commonAncestor.slot};
   }
 
   /**
