@@ -25,7 +25,7 @@ export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): A
         const proof: CompactMultiProof = {
           type: ProofType.compactMulti,
           descriptor,
-          leaves: Array.from({length: res.body.byteLength / 32}, (_, i) => new Uint8Array(res.body, i * 32, 32))
+          leaves: Array.from({length: res.body.byteLength / 32}, (_, i) => new Uint8Array(res.body, i * 32, 32)),
         };
 
         return {ok: true, response: {data: proof}, status: HttpStatusCode.OK};
@@ -51,7 +51,7 @@ export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): A
         const proof: CompactMultiProof = {
           type: ProofType.compactMulti,
           descriptor,
-          leaves: Array.from({length: res.body.byteLength / 32}, (_, i) => new Uint8Array(res.body, i * 32, 32))
+          leaves: Array.from({length: res.body.byteLength / 32}, (_, i) => new Uint8Array(res.body, i * 32, 32)),
         };
 
         return {ok: true, response: {data: proof}, status: HttpStatusCode.OK};
