@@ -4,7 +4,7 @@ export function getCliInMemoryRunner() {
   return async <T = any>(arg: string | readonly string[], context?: Record<string, unknown>): Promise<T> => {
     return new Promise((resolve, reject) => {
       const lodestar = getLodestarCli();
-      lodestar
+      void lodestar
         // Called after the completion of any command. handler is invoked with the result returned by the command:
         .onFinishCommand((result) => {
           resolve(result);
