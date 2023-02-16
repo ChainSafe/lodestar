@@ -25,8 +25,8 @@ import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {ApiModules} from "../types.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {getValidatorStatus} from "../beacon/state/utils.js";
+import {validateGossipFnRetryUnknownRoot} from "../../../network/gossip/handlers/index.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
-import { validateGossipFnRetryUnknownRoot } from "../../../network/gossip/handlers/index.js";
 
 /**
  * If the node is within this many epochs from the head, we declare it to be synced regardless of
