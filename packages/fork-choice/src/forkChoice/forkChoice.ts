@@ -30,6 +30,7 @@ import {
   ExecutionStatus,
   MaybeValidExecutionStatus,
   LVHExecResponse,
+  ProtoNode,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
@@ -268,6 +269,11 @@ export class ForkChoice implements IForkChoice {
   /** Very expensive function, iterates the entire ProtoArray. Called only in debug API */
   getHeads(): ProtoBlock[] {
     return this.protoArray.nodes.filter((node) => node.bestChild === undefined);
+  }
+
+  /** This is for the debug API only */
+  getAllNodes(): ProtoNode[] {
+    return this.protoArray.nodes;
   }
 
   getFinalizedCheckpoint(): CheckpointWithHex {

@@ -260,6 +260,7 @@ function mockForkChoice(): IForkChoice {
     getHead: () => block,
     updateHead: () => block,
     getHeads: () => [block],
+    getAllNodes: () => [{...block, weight: 1}],
     getFinalizedCheckpoint: () => checkpoint,
     getJustifiedCheckpoint: () => checkpoint,
     onBlock: () => block,
