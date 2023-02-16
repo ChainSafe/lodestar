@@ -7,6 +7,7 @@ import * as chain from "./chain.js";
 import * as eth1 from "./eth1.js";
 import * as execution from "./execution.js";
 import * as metrics from "./metrics.js";
+import * as monitoring from "./monitoring.js";
 import * as network from "./network.js";
 import * as sync from "./sync.js";
 
@@ -16,6 +17,7 @@ export type IBeaconNodeArgs = api.IApiArgs &
   execution.ExecutionEngineArgs &
   builder.ExecutionBuilderArgs &
   metrics.IMetricsArgs &
+  monitoring.IMonitoringArgs &
   network.INetworkArgs &
   sync.ISyncArgs;
 
@@ -29,6 +31,7 @@ export function parseBeaconNodeArgs(args: IBeaconNodeArgs): RecursivePartial<IBe
     executionEngine: execution.parseArgs(args),
     executionBuilder: builder.parseArgs(args),
     metrics: metrics.parseArgs(args),
+    monitoring: monitoring.parseArgs(args),
     network: network.parseArgs(args),
     sync: sync.parseArgs(args),
   });
@@ -41,6 +44,7 @@ export const beaconNodeOptions = {
   ...execution.options,
   ...builder.options,
   ...metrics.options,
+  ...monitoring.options,
   ...network.options,
   ...sync.options,
 };

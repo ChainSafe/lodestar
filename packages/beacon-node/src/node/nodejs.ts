@@ -15,6 +15,7 @@ import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics/index.js";
+import {MonitoringService} from "../monitoring/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
@@ -35,6 +36,7 @@ export interface IBeaconNodeModules {
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
   metricsServer?: HttpMetricsServer;
+  monitoring: MonitoringService | null;
   restApi?: BeaconRestApiServer;
   controller?: AbortController;
 }
@@ -64,6 +66,7 @@ enum LoggerModule {
   chain = "chain",
   eth1 = "eth1",
   metrics = "metrics",
+  monitoring = "monitoring",
   network = "network",
   /** validator monitor */
   vmon = "vmon",
@@ -81,6 +84,7 @@ export class BeaconNode {
   db: IBeaconDb;
   metrics: IMetrics | null;
   metricsServer?: HttpMetricsServer;
+  monitoring: MonitoringService | null;
   network: INetwork;
   chain: IBeaconChain;
   api: {[K in keyof Api]: ServerApi<Api[K]>};
@@ -97,6 +101,7 @@ export class BeaconNode {
     db,
     metrics,
     metricsServer,
+    monitoring,
     network,
     chain,
     api,
@@ -109,6 +114,7 @@ export class BeaconNode {
     this.config = config;
     this.metrics = metrics;
     this.metricsServer = metricsServer;
+    this.monitoring = monitoring;
     this.db = db;
     this.chain = chain;
     this.api = api;
@@ -169,6 +175,18 @@ export class BeaconNode {
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db);
+    }
+
+    let monitoring = null;
+    if (opts.monitoring.endpoint) {
+      if (metrics == null) {
+        throw new Error("Metrics must be enabled to use monitoring");
+      }
+      monitoring = new MonitoringService("beacon", opts.monitoring, {
+        register: metrics.register,
+        logger: logger.child({module: LoggerModule.monitoring}),
+      });
+      monitoring.start();
     }
 
     const chain = new BeaconChain(opts.chain, {
@@ -274,6 +292,7 @@ export class BeaconNode {
       db,
       metrics,
       metricsServer,
+      monitoring,
       network,
       chain,
       api,
@@ -294,6 +313,7 @@ export class BeaconNode {
       this.backfillSync?.close();
       await this.network.close();
       if (this.metricsServer) await this.metricsServer.stop();
+      if (this.monitoring) this.monitoring.stop();
       if (this.restApi) await this.restApi.close();
 
       await this.chain.persistToDisk();

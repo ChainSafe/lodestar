@@ -9,14 +9,14 @@ import {
   BuilderSelection,
 } from "@lodestar/validator";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
-import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@lodestar/beacon-node";
+import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer, MonitoringService} from "@lodestar/beacon-node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger, cleanOldLogFiles} from "../../util/index.js";
 import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
-import {IValidatorCliArgs, validatorMetricsDefaultOptions} from "./options.js";
+import {IValidatorCliArgs, validatorMetricsDefaultOptions, validatorMonitoringDefaultOptions} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
 import {logSigners} from "./signers/logSigners.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
@@ -125,6 +125,29 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
     onGracefulShutdownCbs.push(() => metricsServer.stop());
     await metricsServer.start();
+  }
+
+  if (args["monitoring.endpoint"]) {
+    if (register == null) {
+      throw new Error("Metrics must be enabled to use monitoring");
+    }
+
+    const {interval, initialDelay, requestTimeout, collectSystemStats} = validatorMonitoringDefaultOptions;
+
+    const monitoring = new MonitoringService(
+      "validator",
+      {
+        endpoint: args["monitoring.endpoint"],
+        interval: args["monitoring.interval"] ?? interval,
+        initialDelay: args["monitoring.initialDelay"] ?? initialDelay,
+        requestTimeout: args["monitoring.requestTimeout"] ?? requestTimeout,
+        collectSystemStats: args["monitoring.collectSystemStats"] ?? collectSystemStats,
+      },
+      {register, logger}
+    );
+
+    onGracefulShutdownCbs.push(() => monitoring.stop());
+    monitoring.start();
   }
 
   // This promise resolves once genesis is available.
