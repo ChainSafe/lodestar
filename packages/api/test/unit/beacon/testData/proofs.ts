@@ -16,7 +16,7 @@ export const testData: GenericServerTestCases<Api> = {
       },
     },
     query: {
-      descriptor: "0x0000",
+      format: "0x00000000",
     },
   },
   getBlockProof: {
@@ -29,7 +29,7 @@ export const testData: GenericServerTestCases<Api> = {
       },
     },
     query: {
-      descriptor: "0x0000",
+      format: "0x00000000",
     },
   },
 };
