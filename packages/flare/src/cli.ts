@@ -1,6 +1,5 @@
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs from "yargs";
-// @ts-expect-error no type
 import {hideBin} from "yargs/helpers";
 import {cmds} from "./cmds/index.js";
 import {registerCommandToYargs} from "./util/command.js";

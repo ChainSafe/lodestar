@@ -91,7 +91,7 @@
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.5",
     "winston-transport": "^4.3.0",
-    "yargs": "^16.1.0"
+    "yargs": "^17.6.2"
   },
   "devDependencies": {
     "@types/expand-tilde": "^2.0.0",
@@ -100,6 +100,6 @@
     "@types/js-yaml": "^3.12.5",
     "@types/lodash": "^4.14.157",
     "@types/rimraf": "^3.0.2",
-    "@types/yargs": "^15.0.9"
+    "@types/yargs": "^17.0.22"
   }
 }
