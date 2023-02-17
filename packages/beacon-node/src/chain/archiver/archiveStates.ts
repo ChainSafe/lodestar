@@ -47,7 +47,7 @@ export class StatesArchiver {
   async maybeArchiveState(finalized: CheckpointWithHex): Promise<void> {
     const lastStoredSlot = await this.db.stateArchive.lastKey();
     const lastStoredEpoch = computeEpochAtSlot(lastStoredSlot ?? 0);
-    const archiveStateEpochFrequency = this.opts.archiveStateEpochFrequency;
+    const {archiveStateEpochFrequency} = this.opts;
 
     if (finalized.epoch - lastStoredEpoch > Math.min(PERSIST_TEMP_STATE_EVERY_EPOCHS, archiveStateEpochFrequency)) {
       await this.archiveState(finalized);
