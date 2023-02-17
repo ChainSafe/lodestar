@@ -15,9 +15,7 @@ interface StaticPropertyDefinition<T extends RecordValue> extends PropertyDefini
 
 interface DynamicPropertyDefinition<T extends RecordValue> extends PropertyDefinition {
   /** Value provider function */
-  provider: () => T | Promise<T>;
-  /** Only call provider function once and then use cached value */
-  cacheResult?: boolean;
+  provider: () => T;
 }
 
 interface MetricPropertyDefinition<T extends RecordValue> extends PropertyDefinition {
@@ -56,22 +54,10 @@ export class StaticProperty<T extends RecordValue> implements ClientStatsPropert
 }
 
 export class DynamicProperty<T extends RecordValue> implements ClientStatsProperty<T> {
-  private cachedValue?: T;
-
   constructor(readonly definition: DynamicPropertyDefinition<T>) {}
 
-  async getRecord(): Promise<JsonRecord<T>> {
-    if (this.cachedValue != null) {
-      return {key: this.definition.jsonKey, value: this.cachedValue};
-    }
-
-    const value = await this.definition.provider();
-
-    if (this.definition.cacheResult) {
-      this.cachedValue = value;
-    }
-
-    return {key: this.definition.jsonKey, value};
+  getRecord(): JsonRecord<T> {
+    return {key: this.definition.jsonKey, value: this.definition.provider()};
   }
 }
 
