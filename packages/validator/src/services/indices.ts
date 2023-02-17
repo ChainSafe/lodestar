@@ -76,6 +76,14 @@ export class IndicesService {
   private async pollValidatorIndicesInternal(pubkeysHex: PubkeyHex[]): Promise<ValidatorIndex[]> {
     const pubkeysHexToDiscover = pubkeysHex.filter((pubkey) => !this.pubkey2index.has(pubkey));
 
+    pubkeysHex.forEach((pubkey) => {
+      if (this.pubkey2index.has(pubkey)) {
+        this.logger.info("Validator status: ", {status: "active"});
+        this.logger.info("Validator index: ", {index: this.pubkey2index.get(pubkey)});
+        this.logger.info("Validator pubkey: ", {pubkey});
+      }
+    });
+
     if (pubkeysHexToDiscover.length === 0) {
       return [];
     }
