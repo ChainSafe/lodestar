@@ -110,12 +110,10 @@ export class IndicesService {
         newIndices.push(validatorState.index);
       } else {
         this.logger.info(
-          "Validator status: ",
-          {status: validatorState.status || "unknown"},
-          "index: ",
-          {index: this.pubkey2index.get(pubkeyHex)},
-          "pubkey: ",
-          {pubkeyHex}
+          `Validator:
+          status=${validatorState.status || "unknown"}
+          index=${this.pubkey2index.get(pubkeyHex)}
+          pubkey=${pubkeyHex}`
         );
       }
     }
