@@ -15,6 +15,11 @@ export function getProofApi(
 
   return {
     async getStateProof(stateId, descriptor) {
+      // descriptor.length / 2 is a rough approximation of # of gindices
+      if (descriptor.length / 2 > maxGindicesInProof) {
+        throw new Error("Requested proof is too large.");
+      }
+
       const {state} = await resolveStateId(config, chain, db, stateId);
 
       // Commit any changes before computing the state root. In normal cases the state should have no changes here
@@ -23,25 +28,20 @@ export function getProofApi(
 
       const data = createProof(stateNode, {type: ProofType.compactMulti, descriptor});
 
+      return {data};
+    },
+    async getBlockProof(blockId, descriptor) {
       // descriptor.length / 2 is a rough approximation of # of gindices
       if (descriptor.length / 2 > maxGindicesInProof) {
         throw new Error("Requested proof is too large.");
       }
 
-      return {data};
-    },
-    async getBlockProof(blockId, descriptor) {
       const {block} = await resolveBlockId(chain.forkChoice, db, blockId);
 
       // Commit any changes before computing the state root. In normal cases the state should have no changes here
       const blockNode = config.getForkTypes(block.message.slot).BeaconBlock.toView(block.message).node;
 
       const data = createProof(blockNode, {type: ProofType.compactMulti, descriptor});
-
-      // descriptor.length / 2 is a rough approximation of # of gindices
-      if (descriptor.length / 2 > maxGindicesInProof) {
-        throw new Error("Requested proof is too large.");
-      }
 
       return {data};
     },
