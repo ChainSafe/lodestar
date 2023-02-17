@@ -6,6 +6,7 @@ import {HistogramExtra} from "../metrics/utils/histogram.js";
 import {defaultMonitoringOptions, MonitoringOptions} from "./options.js";
 import {createClientStats} from "./clientStats.js";
 import {ClientStats} from "./types.js";
+import {collectSystemData} from "./system.js";
 
 type MonitoringData = Record<string, string | number | boolean>;
 
@@ -146,6 +147,10 @@ export class MonitoringService {
     const timer = this.collectDataMetric.startTimer();
     const data: MonitoringData[] = [];
     const recordPromises = [];
+
+    if (this.options.collectSystemStats) {
+      await collectSystemData(this.logger);
+    }
 
     for (const [i, s] of this.clientStats.entries()) {
       data[i] = {};
