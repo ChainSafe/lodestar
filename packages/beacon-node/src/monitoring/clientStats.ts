@@ -101,9 +101,11 @@ function createProcessStats(process: ProcessType): ClientStats {
 function createBeaconNodeStats(): ClientStats {
   return {
     ...createProcessStats(ProcessType.BeaconNode),
-    diskBeaconChainBytesTotal: new StaticProperty({
+    diskBeaconChainBytesTotal: new MetricProperty({
       jsonKey: "disk_beaconchain_bytes_total",
-      value: 0,
+      metricName: "lodestar_db_size_bytes_total",
+      jsonType: JsonType.Number,
+      defaultValue: 0,
       description: "Amount of bytes consumed on disk by the beacon node's database",
     }),
     networkLibp2pBytesTotalReceive: new MetricProperty({
