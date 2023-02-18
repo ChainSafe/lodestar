@@ -61,7 +61,7 @@ export class MonitoringService {
     this.collectDataMetric = register.histogram({
       name: "lodestar_monitoring_collect_data_seconds",
       help: "Time spent to collect monitoring data in seconds",
-      buckets: [0.001, 0.01, 0.1, 1],
+      buckets: [0.001, 0.01, 0.1, 1, 5],
     });
 
     this.sendDataMetric = register.histogram({
