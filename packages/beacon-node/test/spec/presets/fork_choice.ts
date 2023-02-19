@@ -24,6 +24,7 @@ import {getEmptyBlobsSidecar} from "../../../src/util/blobs.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
+import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -41,6 +42,9 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
 ) => {
   return {
     testFunction: async (testcase) => {
+      await initCKZG();
+      loadEthereumTrustedSetup();
+
       const {steps, anchorState} = testcase;
       const currentSlot = anchorState.slot;
       const config = getConfig(fork);
