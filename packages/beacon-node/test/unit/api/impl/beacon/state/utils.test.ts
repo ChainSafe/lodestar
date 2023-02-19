@@ -11,7 +11,6 @@ import {
   getStateValidatorIndex,
 } from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {IBeaconChain} from "../../../../../../src/chain/index.js";
-import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/chain/archiver/archiveStates.js";
 import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 import {generateCachedAltairState, generateCachedState, generateState} from "../../../../../utils/state.js";
 import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
@@ -91,7 +90,7 @@ describe("beacon state api utils", function () {
     });
 
     it("resolve state on unarchived finalized slot", async function () {
-      const nearestArchiveSlot = PERSIST_STATE_EVERY_EPOCHS * SLOTS_PER_EPOCH;
+      const nearestArchiveSlot = 1024 * SLOTS_PER_EPOCH;
       const finalizedEpoch = 1028;
       const requestedSlot = 1026 * SLOTS_PER_EPOCH;
 

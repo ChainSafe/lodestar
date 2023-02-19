@@ -29,6 +29,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
       "safe-slots-to-import-optimistically": 256,
+      "chain.archiveStateEpochFrequency": 1024,
 
       eth1: true,
       "eth1.providerUrl": "http://my.node:8545",
@@ -112,6 +113,7 @@ describe("options / beaconNodeOptions", () => {
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         assertCorrectProgressiveBalances: true,
         maxSkipSlots: 100,
+        archiveStateEpochFrequency: 1024,
       },
       eth1: {
         enabled: true,
