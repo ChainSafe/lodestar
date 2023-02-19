@@ -12,7 +12,7 @@ import {sleep} from "@lodestar/utils";
 
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Network, NetworkEvent, ReqRespMethod, getReqRespHandlers} from "../../../src/network/index.js";
-import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
+import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 import {GoodByeReasonCode} from "../../../src/constants/index.js";
 
 import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
@@ -44,7 +44,7 @@ describe("network", function () {
   beforeEach(() => (controller = new AbortController()));
   afterEach(() => controller.abort());
 
-  async function getOpts(peerId: PeerId): Promise<INetworkOptions> {
+  async function getOpts(peerId: PeerId): Promise<NetworkOptions> {
     const bindAddrUdp = `/ip4/0.0.0.0/udp/${port++}`;
     const enr = SignableENR.createFromPeerId(peerId);
     enr.setLocationMultiaddr(multiaddr(bindAddrUdp));

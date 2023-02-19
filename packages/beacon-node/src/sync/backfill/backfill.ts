@@ -4,7 +4,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconStateAllForks, blockToHeader} from "@lodestar/state-transition";
 import {IBeaconConfig, IChainForkConfig} from "@lodestar/config";
 import {phase0, Root, Slot, allForks, ssz} from "@lodestar/types";
-import {ErrorAborted, ILogger, sleep} from "@lodestar/utils";
+import {ErrorAborted, Logger, sleep} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -31,7 +31,7 @@ export type BackfillSyncModules = {
   db: IBeaconDb;
   network: INetwork;
   config: IBeaconConfig;
-  logger: ILogger;
+  logger: Logger;
   metrics: IMetrics | null;
   anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
@@ -111,7 +111,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private readonly network: INetwork;
   private readonly db: IBeaconDb;
   private readonly config: IBeaconConfig;
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
   private readonly metrics: IMetrics | null;
 
   /**
@@ -847,7 +847,7 @@ async function extractPreviousFinOrWsCheckpoint(
   config: IChainForkConfig,
   db: IBeaconDb,
   belowSlot: Slot,
-  logger?: ILogger
+  logger?: Logger
 ): Promise<BackfillBlockHeader> {
   // Anything below genesis block is just zero hash
   if (belowSlot <= GENESIS_SLOT) return {root: ZERO_HASH, slot: belowSlot - 1};

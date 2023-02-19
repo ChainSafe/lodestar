@@ -9,12 +9,12 @@ import {
 } from "@lodestar/params";
 import {Slot, allForks, Version, ssz} from "@lodestar/types";
 import {IChainConfig} from "../chainConfig/index.js";
-import {IForkConfig, IForkInfo} from "./types.js";
+import {ForkConfig, ForkInfo} from "./types.js";
 
 export * from "./types.js";
 
-export function createIForkConfig(config: IChainConfig): IForkConfig {
-  const phase0: IForkInfo = {
+export function createForkConfig(config: IChainConfig): ForkConfig {
+  const phase0: ForkInfo = {
     name: ForkName.phase0,
     seq: ForkSeq.phase0,
     epoch: GENESIS_EPOCH,
@@ -23,7 +23,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     prevVersion: config.GENESIS_FORK_VERSION,
     prevForkName: ForkName.phase0,
   };
-  const altair: IForkInfo = {
+  const altair: ForkInfo = {
     name: ForkName.altair,
     seq: ForkSeq.altair,
     epoch: config.ALTAIR_FORK_EPOCH,
@@ -31,7 +31,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     prevVersion: config.GENESIS_FORK_VERSION,
     prevForkName: ForkName.phase0,
   };
-  const bellatrix: IForkInfo = {
+  const bellatrix: ForkInfo = {
     name: ForkName.bellatrix,
     seq: ForkSeq.bellatrix,
     epoch: config.BELLATRIX_FORK_EPOCH,
@@ -39,7 +39,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     prevVersion: config.ALTAIR_FORK_VERSION,
     prevForkName: ForkName.altair,
   };
-  const capella: IForkInfo = {
+  const capella: ForkInfo = {
     name: ForkName.capella,
     seq: ForkSeq.capella,
     epoch: config.CAPELLA_FORK_EPOCH,
@@ -47,7 +47,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     prevVersion: config.BELLATRIX_FORK_VERSION,
     prevForkName: ForkName.bellatrix,
   };
-  const deneb: IForkInfo = {
+  const deneb: ForkInfo = {
     name: ForkName.deneb,
     seq: ForkSeq.deneb,
     epoch: config.EIP4844_FORK_EPOCH,
@@ -70,7 +70,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     forksDescendingEpochOrder,
 
     // Fork convenience methods
-    getForkInfo(slot: Slot): IForkInfo {
+    getForkInfo(slot: Slot): ForkInfo {
       const epoch = Math.floor(Math.max(slot, 0) / SLOTS_PER_EPOCH);
       // NOTE: forks must be sorted by descending epoch, latest fork first
       for (const fork of forksDescendingEpochOrder) {

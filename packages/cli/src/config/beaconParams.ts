@@ -16,11 +16,11 @@ import {
 } from "../options/index.js";
 import {IBeaconParamsUnparsed} from "./types.js";
 
-interface IBeaconParamsArgs {
+type BeaconParamsArgs = {
   network?: NetworkName;
   paramsFile?: string;
   additionalParamsCli: IBeaconParamsUnparsed;
-}
+};
 
 /**
  * Convenience method to parse yargs CLI args and call getBeaconParams
@@ -53,7 +53,7 @@ export function getBeaconParamsFromArgs(args: IGlobalArgs): IChainConfig {
  * Initializes IBeaconConfig with params
  * @see getBeaconParams
  */
-export function getBeaconConfig(args: IBeaconParamsArgs): IChainForkConfig {
+export function getBeaconConfig(args: BeaconParamsArgs): IChainForkConfig {
   return createIChainForkConfig(getBeaconParams(args));
 }
 
@@ -63,7 +63,7 @@ export function getBeaconConfig(args: IBeaconParamsArgs): IChainForkConfig {
  * - existing params file
  * - CLI flags
  */
-export function getBeaconParams({network, paramsFile, additionalParamsCli}: IBeaconParamsArgs): IChainConfig {
+export function getBeaconParams({network, paramsFile, additionalParamsCli}: BeaconParamsArgs): IChainConfig {
   // Default network params
   const networkParams: Partial<IChainConfig> = network ? getNetworkBeaconParams(network) : {};
   // Existing user custom params from file

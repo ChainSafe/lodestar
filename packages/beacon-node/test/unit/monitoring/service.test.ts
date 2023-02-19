@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {ErrorAborted, ILogger, TimeoutError} from "@lodestar/utils";
+import {ErrorAborted, Logger, TimeoutError} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../../src/index.js";
 import {HistogramExtra} from "../../../src/metrics/utils/histogram.js";
 import {MonitoringService} from "../../../src/monitoring/service.js";
@@ -14,7 +14,7 @@ describe("monitoring / service", () => {
   const endpoint = "https://test.example.com/api/v1/client/metrics";
 
   let register: RegistryMetricCreator;
-  let logger: ILogger;
+  let logger: Logger;
 
   beforeEach(() => {
     // recreate to avoid "metric has already been registered" errors

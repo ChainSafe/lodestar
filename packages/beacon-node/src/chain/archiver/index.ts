@@ -1,4 +1,4 @@
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconDb} from "../../db/index.js";
@@ -26,7 +26,7 @@ export class Archiver {
   constructor(
     private readonly db: IBeaconDb,
     private readonly chain: IBeaconChain,
-    private readonly logger: ILogger,
+    private readonly logger: Logger,
     signal: AbortSignal,
     opts: ArchiverOpts
   ) {

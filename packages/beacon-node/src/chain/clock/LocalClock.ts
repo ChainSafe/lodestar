@@ -6,12 +6,12 @@ import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@lodestar/s
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
-import {IBeaconClock} from "./interface.js";
+import {BeaconClock} from "./interface.js";
 
 /**
  * A local clock, the clock time is assumed to be trusted
  */
-export class LocalClock implements IBeaconClock {
+export class LocalClock implements BeaconClock {
   private readonly config: IChainForkConfig;
   private readonly genesisTime: number;
   private timeoutId: number | NodeJS.Timeout;

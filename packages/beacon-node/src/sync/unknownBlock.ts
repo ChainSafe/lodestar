@@ -1,7 +1,7 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {peerIdFromString} from "@libp2p/peer-id";
 import {IChainForkConfig} from "@lodestar/config";
-import {ILogger, pruneSetToMax} from "@lodestar/utils";
+import {Logger, pruneSetToMax} from "@lodestar/utils";
 import {Root, RootHex} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {INetwork, NetworkEvent, PeerAction} from "../network/index.js";
@@ -35,7 +35,7 @@ export class UnknownBlockSync {
     private readonly config: IChainForkConfig,
     private readonly network: INetwork,
     private readonly chain: IBeaconChain,
-    private readonly logger: ILogger,
+    private readonly logger: Logger,
     private readonly metrics: IMetrics | null,
     opts?: SyncOptions
   ) {

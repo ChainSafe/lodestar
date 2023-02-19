@@ -3,7 +3,7 @@ import {ApiError, getClient} from "@lodestar/api";
 import {fromHex} from "@lodestar/utils";
 import {genesisData, NetworkName} from "@lodestar/config/networks";
 import {SlashingProtection, MetaDataRepository} from "@lodestar/validator";
-import {IDatabaseApiOptions, LevelDbController} from "@lodestar/db";
+import {DatabaseApiOptions, LevelDbController} from "@lodestar/db";
 import {IGlobalArgs} from "../../../options/index.js";
 import {getValidatorPaths} from "../paths.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
@@ -20,7 +20,7 @@ export function getSlashingProtection(
   const dbPath = validatorPaths.validatorsDbDir;
   const {config} = getBeaconConfigFromArgs(args);
 
-  const dbOpts: IDatabaseApiOptions = {
+  const dbOpts: DatabaseApiOptions = {
     config,
     controller: new LevelDbController({name: dbPath}, {}),
   };

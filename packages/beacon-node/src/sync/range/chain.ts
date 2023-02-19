@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
-import {ErrorAborted, ILogger} from "@lodestar/utils";
+import {ErrorAborted, Logger} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";
 import {toHexString} from "@chainsafe/ssz";
 import {BlockInput} from "../../chain/blocks/types.js";
@@ -25,7 +25,7 @@ import {
 
 export type SyncChainModules = {
   config: IChainForkConfig;
-  logger: ILogger;
+  logger: Logger;
 };
 
 export type SyncChainFns = {
@@ -108,7 +108,7 @@ export class SyncChain {
   private readonly batches = new Map<Epoch, Batch>();
   private readonly peerset = new PeerMap<ChainTarget>();
 
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
   private readonly config: IChainForkConfig;
 
   constructor(

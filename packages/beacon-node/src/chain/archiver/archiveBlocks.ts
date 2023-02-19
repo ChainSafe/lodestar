@@ -1,10 +1,10 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Slot} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
-import {ILogger, toHex} from "@lodestar/utils";
+import {Logger, toHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {IKeyValue} from "@lodestar/db";
+import {KeyValue} from "@lodestar/db";
 import {IChainForkConfig} from "@lodestar/config";
 import {IBeaconDb} from "../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../db/repositories/index.js";
@@ -32,7 +32,7 @@ export async function archiveBlocks(
   db: IBeaconDb,
   forkChoice: IForkChoice,
   lightclientServer: LightClientServer,
-  logger: ILogger,
+  logger: Logger,
   finalizedCheckpoint: {rootHex: string; epoch: Epoch},
   currentEpoch: Epoch
 ): Promise<void> {
@@ -160,7 +160,7 @@ async function migrateBlobsSidecarFromHotToColdDb(
     if (canonicalBlocks.length === 0) return;
 
     // load Buffer instead of ssz deserialized to improve performance
-    const canonicalBlobsSidecarEntries: IKeyValue<Slot, Uint8Array>[] = await Promise.all(
+    const canonicalBlobsSidecarEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
       canonicalBlocks
         .filter((block) => config.getForkSeq(block.slot) >= ForkSeq.deneb)
         .map(async (block) => {

@@ -4,7 +4,7 @@ import {ForkName} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {IChainForkConfig} from "@lodestar/config";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
@@ -99,7 +99,7 @@ export async function verifyBlocksInEpoch(
   }
 }
 
-function logOnPowBlock(logger: ILogger, config: IChainForkConfig, mergeBlock: bellatrix.BeaconBlock): void {
+function logOnPowBlock(logger: Logger, config: IChainForkConfig, mergeBlock: bellatrix.BeaconBlock): void {
   const mergeBlockHash = toHexString(config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock));
   const mergeExecutionHash = toHexString(mergeBlock.body.executionPayload.blockHash);
   const mergePowHash = toHexString(mergeBlock.body.executionPayload.parentHash);

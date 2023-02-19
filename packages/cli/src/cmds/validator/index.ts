@@ -1,4 +1,4 @@
-import {ICliCommand} from "../../util/index.js";
+import {CliCommand} from "../../util/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {getAccountPaths} from "./paths.js";
 import {slashingProtection} from "./slashingProtection/index.js";
@@ -9,7 +9,7 @@ import {blsToExecutionChange} from "./blsToExecutionChange.js";
 import {validatorOptions, IValidatorCliArgs} from "./options.js";
 import {validatorHandler} from "./handler.js";
 
-export const validator: ICliCommand<IValidatorCliArgs, IGlobalArgs> = {
+export const validator: CliCommand<IValidatorCliArgs, IGlobalArgs> = {
   command: "validator",
   describe: "Run one or multiple validator clients",
   examples: [

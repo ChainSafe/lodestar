@@ -5,7 +5,7 @@ import {expect} from "chai";
 import {Libp2p} from "libp2p";
 import sinon from "sinon";
 import {Uint8ArrayList} from "uint8arraylist";
-import {ILogger, LodestarError, sleep} from "@lodestar/utils";
+import {Logger, LodestarError, sleep} from "@lodestar/utils";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "../../../src/request/index.js";
 import {EncodedPayloadType, Encoding, ProtocolDefinition} from "../../../src/types.js";
 import {messages, sszSnappyPing, sszSnappySignedBeaconBlockPhase0} from "../../fixtures/messages.js";
@@ -14,12 +14,12 @@ import {getValidPeerId} from "../../utils/peer.js";
 import {MockLibP2pStream} from "../../utils/index.js";
 import {responseEncode} from "../../utils/response.js";
 import {RespStatus} from "../../../src/interface.js";
-import {IRequestErrorMetadata} from "../../../src/index.js";
+import {RequestErrorMetadata} from "../../../src/index.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 
 describe("request / sendRequest", () => {
   let controller: AbortController;
-  let logger: ILogger;
+  let logger: Logger;
   let peerId: PeerId;
   let libp2p: Libp2p;
   const sandbox = sinon.createSandbox();
@@ -89,7 +89,7 @@ describe("request / sendRequest", () => {
 
   describe("timeout cases", () => {
     const peerId = getValidPeerId();
-    const metadata: IRequestErrorMetadata = {
+    const metadata: RequestErrorMetadata = {
       method: messages.ping.method,
       encoding: Encoding.SSZ_SNAPPY,
       peer: peerId.toString(),

@@ -4,7 +4,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {BLSSignature, Epoch, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, ApiError, routes} from "@lodestar/api";
-import {IClock, ILoggerVc} from "../util/index.js";
+import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -70,7 +70,7 @@ export class SyncCommitteeDutiesService {
 
   constructor(
     private readonly config: IChainForkConfig,
-    private readonly logger: ILoggerVc,
+    private readonly logger: LoggerVc,
     private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,

@@ -2,7 +2,7 @@ import {pipe} from "it-pipe";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Stream} from "@libp2p/interface-connection";
 import {Uint8ArrayList} from "uint8arraylist";
-import {ILogger, TimeoutError, withTimeout} from "@lodestar/utils";
+import {Logger, TimeoutError, withTimeout} from "@lodestar/utils";
 import {prettyPrintPeerId} from "../utils/index.js";
 import {ProtocolDefinition} from "../types.js";
 import {requestDecode} from "../encoders/requestDecode.js";
@@ -18,7 +18,7 @@ export {ResponseError};
 export const DEFAULT_REQUEST_TIMEOUT = 5 * 1000; // 5 sec
 
 export interface HandleRequestOpts<Req, Resp> {
-  logger: ILogger;
+  logger: Logger;
   stream: Stream;
   peerId: PeerId;
   protocol: ProtocolDefinition<Req, Resp>;

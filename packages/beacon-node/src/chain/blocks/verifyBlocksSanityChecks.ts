@@ -3,7 +3,7 @@ import {IChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
-import {IBeaconClock} from "../clock/interface.js";
+import {BeaconClock} from "../clock/interface.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockInput, ImportBlockOpts} from "./types.js";
 
@@ -20,7 +20,7 @@ import {BlockInput, ImportBlockOpts} from "./types.js";
  *   - Not already known
  */
 export function verifyBlocksSanityChecks(
-  chain: {forkChoice: IForkChoice; clock: IBeaconClock; config: IChainForkConfig},
+  chain: {forkChoice: IForkChoice; clock: BeaconClock; config: IChainForkConfig},
   blocks: BlockInput[],
   opts: ImportBlockOpts
 ): {relevantBlocks: BlockInput[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {

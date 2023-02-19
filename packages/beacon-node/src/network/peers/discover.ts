@@ -2,7 +2,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {PeerInfo} from "@libp2p/interface-peer-info";
 import {IBeaconConfig} from "@lodestar/config";
-import {ILogger, pruneSetToMax, sleep} from "@lodestar/utils";
+import {Logger, pruneSetToMax, sleep} from "@lodestar/utils";
 import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {IMetrics} from "../../metrics/index.js";
@@ -29,7 +29,7 @@ export type PeerDiscoveryModules = {
   libp2p: Libp2p;
   peerRpcScores: IPeerRpcScoreStore;
   metrics: IMetrics | null;
-  logger: ILogger;
+  logger: Logger;
   config: IBeaconConfig;
 };
 
@@ -75,7 +75,7 @@ export class PeerDiscovery {
   private libp2p: Libp2p;
   private peerRpcScores: IPeerRpcScoreStore;
   private metrics: IMetrics | null;
-  private logger: ILogger;
+  private logger: Logger;
   private config: IBeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};

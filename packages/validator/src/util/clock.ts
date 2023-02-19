@@ -1,4 +1,4 @@
-import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@lodestar/utils";
+import {ErrorAborted, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
@@ -30,10 +30,10 @@ export class Clock implements IClock {
   readonly genesisTime: number;
   readonly secondsPerSlot: number;
   private readonly config: IChainForkConfig;
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
   private readonly fns: {timeItem: TimeItem; fn: RunEveryFn}[] = [];
 
-  constructor(config: IChainForkConfig, logger: ILogger, opts: {genesisTime: number}) {
+  constructor(config: IChainForkConfig, logger: Logger, opts: {genesisTime: number}) {
     this.genesisTime = opts.genesisTime;
     this.secondsPerSlot = config.SECONDS_PER_SLOT;
     this.config = config;

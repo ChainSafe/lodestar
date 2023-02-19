@@ -1,17 +1,17 @@
 import {IChainForkConfig} from "@lodestar/config";
-import {ILevelDbControllerMetrics} from "./controller/metrics.js";
+import {LevelDbControllerMetrics} from "./controller/metrics.js";
 import {Db} from "./controller/index.js";
 
-export interface IDatabaseApiOptions {
+export type DatabaseApiOptions = {
   config: IChainForkConfig;
   controller: Db;
-}
+};
 
 export abstract class DatabaseService {
   protected config: IChainForkConfig;
   protected db: Db;
 
-  protected constructor(opts: IDatabaseApiOptions) {
+  protected constructor(opts: DatabaseApiOptions) {
     this.config = opts.config;
     this.db = opts.controller;
   }
@@ -25,7 +25,7 @@ export abstract class DatabaseService {
   }
 
   /** To inject metrics after CLI initialization */
-  setMetrics(metrics: ILevelDbControllerMetrics): void {
+  setMetrics(metrics: LevelDbControllerMetrics): void {
     this.db.setMetrics(metrics);
   }
 }

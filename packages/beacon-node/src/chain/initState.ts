@@ -8,7 +8,7 @@ import {
 } from "@lodestar/state-transition";
 import {phase0, allForks, ssz} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
-import {ILogger, toHex} from "@lodestar/utils";
+import {Logger, toHex} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {GENESIS_SLOT, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -16,11 +16,11 @@ import {Eth1Provider} from "../eth1/index.js";
 import {IMetrics} from "../metrics/index.js";
 import {Eth1Options} from "../eth1/options.js";
 import {GenesisBuilder} from "./genesis/genesis.js";
-import {IGenesisResult} from "./genesis/interface.js";
+import {GenesisResult} from "./genesis/interface.js";
 
 export async function persistGenesisResult(
   db: IBeaconDb,
-  genesisResult: IGenesisResult,
+  genesisResult: GenesisResult,
   genesisBlock: allForks.SignedBeaconBlock
 ): Promise<void> {
   await Promise.all([
@@ -75,7 +75,7 @@ export async function initStateFromEth1({
 }: {
   config: IChainForkConfig;
   db: IBeaconDb;
-  logger: ILogger;
+  logger: Logger;
   opts: Eth1Options;
   signal: AbortSignal;
 }): Promise<CachedBeaconStateAllForks> {
@@ -139,7 +139,7 @@ export async function initStateFromEth1({
 export async function initStateFromDb(
   config: IChainForkConfig,
   db: IBeaconDb,
-  logger: ILogger
+  logger: Logger
 ): Promise<BeaconStateAllForks> {
   const state = await db.stateArchive.lastValue();
   if (!state) {
@@ -161,7 +161,7 @@ export async function initStateFromDb(
 export async function initStateFromAnchorState(
   config: IChainForkConfig,
   db: IBeaconDb,
-  logger: ILogger,
+  logger: Logger,
   anchorState: BeaconStateAllForks,
   {
     isWithinWeakSubjectivityPeriod,

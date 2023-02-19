@@ -4,7 +4,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {createIBeaconConfig, createIChainForkConfig, IChainConfig} from "@lodestar/config";
-import {ILogger, RecursivePartial} from "@lodestar/utils";
+import {Logger, RecursivePartial} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {phase0, ssz} from "@lodestar/types";
 import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
@@ -24,7 +24,7 @@ export async function getDevBeaconNode(
     params: Partial<IChainConfig>;
     options?: RecursivePartial<IBeaconNodeOptions>;
     validatorCount?: number;
-    logger?: ILogger;
+    logger?: Logger;
     peerId?: PeerId;
     peerStoreDir?: string;
     anchorState?: BeaconStateAllForks;

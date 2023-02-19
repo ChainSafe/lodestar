@@ -1,6 +1,6 @@
 import {ssz} from "@lodestar/types";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@lodestar/config";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {
   getLatestBlockRoot,
   isWithinWeakSubjectivityPeriod,
@@ -33,7 +33,7 @@ export function getCheckpointFromState(state: BeaconStateAllForks): Checkpoint {
 async function initAndVerifyWeakSubjectivityState(
   config: IBeaconConfig,
   db: IBeaconDb,
-  logger: ILogger,
+  logger: Logger,
   store: BeaconStateAllForks,
   wsState: BeaconStateAllForks,
   wsCheckpoint: Checkpoint
@@ -90,7 +90,7 @@ export async function initBeaconState(
   args: IBeaconArgs & IGlobalArgs,
   chainForkConfig: IChainForkConfig,
   db: IBeaconDb,
-  logger: ILogger,
+  logger: Logger,
   signal: AbortSignal
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
   // fetch the latest state stored in the db which will be used in all cases, if it exists, either
@@ -154,7 +154,7 @@ async function readWSState(
   wssOpts: {checkpointState: string; wssCheckpoint?: string},
   chainForkConfig: IChainForkConfig,
   db: IBeaconDb,
-  logger: ILogger
+  logger: Logger
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
   // weak subjectivity sync from a provided state file:
   // if a weak subjectivity checkpoint has been provided, it is used for additional verification
@@ -174,7 +174,7 @@ async function fetchWSStateFromBeaconApi(
   wssOpts: {checkpointSyncUrl: string; wssCheckpoint?: string},
   chainForkConfig: IChainForkConfig,
   db: IBeaconDb,
-  logger: ILogger
+  logger: Logger
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
   // weak subjectivity sync from a state that needs to be fetched:
   // if a weak subjectivity checkpoint has been provided, it is used to inform which state to download and used for additional verification

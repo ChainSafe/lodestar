@@ -8,7 +8,7 @@ import {spawn, Worker} from "@chainsafe/threads";
 self = undefined;
 import bls from "@chainsafe/bls";
 import {Implementation, PointFormat} from "@chainsafe/bls/types";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
 import {IMetrics} from "../../../metrics/index.js";
@@ -20,7 +20,7 @@ import {chunkifyMaximizeChunkSize} from "./utils.js";
 import {defaultPoolSize} from "./poolSize.js";
 
 export type BlsMultiThreadWorkerPoolModules = {
-  logger: ILogger;
+  logger: Logger;
   metrics: IMetrics | null;
 };
 
@@ -96,7 +96,7 @@ type WorkerDescriptor = {
  *   sets into packages of work and send at once to a worker to distribute the latency cost
  */
 export class BlsMultiThreadWorkerPool implements IBlsVerifier {
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
   private readonly metrics: IMetrics | null;
 
   private readonly format: PointFormat;

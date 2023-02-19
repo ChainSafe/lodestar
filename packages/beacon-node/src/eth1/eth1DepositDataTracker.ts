@@ -1,7 +1,7 @@
 import {phase0, ssz} from "@lodestar/types";
 import {IChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks, becomesNewEth1Data} from "@lodestar/state-transition";
-import {ErrorAborted, TimeoutError, fromHex, ILogger, isErrorAborted, sleep} from "@lodestar/utils";
+import {ErrorAborted, TimeoutError, fromHex, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 
 import {IBeaconDb} from "../db/index.js";
 import {IMetrics} from "../metrics/index.js";
@@ -41,7 +41,7 @@ export type Eth1DepositDataTrackerModules = {
   config: IChainForkConfig;
   db: IBeaconDb;
   metrics: IMetrics | null;
-  logger: ILogger;
+  logger: Logger;
   signal: AbortSignal;
 };
 
@@ -51,7 +51,7 @@ export type Eth1DepositDataTrackerModules = {
  */
 export class Eth1DepositDataTracker {
   private config: IChainForkConfig;
-  private logger: ILogger;
+  private logger: Logger;
   private signal: AbortSignal;
   private readonly metrics: IMetrics | null;
 

@@ -5,7 +5,7 @@ import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-go
 import {IBeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {allForks, altair, phase0, capella, deneb} from "@lodestar/types";
-import {ILogger, Map2d, Map2dArr} from "@lodestar/utils";
+import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 
 import {IMetrics} from "../../metrics/index.js";
@@ -44,7 +44,7 @@ const MAX_OUTBOUND_BUFFER_SIZE = 2 ** 24; // 16MB
 export type Eth2GossipsubModules = {
   config: IBeaconConfig;
   libp2p: Libp2p;
-  logger: ILogger;
+  logger: Logger;
   metrics: IMetrics | null;
   signal: AbortSignal;
   eth2Context: Eth2Context;
@@ -77,7 +77,7 @@ export class Eth2Gossipsub extends GossipSub {
   readonly jobQueues: GossipJobQueues;
   readonly scoreParams: Partial<PeerScoreParams>;
   private readonly config: IBeaconConfig;
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
   private readonly peersData: PeersData;
 
   // Internal caches

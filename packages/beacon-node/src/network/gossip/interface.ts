@@ -6,7 +6,7 @@ import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
 import {allForks, altair, capella, deneb, phase0} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {NetworkEvent} from "../events.js";
 import {JobItemQueue} from "../../util/queue/index.js";
@@ -107,20 +107,20 @@ export type GossipFnByType = {
 
 export type GossipFn = GossipFnByType[keyof GossipFnByType];
 
-export interface IGossipEvents {
+export type GossipEvents = {
   [topicStr: string]: GossipFn;
   [NetworkEvent.gossipHeartbeat]: () => void;
   [NetworkEvent.gossipStart]: () => void;
   [NetworkEvent.gossipStop]: () => void;
-}
-export type GossipEventEmitter = StrictEventEmitter<EventEmitter, IGossipEvents>;
+};
+export type GossipEventEmitter = StrictEventEmitter<EventEmitter, GossipEvents>;
 
-export interface IGossipModules {
+export type GossipModules = {
   config: IBeaconConfig;
   libp2p: Libp2p;
-  logger: ILogger;
+  logger: Logger;
   chain: IBeaconChain;
-}
+};
 
 /**
  * Contains various methods for validation of incoming gossip topic data.

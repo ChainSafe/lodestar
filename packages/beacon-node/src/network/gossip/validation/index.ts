@@ -1,6 +1,6 @@
 import {TopicValidatorResult} from "@libp2p/interface-pubsub";
 import {IChainForkConfig} from "@lodestar/config";
-import {ILogger, mapValues} from "@lodestar/utils";
+import {Logger, mapValues} from "@lodestar/utils";
 import {IMetrics} from "../../../metrics/index.js";
 import {getGossipSSZType} from "../topic.js";
 import {
@@ -16,7 +16,7 @@ import {createValidationQueues} from "./queue.js";
 
 type ValidatorFnModules = {
   config: IChainForkConfig;
-  logger: ILogger;
+  logger: Logger;
   metrics: IMetrics | null;
 };
 

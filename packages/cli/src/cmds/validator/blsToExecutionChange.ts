@@ -7,7 +7,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 import {PointFormat} from "@chainsafe/bls/types";
 
-import {ICliCommand} from "../../util/index.js";
+import {CliCommand} from "../../util/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IValidatorCliArgs} from "./options.js";
@@ -20,7 +20,7 @@ type BlsToExecutionChangeArgs = {
   toExecutionAddress: string;
 };
 
-export const blsToExecutionChange: ICliCommand<BlsToExecutionChangeArgs, IValidatorCliArgs & IGlobalArgs> = {
+export const blsToExecutionChange: CliCommand<BlsToExecutionChangeArgs, IValidatorCliArgs & IGlobalArgs> = {
   command: "bls-to-execution-change",
 
   describe:

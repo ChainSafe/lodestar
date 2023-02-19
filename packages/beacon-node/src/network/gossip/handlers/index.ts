@@ -2,7 +2,7 @@ import {peerIdFromString} from "@libp2p/peer-id";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
-import {ILogger, prettyBytes} from "@lodestar/utils";
+import {Logger, prettyBytes} from "@lodestar/utils";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {IMetrics} from "../../../metrics/index.js";
 import {OpSource} from "../../../metrics/validatorMonitor.js";
@@ -56,7 +56,7 @@ type ValidatorFnsModules = {
   attnetsService: AttnetsService;
   chain: IBeaconChain;
   config: IBeaconConfig;
-  logger: ILogger;
+  logger: Logger;
   metrics: IMetrics | null;
   networkEventBus: NetworkEventBus;
   peerRpcScores: PeerRpcScoreStore;

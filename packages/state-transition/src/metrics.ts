@@ -1,16 +1,16 @@
 import {Epoch} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "./types.js";
-import {IAttesterStatus} from "./util/attesterStatus.js";
+import {AttesterStatus} from "./util/attesterStatus.js";
 
-export interface IBeaconStateTransitionMetrics {
+export type BeaconStateTransitionMetrics = {
   stfnEpochTransition: IHistogram;
   stfnProcessBlock: IHistogram;
   stfnBalancesNodesPopulatedMiss: IGauge<"source">;
   stfnValidatorsNodesPopulatedMiss: IGauge<"source">;
   stfnStateClone: IGauge<"source">;
   stfnStateClonedCount: IHistogram;
-  registerValidatorStatuses: (currentEpoch: Epoch, statuses: IAttesterStatus[], balances?: number[]) => void;
-}
+  registerValidatorStatuses: (currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]) => void;
+};
 
 type LabelValues<T extends string> = Partial<Record<T, string | number>>;
 
@@ -30,7 +30,7 @@ interface IGauge<T extends string = string> {
 
 export function onStateCloneMetrics(
   state: CachedBeaconStateAllForks,
-  metrics: IBeaconStateTransitionMetrics,
+  metrics: BeaconStateTransitionMetrics,
   source: "stateTransition" | "processSlots"
 ): void {
   metrics.stfnStateClone.inc({source});

@@ -1,22 +1,22 @@
 import fs from "node:fs";
 import path from "node:path";
 import {Interchange} from "@lodestar/validator";
-import {ICliCommand} from "../../../util/index.js";
+import {CliCommand} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";
-import {getCliLogger, ILogArgs} from "../../../util/index.js";
+import {getCliLogger, LogArgs} from "../../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {getValidatorPaths} from "../paths.js";
 import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
 
-interface IImportArgs {
+type ImportArgs = {
   file: string;
-}
+};
 
-export const importCmd: ICliCommand<
-  IImportArgs,
-  ISlashingProtectionArgs & AccountValidatorArgs & IGlobalArgs & ILogArgs
+export const importCmd: CliCommand<
+  ImportArgs,
+  ISlashingProtectionArgs & AccountValidatorArgs & IGlobalArgs & LogArgs
 > = {
   command: "import",
 

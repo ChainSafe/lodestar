@@ -2,7 +2,7 @@ import {IBeaconConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {ErrorAborted, ILogger, sleep, prettyBytes} from "@lodestar/utils";
+import {ErrorAborted, Logger, sleep, prettyBytes} from "@lodestar/utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, isExecutionCachedStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
 import {IBeaconChain} from "../chain/index.js";
@@ -19,7 +19,7 @@ type NodeNotifierModules = {
   chain: IBeaconChain;
   sync: IBeaconSync;
   config: IBeaconConfig;
-  logger: ILogger;
+  logger: Logger;
   signal: AbortSignal;
 };
 

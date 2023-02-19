@@ -5,7 +5,7 @@ import {
   DataAvailableStatus,
 } from "@lodestar/state-transition";
 import {deneb} from "@lodestar/types";
-import {ErrorAborted, ILogger, sleep} from "@lodestar/utils";
+import {ErrorAborted, Logger, sleep} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";
 import {IMetrics} from "../../metrics/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -25,7 +25,7 @@ import {BlockInput, BlockInputType, ImportBlockOpts} from "./types.js";
 export async function verifyBlocksStateTransitionOnly(
   preState0: CachedBeaconStateAllForks,
   blocks: BlockInput[],
-  logger: ILogger,
+  logger: Logger,
   metrics: IMetrics | null,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts

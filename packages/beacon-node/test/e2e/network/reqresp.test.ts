@@ -8,7 +8,7 @@ import {
   Encoding,
   RequestError,
   RequestErrorCode,
-  IRequestErrorMetadata,
+  RequestErrorMetadata,
   HandlerTypeFromMessage,
   EncodedPayloadType,
   EncodedPayload,
@@ -19,7 +19,7 @@ import {allForks, altair, phase0, Root, ssz} from "@lodestar/types";
 import {sleep as _sleep} from "@lodestar/utils";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
 import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
-import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
+import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 import {ReqRespHandlers} from "../../../src/network/reqresp/handlers/index.js";
 import {ReqRespMethod} from "../../../src/network/reqresp/types.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
@@ -37,7 +37,7 @@ describe("network / ReqResp", function () {
   this.retries(2); // This test fail sometimes, with a 5% rate.
 
   const multiaddr = "/ip4/127.0.0.1/tcp/0";
-  const networkOptsDefault: INetworkOptions = {
+  const networkOptsDefault: NetworkOptions = {
     ...defaultNetworkOptions,
     maxPeers: 1,
     targetPeers: 1,
@@ -427,7 +427,7 @@ describe("network / ReqResp", function () {
 });
 
 /** Helper to reduce code-duplication */
-function formatMetadata(method: ReqRespMethod, encoding: Encoding, peer: PeerId): IRequestErrorMetadata {
+function formatMetadata(method: ReqRespMethod, encoding: Encoding, peer: PeerId): RequestErrorMetadata {
   return {method, encoding, peer: peer.toString()};
 }
 

@@ -2,21 +2,21 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Epoch, ssz} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {ChainEvent, IBeaconChain} from "../../chain/index.js";
 import {getActiveForks} from "../forks.js";
 import {Eth2Gossipsub, GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {RequestedSubnet, SubnetMap} from "../peers/utils/index.js";
 import {IMetrics} from "../../metrics/metrics.js";
-import {CommitteeSubscription, ISubnetsService, SubnetsServiceOpts} from "./interface.js";
+import {CommitteeSubscription, SubnetsService, SubnetsServiceOpts} from "./interface.js";
 
 const gossipType = GossipType.sync_committee;
 
 /**
  * Manage sync committee subnets. Sync committees are long (~27h) so there aren't random long-lived subscriptions
  */
-export class SyncnetsService implements ISubnetsService {
+export class SyncnetsService implements SubnetsService {
   /**
    * All currently subscribed subnets. Syncnets do not have additional long-lived
    * random subscriptions since the committees are already active for long periods of time.
@@ -32,7 +32,7 @@ export class SyncnetsService implements ISubnetsService {
     private readonly chain: IBeaconChain,
     private readonly gossip: Eth2Gossipsub,
     private readonly metadata: MetadataController,
-    private readonly logger: ILogger,
+    private readonly logger: Logger,
     private readonly metrics: IMetrics | null,
     private readonly opts?: SubnetsServiceOpts
   ) {

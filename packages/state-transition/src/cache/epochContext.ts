@@ -25,7 +25,7 @@ import {
   getSeed,
   computeProposers,
 } from "../util/index.js";
-import {computeEpochShuffling, IEpochShuffling} from "../util/epochShuffling.js";
+import {computeEpochShuffling, EpochShuffling} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
@@ -117,11 +117,11 @@ export class EpochContext {
    *
    * $VALIDATOR_COUNT x Number
    */
-  previousShuffling: IEpochShuffling;
+  previousShuffling: EpochShuffling;
   /** Same as previousShuffling */
-  currentShuffling: IEpochShuffling;
+  currentShuffling: EpochShuffling;
   /** Same as previousShuffling */
-  nextShuffling: IEpochShuffling;
+  nextShuffling: EpochShuffling;
   /**
    * Effective balances, for altair processAttestations()
    */
@@ -191,9 +191,9 @@ export class EpochContext {
     index2pubkey: Index2PubkeyCache;
     proposers: number[];
     proposersNextEpoch: ProposersDeferred;
-    previousShuffling: IEpochShuffling;
-    currentShuffling: IEpochShuffling;
-    nextShuffling: IEpochShuffling;
+    previousShuffling: EpochShuffling;
+    currentShuffling: EpochShuffling;
+    nextShuffling: EpochShuffling;
     effectiveBalanceIncrements: EffectiveBalanceIncrements;
     syncParticipantReward: number;
     syncProposerReward: number;
@@ -703,17 +703,17 @@ export class EpochContext {
     this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); // Optimize for aggregation
   }
 
-  getShufflingAtSlot(slot: Slot): IEpochShuffling {
+  getShufflingAtSlot(slot: Slot): EpochShuffling {
     const epoch = computeEpochAtSlot(slot);
     return this.getShufflingAtEpoch(epoch);
   }
 
-  getShufflingAtSlotOrNull(slot: Slot): IEpochShuffling | null {
+  getShufflingAtSlotOrNull(slot: Slot): EpochShuffling | null {
     const epoch = computeEpochAtSlot(slot);
     return this.getShufflingAtEpochOrNull(epoch);
   }
 
-  getShufflingAtEpoch(epoch: Epoch): IEpochShuffling {
+  getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
     const shuffling = this.getShufflingAtEpochOrNull(epoch);
     if (shuffling === null) {
       throw new Error(`Requesting slot committee out of range epoch: ${epoch} current: ${this.currentShuffling.epoch}`);
@@ -722,7 +722,7 @@ export class EpochContext {
     return shuffling;
   }
 
-  getShufflingAtEpochOrNull(epoch: Epoch): IEpochShuffling | null {
+  getShufflingAtEpochOrNull(epoch: Epoch): EpochShuffling | null {
     if (epoch === this.previousShuffling.epoch) {
       return this.previousShuffling;
     } else if (epoch === this.currentShuffling.epoch) {

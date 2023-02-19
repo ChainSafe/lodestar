@@ -5,7 +5,7 @@ import {ApiError, getClient} from "@lodestar/api";
 import {getStateTypeFromBytes} from "@lodestar/beacon-node";
 import {IChainConfig, IChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {fromHex, callFnWhenAwait, ILogger} from "@lodestar/utils";
+import {fromHex, callFnWhenAwait, Logger} from "@lodestar/utils";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {parseBootnodesFile} from "../util/format.js";
 import * as mainnet from "./mainnet.js";
@@ -136,7 +136,7 @@ export function readBootnodes(bootnodesFilePath: string): string[] {
  */
 export async function fetchWeakSubjectivityState(
   config: IChainForkConfig,
-  logger: ILogger,
+  logger: Logger,
   {checkpointSyncUrl, wssCheckpoint}: {checkpointSyncUrl: string; wssCheckpoint?: string}
 ): Promise<{wsState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
   try {

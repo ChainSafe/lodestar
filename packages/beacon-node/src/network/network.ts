@@ -2,17 +2,17 @@ import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {IBeaconConfig} from "@lodestar/config";
-import {ILogger, sleep} from "@lodestar/utils";
+import {Logger, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SignableENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {deneb, Epoch, phase0, allForks} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {IMetrics} from "../metrics/index.js";
-import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
+import {ChainEvent, IBeaconChain, BeaconClock} from "../chain/index.js";
 import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "../chain/opPools/utils.js";
-import {INetworkOptions} from "./options.js";
+import {NetworkOptions} from "./options.js";
 import {INetwork, Libp2p} from "./interface.js";
 import {ReqRespBeaconNode, ReqRespHandlers, beaconBlocksMaybeBlobsByRange} from "./reqresp/index.js";
 import {beaconBlocksMaybeBlobsByRoot} from "./reqresp/beaconBlocksMaybeBlobsByRoot.js";
@@ -39,11 +39,11 @@ import {createNodeJsLibp2p} from "./nodejs/util.js";
 // How many changes to batch cleanup
 const CACHED_BLS_BATCH_CLEANUP_LIMIT = 10;
 
-interface INetworkModules {
-  opts: INetworkOptions;
+type NetworkModules = {
+  opts: NetworkOptions;
   config: IBeaconConfig;
   libp2p: Libp2p;
-  logger: ILogger;
+  logger: Logger;
   chain: IBeaconChain;
   signal: AbortSignal;
   peersData: PeersData;
@@ -55,21 +55,21 @@ interface INetworkModules {
   attnetsService: AttnetsService;
   syncnetsService: SyncnetsService;
   peerManager: PeerManager;
-}
+};
 
-export interface INetworkInitModules {
-  opts: INetworkOptions;
+export type NetworkInitModules = {
+  opts: NetworkOptions;
   config: IBeaconConfig;
   peerId: PeerId;
   peerStoreDir?: string;
-  logger: ILogger;
+  logger: Logger;
   metrics: IMetrics | null;
   chain: IBeaconChain;
   reqRespHandlers: ReqRespHandlers;
   signal: AbortSignal;
   // Optionally pass custom GossipHandlers, for testing
   gossipHandlers?: GossipHandlers;
-}
+};
 
 export class Network implements INetwork {
   events: INetworkEventBus;
@@ -79,14 +79,14 @@ export class Network implements INetwork {
   gossip: Eth2Gossipsub;
   metadata: MetadataController;
   readonly peerRpcScores: IPeerRpcScoreStore;
-  private readonly opts: INetworkOptions;
+  private readonly opts: NetworkOptions;
   private readonly peersData: PeersData;
 
   private readonly peerManager: PeerManager;
   private readonly libp2p: Libp2p;
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
   private readonly config: IBeaconConfig;
-  private readonly clock: IBeaconClock;
+  private readonly clock: BeaconClock;
   private readonly chain: IBeaconChain;
   private readonly signal: AbortSignal;
 
@@ -94,7 +94,7 @@ export class Network implements INetwork {
   private regossipBlsChangesPromise: Promise<void> | null = null;
   private closed = false;
 
-  constructor(modules: INetworkModules) {
+  constructor(modules: NetworkModules) {
     const {
       opts,
       config,
@@ -146,7 +146,7 @@ export class Network implements INetwork {
     reqRespHandlers,
     gossipHandlers,
     signal,
-  }: INetworkInitModules): Promise<Network> {
+  }: NetworkInitModules): Promise<Network> {
     const clock = chain.clock;
     const peersData = new PeersData();
     const networkEventBus = new NetworkEventBus();

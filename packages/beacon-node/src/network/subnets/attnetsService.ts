@@ -8,7 +8,7 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {Epoch, Slot, ssz} from "@lodestar/types";
-import {ILogger, randBetween} from "@lodestar/utils";
+import {Logger, randBetween} from "@lodestar/utils";
 import {shuffle} from "../../util/shuffle.js";
 import {ChainEvent, IBeaconChain} from "../../chain/index.js";
 import {GossipTopic, GossipType} from "../gossip/index.js";
@@ -64,7 +64,7 @@ export class AttnetsService implements IAttnetsService {
       unsubscribeTopic: (topic: GossipTopic) => void;
     },
     private readonly metadata: MetadataController,
-    private readonly logger: ILogger,
+    private readonly logger: Logger,
     private readonly metrics: IMetrics | null,
     private readonly opts?: SubnetsServiceOpts
   ) {

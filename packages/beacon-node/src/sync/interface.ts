@@ -1,4 +1,4 @@
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {RootHex, Slot, phase0} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
 import {routes} from "@lodestar/api";
@@ -40,17 +40,17 @@ export const syncStateMetric: {[K in SyncState]: number} = {
   [SyncState.Synced]: 3,
 };
 
-export interface ISlotRange {
+export type SlotRange = {
   start: Slot;
   end: Slot;
-}
+};
 
-export interface ISyncModules {
+export interface SyncModules {
   config: IBeaconConfig;
   network: INetwork;
   db: IBeaconDb;
   metrics: IMetrics | null;
-  logger: ILogger;
+  logger: Logger;
   chain: IBeaconChain;
   wsCheckpoint?: phase0.Checkpoint;
 }

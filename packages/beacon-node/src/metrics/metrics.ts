@@ -1,21 +1,21 @@
 import {Metric, Registry} from "prom-client";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {BeaconStateAllForks, getCurrentSlot} from "@lodestar/state-transition";
 import {IChainForkConfig} from "@lodestar/config";
 import {createBeaconMetrics, IBeaconMetrics} from "./metrics/beacon.js";
 import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar.js";
 import {MetricsOptions} from "./options.js";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
-import {createValidatorMonitor, IValidatorMonitor} from "./validatorMonitor.js";
+import {createValidatorMonitor, ValidatorMonitor} from "./validatorMonitor.js";
 import {collectNodeJSMetrics} from "./nodeJsMetrics.js";
 
-export type IMetrics = IBeaconMetrics & ILodestarMetrics & IValidatorMonitor & {register: RegistryMetricCreator};
+export type IMetrics = IBeaconMetrics & ILodestarMetrics & ValidatorMonitor & {register: RegistryMetricCreator};
 
 export function createMetrics(
   opts: MetricsOptions,
   config: IChainForkConfig,
   anchorState: BeaconStateAllForks,
-  logger: ILogger,
+  logger: Logger,
   externalRegistries: Registry[] = []
 ): IMetrics {
   const register = new RegistryMetricCreator();

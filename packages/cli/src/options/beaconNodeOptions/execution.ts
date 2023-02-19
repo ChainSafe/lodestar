@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {ICliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
+import {CliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
 
 export type ExecutionEngineArgs = {
   "execution.urls": string[];
@@ -34,7 +34,7 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
   };
 }
 
-export const options: ICliCommandOptions<ExecutionEngineArgs> = {
+export const options: CliCommandOptions<ExecutionEngineArgs> = {
   "execution.urls": {
     description: "Urls to execution client engine API",
     type: "array",

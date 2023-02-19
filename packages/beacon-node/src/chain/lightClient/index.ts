@@ -13,7 +13,7 @@ import {
   LightClientUpdateSummary,
   upgradeLightClientHeader,
 } from "@lodestar/light-client/spec";
-import {ILogger, MapDef, pruneSetToMax} from "@lodestar/utils";
+import {Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {MIN_SYNC_COMMITTEE_PARTICIPANTS, SYNC_COMMITTEE_SIZE, ForkName, ForkSeq, ForkExecution} from "@lodestar/params";
@@ -59,7 +59,7 @@ type LightClientServerModules = {
   db: IBeaconDb;
   metrics: IMetrics | null;
   emitter: ChainEventEmitter;
-  logger: ILogger;
+  logger: Logger;
 };
 
 const MAX_CACHED_FINALIZED_HEADERS = 3;
@@ -170,7 +170,7 @@ export class LightClientServer {
   private readonly config: IChainForkConfig;
   private readonly metrics: IMetrics | null;
   private readonly emitter: ChainEventEmitter;
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
   private readonly knownSyncCommittee = new MapDef<SyncPeriod, Set<DependantRootHex>>(() => new Set());
   private storedCurrentSyncCommittee = false;
 

@@ -1,6 +1,6 @@
 import {Api, ServerApi} from "@lodestar/api";
 import {registerRoutes} from "@lodestar/api/beacon/server";
-import {ErrorAborted, ILogger} from "@lodestar/utils";
+import {ErrorAborted, Logger} from "@lodestar/utils";
 import {IChainForkConfig} from "@lodestar/config";
 import {NodeIsSyncing} from "../impl/errors.js";
 import {RestApiServer, RestApiServerModules, RestApiServerMetrics, RestApiServerOpts} from "./base.js";
@@ -24,7 +24,7 @@ export const beaconRestApiServerOpts: BeaconRestApiServerOpts = {
 
 export type BeaconRestApiServerModules = RestApiServerModules & {
   config: IChainForkConfig;
-  logger: ILogger;
+  logger: Logger;
   api: {[K in keyof Api]: ServerApi<Api[K]>};
   metrics: RestApiServerMetrics | null;
 };

@@ -1,14 +1,14 @@
-export interface ILevelDbControllerMetrics {
-  dbReadReq: ICounter<"bucket">;
-  dbReadItems: ICounter<"bucket">;
-  dbWriteReq: ICounter<"bucket">;
-  dbWriteItems: ICounter<"bucket">;
+export type LevelDbControllerMetrics = {
+  dbReadReq: Counter<"bucket">;
+  dbReadItems: Counter<"bucket">;
+  dbWriteReq: Counter<"bucket">;
+  dbWriteItems: Counter<"bucket">;
   dbSizeTotal: IGauge;
-}
+};
 
 type Labels<T extends string> = Partial<Record<T, string | number>>;
 
-interface ICounter<T extends string> {
+interface Counter<T extends string> {
   inc(value?: number): void;
   inc(labels: Labels<T>, value?: number): void;
   inc(arg1?: Labels<T> | number, arg2?: number): void;

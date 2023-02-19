@@ -6,7 +6,7 @@ const IDENTIFIER = Buffer.from([0x73, 0x4e, 0x61, 0x50, 0x70, 0x59]);
 export class SnappyFramesUncompress {
   private buffer = new Uint8ArrayList();
 
-  private state: IUncompressState = {
+  private state: UncompressState = {
     foundIdentifier: false,
   };
 
@@ -66,9 +66,9 @@ export class SnappyFramesUncompress {
   }
 }
 
-interface IUncompressState {
+type UncompressState = {
   foundIdentifier: boolean;
-}
+};
 
 enum ChunkType {
   IDENTIFIER = 0xff,

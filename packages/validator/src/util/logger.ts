@@ -1,12 +1,12 @@
 import {HttpError} from "@lodestar/api";
-import {LogData, ILogger, isErrorAborted} from "@lodestar/utils";
+import {LogData, Logger, isErrorAborted} from "@lodestar/utils";
 import {IClock} from "./clock.js";
 
-export type ILoggerVc = Pick<ILogger, "error" | "warn" | "info" | "verbose" | "debug"> & {
+export type LoggerVc = Pick<Logger, "error" | "warn" | "info" | "verbose" | "debug"> & {
   isSyncing(e: Error): void;
 };
 
-export function getLoggerVc(logger: ILogger, clock: IClock): ILoggerVc {
+export function getLoggerVc(logger: Logger, clock: IClock): LoggerVc {
   let hasLogged = false;
 
   clock.runEverySlot(async () => {

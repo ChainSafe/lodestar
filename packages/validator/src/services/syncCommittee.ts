@@ -3,7 +3,7 @@ import {Slot, CommitteeIndex, altair, Root} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Api, ApiError} from "@lodestar/api";
-import {IClock, ILoggerVc} from "../util/index.js";
+import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -24,7 +24,7 @@ export class SyncCommitteeService {
 
   constructor(
     private readonly config: IChainForkConfig,
-    private readonly logger: ILoggerVc,
+    private readonly logger: LoggerVc,
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,

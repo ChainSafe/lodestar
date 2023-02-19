@@ -1,21 +1,21 @@
 import path from "node:path";
 import {InterchangeFormatVersion} from "@lodestar/validator";
-import {ICliCommand, writeFile600Perm} from "../../../util/index.js";
+import {CliCommand, writeFile600Perm} from "../../../util/index.js";
 import {IGlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";
-import {getCliLogger, ILogArgs} from "../../../util/index.js";
+import {getCliLogger, LogArgs} from "../../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {getValidatorPaths} from "../paths.js";
 import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
 
-interface IExportArgs {
+type ExportArgs = {
   file: string;
-}
+};
 
-export const exportCmd: ICliCommand<
-  IExportArgs,
-  ISlashingProtectionArgs & AccountValidatorArgs & IGlobalArgs & ILogArgs
+export const exportCmd: CliCommand<
+  ExportArgs,
+  ISlashingProtectionArgs & AccountValidatorArgs & IGlobalArgs & LogArgs
 > = {
   command: "export",
 

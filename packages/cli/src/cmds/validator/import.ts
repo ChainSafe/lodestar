@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {YargsError, ICliCommand, getPubkeyHexFromKeystore} from "../../util/index.js";
+import {YargsError, CliCommand, getPubkeyHexFromKeystore} from "../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {validatorOptions, IValidatorCliArgs} from "./options.js";
@@ -10,7 +10,7 @@ import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
 
 /* eslint-disable no-console */
 
-export const importCmd: ICliCommand<IValidatorCliArgs, IGlobalArgs> = {
+export const importCmd: CliCommand<IValidatorCliArgs, IGlobalArgs> = {
   command: "import",
 
   describe:

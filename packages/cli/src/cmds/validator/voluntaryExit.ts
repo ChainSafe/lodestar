@@ -11,7 +11,7 @@ import {ssz, phase0} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {Signer, SignerLocal, SignerType} from "@lodestar/validator";
 import {Api, ApiError, getClient} from "@lodestar/api";
-import {ensure0xPrefix, ICliCommand, YargsError} from "../../util/index.js";
+import {ensure0xPrefix, CliCommand, YargsError} from "../../util/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IValidatorCliArgs} from "./options.js";
@@ -25,7 +25,7 @@ type VoluntaryExitArgs = {
   yes?: boolean;
 };
 
-export const voluntaryExit: ICliCommand<VoluntaryExitArgs, IValidatorCliArgs & IGlobalArgs> = {
+export const voluntaryExit: CliCommand<VoluntaryExitArgs, IValidatorCliArgs & IGlobalArgs> = {
   command: "voluntary-exit",
 
   describe:

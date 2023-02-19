@@ -1,13 +1,13 @@
 import {IChainForkConfig} from "@lodestar/config";
-import {Db, Repository, IKeyValue, IFilterOptions, Bucket} from "@lodestar/db";
+import {Db, Repository, KeyValue, FilterOptions, Bucket} from "@lodestar/db";
 import {Slot, Root, ssz, deneb} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 
-export interface IBlockFilterOptions extends IFilterOptions<Slot> {
+export interface BlockFilterOptions extends FilterOptions<Slot> {
   step?: number;
 }
 
-export type BlockArchiveBatchPutBinaryItem = IKeyValue<Slot, Uint8Array> & {
+export type BlockArchiveBatchPutBinaryItem = KeyValue<Slot, Uint8Array> & {
   slot: Slot;
   blockRoot: Root;
   parentRoot: Root;

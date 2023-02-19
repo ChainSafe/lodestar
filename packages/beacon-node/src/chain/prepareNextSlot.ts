@@ -2,7 +2,7 @@ import {computeEpochAtSlot, isExecutionStateType, computeTimeAtSlot} from "@lode
 import {IChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {ILogger, sleep} from "@lodestar/utils";
+import {Logger, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {IMetrics} from "../metrics/index.js";
 import {TransitionConfigurationV1} from "../execution/engine/interface.js";
@@ -34,7 +34,7 @@ export class PrepareNextSlotScheduler {
     private readonly chain: IBeaconChain,
     private readonly config: IChainForkConfig,
     private readonly metrics: IMetrics | null,
-    private readonly logger: ILogger,
+    private readonly logger: Logger,
     private readonly signal: AbortSignal
   ) {
     this.chain.emitter.on(ChainEvent.clockSlot, this.prepareForNextSlot);

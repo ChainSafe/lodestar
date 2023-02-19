@@ -1,5 +1,5 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, phase0} from "@lodestar/types";
 import {INetwork, NetworkEvent} from "../network/index.js";
@@ -7,7 +7,7 @@ import {isOptimisticBlock} from "../util/forkChoice.js";
 import {IMetrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {GENESIS_SLOT} from "../constants/constants.js";
-import {IBeaconSync, ISyncModules, SyncingStatus} from "./interface.js";
+import {IBeaconSync, SyncModules, SyncingStatus} from "./interface.js";
 import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range.js";
 import {getPeerSyncType, PeerSyncType, peerSyncTypes} from "./utils/remoteSyncType.js";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
@@ -16,7 +16,7 @@ import {SyncOptions} from "./options.js";
 import {UnknownBlockSync} from "./unknownBlock.js";
 
 export class BeaconSync implements IBeaconSync {
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
   private readonly metrics: IMetrics | null;
@@ -38,7 +38,7 @@ export class BeaconSync implements IBeaconSync {
    */
   private readonly slotImportTolerance: Slot;
 
-  constructor(opts: SyncOptions, modules: ISyncModules) {
+  constructor(opts: SyncOptions, modules: SyncModules) {
     const {config, chain, metrics, network, logger} = modules;
     this.opts = opts;
     this.network = network;

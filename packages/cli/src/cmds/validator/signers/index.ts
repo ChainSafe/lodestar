@@ -3,7 +3,7 @@ import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-key
 import {interopSecretKey} from "@lodestar/state-transition";
 import {externalSignerGetKeys, Signer, SignerType} from "@lodestar/validator";
 import {toHexString} from "@chainsafe/ssz";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {defaultNetwork, IGlobalArgs} from "../../../options/index.js";
 import {assertValidPubkeysHex, isValidHttpUrl, parseRange, YargsError} from "../../../util/index.js";
 import {getAccountPaths} from "../paths.js";
@@ -42,7 +42,7 @@ const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 export async function getSignersFromArgs(
   args: IValidatorCliArgs & IGlobalArgs,
   network: string,
-  {logger, signal}: {logger: Pick<ILogger, "info">; signal: AbortSignal}
+  {logger, signal}: {logger: Pick<Logger, "info">; signal: AbortSignal}
 ): Promise<Signer[]> {
   // ONLY USE FOR TESTNETS - Derive interop keys
   if (args.interopIndexes) {

@@ -1,14 +1,14 @@
 import {logFormats, LogLevels} from "@lodestar/utils";
-import {ICliCommandOptions} from "../util/command.js";
+import {CliCommandOptions} from "../util/command.js";
 import {
-  ILogArgs,
+  LogArgs,
   LOG_DAILY_ROTATE_DEFAULT,
   LOG_FILE_DISABLE_KEYWORD,
   LOG_FILE_LEVEL_DEFAULT,
   LOG_LEVEL_DEFAULT,
 } from "../util/logger.js";
 
-export const logOptions: ICliCommandOptions<ILogArgs> = {
+export const logOptions: CliCommandOptions<LogArgs> = {
   logLevel: {
     choices: LogLevels,
     description: "Logging verbosity level for emittings logs to terminal",

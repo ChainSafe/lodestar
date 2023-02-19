@@ -86,9 +86,9 @@ export interface IPeerRpcScoreStore {
   updateGossipsubScore(peerId: PeerIdStr, newScore: number, ignore: boolean): void;
 }
 
-export interface IPeerRpcScoreStoreModules {
+export type PeerRpcScoreStoreModules = {
   metrics: IMetrics | null;
-}
+};
 
 export type PeerScoreStats = ({peerId: PeerIdStr} & PeerScoreStat)[];
 

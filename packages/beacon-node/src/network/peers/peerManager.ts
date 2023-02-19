@@ -5,7 +5,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {IBeaconConfig} from "@lodestar/config";
 import {allForks, altair, phase0} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
 import {IMetrics} from "../../metrics/index.js";
@@ -13,7 +13,7 @@ import {NetworkEvent, INetworkEventBus} from "../events.js";
 import {Libp2p} from "../interface.js";
 import {IReqRespBeaconNode, ReqRespMethod, RequestTypedContainer} from "../reqresp/ReqRespBeaconNode.js";
 import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
-import {ISubnetsService} from "../subnets/index.js";
+import {SubnetsService} from "../subnets/index.js";
 import {SubnetType} from "../metadata.js";
 import {Eth2Gossipsub} from "../gossip/gossipsub.js";
 import {PeersData, PeerData} from "./peersData.js";
@@ -82,12 +82,12 @@ export type PeerManagerOpts = {
 
 export type PeerManagerModules = {
   libp2p: Libp2p;
-  logger: ILogger;
+  logger: Logger;
   metrics: IMetrics | null;
   reqResp: IReqRespBeaconNode;
   gossip: Eth2Gossipsub;
-  attnetsService: ISubnetsService;
-  syncnetsService: ISubnetsService;
+  attnetsService: SubnetsService;
+  syncnetsService: SubnetsService;
   chain: IBeaconChain;
   config: IBeaconConfig;
   peerRpcScores: IPeerRpcScoreStore;
@@ -113,12 +113,12 @@ enum RelevantPeerStatus {
  */
 export class PeerManager {
   private libp2p: Libp2p;
-  private logger: ILogger;
+  private logger: Logger;
   private metrics: IMetrics | null;
   private reqResp: IReqRespBeaconNode;
   private gossipsub: Eth2Gossipsub;
-  private attnetsService: ISubnetsService;
-  private syncnetsService: ISubnetsService;
+  private attnetsService: SubnetsService;
+  private syncnetsService: SubnetsService;
   private chain: IBeaconChain;
   private config: IBeaconConfig;
   private peerRpcScores: IPeerRpcScoreStore;

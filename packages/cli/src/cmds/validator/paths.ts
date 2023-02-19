@@ -1,6 +1,6 @@
 import path from "node:path";
 import {IGlobalArgs} from "../../options/index.js";
-import {IGlobalPaths, getGlobalPaths} from "../../paths/global.js";
+import {GlobalPaths, getGlobalPaths} from "../../paths/global.js";
 
 export type IValidatorPaths = {
   validatorsDbDir: string;
@@ -25,7 +25,7 @@ export type AccountPaths = {
 export function getValidatorPaths(
   args: Partial<IValidatorPaths> & Pick<IGlobalArgs, "dataDir">,
   network: string
-): IValidatorPaths & IGlobalPaths {
+): IValidatorPaths & GlobalPaths {
   // Compute global paths first
   const globalPaths = getGlobalPaths(args, network);
 
@@ -68,7 +68,7 @@ export const defaultValidatorPaths = getValidatorPaths({dataDir: "$dataDir"}, "$
 export function getAccountPaths(
   args: Partial<AccountPaths> & Pick<IGlobalArgs, "dataDir">,
   network: string
-): AccountPaths & IGlobalPaths {
+): AccountPaths & GlobalPaths {
   // Compute global paths first
   const globalPaths = getGlobalPaths(args, network);
 

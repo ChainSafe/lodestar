@@ -1,5 +1,5 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {IBeaconConfig, IForkConfig, IForkDigestContext} from "@lodestar/config";
+import {IBeaconConfig, ForkConfig, ForkDigestContext} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
@@ -34,7 +34,7 @@ export interface Protocol {
   readonly encoding: Encoding;
 }
 
-export interface InboundRateLimitQuota<Req = unknown> {
+export interface nboundRateLimitQuota<Req = unknown> {
   // Will be tracked for the protocol per peer
   byPeer?: RateLimiterQuota;
   // Will be tracked regardless of the peer
@@ -52,7 +52,7 @@ export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<
   ignoreResponse?: boolean;
   renderRequestBody?: (request: Req) => string;
   contextBytes: ContextBytesFactory<Resp>;
-  inboundRateLimits?: InboundRateLimitQuota<Req>;
+  inboundRateLimits?: nboundRateLimitQuota<Req>;
 }
 
 export type ProtocolDefinitionGenerator<Req, Res> = (
@@ -81,7 +81,7 @@ export type ContextBytesFactory<Response> =
   | {type: ContextBytesType.Empty}
   | {
       type: ContextBytesType.ForkDigest;
-      forkDigestContext: IForkDigestContext & Pick<IForkConfig, "getForkName">;
+      forkDigestContext: ForkDigestContext & Pick<ForkConfig, "getForkName">;
       forkFromResponse: (response: Response) => ForkName;
     };
 

@@ -6,7 +6,7 @@ import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
 import {toHexString} from "@lodestar/utils";
 import {computeSigningRoot} from "@lodestar/state-transition";
-import {ICliCommand} from "../util/command.js";
+import {CliCommand} from "../util/command.js";
 import {deriveSecretKeys, SecretKeysArgs, secretKeysOptions} from "../util/deriveSecretKeys.js";
 
 /* eslint-disable no-console */
@@ -17,7 +17,7 @@ type SelfSlashArgs = SecretKeysArgs & {
   batchSize: string;
 };
 
-export const selfSlashProposer: ICliCommand<SelfSlashArgs, Record<never, never>, void> = {
+export const selfSlashProposer: CliCommand<SelfSlashArgs, Record<never, never>, void> = {
   command: "self-slash-proposer",
   describe: "Self slash validators of a provided mnemonic with ProposerSlashing",
   examples: [

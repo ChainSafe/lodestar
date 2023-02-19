@@ -15,7 +15,7 @@ import {IBeaconConfig} from "@lodestar/config";
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {ILogger, pruneSetToMax, toHex} from "@lodestar/utils";
+import {Logger, pruneSetToMax, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
@@ -30,7 +30,7 @@ import {IExecutionEngine, IExecutionBuilder, TransitionConfigurationV1} from "..
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
-import {IBeaconClock, LocalClock} from "./clock/index.js";
+import {BeaconClock, LocalClock} from "./clock/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
 import {IChainOptions} from "./options.js";
@@ -80,14 +80,14 @@ export class BeaconChain implements IBeaconChain {
   readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
-  readonly logger: ILogger;
+  readonly logger: Logger;
   readonly metrics: IMetrics | null;
 
   readonly anchorStateLatestBlockSlot: Slot;
 
   readonly bls: IBlsVerifier;
   readonly forkChoice: IForkChoice;
-  readonly clock: IBeaconClock;
+  readonly clock: BeaconClock;
   readonly emitter: ChainEventEmitter;
   readonly stateCache: StateContextCache;
   readonly checkpointStateCache: CheckpointStateCache;
@@ -150,10 +150,10 @@ export class BeaconChain implements IBeaconChain {
     }: {
       config: IBeaconConfig;
       db: IBeaconDb;
-      logger: ILogger;
+      logger: Logger;
       processShutdownCallback: ProcessShutdownCallback;
       /** Used for testing to supply fake clock */
-      clock?: IBeaconClock;
+      clock?: BeaconClock;
       metrics: IMetrics | null;
       anchorState: BeaconStateAllForks;
       eth1: IEth1ForBlockProduction;

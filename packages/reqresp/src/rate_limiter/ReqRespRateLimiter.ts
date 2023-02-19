@@ -1,5 +1,5 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {InboundRateLimitQuota, ReqRespRateLimiterOpts} from "../types.js";
+import {nboundRateLimitQuota, ReqRespRateLimiterOpts} from "../types.js";
 import {RateLimiterGRCA} from "./rateLimiterGRCA.js";
 
 /** Sometimes a peer request comes AFTER libp2p disconnect event, check for such peers every 10 minutes */
@@ -28,7 +28,7 @@ export class ReqRespRateLimiter {
     return this.rateLimitMultiplier > 0;
   }
 
-  initRateLimits<Req>(protocolID: ProtocolID, rateLimits: InboundRateLimitQuota<Req>): void {
+  initRateLimits<Req>(protocolID: ProtocolID, rateLimits: nboundRateLimitQuota<Req>): void {
     if (!this.enabled) {
       return;
     }

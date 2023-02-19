@@ -1,5 +1,5 @@
 import {Options} from "yargs";
-import {ICliCommandOptions} from "../../util/index.js";
+import {CliCommandOptions} from "../../util/index.js";
 import {beaconOptions, IBeaconArgs} from "../beacon/options.js";
 import {NetworkName} from "../../networks/index.js";
 import {beaconNodeOptions, globalOptions} from "../../options/index.js";
@@ -14,7 +14,7 @@ type IDevOwnArgs = {
   dumpTestnetFiles?: string;
 };
 
-const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
+const devOwnOptions: CliCommandOptions<IDevOwnArgs> = {
   genesisEth1Hash: {
     description: "If present it will create genesis with this eth1 hash.",
     type: "string",

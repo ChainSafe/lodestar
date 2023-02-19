@@ -95,7 +95,7 @@ describe("eth1 / util / eth1Vote", function () {
     const testCases: (() => {
       id: string;
       state: BeaconStateAllForks;
-      eth1Datas: IEth1DataWithTimestamp[];
+      eth1Datas: Eth1DataWithTimestamp[];
       expectedVotesToConsider: phase0.Eth1Data[];
     })[] = [
       () => {
@@ -141,7 +141,7 @@ describe("eth1 / util / eth1Vote", function () {
   });
 });
 
-interface IEth1DataWithTimestamp extends phase0.Eth1Data {
+interface Eth1DataWithTimestamp extends phase0.Eth1Data {
   timestamp: number;
 }
 
@@ -149,7 +149,7 @@ interface IEth1DataWithTimestamp extends phase0.Eth1Data {
  * Util: Fill partial eth1DataBlock with mock data
  * @param eth1DataBlock
  */
-function getEth1DataBlock(eth1DataBlock: Partial<IEth1DataWithTimestamp>): IEth1DataWithTimestamp {
+function getEth1DataBlock(eth1DataBlock: Partial<Eth1DataWithTimestamp>): Eth1DataWithTimestamp {
   return {
     blockHash: Buffer.alloc(32),
     depositRoot: Buffer.alloc(32),

@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {IChainForkConfig, IForkInfo} from "@lodestar/config";
+import {IChainForkConfig, ForkInfo} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 
 /**
@@ -60,7 +60,7 @@ export function getActiveForks(config: IChainForkConfig, epoch: Epoch): ForkName
 export function getCurrentAndNextFork(
   config: IChainForkConfig,
   epoch: Epoch
-): {currentFork: IForkInfo; nextFork: IForkInfo | undefined} {
+): {currentFork: ForkInfo; nextFork: ForkInfo | undefined} {
   if (epoch < 0) {
     epoch = 0;
   }

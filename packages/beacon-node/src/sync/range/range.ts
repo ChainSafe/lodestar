@@ -4,7 +4,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {IBeaconConfig} from "@lodestar/config";
 import {Epoch, phase0} from "@lodestar/types";
-import {ILogger, toHex} from "@lodestar/utils";
+import {Logger, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {INetwork} from "../../network/index.js";
 import {IMetrics} from "../../metrics/index.js";
@@ -42,7 +42,7 @@ export type RangeSyncModules = {
   network: INetwork;
   metrics: IMetrics | null;
   config: IBeaconConfig;
-  logger: ILogger;
+  logger: Logger;
 };
 
 export type RangeSyncOpts = {
@@ -78,7 +78,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private readonly network: INetwork;
   private readonly metrics: IMetrics | null;
   private readonly config: IBeaconConfig;
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
   /** There is a single chain per type, 1 finalized sync, 1 head sync */
   private readonly chains = new Map<RangeSyncType, SyncChain>();
 

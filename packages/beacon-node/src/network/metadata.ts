@@ -2,7 +2,7 @@ import {BitArray, toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {altair, Epoch, phase0, ssz} from "@lodestar/types";
 import {IBeaconConfig} from "@lodestar/config";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
 import {getCurrentAndNextFork} from "./forks.js";
@@ -18,15 +18,15 @@ export enum SubnetType {
   syncnets = "syncnets",
 }
 
-export interface IMetadataOpts {
+export type MetadataOpts = {
   metadata?: altair.Metadata;
-}
+};
 
-export interface IMetadataModules {
+export type MetadataModules = {
   config: IBeaconConfig;
   chain: IBeaconChain;
-  logger: ILogger;
-}
+  logger: Logger;
+};
 
 /**
  * Implementation of Ethereum Consensus p2p MetaData.
@@ -38,9 +38,9 @@ export class MetadataController {
   private config: IBeaconConfig;
   private chain: IBeaconChain;
   private _metadata: altair.Metadata;
-  private logger: ILogger;
+  private logger: Logger;
 
-  constructor(opts: IMetadataOpts, modules: IMetadataModules) {
+  constructor(opts: MetadataOpts, modules: MetadataModules) {
     this.config = modules.config;
     this.chain = modules.chain;
     this.logger = modules.logger;

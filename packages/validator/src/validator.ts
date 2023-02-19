@@ -1,8 +1,8 @@
-import {IDatabaseApiOptions} from "@lodestar/db";
+import {DatabaseApiOptions} from "@lodestar/db";
 import {BLSPubkey, ssz} from "@lodestar/types";
 import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {getClient, Api, routes, ApiError} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
@@ -25,10 +25,10 @@ import {DoppelgangerService} from "./services/doppelgangerService.js";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
-  dbOps: IDatabaseApiOptions;
+  dbOps: DatabaseApiOptions;
   api: Api | string | string[];
   signers: Signer[];
-  logger: ILogger;
+  logger: Logger;
   processShutdownCallback: ProcessShutdownCallback;
   abortController: AbortController;
   afterBlockDelaySlotFraction?: number;
@@ -60,7 +60,7 @@ export class Validator {
   private readonly api: Api;
   private readonly clock: IClock;
   private readonly chainHeaderTracker: ChainHeaderTracker;
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
   private state: Status;
   private readonly controller: AbortController;
 

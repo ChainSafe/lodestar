@@ -8,7 +8,7 @@ import {IBeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {allForks, Epoch, Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {ILogger, mapValues} from "@lodestar/utils";
+import {Logger, mapValues} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconNode} from "../../../src/index.js";
@@ -18,7 +18,7 @@ import {RegenCaller} from "../../../src/chain/regen/index.js";
 
 /* eslint-disable no-console */
 
-export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void {
+export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
   let lastSeenEpoch = 0;
 
   const attestationsPerBlock = new Map<Slot, number>();

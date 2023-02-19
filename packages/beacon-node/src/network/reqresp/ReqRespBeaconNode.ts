@@ -15,7 +15,7 @@ import {
 import {ReqRespOpts} from "@lodestar/reqresp/lib/ReqResp.js";
 import * as reqRespProtocols from "@lodestar/reqresp/protocols";
 import {allForks, altair, deneb, phase0, Root} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {IMetrics} from "../../metrics/metrics.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
@@ -40,7 +40,7 @@ type ProtocolDefinitionAny = ProtocolDefinition<any, any>;
 export interface ReqRespBeaconNodeModules {
   libp2p: Libp2p;
   peersData: PeersData;
-  logger: ILogger;
+  logger: Logger;
   config: IBeaconConfig;
   metrics: IMetrics | null;
   reqRespHandlers: ReqRespHandlers;
@@ -68,7 +68,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   private currentRegisteredFork: ForkSeq = ForkSeq.phase0;
 
   private readonly config: IBeaconConfig;
-  protected readonly logger: ILogger;
+  protected readonly logger: Logger;
 
   constructor(modules: ReqRespBeaconNodeModules, options: ReqRespBeaconNodeOpts = {}) {
     const {reqRespHandlers, networkEventBus, peersData, peerRpcScores, metadata, metrics, logger} = modules;

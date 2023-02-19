@@ -6,7 +6,7 @@ import {sleep} from "@lodestar/utils";
 
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {getReqRespHandlers, Network} from "../../../src/network/index.js";
-import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
+import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 import {GossipType, GossipHandlers} from "../../../src/network/gossip/index.js";
 
 import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
@@ -17,7 +17,7 @@ import {testLogger} from "../../utils/logger.js";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
-const opts: INetworkOptions = {
+const opts: NetworkOptions = {
   ...defaultNetworkOptions,
   maxPeers: 1,
   targetPeers: 1,

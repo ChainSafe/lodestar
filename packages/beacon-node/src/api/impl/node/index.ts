@@ -1,11 +1,11 @@
 import {routes, ServerApi} from "@lodestar/api";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
-import {IApiOptions} from "../../options.js";
+import {ApiOptions} from "../../options.js";
 import {formatNodePeer, getRevelantConnection} from "./utils.js";
 
 export function getNodeApi(
-  opts: IApiOptions,
+  opts: ApiOptions,
   {network, sync}: Pick<ApiModules, "network" | "sync">
 ): ServerApi<routes.node.Api> {
   return {

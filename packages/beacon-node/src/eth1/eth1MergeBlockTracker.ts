@@ -1,6 +1,6 @@
 import {IChainConfig} from "@lodestar/config";
 import {RootHex} from "@lodestar/types";
-import {ILogger, pruneSetToMax} from "@lodestar/utils";
+import {Logger, pruneSetToMax} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {IMetrics} from "../metrics/index.js";
 import {ZERO_HASH_HEX} from "../constants/index.js";
@@ -32,7 +32,7 @@ const MAX_TD_RENDER_VALUE = Number.MAX_SAFE_INTEGER;
 
 export type Eth1MergeBlockTrackerModules = {
   config: IChainConfig;
-  logger: ILogger;
+  logger: Logger;
   signal: AbortSignal;
   metrics: IMetrics | null;
 };
@@ -47,7 +47,7 @@ export type Eth1MergeBlockTrackerModules = {
  */
 export class Eth1MergeBlockTracker {
   private readonly config: IChainConfig;
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
   private readonly metrics: IMetrics | null;
 
   private readonly blocksByHashCache = new Map<RootHex, PowMergeBlock>();
