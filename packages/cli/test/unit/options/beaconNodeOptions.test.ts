@@ -54,7 +54,7 @@ describe("options / beaconNodeOptions", () => {
       "metrics.address": "0.0.0.0",
 
       "monitoring.endpoint": "https://beaconcha.in/api/v1/client/metrics?apikey=secretKey&machine=machine1",
-      "monitoring.interval": 60000,
+      "monitoring.interval": 62000,
       "monitoring.initialDelay": 30000,
       "monitoring.requestTimeout": 10000,
       "monitoring.collectSystemStats": true,
@@ -142,7 +142,7 @@ describe("options / beaconNodeOptions", () => {
       },
       monitoring: {
         endpoint: "https://beaconcha.in/api/v1/client/metrics?apikey=secretKey&machine=machine1",
-        interval: 60000,
+        interval: 62000,
         initialDelay: 30000,
         requestTimeout: 10000,
         collectSystemStats: true,
