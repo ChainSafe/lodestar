@@ -7,6 +7,7 @@ export {upgradeStateToAltair} from "./upgradeStateToAltair.js";
 export {upgradeStateToBellatrix} from "./upgradeStateToBellatrix.js";
 export {upgradeStateToCapella} from "./upgradeStateToCapella.js";
 export {upgradeStateToDeneb} from "./upgradeStateToDeneb.js";
+export {upgradeStateToVerge} from "./upgradeStateToVerge.js";
 
 /**
  * Dial state to next slot. Common for all forks

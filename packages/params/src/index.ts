@@ -244,3 +244,10 @@ export const KZG_COMMITMENT_SUBTREE_INDEX0 = KZG_COMMITMENT_GINDEX0 - 2 ** KZG_C
 
 // ssz.deneb.BlobSidecars.elementType.fixedSize
 export const BLOBSIDECAR_FIXED_SIZE = ACTIVE_PRESET === PresetName.minimal ? 131672 : 131928;
+
+// TODO: Verge spec notes these as preset but there's only one value
+// https://github.com/ethereum/consensus-specs/blob/db74090c1e8dc1fb2c052bae268e22dc63061e32/specs/verge/beacon-chain.md#preset
+export const MAX_STEMS = 2 ** 16;
+export const MAX_COMMITMENTS_PER_STEM = 33;
+export const VERKLE_WIDTH = 256;
+export const IPA_PROOF_DEPTH = 8;

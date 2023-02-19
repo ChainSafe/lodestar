@@ -9,6 +9,7 @@ import {
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
+  CachedBeaconStateDeneb,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
@@ -23,6 +24,7 @@ import {processBlock} from "./block/index.js";
 import {EpochTransitionStep, processEpoch} from "./epoch/index.js";
 import {BlockExternalData, DataAvailableStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 import {ProcessBlockOpts} from "./block/types.js";
+import {upgradeStateToVerge} from "./slot/upgradeStateToVerge.js";
 
 // Multifork capable state transition
 
@@ -229,6 +231,9 @@ function processSlotsWithTransientCache(
       }
       if (stateSlot === config.DENEB_FORK_EPOCH) {
         postState = upgradeStateToDeneb(postState as CachedBeaconStateCapella) as CachedBeaconStateAllForks;
+      }
+      if (stateSlot === config.ELECTRA_FORK_EPOCH) {
+        postState = upgradeStateToVerge(postState as CachedBeaconStateDeneb) as CachedBeaconStateAllForks;
       }
     } else {
       postState.slot++;

@@ -4,12 +4,14 @@ import {ts as altair} from "../altair/index.js";
 import {ts as bellatrix} from "../bellatrix/index.js";
 import {ts as capella} from "../capella/index.js";
 import {ts as deneb} from "../deneb/index.js";
+import {ts as verge} from "../verge/index.js";
 
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
+import {ssz as vergeSsz} from "../verge/index.js";
 
 // Re-export union types for types that are _known_ to differ
 
@@ -18,47 +20,66 @@ export type BeaconBlockBody =
   | altair.BeaconBlockBody
   | bellatrix.BeaconBlockBody
   | capella.BeaconBlockBody
-  | deneb.BeaconBlockBody;
+  | deneb.BeaconBlockBody
+  | verge.BeaconBlockBody;
 export type BeaconBlock =
   | phase0.BeaconBlock
   | altair.BeaconBlock
   | bellatrix.BeaconBlock
   | capella.BeaconBlock
-  | deneb.BeaconBlock;
+  | deneb.BeaconBlock
+  | verge.BeaconBlock;
 export type SignedBeaconBlock =
   | phase0.SignedBeaconBlock
   | altair.SignedBeaconBlock
   | bellatrix.SignedBeaconBlock
   | capella.SignedBeaconBlock
-  | deneb.SignedBeaconBlock;
+  | deneb.SignedBeaconBlock
+  | verge.SignedBeaconBlock;
 export type BeaconState =
   | phase0.BeaconState
   | altair.BeaconState
   | bellatrix.BeaconState
   | capella.BeaconState
-  | deneb.BeaconState;
+  | deneb.BeaconState
+  | verge.BeaconState;
 export type Metadata = phase0.Metadata | altair.Metadata;
 
 // For easy reference in the assemble block for building payloads
-export type ExecutionBlockBody = bellatrix.BeaconBlockBody | capella.BeaconBlockBody | deneb.BeaconBlockBody;
+export type ExecutionBlockBody =
+  | bellatrix.BeaconBlockBody
+  | capella.BeaconBlockBody
+  | deneb.BeaconBlockBody
+  | verge.BeaconBlockBody;
 
 // These two additional types will also change bellatrix forward
-export type ExecutionPayload = bellatrix.ExecutionPayload | capella.ExecutionPayload | deneb.ExecutionPayload;
+export type ExecutionPayload =
+  | bellatrix.ExecutionPayload
+  | capella.ExecutionPayload
+  | deneb.ExecutionPayload
+  | verge.ExecutionPayload;
 export type ExecutionPayloadHeader =
   | bellatrix.ExecutionPayloadHeader
   | capella.ExecutionPayloadHeader
-  | deneb.ExecutionPayloadHeader;
+  | deneb.ExecutionPayloadHeader
+  | verge.ExecutionPayloadHeader;
 
 // Blinded types that will change across forks
 export type BlindedBeaconBlockBody =
   | bellatrix.BlindedBeaconBlockBody
   | capella.BlindedBeaconBlockBody
-  | deneb.BlindedBeaconBlockBody;
-export type BlindedBeaconBlock = bellatrix.BlindedBeaconBlock | capella.BlindedBeaconBlock | deneb.BlindedBeaconBlock;
+  | deneb.BlindedBeaconBlockBody
+  | verge.BlindedBeaconBlockBody;
+export type BlindedBeaconBlock =
+  | bellatrix.BlindedBeaconBlock
+  | capella.BlindedBeaconBlock
+  | deneb.BlindedBeaconBlock
+  | verge.BlindedBeaconBlock;
 export type SignedBlindedBeaconBlock =
   | bellatrix.SignedBlindedBeaconBlock
   | capella.SignedBlindedBeaconBlock
-  | deneb.SignedBlindedBeaconBlock;
+  | deneb.SignedBlindedBeaconBlock
+  | verge.SignedBlindedBeaconBlock;
 
 // Full or blinded types
 export type FullOrBlindedExecutionPayload =
@@ -178,6 +199,7 @@ export type AllForksSSZTypes = {
     | typeof bellatrixSsz.BeaconBlockBody
     | typeof capellaSsz.BeaconBlockBody
     | typeof denebSsz.BeaconBlockBody
+    | typeof vergeSsz.BeaconBlockBody
   >;
   BeaconBlock: AllForksTypeOf<
     | typeof phase0Ssz.BeaconBlock
@@ -185,6 +207,7 @@ export type AllForksSSZTypes = {
     | typeof bellatrixSsz.BeaconBlock
     | typeof capellaSsz.BeaconBlock
     | typeof denebSsz.BeaconBlock
+    | typeof vergeSsz.BeaconBlock
   >;
   SignedBeaconBlock: AllForksTypeOf<
     | typeof phase0Ssz.SignedBeaconBlock
@@ -192,6 +215,7 @@ export type AllForksSSZTypes = {
     | typeof bellatrixSsz.SignedBeaconBlock
     | typeof capellaSsz.SignedBeaconBlock
     | typeof denebSsz.SignedBeaconBlock
+    | typeof vergeSsz.SignedBeaconBlock
   >;
   BeaconState: AllForksTypeOf<
     | typeof phase0Ssz.BeaconState
@@ -199,30 +223,47 @@ export type AllForksSSZTypes = {
     | typeof bellatrixSsz.BeaconState
     | typeof capellaSsz.BeaconState
     | typeof denebSsz.BeaconState
+    | typeof vergeSsz.BeaconState
   >;
   Metadata: AllForksTypeOf<typeof phase0Ssz.Metadata | typeof altairSsz.Metadata>;
 };
 
 export type AllForksExecutionSSZTypes = {
   BeaconBlockBody: AllForksTypeOf<
-    typeof bellatrixSsz.BeaconBlockBody | typeof capellaSsz.BeaconBlockBody | typeof denebSsz.BeaconBlockBody
+    | typeof bellatrixSsz.BeaconBlockBody
+    | typeof capellaSsz.BeaconBlockBody
+    | typeof denebSsz.BeaconBlockBody
+    | typeof vergeSsz.BeaconBlockBody
   >;
   BeaconBlock: AllForksTypeOf<
-    typeof bellatrixSsz.BeaconBlock | typeof capellaSsz.BeaconBlock | typeof denebSsz.BeaconBlock
+    | typeof bellatrixSsz.BeaconBlock
+    | typeof capellaSsz.BeaconBlock
+    | typeof denebSsz.BeaconBlock
+    | typeof vergeSsz.BeaconBlock
   >;
   SignedBeaconBlock: AllForksTypeOf<
-    typeof bellatrixSsz.SignedBeaconBlock | typeof capellaSsz.SignedBeaconBlock | typeof denebSsz.SignedBeaconBlock
+    | typeof bellatrixSsz.SignedBeaconBlock
+    | typeof capellaSsz.SignedBeaconBlock
+    | typeof denebSsz.SignedBeaconBlock
+    | typeof vergeSsz.SignedBeaconBlock
   >;
   BeaconState: AllForksTypeOf<
-    typeof bellatrixSsz.BeaconState | typeof capellaSsz.BeaconState | typeof denebSsz.BeaconState
+    | typeof bellatrixSsz.BeaconState
+    | typeof capellaSsz.BeaconState
+    | typeof denebSsz.BeaconState
+    | typeof vergeSsz.BeaconState
   >;
   ExecutionPayload: AllForksTypeOf<
-    typeof bellatrixSsz.ExecutionPayload | typeof capellaSsz.ExecutionPayload | typeof denebSsz.ExecutionPayload
+    | typeof bellatrixSsz.ExecutionPayload
+    | typeof capellaSsz.ExecutionPayload
+    | typeof denebSsz.ExecutionPayload
+    | typeof vergeSsz.ExecutionPayload
   >;
   ExecutionPayloadHeader: AllForksTypeOf<
     | typeof bellatrixSsz.ExecutionPayloadHeader
     | typeof capellaSsz.ExecutionPayloadHeader
     | typeof denebSsz.ExecutionPayloadHeader
+    | typeof vergeSsz.ExecutionPayloadHeader
   >;
   BuilderBid: AllForksTypeOf<
     typeof bellatrixSsz.BuilderBid | typeof capellaSsz.BuilderBid | typeof denebSsz.BuilderBid
@@ -242,14 +283,19 @@ export type AllForksBlindedSSZTypes = {
     | typeof bellatrixSsz.BlindedBeaconBlockBody
     | typeof capellaSsz.BlindedBeaconBlock
     | typeof denebSsz.BlindedBeaconBlock
+    | typeof vergeSsz.BlindedBeaconBlock
   >;
   BeaconBlock: AllForksTypeOf<
-    typeof bellatrixSsz.BlindedBeaconBlock | typeof capellaSsz.BlindedBeaconBlock | typeof denebSsz.BlindedBeaconBlock
+    | typeof bellatrixSsz.BlindedBeaconBlock
+    | typeof capellaSsz.BlindedBeaconBlock
+    | typeof denebSsz.BlindedBeaconBlock
+    | typeof vergeSsz.BlindedBeaconBlock
   >;
   SignedBeaconBlock: AllForksTypeOf<
     | typeof bellatrixSsz.SignedBlindedBeaconBlock
     | typeof capellaSsz.SignedBlindedBeaconBlock
     | typeof denebSsz.SignedBlindedBeaconBlock
+    | typeof vergeSsz.SignedBlindedBeaconBlock
   >;
 };
 
@@ -259,12 +305,14 @@ export type AllForksLightClientSSZTypes = {
     | typeof bellatrixSsz.BeaconBlock
     | typeof capellaSsz.BeaconBlock
     | typeof denebSsz.BeaconBlock
+    | typeof vergeSsz.BeaconBlock
   >;
   BeaconBlockBody: AllForksTypeOf<
     | typeof altairSsz.BeaconBlockBody
     | typeof bellatrixSsz.BeaconBlockBody
     | typeof capellaSsz.BeaconBlockBody
     | typeof denebSsz.BeaconBlockBody
+    | typeof vergeSsz.BeaconBlockBody
   >;
   LightClientHeader: AllForksTypeOf<
     typeof altairSsz.LightClientHeader | typeof capellaSsz.LightClientHeader | typeof denebSsz.LightClientHeader

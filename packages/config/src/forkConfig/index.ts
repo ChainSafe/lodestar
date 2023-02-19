@@ -55,10 +55,18 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     prevVersion: config.CAPELLA_FORK_VERSION,
     prevForkName: ForkName.capella,
   };
+  const verge: ForkInfo = {
+    name: ForkName.verge,
+    seq: ForkSeq.verge,
+    epoch: config.ELECTRA_FORK_EPOCH,
+    version: config.ELECTRA_FORK_VERSION,
+    prevVersion: config.CAPELLA_FORK_VERSION,
+    prevForkName: ForkName.capella,
+  };
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix, capella, deneb};
+  const forks = {phase0, altair, bellatrix, capella, verge, deneb};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);

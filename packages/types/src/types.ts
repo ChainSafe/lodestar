@@ -6,6 +6,7 @@ export {ts as altair} from "./altair/index.js";
 export {ts as bellatrix} from "./bellatrix/index.js";
 export {ts as capella} from "./capella/index.js";
 export {ts as deneb} from "./deneb/index.js";
+export {ts as verge} from "./verge/index.js";
 
 export {ts as allForks} from "./allForks/index.js";
 

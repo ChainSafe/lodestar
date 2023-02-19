@@ -1,4 +1,4 @@
-import {allForks, bellatrix, capella, deneb, isBlindedBeaconBlockBody, ssz} from "@lodestar/types";
+import {allForks, bellatrix, capella, deneb, verge, isBlindedBeaconBlockBody, ssz} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 
 import {
@@ -168,6 +168,12 @@ export function executionPayloadToPayloadHeader(
     (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).excessBlobGas = (
       payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
     ).excessBlobGas;
+  }
+
+  if (fork >= ForkSeq.verge) {
+    // https://github.com/ethereum/consensus-specs/blob/db74090c1e8dc1fb2c052bae268e22dc63061e32/specs/verge/beacon-chain.md#process_execution_payload
+    (bellatrixPayloadFields as verge.ExecutionPayloadHeader).executionWitnessRoot =
+      ssz.verge.ExecutionWitness.hashTreeRoot((payload as verge.ExecutionPayload).executionWitness);
   }
 
   return bellatrixPayloadFields;

@@ -1,6 +1,6 @@
 import path from "node:path";
 import {expect} from "vitest";
-import {phase0, Root, ssz, TimeSeconds, allForks, deneb} from "@lodestar/types";
+import {phase0, Root, ssz, TimeSeconds, allForks} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -47,7 +47,7 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
         genesisValidatorsRoot: Buffer.alloc(32, 0),
       });
 
-      const executionPayloadHeaderType =
+      const executionPayloadHeaderType: allForks.AllForksExecutionSSZTypes["ExecutionPayloadHeader"] =
         fork !== ForkName.phase0 && fork !== ForkName.altair
           ? ssz.allForksExecution[fork as ExecutionFork].ExecutionPayloadHeader
           : ssz.bellatrix.ExecutionPayloadHeader;
@@ -60,7 +60,7 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
         deposits,
         undefined,
         testcase["execution_payload_header"] &&
-          executionPayloadHeaderType.toViewDU(testcase["execution_payload_header"] as deneb.ExecutionPayloadHeader)
+          executionPayloadHeaderType.toViewDU(testcase["execution_payload_header"])
       );
     },
     // eth1.yaml

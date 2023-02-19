@@ -1,4 +1,5 @@
-import {allForks, capella, deneb, Wei, bellatrix, Root} from "@lodestar/types";
+import * as util from "node:util";
+import {allForks, capella, deneb, Wei, bellatrix, Root, verge, ssz} from "@lodestar/types";
 import {
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
@@ -134,6 +135,7 @@ export type ExecutionPayloadRpc = {
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
   parentBeaconBlockRoot?: QUANTITY; // DENEB
+  executionWitness?: Record<string, unknown>; // DENEB
 };
 
 export type WithdrawalRpc = {
@@ -192,6 +194,20 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
     const {blobGasUsed, excessBlobGas} = data as deneb.ExecutionPayload;
     payload.blobGasUsed = numToQuantity(blobGasUsed);
     payload.excessBlobGas = numToQuantity(excessBlobGas);
+  }
+
+  // VERGE adds executionWitness to the ExecutionPayload
+  if (ForkSeq[fork] >= ForkSeq.verge) {
+    const {executionWitness} = data as verge.ExecutionPayload;
+    // right now the caseMap of ssz ExecutionWitness is camel cased and can
+    // directly be used to serialize tojson
+    payload.executionWitness = ssz.verge.ExecutionWitness.toJson(executionWitness);
+    // serialization with ssz serialize suffix diff's suffix to a string while geth expects num
+    (payload.executionWitness as verge.ExecutionWitness).stateDiff.forEach((sDiff) => {
+      sDiff.suffixDiffs.forEach((sfDiff) => {
+        sfDiff.suffix = Number(sfDiff.suffix);
+      });
+    });
   }
 
   return payload;
@@ -277,6 +293,20 @@ export function parseExecutionPayload(
 
     (executionPayload as deneb.ExecutionPayload).blobGasUsed = quantityToBigint(blobGasUsed);
     (executionPayload as deneb.ExecutionPayload).excessBlobGas = quantityToBigint(excessBlobGas);
+  }
+
+  // VERGE adds execution witness to the payload
+  if (ForkSeq[fork] >= ForkSeq.verge) {
+    // right now the casing of executionWitness is camel case in the ssz caseMap
+    // we can directly use fromJson to read the serialized data from payload
+    const {executionWitness} = data;
+    console.log(
+      "parse executionWitness from EL",
+      util.inspect(executionWitness, false, null, true /* enable colors */),
+      {blockNumber: data.blockNumber}
+    );
+    (executionPayload as verge.ExecutionPayload).executionWitness =
+      ssz.verge.ExecutionWitness.fromJson(executionWitness);
   }
 
   return {executionPayload, executionPayloadValue, blobsBundle, shouldOverrideBuilder};
