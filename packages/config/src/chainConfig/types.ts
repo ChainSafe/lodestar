@@ -40,6 +40,9 @@ export type IChainConfig = {
   // DENEB
   EIP4844_FORK_VERSION: Uint8Array;
   EIP4844_FORK_EPOCH: number;
+  // VERGE
+  VERGE_FORK_VERSION: Uint8Array;
+  VERGE_FORK_EPOCH: number;
 
   // Time parameters
   SECONDS_PER_SLOT: number;
@@ -98,6 +101,9 @@ export const chainConfigTypes: SpecTypes<IChainConfig> = {
   // DENEB
   EIP4844_FORK_VERSION: "bytes",
   EIP4844_FORK_EPOCH: "number",
+  // VERGE
+  VERGE_FORK_VERSION: "bytes",
+  VERGE_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",

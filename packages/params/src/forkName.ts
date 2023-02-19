@@ -7,6 +7,7 @@ export enum ForkName {
   bellatrix = "bellatrix",
   capella = "capella",
   deneb = "deneb",
+  verge = "verge",
 }
 
 /**
@@ -18,6 +19,7 @@ export enum ForkSeq {
   bellatrix = 2,
   capella = 3,
   deneb = 4,
+  verge = 5,
 }
 
 export type ForkLightClient = Exclude<ForkName, ForkName.phase0>;

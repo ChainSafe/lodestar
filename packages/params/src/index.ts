@@ -236,3 +236,10 @@ export const INTERVALS_PER_SLOT = 3;
 export const BYTES_PER_FIELD_ELEMENT = 32;
 export const BLOB_TX_TYPE = 0x05;
 export const VERSIONED_HASH_VERSION_KZG = 0x01;
+
+// TODO: Verge spec notes these as preset but there's only one value
+// https://github.com/ethereum/consensus-specs/blob/db74090c1e8dc1fb2c052bae268e22dc63061e32/specs/verge/beacon-chain.md#preset
+export const MAX_STEMS = 2 ** 16;
+export const MAX_COMMITMENTS_PER_STEM = 33;
+export const VERKLE_WIDTH = 256;
+export const IPA_PROOF_DEPTH = 8;

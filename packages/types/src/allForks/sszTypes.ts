@@ -3,6 +3,7 @@ import {ssz as altair} from "../altair/index.js";
 import {ssz as bellatrix} from "../bellatrix/index.js";
 import {ssz as capella} from "../capella/index.js";
 import {ssz as deneb} from "../deneb/index.js";
+import {ssz as verge} from "../verge/index.js";
 
 /**
  * Index the ssz types that differ by fork
@@ -44,6 +45,13 @@ export const allForks = {
     BeaconState: deneb.BeaconState,
     Metadata: altair.Metadata,
   },
+  verge: {
+    BeaconBlockBody: verge.BeaconBlockBody,
+    BeaconBlock: verge.BeaconBlock,
+    SignedBeaconBlock: verge.SignedBeaconBlock,
+    BeaconState: verge.BeaconState,
+    Metadata: altair.Metadata,
+  },
 };
 
 /**
@@ -82,6 +90,16 @@ export const allForksExecution = {
     BuilderBid: deneb.BuilderBid,
     SignedBuilderBid: deneb.SignedBuilderBid,
   },
+  verge: {
+    BeaconBlockBody: verge.BeaconBlockBody,
+    BeaconBlock: verge.BeaconBlock,
+    SignedBeaconBlock: verge.SignedBeaconBlock,
+    BeaconState: verge.BeaconState,
+    ExecutionPayload: verge.ExecutionPayload,
+    ExecutionPayloadHeader: verge.ExecutionPayloadHeader,
+    BuilderBid: deneb.BuilderBid,
+    SignedBuilderBid: deneb.SignedBuilderBid,
+  },
 };
 
 /**
@@ -103,6 +121,11 @@ export const allForksBlinded = {
     BeaconBlockBody: deneb.BlindedBeaconBlockBody,
     BeaconBlock: deneb.BlindedBeaconBlock,
     SignedBeaconBlock: deneb.SignedBlindedBeaconBlock,
+  },
+  verge: {
+    BeaconBlockBody: verge.BlindedBeaconBlockBody,
+    BeaconBlock: verge.BlindedBeaconBlock,
+    SignedBeaconBlock: verge.SignedBlindedBeaconBlock,
   },
 };
 
@@ -147,10 +170,23 @@ export const allForksLightClient = {
     LightClientOptimisticUpdate: deneb.LightClientOptimisticUpdate,
     LightClientStore: deneb.LightClientStore,
   },
+  verge: {
+    BeaconBlock: verge.BeaconBlock,
+    BeaconBlockBody: verge.BeaconBlockBody,
+    LightClientHeader: deneb.LightClientHeader,
+    LightClientBootstrap: deneb.LightClientBootstrap,
+    LightClientUpdate: deneb.LightClientUpdate,
+    LightClientFinalityUpdate: deneb.LightClientFinalityUpdate,
+    LightClientOptimisticUpdate: deneb.LightClientOptimisticUpdate,
+    LightClientStore: deneb.LightClientStore,
+  },
 };
 
 export const allForksBlobs = {
   deneb: {
+    SignedBeaconBlockAndBlobsSidecar: deneb.SignedBeaconBlockAndBlobsSidecar,
+  },
+  verge: {
     SignedBeaconBlockAndBlobsSidecar: deneb.SignedBeaconBlockAndBlobsSidecar,
   },
 };

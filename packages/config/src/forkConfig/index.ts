@@ -55,10 +55,18 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     prevVersion: config.CAPELLA_FORK_VERSION,
     prevForkName: ForkName.capella,
   };
+  const verge: IForkInfo = {
+    name: ForkName.verge,
+    seq: ForkSeq.verge,
+    epoch: config.VERGE_FORK_EPOCH,
+    version: config.VERGE_FORK_VERSION,
+    prevVersion: config.EIP4844_FORK_VERSION,
+    prevForkName: ForkName.deneb,
+  };
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix, capella, deneb};
+  const forks = {phase0, altair, bellatrix, capella, deneb, verge};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);
