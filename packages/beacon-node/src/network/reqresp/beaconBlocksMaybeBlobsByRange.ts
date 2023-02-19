@@ -18,6 +18,9 @@ export async function beaconBlocksMaybeBlobsByRange(
   // Code below assumes the request is in the same epoch
   // Range sync satisfies this condition, but double check here for sanity
   const {startSlot, count} = request;
+  if (count < 1) {
+    return [];
+  }
   const endSlot = startSlot + count - 1;
 
   const startEpoch = computeEpochAtSlot(startSlot);

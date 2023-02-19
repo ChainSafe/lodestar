@@ -31,6 +31,7 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
   const rangeRequest = ssz.phase0.BeaconBlocksByRangeRequest.defaultValue();
+  rangeRequest.count = 1;
 
   const block1 = ssz.deneb.SignedBeaconBlock.defaultValue();
   block1.message.slot = 1;
