@@ -16,24 +16,24 @@ export async function beaconBlocksMaybeBlobsByRoot(
   currentSlot: Epoch,
   finalizedSlot: Slot
 ): Promise<BlockInput[]> {
-  // Assume all requests are post EIP-4844
-  if (config.getForkSeq(finalizedSlot) >= ForkSeq.eip4844) {
+  // Assume all requests are post Deneb
+  if (config.getForkSeq(finalizedSlot) >= ForkSeq.deneb) {
     const blocksAndBlobs = await reqResp.beaconBlockAndBlobsSidecarByRoot(peerId, request);
     return blocksAndBlobs.map(({beaconBlock, blobsSidecar}) =>
-      getBlockInput.postEIP4844(config, beaconBlock, blobsSidecar)
+      getBlockInput.postDeneb(config, beaconBlock, blobsSidecar)
     );
   }
 
   // Assume all request are pre EIP-4844
-  else if (config.getForkSeq(currentSlot) < ForkSeq.eip4844) {
+  else if (config.getForkSeq(currentSlot) < ForkSeq.deneb) {
     const blocks = await reqResp.beaconBlocksByRoot(peerId, request);
-    return blocks.map((block) => getBlockInput.preEIP4844(config, block));
+    return blocks.map((block) => getBlockInput.preDeneb(config, block));
   }
 
-  // We don't know if a requested root is after the eip4844 fork or not.
-  // Thus some sort of retry is necessary while eip4844 is not finalized
+  // We don't know if a requested root is after the deneb fork or not.
+  // Thus some sort of retry is necessary while deneb is not finalized
   else {
-    return await Promise.all(
+    return Promise.all(
       request.map(async (beaconBlockRoot) =>
         beaconBlockAndBlobsSidecarByRootFallback(config, reqResp, peerId, beaconBlockRoot)
       )
@@ -71,7 +71,7 @@ async function beaconBlockAndBlobsSidecarByRootFallback(
     }
 
     const {beaconBlock, blobsSidecar} = resBlockBlobs.result[0];
-    return getBlockInput.postEIP4844(config, beaconBlock, blobsSidecar);
+    return getBlockInput.postDeneb(config, beaconBlock, blobsSidecar);
   }
 
   const resBlocks = await reqResp.beaconBlocksByRoot(peerId, [beaconBlockRoot]);
@@ -79,5 +79,5 @@ async function beaconBlockAndBlobsSidecarByRootFallback(
     throw Error(`beaconBlocksByRoot return empty for block root ${toHex(beaconBlockRoot)}`);
   }
 
-  return getBlockInput.preEIP4844(config, resBlocks[0]);
+  return getBlockInput.preDeneb(config, resBlocks[0]);
 }

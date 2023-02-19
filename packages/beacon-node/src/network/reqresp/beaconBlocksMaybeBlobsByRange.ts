@@ -62,7 +62,7 @@ export async function beaconBlocksMaybeBlobsByRange(
             `Missing blobsSidecar for blockSlot=${block.message.slot} with blobKzgCommitmentsLen=${blobKzgCommitmentsLen}`
           );
         }
-        blobsSidecar = getEmptyBlobsSidecar(config, block as eip4844.SignedBeaconBlock);
+        blobsSidecar = getEmptyBlobsSidecar(config, block as deneb.SignedBeaconBlock);
       }
       blockInputs.push(getBlockInput.postDeneb(config, block, blobsSidecar));
     }

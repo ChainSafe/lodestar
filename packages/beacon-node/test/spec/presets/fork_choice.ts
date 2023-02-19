@@ -151,7 +151,7 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
             const blockImport =
               config.getForkSeq(slot) < ForkSeq.deneb
                 ? getBlockInput.preDeneb(config, signedBlock)
-                : getBlockInput.postDenebOldBlobs(config, signedBlock, getEmptyBlobsSidecar(config, signedBlock));
+                : getBlockInput.postDeneb(config, signedBlock, getEmptyBlobsSidecar(config, signedBlock));
 
             try {
               await chain.processBlock(blockImport, {
