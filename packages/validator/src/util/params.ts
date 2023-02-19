@@ -73,6 +73,7 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
   const bellatrixForkRelevant = localConfig.BELLATRIX_FORK_EPOCH < Infinity;
   const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
   const denebForkRelevant = localConfig.EIP4844_FORK_EPOCH < Infinity;
+  const vergeForkRelevant = localConfig.VERGE_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -105,6 +106,9 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
     // Deneb
     EIP4844_FORK_VERSION: denebForkRelevant,
     EIP4844_FORK_EPOCH: denebForkRelevant,
+    // Verge
+    VERGE_FORK_VERSION: vergeForkRelevant,
+    VERGE_FORK_EPOCH: vergeForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
