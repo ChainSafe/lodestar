@@ -3,7 +3,7 @@ import {BeaconStateAllForks, isExecutionStateType} from "@lodestar/state-transit
 import {InputType} from "@lodestar/spec-test-util";
 import {toHexString} from "@chainsafe/ssz";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {phase0, allForks, bellatrix, ssz, RootHex} from "@lodestar/types";
+import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
@@ -151,7 +151,11 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
             const blockImport =
               config.getForkSeq(slot) < ForkSeq.deneb
                 ? getBlockInput.preDeneb(config, signedBlock)
-                : getBlockInput.postDeneb(config, signedBlock, getEmptyBlobsSidecar(config, signedBlock));
+                : getBlockInput.postDeneb(
+                    config,
+                    signedBlock,
+                    getEmptyBlobsSidecar(config, signedBlock as deneb.SignedBeaconBlock)
+                  );
 
             try {
               await chain.processBlock(blockImport, {
