@@ -3,7 +3,7 @@ import {BeaconStateAllForks, isExecutionStateType} from "@lodestar/state-transit
 import {InputType} from "@lodestar/spec-test-util";
 import {toHexString} from "@chainsafe/ssz";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {phase0, allForks, bellatrix, ssz, RootHex} from "@lodestar/types";
+import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createIBeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
@@ -20,9 +20,11 @@ import {defaultChainOptions} from "../../../src/chain/options.js";
 import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
 import {ClockStopped} from "../../utils/mocks/clock.js";
 import {getBlockInput, AttestationImportOpt} from "../../../src/chain/blocks/types.js";
+import {getEmptyBlobsSidecar} from "../../../src/util/blobs.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
+import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -40,6 +42,9 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
 ) => {
   return {
     testFunction: async (testcase) => {
+      await initCKZG();
+      loadEthereumTrustedSetup();
+
       const {steps, anchorState} = testcase;
       const currentSlot = anchorState.slot;
       const config = getConfig(fork);
@@ -150,7 +155,11 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
             const blockImport =
               config.getForkSeq(slot) < ForkSeq.deneb
                 ? getBlockInput.preDeneb(config, signedBlock)
-                : getBlockInput.postDenebOldBlobs(config, signedBlock);
+                : getBlockInput.postDeneb(
+                    config,
+                    signedBlock,
+                    getEmptyBlobsSidecar(config, signedBlock as deneb.SignedBeaconBlock)
+                  );
 
             try {
               await chain.processBlock(blockImport, {

@@ -4,11 +4,11 @@ import {peerIdFromString} from "@libp2p/peer-id";
 import {ssz, deneb} from "@lodestar/types";
 import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
-import {doBeaconBlocksMaybeBlobsByRange, ReqRespBeaconNode} from "../../../src/network/reqresp/index.js";
+import {beaconBlocksMaybeBlobsByRange, ReqRespBeaconNode} from "../../../src/network/reqresp/index.js";
 import {BlockInputType} from "../../../src/chain/blocks/types.js";
 import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 
-describe("doBeaconBlocksMaybeBlobsByRange", () => {
+describe("beaconBlocksMaybeBlobsByRange", () => {
   before(async function () {
     this.timeout(10000); // Loading trusted setup is slow
     await initCKZG();
@@ -31,6 +31,7 @@ describe("doBeaconBlocksMaybeBlobsByRange", () => {
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
   const rangeRequest = ssz.phase0.BeaconBlocksByRangeRequest.defaultValue();
+  rangeRequest.count = 1;
 
   const block1 = ssz.deneb.SignedBeaconBlock.defaultValue();
   block1.message.slot = 1;
@@ -80,7 +81,7 @@ describe("doBeaconBlocksMaybeBlobsByRange", () => {
       reqResp.beaconBlocksByRange.resolves(blocks);
       reqResp.blobsSidecarsByRange.resolves(blobsSidecars);
 
-      const response = await doBeaconBlocksMaybeBlobsByRange(config, reqResp, peerId, rangeRequest, 0);
+      const response = await beaconBlocksMaybeBlobsByRange(config, reqResp, peerId, rangeRequest, 0);
       expect(response).to.be.deep.equal(expectedResponse);
     });
   });
