@@ -90,6 +90,7 @@ export class MonitoringService {
     }, initialDelay);
 
     this.logger.info("Started monitoring service", {
+      // do not log full URL as it may contain secrets
       remote: this.remoteServiceHost,
       machine: this.remoteServiceUrl.searchParams.get("machine"),
       interval,
