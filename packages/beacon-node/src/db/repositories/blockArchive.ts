@@ -1,5 +1,5 @@
 import all from "it-all";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository, KeyValue, FilterOptions, Bucket} from "@lodestar/db";
 import {Slot, Root, allForks, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
@@ -21,7 +21,7 @@ export type BlockArchiveBatchPutBinaryItem = KeyValue<Slot, Uint8Array> & {
  * Stores finalized blocks. Block slot is identifier.
  */
 export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeaconBlock> {
-  constructor(config: IChainForkConfig, db: Db) {
+  constructor(config: ChainForkConfig, db: Db) {
     const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used
     super(config, db, Bucket.allForks_blockArchive, type);
   }

@@ -4,7 +4,7 @@ import {interopSecretKey} from "@lodestar/state-transition";
 import {externalSignerGetKeys, Signer, SignerType} from "@lodestar/validator";
 import {toHexString} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/utils";
-import {defaultNetwork, IGlobalArgs} from "../../../options/index.js";
+import {defaultNetwork, GlobalArgs} from "../../../options/index.js";
 import {assertValidPubkeysHex, isValidHttpUrl, parseRange, YargsError} from "../../../util/index.js";
 import {getAccountPaths} from "../paths.js";
 import {IValidatorCliArgs} from "../options.js";
@@ -40,7 +40,7 @@ const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
  * - Remote signer definition imported from keymanager api
  */
 export async function getSignersFromArgs(
-  args: IValidatorCliArgs & IGlobalArgs,
+  args: IValidatorCliArgs & GlobalArgs,
   network: string,
   {logger, signal}: {logger: Pick<Logger, "info">; signal: AbortSignal}
 ): Promise<Signer[]> {
@@ -147,7 +147,7 @@ export function getSignerPubkeyHex(signer: Signer): string {
   }
 }
 
-async function getRemoteSigners(args: IValidatorCliArgs & IGlobalArgs): Promise<Signer[]> {
+async function getRemoteSigners(args: IValidatorCliArgs & GlobalArgs): Promise<Signer[]> {
   const externalSignerUrl = args["externalSigner.url"];
   if (!externalSignerUrl) {
     throw new YargsError("Must set externalSignerUrl with externalSignerPublicKeys");

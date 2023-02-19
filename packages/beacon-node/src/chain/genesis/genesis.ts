@@ -1,6 +1,6 @@
 import {GENESIS_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
-import {IBeaconConfig, IChainForkConfig} from "@lodestar/config";
+import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
 import {
   getTemporaryBlockHeader,
@@ -22,7 +22,7 @@ import {DepositTree} from "../../db/repositories/depositDataRoot.js";
 import {IGenesisBuilder, GenesisResult} from "./interface.js";
 
 export type GenesisBuilderKwargs = {
-  config: IChainForkConfig;
+  config: ChainForkConfig;
   eth1Provider: IEth1Provider;
   logger: Logger;
 
@@ -44,7 +44,7 @@ export class GenesisBuilder implements IGenesisBuilder {
   /** Is null if no block has been processed yet */
   lastProcessedBlockNumber: number | null = null;
 
-  private readonly config: IBeaconConfig;
+  private readonly config: BeaconConfig;
   private readonly eth1Provider: IEth1Provider;
   private readonly logger: Logger;
   private readonly signal?: AbortSignal;
@@ -57,8 +57,8 @@ export class GenesisBuilder implements IGenesisBuilder {
   private activatedValidatorCount: number;
 
   constructor({config, eth1Provider, logger, signal, pendingStatus, maxBlocksPerPoll}: GenesisBuilderKwargs) {
-    // at genesis builder, there is no genesis validator so we don't have a real IBeaconConfig
-    // but we need IBeaconConfig to temporarily create CachedBeaconState, the cast here is safe since we don't use any getDomain here
+    // at genesis builder, there is no genesis validator so we don't have a real BeaconConfig
+    // but we need BeaconConfig to temporarily create CachedBeaconState, the cast here is safe since we don't use any getDomain here
     // the use of state as CachedBeaconState is just for convenient, GenesisResult returns TreeView anyway
     this.eth1Provider = eth1Provider;
     this.logger = logger;

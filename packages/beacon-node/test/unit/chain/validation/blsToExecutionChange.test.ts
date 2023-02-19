@@ -14,7 +14,7 @@ import {
 } from "@lodestar/params";
 import bls from "@chainsafe/bls";
 import {PointFormat} from "@chainsafe/bls/types";
-import {createIBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
 
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {StubbedChainMutable} from "../../../utils/stub/index.js";
@@ -77,7 +77,7 @@ describe("validate bls to execution change", () => {
 
   // Generate the state
   const _state = generateState(stateEmpty, defaultConfig);
-  const config = createIBeaconConfig(defaultConfig, _state.genesisValidatorsRoot);
+  const config = createBeaconConfig(defaultConfig, _state.genesisValidatorsRoot);
   const state = createCachedBeaconStateTest(_state, config);
 
   // Gen a valid blsToExecutionChange for first val

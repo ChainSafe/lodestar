@@ -2,7 +2,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {expect} from "chai";
 import {BitArray} from "@chainsafe/ssz";
-import {createIBeaconConfig, createIChainForkConfig, IChainForkConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {
   Encoding,
@@ -50,13 +50,13 @@ describe("network / ReqResp", function () {
   };
 
   // Schedule ALTAIR_FORK_EPOCH to trigger registering lightclient ReqResp protocols immediately
-  const config = createIChainForkConfig({
+  const config = createChainForkConfig({
     ...chainConfig,
     ALTAIR_FORK_EPOCH: 0,
   });
 
   const state = generateState({}, config);
-  const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
+  const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
   const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config: beaconConfig});
   const db = new StubbedBeaconDb();
 
@@ -431,12 +431,12 @@ function formatMetadata(method: ReqRespMethod, encoding: Encoding, peer: PeerId)
   return {method, encoding, peer: peer.toString()};
 }
 
-function getEmptyEncodedPayloadSignedBeaconBlock(config: IChainForkConfig): EncodedPayload<allForks.SignedBeaconBlock> {
+function getEmptyEncodedPayloadSignedBeaconBlock(config: ChainForkConfig): EncodedPayload<allForks.SignedBeaconBlock> {
   return wrapBlockAsEncodedPayload(config, config.getForkTypes(0).SignedBeaconBlock.defaultValue());
 }
 
 function wrapBlockAsEncodedPayload(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   block: allForks.SignedBeaconBlock
 ): EncodedPayload<allForks.SignedBeaconBlock> {
   return {

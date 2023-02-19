@@ -7,9 +7,9 @@ import {getClient} from "@lodestar/api/beacon";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {LogLevel} from "@lodestar/utils";
 import {chainConfigToJson} from "@lodestar/config";
-import {IBeaconArgs} from "../../../../src/cmds/beacon/options.js";
+import {BeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
-import {IGlobalArgs} from "../../../../src/options/globalOptions.js";
+import {GlobalArgs} from "../../../../src/options/globalOptions.js";
 import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, Runner, RunnerType} from "../interfaces.js";
 import {LODESTAR_BINARY_PATH} from "../constants.js";
 import {isChildProcessRunner} from "../runner/index.js";
@@ -65,7 +65,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     "jwt-secret": jwtSecretPath,
     paramsFile: paramsPath,
     ...clientOptions,
-  } as unknown) as IBeaconArgs & IGlobalArgs;
+  } as unknown) as BeaconArgs & GlobalArgs;
 
   if (engineMock) {
     rcConfig["eth1"] = false;
@@ -163,7 +163,7 @@ export const generateLodestarValidatorJobs = (
     logFile: "none",
     importKeystores: `${rootDir}/keystores`,
     importKeystoresPassword: `${rootDir}/password.txt`,
-  } as unknown) as IValidatorCliArgs & IGlobalArgs;
+  } as unknown) as IValidatorCliArgs & GlobalArgs;
 
   return {
     id,

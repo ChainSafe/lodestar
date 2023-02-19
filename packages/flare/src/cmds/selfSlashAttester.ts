@@ -3,7 +3,7 @@ import type {SecretKey} from "@chainsafe/bls/types";
 import {ApiError, getClient} from "@lodestar/api";
 import {phase0, ssz} from "@lodestar/types";
 import {config as chainConfig} from "@lodestar/config/default";
-import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_ATTESTER, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {toHexString} from "@lodestar/utils";
 import {computeSigningRoot} from "@lodestar/state-transition";
@@ -66,7 +66,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
   const res = await client.beacon.getGenesis();
   ApiError.assert(res, "Can not fetch genesis data from beacon node");
 
-  const config = createIBeaconConfig(chainConfig, res.response.data.genesisValidatorsRoot);
+  const config = createBeaconConfig(chainConfig, res.response.data.genesisValidatorsRoot);
 
   // TODO: Allow to customize the ProposerSlashing payloads
 
@@ -144,7 +144,7 @@ export async function selfSlashAttesterHandler(args: SelfSlashArgs): Promise<voi
 }
 
 function signAttestationDataBigint(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   sks: SecretKey[],
   data: phase0.AttestationDataBigint
 ): Uint8Array {

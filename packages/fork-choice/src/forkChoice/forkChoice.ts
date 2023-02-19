@@ -20,7 +20,7 @@ import {
   getAttesterSlashableIndices,
 } from "@lodestar/state-transition";
 import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
-import {IChainConfig, IChainForkConfig} from "@lodestar/config";
+import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 
 import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {
@@ -108,7 +108,7 @@ export class ForkChoice implements IForkChoice {
    * This is useful if the existing components have been loaded from disk after a process restart.
    */
   constructor(
-    private readonly config: IChainForkConfig,
+    private readonly config: ChainForkConfig,
     private readonly fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
@@ -1243,7 +1243,7 @@ export class ForkChoice implements IForkChoice {
  * imported merge block.
  */
 export function assertValidTerminalPowBlock(
-  config: IChainConfig,
+  config: ChainConfig,
   block: bellatrix.BeaconBlock,
   preCachedData: {
     executionStatus: ExecutionStatus.Syncing | ExecutionStatus.Valid;

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {Interchange} from "@lodestar/validator";
 import {CliCommand} from "../../../util/index.js";
-import {IGlobalArgs} from "../../../options/index.js";
+import {GlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";
 import {getCliLogger, LogArgs} from "../../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
@@ -16,7 +16,7 @@ type ImportArgs = {
 
 export const importCmd: CliCommand<
   ImportArgs,
-  ISlashingProtectionArgs & AccountValidatorArgs & IGlobalArgs & LogArgs
+  ISlashingProtectionArgs & AccountValidatorArgs & GlobalArgs & LogArgs
 > = {
   command: "import",
 

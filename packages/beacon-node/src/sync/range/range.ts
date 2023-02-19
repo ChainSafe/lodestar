@@ -2,12 +2,12 @@ import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {Epoch, phase0} from "@lodestar/types";
 import {Logger, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {INetwork} from "../../network/index.js";
-import {IMetrics} from "../../metrics/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {RangeSyncType, rangeSyncTypes, getRangeSyncTarget} from "../utils/remoteSyncType.js";
 import {ImportBlockOpts, AttestationImportOpt} from "../../chain/blocks/index.js";
 import {updateChains} from "./utils/index.js";
@@ -40,8 +40,8 @@ type RangeSyncState =
 export type RangeSyncModules = {
   chain: IBeaconChain;
   network: INetwork;
-  metrics: IMetrics | null;
-  config: IBeaconConfig;
+  metrics: Metrics | null;
+  config: BeaconConfig;
   logger: Logger;
 };
 
@@ -76,8 +76,8 @@ export type RangeSyncOpts = {
 export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
-  private readonly metrics: IMetrics | null;
-  private readonly config: IBeaconConfig;
+  private readonly metrics: Metrics | null;
+  private readonly config: BeaconConfig;
   private readonly logger: Logger;
   /** There is a single chain per type, 1 finalized sync, 1 head sync */
   private readonly chains = new Map<RangeSyncType, SyncChain>();
@@ -296,7 +296,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     }
   }
 
-  private scrapeMetrics(metrics: IMetrics): void {
+  private scrapeMetrics(metrics: Metrics): void {
     metrics.syncRange.syncChainsPeers.reset();
     const syncChainsByType: Record<RangeSyncType, number> = {
       [RangeSyncType.Finalized]: 0,

@@ -1,4 +1,4 @@
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {UPDATE_TIMEOUT} from "@lodestar/params";
 import {Slot, allForks} from "@lodestar/types";
 import {computeSyncPeriodAtSlot} from "../utils/index.js";
@@ -13,7 +13,7 @@ export class LightclientSpec {
   readonly store: ILightClientStore;
 
   constructor(
-    config: IBeaconConfig,
+    config: BeaconConfig,
     private readonly opts: ProcessUpdateOpts & LightClientStoreEvents,
     bootstrap: allForks.LightClientBootstrap
   ) {

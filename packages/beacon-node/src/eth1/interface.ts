@@ -1,4 +1,4 @@
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {phase0, Root, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 
@@ -102,7 +102,7 @@ export type Eth1Streamer = {
 };
 
 export type IEth1StreamParams = Pick<
-  IBeaconConfig,
+  BeaconConfig,
   "ETH1_FOLLOW_DISTANCE" | "MIN_GENESIS_TIME" | "GENESIS_DELAY" | "SECONDS_PER_ETH1_BLOCK"
 > & {
   maxBlocksPerPoll: number;

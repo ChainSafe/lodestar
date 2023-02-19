@@ -11,7 +11,7 @@ import * as monitoring from "./monitoring.js";
 import * as network from "./network.js";
 import * as sync from "./sync.js";
 
-export type IBeaconNodeArgs = api.ApiArgs &
+export type BeaconNodeArgs = api.ApiArgs &
   chain.ChainArgs &
   eth1.Eth1Args &
   execution.ExecutionEngineArgs &
@@ -21,7 +21,7 @@ export type IBeaconNodeArgs = api.ApiArgs &
   network.NetworkArgs &
   sync.SyncArgs;
 
-export function parseBeaconNodeArgs(args: IBeaconNodeArgs): RecursivePartial<IBeaconNodeOptions> {
+export function parseBeaconNodeArgs(args: BeaconNodeArgs): RecursivePartial<IBeaconNodeOptions> {
   // Remove undefined values to allow deepmerge to inject default values downstream
   return removeUndefinedRecursive({
     api: api.parseArgs(args),

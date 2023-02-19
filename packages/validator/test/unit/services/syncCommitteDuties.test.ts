@@ -3,7 +3,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
-import {createIChainForkConfig} from "@lodestar/config";
+import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {HttpStatusCode, routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
@@ -29,7 +29,7 @@ describe("SyncCommitteeDutiesService", function () {
   let validatorStore: ValidatorStore;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
-  const altair0Config = createIChainForkConfig({
+  const altair0Config = createChainForkConfig({
     ...mainnetConfig,
     ALTAIR_FORK_EPOCH: 0, // Activate Altair immediately
   });

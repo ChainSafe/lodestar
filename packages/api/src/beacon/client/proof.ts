@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {CompactMultiProof, ProofType} from "@chainsafe/persistent-merkle-tree";
 import {Api, ReqTypes, routesData, getReqSerializers} from "../routes/proof.js";
 import {IHttpClient, getFetchOptsSerializers, HttpError} from "../../utils/client/index.js";
@@ -7,7 +7,7 @@ import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 /**
  * REST HTTP client for lightclient routes
  */
-export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): Api {
+export function getClient(_config: ChainForkConfig, httpClient: IHttpClient): Api {
   const reqSerializers = getReqSerializers();
 
   // For `getStateProof()` generate request serializer

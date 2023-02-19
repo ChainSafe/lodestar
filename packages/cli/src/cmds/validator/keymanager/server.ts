@@ -5,7 +5,7 @@ import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@lodestar/
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@lodestar/api/keymanager";
 import {registerRoutes} from "@lodestar/api/keymanager/server";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 
 import {ServerApi} from "@lodestar/api";
 import {writeFile600Perm} from "../../../util/index.js";
@@ -25,7 +25,7 @@ export const keymanagerRestApiServerOptsDefault: KeymanagerRestApiServerOpts = {
 };
 
 export type KeymanagerRestApiServerModules = RestApiServerModules & {
-  config: IChainForkConfig;
+  config: ChainForkConfig;
   api: ServerApi<Api>;
 };
 

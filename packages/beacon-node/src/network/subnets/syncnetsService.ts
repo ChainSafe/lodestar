@@ -1,5 +1,5 @@
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Epoch, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -8,7 +8,7 @@ import {getActiveForks} from "../forks.js";
 import {Eth2Gossipsub, GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {RequestedSubnet, SubnetMap} from "../peers/utils/index.js";
-import {IMetrics} from "../../metrics/metrics.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {CommitteeSubscription, SubnetsService, SubnetsServiceOpts} from "./interface.js";
 
 const gossipType = GossipType.sync_committee;
@@ -28,12 +28,12 @@ export class SyncnetsService implements SubnetsService {
   private subscriptionsCommittee = new SubnetMap();
 
   constructor(
-    private readonly config: IBeaconConfig,
+    private readonly config: BeaconConfig,
     private readonly chain: IBeaconChain,
     private readonly gossip: Eth2Gossipsub,
     private readonly metadata: MetadataController,
     private readonly logger: Logger,
-    private readonly metrics: IMetrics | null,
+    private readonly metrics: Metrics | null,
     private readonly opts?: SubnetsServiceOpts
   ) {
     if (metrics) {
@@ -145,7 +145,7 @@ export class SyncnetsService implements SubnetsService {
     }
   }
 
-  private onScrapeLodestarMetrics(metrics: IMetrics): void {
+  private onScrapeLodestarMetrics(metrics: Metrics): void {
     metrics.syncnetsService.subscriptionsCommittee.set(this.subscriptionsCommittee.size);
   }
 }

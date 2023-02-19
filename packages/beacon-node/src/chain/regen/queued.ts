@@ -3,7 +3,7 @@ import {IForkChoice} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache/index.js";
-import {IMetrics} from "../../metrics/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {IStateRegenerator, RegenCaller, RegenFnName} from "./interface.js";
 import {StateRegenerator, RegenModules} from "./regen.js";
@@ -31,7 +31,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   private forkChoice: IForkChoice;
   private stateCache: StateContextCache;
   private checkpointStateCache: CheckpointStateCache;
-  private metrics: IMetrics | null;
+  private metrics: Metrics | null;
 
   constructor(modules: QueuedStateRegeneratorModules) {
     this.regen = new StateRegenerator(modules);

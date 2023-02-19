@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {BlockError, BlockErrorCode} from "../../errors/index.js";
 import {BlockInput} from "../types.js";
@@ -6,7 +6,7 @@ import {BlockInput} from "../types.js";
 /**
  * Assert this chain segment of blocks is linear with slot numbers and hashes
  */
-export function assertLinearChainSegment(config: IChainForkConfig, blocks: BlockInput[]): void {
+export function assertLinearChainSegment(config: ChainForkConfig, blocks: BlockInput[]): void {
   for (let i = 0; i < blocks.length - 1; i++) {
     const block = blocks[i].block;
     const child = blocks[i + 1].block;

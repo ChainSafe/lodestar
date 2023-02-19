@@ -26,7 +26,7 @@ import {
   isMergeTransitionComplete,
   getExpectedWithdrawals,
 } from "@lodestar/state-transition";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, ForkExecution, isForkExecution} from "@lodestar/params";
 import {toHex, sleep} from "@lodestar/utils";
 
@@ -300,7 +300,7 @@ export async function prepareExecutionPayload(
   chain: {
     eth1: IEth1ForBlockProduction;
     executionEngine: IExecutionEngine;
-    config: IChainForkConfig;
+    config: ChainForkConfig;
   },
   fork: ForkExecution,
   safeBlockHash: RootHex,
@@ -379,7 +379,7 @@ async function prepareExecutionPayloadHeader(
   chain: {
     eth1: IEth1ForBlockProduction;
     executionBuilder?: IExecutionBuilder;
-    config: IChainForkConfig;
+    config: ChainForkConfig;
   },
   fork: ForkExecution,
   state: CachedBeaconStateBellatrix,
@@ -410,7 +410,7 @@ async function prepareExecutionPayloadHeader(
 async function getExecutionPayloadParentHash(
   chain: {
     eth1: IEth1ForBlockProduction;
-    config: IChainForkConfig;
+    config: ChainForkConfig;
   },
   state: CachedBeaconStateExecutions
 ): Promise<{isPremerge: true} | {isPremerge: false; parentHash: Root}> {

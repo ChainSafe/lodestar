@@ -1,5 +1,5 @@
 import {ssz} from "@lodestar/types";
-import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@lodestar/config";
+import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {
   getLatestBlockRoot,
@@ -17,9 +17,9 @@ import {
 import {Checkpoint} from "@lodestar/types/phase0";
 
 import {downloadOrLoadFile} from "../../util/index.js";
-import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions.js";
+import {defaultNetwork, GlobalArgs} from "../../options/globalOptions.js";
 import {fetchWeakSubjectivityState, getCheckpointFromArg, getGenesisFileUrl} from "../../networks/index.js";
-import {IBeaconArgs} from "./options.js";
+import {BeaconArgs} from "./options.js";
 
 export function getCheckpointFromState(state: BeaconStateAllForks): Checkpoint {
   return {
@@ -31,7 +31,7 @@ export function getCheckpointFromState(state: BeaconStateAllForks): Checkpoint {
 }
 
 async function initAndVerifyWeakSubjectivityState(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   db: IBeaconDb,
   logger: Logger,
   store: BeaconStateAllForks,
@@ -87,8 +87,8 @@ async function initAndVerifyWeakSubjectivityState(
  */
 export async function initBeaconState(
   options: IBeaconNodeOptions,
-  args: IBeaconArgs & IGlobalArgs,
-  chainForkConfig: IChainForkConfig,
+  args: BeaconArgs & GlobalArgs,
+  chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger,
   signal: AbortSignal
@@ -98,7 +98,7 @@ export async function initBeaconState(
   //   ii) used during verification of a weak subjectivity state,
   const lastDbState = await db.stateArchive.lastValue();
   if (lastDbState) {
-    const config = createIBeaconConfig(chainForkConfig, lastDbState.genesisValidatorsRoot);
+    const config = createBeaconConfig(chainForkConfig, lastDbState.genesisValidatorsRoot);
     const wssCheck = isWithinWeakSubjectivityPeriod(config, lastDbState, getCheckpointFromState(lastDbState));
     // All cases when we want to directly use lastDbState as the anchor state:
     //  - if no checkpoint sync args provided, or
@@ -134,7 +134,7 @@ export async function initBeaconState(
     if (genesisStateFile && !args.forceGenesis) {
       const stateBytes = await downloadOrLoadFile(genesisStateFile);
       let anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
-      const config = createIBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
+      const config = createBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
       const wssCheck = isWithinWeakSubjectivityPeriod(config, anchorState, getCheckpointFromState(anchorState));
       anchorState = await initStateFromAnchorState(config, db, logger, anchorState, {
         isWithinWeakSubjectivityPeriod: wssCheck,
@@ -152,7 +152,7 @@ export async function initBeaconState(
 async function readWSState(
   lastDbState: BeaconStateAllForks | null,
   wssOpts: {checkpointState: string; wssCheckpoint?: string},
-  chainForkConfig: IChainForkConfig,
+  chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
@@ -163,7 +163,7 @@ async function readWSState(
 
   const stateBytes = await downloadOrLoadFile(checkpointState);
   const wsState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
-  const config = createIBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
+  const config = createBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
   const store = lastDbState ?? wsState;
   const checkpoint = wssCheckpoint ? getCheckpointFromArg(wssCheckpoint) : getCheckpointFromState(wsState);
   return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsState, checkpoint);
@@ -172,7 +172,7 @@ async function readWSState(
 async function fetchWSStateFromBeaconApi(
   lastDbState: BeaconStateAllForks | null,
   wssOpts: {checkpointSyncUrl: string; wssCheckpoint?: string},
-  chainForkConfig: IChainForkConfig,
+  chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
@@ -192,7 +192,7 @@ async function fetchWSStateFromBeaconApi(
   }
 
   const {wsState, wsCheckpoint} = await fetchWeakSubjectivityState(chainForkConfig, logger, wssOpts);
-  const config = createIBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
+  const config = createBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
   const store = lastDbState ?? wsState;
   return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsState, wsCheckpoint);
 }

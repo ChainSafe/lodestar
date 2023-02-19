@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
-import {IChainConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {fromHex} from "@lodestar/utils";
 
 import {linspace} from "../../util/numpy.js";
@@ -48,7 +48,7 @@ export class Eth1Provider implements IEth1Provider {
   private readonly rpc: JsonRpcHttpClient;
 
   constructor(
-    config: Pick<IChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
+    config: Pick<ChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
     opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex">,
     signal?: AbortSignal,
     metrics?: JsonRpcHttpClientMetrics | null

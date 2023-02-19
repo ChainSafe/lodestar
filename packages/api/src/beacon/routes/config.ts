@@ -1,5 +1,5 @@
 import {BeaconPreset} from "@lodestar/params";
-import {IChainConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {Bytes32, UintNum64, phase0, ssz} from "@lodestar/types";
 import {mapValues} from "@lodestar/utils";
 import {ByteVectorType, ContainerType} from "@chainsafe/ssz";
@@ -23,7 +23,7 @@ export type DepositContract = {
   address: Bytes32;
 };
 
-export type Spec = BeaconPreset & IChainConfig;
+export type Spec = BeaconPreset & ChainConfig;
 
 export type Api = {
   /**

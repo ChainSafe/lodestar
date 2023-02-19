@@ -1,4 +1,4 @@
-import {IBeaconConfig, IChainForkConfig} from "@lodestar/config";
+import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {EFFECTIVE_BALANCE_INCREMENT, MAX_DEPOSITS, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Root} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
@@ -18,7 +18,7 @@ const SAFETY_DECAY = 10;
   `state` and `safetyDecay`. The default `safetyDecay` used should be 10% (= 0.1)
  */
 export function getLatestWeakSubjectivityCheckpointEpoch(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   state: CachedBeaconStateAllForks
 ): Epoch {
   return state.epochCtx.epoch - computeWeakSubjectivityPeriodCachedState(config, state);
@@ -33,7 +33,7 @@ export function getLatestWeakSubjectivityCheckpointEpoch(
     https://github.com/runtimeverification/beacon-chain-verification/blob/master/weak-subjectivity/weak-subjectivity-analysis.pdf
  */
 export function computeWeakSubjectivityPeriodCachedState(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   state: CachedBeaconStateAllForks
 ): number {
   const activeValidatorCount = state.epochCtx.currentShuffling.activeIndices.length;
@@ -49,7 +49,7 @@ export function computeWeakSubjectivityPeriodCachedState(
  * Same to computeWeakSubjectivityPeriodCachedState but for normal state
  * This is called only 1 time at app startup so it's ok to calculate totalActiveBalanceIncrements manually
  */
-export function computeWeakSubjectivityPeriod(config: IChainForkConfig, state: BeaconStateAllForks): number {
+export function computeWeakSubjectivityPeriod(config: ChainForkConfig, state: BeaconStateAllForks): number {
   const activeIndices = getActiveValidatorIndices(state, getCurrentEpoch(state));
   const validators = state.validators.getAllReadonlyValues();
   let totalActiveBalanceIncrements = 0;
@@ -107,7 +107,7 @@ export function getLatestBlockRoot(state: BeaconStateAllForks): Root {
 }
 
 export function isWithinWeakSubjectivityPeriod(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   wsState: BeaconStateAllForks,
   wsCheckpoint: Checkpoint
 ): boolean {

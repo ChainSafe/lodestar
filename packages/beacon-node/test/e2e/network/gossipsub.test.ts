@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {capella, phase0, ssz, allForks} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
@@ -29,7 +29,7 @@ const opts: NetworkOptions = {
 
 // Schedule all forks at ALTAIR_FORK_EPOCH to avoid generating the pubkeys cache
 /* eslint-disable @typescript-eslint/naming-convention */
-const config = createIChainForkConfig({
+const config = createChainForkConfig({
   ...defaultChainConfig,
   ALTAIR_FORK_EPOCH: 1,
   BELLATRIX_FORK_EPOCH: 1,
@@ -63,7 +63,7 @@ describe("gossipsub", function () {
       },
     });
 
-    const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
+    const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,

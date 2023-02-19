@@ -1,7 +1,7 @@
 import {CachedBeaconStateAllForks, getBlockSignatureSets} from "@lodestar/state-transition";
 import {allForks} from "@lodestar/types";
 import {Logger, sleep} from "@lodestar/utils";
-import {IMetrics} from "../../metrics/metrics.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {IBlsVerifier} from "../bls/index.js";
 import {BlockError, BlockErrorCode} from "../errors/blockError.js";
 import {ImportBlockOpts} from "./types.js";
@@ -16,7 +16,7 @@ import {ImportBlockOpts} from "./types.js";
 export async function verifyBlocksSignatures(
   bls: IBlsVerifier,
   logger: Logger,
-  metrics: IMetrics | null,
+  metrics: Metrics | null,
   preState0: CachedBeaconStateAllForks,
   blocks: allForks.SignedBeaconBlock[],
   opts: ImportBlockOpts

@@ -5,11 +5,11 @@ import {fromHexString} from "@chainsafe/ssz";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {getGlobalPaths} from "../../paths/global.js";
-import {IGlobalArgs} from "../../options/index.js";
+import {GlobalArgs} from "../../options/index.js";
 import {getCliLogger} from "../../util/index.js";
 import {ILightClientArgs} from "./options.js";
 
-export async function lightclientHandler(args: ILightClientArgs & IGlobalArgs): Promise<void> {
+export async function lightclientHandler(args: ILightClientArgs & GlobalArgs): Promise<void> {
   const {config, network} = getBeaconConfigFromArgs(args);
   const globalPaths = getGlobalPaths(args, network);
 

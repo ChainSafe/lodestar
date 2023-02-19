@@ -1,5 +1,5 @@
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {Slot} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
@@ -20,7 +20,7 @@ import {BlockInput, ImportBlockOpts} from "./types.js";
  *   - Not already known
  */
 export function verifyBlocksSanityChecks(
-  chain: {forkChoice: IForkChoice; clock: BeaconClock; config: IChainForkConfig},
+  chain: {forkChoice: IForkChoice; clock: BeaconClock; config: ChainForkConfig},
   blocks: BlockInput[],
   opts: ImportBlockOpts
 ): {relevantBlocks: BlockInput[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {

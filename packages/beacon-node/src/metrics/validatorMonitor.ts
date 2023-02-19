@@ -1,11 +1,11 @@
 import {computeEpochAtSlot, AttesterStatus, parseAttesterFlags} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {allForks, altair} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types/phase0";
-import {ILodestarMetrics} from "./metrics/lodestar.js";
+import {LodestarMetrics} from "./metrics/lodestar.js";
 
 /** The validator monitor collects per-epoch data about each monitored validator.
  * Historical data will be kept around for `HISTORIC_EPOCHS` before it is pruned.
@@ -179,8 +179,8 @@ type MonitoredValidator = {
 };
 
 export function createValidatorMonitor(
-  metrics: ILodestarMetrics,
-  config: IChainForkConfig,
+  metrics: LodestarMetrics,
+  config: ChainForkConfig,
   genesisTime: number,
   logger: Logger
 ): ValidatorMonitor {

@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {ssz, allForks} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
-import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {upgradeLightClientHeader} from "@lodestar/light-client/spec";
 
 describe("UpgradeLightClientHeader", function () {
@@ -9,7 +9,7 @@ describe("UpgradeLightClientHeader", function () {
   let testSlots: Record<ForkName, number>;
 
   /* eslint-disable @typescript-eslint/naming-convention */
-  const chainConfig = createIChainForkConfig({
+  const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 1,
     BELLATRIX_FORK_EPOCH: 2,
@@ -18,7 +18,7 @@ describe("UpgradeLightClientHeader", function () {
   });
 
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
-  const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
+  const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
   beforeEach(function () {
     lcHeaderByFork = {

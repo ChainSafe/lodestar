@@ -4,7 +4,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, phase0} from "@lodestar/types";
 import {INetwork, NetworkEvent} from "../network/index.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
-import {IMetrics} from "../metrics/index.js";
+import {Metrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {IBeaconSync, SyncModules, SyncingStatus} from "./interface.js";
@@ -19,7 +19,7 @@ export class BeaconSync implements IBeaconSync {
   private readonly logger: Logger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
-  private readonly metrics: IMetrics | null;
+  private readonly metrics: Metrics | null;
   private readonly opts: SyncOptions;
 
   private readonly rangeSync: RangeSync;
@@ -226,7 +226,7 @@ export class BeaconSync implements IBeaconSync {
     this.updateSyncState();
   };
 
-  private scrapeMetrics(metrics: IMetrics): void {
+  private scrapeMetrics(metrics: Metrics): void {
     // Compute current sync state
     metrics.syncStatus.set(syncStateMetric[this.state]);
 

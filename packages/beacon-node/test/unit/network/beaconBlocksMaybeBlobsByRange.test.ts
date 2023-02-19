@@ -2,7 +2,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import {peerIdFromString} from "@libp2p/peer-id";
 import {ssz, deneb} from "@lodestar/types";
-import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
 import {beaconBlocksMaybeBlobsByRange, ReqRespBeaconNode} from "../../../src/network/reqresp/index.js";
 import {BlockInputType} from "../../../src/chain/blocks/types.js";
@@ -21,7 +21,7 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
   const peerId = peerIdFromString("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
 
   /* eslint-disable @typescript-eslint/naming-convention */
-  const chainConfig = createIChainForkConfig({
+  const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 0,
     BELLATRIX_FORK_EPOCH: 0,
@@ -29,7 +29,7 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
     EIP4844_FORK_EPOCH: 0,
   });
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
-  const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
+  const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
   const rangeRequest = ssz.phase0.BeaconBlocksByRangeRequest.defaultValue();
   rangeRequest.count = 1;
 

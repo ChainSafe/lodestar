@@ -11,7 +11,7 @@ import {
   Index2PubkeyCache,
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -21,7 +21,7 @@ import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
-import {IMetrics} from "../metrics/index.js";
+import {Metrics} from "../metrics/index.js";
 import {bytesToData, numToQuantity} from "../eth1/provider/utils.js";
 import {wrapError} from "../util/wrapError.js";
 import {ckzg} from "../util/kzg.js";
@@ -79,9 +79,9 @@ export class BeaconChain implements IBeaconChain {
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
-  readonly config: IBeaconConfig;
+  readonly config: BeaconConfig;
   readonly logger: Logger;
-  readonly metrics: IMetrics | null;
+  readonly metrics: Metrics | null;
 
   readonly anchorStateLatestBlockSlot: Slot;
 
@@ -148,13 +148,13 @@ export class BeaconChain implements IBeaconChain {
       executionEngine,
       executionBuilder,
     }: {
-      config: IBeaconConfig;
+      config: BeaconConfig;
       db: IBeaconDb;
       logger: Logger;
       processShutdownCallback: ProcessShutdownCallback;
       /** Used for testing to supply fake clock */
       clock?: BeaconClock;
-      metrics: IMetrics | null;
+      metrics: Metrics | null;
       anchorState: BeaconStateAllForks;
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;

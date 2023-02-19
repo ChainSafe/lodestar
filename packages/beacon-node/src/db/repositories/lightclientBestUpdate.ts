@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {Bucket, DatabaseController, Repository} from "@lodestar/db";
 import {ssz, SyncPeriod, allForks} from "@lodestar/types";
 
@@ -10,7 +10,7 @@ const SLOT_BYTE_COUNT = 8;
  * Used to prepare light client updates
  */
 export class BestLightClientUpdateRepository extends Repository<SyncPeriod, allForks.LightClientUpdate> {
-  constructor(config: IChainForkConfig, db: DatabaseController<Uint8Array, Uint8Array>) {
+  constructor(config: ChainForkConfig, db: DatabaseController<Uint8Array, Uint8Array>) {
     // Pick some type but won't be used
     super(config, db, Bucket.lightClient_bestLightClientUpdate, ssz.altair.LightClientUpdate);
   }

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import {expect} from "chai";
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
-import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
+import {parseBeaconNodeArgs, BeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
 
 describe("options / beaconNodeOptions", () => {
@@ -86,7 +86,7 @@ describe("options / beaconNodeOptions", () => {
       "sync.disableProcessAsChainSegment": true,
       "sync.backfillBatchSize": 64,
       "sync.disableRangeSync": false,
-    } as IBeaconNodeArgs;
+    } as BeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       api: {
@@ -190,7 +190,7 @@ describe("options / beaconNodeOptions", () => {
       eth1: true,
       "execution.urls": ["http://my.node:8551"],
       "jwt-secret": jwtSecretFile,
-    } as IBeaconNodeArgs;
+    } as BeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       eth1: {

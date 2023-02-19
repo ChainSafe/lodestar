@@ -5,7 +5,7 @@ import StrictEventEmitter from "strict-event-emitter-types";
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
 import {allForks, altair, capella, deneb, phase0} from "@lodestar/types";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {NetworkEvent} from "../events.js";
@@ -116,7 +116,7 @@ export type GossipEvents = {
 export type GossipEventEmitter = StrictEventEmitter<EventEmitter, GossipEvents>;
 
 export type GossipModules = {
-  config: IBeaconConfig;
+  config: BeaconConfig;
   libp2p: Libp2p;
   logger: Logger;
   chain: IBeaconChain;

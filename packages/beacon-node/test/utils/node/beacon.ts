@@ -3,7 +3,7 @@ import tmp from "tmp";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {config as minimalConfig} from "@lodestar/config/default";
-import {createIBeaconConfig, createIChainForkConfig, IChainConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig, ChainConfig} from "@lodestar/config";
 import {Logger, RecursivePartial} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {phase0, ssz} from "@lodestar/types";
@@ -21,7 +21,7 @@ import {InteropStateOpts} from "../../../src/node/utils/interop/state.js";
 
 export async function getDevBeaconNode(
   opts: {
-    params: Partial<IChainConfig>;
+    params: Partial<ChainConfig>;
     options?: RecursivePartial<IBeaconNodeOptions>;
     validatorCount?: number;
     logger?: Logger;
@@ -36,7 +36,7 @@ export async function getDevBeaconNode(
 
   if (!peerId) peerId = await createSecp256k1PeerId();
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
-  const config = createIChainForkConfig({...minimalConfig, ...params});
+  const config = createChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
 
   const db = new BeaconDb({config, controller: new LevelDbController({name: tmpDir.name}, {})});
@@ -86,7 +86,7 @@ export async function getDevBeaconNode(
     }
   }
 
-  const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
+  const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
   return BeaconNode.init({
     opts: options as IBeaconNodeOptions,
     config: beaconConfig,

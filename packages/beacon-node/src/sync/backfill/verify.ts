@@ -1,5 +1,5 @@
 import {CachedBeaconStateAllForks, ISignatureSet, getProposerSignatureSet} from "@lodestar/state-transition";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {allForks, Root, allForks as allForkTypes, ssz, Slot} from "@lodestar/types";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {IBlsVerifier} from "../../chain/bls/index.js";
@@ -13,7 +13,7 @@ export type BackfillBlockHeader = {
 export type BackfillBlock = BackfillBlockHeader & {block: allForks.SignedBeaconBlock};
 
 export function verifyBlockSequence(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   blocks: allForkTypes.SignedBeaconBlock[],
   anchorRoot: Root
 ): {
