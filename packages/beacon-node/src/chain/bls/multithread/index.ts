@@ -11,7 +11,7 @@ import {Implementation, PointFormat} from "@chainsafe/bls/types";
 import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
-import {IMetrics} from "../../../metrics/index.js";
+import {Metrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
@@ -21,7 +21,7 @@ import {defaultPoolSize} from "./poolSize.js";
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: Logger;
-  metrics: IMetrics | null;
+  metrics: Metrics | null;
 };
 
 export type BlsMultiThreadWorkerPoolOptions = {
@@ -97,7 +97,7 @@ type WorkerDescriptor = {
  */
 export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private readonly logger: Logger;
-  private readonly metrics: IMetrics | null;
+  private readonly metrics: Metrics | null;
 
   private readonly format: PointFormat;
   private readonly workers: WorkerDescriptor[];

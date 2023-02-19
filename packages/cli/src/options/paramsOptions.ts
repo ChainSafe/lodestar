@@ -1,5 +1,5 @@
 import {Options} from "yargs";
-import {IChainConfig, chainConfigTypes} from "@lodestar/config";
+import {ChainConfig, chainConfigTypes} from "@lodestar/config";
 import {IBeaconParamsUnparsed} from "../config/types.js";
 import {ObjectKeys, CliCommandOptions} from "../util/index.js";
 
@@ -36,7 +36,7 @@ const paramsOptionsByName = ObjectKeys(chainConfigTypes).reduce(
   {}
 );
 
-const terminalArgsToParamsMap: {[K in keyof ITerminalPowArgs]: keyof IChainConfig} = {
+const terminalArgsToParamsMap: {[K in keyof ITerminalPowArgs]: keyof ChainConfig} = {
   "terminal-total-difficulty-override": "TERMINAL_TOTAL_DIFFICULTY",
   "terminal-block-hash-override": "TERMINAL_BLOCK_HASH",
   "terminal-block-hash-epoch-override": "TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH",

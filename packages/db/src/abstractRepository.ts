@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {Type} from "@chainsafe/ssz";
 import {BUCKET_LENGTH} from "./const.js";
 import {FilterOptions, KeyValue} from "./controller/index.js";
@@ -17,7 +17,7 @@ export type Id = Uint8Array | string | number | bigint;
  * indexed by root
  */
 export abstract class Repository<I extends Id, T> {
-  protected config: IChainForkConfig;
+  protected config: ChainForkConfig;
 
   protected db: Db;
 
@@ -30,7 +30,7 @@ export abstract class Repository<I extends Id, T> {
 
   protected type: Type<T>;
 
-  protected constructor(config: IChainForkConfig, db: Db, bucket: Bucket, type: Type<T>) {
+  protected constructor(config: ChainForkConfig, db: Db, bucket: Bucket, type: Type<T>) {
     this.config = config;
     this.db = db;
     this.bucket = bucket;

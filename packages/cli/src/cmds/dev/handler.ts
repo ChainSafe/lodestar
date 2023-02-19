@@ -3,7 +3,7 @@ import {promisify} from "node:util";
 import rimraf from "rimraf";
 import {toHex, fromHex} from "@lodestar/utils";
 import {nodeUtils} from "@lodestar/beacon-node";
-import {IGlobalArgs} from "../../options/index.js";
+import {GlobalArgs} from "../../options/index.js";
 import {mkdir, onGracefulShutdown} from "../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {getBeaconPaths} from "../beacon/paths.js";
@@ -16,7 +16,7 @@ import {writeTestnetFiles} from "./files.js";
 /**
  * Run a beacon node with validator
  */
-export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
+export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
   const {config} = getBeaconConfigFromArgs(args);
 
   if (args.dumpTestnetFiles) {

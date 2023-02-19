@@ -1,6 +1,6 @@
 import {ErrorAborted, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 
@@ -29,11 +29,11 @@ export enum TimeItem {
 export class Clock implements IClock {
   readonly genesisTime: number;
   readonly secondsPerSlot: number;
-  private readonly config: IChainForkConfig;
+  private readonly config: ChainForkConfig;
   private readonly logger: Logger;
   private readonly fns: {timeItem: TimeItem; fn: RunEveryFn}[] = [];
 
-  constructor(config: IChainForkConfig, logger: Logger, opts: {genesisTime: number}) {
+  constructor(config: ChainForkConfig, logger: Logger, opts: {genesisTime: number}) {
     this.genesisTime = opts.genesisTime;
     this.secondsPerSlot = config.SECONDS_PER_SLOT;
     this.config = config;
@@ -136,7 +136,7 @@ export class Clock implements IClock {
 /**
  * Same to the spec but we use Math.round instead of Math.floor.
  */
-export function getCurrentSlotAround(config: IChainForkConfig, genesisTime: TimeSeconds): Slot {
+export function getCurrentSlotAround(config: ChainForkConfig, genesisTime: TimeSeconds): Slot {
   const diffInSeconds = Date.now() / 1000 - genesisTime;
   const slotsSinceGenesis = Math.round(diffInSeconds / config.SECONDS_PER_SLOT);
   return GENESIS_SLOT + slotsSinceGenesis;

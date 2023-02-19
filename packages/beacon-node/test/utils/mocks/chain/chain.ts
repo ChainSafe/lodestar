@@ -2,7 +2,7 @@ import sinon from "sinon";
 
 import {CompositeTypeAny, toHexString, TreeView} from "@chainsafe/ssz";
 import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64, RootHex, deneb, Wei} from "@lodestar/types";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus, AncestorStatus} from "@lodestar/fork-choice";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
@@ -50,7 +50,7 @@ export type MockChainParams = {
   chainId: Uint16;
   networkId: UintBn64;
   state: BeaconStateAllForks;
-  config: IBeaconConfig;
+  config: BeaconConfig;
 };
 
 export class MockBeaconChain implements IBeaconChain {
@@ -58,7 +58,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly genesisValidatorsRoot: Root;
   readonly eth1 = new Eth1ForBlockProductionDisabled();
   readonly executionEngine = new ExecutionEngineDisabled();
-  readonly config: IBeaconConfig;
+  readonly config: BeaconConfig;
   readonly logger: Logger;
   readonly metrics = null;
   readonly opts: IChainOptions = {

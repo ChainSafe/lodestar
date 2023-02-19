@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
+import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {ApiError, getClient, routes} from "@lodestar/api";
 import {sleep} from "@lodestar/utils";
@@ -20,9 +20,9 @@ describe("lightclient api", function () {
   const SECONDS_PER_SLOT = 1;
   const ALTAIR_FORK_EPOCH = 0;
   const restPort = 9596;
-  const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+  const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
-  const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
+  const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
   const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
   const loggerNodeA = testLogger("Node-A", testLoggerOpts);
   const validatorCount = 2;

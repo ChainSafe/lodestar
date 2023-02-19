@@ -2,7 +2,7 @@ import {setMaxListeners} from "node:events";
 import {Registry} from "prom-client";
 
 import {PeerId} from "@libp2p/interface-peer-id";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Api, ServerApi} from "@lodestar/api";
@@ -14,7 +14,7 @@ import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
-import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics/index.js";
+import {createMetrics, Metrics, HttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
@@ -27,9 +27,9 @@ export * from "./options.js";
 
 export type BeaconNodeModules = {
   opts: IBeaconNodeOptions;
-  config: IBeaconConfig;
+  config: BeaconConfig;
   db: IBeaconDb;
-  metrics: IMetrics | null;
+  metrics: Metrics | null;
   network: INetwork;
   chain: IBeaconChain;
   api: {[K in keyof Api]: ServerApi<Api[K]>};
@@ -43,7 +43,7 @@ export type BeaconNodeModules = {
 
 export type BeaconNodeInitModules = {
   opts: IBeaconNodeOptions;
-  config: IBeaconConfig;
+  config: BeaconConfig;
   db: IBeaconDb;
   logger: Logger;
   processShutdownCallback: ProcessShutdownCallback;
@@ -80,9 +80,9 @@ enum LoggerModule {
  */
 export class BeaconNode {
   opts: IBeaconNodeOptions;
-  config: IBeaconConfig;
+  config: BeaconConfig;
   db: IBeaconDb;
-  metrics: IMetrics | null;
+  metrics: Metrics | null;
   metricsServer?: HttpMetricsServer;
   monitoring: MonitoringService | null;
   network: INetwork;

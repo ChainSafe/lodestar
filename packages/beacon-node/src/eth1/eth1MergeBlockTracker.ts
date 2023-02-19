@@ -1,8 +1,8 @@
-import {IChainConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {RootHex} from "@lodestar/types";
 import {Logger, pruneSetToMax} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {IMetrics} from "../metrics/index.js";
+import {Metrics} from "../metrics/index.js";
 import {ZERO_HASH_HEX} from "../constants/index.js";
 import {enumToIndexMap} from "../util/enum.js";
 import {IEth1Provider, EthJsonRpcBlockRaw, PowMergeBlock, PowMergeBlockTimestamp, TDProgress} from "./interface.js";
@@ -31,10 +31,10 @@ const MAX_CACHE_POW_BLOCKS = 1024;
 const MAX_TD_RENDER_VALUE = Number.MAX_SAFE_INTEGER;
 
 export type Eth1MergeBlockTrackerModules = {
-  config: IChainConfig;
+  config: ChainConfig;
   logger: Logger;
   signal: AbortSignal;
-  metrics: IMetrics | null;
+  metrics: Metrics | null;
 };
 
 // get_pow_block_at_total_difficulty
@@ -46,9 +46,9 @@ export type Eth1MergeBlockTrackerModules = {
  * production during the weeks between BELLATRIX_EPOCH and TTD.
  */
 export class Eth1MergeBlockTracker {
-  private readonly config: IChainConfig;
+  private readonly config: ChainConfig;
   private readonly logger: Logger;
-  private readonly metrics: IMetrics | null;
+  private readonly metrics: Metrics | null;
 
   private readonly blocksByHashCache = new Map<RootHex, PowMergeBlock>();
   private readonly intervals: NodeJS.Timeout[] = [];

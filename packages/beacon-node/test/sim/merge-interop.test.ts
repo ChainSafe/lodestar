@@ -4,7 +4,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
 import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {IChainConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {routes} from "@lodestar/api";
 import {Epoch} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
@@ -241,7 +241,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
 
-    const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
+    const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
       SECONDS_PER_SLOT: 2,
     };
 

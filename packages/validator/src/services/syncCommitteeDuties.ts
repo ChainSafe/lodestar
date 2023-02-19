@@ -1,6 +1,6 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {BLSSignature, Epoch, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, ApiError, routes} from "@lodestar/api";
@@ -69,7 +69,7 @@ export class SyncCommitteeDutiesService {
   private readonly dutiesByIndexByPeriod = new Map<SyncPeriod, Map<ValidatorIndex, DutyAtPeriod>>();
 
   constructor(
-    private readonly config: IChainForkConfig,
+    private readonly config: ChainForkConfig,
     private readonly logger: LoggerVc,
     private readonly api: Api,
     clock: IClock,

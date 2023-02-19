@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {deneb} from "@lodestar/types";
 import {ckzg} from "./kzg.js";
 
@@ -14,7 +14,7 @@ function getEmptyKzgAggregatedProof(): Uint8Array {
 /**
  * Construct a valid BlobsSidecar for a SignedBeaconBlock that references 0 commitments
  */
-export function getEmptyBlobsSidecar(config: IChainForkConfig, block: deneb.SignedBeaconBlock): deneb.BlobsSidecar {
+export function getEmptyBlobsSidecar(config: ChainForkConfig, block: deneb.SignedBeaconBlock): deneb.BlobsSidecar {
   return {
     beaconBlockRoot: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
     beaconBlockSlot: block.message.slot,

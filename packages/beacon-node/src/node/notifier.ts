@@ -1,4 +1,4 @@
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ProtoBlock} from "@lodestar/fork-choice";
@@ -18,7 +18,7 @@ type NodeNotifierModules = {
   network: INetwork;
   chain: IBeaconChain;
   sync: IBeaconSync;
-  config: IBeaconConfig;
+  config: BeaconConfig;
   logger: Logger;
   signal: AbortSignal;
 };
@@ -139,7 +139,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
   }
 }
 
-function timeToNextHalfSlot(config: IBeaconConfig, chain: IBeaconChain): number {
+function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain): number {
   const msPerSlot = config.SECONDS_PER_SLOT * 1000;
   const msFromGenesis = Date.now() - chain.genesisTime * 1000;
   const msToNextSlot = msPerSlot - (msFromGenesis % msPerSlot);
@@ -147,7 +147,7 @@ function timeToNextHalfSlot(config: IBeaconConfig, chain: IBeaconChain): number 
 }
 
 function getExecutionInfo(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   clockEpoch: Epoch,
   headState: CachedBeaconStateAllForks,
   headInfo: ProtoBlock

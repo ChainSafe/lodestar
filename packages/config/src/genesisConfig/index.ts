@@ -1,11 +1,11 @@
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DomainType, ForkDigest, phase0, Root, Slot, ssz, Version} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
-import {IChainForkConfig} from "../beaconConfig.js";
+import {ChainForkConfig} from "../beaconConfig.js";
 import {ForkDigestHex, CachedGenesis} from "./types.js";
 export {ForkDigestContext} from "./types.js";
 
-export function createCachedGenesis(chainForkConfig: IChainForkConfig, genesisValidatorsRoot: Root): CachedGenesis {
+export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisValidatorsRoot: Root): CachedGenesis {
   const domainCache = new Map<ForkName, Map<DomainType, Uint8Array>>();
 
   const forkDigestByForkName = new Map<ForkName, ForkDigest>();

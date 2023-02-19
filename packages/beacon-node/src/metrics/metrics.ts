@@ -1,23 +1,23 @@
 import {Metric, Registry} from "prom-client";
 import {Logger} from "@lodestar/utils";
 import {BeaconStateAllForks, getCurrentSlot} from "@lodestar/state-transition";
-import {IChainForkConfig} from "@lodestar/config";
-import {createBeaconMetrics, IBeaconMetrics} from "./metrics/beacon.js";
-import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar.js";
+import {ChainForkConfig} from "@lodestar/config";
+import {createBeaconMetrics, BeaconMetrics} from "./metrics/beacon.js";
+import {createLodestarMetrics, LodestarMetrics} from "./metrics/lodestar.js";
 import {MetricsOptions} from "./options.js";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
 import {createValidatorMonitor, ValidatorMonitor} from "./validatorMonitor.js";
 import {collectNodeJSMetrics} from "./nodeJsMetrics.js";
 
-export type IMetrics = IBeaconMetrics & ILodestarMetrics & ValidatorMonitor & {register: RegistryMetricCreator};
+export type Metrics = BeaconMetrics & LodestarMetrics & ValidatorMonitor & {register: RegistryMetricCreator};
 
 export function createMetrics(
   opts: MetricsOptions,
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   anchorState: BeaconStateAllForks,
   logger: Logger,
   externalRegistries: Registry[] = []
-): IMetrics {
+): Metrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, anchorState);

@@ -1,5 +1,5 @@
 import path from "node:path";
-import {IGlobalArgs} from "../../options/index.js";
+import {GlobalArgs} from "../../options/index.js";
 import {GlobalPaths, getGlobalPaths} from "../../paths/global.js";
 
 export type IValidatorPaths = {
@@ -23,7 +23,7 @@ export type AccountPaths = {
  * ```
  */
 export function getValidatorPaths(
-  args: Partial<IValidatorPaths> & Pick<IGlobalArgs, "dataDir">,
+  args: Partial<IValidatorPaths> & Pick<GlobalArgs, "dataDir">,
   network: string
 ): IValidatorPaths & GlobalPaths {
   // Compute global paths first
@@ -66,7 +66,7 @@ export const defaultValidatorPaths = getValidatorPaths({dataDir: "$dataDir"}, "$
  */
 // Using Pick<IGlobalArgs, "dataDir"> make changes in IGlobalArgs throw a type error here
 export function getAccountPaths(
-  args: Partial<AccountPaths> & Pick<IGlobalArgs, "dataDir">,
+  args: Partial<AccountPaths> & Pick<GlobalArgs, "dataDir">,
   network: string
 ): AccountPaths & GlobalPaths {
   // Compute global paths first

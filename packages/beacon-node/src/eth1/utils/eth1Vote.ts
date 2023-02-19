@@ -1,5 +1,5 @@
 import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {phase0, RootHex} from "@lodestar/types";
 import {BeaconStateAllForks, computeTimeAtSlot} from "@lodestar/state-transition";
 import {toHex} from "@lodestar/utils";
@@ -11,7 +11,7 @@ export type Eth1DataGetter = ({
 }) => Promise<phase0.Eth1Data[]>;
 
 export async function getEth1VotesToConsider(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   state: BeaconStateAllForks,
   eth1DataGetter: Eth1DataGetter
 ): Promise<phase0.Eth1Data[]> {
@@ -132,7 +132,7 @@ export function fastSerializeEth1Data(eth1Data: phase0.Eth1Data): string {
   return toHex(eth1Data.blockHash) + eth1Data.depositCount.toString(16) + toHex(eth1Data.depositRoot);
 }
 
-export function votingPeriodStartTime(config: IChainForkConfig, state: BeaconStateAllForks): number {
+export function votingPeriodStartTime(config: ChainForkConfig, state: BeaconStateAllForks): number {
   const eth1VotingPeriodStartSlot = state.slot - (state.slot % (EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH));
   return computeTimeAtSlot(config, eth1VotingPeriodStartSlot, state.genesisTime);
 }

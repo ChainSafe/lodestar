@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Libp2p} from "libp2p";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   collectExactOne,
@@ -16,7 +16,7 @@ import {ReqRespOpts} from "@lodestar/reqresp/lib/ReqResp.js";
 import * as reqRespProtocols from "@lodestar/reqresp/protocols";
 import {allForks, altair, deneb, phase0, Root} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {IMetrics} from "../../metrics/metrics.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
 import {PeersData} from "../peers/peersData.js";
@@ -41,8 +41,8 @@ export interface ReqRespBeaconNodeModules {
   libp2p: Libp2p;
   peersData: PeersData;
   logger: Logger;
-  config: IBeaconConfig;
-  metrics: IMetrics | null;
+  config: BeaconConfig;
+  metrics: Metrics | null;
   reqRespHandlers: ReqRespHandlers;
   metadata: MetadataController;
   peerRpcScores: IPeerRpcScoreStore;
@@ -67,7 +67,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   /** Track registered fork to only send to known protocols */
   private currentRegisteredFork: ForkSeq = ForkSeq.phase0;
 
-  private readonly config: IBeaconConfig;
+  private readonly config: BeaconConfig;
   protected readonly logger: Logger;
 
   constructor(modules: ReqRespBeaconNodeModules, options: ReqRespBeaconNodeOpts = {}) {

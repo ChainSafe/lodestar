@@ -1,5 +1,5 @@
 import winston from "winston";
-import type {Logger} from "winston";
+import type {Logger as Winston} from "winston";
 import {Logger, LoggerOptions, LoggerChildOpts, LogLevel, logLevelNum} from "./interface.js";
 import {getFormat} from "./format.js";
 import {LogData} from "./json.js";
@@ -37,7 +37,7 @@ export function createWinstonLogger(options: Partial<LoggerOptions> = {}, transp
 }
 
 export class WinstonLogger implements Logger {
-  constructor(private readonly winston: Logger) {}
+  constructor(private readonly winston: Winston) {}
 
   static fromOpts(options: Partial<LoggerOptions> = {}, transports?: winston.transport[]): WinstonLogger {
     const defaultMeta: DefaultMeta = {module: options?.module || ""};

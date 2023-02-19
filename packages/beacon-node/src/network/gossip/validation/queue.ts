@@ -1,5 +1,5 @@
 import {mapValues} from "@lodestar/utils";
-import {IMetrics} from "../../../metrics/index.js";
+import {Metrics} from "../../../metrics/index.js";
 import {JobItemQueue, JobQueueOpts, QueueType} from "../../../util/queue/index.js";
 import {GossipJobQueues, GossipType, GossipValidatorFn, ResolvedType, ValidatorFnsByType} from "../interface.js";
 
@@ -47,7 +47,7 @@ const gossipQueueOpts: {
 export function createValidationQueues(
   gossipValidatorFns: ValidatorFnsByType,
   signal: AbortSignal,
-  metrics: IMetrics | null
+  metrics: Metrics | null
 ): GossipJobQueues {
   return mapValues(gossipQueueOpts, (opts, type) => {
     const gossipValidatorFn = gossipValidatorFns[type];

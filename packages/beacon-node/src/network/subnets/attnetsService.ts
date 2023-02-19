@@ -1,5 +1,5 @@
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
@@ -15,7 +15,7 @@ import {GossipTopic, GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {SubnetMap, RequestedSubnet} from "../peers/utils/index.js";
 import {getActiveForks} from "../forks.js";
-import {IMetrics} from "../../metrics/metrics.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {IAttnetsService, CommitteeSubscription, SubnetsServiceOpts, RandBetweenFn, ShuffleFn} from "./interface.js";
 
 /**
@@ -57,7 +57,7 @@ export class AttnetsService implements IAttnetsService {
   private shuffleFn: ShuffleFn;
 
   constructor(
-    private readonly config: IChainForkConfig,
+    private readonly config: ChainForkConfig,
     private readonly chain: IBeaconChain,
     private readonly gossip: {
       subscribeTopic: (topic: GossipTopic) => void;
@@ -65,7 +65,7 @@ export class AttnetsService implements IAttnetsService {
     },
     private readonly metadata: MetadataController,
     private readonly logger: Logger,
-    private readonly metrics: IMetrics | null,
+    private readonly metrics: Metrics | null,
     private readonly opts?: SubnetsServiceOpts
   ) {
     // if subscribeAllSubnets, we act like we have >= ATTESTATION_SUBNET_COUNT validators connecting to this node
@@ -346,7 +346,7 @@ export class AttnetsService implements IAttnetsService {
     );
   }
 
-  private onScrapeLodestarMetrics(metrics: IMetrics): void {
+  private onScrapeLodestarMetrics(metrics: Metrics): void {
     metrics.attnetsService.committeeSubnets.set(this.committeeSubnets.size);
     metrics.attnetsService.subscriptionsCommittee.set(this.subscriptionsCommittee.size);
     metrics.attnetsService.subscriptionsRandom.set(this.subscriptionsRandom.size);

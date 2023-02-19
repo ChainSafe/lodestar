@@ -2,7 +2,7 @@ import {EventEmitter} from "events";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconStateAllForks, blockToHeader} from "@lodestar/state-transition";
-import {IBeaconConfig, IChainForkConfig} from "@lodestar/config";
+import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {phase0, Root, Slot, allForks, ssz} from "@lodestar/types";
 import {ErrorAborted, Logger, sleep} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
@@ -15,7 +15,7 @@ import {INetwork, NetworkEvent, PeerAction} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerSet} from "../../util/peerMap.js";
 import {shuffleOne} from "../../util/shuffle.js";
-import {IMetrics} from "../../metrics/metrics";
+import {Metrics} from "../../metrics/metrics";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {computeAnchorCheckpoint} from "../../chain/initState.js";
 import {verifyBlockProposerSignature, verifyBlockSequence, BackfillBlockHeader, BackfillBlock} from "./verify.js";
@@ -30,9 +30,9 @@ export type BackfillSyncModules = {
   chain: IBeaconChain;
   db: IBeaconDb;
   network: INetwork;
-  config: IBeaconConfig;
+  config: BeaconConfig;
   logger: Logger;
-  metrics: IMetrics | null;
+  metrics: Metrics | null;
   anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
   signal: AbortSignal;
@@ -110,9 +110,9 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
   private readonly db: IBeaconDb;
-  private readonly config: IBeaconConfig;
+  private readonly config: BeaconConfig;
   private readonly logger: Logger;
-  private readonly metrics: IMetrics | null;
+  private readonly metrics: Metrics | null;
 
   /**
    * Process in blocks of at max batchSize
@@ -844,7 +844,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 }
 
 async function extractPreviousFinOrWsCheckpoint(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   db: IBeaconDb,
   belowSlot: Slot,
   logger?: Logger

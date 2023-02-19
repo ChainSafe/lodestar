@@ -1,5 +1,5 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {IBeaconConfig, ForkConfig, ForkDigestContext} from "@lodestar/config";
+import {BeaconConfig, ForkConfig, ForkDigestContext} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
@@ -34,7 +34,7 @@ export interface Protocol {
   readonly encoding: Encoding;
 }
 
-export interface nboundRateLimitQuota<Req = unknown> {
+export interface InboundRateLimitQuota<Req = unknown> {
   // Will be tracked for the protocol per peer
   byPeer?: RateLimiterQuota;
   // Will be tracked regardless of the peer
@@ -52,12 +52,12 @@ export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<
   ignoreResponse?: boolean;
   renderRequestBody?: (request: Req) => string;
   contextBytes: ContextBytesFactory<Resp>;
-  inboundRateLimits?: nboundRateLimitQuota<Req>;
+  inboundRateLimits?: InboundRateLimitQuota<Req>;
 }
 
 export type ProtocolDefinitionGenerator<Req, Res> = (
   // "inboundRateLimiter" is available only on handler context not on generator
-  modules: {config: IBeaconConfig},
+  modules: {config: BeaconConfig},
   handler: ReqRespHandler<Req, Res>
 ) => ProtocolDefinition<Req, Res>;
 

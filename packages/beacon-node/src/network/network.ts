@@ -1,14 +1,14 @@
 import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {Logger, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SignableENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {deneb, Epoch, phase0, allForks} from "@lodestar/types";
 import {routes} from "@lodestar/api";
-import {IMetrics} from "../metrics/index.js";
+import {Metrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, BeaconClock} from "../chain/index.js";
 import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "../chain/opPools/utils.js";
@@ -41,7 +41,7 @@ const CACHED_BLS_BATCH_CLEANUP_LIMIT = 10;
 
 type NetworkModules = {
   opts: NetworkOptions;
-  config: IBeaconConfig;
+  config: BeaconConfig;
   libp2p: Libp2p;
   logger: Logger;
   chain: IBeaconChain;
@@ -59,11 +59,11 @@ type NetworkModules = {
 
 export type NetworkInitModules = {
   opts: NetworkOptions;
-  config: IBeaconConfig;
+  config: BeaconConfig;
   peerId: PeerId;
   peerStoreDir?: string;
   logger: Logger;
-  metrics: IMetrics | null;
+  metrics: Metrics | null;
   chain: IBeaconChain;
   reqRespHandlers: ReqRespHandlers;
   signal: AbortSignal;
@@ -85,7 +85,7 @@ export class Network implements INetwork {
   private readonly peerManager: PeerManager;
   private readonly libp2p: Libp2p;
   private readonly logger: Logger;
-  private readonly config: IBeaconConfig;
+  private readonly config: BeaconConfig;
   private readonly clock: BeaconClock;
   private readonly chain: IBeaconChain;
   private readonly signal: AbortSignal;

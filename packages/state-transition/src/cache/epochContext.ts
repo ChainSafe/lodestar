@@ -1,7 +1,7 @@
 import {CoordType} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, SyncPeriod} from "@lodestar/types";
-import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@lodestar/config";
+import {createBeaconConfig, BeaconConfig, ChainConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   DOMAIN_BEACON_PROPOSER,
@@ -42,7 +42,7 @@ import {
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
 
 export type EpochContextImmutableData = {
-  config: IBeaconConfig;
+  config: BeaconConfig;
   pubkey2index: PubkeyIndexMap;
   index2pubkey: Index2PubkeyCache;
 };
@@ -78,7 +78,7 @@ type ProposersDeferred = {computed: false; seed: Uint8Array} | {computed: true; 
  * - syncPeriod
  **/
 export class EpochContext {
-  config: IBeaconConfig;
+  config: BeaconConfig;
   /**
    * Unique globally shared pubkey registry. There should only exist one for the entire application.
    *
@@ -186,7 +186,7 @@ export class EpochContext {
   syncPeriod: SyncPeriod;
 
   constructor(data: {
-    config: IBeaconConfig;
+    config: BeaconConfig;
     pubkey2index: PubkeyIndexMap;
     index2pubkey: Index2PubkeyCache;
     proposers: number[];
@@ -812,11 +812,11 @@ type EpochContextErrorType = {
 export class EpochContextError extends LodestarError<EpochContextErrorType> {}
 
 export function createEmptyEpochContextImmutableData(
-  chainConfig: IChainConfig,
+  chainConfig: ChainConfig,
   state: Pick<BeaconStateAllForks, "genesisValidatorsRoot">
 ): EpochContextImmutableData {
   return {
-    config: createIBeaconConfig(chainConfig, state.genesisValidatorsRoot),
+    config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
     // This is a test state, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],

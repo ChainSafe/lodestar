@@ -8,12 +8,12 @@ import {
   isForkBlobs,
 } from "@lodestar/params";
 import {Slot, allForks, Version, ssz} from "@lodestar/types";
-import {IChainConfig} from "../chainConfig/index.js";
+import {ChainConfig} from "../chainConfig/index.js";
 import {ForkConfig, ForkInfo} from "./types.js";
 
 export * from "./types.js";
 
-export function createForkConfig(config: IChainConfig): ForkConfig {
+export function createForkConfig(config: ChainConfig): ForkConfig {
   const phase0: ForkInfo = {
     name: ForkName.phase0,
     seq: ForkSeq.phase0,

@@ -2,11 +2,11 @@ import {ChildProcess} from "node:child_process";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {Api} from "@lodestar/api";
 import {Api as KeyManagerApi} from "@lodestar/api/keymanager";
-import {IChainConfig, IChainForkConfig} from "@lodestar/config";
+import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Slot, allForks, Epoch} from "@lodestar/types";
-import {IBeaconArgs} from "../../../src/cmds/beacon/options.js";
-import {IGlobalArgs} from "../../../src/options/index.js";
+import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
+import {GlobalArgs} from "../../../src/options/index.js";
 import {EpochClock} from "./EpochClock.js";
 import {Eth1ProviderWithAdmin} from "./Eth1ProviderWithAdmin.js";
 
@@ -15,7 +15,7 @@ export type NodeId = string;
 export type SimulationInitOptions = {
   id: string;
   logsDir: string;
-  chainConfig: AtLeast<IChainConfig, "ALTAIR_FORK_EPOCH" | "BELLATRIX_FORK_EPOCH" | "GENESIS_DELAY">;
+  chainConfig: AtLeast<ChainConfig, "ALTAIR_FORK_EPOCH" | "BELLATRIX_FORK_EPOCH" | "GENESIS_DELAY">;
 };
 
 export type SimulationOptions = {
@@ -42,7 +42,7 @@ export enum ELStartMode {
 }
 
 export type CLClientsOptions = {
-  [CLClient.Lodestar]: Partial<IBeaconArgs & IGlobalArgs>;
+  [CLClient.Lodestar]: Partial<BeaconArgs & GlobalArgs>;
 };
 
 export type ELClientsOptions = {
@@ -74,7 +74,7 @@ export interface CLClientGeneratorOptions<C extends CLClient = CLClient> {
   restPort: number;
   port: number;
   keyManagerPort: number;
-  config: IChainForkConfig;
+  config: ChainForkConfig;
   keys: CLClientKeys;
   genesisTime: number;
   engineUrls: string[];
@@ -212,7 +212,7 @@ export type SimulationCaptureInput<T, D extends Record<string, unknown> = Record
   clock: EpochClock;
   node: NodePair;
   store: Record<Slot, T>;
-  forkConfig: IChainForkConfig;
+  forkConfig: ChainForkConfig;
   dependantStores: D;
 };
 
@@ -223,14 +223,14 @@ export type SimulationAssertionInput<T, D extends Record<string, unknown> = Reco
   nodes: NodePair[];
   store: Record<NodeId, Record<Slot, T>>;
   dependantStores: D;
-  forkConfig: IChainForkConfig;
+  forkConfig: ChainForkConfig;
 };
 
 export type SimulationMatcherInput = {
   slot: Slot;
   epoch: Epoch;
   clock: EpochClock;
-  forkConfig: IChainForkConfig;
+  forkConfig: ChainForkConfig;
 };
 
 export type AssertionMatcher = (input: SimulationMatcherInput) => boolean | {match: boolean; remove: boolean};
@@ -279,7 +279,7 @@ export abstract class SimulationReporter<T extends SimulationAssertion[]> {
   constructor(
     protected options: {
       clock: EpochClock;
-      forkConfig: IChainForkConfig;
+      forkConfig: ChainForkConfig;
       stores: StoreTypes<T>;
       nodes: NodePair[];
       errors: SimulationAssertionError[];

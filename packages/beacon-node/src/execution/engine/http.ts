@@ -3,7 +3,7 @@ import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 
 import {ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
-import {IMetrics} from "../../metrics/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
@@ -31,7 +31,7 @@ import {
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
-  metrics?: IMetrics | null;
+  metrics?: Metrics | null;
 };
 
 export type ExecutionEngineHttpOpts = {

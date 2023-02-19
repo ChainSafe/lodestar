@@ -3,18 +3,18 @@ import {CachedBeaconStateAllForks} from "./types.js";
 import {AttesterStatus} from "./util/attesterStatus.js";
 
 export type BeaconStateTransitionMetrics = {
-  stfnEpochTransition: IHistogram;
-  stfnProcessBlock: IHistogram;
-  stfnBalancesNodesPopulatedMiss: IGauge<"source">;
-  stfnValidatorsNodesPopulatedMiss: IGauge<"source">;
-  stfnStateClone: IGauge<"source">;
-  stfnStateClonedCount: IHistogram;
+  stfnEpochTransition: Histogram;
+  stfnProcessBlock: Histogram;
+  stfnBalancesNodesPopulatedMiss: Gauge<"source">;
+  stfnValidatorsNodesPopulatedMiss: Gauge<"source">;
+  stfnStateClone: Gauge<"source">;
+  stfnStateClonedCount: Histogram;
   registerValidatorStatuses: (currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]) => void;
 };
 
 type LabelValues<T extends string> = Partial<Record<T, string | number>>;
 
-interface IHistogram<T extends string = string> {
+interface Histogram<T extends string = string> {
   startTimer(): () => void;
 
   observe(value: number): void;
@@ -22,7 +22,7 @@ interface IHistogram<T extends string = string> {
   observe(arg1: LabelValues<T> | number, arg2?: number): void;
 }
 
-interface IGauge<T extends string = string> {
+interface Gauge<T extends string = string> {
   inc(value?: number): void;
   inc(labels: LabelValues<T>, value?: number): void;
   inc(arg1?: LabelValues<T> | number, arg2?: number): void;

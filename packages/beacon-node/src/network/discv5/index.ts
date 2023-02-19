@@ -11,17 +11,17 @@ import {
   SignableENR,
 } from "@chainsafe/discv5";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
-import {chainConfigFromJson, chainConfigToJson, IBeaconConfig} from "@lodestar/config";
+import {chainConfigFromJson, chainConfigToJson, BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
-import {IMetrics} from "../../metrics/metrics.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 
 export type Discv5Opts = {
   peerId: PeerId;
   discv5: Omit<IDiscv5DiscoveryInputOptions, "metrics" | "searchInterval" | "enabled">;
   logger: Logger;
-  config: IBeaconConfig;
-  metrics?: IMetrics;
+  config: BeaconConfig;
+  metrics?: Metrics;
 };
 
 export type Discv5Events = {

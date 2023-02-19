@@ -3,7 +3,7 @@ import {Context} from "mocha";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH, ForkName} from "@lodestar/params";
-import {IChainConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, capella, Slot} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
@@ -207,7 +207,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
 
-    const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
+    const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
       SECONDS_PER_SLOT: 2,
     };
 

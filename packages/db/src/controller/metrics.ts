@@ -3,7 +3,7 @@ export type LevelDbControllerMetrics = {
   dbReadItems: Counter<"bucket">;
   dbWriteReq: Counter<"bucket">;
   dbWriteItems: Counter<"bucket">;
-  dbSizeTotal: IGauge;
+  dbSizeTotal: Gauge;
 };
 
 type Labels<T extends string> = Partial<Record<T, string | number>>;
@@ -14,7 +14,7 @@ interface Counter<T extends string> {
   inc(arg1?: Labels<T> | number, arg2?: number): void;
 }
 
-interface IGauge<T extends string = string> {
+interface Gauge<T extends string = string> {
   set(value: number): void;
   set(labels: Labels<T>, value: number): void;
   set(arg1?: Labels<T> | number, arg2?: number): void;

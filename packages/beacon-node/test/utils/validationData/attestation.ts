@@ -4,7 +4,7 @@ import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {phase0, Slot, ssz} from "@lodestar/types";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {IStateRegenerator} from "../../../src/chain/regen/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
@@ -117,7 +117,7 @@ export function getAttestationValidData(
 
   const chain = ({
     clock,
-    config: config as IBeaconConfig,
+    config: config as BeaconConfig,
     forkChoice,
     regen,
     seenAttesters: new SeenAttesters(),

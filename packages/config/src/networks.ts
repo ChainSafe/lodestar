@@ -1,7 +1,7 @@
-import {IChainConfig} from "./chainConfig/index.js";
+import {ChainConfig} from "./chainConfig/index.js";
 import {mainnetChainConfig} from "./chainConfig/networks/mainnet.js";
 import {gnosisChainConfig} from "./chainConfig/networks/gnosis.js";
-import {goerliChainConfig} from "./chainConfig/networks/goerli.js";
+import {goerlChainConfig} from "./chainConfig/networks/goerli.js";
 import {ropstenChainConfig} from "./chainConfig/networks/ropsten.js";
 import {sepoliaChainConfig} from "./chainConfig/networks/sepolia.js";
 import {chiadoChainConfig} from "./chainConfig/networks/chiado.js";
@@ -10,7 +10,7 @@ import {zhejiangChainConfig} from "./chainConfig/networks/zhejiang.js";
 export {
   mainnetChainConfig,
   gnosisChainConfig,
-  goerliChainConfig,
+  goerlChainConfig,
   ropstenChainConfig,
   sepoliaChainConfig,
   chiadoChainConfig,
@@ -18,10 +18,10 @@ export {
 };
 
 export type NetworkName = "mainnet" | "gnosis" | "goerli" | "ropsten" | "sepolia" | "chiado" | "zhejiang";
-export const networksChainConfig: Record<NetworkName, IChainConfig> = {
+export const networksChainConfig: Record<NetworkName, ChainConfig> = {
   mainnet: mainnetChainConfig,
   gnosis: gnosisChainConfig,
-  goerli: goerliChainConfig,
+  goerli: goerlChainConfig,
   ropsten: ropstenChainConfig,
   sepolia: sepoliaChainConfig,
   chiado: chiadoChainConfig,

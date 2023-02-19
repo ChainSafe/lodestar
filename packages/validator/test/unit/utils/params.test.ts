@@ -1,11 +1,11 @@
 import {expect} from "chai";
-import {chainConfigToJson, IChainConfig} from "@lodestar/config";
+import {chainConfigToJson, ChainConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {networksChainConfig} from "@lodestar/config/networks";
 import {assertEqualParams, NotEqualParamsError} from "../../../src/util/params.js";
 import {lightHouseRopstenConfig, prysmRopstenConfig, tekuRopstenConfig, nimbusRopstenConfig} from "./interopConfigs.js";
 
-const testCases: {name: string; items: [IChainConfig, Record<string, string>]}[] = [
+const testCases: {name: string; items: [ChainConfig, Record<string, string>]}[] = [
   {name: "lighthouse", items: [networksChainConfig.ropsten, lightHouseRopstenConfig]},
   {name: "prysm", items: [networksChainConfig.ropsten, prysmRopstenConfig]},
   {name: "teku", items: [networksChainConfig.ropsten, tekuRopstenConfig]},

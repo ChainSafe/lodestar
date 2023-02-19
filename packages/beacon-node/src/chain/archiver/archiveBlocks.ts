@@ -5,7 +5,7 @@ import {Logger, toHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {KeyValue} from "@lodestar/db";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {IBeaconDb} from "../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../db/repositories/index.js";
 import {LightClientServer} from "../lightClient/index.js";
@@ -28,7 +28,7 @@ type BlockRootSlot = {slot: Slot; root: Uint8Array};
  * the next run should not reprocess finalzied block of this run.
  */
 export async function archiveBlocks(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   db: IBeaconDb,
   forkChoice: IForkChoice,
   lightclientServer: LightClientServer,
@@ -148,7 +148,7 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot
 }
 
 async function migrateBlobsSidecarFromHotToColdDb(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   db: IBeaconDb,
   blocks: BlockRootSlot[]
 ): Promise<void> {

@@ -44,7 +44,7 @@ export const rcConfigOption: [string, string, (configPath: string) => Record<str
   (configPath: string): Record<string, unknown> => readFile(configPath, ["json", "yml", "yaml"]),
 ];
 
-export type IGlobalArgs = GlobalSingleArgs & IParamsArgs;
+export type GlobalArgs = GlobalSingleArgs & IParamsArgs;
 
 export const globalOptions = {
   ...globalSingleOptions,

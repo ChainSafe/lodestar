@@ -1,14 +1,14 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {LevelDbControllerMetrics} from "./controller/metrics.js";
 import {Db} from "./controller/index.js";
 
 export type DatabaseApiOptions = {
-  config: IChainForkConfig;
+  config: ChainForkConfig;
   controller: Db;
 };
 
 export abstract class DatabaseService {
-  protected config: IChainForkConfig;
+  protected config: ChainForkConfig;
   protected db: Db;
 
   protected constructor(opts: DatabaseApiOptions) {

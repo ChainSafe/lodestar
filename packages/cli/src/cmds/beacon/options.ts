@@ -1,5 +1,5 @@
 import {Options} from "yargs";
-import {beaconNodeOptions, paramsOptions, IBeaconNodeArgs} from "../../options/index.js";
+import {beaconNodeOptions, paramsOptions, BeaconNodeArgs} from "../../options/index.js";
 import {logOptions} from "../../options/logOptions.js";
 import {CliCommandOptions, LogArgs} from "../../util/index.js";
 import {defaultBeaconPaths, BeaconPaths} from "./paths.js";
@@ -143,7 +143,7 @@ export const debugOptions: CliCommandOptions<DebugArgs> = {
   },
 };
 
-export type IBeaconArgs = BeaconExtraArgs & LogArgs & BeaconPaths & IBeaconNodeArgs & ENRArgs & DebugArgs;
+export type BeaconArgs = BeaconExtraArgs & LogArgs & BeaconPaths & BeaconNodeArgs & ENRArgs & DebugArgs;
 
 export const beaconOptions: {[k: string]: Options} = {
   ...beaconExtraOptions,

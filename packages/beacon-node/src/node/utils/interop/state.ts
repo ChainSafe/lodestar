@@ -1,5 +1,5 @@
 import {Bytes32, phase0, ssz, TimeSeconds} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks, initializeBeaconStateFromEth1} from "@lodestar/state-transition";
 import {createEmptyEpochContextImmutableData} from "@lodestar/state-transition";
 import {ForkName, GENESIS_SLOT} from "@lodestar/params";
@@ -22,7 +22,7 @@ export type InteropStateOpts = {
 };
 
 export function getInteropState(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   {
     genesisTime = Math.floor(Date.now() / 1000),
     eth1BlockHash = INTEROP_BLOCK_HASH,

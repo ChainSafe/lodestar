@@ -1,10 +1,10 @@
 import {phase0, ssz} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks, becomesNewEth1Data} from "@lodestar/state-transition";
 import {ErrorAborted, TimeoutError, fromHex, Logger, isErrorAborted, sleep} from "@lodestar/utils";
 
 import {IBeaconDb} from "../db/index.js";
-import {IMetrics} from "../metrics/index.js";
+import {Metrics} from "../metrics/index.js";
 import {Eth1DepositsCache} from "./eth1DepositsCache.js";
 import {Eth1DataCache} from "./eth1DataCache.js";
 import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote.js";
@@ -38,9 +38,9 @@ const ETH1_FOLLOW_DISTANCE_DELTA_IF_SLOW = 32;
 const ETH_MIN_FOLLOW_DISTANCE = 64;
 
 export type Eth1DepositDataTrackerModules = {
-  config: IChainForkConfig;
+  config: ChainForkConfig;
   db: IBeaconDb;
-  metrics: IMetrics | null;
+  metrics: Metrics | null;
   logger: Logger;
   signal: AbortSignal;
 };
@@ -50,10 +50,10 @@ export type Eth1DepositDataTrackerModules = {
  * Upon instantiation, starts fetching deposits and blocks at regular intervals
  */
 export class Eth1DepositDataTracker {
-  private config: IChainForkConfig;
+  private config: ChainForkConfig;
   private logger: Logger;
   private signal: AbortSignal;
-  private readonly metrics: IMetrics | null;
+  private readonly metrics: Metrics | null;
 
   // Internal modules, state
   private depositsCache: Eth1DepositsCache;

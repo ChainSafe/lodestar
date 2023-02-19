@@ -6,13 +6,13 @@ import {
   getCurrentSlot,
 } from "@lodestar/state-transition";
 import {DOMAIN_VOLUNTARY_EXIT} from "@lodestar/params";
-import {createIBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
 import {ssz, phase0} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {Signer, SignerLocal, SignerType} from "@lodestar/validator";
 import {Api, ApiError, getClient} from "@lodestar/api";
 import {ensure0xPrefix, CliCommand, YargsError} from "../../util/index.js";
-import {IGlobalArgs} from "../../options/index.js";
+import {GlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IValidatorCliArgs} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
@@ -25,7 +25,7 @@ type VoluntaryExitArgs = {
   yes?: boolean;
 };
 
-export const voluntaryExit: CliCommand<VoluntaryExitArgs, IValidatorCliArgs & IGlobalArgs> = {
+export const voluntaryExit: CliCommand<VoluntaryExitArgs, IValidatorCliArgs & GlobalArgs> = {
   command: "voluntary-exit",
 
   describe:
@@ -73,7 +73,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     const genesisRes = await client.beacon.getGenesis();
     ApiError.assert(genesisRes, "Unable to fetch genesisValidatorsRoot from beacon node");
     const {genesisValidatorsRoot, genesisTime} = genesisRes.response.data;
-    const config = createIBeaconConfig(chainForkConfig, genesisValidatorsRoot);
+    const config = createBeaconConfig(chainForkConfig, genesisValidatorsRoot);
 
     // Set exitEpoch to current epoch if unspecified
     const exitEpoch = args.exitEpoch ?? computeEpochAtSlot(getCurrentSlot(config, genesisTime));

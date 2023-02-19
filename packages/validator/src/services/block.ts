@@ -1,5 +1,5 @@
 import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, capella, isBlindedBeaconBlock, Wei} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {extendError, prettyBytes} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
@@ -25,7 +25,7 @@ export class BlockProposingService {
   private readonly dutiesService: BlockDutiesService;
 
   constructor(
-    private readonly config: IChainForkConfig,
+    private readonly config: ChainForkConfig,
     private readonly logger: LoggerVc,
     private readonly api: Api,
     private readonly clock: IClock,

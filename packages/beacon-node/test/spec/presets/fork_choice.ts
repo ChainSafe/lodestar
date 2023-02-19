@@ -5,7 +5,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
-import {createIBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
@@ -84,7 +84,7 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
           computeUnrealized: false,
         },
         {
-          config: createIBeaconConfig(config, state.genesisValidatorsRoot),
+          config: createBeaconConfig(config, state.genesisValidatorsRoot),
           db: getStubbedBeaconDb(),
           logger,
           // eslint-disable-next-line @typescript-eslint/no-empty-function

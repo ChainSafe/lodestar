@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository, KeyValue, FilterOptions, Bucket} from "@lodestar/db";
 import {Slot, Root, ssz, deneb} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
@@ -17,7 +17,7 @@ export type BlockArchiveBatchPutBinaryItem = KeyValue<Slot, Uint8Array> & {
  * Stores finalized blocks. Block slot is identifier.
  */
 export class BlobsSidecarArchiveRepository extends Repository<Slot, deneb.BlobsSidecar> {
-  constructor(config: IChainForkConfig, db: Db) {
+  constructor(config: ChainForkConfig, db: Db) {
     super(config, db, Bucket.allForks_blobsSidecarArchive, ssz.deneb.BlobsSidecar);
   }
 

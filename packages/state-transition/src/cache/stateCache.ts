@@ -1,4 +1,4 @@
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {EpochContext, EpochContextImmutableData, EpochContextOpts} from "./epochContext.js";
 import {
   BeaconStateAllForks,
@@ -11,7 +11,7 @@ import {
 } from "./types.js";
 
 export type BeaconStateCache = {
-  config: IBeaconConfig;
+  config: BeaconConfig;
   epochCtx: EpochContext;
   /** Count of clones created from this BeaconStateCache instance. readonly to prevent accidental usage downstream */
   readonly clonedCount: number;

@@ -16,7 +16,7 @@ import {
   LVHValidResponse,
   LVHInvalidResponse,
 } from "@lodestar/fork-choice";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {IExecutionEngine} from "../../execution/engine/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -24,7 +24,7 @@ import {BeaconClock} from "../clock/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
-import {IMetrics} from "../../metrics/metrics.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {ImportBlockOpts} from "./types.js";
 
 export type VerifyBlockExecutionPayloadModules = {
@@ -32,9 +32,9 @@ export type VerifyBlockExecutionPayloadModules = {
   executionEngine: IExecutionEngine;
   clock: BeaconClock;
   logger: Logger;
-  metrics: IMetrics | null;
+  metrics: Metrics | null;
   forkChoice: IForkChoice;
-  config: IChainForkConfig;
+  config: ChainForkConfig;
 };
 
 type ExecAbortType = {blockIndex: number; execError: BlockError};

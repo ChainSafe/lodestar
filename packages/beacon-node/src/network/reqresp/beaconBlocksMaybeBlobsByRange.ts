@@ -1,5 +1,5 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {deneb, Epoch, phase0} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -9,7 +9,7 @@ import {getEmptyBlobsSidecar} from "../../util/blobs.js";
 import {IReqRespBeaconNode} from "./interface.js";
 
 export async function beaconBlocksMaybeBlobsByRange(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   reqResp: IReqRespBeaconNode,
   peerId: PeerId,
   request: phase0.BeaconBlocksByRangeRequest,

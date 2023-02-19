@@ -1,7 +1,7 @@
 import path from "node:path";
 import {InterchangeFormatVersion} from "@lodestar/validator";
 import {CliCommand, writeFile600Perm} from "../../../util/index.js";
-import {IGlobalArgs} from "../../../options/index.js";
+import {GlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";
 import {getCliLogger, LogArgs} from "../../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
@@ -15,7 +15,7 @@ type ExportArgs = {
 
 export const exportCmd: CliCommand<
   ExportArgs,
-  ISlashingProtectionArgs & AccountValidatorArgs & IGlobalArgs & LogArgs
+  ISlashingProtectionArgs & AccountValidatorArgs & GlobalArgs & LogArgs
 > = {
   command: "export",
 

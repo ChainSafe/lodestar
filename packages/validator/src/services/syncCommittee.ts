@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {Slot, CommitteeIndex, altair, Root} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -23,7 +23,7 @@ export class SyncCommitteeService {
   private readonly dutiesService: SyncCommitteeDutiesService;
 
   constructor(
-    private readonly config: IChainForkConfig,
+    private readonly config: ChainForkConfig,
     private readonly logger: LoggerVc,
     private readonly api: Api,
     private readonly clock: IClock,

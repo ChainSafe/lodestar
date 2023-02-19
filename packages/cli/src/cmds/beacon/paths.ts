@@ -1,8 +1,8 @@
 import path from "node:path";
-import {IGlobalArgs} from "../../options/index.js";
+import {GlobalArgs} from "../../options/index.js";
 import {getGlobalPaths, GlobalPaths} from "../../paths/global.js";
 
-export type BeaconPaths = Partial<{
+export type BeaconPathsPartial = Partial<{
   beaconDir: string;
   peerStoreDir: string;
   dbDir: string;
@@ -31,9 +31,9 @@ export type BeaconPaths = {
  */
 export function getBeaconPaths(
   // Using Pick<IGlobalArgs, "dataDir"> make changes in IGlobalArgs throw a type error here
-  args: BeaconPaths & Pick<IGlobalArgs, "dataDir">,
+  args: BeaconPathsPartial & Pick<GlobalArgs, "dataDir">,
   network: string
-): GlobalPaths & Required<BeaconPaths> {
+): GlobalPaths & Required<BeaconPathsPartial> {
   // Compute global paths first
   const globalPaths = getGlobalPaths(args, network);
 
