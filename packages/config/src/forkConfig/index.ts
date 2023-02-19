@@ -51,13 +51,21 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     prevVersion: config.BELLATRIX_FORK_VERSION,
     prevForkName: ForkName.bellatrix,
   };
+  const verkle: ForkInfo = {
+    name: ForkName.verkle,
+    seq: ForkSeq.verkle,
+    epoch: config.VERKLE_FORK_EPOCH,
+    version: config.VERKLE_FORK_VERSION,
+    prevVersion: config.CAPELLA_FORK_VERSION,
+    prevForkName: ForkName.capella,
+  };
   const deneb: ForkInfo = {
     name: ForkName.deneb,
     seq: ForkSeq.deneb,
     epoch: config.DENEB_FORK_EPOCH,
     version: config.DENEB_FORK_VERSION,
-    prevVersion: config.CAPELLA_FORK_VERSION,
-    prevForkName: ForkName.capella,
+    prevVersion: config.VERKLE_FORK_VERSION,
+    prevForkName: ForkName.verkle,
   };
   const electra: ForkInfo = {
     name: ForkName.electra,
@@ -70,7 +78,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix, capella, deneb, electra};
+  const forks = {phase0, altair, bellatrix, capella, verkle, deneb, electra};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);

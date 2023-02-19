@@ -1,4 +1,4 @@
-import {capella, deneb, electra, Wei, bellatrix, Root, ExecutionPayload} from "@lodestar/types";
+import {capella, deneb, Wei, bellatrix, Root, verkle, electra, ExecutionPayload, ssz} from "@lodestar/types";
 import {
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
@@ -166,6 +166,7 @@ export type ExecutionPayloadRpc = {
   depositRequests?: DepositRequestRpc[]; // ELECTRA
   withdrawalRequests?: WithdrawalRequestRpc[]; // ELECTRA
   consolidationRequests?: ConsolidationRequestRpc[]; // ELECTRA
+  executionWitness?: Record<string, unknown>; // DENEB
 };
 
 export type WithdrawalRpc = {
@@ -232,6 +233,20 @@ export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload
   if (ForkSeq[fork] >= ForkSeq.capella) {
     const {withdrawals} = data as capella.ExecutionPayload;
     payload.withdrawals = withdrawals.map(serializeWithdrawal);
+  }
+
+  // VERKLE adds executionWitness to the ExecutionPayload
+  if (ForkSeq[fork] >= ForkSeq.verkle) {
+    const {executionWitness} = data as verkle.ExecutionPayload;
+    // right now the caseMap of ssz ExecutionWitness is camel cased and can
+    // directly be used to serialize tojson
+    payload.executionWitness = ssz.verkle.ExecutionWitness.toJson(executionWitness);
+    // serialization with ssz serialize suffix diff's suffix to a string while geth expects num
+    (payload.executionWitness as verkle.ExecutionWitness).stateDiff.forEach((sDiff) => {
+      sDiff.suffixDiffs.forEach((sfDiff) => {
+        sfDiff.suffix = Number(sfDiff.suffix);
+      });
+    });
   }
 
   // DENEB adds blobGasUsed & excessBlobGas to the ExecutionPayload
@@ -313,6 +328,15 @@ export function parseExecutionPayload(
       );
     }
     (executionPayload as capella.ExecutionPayload).withdrawals = withdrawals.map((w) => deserializeWithdrawal(w));
+  }
+
+  // VERKLE adds execution witness to the payload
+  if (ForkSeq[fork] >= ForkSeq.verkle) {
+    // right now the casing of executionWitness is camel case in the ssz caseMap
+    // we can directly use fromJson to read the serialized data from payload
+    const {executionWitness} = data;
+    (executionPayload as verkle.ExecutionPayload).executionWitness =
+      ssz.verkle.ExecutionWitness.fromJson(executionWitness);
   }
 
   // DENEB adds excessBlobGas to the ExecutionPayload

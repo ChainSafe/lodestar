@@ -42,11 +42,14 @@ export const chainConfig: ChainConfig = {
   // Capella
   CAPELLA_FORK_VERSION: b("0x03000001"),
   CAPELLA_FORK_EPOCH: Infinity,
+  // Verkle
+  VERKLE_FORK_VERSION: b("0x04000001"),
+  VERKLE_FORK_EPOCH: Infinity,
   // Deneb
-  DENEB_FORK_VERSION: b("0x04000001"),
+  DENEB_FORK_VERSION: b("0x05000001"),
   DENEB_FORK_EPOCH: Infinity,
   // ELECTRA
-  ELECTRA_FORK_VERSION: b("0x05000001"),
+  ELECTRA_FORK_VERSION: b("0x06000001"),
   ELECTRA_FORK_EPOCH: Infinity,
 
   // Time parameters

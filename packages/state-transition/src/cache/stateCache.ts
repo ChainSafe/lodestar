@@ -9,6 +9,7 @@ import {
   BeaconStateAltair,
   BeaconStateBellatrix,
   BeaconStateCapella,
+  BeaconStateVerkle,
   BeaconStateDeneb,
   BeaconStateElectra,
 } from "./types.js";
@@ -130,9 +131,9 @@ export type CachedBeaconStatePhase0 = CachedBeaconState<BeaconStatePhase0>;
 export type CachedBeaconStateAltair = CachedBeaconState<BeaconStateAltair>;
 export type CachedBeaconStateBellatrix = CachedBeaconState<BeaconStateBellatrix>;
 export type CachedBeaconStateCapella = CachedBeaconState<BeaconStateCapella>;
+export type CachedBeaconStateVerkle = CachedBeaconState<BeaconStateVerkle>;
 export type CachedBeaconStateDeneb = CachedBeaconState<BeaconStateDeneb>;
 export type CachedBeaconStateElectra = CachedBeaconState<BeaconStateElectra>;
-
 export type CachedBeaconStateAllForks = CachedBeaconState<BeaconStateAllForks>;
 export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecutions>;
 /**

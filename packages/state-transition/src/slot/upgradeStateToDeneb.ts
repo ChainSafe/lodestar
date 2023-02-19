@@ -1,23 +1,23 @@
 import {ssz} from "@lodestar/types";
 import {CachedBeaconStateDeneb} from "../types.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
-import {CachedBeaconStateCapella} from "../types.js";
+import {CachedBeaconStateVerkle} from "../types.js";
 
 /**
- * Upgrade a state from Capella to Deneb.
+ * Upgrade a state from Verkle to Deneb.
  */
-export function upgradeStateToDeneb(stateCapella: CachedBeaconStateCapella): CachedBeaconStateDeneb {
-  const {config} = stateCapella;
+export function upgradeStateToDeneb(stateVerkle: CachedBeaconStateVerkle): CachedBeaconStateDeneb {
+  const {config} = stateVerkle;
 
-  const stateCapellaNode = ssz.capella.BeaconState.commitViewDU(stateCapella);
-  const stateDenebView = ssz.deneb.BeaconState.getViewDU(stateCapellaNode);
+  const stateVerkleNode = ssz.verkle.BeaconState.commitViewDU(stateVerkle);
+  const stateDenebView = ssz.deneb.BeaconState.getViewDU(stateVerkleNode);
 
-  const stateDeneb = getCachedBeaconState(stateDenebView, stateCapella);
+  const stateDeneb = getCachedBeaconState(stateDenebView, stateVerkle);
 
   stateDeneb.fork = ssz.phase0.Fork.toViewDU({
-    previousVersion: stateCapella.fork.currentVersion,
+    previousVersion: stateVerkle.fork.currentVersion,
     currentVersion: config.DENEB_FORK_VERSION,
-    epoch: stateCapella.epochCtx.epoch,
+    epoch: stateVerkle.epochCtx.epoch,
   });
 
   // Since excessBlobGas and blobGasUsed are appened in the end to latestExecutionPayloadHeader so they should
@@ -27,13 +27,13 @@ export function upgradeStateToDeneb(stateCapella: CachedBeaconStateCapella): Cac
   //
   // TODO DENEB: Debug and remove the following cloning
   stateDeneb.latestExecutionPayloadHeader = ssz.deneb.BeaconState.fields.latestExecutionPayloadHeader.toViewDU({
-    ...stateCapella.latestExecutionPayloadHeader.toValue(),
+    ...stateVerkle.latestExecutionPayloadHeader.toValue(),
     excessBlobGas: BigInt(0),
     blobGasUsed: BigInt(0),
   });
 
   stateDeneb.commit();
-  // Clear cache to ensure the cache of capella fields is not used by new deneb fields
+  // Clear cache to ensure the cache of verkle fields is not used by new deneb fields
   stateDeneb["clearCache"]();
 
   return stateDeneb;
