@@ -9,12 +9,14 @@ function getForkConfig({
   bellatrix,
   capella,
   deneb,
+  verge,
 }: {
   phase0: number;
   altair: number;
   bellatrix: number;
   capella: number;
   deneb: number;
+  verge: number;
 }): IBeaconConfig {
   const forks: Record<ForkName, IForkInfo> = {
     phase0: {
@@ -53,6 +55,14 @@ function getForkConfig({
       name: ForkName.deneb,
       seq: ForkSeq.deneb,
       epoch: deneb,
+      version: Buffer.from([0, 0, 0, 4]),
+      prevVersion: Buffer.from([0, 0, 0, 3]),
+      prevForkName: ForkName.capella,
+    },
+    verge: {
+      name: ForkName.verge,
+      seq: ForkSeq.verge,
+      epoch: verge,
       version: Buffer.from([0, 0, 0, 4]),
       prevVersion: Buffer.from([0, 0, 0, 3]),
       prevForkName: ForkName.capella,
@@ -134,9 +144,10 @@ for (const testScenario of testScenarios) {
   const {phase0, altair, bellatrix, capella, testCases} = testScenario;
   // TODO DENEB: Is it necessary to test?
   const deneb = Infinity;
+  const verge = Infinity;
 
   describe(`network / fork: phase0: ${phase0}, altair: ${altair}, bellatrix: ${bellatrix} capella: ${capella}`, () => {
-    const forkConfig = getForkConfig({phase0, altair, bellatrix, capella, deneb});
+    const forkConfig = getForkConfig({phase0, altair, bellatrix, capella, deneb, verge});
     const forks = forkConfig.forks;
     for (const testCase of testCases) {
       const {epoch, currentFork, nextFork, activeForks} = testCase;
