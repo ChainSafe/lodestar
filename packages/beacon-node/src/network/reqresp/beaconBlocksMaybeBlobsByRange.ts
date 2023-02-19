@@ -17,20 +17,25 @@ export async function beaconBlocksMaybeBlobsByRange(
 ): Promise<BlockInput[]> {
   // Code below assumes the request is in the same epoch
   // Range sync satisfies this condition, but double check here for sanity
-  const startEpoch = computeEpochAtSlot(request.startSlot);
-  const endEpoch = computeEpochAtSlot(request.startSlot + request.count);
+  const {startSlot, count} = request;
+  const endSlot = startSlot + count - 1;
+
+  const startEpoch = computeEpochAtSlot(startSlot);
+  const endEpoch = computeEpochAtSlot(endSlot);
   if (startEpoch !== endEpoch) {
-    throw Error(`BeaconBlocksByRangeRequest must be in the same epoch ${startEpoch} != ${endEpoch}`);
+    throw Error(
+      `BeaconBlocksByRangeRequest must be in the same epoch startEpoch=${startEpoch} != endEpoch=${endEpoch}`
+    );
   }
 
   // Note: Assumes all blocks in the same epoch
-  if (config.getForkSeq(request.startSlot) < ForkSeq.deneb) {
+  if (config.getForkSeq(startSlot) < ForkSeq.deneb) {
     const blocks = await reqResp.beaconBlocksByRange(peerId, request);
     return blocks.map((block) => getBlockInput.preDeneb(config, block));
   }
 
   // Only request blobs if they are recent enough
-  else if (computeEpochAtSlot(request.startSlot) >= currentEpoch - config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS) {
+  else if (computeEpochAtSlot(startSlot) >= currentEpoch - config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS) {
     const [blocks, blobsSidecars] = await Promise.all([
       reqResp.beaconBlocksByRange(peerId, request),
       reqResp.blobsSidecarsByRange(peerId, request),
@@ -69,7 +74,11 @@ export async function beaconBlocksMaybeBlobsByRange(
 
     // If there are still unconsumed blobs this means that the response was inconsistent
     // and matching was wrong and hence we should throw error
-    if (blobsSidecars[blobSideCarIndex] !== undefined) {
+    if (
+      blobsSidecars[blobSideCarIndex] !== undefined &&
+      // If there are no blobs, the blobs request can give 1 block outside the requested range
+      blobsSidecars[blobSideCarIndex].beaconBlockSlot <= endSlot
+    ) {
       throw Error(
         `Unmatched blobsSidecars, blocks=${blocks.length}, blobs=${
           blobsSidecars.length
