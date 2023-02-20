@@ -16,7 +16,7 @@ export class Runner implements IRunner {
     };
   }
 
-  on(event: RunnerEvent, cb: () => void | Promise<void>): void {
+  on(event: RunnerEvent, cb: (id: string) => void | Promise<void>): void {
     this.emitter.on(event, cb);
   }
 

@@ -197,7 +197,7 @@ export type RunnerOptions = {
 
 export interface IRunner {
   create: (jobOptions: JobOptions[]) => Job;
-  on(event: RunnerEvent, cb: () => void | Promise<void>): void;
+  on(event: RunnerEvent, cb: (id: string) => void | Promise<void>): void;
   start(): Promise<void>;
   stop(): Promise<void>;
   getNextIp(): string;
