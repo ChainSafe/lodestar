@@ -9,6 +9,7 @@ import {validateBlsToExecutionChange} from "../../../../chain/validation/blsToEx
 import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCommittee.js";
 import {ApiModules} from "../../types.js";
 import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors/index.js";
+import {validateGossipFnRetryUnknownRoot} from "../../../../network/gossip/handlers/index.js";
 
 export function getBeaconPoolApi({
   chain,
@@ -51,7 +52,18 @@ export function getBeaconPoolApi({
       await Promise.all(
         attestations.map(async (attestation, i) => {
           try {
-            const {indexedAttestation, subnet} = await validateGossipAttestation(chain, attestation, null);
+            // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+            const validateFn = () => validateGossipAttestation(chain, attestation, null);
+            const {slot, beaconBlockRoot} = attestation.data;
+            // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
+            // and the block hasn't been in our forkchoice since we haven't seen / processing that block
+            // see https://github.com/ChainSafe/lodestar/issues/5098
+            const {indexedAttestation, subnet} = await validateGossipFnRetryUnknownRoot(
+              validateFn,
+              chain,
+              slot,
+              beaconBlockRoot
+            );
 
             const insertOutcome = chain.attestationPool.add(attestation);
             const sentPeers = await network.gossip.publishBeaconAttestation(attestation, subnet);

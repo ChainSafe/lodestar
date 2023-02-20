@@ -211,7 +211,7 @@ export class MockBeaconChain implements IBeaconChain {
     return this.forkChoice.getHead();
   }
 
-  async waitForBlockOfAttestation(): Promise<boolean> {
+  async waitForBlock(): Promise<boolean> {
     return false;
   }
 

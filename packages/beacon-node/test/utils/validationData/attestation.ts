@@ -123,7 +123,7 @@ export function getAttestationValidData(
     seenAttesters: new SeenAttesters(),
     seenAggregatedAttestations: new SeenAggregatedAttestations(null),
     bls: new BlsSingleThreadVerifier({metrics: null}),
-    waitForBlockOfAttestation: () => Promise.resolve(false),
+    waitForBlock: () => Promise.resolve(false),
   } as Partial<IBeaconChain>) as IBeaconChain;
 
   return {chain, attestation, subnet, validatorIndex};

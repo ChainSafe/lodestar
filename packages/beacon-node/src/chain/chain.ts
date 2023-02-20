@@ -479,7 +479,7 @@ export class BeaconChain implements IBeaconChain {
    * Used to handle unknown block root for both unaggregated and aggregated attestations.
    * @returns true if blockFound
    */
-  waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean> {
+  waitForBlock(slot: Slot, root: RootHex): Promise<boolean> {
     return this.reprocessController.waitForBlockOfAttestation(slot, root);
   }
 
