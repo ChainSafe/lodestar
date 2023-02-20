@@ -125,7 +125,7 @@ export interface IBeaconChain {
 
   recomputeForkChoiceHead(): ProtoBlock;
 
-  waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean>;
+  waitForBlock(slot: Slot, root: RootHex): Promise<boolean>;
 
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
 
