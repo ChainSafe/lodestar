@@ -64,7 +64,7 @@ export const defaultValidatorPaths = getValidatorPaths({dataDir: "$dataDir"}, "$
  *     └── 0xa329f988c16993768299643d918a2694892c012765d896a16f.json
  * ```
  */
-// Using Pick<IGlobalArgs, "dataDir"> make changes in IGlobalArgs throw a type error here
+// Using Pick<GlobalArgs, "dataDir"> make changes in GlobalArgs throw a type error here
 export function getAccountPaths(
   args: Partial<AccountPaths> & Pick<GlobalArgs, "dataDir">,
   network: string

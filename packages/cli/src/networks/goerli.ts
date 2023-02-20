@@ -1,4 +1,4 @@
-export {goerlChainConfig as chainConfig} from "@lodestar/config/networks";
+export {goerliChainConfig as chainConfig} from "@lodestar/config/networks";
 
 export const depositContractDeployBlock = 4367322;
 export const genesisFileUrl =

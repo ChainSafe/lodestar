@@ -3,7 +3,7 @@ import {fromHexString as b} from "@chainsafe/ssz";
 import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../presets/mainnet.js";
 
-export const goerlChainConfig: ChainConfig = {
+export const goerliChainConfig: ChainConfig = {
   ...mainnet,
 
   CONFIG_NAME: "goerli",

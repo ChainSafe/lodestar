@@ -30,7 +30,7 @@ export type BeaconPaths = {
  * ```
  */
 export function getBeaconPaths(
-  // Using Pick<IGlobalArgs, "dataDir"> make changes in IGlobalArgs throw a type error here
+  // Using Pick<GlobalArgs, "dataDir"> make changes in GlobalArgs throw a type error here
   args: BeaconPathsPartial & Pick<GlobalArgs, "dataDir">,
   network: string
 ): GlobalPaths & Required<BeaconPathsPartial> {
