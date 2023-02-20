@@ -10,7 +10,7 @@ import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
-import {BeaconNodeOptions, exportToJSON, getBeaconConfigFromArgs} from "../../config/index.js";
+import {BeaconNodeOptions, exportToJSON, getBeaconConfigFromArgs, readPeerId} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
 import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm, cleanOldLogFiles} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
@@ -41,10 +41,6 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   } catch (e) {
     logger.debug("Not able to delete log files", logParams, e as Error);
   }
-
-  onGracefulShutdown(async () => {
-    abortController.abort();
-  }, logger.info.bind(logger));
 
   logger.info("Lodestar", {network, version, commit});
   // Callback for beacon to request forced exit, for e.g. in case of irrecoverable
@@ -97,6 +93,15 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
     if (args.attachToGlobalThis) ((globalThis as unknown) as {bn: BeaconNode}).bn = node;
 
+    onGracefulShutdown(async () => {
+      const enr = await node.network.getEnr();
+      if (args.peerIdFile && enr) {
+        const enrPath = path.join(beaconPaths.beaconDir, "enr");
+        writeFile600Perm(enrPath, enr.encodeTxt());
+      }
+      abortController.abort();
+    }, logger.info.bind(logger));
+
     abortController.signal.addEventListener("abort", () => node.close(), {once: true});
   } catch (e) {
     await db.stop();
@@ -140,7 +145,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   }
 
   // Create new PeerId everytime by default, unless peerIdFile is provided
-  const peerId = await createSecp256k1PeerId();
+  const peerId = args.peerIdFile ? await readPeerId(args.peerIdFile) : await createSecp256k1PeerId();
   const enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
   overwriteEnrWithCliArgs(enr, args);
 
