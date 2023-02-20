@@ -1,6 +1,11 @@
 version: "3.4"
 
-# TODO: How to use?
+# Configuration to work with a local non-dockerized Lodestar node
+# For local testing and quick debugging
+#
+# HOW TO USE: Start a Lodestar node, then run
+#
+# ./docker/docker-compose.local_dev.sh
 
 services:
   prometheus:
@@ -17,9 +22,7 @@ services:
       - "prometheus:/prometheus"
 
   grafana:
-    build:
-      context: ..
-      dockerfile: docker/grafana
+    build: grafana_dev
     restart: always
     network_mode: host
     volumes:

@@ -58,8 +58,10 @@ docker-compose -f docker-compose.yml -f docker-compose.validator.yml up -d
 
 ###### Dockerized metrics + local beacon node:
 
+Run a local beacon with `--metrics` enabled. Then start Prometheus + Grafana with all dashboards in `./dashboards` automatically loaded running:
+
 ```
-docker-compose -f docker/docker-compose.local.yml up -d
+./docker/docker-compose.local_dev.sh
 ```
 
 ## First Time Contributor?
