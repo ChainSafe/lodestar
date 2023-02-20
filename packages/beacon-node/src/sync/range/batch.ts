@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Epoch, phase0, RootHex} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {LodestarError} from "@lodestar/utils";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
 import {BlockInput} from "../../chain/blocks/types.js";
@@ -71,9 +71,9 @@ export class Batch {
   readonly executionErrorAttempts: Attempt[] = [];
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerId[] = [];
-  private readonly config: IChainForkConfig;
+  private readonly config: ChainForkConfig;
 
-  constructor(startEpoch: Epoch, config: IChainForkConfig) {
+  constructor(startEpoch: Epoch, config: ChainForkConfig) {
     const {startSlot, count} = getBatchSlotRange(startEpoch);
 
     this.config = config;

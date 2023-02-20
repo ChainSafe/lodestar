@@ -1,6 +1,6 @@
 import {GENESIS_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
-import {IBeaconConfig, IChainForkConfig} from "@lodestar/config";
+import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
 import {
   getTemporaryBlockHeader,
@@ -14,17 +14,17 @@ import {
   createEmptyEpochContextImmutableData,
   getActiveValidatorIndices,
 } from "@lodestar/state-transition";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {IEth1Provider} from "../../eth1/index.js";
 import {IEth1StreamParams} from "../../eth1/interface.js";
 import {getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1/stream.js";
 import {DepositTree} from "../../db/repositories/depositDataRoot.js";
-import {IGenesisBuilder, IGenesisResult} from "./interface.js";
+import {IGenesisBuilder, GenesisResult} from "./interface.js";
 
-export interface IGenesisBuilderKwargs {
-  config: IChainForkConfig;
+export type GenesisBuilderKwargs = {
+  config: ChainForkConfig;
   eth1Provider: IEth1Provider;
-  logger: ILogger;
+  logger: Logger;
 
   /** Use to restore pending progress */
   pendingStatus?: {
@@ -35,7 +35,7 @@ export interface IGenesisBuilderKwargs {
 
   signal?: AbortSignal;
   maxBlocksPerPoll?: number;
-}
+};
 
 export class GenesisBuilder implements IGenesisBuilder {
   // Expose state to persist on error
@@ -44,9 +44,9 @@ export class GenesisBuilder implements IGenesisBuilder {
   /** Is null if no block has been processed yet */
   lastProcessedBlockNumber: number | null = null;
 
-  private readonly config: IBeaconConfig;
+  private readonly config: BeaconConfig;
   private readonly eth1Provider: IEth1Provider;
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
   private readonly signal?: AbortSignal;
   private readonly eth1Params: IEth1StreamParams;
   private readonly depositCache = new Set<number>();
@@ -56,10 +56,10 @@ export class GenesisBuilder implements IGenesisBuilder {
   /** Current count of active validators in the state */
   private activatedValidatorCount: number;
 
-  constructor({config, eth1Provider, logger, signal, pendingStatus, maxBlocksPerPoll}: IGenesisBuilderKwargs) {
-    // at genesis builder, there is no genesis validator so we don't have a real IBeaconConfig
-    // but we need IBeaconConfig to temporarily create CachedBeaconState, the cast here is safe since we don't use any getDomain here
-    // the use of state as CachedBeaconState is just for convenient, IGenesisResult returns TreeView anyway
+  constructor({config, eth1Provider, logger, signal, pendingStatus, maxBlocksPerPoll}: GenesisBuilderKwargs) {
+    // at genesis builder, there is no genesis validator so we don't have a real BeaconConfig
+    // but we need BeaconConfig to temporarily create CachedBeaconState, the cast here is safe since we don't use any getDomain here
+    // the use of state as CachedBeaconState is just for convenient, GenesisResult returns TreeView anyway
     this.eth1Provider = eth1Provider;
     this.logger = logger;
     this.signal = signal;
@@ -94,7 +94,7 @@ export class GenesisBuilder implements IGenesisBuilder {
   /**
    * Get eth1 deposit events and blocks and apply to this.state until we found genesis.
    */
-  async waitForGenesis(): Promise<IGenesisResult> {
+  async waitForGenesis(): Promise<GenesisResult> {
     await this.eth1Provider.validateContract();
 
     // Load data from data from this.db.depositData, this.db.depositDataRoot

@@ -5,19 +5,19 @@ import {config} from "@lodestar/config/default";
 import {ForkChoice, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {toHex} from "@lodestar/utils";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {allForks, Slot, ssz} from "@lodestar/types";
 import {verifyBlocksSanityChecks as verifyBlocksImportSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
-import {IBeaconClock} from "../../../../src/chain/index.js";
+import {BeaconClock} from "../../../../src/chain/index.js";
 import {ClockStopped} from "../../../utils/mocks/clock.js";
 import {getBlockInput} from "../../../../src/chain/blocks/types.js";
 
 describe("chain / blocks / verifyBlocksSanityChecks", function () {
   let forkChoice: SinonStubbedInstance<ForkChoice>;
   let clock: ClockStopped;
-  let modules: {forkChoice: IForkChoice; clock: IBeaconClock; config: IChainForkConfig};
+  let modules: {forkChoice: IForkChoice; clock: BeaconClock; config: ChainForkConfig};
   let block: allForks.SignedBeaconBlock;
   const currentSlot = 1;
 
@@ -28,7 +28,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", function () {
     forkChoice = sinon.createStubInstance(ForkChoice);
     forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32), rootHex: ""});
     clock = new ClockStopped(currentSlot);
-    modules = {config, forkChoice, clock} as {forkChoice: IForkChoice; clock: IBeaconClock; config: IChainForkConfig};
+    modules = {config, forkChoice, clock} as {forkChoice: IForkChoice; clock: BeaconClock; config: ChainForkConfig};
     // On first call, parentRoot is known
     forkChoice.getBlockHex.returns({} as ProtoBlock);
   });

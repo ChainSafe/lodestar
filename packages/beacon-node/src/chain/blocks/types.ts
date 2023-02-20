@@ -2,7 +2,7 @@ import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-tra
 import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
 import {allForks, deneb, Slot} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 
 export enum BlockInputType {
   preDeneb = "preDeneb",
@@ -13,7 +13,7 @@ export type BlockInput =
   | {type: BlockInputType.preDeneb; block: allForks.SignedBeaconBlock}
   | {type: BlockInputType.postDeneb; block: allForks.SignedBeaconBlock; blobs: deneb.BlobsSidecar};
 
-export function blockRequiresBlobs(config: IChainForkConfig, blockSlot: Slot, clockSlot: Slot): boolean {
+export function blockRequiresBlobs(config: ChainForkConfig, blockSlot: Slot, clockSlot: Slot): boolean {
   return (
     config.getForkSeq(blockSlot) >= ForkSeq.deneb &&
     // Only request blobs if they are recent enough
@@ -22,7 +22,7 @@ export function blockRequiresBlobs(config: IChainForkConfig, blockSlot: Slot, cl
 }
 
 export const getBlockInput = {
-  preDeneb(config: IChainForkConfig, block: allForks.SignedBeaconBlock): BlockInput {
+  preDeneb(config: ChainForkConfig, block: allForks.SignedBeaconBlock): BlockInput {
     if (config.getForkSeq(block.message.slot) >= ForkSeq.deneb) {
       throw Error(`Post Deneb block slot ${block.message.slot}`);
     }
@@ -32,7 +32,7 @@ export const getBlockInput = {
     };
   },
 
-  postDeneb(config: IChainForkConfig, block: allForks.SignedBeaconBlock, blobs: deneb.BlobsSidecar): BlockInput {
+  postDeneb(config: ChainForkConfig, block: allForks.SignedBeaconBlock, blobs: deneb.BlobsSidecar): BlockInput {
     if (config.getForkSeq(block.message.slot) < ForkSeq.deneb) {
       throw Error(`Pre Deneb block slot ${block.message.slot}`);
     }

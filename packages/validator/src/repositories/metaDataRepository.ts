@@ -1,4 +1,4 @@
-import {Bucket, encodeKey, IDatabaseApiOptions} from "@lodestar/db";
+import {Bucket, encodeKey, DatabaseApiOptions} from "@lodestar/db";
 import {Root, UintNum64} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {LodestarValidatorDatabaseController} from "../types.js";
@@ -13,7 +13,7 @@ export class MetaDataRepository {
   protected db: LodestarValidatorDatabaseController;
   protected bucket = Bucket.validator_metaData;
 
-  constructor(opts: IDatabaseApiOptions) {
+  constructor(opts: DatabaseApiOptions) {
     this.db = opts.controller;
   }
 

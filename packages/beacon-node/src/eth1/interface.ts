@@ -1,4 +1,4 @@
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {phase0, Root, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 
@@ -91,18 +91,18 @@ export type TDProgress =
     }
   | {ttdHit: true};
 
-export interface IBatchDepositEvents {
+export type BatchDepositEvents = {
   depositEvents: phase0.DepositEvent[];
   blockNumber: number;
-}
+};
 
-export interface IEth1Streamer {
-  getDepositsStream(fromBlock: number): AsyncGenerator<IBatchDepositEvents>;
+export type Eth1Streamer = {
+  getDepositsStream(fromBlock: number): AsyncGenerator<BatchDepositEvents>;
   getDepositsAndBlockStreamForGenesis(fromBlock: number): AsyncGenerator<[phase0.DepositEvent[], phase0.Eth1Block]>;
-}
+};
 
 export type IEth1StreamParams = Pick<
-  IBeaconConfig,
+  BeaconConfig,
   "ETH1_FOLLOW_DISTANCE" | "MIN_GENESIS_TIME" | "GENESIS_DELAY" | "SECONDS_PER_ETH1_BLOCK"
 > & {
   maxBlocksPerPoll: number;
@@ -110,7 +110,7 @@ export type IEth1StreamParams = Pick<
 
 export type IJson = string | number | boolean | undefined | IJson[] | {[key: string]: IJson};
 
-export interface IRpcPayload<P = IJson[]> {
+export interface RpcPayload<P = IJson[]> {
   method: string;
   params: P;
 }

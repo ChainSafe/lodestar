@@ -1,6 +1,6 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {phase0, allForks, Slot, Root, ssz, RootHex, deneb} from "@lodestar/types";
 
 import {
@@ -232,7 +232,7 @@ export type ReqTypes = {
   getBlobsSidecar: BlockIdOnlyReq;
 };
 
-export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api, ReqTypes> {
+export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, ReqTypes> {
   const blockIdOnlyReq: ReqSerializer<Api["getBlock"], BlockIdOnlyReq> = {
     writeReq: (block_id) => ({params: {block_id: String(block_id)}}),
     parseReq: ({params}) => [params.block_id],

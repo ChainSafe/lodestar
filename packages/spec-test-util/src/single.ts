@@ -38,7 +38,7 @@ export function toExpandedInputType(inputType: InputType | ExpandedInputType): E
   };
 }
 
-export interface ISpecTestOptions<TestCase extends {meta?: any}, Result> {
+export interface SpecTestOptions<TestCase extends {meta?: any}, Result> {
   /**
    * If directory contains both ssz or yaml file version,
    * you can choose which one to use. Default is ssz snappy.
@@ -79,7 +79,7 @@ export interface ISpecTestOptions<TestCase extends {meta?: any}, Result> {
   timeout?: number;
 }
 
-const defaultOptions: ISpecTestOptions<any, any> = {
+const defaultOptions: SpecTestOptions<any, any> = {
   inputTypes: {},
   inputProcessing: {},
   sszTypes: {},
@@ -94,7 +94,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
   name: string,
   testCaseDirectoryPath: string,
   testFunction: (testCase: TestCase, directoryName: string) => Result | Promise<Result>,
-  options: Partial<ISpecTestOptions<TestCase, Result>>
+  options: Partial<SpecTestOptions<TestCase, Result>>
 ): void {
   options = {...defaultOptions, ...options};
   if (!isDirectory(testCaseDirectoryPath)) {
@@ -152,7 +152,7 @@ export function loadYamlFile(path: string): Record<string, unknown> {
 
 function loadInputFiles<TestCase extends {meta?: any}, Result>(
   directory: string,
-  options: ISpecTestOptions<TestCase, Result>,
+  options: SpecTestOptions<TestCase, Result>,
   meta?: TestCase["meta"]
 ): TestCase {
   const testCase: any = {};
@@ -205,7 +205,7 @@ function deserializeInputFile<TestCase extends {meta?: any}, Result>(
   file: string,
   inputName: string,
   inputType: InputType,
-  options: ISpecTestOptions<TestCase, Result>,
+  options: SpecTestOptions<TestCase, Result>,
   meta?: TestCase["meta"]
 ): any {
   if (inputType === InputType.YAML) {

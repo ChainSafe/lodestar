@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {allForks} from "@lodestar/types";
 import {IBeaconChain} from "../interface.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
@@ -7,7 +7,7 @@ import {updateReceivedTooEarly} from "./lightClientOptimisticUpdate.js";
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_finality_update
 export function validateLightClientFinalityUpdate(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   chain: IBeaconChain,
   gossipedFinalityUpdate: allForks.LightClientFinalityUpdate
 ): void {

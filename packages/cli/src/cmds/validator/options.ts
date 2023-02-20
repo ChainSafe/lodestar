@@ -1,6 +1,6 @@
 import {defaultOptions} from "@lodestar/validator";
 import {logOptions} from "../../options/logOptions.js";
-import {ensure0xPrefix, ICliCommandOptions, ILogArgs} from "../../util/index.js";
+import {ensure0xPrefix, CliCommandOptions, LogArgs} from "../../util/index.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
 import {defaultAccountPaths, defaultValidatorPaths} from "./paths.js";
 
@@ -18,7 +18,7 @@ export const validatorMetricsDefaultOptions = {
 };
 
 export const validatorMonitoringDefaultOptions = {
-  interval: 60_000,
+  interval: 62_000,
   initialDelay: 30_000,
   requestTimeout: 10_000,
   collectSystemStats: false,
@@ -29,7 +29,7 @@ export const DEFAULT_BEACON_NODE_URL = "";
 
 export type IValidatorCliArgs = AccountValidatorArgs &
   KeymanagerArgs &
-  ILogArgs & {
+  LogArgs & {
     validatorsDbDir?: string;
     beaconNodes: string[];
     force: boolean;
@@ -76,7 +76,7 @@ export type KeymanagerArgs = {
   "keymanager.bodyLimit"?: number;
 };
 
-export const keymanagerOptions: ICliCommandOptions<KeymanagerArgs> = {
+export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
   keymanager: {
     type: "boolean",
     description: "Enable keymanager API server",
@@ -114,7 +114,7 @@ export const keymanagerOptions: ICliCommandOptions<KeymanagerArgs> = {
   },
 };
 
-export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
+export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   ...logOptions,
   ...keymanagerOptions,
 

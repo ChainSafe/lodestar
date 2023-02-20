@@ -12,8 +12,8 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {sleep} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {IChainForkConfig} from "@lodestar/config";
-import {IMetrics} from "../../metrics/index.js";
+import {ChainForkConfig} from "@lodestar/config";
+import {Metrics} from "../../metrics/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {CheckpointStateCache, StateContextCache} from "../stateCache/index.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
@@ -26,9 +26,9 @@ export type RegenModules = {
   forkChoice: IForkChoice;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
-  config: IChainForkConfig;
+  config: ChainForkConfig;
   emitter: ChainEventEmitter;
-  metrics: IMetrics | null;
+  metrics: Metrics | null;
 };
 
 /**
@@ -221,7 +221,7 @@ export class StateRegenerator implements IStateRegenerator {
  * emitting "checkpoint" events after every epoch processed.
  */
 async function processSlotsByCheckpoint(
-  modules: {checkpointStateCache: CheckpointStateCache; metrics: IMetrics | null; emitter: ChainEventEmitter},
+  modules: {checkpointStateCache: CheckpointStateCache; metrics: Metrics | null; emitter: ChainEventEmitter},
   preState: CachedBeaconStateAllForks,
   slot: Slot
 ): Promise<CachedBeaconStateAllForks> {
@@ -240,7 +240,7 @@ async function processSlotsByCheckpoint(
  * Stops processing after no more full epochs can be processed.
  */
 async function processSlotsToNearestCheckpoint(
-  modules: {checkpointStateCache: CheckpointStateCache; metrics: IMetrics | null; emitter: ChainEventEmitter},
+  modules: {checkpointStateCache: CheckpointStateCache; metrics: Metrics | null; emitter: ChainEventEmitter},
   preState: CachedBeaconStateAllForks,
   slot: Slot
 ): Promise<CachedBeaconStateAllForks> {

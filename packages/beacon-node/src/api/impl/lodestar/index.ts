@@ -5,7 +5,7 @@ import {Bucket, Repository} from "@lodestar/db";
 import {toHex} from "@lodestar/utils";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
@@ -190,7 +190,7 @@ export function getLodestarApi({
   };
 }
 
-function regenRequestToJson(config: IChainForkConfig, regenRequest: RegenRequest): unknown {
+function regenRequestToJson(config: ChainForkConfig, regenRequest: RegenRequest): unknown {
   switch (regenRequest.key) {
     case "getBlockSlotState":
       return {

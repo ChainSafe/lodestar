@@ -1,7 +1,7 @@
 import {BitArray, byteArrayEquals} from "@chainsafe/ssz";
 import {FINALIZED_ROOT_DEPTH, NEXT_SYNC_COMMITTEE_DEPTH, ForkSeq, ForkName} from "@lodestar/params";
 import {altair, phase0, ssz, allForks, capella, deneb} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 
 export const GENESIS_SLOT = 0;
 export const ZERO_HASH = new Uint8Array(32);
@@ -48,7 +48,7 @@ export function isZeroedSyncCommittee(syncCommittee: altair.SyncCommittee): bool
 }
 
 export function upgradeLightClientHeader(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   targetFork: ForkName,
   header: altair.LightClientHeader
 ): allForks.LightClientHeader {

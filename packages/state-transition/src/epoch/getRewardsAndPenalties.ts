@@ -19,14 +19,14 @@ import {
 } from "../util/attesterStatus.js";
 import {isInInactivityLeak, newZeroedArray} from "../util/index.js";
 
-interface IRewardPenaltyItem {
+type RewardPenaltyItem = {
   baseReward: number;
   timelySourceReward: number;
   timelySourcePenalty: number;
   timelyTargetReward: number;
   timelyTargetPenalty: number;
   timelyHeadReward: number;
-}
+};
 
 /**
  * An aggregate of getFlagIndexDeltas and getInactivityPenaltyDeltas that loop through process.statuses 1 time instead of 4.
@@ -54,7 +54,7 @@ export function getRewardsAndPenaltiesAltair(
   const isInInactivityLeakBn = isInInactivityLeak(state);
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
   // so there are limited values of them like 32, 31, 30
-  const rewardPenaltyItemCache = new Map<number, IRewardPenaltyItem>();
+  const rewardPenaltyItemCache = new Map<number, RewardPenaltyItem>();
   const {config, epochCtx} = state;
   const fork = config.getForkSeq(state.slot);
 

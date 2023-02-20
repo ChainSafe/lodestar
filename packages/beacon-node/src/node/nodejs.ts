@@ -2,9 +2,9 @@ import {setMaxListeners} from "node:events";
 import {Registry} from "prom-client";
 
 import {PeerId} from "@libp2p/interface-peer-id";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {Api, ServerApi} from "@lodestar/api";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -14,7 +14,7 @@ import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
-import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics/index.js";
+import {createMetrics, Metrics, HttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
@@ -25,11 +25,11 @@ import {runNodeNotifier} from "./notifier.js";
 
 export * from "./options.js";
 
-export interface IBeaconNodeModules {
+export type BeaconNodeModules = {
   opts: IBeaconNodeOptions;
-  config: IBeaconConfig;
+  config: BeaconConfig;
   db: IBeaconDb;
-  metrics: IMetrics | null;
+  metrics: Metrics | null;
   network: INetwork;
   chain: IBeaconChain;
   api: {[K in keyof Api]: ServerApi<Api[K]>};
@@ -39,20 +39,20 @@ export interface IBeaconNodeModules {
   monitoring: MonitoringService | null;
   restApi?: BeaconRestApiServer;
   controller?: AbortController;
-}
+};
 
-export interface IBeaconNodeInitModules {
+export type BeaconNodeInitModules = {
   opts: IBeaconNodeOptions;
-  config: IBeaconConfig;
+  config: BeaconConfig;
   db: IBeaconDb;
-  logger: ILogger;
+  logger: Logger;
   processShutdownCallback: ProcessShutdownCallback;
   peerId: PeerId;
   peerStoreDir?: string;
   anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
-}
+};
 
 export enum BeaconNodeStatus {
   started = "started",
@@ -80,9 +80,9 @@ enum LoggerModule {
  */
 export class BeaconNode {
   opts: IBeaconNodeOptions;
-  config: IBeaconConfig;
+  config: BeaconConfig;
   db: IBeaconDb;
-  metrics: IMetrics | null;
+  metrics: Metrics | null;
   metricsServer?: HttpMetricsServer;
   monitoring: MonitoringService | null;
   network: INetwork;
@@ -109,7 +109,7 @@ export class BeaconNode {
     sync,
     backfillSync,
     controller,
-  }: IBeaconNodeModules) {
+  }: BeaconNodeModules) {
     this.opts = opts;
     this.config = config;
     this.metrics = metrics;
@@ -142,7 +142,7 @@ export class BeaconNode {
     anchorState,
     wsCheckpoint,
     metricsRegistries = [],
-  }: IBeaconNodeInitModules): Promise<T> {
+  }: BeaconNodeInitModules): Promise<T> {
     const controller = new AbortController();
     // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
     // Since it is perfectly fine to have listeners > 10

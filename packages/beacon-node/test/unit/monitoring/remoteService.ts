@@ -2,7 +2,7 @@ import {expect} from "chai";
 import fastify from "fastify";
 import {RemoteServiceError} from "../../../src/monitoring/service.js";
 import {ProcessType} from "../../../src/monitoring/types.js";
-import {beaconNodeStatsSchema, ClientStatsSchema, systemStatsSchema, validatorStatsSchema} from "./schemas.js";
+import {BEACON_NODE_STATS_SCHEMA, ClientStatsSchema, SYSTEM_STATS_SCHEMA, VALIDATOR_STATS_SCHEMA} from "./schemas.js";
 
 /* eslint-disable no-console */
 
@@ -60,13 +60,13 @@ export async function startRemoteService(): Promise<{baseUrl: URL}> {
 function validateRequestData(data: ReceivedData): void {
   switch (data.process) {
     case ProcessType.BeaconNode:
-      validateClientStats(data, beaconNodeStatsSchema);
+      validateClientStats(data, BEACON_NODE_STATS_SCHEMA);
       break;
     case ProcessType.Validator:
-      validateClientStats(data, validatorStatsSchema);
+      validateClientStats(data, VALIDATOR_STATS_SCHEMA);
       break;
     case ProcessType.System:
-      validateClientStats(data, systemStatsSchema);
+      validateClientStats(data, SYSTEM_STATS_SCHEMA);
       break;
     default:
       throw new Error(`Invalid process type "${data.process}"`);

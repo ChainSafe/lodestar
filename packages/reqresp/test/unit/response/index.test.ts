@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {Uint8ArrayList} from "uint8arraylist";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {LodestarError, fromHex, ILogger} from "@lodestar/utils";
+import {LodestarError, fromHex, Logger} from "@lodestar/utils";
 import {ProtocolDefinition, RespStatus} from "../../../src/index.js";
 import {sszSnappyPing} from "../../fixtures/messages.js";
 import {Ping} from "../../../src/protocols/index.js";
@@ -45,7 +45,7 @@ const testCases: {
 
 describe("response / handleRequest", () => {
   let controller: AbortController;
-  let logger: ILogger;
+  let logger: Logger;
   let peerId: PeerId;
 
   beforeEach(() => {

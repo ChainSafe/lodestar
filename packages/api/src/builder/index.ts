@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {HttpClient, HttpClientModules, HttpClientOptions, IHttpClient} from "../utils/client/httpClient.js";
 import {Api} from "./routes.js";
 import * as builder from "./client.js";
@@ -10,7 +10,7 @@ export {Api};
 // Note: build API does not have namespaces as routes are declared at the "root" namespace
 
 type ClientModules = HttpClientModules & {
-  config: IChainForkConfig;
+  config: ChainForkConfig;
   httpClient?: IHttpClient;
 };
 

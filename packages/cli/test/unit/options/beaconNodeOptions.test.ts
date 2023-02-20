@@ -2,7 +2,7 @@ import fs from "node:fs";
 import {expect} from "chai";
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
-import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
+import {parseBeaconNodeArgs, BeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
 
 describe("options / beaconNodeOptions", () => {
@@ -54,7 +54,7 @@ describe("options / beaconNodeOptions", () => {
       "metrics.address": "0.0.0.0",
 
       "monitoring.endpoint": "https://beaconcha.in/api/v1/client/metrics?apikey=secretKey&machine=machine1",
-      "monitoring.interval": 60000,
+      "monitoring.interval": 62000,
       "monitoring.initialDelay": 30000,
       "monitoring.requestTimeout": 10000,
       "monitoring.collectSystemStats": true,
@@ -86,7 +86,7 @@ describe("options / beaconNodeOptions", () => {
       "sync.disableProcessAsChainSegment": true,
       "sync.backfillBatchSize": 64,
       "sync.disableRangeSync": false,
-    } as IBeaconNodeArgs;
+    } as BeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       api: {
@@ -142,7 +142,7 @@ describe("options / beaconNodeOptions", () => {
       },
       monitoring: {
         endpoint: "https://beaconcha.in/api/v1/client/metrics?apikey=secretKey&machine=machine1",
-        interval: 60000,
+        interval: 62000,
         initialDelay: 30000,
         requestTimeout: 10000,
         collectSystemStats: true,
@@ -190,7 +190,7 @@ describe("options / beaconNodeOptions", () => {
       eth1: true,
       "execution.urls": ["http://my.node:8551"],
       "jwt-secret": jwtSecretFile,
-    } as IBeaconNodeArgs;
+    } as BeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       eth1: {

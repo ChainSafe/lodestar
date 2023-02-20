@@ -1,9 +1,9 @@
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
-import {IChainConfig} from "./types.js";
+import {ChainConfig} from "./types.js";
 import {chainConfig as mainnet} from "./presets/mainnet.js";
 import {chainConfig as minimal} from "./presets/minimal.js";
 
-let defaultChainConfig: IChainConfig;
+let defaultChainConfig: ChainConfig;
 
 switch (ACTIVE_PRESET) {
   case PresetName.minimal:

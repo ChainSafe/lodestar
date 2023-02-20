@@ -4,16 +4,12 @@ import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
 import {INetwork, Network} from "../../src/network/index.js";
-import {createNodejsLibp2p, ILibp2pOptions} from "../../src/network/nodejs/index.js";
+import {createNodejsLibp2p, Libp2pOptions} from "../../src/network/nodejs/index.js";
 import {Libp2p} from "../../src/network/interface.js";
 import {Libp2pEvent} from "../../src/constants/index.js";
-import {defaultNetworkOptions, INetworkOptions} from "../../src/network/options.js";
+import {defaultNetworkOptions, NetworkOptions} from "../../src/network/options.js";
 
-export async function createNode(
-  multiaddr: string,
-  inPeerId?: PeerId,
-  opts?: Partial<ILibp2pOptions>
-): Promise<Libp2p> {
+export async function createNode(multiaddr: string, inPeerId?: PeerId, opts?: Partial<Libp2pOptions>): Promise<Libp2p> {
   const peerId = inPeerId || (await createSecp256k1PeerId());
   return createNodejsLibp2p({
     peerId,
@@ -25,8 +21,8 @@ export async function createNode(
 export async function createNetworkModules(
   multiaddr: string,
   peerId?: PeerId,
-  opts?: Partial<INetworkOptions>
-): Promise<{opts: INetworkOptions; peerId: PeerId}> {
+  opts?: Partial<NetworkOptions>
+): Promise<{opts: NetworkOptions; peerId: PeerId}> {
   return {
     peerId: peerId ?? (await createSecp256k1PeerId()),
     opts: {...defaultNetworkOptions, ...opts, localMultiaddrs: [multiaddr]},

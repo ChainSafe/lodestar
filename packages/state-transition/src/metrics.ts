@@ -1,8 +1,8 @@
 import {Epoch} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "./types.js";
-import {IAttesterStatus} from "./util/attesterStatus.js";
+import {AttesterStatus} from "./util/attesterStatus.js";
 
-export interface IBeaconStateTransitionMetrics {
+export type BeaconStateTransitionMetrics = {
   epochTransitionTime: IHistogram;
   epochTransitionCommitTime: IHistogram;
   processBlockTime: IHistogram;
@@ -22,7 +22,7 @@ export interface IBeaconStateTransitionMetrics {
 
 type LabelValues<T extends string> = Partial<Record<T, string | number>>;
 
-interface IHistogram<T extends string = string> {
+interface Histogram<T extends string = string> {
   startTimer(): () => void;
 
   observe(value: number): void;
@@ -30,7 +30,7 @@ interface IHistogram<T extends string = string> {
   observe(arg1: LabelValues<T> | number, arg2?: number): void;
 }
 
-interface IGauge<T extends string = string> {
+interface Gauge<T extends string = string> {
   inc(value?: number): void;
   inc(labels: LabelValues<T>, value?: number): void;
   inc(arg1?: LabelValues<T> | number, arg2?: number): void;
@@ -38,7 +38,7 @@ interface IGauge<T extends string = string> {
 
 export function onStateCloneMetrics(
   state: CachedBeaconStateAllForks,
-  metrics: IBeaconStateTransitionMetrics,
+  metrics: BeaconStateTransitionMetrics,
   source: "stateTransition" | "processSlots"
 ): void {
   metrics.preStateClonedCount.observe(state.clonedCount);
@@ -56,7 +56,7 @@ export function onStateCloneMetrics(
   }
 }
 
-export function onPostStateMetrics(postState: CachedBeaconStateAllForks, metrics: IBeaconStateTransitionMetrics): void {
+export function onPostStateMetrics(postState: CachedBeaconStateAllForks, metrics: BeaconStateTransitionMetrics): void {
   if (isBalancesNodesPopulated(postState)) {
     metrics.postStateBalancesNodesPopulatedHit.inc();
   } else {

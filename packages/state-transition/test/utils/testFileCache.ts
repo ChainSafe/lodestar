@@ -3,7 +3,7 @@ import path from "node:path";
 import got from "got";
 import {ApiError, getClient} from "@lodestar/api";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
-import {createIChainForkConfig, IChainForkConfig} from "@lodestar/config";
+import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {allForks} from "@lodestar/types";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "../../src/index.js";
 import {testCachePath} from "../cache.js";
@@ -20,9 +20,9 @@ const TEST_FILES_BASE_URL = "https://github.com/dapplion/ethereum-consensus-test
 /**
  * Create a network config from known network params
  */
-export function getNetworkConfig(network: NetworkName): IChainForkConfig {
+export function getNetworkConfig(network: NetworkName): ChainForkConfig {
   const configNetwork = networksChainConfig[network];
-  return createIChainForkConfig(configNetwork);
+  return createChainForkConfig(configNetwork);
 }
 
 /**

@@ -3,7 +3,7 @@ import bls, {init} from "@chainsafe/bls/switchable";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {altair, ssz} from "@lodestar/types";
 import {chainConfig} from "@lodestar/config/default";
-import {createIBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
 import {
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   FINALIZED_ROOT_GINDEX,
@@ -22,7 +22,7 @@ describe("validation", function () {
   this.timeout(15000);
 
   const genValiRoot = Buffer.alloc(32, 9);
-  const config = createIBeaconConfig(chainConfig, genValiRoot);
+  const config = createBeaconConfig(chainConfig, genValiRoot);
 
   let update: altair.LightClientUpdate;
   let snapshot: LightClientSnapshotFast;

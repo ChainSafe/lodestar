@@ -15,14 +15,14 @@ import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {getNodeApi} from "../../../../../src/api/impl/node/index.js";
 import {libp2pConnection} from "../../../../utils/node/p2p.js";
 
-interface IPeerSummary {
+type PeerSummary = {
   direction: string | null;
   state: string;
   hasPeerId: boolean;
   hasP2pAddress: boolean;
-}
+};
 
-const toPeerSummary = (peer: routes.node.NodePeer): IPeerSummary => {
+const toPeerSummary = (peer: routes.node.NodePeer): PeerSummary => {
   return {
     direction: peer.direction,
     state: peer.state,

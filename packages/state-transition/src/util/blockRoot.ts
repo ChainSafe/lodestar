@@ -1,5 +1,5 @@
 import {Epoch, Slot, Root, phase0, allForks} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ZERO_HASH} from "../constants/index.js";
@@ -29,7 +29,7 @@ export function getBlockRoot(state: BeaconStateAllForks, epoch: Epoch): Root {
  * Return the block header corresponding to a block with ``state_root`` set to ``ZERO_HASH``.
  */
 export function getTemporaryBlockHeader(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   block: allForks.BeaconBlock
 ): phase0.BeaconBlockHeader {
   return {
@@ -45,7 +45,7 @@ export function getTemporaryBlockHeader(
 /**
  * Receives a BeaconBlock, and produces the corresponding BeaconBlockHeader.
  */
-export function blockToHeader(config: IChainForkConfig, block: allForks.BeaconBlock): phase0.BeaconBlockHeader {
+export function blockToHeader(config: ChainForkConfig, block: allForks.BeaconBlock): phase0.BeaconBlockHeader {
   return {
     stateRoot: block.stateRoot,
     proposerIndex: block.proposerIndex,

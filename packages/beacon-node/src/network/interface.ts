@@ -12,7 +12,7 @@ import {Eth2Gossipsub} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
 import {IPeerRpcScoreStore, PeerAction} from "./peers/index.js";
 import {IReqRespBeaconNode} from "./reqresp/ReqRespBeaconNode.js";
-import {IAttnetsService, ISubnetsService, CommitteeSubscription} from "./subnets/index.js";
+import {IAttnetsService, SubnetsService, CommitteeSubscription} from "./subnets/index.js";
 import {Discv5Worker} from "./discv5/index.js";
 
 export type PeerSearchOptions = {
@@ -24,7 +24,7 @@ export interface INetwork {
   events: INetworkEventBus;
   reqResp: IReqRespBeaconNode;
   attnetsService: IAttnetsService;
-  syncnetsService: ISubnetsService;
+  syncnetsService: SubnetsService;
   gossip: Eth2Gossipsub;
   discv5(): Discv5Worker | undefined;
   metadata: MetadataController;

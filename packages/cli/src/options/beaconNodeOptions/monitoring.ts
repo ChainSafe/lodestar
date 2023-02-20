@@ -1,15 +1,15 @@
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {ICliCommandOptions} from "../../util/index.js";
+import {CliCommandOptions} from "../../util/index.js";
 
-export interface IMonitoringArgs {
+export type MonitoringArgs = {
   "monitoring.endpoint": string;
   "monitoring.interval": number;
   "monitoring.initialDelay": number;
   "monitoring.requestTimeout": number;
   "monitoring.collectSystemStats": boolean;
-}
+};
 
-export function parseArgs(args: IMonitoringArgs): IBeaconNodeOptions["monitoring"] {
+export function parseArgs(args: MonitoringArgs): IBeaconNodeOptions["monitoring"] {
   return {
     endpoint: args["monitoring.endpoint"],
     interval: args["monitoring.interval"],
@@ -19,7 +19,7 @@ export function parseArgs(args: IMonitoringArgs): IBeaconNodeOptions["monitoring
   };
 }
 
-export const options: ICliCommandOptions<IMonitoringArgs> = {
+export const options: CliCommandOptions<MonitoringArgs> = {
   "monitoring.endpoint": {
     type: "string",
     description:

@@ -4,7 +4,7 @@ import http from "node:http";
 import {expect} from "chai";
 import {JsonRpcHttpClient} from "../../../src/eth1/provider/jsonRpcHttpClient.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
-import {IRpcPayload} from "../../../src/eth1/interface.js";
+import {RpcPayload} from "../../../src/eth1/interface.js";
 
 describe("eth1 / jsonRpcHttpClient", function () {
   this.timeout("10 seconds");
@@ -17,7 +17,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
   const testCases: {
     id: string;
     url?: string;
-    payload?: IRpcPayload;
+    payload?: RpcPayload;
     requestListener?: http.RequestListener;
     abort?: true;
     timeout?: number;

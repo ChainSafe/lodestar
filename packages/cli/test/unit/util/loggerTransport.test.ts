@@ -3,19 +3,19 @@ import path from "node:path";
 import rimraf from "rimraf";
 import {expect} from "chai";
 import {config} from "@lodestar/config/default";
-import {ILogger, LodestarError, LogData, LogFormat, logFormats, LogLevel} from "@lodestar/utils";
-import {getCliLogger, ILogArgs, LOG_FILE_DISABLE_KEYWORD} from "../../../src/util/logger.js";
+import {Logger, LodestarError, LogData, LogFormat, logFormats, LogLevel} from "@lodestar/utils";
+import {getCliLogger, LogArgs, LOG_FILE_DISABLE_KEYWORD} from "../../../src/util/logger.js";
 
 describe("winston logger format and options", () => {
-  interface ITestCase {
+  type TestCase = {
     id: string;
     message: string;
     context?: LogData;
     error?: Error;
     output: {[P in LogFormat]: string};
-  }
+  };
   /* eslint-disable quotes */
-  const testCases: (ITestCase | (() => ITestCase))[] = [
+  const testCases: (TestCase | (() => TestCase))[] = [
     {
       id: "regular log with metadata",
       message: "foo bar",
@@ -138,7 +138,7 @@ describe("winston transport log to file", () => {
   });
 });
 
-function getCliLoggerTest(logArgs: Partial<ILogArgs>): ILogger {
+function getCliLoggerTest(logArgs: Partial<LogArgs>): Logger {
   return getCliLogger(
     {logFile: LOG_FILE_DISABLE_KEYWORD, ...logArgs},
     {defaultLogFilepath: "logger_transport_test.log"},

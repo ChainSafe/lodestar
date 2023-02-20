@@ -1,31 +1,31 @@
 import {Root} from "@lodestar/types";
-import {createIChainConfig, IChainConfig} from "./chainConfig/index.js";
-import {createIForkConfig, IForkConfig} from "./forkConfig/index.js";
-import {createICachedGenesis} from "./genesisConfig/index.js";
-import {ICachedGenesis} from "./genesisConfig/types.js";
+import {createChainConfig, ChainConfig} from "./chainConfig/index.js";
+import {createForkConfig, ForkConfig} from "./forkConfig/index.js";
+import {createCachedGenesis} from "./genesisConfig/index.js";
+import {CachedGenesis} from "./genesisConfig/types.js";
 
 /**
  * Chain run-time configuration with additional fork schedule helpers
  */
-export type IChainForkConfig = IChainConfig & IForkConfig;
+export type ChainForkConfig = ChainConfig & ForkConfig;
 
-export type IBeaconConfig = IChainForkConfig & ICachedGenesis;
+export type BeaconConfig = ChainForkConfig & CachedGenesis;
 
 /**
- * Create an `IBeaconConfig`, filling in missing values with preset defaults
+ * Create an `BeaconConfig`, filling in missing values with preset defaults
  */
-export function createIChainForkConfig(chainConfig: Partial<IChainConfig>): IChainForkConfig {
-  const fullChainConfig = createIChainConfig(chainConfig);
+export function createChainForkConfig(chainConfig: Partial<ChainConfig>): ChainForkConfig {
+  const fullChainConfig = createChainConfig(chainConfig);
   return {
     ...fullChainConfig,
-    ...createIForkConfig(fullChainConfig),
+    ...createForkConfig(fullChainConfig),
   };
 }
 
-export function createIBeaconConfig(chainConfig: Partial<IChainConfig>, genesisValidatorsRoot: Root): IBeaconConfig {
-  const chainForkConfig = createIChainForkConfig(chainConfig);
+export function createBeaconConfig(chainConfig: Partial<ChainConfig>, genesisValidatorsRoot: Root): BeaconConfig {
+  const chainForkConfig = createChainForkConfig(chainConfig);
   return {
     ...chainForkConfig,
-    ...createICachedGenesis(chainForkConfig, genesisValidatorsRoot),
+    ...createCachedGenesis(chainForkConfig, genesisValidatorsRoot),
   };
 }

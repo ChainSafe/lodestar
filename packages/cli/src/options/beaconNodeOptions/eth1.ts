@@ -1,18 +1,18 @@
 import fs from "node:fs";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {ICliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
+import {CliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
 import {ExecutionEngineArgs} from "./execution.js";
 
-export interface IEth1Args {
+export type Eth1Args = {
   eth1: boolean;
   "eth1.providerUrls": string[];
   "eth1.depositContractDeployBlock": number;
   "eth1.disableEth1DepositDataTracker": boolean;
   "eth1.unsafeAllowDepositDataOverwrite": boolean;
   "eth1.forcedEth1DataVote": string;
-}
+};
 
-export function parseArgs(args: IEth1Args & Partial<ExecutionEngineArgs>): IBeaconNodeOptions["eth1"] {
+export function parseArgs(args: Eth1Args & Partial<ExecutionEngineArgs>): IBeaconNodeOptions["eth1"] {
   let jwtSecretHex: string | undefined;
   let providerUrls = args["eth1.providerUrls"];
 
@@ -38,7 +38,7 @@ export function parseArgs(args: IEth1Args & Partial<ExecutionEngineArgs>): IBeac
   };
 }
 
-export const options: ICliCommandOptions<IEth1Args> = {
+export const options: CliCommandOptions<Eth1Args> = {
   eth1: {
     description: "Whether to follow the eth1 chain",
     type: "boolean",

@@ -1,7 +1,7 @@
-import {IInterchangeCompleteV4} from "./completeV4.js";
-import {IInterchangeV5} from "./v5.js";
+import {InterchangeCompleteV4} from "./completeV4.js";
+import {InterchangeV5} from "./v5.js";
 
 export type InterchangeFormat = {
-  v4: IInterchangeCompleteV4;
-  v5: IInterchangeV5;
+  v4: InterchangeCompleteV4;
+  v5: InterchangeV5;
 };

@@ -1,5 +1,5 @@
 import {allForks, bellatrix, Slot, Root, BLSPubkey, ssz, deneb, Wei} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 
@@ -23,12 +23,12 @@ export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
 
 export class ExecutionBuilderHttp implements IExecutionBuilder {
   readonly api: BuilderApi;
-  readonly config: IChainForkConfig;
+  readonly config: ChainForkConfig;
   readonly issueLocalFcUForBlockProduction?: boolean;
   // Builder needs to be explicity enabled using updateStatus
   status = false;
 
-  constructor(opts: ExecutionBuilderHttpOpts, config: IChainForkConfig) {
+  constructor(opts: ExecutionBuilderHttpOpts, config: ChainForkConfig) {
     const baseUrl = opts.urls[0];
     if (!baseUrl) throw Error("No Url provided for executionBuilder");
     this.api = getClient({baseUrl, timeoutMs: opts.timeout}, {config});

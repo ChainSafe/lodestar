@@ -1,6 +1,6 @@
 import fetch from "cross-fetch";
 import {Registry} from "prom-client";
-import {ErrorAborted, ILogger, TimeoutError} from "@lodestar/utils";
+import {ErrorAborted, Logger, TimeoutError} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../metrics/index.js";
 import {HistogramExtra} from "../metrics/utils/histogram.js";
 import {defaultMonitoringOptions, MonitoringOptions} from "./options.js";
@@ -35,7 +35,7 @@ export class MonitoringService {
   private readonly remoteServiceHost: string;
   private readonly options: Required<MonitoringOptions>;
   private readonly register: Registry;
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
 
   private readonly collectDataMetric: HistogramExtra<string>;
   private readonly sendDataMetric: HistogramExtra<"status">;
@@ -49,7 +49,7 @@ export class MonitoringService {
   constructor(
     client: Client,
     options: MonitoringOptions,
-    {register, logger}: {register: RegistryMetricCreator; logger: ILogger}
+    {register, logger}: {register: RegistryMetricCreator; logger: Logger}
   ) {
     this.options = {...defaultMonitoringOptions, ...options};
     this.logger = logger;
@@ -61,7 +61,7 @@ export class MonitoringService {
     this.collectDataMetric = register.histogram({
       name: "lodestar_monitoring_collect_data_seconds",
       help: "Time spent to collect monitoring data in seconds",
-      buckets: [0.001, 0.01, 0.1, 1],
+      buckets: [0.001, 0.01, 0.1, 1, 5],
     });
 
     this.sendDataMetric = register.histogram({
@@ -90,6 +90,7 @@ export class MonitoringService {
     }, initialDelay);
 
     this.logger.info("Started monitoring service", {
+      // do not log full URL as it may contain secrets
       remote: this.remoteServiceHost,
       machine: this.remoteServiceUrl.searchParams.get("machine"),
       interval,
