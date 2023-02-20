@@ -8,7 +8,7 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import {getClient} from "@lodestar/api/beacon";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
-import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, RunnerType} from "../interfaces.js";
+import {CLClient, CLClientGenerator, CLClientGeneratorOptions, IRunner, JobOptions, RunnerType} from "../interfaces.js";
 
 export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse> = (opts, runner) => {
   if (!process.env.LIGHTHOUSE_BINARY_PATH && !process.env.LIGHTHOUSE_DOCKER_IMAGE) {
@@ -100,12 +100,15 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
   const validatorClientsJobs: JobOptions[] = [];
   if (keys.type !== "no-keys") {
     validatorClientsJobs.push(
-      generateLighthouseValidatorJobs({
-        ...opts,
-        dataDir: join(dataDir, "validator"),
-        id: `${id}-validator`,
-        logFilePath: join(dirname(opts.logFilePath), `${id}-validator.log`),
-      })
+      generateLighthouseValidatorJobs(
+        {
+          ...opts,
+          dataDir,
+          id: `${id}-validator`,
+          logFilePath: join(dirname(opts.logFilePath), `${id}-validator.log`),
+        },
+        runner
+      )
     );
   }
 
@@ -120,12 +123,12 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
   };
 };
 
-export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions): JobOptions => {
+export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions, runner: IRunner): JobOptions => {
   const isDocker = process.env.LIGHTHOUSE_DOCKER_IMAGE !== undefined;
 
   const binaryPath = isDocker ? "lighthouse" : `${process.env.LIGHTHOUSE_BINARY_PATH}`;
   const {dataDir, id, address, keyManagerPort, restPort, keys} = opts;
-  const dataDirParam = isDocker ? "/data" : join(dataDir, "../");
+  const dataDirParam = isDocker ? "/data" : dataDir;
 
   if (keys.type === "no-keys") {
     throw Error("Attempting to run a vc with keys.type == 'no-keys'");
@@ -133,7 +136,7 @@ export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions):
 
   const params = {
     "testnet-dir": dataDirParam,
-    datadir: dataDirParam,
+    // datadir: dataDirParam,
     "beacon-nodes": `http://${address}:${restPort}/`,
     "debug-level": "debug",
     "init-slashing-protection": null,
@@ -142,6 +145,7 @@ export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions):
     "unencrypted-http-transport": null,
     "http-address": "0.0.0.0",
     "http-port": keyManagerPort,
+    "validators-dir": join(dataDirParam, "validators"),
   };
 
   return {
@@ -150,12 +154,12 @@ export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions):
     options: isDocker
       ? {
           image: process.env.LIGHTHOUSE_DOCKER_IMAGE as string,
-          dataVolumePath: join(dataDir, "../"),
+          dataVolumePath: dataDir,
+          dockerNetworkIp: runner.getNextIp(),
         }
       : undefined,
     bootstrap: async () => {
-      await mkdir(dataDir);
-      await mkdir(`${dataDir}/validators`);
+      await mkdir(join(dataDir, "validators"));
       await writeFile(join(dataDir, "password.txt"), "password");
 
       if (keys.type === "local") {
@@ -172,8 +176,8 @@ export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions):
             enabled: true,
             type: "local_keystore",
             voting_public_key: key.toPublicKey().toHex(),
-            voting_keystore_path: join(dataDir, "validators", `${key.toPublicKey().toHex()}.json`),
-            voting_keystore_password_path: join(dataDir, "password.txt"),
+            voting_keystore_path: join(dataDirParam, "validators", `${key.toPublicKey().toHex()}.json`),
+            voting_keystore_password_path: join(dataDirParam, "password.txt"),
           });
         }
 
