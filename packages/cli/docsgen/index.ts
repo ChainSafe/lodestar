@@ -3,10 +3,10 @@ import path from "node:path";
 import {Options} from "yargs";
 import omit from "lodash/omit.js";
 import {cmds} from "../src/cmds/index.js";
-import {ICliCommand} from "../src/util/index.js";
+import {CliCommand} from "../src/util/index.js";
 import {globalOptions} from "../src/options/index.js";
 import {beaconOptions} from "../src/cmds/beacon/options.js";
-import {renderMarkdownSections, toMarkdownTable, IMarkdownSection} from "./markdown.js";
+import {renderMarkdownSections, toMarkdownTable, MarkdownSection} from "./markdown.js";
 
 // Script to generate a reference of all CLI commands and options
 // Outputs a markdown format ready to be consumed by mkdocs
@@ -38,10 +38,10 @@ fs.mkdirSync(path.parse(docsMarkdownPath).dir, {recursive: true});
 fs.writeFileSync(docsMarkdownPath, docsString);
 
 /**
- * Parse an ICliCommand type recursively and output a IMarkdownSection
+ * Parse an CliCommand type recursively and output a MarkdownSection
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IMarkdownSection {
+function cmdToMarkdownSection(cmd: CliCommand<any>, parentCommand?: string): MarkdownSection {
   const commandJson = [parentCommand, cmd.command.replace("<command>", "")].filter(Boolean).join(" ");
   const body = [cmd.describe];
 

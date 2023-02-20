@@ -1,14 +1,14 @@
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {ICliCommandOptions} from "../../util/index.js";
+import {CliCommandOptions} from "../../util/index.js";
 
-export interface ISyncArgs {
+export type SyncArgs = {
   "sync.isSingleNode": boolean;
   "sync.disableProcessAsChainSegment": boolean;
   "sync.disableRangeSync": boolean;
   "sync.backfillBatchSize": number;
-}
+};
 
-export function parseArgs(args: ISyncArgs): IBeaconNodeOptions["sync"] {
+export function parseArgs(args: SyncArgs): IBeaconNodeOptions["sync"] {
   return {
     isSingleNode: args["sync.isSingleNode"],
     disableProcessAsChainSegment: args["sync.disableProcessAsChainSegment"],
@@ -17,7 +17,7 @@ export function parseArgs(args: ISyncArgs): IBeaconNodeOptions["sync"] {
   };
 }
 
-export const options: ICliCommandOptions<ISyncArgs> = {
+export const options: CliCommandOptions<SyncArgs> = {
   "sync.isSingleNode": {
     hidden: true,
     type: "boolean",

@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {allForks} from "@lodestar/types";
 import {
   computeStartSlotAtEpoch,
@@ -17,7 +17,7 @@ import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors/index.js
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateGossipBlock(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   chain: IBeaconChain,
   signedBlock: allForks.SignedBeaconBlock,
   fork: ForkName

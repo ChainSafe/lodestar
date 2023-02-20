@@ -27,15 +27,15 @@ class MemoryTransport extends Transport {
 
 describe("winston logger", () => {
   describe("winston logger format and options", () => {
-    interface ITestCase {
+    type TestCase = {
       id: string;
       message: string;
       context?: LogData;
       error?: Error;
       output: {[P in LogFormat]: string};
-    }
+    };
     /* eslint-disable quotes */
-    const testCases: (ITestCase | (() => ITestCase))[] = [
+    const testCases: (TestCase | (() => TestCase))[] = [
       {
         id: "regular log with metadata",
         message: "foo bar",

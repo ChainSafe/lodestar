@@ -1,5 +1,5 @@
 import {mapValues} from "@lodestar/utils";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {ReqGeneric, TypeJson, Resolves, RouteGroupDefinition} from "../types.js";
 import {getFastifySchema} from "../schema.js";
 import {toColonNotationPath} from "../urlFormat.js";
@@ -22,7 +22,7 @@ export function getGenericJsonServer<
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 >(
   {routesData, getReqSerializers, getReturnTypes}: RouteGroupDefinition<Api, ReqTypes>,
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   api: Api
 ): ServerRoutes<Api, ReqTypes> {
   const reqSerializers = getReqSerializers(config);

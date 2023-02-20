@@ -3,7 +3,7 @@ import {isForkLightClient} from "@lodestar/params";
 import {altair, phase0, RootHex, Slot, ssz} from "@lodestar/types";
 import {init} from "@chainsafe/bls/switchable";
 import {InputType} from "@lodestar/spec-test-util";
-import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
+import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {fromHex, toHex} from "@lodestar/utils";
 import {LightclientSpec, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
 import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
@@ -19,7 +19,7 @@ type SyncTestCase = {
     trusted_block_root: RootHex;
   };
   steps: LightclientSyncSteps[];
-  config: Partial<IChainConfig>;
+  config: Partial<ChainConfig>;
   bootstrap: altair.LightClientBootstrap;
 
   // leaf: Bytes32            # string, hex encoded, with 0x prefix
@@ -81,7 +81,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
       await init("blst-native");
 
       // Grab only the ALTAIR_FORK_EPOCH, since the domains are the same as minimal
-      const config = createIBeaconConfig(
+      const config = createBeaconConfig(
         pickConfigForkEpochs(testcase.config),
         fromHex(testcase.meta.genesis_validators_root)
       );
@@ -198,9 +198,9 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
   };
 };
 
-function pickConfigForkEpochs(config: Partial<IChainConfig>): Partial<IChainConfig> {
+function pickConfigForkEpochs(config: Partial<ChainConfig>): Partial<ChainConfig> {
   const configOnlyFork: Record<string, number> = {};
-  for (const key of Object.keys(config) as (keyof IChainConfig)[]) {
+  for (const key of Object.keys(config) as (keyof ChainConfig)[]) {
     if (key.endsWith("_FORK_EPOCH")) {
       configOnlyFork[key] = config[key] as number;
     }

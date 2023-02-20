@@ -1,5 +1,5 @@
 import {Uint8ArrayList} from "uint8arraylist";
-import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {allForks, altair, phase0, ssz} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
@@ -126,7 +126,7 @@ export const sszSnappySignedBeaconBlockAltair: MessageFixture<altair.SignedBeaco
 const getEmptyHandler = <T = unknown>() => async function* emptyHandler(): AsyncGenerator<T> {};
 
 export const getAllMessages = (
-  modules: {config: IBeaconConfig} = {config: createIBeaconConfig(chainConfig, ZERO_HASH)}
+  modules: {config: BeaconConfig} = {config: createBeaconConfig(chainConfig, ZERO_HASH)}
 ): {
   ping: ProtocolDefinition<phase0.Ping, phase0.Ping>;
   goodbye: ProtocolDefinition<phase0.Goodbye, phase0.Goodbye>;
@@ -155,6 +155,6 @@ if (slotBlockAltair - slotBlockPhase0 < SLOTS_PER_EPOCH) {
 }
 const ALTAIR_FORK_EPOCH = Math.floor(slotBlockAltair / SLOTS_PER_EPOCH);
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const beaconConfig = createIBeaconConfig({...chainConfig, ALTAIR_FORK_EPOCH}, ZERO_HASH);
+export const beaconConfig = createBeaconConfig({...chainConfig, ALTAIR_FORK_EPOCH}, ZERO_HASH);
 
 export const messages = getAllMessages({config: beaconConfig});

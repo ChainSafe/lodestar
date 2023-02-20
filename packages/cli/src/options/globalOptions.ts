@@ -1,18 +1,18 @@
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {NetworkName, networkNames} from "../networks/index.js";
-import {ICliCommandOptions, readFile} from "../util/index.js";
+import {CliCommandOptions, readFile} from "../util/index.js";
 import {paramsOptions, IParamsArgs} from "./paramsOptions.js";
 
-interface IGlobalSingleArgs {
+type GlobalSingleArgs = {
   dataDir?: string;
   network?: NetworkName;
   paramsFile: string;
   preset: string;
-}
+};
 
 export const defaultNetwork: NetworkName = "mainnet";
 
-const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
+const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
   dataDir: {
     description: "Lodestar root data directory",
     type: "string",
@@ -44,7 +44,7 @@ export const rcConfigOption: [string, string, (configPath: string) => Record<str
   (configPath: string): Record<string, unknown> => readFile(configPath, ["json", "yml", "yaml"]),
 ];
 
-export type IGlobalArgs = IGlobalSingleArgs & IParamsArgs;
+export type GlobalArgs = GlobalSingleArgs & IParamsArgs;
 
 export const globalOptions = {
   ...globalSingleOptions,

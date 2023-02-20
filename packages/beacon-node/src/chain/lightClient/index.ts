@@ -1,5 +1,5 @@
 import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod, allForks} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {
   CachedBeaconStateAltair,
   computeStartSlotAtEpoch,
@@ -13,13 +13,13 @@ import {
   LightClientUpdateSummary,
   upgradeLightClientHeader,
 } from "@lodestar/light-client/spec";
-import {ILogger, MapDef, pruneSetToMax} from "@lodestar/utils";
+import {Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {MIN_SYNC_COMMITTEE_PARTICIPANTS, SYNC_COMMITTEE_SIZE, ForkName, ForkSeq, ForkExecution} from "@lodestar/params";
 
 import {IBeaconDb} from "../../db/index.js";
-import {IMetrics} from "../../metrics/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {byteArrayEquals} from "../../util/bytes.js";
 import {ZERO_HASH} from "../../constants/index.js";
@@ -55,11 +55,11 @@ export type SyncAttestedData = {
 );
 
 type LightClientServerModules = {
-  config: IChainForkConfig;
+  config: ChainForkConfig;
   db: IBeaconDb;
-  metrics: IMetrics | null;
+  metrics: Metrics | null;
   emitter: ChainEventEmitter;
-  logger: ILogger;
+  logger: Logger;
 };
 
 const MAX_CACHED_FINALIZED_HEADERS = 3;
@@ -167,10 +167,10 @@ const MAX_PREV_HEAD_DATA = 32;
  */
 export class LightClientServer {
   private readonly db: IBeaconDb;
-  private readonly config: IChainForkConfig;
-  private readonly metrics: IMetrics | null;
+  private readonly config: ChainForkConfig;
+  private readonly metrics: Metrics | null;
   private readonly emitter: ChainEventEmitter;
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
   private readonly knownSyncCommittee = new MapDef<SyncPeriod, Set<DependantRootHex>>(() => new Set());
   private storedCurrentSyncCommittee = false;
 

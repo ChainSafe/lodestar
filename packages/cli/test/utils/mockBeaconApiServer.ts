@@ -1,7 +1,7 @@
 import {RestApiServer, RestApiServerOpts, RestApiServerModules} from "@lodestar/beacon-node";
 import {registerRoutes} from "@lodestar/api/beacon/server";
 import {Api as ClientApi, allNamespaces, ServerApi} from "@lodestar/api";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
@@ -19,7 +19,7 @@ export type MockBeaconApiOpts = {
 };
 
 class MockBeaconRestApiServer extends RestApiServer {
-  constructor(optsArg: RestApiServerOpts, modules: RestApiServerModules, config: IChainForkConfig, api: Api) {
+  constructor(optsArg: RestApiServerOpts, modules: RestApiServerModules, config: ChainForkConfig, api: Api) {
     super(optsArg, modules);
 
     // Instantiate and register the routes with matching namespace in `opts.api`

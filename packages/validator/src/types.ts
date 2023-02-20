@@ -1,6 +1,6 @@
 import type {SecretKey} from "@chainsafe/bls/types";
 import {BLSPubkey} from "@lodestar/types";
-import {IDatabaseController} from "@lodestar/db";
+import {DatabaseController} from "@lodestar/db";
 
 export type GenesisInfo = {
   startTime: number;
@@ -20,7 +20,7 @@ export type BLSKeypair = {
 export type PubkeyHex = string;
 
 export type LodestarValidatorDatabaseController = Pick<
-  IDatabaseController<Uint8Array, Uint8Array>,
+  DatabaseController<Uint8Array, Uint8Array>,
   "get" | "start" | "values" | "batchPut" | "keys" | "get" | "put"
 >;
 

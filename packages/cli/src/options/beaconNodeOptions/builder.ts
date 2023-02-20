@@ -1,5 +1,5 @@
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {ICliCommandOptions} from "../../util/index.js";
+import {CliCommandOptions} from "../../util/index.js";
 
 export type ExecutionBuilderArgs = {
   builder: boolean;
@@ -15,7 +15,7 @@ export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["execu
   };
 }
 
-export const options: ICliCommandOptions<ExecutionBuilderArgs> = {
+export const options: CliCommandOptions<ExecutionBuilderArgs> = {
   builder: {
     description: "Enable builder interface",
     type: "boolean",

@@ -6,7 +6,7 @@ import {
 } from "@lodestar/state-transition";
 import {allForks, Root} from "@lodestar/types";
 import {ZERO_HASH} from "../../constants/index.js";
-import {IMetrics} from "../../metrics/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {BlockType, AssembledBlockType} from "./produceBlockBody.js";
 
 export {BlockType, AssembledBlockType};
@@ -17,7 +17,7 @@ export {BlockType, AssembledBlockType};
  * epoch transition which happen at slot % 32 === 0)
  */
 export function computeNewStateRoot(
-  metrics: IMetrics | null,
+  metrics: Metrics | null,
   state: CachedBeaconStateAllForks,
   block: allForks.FullOrBlindedBeaconBlock
 ): Root {

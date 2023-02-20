@@ -1,6 +1,6 @@
 import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {capella, ssz} from "@lodestar/types";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
 
@@ -18,7 +18,7 @@ export function verifyBlsToExecutionChangeSignature(
  * Extract signatures to allow validating all block signatures at once
  */
 export function getBlsToExecutionChangeSignatureSet(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   signedBLSToExecutionChange: capella.SignedBLSToExecutionChange
 ): ISignatureSet {
   // signatureFork for signing domain is fixed
@@ -36,7 +36,7 @@ export function getBlsToExecutionChangeSignatureSet(
 }
 
 export function getBlsToExecutionChangeSignatureSets(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   signedBlock: capella.SignedBeaconBlock
 ): ISignatureSet[] {
   return signedBlock.message.body.blsToExecutionChanges.map((blsToExecutionChange) =>

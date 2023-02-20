@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {IMetrics} from "../../../src/metrics/index.js";
+import {Metrics} from "../../../src/metrics/index.js";
 import {DynamicProperty, MetricProperty, StaticProperty} from "../../../src/monitoring/properties.js";
 import {JsonType} from "../../../src/monitoring/types.js";
 import {createMetricsTest} from "../metrics/utils.js";
@@ -49,7 +49,7 @@ describe("monitoring / properties", () => {
   });
 
   describe("MetricProperty", () => {
-    let metrics: IMetrics;
+    let metrics: Metrics;
 
     before(() => {
       metrics = createMetricsTest();

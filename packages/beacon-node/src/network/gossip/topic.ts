@@ -1,5 +1,5 @@
 import {ssz} from "@lodestar/types";
-import {IForkDigestContext} from "@lodestar/config";
+import {ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,
@@ -18,7 +18,7 @@ export interface IGossipTopicCache {
 export class GossipTopicCache implements IGossipTopicCache {
   private topicsByTopicStr = new Map<string, Required<GossipTopic>>();
 
-  constructor(private readonly forkDigestContext: IForkDigestContext) {}
+  constructor(private readonly forkDigestContext: ForkDigestContext) {}
 
   /** Returns cached GossipTopic, otherwise attempts to parse it from the str */
   getTopic(topicStr: string): GossipTopic {
@@ -46,7 +46,7 @@ export class GossipTopicCache implements IGossipTopicCache {
 /**
  * Stringify a GossipTopic into a spec-ed formated topic string
  */
-export function stringifyGossipTopic(forkDigestContext: IForkDigestContext, topic: GossipTopic): string {
+export function stringifyGossipTopic(forkDigestContext: ForkDigestContext, topic: GossipTopic): string {
   const forkDigestHexNoPrefix = forkDigestContext.forkName2ForkDigestHex(topic.fork);
   const topicType = stringifyGossipTopicType(topic);
   const encoding = topic.encoding ?? DEFAULT_ENCODING;
@@ -121,7 +121,7 @@ const gossipTopicRegex = new RegExp("^/eth2/(\\w+)/(\\w+)/(\\w+)");
  * /eth2/$FORK_DIGEST/$GOSSIP_TYPE/$ENCODING
  * ```
  */
-export function parseGossipTopic(forkDigestContext: IForkDigestContext, topicStr: string): Required<GossipTopic> {
+export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr: string): Required<GossipTopic> {
   try {
     const matches = topicStr.match(gossipTopicRegex);
     if (matches === null) {

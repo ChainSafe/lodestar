@@ -11,7 +11,7 @@ import {
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer, MonitoringService} from "@lodestar/beacon-node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
-import {IGlobalArgs} from "../../options/index.js";
+import {GlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger, cleanOldLogFiles} from "../../util/index.js";
 import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
@@ -27,7 +27,7 @@ import {KeymanagerRestApiServer} from "./keymanager/server.js";
 /**
  * Runs a validator client.
  */
-export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
+export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Promise<void> {
   const {config, network} = getBeaconConfigFromArgs(args);
 
   const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;

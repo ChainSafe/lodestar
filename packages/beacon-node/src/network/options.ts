@@ -5,7 +5,7 @@ import {PeerManagerOpts} from "./peers/index.js";
 import {ReqRespBeaconNodeOpts} from "./reqresp/ReqRespBeaconNode.js";
 
 // Since Network is eventually intended to be run in a separate thread, ensure that all options are cloneable using structuredClone
-export interface INetworkOptions
+export interface NetworkOptions
   extends PeerManagerOpts,
     // remove all Functions
     Omit<ReqRespBeaconNodeOpts, "getPeerLogMetadata" | "onRateLimit">,
@@ -27,7 +27,7 @@ export const defaultDiscv5Options: IDiscv5DiscoveryInputOptions = {
   enabled: true,
 };
 
-export const defaultNetworkOptions: INetworkOptions = {
+export const defaultNetworkOptions: NetworkOptions = {
   maxPeers: 55, // Allow some room above targetPeers for new inbound peers
   targetPeers: 50,
   discv5FirstQueryDelayMs: 1000,

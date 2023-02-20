@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {ReqGeneric, Resolves} from "../../src/utils/index.js";
 import {FetchOpts, HttpClient, IHttpClient} from "../../src/utils/client/index.js";
 import {ServerRoutes} from "../../src/utils/server/genericJsonServer.js";
@@ -22,9 +22,9 @@ export function runGenericServerTest<
   Api extends Record<string, APIClientHandler>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 >(
-  config: IChainForkConfig,
-  getClient: (config: IChainForkConfig, https: IHttpClient) => Api,
-  getRoutes: (config: IChainForkConfig, api: ServerApi<Api>) => ServerRoutes<ServerApi<Api>, ReqTypes>,
+  config: ChainForkConfig,
+  getClient: (config: ChainForkConfig, https: IHttpClient) => Api,
+  getRoutes: (config: ChainForkConfig, api: ServerApi<Api>) => ServerRoutes<ServerApi<Api>, ReqTypes>,
   testCases: GenericServerTestCases<Api>
 ): void {
   const mockApi = getMockApi<Api>(testCases);

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {IChainConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
 import {fromHexString} from "@chainsafe/ssz";
 import {Eth1Provider, IEth1Provider} from "../../../src/index.js";
@@ -20,7 +20,7 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
 
   const logger = testLogger();
 
-  function getConfig(ttd: bigint): IChainConfig {
+  function getConfig(ttd: bigint): ChainConfig {
     return ({
       // Set time units to 1s to make the test faster
       SECONDS_PER_ETH1_BLOCK: 1,
@@ -28,7 +28,7 @@ describe.skip("eth1 / Eth1MergeBlockTracker", function () {
       DEPOSIT_CONTRACT_ADDRESS: Buffer.alloc(32, 0),
       TERMINAL_TOTAL_DIFFICULTY: ttd,
       TERMINAL_BLOCK_HASH: ZERO_HASH,
-    } as Partial<IChainConfig>) as IChainConfig;
+    } as Partial<ChainConfig>) as ChainConfig;
   }
   const eth1Config = {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH};
 

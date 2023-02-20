@@ -1,7 +1,7 @@
 import {allForks} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {blockToHeader} from "@lodestar/state-transition";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {fromHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../../../db/index.js";
@@ -10,7 +10,7 @@ import {ApiError, ValidationError} from "../../errors.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 
 export function toBeaconHeaderResponse(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   block: allForks.SignedBeaconBlock,
   canonical = false
 ): routes.beacon.BlockHeaderResponse {

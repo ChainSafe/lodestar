@@ -2,13 +2,13 @@ import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {allForks, altair, phase0, capella, deneb} from "@lodestar/types";
-import {ILogger, Map2d, Map2dArr} from "@lodestar/utils";
+import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 
-import {IMetrics} from "../../metrics/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {Eth2Context} from "../../chain/index.js";
 import {PeersData} from "../peers/peersData.js";
 import {ClientKind} from "../peers/client.js";
@@ -42,10 +42,10 @@ const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 const MAX_OUTBOUND_BUFFER_SIZE = 2 ** 24; // 16MB
 
 export type Eth2GossipsubModules = {
-  config: IBeaconConfig;
+  config: BeaconConfig;
   libp2p: Libp2p;
-  logger: ILogger;
-  metrics: IMetrics | null;
+  logger: Logger;
+  metrics: Metrics | null;
   signal: AbortSignal;
   eth2Context: Eth2Context;
   gossipHandlers: GossipHandlers;
@@ -76,8 +76,8 @@ export type Eth2GossipsubOpts = {
 export class Eth2Gossipsub extends GossipSub {
   readonly jobQueues: GossipJobQueues;
   readonly scoreParams: Partial<PeerScoreParams>;
-  private readonly config: IBeaconConfig;
-  private readonly logger: ILogger;
+  private readonly config: BeaconConfig;
+  private readonly logger: Logger;
   private readonly peersData: PeersData;
 
   // Internal caches
@@ -287,7 +287,7 @@ export class Eth2Gossipsub extends GossipSub {
     return stringifyGossipTopic(this.config, topic);
   }
 
-  private onScrapeLodestarMetrics(metrics: IMetrics): void {
+  private onScrapeLodestarMetrics(metrics: Metrics): void {
     const mesh = this["mesh"] as Map<string, Set<string>>;
     const topics = this["topics"] as Map<string, Set<string>>;
     const peers = this["peers"] as Set<string>;
@@ -417,7 +417,7 @@ function attSubnetLabel(subnet: number): string {
   else return `0${subnet}`;
 }
 
-function getMetricsTopicStrToLabel(config: IBeaconConfig): TopicStrToLabel {
+function getMetricsTopicStrToLabel(config: BeaconConfig): TopicStrToLabel {
   const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
 
   for (const {name: fork} of config.forksAscendingEpochOrder) {

@@ -10,16 +10,16 @@ export type CommitteeSubscription = {
   isAggregator: boolean;
 };
 
-export interface ISubnetsService {
+export type SubnetsService = {
   start(): void;
   stop(): void;
   addCommitteeSubscriptions(subscriptions: CommitteeSubscription[]): void;
   getActiveSubnets(): RequestedSubnet[];
   subscribeSubnetsToNextFork(nextFork: ForkName): void;
   unsubscribeSubnetsFromPrevFork(prevFork: ForkName): void;
-}
+};
 
-export interface IAttnetsService extends ISubnetsService {
+export interface IAttnetsService extends SubnetsService {
   shouldProcess(subnet: number, slot: Slot): boolean;
 }
 

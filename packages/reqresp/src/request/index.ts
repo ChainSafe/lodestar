@@ -2,7 +2,7 @@ import {pipe} from "it-pipe";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Libp2p} from "libp2p";
 import {Uint8ArrayList} from "uint8arraylist";
-import {ErrorAborted, ILogger, withTimeout, TimeoutError} from "@lodestar/utils";
+import {ErrorAborted, Logger, withTimeout, TimeoutError} from "@lodestar/utils";
 import {ProtocolDefinition} from "../types.js";
 import {prettyPrintPeerId, abortableSource} from "../utils/index.js";
 import {ResponseError} from "../response/index.js";
@@ -12,7 +12,7 @@ import {
   RequestError,
   RequestErrorCode,
   RequestInternalError,
-  IRequestErrorMetadata,
+  RequestErrorMetadata,
   responseStatusErrorToRequestError,
 } from "./errors.js";
 
@@ -36,7 +36,7 @@ export interface SendRequestOpts {
 }
 
 type SendRequestModules = {
-  logger: ILogger;
+  logger: Logger;
   libp2p: Libp2p;
   peerClient?: string;
 };
@@ -211,7 +211,7 @@ export async function* sendRequest<Req, Resp>(
   } catch (e) {
     logger.verbose("Req  error", logCtx, e as Error);
 
-    const metadata: IRequestErrorMetadata = {method, encoding, peer: peerIdStr};
+    const metadata: RequestErrorMetadata = {method, encoding, peer: peerIdStr};
 
     if (e instanceof ResponseError) {
       throw new RequestError(responseStatusErrorToRequestError(e), metadata);

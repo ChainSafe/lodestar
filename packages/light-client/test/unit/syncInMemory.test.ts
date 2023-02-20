@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import bls, {init} from "@chainsafe/bls/switchable";
-import {createIBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {altair, ssz, SyncPeriod} from "@lodestar/types";
@@ -29,7 +29,7 @@ describe("syncInMemory", function () {
 
   // Fixed params
   const genValiRoot = Buffer.alloc(32, 9);
-  const config = createIBeaconConfig(chainConfig, genValiRoot);
+  const config = createBeaconConfig(chainConfig, genValiRoot);
   const currentSlot = 1;
   const syncCommitteesKeys = new Map<SyncPeriod, SyncCommitteeKeys>();
   let updateData: {chain: IBeaconChainLc; blockWithSyncAggregate: altair.BeaconBlock};

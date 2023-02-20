@@ -24,7 +24,7 @@ const FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED = FLAG_PREV_SOURCE_ATTESTER | FLAG_
 const FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED = FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED;
 const FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED = FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED;
 
-interface IRewardPenaltyItem {
+type RewardPenaltyItem = {
   baseReward: number;
   proposerReward: number;
   maxAttesterReward: number;
@@ -33,7 +33,7 @@ interface IRewardPenaltyItem {
   headReward: number;
   basePenalty: number;
   finalityDelayPenalty: number;
-}
+};
 
 /**
  * Return attestation reward/penalty deltas for each validator.
@@ -73,7 +73,7 @@ export function getAttestationDeltas(state: CachedBeaconStatePhase0, epochProces
 
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
   // so there are limited values of them like 32, 31, 30
-  const rewardPnaltyItemCache = new Map<number, IRewardPenaltyItem>();
+  const rewardPnaltyItemCache = new Map<number, RewardPenaltyItem>();
   const {statuses} = epochProcess;
   const {effectiveBalanceIncrements} = state.epochCtx;
   for (let i = 0; i < statuses.length; i++) {

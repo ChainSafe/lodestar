@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@lodestar/params";
-import {IChainConfig} from "../types.js";
+import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../presets/mainnet.js";
 
-export const gnosisChainConfig: IChainConfig = {
+export const gnosisChainConfig: ChainConfig = {
   ...mainnet,
 
   // NOTE: Only add diff values

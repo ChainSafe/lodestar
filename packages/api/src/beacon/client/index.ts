@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {Api} from "../routes/index.js";
 import {IHttpClient, HttpClient, HttpClientOptions, HttpClientModules} from "../../utils/client/index.js";
 
@@ -13,7 +13,7 @@ import * as proof from "./proof.js";
 import * as validator from "./validator.js";
 
 type ClientModules = HttpClientModules & {
-  config: IChainForkConfig;
+  config: ChainForkConfig;
   httpClient?: IHttpClient;
 };
 

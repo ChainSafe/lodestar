@@ -1,6 +1,6 @@
 import fetch from "cross-fetch";
 import {Registry} from "prom-client";
-import {ErrorAborted, ILogger, TimeoutError} from "@lodestar/utils";
+import {ErrorAborted, Logger, TimeoutError} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../metrics/index.js";
 import {HistogramExtra} from "../metrics/utils/histogram.js";
 import {defaultMonitoringOptions, MonitoringOptions} from "./options.js";
@@ -35,7 +35,7 @@ export class MonitoringService {
   private readonly remoteServiceHost: string;
   private readonly options: Required<MonitoringOptions>;
   private readonly register: Registry;
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
 
   private readonly collectDataMetric: HistogramExtra<string>;
   private readonly sendDataMetric: HistogramExtra<"status">;
@@ -49,7 +49,7 @@ export class MonitoringService {
   constructor(
     client: Client,
     options: MonitoringOptions,
-    {register, logger}: {register: RegistryMetricCreator; logger: ILogger}
+    {register, logger}: {register: RegistryMetricCreator; logger: Logger}
   ) {
     this.options = {...defaultMonitoringOptions, ...options};
     this.logger = logger;

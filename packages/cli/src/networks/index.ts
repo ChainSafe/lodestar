@@ -3,9 +3,9 @@ import got from "got";
 import {SLOTS_PER_EPOCH, ForkName} from "@lodestar/params";
 import {ApiError, getClient} from "@lodestar/api";
 import {getStateTypeFromBytes} from "@lodestar/beacon-node";
-import {IChainConfig, IChainForkConfig} from "@lodestar/config";
+import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {fromHex, callFnWhenAwait, ILogger} from "@lodestar/utils";
+import {fromHex, callFnWhenAwait, Logger} from "@lodestar/utils";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {parseBootnodesFile} from "../util/format.js";
 import * as mainnet from "./mainnet.js";
@@ -46,7 +46,7 @@ const GET_STATE_LOG_INTERVAL = 30 * 1000;
 export function getNetworkData(
   network: NetworkName
 ): {
-  chainConfig: IChainConfig;
+  chainConfig: ChainConfig;
   depositContractDeployBlock: number;
   genesisFileUrl: string | null;
   bootnodesFileUrl: string | null;
@@ -74,7 +74,7 @@ export function getNetworkData(
   }
 }
 
-export function getNetworkBeaconParams(network: NetworkName): IChainConfig {
+export function getNetworkBeaconParams(network: NetworkName): ChainConfig {
   return getNetworkData(network).chainConfig;
 }
 
@@ -135,8 +135,8 @@ export function readBootnodes(bootnodesFilePath: string): string[] {
  * Fetch weak subjectivity state from a remote beacon node
  */
 export async function fetchWeakSubjectivityState(
-  config: IChainForkConfig,
-  logger: ILogger,
+  config: ChainForkConfig,
+  logger: Logger,
   {checkpointSyncUrl, wssCheckpoint}: {checkpointSyncUrl: string; wssCheckpoint?: string}
 ): Promise<{wsState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
   try {

@@ -1,7 +1,7 @@
 import {allForks, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
-import {IBeaconStateTransitionMetrics, onStateCloneMetrics} from "./metrics.js";
+import {BeaconStateTransitionMetrics, onStateCloneMetrics} from "./metrics.js";
 import {beforeProcessEpoch, EpochProcessOpts} from "./cache/epochProcess.js";
 import {
   CachedBeaconStateAllForks,
@@ -46,7 +46,7 @@ export function stateTransition(
     executionPayloadStatus: ExecutionPayloadStatus.valid,
     dataAvailableStatus: DataAvailableStatus.available,
   },
-  metrics?: IBeaconStateTransitionMetrics | null
+  metrics?: BeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
   const {verifyStateRoot = true, verifyProposer = true} = options;
 
@@ -111,7 +111,7 @@ export function processSlots(
   state: CachedBeaconStateAllForks,
   slot: Slot,
   epochProcessOpts?: EpochProcessOpts,
-  metrics?: IBeaconStateTransitionMetrics | null
+  metrics?: BeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
   // .clone() before mutating state in state transition
   let postState = state.clone();
@@ -138,7 +138,7 @@ function processSlotsWithTransientCache(
   postState: CachedBeaconStateAllForks,
   slot: Slot,
   epochProcessOpts?: EpochProcessOpts,
-  metrics?: IBeaconStateTransitionMetrics | null
+  metrics?: BeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
   const {config} = postState;
   if (postState.slot > slot) {

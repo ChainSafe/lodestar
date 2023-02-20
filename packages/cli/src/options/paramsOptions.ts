@@ -1,7 +1,7 @@
 import {Options} from "yargs";
-import {IChainConfig, chainConfigTypes} from "@lodestar/config";
+import {ChainConfig, chainConfigTypes} from "@lodestar/config";
 import {IBeaconParamsUnparsed} from "../config/types.js";
-import {ObjectKeys, ICliCommandOptions} from "../util/index.js";
+import {ObjectKeys, CliCommandOptions} from "../util/index.js";
 
 // No options are statically declared
 // If an arbitraty key notation is used, it removes typesafety on most of this CLI arg parsing code.
@@ -36,7 +36,7 @@ const paramsOptionsByName = ObjectKeys(chainConfigTypes).reduce(
   {}
 );
 
-const terminalArgsToParamsMap: {[K in keyof ITerminalPowArgs]: keyof IChainConfig} = {
+const terminalArgsToParamsMap: {[K in keyof ITerminalPowArgs]: keyof ChainConfig} = {
   "terminal-total-difficulty-override": "TERMINAL_TOTAL_DIFFICULTY",
   "terminal-block-hash-override": "TERMINAL_BLOCK_HASH",
   "terminal-block-hash-epoch-override": "TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH",
@@ -52,7 +52,7 @@ export function parseTerminalPowArgs(args: ITerminalPowArgs): IBeaconParamsUnpar
   return parsedArgs;
 }
 
-export const paramsOptions: ICliCommandOptions<IParamsArgs> = {
+export const paramsOptions: CliCommandOptions<IParamsArgs> = {
   ...paramsOptionsByName,
 
   "terminal-total-difficulty-override": {

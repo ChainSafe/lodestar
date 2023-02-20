@@ -1,5 +1,5 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {Epoch, phase0, Root, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
@@ -9,7 +9,7 @@ import {wrapError} from "../../util/wrapError.js";
 import {IReqRespBeaconNode} from "./interface.js";
 
 export async function beaconBlocksMaybeBlobsByRoot(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   reqResp: IReqRespBeaconNode,
   peerId: PeerId,
   request: phase0.BeaconBlocksByRootRequest,
@@ -42,7 +42,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
 }
 
 async function beaconBlockAndBlobsSidecarByRootFallback(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   reqResp: IReqRespBeaconNode,
   peerId: PeerId,
   beaconBlockRoot: Root
