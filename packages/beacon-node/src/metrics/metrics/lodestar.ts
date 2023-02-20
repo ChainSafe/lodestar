@@ -257,12 +257,13 @@ export function createLodestarMetrics(
       name: "lodestar_gossip_validation_queue_job_time_seconds",
       help: "Time to process gossip validation queue job in seconds",
       labelNames: ["topic"],
+      buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
     }),
     gossipValidationQueueJobWaitTime: register.histogram<"topic">({
       name: "lodestar_gossip_validation_queue_job_wait_time_seconds",
       help: "Time from job added to the queue to starting the job in seconds",
       labelNames: ["topic"],
-      buckets: [0.1, 1, 10, 100],
+      buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
     }),
 
     discv5: {
@@ -330,12 +331,12 @@ export function createLodestarMetrics(
       jobTime: register.histogram({
         name: "lodestar_regen_queue_job_time_seconds",
         help: "Time to process regen queue job in seconds",
-        buckets: [0.1, 1, 10, 100],
+        buckets: [0.01, 0.1, 1, 10, 100],
       }),
       jobWaitTime: register.histogram({
         name: "lodestar_regen_queue_job_wait_time_seconds",
         help: "Time from job added to the regen queue to starting in seconds",
-        buckets: [0.1, 1, 10, 100],
+        buckets: [0.01, 0.1, 1, 10, 100],
       }),
     },
 
@@ -351,12 +352,12 @@ export function createLodestarMetrics(
       jobTime: register.histogram({
         name: "lodestar_block_processor_queue_job_time_seconds",
         help: "Time to process block processor queue job in seconds",
-        buckets: [0.1, 1, 10, 100],
+        buckets: [0.01, 0.1, 1, 10, 100],
       }),
       jobWaitTime: register.histogram({
         name: "lodestar_block_processor_queue_job_wait_time_seconds",
         help: "Time from job added to the block processor queue to starting in seconds",
-        buckets: [0.1, 1, 10, 100],
+        buckets: [0.01, 0.1, 1, 10, 100],
       }),
     },
 
@@ -478,7 +479,7 @@ export function createLodestarMetrics(
       jobWaitTime: register.histogram({
         name: "lodestar_bls_thread_pool_queue_job_wait_time_seconds",
         help: "Time from job added to the queue to starting the job in seconds",
-        buckets: [0.1, 1, 10],
+        buckets: [0.01, 0.02, 0.5, 0.1, 0.3, 1],
       }),
       queueLength: register.gauge({
         name: "lodestar_bls_thread_pool_queue_length",
