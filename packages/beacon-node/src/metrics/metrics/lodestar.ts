@@ -265,6 +265,11 @@ export function createLodestarMetrics(
       labelNames: ["topic"],
       buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
     }),
+    gossipValidationQueueConcurrency: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_queue_concurrency",
+      help: "Current concurrency of gossip validation queue",
+      labelNames: ["topic"],
+    }),
 
     discv5: {
       decodeEnrAttemptCount: register.counter({
@@ -338,6 +343,10 @@ export function createLodestarMetrics(
         help: "Time from job added to the regen queue to starting in seconds",
         buckets: [0.01, 0.1, 1, 10, 100],
       }),
+      concurrency: register.gauge({
+        name: "lodestar_regen_queue_concurrency",
+        help: "Current concurrency of regen queue",
+      }),
     },
 
     blockProcessorQueue: {
@@ -358,6 +367,10 @@ export function createLodestarMetrics(
         name: "lodestar_block_processor_queue_job_wait_time_seconds",
         help: "Time from job added to the block processor queue to starting in seconds",
         buckets: [0.01, 0.1, 1, 10, 100],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_block_processor_queue_concurrency",
+        help: "Current concurrency of block processor queue",
       }),
     },
 
@@ -381,6 +394,10 @@ export function createLodestarMetrics(
         help: "Time from job added to the engine http processor queue to starting in seconds",
         // Ideally it should be picked up < 100 of ms and could run upto 100 of secs
         buckets: [0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1, 2, 5, 10, 25, 50, 100],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_engine_http_processor_queue_concurrency_total",
+        help: "Current concurrency of engine http processor queue",
       }),
     },
 

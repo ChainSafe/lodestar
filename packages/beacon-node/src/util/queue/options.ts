@@ -24,6 +24,7 @@ export type QueueMetrics = {
   /** Compute async utilization rate with `rate(metrics_name[1m])` */
   jobTime: IHistogram;
   jobWaitTime: IHistogram;
+  concurrency: IGauge;
 };
 
 export const defaultQueueOpts: Required<

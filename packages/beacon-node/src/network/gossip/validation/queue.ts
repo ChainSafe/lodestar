@@ -60,6 +60,7 @@ export function createValidationQueues(
             droppedJobs: metrics.gossipValidationQueueDroppedJobs.child({topic: type}),
             jobTime: metrics.gossipValidationQueueJobTime.child({topic: type}),
             jobWaitTime: metrics.gossipValidationQueueJobWaitTime.child({topic: type}),
+            concurrency: metrics.gossipValidationQueueConcurrency.child({topic: type}),
           }
         : undefined
     );
