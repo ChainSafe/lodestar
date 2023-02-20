@@ -52,12 +52,14 @@ export class Runner implements IRunner {
       startSequence.push(async () => {
         this.emitter.emit("starting", jobOption.id);
         console.log(`Starting "${jobOption.id}"...`);
+
         if (jobOption.bootstrap) await jobOption.bootstrap();
         await job.start();
 
-        if (childrenJob) await childrenJob.start();
         this.emitter.emit("started", jobOption.id);
         console.log(`Started "${jobOption.id}"...`);
+
+        if (childrenJob) await childrenJob.start();
       });
 
       stopSequence.push(async () => {

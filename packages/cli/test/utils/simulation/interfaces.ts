@@ -189,9 +189,9 @@ export type RunnerOptions = {
   [RunnerType.ChildProcess]: never;
   [RunnerType.Docker]: {
     image: string;
-    dataVolumePath: string;
-    exposePorts: number[];
-    dockerNetworkIp: string;
+    dataVolumePath?: string;
+    exposePorts?: number[];
+    dockerNetworkIp?: string;
   };
 };
 

@@ -62,10 +62,16 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
   create(jobOption: Omit<JobOptions<RunnerType.Docker>, "children">): Job {
     const jobArgs = ["run", "--rm", "--name", jobOption.id];
 
-    jobArgs.push("--network", dockerNetworkName, "--ip", jobOption.options.dockerNetworkIp);
+    jobArgs.push("--network", dockerNetworkName);
+
+    if (jobOption.options.dockerNetworkIp) {
+      jobArgs.push("--ip", jobOption.options.dockerNetworkIp);
+    }
 
     // Mount volumes
-    jobArgs.push("-v", `${jobOption.options.dataVolumePath}:/data`);
+    if (jobOption.options.dataVolumePath) {
+      jobArgs.push("-v", `${jobOption.options.dataVolumePath}:/data`);
+    }
 
     // Pass ENV variables
     if (jobOption.cli.env && Object.keys(jobOption.cli.env).length > 0) {
@@ -74,7 +80,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
     }
 
     // Expose ports
-    for (const port of jobOption.options.exposePorts) {
+    for (const port of jobOption.options.exposePorts ?? []) {
       jobArgs.push("-p");
       jobArgs.push(`${port}:${port}`);
     }

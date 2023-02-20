@@ -41,7 +41,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     dataDir,
     genesisStateFile: genesisStateFilePath,
     rest: true,
-    "rest.address": address,
+    "rest.address": "0.0.0.0",
     "rest.port": restPort,
     "rest.namespace": "*",
     "sync.isSingleNode": false,
@@ -49,7 +49,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     discv5: true,
     "network.connectToDiscv5Bootnodes": true,
     "network.rateLimitMultiplier": 0,
-    listenAddress: address,
+    listenAddress: "0.0.0.0",
     port: port,
     metrics: false,
     bootnodes: [],
@@ -120,10 +120,10 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
   return {
     id,
     client: CLClient.Lodestar,
-    url: `http://${address}:${restPort}`,
+    url: `http://127.0.0.1:${restPort}`,
     keys,
-    api: getClient({baseUrl: `http://${address}:${restPort}`}, {config}),
-    keyManager: keyManagerGetClient({baseUrl: `http://${address}:${keyManagerPort}`}, {config}),
+    api: getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}),
+    keyManager: keyManagerGetClient({baseUrl: `http://127.0.0.1:${keyManagerPort}`}, {config}),
     job,
   };
 };
@@ -139,10 +139,10 @@ export const generateLodestarValidatorJobs = (opts: CLClientGeneratorOptions): J
     network: "dev",
     preset: "minimal",
     dataDir: rootDir,
-    server: `http://${address}:${restPort}/`,
+    server: `http://0.0.0.0:${restPort}/`,
     keymanager: true,
     "keymanager.authEnabled": false,
-    "keymanager.address": address,
+    "keymanager.address": "127.0.0.1",
     "keymanager.port": keyManagerPort,
     logPrefix: id,
     logFormatGenesisTime: genesisTime,
@@ -184,7 +184,7 @@ export const generateLodestarValidatorJobs = (opts: CLClientGeneratorOptions): J
     },
     health: async () => {
       try {
-        await got.get(`http://${address}:${keyManagerPort}/eth/v1/keystores`);
+        await got.get(`http://127.0.0.1:${keyManagerPort}/eth/v1/keystores`);
         return {ok: true};
       } catch (err) {
         return {ok: false, reason: (err as Error).message, checkId: "eth/v1/keystores query"};

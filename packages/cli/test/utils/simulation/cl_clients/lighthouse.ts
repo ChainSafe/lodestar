@@ -48,14 +48,14 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
     // Forces the HTTP to indicate that the node is synced when sync is actually
     // stalled. This is useful for very small testnets. TESTING ONLY. DO NOT USE ON MAINNET.
     "http-allow-sync-stalled": null,
-    "http-address": address,
+    "http-address": "0.0.0.0",
     "http-port": restPort,
     "http-allow-origin": "*",
     // "sync.isSingleNode": false,
     // "network.allowPublishToZeroPeers": false,
     // discv5: true,
     // "network.connectToDiscv5Bootnodes": true,
-    "listen-address": address,
+    "listen-address": "0.0.0.0",
     port: port,
     // metrics: false,
     // "boot-nodes": "",
@@ -115,7 +115,7 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
     },
     health: async () => {
       try {
-        await got.get(`http://${address}:${restPort}/eth/v1/node/health`);
+        await got.get(`http://127.0.0.1:${restPort}/eth/v1/node/health`);
         return {ok: true};
       } catch (err) {
         if (err instanceof RequestError && err.code !== "ECONNREFUSED") {
@@ -141,10 +141,10 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
   return {
     id,
     client: CLClient.Lighthouse,
-    url: `http://${address}:${restPort}`,
+    url: `http://127.0.0.1:${restPort}`,
     keys,
-    api: getClient({baseUrl: `http://${address}:${restPort}`}, {config}),
-    keyManager: keyManagerGetClient({baseUrl: `http://${address}:${keyManagerPort}`}, {config}),
+    api: getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}),
+    keyManager: keyManagerGetClient({baseUrl: `http://127.0.0.1:${keyManagerPort}`}, {config}),
     job: runner.create([{...beaconNodeJob, children: [...validatorClientsJobs]}]),
   };
 };
@@ -162,7 +162,7 @@ export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions):
 
   const params = {
     // network: "mainnet",
-    spec: "minimal",
+    // spec: "minimal",
     "testnet-dir": dataDirParam,
     datadir: dataDirParam,
     "beacon-nodes": `http://${address}:${restPort}/`,
@@ -171,7 +171,7 @@ export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions):
     "allow-unsynced": null,
     http: null,
     "unencrypted-http-transport": null,
-    "http-address": address,
+    "http-address": "0.0.0.0",
     "http-port": keyManagerPort,
     // keymanager: true,
     // "keymanager.authEnabled": false,
@@ -187,8 +187,6 @@ export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions):
       ? {
           image: process.env.LIGHTHOUSE_DOCKER_IMAGE as string,
           dataVolumePath: join(dataDir, "../"),
-          exposePorts: [],
-          dockerNetworkIp: address,
         }
       : undefined,
     bootstrap: async () => {
@@ -241,11 +239,10 @@ export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions):
     },
     health: async () => {
       try {
-        await got.get(`http://${address}:${keyManagerPort}/lighthouse/health`);
+        await got.get(`http://127.0.0.1:${keyManagerPort}/lighthouse/health`);
         return {ok: true};
       } catch (err) {
         if (err instanceof RequestError) {
-          console.log(err.response?.body);
           return {ok: true};
         }
         return {ok: false, reason: (err as Error).message, checkId: "/lighthouse/health query"};

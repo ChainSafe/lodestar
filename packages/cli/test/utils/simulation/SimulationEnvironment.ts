@@ -277,8 +277,6 @@ export class SimulationEnvironment {
     const elOptions = typeof el === "object" ? el.options : {};
     const elNode = this.createELNode(elType, {...elOptions, id, mining});
 
-    console.log("%%%%%%% elNode: ", elNode.id, elNode.engineRpcUrl);
-
     const clType = typeof cl === "object" ? cl.type : cl;
     const clOptions = typeof cl === "object" ? cl.options : {};
     const clNode = this.createCLNode(clType, {

@@ -35,7 +35,9 @@ export async function connectNewCLNode(newNode: CLNode, nodes: CLNode[]): Promis
     if (node.client === CLClient.Lodestar) {
       const res = await (node as CLNode<CLClient.Lodestar>).api.lodestar.connectPeer(
         clIdentity.peerId,
-        clIdentity.p2pAddresses
+        // As the lodestar is always running on host
+        // convert the address to local host to connect the container node
+        clIdentity.p2pAddresses.map((str) => str.replace(/(\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/)/, "/127.0.0.1/"))
       );
       ApiError.assert(res);
     }
