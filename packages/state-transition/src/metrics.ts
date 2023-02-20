@@ -3,22 +3,22 @@ import {CachedBeaconStateAllForks} from "./types.js";
 import {AttesterStatus} from "./util/attesterStatus.js";
 
 export type BeaconStateTransitionMetrics = {
-  epochTransitionTime: IHistogram;
-  epochTransitionCommitTime: IHistogram;
-  processBlockTime: IHistogram;
-  processBlockCommitTime: IHistogram;
-  stateHashTreeRootTime: IHistogram;
-  preStateBalancesNodesPopulatedMiss: IGauge<"source">;
-  preStateBalancesNodesPopulatedHit: IGauge<"source">;
-  preStateValidatorsNodesPopulatedMiss: IGauge<"source">;
-  preStateValidatorsNodesPopulatedHit: IGauge<"source">;
-  preStateClonedCount: IHistogram;
-  postStateBalancesNodesPopulatedMiss: IGauge;
-  postStateBalancesNodesPopulatedHit: IGauge;
-  postStateValidatorsNodesPopulatedMiss: IGauge;
-  postStateValidatorsNodesPopulatedHit: IGauge;
-  registerValidatorStatuses: (currentEpoch: Epoch, statuses: IAttesterStatus[], balances?: number[]) => void;
-}
+  epochTransitionTime: Histogram;
+  epochTransitionCommitTime: Histogram;
+  processBlockTime: Histogram;
+  processBlockCommitTime: Histogram;
+  stateHashTreeRootTime: Histogram;
+  preStateBalancesNodesPopulatedMiss: Gauge<"source">;
+  preStateBalancesNodesPopulatedHit: Gauge<"source">;
+  preStateValidatorsNodesPopulatedMiss: Gauge<"source">;
+  preStateValidatorsNodesPopulatedHit: Gauge<"source">;
+  preStateClonedCount: Histogram;
+  postStateBalancesNodesPopulatedMiss: Gauge;
+  postStateBalancesNodesPopulatedHit: Gauge;
+  postStateValidatorsNodesPopulatedMiss: Gauge;
+  postStateValidatorsNodesPopulatedHit: Gauge;
+  registerValidatorStatuses: (currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]) => void;
+};
 
 type LabelValues<T extends string> = Partial<Record<T, string | number>>;
 
