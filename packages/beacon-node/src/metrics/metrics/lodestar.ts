@@ -449,17 +449,22 @@ export function createLodestarMetrics(
     }),
     preStateBalancesNodesPopulatedMiss: register.gauge<"source">({
       name: "lodestar_stfn_balances_nodes_populated_miss_total",
-      help: "Total count state.balances nodesPopulated is not true on stfn",
+      help: "Total count state.balances nodesPopulated is false on stfn",
+      labelNames: ["source"],
+    }),
+    preStateBalancesNodesPopulatedHit: register.gauge<"source">({
+      name: "lodestar_stfn_balances_nodes_populated_hit_total",
+      help: "Total count state.balances nodesPopulated is true on stfn",
       labelNames: ["source"],
     }),
     preStateValidatorsNodesPopulatedMiss: register.gauge<"source">({
       name: "lodestar_stfn_validators_nodes_populated_miss_total",
-      help: "Total count state.validators nodesPopulated is not true on stfn",
+      help: "Total count state.validators nodesPopulated is false on stfn",
       labelNames: ["source"],
     }),
-    preStateClone: register.gauge<"source">({
-      name: "lodestar_stfn_state_clone_total",
-      help: "Total count of state.clone() calls in stfn",
+    preStateValidatorsNodesPopulatedHit: register.gauge<"source">({
+      name: "lodestar_stfn_validators_nodes_populated_hit_total",
+      help: "Total count state.validators nodesPopulated is true on stfn",
       labelNames: ["source"],
     }),
     preStateClonedCount: register.histogram({
@@ -467,17 +472,21 @@ export function createLodestarMetrics(
       help: "Histogram of cloned count per state every time state.clone() is called",
       buckets: [1, 2, 5, 10, 50, 250],
     }),
-    postStateCount: register.gauge({
-      name: "lodestar_stfn_post_state_total",
-      help: "Total count of post state metrics registered on stfn",
+    postStateBalancesNodesPopulatedHit: register.gauge({
+      name: "lodestar_stfn_post_state_balances_nodes_populated_hit_total",
+      help: "Total count state.validators nodesPopulated is true on stfn for post state",
     }),
     postStateBalancesNodesPopulatedMiss: register.gauge({
       name: "lodestar_stfn_post_state_balances_nodes_populated_miss_total",
-      help: "Total count state.validators nodesPopulated is not true on stfn for post state",
+      help: "Total count state.validators nodesPopulated is false on stfn for post state",
+    }),
+    postStateValidatorsNodesPopulatedHit: register.gauge({
+      name: "lodestar_stfn_post_state_validators_nodes_populated_hit_total",
+      help: "Total count state.validators nodesPopulated is true on stfn for post state",
     }),
     postStateValidatorsNodesPopulatedMiss: register.gauge({
       name: "lodestar_stfn_post_state_validators_nodes_populated_miss_total",
-      help: "Total count state.validators nodesPopulated is not true on stfn for post state",
+      help: "Total count state.validators nodesPopulated is false on stfn for post state",
     }),
 
     // BLS verifier thread pool and queue

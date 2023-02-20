@@ -9,12 +9,14 @@ export interface IBeaconStateTransitionMetrics {
   processBlockCommitTime: IHistogram;
   stateHashTreeRootTime: IHistogram;
   preStateBalancesNodesPopulatedMiss: IGauge<"source">;
+  preStateBalancesNodesPopulatedHit: IGauge<"source">;
   preStateValidatorsNodesPopulatedMiss: IGauge<"source">;
-  preStateClone: IGauge<"source">;
+  preStateValidatorsNodesPopulatedHit: IGauge<"source">;
   preStateClonedCount: IHistogram;
-  postStateCount: IGauge;
   postStateBalancesNodesPopulatedMiss: IGauge;
+  postStateBalancesNodesPopulatedHit: IGauge;
   postStateValidatorsNodesPopulatedMiss: IGauge;
+  postStateValidatorsNodesPopulatedHit: IGauge;
   registerValidatorStatuses: (currentEpoch: Epoch, statuses: IAttesterStatus[], balances?: number[]) => void;
 }
 
@@ -39,26 +41,31 @@ export function onStateCloneMetrics(
   metrics: IBeaconStateTransitionMetrics,
   source: "stateTransition" | "processSlots"
 ): void {
-  metrics.preStateClone.inc({source});
   metrics.preStateClonedCount.observe(state.clonedCount);
 
-  if (!isBalancesNodesPopulated(state)) {
+  if (isBalancesNodesPopulated(state)) {
+    metrics.preStateBalancesNodesPopulatedHit.inc({source});
+  } else {
     metrics.preStateBalancesNodesPopulatedMiss.inc({source});
   }
 
-  if (!isValidatorsNodesPopulated(state)) {
+  if (isValidatorsNodesPopulated(state)) {
+    metrics.preStateValidatorsNodesPopulatedHit.inc({source});
+  } else {
     metrics.preStateValidatorsNodesPopulatedMiss.inc({source});
   }
 }
 
 export function onPostStateMetrics(postState: CachedBeaconStateAllForks, metrics: IBeaconStateTransitionMetrics): void {
-  metrics.postStateCount.inc();
-
-  if (!isBalancesNodesPopulated(postState)) {
+  if (isBalancesNodesPopulated(postState)) {
+    metrics.postStateBalancesNodesPopulatedHit.inc();
+  } else {
     metrics.postStateBalancesNodesPopulatedMiss.inc();
   }
 
-  if (!isValidatorsNodesPopulated(postState)) {
+  if (isValidatorsNodesPopulated(postState)) {
+    metrics.postStateValidatorsNodesPopulatedHit.inc();
+  } else {
     metrics.postStateValidatorsNodesPopulatedMiss.inc();
   }
 }
