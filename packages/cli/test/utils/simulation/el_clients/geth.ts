@@ -67,7 +67,7 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (opts, runner)
     options: isDocker
       ? {
           image: process.env.GETH_DOCKER_IMAGE as string,
-          dockerNetworkIp: address,
+          dataVolumePath: dataDir,
         }
       : undefined,
     bootstrap: async () => {
