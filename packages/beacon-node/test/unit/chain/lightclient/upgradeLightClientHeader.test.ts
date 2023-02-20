@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {ssz, capella, altair, deneb, allForks} from "@lodestar/types";
+import {ssz, capella, altair, deneb, allForks, verge} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {upgradeLightClientHeader} from "@lodestar/light-client/spec";
@@ -30,8 +30,8 @@ describe("UpgradeLightClientHeader", function () {
     denebLCHeader = ssz.deneb.LightClientHeader.defaultValue();
     bellatrixLCHeader = ssz.altair.LightClientHeader.defaultValue();
 
-    update = [altairLCHeader, altairLCHeader, bellatrixLCHeader, capellaLCHeader, denebLCHeader];
-    testSlots = [0, 10, 17, 25, 33];
+    update = [altairLCHeader, altairLCHeader, bellatrixLCHeader, capellaLCHeader, denebLCHeader, denebLCHeader];
+    testSlots = [0, 10, 17, 25, 33, 41];
   });
 
   for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
