@@ -73,6 +73,7 @@ export class Runner implements IRunner {
       });
     }
 
+    console.log({jobOptions});
     return {
       id: jobOptions[0].id,
       start: async () => {

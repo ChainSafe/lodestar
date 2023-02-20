@@ -12,24 +12,10 @@ const SECRET_KEY = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065f
 const PASSWORD = "12345678";
 const GENESIS_ACCOUNT = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
 
-export const generateGethNode: ELClientGenerator<ELClient.Geth> = (
-  {
-    id,
-    mode,
-    dataDir,
-    ethPort,
-    port,
-    enginePort,
-    ttd,
-    logFilePath,
-    jwtSecretHex,
-    cliqueSealingPeriod,
-    address,
-    mining,
-    clientOptions,
-  },
-  runner
-) => {
+export const generateGethNode: ELClientGenerator<ELClient.Geth> = (opts, runner) => {
+  const {id, mode, dataDir, ethPort, port, enginePort, ttd} = opts;
+  const {logFilePath, jwtSecretHex, cliqueSealingPeriod, address, mining, clientOptions} = opts;
+
   if (!process.env.GETH_BINARY_DIR && !process.env.GETH_DOCKER_IMAGE) {
     throw new Error("GETH_BINARY_DIR or GETH_DOCKER_IMAGE must be provided");
   }

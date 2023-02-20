@@ -17,32 +17,15 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
 
   const isDocker = process.env.LIGHTHOUSE_DOCKER_IMAGE !== undefined;
 
-  const {
-    dataDir,
-    address,
-    restPort,
-    port,
-    id,
-    config,
-    keys,
-    keyManagerPort,
-    engineUrls,
-    genesisStateFilePath,
-    jwtSecretHex,
-    engineMock,
-    clientOptions,
-  } = opts;
+  const {dataDir, address, restPort, port, id, config, keys, keyManagerPort} = opts;
+  const {engineUrls, genesisStateFilePath, jwtSecretHex, engineMock, clientOptions} = opts;
 
   const dataDirParam = isDocker ? "/data" : dataDir;
   const jwtSecretPath = join(dataDir, "jwtsecret.txt");
 
   const cliParams: Record<string, unknown> = {
-    // network: "mainnet",
     "testnet-dir": dataDirParam,
     datadir: dataDirParam,
-    // genesisStateFile: genesisStateFilePath,
-    // rest: true,
-    // "rest.namespace": "*",
     http: null,
     //  Enable the RESTful HTTP API server. Disabled by default.
     // Forces the HTTP to indicate that the node is synced when sync is actually
@@ -51,26 +34,14 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
     "http-address": "0.0.0.0",
     "http-port": restPort,
     "http-allow-origin": "*",
-    // "sync.isSingleNode": false,
-    // "network.allowPublishToZeroPeers": false,
-    // discv5: true,
-    // "network.connectToDiscv5Bootnodes": true,
     "listen-address": "0.0.0.0",
     port: port,
-    // metrics: false,
-    // "boot-nodes": "",
-    // "enable-private-discovery": "",
     "enr-address": address,
     "enr-udp-port": port,
     "enr-tcp-port": port,
     "disable-discovery": null,
     "enable-private-discovery": null,
-    // logPrefix: id,
-    // logFormatGenesisTime: `${genesisTime}`,
     "debug-level": "debug",
-    // logFileDailyRotate: 0,
-    // logFile: "none",
-    // paramsFile: paramsPath,
     ...clientOptions,
   };
 
@@ -161,8 +132,6 @@ export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions):
   }
 
   const params = {
-    // network: "mainnet",
-    // spec: "minimal",
     "testnet-dir": dataDirParam,
     datadir: dataDirParam,
     "beacon-nodes": `http://${address}:${restPort}/`,
@@ -173,11 +142,6 @@ export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions):
     "unencrypted-http-transport": null,
     "http-address": "0.0.0.0",
     "http-port": keyManagerPort,
-    // keymanager: true,
-    // "keymanager.authEnabled": false,
-    // "keymanager.address": address,
-    // "keymanager.port": keyManagerPort,
-    // "validators-dir": `${dataDir}/validators`,
   };
 
   return {

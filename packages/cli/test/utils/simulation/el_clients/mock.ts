@@ -1,9 +1,7 @@
 import {ELClient, ELClientGenerator} from "../interfaces.js";
 
-export const generateMockNode: ELClientGenerator<ELClient.Mock> = (
-  {id, ethPort, enginePort, ttd, jwtSecretHex},
-  runner
-) => {
+export const generateMockNode: ELClientGenerator<ELClient.Mock> = (opts, runner) => {
+  const {id, ethPort, enginePort, ttd, jwtSecretHex} = opts;
   const ethRpcUrl = `http://127.0.0.1:${ethPort}`;
   const engineRpcUrl = `http://127.0.0.1:${enginePort}`;
 

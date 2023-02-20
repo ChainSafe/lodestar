@@ -7,24 +7,10 @@ import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {ELClient, ELClientGenerator, JobOptions, RunnerType} from "../interfaces.js";
 import {getNethermindChainSpec} from "../utils/el_genesis.js";
 
-export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (
-  {
-    id,
-    mode,
-    dataDir,
-    ethPort,
-    port,
-    enginePort,
-    ttd,
-    logFilePath,
-    jwtSecretHex,
-    cliqueSealingPeriod,
-    address,
-    mining,
-    clientOptions,
-  },
-  runner
-) => {
+export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (opts, runner) => {
+  const {id, mode, dataDir, ethPort, port, enginePort, ttd} = opts;
+  const {logFilePath, jwtSecretHex, cliqueSealingPeriod, address, mining, clientOptions} = opts;
+
   if (!process.env.NETHERMIND_DOCKER_IMAGE) {
     throw Error(`EL ENV must be provided, NETHERMIND_DOCKER_IMAGE: ${process.env.NETHERMIND_DOCKER_IMAGE}`);
   }

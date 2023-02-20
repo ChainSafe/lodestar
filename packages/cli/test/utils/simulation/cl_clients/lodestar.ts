@@ -14,22 +14,8 @@ import {LODESTAR_BINARY_PATH} from "../constants.js";
 import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, RunnerType} from "../interfaces.js";
 
 export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = (opts, runner) => {
-  const {
-    dataDir,
-    address,
-    restPort,
-    port,
-    id,
-    config,
-    genesisStateFilePath,
-    keys,
-    keyManagerPort,
-    genesisTime,
-    engineUrls,
-    engineMock,
-    jwtSecretHex,
-    clientOptions,
-  } = opts;
+  const {dataDir, address, restPort, port, id, config, genesisStateFilePath} = opts;
+  const {keys, keyManagerPort, genesisTime, engineUrls, engineMock, jwtSecretHex, clientOptions} = opts;
 
   const jwtSecretPath = join(dataDir, "jwtsecret");
   const rcConfigPath = join(dataDir, "rc_config.json");
@@ -129,7 +115,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
 };
 
 export const generateLodestarValidatorJobs = (opts: CLClientGeneratorOptions): JobOptions => {
-  const {dataDir: rootDir, id, address, keyManagerPort, restPort, keys, config, genesisTime} = opts;
+  const {dataDir: rootDir, id, keyManagerPort, restPort, keys, config, genesisTime} = opts;
 
   if (keys.type === "no-keys") {
     throw Error("Attempting to run a vc with keys.type == 'no-keys'");
