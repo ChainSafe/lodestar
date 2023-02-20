@@ -102,18 +102,17 @@ export function getBeaconPoolApi({
       await Promise.all(
         blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
           try {
-            await validateBlsToExecutionChange(chain, blsToExecutionChange);
-            // TODO: Remove below condition
-            // Only used for testing in devnet-3 of withdrawals
-            chain.opPool.insertBlsToExecutionChange(
-              blsToExecutionChange,
-              // true if pre capella else false
-              !(
-                chain.clock.currentEpoch >= chain.config.CAPELLA_FORK_EPOCH &&
-                // TODO: Remove this condition once testing is done
-                network.isSubscribedToGossipCoreTopics()
-              )
+            // Ignore even if the change exists and reprocess
+            await validateBlsToExecutionChange(chain, blsToExecutionChange, true);
+            const preCapella = !(
+              chain.clock.currentEpoch >= chain.config.CAPELLA_FORK_EPOCH &&
+              // TODO: Remove this condition once testing is done
+              network.isSubscribedToGossipCoreTopics()
             );
+            chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, preCapella);
+            if (!preCapella) {
+              await network.gossip.publishBlsToExecutionChange(blsToExecutionChange);
+            }
           } catch (e) {
             errors.push(e as Error);
             logger.error(

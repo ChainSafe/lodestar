@@ -9,11 +9,12 @@ import {BlsToExecutionChangeError, BlsToExecutionChangeErrorCode, GossipAction} 
 
 export async function validateBlsToExecutionChange(
   chain: IBeaconChain,
-  blsToExecutionChange: capella.SignedBLSToExecutionChange
+  blsToExecutionChange: capella.SignedBLSToExecutionChange,
+  ignoreExists = false
 ): Promise<void> {
   // [IGNORE] The blsToExecutionChange is the first valid blsToExecutionChange received for the validator with index
   // signedBLSToExecutionChange.message.validatorIndex.
-  if (chain.opPool.hasSeenBlsToExecutionChange(blsToExecutionChange.message.validatorIndex)) {
+  if (!ignoreExists && chain.opPool.hasSeenBlsToExecutionChange(blsToExecutionChange.message.validatorIndex)) {
     throw new BlsToExecutionChangeError(GossipAction.IGNORE, {
       code: BlsToExecutionChangeErrorCode.ALREADY_EXISTS,
     });
