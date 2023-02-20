@@ -39,12 +39,18 @@ interface MetricPropertyDefinition<T extends RecordValue> extends PropertyDefini
   defaultValue: T;
 }
 
+/**
+ * Interface to be implemented by client stats properties
+ */
 export interface ClientStatsProperty<T extends RecordValue> {
   readonly definition: PropertyDefinition;
 
   getRecord(register: Registry): JsonRecord<T> | Promise<JsonRecord<T>>;
 }
 
+/**
+ * Static property that can be used to define hard-coded values
+ */
 export class StaticProperty<T extends RecordValue> implements ClientStatsProperty<T> {
   constructor(readonly definition: StaticPropertyDefinition<T>) {}
 
@@ -53,6 +59,9 @@ export class StaticProperty<T extends RecordValue> implements ClientStatsPropert
   }
 }
 
+/**
+ * Dynamic property that can be used to get value from a provider function
+ */
 export class DynamicProperty<T extends RecordValue> implements ClientStatsProperty<T> {
   constructor(readonly definition: DynamicPropertyDefinition<T>) {}
 
@@ -61,6 +70,9 @@ export class DynamicProperty<T extends RecordValue> implements ClientStatsProper
   }
 }
 
+/**
+ * Metric property that can be used to get value from an existing prometheus metric
+ */
 export class MetricProperty<T extends RecordValue> implements ClientStatsProperty<T> {
   private cachedValue?: T;
 
