@@ -63,18 +63,10 @@ export function processBlock(
 
   if (fork >= ForkSeq.deneb) {
     processBlobKzgCommitments(block.body as deneb.BeaconBlockBody);
-
-    // New in Deneb, note: Can sync optimistically without this condition, see note on `is_data_available`
-    // NOTE: Ommitted and should be verified beforehand
-
-    // assert is_data_available(block.slot, hash_tree_root(block), block.body.blob_kzg_commitments)
-    switch (externalData.dataAvailableStatus) {
-      case DataAvailableStatus.preDeneb:
-        throw Error("dataAvailableStatus preDeneb");
-      case DataAvailableStatus.notAvailable:
-        throw Error("dataAvailableStatus notAvailable");
-      case DataAvailableStatus.available:
-        break; // ok
+    // Only throw preDeneb so beacon can also sync/process blocks optimistically
+    // and let forkChoice handle it
+    if (externalData.dataAvailableStatus === DataAvailableStatus.preDeneb) {
+      throw Error("dataAvailableStatus preDeneb");
     }
   }
 }
