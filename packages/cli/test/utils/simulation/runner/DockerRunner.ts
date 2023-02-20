@@ -62,9 +62,8 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
   create(jobOption: Omit<JobOptions<RunnerType.Docker>, "children">): Job {
     const jobArgs = ["run", "--rm", "--name", jobOption.id];
 
-    jobArgs.push("--network", dockerNetworkName);
-
     if (jobOption.options.dockerNetworkIp) {
+      jobArgs.push("--network", dockerNetworkName);
       jobArgs.push("--ip", jobOption.options.dockerNetworkIp);
     }
 
