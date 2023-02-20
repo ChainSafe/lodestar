@@ -17,7 +17,7 @@ import {
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 
-const genesisSlotsDelay = 25;
+const genesisSlotsDelay = 30;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
 // Make sure bellatrix started before TTD reach
