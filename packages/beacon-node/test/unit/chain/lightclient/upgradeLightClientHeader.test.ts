@@ -1,16 +1,12 @@
 import {expect} from "chai";
-import {ssz, capella, altair, deneb, allForks} from "@lodestar/types";
+import {ssz, allForks} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {upgradeLightClientHeader} from "@lodestar/light-client/spec";
 
 describe("UpgradeLightClientHeader", function () {
-  let capellaLCHeader: capella.LightClientHeader;
-  let altairLCHeader: altair.LightClientHeader;
-  let bellatrixLCHeader: altair.LightClientHeader;
-  let denebLCHeader: deneb.LightClientHeader;
-  let update: allForks.LightClientHeader[];
-  let testSlots: number[];
+  let lcHeaderByFork: Record<ForkName, allForks.LightClientHeader>;
+  let testSlots: Record<ForkName, number>;
 
   /* eslint-disable @typescript-eslint/naming-convention */
   const chainConfig = createIChainForkConfig({
@@ -25,43 +21,50 @@ describe("UpgradeLightClientHeader", function () {
   const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
 
   beforeEach(function () {
-    altairLCHeader = ssz.altair.LightClientHeader.defaultValue();
-    capellaLCHeader = ssz.capella.LightClientHeader.defaultValue();
-    denebLCHeader = ssz.deneb.LightClientHeader.defaultValue();
-    bellatrixLCHeader = ssz.altair.LightClientHeader.defaultValue();
+    lcHeaderByFork = {
+      phase0: ssz.altair.LightClientHeader.defaultValue(),
+      altair: ssz.altair.LightClientHeader.defaultValue(),
+      capella: ssz.capella.LightClientHeader.defaultValue(),
+      bellatrix: ssz.altair.LightClientHeader.defaultValue(),
+      deneb: ssz.deneb.LightClientHeader.defaultValue(),
+    };
 
-    update = [altairLCHeader, altairLCHeader, bellatrixLCHeader, capellaLCHeader, denebLCHeader];
-    testSlots = [0, 10, 17, 25, 33];
+    testSlots = {
+      phase0: 0,
+      altair: 10,
+      bellatrix: 17,
+      capella: 25,
+      deneb: 33,
+    };
   });
 
   for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
     for (let j = i + 1; j < Object.values(ForkName).length; j++) {
-      it(`Successful upgrade ${ForkName[ForkSeq[i] as ForkName]}=>${ForkName[ForkSeq[j] as ForkName]}`, function () {
-        update[i].beacon.slot = testSlots[i];
-        update[j].beacon.slot = testSlots[i];
+      const fromFork = ForkName[ForkSeq[i] as ForkName];
+      const toFork = ForkName[ForkSeq[j] as ForkName];
 
-        const updatedHeader = upgradeLightClientHeader(config, ForkName[ForkSeq[j] as ForkName], update[i]);
-        expect(updatedHeader).to.deep.equal(
-          update[j],
-          `${ForkName[ForkSeq[i] as ForkName]} -> ${ForkName[ForkSeq[j] as ForkName]}`
-        );
+      it(`Successful upgrade ${fromFork}=>${toFork}`, function () {
+        lcHeaderByFork[fromFork].beacon.slot = testSlots[fromFork];
+        lcHeaderByFork[toFork].beacon.slot = testSlots[fromFork];
+
+        const updatedHeader = upgradeLightClientHeader(config, toFork, lcHeaderByFork[fromFork]);
+        expect(updatedHeader).to.deep.equal(lcHeaderByFork[toFork], `${fromFork} -> ${toFork}`);
       });
     }
   }
 
   for (let i = ForkSeq.altair; i < Object.values(ForkName).length; i++) {
     for (let j = i; j > 0; j--) {
-      it(`Throw upgrade error ${ForkName[ForkSeq[i] as ForkName]}=>${ForkName[ForkSeq[j] as ForkName]}`, function () {
-        update[i].beacon.slot = testSlots[i];
-        update[j].beacon.slot = testSlots[i];
+      const fromFork = ForkName[ForkSeq[i] as ForkName];
+      const toFork = ForkName[ForkSeq[j] as ForkName];
+
+      it(`Throw upgrade error ${fromFork}=>${toFork}`, function () {
+        lcHeaderByFork[fromFork].beacon.slot = testSlots[fromFork];
+        lcHeaderByFork[toFork].beacon.slot = testSlots[fromFork];
 
         expect(() => {
-          upgradeLightClientHeader(config, ForkName[ForkSeq[j] as ForkName], update[i]);
-        }).to.throw(
-          `Invalid upgrade request from headerFork=${ForkName[ForkSeq[i] as ForkName]} to targetFork=${
-            ForkName[ForkSeq[j] as ForkName]
-          }`
-        );
+          upgradeLightClientHeader(config, toFork, lcHeaderByFork[fromFork]);
+        }).to.throw(`Invalid upgrade request from headerFork=${fromFork} to targetFork=${toFork}`);
       });
     }
   }
