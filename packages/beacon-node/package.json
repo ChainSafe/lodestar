@@ -150,6 +150,7 @@
     "snappyjs": "^0.7.0",
     "stream-to-it": "^0.2.0",
     "strict-event-emitter-types": "^2.0.0",
+    "systeminformation": "^5.17.9",
     "uint8arraylist": "^2.3.2",
     "uint8arrays": "^4.0.2",
     "varint": "^6.0.0",
