@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {mkdir, writeFile, cp} from "node:fs/promises";
 import {dirname, join} from "node:path";
-import {readFileSync} from "node:fs";
 import got from "got";
 import {RequestError} from "got";
 import yaml from "js-yaml";
@@ -113,7 +112,7 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
     );
   }
 
-  const result = {
+  return {
     id,
     client: CLClient.Lighthouse,
     url: `http://127.0.0.1:${restPort}`,
@@ -122,14 +121,6 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
     keyManager: keyManagerGetClient({baseUrl: `http://127.0.0.1:${keyManagerPort}`}, {config}),
     job: runner.create([{...beaconNodeJob, children: [...validatorClientsJobs]}]),
   };
-
-  runner.on("started", (jobId) => {
-    if (jobId !== `${id}-validator`) return;
-    const bearerToken = readFileSync(join(dataDir, "validators", "api-token.txt"), "utf8");
-    result.keyManager = keyManagerGetClient({baseUrl: `http://127.0.0.1:${keyManagerPort}`, bearerToken}, {config});
-  });
-
-  return result;
 };
 
 export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions, runner: IRunner): JobOptions => {
