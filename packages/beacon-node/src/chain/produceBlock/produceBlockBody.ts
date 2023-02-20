@@ -392,9 +392,6 @@ async function prepareExecutionPayloadHeader(
   if (!chain.executionBuilder) {
     throw Error("executionBuilder required");
   }
-  if (ForkSeq[fork] >= ForkSeq.capella) {
-    throw Error("executionBuilder capella api not implemented");
-  }
 
   const parentHashRes = await getExecutionPayloadParentHash(chain, state);
 
