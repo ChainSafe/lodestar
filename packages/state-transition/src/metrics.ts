@@ -1,4 +1,5 @@
 import {Epoch} from "@lodestar/types";
+import {isStateBalancesNodesPopulated, isStateValidatorsNodesPopulated} from "./cache/stateCache.js";
 import {CachedBeaconStateAllForks} from "./types.js";
 import {AttesterStatus} from "./util/attesterStatus.js";
 

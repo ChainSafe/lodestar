@@ -2,7 +2,7 @@ export * from "./stateTransition.js";
 export * from "./constants/index.js";
 export * from "./util/index.js";
 export * from "./signatureSets/index.js";
-export * from "./metrics.js";
+export {IBeaconStateTransitionMetrics} from "./metrics.js";
 
 export {
   CachedBeaconStatePhase0,
@@ -23,7 +23,13 @@ export {
 } from "./types.js";
 
 // Main state caches
-export {createCachedBeaconState, BeaconStateCache, isCachedBeaconState} from "./cache/stateCache.js";
+export {
+  createCachedBeaconState,
+  BeaconStateCache,
+  isCachedBeaconState,
+  isStateBalancesNodesPopulated,
+  isStateValidatorsNodesPopulated,
+} from "./cache/stateCache.js";
 export {EpochContext, EpochContextImmutableData, createEmptyEpochContextImmutableData} from "./cache/epochContext.js";
 export {EpochProcess, beforeProcessEpoch} from "./cache/epochProcess.js";
 
