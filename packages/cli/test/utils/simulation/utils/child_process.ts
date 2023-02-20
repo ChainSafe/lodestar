@@ -29,7 +29,6 @@ export const startChildProcess = async (
     void (async () => {
       console.log(`Starting childProcess: '${jobOptions.id}'`);
       console.log(jobOptions.cli.command, jobOptions.cli.args.join(" "));
-      console.log({...process.env, ...jobOptions.cli.env});
       const childProcess = spawn(jobOptions.cli.command, jobOptions.cli.args, {
         env: {...process.env, ...jobOptions.cli.env},
       });
