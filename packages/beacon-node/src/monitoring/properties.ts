@@ -15,9 +15,7 @@ interface StaticPropertyDefinition<T extends RecordValue> extends PropertyDefini
 
 interface DynamicPropertyDefinition<T extends RecordValue> extends PropertyDefinition {
   /** Value provider function */
-  provider: () => T | Promise<T>;
-  /** Only call provider function once and then use cached value */
-  cacheResult?: boolean;
+  provider: () => T;
 }
 
 interface MetricPropertyDefinition<T extends RecordValue> extends PropertyDefinition {
@@ -41,12 +39,18 @@ interface MetricPropertyDefinition<T extends RecordValue> extends PropertyDefini
   defaultValue: T;
 }
 
+/**
+ * Interface to be implemented by client stats properties
+ */
 export interface ClientStatsProperty<T extends RecordValue> {
   readonly definition: PropertyDefinition;
 
   getRecord(register: Registry): JsonRecord<T> | Promise<JsonRecord<T>>;
 }
 
+/**
+ * Static property that can be used to define hard-coded values
+ */
 export class StaticProperty<T extends RecordValue> implements ClientStatsProperty<T> {
   constructor(readonly definition: StaticPropertyDefinition<T>) {}
 
@@ -55,26 +59,20 @@ export class StaticProperty<T extends RecordValue> implements ClientStatsPropert
   }
 }
 
+/**
+ * Dynamic property that can be used to get value from a provider function
+ */
 export class DynamicProperty<T extends RecordValue> implements ClientStatsProperty<T> {
-  private cachedValue?: T;
-
   constructor(readonly definition: DynamicPropertyDefinition<T>) {}
 
-  async getRecord(): Promise<JsonRecord<T>> {
-    if (this.cachedValue != null) {
-      return {key: this.definition.jsonKey, value: this.cachedValue};
-    }
-
-    const value = await this.definition.provider();
-
-    if (this.definition.cacheResult) {
-      this.cachedValue = value;
-    }
-
-    return {key: this.definition.jsonKey, value};
+  getRecord(): JsonRecord<T> {
+    return {key: this.definition.jsonKey, value: this.definition.provider()};
   }
 }
 
+/**
+ * Metric property that can be used to get value from an existing prometheus metric
+ */
 export class MetricProperty<T extends RecordValue> implements ClientStatsProperty<T> {
   private cachedValue?: T;
 

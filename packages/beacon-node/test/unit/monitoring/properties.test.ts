@@ -20,31 +20,13 @@ describe("monitoring / properties", () => {
   });
 
   describe("DynamicProperty", () => {
-    it("should return a json record with the configured key and return value of provider", async () => {
+    it("should return a json record with the configured key and return value of provider", () => {
       const dynamicProperty = new DynamicProperty({jsonKey, provider: () => value});
 
-      const jsonRecord = await dynamicProperty.getRecord();
+      const jsonRecord = dynamicProperty.getRecord();
 
       expect(jsonRecord.key).to.equal(jsonKey);
       expect(jsonRecord.value).to.equal(value);
-    });
-
-    it("should return the same value on consecutive calls if cacheResult is set to true", async () => {
-      const initialValue = 1;
-      let updatedValue = initialValue;
-
-      const provider = (): number => {
-        const value = updatedValue;
-        updatedValue++;
-        return value;
-      };
-
-      const dynamicProperty = new DynamicProperty({jsonKey, provider, cacheResult: true});
-
-      // ensure consecutive calls still return initial provider value
-      expect((await dynamicProperty.getRecord()).value).to.equal(initialValue);
-      expect((await dynamicProperty.getRecord()).value).to.equal(initialValue);
-      expect((await dynamicProperty.getRecord()).value).to.equal(initialValue);
     });
   });
 

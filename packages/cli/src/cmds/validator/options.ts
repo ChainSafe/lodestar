@@ -18,7 +18,7 @@ export const validatorMetricsDefaultOptions = {
 };
 
 export const validatorMonitoringDefaultOptions = {
-  interval: 60_000,
+  interval: 62_000,
   initialDelay: 30_000,
   requestTimeout: 10_000,
   collectSystemStats: false,

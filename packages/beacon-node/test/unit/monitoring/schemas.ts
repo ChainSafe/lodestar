@@ -2,14 +2,14 @@
 
 export type ClientStatsSchema = {key: string; type: "string" | "number" | "boolean"}[];
 
-export const commonStatsSchema: ClientStatsSchema = [
+export const COMMON_STATS_SCHEMA: ClientStatsSchema = [
   {key: "version", type: "number"},
   {key: "timestamp", type: "number"},
   {key: "process", type: "string"},
 ];
 
-export const processStatsSchema: ClientStatsSchema = [
-  ...commonStatsSchema,
+export const PROCESS_STATS_SCHEMA: ClientStatsSchema = [
+  ...COMMON_STATS_SCHEMA,
   {key: "cpu_process_seconds_total", type: "number"},
   {key: "memory_process_bytes", type: "number"},
   {key: "client_name", type: "string"},
@@ -19,8 +19,8 @@ export const processStatsSchema: ClientStatsSchema = [
   {key: "sync_eth2_fallback_connected", type: "boolean"},
 ];
 
-export const beaconNodeStatsSchema: ClientStatsSchema = [
-  ...processStatsSchema,
+export const BEACON_NODE_STATS_SCHEMA: ClientStatsSchema = [
+  ...PROCESS_STATS_SCHEMA,
   {key: "disk_beaconchain_bytes_total", type: "number"},
   {key: "network_libp2p_bytes_total_receive", type: "number"},
   {key: "network_libp2p_bytes_total_transmit", type: "number"},
@@ -33,14 +33,14 @@ export const beaconNodeStatsSchema: ClientStatsSchema = [
   {key: "slasher_active", type: "boolean"},
 ];
 
-export const validatorStatsSchema: ClientStatsSchema = [
-  ...processStatsSchema,
+export const VALIDATOR_STATS_SCHEMA: ClientStatsSchema = [
+  ...PROCESS_STATS_SCHEMA,
   {key: "validator_total", type: "number"},
   {key: "validator_active", type: "number"},
 ];
 
-export const systemStatsSchema: ClientStatsSchema = [
-  ...commonStatsSchema,
+export const SYSTEM_STATS_SCHEMA: ClientStatsSchema = [
+  ...COMMON_STATS_SCHEMA,
   {key: "cpu_cores", type: "number"},
   {key: "cpu_threads", type: "number"},
   {key: "cpu_node_system_seconds_total", type: "number"},

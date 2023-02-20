@@ -200,13 +200,11 @@ function createSystemStats(): ClientStats {
     cpuCores: new DynamicProperty({
       jsonKey: "cpu_cores",
       provider: () => 0,
-      cacheResult: true,
       description: "Number of CPU cores available",
     }),
     cpuThreads: new DynamicProperty({
       jsonKey: "cpu_threads",
       provider: () => 0,
-      cacheResult: true,
       description: "Number of CPU threads available",
     }),
     cpuNodeSystemSecondsTotal: new DynamicProperty({
@@ -232,7 +230,6 @@ function createSystemStats(): ClientStats {
     memoryNodeBytesTotal: new DynamicProperty({
       jsonKey: "memory_node_bytes_total",
       provider: () => 0,
-      cacheResult: true,
       description: "Total amount of memory in bytes available",
     }),
     memoryNodeBytesFree: new DynamicProperty({
