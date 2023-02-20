@@ -298,7 +298,12 @@ export function getValidatorApi({
         attEpoch <= headEpoch
           ? headState
           : // Will advance the state to the correct next epoch if necessary
-            await chain.regen.getBlockSlotState(headBlockRootHex, slot, RegenCaller.produceAttestationData);
+            await chain.regen.getBlockSlotState(
+              headBlockRootHex,
+              slot,
+              {dontTransferCache: true},
+              RegenCaller.produceAttestationData
+            );
 
       return {
         data: {

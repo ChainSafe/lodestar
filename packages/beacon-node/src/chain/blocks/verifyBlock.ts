@@ -55,9 +55,11 @@ export async function verifyBlocksInEpoch(
 
   // TODO: Skip in process chain segment
   // Retrieve preState from cache (regen)
-  const preState0 = await this.regen.getPreState(block0.message, RegenCaller.processBlocksInEpoch).catch((e) => {
-    throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
-  });
+  const preState0 = await this.regen
+    .getPreState(block0.message, {dontTransferCache: false}, RegenCaller.processBlocksInEpoch)
+    .catch((e) => {
+      throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
+    });
 
   // Ensure the state is in the same epoch as block0
   if (block0Epoch !== computeEpochAtSlot(preState0.slot)) {

@@ -152,8 +152,8 @@ export function getCachedBeaconState<T extends BeaconStateAllForks>(
   // TreeViewDU.clone() creates a new object that does not have the attached cache
   const viewDUClone = cachedState.clone.bind(cachedState);
 
-  function clone(this: T & BeaconStateCache): T & BeaconStateCache {
-    const viewDUCloned = viewDUClone();
+  function clone(this: T & BeaconStateCache, dontTransferCache?: boolean): T & BeaconStateCache {
+    const viewDUCloned = viewDUClone(dontTransferCache);
 
     // Override `readonly` attribute in single place where `.clonedCount` is incremented
     (this as {clonedCount: number}).clonedCount++;
