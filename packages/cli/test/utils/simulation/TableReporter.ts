@@ -101,10 +101,10 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       eph: epochStr,
       slot: head0 ? head0.slot : "-",
       head: head0 ? (nodesHaveSameHead ? `${head0?.blockRoot.slice(0, 6)}..` : "different") : "-",
-      finzed: !arrayIsUnique(finalizedSlots) ? finalizedSlots[0] : finalizedSlots.join(","),
-      peers: !arrayIsUnique(peerCount) ? peerCount[0] : peerCount.join(","),
-      attCount: !arrayIsUnique(attestationCount) ? attestationCount[0] : "---",
-      incDelay: !arrayIsUnique(inclusionDelay) ? inclusionDelay[0].toFixed(2) : "---",
+      finzed: !arrayIsUnique(finalizedSlots) && finalizedSlots[0] ? finalizedSlots[0] : finalizedSlots.join(","),
+      peers: !arrayIsUnique(peerCount) && peerCount[0] ? peerCount[0] : peerCount.join(","),
+      attCount: !arrayIsUnique(attestationCount) && attestationCount[0] ? attestationCount[0] : "---",
+      incDelay: !arrayIsUnique(inclusionDelay) && inclusionDelay[0] ? inclusionDelay[0].toFixed(2) : "---",
       errors: errorCount,
     });
   }

@@ -73,14 +73,25 @@ export class Runner implements IRunner {
       });
     }
 
-    console.log({jobOptions});
+    if (jobOptions.length > 0) {
+      return {
+        id: jobOptions[0].id,
+        start: async () => {
+          for (const start of startSequence) await start();
+        },
+        stop: async () => {
+          for (const stop of stopSequence) await stop();
+        },
+      };
+    }
+
     return {
-      id: jobOptions[0].id,
+      id: "non-typed-job",
       start: async () => {
-        for (const start of startSequence) await start();
+        return Promise.resolve();
       },
       stop: async () => {
-        for (const stop of stopSequence) await stop();
+        return Promise.resolve();
       },
     };
   }
