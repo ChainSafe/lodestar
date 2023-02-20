@@ -17,7 +17,7 @@ import {
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 
-const genesisSlotsDelay = 20;
+const genesisSlotsDelay = 25;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
 // Make sure bellatrix started before TTD reach
@@ -56,9 +56,8 @@ const env = SimulationEnvironment.initWithDefaults(
   [
     {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32, mining: true},
     {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32, remote: true},
-    // {id: "node-3", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
-    {id: "node-4", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32},
-    {id: "node-5", cl: CLClient.Lighthouse, el: ELClient.Geth, keysCount: 32},
+    {id: "node-3", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32},
+    {id: "node-4", cl: CLClient.Lighthouse, el: ELClient.Geth, keysCount: 32},
   ]
 );
 
