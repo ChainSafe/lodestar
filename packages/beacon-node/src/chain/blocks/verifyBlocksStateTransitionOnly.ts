@@ -65,8 +65,12 @@ export async function verifyBlocksStateTransitionOnly(
       metrics
     );
 
+    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer();
+    const stateRoot = postState.hashTreeRoot();
+    hashTreeRootTimer?.();
+
     // Check state root matches
-    if (!byteArrayEquals(block.message.stateRoot, postState.hashTreeRoot())) {
+    if (!byteArrayEquals(block.message.stateRoot, stateRoot)) {
       throw new BlockError(block, {
         code: BlockErrorCode.INVALID_STATE_ROOT,
         root: postState.hashTreeRoot(),

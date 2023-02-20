@@ -442,7 +442,7 @@ export function createLodestarMetrics(
       help: "Time to call commit after process a single block in seconds",
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],
     }),
-    hashTreeRootTime: register.histogram({
+    stateHashTreeRootTime: register.histogram({
       name: "lodestar_stfn_hash_tree_root_seconds",
       help: "Time to compute the hash tree root of a post state in seconds",
       buckets: [0.005, 0.01, 0.02, 0.05, 0.1, 1],

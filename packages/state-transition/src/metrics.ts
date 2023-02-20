@@ -7,7 +7,7 @@ export interface IBeaconStateTransitionMetrics {
   epochTransitionCommitTime: IHistogram;
   processBlockTime: IHistogram;
   processBlockCommitTime: IHistogram;
-  hashTreeRootTime: IHistogram;
+  stateHashTreeRootTime: IHistogram;
   preStateBalancesNodesPopulatedMiss: IGauge<"source">;
   preStateValidatorsNodesPopulatedMiss: IGauge<"source">;
   preStateClone: IGauge<"source">;

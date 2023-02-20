@@ -95,7 +95,7 @@ export function stateTransition(
 
   // Verify state root
   if (verifyStateRoot) {
-    const hashTreeRootTimer = metrics?.hashTreeRootTime.startTimer();
+    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer();
     const stateRoot = postState.hashTreeRoot();
     hashTreeRootTimer?.();
 
