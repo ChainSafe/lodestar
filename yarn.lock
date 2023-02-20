@@ -579,10 +579,10 @@
     uint8arraylist "^2.3.2"
     uint8arrays "^4.0.2"
 
-"@chainsafe/persistent-merkle-tree@^0.4.2":
-  version "0.4.2"
-  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.4.2.tgz#4c9ee80cc57cd3be7208d98c40014ad38f36f7ff"
-  integrity sha512-lLO3ihKPngXLTus/L7WHKaw9PnNJWizlOF1H9NNzHP6Xvh82vzg9F2bzkXhYIFshMZ2gTCEz8tq6STe7r5NDfQ==
+"@chainsafe/persistent-merkle-tree@^0.5.0":
+  version "0.5.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.5.0.tgz#2b4a62c9489a5739dedd197250d8d2f5427e9f63"
+  integrity sha512-l0V1b5clxA3iwQLXP40zYjyZYospQLZXzBVIhhr9kDg/1qHZfzzHw0jj4VPBijfYCArZDlPkRi1wZaV2POKeuw==
   dependencies:
     "@chainsafe/as-sha256" "^0.3.1"
 
@@ -603,14 +603,13 @@
     buffer-from "^1.1.1"
     snappy "^6.3.5"
 
-"@chainsafe/ssz@^0.9.2":
-  version "0.9.2"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.9.2.tgz#6f2552db312217b911e34bcdef9057f8a3a108f2"
-  integrity sha512-r3bKiGMF7EZlsgXTyyzQbS+GJTj6MvTlY3Ms1byFZLL1H9Maht8muE2LkF3pS1zU9KY4tiJeQd+KABdhyfB9Ag==
+"@chainsafe/ssz@^0.10.1":
+  version "0.10.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.10.1.tgz#c05ec168a3c7de1e6b72eac170afbe497ffca329"
+  integrity sha512-IdDOblRmH/aYqSJknAjTuT2Y2FEctofyXvmFzbJZkQ/XgYWyFELI3IFR3P2T2VNxeAgl6QOqcVbe+cGRL7Mxpw==
   dependencies:
     "@chainsafe/as-sha256" "^0.3.1"
-    "@chainsafe/persistent-merkle-tree" "^0.4.2"
-    case "^1.6.3"
+    "@chainsafe/persistent-merkle-tree" "^0.5.0"
 
 "@chainsafe/threads@^1.10.0":
   version "1.10.0"
