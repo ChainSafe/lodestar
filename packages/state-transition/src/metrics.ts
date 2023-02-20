@@ -3,12 +3,20 @@ import {CachedBeaconStateAllForks} from "./types.js";
 import {AttesterStatus} from "./util/attesterStatus.js";
 
 export type BeaconStateTransitionMetrics = {
-  stfnEpochTransition: Histogram;
-  stfnProcessBlock: Histogram;
-  stfnBalancesNodesPopulatedMiss: Gauge<"source">;
-  stfnValidatorsNodesPopulatedMiss: Gauge<"source">;
-  stfnStateClone: Gauge<"source">;
-  stfnStateClonedCount: Histogram;
+  epochTransitionTime: Histogram;
+  epochTransitionCommitTime: Histogram;
+  processBlockTime: Histogram;
+  processBlockCommitTime: Histogram;
+  stateHashTreeRootTime: Histogram;
+  preStateBalancesNodesPopulatedMiss: Gauge<"source">;
+  preStateBalancesNodesPopulatedHit: Gauge<"source">;
+  preStateValidatorsNodesPopulatedMiss: Gauge<"source">;
+  preStateValidatorsNodesPopulatedHit: Gauge<"source">;
+  preStateClonedCount: Histogram;
+  postStateBalancesNodesPopulatedMiss: Gauge;
+  postStateBalancesNodesPopulatedHit: Gauge;
+  postStateValidatorsNodesPopulatedMiss: Gauge;
+  postStateValidatorsNodesPopulatedHit: Gauge;
   registerValidatorStatuses: (currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]) => void;
 };
 
@@ -33,17 +41,42 @@ export function onStateCloneMetrics(
   metrics: BeaconStateTransitionMetrics,
   source: "stateTransition" | "processSlots"
 ): void {
-  metrics.stfnStateClone.inc({source});
-  metrics.stfnStateClonedCount.observe(state.clonedCount);
+  metrics.preStateClonedCount.observe(state.clonedCount);
 
-  if (!state.balances["nodesPopulated"]) {
-    metrics.stfnBalancesNodesPopulatedMiss.inc({source});
+  if (isBalancesNodesPopulated(state)) {
+    metrics.preStateBalancesNodesPopulatedHit.inc({source});
+  } else {
+    metrics.preStateBalancesNodesPopulatedMiss.inc({source});
   }
 
-  // Given a CachedBeaconState, check if validators array internal cache is populated.
-  // This cache is populated during epoch transition, and should be preserved for performance.
-  // If the cache is missing too often, means that our clone strategy is not working well.
-  if (!state.validators["nodesPopulated"]) {
-    metrics.stfnValidatorsNodesPopulatedMiss.inc({source});
+  if (isValidatorsNodesPopulated(state)) {
+    metrics.preStateValidatorsNodesPopulatedHit.inc({source});
+  } else {
+    metrics.preStateValidatorsNodesPopulatedMiss.inc({source});
   }
+}
+
+export function onPostStateMetrics(postState: CachedBeaconStateAllForks, metrics: BeaconStateTransitionMetrics): void {
+  if (isBalancesNodesPopulated(postState)) {
+    metrics.postStateBalancesNodesPopulatedHit.inc();
+  } else {
+    metrics.postStateBalancesNodesPopulatedMiss.inc();
+  }
+
+  if (isValidatorsNodesPopulated(postState)) {
+    metrics.postStateValidatorsNodesPopulatedHit.inc();
+  } else {
+    metrics.postStateValidatorsNodesPopulatedMiss.inc();
+  }
+}
+
+// Given a CachedBeaconState, check if validators array internal cache is populated.
+// This cache is populated during epoch transition, and should be preserved for performance.
+// If the cache is missing too often, means that our clone strategy is not working well.
+function isValidatorsNodesPopulated(state: CachedBeaconStateAllForks): boolean {
+  return state.validators["nodesPopulated"] === true;
+}
+
+function isBalancesNodesPopulated(state: CachedBeaconStateAllForks): boolean {
+  return state.balances["nodesPopulated"] === true;
 }
