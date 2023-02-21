@@ -225,13 +225,12 @@ export class PeerDiscovery {
     ) {
       if (!this.cachedENRs.has(NIMBUS_PEER_ID)) {
         const enr = ENR.decodeTxt(NIMBUS_ENR);
-        void this.onDiscoveredENR(enr).then(() => {
-          const cachedEnr = this.cachedENRs.get(NIMBUS_ENR);
-          if (cachedEnr) {
-            void this.dialPeer(cachedEnr);
-            this.logger.info("Attempt to dial to Nimbus peer", {peerId: NIMBUS_PEER_ID});
-          }
-        });
+        void this.onDiscoveredENR(enr);
+        const cachedEnr = this.cachedENRs.get(NIMBUS_ENR);
+        if (cachedEnr) {
+          this.logger.info("Attempt to dial to Nimbus peer", {peerId: NIMBUS_PEER_ID});
+          void this.dialPeer(cachedEnr);
+        }
       }
     } else {
       this.logger.info("Already connected to Nimbus peer", {peerId: NIMBUS_PEER_ID});
