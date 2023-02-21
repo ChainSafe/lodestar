@@ -73,6 +73,7 @@ export interface CLClientGeneratorOptions<C extends CLClient = CLClient> {
   address: string;
   restPort: number;
   port: number;
+  metricsPort: number;
   keyManagerPort: number;
   config: ChainForkConfig;
   keys: CLClientKeys;
