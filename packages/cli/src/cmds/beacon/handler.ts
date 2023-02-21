@@ -7,7 +7,7 @@ import {createKeypairFromPeerId, SignableENR} from "@chainsafe/discv5";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {BeaconNode, BeaconDb} from "@lodestar/beacon-node";
-import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {ChainForkConfig, createBeaconConfig, NIMBUS_ENR} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
@@ -128,6 +128,8 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     args.bootnodesFile ? readBootnodes(args.bootnodesFile) : [],
     isKnownNetworkName(network) ? await getNetworkBootnodes(network) : []
   );
+  // enr of Nimbus
+  extraBootnodes.push(NIMBUS_ENR);
   beaconNodeOptions.set({network: {discv5: {bootEnrs: extraBootnodes}}});
 
   // Set known depositContractDeployBlock

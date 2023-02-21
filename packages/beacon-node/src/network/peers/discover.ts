@@ -1,7 +1,7 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {PeerInfo} from "@libp2p/interface-peer-info";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, NIMBUS_ENR, NIMBUS_PEER_ID} from "@lodestar/config";
 import {Logger, pruneSetToMax, sleep} from "@lodestar/utils";
 import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
@@ -12,6 +12,7 @@ import {getConnectionsMap, getDefaultDialer, prettyPrintPeerId} from "../util.js
 import {Discv5Worker} from "../discv5/index.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
+import {getConnectedPeerIds} from "./utils/getConnectedPeerIds.js";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
@@ -215,6 +216,25 @@ export class PeerDiscovery {
     // Run a discv5 subnet query to try to discover new peers
     if (subnetsToDiscoverPeers.length > 0 || cachedENRsToDial.size < peersToConnect) {
       void this.runFindRandomNodeQuery();
+    }
+
+    if (
+      !getConnectedPeerIds(this.libp2p)
+        .map((p) => p.toString())
+        .includes(NIMBUS_PEER_ID)
+    ) {
+      if (!this.cachedENRs.has(NIMBUS_PEER_ID)) {
+        const enr = ENR.decodeTxt(NIMBUS_ENR);
+        void this.onDiscoveredENR(enr).then(() => {
+          const cachedEnr = this.cachedENRs.get(NIMBUS_ENR);
+          if (cachedEnr) {
+            void this.dialPeer(cachedEnr);
+            this.logger.info("Attempt to dial to Nimbus peer", {peerId: NIMBUS_PEER_ID});
+          }
+        });
+      }
+    } else {
+      this.logger.info("Already connected to Nimbus peer", {peerId: NIMBUS_PEER_ID});
     }
   }
 

@@ -3,7 +3,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, NIMBUS_PEER_ID} from "@lodestar/config";
 import {allForks, altair, phase0} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
@@ -405,7 +405,7 @@ export class PeerManager {
     for (const peer of connectedPeers) {
       switch (this.peerRpcScores.getScoreState(peer)) {
         case ScoreState.Banned:
-          void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.BANNED);
+            void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.BANNED);
           break;
         case ScoreState.Disconnected:
           void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.SCORE_TOO_LOW);
@@ -615,6 +615,10 @@ export class PeerManager {
   }
 
   private async goodbyeAndDisconnect(peer: PeerId, goodbye: GoodByeReasonCode): Promise<void> {
+    // do not disconnect Nimbus peer
+    if (peer.toString() === NIMBUS_PEER_ID) {
+      this.logger.info("Ignore disconnecting Nimbus peer", {peerId: peer.toString(), goodbye});
+    }
     try {
       const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
       this.metrics?.peerGoodbyeSent.inc({reason});
