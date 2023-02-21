@@ -203,6 +203,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
 
   /** Capture metric for db size */
   private dbSizeMetric(): void {
+    const timer = this.metrics?.dbApproximateSizeTime.startTimer();
     const minKey = Buffer.from([0x00]);
     const maxKey = Buffer.from([0xff]);
 
@@ -212,7 +213,8 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
       })
       .catch((e) => {
         this.logger.debug("Error approximating db size", {}, e);
-      });
+      })
+      .finally(timer);
   }
 }
 
