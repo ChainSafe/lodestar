@@ -1,6 +1,6 @@
 import {Root} from "@lodestar/types";
 import {ApiError, getClient} from "@lodestar/api";
-import {fromHex} from "@lodestar/utils";
+import {fromHex, Logger} from "@lodestar/utils";
 import {genesisData, NetworkName} from "@lodestar/config/networks";
 import {SlashingProtection, MetaDataRepository} from "@lodestar/validator";
 import {DatabaseApiOptions, LevelDbController} from "@lodestar/db";
@@ -14,7 +14,8 @@ import {ISlashingProtectionArgs} from "./options.js";
  */
 export function getSlashingProtection(
   args: GlobalArgs,
-  network: string
+  network: string,
+  logger: Logger
 ): {slashingProtection: SlashingProtection; metadata: MetaDataRepository} {
   const validatorPaths = getValidatorPaths(args, network);
   const dbPath = validatorPaths.validatorsDbDir;
@@ -22,7 +23,7 @@ export function getSlashingProtection(
 
   const dbOpts: DatabaseApiOptions = {
     config,
-    controller: new LevelDbController({name: dbPath}, {}),
+    controller: new LevelDbController({name: dbPath}, {logger}),
   };
 
   return {

@@ -39,7 +39,7 @@ export async function getDevBeaconNode(
   const config = createChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
 
-  const db = new BeaconDb({config, controller: new LevelDbController({name: tmpDir.name}, {})});
+  const db = new BeaconDb({config, controller: new LevelDbController({name: tmpDir.name}, {logger})});
   await db.start();
 
   options = deepmerge(

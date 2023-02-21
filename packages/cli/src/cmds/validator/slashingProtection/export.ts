@@ -52,7 +52,7 @@ export const exportCmd: CliCommand<
     const formatVersion: InterchangeFormatVersion = {version: "4", format: "complete"};
     logger.info("Exporting the slashing protection logs", {...formatVersion, dbPath});
 
-    const {slashingProtection, metadata} = getSlashingProtection(args, network);
+    const {slashingProtection, metadata} = getSlashingProtection(args, network, logger);
 
     // When exporting validator DB should already have genesisValidatorsRoot persisted.
     // For legacy node and general fallback, fetch from:
