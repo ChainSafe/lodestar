@@ -39,7 +39,7 @@ export class ChildProcessRunner implements Runner<RunnerType.ChildProcess> {
             this.emitter.emit("starting");
             childProcesses.push(...(await startJobs(jobOptions)));
             // eslint-disable-next-line no-console
-            console.log(`Started "${id}"...`);
+            console.log(`Started "${id}" logs: ${jobOptions.map((opts) => opts.logs.stdoutFilePath).join(" ")}`);
             this.emitter.emit("started");
             resolve();
           } catch (err) {

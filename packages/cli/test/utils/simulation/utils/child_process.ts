@@ -90,13 +90,13 @@ export const startJobs = async (jobs: JobOptions[]): Promise<ChildProcessWithJob
   const childProcesses: ChildProcessWithJobOptions[] = [];
   for (const job of jobs) {
     if (job.bootstrap) {
-      console.log(`DockerRunner bootstraping '${job.id}'...`);
+      console.log(`ChildProcessRunner bootstraping '${job.id}'...`);
       await job.bootstrap();
-      console.log(`DockerRunner bootstraped '${job.id}'`);
+      console.log(`ChildProcessRunner bootstraped '${job.id}'`);
     }
-    console.log(`DockerRunner starting '${job.id}'...`);
+    console.log(`ChildProcessRunner starting '${job.id}'... logs: ${job.logs.stdoutFilePath}`);
     childProcesses.push({childProcess: await startChildProcess(job), jobOptions: job});
-    console.log(`DockerRunner started '${job.id}'`);
+    console.log(`ChildProcessRunner started '${job.id}'`);
 
     if (job.children) {
       childProcesses.push(...(await startJobs(job.children)));
