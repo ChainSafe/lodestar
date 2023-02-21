@@ -1,11 +1,13 @@
+import fs from "node:fs";
 import path from "node:path";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {Registry} from "prom-client";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {createKeypairFromPeerId, SignableENR} from "@chainsafe/discv5";
-import {ErrorAborted} from "@lodestar/utils";
+import {ErrorAborted, Logger} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {BeaconNode, BeaconDb} from "@lodestar/beacon-node";
-import {createBeaconConfig} from "@lodestar/config";
+import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
@@ -23,7 +25,7 @@ import {initBeaconState} from "./initBeaconState.js";
  * Runs a beacon node.
  */
 export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
-  const {config, options, beaconPaths, network, version, commit, peerId} = await beaconHandlerInit(args);
+  const {config, options, beaconPaths, network, version, commit, peerId, logger} = await beaconHandlerInit(args);
 
   // initialize directories
   mkdir(beaconPaths.dataDir);
@@ -31,16 +33,6 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   mkdir(beaconPaths.dbDir);
 
   const abortController = new AbortController();
-  const {logger, logParams} = getCliLogger(
-    args,
-    {defaultLogFilepath: path.join(beaconPaths.dataDir, "beacon.log")},
-    config
-  );
-  try {
-    cleanOldLogFiles(logParams.filename, logParams.rotateMaxFiles);
-  } catch (e) {
-    logger.debug("Not able to delete log files", logParams, e as Error);
-  }
 
   logger.info("Lodestar", {network, version, commit});
   // Callback for beacon to request forced exit, for e.g. in case of irrecoverable
@@ -144,17 +136,8 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     beaconNodeOptions.set({eth1: {depositContractDeployBlock}});
   }
 
-  // Create new PeerId everytime by default, unless peerIdFile is provided
-  const peerId = args.peerIdFile ? await readPeerId(args.peerIdFile) : await createSecp256k1PeerId();
-  const enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
-  overwriteEnrWithCliArgs(enr, args);
-
-  // Persist ENR and PeerId in beaconDir fixed paths for debugging
-  const pIdPath = path.join(beaconPaths.beaconDir, "peer_id.json");
-  const enrPath = path.join(beaconPaths.beaconDir, "enr");
-  writeFile600Perm(pIdPath, exportToJSON(peerId));
-  writeFile600Perm(enrPath, enr.encodeTxt());
-
+  const logger = initLogger(args, beaconPaths.dataDir, config);
+  const {peerId, enr} = await initPeerIdAndEnr(args, beaconPaths.beaconDir, logger);
   // Inject ENR to beacon options
   beaconNodeOptions.set({network: {discv5: {enr, enrUpdate: !enr.ip && !enr.ip6}}});
   // Add simple version string for libp2p agent version
@@ -163,7 +146,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();
 
-  return {config, options, beaconPaths, network, version, commit, peerId};
+  return {config, options, beaconPaths, network, version, commit, peerId, logger};
 }
 
 export function overwriteEnrWithCliArgs(enr: SignableENR, args: BeaconArgs): void {
@@ -175,4 +158,60 @@ export function overwriteEnrWithCliArgs(enr: SignableENR, args: BeaconArgs): voi
   if (args["enr.ip6"] != null) enr.ip6 = args["enr.ip6"];
   if (args["enr.tcp6"] != null) enr.tcp6 = args["enr.tcp6"];
   if (args["enr.udp6"] != null) enr.udp6 = args["enr.udp6"];
+}
+
+export async function initPeerIdAndEnr(
+  args: BeaconArgs & GlobalArgs,
+  beaconDir: string,
+  logger: Logger
+): Promise<{peerId: PeerId; enr: SignableENR}> {
+  // Create new PeerId everytime by default, unless peerIdFile is provided
+  const enrFilePath = path.join(beaconDir, "enr");
+  const {peerIdFile} = args;
+  let peerId: PeerId | undefined;
+  let enr: SignableENR | undefined;
+
+  let usePeerIdFile = false;
+  try {
+    if (peerIdFile) {
+      peerId = await readPeerId(peerIdFile);
+      enr = SignableENR.decodeTxt(fs.readFileSync(enrFilePath, "utf-8"), createKeypairFromPeerId(peerId));
+      if (!peerId.equals(await enr.peerId())) {
+        throw Error(`Peer id in ${enrFilePath} is not the same to ${peerIdFile}`);
+      }
+      usePeerIdFile = true;
+      logger.verbose("Successfully load peerId and enr file", {peerId: peerId.toString(), peerIdFile, enrFilePath});
+    }
+  } catch (e) {
+    logger.debug("Not able to use existing peer id and enr file", {peerIdFile, enrFilePath}, e as Error);
+  }
+
+  if (!usePeerIdFile) {
+    peerId = await createSecp256k1PeerId();
+    enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
+  }
+
+  // should not happen
+  if (!peerId || !enr) {
+    throw Error("Not able to create peerId and Enr");
+  }
+
+  overwriteEnrWithCliArgs(enr, args);
+
+  // Persist ENR and PeerId in beaconDir fixed paths for debugging
+  const pIdPath = path.join(beaconDir, "peer_id.json");
+  writeFile600Perm(pIdPath, exportToJSON(peerId));
+  writeFile600Perm(enrFilePath, enr.encodeTxt());
+  return {peerId, enr};
+}
+
+export function initLogger(args: BeaconArgs, dataDir: string, config: ChainForkConfig): Logger {
+  const {logger, logParams} = getCliLogger(args, {defaultLogFilepath: path.join(dataDir, "beacon.log")}, config);
+  try {
+    cleanOldLogFiles(logParams.filename, logParams.rotateMaxFiles);
+  } catch (e) {
+    logger.debug("Not able to delete log files", logParams, e as Error);
+  }
+
+  return logger;
 }
