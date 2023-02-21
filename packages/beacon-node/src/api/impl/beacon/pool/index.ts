@@ -10,6 +10,7 @@ import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCom
 import {ApiModules} from "../../types.js";
 import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors/index.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/gossip/handlers/index.js";
+import {isErr} from "../../../../util/err.js";
 
 export function getBeaconPoolApi({
   chain,
@@ -51,34 +52,32 @@ export function getBeaconPoolApi({
 
       await Promise.all(
         attestations.map(async (attestation, i) => {
-          try {
-            // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-            const validateFn = () => validateGossipAttestation(chain, attestation, null);
-            const {slot, beaconBlockRoot} = attestation.data;
-            // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
-            // and the block hasn't been in our forkchoice since we haven't seen / processing that block
-            // see https://github.com/ChainSafe/lodestar/issues/5098
-            const {indexedAttestation, subnet} = await validateGossipFnRetryUnknownRoot(
-              validateFn,
-              chain,
-              slot,
-              beaconBlockRoot
-            );
+          // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+          const validateFn = () => validateGossipAttestation(chain, [{attestation, subnet: null}]);
+          const {slot, beaconBlockRoot} = attestation.data;
+          // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
+          // and the block hasn't been in our forkchoice since we haven't seen / processing that block
+          // see https://github.com/ChainSafe/lodestar/issues/5098
+          const [result] = await validateGossipFnRetryUnknownRoot(validateFn, chain, slot, beaconBlockRoot);
 
+          if (isErr(result)) {
+            // TODO: Drop the conversion to Error
+            const err = new AttestationError(result.error.action, result.error);
+            errors.push(err);
+            logger.error(
+              `Error on submitPoolAttestations [${i}]`,
+              {slot: attestation.data.slot, index: attestation.data.index},
+              err
+            );
+            if (result.error.action === GossipAction.REJECT) {
+              chain.persistInvalidSszValue(ssz.phase0.Attestation, attestation, "api_reject");
+            }
+          } else {
+            const {indexedAttestation, subnet} = result;
             const insertOutcome = chain.attestationPool.add(attestation);
             const sentPeers = await network.gossip.publishBeaconAttestation(attestation, subnet);
             metrics?.submitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
             metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
-          } catch (e) {
-            errors.push(e as Error);
-            logger.error(
-              `Error on submitPoolAttestations [${i}]`,
-              {slot: attestation.data.slot, index: attestation.data.index},
-              e as Error
-            );
-            if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-              chain.persistInvalidSszValue(ssz.phase0.Attestation, attestation, "api_reject");
-            }
           }
         })
       );

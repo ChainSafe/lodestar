@@ -38,6 +38,10 @@ export class JobItemQueue<Args extends any[], R> {
     }
   }
 
+  get jobLen(): number {
+    return this.jobs.length;
+  }
+
   push(...args: Args): Promise<R> {
     if (this.opts.signal.aborted) {
       throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});

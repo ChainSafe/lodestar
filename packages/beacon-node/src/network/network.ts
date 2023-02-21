@@ -35,6 +35,7 @@ import {PeersData} from "./peers/peersData.js";
 import {getConnectionsMap, isPublishToZeroPeersError} from "./util.js";
 import {Discv5Worker} from "./discv5/index.js";
 import {createNodeJsLibp2p} from "./nodejs/util.js";
+import {NetworkProcessor} from "./processor/index.js";
 
 // How many changes to batch cleanup
 const CACHED_BLS_BATCH_CLEANUP_LIMIT = 10;
@@ -48,6 +49,7 @@ type NetworkModules = {
   signal: AbortSignal;
   peersData: PeersData;
   networkEventBus: NetworkEventBus;
+  networkProcessor: NetworkProcessor;
   metadata: MetadataController;
   peerRpcScores: PeerRpcScoreStore;
   reqResp: ReqRespBeaconNode;
@@ -82,6 +84,7 @@ export class Network implements INetwork {
   private readonly opts: NetworkOptions;
   private readonly peersData: PeersData;
 
+  private readonly networkProcessor: NetworkProcessor;
   private readonly peerManager: PeerManager;
   private readonly libp2p: Libp2p;
   private readonly logger: Logger;
@@ -104,6 +107,7 @@ export class Network implements INetwork {
       signal,
       peersData,
       networkEventBus,
+      networkProcessor,
       metadata,
       peerRpcScores,
       reqResp,
@@ -121,6 +125,7 @@ export class Network implements INetwork {
     this.signal = signal;
     this.peersData = peersData;
     this.events = networkEventBus;
+    this.networkProcessor = networkProcessor;
     this.metadata = metadata;
     this.peerRpcScores = peerRpcScores;
     this.reqResp = reqResp;
@@ -204,6 +209,7 @@ export class Network implements INetwork {
         currentEpoch: clock.currentEpoch,
       },
       peersData,
+      events: networkEventBus,
     });
 
     const syncnetsService = new SyncnetsService(config, chain, gossip, metadata, logger, metrics, opts);
@@ -225,6 +231,15 @@ export class Network implements INetwork {
       },
       opts
     );
+
+    const networkProcessor = new NetworkProcessor({
+      attnetsService,
+      chain,
+      logger,
+      metrics,
+      options: opts,
+      events: networkEventBus,
+    });
 
     await libp2p.start();
 
@@ -258,6 +273,7 @@ export class Network implements INetwork {
       signal,
       peersData,
       networkEventBus,
+      networkProcessor,
       metadata,
       peerRpcScores,
       reqResp,

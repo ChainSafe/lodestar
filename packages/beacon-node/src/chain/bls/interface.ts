@@ -43,4 +43,6 @@ export interface IBlsVerifier {
 
   /** For multithread pool awaits terminating all workers */
   close(): Promise<void>;
+
+  canAcceptWork(): boolean;
 }

@@ -34,7 +34,7 @@ import {BeaconClock, LocalClock} from "./clock/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
 import {IChainOptions} from "./options.js";
-import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
+import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
 import {computeAnchorCheckpoint} from "./initState.js";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls/index.js";
@@ -91,7 +91,7 @@ export class BeaconChain implements IBeaconChain {
   readonly emitter: ChainEventEmitter;
   readonly stateCache: StateContextCache;
   readonly checkpointStateCache: CheckpointStateCache;
-  readonly regen: IStateRegenerator;
+  readonly regen: QueuedStateRegenerator;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;
 
@@ -291,6 +291,14 @@ export class BeaconChain implements IBeaconChain {
     this.stateCache.clear();
     this.checkpointStateCache.clear();
     await this.bls.close();
+  }
+
+  regenCanAcceptWork(): boolean {
+    return this.regen.canAcceptWork();
+  }
+
+  blsThreadPoolCanAcceptWork(): boolean {
+    return this.bls.canAcceptWork();
   }
 
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean {

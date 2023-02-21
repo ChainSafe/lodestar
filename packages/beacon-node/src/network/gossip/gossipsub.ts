@@ -1,3 +1,5 @@
+import {PeerId} from "@libp2p/interface-peer-id";
+import {TopicValidatorResult} from "@libp2p/interface-pubsub";
 import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
@@ -13,6 +15,7 @@ import {Eth2Context} from "../../chain/index.js";
 import {PeersData} from "../peers/peersData.js";
 import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
+import {NetworkEventBus, NetworkEvent} from "../events.js";
 import {Libp2p} from "../interface.js";
 import {
   GossipJobQueues,
@@ -50,6 +53,7 @@ export type Eth2GossipsubModules = {
   eth2Context: Eth2Context;
   gossipHandlers: GossipHandlers;
   peersData: PeersData;
+  events: NetworkEventBus;
 };
 
 export type Eth2GossipsubOpts = {
@@ -79,6 +83,7 @@ export class Eth2Gossipsub extends GossipSub {
   private readonly config: BeaconConfig;
   private readonly logger: Logger;
   private readonly peersData: PeersData;
+  private readonly events: NetworkEventBus;
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
@@ -90,7 +95,7 @@ export class Eth2Gossipsub extends GossipSub {
     const gossipTopicCache = new GossipTopicCache(modules.config);
 
     const scoreParams = computeGossipPeerScoreParams(modules);
-    const {config, logger, metrics, signal, gossipHandlers, peersData} = modules;
+    const {config, logger, metrics, signal, gossipHandlers, peersData, events} = modules;
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
@@ -135,6 +140,7 @@ export class Eth2Gossipsub extends GossipSub {
     this.config = config;
     this.logger = logger;
     this.peersData = peersData;
+    this.events = events;
     this.gossipTopicCache = gossipTopicCache;
 
     // Note: We use the validator functions as handlers. No handler will be registered to gossipsub.
@@ -154,6 +160,7 @@ export class Eth2Gossipsub extends GossipSub {
     }
 
     this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
+    this.events.on(NetworkEvent.gossipMessageValidationResult, this.onValidationResult.bind(this));
 
     // Having access to this data is CRUCIAL for debugging. While this is a massive log, it must not be deleted.
     // Scoring issues require this dump + current peer score stats to re-calculate scores.
@@ -397,14 +404,28 @@ export class Eth2Gossipsub extends GossipSub {
     // Get seenTimestamp before adding the message to the queue or add async delays
     const seenTimestampSec = Date.now() / 1000;
 
-    // Puts object in queue, validates, then processes
-    this.validatorFnsByType[topic.type](topic, msg, propagationSource.toString(), seenTimestampSec)
-      .then((acceptance) => {
-        this.reportMessageValidationResult(msgId, propagationSource, acceptance);
-      })
-      .catch((e) => {
-        this.logger.error("Error onGossipsubMessage", {}, e);
+    if (topic.type === GossipType.beacon_attestation) {
+      this.events.emit(NetworkEvent.pendingGossipsubMessage, {
+        topic,
+        msg,
+        msgId,
+        propagationSource,
+        seenTimestampSec,
       });
+    } else {
+      // Puts object in queue, validates, then processes
+      this.validatorFnsByType[topic.type](topic, msg, propagationSource.toString(), seenTimestampSec)
+        .then((acceptance) => {
+          this.reportMessageValidationResult(msgId, propagationSource, acceptance);
+        })
+        .catch((e) => {
+          this.logger.error("Error onGossipsubMessage", {}, e);
+        });
+    }
+  }
+
+  private onValidationResult(msgId: string, propagationSource: PeerId, acceptance: TopicValidatorResult): void {
+    this.reportMessageValidationResult(msgId, propagationSource, acceptance);
   }
 }
 

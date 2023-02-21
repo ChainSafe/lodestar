@@ -10,6 +10,8 @@ import {StateRegenerator, RegenModules} from "./regen.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 
 const REGEN_QUEUE_MAX_LEN = 256;
+// TODO: Should this constant be lower than above? 256 feels high
+const REGEN_CAN_ACCEPT_WORK_THRESHOLD = 16;
 
 type QueuedStateRegeneratorModules = RegenModules & {
   signal: AbortSignal;
@@ -44,6 +46,10 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.stateCache = modules.stateCache;
     this.checkpointStateCache = modules.checkpointStateCache;
     this.metrics = modules.metrics;
+  }
+
+  canAcceptWork(): boolean {
+    return this.jobQueue.jobLen < REGEN_CAN_ACCEPT_WORK_THRESHOLD;
   }
 
   /**

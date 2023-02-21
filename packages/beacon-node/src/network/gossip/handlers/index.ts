@@ -20,7 +20,6 @@ import {
 import {GossipHandlers, GossipType} from "../interface.js";
 import {
   validateGossipAggregateAndProof,
-  validateGossipAttestation,
   validateGossipAttesterSlashing,
   validateGossipBlock,
   validateGossipProposerSlashing,
@@ -36,7 +35,6 @@ import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lig
 import {validateGossipBlobsSidecar} from "../../../chain/validation/blobsSidecar.js";
 import {BlockInput, getBlockInput} from "../../../chain/blocks/types.js";
 import {AttnetsService} from "../../subnets/attnetsService.js";
-import {isErr} from "../../../util/err.js";
 
 /**
  * Gossip handler options as part of network options
@@ -53,7 +51,7 @@ export const defaultGossipHandlerOpts = {
   dontSendGossipAttestationsToForkchoice: false,
 };
 
-type ValidatorFnsModules = {
+export type ValidatorFnsModules = {
   attnetsService: AttnetsService;
   chain: IBeaconChain;
   config: BeaconConfig;
@@ -80,7 +78,7 @@ const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
  * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
-  const {attnetsService, chain, config, metrics, networkEventBus, peerRpcScores, logger} = modules;
+  const {chain, config, metrics, networkEventBus, peerRpcScores, logger} = modules;
 
   async function validateBeaconBlock(
     blockInput: BlockInput,
@@ -234,56 +232,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec) => {
-      let validationResult: {indexedAttestation: phase0.IndexedAttestation; subnet: number};
-      try {
-        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        const validateFn = () => validateGossipAttestation(chain, attestation, subnet);
-        const {slot, beaconBlockRoot} = attestation.data;
-        // If an attestation refers to a block root that's not known, it will wait for 1 slot max
-        // See https://github.com/ChainSafe/lodestar/pull/3564 for reasoning and results
-        // Waiting here requires minimal code and automatically affects attestation, and aggregate validation
-        // both from gossip and the API. I also prevents having to catch and re-throw in multiple places.
-        validationResult = await validateGossipFnRetryUnknownRoot(validateFn, chain, slot, beaconBlockRoot);
-        // const validationResult = await validateGossipAttestationRetryUnknownRoot(chain, attestation, subnet);
-        // if (isErr(validationResult)) {
-        //   if (validationResult.error.action === GossipAction.REJECT) {
-        //     //
-        //   }
-        // }
-      } catch (e) {
-        if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszValue(ssz.phase0.Attestation, attestation, "gossip_reject");
-        }
-        return validationResult.error;
-      }
-
-      // Handler
-      const {indexedAttestation} = validationResult;
-      metrics?.registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation);
-
-      // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
-      // but don't import them, to save CPU and RAM
-      if (!attnetsService.shouldProcess(subnet, attestation.data.slot)) {
-        return;
-      }
-
-      try {
-        const insertOutcome = chain.attestationPool.add(attestation);
-        metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
-      }
-
-      if (!options.dontSendGossipAttestationsToForkchoice) {
-        try {
-          chain.forkChoice.onAttestation(indexedAttestation);
-        } catch (e) {
-          logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
-        }
-      }
-
-      return;
+    [GossipType.beacon_attestation]: async () => {
+      throw Error("attestations processed in worker");
     },
 
     [GossipType.attester_slashing]: async (attesterSlashing) => {
