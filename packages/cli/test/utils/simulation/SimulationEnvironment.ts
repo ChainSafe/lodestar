@@ -12,6 +12,7 @@ import {generateLodestarBeaconNode} from "./cl_clients/lodestar.js";
 import {
   BN_P2P_BASE_PORT,
   BN_REST_BASE_PORT,
+  BN_METRICS_BASE_PORT,
   CLIQUE_SEALING_PERIOD,
   EL_ENGINE_BASE_PORT,
   EL_ETH_BASE_PORT,
@@ -308,6 +309,7 @@ export class SimulationEnvironment {
           genesisStateFilePath: this.genesisStatePath,
           restPort: BN_REST_BASE_PORT + this.nodePairCount + 1,
           port: BN_P2P_BASE_PORT + this.nodePairCount + 1,
+          metricsPort: BN_METRICS_BASE_PORT + this.nodePairCount,
           keyManagerPort: KEY_MANAGER_BASE_PORT + this.nodePairCount + 1,
           config: this.forkConfig,
           address: "127.0.0.1",

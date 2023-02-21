@@ -9,6 +9,7 @@ import {fileURLToPath} from "node:url";
 export const FAR_FUTURE_EPOCH = 10 ** 12;
 export const BN_P2P_BASE_PORT = 4000;
 export const BN_REST_BASE_PORT = 5000;
+export const BN_METRICS_BASE_PORT = 8008;
 export const KEY_MANAGER_BASE_PORT = 6000;
 export const EXTERNAL_SIGNER_BASE_PORT = 7000;
 export const EL_ETH_BASE_PORT = 8000;
