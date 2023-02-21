@@ -4,12 +4,13 @@ import {IForkChoice} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RootHex, Slot} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
-import {GossipTopic} from "../gossip/interface.js";
+import {GossipTopic, GossipType, metricsTopicGossipAttestationUnknown} from "../gossip/interface.js";
 import {
   getTargetFromAttestationSerialized,
   getBlockRootFromAttestationSerialized,
   getSlotFromAttestationSerialized,
 } from "../../util/sszBytes.js";
+import {Metrics} from "../../metrics/metrics.js";
 
 type BlockRootHex = RootHex;
 type TargetHex = RootHex;
@@ -28,11 +29,13 @@ export type PendingGossipsubMessage = {
   // TODO: Refactor into accepting string (requires gossipsub changes) for easier multi-threading
   propagationSource: PeerId;
   seenTimestampSec: number;
+  startProcessUnixSec: number | null;
 };
 
-export enum AttestationProcessorStatus {
-  available,
-  full,
+export enum QueueAddStatus {
+  accepted,
+  tooOld,
+  queueFull,
 }
 
 const ATTESTATION_BATCH_SIZE = 128;
@@ -48,9 +51,21 @@ export class GossipsubAttestationQueue {
     ATTESTATION_BATCH_SIZE
   );
 
-  constructor(private readonly forkChoice: Pick<IForkChoice, "getBlockHex">, private currentSlot: Slot) {}
+  constructor(
+    private readonly forkChoice: Pick<IForkChoice, "getBlockHex">,
+    private readonly metrics: Metrics | null,
+    private currentSlot: Slot
+  ) {}
 
-  onAttestation(data: PendingGossipsubMessage): void {
+  get unknownBlockRootSize(): number {
+    return this.unknownBlockRootQueuesBySlot.size;
+  }
+
+  get knownBlockRootSize(): number {
+    return this.knownBlockRootQueuesBySlot.size;
+  }
+
+  onAttestation(data: PendingGossipsubMessage): QueueAddStatus {
     const blockRootHex = getBlockRootFromAttestationSerialized(data.msg.data);
     const attestationSlot = getSlotFromAttestationSerialized(data.msg.data);
 
@@ -59,27 +74,29 @@ export class GossipsubAttestationQueue {
     if (!block) {
       // Instead of pruning to max, prevent adding more attestations beyond max
       if (this.unknownBlockRootQueuesBySlot.size > MAX_ITEMS_CACHE_UNKNOWN_BLOCK) {
-        throw Error("queue full");
+        this.metrics?.gossipValidationQueueDroppedJobs.inc({topic: metricsTopicGossipAttestationUnknown});
+        return QueueAddStatus.queueFull;
       }
 
       if (attestationSlot < this.currentSlot - MAX_SLOTS_CACHE_UNKNOWN_BLOCK) {
         // TODO: Should discard old attestations too?
-        throw Error("IGNORE too old");
+        return QueueAddStatus.tooOld;
       }
 
       // Should prune here too? Or maybe inside the data structures?
 
       this.unknownBlockRootQueuesBySlot.add(data, attestationSlot, blockRootHex);
-      return;
+      return QueueAddStatus.accepted;
     }
 
     // Discard old attestations immediatelly
     if (attestationSlot < this.currentSlot - MAX_SLOTS_CACHE_KNOWN_BLOCK) {
-      throw Error("IGNORE too old");
+      return QueueAddStatus.tooOld;
     }
 
     // Add attestations such that there's not a batch bigger than ATTESTATION_BATCH_SIZE
     this.addAttestationKnownBlock(data, attestationSlot);
+    return QueueAddStatus.accepted;
   }
 
   onImportedBlock(blockRoot: BlockRootHex): void {
@@ -134,6 +151,8 @@ export class GossipsubAttestationQueue {
     const target = getTargetFromAttestationSerialized(item.msg.data);
     this.knownBlockRootQueuesBySlot.add(item, slot, target);
 
+    const sizeBefore = this.knownBlockRootQueuesBySlot.size;
+
     // Always accept new attestations, but prune oldest by batches
     if (this.knownBlockRootQueuesBySlot.size > MAX_ITEMS_CACHE_KNOWN_BLOCK) {
       // Prune known block attestations, from oldest slot first
@@ -142,6 +161,11 @@ export class GossipsubAttestationQueue {
           // Drop
 
           if (this.knownBlockRootQueuesBySlot.size <= MAX_ITEMS_CACHE_KNOWN_BLOCK) {
+            this.metrics?.gossipValidationQueueDroppedJobs.inc(
+              {topic: GossipType.beacon_attestation},
+              sizeBefore - this.knownBlockRootQueuesBySlot.size
+            );
+
             return;
           }
         }

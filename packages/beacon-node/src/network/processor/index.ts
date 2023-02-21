@@ -3,8 +3,9 @@ import {Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/interface.js";
 import {ChainEvent} from "../../chain/emitter.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
-import {GossipType} from "../gossip/interface.js";
+import {GossipType, metricsTopicGossipAttestationUnknown} from "../gossip/interface.js";
 import {GossipsubAttestationQueue, PendingGossipsubMessage} from "./gossipAttestationQueue.js";
 import {NetworkWorker, NetworkWorkerModules} from "./worker.js";
 
@@ -12,6 +13,7 @@ export type NetworkProcessorModules = NetworkWorkerModules & {
   chain: IBeaconChain;
   events: NetworkEventBus;
   logger: Logger;
+  metrics: Metrics | null;
 };
 
 /**
@@ -40,16 +42,29 @@ export class NetworkProcessor {
   private readonly logger: Logger;
 
   constructor(modules: NetworkProcessorModules) {
-    const {chain, events, logger} = modules;
+    const {chain, events, logger, metrics} = modules;
     this.logger = logger;
     this.worker = new NetworkWorker(modules);
 
-    this.gossipsubAttestationQueue = new GossipsubAttestationQueue(chain.forkChoice, chain.clock.currentSlot);
+    this.gossipsubAttestationQueue = new GossipsubAttestationQueue(chain.forkChoice, metrics, chain.clock.currentSlot);
 
     events.on(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage.bind(this));
 
     chain.emitter.on(routes.events.EventType.block, this.onImportedBlock.bind(this));
     chain.emitter.on(ChainEvent.clockSlot, this.onClockSlot.bind(this));
+
+    if (metrics) {
+      metrics.gossipValidationQueueLength.addCollect(() => {
+        metrics.gossipValidationQueueLength.set(
+          {topic: GossipType.beacon_attestation},
+          this.gossipsubAttestationQueue.knownBlockRootSize
+        );
+        metrics.gossipValidationQueueLength.set(
+          {topic: metricsTopicGossipAttestationUnknown},
+          this.gossipsubAttestationQueue.unknownBlockRootSize
+        );
+      });
+    }
 
     // TODO: Pull new work when available
     // this.bls.onAvailable(() => this.executeWork());

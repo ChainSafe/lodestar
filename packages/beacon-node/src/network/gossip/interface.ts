@@ -27,6 +27,8 @@ export enum GossipType {
   bls_to_execution_change = "bls_to_execution_change",
 }
 
+export const metricsTopicGossipAttestationUnknown = `${GossipType.beacon_attestation}_unknown_block`;
+
 export enum GossipEncoding {
   ssz_snappy = "ssz_snappy",
 }

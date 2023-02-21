@@ -411,6 +411,7 @@ export class Eth2Gossipsub extends GossipSub {
         msgId,
         propagationSource,
         seenTimestampSec,
+        startProcessUnixSec: null,
       });
     } else {
       // Puts object in queue, validates, then processes
