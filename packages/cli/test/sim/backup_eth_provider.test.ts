@@ -8,6 +8,8 @@ import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.j
 import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js";
 
+const replaceIpFromUrl = (url: string, ip: string): string => url.replace(/(http:\/\/)(.*)(:)/, `$1${ip}$3`);
+
 const genesisSlotsDelay = 20;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
@@ -57,7 +59,9 @@ env.tracker.register({
 // Create node2 with additional engine url pointing to node1
 const node2 = env.createNodePair({
   id: "node-2",
-  cl: {type: CLClient.Lodestar, options: {engineUrls: [env.nodes[0].el.engineRpcUrl]}},
+  // As the Lodestar running on host and the geth running in docker container
+  // we have to replace the IP with the local ip to connect to the geth
+  cl: {type: CLClient.Lodestar, options: {engineUrls: [replaceIpFromUrl(env.nodes[0].el.engineRpcUrl, "127.0.0.1")]}},
   el: ELClient.Geth,
   keysCount: 32,
 });
@@ -65,7 +69,9 @@ const node2 = env.createNodePair({
 // Create node3 with additional engine url pointing to node1
 const node3 = env.createNodePair({
   id: "node-3",
-  cl: {type: CLClient.Lodestar, options: {engineUrls: [env.nodes[0].el.engineRpcUrl]}},
+  // As the Lodestar running on host and the geth running in docker container
+  // we have to replace the IP with the local ip to connect to the geth
+  cl: {type: CLClient.Lodestar, options: {engineUrls: [replaceIpFromUrl(env.nodes[0].el.engineRpcUrl, "127.0.0.1")]}},
   el: ELClient.Geth,
   keysCount: 0,
 });
