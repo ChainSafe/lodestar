@@ -51,7 +51,7 @@ export const importCmd: CliCommand<
 
     logger.info("Importing the slashing protection logs", {dbPath});
 
-    const {slashingProtection, metadata} = getSlashingProtection(args, network);
+    const {slashingProtection, metadata} = getSlashingProtection(args, network, logger);
 
     // Fetch genesisValidatorsRoot from:
     // - existing cached in validator DB

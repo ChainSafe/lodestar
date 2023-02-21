@@ -1,5 +1,6 @@
 import {Level} from "level";
 import type {ClassicLevel} from "classic-level";
+import {Logger} from "@lodestar/utils";
 import {DbReqOpts, DatabaseController, DatabaseOptions, FilterOptions, KeyValue} from "./interface.js";
 import {LevelDbControllerMetrics} from "./metrics.js";
 
@@ -15,6 +16,7 @@ export interface LevelDBOptions extends DatabaseOptions {
 }
 
 export type LevelDbControllerModules = {
+  logger: Logger;
   metrics?: LevelDbControllerMetrics | null;
 };
 
@@ -31,11 +33,13 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
   private db: Level<Uint8Array, Uint8Array>;
 
   private readonly opts: LevelDBOptions;
+  private readonly logger: Logger;
   private metrics: LevelDbControllerMetrics | null;
   private dbSizeMetricInterval?: NodeJS.Timer;
 
-  constructor(opts: LevelDBOptions, {metrics}: LevelDbControllerModules) {
+  constructor(opts: LevelDBOptions, {metrics, logger}: LevelDbControllerModules) {
     this.opts = opts;
+    this.logger = logger;
     this.metrics = metrics ?? null;
     this.db = opts.db || new Level(opts.name || "beaconchain", {keyEncoding: "binary", valueEncoding: "binary"});
   }
@@ -199,6 +203,7 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
 
   /** Capture metric for db size */
   private dbSizeMetric(): void {
+    const timer = this.metrics?.dbApproximateSizeTime.startTimer();
     const minKey = Buffer.from([0x00]);
     const maxKey = Buffer.from([0xff]);
 
@@ -206,9 +211,10 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
       .then((dbSize) => {
         this.metrics?.dbSizeTotal.set(dbSize);
       })
-      .catch(() => {
-        // ignore errors
-      });
+      .catch((e) => {
+        this.logger.debug("Error approximating db size", {}, e);
+      })
+      .finally(timer);
   }
 }
 

@@ -2,6 +2,7 @@ import child_process from "node:child_process";
 import {FilterOptions, LevelDbController} from "@lodestar/db";
 import {ChainForkConfig} from "@lodestar/config";
 import {BeaconDb} from "../../src/index.js";
+import {testLogger} from "./logger.js";
 
 export const TEMP_DB_LOCATION = ".tmpdb";
 
@@ -11,7 +12,7 @@ export async function startTmpBeaconDb(config: ChainForkConfig): Promise<BeaconD
 
   const db = new BeaconDb({
     config,
-    controller: new LevelDbController({name: TEMP_DB_LOCATION}, {}),
+    controller: new LevelDbController({name: TEMP_DB_LOCATION}, {logger: testLogger()}),
   });
   await db.start();
 

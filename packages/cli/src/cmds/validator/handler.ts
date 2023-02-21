@@ -100,7 +100,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   const dbOps = {
     config,
-    controller: new LevelDbController({name: dbPath}, {metrics: null}),
+    controller: new LevelDbController({name: dbPath}, {metrics: null, logger}),
   };
   onGracefulShutdownCbs.push(() => dbOps.controller.stop());
   await dbOps.controller.start();

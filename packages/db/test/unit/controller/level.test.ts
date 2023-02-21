@@ -3,10 +3,11 @@ import {expect} from "chai";
 import leveldown from "leveldown";
 import all from "it-all";
 import {LevelDbController} from "../../../src/controller/index.js";
+import {testLogger} from "../../utils/logger.js";
 
 describe("LevelDB controller", () => {
   const dbLocation = "./.__testdb";
-  const db = new LevelDbController({name: dbLocation}, {metrics: null});
+  const db = new LevelDbController({name: dbLocation}, {metrics: null, logger: testLogger()});
 
   before(async () => {
     await db.start();

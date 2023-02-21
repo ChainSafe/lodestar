@@ -65,7 +65,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
   }
   const db = new BeaconDb({
     config,
-    controller: new LevelDbController(options.db, {metrics: null}),
+    controller: new LevelDbController(options.db, {metrics: null, logger}),
   });
 
   await db.start();
