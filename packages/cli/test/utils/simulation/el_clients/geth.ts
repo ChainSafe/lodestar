@@ -1,39 +1,42 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {mkdir, writeFile} from "node:fs/promises";
+import {writeFile} from "node:fs/promises";
 import {join} from "node:path";
 import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
-import {SIM_ENV_NETWORK_ID} from "../constants.js";
+import {SHARED_JWT_SECRET, SIM_ENV_NETWORK_ID} from "../constants.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {ELClient, ELClientGenerator, ELStartMode, JobOptions, RunnerType} from "../interfaces.js";
-import {getGethGenesisBlock} from "../utils/el_genesis.js";
+import {getNodeMountedPaths} from "../utils/paths.js";
+import {getNodePorts} from "../utils/ports.js";
 
 const SECRET_KEY = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8";
 const PASSWORD = "12345678";
 const GENESIS_ACCOUNT = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
 
 export const generateGethNode: ELClientGenerator<ELClient.Geth> = (opts, runner) => {
-  const {id, mode, dataDir, ethPort, port, enginePort, ttd} = opts;
-  const {logFilePath, jwtSecretHex, cliqueSealingPeriod, address, mining, clientOptions} = opts;
-
   if (!process.env.GETH_BINARY_DIR && !process.env.GETH_DOCKER_IMAGE) {
     throw new Error("GETH_BINARY_DIR or GETH_DOCKER_IMAGE must be provided");
   }
 
+  const {id, mode, ttd, address, mining, clientOptions, nodeIndex} = opts;
+  const {
+    el: {httpPort, enginePort, port},
+  } = getNodePorts(nodeIndex);
+
   const isDocker = process.env.GETH_DOCKER_IMAGE !== undefined;
   const binaryPath = isDocker ? "" : `${process.env.GETH_BINARY_DIR}/geth`;
-  const gethDataDir = isDocker ? "/data" : dataDir;
-  const ethRpcUrl = `http://127.0.0.1:${ethPort}`;
+  const {rootDir, rootDirMounted, genesisFilePathMounted, logFilePath, jwtsecretFilePathMounted} = getNodeMountedPaths(
+    opts.paths,
+    "/data",
+    isDocker
+  );
+  const ethRpcUrl = `http://127.0.0.1:${httpPort}`;
   const engineRpcUrl = `http://${address}:${enginePort}`;
 
-  const skPath = join(dataDir, "sk.json");
-  const skGethPath = join(gethDataDir, "sk.json");
-  const genesisPath = join(dataDir, "genesis.json");
-  const genesisGethPath = join(gethDataDir, "genesis.json");
-  const passwordPath = join(dataDir, "password.txt");
-  const passwordGethPath = join(gethDataDir, "password.txt");
-  const jwtSecretPath = join(dataDir, "jwtsecret");
-  const jwtSecretGethPath = join(gethDataDir, "jwtsecret");
+  const skPath = join(rootDir, "sk.json");
+  const skPathMounted = join(rootDirMounted, "sk.json");
+  const passwordPath = join(rootDir, "password.txt");
+  const passwordPathMounted = join(rootDirMounted, "password.txt");
 
   const initJobOptions: JobOptions = {
     id: `${id}-init`,
@@ -41,19 +44,19 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (opts, runner)
     options: isDocker
       ? {
           image: process.env.GETH_DOCKER_IMAGE as string,
-          dataVolumePath: dataDir,
+          mounts: [[rootDir, rootDirMounted]],
         }
       : undefined,
-    bootstrap: async () => {
-      await mkdir(dataDir, {recursive: true});
-      await writeFile(
-        genesisPath,
-        JSON.stringify(getGethGenesisBlock(mode, {ttd, cliqueSealingPeriod, clientOptions: []}))
-      );
-    },
     cli: {
       command: binaryPath,
-      args: ["--datadir", gethDataDir, "--networkid", String(SIM_ENV_NETWORK_ID as number), "init", genesisGethPath],
+      args: [
+        "--datadir",
+        rootDirMounted,
+        "--networkid",
+        String(SIM_ENV_NETWORK_ID as number),
+        "init",
+        genesisFilePathMounted,
+      ],
       env: {},
     },
     logs: {
@@ -67,26 +70,25 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (opts, runner)
     options: isDocker
       ? {
           image: process.env.GETH_DOCKER_IMAGE as string,
-          dataVolumePath: dataDir,
+          mounts: [[rootDir, rootDirMounted]],
         }
       : undefined,
     bootstrap: async () => {
       await writeFile(skPath, SECRET_KEY);
       await writeFile(passwordPath, PASSWORD);
-      await writeFile(jwtSecretPath, jwtSecretHex);
     },
     cli: {
       command: binaryPath,
       args: [
         "--datadir",
-        gethDataDir,
+        rootDirMounted,
         "--networkid",
         String(SIM_ENV_NETWORK_ID as number),
         "account",
         "import",
         "--password",
-        passwordGethPath,
-        skGethPath,
+        passwordPathMounted,
+        skPathMounted,
       ],
       env: {},
     },
@@ -101,8 +103,8 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (opts, runner)
     options: isDocker
       ? {
           image: process.env.GETH_DOCKER_IMAGE as string,
-          dataVolumePath: dataDir,
-          exposePorts: [enginePort, ethPort, port],
+          mounts: [[rootDir, rootDirMounted]],
+          exposePorts: [enginePort, httpPort, port],
           dockerNetworkIp: address,
         }
       : undefined,
@@ -113,7 +115,7 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (opts, runner)
         "--http.api",
         "engine,net,eth,miner,admin",
         "--http.port",
-        String(ethPort as number),
+        String(httpPort as number),
         "--http.addr",
         "0.0.0.0",
         "--authrpc.port",
@@ -125,14 +127,14 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (opts, runner)
         "--nat",
         `extip:${address}`,
         "--authrpc.jwtsecret",
-        jwtSecretGethPath,
+        jwtsecretFilePathMounted,
         "--datadir",
-        gethDataDir,
+        rootDirMounted,
         "--allow-insecure-unlock",
         "--unlock",
         GENESIS_ACCOUNT,
         "--password",
-        passwordGethPath,
+        passwordPathMounted,
         "--syncmode",
         "full",
         "--networkid",
@@ -164,7 +166,7 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (opts, runner)
   const provider = new Eth1ProviderWithAdmin(
     {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},
     // To allow admin_* RPC methods had to add "ethRpcUrl"
-    {providerUrls: [`http://127.0.0.1:${ethPort}`, `http://127.0.0.1:${enginePort}`], jwtSecretHex}
+    {providerUrls: [`http://127.0.0.1:${httpPort}`, `http://127.0.0.1:${enginePort}`], jwtSecretHex: SHARED_JWT_SECRET}
   );
 
   return {
@@ -173,7 +175,7 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (opts, runner)
     engineRpcUrl,
     ethRpcUrl,
     ttd,
-    jwtSecretHex,
+    jwtSecretHex: SHARED_JWT_SECRET,
     provider,
     job,
   };

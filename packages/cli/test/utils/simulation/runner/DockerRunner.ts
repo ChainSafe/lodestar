@@ -68,8 +68,10 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
     }
 
     // Mount volumes
-    if (jobOption.options.dataVolumePath) {
-      jobArgs.push("-v", `${jobOption.options.dataVolumePath}:/data`);
+    if (jobOption.options.mounts) {
+      for (const [hostPath, containerPath] of jobOption.options.mounts) {
+        jobArgs.push("-v", `${hostPath}:${containerPath}`);
+      }
     }
 
     // Pass ENV variables

@@ -1,14 +1,12 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {mkdir, writeFile, cp} from "node:fs/promises";
+import {writeFile} from "node:fs/promises";
 import {dirname, join} from "node:path";
-import got from "got";
-import {RequestError} from "got";
+import got, {RequestError} from "got";
 import yaml from "js-yaml";
-import {Keystore} from "@chainsafe/bls-keystore";
+import {HttpClient} from "@lodestar/api";
 import {getClient} from "@lodestar/api/beacon";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
-import {HttpClient} from "@lodestar/api";
 import {
   CLClient,
   CLClientGenerator,
@@ -18,6 +16,9 @@ import {
   LighthouseAPI,
   RunnerType,
 } from "../interfaces.js";
+import {getNodePorts} from "../utils/ports.js";
+import {getNodeMountedPaths} from "../utils/paths.js";
+import {updateKeystoresPath} from "../utils/keys.js";
 
 export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse> = (opts, runner) => {
   if (!process.env.LIGHTHOUSE_BINARY_PATH && !process.env.LIGHTHOUSE_DOCKER_IMAGE) {
@@ -26,22 +27,28 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
 
   const isDocker = process.env.LIGHTHOUSE_DOCKER_IMAGE !== undefined;
 
-  const {dataDir, address, restPort, port, id, config, keys, keyManagerPort} = opts;
-  const {engineUrls, genesisStateFilePath, jwtSecretHex, engineMock, clientOptions} = opts;
+  const {address, id, config, keys, nodeIndex} = opts;
+  const {engineUrls, engineMock, clientOptions} = opts;
+  const {
+    cl: {httpPort, port, keymanagerPort},
+  } = getNodePorts(nodeIndex);
 
-  const dataDirParam = isDocker ? "/data" : dataDir;
-  const jwtSecretPath = join(dataDir, "jwtsecret.txt");
+  const {rootDir, rootDirMounted, jwtsecretFilePathMounted, logFilePath} = getNodeMountedPaths(
+    opts.paths,
+    "/data",
+    isDocker
+  );
 
   const cliParams: Record<string, unknown> = {
-    "testnet-dir": dataDirParam,
-    datadir: dataDirParam,
+    "testnet-dir": rootDirMounted,
+    datadir: rootDirMounted,
     http: null,
     //  Enable the RESTful HTTP API server. Disabled by default.
     // Forces the HTTP to indicate that the node is synced when sync is actually
     // stalled. This is useful for very small testnets. TESTING ONLY. DO NOT USE ON MAINNET.
     "http-allow-sync-stalled": null,
     "http-address": "0.0.0.0",
-    "http-port": restPort,
+    "http-port": httpPort,
     "http-allow-origin": "*",
     "listen-address": "0.0.0.0",
     port: port,
@@ -57,7 +64,7 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
   if (engineMock) {
     cliParams["dummy-eth1"] = null;
   } else {
-    cliParams["execution-jwt"] = join(dataDirParam, "jwtsecret.txt");
+    cliParams["execution-jwt"] = jwtsecretFilePathMounted;
     cliParams["execution-endpoint"] = [...engineUrls].join(",");
   }
 
@@ -67,18 +74,14 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
     options: isDocker
       ? {
           image: process.env.LIGHTHOUSE_DOCKER_IMAGE as string,
-          dataVolumePath: dataDir,
-          exposePorts: [restPort, port],
+          mounts: [[rootDir, rootDirMounted]],
+          exposePorts: [httpPort, port],
           dockerNetworkIp: address,
         }
       : undefined,
     bootstrap: async () => {
-      await mkdir(dataDir, {recursive: true});
-      await writeFile(jwtSecretPath, jwtSecretHex);
-      await writeFile(join(dataDir, "config.yaml"), yaml.dump(chainConfigToJson(config)));
-      // await writeFile(join(dataDir, "boot_enr.yaml"), "[]");
-      await writeFile(join(dataDir, "deploy_block.txt"), "0");
-      await cp(genesisStateFilePath, join(dataDir, "genesis.ssz"));
+      await writeFile(join(rootDir, "config.yaml"), yaml.dump(chainConfigToJson(config)));
+      await writeFile(join(rootDir, "deploy_block.txt"), "0");
     },
     cli: {
       command: isDocker ? "lighthouse" : (process.env.LIGHTHOUSE_BINARY_PATH as string),
@@ -91,11 +94,11 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
       env: {},
     },
     logs: {
-      stdoutFilePath: opts.logFilePath,
+      stdoutFilePath: logFilePath,
     },
     health: async () => {
       try {
-        await got.get(`http://127.0.0.1:${restPort}/eth/v1/node/health`);
+        await got.get(`http://127.0.0.1:${httpPort}/eth/v1/node/health`);
         return {ok: true};
       } catch (err) {
         if (err instanceof RequestError && err.code !== "ECONNREFUSED") {
@@ -112,17 +115,19 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
       generateLighthouseValidatorJobs(
         {
           ...opts,
-          dataDir,
           id: `${id}-validator`,
-          logFilePath: join(dirname(opts.logFilePath), `${id}-validator.log`),
+          paths: {
+            ...opts.paths,
+            logFilePath: join(dirname(logFilePath), `${id}-validator.log`),
+          },
         },
         runner
       )
     );
   }
 
-  const httpClient = new HttpClient({baseUrl: `http://127.0.0.1:${restPort}`});
-  const api = (getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}) as unknown) as LighthouseAPI;
+  const httpClient = new HttpClient({baseUrl: `http://127.0.0.1:${httpPort}`});
+  const api = (getClient({baseUrl: `http://127.0.0.1:${httpPort}`}, {config}) as unknown) as LighthouseAPI;
   api.lighthouse = {
     async getPeers() {
       return httpClient.json({url: "/lighthouse/peers", method: "GET"});
@@ -132,10 +137,10 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
   return {
     id,
     client: CLClient.Lighthouse,
-    url: `http://127.0.0.1:${restPort}`,
+    url: `http://127.0.0.1:${httpPort}`,
     keys,
     api,
-    keyManager: keyManagerGetClient({baseUrl: `http://127.0.0.1:${keyManagerPort}`}, {config}),
+    keyManager: keyManagerGetClient({baseUrl: `http://127.0.0.1:${keymanagerPort}`}, {config}),
     job: runner.create([{...beaconNodeJob, children: [...validatorClientsJobs]}]),
   };
 };
@@ -144,24 +149,34 @@ export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions, 
   const isDocker = process.env.LIGHTHOUSE_DOCKER_IMAGE !== undefined;
 
   const binaryPath = isDocker ? "lighthouse" : `${process.env.LIGHTHOUSE_BINARY_PATH}`;
-  const {dataDir, id, address, keyManagerPort, restPort, keys} = opts;
-  const dataDirParam = isDocker ? "/data" : dataDir;
+  const {id, keys, address} = opts;
+  const {
+    rootDir,
+    rootDirMounted,
+    logFilePath,
+    validatorsDirMounted,
+    validatorsDefinitionFilePath,
+    validatorsDefinitionFilePathMounted,
+  } = getNodeMountedPaths(opts.paths, "/data", isDocker);
+  const {
+    cl: {httpPort, keymanagerPort},
+  } = getNodePorts(opts.nodeIndex);
 
   if (keys.type === "no-keys") {
     throw Error("Attempting to run a vc with keys.type == 'no-keys'");
   }
 
   const params = {
-    "testnet-dir": dataDirParam,
-    "beacon-nodes": `http://${address}:${restPort}/`,
+    "testnet-dir": rootDirMounted,
+    "beacon-nodes": `http://${address}:${httpPort}/`,
     "debug-level": "debug",
     "init-slashing-protection": null,
     "allow-unsynced": null,
     http: null,
     "unencrypted-http-transport": null,
     "http-address": "0.0.0.0",
-    "http-port": keyManagerPort,
-    "validators-dir": join(dataDirParam, "validators"),
+    "http-port": keymanagerPort,
+    "validators-dir": validatorsDirMounted,
   };
 
   return {
@@ -170,41 +185,16 @@ export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions, 
     options: isDocker
       ? {
           image: process.env.LIGHTHOUSE_DOCKER_IMAGE as string,
-          dataVolumePath: dataDir,
+          mounts: [[rootDir, rootDirMounted]],
           dockerNetworkIp: runner.getNextIp(),
         }
       : undefined,
     bootstrap: async () => {
-      await mkdir(join(dataDir, "validators"));
-      await writeFile(join(dataDir, "password.txt"), "password");
-
-      if (keys.type === "local") {
-        const definition = [];
-
-        for (const key of keys.secretKeys) {
-          const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
-          await writeFile(
-            join(dataDir, "validators", `${key.toPublicKey().toHex()}.json`),
-            JSON.stringify(keystore.toObject(), null, 2)
-          );
-
-          definition.push({
-            enabled: true,
-            type: "local_keystore",
-            voting_public_key: key.toPublicKey().toHex(),
-            voting_keystore_path: join(dataDirParam, "validators", `${key.toPublicKey().toHex()}.json`),
-            voting_keystore_password_path: join(dataDirParam, "password.txt"),
-          });
-        }
-
-        await writeFile(
-          join(dataDir, "validators", "validator_definitions.yml"),
-          yaml.dump(definition, {
-            styles: {
-              "!!null": "canonical", // dump null as ~
-            },
-            sortKeys: true, // sort object keys
-          })
+      if (isDocker) {
+        await updateKeystoresPath(
+          validatorsDefinitionFilePath,
+          dirname(validatorsDefinitionFilePathMounted),
+          validatorsDefinitionFilePath
         );
       }
     },
@@ -219,11 +209,11 @@ export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions, 
       env: {},
     },
     logs: {
-      stdoutFilePath: opts.logFilePath,
+      stdoutFilePath: logFilePath,
     },
     health: async () => {
       try {
-        await got.get(`http://127.0.0.1:${keyManagerPort}/lighthouse/health`);
+        await got.get(`http://127.0.0.1:${keymanagerPort}/lighthouse/health`);
         return {ok: true};
       } catch (err) {
         if (err instanceof RequestError) {

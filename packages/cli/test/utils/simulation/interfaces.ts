@@ -70,19 +70,14 @@ export type CLClientKeys =
 
 export interface CLClientGeneratorOptions<C extends CLClient = CLClient> {
   id: string;
-  dataDir: string;
-  logFilePath: string;
-  genesisStateFilePath: string;
+  nodeIndex: number;
+  paths: CLPaths;
   address: string;
-  restPort: number;
-  port: number;
-  keyManagerPort: number;
   config: ChainForkConfig;
   keys: CLClientKeys;
   genesisTime: number;
   engineUrls: string[];
   engineMock: boolean;
-  jwtSecretHex: string;
   clientOptions: CLClientsOptions[C];
 }
 
@@ -94,15 +89,11 @@ export interface ELGeneratorGenesisOptions<E extends ELClient = ELClient> {
 
 export interface ELGeneratorClientOptions<E extends ELClient = ELClient> extends ELGeneratorGenesisOptions {
   mode: ELStartMode;
+  nodeIndex: number;
   id: string;
-  logFilePath: string;
-  dataDir: string;
-  jwtSecretHex: string;
-  enginePort: number;
-  ethPort: number;
-  port: number;
   address: string;
   mining: boolean;
+  paths: ELPaths;
   clientOptions: ELClientsOptions[E];
 }
 
@@ -210,7 +201,7 @@ export type RunnerOptions = {
   [RunnerType.ChildProcess]: never;
   [RunnerType.Docker]: {
     image: string;
-    dataVolumePath?: string;
+    mounts?: [[string, string]];
     exposePorts?: number[];
     dockerNetworkIp?: string;
   };
@@ -318,3 +309,29 @@ export abstract class SimulationReporter<T extends SimulationAssertion[]> {
   abstract progress(slot: Slot): void;
   abstract summary(): void;
 }
+
+export interface CLPaths {
+  rootDir: string;
+  dataDir: string;
+  genesisFilePath: string;
+  jwtsecretFilePath: string;
+  validatorsDir: string;
+  keystoresDir: string;
+  keystoresSecretsDir: string;
+  keystoresSecretFilePath: string;
+  validatorsDefinitionFilePath: string;
+  logFilePath: string;
+}
+
+export interface ELPaths {
+  rootDir: string;
+  dataDir: string;
+  genesisFilePath: string;
+  jwtsecretFilePath: string;
+  logFilePath: string;
+}
+
+export type MountedPaths<T> = T &
+  {
+    [P in keyof T as `${string & P}Mounted`]: T[P];
+  };

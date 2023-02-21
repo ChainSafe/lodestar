@@ -38,7 +38,7 @@ const ttd = getEstimatedTTD({
   additionalSlots: additionalSlotsForTTD,
 });
 
-const env = SimulationEnvironment.initWithDefaults(
+const env = await SimulationEnvironment.initWithDefaults(
   {
     id: "backup-eth-provider",
     logsDir: join(logFilesDir, "backup-eth-provider"),
@@ -60,7 +60,7 @@ env.tracker.register({
 });
 
 // Create node2 with additional engine url pointing to node1
-const node2 = env.createNodePair({
+const node2 = await env.createNodePair({
   id: "node-2",
   // As the Lodestar running on host and the geth running in docker container
   // we have to replace the IP with the local ip to connect to the geth
@@ -70,7 +70,7 @@ const node2 = env.createNodePair({
 });
 
 // Create node3 with additional engine url pointing to node1
-const node3 = env.createNodePair({
+const node3 = await env.createNodePair({
   id: "node-3",
   // As the Lodestar running on host and the geth running in docker container
   // we have to replace the IP with the local ip to connect to the geth

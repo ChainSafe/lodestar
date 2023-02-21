@@ -42,7 +42,7 @@ const ttd = getEstimatedTTD({
   additionalSlots: additionalSlotsForTTD,
 });
 
-const env = SimulationEnvironment.initWithDefaults(
+const env = await SimulationEnvironment.initWithDefaults(
   {
     id: "multi-fork",
     logsDir: join(logFilesDir, "multi-fork"),
@@ -90,7 +90,7 @@ await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePrese
 // ========================================================
 const headForRangeSync = await env.nodes[0].cl.api.beacon.getBlockHeader("head");
 ApiError.assert(headForRangeSync);
-const rangeSync = env.createNodePair({
+const rangeSync = await env.createNodePair({
   id: "range-sync-node",
   cl: CLClient.Lodestar,
   el: ELClient.Geth,
@@ -102,7 +102,7 @@ const rangeSync = env.createNodePair({
 const res = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
 ApiError.assert(res);
 const headForCheckpointSync = res.response.data.finalized;
-const checkpointSync = env.createNodePair({
+const checkpointSync = await env.createNodePair({
   id: "checkpoint-sync-node",
   cl: {
     type: CLClient.Lodestar,
@@ -138,7 +138,7 @@ await checkpointSync.el.job.stop();
 
 // Unknown block sync
 // ========================================================
-const unknownBlockSync = env.createNodePair({
+const unknownBlockSync = await env.createNodePair({
   id: "unknown-block-sync-node",
   cl: {
     type: CLClient.Lodestar,

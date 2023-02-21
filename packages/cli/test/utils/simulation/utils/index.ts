@@ -1,6 +1,8 @@
-import {Epoch, Slot} from "@lodestar/types";
+/* eslint-disable no-console */
 import {activePreset} from "@lodestar/params";
+import {Epoch, Slot} from "@lodestar/types";
 import {ETH_TTD_INCREMENT} from "../constants.js";
+import {SimulationEnvironment} from "../SimulationEnvironment.js";
 
 export const logFilesDir = "test-logs";
 
@@ -74,3 +76,22 @@ export const arrayIsUnique = <T>(arr: T[], predicate?: (val: T) => unknown): boo
 export const replaceIpFromUrl = (url: string, ip: string): string => url.replace(/(http:\/\/)(.*)(:)/, `$1${ip}$3`);
 
 export const makeUniqueArray = <T>(arr: T[]): T[] => [...new Set(arr)];
+
+export const regsiterProcessHandler = (env: SimulationEnvironment): void => {
+  process.on("unhandledRejection", async (reason, promise) => {
+    console.error("Unhandled Rejection at:", promise, "reason:", reason);
+    await env.stop(1, "Unhandled promise rejection");
+  });
+
+  process.on("uncaughtException", async (err) => {
+    console.error("Uncaught exception:", err);
+    await env.stop(1, "Uncaught exception");
+  });
+
+  process.on("SIGTERM", async () => {
+    await env.stop(0, "Terminating");
+  });
+  process.on("SIGINT", async () => {
+    await env.stop(0, "Terminating");
+  });
+};

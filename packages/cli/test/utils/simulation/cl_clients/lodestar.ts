@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {mkdir, writeFile} from "node:fs/promises";
+import {writeFile} from "node:fs/promises";
 import {dirname, join} from "node:path";
 import got from "got";
-import {Keystore} from "@chainsafe/bls-keystore";
 import {getClient} from "@lodestar/api/beacon";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
@@ -12,23 +11,26 @@ import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
 import {GlobalArgs} from "../../../../src/options/globalOptions.js";
 import {LODESTAR_BINARY_PATH} from "../constants.js";
 import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, RunnerType} from "../interfaces.js";
+import {getNodePorts} from "../utils/ports.js";
 
 export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = (opts, runner) => {
-  const {dataDir, address, restPort, port, id, config, genesisStateFilePath} = opts;
-  const {keys, keyManagerPort, genesisTime, engineUrls, engineMock, jwtSecretHex, clientOptions} = opts;
+  const {address, id, config, keys, genesisTime, engineUrls, engineMock, clientOptions, nodeIndex} = opts;
+  const {
+    paths: {jwtsecretFilePath, rootDir, genesisFilePath, logFilePath},
+  } = opts;
+  const ports = getNodePorts(nodeIndex);
 
-  const jwtSecretPath = join(dataDir, "jwtsecret");
-  const rcConfigPath = join(dataDir, "rc_config.json");
-  const paramsPath = join(dataDir, "params.json");
+  const rcConfigPath = join(rootDir, "rc_config.json");
+  const paramsPath = join(rootDir, "params.json");
 
   const rcConfig = ({
     network: "dev",
     preset: "minimal",
-    dataDir,
-    genesisStateFile: genesisStateFilePath,
+    dataDir: rootDir,
+    genesisStateFile: genesisFilePath,
     rest: true,
     "rest.address": "0.0.0.0",
-    "rest.port": restPort,
+    "rest.port": ports.cl.httpPort,
     "rest.namespace": "*",
     "sync.isSingleNode": false,
     "network.allowPublishToZeroPeers": false,
@@ -36,7 +38,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     "network.connectToDiscv5Bootnodes": true,
     "network.rateLimitMultiplier": 0,
     listenAddress: "0.0.0.0",
-    port: port,
+    port: ports.cl.port,
     metrics: false,
     bootnodes: [],
     logPrefix: id,
@@ -44,7 +46,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     logLevel: LogLevel.debug,
     logFileDailyRotate: 0,
     logFile: "none",
-    "jwt-secret": jwtSecretPath,
+    "jwt-secret": jwtsecretFilePath,
     paramsFile: paramsPath,
     ...clientOptions,
   } as unknown) as BeaconArgs & GlobalArgs;
@@ -64,9 +66,11 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     validatorClientsJobs.push(
       generateLodestarValidatorJobs({
         ...opts,
-        dataDir: join(dataDir, "validator"),
         id: `${id}-validator`,
-        logFilePath: join(dirname(opts.logFilePath), `${id}-validator.log`),
+        paths: {
+          ...opts.paths,
+          logFilePath: join(dirname(logFilePath), `${id}-validator.log`),
+        },
       })
     );
   }
@@ -75,9 +79,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     {
       id,
       bootstrap: async () => {
-        await mkdir(dataDir, {recursive: true});
         await writeFile(rcConfigPath, JSON.stringify(rcConfig, null, 2));
-        await writeFile(jwtSecretPath, jwtSecretHex);
         await writeFile(paramsPath, JSON.stringify(chainConfigToJson(config), null, 2));
       },
       type: RunnerType.ChildProcess,
@@ -89,11 +91,11 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
         },
       },
       logs: {
-        stdoutFilePath: opts.logFilePath,
+        stdoutFilePath: logFilePath,
       },
       health: async () => {
         try {
-          await got.get(`http://${address}:${restPort}/eth/v1/node/health`);
+          await got.get(`http://${address}:${ports.cl.httpPort}/eth/v1/node/health`);
           return {ok: true};
         } catch (err) {
           return {ok: false, reason: (err as Error).message, checkId: "eth/v1/node/health query"};
@@ -106,16 +108,18 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
   return {
     id,
     client: CLClient.Lodestar,
-    url: `http://127.0.0.1:${restPort}`,
+    url: `http://127.0.0.1:${ports.cl.httpPort}`,
     keys,
-    api: getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}),
-    keyManager: keyManagerGetClient({baseUrl: `http://127.0.0.1:${keyManagerPort}`}, {config}),
+    api: getClient({baseUrl: `http://127.0.0.1:${ports.cl.httpPort}`}, {config}),
+    keyManager: keyManagerGetClient({baseUrl: `http://127.0.0.1:${ports.cl.keymanagerPort}`}, {config}),
     job,
   };
 };
 
 export const generateLodestarValidatorJobs = (opts: CLClientGeneratorOptions): JobOptions => {
-  const {dataDir: rootDir, id, keyManagerPort, restPort, keys, config, genesisTime} = opts;
+  const {paths, id, keys, config, genesisTime, nodeIndex} = opts;
+  const {rootDir, keystoresDir, keystoresSecretFilePath, logFilePath} = paths;
+  const ports = getNodePorts(nodeIndex);
 
   if (keys.type === "no-keys") {
     throw Error("Attempting to run a vc with keys.type == 'no-keys'");
@@ -125,38 +129,25 @@ export const generateLodestarValidatorJobs = (opts: CLClientGeneratorOptions): J
     network: "dev",
     preset: "minimal",
     dataDir: rootDir,
-    server: `http://0.0.0.0:${restPort}/`,
+    server: `http://0.0.0.0:${ports.cl.httpPort}/`,
     keymanager: true,
     "keymanager.authEnabled": false,
     "keymanager.address": "127.0.0.1",
-    "keymanager.port": keyManagerPort,
+    "keymanager.port": ports.cl.keymanagerPort,
     logPrefix: id,
     logFormatGenesisTime: genesisTime,
     logLevel: LogLevel.debug,
     logFile: "none",
-    importKeystores: `${rootDir}/keystores`,
-    importKeystoresPassword: `${rootDir}/password.txt`,
+    importKeystores: keystoresDir,
+    importKeystoresPassword: keystoresSecretFilePath,
   } as unknown) as IValidatorCliArgs & GlobalArgs;
 
   return {
     id,
     type: RunnerType.ChildProcess,
     bootstrap: async () => {
-      await mkdir(rootDir);
-      await mkdir(`${rootDir}/keystores`);
-      await writeFile(join(rootDir, "password.txt"), "password");
       await writeFile(join(rootDir, "rc_config.json"), JSON.stringify(rcConfig, null, 2));
       await writeFile(join(rootDir, "params.json"), JSON.stringify(chainConfigToJson(config), null, 2));
-
-      if (keys.type === "local") {
-        for (const key of keys.secretKeys) {
-          const keystore = await Keystore.create("password", key.toBytes(), key.toPublicKey().toBytes(), "");
-          await writeFile(
-            join(rootDir, "keystores", `${key.toPublicKey().toHex()}.json`),
-            JSON.stringify(keystore.toObject(), null, 2)
-          );
-        }
-      }
     },
     cli: {
       command: LODESTAR_BINARY_PATH,
@@ -166,11 +157,11 @@ export const generateLodestarValidatorJobs = (opts: CLClientGeneratorOptions): J
       },
     },
     logs: {
-      stdoutFilePath: opts.logFilePath,
+      stdoutFilePath: logFilePath,
     },
     health: async () => {
       try {
-        await got.get(`http://127.0.0.1:${keyManagerPort}/eth/v1/keystores`);
+        await got.get(`http://127.0.0.1:${ports.cl.keymanagerPort}/eth/v1/keystores`);
         return {ok: true};
       } catch (err) {
         return {ok: false, reason: (err as Error).message, checkId: "eth/v1/keystores query"};
