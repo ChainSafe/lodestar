@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {ChildProcess} from "node:child_process";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {Api} from "@lodestar/api";
@@ -106,7 +107,27 @@ export interface ELGeneratorClientOptions<E extends ELClient = ELClient> extends
 }
 
 export type LodestarAPI = Api;
-export type LighthouseAPI = Omit<Api, "lodestar">;
+export type LighthouseAPI = Omit<Api, "lodestar"> & {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  lighthouse: {
+    getPeers(): Promise<{
+      status: number;
+      body: {
+        peer_id: string;
+        peer_info: {
+          score: {
+            Real: {
+              lighthouse_score: number;
+              gossipsub_score: number;
+              ignore_negative_gossipsub_score: boolean;
+              score: number;
+            };
+          };
+        };
+      }[];
+    }>;
+  };
+};
 
 export interface CLNode<C extends CLClient = CLClient> {
   readonly client: C;

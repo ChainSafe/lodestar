@@ -8,7 +8,16 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import {getClient} from "@lodestar/api/beacon";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
 import {chainConfigToJson} from "@lodestar/config";
-import {CLClient, CLClientGenerator, CLClientGeneratorOptions, IRunner, JobOptions, RunnerType} from "../interfaces.js";
+import {HttpClient} from "@lodestar/api";
+import {
+  CLClient,
+  CLClientGenerator,
+  CLClientGeneratorOptions,
+  IRunner,
+  JobOptions,
+  LighthouseAPI,
+  RunnerType,
+} from "../interfaces.js";
 
 export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse> = (opts, runner) => {
   if (!process.env.LIGHTHOUSE_BINARY_PATH && !process.env.LIGHTHOUSE_DOCKER_IMAGE) {
@@ -112,12 +121,20 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
     );
   }
 
+  const httpClient = new HttpClient({baseUrl: `http://127.0.0.1:${restPort}`});
+  const api = (getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}) as unknown) as LighthouseAPI;
+  api.lighthouse = {
+    async getPeers() {
+      return httpClient.json({url: "/lighthouse/peers", method: "GET"});
+    },
+  };
+
   return {
     id,
     client: CLClient.Lighthouse,
     url: `http://127.0.0.1:${restPort}`,
     keys,
-    api: getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}),
+    api,
     keyManager: keyManagerGetClient({baseUrl: `http://127.0.0.1:${keyManagerPort}`}, {config}),
     job: runner.create([{...beaconNodeJob, children: [...validatorClientsJobs]}]),
   };
