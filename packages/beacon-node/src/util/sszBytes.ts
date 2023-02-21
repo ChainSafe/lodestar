@@ -1,4 +1,5 @@
 import {RootHex, Slot} from "@lodestar/types";
+import {toHex} from "@lodestar/utils";
 
 export type BlockRootHex = RootHex;
 export type TargetHex = string;
@@ -32,11 +33,10 @@ export function getSlotFromAttestationSerialized(data: Uint8Array): Slot {
 }
 
 export function getBlockRootFromAttestationSerialized(data: Uint8Array): BlockRootHex {
-  return toHexNoPrefix(
-    data.slice(ATTESTATION_BEACON_BLOCK_ROOT_OFFSET, ATTESTATION_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE)
-  );
+  return toHex(data.slice(ATTESTATION_BEACON_BLOCK_ROOT_OFFSET, ATTESTATION_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE));
 }
 
+/** Note: returns string not prefixed with 0x since it holds no meaning */
 export function getTargetFromAttestationSerialized(data: Uint8Array): TargetHex {
   return toHexNoPrefix(data.slice(ATTESTATION_TARGET_OFFSET, ATTESTATION_TARGET_OFFSET + CHECKPOINT_SIZE));
 }
