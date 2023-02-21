@@ -43,7 +43,7 @@ export class MonitoringService {
 
   private status = Status.Stopped;
   private initialDelayTimeout?: NodeJS.Timeout;
-  private monitoringInterval?: NodeJS.Timer;
+  private monitoringInterval?: NodeJS.Timeout;
   private fetchAbortController?: AbortController;
   private pendingRequest?: Promise<void>;
 
@@ -84,10 +84,7 @@ export class MonitoringService {
 
     this.initialDelayTimeout = setTimeout(async () => {
       await this.send();
-
-      this.monitoringInterval = setInterval(async () => {
-        await this.send();
-      }, interval);
+      this.nextMonitoringInterval();
     }, initialDelay);
 
     this.logger.info("Started monitoring service", {
@@ -109,7 +106,7 @@ export class MonitoringService {
       clearTimeout(this.initialDelayTimeout);
     }
     if (this.monitoringInterval) {
-      clearInterval(this.monitoringInterval);
+      clearTimeout(this.monitoringInterval);
     }
     if (this.pendingRequest) {
       this.fetchAbortController?.abort(FetchAbortReason.Stop);
@@ -209,6 +206,16 @@ export class MonitoringService {
       timer({status: res?.ok ? "success" : "error"});
       clearTimeout(timeout);
     }
+  }
+
+  private nextMonitoringInterval(): void {
+    if (this.status === Status.Stopped) return;
+    // ensure next interval only starts after previous request has finished
+    // else we might send next request too early and run into rate limit errors
+    this.monitoringInterval = setTimeout(async () => {
+      await this.send();
+      this.nextMonitoringInterval();
+    }, this.options.interval);
   }
 
   private parseMonitoringEndpoint(endpoint: string): URL {

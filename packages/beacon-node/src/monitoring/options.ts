@@ -13,9 +13,7 @@ export type MonitoringOptions = {
 
 export const defaultMonitoringOptions: Required<MonitoringOptions> = {
   endpoint: "",
-  // default interval should be once a minute
-  // but need to add 2 seconds to avoid rate limit errors
-  interval: 62_000,
+  interval: 60_000,
   initialDelay: 30_000,
   requestTimeout: 10_000,
   collectSystemStats: true,
