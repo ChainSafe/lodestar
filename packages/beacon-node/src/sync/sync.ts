@@ -132,7 +132,7 @@ export class BeaconSync implements IBeaconSync {
         (headSlot <= currentSlot && headSlot >= currentSlot - this.slotImportTolerance)) &&
       // Ensure there at least one connected peer to not claim synced if has no peers
       // Allow to bypass this conditions for local networks with a single node
-      (this.opts.isSingleNode || this.network.hasSomeConnectedPeer())
+      (this.opts.isSingleNode || this.network.getConnectedPeerCount() > 0)
       // TODO: Consider enabling this condition (used in Lighthouse)
       // && headSlot > 0
     ) {
@@ -201,19 +201,31 @@ export class BeaconSync implements IBeaconSync {
       !this.network.isSubscribedToGossipCoreTopics() &&
       this.chain.clock.currentEpoch >= MIN_EPOCH_TO_START_GOSSIP
     ) {
-      this.network.subscribeGossipCoreTopics();
-      this.metrics?.syncSwitchGossipSubscriptions.inc({action: "subscribed"});
-      this.logger.info("Subscribed gossip core topics");
+      this.network
+        .subscribeGossipCoreTopics()
+        .then(() => {
+          this.metrics?.syncSwitchGossipSubscriptions.inc({action: "subscribed"});
+          this.logger.info("Subscribed gossip core topics");
+        })
+        .catch((e) => {
+          this.logger.error("Error subscribing to gossip core topics", {}, e);
+        });
     }
 
     // If we stopped being synced and falled significantly behind, stop gossip
-    if (state !== SyncState.Synced && this.network.isSubscribedToGossipCoreTopics()) {
+    else if (state !== SyncState.Synced && this.network.isSubscribedToGossipCoreTopics()) {
       const syncDiff = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot;
       if (syncDiff > this.slotImportTolerance * 2) {
         this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots`);
-        this.network.unsubscribeGossipCoreTopics();
-        this.metrics?.syncSwitchGossipSubscriptions.inc({action: "unsubscribed"});
-        this.logger.info("Un-subscribed gossip core topics");
+        this.network
+          .unsubscribeGossipCoreTopics()
+          .then(() => {
+            this.metrics?.syncSwitchGossipSubscriptions.inc({action: "unsubscribed"});
+            this.logger.info("Un-subscribed gossip core topics");
+          })
+          .catch((e) => {
+            this.logger.error("Error unsubscribing to gossip core topics", {}, e);
+          });
       }
     }
   };

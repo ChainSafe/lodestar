@@ -22,6 +22,7 @@ import {
   GossipTypeMap,
   ValidatorFnsByType,
   GossipHandlers,
+  GossipBeaconNode,
 } from "./interface.js";
 import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic, getCoreTopicsAtFork} from "./topic.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
@@ -73,7 +74,7 @@ export type Eth2GossipsubOpts = {
  *
  * See https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
  */
-export class Eth2Gossipsub extends GossipSub {
+export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
   readonly jobQueues: GossipJobQueues;
   readonly scoreParams: Partial<PeerScoreParams>;
   private readonly config: BeaconConfig;

@@ -1,15 +1,18 @@
-import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {multiaddr} from "@multiformats/multiaddr";
-import {PeerStatus, PeerDirection} from "../../../src/network/index.js";
+import {routes} from "@lodestar/api";
+import {PeerDirection} from "../../../src/network/index.js";
 
-export function libp2pConnection(peer: PeerId, status: PeerStatus, direction: PeerDirection): Connection {
+export function lodestarNodePeer(
+  peer: PeerId,
+  state: routes.node.PeerState,
+  direction: PeerDirection | null
+): routes.lodestar.LodestarNodePeer {
   return {
-    remoteAddr: multiaddr(),
-    stat: {
-      status,
-      direction,
-    },
-    remotePeer: peer,
-  } as Connection;
+    peerId: peer.toString(),
+    state,
+    direction,
+    enr: "",
+    lastSeenP2pAddress: "",
+    agentVersion: "",
+  };
 }
