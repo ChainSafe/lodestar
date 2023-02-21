@@ -76,7 +76,7 @@ export class NetworkWorker {
         {topic},
         message.startProcessUnixSec - message.seenTimestampSec
       );
-      this.metrics?.gossipValidationQueueJobTime.observe({topic}, Date.now() - message.startProcessUnixSec);
+      this.metrics?.gossipValidationQueueJobTime.observe({topic}, Date.now() / 1000 - message.startProcessUnixSec);
     }
 
     let acceptance: TopicValidatorResult;
