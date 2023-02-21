@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonSpy} from "sinon";
 import {ErrorAborted, Logger, TimeoutError} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../../src/index.js";
 import {HistogramExtra} from "../../../src/metrics/utils/histogram.js";
@@ -73,11 +73,12 @@ describe("monitoring / service", () => {
     });
 
     it("should set interval to continuously send client stats", async () => {
-      const setInterval = sandbox.spy(global, "setInterval");
+      const setTimeout = sandbox.spy(global, "setTimeout");
+      const interval = 1000;
 
-      const service = await startedMonitoringService();
+      const service = await startedMonitoringService({interval});
 
-      expect(setInterval).to.have.been.calledOnce;
+      expect(setTimeout).to.have.been.calledWithMatch({}, interval);
       expect(service["monitoringInterval"]).to.be.an("object");
     });
 
@@ -116,6 +117,12 @@ describe("monitoring / service", () => {
   });
 
   describe("MonitoringService - stop", () => {
+    let clearTimeout: SinonSpy;
+
+    before(() => {
+      clearTimeout = sandbox.spy(global, "clearTimeout");
+    });
+
     it("should set the status to stopped", async () => {
       const service = await startedMonitoringService();
 
@@ -125,23 +132,19 @@ describe("monitoring / service", () => {
     });
 
     it("should clear the monitoring interval", async () => {
-      const clearInterval = sandbox.spy(global, "clearInterval");
-
       const service = await startedMonitoringService();
 
       service.stop();
 
-      expect(clearInterval).to.have.been.calledOnceWith(service["monitoringInterval"]);
+      expect(clearTimeout).to.have.been.calledWith(service["monitoringInterval"]);
     });
 
     it("should clear the initial delay timeout", async () => {
-      const clearTimeout = sandbox.spy(global, "clearTimeout");
-
       const service = await startedMonitoringService({initialDelay: 1000});
 
       service.stop();
 
-      expect(clearTimeout).to.have.been.calledOnceWith(service["initialDelayTimeout"]);
+      expect(clearTimeout).to.have.been.calledWith(service["initialDelayTimeout"]);
     });
 
     it("should abort pending requests", async () => {

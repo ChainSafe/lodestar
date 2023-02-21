@@ -40,9 +40,7 @@ It is also possible to print out the data sent to the remote service by enabling
 ### Monitoring interval
 
 It is possible to adjust the interval between sending client stats to the remote service by setting the `--monitoring.interval` flag.
-It takes an integer value in milliseconds, the default is `62000` which means data is sent approximately once a minute.
-The extra 2 seconds are added to avoid rate limit errors when using *beaconcha.in* as they are currently really strict
-and minor delays in the previous request can cause the following request to fail.
+It takes an integer value in milliseconds, the default is `60000` which means data is sent once a minute.
 
 For example, setting an interval of `300000` would mean the data is only sent every 5 minutes.
 
