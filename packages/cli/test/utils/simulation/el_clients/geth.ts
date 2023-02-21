@@ -164,7 +164,7 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (opts, runner)
   const provider = new Eth1ProviderWithAdmin(
     {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},
     // To allow admin_* RPC methods had to add "ethRpcUrl"
-    {providerUrls: [ethRpcUrl, engineRpcUrl], jwtSecretHex}
+    {providerUrls: [`http://127.0.0.1:${ethPort}`, `http://127.0.0.1:${enginePort}`], jwtSecretHex}
   );
 
   return {

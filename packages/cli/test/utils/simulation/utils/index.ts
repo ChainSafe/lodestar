@@ -70,3 +70,7 @@ export function strFixedSize(str: string, width: number): string {
 
 export const arrayIsUnique = <T>(arr: T[], predicate?: (val: T) => unknown): boolean =>
   arr.length === new Set(predicate ? arr.map(predicate) : arr).size;
+
+export const replaceIpFromUrl = (url: string, ip: string): string => url.replace(/(http:\/\/)(.*)(:)/, `$1${ip}$3`);
+
+export const makeUniqueArray = <T>(arr: T[]): T[] => [...new Set(arr)];

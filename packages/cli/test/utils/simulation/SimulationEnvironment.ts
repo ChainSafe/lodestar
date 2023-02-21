@@ -44,7 +44,7 @@ import {
   SimulationOptions,
 } from "./interfaces.js";
 import {SimulationTracker} from "./SimulationTracker.js";
-import {getEstimatedTTD} from "./utils/index.js";
+import {getEstimatedTTD, makeUniqueArray, replaceIpFromUrl} from "./utils/index.js";
 import {generateLighthouseBeaconNode} from "./cl_clients/lighthouse.js";
 import {Runner} from "./runner/index.js";
 
@@ -279,6 +279,12 @@ export class SimulationEnvironment {
 
     const clType = typeof cl === "object" ? cl.type : cl;
     const clOptions = typeof cl === "object" ? cl.options : {};
+    const engineUrls = [
+      // As lodestar is running on host machine, need to connect through local exposed ports
+      clType === CLClient.Lodestar ? replaceIpFromUrl(elNode.engineRpcUrl, "127.0.0.1") : elNode.engineRpcUrl,
+      ...(clOptions.engineUrls || []),
+    ];
+
     const clNode = this.createCLNode(clType, {
       ...clOptions,
       id,
@@ -289,7 +295,7 @@ export class SimulationEnvironment {
           ? {type: "local", secretKeys: keys}
           : {type: "no-keys"},
       engineMock: typeof el === "string" ? el === ELClient.Mock : el.type === ELClient.Mock,
-      engineUrls: [elNode.engineRpcUrl, ...(clOptions.engineUrls || [])],
+      engineUrls,
     });
 
     return {id, el: elNode, cl: clNode};
@@ -317,7 +323,10 @@ export class SimulationEnvironment {
           keys: options?.keys ?? {type: "no-keys"},
           genesisTime: this.options.genesisTime,
           engineUrls: options?.engineUrls
-            ? [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`, ...options.engineUrls]
+            ? makeUniqueArray([
+                `http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`,
+                ...options.engineUrls,
+              ])
             : [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`],
           engineMock: options?.engineMock ?? false,
           jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
@@ -339,7 +348,7 @@ export class SimulationEnvironment {
           keys: options?.keys ?? {type: "no-keys"},
           genesisTime: this.options.genesisTime,
           engineUrls: options?.engineUrls
-            ? [...options.engineUrls]
+            ? makeUniqueArray([...options.engineUrls])
             : [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + this.nodePairCount + 1}`],
           engineMock: options?.engineMock ?? false,
           jwtSecretHex: options?.jwtSecretHex ?? SHARED_JWT_SECRET,
