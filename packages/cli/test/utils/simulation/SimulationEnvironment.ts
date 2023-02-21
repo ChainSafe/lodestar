@@ -289,7 +289,7 @@ export class SimulationEnvironment {
           ? {type: "local", secretKeys: keys}
           : {type: "no-keys"},
       engineMock: typeof el === "string" ? el === ELClient.Mock : el.type === ELClient.Mock,
-      engineUrls: [elNode.engineRpcUrl],
+      engineUrls: [elNode.engineRpcUrl, ...(clOptions.engineUrls || [])],
     });
 
     return {id, el: elNode, cl: clNode};
@@ -300,6 +300,7 @@ export class SimulationEnvironment {
     options?: AtLeast<CLClientGeneratorOptions<C>, "keys" | "id">
   ): CLNode {
     const clId = `${options?.id}-cl-${client}`;
+    console.log("createCLNode:", options?.engineUrls);
 
     switch (client) {
       case CLClient.Lodestar: {

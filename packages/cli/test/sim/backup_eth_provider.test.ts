@@ -88,7 +88,7 @@ await waitForSlot(env.clock.getLastSlotOfEpoch(1), env.nodes, {silent: true, env
 await node2.el.job.stop();
 await node3.el.job.stop();
 
-// node2 and node2 will successfully reach TTD if they can communicate to an EL on node1
+// node2 and node3 will successfully reach TTD if they can communicate to an EL on node1
 await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2, env.nodes, {
   silent: true,
   env,
