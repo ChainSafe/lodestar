@@ -76,6 +76,7 @@ export class NetworkProcessor {
       metrics.gossipValidationQueueLength.addCollect(() => {
         for (const topic of executeGossipWorkOrder) {
           metrics.gossipValidationQueueLength.set({topic}, this.gossipQueues[topic].length);
+          metrics.gossipValidationQueueConcurrency.set({topic}, this.gossipTopicConcurrency[topic]);
         }
       });
     }

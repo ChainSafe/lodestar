@@ -267,7 +267,7 @@ export function createLodestarMetrics(
     }),
     gossipValidationQueueConcurrency: register.gauge<"topic">({
       name: "lodestar_gossip_validation_queue_concurrency",
-      help: "Current concurrency of gossip validation queue",
+      help: "Current count of jobs being run on network processor for topic",
       labelNames: ["topic"],
     }),
 
