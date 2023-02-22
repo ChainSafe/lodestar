@@ -14,6 +14,7 @@ import {GossipBeaconNode} from "./gossip/index.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
 import {IReqRespBeaconNode} from "./reqresp/ReqRespBeaconNode.js";
 import {CommitteeSubscription} from "./subnets/index.js";
+import {PendingGossipsubMessage} from "./processor/types.js";
 
 export type PeerSearchOptions = {
   supportsProtocols?: string[];
@@ -61,7 +62,7 @@ export interface INetwork {
   dumpPeer(peerIdStr: string): Promise<routes.lodestar.LodestarNodePeer | undefined>;
   dumpPeerScoreStats(): Promise<PeerScoreStats>;
   dumpGossipPeerScoreStats(): Promise<PeerScoreStatsDump>;
-  dumpGossipQueueItems(gossipType: string): Promise<routes.lodestar.GossipQueueItem[]>;
+  dumpGossipQueue(gossipType: string): Promise<PendingGossipsubMessage[]>;
   dumpDiscv5KadValues(): Promise<string[]>;
 }
 

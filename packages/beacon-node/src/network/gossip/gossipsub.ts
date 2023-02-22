@@ -17,7 +17,7 @@ import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
 import {Libp2p} from "../interface.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
-import {GossipTopic, GossipTopicMap, GossipType, GossipTypeMap} from "./interface.js";
+import {GossipBeaconNode, GossipTopic, GossipTopicMap, GossipType, GossipTypeMap} from "./interface.js";
 import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic, getCoreTopicsAtFork} from "./topic.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
 
@@ -66,7 +66,7 @@ export type Eth2GossipsubOpts = {
  *
  * See https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
  */
-export class Eth2Gossipsub extends GossipSub {
+export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
   readonly scoreParams: Partial<PeerScoreParams>;
   private readonly config: BeaconConfig;
   private readonly logger: Logger;

@@ -78,6 +78,10 @@ export class GossipQueue<T> {
         return this.list.shift();
     }
   }
+
+  getAll(): T[] {
+    return this.list.toArray();
+  }
 }
 
 /**

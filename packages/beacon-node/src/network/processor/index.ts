@@ -91,6 +91,15 @@ export class NetworkProcessor {
     }
   }
 
+  dumpGossipQueue(topic: GossipType): PendingGossipsubMessage[] {
+    const queue = this.gossipQueues[topic];
+    if (queue === undefined) {
+      throw Error(`Unknown gossipType ${topic}, known values: ${Object.keys(this.gossipQueues).join(", ")}`);
+    }
+
+    return queue.getAll();
+  }
+
   private onPendingGossipsubMessage(data: PendingGossipsubMessage): void {
     const droppedJob = this.gossipQueues[data.topic.type].add(data);
     if (droppedJob) {
