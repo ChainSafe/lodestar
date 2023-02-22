@@ -3,8 +3,8 @@ import {Api, ApiError} from "@lodestar/api";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 
-import {ProposerPreparationData} from "@lodestar/api";
-import {IClock, batchItems, LoggerVc} from "../util/index.js";
+import {ProposerPreparationData} from "@lodestar/api/lib/beacon/routes/validator.js";
+import {IClock, LoggerVc, batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
 

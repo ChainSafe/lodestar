@@ -1,7 +1,8 @@
 import {ValidatorIndex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {Api, ApiError, ValidatorResponse, ValidatorStatus} from "@lodestar/api";
+import {Api, ApiError} from "@lodestar/api";
+import {ValidatorStatus, ValidatorResponse} from "@lodestar/api/lib/beacon/routes/beacon/state.js";
 import {batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 
@@ -127,7 +128,7 @@ function logValidatorStatuses(allValidators: Map<ValidatorStatus, ValidatorRespo
     "Validator activated": ["active"],
     "Validator pending": ["pending_initialized", "pending_queued"],
     "Validator withdrawn": ["withdrawal_done"],
-    "Validator exited": ["exit_slashed", "exit_unslashed"],
+    "Validator exited": ["exited_slashed", "exited_unslashed"],
   };
 
   const logFormatter = (message: string, validatorState: ValidatorResponse): void => {
@@ -136,17 +137,16 @@ function logValidatorStatuses(allValidators: Map<ValidatorStatus, ValidatorRespo
       index: validatorState.index,
     });
   };
-  Object.keys(loggedValidatorStates).map((key) => {
-    getValidatorStatesByStatuses(loggedValidatorStates[key], allValidators).forEach(
-      (validatorState: ValidatorResponse) => {
-        logFormatter(key, validatorState);
-      }
-    );
-  });
+
+  for (const [message, statuses] of Object.entries(loggedValidatorStates)) {
+    getValidatorStatesByStatuses(statuses, allValidators).forEach((validatorState) => {
+      logFormatter(message, validatorState);
+    });
+  }
 
   logger.info("Initialized validators", {
     total: allValidators.size,
-    active: allValidators.get("active")?.length,
+    active: allValidators.get("active")?.length ?? 0,
   });
 }
 
@@ -154,5 +154,11 @@ function getValidatorStatesByStatuses(
   statuses: ValidatorStatus[],
   allValidators: Map<ValidatorStatus, ValidatorResponse[]>
 ): ValidatorResponse[] {
-  return statuses.filter((status) => allValidators.has(status)).map((status) => allValidators.get(status));
+  return statuses.reduce((validatorStates, status) => {
+    const validators = allValidators.get(status);
+    if (validators) {
+      validatorStates.push(...validators);
+    }
+    return validatorStates;
+  }, [] as ValidatorResponse[]);
 }
