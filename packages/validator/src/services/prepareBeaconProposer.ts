@@ -1,8 +1,9 @@
 import {Epoch, bellatrix} from "@lodestar/types";
-import {Api, ApiError, routes} from "@lodestar/api";
+import {Api, ApiError} from "@lodestar/api";
 import {IBeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
+import {ProposerPreparationData} from "@lodestar/api/lib/beacon/routes/validator.js";
 import {IClock, ILoggerVc, batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -37,13 +38,19 @@ export function pollPrepareBeaconProposer(
     const indicesChunks = batchItems(validatorStore.getAllLocalIndices(), {batchSize: REGISTRATION_CHUNK_SIZE});
 
     for (const indices of indicesChunks) {
+      const proposers: ProposerPreparationData[] = [];
       try {
-        const proposers = indices.map(
-          (index): routes.validator.ProposerPreparationData => ({
+        indices.forEach((index) => {
+          const feeRecipient = validatorStore.getFeeRecipientByIndex(index);
+          const pubKey = validatorStore.getPubkeyOfIndex(index);
+
+          proposers.push({
             validatorIndex: String(index as number),
-            feeRecipient: validatorStore.getFeeRecipientByIndex(index),
-          })
-        );
+            feeRecipient,
+          });
+
+          logger.info("Validator exists in Beacon Chain", {validatorIndex: index, feeRecipient, pubKey});
+        });
         ApiError.assert(await api.validator.prepareBeaconProposer(proposers));
       } catch (e) {
         logger.error("Failed to register proposers with beacon", {epoch}, e as Error);

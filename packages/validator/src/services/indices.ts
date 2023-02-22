@@ -2,6 +2,7 @@ import {ValidatorIndex} from "@lodestar/types";
 import {ILogger} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, ApiError} from "@lodestar/api";
+import {ValidatorResponse, ValidatorStatus} from "@lodestar/api/lib/beacon/routes/beacon/state.js";
 import {batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 
@@ -90,7 +91,6 @@ export class IndicesService {
       newIndices.push(...validatorIndicesArr);
     }
 
-    this.logger.info("Discovered new validators", {count: newIndices.length});
     this.metrics?.discoveredIndices.inc(newIndices.length);
 
     return newIndices;
@@ -101,22 +101,34 @@ export class IndicesService {
     ApiError.assert(res, "Can not fetch state validators from beacon node");
 
     const newIndices = [];
+
+    const allValidators = new Map<ValidatorStatus, ValidatorResponse[]>();
+
     for (const validatorState of res.response.data) {
+      // Group all validators by status
+      allValidators.set(validatorState.status, [validatorState]);
+
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
       if (!this.pubkey2index.has(pubkeyHex)) {
         this.logger.debug("Discovered validator", {pubkey: pubkeyHex, index: validatorState.index});
         this.pubkey2index.set(pubkeyHex, validatorState.index);
         this.index2pubkey.set(validatorState.index, pubkeyHex);
         newIndices.push(validatorState.index);
-      } else {
-        this.logger.info(
-          `Validator:
-          status=${validatorState.status || "unknown"}
-          index=${this.pubkey2index.get(pubkeyHex)}
-          pubkey=${pubkeyHex}`
-        );
       }
     }
+
+    allValidators.get("active")?.forEach((validatorState: ValidatorResponse) => {
+      this.logger.info("Validator activated", {
+        pubkey: toHexString(validatorState.validator.pubkey),
+        index: validatorState.index,
+      });
+    });
+
+    this.logger.info("Initialized Validators: ", {
+      total: allValidators.size,
+      available: allValidators.get("active")?.length,
+    });
+
     return newIndices;
   }
 }
