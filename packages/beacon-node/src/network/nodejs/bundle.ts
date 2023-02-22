@@ -1,3 +1,4 @@
+import {yamux} from "@chainsafe/libp2p-yamux";
 import {createLibp2p} from "libp2p";
 import {tcp} from "@libp2p/tcp";
 import {mplex} from "@libp2p/mplex";
@@ -58,7 +59,7 @@ export async function createNodejsLibp2p(options: Libp2pOptions): Promise<Libp2p
         },
       }),
     ],
-    streamMuxers: [mplex({maxInboundStreams: 256})],
+    streamMuxers: [yamux(), mplex({maxInboundStreams: 256})],
     peerDiscovery,
     metrics: options.metrics
       ? prometheusMetrics({

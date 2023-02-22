@@ -153,6 +153,7 @@
     "uint8arraylist": "^2.3.2",
     "uint8arrays": "^4.0.2",
     "varint": "^6.0.0",
+    "@chainsafe/libp2p-yamux": "^3.0.3",
     "xxhash-wasm": "1.0.1"
   },
   "peerDependencies": {
