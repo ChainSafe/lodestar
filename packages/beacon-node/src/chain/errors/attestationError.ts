@@ -3,6 +3,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {GossipAction, GossipActionError} from "./gossipValidation.js";
 
 export enum AttestationErrorCode {
+  INVALID_SSZ = "ATTESTATION_ERROR_INVALID_SSZ",
   /**
    * The target state cannot be fetched
    */
@@ -129,6 +130,7 @@ export enum AttestationErrorCode {
 }
 
 export type AttestationErrorType =
+  | {code: AttestationErrorCode.INVALID_SSZ; error: string}
   | {code: AttestationErrorCode.TARGET_STATE_MISSING}
   | {code: AttestationErrorCode.FUTURE_SLOT; attestationSlot: Slot; latestPermissibleSlot: Slot}
   | {code: AttestationErrorCode.PAST_SLOT; attestationSlot: Slot; earliestPermissibleSlot: Slot}

@@ -12,7 +12,7 @@ import {IBeaconChain} from "..";
 import {AttestationErrorCode, AttestationGossipErrorType, GossipAction} from "../errors/index.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
-import {Err, isErr, Result} from "../../util/err.js";
+import {Err, isErr, mapOkResultsAsync, Result} from "../../util/err.js";
 
 type Results<T> = Result<T, AttestationGossipErrorType>[];
 
@@ -187,47 +187,49 @@ export async function validateGossipAttestation(
     };
   });
 
-  // TODO: Should report status separately
-  // TODO: Submit concurrently
-  const resultsAfterSigCheck: Results<{
-    indexedAttestation: phase0.IndexedAttestation;
-    subnet: number;
-  }> = await Promise.all(
-    resultsBeforeSigCheck.map(async (result, i) => {
-      if (isErr(result)) return result;
+  const resultsAfterSigCheck = await mapOkResultsAsync(resultsBeforeSigCheck, async (resultsOkBeforeSigCheck) => {
+    return Promise.all(
+      resultsOkBeforeSigCheck.map(async (result) => {
+        // [REJECT] The signature of attestation is valid.
+        // TODO: Optimize by submitting the entire batch at one in one async fn call
+        const isValid = await chain.bls.verifySignatureSets([result.signatureSet], {batchable: true});
+        if (isValid) {
+          return result;
+        } else {
+          return Err({
+            action: GossipAction.REJECT,
+            code: AttestationErrorCode.INVALID_SIGNATURE,
+          } as AttestationGossipErrorType);
+        }
+      })
+    );
+  });
 
-      if (!(await chain.bls.verifySignatureSets([result.signatureSet], {batchable: true}))) {
-        return Err({
-          action: GossipAction.REJECT,
-          code: AttestationErrorCode.INVALID_SIGNATURE,
-        } as AttestationGossipErrorType);
-      }
+  return resultsAfterSigCheck.map((result) => {
+    if (isErr(result)) return result;
 
-      // Now that the attestation has been fully verified, store that we have received a valid attestation from this validator.
-      //
-      // It's important to double check that the attestation still hasn't been observed, since
-      // there can be a race-condition if we receive two attestations at the same time and
-      // process them in different threads.
-      const targetEpoch = attestations[i].attestation.data.target.epoch;
-      if (chain.seenAttesters.isKnown(targetEpoch, result.validatorIndex)) {
-        return Err({
-          action: GossipAction.IGNORE,
-          code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN,
-          targetEpoch,
-          validatorIndex: result.validatorIndex,
-        });
-      }
+    // Now that the attestation has been fully verified, store that we have received a valid attestation from this validator.
+    //
+    // It's important to double check that the attestation still hasn't been observed, since
+    // there can be a race-condition if we receive two attestations at the same time and
+    // process them in different threads.
+    const targetEpoch = result.indexedAttestation.data.target.epoch;
+    if (chain.seenAttesters.isKnown(targetEpoch, result.validatorIndex)) {
+      return Err({
+        action: GossipAction.IGNORE,
+        code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN,
+        targetEpoch,
+        validatorIndex: result.validatorIndex,
+      });
+    }
 
-      chain.seenAttesters.add(targetEpoch, result.validatorIndex);
+    chain.seenAttesters.add(targetEpoch, result.validatorIndex);
 
-      return {
-        indexedAttestation: result.indexedAttestation,
-        subnet: result.subnet,
-      };
-    })
-  );
-
-  return resultsAfterSigCheck;
+    return {
+      indexedAttestation: result.indexedAttestation,
+      subnet: result.subnet,
+    };
+  });
 }
 
 /**

@@ -1,10 +1,11 @@
 import {TopicValidatorResult} from "@libp2p/interface-pubsub";
-import {ssz} from "@lodestar/types";
+import {phase0, ssz} from "@lodestar/types";
+import {AttestationErrorCode, AttestationGossipErrorType} from "../../chain/errors/attestationError.js";
 import {GossipAction} from "../../chain/errors/gossipValidation.js";
 import {IBeaconChain} from "../../chain/interface.js";
 import {validateGossipAttestation} from "../../chain/validation/attestation.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {isErr, Result} from "../../util/err.js";
+import {Err, isErr, mapOkResultsAsync, Result} from "../../util/err.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {GossipTopic, GossipType} from "../gossip/interface.js";
 import {GossipAttestationsWork, PendingGossipsubMessage} from "./gossipAttestationQueue.js";
@@ -42,26 +43,46 @@ export class NetworkWorker {
       message.startProcessUnixSec = Date.now() / 1000;
     }
 
-    const attestations = messages.map((message) => ({
-      attestation: ssz.phase0.Attestation.deserialize(message.msg.data),
-      subnet: getTopicSubnet(message.topic),
-    }));
+    const attestationsRes: Result<
+      {attestation: phase0.Attestation; subnet: number},
+      AttestationGossipErrorType
+    >[] = messages.map((message) => {
+      try {
+        return {
+          attestation: ssz.phase0.Attestation.deserialize(message.msg.data),
+          subnet: getTopicSubnet(message.topic),
+        };
+      } catch (e) {
+        return Err({
+          action: GossipAction.REJECT,
+          code: AttestationErrorCode.INVALID_SSZ,
+          error: (e as Error).message,
+        });
+      }
+    });
 
-    const results = await validateGossipAttestation(this.chain, attestations);
+    const results = await mapOkResultsAsync(attestationsRes, (attestationsOk) =>
+      validateGossipAttestation(this.chain, attestationsOk)
+    );
 
-    for (let i = 0; i < attestations.length; i++) {
-      // TODO: Are not of the same length since SSZ deserialization may fail
+    for (let i = 0; i < attestationsRes.length; i++) {
       const result = results[i];
-      const {attestation, subnet} = attestations[i];
+      const attestationRes = attestationsRes[i];
       const message = messages[i];
 
       // Submit validation result to gossip
       this.reportGossipValidationResult(message, result, GossipType.beacon_attestation);
 
       // Import attestation
-      if (!isErr(result)) {
-        const {indexedAttestation} = result;
-        this.importer.importGossipAttestation(attestation, indexedAttestation, subnet, message.seenTimestampSec);
+      // Note: the second `!isErr(attestationRes)` should never be an error, but required to make TS compiler happy
+      if (!isErr(result) && !isErr(attestationRes)) {
+        const {indexedAttestation, subnet} = result;
+        this.importer.importGossipAttestation(
+          attestationRes.attestation,
+          indexedAttestation,
+          subnet,
+          message.seenTimestampSec
+        );
       }
     }
   }
