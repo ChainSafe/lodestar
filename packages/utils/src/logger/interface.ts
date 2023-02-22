@@ -40,7 +40,7 @@ export type TimestampFormat =
   | {format: TimestampFormatCode.DateRegular}
   | ({format: TimestampFormatCode.EpochSlot} & EpochSlotOpts);
 
-export interface ILoggerOptions {
+export interface LoggerOptions {
   level?: LogLevel;
   module?: string;
   format?: LogFormat;
@@ -54,12 +54,12 @@ export type LoggerChildOpts = {
 
 export type LogHandler = (message: string, context?: LogData, error?: Error) => void;
 
-export interface ILogger {
+export type Logger = {
   error: LogHandler;
   warn: LogHandler;
   info: LogHandler;
   verbose: LogHandler;
   debug: LogHandler;
   // custom
-  child(options: LoggerChildOpts): ILogger;
-}
+  child(options: LoggerChildOpts): Logger;
+};

@@ -1,10 +1,10 @@
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {ICliCommandOptions, YargsError} from "../../util/index.js";
+import {CliCommandOptions, YargsError} from "../../util/index.js";
 
 const defaultListenAddress = "0.0.0.0";
 export const defaultP2pPort = 9000;
 
-export interface INetworkArgs {
+export type NetworkArgs = {
   discv5?: boolean;
   listenAddress?: string;
   port?: number;
@@ -32,9 +32,9 @@ export interface INetworkArgs {
   "network.blockCountPeerLimit": number;
   /** @deprecated This option is deprecated and should be removed in next major release. */
   "network.rateTrackerTimeoutMs": number;
-}
+};
 
-export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
+export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const listenAddress = args.listenAddress || defaultListenAddress;
   const udpPort = args.discoveryPort ?? args.port ?? defaultP2pPort;
   const tcpPort = args.port ?? defaultP2pPort;
@@ -70,7 +70,7 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
   };
 }
 
-export const options: ICliCommandOptions<INetworkArgs> = {
+export const options: CliCommandOptions<NetworkArgs> = {
   discv5: {
     type: "boolean",
     // TODO: Add `network.discv5.enabled` to the `IDiscv5DiscoveryInputOptions` type

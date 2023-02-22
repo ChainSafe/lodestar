@@ -12,7 +12,7 @@ import {Registry} from "prom-client";
 import {Libp2p} from "../interface.js";
 import {createNoise} from "./noise.js";
 
-export interface ILibp2pOptions {
+export type Libp2pOptions = {
   peerId: PeerId;
   addresses: {
     listen: string[];
@@ -27,9 +27,9 @@ export interface ILibp2pOptions {
   metricsRegistry?: Registry;
   lodestarVersion?: string;
   mdns?: boolean;
-}
+};
 
-export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2p> {
+export async function createNodejsLibp2p(options: Libp2pOptions): Promise<Libp2p> {
   const peerDiscovery = [];
   if (options.peerDiscovery) {
     peerDiscovery.push(...options.peerDiscovery);

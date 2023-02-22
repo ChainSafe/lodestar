@@ -2,13 +2,13 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import {peerIdFromString} from "@libp2p/peer-id";
 import {ssz, deneb} from "@lodestar/types";
-import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
-import {doBeaconBlocksMaybeBlobsByRange, ReqRespBeaconNode} from "../../../src/network/reqresp/index.js";
+import {beaconBlocksMaybeBlobsByRange, ReqRespBeaconNode} from "../../../src/network/reqresp/index.js";
 import {BlockInputType} from "../../../src/chain/blocks/types.js";
 import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 
-describe("doBeaconBlocksMaybeBlobsByRange", () => {
+describe("beaconBlocksMaybeBlobsByRange", () => {
   before(async function () {
     this.timeout(10000); // Loading trusted setup is slow
     await initCKZG();
@@ -21,7 +21,7 @@ describe("doBeaconBlocksMaybeBlobsByRange", () => {
   const peerId = peerIdFromString("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
 
   /* eslint-disable @typescript-eslint/naming-convention */
-  const chainConfig = createIChainForkConfig({
+  const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
     ALTAIR_FORK_EPOCH: 0,
     BELLATRIX_FORK_EPOCH: 0,
@@ -29,8 +29,9 @@ describe("doBeaconBlocksMaybeBlobsByRange", () => {
     EIP4844_FORK_EPOCH: 0,
   });
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
-  const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
+  const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
   const rangeRequest = ssz.phase0.BeaconBlocksByRangeRequest.defaultValue();
+  rangeRequest.count = 1;
 
   const block1 = ssz.deneb.SignedBeaconBlock.defaultValue();
   block1.message.slot = 1;
@@ -80,7 +81,7 @@ describe("doBeaconBlocksMaybeBlobsByRange", () => {
       reqResp.beaconBlocksByRange.resolves(blocks);
       reqResp.blobsSidecarsByRange.resolves(blobsSidecars);
 
-      const response = await doBeaconBlocksMaybeBlobsByRange(config, reqResp, peerId, rangeRequest, 0);
+      const response = await beaconBlocksMaybeBlobsByRange(config, reqResp, peerId, rangeRequest, 0);
       expect(response).to.be.deep.equal(expectedResponse);
     });
   });

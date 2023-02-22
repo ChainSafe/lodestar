@@ -1,14 +1,14 @@
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {ICliCommandOptions} from "../../util/index.js";
+import {CliCommandOptions} from "../../util/index.js";
 
-export interface IChainArgs {
+export type ChainArgs = {
   suggestedFeeRecipient: string;
   "chain.blsVerifyAllMultiThread": boolean;
   "chain.blsVerifyAllMainThread": boolean;
   "chain.disableBlsBatchVerify": boolean;
   "chain.persistInvalidSszObjects": boolean;
-  // No need to define chain.persistInvalidSszObjects as part of IChainArgs
-  // as this is defined as part of IBeaconPaths
+  // No need to define chain.persistInvalidSszObjects as part of ChainArgs
+  // as this is defined as part of BeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
   "chain.proposerBoostEnabled": boolean;
   "chain.disableImportExecutionFcU": boolean;
@@ -17,9 +17,10 @@ export interface IChainArgs {
   "chain.assertCorrectProgressiveBalances": boolean;
   "chain.maxSkipSlots": number;
   "safe-slots-to-import-optimistically": number;
-}
+  "chain.archiveStateEpochFrequency": number;
+};
 
-export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
+export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args["suggestedFeeRecipient"],
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
@@ -35,10 +36,11 @@ export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
+    archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
   };
 }
 
-export const options: ICliCommandOptions<IChainArgs> = {
+export const options: CliCommandOptions<ChainArgs> = {
   suggestedFeeRecipient: {
     type: "string",
     description:
@@ -131,6 +133,13 @@ Will double processing times. Use only for debugging purposes.",
     description:
       "Slots from current (clock) slot till which its safe to import a block optimistically if the merge is not justified yet.",
     defaultDescription: String(defaultOptions.chain.safeSlotsToImportOptimistically),
+    group: "chain",
+  },
+
+  "chain.archiveStateEpochFrequency": {
+    hidden: true,
+    description: "Minimum number of epochs between archived states",
+    type: "number",
     group: "chain",
   },
 };

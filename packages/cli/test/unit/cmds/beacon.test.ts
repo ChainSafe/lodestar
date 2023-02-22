@@ -7,8 +7,8 @@ import {chainConfigToJson} from "@lodestar/config";
 import {ENR} from "@chainsafe/discv5";
 import {exportToJSON} from "../../../src/config/peerId.js";
 import {beaconHandlerInit} from "../../../src/cmds/beacon/handler.js";
-import {IBeaconArgs} from "../../../src/cmds/beacon/options.js";
-import {IGlobalArgs} from "../../../src/options/globalOptions.js";
+import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
+import {GlobalArgs} from "../../../src/options/globalOptions.js";
 import {testFilesDir} from "../../utils.js";
 
 describe("cmds / beacon / args handler", () => {
@@ -94,9 +94,9 @@ describe("cmds / beacon / args handler", () => {
 });
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-async function runBeaconHandlerInit(args: Partial<IBeaconArgs & IGlobalArgs>) {
+async function runBeaconHandlerInit(args: Partial<BeaconArgs & GlobalArgs>) {
   return beaconHandlerInit({
     dataDir: testFilesDir,
     ...args,
-  } as IBeaconArgs & IGlobalArgs);
+  } as BeaconArgs & GlobalArgs);
 }

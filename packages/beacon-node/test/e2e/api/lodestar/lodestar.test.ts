@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
+import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {phase0} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -15,7 +15,7 @@ describe("api / impl / validator", function () {
     const ALTAIR_FORK_EPOCH = 0;
     const validatorCount = 8;
     const restPort = 9596;
-    const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH"> = {
+    const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH"> = {
       /* eslint-disable @typescript-eslint/naming-convention */
       SECONDS_PER_SLOT: SECONDS_PER_SLOT,
       ALTAIR_FORK_EPOCH: ALTAIR_FORK_EPOCH,
@@ -34,9 +34,9 @@ describe("api / impl / validator", function () {
     it("Should return validator indices that are live", async function () {
       this.timeout("10 min");
 
-      const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+      const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
       const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
-      const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
+      const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
       const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
       const loggerNodeA = testLogger("Node-A", testLoggerOpts);
@@ -86,9 +86,9 @@ describe("api / impl / validator", function () {
     it("Should return only for previous, current and next epoch", async function () {
       this.timeout("10 min");
 
-      const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+      const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
       const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
-      const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
+      const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
       const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
       const loggerNodeA = testLogger("Node-A", testLoggerOpts);

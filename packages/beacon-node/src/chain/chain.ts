@@ -11,17 +11,17 @@ import {
   Index2PubkeyCache,
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {ILogger, pruneSetToMax, toHex} from "@lodestar/utils";
+import {Logger, pruneSetToMax, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
-import {IMetrics} from "../metrics/index.js";
+import {Metrics} from "../metrics/index.js";
 import {bytesToData, numToQuantity} from "../eth1/provider/utils.js";
 import {wrapError} from "../util/wrapError.js";
 import {ckzg} from "../util/kzg.js";
@@ -30,7 +30,7 @@ import {IExecutionEngine, IExecutionBuilder, TransitionConfigurationV1} from "..
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
-import {IBeaconClock, LocalClock} from "./clock/index.js";
+import {BeaconClock, LocalClock} from "./clock/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
 import {IChainOptions} from "./options.js";
@@ -79,15 +79,15 @@ export class BeaconChain implements IBeaconChain {
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
-  readonly config: IBeaconConfig;
-  readonly logger: ILogger;
-  readonly metrics: IMetrics | null;
+  readonly config: BeaconConfig;
+  readonly logger: Logger;
+  readonly metrics: Metrics | null;
 
   readonly anchorStateLatestBlockSlot: Slot;
 
   readonly bls: IBlsVerifier;
   readonly forkChoice: IForkChoice;
-  readonly clock: IBeaconClock;
+  readonly clock: BeaconClock;
   readonly emitter: ChainEventEmitter;
   readonly stateCache: StateContextCache;
   readonly checkpointStateCache: CheckpointStateCache;
@@ -148,13 +148,13 @@ export class BeaconChain implements IBeaconChain {
       executionEngine,
       executionBuilder,
     }: {
-      config: IBeaconConfig;
+      config: BeaconConfig;
       db: IBeaconDb;
-      logger: ILogger;
+      logger: Logger;
       processShutdownCallback: ProcessShutdownCallback;
       /** Used for testing to supply fake clock */
-      clock?: IBeaconClock;
-      metrics: IMetrics | null;
+      clock?: BeaconClock;
+      metrics: Metrics | null;
       anchorState: BeaconStateAllForks;
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
@@ -479,7 +479,7 @@ export class BeaconChain implements IBeaconChain {
    * Used to handle unknown block root for both unaggregated and aggregated attestations.
    * @returns true if blockFound
    */
-  waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean> {
+  waitForBlock(slot: Slot, root: RootHex): Promise<boolean> {
     return this.reprocessController.waitForBlockOfAttestation(slot, root);
   }
 

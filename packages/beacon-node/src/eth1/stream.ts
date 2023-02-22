@@ -1,6 +1,6 @@
 import {sleep} from "@lodestar/utils";
 import {phase0} from "@lodestar/types";
-import {Eth1Block, IBatchDepositEvents, IEth1Provider, IEth1StreamParams} from "./interface.js";
+import {Eth1Block, BatchDepositEvents, IEth1Provider, IEth1StreamParams} from "./interface.js";
 import {groupDepositEventsByBlock} from "./utils/groupDepositEventsByBlock.js";
 import {optimizeNextBlockDiffForGenesis} from "./utils/optimizeNextBlockDiffForGenesis.js";
 import {parseEth1Block} from "./provider/eth1Provider.js";
@@ -15,7 +15,7 @@ export async function* getDepositsStream(
   provider: IEth1Provider,
   params: IEth1StreamParams,
   signal?: AbortSignal
-): AsyncGenerator<IBatchDepositEvents> {
+): AsyncGenerator<BatchDepositEvents> {
   fromBlock = Math.max(fromBlock, provider.deployBlock);
 
   while (true) {

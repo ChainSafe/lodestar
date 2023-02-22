@@ -13,13 +13,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable mocha/no-exports, mocha/no-top-level-hooks */
 
-export interface ISimpleStruct {
+export type SimpleStruct = {
   test: boolean;
   number: number;
-}
+};
 
-export interface ISimpleCase extends Iterable<string> {
-  input: ISimpleStruct;
+export interface SimpleCase extends Iterable<string> {
+  input: SimpleStruct;
   output: number;
   meta?: {
     bls_setting?: bigint;
@@ -45,7 +45,7 @@ after(() => {
   unlinkSync(join(__dirname, "../_test_files/single/case1/output.ssz"));
 });
 
-describeDirectorySpecTest<ISimpleCase, number>(
+describeDirectorySpecTest<SimpleCase, number>(
   "single spec test",
   join(__dirname, "../_test_files/single"),
   (testCase) => {

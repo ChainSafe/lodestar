@@ -2,7 +2,7 @@ import fs from "node:fs";
 import net from "node:net";
 import {spawn} from "node:child_process";
 import {sleep} from "@lodestar/utils";
-import {IChainConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {Eth1Provider} from "../../src/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
 import {shell} from "../sim/shell.js";
@@ -95,7 +95,7 @@ async function getGenesisBlockHash(
   signal: AbortSignal
 ): Promise<string> {
   const eth1Provider = new Eth1Provider(
-    ({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH} as Partial<IChainConfig>) as IChainConfig,
+    ({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH} as Partial<ChainConfig>) as ChainConfig,
     {providerUrls: [providerUrl], jwtSecretHex},
     signal
   );

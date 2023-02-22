@@ -48,12 +48,12 @@ type RequestErrorType =
   | {code: RequestErrorCode.RESP_TIMEOUT}
   | {code: RequestErrorCode.REQUEST_RATE_LIMITED};
 
-export interface IRequestErrorMetadata {
+export type RequestErrorMetadata = {
   method: string;
   encoding: Encoding;
   peer: string;
   // Do not include requestId in error metadata to make the errors deterministic for tests
-}
+};
 
 /**
  * Same error types as RequestError but without metadata.
@@ -65,8 +65,8 @@ export class RequestInternalError extends LodestarError<RequestErrorType> {
   }
 }
 
-export class RequestError extends LodestarError<RequestErrorType & IRequestErrorMetadata> {
-  constructor(type: RequestErrorType, metadata: IRequestErrorMetadata) {
+export class RequestError extends LodestarError<RequestErrorType & RequestErrorMetadata> {
+  constructor(type: RequestErrorType, metadata: RequestErrorMetadata) {
     super({...metadata, ...type}, renderErrorMessage(type));
   }
 }

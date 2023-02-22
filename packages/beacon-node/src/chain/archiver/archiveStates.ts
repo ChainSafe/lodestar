@@ -1,4 +1,4 @@
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, Epoch} from "@lodestar/types";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -7,14 +7,17 @@ import {IBeaconDb} from "../../db/index.js";
 import {CheckpointStateCache} from "../stateCache/index.js";
 
 /**
- * Minimum number of epochs between archived states
- */
-export const PERSIST_STATE_EVERY_EPOCHS = 1024;
-/**
  * Minimum number of epochs between single temp archived states
  * These states will be pruned once a new state is persisted
  */
 const PERSIST_TEMP_STATE_EVERY_EPOCHS = 32;
+
+export interface StatesArchiverOpts {
+  /**
+   * Minimum number of epochs between archived states
+   */
+  archiveStateEpochFrequency: number;
+}
 
 /**
  * Archives finalized states from active bucket to archive bucket.
@@ -25,7 +28,8 @@ export class StatesArchiver {
   constructor(
     private readonly checkpointStateCache: CheckpointStateCache,
     private readonly db: IBeaconDb,
-    private readonly logger: ILogger
+    private readonly logger: Logger,
+    private readonly opts: StatesArchiverOpts
   ) {}
 
   /**
@@ -43,14 +47,15 @@ export class StatesArchiver {
   async maybeArchiveState(finalized: CheckpointWithHex): Promise<void> {
     const lastStoredSlot = await this.db.stateArchive.lastKey();
     const lastStoredEpoch = computeEpochAtSlot(lastStoredSlot ?? 0);
+    const {archiveStateEpochFrequency} = this.opts;
 
-    if (finalized.epoch - lastStoredEpoch > PERSIST_TEMP_STATE_EVERY_EPOCHS) {
+    if (finalized.epoch - lastStoredEpoch > Math.min(PERSIST_TEMP_STATE_EVERY_EPOCHS, archiveStateEpochFrequency)) {
       await this.archiveState(finalized);
 
       // Only check the current and previous intervals
       const minEpoch = Math.max(
         0,
-        (Math.floor(finalized.epoch / PERSIST_STATE_EVERY_EPOCHS) - 1) * PERSIST_STATE_EVERY_EPOCHS
+        (Math.floor(finalized.epoch / archiveStateEpochFrequency) - 1) * archiveStateEpochFrequency
       );
 
       const storedStateSlots = await this.db.stateArchive.keys({
@@ -58,7 +63,7 @@ export class StatesArchiver {
         gte: computeStartSlotAtEpoch(minEpoch),
       });
 
-      const statesSlotsToDelete = computeStateSlotsToDelete(storedStateSlots, PERSIST_STATE_EVERY_EPOCHS);
+      const statesSlotsToDelete = computeStateSlotsToDelete(storedStateSlots, archiveStateEpochFrequency);
       if (statesSlotsToDelete.length > 0) {
         await this.db.stateArchive.batchDelete(statesSlotsToDelete);
       }

@@ -5,24 +5,24 @@ import {createKeypairFromPeerId, SignableENR} from "@chainsafe/discv5";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {BeaconNode, BeaconDb} from "@lodestar/beacon-node";
-import {createIBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
-import {IGlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
+import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {BeaconNodeOptions, exportToJSON, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
 import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm, cleanOldLogFiles} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {defaultP2pPort} from "../../options/beaconNodeOptions/network.js";
-import {IBeaconArgs} from "./options.js";
+import {BeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
 import {initBeaconState} from "./initBeaconState.js";
 
 /**
  * Runs a beacon node.
  */
-export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<void> {
+export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void> {
   const {config, options, beaconPaths, network, version, commit, peerId} = await beaconHandlerInit(args);
 
   // initialize directories
@@ -65,7 +65,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   }
   const db = new BeaconDb({
     config,
-    controller: new LevelDbController(options.db, {metrics: null}),
+    controller: new LevelDbController(options.db, {metrics: null, logger}),
   });
 
   await db.start();
@@ -81,7 +81,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       logger,
       abortController.signal
     );
-    const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
+    const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
     const node = await BeaconNode.init({
       opts: options,
       config: beaconConfig,
@@ -111,7 +111,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
 
 /** Separate function to simplify unit testing of options merging */
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
+export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const {config, network} = getBeaconConfigFromArgs(args);
 
   const beaconNodeOptions = new BeaconNodeOptions(parseBeaconNodeArgs(args));
@@ -161,7 +161,7 @@ export async function beaconHandlerInit(args: IBeaconArgs & IGlobalArgs) {
   return {config, options, beaconPaths, network, version, commit, peerId};
 }
 
-export function overwriteEnrWithCliArgs(enr: SignableENR, args: IBeaconArgs): void {
+export function overwriteEnrWithCliArgs(enr: SignableENR, args: BeaconArgs): void {
   // TODO: Not sure if we should propagate port/defaultP2pPort options to the ENR
   enr.tcp = args["enr.tcp"] ?? args.port ?? defaultP2pPort;
   const udpPort = args["enr.udp"] ?? args.discoveryPort ?? args.port ?? defaultP2pPort;

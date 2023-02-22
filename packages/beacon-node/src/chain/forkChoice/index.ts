@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {Slot} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {
   ForkChoice,
   ProtoArray,
@@ -27,7 +27,7 @@ export {ForkChoiceOpts};
  * Fork Choice extended with a ChainEventEmitter
  */
 export function initializeForkChoice(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   emitter: ChainEventEmitter,
   currentSlot: Slot,
   state: CachedBeaconStateAllForks,

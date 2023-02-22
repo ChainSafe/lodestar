@@ -1,5 +1,5 @@
 import {BLSPubkey} from "@lodestar/types";
-import {IMinMaxSurround, IDistanceEntry, IDistanceStore, MinMaxSurroundAttestation} from "./interface.js";
+import {IMinMaxSurround, DistanceEntry, IDistanceStore, MinMaxSurroundAttestation} from "./interface.js";
 import {SurroundAttestationError, SurroundAttestationErrorCode} from "./errors.js";
 
 // surround vote checking with min-max surround
@@ -31,7 +31,7 @@ export class MinMaxSurround implements IMinMaxSurround {
 
     const untilEpoch = Math.max(0, attestation.sourceEpoch - 1 - this.maxEpochLookback);
 
-    const values: IDistanceEntry[] = [];
+    const values: DistanceEntry[] = [];
     for (let epoch = attestation.sourceEpoch - 1; epoch >= untilEpoch; epoch--) {
       const minSpan = await this.store.minSpan.get(pubKey, epoch);
       const distance = attestation.targetEpoch - epoch;
@@ -61,7 +61,7 @@ export class MinMaxSurround implements IMinMaxSurround {
   private async updateMaxSpan(pubKey: BLSPubkey, attestation: MinMaxSurroundAttestation): Promise<void> {
     await this.assertNotSurrounded(pubKey, attestation);
 
-    const values: IDistanceEntry[] = [];
+    const values: DistanceEntry[] = [];
     for (let epoch = attestation.sourceEpoch + 1; epoch < attestation.targetEpoch; epoch++) {
       const maxSpan = await this.store.maxSpan.get(pubKey, epoch);
       const distance = attestation.targetEpoch - epoch;

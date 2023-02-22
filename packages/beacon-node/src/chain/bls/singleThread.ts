@@ -1,13 +1,13 @@
 import {ISignatureSet} from "@lodestar/state-transition";
-import {IMetrics} from "../../metrics/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier} from "./interface.js";
 import {verifySignatureSetsMaybeBatch} from "./maybeBatch.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "./utils.js";
 
 export class BlsSingleThreadVerifier implements IBlsVerifier {
-  private readonly metrics: IMetrics | null;
+  private readonly metrics: Metrics | null;
 
-  constructor({metrics = null}: {metrics: IMetrics | null}) {
+  constructor({metrics = null}: {metrics: Metrics | null}) {
     this.metrics = metrics;
   }
 

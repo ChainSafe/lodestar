@@ -2,7 +2,7 @@ import {setMaxListeners} from "node:events";
 import {Connection, Stream} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Libp2p} from "libp2p";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "./request/index.js";
 import {handleRequest} from "./response/index.js";
@@ -16,7 +16,7 @@ export const DEFAULT_PROTOCOL_PREFIX = "/eth2/beacon_chain/req";
 
 export interface ReqRespProtocolModules {
   libp2p: Libp2p;
-  logger: ILogger;
+  logger: Logger;
   metricsRegister: MetricsRegister | null;
 }
 
@@ -39,7 +39,7 @@ export interface ReqRespRegisterOpts {
 export class ReqResp {
   // protected to be usable by extending class
   protected readonly libp2p: Libp2p;
-  protected readonly logger: ILogger;
+  protected readonly logger: Logger;
   protected readonly metrics: Metrics | null;
 
   // to not be used by extending class

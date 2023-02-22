@@ -1,8 +1,8 @@
-import {IDatabaseApiOptions} from "@lodestar/db";
+import {DatabaseApiOptions} from "@lodestar/db";
 import {BLSPubkey, ssz} from "@lodestar/types";
-import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {getClient, Api, routes, ApiError} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
@@ -25,10 +25,10 @@ import {DoppelgangerService} from "./services/doppelgangerService.js";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
-  dbOps: IDatabaseApiOptions;
+  dbOps: DatabaseApiOptions;
   api: Api | string | string[];
   signers: Signer[];
-  logger: ILogger;
+  logger: Logger;
   processShutdownCallback: ProcessShutdownCallback;
   abortController: AbortController;
   afterBlockDelaySlotFraction?: number;
@@ -56,17 +56,17 @@ export class Validator {
   private readonly blockProposingService: BlockProposingService;
   private readonly attestationService: AttestationService;
   private readonly syncCommitteeService: SyncCommitteeService;
-  private readonly config: IBeaconConfig;
+  private readonly config: BeaconConfig;
   private readonly api: Api;
   private readonly clock: IClock;
   private readonly chainHeaderTracker: ChainHeaderTracker;
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
   private state: Status;
   private readonly controller: AbortController;
 
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
     const {dbOps, logger, slashingProtection, signers, valProposerConfig} = opts;
-    const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
+    const config = createBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
     this.controller = opts.abortController;
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const loggerVc = getLoggerVc(logger, clock);

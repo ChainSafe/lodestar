@@ -5,7 +5,7 @@ import {join} from "node:path";
 import tmp from "tmp";
 import {fromHexString} from "@chainsafe/ssz";
 import {nodeUtils} from "@lodestar/beacon-node";
-import {createIChainForkConfig, IChainForkConfig} from "@lodestar/config";
+import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {activePreset} from "@lodestar/params";
 import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition";
 import {generateLodestarBeaconNode} from "./cl_clients/lodestar.js";
@@ -60,7 +60,7 @@ export class SimulationEnvironment {
   readonly dockerRunner: DockerRunner;
   readonly externalSigner: ExternalSignerServer;
 
-  readonly forkConfig: IChainForkConfig;
+  readonly forkConfig: ChainForkConfig;
   readonly options: SimulationOptions;
 
   private keysCount = 0;
@@ -68,7 +68,7 @@ export class SimulationEnvironment {
   private genesisState?: BeaconStateAllForks;
   private genesisStatePath: string;
 
-  private constructor(forkConfig: IChainForkConfig, options: SimulationOptions) {
+  private constructor(forkConfig: ChainForkConfig, options: SimulationOptions) {
     this.forkConfig = forkConfig;
     this.options = options;
     this.genesisStatePath = join(this.options.rootDir, "genesis.ssz");
@@ -111,7 +111,7 @@ export class SimulationEnvironment {
         additionalSlots: activePreset.SLOTS_PER_EPOCH - 2,
       });
 
-    const forkConfig = createIChainForkConfig({
+    const forkConfig = createChainForkConfig({
       ...chainConfig,
       SECONDS_PER_SLOT: secondsPerSlot,
       TERMINAL_TOTAL_DIFFICULTY: ttd,

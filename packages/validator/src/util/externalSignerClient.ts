@@ -2,7 +2,7 @@ import fetch from "cross-fetch";
 import {phase0, altair, capella} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {computeEpochAtSlot, blindedOrFullBlockToHeader} from "@lodestar/state-transition";
 import {allForks, Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
 import {ContainerType, toHexString, ValueOf} from "@chainsafe/ssz";
@@ -117,7 +117,7 @@ export async function externalSignerGetKeys(externalSignerUrl: string): Promise<
  * Return signature in bytes. Assumption that the pubkey has it's corresponding secret key in the keystore of an external signer.
  */
 export async function externalSignerPostSignature(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   externalSignerUrl: string,
   pubkeyHex: PubkeyHex,
   signingRoot: Root,
@@ -173,7 +173,7 @@ async function handlerExternalSignerResponse<T>(res: Response): Promise<T> {
   return JSON.parse(await res.text()) as T;
 }
 
-function serializerSignableMessagePayload(config: IBeaconConfig, payload: SignableMessage): Record<string, unknown> {
+function serializerSignableMessagePayload(config: BeaconConfig, payload: SignableMessage): Record<string, unknown> {
   switch (payload.type) {
     case SignableMessageType.AGGREGATION_SLOT:
       return {aggregation_slot: AggregationSlotType.toJson(payload.data)};

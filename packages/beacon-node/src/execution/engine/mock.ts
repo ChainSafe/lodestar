@@ -29,7 +29,7 @@ import {
   ExecutionPayloadBodyRpc,
 } from "./types.js";
 import {ExecutePayloadStatus, PayloadIdCache} from "./interface.js";
-import {IJsonRpcBackend} from "./utils.js";
+import {JsonRpcBackend} from "./utils.js";
 
 const INTEROP_GAS_LIMIT = 30e6;
 const PRUNE_PAYLOAD_ID_AFTER_MS = 5000;
@@ -58,7 +58,7 @@ type PreparedPayload = {
 /**
  * Mock ExecutionEngine for fast prototyping and unit testing
  */
-export class ExecutionEngineMockBackend implements IJsonRpcBackend {
+export class ExecutionEngineMockBackend implements JsonRpcBackend {
   // Public state to check if notifyForkchoiceUpdate() is called properly
   headBlockHash = ZERO_HASH_HEX;
   safeBlockHash = ZERO_HASH_HEX;

@@ -5,7 +5,7 @@ import {Gauge} from "prom-client";
 import {expose} from "@chainsafe/threads/worker";
 import {Observable, Subject} from "@chainsafe/threads/observable";
 import {createKeypairFromPeerId, Discv5, ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/discv5";
-import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
 import {ENRKey} from "../metadata.js";
@@ -19,7 +19,7 @@ enum ENRRelevance {
   relevant = "relevant",
 }
 
-function enrRelevance(enr: ENR, config: IBeaconConfig): ENRRelevance {
+function enrRelevance(enr: ENR, config: BeaconConfig): ENRRelevance {
   // We are not interested in peers that don't advertise their tcp addr
   const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
   if (!multiaddrTCP) {
@@ -73,7 +73,7 @@ if (workerData.metrics) {
 const peerId = await createFromProtobuf(workerData.peerIdProto);
 const keypair = createKeypairFromPeerId(peerId);
 
-const config = createIBeaconConfig(workerData.chainConfig, workerData.genesisValidatorsRoot);
+const config = createBeaconConfig(workerData.chainConfig, workerData.genesisValidatorsRoot);
 
 // Initialize discv5
 const discv5 = Discv5.create({

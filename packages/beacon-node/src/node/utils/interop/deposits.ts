@@ -1,7 +1,7 @@
 import {digest} from "@chainsafe/as-sha256";
 import {phase0, ssz} from "@lodestar/types";
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
-import {IChainConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {computeDomain, computeSigningRoot, interopSecretKeys, ZERO_HASH} from "@lodestar/state-transition";
 import {
   BLS_WITHDRAWAL_PREFIX,
@@ -15,7 +15,7 @@ import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
  * Compute and return deposit data from other validators.
  */
 export function interopDeposits(
-  config: IChainConfig,
+  config: ChainConfig,
   depositDataRootList: DepositTree,
   validatorCount: number,
   {withEth1Credentials}: {withEth1Credentials?: boolean} = {}

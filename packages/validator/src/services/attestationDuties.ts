@@ -4,7 +4,7 @@ import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/sta
 import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
 import {Api, ApiError, routes} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
-import {batchItems, IClock, ILoggerVc} from "../util/index.js";
+import {batchItems, IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -41,7 +41,7 @@ export class AttestationDutiesService {
   private readonly pendingDependentRootByEpoch = new Map<Epoch, RootHex>();
 
   constructor(
-    private readonly logger: ILoggerVc,
+    private readonly logger: LoggerVc,
     private readonly api: Api,
     private clock: IClock,
     private readonly validatorStore: ValidatorStore,

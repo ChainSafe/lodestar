@@ -4,11 +4,11 @@ import {
   CachedBeaconStateAllForks,
   beforeProcessEpoch,
 } from "@lodestar/state-transition";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {allForks, Epoch, Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {ILogger, mapValues} from "@lodestar/utils";
+import {Logger, mapValues} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconNode} from "../../../src/index.js";
@@ -18,7 +18,7 @@ import {RegenCaller} from "../../../src/chain/regen/index.js";
 
 /* eslint-disable no-console */
 
-export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void {
+export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
   let lastSeenEpoch = 0;
 
   const attestationsPerBlock = new Map<Slot, number>();
@@ -107,7 +107,7 @@ function avg(arr: number[]): number {
 /**
  * Print a table grid of (Y) epoch / (X) slot_per_epoch
  */
-function printEpochSlotGrid<T>(map: Map<Slot, T>, config: IBeaconConfig, title: string): void {
+function printEpochSlotGrid<T>(map: Map<Slot, T>, config: BeaconConfig, title: string): void {
   const lastSlot = Array.from(map.keys())[map.size - 1];
   const lastEpoch = computeEpochAtSlot(lastSlot);
   const rowsByEpochBySlot = linspace(0, lastEpoch).map((epoch) => {

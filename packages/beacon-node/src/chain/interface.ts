@@ -1,14 +1,14 @@
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
-import {IMetrics} from "../metrics/metrics.js";
-import {IBeaconClock} from "./clock/interface.js";
+import {Metrics} from "../metrics/metrics.js";
+import {BeaconClock} from "./clock/interface.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {IStateRegenerator} from "./regen/index.js";
 import {StateContextCache, CheckpointStateCache} from "./stateCache/index.js";
@@ -52,16 +52,16 @@ export interface IBeaconChain {
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
-  readonly config: IBeaconConfig;
-  readonly logger: ILogger;
-  readonly metrics: IMetrics | null;
+  readonly config: BeaconConfig;
+  readonly logger: Logger;
+  readonly metrics: Metrics | null;
 
   /** The initial slot that the chain is started with */
   readonly anchorStateLatestBlockSlot: Slot;
 
   readonly bls: IBlsVerifier;
   readonly forkChoice: IForkChoice;
-  readonly clock: IBeaconClock;
+  readonly clock: BeaconClock;
   readonly emitter: ChainEventEmitter;
   readonly stateCache: StateContextCache;
   readonly checkpointStateCache: CheckpointStateCache;
@@ -125,7 +125,7 @@ export interface IBeaconChain {
 
   recomputeForkChoiceHead(): ProtoBlock;
 
-  waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean>;
+  waitForBlock(slot: Slot, root: RootHex): Promise<boolean>;
 
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
 

@@ -1,6 +1,6 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
 import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 import {routesData, getReqSerializers, getReturnTypes} from "../../../src/builder/routes.js";
@@ -24,7 +24,7 @@ const openApiFile: OpenApiFile = {
 
 const reqSerializers = getReqSerializers(
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  createIChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0})
+  createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0})
 );
 const returnTypes = getReturnTypes();
 

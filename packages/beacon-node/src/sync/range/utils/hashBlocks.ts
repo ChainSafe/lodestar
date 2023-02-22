@@ -1,12 +1,12 @@
 import {RootHex} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {toHex} from "@lodestar/utils";
 import {BlockInput} from "../../../chain/blocks/types.js";
 
 /**
  * String to uniquely identify block segments. Used for peer scoring and to compare if batches are equivalent.
  */
-export function hashBlocks(blocks: BlockInput[], config: IChainForkConfig): RootHex {
+export function hashBlocks(blocks: BlockInput[], config: ChainForkConfig): RootHex {
   switch (blocks.length) {
     case 0:
       return "0x";

@@ -1,20 +1,21 @@
 import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
-import {IBeaconConfig} from "@lodestar/config";
-import {ILogger, sleep} from "@lodestar/utils";
+import {BeaconConfig} from "@lodestar/config";
+import {Logger, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SignableENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {deneb, Epoch, phase0, allForks} from "@lodestar/types";
 import {routes} from "@lodestar/api";
-import {IMetrics} from "../metrics/index.js";
-import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain/index.js";
-import {BlockInput, BlockInputType, getBlockInput} from "../chain/blocks/types.js";
+import {Metrics} from "../metrics/index.js";
+import {ChainEvent, IBeaconChain, BeaconClock} from "../chain/index.js";
+import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "../chain/opPools/utils.js";
-import {INetworkOptions} from "./options.js";
+import {NetworkOptions} from "./options.js";
 import {INetwork, Libp2p} from "./interface.js";
-import {ReqRespBeaconNode, ReqRespHandlers, doBeaconBlocksMaybeBlobsByRange} from "./reqresp/index.js";
+import {ReqRespBeaconNode, ReqRespHandlers, beaconBlocksMaybeBlobsByRange} from "./reqresp/index.js";
+import {beaconBlocksMaybeBlobsByRoot} from "./reqresp/beaconBlocksMaybeBlobsByRoot.js";
 import {
   Eth2Gossipsub,
   getGossipHandlers,
@@ -38,11 +39,11 @@ import {createNodeJsLibp2p} from "./nodejs/util.js";
 // How many changes to batch cleanup
 const CACHED_BLS_BATCH_CLEANUP_LIMIT = 10;
 
-interface INetworkModules {
-  opts: INetworkOptions;
-  config: IBeaconConfig;
+type NetworkModules = {
+  opts: NetworkOptions;
+  config: BeaconConfig;
   libp2p: Libp2p;
-  logger: ILogger;
+  logger: Logger;
   chain: IBeaconChain;
   signal: AbortSignal;
   peersData: PeersData;
@@ -54,21 +55,21 @@ interface INetworkModules {
   attnetsService: AttnetsService;
   syncnetsService: SyncnetsService;
   peerManager: PeerManager;
-}
+};
 
-export interface INetworkInitModules {
-  opts: INetworkOptions;
-  config: IBeaconConfig;
+export type NetworkInitModules = {
+  opts: NetworkOptions;
+  config: BeaconConfig;
   peerId: PeerId;
   peerStoreDir?: string;
-  logger: ILogger;
-  metrics: IMetrics | null;
+  logger: Logger;
+  metrics: Metrics | null;
   chain: IBeaconChain;
   reqRespHandlers: ReqRespHandlers;
   signal: AbortSignal;
   // Optionally pass custom GossipHandlers, for testing
   gossipHandlers?: GossipHandlers;
-}
+};
 
 export class Network implements INetwork {
   events: INetworkEventBus;
@@ -78,14 +79,14 @@ export class Network implements INetwork {
   gossip: Eth2Gossipsub;
   metadata: MetadataController;
   readonly peerRpcScores: IPeerRpcScoreStore;
-  private readonly opts: INetworkOptions;
+  private readonly opts: NetworkOptions;
   private readonly peersData: PeersData;
 
   private readonly peerManager: PeerManager;
   private readonly libp2p: Libp2p;
-  private readonly logger: ILogger;
-  private readonly config: IBeaconConfig;
-  private readonly clock: IBeaconClock;
+  private readonly logger: Logger;
+  private readonly config: BeaconConfig;
+  private readonly clock: BeaconClock;
   private readonly chain: IBeaconChain;
   private readonly signal: AbortSignal;
 
@@ -93,7 +94,7 @@ export class Network implements INetwork {
   private regossipBlsChangesPromise: Promise<void> | null = null;
   private closed = false;
 
-  constructor(modules: INetworkModules) {
+  constructor(modules: NetworkModules) {
     const {
       opts,
       config,
@@ -145,7 +146,7 @@ export class Network implements INetwork {
     reqRespHandlers,
     gossipHandlers,
     signal,
-  }: INetworkInitModules): Promise<Network> {
+  }: NetworkInitModules): Promise<Network> {
     const clock = chain.clock;
     const peersData = new PeersData();
     const networkEventBus = new NetworkEventBus();
@@ -328,9 +329,6 @@ export class Network implements INetwork {
           beaconBlock: blockInput.block as deneb.SignedBeaconBlock,
           blobsSidecar: blockInput.blobs,
         });
-
-      case BlockInputType.postDenebOldBlobs:
-        throw Error(`Attempting to broadcast old BlockInput slot ${blockInput.block.message.slot}`);
     }
   }
 
@@ -338,71 +336,18 @@ export class Network implements INetwork {
     peerId: PeerId,
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<BlockInput[]> {
-    return doBeaconBlocksMaybeBlobsByRange(this.config, this.reqResp, peerId, request, this.clock.currentEpoch);
+    return beaconBlocksMaybeBlobsByRange(this.config, this.reqResp, peerId, request, this.clock.currentEpoch);
   }
 
   async beaconBlocksMaybeBlobsByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<BlockInput[]> {
-    // Assume all requests are post Deneb
-    if (this.config.getForkSeq(this.chain.forkChoice.getFinalizedBlock().slot) >= ForkSeq.deneb) {
-      const blocksAndBlobs = await this.reqResp.beaconBlockAndBlobsSidecarByRoot(peerId, request);
-      return blocksAndBlobs.map(({beaconBlock, blobsSidecar}) =>
-        getBlockInput.postDeneb(this.config, beaconBlock, blobsSidecar)
-      );
-    }
-
-    // Assume all request are pre Deneb
-    else if (this.config.getForkSeq(this.clock.currentSlot) < ForkSeq.deneb) {
-      const blocks = await this.reqResp.beaconBlocksByRoot(peerId, request);
-      return blocks.map((block) => getBlockInput.preDeneb(this.config, block));
-    }
-
-    // NOTE: Consider blocks may be post or pre Deneb
-    // TODO Deneb: Request either blocks, or blocks+blobs
-    else {
-      const results = await Promise.all(
-        request.map(
-          async (beaconBlockRoot): Promise<BlockInput | null> => {
-            const [resultBlockBlobs, resultBlocks] = await Promise.allSettled([
-              this.reqResp.beaconBlockAndBlobsSidecarByRoot(peerId, [beaconBlockRoot]),
-              this.reqResp.beaconBlocksByRoot(peerId, [beaconBlockRoot]),
-            ]);
-
-            if (resultBlockBlobs.status === "fulfilled" && resultBlockBlobs.value.length === 1) {
-              const {beaconBlock, blobsSidecar} = resultBlockBlobs.value[0];
-              return getBlockInput.postDeneb(this.config, beaconBlock, blobsSidecar);
-            }
-
-            if (resultBlocks.status === "rejected") {
-              return Promise.reject(resultBlocks.reason);
-            }
-
-            // Promise fullfilled + no result = block not found
-            if (resultBlocks.value.length < 1) {
-              return null;
-            }
-
-            const block = resultBlocks.value[0];
-
-            if (this.config.getForkSeq(block.message.slot) >= ForkSeq.deneb) {
-              // beaconBlockAndBlobsSidecarByRoot should have succeeded
-              if (resultBlockBlobs.status === "rejected") {
-                // Recycle existing error for beaconBlockAndBlobsSidecarByRoot if any
-                return Promise.reject(resultBlockBlobs.reason);
-              } else {
-                throw Error(
-                  `Received post Deneb ${beaconBlockRoot} over beaconBlocksByRoot not beaconBlockAndBlobsSidecarByRoot`
-                );
-              }
-            }
-
-            // Block is pre Deneb
-            return getBlockInput.preDeneb(this.config, block);
-          }
-        )
-      );
-
-      return results.filter((blockOrNull): blockOrNull is BlockInput => blockOrNull !== null);
-    }
+    return beaconBlocksMaybeBlobsByRoot(
+      this.config,
+      this.reqResp,
+      peerId,
+      request,
+      this.clock.currentSlot,
+      this.chain.forkChoice.getFinalizedBlock().slot
+    );
   }
 
   /**

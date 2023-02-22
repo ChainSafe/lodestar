@@ -59,7 +59,7 @@
     "@chainsafe/bls-keystore": "^2.0.0",
     "@chainsafe/blst": "^0.2.8",
     "@chainsafe/discv5": "^3.0.0",
-    "@chainsafe/ssz": "^0.9.2",
+    "@chainsafe/ssz": "^0.10.1",
     "@libp2p/peer-id-factory": "^2.0.1",
     "@lodestar/api": "^1.4.3",
     "@lodestar/beacon-node": "^1.4.3",

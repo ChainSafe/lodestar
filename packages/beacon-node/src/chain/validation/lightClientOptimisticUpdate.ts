@@ -1,5 +1,5 @@
 import {allForks} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {IBeaconChain} from "../interface.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
@@ -8,7 +8,7 @@ import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_optimistic_update
 export function validateLightClientOptimisticUpdate(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   chain: IBeaconChain,
   gossipedOptimisticUpdate: allForks.LightClientOptimisticUpdate
 ): void {
@@ -54,7 +54,7 @@ export function validateLightClientOptimisticUpdate(
  * (SECONDS_PER_SLOT / INTERVALS_PER_SLOT seconds after the start of the slot, with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
  */
 export function updateReceivedTooEarly(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   genesisTime: number,
   update: Pick<allForks.LightClientOptimisticUpdate, "signatureSlot">
 ): boolean {

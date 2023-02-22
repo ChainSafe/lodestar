@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {altair, ssz} from "@lodestar/types";
 
 import {computeTimeAtSlot} from "@lodestar/state-transition";
@@ -14,7 +14,7 @@ describe("Light Client Optimistic Update validation", function () {
   let fakeClock: sinon.SinonFakeTimers;
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIChainForkConfig({
+  const config = createChainForkConfig({
     ...defaultChainConfig,
     /* eslint-disable @typescript-eslint/naming-convention */
     ALTAIR_FORK_EPOCH: 1,
@@ -42,7 +42,7 @@ describe("Light Client Optimistic Update validation", function () {
       },
     });
 
-    const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
+    const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,

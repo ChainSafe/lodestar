@@ -3,7 +3,7 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
 import {Api, ApiError} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
-import {IClock, ILoggerVc} from "../util/index.js";
+import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -32,7 +32,7 @@ export class AttestationService {
   private readonly dutiesService: AttestationDutiesService;
 
   constructor(
-    private readonly logger: ILoggerVc,
+    private readonly logger: LoggerVc,
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,

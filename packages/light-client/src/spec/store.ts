@@ -1,5 +1,5 @@
 import type {PublicKey} from "@chainsafe/bls/types";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {SyncPeriod, allForks} from "@lodestar/types";
 import {computeSyncPeriodAtSlot, deserializeSyncCommittee} from "../utils/index.js";
 import {LightClientUpdateSummary} from "./isBetterUpdate.js";
@@ -7,7 +7,7 @@ import {LightClientUpdateSummary} from "./isBetterUpdate.js";
 export const MAX_SYNC_PERIODS_CACHE = 2;
 
 export interface ILightClientStore {
-  readonly config: IBeaconConfig;
+  readonly config: BeaconConfig;
 
   /** Map of trusted SyncCommittee to be used for sig validation */
   readonly syncCommittees: Map<SyncPeriod, SyncCommitteeFast>;
@@ -39,7 +39,7 @@ export class LightClientStore implements ILightClientStore {
   private readonly maxActiveParticipants = new Map<SyncPeriod, number>();
 
   constructor(
-    readonly config: IBeaconConfig,
+    readonly config: BeaconConfig,
     bootstrap: allForks.LightClientBootstrap,
     private readonly events: LightClientStoreEvents
   ) {

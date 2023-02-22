@@ -5,9 +5,9 @@ import {BeaconStateAllForks, BeaconStateAltair} from "@lodestar/state-transition
 import {altair, ssz} from "@lodestar/types";
 import {routes, Api, getClient, ServerApi, ApiError} from "@lodestar/api";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
+import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {JsonPath, toHexString} from "@chainsafe/ssz";
-import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
+import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {Lightclient, LightclientEvent} from "../../src/index.js";
 import {LightclientServerApiMock, ProofServerApiMock} from "../mocks/LightclientServerApiMock.js";
 import {EventsServerApiMock} from "../mocks/EventsServerApiMock.js";
@@ -53,10 +53,10 @@ describe("sync", () => {
 
     // Genesis data such that targetSlot is at the current clock slot
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+    const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
     const genesisTime = Math.floor(Date.now() / 1000) - chainConfig.SECONDS_PER_SLOT * targetSlot;
     const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
-    const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
+    const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
     // Create server impl mock backed
     const lightclientServerApi = new LightclientServerApiMock();
@@ -189,7 +189,9 @@ async function getHeadStateProof(
 ): Promise<{proof: TreeOffsetProof; header: altair.LightClientHeader}> {
   const header = lightclient.getHead();
   const stateId = toHexString(header.beacon.stateRoot);
-  const res = await api.proof.getStateProof(stateId, paths);
+  const gindices = paths.map((path) => ssz.bellatrix.BeaconState.getPathInfo(path).gindex);
+  const descriptor = computeDescriptor(gindices);
+  const res = await api.proof.getStateProof(stateId, descriptor);
   ApiError.assert(res);
 
   return {

@@ -11,16 +11,16 @@ import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
 
 describe("eth1 / util / deposits", function () {
   describe("getDeposits", () => {
-    interface ITestCase {
+    type TestCase = {
       id: string;
       depositCount: number;
       eth1DepositIndex: number;
       depositIndexes: number[];
       expectedReturnedIndexes?: number[];
       error?: Eth1ErrorCode;
-    }
+    };
 
-    const testCases: ITestCase[] = [
+    const testCases: TestCase[] = [
       {
         id: "Return first deposit",
         depositCount: 1,

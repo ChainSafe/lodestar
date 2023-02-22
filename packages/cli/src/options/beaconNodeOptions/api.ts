@@ -1,9 +1,9 @@
 import {defaultOptions, IBeaconNodeOptions, allNamespaces} from "@lodestar/beacon-node";
-import {ICliCommandOptions} from "../../util/index.js";
+import {CliCommandOptions} from "../../util/index.js";
 
 const enabledAll = "*";
 
-export interface IApiArgs {
+export type ApiArgs = {
   "api.maxGindicesInProof": number;
   "rest.namespace": string[];
   "rest.cors": string;
@@ -11,9 +11,9 @@ export interface IApiArgs {
   "rest.address": string;
   "rest.port": number;
   "rest.bodyLimit": number;
-}
+};
 
-export function parseArgs(args: IApiArgs): IBeaconNodeOptions["api"] {
+export function parseArgs(args: ApiArgs): IBeaconNodeOptions["api"] {
   return {
     maxGindicesInProof: args["api.maxGindicesInProof"],
     rest: {
@@ -27,7 +27,7 @@ export function parseArgs(args: IApiArgs): IBeaconNodeOptions["api"] {
   };
 }
 
-export const options: ICliCommandOptions<IApiArgs> = {
+export const options: CliCommandOptions<ApiArgs> = {
   rest: {
     type: "boolean",
     description: "Enable/disable HTTP API",

@@ -1,8 +1,8 @@
 import {expect} from "chai";
-import {IChainConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {ssz, altair} from "@lodestar/types";
 import {JsonPath, toHexString, fromHexString} from "@chainsafe/ssz";
-import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
+import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {TimestampFormatCode} from "@lodestar/utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Lightclient} from "@lodestar/light-client";
@@ -30,7 +30,7 @@ describe("chain / lightclient", function () {
   const targetSlotToReach = computeStartSlotAtEpoch(finalizedEpochToReach + 2) - 1;
   const restPort = 9000;
 
-  const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH"> = {
+  const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH"> = {
     /* eslint-disable @typescript-eslint/naming-convention */
     SECONDS_PER_SLOT: 1,
     ALTAIR_FORK_EPOCH: 0,
@@ -194,7 +194,9 @@ async function getHeadStateProof(
 ): Promise<{proof: TreeOffsetProof; header: altair.LightClientHeader}> {
   const header = lightclient.getHead();
   const stateId = toHexString(header.beacon.stateRoot);
-  const res = await api.proof.getStateProof(stateId, paths);
+  const gindices = paths.map((path) => ssz.bellatrix.BeaconState.getPathInfo(path).gindex);
+  const descriptor = computeDescriptor(gindices);
+  const res = await api.proof.getStateProof(stateId, descriptor);
   ApiError.assert(res);
   return {
     proof: res.response.data as TreeOffsetProof,

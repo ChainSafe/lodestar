@@ -2,7 +2,7 @@ import bls from "@chainsafe/bls/switchable";
 import {PointFormat, PublicKey, SecretKey} from "@chainsafe/bls/types";
 import {hash, Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_SYNC_COMMITTEE,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
@@ -40,7 +40,7 @@ export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.
 }
 
 export function getSyncAggregateSigningRoot(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   syncAttestedBlockHeader: altair.LightClientHeader
 ): Uint8Array {
   const domain = config.getDomain(syncAttestedBlockHeader.beacon.slot, DOMAIN_SYNC_COMMITTEE);
@@ -57,7 +57,7 @@ export type SyncCommitteeKeys = {
   pks: PublicKey[];
   syncCommittee: altair.SyncCommittee;
   syncCommitteeFast: SyncCommitteeFast;
-  signHeader(config: IBeaconConfig, header: altair.LightClientHeader): altair.SyncAggregate;
+  signHeader(config: BeaconConfig, header: altair.LightClientHeader): altair.SyncAggregate;
   signAndAggregate(message: Uint8Array): altair.SyncAggregate;
 };
 
@@ -86,7 +86,7 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
     };
   }
 
-  function signHeader(config: IBeaconConfig, header: altair.LightClientHeader): altair.SyncAggregate {
+  function signHeader(config: BeaconConfig, header: altair.LightClientHeader): altair.SyncAggregate {
     return signAndAggregate(getSyncAggregateSigningRoot(config, header));
   }
 
@@ -108,7 +108,7 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
 /**
  * Creates LightClientUpdate that passes `assertValidLightClientUpdate` function, from mock data
  */
-export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeriod): altair.LightClientUpdate {
+export function computeLightclientUpdate(config: BeaconConfig, period: SyncPeriod): altair.LightClientUpdate {
   const updateSlot = period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
 
   const committee = getInteropSyncCommittee(period);
