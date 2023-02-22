@@ -3,7 +3,7 @@ import {Api, ApiError} from "@lodestar/api";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 
-import {ProposerPreparationData} from "@lodestar/api/lib/beacon/routes/validator.js";
+import {ProposerPreparationData} from "@lodestar/api";
 import {IClock, batchItems, LoggerVc} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -49,7 +49,7 @@ export function pollPrepareBeaconProposer(
             feeRecipient,
           });
 
-          logger.info("Validator exists in Beacon Chain", {validatorIndex: index, feeRecipient, pubKey});
+          logger.info("Validator exists in beacon chain", {validatorIndex: index, feeRecipient, pubKey});
         });
         ApiError.assert(await api.validator.prepareBeaconProposer(proposers));
       } catch (e) {

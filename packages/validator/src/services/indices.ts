@@ -1,8 +1,7 @@
 import {ValidatorIndex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {Api, ApiError} from "@lodestar/api";
-import {ValidatorResponse, ValidatorStatus} from "@lodestar/api/lib/beacon/routes/beacon/state.js";
+import {Api, ApiError, ValidatorResponse, ValidatorStatus} from "@lodestar/api";
 import {batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 
@@ -124,40 +123,36 @@ export class IndicesService {
 }
 
 function logValidatorStatuses(allValidators: Map<ValidatorStatus, ValidatorResponse[]>, logger: Logger): void {
-  allValidators.get("active")?.forEach((validatorState: ValidatorResponse) => {
-    logger.info("Validator activated", {
+  const loggedValidatorStates: {[key: string]: ValidatorStatus[]} = {
+    "Validator activated": ["active"],
+    "Validator pending": ["pending_initialized", "pending_queued"],
+    "Validator withdrawn": ["withdrawal_done"],
+    "Validator exited": ["exit_slashed", "exit_unslashed"],
+  };
+
+  const logFormatter = (message: string, validatorState: ValidatorResponse): void => {
+    logger.info(message, {
       pubkey: toHexString(validatorState.validator.pubkey),
       index: validatorState.index,
     });
+  };
+  Object.keys(loggedValidatorStates).map((key) => {
+    getValidatorStatesByStatuses(loggedValidatorStates[key], allValidators).forEach(
+      (validatorState: ValidatorResponse) => {
+        logFormatter(key, validatorState);
+      }
+    );
   });
 
-  [...(allValidators.get("pending_initialized") ?? []), ...(allValidators.get("pending_queued") ?? [])]?.forEach(
-    (validatorState: ValidatorResponse) => {
-      logger.info("Validator pending", {
-        pubkey: toHexString(validatorState.validator.pubkey),
-        index: validatorState.index,
-      });
-    }
-  );
-
-  allValidators.get("withdrawal_done")?.forEach((validatorState: ValidatorResponse) => {
-    logger.info("Validator withdrawn", {
-      pubkey: toHexString(validatorState.validator.pubkey),
-      index: validatorState.index,
-    });
-  });
-
-  [...(allValidators.get("exited_slashed") ?? []), ...(allValidators.get("exited_unslashed") ?? [])]?.forEach(
-    (validatorState: ValidatorResponse) => {
-      logger.info("Validator Exited", {
-        pubkey: toHexString(validatorState.validator.pubkey),
-        index: validatorState.index,
-      });
-    }
-  );
-
-  logger.info("Initialized Validators: ", {
+  logger.info("Initialized validators", {
     total: allValidators.size,
-    available: allValidators.get("active")?.length,
+    active: allValidators.get("active")?.length,
   });
+}
+
+function getValidatorStatesByStatuses(
+  statuses: ValidatorStatus[],
+  allValidators: Map<ValidatorStatus, ValidatorResponse[]>
+): ValidatorResponse[] {
+  return statuses.filter((status) => allValidators.has(status)).map((status) => allValidators.get(status));
 }
