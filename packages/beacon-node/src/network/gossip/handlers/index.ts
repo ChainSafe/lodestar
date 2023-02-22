@@ -1,16 +1,13 @@
-import {peerIdFromString} from "@libp2p/peer-id";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger, prettyBytes} from "@lodestar/utils";
 import {phase0, Root, Slot, ssz} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {Metrics} from "../../../metrics/index.js";
-import {OpSource} from "../../../metrics/validatorMonitor.js";
 import {IBeaconChain} from "../../../chain/index.js";
 import {
   AttestationError,
   AttestationErrorCode,
-  BlockError,
   BlockErrorCode,
   BlockGossipError,
   GossipAction,
@@ -30,12 +27,13 @@ import {
   validateBlsToExecutionChange,
 } from "../../../chain/validation/index.js";
 import {NetworkEvent, NetworkEventBus} from "../../events.js";
-import {PeerAction, PeerRpcScoreStore} from "../../peers/index.js";
+import {PeerRpcScoreStore} from "../../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipBlobsSidecar} from "../../../chain/validation/blobsSidecar.js";
 import {BlockInput, getBlockInput} from "../../../chain/blocks/types.js";
 import {AttnetsService} from "../../subnets/attnetsService.js";
+import {NetworkImporter} from "../../processor/importer.js";
 
 /**
  * Gossip handler options as part of network options
@@ -80,6 +78,7 @@ const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
  */
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
   const {attnetsService, chain, config, metrics, networkEventBus, peerRpcScores, logger} = modules;
+  const networkImporter = new NetworkImporter({chain, attnetsService, peerRpcScores, logger, metrics}, options);
 
   async function validateBeaconBlock(
     blockInput: BlockInput,
@@ -121,50 +120,6 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     }
   }
 
-  function handleValidBeaconBlock(blockInput: BlockInput, peerIdStr: string, seenTimestampSec: number): void {
-    const signedBlock = blockInput.block;
-
-    // Handler - MUST NOT `await`, to allow validation result to be propagated
-
-    metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
-
-    chain
-      .processBlock(blockInput, {
-        // proposer signature already checked in validateBeaconBlock()
-        validProposerSignature: true,
-        // blobsSidecar already checked in validateGossipBlobsSidecar()
-        validBlobsSidecar: true,
-        // It's critical to keep a good number of mesh peers.
-        // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
-        // Gossip Job Wait Time depends on the BLS Job Wait Time
-        // so `blsVerifyOnMainThread = true`: we want to verify signatures immediately without affecting the bls thread pool.
-        // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
-        // See https://github.com/ChainSafe/lodestar/issues/3792
-        blsVerifyOnMainThread: true,
-        // to track block process steps
-        seenTimestampSec,
-      })
-      .then(() => {
-        // Returns the delay between the start of `block.slot` and `current time`
-        const delaySec = chain.clock.secFromSlot(signedBlock.message.slot);
-        metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
-      })
-      .catch((e) => {
-        if (e instanceof BlockError) {
-          switch (e.type.code) {
-            case BlockErrorCode.ALREADY_KNOWN:
-            case BlockErrorCode.PARENT_UNKNOWN:
-            case BlockErrorCode.PRESTATE_MISSING:
-            case BlockErrorCode.EXECUTION_ENGINE_ERROR:
-              break;
-            default:
-              peerRpcScores.applyAction(peerIdFromString(peerIdStr), PeerAction.LowToleranceError, "BadGossipBlock");
-          }
-        }
-        logger.error("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
-      });
-  }
-
   return {
     [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
       // TODO Deneb: Can blocks be received by this topic?
@@ -174,7 +129,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       const blockInput = getBlockInput.preDeneb(config, signedBlock);
       await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
-      handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+      networkImporter.importGossipBlock(blockInput, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_block_and_blobs_sidecar]: async (blockAndBlocks, topic, peerIdStr, seenTimestampSec) => {
@@ -188,7 +143,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       const blockInput = getBlockInput.postDeneb(config, beaconBlock, blobsSidecar);
       await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
       validateGossipBlobsSidecar(beaconBlock, blobsSidecar);
-      handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+      networkImporter.importGossipBlock(blockInput, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {
@@ -211,26 +166,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       // Handler
       const {indexedAttestation, committeeIndices} = validationResult;
-      metrics?.registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation);
-      const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
-
-      chain.aggregatedAttestationPool.add(
-        aggregatedAttestation,
-        indexedAttestation.attestingIndices.length,
-        committeeIndices
+      networkImporter.importGossipAggregateAttestation(
+        indexedAttestation,
+        committeeIndices,
+        signedAggregateAndProof,
+        seenTimestampSec
       );
-
-      if (!options.dontSendGossipAttestationsToForkchoice) {
-        try {
-          chain.forkChoice.onAttestation(indexedAttestation);
-        } catch (e) {
-          logger.debug(
-            "Error adding gossip aggregated attestation to forkchoice",
-            {slot: aggregatedAttestation.data.slot},
-            e as Error
-          );
-        }
-      }
     },
 
     [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec) => {
@@ -253,65 +194,28 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       // Handler
       const {indexedAttestation} = validationResult;
-      metrics?.registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation);
-
-      // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
-      // but don't import them, to save CPU and RAM
-      if (!attnetsService.shouldProcess(subnet, attestation.data.slot)) {
-        return;
-      }
-
-      try {
-        const insertOutcome = chain.attestationPool.add(attestation);
-        metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
-      }
-
-      if (!options.dontSendGossipAttestationsToForkchoice) {
-        try {
-          chain.forkChoice.onAttestation(indexedAttestation);
-        } catch (e) {
-          logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
-        }
-      }
+      networkImporter.importGossipAttestation(attestation, indexedAttestation, subnet, seenTimestampSec);
     },
 
     [GossipType.attester_slashing]: async (attesterSlashing) => {
       await validateGossipAttesterSlashing(chain, attesterSlashing);
 
       // Handler
-
-      try {
-        chain.opPool.insertAttesterSlashing(attesterSlashing);
-        chain.forkChoice.onAttesterSlashing(attesterSlashing);
-      } catch (e) {
-        logger.error("Error adding attesterSlashing to pool", {}, e as Error);
-      }
+      networkImporter.importGossipAttesterSlashing(attesterSlashing);
     },
 
     [GossipType.proposer_slashing]: async (proposerSlashing) => {
       await validateGossipProposerSlashing(chain, proposerSlashing);
 
       // Handler
-
-      try {
-        chain.opPool.insertProposerSlashing(proposerSlashing);
-      } catch (e) {
-        logger.error("Error adding attesterSlashing to pool", {}, e as Error);
-      }
+      networkImporter.importGossipProposerSlashing(proposerSlashing);
     },
 
     [GossipType.voluntary_exit]: async (voluntaryExit) => {
       await validateGossipVoluntaryExit(chain, voluntaryExit);
 
       // Handler
-
-      try {
-        chain.opPool.insertVoluntaryExit(voluntaryExit);
-      } catch (e) {
-        logger.error("Error adding voluntaryExit to pool", {}, e as Error);
-      }
+      networkImporter.importGossipVoluntaryExit(voluntaryExit);
     },
 
     [GossipType.sync_committee_contribution_and_proof]: async (contributionAndProof) => {
@@ -326,17 +230,14 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       });
 
       // Handler
-      metrics?.registerGossipSyncContributionAndProof(contributionAndProof.message, syncCommitteeParticipantIndices);
-
-      try {
-        chain.syncContributionAndProofPool.add(contributionAndProof.message, syncCommitteeParticipantIndices.length);
-      } catch (e) {
-        logger.error("Error adding to contributionAndProof pool", {}, e as Error);
-      }
+      networkImporter.importGossipSyncCommitteeContributionAndProof(
+        contributionAndProof,
+        syncCommitteeParticipantIndices
+      );
     },
 
     [GossipType.sync_committee]: async (syncCommittee, {subnet}) => {
-      let indexInSubcommittee = 0;
+      let indexInSubcommittee: number;
       try {
         indexInSubcommittee = (await validateGossipSyncCommittee(chain, syncCommittee, subnet)).indexInSubcommittee;
       } catch (e) {
@@ -347,12 +248,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
 
       // Handler
-
-      try {
-        chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
-      } catch (e) {
-        logger.error("Error adding to syncCommittee pool", {subnet}, e as Error);
-      }
+      networkImporter.importGossipSyncCommitteeMessage(syncCommittee, subnet, indexInSubcommittee);
     },
 
     [GossipType.light_client_finality_update]: async (lightClientFinalityUpdate) => {
@@ -364,15 +260,11 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     },
 
     // blsToExecutionChange is to be generated and validated against GENESIS_FORK_VERSION
-    [GossipType.bls_to_execution_change]: async (blsToExecutionChange, _topic) => {
+    [GossipType.bls_to_execution_change]: async (blsToExecutionChange) => {
       await validateBlsToExecutionChange(chain, blsToExecutionChange);
 
       // Handler
-      try {
-        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
-      } catch (e) {
-        logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
-      }
+      networkImporter.importGossipBlsToExecutionChange(blsToExecutionChange);
     },
   };
 }
