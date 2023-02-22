@@ -1,6 +1,6 @@
 import {generateKeypair, IDiscv5DiscoveryInputOptions, KeypairType, SignableENR} from "@chainsafe/discv5";
 import {Eth2GossipsubOpts} from "./gossip/gossipsub.js";
-import {defaultGossipHandlerOpts, GossipHandlerOpts} from "./gossip/handlers/index.js";
+import {defaultGossipHandlerOpts, GossipHandlerOpts} from "./processor/gossipHandlers.js";
 import {PeerManagerOpts} from "./peers/index.js";
 import {ReqRespBeaconNodeOpts} from "./reqresp/ReqRespBeaconNode.js";
 

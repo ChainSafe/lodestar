@@ -43,4 +43,9 @@ export interface IBlsVerifier {
 
   /** For multithread pool awaits terminating all workers */
   close(): Promise<void>;
+
+  /**
+   * Returns true if BLS worker pool is ready to accept more work jobs.
+   */
+  canAcceptWork(): boolean;
 }
