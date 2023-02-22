@@ -1,3 +1,4 @@
+import {join} from "node:path";
 import bls from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@lodestar/state-transition";
@@ -94,7 +95,7 @@ export async function getSignersFromArgs(
     return decryptKeystoreDefinitions(keystoreDefinitions, {
       ...args,
       onDecrypt: needle,
-      cacheFilePath: `${args.importKeystores[0]}.cache`,
+      cacheFilePath: join(args.importKeystores[0], "keystore.cache"),
     });
   }
 
@@ -126,7 +127,7 @@ export async function getSignersFromArgs(
     const keystoreSigners = await decryptKeystoreDefinitions(keystoreDefinitions, {
       ...args,
       onDecrypt: needle,
-      cacheFilePath: `${accountPaths.keystoresDir}.cache`,
+      cacheFilePath: join(accountPaths.cacheDir, "keystores.cache"),
     });
 
     // Read local remote keys, imported via keymanager api

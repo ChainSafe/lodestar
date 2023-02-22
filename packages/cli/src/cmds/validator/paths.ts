@@ -7,6 +7,7 @@ export type IValidatorPaths = {
 };
 
 export type AccountPaths = {
+  cacheDir: string;
   keystoresDir: string;
   secretsDir: string;
   remoteKeysDir: string;
@@ -73,12 +74,14 @@ export function getAccountPaths(
   const globalPaths = getGlobalPaths(args, network);
 
   const dataDir = globalPaths.dataDir;
+  const cacheDir = args.cacheDir || path.join(dataDir, "cache");
   const keystoresDir = args.keystoresDir || path.join(dataDir, "keystores");
   const secretsDir = args.secretsDir || path.join(dataDir, "secrets");
   const remoteKeysDir = args.remoteKeysDir || path.join(dataDir, "remoteKeys");
   const proposerDir = args.proposerDir || path.join(dataDir, "proposerConfigs");
   return {
     ...globalPaths,
+    cacheDir,
     keystoresDir,
     secretsDir,
     remoteKeysDir,
