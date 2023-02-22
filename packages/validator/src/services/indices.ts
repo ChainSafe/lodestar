@@ -117,18 +117,47 @@ export class IndicesService {
       }
     }
 
-    allValidators.get("active")?.forEach((validatorState: ValidatorResponse) => {
-      this.logger.info("Validator activated", {
-        pubkey: toHexString(validatorState.validator.pubkey),
-        index: validatorState.index,
-      });
-    });
-
-    this.logger.info("Initialized Validators: ", {
-      total: allValidators.size,
-      available: allValidators.get("active")?.length,
-    });
+    logValidatorStatuses(allValidators, this.logger);
 
     return newIndices;
   }
+}
+
+function logValidatorStatuses(allValidators: Map<ValidatorStatus, ValidatorResponse[]>, logger: Logger): void {
+  allValidators.get("active")?.forEach((validatorState: ValidatorResponse) => {
+    logger.info("Validator activated", {
+      pubkey: toHexString(validatorState.validator.pubkey),
+      index: validatorState.index,
+    });
+  });
+
+  [...(allValidators.get("pending_initialized") ?? []), ...(allValidators.get("pending_queued") ?? [])]?.forEach(
+    (validatorState: ValidatorResponse) => {
+      logger.info("Validator pending", {
+        pubkey: toHexString(validatorState.validator.pubkey),
+        index: validatorState.index,
+      });
+    }
+  );
+
+  allValidators.get("withdrawal_done")?.forEach((validatorState: ValidatorResponse) => {
+    logger.info("Validator withdrawn", {
+      pubkey: toHexString(validatorState.validator.pubkey),
+      index: validatorState.index,
+    });
+  });
+
+  [...(allValidators.get("exited_slashed") ?? []), ...(allValidators.get("exited_unslashed") ?? [])]?.forEach(
+    (validatorState: ValidatorResponse) => {
+      logger.info("Validator Exited", {
+        pubkey: toHexString(validatorState.validator.pubkey),
+        index: validatorState.index,
+      });
+    }
+  );
+
+  logger.info("Initialized Validators: ", {
+    total: allValidators.size,
+    available: allValidators.get("active")?.length,
+  });
 }
