@@ -2,7 +2,7 @@ export * from "./stateTransition.js";
 export * from "./constants/index.js";
 export * from "./util/index.js";
 export * from "./signatureSets/index.js";
-export {IBeaconStateTransitionMetrics} from "./metrics.js";
+export {BeaconStateTransitionMetrics} from "./metrics.js";
 
 export {
   CachedBeaconStatePhase0,
