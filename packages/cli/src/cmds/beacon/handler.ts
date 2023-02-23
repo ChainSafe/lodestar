@@ -86,10 +86,12 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     if (args.attachToGlobalThis) ((globalThis as unknown) as {bn: BeaconNode}).bn = node;
 
     onGracefulShutdown(async () => {
-      const enr = await node.network.getEnr();
-      if (args.peerIdFile && enr) {
-        const enrPath = path.join(beaconPaths.beaconDir, "enr");
-        writeFile600Perm(enrPath, enr.encodeTxt());
+      if (args.persistNetworkIdentity) {
+        const enr = await node.network.getEnr().catch((e) => logger.warn("Unable to persist enr", {}, e));
+        if (enr) {
+          const enrPath = path.join(beaconPaths.beaconDir, "enr");
+          writeFile600Perm(enrPath, enr.encodeTxt());
+        }
       }
       abortController.abort();
     }, logger.info.bind(logger));
@@ -160,49 +162,67 @@ export function overwriteEnrWithCliArgs(enr: SignableENR, args: BeaconArgs): voi
   if (args["enr.udp6"] != null) enr.udp6 = args["enr.udp6"];
 }
 
+/**
+ * Create new PeerId and ENR by default, unless persistNetworkIdentity is provided
+ */
 export async function initPeerIdAndEnr(
-  args: BeaconArgs & GlobalArgs,
+  args: BeaconArgs,
   beaconDir: string,
   logger: Logger
 ): Promise<{peerId: PeerId; enr: SignableENR}> {
-  // Create new PeerId everytime by default, unless peerIdFile is provided
-  const enrFilePath = path.join(beaconDir, "enr");
-  const {peerIdFile} = args;
-  let peerId: PeerId | undefined;
-  let enr: SignableENR | undefined;
+  const {persistNetworkIdentity} = args;
 
-  let usePeerIdFile = false;
-  try {
-    if (peerIdFile) {
+  const newPeerIdAndENR = async (): Promise<{peerId: PeerId; enr: SignableENR}> => {
+    const peerId = await createSecp256k1PeerId();
+    const enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
+    return {peerId, enr};
+  };
+
+  const readPersistedPeerIdAndENR = async (
+    peerIdFile: string,
+    enrFile: string
+  ): Promise<{peerId: PeerId; enr: SignableENR}> => {
+    let peerId: PeerId;
+    let enr: SignableENR;
+
+    // attempt to read stored peer id
+    try {
       peerId = await readPeerId(peerIdFile);
-      enr = SignableENR.decodeTxt(fs.readFileSync(enrFilePath, "utf-8"), createKeypairFromPeerId(peerId));
-      if (!peerId.equals(await enr.peerId())) {
-        throw Error(`Peer id in ${enrFilePath} is not the same to ${peerIdFile}`);
-      }
-      usePeerIdFile = true;
-      logger.verbose("Successfully load peerId and enr file", {peerId: peerId.toString(), peerIdFile, enrFilePath});
+    } catch (e) {
+      logger.warn("Unable to read peerIdFile, creating a new peer id");
+      return newPeerIdAndENR();
     }
-  } catch (e) {
-    logger.debug("Not able to use existing peer id and enr file", {peerIdFile, enrFilePath}, e as Error);
+    // attempt to read stored enr
+    try {
+      enr = SignableENR.decodeTxt(fs.readFileSync(enrFile, "utf-8"), createKeypairFromPeerId(peerId));
+    } catch (e) {
+      logger.warn("Unable to decode stored local ENR, creating a new ENR");
+      enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
+      return {peerId, enr};
+    }
+    // check stored peer id against stored enr
+    if (!peerId.equals(await enr.peerId())) {
+      logger.warn("Stored local ENR doesn't match peerIdFile, creating a new ENR");
+      enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
+      return {peerId, enr};
+    }
+    return {peerId, enr};
+  };
+
+  if (persistNetworkIdentity) {
+    const enrFile = path.join(beaconDir, "enr");
+    const peerIdFile = path.join(beaconDir, "peer-id.json");
+    const {peerId, enr} = await readPersistedPeerIdAndENR(peerIdFile, enrFile);
+    overwriteEnrWithCliArgs(enr, args);
+    // Re-persist peer-id and enr
+    writeFile600Perm(peerIdFile, exportToJSON(peerId));
+    writeFile600Perm(enrFile, enr.encodeTxt());
+    return {peerId, enr};
+  } else {
+    const {peerId, enr} = await newPeerIdAndENR();
+    overwriteEnrWithCliArgs(enr, args);
+    return {peerId, enr};
   }
-
-  if (!usePeerIdFile) {
-    peerId = await createSecp256k1PeerId();
-    enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
-  }
-
-  // should not happen
-  if (!peerId || !enr) {
-    throw Error("Not able to create peerId and Enr");
-  }
-
-  overwriteEnrWithCliArgs(enr, args);
-
-  // Persist ENR and PeerId in beaconDir fixed paths for debugging
-  const pIdPath = path.join(beaconDir, "peer_id.json");
-  writeFile600Perm(pIdPath, exportToJSON(peerId));
-  writeFile600Perm(enrFilePath, enr.encodeTxt());
-  return {peerId, enr};
 }
 
 export function initLogger(args: BeaconArgs, dataDir: string, config: ChainForkConfig): Logger {

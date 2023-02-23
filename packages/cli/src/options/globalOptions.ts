@@ -6,7 +6,6 @@ import {paramsOptions, IParamsArgs} from "./paramsOptions.js";
 type GlobalSingleArgs = {
   dataDir?: string;
   network?: NetworkName;
-  peerIdFile?: string;
   paramsFile: string;
   preset: string;
 };
@@ -24,11 +23,6 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
     type: "string",
     defaultDescription: defaultNetwork,
     choices: networkNames,
-  },
-
-  peerIdFile: {
-    description: "Peer id file path",
-    type: "string",
   },
 
   paramsFile: {
