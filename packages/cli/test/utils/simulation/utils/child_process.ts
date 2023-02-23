@@ -2,9 +2,9 @@
 import {ChildProcess, spawn} from "node:child_process";
 import {createWriteStream, mkdirSync} from "node:fs";
 import {dirname} from "node:path";
-import {ChildProcessWithJobOptions, JobOptions} from "../interfaces.js";
+import {JobOptions, RunnerType} from "../interfaces.js";
 
-const childProcessHealthCheckInterval = 1000;
+const healthCheckIntervalMs = 1000;
 const logHealthChecksAfterMs = 2000;
 
 export const stopChildProcess = async (
@@ -22,7 +22,9 @@ export const stopChildProcess = async (
   });
 };
 
-export const startChildProcess = async (jobOptions: JobOptions): Promise<ChildProcess> => {
+export const startChildProcess = async (
+  jobOptions: Pick<JobOptions<RunnerType.ChildProcess>, "cli" | "logs" | "id" | "health">
+): Promise<ChildProcess> => {
   return new Promise<ChildProcess>((resolve, reject) => {
     void (async () => {
       const childProcess = spawn(jobOptions.cli.command, jobOptions.cli.args, {
@@ -60,13 +62,17 @@ export const startChildProcess = async (jobOptions: JobOptions): Promise<ChildPr
             .catch((e) => {
               console.error("error on health check, health functions must never throw", e);
             });
-        }, childProcessHealthCheckInterval);
+        }, healthCheckIntervalMs);
 
         childProcess.once("exit", (code: number) => {
           clearInterval(intervalId);
           stdoutFileStream.close();
           reject(
-            new Error(`process exited with code ${code}. ${jobOptions.cli.command} ${jobOptions.cli.args.join(" ")}`)
+            new Error(
+              `process exited. job=${jobOptions.id}, code=${code}, command="${
+                jobOptions.cli.command
+              } ${jobOptions.cli.args.join(" ")}"`
+            )
           );
         });
       } else {
@@ -75,7 +81,11 @@ export const startChildProcess = async (jobOptions: JobOptions): Promise<ChildPr
           stdoutFileStream.close();
           if (code > 0) {
             reject(
-              new Error(`$process exited with code ${code}. ${jobOptions.cli.command} ${jobOptions.cli.args.join(" ")}`)
+              new Error(
+                `process exited. job=${jobOptions.id}, code=${code}, command="${
+                  jobOptions.cli.command
+                } ${jobOptions.cli.args.join(" ")}"`
+              )
             );
           } else {
             resolve(childProcess);
@@ -84,24 +94,4 @@ export const startChildProcess = async (jobOptions: JobOptions): Promise<ChildPr
       }
     })();
   });
-};
-
-export const startJobs = async (jobs: JobOptions[]): Promise<ChildProcessWithJobOptions[]> => {
-  const childProcesses: ChildProcessWithJobOptions[] = [];
-  for (const job of jobs) {
-    if (job.bootstrap) {
-      console.log(`DockerRunner bootstraping '${job.id}'...`);
-      await job.bootstrap();
-      console.log(`DockerRunner bootstraped '${job.id}'`);
-    }
-    console.log(`DockerRunner starting '${job.id}'...`);
-    childProcesses.push({childProcess: await startChildProcess(job), jobOptions: job});
-    console.log(`DockerRunner started '${job.id}'`);
-
-    if (job.children) {
-      childProcesses.push(...(await startJobs(job.children)));
-    }
-  }
-
-  return childProcesses;
 };

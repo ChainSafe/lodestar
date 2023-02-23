@@ -22,3 +22,4 @@ export const SIM_ENV_NETWORK_ID = 1234;
 export const LODESTAR_BINARY_PATH = `${__dirname}/../../../bin/lodestar.js`;
 export const MOCK_ETH1_GENESIS_HASH = "0xfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfb";
 export const SHARED_JWT_SECRET = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
+export const SHARED_VALIDATOR_PASSWORD = "passwrod";

@@ -9,6 +9,7 @@ on:
 
 env:
   GETH_DOCKER_IMAGE: ethereum/client-go:v1.10.25
+  LIGHTHOUSE_DOCKER_IMAGE: sigp/lighthouse:latest-amd64-unstable-dev
   NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.14.5
 
 jobs:
