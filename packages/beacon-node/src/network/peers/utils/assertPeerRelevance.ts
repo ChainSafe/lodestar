@@ -3,7 +3,6 @@ import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {Epoch, ForkDigest, Root, phase0, ssz} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../chain/index.js";
-import {GENESIS_EPOCH} from "../../../constants/index.js";
 
 // TODO: Why this value? (From Lighthouse)
 const FUTURE_SLOT_TOLERANCE = 1;
@@ -11,14 +10,12 @@ const FUTURE_SLOT_TOLERANCE = 1;
 export enum IrrelevantPeerCode {
   INCOMPATIBLE_FORKS = "IRRELEVANT_PEER_INCOMPATIBLE_FORKS",
   DIFFERENT_CLOCKS = "IRRELEVANT_PEER_DIFFERENT_CLOCKS",
-  GENESIS_NONZERO = "IRRELEVANT_PEER_GENESIS_NONZERO",
   DIFFERENT_FINALIZED = "IRRELEVANT_PEER_DIFFERENT_FINALIZED",
 }
 
 type IrrelevantPeerType =
   | {code: IrrelevantPeerCode.INCOMPATIBLE_FORKS; ours: ForkDigest; theirs: ForkDigest}
   | {code: IrrelevantPeerCode.DIFFERENT_CLOCKS; slotDiff: number}
-  | {code: IrrelevantPeerCode.GENESIS_NONZERO; root: Root}
   | {code: IrrelevantPeerCode.DIFFERENT_FINALIZED; expectedRoot: Root; remoteRoot: Root};
 
 /**
@@ -43,14 +40,6 @@ export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain):
   const slotDiff = remote.headSlot - Math.max(chain.clock.currentSlot, 0);
   if (slotDiff > FUTURE_SLOT_TOLERANCE) {
     return {code: IrrelevantPeerCode.DIFFERENT_CLOCKS, slotDiff};
-  }
-
-  // TODO: Is this check necessary?
-  if (remote.finalizedEpoch === GENESIS_EPOCH && !isZeroRoot(remote.finalizedRoot)) {
-    return {
-      code: IrrelevantPeerCode.GENESIS_NONZERO,
-      root: remote.finalizedRoot,
-    };
   }
 
   // The remote's finalized epoch is less than or equal to ours, but the block root is
@@ -119,8 +108,6 @@ export function renderIrrelevantPeerType(type: IrrelevantPeerType): string {
       return `INCOMPATIBLE_FORKS ours: ${toHexString(type.ours)} theirs: ${toHexString(type.theirs)}`;
     case IrrelevantPeerCode.DIFFERENT_CLOCKS:
       return `DIFFERENT_CLOCKS slotDiff: ${type.slotDiff}`;
-    case IrrelevantPeerCode.GENESIS_NONZERO:
-      return `GENESIS_NONZERO: ${toHexString(type.root)}`;
     case IrrelevantPeerCode.DIFFERENT_FINALIZED:
       return `DIFFERENT_FINALIZED root: ${toHexString(type.remoteRoot)} expected: ${toHexString(type.expectedRoot)}`;
   }
