@@ -3,7 +3,7 @@ import {Api, ApiError} from "@lodestar/api";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 
-import {ProposerPreparationData} from "@lodestar/api/lib/beacon/routes/validator.js";
+import {routes} from "@lodestar/api";
 import {IClock, LoggerVc, batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -38,7 +38,7 @@ export function pollPrepareBeaconProposer(
     const indicesChunks = batchItems(validatorStore.getAllLocalIndices(), {batchSize: REGISTRATION_CHUNK_SIZE});
 
     for (const indices of indicesChunks) {
-      const proposers: ProposerPreparationData[] = [];
+      const proposers: routes.validator.ProposerPreparationData[] = [];
       try {
         indices.forEach((index) => {
           const feeRecipient = validatorStore.getFeeRecipientByIndex(index);

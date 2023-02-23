@@ -2,7 +2,7 @@ import {ValidatorIndex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, ApiError} from "@lodestar/api";
-import {ValidatorStatus, ValidatorResponse} from "@lodestar/api/lib/beacon/routes/beacon/state.js";
+import {routes} from "@lodestar/api";
 import {batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 
@@ -102,15 +102,22 @@ export class IndicesService {
 
     const newIndices = [];
 
-    const allValidators = new Map<ValidatorStatus, ValidatorResponse[]>();
+    const allValidators = new Map<routes.beacon.ValidatorStatus, routes.beacon.ValidatorResponse[]>();
 
     for (const validatorState of res.response.data) {
       // Group all validators by status
-      allValidators.set(validatorState.status, [validatorState]);
+      if (!allValidators.has(validatorState.status)) {
+        allValidators.set(validatorState.status, [validatorState]);
+      } else {
+        allValidators.get(validatorState.status)?.push(validatorState);
+      }
 
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
       if (!this.pubkey2index.has(pubkeyHex)) {
-        this.logger.debug("Discovered validator", {pubkey: pubkeyHex, index: validatorState.index});
+        this.logger.debug("Validator exists in beacon chain", {
+          validatorIndex: validatorState.index,
+          pubkey: pubkeyHex,
+        });
         this.pubkey2index.set(pubkeyHex, validatorState.index);
         this.index2pubkey.set(validatorState.index, pubkeyHex);
         newIndices.push(validatorState.index);
@@ -123,42 +130,44 @@ export class IndicesService {
   }
 }
 
-function logValidatorStatuses(allValidators: Map<ValidatorStatus, ValidatorResponse[]>, logger: Logger): void {
-  const loggedValidatorStates: {[key: string]: ValidatorStatus[]} = {
+function logValidatorStatuses(
+  allValidators: Map<routes.beacon.ValidatorStatus, routes.beacon.ValidatorResponse[]>,
+  logger: Logger
+): void {
+  const loggedValidatorStates: {[key: string]: routes.beacon.ValidatorStatus[]} = {
     "Validator activated": ["active"],
     "Validator pending": ["pending_initialized", "pending_queued"],
     "Validator withdrawn": ["withdrawal_done"],
     "Validator exited": ["exited_slashed", "exited_unslashed"],
   };
 
-  const logFormatter = (message: string, validatorState: ValidatorResponse): void => {
-    logger.info(message, {
-      pubkey: toHexString(validatorState.validator.pubkey),
-      index: validatorState.index,
-    });
-  };
-
   for (const [message, statuses] of Object.entries(loggedValidatorStates)) {
-    getValidatorStatesByStatuses(statuses, allValidators).forEach((validatorState) => {
-      logFormatter(message, validatorState);
-    });
+    for (const validatorState of getValidatorStatesByStatuses(statuses, allValidators)) {
+      logger.info(message, {
+        pubkey: toHexString(validatorState.validator.pubkey),
+        index: validatorState.index,
+      });
+    }
   }
 
-  logger.info("Initialized validators", {
-    total: allValidators.size,
+  logger.info("Validator statuses", {
     active: allValidators.get("active")?.length ?? 0,
+    pending: getValidatorStatesByStatuses(loggedValidatorStates["Validator pending"], allValidators)?.length ?? 0,
+    exited: getValidatorStatesByStatuses(loggedValidatorStates["Validator exited"], allValidators)?.length ?? 0,
+    withdrawn: getValidatorStatesByStatuses(loggedValidatorStates["Validator withdrawn"], allValidators)?.length ?? 0,
+    total: allValidators.size,
   });
 }
 
 function getValidatorStatesByStatuses(
-  statuses: ValidatorStatus[],
-  allValidators: Map<ValidatorStatus, ValidatorResponse[]>
-): ValidatorResponse[] {
+  statuses: routes.beacon.ValidatorStatus[],
+  allValidators: Map<routes.beacon.ValidatorStatus, routes.beacon.ValidatorResponse[]>
+): routes.beacon.ValidatorResponse[] {
   return statuses.reduce((validatorStates, status) => {
     const validators = allValidators.get(status);
     if (validators) {
       validatorStates.push(...validators);
     }
     return validatorStates;
-  }, [] as ValidatorResponse[]);
+  }, [] as routes.beacon.ValidatorResponse[]);
 }
