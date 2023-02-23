@@ -1,3 +1,4 @@
+import {join} from "node:path";
 import bls from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@lodestar/state-transition";
@@ -44,6 +45,8 @@ export async function getSignersFromArgs(
   network: string,
   {logger, signal}: {logger: Pick<Logger, "info">; signal: AbortSignal}
 ): Promise<Signer[]> {
+  const accountPaths = getAccountPaths(args, network);
+
   // ONLY USE FOR TESTNETS - Derive interop keys
   if (args.interopIndexes) {
     const indexes = parseRange(args.interopIndexes);
@@ -94,7 +97,7 @@ export async function getSignersFromArgs(
     return decryptKeystoreDefinitions(keystoreDefinitions, {
       ...args,
       onDecrypt: needle,
-      cacheFilePath: `${args.importKeystores[0]}.cache`,
+      cacheFilePath: join(accountPaths.cacheDir, "imported_keystores.cache"),
     });
   }
 
@@ -105,7 +108,6 @@ export async function getSignersFromArgs(
 
   // Read keys from local account manager
   else {
-    const accountPaths = getAccountPaths(args, network);
     const persistedKeysBackend = new PersistedKeysBackend(accountPaths);
 
     // Read and decrypt local keystores, imported via keymanager api or import cmd
@@ -123,10 +125,11 @@ export async function getSignersFromArgs(
         );
       },
     });
+
     const keystoreSigners = await decryptKeystoreDefinitions(keystoreDefinitions, {
       ...args,
       onDecrypt: needle,
-      cacheFilePath: `${accountPaths.keystoresDir}.cache`,
+      cacheFilePath: join(accountPaths.cacheDir, "local_keystores.cache"),
     });
 
     // Read local remote keys, imported via keymanager api
