@@ -122,6 +122,21 @@ export type GossipModules = {
   chain: IBeaconChain;
 };
 
+export type GossipBeaconNode = {
+  publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<void>;
+  publishSignedBeaconBlockAndBlobsSidecar(item: deneb.SignedBeaconBlockAndBlobsSidecar): Promise<void>;
+  publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number>;
+  publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number>;
+  publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void>;
+  publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<void>;
+  publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void>;
+  publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<void>;
+  publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: number): Promise<void>;
+  publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<void>;
+  publishLightClientFinalityUpdate(lightClientFinalityUpdate: allForks.LightClientFinalityUpdate): Promise<void>;
+  publishLightClientOptimisticUpdate(lightClientOptimisitcUpdate: allForks.LightClientOptimisticUpdate): Promise<void>;
+};
+
 /**
  * Contains various methods for validation of incoming gossip topic data.
  * The conditions for valid gossip topics and how they are handled are specified here:

@@ -130,8 +130,8 @@ describe("gossipsub", function () {
     expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
@@ -162,8 +162,8 @@ describe("gossipsub", function () {
     expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
@@ -209,8 +209,8 @@ describe("gossipsub", function () {
     expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
@@ -244,8 +244,8 @@ describe("gossipsub", function () {
     expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
@@ -280,8 +280,8 @@ describe("gossipsub", function () {
     expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {

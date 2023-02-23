@@ -203,7 +203,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   /** Convenience method for `SyncChain` */
   private reportPeer: SyncChainFns["reportPeer"] = (peer, action, actionName) => {
-    this.network.reportPeer(peer, action, actionName);
+    this.network.reportPeer(peer, action, actionName).catch((e) => this.logger.error("Error reporting peer", {}, e));
   };
 
   /** Convenience method for `SyncChain` */
@@ -275,7 +275,9 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         });
 
         // Re-status peers from successful chain. Potentially trigger a Head sync
-        this.network.reStatusPeers(syncChain.getPeers());
+        this.network
+          .reStatusPeers(syncChain.getPeers())
+          .catch((e) => this.logger.error("Error resyncing peers", {}, e));
       }
     }
 

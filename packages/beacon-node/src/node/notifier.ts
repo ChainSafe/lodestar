@@ -37,7 +37,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
 
   try {
     while (!signal.aborted) {
-      const connectedPeerCount = network.getConnectedPeers().length;
+      const connectedPeerCount = network.getConnectedPeerCount();
 
       if (connectedPeerCount <= WARN_PEER_COUNT) {
         if (!hasLowPeerCount) {
