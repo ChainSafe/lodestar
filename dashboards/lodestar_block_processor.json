@@ -996,10 +996,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "delta(lodestar_stfn_epoch_transition_seconds_sum[$rate_interval])\n/\ndelta(lodestar_stfn_epoch_transition_seconds_count[$rate_interval])",
+          "expr": "rate(lodestar_stfn_epoch_transition_seconds_sum[$rate_interval])\n/\nrate(lodestar_stfn_epoch_transition_seconds_count[$rate_interval])",
           "interval": "",
           "legendFormat": "epoch transition",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -1083,13 +1085,192 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "delta(lodestar_stfn_process_block_seconds_sum[$rate_interval])/delta(lodestar_stfn_process_block_seconds_count[$rate_interval])",
+          "editorMode": "code",
+          "expr": "rate(lodestar_stfn_process_block_seconds_sum[$rate_interval])\n/\nrate(lodestar_stfn_process_block_seconds_count[$rate_interval])",
           "interval": "",
           "legendFormat": "process block time",
+          "range": true,
           "refId": "A"
         }
       ],
       "title": "Process block avg time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 22,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 4,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": []
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 42
+      },
+      "id": 524,
+      "options": {
+        "graph": {},
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "delta(lodestar_stfn_epoch_transition_commit_seconds_sum[$rate_interval])\n/\ndelta(lodestar_stfn_epoch_transition_commit_seconds_count[$rate_interval])",
+          "interval": "",
+          "legendFormat": "epoch transition",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Epoch transition commit step avg time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 22,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": []
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 42
+      },
+      "id": 525,
+      "options": {
+        "graph": {},
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_stfn_process_block_commit_seconds_sum[$rate_interval])\n/\nrate(lodestar_stfn_process_block_commit_seconds_count[$rate_interval])",
+          "interval": "",
+          "legendFormat": "process block time",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Process block commit step avg time",
       "type": "timeseries"
     },
     {
@@ -1162,7 +1343,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 42
+        "y": 50
       },
       "id": 122,
       "options": {
@@ -1265,7 +1446,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 42
+        "y": 50
       },
       "id": 123,
       "options": {
@@ -1369,7 +1550,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 50
+        "y": 58
       },
       "id": 124,
       "options": {
@@ -1472,7 +1653,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 50
+        "y": 58
       },
       "id": 125,
       "options": {
@@ -1506,6 +1687,218 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 22,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": []
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 66
+      },
+      "id": 526,
+      "options": {
+        "graph": {},
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_stfn_hash_tree_root_seconds_sum[$rate_interval])\n/ on(source)\nrate(lodestar_stfn_hash_tree_root_seconds_count[$rate_interval])",
+          "interval": "",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "State hash_tree_root avg time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 22,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": []
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 66
+      },
+      "id": 527,
+      "options": {
+        "graph": {},
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_stfn_validators_nodes_populated_miss_total{source=\"stateTransition\"} [$rate_interval])\n/on(instance)\nrate(lodestar_stfn_state_cloned_count_count[$rate_interval])",
+          "interval": "",
+          "legendFormat": "stateTransition-validators",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_stfn_balances_nodes_populated_miss_total{source=\"stateTransition\"} [$rate_interval])\n/on(instance)\nrate(lodestar_stfn_state_cloned_count_count[$rate_interval])",
+          "hide": false,
+          "legendFormat": "stateTransition-balances",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_stfn_validators_nodes_populated_miss_total{source=\"processSlots\"} [$rate_interval])\n/on(instance)\nrate(lodestar_stfn_state_cloned_count_count[$rate_interval])",
+          "hide": false,
+          "legendFormat": "processSlots-validators",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_stfn_balances_nodes_populated_miss_total{source=\"processSlots\"} [$rate_interval])\n/on(instance)\nrate(lodestar_stfn_state_cloned_count_count[$rate_interval])",
+          "hide": false,
+          "legendFormat": "processSlots-balances",
+          "range": true,
+          "refId": "D"
+        }
+      ],
+      "title": "State SSZ cache miss rate on preState",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
@@ -1515,7 +1908,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 74
       },
       "id": 92,
       "panels": [],
@@ -1540,7 +1933,7 @@
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 59
+        "y": 75
       },
       "id": 154,
       "options": {
@@ -1631,7 +2024,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 62
+        "y": 78
       },
       "id": 94,
       "options": {
@@ -1723,7 +2116,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 62
+        "y": 78
       },
       "id": 519,
       "options": {
@@ -1818,7 +2211,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 70
+        "y": 86
       },
       "id": 151,
       "options": {
@@ -1917,7 +2310,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 70
+        "y": 86
       },
       "id": 96,
       "options": {
@@ -2016,7 +2409,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 78
+        "y": 94
       },
       "id": 150,
       "options": {
@@ -2115,7 +2508,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 78
+        "y": 94
       },
       "id": 95,
       "options": {
@@ -2215,7 +2608,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 83
+        "y": 99
       },
       "id": 148,
       "options": {
@@ -2324,7 +2717,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 86
+        "y": 102
       },
       "id": 147,
       "options": {
@@ -2423,7 +2816,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 89
+        "y": 105
       },
       "id": 98,
       "options": {
@@ -2534,7 +2927,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 93
+        "y": 109
       },
       "id": 153,
       "options": {
@@ -2642,7 +3035,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 94
+        "y": 110
       },
       "id": 97,
       "options": {
@@ -2684,7 +3077,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 100
+        "y": 116
       },
       "id": 309,
       "panels": [],
@@ -2792,7 +3185,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 101
+        "y": 117
       },
       "id": 305,
       "options": {
@@ -2901,7 +3294,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 101
+        "y": 117
       },
       "id": 307,
       "options": {
@@ -3005,7 +3398,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 109
+        "y": 125
       },
       "id": 335,
       "options": {
@@ -3109,7 +3502,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 109
+        "y": 125
       },
       "id": 334,
       "options": {
@@ -3150,7 +3543,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 117
+        "y": 133
       },
       "id": 136,
       "panels": [],
@@ -3230,7 +3623,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 118
+        "y": 134
       },
       "id": 130,
       "options": {
@@ -3342,7 +3735,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 118
+        "y": 134
       },
       "id": 140,
       "options": {
@@ -3456,7 +3849,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 126
+        "y": 142
       },
       "id": 132,
       "options": {
@@ -3592,7 +3985,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 126
+        "y": 142
       },
       "id": 138,
       "options": {
