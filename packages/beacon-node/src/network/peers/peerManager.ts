@@ -263,6 +263,9 @@ export class PeerManager {
    */
   private onPing(peer: PeerId, seqNumber: phase0.Ping): void {
     // if the sequence number is unknown update the peer's metadata
+    if (peer.toString() === NIMBUS_PEER_ID) {
+      this.logger.verbose("Lodestar receives ping requests from Nimbus", {peerId: NIMBUS_PEER_ID});
+    }
     const metadata = this.connectedPeers.get(peer.toString())?.metadata;
     if (!metadata || metadata.seqNumber < seqNumber) {
       void this.requestMetadata(peer);
@@ -276,6 +279,9 @@ export class PeerManager {
     // Store metadata always in case the peer updates attnets but not the sequence number
     // Trust that the peer always sends the latest metadata (From Lighthouse)
     const peerData = this.connectedPeers.get(peer.toString());
+    if (peer.toString() === NIMBUS_PEER_ID) {
+      this.logger.verbose("Lodestar receives metadata requests from Nimbus", {peerId: NIMBUS_PEER_ID});
+    }
     if (peerData) {
       peerData.metadata = {
         seqNumber: metadata.seqNumber,
@@ -309,6 +315,9 @@ export class PeerManager {
   private onStatus(peer: PeerId, status: phase0.Status): void {
     // reset the to-status timer of this peer
     const peerData = this.connectedPeers.get(peer.toString());
+    if (peer.toString() === NIMBUS_PEER_ID) {
+      this.logger.verbose("Lodestar receives status requests from Nimbus", {peerId: NIMBUS_PEER_ID});
+    }
     if (peerData) peerData.lastStatusUnixTsMs = Date.now();
 
     let isIrrelevant: boolean;
@@ -351,7 +360,13 @@ export class PeerManager {
 
   private async requestMetadata(peer: PeerId): Promise<void> {
     try {
+      if (peer.toString() === NIMBUS_PEER_ID) {
+        this.logger.verbose("Lodestar is requesting metadata from Nimbus", {peerId: NIMBUS_PEER_ID});
+      }
       this.onMetadata(peer, await this.reqResp.metadata(peer));
+      if (peer.toString() === NIMBUS_PEER_ID) {
+        this.logger.verbose("Lodestar done requesting metadata from Nimbus", {peerId: NIMBUS_PEER_ID});
+      }
     } catch (e) {
       // TODO: Downvote peer here or in the reqResp layer
     }
