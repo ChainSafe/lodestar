@@ -2,11 +2,18 @@
   "__inputs": [
     {
       "name": "DS_PROMETHEUS",
-      "label": "prometheus",
+      "label": "Prometheus",
       "description": "",
       "type": "datasource",
       "pluginId": "prometheus",
       "pluginName": "Prometheus"
+    },
+    {
+      "name": "VAR_BEACON_JOB",
+      "type": "constant",
+      "label": "Beacon node job name",
+      "value": "beacon",
+      "description": ""
     }
   ],
   "__elements": {},
@@ -418,10 +425,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "process_heap_bytes{job=\"beacon\"}",
+          "expr": "process_heap_bytes{job=\"$beacon_job\"}",
           "interval": "",
           "legendFormat": "process_heap_bytes",
+          "range": true,
           "refId": "A"
         },
         {
@@ -429,11 +438,13 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "nodejs_heap_size_total_bytes{job=\"beacon\"}",
+          "expr": "nodejs_heap_size_total_bytes{job=\"$beacon_job\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "heap_total",
+          "range": true,
           "refId": "B"
         },
         {
@@ -441,11 +452,13 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "nodejs_heap_size_used_bytes{job=\"beacon\"}",
+          "expr": "nodejs_heap_size_used_bytes{job=\"$beacon_job\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "heap_used",
+          "range": true,
           "refId": "C"
         },
         {
@@ -453,11 +466,13 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "nodejs_external_memory_bytes{job=\"beacon\"}",
+          "expr": "nodejs_external_memory_bytes{job=\"$beacon_job\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "external_memory",
+          "range": true,
           "refId": "D"
         },
         {
@@ -465,11 +480,13 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "process_resident_memory_bytes{job=\"beacon\"}",
+          "expr": "process_resident_memory_bytes{job=\"$beacon_job\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "rss",
+          "range": true,
           "refId": "E"
         }
       ],
@@ -738,7 +755,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "{job=\"beacon\"}"
+              "options": "{job=\"$beacon_job\"}"
             },
             "properties": [
               {
@@ -833,7 +850,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -927,7 +945,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1036,7 +1055,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1156,7 +1176,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 9
+            "y": 25
           },
           "id": 102,
           "options": {
@@ -1275,7 +1295,7 @@
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 9
+            "y": 25
           },
           "id": 172,
           "options": {
@@ -1370,7 +1390,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 15
+            "y": 31
           },
           "id": 171,
           "options": {
@@ -1413,7 +1433,7 @@
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 15
+            "y": 31
           },
           "id": 99,
           "options": {
@@ -1526,7 +1546,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 11
+            "y": 27
           },
           "id": 353,
           "options": {
@@ -1617,7 +1637,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 11
+            "y": 27
           },
           "id": 355,
           "options": {
@@ -1707,7 +1727,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 19
+            "y": 35
           },
           "id": 357,
           "options": {
@@ -2180,7 +2200,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 19
+            "y": 35
           },
           "id": 359,
           "links": [],
@@ -2333,7 +2353,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 27
+            "y": 43
           },
           "id": 361,
           "options": {
@@ -2452,7 +2472,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 27
+            "y": 43
           },
           "id": 363,
           "options": {
@@ -2554,7 +2574,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 35
+            "y": 51
           },
           "id": 365,
           "options": {
@@ -2684,7 +2704,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 35
+            "y": 51
           },
           "id": 48,
           "options": {
@@ -2803,7 +2823,7 @@
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "{job=\"beacon\"}"
+                  "options": "{job=\"$beacon_job\"}"
                 },
                 "properties": [
                   {
@@ -2821,7 +2841,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 35
+            "y": 51
           },
           "id": 50,
           "options": {
@@ -2943,7 +2963,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 53
+            "y": 69
           },
           "id": 529,
           "options": {
@@ -3009,7 +3029,7 @@
                   "type": "linear"
                 },
                 "showPoints": "never",
-                "spanNulls": 3600000,
+                "spanNulls": false,
                 "stacking": {
                   "group": "A",
                   "mode": "none"
@@ -3100,7 +3120,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 53
+            "y": 69
           },
           "id": 531,
           "options": {
@@ -3220,7 +3240,7 @@
             "h": 11,
             "w": 12,
             "x": 0,
-            "y": 13
+            "y": 29
           },
           "id": 84,
           "options": {
@@ -3313,7 +3333,7 @@
             "h": 11,
             "w": 12,
             "x": 12,
-            "y": 13
+            "y": 29
           },
           "id": 87,
           "options": {
@@ -3404,7 +3424,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 24
+            "y": 40
           },
           "id": 516,
           "options": {
@@ -3505,7 +3525,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 24
+            "y": 40
           },
           "id": 515,
           "options": {
@@ -3594,7 +3614,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 32
+            "y": 48
           },
           "id": 513,
           "options": {
@@ -3683,7 +3703,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 32
+            "y": 48
           },
           "id": 517,
           "options": {
@@ -4212,7 +4232,7 @@
             "x": 0,
             "y": 65
           },
-          "id": 527,
+          "id": 535,
           "options": {
             "legend": {
               "calcs": [],
@@ -4238,7 +4258,7 @@
               "refId": "A"
             }
           ],
-          "title": "DB Size - Beacon Node",
+          "title": "DB size - Beacon node",
           "type": "timeseries"
         },
         {
@@ -4329,7 +4349,7 @@
             "x": 12,
             "y": 65
           },
-          "id": 529,
+          "id": 537,
           "options": {
             "legend": {
               "calcs": [],
@@ -4355,7 +4375,7 @@
               "refId": "A"
             }
           ],
-          "title": "DB Size - Validator",
+          "title": "DB size - Validator client",
           "type": "timeseries"
         },
         {
@@ -4465,7 +4485,7 @@
               "refId": "B"
             }
           ],
-          "title": "Approximate db size duration",
+          "title": "Approximate DB size duration",
           "type": "timeseries"
         }
       ],
@@ -4602,6 +4622,27 @@
         "name": "Filters",
         "skipUrlSync": false,
         "type": "adhoc"
+      },
+      {
+        "description": "Job name used in Prometheus config to scrape Beacon node",
+        "hide": 2,
+        "label": "Beacon node job name",
+        "name": "beacon_job",
+        "query": "${VAR_BEACON_JOB}",
+        "skipUrlSync": false,
+        "type": "constant",
+        "current": {
+          "value": "${VAR_BEACON_JOB}",
+          "text": "${VAR_BEACON_JOB}",
+          "selected": false
+        },
+        "options": [
+          {
+            "value": "${VAR_BEACON_JOB}",
+            "text": "${VAR_BEACON_JOB}",
+            "selected": false
+          }
+        ]
       }
     ]
   },
@@ -4626,6 +4667,6 @@
   "timezone": "utc",
   "title": "Lodestar - VM + host",
   "uid": "lodestar_vm_host",
-  "version": 7,
+  "version": 8,
   "weekStart": "monday"
 }
