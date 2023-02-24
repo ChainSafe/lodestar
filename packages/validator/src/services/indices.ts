@@ -1,8 +1,7 @@
 import {ValidatorIndex} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {Logger, MapDef} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {Api, ApiError} from "@lodestar/api";
-import {routes} from "@lodestar/api";
+import {Api, ApiError, routes} from "@lodestar/api";
 import {batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 
@@ -14,6 +13,9 @@ const PUBKEYS_PER_REQUEST = 10;
 
 // To assist with readability
 type PubkeyHex = string;
+
+// To assist with logging statuses, we only log the statuses that are not active_exiting or withdrawal_possible
+type SimpleValidatorStatus = Exclude<routes.beacon.ValidatorStatus, "active_exiting" | "withdrawal_possible">;
 
 export class IndicesService {
   readonly index2pubkey = new Map<ValidatorIndex, PubkeyHex>();
@@ -102,15 +104,14 @@ export class IndicesService {
 
     const newIndices = [];
 
-    const allValidators = new Map<routes.beacon.ValidatorStatus, routes.beacon.ValidatorResponse[]>();
+    const allValidators = new MapDef<SimpleValidatorStatus, number>(() => 0);
 
     for (const validatorState of res.response.data) {
       // Group all validators by status
-      if (!allValidators.has(validatorState.status)) {
-        allValidators.set(validatorState.status, [validatorState]);
-      } else {
-        allValidators.get(validatorState.status)?.push(validatorState);
-      }
+      allValidators.set(
+        validatorState.status as SimpleValidatorStatus,
+        allValidators.getOrDefault(validatorState.status as SimpleValidatorStatus) + 1
+      );
 
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
       if (!this.pubkey2index.has(pubkeyHex)) {
@@ -124,50 +125,12 @@ export class IndicesService {
       }
     }
 
-    logValidatorStatuses(allValidators, this.logger);
+    // Filter out validator statuses that are greater than 0
+    const statuses = Object.fromEntries(Array.from(allValidators.entries()).filter((entry) => entry[1] > 0));
+    // The total number of validators
+    const total = Object.values(statuses).reduce((a, b) => a + b, 0);
+    logger.info("Validator statuses", {...statuses, total});
 
     return newIndices;
   }
-}
-
-function logValidatorStatuses(
-  allValidators: Map<routes.beacon.ValidatorStatus, routes.beacon.ValidatorResponse[]>,
-  logger: Logger
-): void {
-  const loggedValidatorStates: {[key: string]: routes.beacon.ValidatorStatus[]} = {
-    "Validator activated": ["active"],
-    "Validator pending": ["pending_initialized", "pending_queued"],
-    "Validator withdrawn": ["withdrawal_done"],
-    "Validator exited": ["exited_slashed", "exited_unslashed"],
-  };
-
-  for (const [message, statuses] of Object.entries(loggedValidatorStates)) {
-    for (const validatorState of getValidatorStatesByStatuses(statuses, allValidators)) {
-      logger.info(message, {
-        pubkey: toHexString(validatorState.validator.pubkey),
-        index: validatorState.index,
-      });
-    }
-  }
-
-  logger.info("Validator statuses", {
-    active: allValidators.get("active")?.length ?? 0,
-    pending: getValidatorStatesByStatuses(loggedValidatorStates["Validator pending"], allValidators)?.length ?? 0,
-    exited: getValidatorStatesByStatuses(loggedValidatorStates["Validator exited"], allValidators)?.length ?? 0,
-    withdrawn: getValidatorStatesByStatuses(loggedValidatorStates["Validator withdrawn"], allValidators)?.length ?? 0,
-    total: allValidators.size,
-  });
-}
-
-function getValidatorStatesByStatuses(
-  statuses: routes.beacon.ValidatorStatus[],
-  allValidators: Map<routes.beacon.ValidatorStatus, routes.beacon.ValidatorResponse[]>
-): routes.beacon.ValidatorResponse[] {
-  return statuses.reduce((validatorStates, status) => {
-    const validators = allValidators.get(status);
-    if (validators) {
-      validatorStates.push(...validators);
-    }
-    return validatorStates;
-  }, [] as routes.beacon.ValidatorResponse[]);
 }
