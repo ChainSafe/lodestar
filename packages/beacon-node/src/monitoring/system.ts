@@ -5,264 +5,214 @@ import {Logger} from "@lodestar/utils";
 
 type MiscOs = "lin" | "win" | "mac" | "unk";
 
-// static data only needs to be collected once
-let staticDataCollected = false;
-// disk I/O is not measurable in some environments
-let diskIOMeasurable = true;
-
-let cpuCores = 0;
-let cpuThreads = 0;
-let cpuNodeSystemSecondsTotal = 0;
-let cpuNodeUserSecondsTotal = 0;
-let cpuNodeIdleSecondsTotal = 0;
-let memoryNodeBytesTotal = 0;
-let memoryNodeBytesFree = 0;
-let memoryNodeBytesCached = 0;
-let memoryNodeBytesBuffers = 0;
-let diskNodeBytesTotal = 0;
-let diskNodeBytesFree = 0;
-let diskNodeReadsTotal = 0;
-let diskNodeWritesTotal = 0;
-let networkNodeBytesTotalReceive = 0;
-let networkNodeBytesTotalTransmit = 0;
-let miscNodeBootTsSeconds = 0;
-let miscOs: MiscOs = "unk";
-
 /**
- * Collect system data and update cached values
+ * Singleton class to collect and provide system information
  */
-export async function collectSystemData(logger: Logger): Promise<void> {
-  const debug = (dataType: string, e: Error): void => logger.debug(`Failed to collect ${dataType} data`, {}, e);
+class System {
+  // static data only needs to be collected once
+  private staticDataCollected = false;
+  // disk I/O is not measurable in some environments
+  private diskIOMeasurable = true;
 
-  await Promise.all([
-    collectStaticData().catch((e) => debug("static system", e)),
-    collectCpuData().catch((e) => debug("CPU", e)),
-    collectMemoryData().catch((e) => debug("memory", e)),
-    collectDiskData().catch((e) => debug("disk", e)),
-    collectNetworkData().catch((e) => debug("network", e)),
-  ]);
+  private _cpuCores = 0;
+  private _cpuThreads = 0;
+  private _cpuNodeSystemSecondsTotal = 0;
+  private _cpuNodeUserSecondsTotal = 0;
+  private _cpuNodeIdleSecondsTotal = 0;
+  private _memoryNodeBytesTotal = 0;
+  private _memoryNodeBytesFree = 0;
+  private _memoryNodeBytesCached = 0;
+  private _memoryNodeBytesBuffers = 0;
+  private _diskNodeBytesTotal = 0;
+  private _diskNodeBytesFree = 0;
+  private _diskNodeReadsTotal = 0;
+  private _diskNodeWritesTotal = 0;
+  private _networkNodeBytesTotalReceive = 0;
+  private _networkNodeBytesTotalTransmit = 0;
+  private _miscNodeBootTsSeconds = 0;
+  private _miscOs: MiscOs = "unk";
 
-  miscNodeBootTsSeconds = getSystemBootTime();
-}
+  /**
+   * Collect system data and update cached values
+   */
+  async collectData(logger: Logger): Promise<void> {
+    const debug = (dataType: string, e: Error): void => logger.debug(`Failed to collect ${dataType} data`, {}, e);
 
-async function collectStaticData(): Promise<void> {
-  if (staticDataCollected) return;
+    await Promise.all([
+      this.collectStaticData().catch((e) => debug("static system", e)),
+      this.collectCpuData().catch((e) => debug("CPU", e)),
+      this.collectMemoryData().catch((e) => debug("memory", e)),
+      this.collectDiskData().catch((e) => debug("disk", e)),
+      this.collectNetworkData().catch((e) => debug("network", e)),
+    ]);
 
-  const cpu = await system.cpu();
-  // Note: inside container this might be inaccurate as
-  // physicalCores in some cases is the count of logical CPU cores
-  cpuCores = cpu.physicalCores;
-  cpuThreads = cpu.cores;
+    this._miscNodeBootTsSeconds = this.getSystemBootTime();
+  }
 
-  miscOs = getNormalizedOsVersion();
+  private async collectStaticData(): Promise<void> {
+    if (this.staticDataCollected) return;
 
-  staticDataCollected = true;
-}
+    const cpu = await system.cpu();
+    // Note: inside container this might be inaccurate as
+    // physicalCores in some cases is the count of logical CPU cores
+    this._cpuCores = cpu.physicalCores;
+    this._cpuThreads = cpu.cores;
 
-async function collectCpuData(): Promise<void> {
-  const cpuTimes: Record<string, number> = {};
+    this._miscOs = this.getNormalizedOsVersion();
 
-  os.cpus().forEach((cpu) => {
-    // sum up CPU times per mode and convert to seconds
-    for (const [mode, time] of Object.entries(cpu.times)) {
-      if (cpuTimes[mode] == null) cpuTimes[mode] = 0;
-      cpuTimes[mode] += Math.floor(time / 1000);
+    this.staticDataCollected = true;
+  }
+
+  private async collectCpuData(): Promise<void> {
+    const cpuTimes: Record<string, number> = {};
+
+    for (const cpu of os.cpus()) {
+      // sum up CPU times per mode and convert to seconds
+      for (const [mode, time] of Object.entries(cpu.times)) {
+        if (cpuTimes[mode] == null) cpuTimes[mode] = 0;
+        cpuTimes[mode] += Math.floor(time / 1000);
+      }
     }
-  });
 
-  // Note: currently beaconcha.in expects system CPU seconds to be everything
-  cpuNodeSystemSecondsTotal = Object.values(cpuTimes).reduce((total, time) => total + time, 0);
-  cpuNodeUserSecondsTotal = cpuTimes.user;
-  cpuNodeIdleSecondsTotal = cpuTimes.idle;
-}
+    // Note: currently beaconcha.in expects system CPU seconds to be everything
+    this._cpuNodeSystemSecondsTotal = Object.values(cpuTimes).reduce((total, time) => total + time, 0);
+    this._cpuNodeUserSecondsTotal = cpuTimes.user;
+    this._cpuNodeIdleSecondsTotal = cpuTimes.idle;
+  }
 
-async function collectMemoryData(): Promise<void> {
-  const memory = await system.mem();
-  memoryNodeBytesTotal = memory.total;
-  memoryNodeBytesFree = memory.free;
-  memoryNodeBytesCached = memory.cached;
-  memoryNodeBytesBuffers = memory.buffers;
-}
+  private async collectMemoryData(): Promise<void> {
+    const memory = await system.mem();
+    this._memoryNodeBytesTotal = memory.total;
+    this._memoryNodeBytesFree = memory.free;
+    this._memoryNodeBytesCached = memory.cached;
+    this._memoryNodeBytesBuffers = memory.buffers;
+  }
 
-async function collectDiskData(): Promise<void> {
-  const fileSystems = await system.fsSize();
-  // get file system root, on windows this is the name of the hard disk partition
-  const rootFs = process.platform === "win32" ? process.cwd().split(path.sep)[0] : "/";
-  // only consider root file system, if it does not exist use first entry in the list
-  const fileSystem = fileSystems.find((fs) => fs.mount === rootFs) ?? fileSystems[0];
-  diskNodeBytesTotal = fileSystem.size;
-  diskNodeBytesFree = fileSystem.available;
+  private async collectDiskData(): Promise<void> {
+    const fileSystems = await system.fsSize();
+    // get file system root, on windows this is the name of the hard disk partition
+    const rootFs = process.platform === "win32" ? process.cwd().split(path.sep)[0] : "/";
+    // only consider root file system, if it does not exist use first entry in the list
+    const fileSystem = fileSystems.find((fs) => fs.mount === rootFs) ?? fileSystems[0];
+    this._diskNodeBytesTotal = fileSystem.size;
+    this._diskNodeBytesFree = fileSystem.available;
 
-  if (diskIOMeasurable) {
-    const disk = await system.disksIO();
-    if (disk != null && disk.rIO !== 0) {
-      // Note: rIO and wIO might not be available inside container
-      // see https://github.com/sebhildebrandt/systeminformation/issues/777
-      diskNodeReadsTotal = disk.rIO;
-      diskNodeWritesTotal = disk.wIO;
-    } else {
-      diskIOMeasurable = false;
+    if (this.diskIOMeasurable) {
+      const disk = await system.disksIO();
+      if (disk != null && disk.rIO !== 0) {
+        // Note: rIO and wIO might not be available inside container
+        // see https://github.com/sebhildebrandt/systeminformation/issues/777
+        this._diskNodeReadsTotal = disk.rIO;
+        this._diskNodeWritesTotal = disk.wIO;
+      } else {
+        this.diskIOMeasurable = false;
+      }
     }
+  }
+
+  private async collectNetworkData(): Promise<void> {
+    // defaults to first external network interface
+    const [network] = await system.networkStats();
+    // Note: rx_bytes and tx_bytes will be inaccurate if process
+    // runs inside container as it only captures local network traffic
+    this._networkNodeBytesTotalReceive = network.rx_bytes;
+    this._networkNodeBytesTotalTransmit = network.tx_bytes;
+  }
+
+  private getNormalizedOsVersion(): MiscOs {
+    switch (process.platform) {
+      case "linux":
+        return "lin";
+      case "darwin":
+        return "mac";
+      case "win32":
+        return "win";
+      default:
+        return "unk";
+    }
+  }
+
+  private getSystemBootTime(): number {
+    return Math.floor(Date.now() / 1000 - os.uptime());
+  }
+
+  get cpuCores(): number {
+    return this._cpuCores;
+  }
+
+  get cpuThreads(): number {
+    return this._cpuThreads;
+  }
+
+  get cpuNodeSystemSecondsTotal(): number {
+    return this._cpuNodeSystemSecondsTotal;
+  }
+
+  get cpuNodeUserSecondsTotal(): number {
+    return this._cpuNodeUserSecondsTotal;
+  }
+
+  get cpuNodeIOWaitSecondsTotal(): number {
+    // Note: not measured by os.cpus()
+    return 0;
+  }
+
+  get cpuNodeIdleSecondsTotal(): number {
+    return this._cpuNodeIdleSecondsTotal;
+  }
+
+  get memoryNodeBytesTotal(): number {
+    return this._memoryNodeBytesTotal;
+  }
+
+  get memoryNodeBytesFree(): number {
+    return this._memoryNodeBytesFree;
+  }
+
+  get memoryNodeBytesCached(): number {
+    return this._memoryNodeBytesCached;
+  }
+
+  get memoryNodeBytesBuffers(): number {
+    return this._memoryNodeBytesBuffers;
+  }
+
+  get diskNodeBytesTotal(): number {
+    return this._diskNodeBytesTotal;
+  }
+
+  get diskNodeBytesFree(): number {
+    return this._diskNodeBytesFree;
+  }
+
+  get diskNodeIOSeconds(): number {
+    // Note: currently unused by beaconcha.in
+    return 0;
+  }
+
+  get diskNodeReadsTotal(): number {
+    return this._diskNodeReadsTotal;
+  }
+
+  get diskNodeWritesTotal(): number {
+    return this._diskNodeWritesTotal;
+  }
+
+  get networkNodeBytesTotalReceive(): number {
+    return this._networkNodeBytesTotalReceive;
+  }
+
+  get networkNodeBytesTotalTransmit(): number {
+    return this._networkNodeBytesTotalTransmit;
+  }
+
+  get miscNodeBootTsSeconds(): number {
+    return this._miscNodeBootTsSeconds;
+  }
+
+  get miscOs(): MiscOs {
+    return this._miscOs;
   }
 }
 
-async function collectNetworkData(): Promise<void> {
-  // defaults to first external network interface
-  const [network] = await system.networkStats();
-  // Note: rx_bytes and tx_bytes will be inaccurate if process
-  // runs inside container as it only captures local network traffic
-  networkNodeBytesTotalReceive = network.rx_bytes;
-  networkNodeBytesTotalTransmit = network.tx_bytes;
-}
-
-function getNormalizedOsVersion(): MiscOs {
-  switch (process.platform) {
-    case "linux":
-      return "lin";
-    case "darwin":
-      return "mac";
-    case "win32":
-      return "win";
-    default:
-      return "unk";
-  }
-}
-
-function getSystemBootTime(): number {
-  return Math.floor(Date.now() / 1000 - os.uptime());
-}
-
-/**
- * Number of CPU cores available
- */
-export function getCpuCores(): number {
-  return cpuCores;
-}
-
-/**
- * Number of CPU threads available
- */
-export function getCpuThreads(): number {
-  return cpuThreads;
-}
-
-/**
- * CPU seconds consumed by all processes
- */
-export function getCpuNodeSystemSecondsTotal(): number {
-  return cpuNodeSystemSecondsTotal;
-}
-
-/**
- * CPU seconds consumed by user processes
- */
-export function getCpuNodeUserSecondsTotal(): number {
-  return cpuNodeUserSecondsTotal;
-}
-
-/**
- * CPU seconds spent in I/O wait state
- */
-export function getCpuNodeIOWaitSecondsTotal(): number {
-  // Note: not measured by os.cpus()
-  return 0;
-}
-
-/**
- * CPU seconds spent in idle state
- */
-export function getCpuNodeIdleSecondsTotal(): number {
-  return cpuNodeIdleSecondsTotal;
-}
-
-/**
- * Total amount of memory in bytes available
- */
-export function getMemoryNodeBytesTotal(): number {
-  return memoryNodeBytesTotal;
-}
-
-/**
- * Amount of free memory in bytes
- */
-export function getMemoryNodeBytesFree(): number {
-  return memoryNodeBytesFree;
-}
-
-/**
- * Amount of memory in bytes used by cache
- */
-export function getMemoryNodeBytesCached(): number {
-  return memoryNodeBytesCached;
-}
-
-/**
- * Amount of memory in bytes used by buffers
- */
-export function getMemoryNodeBytesBuffers(): number {
-  return memoryNodeBytesBuffers;
-}
-
-/**
- * Total amount of available disk space in bytes
- */
-export function getDiskNodeBytesTotal(): number {
-  return diskNodeBytesTotal;
-}
-
-/**
- * Amount of free disk space in bytes
- */
-export function getDiskNodeBytesFree(): number {
-  return diskNodeBytesFree;
-}
-
-/**
- * Total time spent in seconds on disk I/O operations
- */
-export function getDiskNodeIOSeconds(): number {
-  // Note: currently unused by beaconcha.in
-  return 0;
-}
-
-/**
- * Total number of disk read I/O operations
- */
-export function getDiskNodeReadsTotal(): number {
-  return diskNodeReadsTotal;
-}
-
-/**
- * Total number of disk write I/O operations
- */
-export function getDiskNodeWritesTotal(): number {
-  return diskNodeWritesTotal;
-}
-
-/**
- * Total amount of bytes received over the network
- */
-export function getNetworkNodeBytesTotalReceive(): number {
-  return networkNodeBytesTotalReceive;
-}
-
-/**
- * Total amount of bytes transmitted over the network
- */
-export function getNetworkNodeBytesTotalTransmit(): number {
-  return networkNodeBytesTotalTransmit;
-}
-
-/**
- * Unix timestamp in seconds of boot time
- */
-export function getMiscNodeBootTsSeconds(): number {
-  return miscNodeBootTsSeconds;
-}
-
-/**
- * Operating system, can be one of: lin, win, mac, unk for unknown
- */
-export function getMiscOs(): MiscOs {
-  return miscOs;
-}
+export default new System();
