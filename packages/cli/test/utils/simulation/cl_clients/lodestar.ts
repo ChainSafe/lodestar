@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {writeFile} from "node:fs/promises";
-import {dirname, join} from "node:path";
+import path from "node:path";
 import got from "got";
 import {getClient} from "@lodestar/api/beacon";
 import {getClient as keyManagerGetClient} from "@lodestar/api/keymanager";
@@ -20,8 +20,8 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
   } = opts;
   const ports = getNodePorts(nodeIndex);
 
-  const rcConfigPath = join(rootDir, "rc_config.json");
-  const paramsPath = join(rootDir, "params.json");
+  const rcConfigPath = path.join(rootDir, "rc_config.json");
+  const paramsPath = path.join(rootDir, "params.json");
 
   const rcConfig = ({
     network: "dev",
@@ -69,7 +69,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
         id: `${id}-validator`,
         paths: {
           ...opts.paths,
-          logFilePath: join(dirname(logFilePath), `${id}-validator.log`),
+          logFilePath: path.join(path.dirname(logFilePath), `${id}-validator.log`),
         },
       })
     );
@@ -146,12 +146,18 @@ export const generateLodestarValidatorJobs = (opts: CLClientGeneratorOptions): J
     id,
     type: RunnerType.ChildProcess,
     bootstrap: async () => {
-      await writeFile(join(rootDir, "rc_config.json"), JSON.stringify(rcConfig, null, 2));
-      await writeFile(join(rootDir, "params.json"), JSON.stringify(chainConfigToJson(config), null, 2));
+      await writeFile(path.join(rootDir, "rc_config.json"), JSON.stringify(rcConfig, null, 2));
+      await writeFile(path.join(rootDir, "params.json"), JSON.stringify(chainConfigToJson(config), null, 2));
     },
     cli: {
       command: LODESTAR_BINARY_PATH,
-      args: ["validator", "--rcConfig", join(rootDir, "rc_config.json"), "--paramsFile", join(rootDir, "params.json")],
+      args: [
+        "validator",
+        "--rcConfig",
+        path.join(rootDir, "rc_config.json"),
+        "--paramsFile",
+        path.join(rootDir, "params.json"),
+      ],
       env: {
         DEBUG: process.env.DISABLE_DEBUG_LOGS ? "" : "*,-winston:*",
       },

@@ -159,6 +159,7 @@ module.exports = {
         ],
       },
     ],
+    "no-restricted-syntax": ["error", ...restrictImportDestructuring("node:fs", "node:os", "node:path")],
     // Force to add names to all functions to ease CPU profiling
     "func-names": ["error", "always"],
 
@@ -241,3 +242,10 @@ module.exports = {
     },
   ],
 };
+
+function restrictImportDestructuring(...modules) {
+  return modules.map((module) => ({
+    selector: `ImportDeclaration[source.value='${module}'] ImportSpecifier`,
+    message: `Importing from '${module}' using destructuring is restricted.`,
+  }));
+}

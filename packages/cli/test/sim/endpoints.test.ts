@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {join} from "node:path";
+import path from "node:path";
 import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
@@ -26,7 +26,7 @@ const runTimeoutMs =
 const env = await SimulationEnvironment.initWithDefaults(
   {
     id: "beacon-endpoints",
-    logsDir: join(logFilesDir, "beacon-endpoints"),
+    logsDir: path.join(logFilesDir, "beacon-endpoints"),
     chainConfig: {
       ALTAIR_FORK_EPOCH: altairForkEpoch,
       BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
