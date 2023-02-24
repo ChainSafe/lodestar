@@ -129,7 +129,7 @@ export class IndicesService {
     const statuses = Object.fromEntries(Array.from(allValidators.entries()).filter((entry) => entry[1] > 0));
     // The total number of validators
     const total = Object.values(statuses).reduce((a, b) => a + b, 0);
-    logger.info("Validator statuses", {...statuses, total});
+    this.logger.info("Validator statuses", {...statuses, total});
 
     return newIndices;
   }
