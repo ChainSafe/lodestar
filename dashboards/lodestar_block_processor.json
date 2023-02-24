@@ -3046,7 +3046,7 @@
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "beacon_fork_choice_errors_total{group=\"beta\", instance=\"contabo-13\", job=\"$beacon_job\"}"
+                  "options": "beacon_fork_choice_errors_total{group=\"beta\", instance=\"contabo-13\", job=~\"$beacon_job|beacon\"}"
                 },
                 "properties": [
                   {
@@ -3294,7 +3294,7 @@
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "{job=\"$beacon_job\"}"
+                  "options": "{job=~\"$beacon_job|beacon\"}"
                 },
                 "properties": [
                   {
