@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Libp2p} from "libp2p";
-import {BeaconConfig, NIMBUS_PEER_ID} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   collectExactOne,
@@ -361,35 +361,23 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   }
 
   private async *onStatus(req: phase0.Status, peerId: PeerId): AsyncIterable<EncodedPayload<phase0.Status>> {
-    if (peerId.toString() === NIMBUS_PEER_ID) {
-      this.logger.verbose("Received status request from Nimbus peer", {peerId: peerId.toString()});
-    }
     this.onIncomingRequestBody({method: ReqRespMethod.Status, body: req}, peerId);
 
     yield* this.reqRespHandlers.onStatus(req, peerId);
   }
 
   private async *onGoodbye(req: phase0.Goodbye, peerId: PeerId): AsyncIterable<EncodedPayload<phase0.Goodbye>> {
-    if (peerId.toString() === NIMBUS_PEER_ID) {
-      this.logger.verbose("Received goodbye request from Nimbus peer", {peerId: peerId.toString()});
-    }
     this.onIncomingRequestBody({method: ReqRespMethod.Goodbye, body: req}, peerId);
 
     yield {type: EncodedPayloadType.ssz, data: BigInt(0)};
   }
 
   private async *onPing(req: phase0.Ping, peerId: PeerId): AsyncIterable<EncodedPayload<phase0.Ping>> {
-    if (peerId.toString() === NIMBUS_PEER_ID) {
-      this.logger.verbose("Received ping request from Nimbus peer", {peerId: peerId.toString()});
-    }
     this.onIncomingRequestBody({method: ReqRespMethod.Ping, body: req}, peerId);
     yield {type: EncodedPayloadType.ssz, data: this.metadataController.seqNumber};
   }
 
   private async *onMetadata(req: null, peerId: PeerId): AsyncIterable<EncodedPayload<allForks.Metadata>> {
-    if (peerId.toString() === NIMBUS_PEER_ID) {
-      this.logger.verbose("Received metadata request from Nimbus peer", {peerId: peerId.toString()});
-    }
     this.onIncomingRequestBody({method: ReqRespMethod.Metadata, body: req}, peerId);
 
     // V1 -> phase0, V2 -> altair. But the type serialization of phase0.Metadata will just ignore the extra .syncnets property
