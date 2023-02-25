@@ -581,7 +581,9 @@ export class PeerManager {
         peerData.agentClient = clientFromAgentVersion(agentVersion);
         // test gossiping with Nimbus
         if (peerData.agentClient !== ClientKind.Nimbus) {
-          void this.goodbyeAndDisconnect(peerData.peerId, GoodByeReasonCode.TOO_MANY_PEERS);
+          // void this.goodbyeAndDisconnect(peerData.peerId, GoodByeReasonCode.TOO_MANY_PEERS);
+          // says goodbye 40k per sec, should skip
+          void this.libp2p.hangUp(peerData.peerId);
         }
       }
     }, 1000);
