@@ -193,11 +193,11 @@ export function getCoreTopicsAtFork(
   }
 
   // Any fork after altair included
-  if (ForkSeq[fork] >= ForkSeq.altair) {
-    topics.push({type: GossipType.sync_committee_contribution_and_proof});
-    topics.push({type: GossipType.light_client_optimistic_update});
-    topics.push({type: GossipType.light_client_finality_update});
-  }
+  // if (ForkSeq[fork] >= ForkSeq.altair) {
+  //   topics.push({type: GossipType.sync_committee_contribution_and_proof});
+  //   topics.push({type: GossipType.light_client_optimistic_update});
+  //   topics.push({type: GossipType.light_client_finality_update});
+  // }
 
   if (opts.subscribeAllSubnets) {
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
