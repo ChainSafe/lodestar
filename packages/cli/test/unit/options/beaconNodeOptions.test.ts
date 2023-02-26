@@ -136,6 +136,8 @@ describe("options / beaconNodeOptions", () => {
         enabled: false,
         urls: ["http://localhost:8661"],
         timeout: 12000,
+        faultInspectionWindow: 32,
+        allowedFaults: 16,
       },
       metrics: {
         enabled: true,
