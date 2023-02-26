@@ -48,6 +48,8 @@ describe("options / beaconNodeOptions", () => {
       builder: false,
       "builder.urls": ["http://localhost:8661"],
       "builder.timeout": 12000,
+      "builder.faultInspectionWindow": 32,
+      "builder.allowedFaults": 16,
 
       metrics: true,
       "metrics.port": 8765,
