@@ -318,7 +318,7 @@ export class BeaconChain implements IBeaconChain {
     const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
     const head = this.forkChoice.getHead();
     const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
-    return this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getDuties);
+    return this.regen.getBlockSlotState(head.blockRoot, bestSlot, {dontTransferCache: true}, RegenCaller.getDuties);
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
@@ -348,7 +348,12 @@ export class BeaconChain implements IBeaconChain {
     {randaoReveal, graffiti, slot}: BlockAttributes
   ): Promise<{block: AssembledBlockType<T>; blockValue: Wei}> {
     const head = this.forkChoice.getHead();
-    const state = await this.regen.getBlockSlotState(head.blockRoot, slot, RegenCaller.produceBlock);
+    const state = await this.regen.getBlockSlotState(
+      head.blockRoot,
+      slot,
+      {dontTransferCache: true},
+      RegenCaller.produceBlock
+    );
     const parentBlockRoot = fromHexString(head.blockRoot);
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();

@@ -19,7 +19,8 @@ export function computeUnrealizedCheckpoints(
 
   // For phase0, we need to create the cache through beforeProcessEpoch
   if (state.config.getForkSeq(state.slot) === ForkSeq.phase0) {
-    stateRealizedCheckpoints = state.clone();
+    // Clone state to mutate below         true = do not transfer cache
+    stateRealizedCheckpoints = state.clone(true);
     const epochProcess = beforeProcessEpoch(stateRealizedCheckpoints);
     processJustificationAndFinalization(stateRealizedCheckpoints, epochProcess);
   }
@@ -33,8 +34,8 @@ export function computeUnrealizedCheckpoints(
 
     // Clone state and use progressive balances
     else {
-      // Clone state to mutate below           false = do not transfer cache
-      stateRealizedCheckpoints = state.clone(false);
+      // Clone state to mutate below         true = do not transfer cache
+      stateRealizedCheckpoints = state.clone(true);
 
       weighJustificationAndFinalization(
         stateRealizedCheckpoints,

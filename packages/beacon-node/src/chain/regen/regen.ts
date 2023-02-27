@@ -18,7 +18,7 @@ import {IBeaconDb} from "../../db/index.js";
 import {CheckpointStateCache, StateContextCache} from "../stateCache/index.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
-import {IStateRegenerator, RegenCaller} from "./interface.js";
+import {IStateRegenerator, RegenCaller, StateCloneOpts} from "./interface.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 
 export type RegenModules = {
@@ -42,7 +42,11 @@ export class StateRegenerator implements IStateRegenerator {
    * - If parent is in same epoch -> Exact state at `block.parentRoot`
    * - If parent is in prev epoch -> State after `block.parentRoot` dialed forward through epoch transition
    */
-  async getPreState(block: allForks.BeaconBlock, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
+  async getPreState(
+    block: allForks.BeaconBlock,
+    opts: StateCloneOpts,
+    rCaller: RegenCaller
+  ): Promise<CachedBeaconStateAllForks> {
     const parentBlock = this.modules.forkChoice.getBlock(block.parentRoot);
     if (!parentBlock) {
       throw new RegenError({
@@ -60,7 +64,7 @@ export class StateRegenerator implements IStateRegenerator {
     // We may have the checkpoint state with parent root inside the checkpoint state cache
     // through gossip validation.
     if (parentEpoch < blockEpoch) {
-      return this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch}, rCaller);
+      return this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch}, opts, rCaller);
     }
 
     // Otherwise, get the state normally.
@@ -70,15 +74,24 @@ export class StateRegenerator implements IStateRegenerator {
   /**
    * Get state after block `cp.root` dialed forward to first slot of `cp.epoch`
    */
-  async getCheckpointState(cp: phase0.Checkpoint, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
+  async getCheckpointState(
+    cp: phase0.Checkpoint,
+    opts: StateCloneOpts,
+    rCaller: RegenCaller
+  ): Promise<CachedBeaconStateAllForks> {
     const checkpointStartSlot = computeStartSlotAtEpoch(cp.epoch);
-    return this.getBlockSlotState(toHexString(cp.root), checkpointStartSlot, rCaller);
+    return this.getBlockSlotState(toHexString(cp.root), checkpointStartSlot, opts, rCaller);
   }
 
   /**
    * Get state after block `blockRoot` dialed forward to `slot`
    */
-  async getBlockSlotState(blockRoot: RootHex, slot: Slot, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
+  async getBlockSlotState(
+    blockRoot: RootHex,
+    slot: Slot,
+    opts: StateCloneOpts,
+    rCaller: RegenCaller
+  ): Promise<CachedBeaconStateAllForks> {
     const block = this.modules.forkChoice.getBlockHex(blockRoot);
     if (!block) {
       throw new RegenError({
@@ -100,14 +113,14 @@ export class StateRegenerator implements IStateRegenerator {
     // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
     // or needs to have empty slots processed until the requested epoch
     if (latestCheckpointStateCtx) {
-      return processSlotsByCheckpoint(this.modules, latestCheckpointStateCtx, slot);
+      return processSlotsByCheckpoint(this.modules, latestCheckpointStateCtx, slot, opts);
     }
 
     // Otherwise, use the fork choice to get the stateRoot from block at the checkpoint root
     // regenerate that state,
     // then process empty slots until the requested epoch
     const blockStateCtx = await this.getState(block.stateRoot, rCaller);
-    return processSlotsByCheckpoint(this.modules, blockStateCtx, slot);
+    return processSlotsByCheckpoint(this.modules, blockStateCtx, slot, opts);
   }
 
   /**
@@ -223,11 +236,12 @@ export class StateRegenerator implements IStateRegenerator {
 async function processSlotsByCheckpoint(
   modules: {checkpointStateCache: CheckpointStateCache; metrics: Metrics | null; emitter: ChainEventEmitter},
   preState: CachedBeaconStateAllForks,
-  slot: Slot
+  slot: Slot,
+  opts: StateCloneOpts
 ): Promise<CachedBeaconStateAllForks> {
-  let postState = await processSlotsToNearestCheckpoint(modules, preState, slot);
+  let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, opts);
   if (postState.slot < slot) {
-    postState = processSlots(postState, slot, {}, modules.metrics);
+    postState = processSlots(postState, slot, opts, modules.metrics);
   }
   return postState;
 }
@@ -242,7 +256,8 @@ async function processSlotsByCheckpoint(
 async function processSlotsToNearestCheckpoint(
   modules: {checkpointStateCache: CheckpointStateCache; metrics: Metrics | null; emitter: ChainEventEmitter},
   preState: CachedBeaconStateAllForks,
-  slot: Slot
+  slot: Slot,
+  opts: StateCloneOpts
 ): Promise<CachedBeaconStateAllForks> {
   const preSlot = preState.slot;
   const postSlot = slot;
@@ -256,7 +271,7 @@ async function processSlotsToNearestCheckpoint(
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
     // processSlots calls .clone() before mutating
-    postState = processSlots(postState, nextEpochSlot, {}, metrics);
+    postState = processSlots(postState, nextEpochSlot, opts, metrics);
 
     // Cache state to preserve epoch transition work
     const checkpointState = postState;
