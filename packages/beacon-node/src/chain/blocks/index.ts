@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import {allForks} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {JobItemQueue} from "../../util/queue/index.js";

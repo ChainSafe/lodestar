@@ -79,8 +79,8 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
         executionPayloadStatus: testCase.execution.execution_valid
           ? ExecutionPayloadStatus.valid
           : ExecutionPayloadStatus.invalid,
-        // TODO EIP-4844: Make this value dynamic on fork EIP4844
-        dataAvailableStatus: DataAvailableStatus.preEIP4844,
+        // TODO Deneb: Make this value dynamic on fork Deneb
+        dataAvailableStatus: DataAvailableStatus.preDeneb,
       }
     );
   },

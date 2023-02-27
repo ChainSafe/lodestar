@@ -41,7 +41,7 @@ export function getBeaconPoolApi({
     },
 
     async getPoolBlsToExecutionChanges() {
-      return {data: chain.opPool.getAllBlsToExecutionChanges()};
+      return {data: chain.opPool.getAllBlsToExecutionChanges().map(({data}) => data)};
     },
 
     async submitPoolAttestations(attestations) {
@@ -102,13 +102,21 @@ export function getBeaconPoolApi({
       await Promise.all(
         blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
           try {
-            await validateBlsToExecutionChange(chain, blsToExecutionChange);
-            chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
-            await network.gossip.publishBlsToExecutionChange(blsToExecutionChange);
+            // Ignore even if the change exists and reprocess
+            await validateBlsToExecutionChange(chain, blsToExecutionChange, true);
+            const preCapella = !(
+              chain.clock.currentEpoch >= chain.config.CAPELLA_FORK_EPOCH &&
+              // TODO: Remove this condition once testing is done
+              network.isSubscribedToGossipCoreTopics()
+            );
+            chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, preCapella);
+            if (!preCapella) {
+              await network.gossip.publishBlsToExecutionChange(blsToExecutionChange);
+            }
           } catch (e) {
             errors.push(e as Error);
             logger.error(
-              `Error on submitPoolSyncCommitteeSignatures [${i}]`,
+              `Error on submitPoolBlsToExecutionChange [${i}]`,
               {validatorIndex: blsToExecutionChange.message.validatorIndex},
               e as Error
             );

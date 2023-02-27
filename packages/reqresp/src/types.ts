@@ -47,9 +47,7 @@ export interface InboundRateLimitQuota<Req = unknown> {
 // `protocolPrefix` is added runtime so not part of definition
 export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<Protocol, "protocolPrefix"> {
   handler: ReqRespHandler<Req, Resp>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   requestType: (fork: ForkName) => TypeSerializer<Req> | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   responseType: (fork: ForkName) => TypeSerializer<Resp>;
   ignoreResponse?: boolean;
   renderRequestBody?: (request: Req) => string;

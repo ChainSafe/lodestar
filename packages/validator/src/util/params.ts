@@ -72,7 +72,7 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
   const altairForkRelevant = localConfig.ALTAIR_FORK_EPOCH < Infinity;
   const bellatrixForkRelevant = localConfig.BELLATRIX_FORK_EPOCH < Infinity;
   const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
-  const eip4844ForkRelevant = localConfig.EIP4844_FORK_EPOCH < Infinity;
+  const denebForkRelevant = localConfig.EIP4844_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -102,9 +102,9 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
     // Capella
     CAPELLA_FORK_VERSION: capellaForkRelevant,
     CAPELLA_FORK_EPOCH: capellaForkRelevant,
-    // EIP-4844
-    EIP4844_FORK_VERSION: eip4844ForkRelevant,
-    EIP4844_FORK_EPOCH: eip4844ForkRelevant,
+    // Deneb
+    EIP4844_FORK_VERSION: denebForkRelevant,
+    EIP4844_FORK_EPOCH: denebForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
@@ -129,8 +129,8 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
     DEPOSIT_CONTRACT_ADDRESS: true,
 
     // Blobs
-    MAX_REQUEST_BLOBS_SIDECARS: eip4844ForkRelevant,
-    MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS: eip4844ForkRelevant,
+    MAX_REQUEST_BLOBS_SIDECARS: denebForkRelevant,
+    MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS: denebForkRelevant,
 
     // # Phase0Preset
     /////////////////
@@ -211,9 +211,9 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
     MAX_WITHDRAWALS_PER_PAYLOAD: capellaForkRelevant,
     MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP: capellaForkRelevant,
 
-    // # EIP4844Preset
+    // # DenebPreset
     /////////////////
-    FIELD_ELEMENTS_PER_BLOB: eip4844ForkRelevant,
-    MAX_BLOBS_PER_BLOCK: eip4844ForkRelevant,
+    FIELD_ELEMENTS_PER_BLOB: denebForkRelevant,
+    MAX_BLOBS_PER_BLOCK: denebForkRelevant,
   };
 }

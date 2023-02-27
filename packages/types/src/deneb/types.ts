@@ -32,3 +32,10 @@ export type FullOrBlindedExecutionPayload = ExecutionPayload | ExecutionPayloadH
 
 export type BuilderBid = ValueOf<typeof ssz.BuilderBid>;
 export type SignedBuilderBid = ValueOf<typeof ssz.SignedBuilderBid>;
+
+export type LightClientHeader = ValueOf<typeof ssz.LightClientHeader>;
+export type LightClientBootstrap = ValueOf<typeof ssz.LightClientBootstrap>;
+export type LightClientUpdate = ValueOf<typeof ssz.LightClientUpdate>;
+export type LightClientFinalityUpdate = ValueOf<typeof ssz.LightClientFinalityUpdate>;
+export type LightClientOptimisticUpdate = ValueOf<typeof ssz.LightClientOptimisticUpdate>;
+export type LightClientStore = ValueOf<typeof ssz.LightClientStore>;

@@ -50,7 +50,6 @@ export class LightclientServerApiMock implements ServerApi<routes.lightclient.Ap
 
   async getFinalityUpdate(): Promise<{version: ForkName; data: altair.LightClientFinalityUpdate}> {
     if (!this.finalized) throw Error("No finalized head update");
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     return {version: ForkName.bellatrix, data: this.finalized};
   }
 

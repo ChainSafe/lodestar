@@ -14,7 +14,7 @@ describe("getBlobsSideCar", function () {
 
   it("getBlobsSideCar", async () => {
     const block = config.getForkTypes(GENESIS_SLOT).SignedBeaconBlock.defaultValue();
-    const blobsSidecar = ssz.eip4844.BlobsSidecar.defaultValue();
+    const blobsSidecar = ssz.deneb.BlobsSidecar.defaultValue();
     block.message.slot = GENESIS_SLOT;
 
     server.dbStub.blockArchive.get.resolves(block);

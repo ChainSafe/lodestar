@@ -1,4 +1,4 @@
-import {allForks, capella, eip4844, Wei} from "@lodestar/types";
+import {allForks, capella, deneb, Wei} from "@lodestar/types";
 import {
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
@@ -112,7 +112,7 @@ export type ExecutionPayloadRpc = {
   blockHash: DATA; // 32 bytes
   transactions: DATA[];
   withdrawals?: WithdrawalRpc[]; // Capella hardfork
-  excessDataGas?: QUANTITY; // EIP-4844
+  excessDataGas?: QUANTITY; // DENEB
 };
 
 export type WithdrawalRpc = {
@@ -162,9 +162,9 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
     payload.withdrawals = withdrawals.map(serializeWithdrawal);
   }
 
-  // EIP-4844 adds excessDataGas to the ExecutionPayload
-  if ((data as eip4844.ExecutionPayload).excessDataGas !== undefined) {
-    payload.excessDataGas = numToQuantity((data as eip4844.ExecutionPayload).excessDataGas);
+  // DENEB adds excessDataGas to the ExecutionPayload
+  if ((data as deneb.ExecutionPayload).excessDataGas !== undefined) {
+    payload.excessDataGas = numToQuantity((data as deneb.ExecutionPayload).excessDataGas);
   }
 
   return payload;
@@ -217,14 +217,14 @@ export function parseExecutionPayload(
     (executionPayload as capella.ExecutionPayload).withdrawals = withdrawals.map((w) => deserializeWithdrawal(w));
   }
 
-  // EIP-4844 adds excessDataGas to the ExecutionPayload
-  if (ForkSeq[fork] >= ForkSeq.eip4844) {
+  // DENEB adds excessDataGas to the ExecutionPayload
+  if (ForkSeq[fork] >= ForkSeq.deneb) {
     if (data.excessDataGas == null) {
       throw Error(
-        `excessDataGas missing for ${fork} >= eip4844 executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+        `excessDataGas missing for ${fork} >= deneb executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as eip4844.ExecutionPayload).excessDataGas = quantityToBigint(data.excessDataGas);
+    (executionPayload as deneb.ExecutionPayload).excessDataGas = quantityToBigint(data.excessDataGas);
   }
 
   return {executionPayload, blockValue};

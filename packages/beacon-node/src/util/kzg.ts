@@ -32,7 +32,6 @@ export let ckzg: {
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const TRUSTED_SETUP_BIN_FILEPATH = path.join(__dirname, "../../trusted_setup.bin");
 const TRUSTED_SETUP_JSON_FILEPATH = path.join(__dirname, "../../trusted_setup.json");
@@ -49,7 +48,6 @@ export async function initCKZG(): Promise<void> {
   /* eslint-disable import/no-extraneous-dependencies, @typescript-eslint/ban-ts-comment */
   // @ts-ignore
   ckzg = (await import("c-kzg")) as typeof ckzg;
-  /* eslint-enable import/no-extraneous-dependencies, @typescript-eslint/ban-ts-comment */
 }
 
 /**

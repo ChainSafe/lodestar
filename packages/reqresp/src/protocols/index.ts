@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 export {BeaconBlockAndBlobsSidecarByRoot} from "./BeaconBlockAndBlobsSidecarByRoot.js";
 export {BeaconBlocksByRoot, BeaconBlocksByRootV2} from "./BeaconBlocksByRoot.js";
 export {BeaconBlocksByRange, BeaconBlocksByRangeV2} from "./BeaconBlocksByRange.js";

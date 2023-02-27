@@ -3,8 +3,6 @@ import {fromHexString as b} from "@chainsafe/ssz";
 import {IChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../presets/mainnet.js";
 
-/* eslint-disable max-len */
-
 // Ropsten beacon chain config:
 // https://github.com/eth-clients/merge-testnets/blob/main/sepolia-beacon-chain/config.yaml
 
@@ -29,6 +27,9 @@ export const sepoliaChainConfig: IChainConfig = {
   BELLATRIX_FORK_VERSION: b("0x90000071"),
   BELLATRIX_FORK_EPOCH: 100,
   TERMINAL_TOTAL_DIFFICULTY: BigInt("17000000000000000"),
+  // Capella
+  CAPELLA_FORK_VERSION: b("0x90000072"),
+  CAPELLA_FORK_EPOCH: 56832,
 
   // Deposit contract
   // ---------------------------------------------------------------

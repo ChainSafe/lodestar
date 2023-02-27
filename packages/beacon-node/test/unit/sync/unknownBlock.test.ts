@@ -55,7 +55,7 @@ describe("sync / UnknownBlockSync", () => {
           Array.from(roots)
             .map((root) => blocksByRoot.get(toHexString(root)))
             .filter(notNullish)
-            .map((block) => getBlockInput.preEIP4844(config, block)),
+            .map((block) => getBlockInput.preDeneb(config, block)),
 
         reportPeer: (peerId, action, actionName) => reportPeerResolveFn([peerId, action, actionName]),
       };
@@ -77,7 +77,7 @@ describe("sync / UnknownBlockSync", () => {
       };
 
       new UnknownBlockSync(config, network as INetwork, chain as IBeaconChain, logger, null);
-      network.events?.emit(NetworkEvent.unknownBlockParent, getBlockInput.preEIP4844(config, blockC), peerIdStr);
+      network.events?.emit(NetworkEvent.unknownBlockParent, getBlockInput.preDeneb(config, blockC), peerIdStr);
 
       if (reportPeer) {
         const err = await reportPeerPromise;

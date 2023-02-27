@@ -1,5 +1,4 @@
 import {Level} from "level";
-// eslint-disable-next-line import/no-extraneous-dependencies
 import type {ClassicLevel} from "classic-level";
 import {DbReqOpts, IDatabaseController, IDatabaseOptions, IFilterOptions, IKeyValue} from "./interface.js";
 import {ILevelDbControllerMetrics} from "./metrics.js";

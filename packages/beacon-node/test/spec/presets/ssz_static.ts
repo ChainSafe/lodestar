@@ -17,15 +17,6 @@ import {runValidSszTest} from "../utils/runValidSszTest.js";
 //
 // Docs: https://github.com/ethereum/consensus-specs/blob/master/tests/formats/ssz_static/core.md
 
-/* eslint-disable
-  @typescript-eslint/naming-convention,
-  @typescript-eslint/no-unsafe-assignment,
-  @typescript-eslint/no-unsafe-call,
-  @typescript-eslint/no-unsafe-member-access,
-  no-console
-*/
-
-// eslint-disable-next-line
 type Types = Record<string, Type<any>>;
 
 // Mapping of sszGeneric() fn arguments to the path in spec tests
@@ -35,7 +26,7 @@ type Types = Record<string, Type<any>>;
 // tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
 //
 
-export const sszStatic = (skippedTypes?: string[]) => (
+export const sszStatic = (skippedTypes?: string[], overrideSSZTypes?: Record<string, Types>) => (
   fork: ForkName,
   typeName: string,
   testSuite: string,
@@ -48,6 +39,7 @@ export const sszStatic = (skippedTypes?: string[]) => (
 
   /* eslint-disable @typescript-eslint/strict-boolean-expressions */
   const sszType =
+    (((overrideSSZTypes ?? {})[fork] ?? {}) as Types)[typeName] ||
     (ssz[fork] as Types)[typeName] ||
     (ssz.capella as Types)[typeName] ||
     (ssz.bellatrix as Types)[typeName] ||

@@ -1,5 +1,5 @@
 import {verifyKzgCommitmentsAgainstTransactions} from "@lodestar/state-transition";
-import {allForks, eip4844} from "@lodestar/types";
+import {allForks, deneb} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {BlobsBundle} from "../../execution/index.js";
 import {byteArrayEquals} from "../../util/bytes.js";
@@ -18,7 +18,7 @@ export function validateBlobsAndKzgCommitments(payload: allForks.ExecutionPayloa
   }
 
   for (let i = 0; i < blobsBundle.blobs.length; i++) {
-    const kzg = ckzg.blobToKzgCommitment(blobsBundle.blobs[i]) as eip4844.KZGCommitment;
+    const kzg = ckzg.blobToKzgCommitment(blobsBundle.blobs[i]) as deneb.KZGCommitment;
     if (!byteArrayEquals(kzg, blobsBundle.kzgs[i])) {
       throw Error(`Wrong KZG[${i}] ${toHex(blobsBundle.kzgs[i])} expected ${toHex(kzg)}`);
     }

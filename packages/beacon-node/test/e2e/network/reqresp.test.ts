@@ -83,7 +83,6 @@ describe("network / ReqResp", function () {
     const peerIdB = await createSecp256k1PeerId();
     const [libp2pA, libp2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr, peerIdB)]);
 
-    // eslint-disable-next-line
     const notImplemented = async function* <T>(): AsyncIterable<T> {
       throw Error("not implemented");
     };

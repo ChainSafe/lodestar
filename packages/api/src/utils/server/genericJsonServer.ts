@@ -1,5 +1,4 @@
 import {mapValues} from "@lodestar/utils";
-// eslint-disable-next-line import/no-extraneous-dependencies
 import {IChainForkConfig} from "@lodestar/config";
 import {ReqGeneric, TypeJson, Resolves, RouteGroupDefinition} from "../types.js";
 import {getFastifySchema} from "../schema.js";
@@ -9,7 +8,7 @@ import {ServerRoute} from "./types.js";
 
 // See /packages/api/src/routes/index.ts for reasoning
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/naming-convention */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export type ServerRoutes<
   Api extends Record<string, APIServerHandler>,

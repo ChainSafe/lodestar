@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import {expect} from "chai";
 import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {capella, altair, phase0, ssz} from "@lodestar/types";
+import {capella, phase0, ssz, allForks} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -225,8 +225,8 @@ describe("gossipsub", function () {
   });
 
   it("Publish and receive a LightClientOptimisticUpdate", async function () {
-    let onLightClientOptimisticUpdate: (ou: altair.LightClientOptimisticUpdate) => void;
-    const onLightClientOptimisticUpdatePromise = new Promise<altair.LightClientOptimisticUpdate>(
+    let onLightClientOptimisticUpdate: (ou: allForks.LightClientOptimisticUpdate) => void;
+    const onLightClientOptimisticUpdatePromise = new Promise<allForks.LightClientOptimisticUpdate>(
       (resolve) => (onLightClientOptimisticUpdate = resolve)
     );
 
@@ -252,7 +252,7 @@ describe("gossipsub", function () {
       }
     }
 
-    const lightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+    const lightClientOptimisticUpdate = ssz.capella.LightClientOptimisticUpdate.defaultValue();
     lightClientOptimisticUpdate.signatureSlot = START_SLOT;
     await netA.gossip.publishLightClientOptimisticUpdate(lightClientOptimisticUpdate);
 
@@ -261,8 +261,8 @@ describe("gossipsub", function () {
   });
 
   it("Publish and receive a LightClientFinalityUpdate", async function () {
-    let onLightClientFinalityUpdate: (fu: altair.LightClientFinalityUpdate) => void;
-    const onLightClientFinalityUpdatePromise = new Promise<altair.LightClientFinalityUpdate>(
+    let onLightClientFinalityUpdate: (fu: allForks.LightClientFinalityUpdate) => void;
+    const onLightClientFinalityUpdatePromise = new Promise<allForks.LightClientFinalityUpdate>(
       (resolve) => (onLightClientFinalityUpdate = resolve)
     );
 
@@ -288,7 +288,7 @@ describe("gossipsub", function () {
       }
     }
 
-    const lightClientFinalityUpdate = ssz.altair.LightClientFinalityUpdate.defaultValue();
+    const lightClientFinalityUpdate = ssz.capella.LightClientFinalityUpdate.defaultValue();
     lightClientFinalityUpdate.signatureSlot = START_SLOT;
     await netA.gossip.publishLightClientFinalityUpdate(lightClientFinalityUpdate);
 

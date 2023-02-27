@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {ELClient, ELClientGenerator, ELGeneratorClientOptions, Runner, RunnerType} from "../interfaces.js";
 
 export const generateMockNode: ELClientGenerator<ELClient.Mock> = (

@@ -41,7 +41,7 @@ export async function archiveBlocks(
   const finalizedNonCanonicalBlocks = forkChoice.getAllNonAncestorBlocks(finalizedCheckpoint.rootHex);
 
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous
-  const finalizedPostEIP4844 = finalizedCheckpoint.epoch >= config.EIP4844_FORK_EPOCH;
+  const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.EIP4844_FORK_EPOCH;
 
   const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
@@ -56,7 +56,7 @@ export async function archiveBlocks(
       size: finalizedCanonicalBlockRoots.length,
     });
 
-    if (finalizedPostEIP4844) {
+    if (finalizedPostDeneb) {
       await migrateBlobsSidecarFromHotToColdDb(config, db, finalizedCanonicalBlockRoots);
       logger.verbose("Migrated blobsSidecar from hot DB to cold DB");
     }
@@ -72,7 +72,7 @@ export async function archiveBlocks(
       slots: finalizedNonCanonicalBlocks.map((summary) => summary.slot).join(","),
     });
 
-    if (finalizedPostEIP4844) {
+    if (finalizedPostDeneb) {
       await db.blobsSidecar.batchDelete(nonCanonicalBlockRoots);
       logger.verbose("Deleted non canonical blobsSider from hot DB");
     }
@@ -80,7 +80,7 @@ export async function archiveBlocks(
 
   // Delete expired blobs
   // Keep only `[max(GENESIS_EPOCH, current_epoch - MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS), current_epoch]`
-  if (finalizedPostEIP4844) {
+  if (finalizedPostDeneb) {
     const blobsSidecarMinEpoch = currentEpoch - config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS;
     if (blobsSidecarMinEpoch >= config.EIP4844_FORK_EPOCH) {
       const slotsToDelete = await db.blobsSidecarArchive.keys({lt: computeStartSlotAtEpoch(blobsSidecarMinEpoch)});
@@ -162,7 +162,7 @@ async function migrateBlobsSidecarFromHotToColdDb(
     // load Buffer instead of ssz deserialized to improve performance
     const canonicalBlobsSidecarEntries: IKeyValue<Slot, Uint8Array>[] = await Promise.all(
       canonicalBlocks
-        .filter((block) => config.getForkSeq(block.slot) >= ForkSeq.eip4844)
+        .filter((block) => config.getForkSeq(block.slot) >= ForkSeq.deneb)
         .map(async (block) => {
           const bytes = await db.blobsSidecar.getBinary(block.root);
           if (!bytes) {

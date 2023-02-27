@@ -6,7 +6,7 @@ export enum ForkName {
   altair = "altair",
   bellatrix = "bellatrix",
   capella = "capella",
-  eip4844 = "eip4844",
+  deneb = "deneb",
 }
 
 /**
@@ -17,15 +17,25 @@ export enum ForkSeq {
   altair = 1,
   bellatrix = 2,
   capella = 3,
-  eip4844 = 4,
+  deneb = 4,
 }
 
-export type ForkExecution = Exclude<ForkName, ForkName.phase0 | ForkName.altair>;
+export type ForkLightClient = Exclude<ForkName, ForkName.phase0>;
+export function isForkLightClient(fork: ForkName): fork is ForkLightClient {
+  return fork !== ForkName.phase0;
+}
+
+export type ForkExecution = Exclude<ForkLightClient, ForkName.altair>;
 export function isForkExecution(fork: ForkName): fork is ForkExecution {
-  return fork !== ForkName.phase0 && fork !== ForkName.altair;
+  return isForkLightClient(fork) && fork !== ForkName.altair;
+}
+
+export type ForkWithdrawals = Exclude<ForkExecution, ForkName.bellatrix>;
+export function isForkWithdrawals(fork: ForkName): fork is ForkWithdrawals {
+  return isForkExecution(fork) && fork !== ForkName.capella;
 }
 
 export type ForkBlobs = Exclude<ForkExecution, ForkName.bellatrix | ForkName.capella>;
 export function isForkBlobs(fork: ForkName): fork is ForkBlobs {
-  return isForkExecution(fork) && fork !== ForkName.bellatrix && fork !== ForkName.capella;
+  return isForkWithdrawals(fork) && fork !== ForkName.capella;
 }

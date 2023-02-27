@@ -38,14 +38,12 @@ export async function disconnect(network: INetworkDebug, peer: PeerId): Promise<
 
 export function onPeerConnect(network: Network): Promise<void> {
   return new Promise<void>((resolve) =>
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     network["libp2p"].connectionManager.addEventListener(Libp2pEvent.peerConnect, () => resolve())
   );
 }
 
 export function onPeerDisconnect(network: Network): Promise<void> {
   return new Promise<void>((resolve) =>
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     network["libp2p"].connectionManager.addEventListener(Libp2pEvent.peerDisconnect, () => resolve())
   );
 }

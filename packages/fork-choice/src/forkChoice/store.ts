@@ -46,8 +46,6 @@ export interface IForkChoiceStore {
   equivocatingIndices: Set<ValidatorIndex>;
 }
 
-/* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/member-ordering */
-
 /**
  * IForkChoiceStore implementer which emits forkChoice events on updated justified and finalized checkpoints.
  */

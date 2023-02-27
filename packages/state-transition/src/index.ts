@@ -9,7 +9,7 @@ export {
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
-  CachedBeaconStateEip4844,
+  CachedBeaconStateDeneb,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   // Non-cached states
@@ -17,7 +17,7 @@ export {
   BeaconStateAltair,
   BeaconStateBellatrix,
   BeaconStateCapella,
-  BeaconStateEip4844,
+  BeaconStateDeneb,
   BeaconStateAllForks,
   BeaconStateExecutions,
 } from "./types.js";
@@ -47,3 +47,4 @@ export {ExecutionPayloadStatus, DataAvailableStatus, BlockExternalData} from "./
 export {becomesNewEth1Data} from "./block/processEth1Data.js";
 // Withdrawals for new blocks
 export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
+export {executionPayloadToPayloadHeader} from "./block/processExecutionPayload.js";

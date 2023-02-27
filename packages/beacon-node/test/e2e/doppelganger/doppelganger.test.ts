@@ -15,7 +15,6 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {BeaconNode} from "../../../src/node/index.js";
 
-/* eslint-disable @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment */
 // TODO: Reconsider this tests latter.
 // Doppelganger testing can be split in two items:
 // 1. Can a running beacon node detect liveness of the validator?

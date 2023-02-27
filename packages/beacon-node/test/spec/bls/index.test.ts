@@ -12,8 +12,6 @@ const skippedTestNames = [
   "deserialization_succeeds_infinity_with_true_b_flag.yaml",
 ];
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 /**
  * File path structure:
  * ```

@@ -54,7 +54,6 @@ function serializeSszBody<T>(chunk: EncodedPayload<T>, type: TypeSerializer<T>):
 
     case EncodedPayloadType.ssz: {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const bytes = type.serialize(chunk.data);
         return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.length);
       } catch (e) {

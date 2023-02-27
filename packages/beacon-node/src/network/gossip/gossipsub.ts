@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
 import {IBeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {allForks, altair, phase0, capella, eip4844} from "@lodestar/types";
+import {allForks, altair, phase0, capella, deneb} from "@lodestar/types";
 import {ILogger, Map2d, Map2dArr} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 
@@ -200,7 +199,7 @@ export class Eth2Gossipsub extends GossipSub {
     await this.publishObject<GossipType.beacon_block>({type: GossipType.beacon_block, fork}, signedBlock);
   }
 
-  async publishSignedBeaconBlockAndBlobsSidecar(item: eip4844.SignedBeaconBlockAndBlobsSidecar): Promise<void> {
+  async publishSignedBeaconBlockAndBlobsSidecar(item: deneb.SignedBeaconBlockAndBlobsSidecar): Promise<void> {
     const fork = this.config.getForkName(item.beaconBlock.message.slot);
     await this.publishObject<GossipType.beacon_block_and_blobs_sidecar>(
       {type: GossipType.beacon_block_and_blobs_sidecar, fork},
@@ -266,7 +265,7 @@ export class Eth2Gossipsub extends GossipSub {
     );
   }
 
-  async publishLightClientFinalityUpdate(lightClientFinalityUpdate: altair.LightClientFinalityUpdate): Promise<void> {
+  async publishLightClientFinalityUpdate(lightClientFinalityUpdate: allForks.LightClientFinalityUpdate): Promise<void> {
     const fork = this.config.getForkName(lightClientFinalityUpdate.signatureSlot);
     await this.publishObject<GossipType.light_client_finality_update>(
       {type: GossipType.light_client_finality_update, fork},
@@ -275,7 +274,7 @@ export class Eth2Gossipsub extends GossipSub {
   }
 
   async publishLightClientOptimisticUpdate(
-    lightClientOptimisitcUpdate: altair.LightClientOptimisticUpdate
+    lightClientOptimisitcUpdate: allForks.LightClientOptimisticUpdate
   ): Promise<void> {
     const fork = this.config.getForkName(lightClientOptimisitcUpdate.signatureSlot);
     await this.publishObject<GossipType.light_client_optimistic_update>(

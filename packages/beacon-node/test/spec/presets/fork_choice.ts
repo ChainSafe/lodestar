@@ -26,8 +26,6 @@ import {assertCorrectProgressiveBalances} from "../config.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
 const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
 const BLOCK_FILE_NAME = "^(block)_([0-9a-zA-Z]+)$";
@@ -150,9 +148,9 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
             });
 
             const blockImport =
-              config.getForkSeq(slot) < ForkSeq.eip4844
-                ? getBlockInput.preEIP4844(config, signedBlock)
-                : getBlockInput.postEIP4844OldBlobs(config, signedBlock);
+              config.getForkSeq(slot) < ForkSeq.deneb
+                ? getBlockInput.preDeneb(config, signedBlock)
+                : getBlockInput.postDenebOldBlobs(config, signedBlock);
 
             try {
               await chain.processBlock(blockImport, {

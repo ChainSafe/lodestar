@@ -121,7 +121,7 @@ export const minimalPreset: BeaconPreset = {
   MAX_WITHDRAWALS_PER_PAYLOAD: 4,
   MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP: 16,
 
-  // EIP-4844
+  // DENEB
   ///////////
   // https://github.com/ethereum/consensus-specs/blob/dev/presets/minimal/eip4844.yaml
   FIELD_ELEMENTS_PER_BLOB: 4,

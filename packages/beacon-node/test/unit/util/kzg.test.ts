@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {bellatrix, eip4844, ssz} from "@lodestar/types";
+import {bellatrix, deneb, ssz} from "@lodestar/types";
 import {BLOB_TX_TYPE, BYTES_PER_FIELD_ELEMENT} from "@lodestar/params";
 import {
   kzgCommitmentToVersionedHash,
@@ -31,14 +31,14 @@ describe("C-KZG", () => {
     const blobs = [generateRandomBlob(), generateRandomBlob()];
     const kzgCommitments = blobs.map((blob) => ckzg.blobToKzgCommitment(blob));
 
-    const signedBeaconBlock = ssz.eip4844.SignedBeaconBlock.defaultValue();
+    const signedBeaconBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
     for (const kzgCommitment of kzgCommitments) {
       signedBeaconBlock.message.body.executionPayload.transactions.push(transactionForKzgCommitment(kzgCommitment));
       signedBeaconBlock.message.body.blobKzgCommitments.push(kzgCommitment);
     }
-    const beaconBlockRoot = ssz.eip4844.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
+    const beaconBlockRoot = ssz.deneb.BeaconBlock.hashTreeRoot(signedBeaconBlock.message);
 
-    const blobsSidecar: eip4844.BlobsSidecar = {
+    const blobsSidecar: deneb.BlobsSidecar = {
       beaconBlockRoot,
       beaconBlockSlot: 0,
       blobs,
@@ -53,7 +53,7 @@ describe("C-KZG", () => {
   });
 });
 
-function transactionForKzgCommitment(kzgCommitment: eip4844.KZGCommitment): bellatrix.Transaction {
+function transactionForKzgCommitment(kzgCommitment: deneb.KZGCommitment): bellatrix.Transaction {
   // Some random value that after the offset's position
   const blobVersionedHashesOffset = OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET + 64;
 
@@ -79,7 +79,7 @@ function transactionForKzgCommitment(kzgCommitment: eip4844.KZGCommitment): bell
 /**
  * Generate random blob of sequential integers such that each element is < BLS_MODULUS
  */
-function generateRandomBlob(): eip4844.Blob {
+function generateRandomBlob(): deneb.Blob {
   const blob = new Uint8Array(FIELD_ELEMENTS_PER_BLOB_MAINNET * BYTES_PER_FIELD_ELEMENT);
   const dv = new DataView(blob.buffer, blob.byteOffset, blob.byteLength);
   for (let i = 0; i < FIELD_ELEMENTS_PER_BLOB_MAINNET; i++) {
