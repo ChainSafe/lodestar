@@ -16,7 +16,7 @@ type BeaconExtraArgs = {
   dbDir?: string;
   persistInvalidSszObjectsDir?: string;
   peerStoreDir?: string;
-  persistNetworkIdentity?: string;
+  persistNetworkIdentity?: boolean;
 };
 
 export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
