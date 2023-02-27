@@ -43,17 +43,6 @@ describe("network / peers / utils / assertPeerRelevance", () => {
       irrelevantType: {code: IrrelevantPeerCode.DIFFERENT_CLOCKS, slotDiff: 100},
     },
     {
-      id: "Reject non zeroed genesis",
-      remote: {
-        forkDigest: correctForkDigest,
-        finalizedRoot: differedRoot, // non zero root
-        finalizedEpoch: 0, // at genesis
-        headRoot: ZERO_HASH,
-        headSlot: 0,
-      },
-      irrelevantType: {code: IrrelevantPeerCode.GENESIS_NONZERO, root: differedRoot},
-    },
-    {
       id: "Accept a finalized epoch equal to ours, with same root",
       remote: {
         forkDigest: correctForkDigest,

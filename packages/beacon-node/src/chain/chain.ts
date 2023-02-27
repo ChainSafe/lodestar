@@ -17,7 +17,7 @@ import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lode
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, pruneSetToMax, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -130,8 +130,6 @@ export class BeaconChain implements IBeaconChain {
   private successfulExchangeTransition = false;
   private readonly exchangeTransitionConfigurationEverySlots: number;
 
-  private readonly faultInspectionWindow: number;
-  private readonly allowedFaults: number;
   private processShutdownCallback: ProcessShutdownCallback;
 
   constructor(
@@ -177,24 +175,6 @@ export class BeaconChain implements IBeaconChain {
     // > Consensus Layer client software SHOULD poll this endpoint every 60 seconds.
     // Align to a multiple of SECONDS_PER_SLOT for nicer logs
     this.exchangeTransitionConfigurationEverySlots = Math.floor(60 / this.config.SECONDS_PER_SLOT);
-
-    /**
-     * Beacon clients select randomized values from the following ranges when initializing
-     * the circuit breaker (so at boot time and once for each unique boot).
-     *
-     * ALLOWED_FAULTS: between 1 and SLOTS_PER_EPOCH // 2
-     * FAULT_INSPECTION_WINDOW: between SLOTS_PER_EPOCH and 2 * SLOTS_PER_EPOCH
-     *
-     */
-    this.faultInspectionWindow = Math.max(
-      opts.faultInspectionWindow ?? SLOTS_PER_EPOCH + Math.floor(Math.random() * SLOTS_PER_EPOCH),
-      SLOTS_PER_EPOCH
-    );
-    // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/2
-    this.allowedFaults = Math.min(
-      opts.allowedFaults ?? Math.floor(this.faultInspectionWindow / 2),
-      Math.floor(this.faultInspectionWindow / 2)
-    );
 
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
@@ -338,7 +318,7 @@ export class BeaconChain implements IBeaconChain {
     const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
     const head = this.forkChoice.getHead();
     const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
-    return this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getDuties);
+    return this.regen.getBlockSlotState(head.blockRoot, bestSlot, {dontTransferCache: true}, RegenCaller.getDuties);
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
@@ -368,7 +348,12 @@ export class BeaconChain implements IBeaconChain {
     {randaoReveal, graffiti, slot}: BlockAttributes
   ): Promise<{block: AssembledBlockType<T>; blockValue: Wei}> {
     const head = this.forkChoice.getHead();
-    const state = await this.regen.getBlockSlotState(head.blockRoot, slot, RegenCaller.produceBlock);
+    const state = await this.regen.getBlockSlotState(
+      head.blockRoot,
+      slot,
+      {dontTransferCache: true},
+      RegenCaller.produceBlock
+    );
     const parentBlockRoot = fromHexString(head.blockRoot);
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
     const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
@@ -755,27 +740,24 @@ export class BeaconChain implements IBeaconChain {
   updateBuilderStatus(clockSlot: Slot): void {
     const executionBuilder = this.executionBuilder;
     if (executionBuilder) {
-      const slotsPresent = this.forkChoice.getSlotsPresent(clockSlot - this.faultInspectionWindow);
+      const {faultInspectionWindow, allowedFaults} = executionBuilder;
+      const slotsPresent = this.forkChoice.getSlotsPresent(clockSlot - faultInspectionWindow);
       const previousStatus = executionBuilder.status;
-      const shouldEnable = slotsPresent >= this.faultInspectionWindow - this.allowedFaults;
+      const shouldEnable = slotsPresent >= faultInspectionWindow - allowedFaults;
 
       executionBuilder.updateStatus(shouldEnable);
       // The status changed we should log
       const status = executionBuilder.status;
+      const builderLog = {
+        status,
+        slotsPresent,
+        faultInspectionWindow,
+        allowedFaults,
+      };
       if (status !== previousStatus) {
-        this.logger.info("Execution builder status updated", {
-          status,
-          slotsPresent,
-          window: this.faultInspectionWindow,
-          allowedFaults: this.allowedFaults,
-        });
+        this.logger.info("Execution builder status updated", builderLog);
       } else {
-        this.logger.verbose("Execution builder status", {
-          status,
-          slotsPresent,
-          window: this.faultInspectionWindow,
-          allowedFaults: this.allowedFaults,
-        });
+        this.logger.verbose("Execution builder status", builderLog);
       }
     }
   }

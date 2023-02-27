@@ -23,7 +23,7 @@ const runTimeoutMs =
     graceExtraTimeFraction: 0.1,
   }) * 1000;
 
-const env = SimulationEnvironment.initWithDefaults(
+const env = await SimulationEnvironment.initWithDefaults(
   {
     id: "beacon-endpoints",
     logsDir: join(logFilesDir, "beacon-endpoints"),

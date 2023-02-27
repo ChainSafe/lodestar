@@ -12,7 +12,6 @@ import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.j
 import {GossipType} from "../../../network/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {ApiModules} from "../types.js";
-import {formatNodePeer} from "../node/utils.js";
 
 export function getLodestarApi({
   chain,
@@ -60,22 +59,8 @@ export function getLodestarApi({
     },
 
     async getGossipQueueItems(gossipType: GossipType | string) {
-      const jobQueue = network.gossip.jobQueues[gossipType as GossipType];
-      if (jobQueue === undefined) {
-        throw Error(`Unknown gossipType ${gossipType}, known values: ${Object.keys(jobQueue).join(", ")}`);
-      }
-
       return {
-        data: jobQueue.getItems().map((item) => {
-          const [topic, message, propagationSource, seenTimestampSec] = item.args;
-          return {
-            topic: topic,
-            propagationSource,
-            data: message.data,
-            addedTimeMs: item.addedTimeMs,
-            seenTimestampSec,
-          };
-        }),
+        data: await network.dumpGossipQueueItems(gossipType),
       };
     },
 
@@ -111,11 +96,13 @@ export function getLodestarApi({
     },
 
     async getGossipPeerScoreStats() {
-      return {data: Object.entries(network.gossip.dumpPeerScoreStats()).map(([peerId, stats]) => ({peerId, ...stats}))};
+      return {
+        data: Object.entries(await network.dumpGossipPeerScoreStats()).map(([peerId, stats]) => ({peerId, ...stats})),
+      };
     },
 
     async getLodestarPeerScoreStats() {
-      return {data: network.peerRpcScores.dumpPeerScoreStats()};
+      return {data: await network.dumpPeerScoreStats()};
     },
 
     async runGC() {
@@ -141,16 +128,11 @@ export function getLodestarApi({
 
     async getPeers(filters) {
       const {state, direction} = filters || {};
-      const peers = Array.from(network.getConnectionsByPeer().entries())
-        .map(([peerIdStr, connections]) => ({
-          ...formatNodePeer(peerIdStr, connections),
-          agentVersion: network.getAgentVersion(peerIdStr),
-        }))
-        .filter(
-          (nodePeer) =>
-            (!state || state.length === 0 || state.includes(nodePeer.state)) &&
-            (!direction || direction.length === 0 || (nodePeer.direction && direction.includes(nodePeer.direction)))
-        );
+      const peers = (await network.dumpPeers()).filter(
+        (nodePeer) =>
+          (!state || state.length === 0 || state.includes(nodePeer.state)) &&
+          (!direction || direction.length === 0 || (nodePeer.direction && direction.includes(nodePeer.direction)))
+      );
 
       return {
         data: peers,
@@ -159,15 +141,8 @@ export function getLodestarApi({
     },
 
     async discv5GetKadValues() {
-      const discv5 = network.discv5();
-      if (!discv5) {
-        return {
-          data: [],
-        };
-      }
-
       return {
-        data: (await discv5.kadValues()).map((enr) => enr.encodeTxt()) ?? [],
+        data: await network.dumpDiscv5KadValues(),
       };
     },
 

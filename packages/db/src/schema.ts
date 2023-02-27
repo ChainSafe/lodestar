@@ -65,7 +65,8 @@ export enum Bucket {
   // TODO: May be redundant to block stores
   lightClient_checkpointHeader = 53, // BlockRoot -> phase0.BeaconBlockHeader
   // 54 was for bestPartialLightClientUpdate, allocate a fresh one
-  lightClient_bestLightClientUpdate = 55, // SyncPeriod -> LightClientUpdate
+  // lightClient_bestLightClientUpdate = 55, // SyncPeriod -> LightClientUpdate // DEPRECATED on v1.5.0
+  lightClient_bestLightClientUpdate = 56, // SyncPeriod -> [Slot, LightClientUpdate]
 
   validator_metaData = 41,
 

@@ -38,6 +38,8 @@ export function computeNewStateRoot(
       verifyProposer: false,
       // verifySignatures: false | since the data to assemble the block is trusted
       verifySignatures: false,
+      // Preserve cache in source state, since the resulting state is not added to the state cache
+      dontTransferCache: true,
     },
     metrics
   );

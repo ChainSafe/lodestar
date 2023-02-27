@@ -6,12 +6,14 @@ import {Logger, sleep} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SignableENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
-import {deneb, Epoch, phase0, allForks} from "@lodestar/types";
+import {deneb, Epoch, phase0, allForks, altair} from "@lodestar/types";
 import {routes} from "@lodestar/api";
+import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {Metrics} from "../metrics/index.js";
 import {ChainEvent, IBeaconChain, BeaconClock} from "../chain/index.js";
 import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "../chain/opPools/utils.js";
+import {formatNodePeer} from "../api/impl/node/utils.js";
 import {NetworkOptions} from "./options.js";
 import {INetwork, Libp2p} from "./interface.js";
 import {ReqRespBeaconNode, ReqRespHandlers, beaconBlocksMaybeBlobsByRange} from "./reqresp/index.js";
@@ -28,7 +30,7 @@ import {
 import {MetadataController} from "./metadata.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "./forks.js";
 import {PeerManager} from "./peers/peerManager.js";
-import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "./peers/index.js";
+import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore, PeerScoreStats} from "./peers/index.js";
 import {INetworkEventBus, NetworkEventBus} from "./events.js";
 import {AttnetsService, CommitteeSubscription, SyncnetsService} from "./subnets/index.js";
 import {PeersData} from "./peers/peersData.js";
@@ -291,7 +293,11 @@ export class Network implements INetwork {
     this.closed = true;
   }
 
-  discv5(): Discv5Worker | undefined {
+  async metrics(): Promise<string> {
+    return (await this.discv5?.metrics()) ?? "";
+  }
+
+  get discv5(): Discv5Worker | undefined {
     return this.peerManager["discovery"]?.discv5;
   }
 
@@ -307,6 +313,14 @@ export class Network implements INetwork {
     return this.peerManager["discovery"]?.discv5.enr();
   }
 
+  async getMetadata(): Promise<altair.Metadata> {
+    return {
+      seqNumber: this.metadata.seqNumber,
+      attnets: this.metadata.attnets,
+      syncnets: this.metadata.syncnets,
+    };
+  }
+
   getConnectionsByPeer(): Map<string, Connection[]> {
     return getConnectionsMap(this.libp2p.connectionManager);
   }
@@ -315,8 +329,8 @@ export class Network implements INetwork {
     return this.peerManager.getConnectedPeerIds();
   }
 
-  hasSomeConnectedPeer(): boolean {
-    return this.peerManager.hasSomeConnectedPeer();
+  getConnectedPeerCount(): number {
+    return this.peerManager.getConnectedPeerIds().length;
   }
 
   publishBeaconBlockMaybeBlobs(blockInput: BlockInput): Promise<void> {
@@ -353,12 +367,12 @@ export class Network implements INetwork {
   /**
    * Request att subnets up `toSlot`. Network will ensure to mantain some peers for each
    */
-  prepareBeaconCommitteeSubnet(subscriptions: CommitteeSubscription[]): void {
+  async prepareBeaconCommitteeSubnet(subscriptions: CommitteeSubscription[]): Promise<void> {
     this.attnetsService.addCommitteeSubscriptions(subscriptions);
     if (subscriptions.length > 0) this.peerManager.onCommitteeSubscriptions();
   }
 
-  prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): void {
+  async prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     this.syncnetsService.addCommitteeSubscriptions(subscriptions);
     if (subscriptions.length > 0) this.peerManager.onCommitteeSubscriptions();
   }
@@ -366,18 +380,18 @@ export class Network implements INetwork {
   /**
    * The app layer needs to refresh the status of some peers. The sync have reached a target
    */
-  reStatusPeers(peers: PeerId[]): void {
+  async reStatusPeers(peers: PeerId[]): Promise<void> {
     this.peerManager.reStatusPeers(peers);
   }
 
-  reportPeer(peer: PeerId, action: PeerAction, actionName: string): void {
+  async reportPeer(peer: PeerId, action: PeerAction, actionName: string): Promise<void> {
     this.peerRpcScores.applyAction(peer, action, actionName);
   }
 
   /**
    * Subscribe to all gossip events. Safe to call multiple times
    */
-  subscribeGossipCoreTopics(): void {
+  async subscribeGossipCoreTopics(): Promise<void> {
     if (!this.isSubscribedToGossipCoreTopics()) {
       this.logger.info("Subscribed gossip core topics");
     }
@@ -391,7 +405,7 @@ export class Network implements INetwork {
   /**
    * Unsubscribe from all gossip events. Safe to call multiple times
    */
-  unsubscribeGossipCoreTopics(): void {
+  async unsubscribeGossipCoreTopics(): Promise<void> {
     for (const fork of this.subscribedForks.values()) {
       this.unsubscribeCoreTopicsAtFork(fork);
     }
@@ -417,8 +431,48 @@ export class Network implements INetwork {
     await this.libp2p.hangUp(peer);
   }
 
-  getAgentVersion(peerIdStr: string): string {
-    return this.peersData.getAgentVersion(peerIdStr);
+  async dumpPeer(peerIdStr: string): Promise<routes.lodestar.LodestarNodePeer | undefined> {
+    const connections = this.getConnectionsByPeer().get(peerIdStr);
+    return connections
+      ? {...formatNodePeer(peerIdStr, connections), agentVersion: this.peersData.getAgentVersion(peerIdStr)}
+      : undefined;
+  }
+
+  async dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]> {
+    return Array.from(this.getConnectionsByPeer().entries()).map(([peerIdStr, connections]) => ({
+      ...formatNodePeer(peerIdStr, connections),
+      agentVersion: this.peersData.getAgentVersion(peerIdStr),
+    }));
+  }
+
+  async dumpGossipQueueItems(gossipType: string): Promise<routes.lodestar.GossipQueueItem[]> {
+    const jobQueue = this.gossip.jobQueues[gossipType as GossipType];
+    if (jobQueue === undefined) {
+      throw Error(`Unknown gossipType ${gossipType}, known values: ${Object.keys(jobQueue).join(", ")}`);
+    }
+
+    return jobQueue.getItems().map((item) => {
+      const [topic, message, propagationSource, seenTimestampSec] = item.args;
+      return {
+        topic: topic,
+        propagationSource,
+        data: message.data,
+        addedTimeMs: item.addedTimeMs,
+        seenTimestampSec,
+      };
+    });
+  }
+
+  async dumpPeerScoreStats(): Promise<PeerScoreStats> {
+    return this.peerRpcScores.dumpPeerScoreStats();
+  }
+
+  async dumpGossipPeerScoreStats(): Promise<PeerScoreStatsDump> {
+    return this.gossip.dumpPeerScoreStats();
+  }
+
+  async dumpDiscv5KadValues(): Promise<string[]> {
+    return (await this.discv5?.kadValues())?.map((enr) => enr.encodeTxt()) ?? [];
   }
 
   /**

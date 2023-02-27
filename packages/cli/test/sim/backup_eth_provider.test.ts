@@ -5,7 +5,12 @@ import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
-import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
+import {
+  getEstimatedTimeInSecForRun,
+  getEstimatedTTD,
+  logFilesDir,
+  replaceIpFromUrl,
+} from "../utils/simulation/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js";
 
 const genesisSlotsDelay = 20;
@@ -33,7 +38,7 @@ const ttd = getEstimatedTTD({
   additionalSlots: additionalSlotsForTTD,
 });
 
-const env = SimulationEnvironment.initWithDefaults(
+const env = await SimulationEnvironment.initWithDefaults(
   {
     id: "backup-eth-provider",
     logsDir: join(logFilesDir, "backup-eth-provider"),
@@ -55,17 +60,21 @@ env.tracker.register({
 });
 
 // Create node2 with additional engine url pointing to node1
-const node2 = env.createNodePair({
+const node2 = await env.createNodePair({
   id: "node-2",
-  cl: {type: CLClient.Lodestar, options: {engineUrls: [env.nodes[0].el.engineRpcUrl]}},
+  // As the Lodestar running on host and the geth running in docker container
+  // we have to replace the IP with the local ip to connect to the geth
+  cl: {type: CLClient.Lodestar, options: {engineUrls: [replaceIpFromUrl(env.nodes[0].el.engineRpcUrl, "127.0.0.1")]}},
   el: ELClient.Geth,
   keysCount: 32,
 });
 
 // Create node3 with additional engine url pointing to node1
-const node3 = env.createNodePair({
+const node3 = await env.createNodePair({
   id: "node-3",
-  cl: {type: CLClient.Lodestar, options: {engineUrls: [env.nodes[0].el.engineRpcUrl]}},
+  // As the Lodestar running on host and the geth running in docker container
+  // we have to replace the IP with the local ip to connect to the geth
+  cl: {type: CLClient.Lodestar, options: {engineUrls: [replaceIpFromUrl(env.nodes[0].el.engineRpcUrl, "127.0.0.1")]}},
   el: ELClient.Geth,
   keysCount: 0,
 });
@@ -82,7 +91,7 @@ await waitForSlot(env.clock.getLastSlotOfEpoch(1), env.nodes, {silent: true, env
 await node2.el.job.stop();
 await node3.el.job.stop();
 
-// node2 and node2 will successfully reach TTD if they can communicate to an EL on node1
+// node2 and node3 will successfully reach TTD if they can communicate to an EL on node1
 await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2, env.nodes, {
   silent: true,
   env,

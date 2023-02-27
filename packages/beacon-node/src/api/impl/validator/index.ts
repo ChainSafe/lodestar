@@ -298,7 +298,12 @@ export function getValidatorApi({
         attEpoch <= headEpoch
           ? headState
           : // Will advance the state to the correct next epoch if necessary
-            await chain.regen.getBlockSlotState(headBlockRootHex, slot, RegenCaller.produceAttestationData);
+            await chain.regen.getBlockSlotState(
+              headBlockRootHex,
+              slot,
+              {dontTransferCache: true},
+              RegenCaller.produceAttestationData
+            );
 
       return {
         data: {
@@ -622,7 +627,7 @@ export function getValidatorApi({
     async prepareBeaconCommitteeSubnet(subscriptions) {
       notWhileSyncing();
 
-      network.prepareBeaconCommitteeSubnet(
+      await network.prepareBeaconCommitteeSubnet(
         subscriptions.map(({validatorIndex, slot, isAggregator, committeesAtSlot, committeeIndex}) => ({
           validatorIndex: validatorIndex,
           subnet: computeSubnetForCommitteesAtSlot(slot, committeesAtSlot, committeeIndex),
@@ -670,7 +675,7 @@ export function getValidatorApi({
         }
       }
 
-      network.prepareSyncCommitteeSubnets(subs);
+      await network.prepareSyncCommitteeSubnets(subs);
 
       if (metrics) {
         for (const subscription of subscriptions) {
