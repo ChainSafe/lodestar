@@ -7,6 +7,13 @@
       "type": "datasource",
       "pluginId": "prometheus",
       "pluginName": "Prometheus"
+    },
+    {
+      "name": "VAR_BEACON_JOB",
+      "type": "constant",
+      "label": "Beacon node job name",
+      "value": "beacon",
+      "description": ""
     }
   ],
   "__elements": {},
@@ -3717,7 +3724,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "beacon_fork_choice_errors_total{group=\"beta\", instance=\"contabo-13\", job=\"beacon\"}"
+              "options": "beacon_fork_choice_errors_total{group=\"beta\", instance=\"contabo-13\", job=~\"$beacon_job|beacon\"}"
             },
             "properties": [
               {
@@ -3967,7 +3974,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "{job=\"beacon\"}"
+              "options": "{job=~\"$beacon_job|beacon\"}"
             },
             "properties": [
               {
@@ -4153,6 +4160,27 @@
         "name": "Filters",
         "skipUrlSync": false,
         "type": "adhoc"
+      },
+      {
+        "description": "Job name used in Prometheus config to scrape Beacon node",
+        "hide": 2,
+        "label": "Beacon node job name",
+        "name": "beacon_job",
+        "query": "${VAR_BEACON_JOB}",
+        "skipUrlSync": false,
+        "type": "constant",
+        "current": {
+          "value": "${VAR_BEACON_JOB}",
+          "text": "${VAR_BEACON_JOB}",
+          "selected": false
+        },
+        "options": [
+          {
+            "value": "${VAR_BEACON_JOB}",
+            "text": "${VAR_BEACON_JOB}",
+            "selected": false
+          }
+        ]
       }
     ]
   },

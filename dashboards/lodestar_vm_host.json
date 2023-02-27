@@ -7,6 +7,13 @@
       "type": "datasource",
       "pluginId": "prometheus",
       "pluginName": "Prometheus"
+    },
+    {
+      "name": "VAR_BEACON_JOB",
+      "type": "constant",
+      "label": "Beacon node job name",
+      "value": "beacon",
+      "description": ""
     }
   ],
   "__elements": {},
@@ -420,7 +427,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "process_heap_bytes{job=\"beacon\"}",
+          "expr": "process_heap_bytes{job=~\"$beacon_job|beacon\"}",
           "interval": "",
           "legendFormat": "process_heap_bytes",
           "range": true,
@@ -433,7 +440,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "nodejs_heap_size_total_bytes{job=\"beacon\"}",
+          "expr": "nodejs_heap_size_total_bytes{job=~\"$beacon_job|beacon\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "heap_total",
@@ -447,7 +454,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "nodejs_heap_size_used_bytes{job=\"beacon\"}",
+          "expr": "nodejs_heap_size_used_bytes{job=~\"$beacon_job|beacon\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "heap_used",
@@ -461,7 +468,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "nodejs_external_memory_bytes{job=\"beacon\"}",
+          "expr": "nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "external_memory",
@@ -475,7 +482,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "process_resident_memory_bytes{job=\"beacon\"}",
+          "expr": "process_resident_memory_bytes{job=~\"$beacon_job|beacon\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "rss",
@@ -748,7 +755,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "{job=\"beacon\"}"
+              "options": "{job=~\"$beacon_job|beacon\"}"
             },
             "properties": [
               {
@@ -2816,7 +2823,7 @@
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "{job=\"beacon\"}"
+                  "options": "{job=~\"$beacon_job|beacon\"}"
                 },
                 "properties": [
                   {
@@ -4615,6 +4622,27 @@
         "name": "Filters",
         "skipUrlSync": false,
         "type": "adhoc"
+      },
+      {
+        "description": "Job name used in Prometheus config to scrape Beacon node",
+        "hide": 2,
+        "label": "Beacon node job name",
+        "name": "beacon_job",
+        "query": "${VAR_BEACON_JOB}",
+        "skipUrlSync": false,
+        "type": "constant",
+        "current": {
+          "value": "${VAR_BEACON_JOB}",
+          "text": "${VAR_BEACON_JOB}",
+          "selected": false
+        },
+        "options": [
+          {
+            "value": "${VAR_BEACON_JOB}",
+            "text": "${VAR_BEACON_JOB}",
+            "selected": false
+          }
+        ]
       }
     ]
   },
