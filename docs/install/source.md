@@ -10,10 +10,10 @@ Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install).
     Node Version Manager (NVM) will only install NodeJS for use with the active user. If you intend on setting up Lodestar to run under another user, we recommend using [Nodesource's source for NodeJS](https://github.com/nodesource/distributions/blob/master/README.md#installation-instructions) so you can install NodeJS globally.
 <!-- prettier-ignore-end -->
 
-Clone the repo locally.
+Clone the repo locally and build from the stable release branch.
 
 ```bash
-git clone https://github.com/chainsafe/lodestar.git
+git clone -b stable https://github.com/chainsafe/lodestar.git
 ```
 
 Install across all packages. Lodestar follows a [monorepo](https://github.com/lerna/lerna) structure, so all commands below must be run in the project root. Use the `--ignore-optional` flag to prevent downloading the Ethereum Consensus spec tests.
