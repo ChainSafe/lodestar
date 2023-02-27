@@ -34,10 +34,8 @@ describe("network", function () {
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
-    while (afterEachCallbacks.length > 0) {
-      const callback = afterEachCallbacks.pop();
-      if (callback) await callback();
-    }
+    await Promise.all(afterEachCallbacks.map((cb) => cb()));
+    afterEachCallbacks.splice(0, afterEachCallbacks.length);
   });
 
   let controller: AbortController;
@@ -56,12 +54,7 @@ describe("network", function () {
       bootMultiaddrs: [],
       localMultiaddrs: [],
       discv5FirstQueryDelayMs: 0,
-      discv5: {
-        enr,
-        bindAddr: bindAddrUdp,
-        bootEnrs: [],
-        enabled: true,
-      },
+      discv5: null,
     };
   }
 
