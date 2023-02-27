@@ -15,7 +15,24 @@ const PUBKEYS_PER_REQUEST = 10;
 type PubkeyHex = string;
 
 // To assist with logging statuses, we only log the statuses that are not active_exiting or withdrawal_possible
-type SimpleValidatorStatus = Exclude<routes.beacon.ValidatorStatus, "active_exiting" | "withdrawal_possible">;
+type SimpleValidatorStatus = "pending" | "active" | "exited" | "withdrawn" | "unknown";
+
+const statusToSimpleStatusMapping = (status: routes.beacon.ValidatorStatus): SimpleValidatorStatus => {
+  if (status.includes("active") || status === "withdrawal_possible") {
+    return "active";
+  }
+  if (status.includes("exiting")) {
+    return "exited";
+  }
+  if (status.includes("pending")) {
+    return "pending";
+  }
+  if (status === "withdrawal_done") {
+    return "withdrawn";
+  }
+
+  return "unknown";
+};
 
 export class IndicesService {
   readonly index2pubkey = new Map<ValidatorIndex, PubkeyHex>();
@@ -108,10 +125,8 @@ export class IndicesService {
 
     for (const validatorState of res.response.data) {
       // Group all validators by status
-      allValidators.set(
-        validatorState.status as SimpleValidatorStatus,
-        allValidators.getOrDefault(validatorState.status as SimpleValidatorStatus) + 1
-      );
+      const status = statusToSimpleStatusMapping(validatorState.status);
+      allValidators.set(status, allValidators.getOrDefault(status) + 1);
 
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
       if (!this.pubkey2index.has(pubkeyHex)) {
@@ -127,6 +142,11 @@ export class IndicesService {
 
     // Filter out validator statuses that are greater than 0
     const statuses = Object.fromEntries(Array.from(allValidators.entries()).filter((entry) => entry[1] > 0));
+    // The number of validators that are not in the beacon chain
+    const pendingCount = pubkeysHex.length - res.response.data.length;
+    if (pendingCount > 0) {
+      statuses["pending"] = pendingCount;
+    }
     // The total number of validators
     const total = Object.values(statuses).reduce((a, b) => a + b, 0);
     this.logger.info("Validator statuses", {...statuses, total});
