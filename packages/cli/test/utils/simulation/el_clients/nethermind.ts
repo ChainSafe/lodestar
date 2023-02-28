@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {writeFile} from "node:fs/promises";
-import {join} from "node:path";
+import path from "node:path";
 import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
@@ -31,8 +31,8 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (o
   const ethRpcUrl = `http://127.0.0.1:${httpPort}`;
   const engineRpcUrl = `http://${address}:${enginePort}`;
 
-  const chainSpecPath = join(rootDir, "chain.json");
-  const chainSpecContainerPath = join(rootDirMounted, "chain.json");
+  const chainSpecPath = path.join(rootDir, "chain.json");
+  const chainSpecContainerPath = path.join(rootDirMounted, "chain.json");
 
   const startJobOptions: JobOptions<RunnerType.Docker> = {
     id,
@@ -69,7 +69,7 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (o
         "--JsonRpc.EnabledModules",
         "Admin,Net,Eth,Subscribe,Web3",
         "--Init.BaseDbPath",
-        join(rootDirMounted, "db"),
+        path.join(rootDirMounted, "db"),
         "--Init.DiscoveryEnabled",
         "false",
         "--Init.PeerManagerEnabled",

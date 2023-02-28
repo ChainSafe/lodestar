@@ -1,5 +1,5 @@
-import {join} from "node:path";
-import {existsSync} from "node:fs";
+import path from "node:path";
+import fs from "node:fs";
 import {mkdir} from "node:fs/promises";
 import {CLClient, CLPaths, ELClient, ELPaths, MountedPaths} from "../interfaces.js";
 
@@ -14,23 +14,23 @@ export const getCLNodePaths = ({
   client: CLClient;
   logsDir: string;
 }): CLPaths => {
-  const clRootDir = join(root, id, `cl_${client}`);
-  const dataDir = join(clRootDir, "data");
-  const genesisFilePath = join(clRootDir, "genesis.ssz");
-  const jwtsecretFilePath = join(clRootDir, "jwtsecret.txt");
-  const validatrosDir = join(clRootDir, "validators");
-  const keystoresDir = join(clRootDir, "validators", "keystores");
-  const keystoresSecretsDir = join(clRootDir, "validators", "secretts");
-  const keystoresSecretFilePath = join(clRootDir, "validators", "password.txt");
-  const validatorsDefinitionFilePath = join(clRootDir, "validators", "validator_definitions.yml");
-  const logFilePath = join(logsDir, `${id}-cl-${client}.log`);
+  const clRootDir = path.join(root, id, `cl_${client}`);
+  const dataDir = path.join(clRootDir, "data");
+  const genesisFilePath = path.join(clRootDir, "genesis.ssz");
+  const jwtsecretFilePath = path.join(clRootDir, "jwtsecret.txt");
+  const validatorsDir = path.join(clRootDir, "validators");
+  const keystoresDir = path.join(clRootDir, "validators", "keystores");
+  const keystoresSecretsDir = path.join(clRootDir, "validators", "secretts");
+  const keystoresSecretFilePath = path.join(clRootDir, "validators", "password.txt");
+  const validatorsDefinitionFilePath = path.join(clRootDir, "validators", "validator_definitions.yml");
+  const logFilePath = path.join(logsDir, `${id}-cl-${client}.log`);
 
   return {
     rootDir: clRootDir,
     dataDir,
     genesisFilePath,
     jwtsecretFilePath,
-    validatorsDir: validatrosDir,
+    validatorsDir,
     keystoresDir,
     keystoresSecretsDir,
     validatorsDefinitionFilePath,
@@ -46,7 +46,7 @@ export const getCLNodePathsForDocker = (paths: CLPaths, mountPath: string): CLPa
     genesisFilePath,
     jwtsecretFilePath,
     validatorsDefinitionFilePath,
-    validatorsDir: validatrosDir,
+    validatorsDir,
     keystoresDir,
     keystoresSecretFilePath,
     keystoresSecretsDir,
@@ -58,7 +58,7 @@ export const getCLNodePathsForDocker = (paths: CLPaths, mountPath: string): CLPa
     dataDir: dataDir.replace(rootDir, mountPath),
     genesisFilePath: genesisFilePath.replace(rootDir, mountPath),
     jwtsecretFilePath: jwtsecretFilePath.replace(rootDir, mountPath),
-    validatorsDir: validatrosDir.replace(rootDir, mountPath),
+    validatorsDir: validatorsDir.replace(rootDir, mountPath),
     keystoresDir: keystoresDir.replace(rootDir, mountPath),
     keystoresSecretsDir: keystoresSecretsDir.replace(rootDir, mountPath),
     validatorsDefinitionFilePath: validatorsDefinitionFilePath.replace(rootDir, mountPath),
@@ -70,9 +70,9 @@ export const getCLNodePathsForDocker = (paths: CLPaths, mountPath: string): CLPa
 export const createCLNodePaths = async (paths: CLPaths): Promise<CLPaths> => {
   const {dataDir, keystoresDir, keystoresSecretsDir} = paths;
 
-  if (!existsSync(dataDir)) await mkdir(dataDir, {recursive: true});
-  if (!existsSync(keystoresDir)) await mkdir(keystoresDir, {recursive: true});
-  if (!existsSync(keystoresSecretsDir)) await mkdir(keystoresSecretsDir, {recursive: true});
+  if (!fs.existsSync(dataDir)) await mkdir(dataDir, {recursive: true});
+  if (!fs.existsSync(keystoresDir)) await mkdir(keystoresDir, {recursive: true});
+  if (!fs.existsSync(keystoresSecretsDir)) await mkdir(keystoresSecretsDir, {recursive: true});
 
   return paths;
 };
@@ -88,15 +88,15 @@ export const getELNodePaths = ({
   client: ELClient;
   logsDir: string;
 }): ELPaths => {
-  const elRootDir = join(root, id, `el_${client}`);
-  const dataDir = join(elRootDir, "data");
-  const logFilePath = join(logsDir, `${id}-el=${client}.log`);
+  const elRootDir = path.join(root, id, `el_${client}`);
+  const dataDir = path.join(elRootDir, "data");
+  const logFilePath = path.join(logsDir, `${id}-el=${client}.log`);
 
   return {
     rootDir: elRootDir,
     dataDir,
-    genesisFilePath: join(elRootDir, "genesis.json"),
-    jwtsecretFilePath: join(elRootDir, "jwtsecret.txt"),
+    genesisFilePath: path.join(elRootDir, "genesis.json"),
+    jwtsecretFilePath: path.join(elRootDir, "jwtsecret.txt"),
     logFilePath,
   };
 };
@@ -118,7 +118,7 @@ export const getNodeMountedPaths = <T extends ELPaths | CLPaths>(
 export const createELNodePaths = async (paths: ELPaths): Promise<ELPaths> => {
   const {dataDir} = paths;
 
-  if (!existsSync(dataDir)) await mkdir(dataDir, {recursive: true});
+  if (!fs.existsSync(dataDir)) await mkdir(dataDir, {recursive: true});
 
   return paths;
 };

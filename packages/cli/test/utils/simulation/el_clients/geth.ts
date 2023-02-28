@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {writeFile} from "node:fs/promises";
-import {join} from "node:path";
+import path from "node:path";
 import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
 import {SHARED_JWT_SECRET, SIM_ENV_NETWORK_ID} from "../constants.js";
@@ -33,10 +33,10 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (opts, runner)
   const ethRpcUrl = `http://127.0.0.1:${httpPort}`;
   const engineRpcUrl = `http://${address}:${enginePort}`;
 
-  const skPath = join(rootDir, "sk.json");
-  const skPathMounted = join(rootDirMounted, "sk.json");
-  const passwordPath = join(rootDir, "password.txt");
-  const passwordPathMounted = join(rootDirMounted, "password.txt");
+  const skPath = path.join(rootDir, "sk.json");
+  const skPathMounted = path.join(rootDirMounted, "sk.json");
+  const passwordPath = path.join(rootDir, "password.txt");
+  const passwordPathMounted = path.join(rootDirMounted, "password.txt");
 
   const initJobOptions: JobOptions = {
     id: `${id}-init`,

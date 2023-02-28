@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import {ChildProcess, spawn} from "node:child_process";
-import {createWriteStream, mkdirSync} from "node:fs";
-import {dirname} from "node:path";
+import fs from "node:fs";
+import path from "node:path";
 import {JobOptions, RunnerType} from "../interfaces.js";
 
 const healthCheckIntervalMs = 1000;
@@ -31,8 +31,8 @@ export const startChildProcess = async (
         env: {...process.env, ...jobOptions.cli.env},
       });
 
-      mkdirSync(dirname(jobOptions.logs.stdoutFilePath), {recursive: true});
-      const stdoutFileStream = createWriteStream(jobOptions.logs.stdoutFilePath);
+      fs.mkdirSync(path.dirname(jobOptions.logs.stdoutFilePath), {recursive: true});
+      const stdoutFileStream = fs.createWriteStream(jobOptions.logs.stdoutFilePath);
       childProcess.stdout?.pipe(stdoutFileStream);
       childProcess.stderr?.pipe(stdoutFileStream);
 
