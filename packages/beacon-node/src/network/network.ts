@@ -449,24 +449,6 @@ export class Network implements INetwork {
     }));
   }
 
-  async dumpGossipQueueItems(gossipType: string): Promise<routes.lodestar.GossipQueueItem[]> {
-    const jobQueue = this.gossip.jobQueues[gossipType as GossipType];
-    if (jobQueue === undefined) {
-      throw Error(`Unknown gossipType ${gossipType}, known values: ${Object.keys(jobQueue).join(", ")}`);
-    }
-
-    return jobQueue.getItems().map((item) => {
-      const [topic, message, propagationSource, seenTimestampSec] = item.args;
-      return {
-        topic: topic,
-        propagationSource,
-        data: message.data,
-        addedTimeMs: item.addedTimeMs,
-        seenTimestampSec,
-      };
-    });
-  }
-
   async dumpPeerScoreStats(): Promise<PeerScoreStats> {
     return this.peerRpcScores.dumpPeerScoreStats();
   }
@@ -479,7 +461,7 @@ export class Network implements INetwork {
     return (await this.discv5?.kadValues())?.map((enr) => enr.encodeTxt()) ?? [];
   }
 
-  dumpGossipQueue(gossipType: GossipType): PendingGossipsubMessage[] {
+  async dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]> {
     return this.networkProcessor.dumpGossipQueue(gossipType);
   }
 
