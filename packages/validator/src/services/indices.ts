@@ -15,23 +15,25 @@ const PUBKEYS_PER_REQUEST = 10;
 type PubkeyHex = string;
 
 // To assist with logging statuses, we only log the statuses that are not active_exiting or withdrawal_possible
-type SimpleValidatorStatus = "pending" | "active" | "exited" | "withdrawn" | "unknown";
+type SimpleValidatorStatus = "pending" | "active" | "exited" | "withdrawn";
 
 const statusToSimpleStatusMapping = (status: routes.beacon.ValidatorStatus): SimpleValidatorStatus => {
-  if (status.includes("active") || status === "withdrawal_possible") {
-    return "active";
+  switch (status) {
+    case "active":
+    case "active_exiting":
+    case "active_slashed":
+    case "active_ongoing":
+    case "withdrawal_possible":
+      return "active";
+    case "exited_slashed":
+    case "exited_unslashed":
+      return "exited";
+    case "pending_initialized":
+    case "pending_queued":
+      return "pending";
+    case "withdrawal_done":
+      return "withdrawn";
   }
-  if (status.includes("exiting")) {
-    return "exited";
-  }
-  if (status.includes("pending")) {
-    return "pending";
-  }
-  if (status === "withdrawal_done") {
-    return "withdrawn";
-  }
-
-  return "unknown";
 };
 
 export class IndicesService {
@@ -145,7 +147,7 @@ export class IndicesService {
     // The number of validators that are not in the beacon chain
     const pendingCount = pubkeysHex.length - res.response.data.length;
     if (pendingCount > 0) {
-      statuses["pending"] = pendingCount;
+      statuses["pending"] += pendingCount;
     }
     // The total number of validators
     const total = Object.values(statuses).reduce((a, b) => a + b, 0);
