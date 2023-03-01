@@ -151,6 +151,7 @@ export class Network implements INetwork {
     chain,
     reqRespHandlers,
     signal,
+    gossipHandlers,
   }: NetworkInitModules): Promise<Network> {
     const clock = chain.clock;
     const peersData = new PeersData();
@@ -229,7 +230,7 @@ export class Network implements INetwork {
     );
 
     const networkProcessor = new NetworkProcessor(
-      {attnetsService, chain, config, logger, metrics, peerRpcScores, events: networkEventBus},
+      {attnetsService, chain, config, logger, metrics, peerRpcScores, events: networkEventBus, gossipHandlers},
       opts
     );
 

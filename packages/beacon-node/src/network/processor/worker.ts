@@ -1,7 +1,7 @@
 import {IBeaconChain} from "../../chain/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
-import {GossipValidatorFn} from "../gossip/interface.js";
+import {GossipHandlers, GossipValidatorFn} from "../gossip/interface.js";
 import {getGossipHandlers, GossipHandlerOpts, ValidatorFnsModules} from "./gossipHandlers.js";
 import {getGossipValidatorFn, ValidatorFnModules} from "./gossipValidatorFn.js";
 import {PendingGossipsubMessage} from "./types.js";
@@ -11,6 +11,8 @@ export type NetworkWorkerModules = ValidatorFnsModules &
     chain: IBeaconChain;
     events: NetworkEventBus;
     metrics: Metrics | null;
+    // Optionally pass custom GossipHandlers, for testing
+    gossipHandlers?: GossipHandlers;
   };
 
 export class NetworkWorker {
@@ -21,7 +23,7 @@ export class NetworkWorker {
   constructor(modules: NetworkWorkerModules, opts: GossipHandlerOpts) {
     this.events = modules.events;
     this.metrics = modules.metrics;
-    this.gossipValidatorFn = getGossipValidatorFn(getGossipHandlers(modules, opts), modules);
+    this.gossipValidatorFn = getGossipValidatorFn(modules.gossipHandlers ?? getGossipHandlers(modules, opts), modules);
   }
 
   async processPendingGossipsubMessage(message: PendingGossipsubMessage): Promise<void> {
