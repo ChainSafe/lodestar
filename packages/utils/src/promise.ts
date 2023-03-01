@@ -68,6 +68,15 @@ export async function racePromisesWithCutoff<T>(inputs: Promise<T>[], cutoffMs: 
           if (resolvedAny || rejectedAll) {
             resolve(mapStatues());
           }
+        } else {
+          let anyPending = false;
+          // If all are resolved or rejected return, no point waiting any further
+          for (let index = 0; index < inputs.length; index++) {
+            anyPending = anyPending || promisesStatus[index].status === PromiseStatus.pending;
+          }
+          if (!anyPending) {
+            resolve(mapStatues());
+          }
         }
       };
 
@@ -79,6 +88,8 @@ export async function racePromisesWithCutoff<T>(inputs: Promise<T>[], cutoffMs: 
             promisesStatus[index] = {status: PromiseStatus.resolved, value};
             if (deadLineFullFilled) {
               resolve(mapStatues());
+            } else {
+              checkAndResolve();
             }
           })
           .catch((e: Error) => {
@@ -93,6 +104,9 @@ export async function racePromisesWithCutoff<T>(inputs: Promise<T>[], cutoffMs: 
         }
       });
 
+      // IF there is no pending promise then just resolve
+      checkAndResolve();
+      // Wait for cutoff
       await sleep(cutoffMs);
       // If any promise resolved return will all the resolves
       deadLineFullFilled = true;
@@ -102,3 +116,15 @@ export async function racePromisesWithCutoff<T>(inputs: Promise<T>[], cutoffMs: 
     }
   });
 }
+
+// Some testcases vectors
+// p1 = Promise.resolve("3")
+// p2 = new Promise((resolve, reject) => {setTimeout(() => {resolve("foo");}, 500);});
+// p3 = new Promise((resolve, reject) => {setTimeout(() => {resolve("foo");}, 1500);});
+// p4 = new Promise((resolve, reject) => {setTimeout(() => {reject(Error("foo"));}, 5000);});
+// p5 = Promise.reject(Error("rejectme"))
+//
+// utl.racePromisesWithCutoff([p1,p2,p3,p4,p5],1000).then(values=>{console.log({values})})
+// utl.racePromisesWithCutoff([p2,p3,p4,p5],1000).then(values=>{console.log({values})})
+// utl.racePromisesWithCutoff([p3,p4,p5],1000).then(values=>{console.log({values})})
+// utl.racePromisesWithCutoff([p4,p5],1000).then(values=>{console.log({values})})
