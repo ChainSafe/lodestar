@@ -139,6 +139,9 @@ export class NetworkProcessor {
           continue a;
         }
       }
+
+      // No item of work available on all queues, break off job_loop
+      break;
     }
 
     this.metrics?.networkProcessor.maxJobsSubmittedByTick.inc();
