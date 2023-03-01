@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {Err, isErr, mapOkResults, mapOkResultsAsync, Result} from "../../../src/util/err.js";
-import {expectDeepEquals, expectEquals} from "../../utils/chai.js";
+import {Err, isErr, mapOkResults, mapOkResultsAsync, Result} from "../../src/err.js";
+import {expectDeepEquals, expectEquals} from "../utils/chai.js";
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
