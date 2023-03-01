@@ -1,51 +1,16 @@
 import {TopicValidatorResult} from "@libp2p/interface-pubsub";
 import {ChainForkConfig} from "@lodestar/config";
-import {Logger, mapValues} from "@lodestar/utils";
-import {Metrics} from "../../../metrics/index.js";
-import {getGossipSSZType} from "../topic.js";
-import {
-  GossipJobQueues,
-  GossipType,
-  GossipValidatorFn,
-  ValidatorFnsByType,
-  GossipHandlers,
-  GossipHandlerFn,
-} from "../interface.js";
-import {GossipActionError, GossipAction} from "../../../chain/errors/index.js";
-import {createValidationQueues} from "./queue.js";
+import {Logger} from "@lodestar/utils";
+import {Metrics} from "../../metrics/index.js";
+import {getGossipSSZType} from "../gossip/topic.js";
+import {GossipValidatorFn, GossipHandlers, GossipHandlerFn} from "../gossip/interface.js";
+import {GossipActionError, GossipAction} from "../../chain/errors/index.js";
 
-type ValidatorFnModules = {
+export type ValidatorFnModules = {
   config: ChainForkConfig;
   logger: Logger;
   metrics: Metrics | null;
 };
-
-/**
- * Returns GossipValidatorFn for each GossipType, given GossipHandlerFn indexed by type.
- *
- * @see getGossipHandlers for reasoning on why GossipHandlerFn are used for gossip validation.
- */
-export function createValidatorFnsByType(
-  gossipHandlers: GossipHandlers,
-  modules: ValidatorFnModules & {signal: AbortSignal}
-): {validatorFnsByType: ValidatorFnsByType; jobQueues: GossipJobQueues} {
-  const gossipValidatorFns = mapValues(gossipHandlers, (gossipHandler, type) => {
-    return getGossipValidatorFn(gossipHandler, type, modules);
-  });
-
-  const jobQueues = createValidationQueues(gossipValidatorFns, modules.signal, modules.metrics);
-
-  const validatorFnsByType = mapValues(
-    jobQueues,
-    (jobQueue): GossipValidatorFn => {
-      return async function gossipValidatorFnWithQueue(topic, gossipMsg, propagationSource, seenTimestampSec) {
-        return jobQueue.push(topic, gossipMsg, propagationSource, seenTimestampSec);
-      };
-    }
-  );
-
-  return {jobQueues, validatorFnsByType};
-}
 
 /**
  * Returns a GossipSub validator function from a GossipHandlerFn. GossipHandlerFn may throw GossipActionError if one
@@ -61,14 +26,12 @@ export function createValidatorFnsByType(
  *
  * @see getGossipHandlers for reasoning on why GossipHandlerFn are used for gossip validation.
  */
-function getGossipValidatorFn<K extends GossipType>(
-  gossipHandler: GossipHandlers[K],
-  type: K,
-  modules: ValidatorFnModules
-): GossipValidatorFn {
+export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: ValidatorFnModules): GossipValidatorFn {
   const {logger, metrics} = modules;
 
   return async function gossipValidatorFn(topic, msg, propagationSource, seenTimestampSec) {
+    const type = topic.type;
+
     // Define in scope above try {} to be used in catch {} if object was parsed
     let gossipObject;
     try {
@@ -81,7 +44,7 @@ function getGossipValidatorFn<K extends GossipType>(
         return TopicValidatorResult.Reject;
       }
 
-      await (gossipHandler as GossipHandlerFn)(gossipObject, topic, propagationSource, seenTimestampSec);
+      await (gossipHandlers[topic.type] as GossipHandlerFn)(gossipObject, topic, propagationSource, seenTimestampSec);
 
       metrics?.gossipValidationAccept.inc({topic: type});
 

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {readFile, writeFile} from "node:fs/promises";
-import {dirname, join} from "node:path";
+import path from "node:path";
 import yaml from "js-yaml";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {SHARED_VALIDATOR_PASSWORD} from "../constants.js";
@@ -25,18 +25,18 @@ export const createKeystores = async (
       const keystore = await Keystore.create(SHARED_VALIDATOR_PASSWORD, key.toBytes(), key.toPublicKey().toBytes(), "");
 
       await writeFile(
-        join(keystoresDir, `${key.toPublicKey().toHex()}.json`),
+        path.join(keystoresDir, `${key.toPublicKey().toHex()}.json`),
         JSON.stringify(keystore.toObject(), null, 2)
       );
 
-      await writeFile(join(keystoresSecretsDir, `${key.toPublicKey().toHex()}.txt`), SHARED_VALIDATOR_PASSWORD);
+      await writeFile(path.join(keystoresSecretsDir, `${key.toPublicKey().toHex()}.txt`), SHARED_VALIDATOR_PASSWORD);
 
       definition.push({
         enabled: true,
         type: "local_keystore",
         voting_public_key: key.toPublicKey().toHex(),
-        voting_keystore_path: join(keystoresDir, `${key.toPublicKey().toHex()}.json`),
-        voting_keystore_password_path: join(keystoresSecretsDir, `${key.toPublicKey().toHex()}.txt`),
+        voting_keystore_path: path.join(keystoresDir, `${key.toPublicKey().toHex()}.json`),
+        voting_keystore_password_path: path.join(keystoresSecretsDir, `${key.toPublicKey().toHex()}.txt`),
       });
     }
   }
@@ -58,7 +58,7 @@ export const updateKeystoresPath = async (
   newDefinitionFilePath: string
 ): Promise<void> => {
   const definition = [];
-  const oldValidatorDir = dirname(definitionFilePath);
+  const oldValidatorDir = path.dirname(definitionFilePath);
 
   const definitionYaml = yaml.load(await readFile(definitionFilePath, "utf8")) as KeystoreDefinition[];
 

@@ -1,4 +1,8 @@
-import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
+import {
+  CachedBeaconStateAllForks,
+  computeEpochAtSlot,
+  isStateValidatorsNodesPopulated,
+} from "@lodestar/state-transition";
 import {bellatrix} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
@@ -55,9 +59,20 @@ export async function verifyBlocksInEpoch(
 
   // TODO: Skip in process chain segment
   // Retrieve preState from cache (regen)
-  const preState0 = await this.regen.getPreState(block0.message, RegenCaller.processBlocksInEpoch).catch((e) => {
-    throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
-  });
+  const preState0 = await this.regen
+    .getPreState(block0.message, {dontTransferCache: false}, RegenCaller.processBlocksInEpoch)
+    .catch((e) => {
+      throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
+    });
+
+  if (!isStateValidatorsNodesPopulated(preState0)) {
+    this.logger.verbose("verifyBlocksInEpoch preState0 SSZ cache stats", {
+      cache: isStateValidatorsNodesPopulated(preState0),
+      clonedCount: preState0.clonedCount,
+      clonedCountWithTransferCache: preState0.clonedCountWithTransferCache,
+      createdWithTransferCache: preState0.createdWithTransferCache,
+    });
+  }
 
   // Ensure the state is in the same epoch as block0
   if (block0Epoch !== computeEpochAtSlot(preState0.slot)) {

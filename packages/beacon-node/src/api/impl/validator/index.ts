@@ -25,7 +25,7 @@ import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {ApiModules} from "../types.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {getValidatorStatus} from "../beacon/state/utils.js";
-import {validateGossipFnRetryUnknownRoot} from "../../../network/gossip/handlers/index.js";
+import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
 
 /**
@@ -298,7 +298,12 @@ export function getValidatorApi({
         attEpoch <= headEpoch
           ? headState
           : // Will advance the state to the correct next epoch if necessary
-            await chain.regen.getBlockSlotState(headBlockRootHex, slot, RegenCaller.produceAttestationData);
+            await chain.regen.getBlockSlotState(
+              headBlockRootHex,
+              slot,
+              {dontTransferCache: true},
+              RegenCaller.produceAttestationData
+            );
 
       return {
         data: {

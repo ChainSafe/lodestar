@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import {EventEmitter} from "node:events";
-import {join} from "node:path";
+import path from "node:path";
 import {IRunner, Job, JobOptions, RunnerEvent, RunnerType} from "../interfaces.js";
 import {ChildProcessRunner} from "./ChildProcessRunner.js";
 import {DockerRunner} from "./DockerRunner.js";
@@ -12,7 +12,7 @@ export class Runner implements IRunner {
   constructor({logsDir}: {logsDir: string}) {
     this.runners = {
       [RunnerType.ChildProcess]: new ChildProcessRunner(),
-      [RunnerType.Docker]: new DockerRunner(join(logsDir, "docker_runner.log")),
+      [RunnerType.Docker]: new DockerRunner(path.join(logsDir, "docker_runner.log")),
     };
   }
 
