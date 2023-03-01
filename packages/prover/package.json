@@ -50,9 +50,16 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@lodestar/api": "1.4.3"
+    "@lodestar/api": "1.4.3",
+    "@lodestar/types": "1.4.3",
+    "@lodestar/config": "1.4.3",
+    "@ethereumjs/trie": "^5.0.4",
+    "@ethereumjs/util": "^8.0.5",
+    "@ethereumjs/rlp": "^4.0.1",    
+    "ethereum-cryptography": "^1.2.0"
   },
   "devDependencies": {
+    "web3": "^1.8.2"
   },
   "peerDependencies": {
   },

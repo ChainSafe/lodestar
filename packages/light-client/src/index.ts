@@ -49,7 +49,7 @@ const ON_ERROR_RETRY_MS = 1000;
 // TODO: Customize with option
 const ALLOW_FORCED_UPDATES = true;
 
-enum RunStatusCode {
+export enum RunStatusCode {
   started,
   syncing,
   stopped,
@@ -132,6 +132,10 @@ export class Lightclient {
       },
       bootstrap
     );
+  }
+
+  getStatus(): RunStatusCode {
+    return this.status.code;
   }
 
   // Embed lightweight clock. The epoch cycles are handled with `this.runLoop()`
