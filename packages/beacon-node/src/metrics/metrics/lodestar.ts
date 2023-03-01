@@ -276,13 +276,10 @@ export function createLodestarMetrics(
         name: "lodestar_network_processor_execute_work_calls_total",
         help: "Total calls to network processor execute work fn",
       }),
-      jobsSubmitted: register.gauge({
+      jobsSubmitted: register.histogram({
         name: "lodestar_network_processor_execute_jobs_submitted_total",
         help: "Total calls to network processor execute work fn",
-      }),
-      maxJobsSubmittedByTick: register.gauge({
-        name: "lodestar_network_processor_max_jobs_submitted_total",
-        help: "Total times network processor submitted max jobs per tick on executeWork",
+        buckets: [0, 1, 5, 128],
       }),
       canNotAcceptWork: register.gauge({
         name: "lodestar_network_processor_can_not_accept_work_total",

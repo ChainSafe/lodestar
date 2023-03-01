@@ -16,6 +16,10 @@ export type NetworkProcessorModules = NetworkWorkerModules &
     metrics: Metrics | null;
   };
 
+export type NetworkProcessorOpts = GossipHandlerOpts & {
+  maxGossipTopicConcurrency?: number;
+};
+
 const executeGossipWorkOrderObj: Record<GossipType, true> = {
   [GossipType.beacon_block]: true,
   [GossipType.beacon_block_and_blobs_sidecar]: true,
@@ -63,7 +67,7 @@ export class NetworkProcessor {
   private readonly gossipQueues = createGossipQueues<PendingGossipsubMessage>();
   private readonly gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
 
-  constructor(modules: NetworkProcessorModules, opts: GossipHandlerOpts) {
+  constructor(modules: NetworkProcessorModules, private readonly opts: NetworkProcessorOpts) {
     const {chain, events, logger, metrics} = modules;
     this.chain = chain;
     this.metrics = metrics;
@@ -116,15 +120,24 @@ export class NetworkProcessor {
     // TODO: Maybe de-bounce by timing the last time executeWork was run
 
     this.metrics?.networkProcessor.executeWorkCalls.inc();
+    let jobsSubmitted = 0;
 
-    a: for (let i = 0; i < MAX_JOBS_SUBMITTED_PER_TICK; i++) {
-      // TODO: Add metrics for when available or not
+    job_loop: while (jobsSubmitted < MAX_JOBS_SUBMITTED_PER_TICK) {
+      // Check canAcceptWork before calling queue.next() since it consumes the items
       if (!this.chain.blsThreadPoolCanAcceptWork() || !this.chain.regenCanAcceptWork()) {
         this.metrics?.networkProcessor.canNotAcceptWork.inc();
-        return;
+        break;
       }
 
       for (const topic of executeGossipWorkOrder) {
+        if (
+          this.opts.maxGossipTopicConcurrency !== undefined &&
+          this.gossipTopicConcurrency[topic] > this.opts.maxGossipTopicConcurrency
+        ) {
+          // Reached concurrency limit for topic, continue to next topic
+          continue;
+        }
+
         const item = this.gossipQueues[topic].next();
         if (item) {
           this.gossipTopicConcurrency[topic]++;
@@ -133,10 +146,9 @@ export class NetworkProcessor {
             .finally(() => this.gossipTopicConcurrency[topic]--)
             .catch((e) => this.logger.error("processGossipAttestations must not throw", {}, e));
 
-          this.metrics?.networkProcessor.jobsSubmitted.inc();
-
-          // Attempt to find more work respecting executeGossipWorkOrder priorization
-          continue a;
+          jobsSubmitted++;
+          // Attempt to find more work, but check canAcceptWork() again and run executeGossipWorkOrder priorization
+          continue job_loop;
         }
       }
 
@@ -144,6 +156,6 @@ export class NetworkProcessor {
       break;
     }
 
-    this.metrics?.networkProcessor.maxJobsSubmittedByTick.inc();
+    this.metrics?.networkProcessor.jobsSubmitted.observe(jobsSubmitted);
   }
 }
