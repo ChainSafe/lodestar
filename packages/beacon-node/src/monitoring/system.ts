@@ -9,6 +9,7 @@ type MiscOs = "lin" | "win" | "mac" | "unk";
  * Singleton class to collect and provide system information
  */
 class System {
+  private static instance?: System;
   // static data only needs to be collected once
   private staticDataCollected = false;
   // disk I/O is not measurable in some environments
@@ -31,6 +32,11 @@ class System {
   private _networkNodeBytesTotalTransmit = 0;
   private _miscNodeBootTsSeconds = 0;
   private _miscOs: MiscOs = "unk";
+
+  constructor() {
+    if (System.instance) return System.instance;
+    System.instance = this;
+  }
 
   /**
    * Collect system data and update cached values
