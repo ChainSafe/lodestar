@@ -7,6 +7,20 @@
       "type": "datasource",
       "pluginId": "prometheus",
       "pluginName": "Prometheus"
+    },
+    {
+      "name": "VAR_BEACON_JOB",
+      "type": "constant",
+      "label": "Beacon node job name",
+      "value": "beacon",
+      "description": ""
+    },
+    {
+      "name": "VAR_VALIDATOR_JOB",
+      "type": "constant",
+      "label": "Validator client job name",
+      "value": "validator",
+      "description": ""
     }
   ],
   "__elements": {},
@@ -645,7 +659,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(process_cpu_user_seconds_total{job=\"beacon\"} [1m])",
+          "expr": "rate(process_cpu_user_seconds_total{job=~\"$beacon_job|beacon\"} [1m])",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -705,7 +719,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "process_heap_bytes{job=\"beacon\"}",
+          "expr": "process_heap_bytes{job=~\"$beacon_job|beacon\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -769,7 +783,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "process_start_time_seconds{job=\"beacon\"}*1000",
+          "expr": "process_start_time_seconds{job=~\"$beacon_job|beacon\"}*1000",
           "instant": false,
           "interval": "",
           "legendFormat": "",
@@ -913,7 +927,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_version{job=\"beacon\"}",
+          "expr": "lodestar_version{job=~\"$beacon_job|beacon\"}",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -973,7 +987,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_version{job=\"beacon\"}",
+          "expr": "lodestar_version{job=~\"$beacon_job|beacon\"}",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -1042,7 +1056,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "nodejs_version_info{job=\"beacon\"}",
+          "expr": "nodejs_version_info{job=~\"$beacon_job|beacon\"}",
           "instant": true,
           "interval": "",
           "legendFormat": "{{version}}",
@@ -1704,7 +1718,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(nodejs_gc_duration_seconds_sum{job=\"beacon\"} [$rate_interval])) by (instance)",
+          "expr": "sum(rate(nodejs_gc_duration_seconds_sum{job=~\"$beacon_job|beacon\"} [$rate_interval])) by (instance)",
           "hide": false,
           "interval": "",
           "legendFormat": "gc_duration_sum",
@@ -1716,7 +1730,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(rate(nodejs_gc_pause_seconds_total{job=\"beacon\"} [$rate_interval])) by (instance)",
+          "expr": "sum(rate(nodejs_gc_pause_seconds_total{job=~\"$beacon_job|beacon\"} [$rate_interval])) by (instance)",
           "hide": false,
           "interval": "",
           "legendFormat": "gc_pause_sum",
@@ -1845,7 +1859,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "avg_over_time( scrape_duration_seconds{job=\"beacon\"} [$rate_interval])",
+          "expr": "avg_over_time( scrape_duration_seconds{job=~\"$beacon_job|beacon\"} [$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "prometheus_beacon_scrape_roundtrip",
@@ -1857,7 +1871,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "avg_over_time( scrape_duration_seconds{job=\"validator\"} [$rate_interval])",
+          "expr": "avg_over_time( scrape_duration_seconds{job=~\"$validator_job|validator\"} [$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "prometheus_validator_scrape_roundtrip",
@@ -3073,6 +3087,48 @@
         "name": "Filters",
         "skipUrlSync": false,
         "type": "adhoc"
+      },
+      {
+        "description": "Job name used in Prometheus config to scrape Beacon node",
+        "hide": 2,
+        "label": "Beacon node job name",
+        "name": "beacon_job",
+        "query": "${VAR_BEACON_JOB}",
+        "skipUrlSync": false,
+        "type": "constant",
+        "current": {
+          "value": "${VAR_BEACON_JOB}",
+          "text": "${VAR_BEACON_JOB}",
+          "selected": false
+        },
+        "options": [
+          {
+            "value": "${VAR_BEACON_JOB}",
+            "text": "${VAR_BEACON_JOB}",
+            "selected": false
+          }
+        ]
+      },
+      {
+        "description": "Job name used in Prometheus config to scrape Validator client",
+        "hide": 2,
+        "label": "Validator client job name",
+        "name": "validator_job",
+        "query": "${VAR_VALIDATOR_JOB}",
+        "skipUrlSync": false,
+        "type": "constant",
+        "current": {
+          "value": "${VAR_VALIDATOR_JOB}",
+          "text": "${VAR_VALIDATOR_JOB}",
+          "selected": false
+        },
+        "options": [
+          {
+            "value": "${VAR_VALIDATOR_JOB}",
+            "text": "${VAR_VALIDATOR_JOB}",
+            "selected": false
+          }
+        ]
       }
     ]
   },

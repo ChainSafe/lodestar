@@ -7,6 +7,13 @@
       "type": "datasource",
       "pluginId": "prometheus",
       "pluginName": "Prometheus"
+    },
+    {
+      "name": "VAR_VALIDATOR_JOB",
+      "type": "constant",
+      "label": "Validator client job name",
+      "value": "validator",
+      "description": ""
     }
   ],
   "__elements": {},
@@ -270,7 +277,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_version{job=\"validator\"}",
+          "expr": "lodestar_version{job=~\"$validator_job|validator\"}",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -339,7 +346,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "nodejs_version_info{job=\"validator\"}",
+          "expr": "nodejs_version_info{job=~\"$validator_job|validator\"}",
           "instant": true,
           "interval": "",
           "legendFormat": "{{version}}",
@@ -406,7 +413,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_version{job=\"validator\"}",
+          "expr": "lodestar_version{job=~\"$validator_job|validator\"}",
           "format": "time_series",
           "instant": true,
           "interval": "",
@@ -539,7 +546,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "process_heap_bytes{job=\"validator\"}",
+          "expr": "process_heap_bytes{job=~\"$validator_job|validator\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -605,7 +612,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "nodejs_heap_size_used_bytes{job=\"validator\"}",
+          "expr": "nodejs_heap_size_used_bytes{job=~\"$validator_job|validator\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -2179,6 +2186,27 @@
         "name": "Filters",
         "skipUrlSync": false,
         "type": "adhoc"
+      },
+      {
+        "description": "Job name used in Prometheus config to scrape Validator client",
+        "hide": 2,
+        "label": "Validator client job name",
+        "name": "validator_job",
+        "query": "${VAR_VALIDATOR_JOB}",
+        "skipUrlSync": false,
+        "type": "constant",
+        "current": {
+          "value": "${VAR_VALIDATOR_JOB}",
+          "text": "${VAR_VALIDATOR_JOB}",
+          "selected": false
+        },
+        "options": [
+          {
+            "value": "${VAR_VALIDATOR_JOB}",
+            "text": "${VAR_VALIDATOR_JOB}",
+            "selected": false
+          }
+        ]
       }
     ]
   },
