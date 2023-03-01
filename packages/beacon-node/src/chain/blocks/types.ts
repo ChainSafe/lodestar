@@ -1,57 +1,45 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
-import {allForks, eip4844, Slot} from "@lodestar/types";
+import {allForks, deneb, Slot} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 
 export enum BlockInputType {
-  preEIP4844 = "preEIP4844",
-  postEIP4844 = "postEIP4844",
-  postEIP4844OldBlobs = "postEIP4844OldBlobs",
+  preDeneb = "preDeneb",
+  postDeneb = "postDeneb",
 }
 
 export type BlockInput =
-  | {type: BlockInputType.preEIP4844; block: allForks.SignedBeaconBlock}
-  | {type: BlockInputType.postEIP4844; block: allForks.SignedBeaconBlock; blobs: eip4844.BlobsSidecar}
-  | {type: BlockInputType.postEIP4844OldBlobs; block: allForks.SignedBeaconBlock};
+  | {type: BlockInputType.preDeneb; block: allForks.SignedBeaconBlock}
+  | {type: BlockInputType.postDeneb; block: allForks.SignedBeaconBlock; blobs: deneb.BlobsSidecar};
 
-export function blockRequiresBlobs(config: IChainForkConfig, blockSlot: Slot, clockSlot: Slot): boolean {
+export function blockRequiresBlobs(config: ChainForkConfig, blockSlot: Slot, clockSlot: Slot): boolean {
   return (
-    config.getForkSeq(blockSlot) >= ForkSeq.eip4844 &&
+    config.getForkSeq(blockSlot) >= ForkSeq.deneb &&
     // Only request blobs if they are recent enough
     computeEpochAtSlot(blockSlot) >= computeEpochAtSlot(clockSlot) - config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS
   );
 }
 
 export const getBlockInput = {
-  preEIP4844(config: IChainForkConfig, block: allForks.SignedBeaconBlock): BlockInput {
-    if (config.getForkSeq(block.message.slot) >= ForkSeq.eip4844) {
-      throw Error(`Post EIP4844 block slot ${block.message.slot}`);
+  preDeneb(config: ChainForkConfig, block: allForks.SignedBeaconBlock): BlockInput {
+    if (config.getForkSeq(block.message.slot) >= ForkSeq.deneb) {
+      throw Error(`Post Deneb block slot ${block.message.slot}`);
     }
     return {
-      type: BlockInputType.preEIP4844,
+      type: BlockInputType.preDeneb,
       block,
     };
   },
 
-  postEIP4844(config: IChainForkConfig, block: allForks.SignedBeaconBlock, blobs: eip4844.BlobsSidecar): BlockInput {
-    if (config.getForkSeq(block.message.slot) < ForkSeq.eip4844) {
-      throw Error(`Pre EIP4844 block slot ${block.message.slot}`);
+  postDeneb(config: ChainForkConfig, block: allForks.SignedBeaconBlock, blobs: deneb.BlobsSidecar): BlockInput {
+    if (config.getForkSeq(block.message.slot) < ForkSeq.deneb) {
+      throw Error(`Pre Deneb block slot ${block.message.slot}`);
     }
     return {
-      type: BlockInputType.postEIP4844,
+      type: BlockInputType.postDeneb,
       block,
       blobs,
-    };
-  },
-
-  postEIP4844OldBlobs(config: IChainForkConfig, block: allForks.SignedBeaconBlock): BlockInput {
-    if (config.getForkSeq(block.message.slot) < ForkSeq.eip4844) {
-      throw Error(`Pre EIP4844 block slot ${block.message.slot}`);
-    }
-    return {
-      type: BlockInputType.postEIP4844OldBlobs,
-      block,
     };
   },
 };

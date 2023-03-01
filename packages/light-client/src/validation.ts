@@ -1,4 +1,4 @@
-import {altair, Root, Slot, ssz} from "@lodestar/types";
+import {altair, Root, Slot, ssz, allForks} from "@lodestar/types";
 import bls from "@chainsafe/bls/switchable";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
 import {
@@ -9,7 +9,7 @@ import {
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
   DOMAIN_SYNC_COMMITTEE,
 } from "@lodestar/params";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
 import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils.js";
 import {SyncCommitteeFast} from "./types.js";
@@ -22,9 +22,9 @@ import {computeSyncPeriodAtSlot} from "./utils/clock.js";
  * @param update the light client update for validation
  */
 export function assertValidLightClientUpdate(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   syncCommittee: SyncCommitteeFast,
-  update: altair.LightClientUpdate
+  update: allForks.LightClientUpdate
 ): void {
   // DIFF FROM SPEC: An update with the same header.slot can be valid and valuable to the lightclient
   // It may have more consensus and result in a better snapshot whilst not advancing the state
@@ -64,7 +64,7 @@ export function assertValidLightClientUpdate(
  *
  * Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
  */
-export function assertValidFinalityProof(update: altair.LightClientFinalityUpdate): void {
+export function assertValidFinalityProof(update: allForks.LightClientFinalityUpdate): void {
   if (
     !isValidMerkleBranch(
       ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader.beacon),
@@ -94,7 +94,7 @@ export function assertValidFinalityProof(update: altair.LightClientFinalityUpdat
  *
  * Where `hashTreeRoot(state) == update.header.stateRoot`
  */
-export function assertValidSyncCommitteeProof(update: altair.LightClientUpdate): void {
+export function assertValidSyncCommitteeProof(update: allForks.LightClientUpdate): void {
   if (
     !isValidMerkleBranch(
       ssz.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
@@ -124,7 +124,7 @@ export function assertValidSyncCommitteeProof(update: altair.LightClientUpdate):
  * @param signedHeaderRoot Takes header root instead of the head itself to prevent re-hashing on SSE
  */
 export function assertValidSignedHeader(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   syncCommittee: SyncCommitteeFast,
   syncAggregate: altair.SyncAggregate,
   signedHeaderRoot: Root,

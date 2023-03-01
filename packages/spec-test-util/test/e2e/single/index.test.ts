@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import {unlinkSync, writeFileSync} from "node:fs";
-import path, {join} from "node:path";
+import fs from "node:fs";
+import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
@@ -14,13 +13,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable mocha/no-exports, mocha/no-top-level-hooks */
 
-export interface ISimpleStruct {
+export type SimpleStruct = {
   test: boolean;
   number: number;
-}
+};
 
-export interface ISimpleCase extends Iterable<string> {
-  input: ISimpleStruct;
+export interface SimpleCase extends Iterable<string> {
+  input: SimpleStruct;
   output: number;
   meta?: {
     bls_setting?: bigint;
@@ -33,22 +32,22 @@ const sampleContainerType = new ContainerType({
 });
 
 before(() => {
-  yamlToSSZ(join(__dirname, "../_test_files/single/case0/input.yaml"), sampleContainerType);
-  yamlToSSZ(join(__dirname, "../_test_files/single/case0/output.yaml"), ssz.UintNum64);
-  yamlToSSZ(join(__dirname, "../_test_files/single/case1/input.yaml"), sampleContainerType);
-  yamlToSSZ(join(__dirname, "../_test_files/single/case1/output.yaml"), ssz.UintNum64);
+  yamlToSSZ(path.join(__dirname, "../_test_files/single/case0/input.yaml"), sampleContainerType);
+  yamlToSSZ(path.join(__dirname, "../_test_files/single/case0/output.yaml"), ssz.UintNum64);
+  yamlToSSZ(path.join(__dirname, "../_test_files/single/case1/input.yaml"), sampleContainerType);
+  yamlToSSZ(path.join(__dirname, "../_test_files/single/case1/output.yaml"), ssz.UintNum64);
 });
 
 after(() => {
-  unlinkSync(join(__dirname, "../_test_files/single/case0/input.ssz"));
-  unlinkSync(join(__dirname, "../_test_files/single/case0/output.ssz"));
-  unlinkSync(join(__dirname, "../_test_files/single/case1/input.ssz"));
-  unlinkSync(join(__dirname, "../_test_files/single/case1/output.ssz"));
+  fs.unlinkSync(path.join(__dirname, "../_test_files/single/case0/input.ssz"));
+  fs.unlinkSync(path.join(__dirname, "../_test_files/single/case0/output.ssz"));
+  fs.unlinkSync(path.join(__dirname, "../_test_files/single/case1/input.ssz"));
+  fs.unlinkSync(path.join(__dirname, "../_test_files/single/case1/output.ssz"));
 });
 
-describeDirectorySpecTest<ISimpleCase, number>(
+describeDirectorySpecTest<SimpleCase, number>(
   "single spec test",
-  join(__dirname, "../_test_files/single"),
+  path.join(__dirname, "../_test_files/single"),
   (testCase) => {
     return testCase.input.number;
   },
@@ -68,5 +67,5 @@ describeDirectorySpecTest<ISimpleCase, number>(
 
 function yamlToSSZ(file: string, sszSchema: Type<any>): void {
   const input = sszSchema.fromJson(loadYamlFile(file)) as {test: boolean; number: number};
-  writeFileSync(file.replace(".yaml", ".ssz"), sszSchema.serialize(input));
+  fs.writeFileSync(file.replace(".yaml", ".ssz"), sszSchema.serialize(input));
 }

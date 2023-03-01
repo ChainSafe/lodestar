@@ -3,7 +3,7 @@ import {TrustedSetupJSON, trustedSetupJsonToBin, TRUSTED_SETUP_BIN_FILEPATH} fro
 
 // CLI TOOL: Use to transform a JSON trusted setup into .ssz
 //
-// Note: Closer to EIP-4844 this tool may never be useful again,
+// Note: Closer to DENEB this tool may never be useful again,
 //       see https://github.com/ethereum/c-kzg-4844/issues/3
 
 const INPUT_FILE = process.argv[2];

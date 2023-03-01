@@ -3,16 +3,14 @@ import tmp from "tmp";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {config as minimalConfig} from "@lodestar/config/default";
-import {createIBeaconConfig, createIChainForkConfig, IChainConfig} from "@lodestar/config";
-import {ILogger, RecursivePartial} from "@lodestar/utils";
+import {createBeaconConfig, createChainForkConfig, ChainConfig} from "@lodestar/config";
+import {Logger, RecursivePartial} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {phase0, ssz} from "@lodestar/types";
 import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {isPlainObject} from "@lodestar/utils";
-import {createKeypairFromPeerId, SignableENR} from "@chainsafe/discv5";
 import {BeaconNode} from "../../../src/index.js";
-import {createNodeJsLibp2p} from "../../../src/network/nodejs/index.js";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
 import {initDevState, writeDeposits} from "../../../src/node/utils/state.js";
 import {IBeaconNodeOptions} from "../../../src/node/options.js";
@@ -23,10 +21,10 @@ import {InteropStateOpts} from "../../../src/node/utils/interop/state.js";
 
 export async function getDevBeaconNode(
   opts: {
-    params: Partial<IChainConfig>;
+    params: Partial<ChainConfig>;
     options?: RecursivePartial<IBeaconNodeOptions>;
     validatorCount?: number;
-    logger?: ILogger;
+    logger?: Logger;
     peerId?: PeerId;
     peerStoreDir?: string;
     anchorState?: BeaconStateAllForks;
@@ -38,27 +36,11 @@ export async function getDevBeaconNode(
 
   if (!peerId) peerId = await createSecp256k1PeerId();
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
-  const config = createIChainForkConfig({...minimalConfig, ...params});
+  const config = createChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
 
-  const db = new BeaconDb({config, controller: new LevelDbController({name: tmpDir.name}, {})});
+  const db = new BeaconDb({config, controller: new LevelDbController({name: tmpDir.name}, {logger})});
   await db.start();
-
-  const libp2p = await createNodeJsLibp2p(
-    peerId,
-    {
-      discv5: {
-        enabled: false,
-        enr: createEnr(peerId),
-        bindAddr: options.network?.discv5?.bindAddr || "/ip4/127.0.0.1/udp/0",
-        bootEnrs: [],
-      },
-      localMultiaddrs: options.network?.localMultiaddrs || ["/ip4/127.0.0.1/tcp/0"],
-      targetPeers: defaultNetworkOptions.targetPeers,
-      maxPeers: defaultNetworkOptions.maxPeers,
-    },
-    {disablePeerDiscovery: true, peerStoreDir}
-  );
 
   options = deepmerge(
     // This deepmerge should NOT merge the array with the defaults but overwrite them
@@ -71,7 +53,12 @@ export async function getDevBeaconNode(
         eth1: {enabled: false},
         api: {rest: {api: ["beacon", "config", "events", "node", "validator"], port: 19596}},
         metrics: {enabled: false},
-        network: {discv5: null},
+        network: {
+          discv5: null,
+          localMultiaddrs: options.network?.localMultiaddrs || ["/ip4/127.0.0.1/tcp/0"],
+          targetPeers: defaultNetworkOptions.targetPeers,
+          maxPeers: defaultNetworkOptions.maxPeers,
+        },
       } as Partial<IBeaconNodeOptions>,
       options
     ),
@@ -92,30 +79,26 @@ export async function getDevBeaconNode(
     block.message.stateRoot = state.hashTreeRoot();
     await db.blockArchive.add(block);
 
-    if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.eip4844) {
-      const blobsSidecar = ssz.eip4844.BlobsSidecar.defaultValue();
+    if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.deneb) {
+      const blobsSidecar = ssz.deneb.BlobsSidecar.defaultValue();
       blobsSidecar.beaconBlockRoot = config.getForkTypes(GENESIS_SLOT).BeaconBlock.hashTreeRoot(block.message);
       await db.blobsSidecar.add(blobsSidecar);
     }
   }
 
-  const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
-  return await BeaconNode.init({
+  const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
+  return BeaconNode.init({
     opts: options as IBeaconNodeOptions,
     config: beaconConfig,
     db,
     logger,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     processShutdownCallback: () => {},
-    libp2p,
+    peerId,
+    peerStoreDir,
     anchorState,
     wsCheckpoint: opts.wsCheckpoint,
   });
-}
-
-function createEnr(peerId: PeerId): SignableENR {
-  const keypair = createKeypairFromPeerId(peerId);
-  return SignableENR.createV4(keypair);
 }
 
 function overwriteTargetArrayIfItems(target: unknown[], source: unknown[]): unknown[] {

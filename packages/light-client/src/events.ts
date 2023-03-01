@@ -1,4 +1,4 @@
-import {altair} from "@lodestar/types";
+import {allForks} from "@lodestar/types";
 
 export enum LightclientEvent {
   lightClientOptimisticUpdate = "light_client_optimistic_update",
@@ -6,8 +6,8 @@ export enum LightclientEvent {
 }
 
 export type LightclientEmitterEvents = {
-  [LightclientEvent.lightClientOptimisticUpdate]: (newHeader: altair.LightClientHeader) => void;
-  [LightclientEvent.lightClientFinalityUpdate]: (newHeader: altair.LightClientHeader) => void;
+  [LightclientEvent.lightClientOptimisticUpdate]: (newHeader: allForks.LightClientHeader) => void;
+  [LightclientEvent.lightClientFinalityUpdate]: (newHeader: allForks.LightClientHeader) => void;
 };
 
 export type LightclientEmitter = MittEmitter<LightclientEmitterEvents>;

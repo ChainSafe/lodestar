@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {ApiClientResponse} from "../../interfaces.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {generateGenericJsonClient, getFetchOptsSerializers, IHttpClient} from "../../utils/client/index.js";
@@ -12,7 +12,7 @@ const GET_STATE_TIMEOUT_MS = 5 * 60 * 1000;
 /**
  * REST HTTP client for debug routes
  */
-export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): Api {
+export function getClient(_config: ChainForkConfig, httpClient: IHttpClient): Api {
   const reqSerializers = getReqSerializers();
   const returnTypes = getReturnTypes();
   // Some routes return JSON, use a client auto-generator
@@ -37,8 +37,6 @@ export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): A
           ...fetchOptsSerializers.getState(stateId, format),
           timeoutMs: GET_STATE_TIMEOUT_MS,
         });
-        // Casting to any otherwise Typescript doesn't like the multi-type return
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
         return {
           ok: true,
           response: new Uint8Array(res.body),
@@ -57,8 +55,6 @@ export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): A
           ...fetchOptsSerializers.getStateV2(stateId, format),
           timeoutMs: GET_STATE_TIMEOUT_MS,
         });
-        // Casting to any otherwise Typescript doesn't like the multi-type return
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
         return {ok: true, response: new Uint8Array(res.body), status: res.status} as ApiClientResponse<{
           [HttpStatusCode.OK]: Uint8Array;
         }>;

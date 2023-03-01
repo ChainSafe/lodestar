@@ -6,13 +6,13 @@ import {
   LightClientServerError,
   LightClientServerErrorCode,
 } from "@lodestar/reqresp";
-import {altair, Root} from "@lodestar/types";
+import {Root, allForks} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 
 export async function* onLightClientBootstrap(
   requestBody: Root,
   chain: IBeaconChain
-): AsyncIterable<EncodedPayload<altair.LightClientBootstrap>> {
+): AsyncIterable<EncodedPayload<allForks.LightClientBootstrap>> {
   try {
     yield {
       type: EncodedPayloadType.ssz,

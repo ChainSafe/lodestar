@@ -90,7 +90,10 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
     }
 
     const head0 = heads.length > 0 ? heads[0] : null;
-    const nodesHaveSameHead = heads.every((head) => head?.blockRoot === head0?.blockRoot);
+    const nodesHaveSameHead = heads.every(
+      (head) =>
+        head0 && head0.blockRoot !== null && head0.blockRoot !== undefined && head?.blockRoot === head0.blockRoot
+    );
     const errorCount = errors.filter((e) => e.slot === slot).length;
 
     this.table.addRow({
@@ -98,10 +101,14 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       eph: epochStr,
       slot: head0 ? head0.slot : "-",
       head: head0 ? (nodesHaveSameHead ? `${head0?.blockRoot.slice(0, 6)}..` : "different") : "-",
-      finzed: !arrayIsUnique(finalizedSlots) ? finalizedSlots[0] : finalizedSlots.join(","),
-      peers: !arrayIsUnique(peerCount) ? peerCount[0] : peerCount.join(","),
-      attCount: !arrayIsUnique(attestationCount) ? attestationCount[0] : "---",
-      incDelay: !arrayIsUnique(inclusionDelay) ? inclusionDelay[0].toFixed(2) : "---",
+      finzed:
+        !arrayIsUnique(finalizedSlots) && finalizedSlots[0] !== undefined
+          ? finalizedSlots[0]
+          : finalizedSlots.join(","),
+      peers: !arrayIsUnique(peerCount) && peerCount[0] !== undefined ? peerCount[0] : peerCount.join(","),
+      attCount: !arrayIsUnique(attestationCount) && attestationCount[0] !== undefined ? attestationCount[0] : "---",
+      incDelay:
+        !arrayIsUnique(inclusionDelay) && inclusionDelay[0] !== undefined ? inclusionDelay[0].toFixed(2) : "---",
       errors: errorCount,
     });
   }

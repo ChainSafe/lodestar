@@ -7,7 +7,7 @@ import {config} from "@lodestar/config/default";
 import {BitArray} from "@chainsafe/ssz";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {createIBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
 import {IReqRespBeaconNode, ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.js";
 import {PeerRpcScoreStore, PeerManager} from "../../../../src/network/peers/index.js";
 import {Eth2Gossipsub, getConnectionsMap, NetworkEvent, NetworkEventBus} from "../../../../src/network/index.js";
@@ -43,7 +43,7 @@ describe("network / peers / PeerManager", function () {
         root: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
       },
     });
-    const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
+    const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
@@ -162,7 +162,6 @@ describe("network / peers / PeerManager", function () {
     const {chain, libp2p, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
@@ -179,7 +178,6 @@ describe("network / peers / PeerManager", function () {
     const {chain, libp2p, reqResp, peerManager, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
@@ -193,7 +191,6 @@ describe("network / peers / PeerManager", function () {
     reqResp.metadata.resolves(remoteMetadata);
 
     // Simualate a peer connection, get() should return truthy
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
     getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
     (libp2p.connectionManager as DefaultConnectionManager).dispatchEvent(
       new CustomEvent("peer:connect", {detail: libp2pConnectionOutboud})

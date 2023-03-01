@@ -33,7 +33,7 @@ import {
   ContainerDataExecutionOptimistic,
   ContainerData,
 } from "../../utils/index.js";
-import {fromU64Str, toU64Str, U64Str} from "../../utils/serdes.js";
+import {fromU64Str, fromGraffitiHex, toU64Str, U64Str, toGraffitiHex} from "../../utils/serdes.js";
 import {ExecutionOptimistic} from "./beacon/block.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -380,9 +380,9 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   const produceBlock: ReqSerializers<Api, ReqTypes>["produceBlock"] = {
     writeReq: (slot, randaoReveal, graffiti) => ({
       params: {slot},
-      query: {randao_reveal: toHexString(randaoReveal), graffiti},
+      query: {randao_reveal: toHexString(randaoReveal), graffiti: toGraffitiHex(graffiti)},
     }),
-    parseReq: ({params, query}) => [params.slot, fromHexString(query.randao_reveal), query.graffiti],
+    parseReq: ({params, query}) => [params.slot, fromHexString(query.randao_reveal), fromGraffitiHex(query.graffiti)],
     schema: {
       params: {slot: Schema.UintRequired},
       query: {randao_reveal: Schema.StringRequired, graffiti: Schema.String},

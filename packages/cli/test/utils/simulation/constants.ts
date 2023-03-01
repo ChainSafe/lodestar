@@ -1,9 +1,9 @@
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const __dirname = dirname(fileURLToPath(import.meta.url));
+export const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-import {dirname} from "node:path";
+import path from "node:path";
 import {fileURLToPath} from "node:url";
 
 export const FAR_FUTURE_EPOCH = 10 ** 12;
@@ -22,3 +22,4 @@ export const SIM_ENV_NETWORK_ID = 1234;
 export const LODESTAR_BINARY_PATH = `${__dirname}/../../../bin/lodestar.js`;
 export const MOCK_ETH1_GENESIS_HASH = "0xfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfb";
 export const SHARED_JWT_SECRET = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
+export const SHARED_VALIDATOR_PASSWORD = "passwrod";

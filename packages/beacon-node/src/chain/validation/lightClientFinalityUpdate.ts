@@ -1,5 +1,5 @@
-import {IChainForkConfig} from "@lodestar/config";
-import {altair, ssz} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
+import {allForks} from "@lodestar/types";
 import {IBeaconChain} from "../interface.js";
 import {LightClientError, LightClientErrorCode} from "../errors/lightClientError.js";
 import {GossipAction} from "../errors/index.js";
@@ -7,9 +7,9 @@ import {updateReceivedTooEarly} from "./lightClientOptimisticUpdate.js";
 
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_finality_update
 export function validateLightClientFinalityUpdate(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   chain: IBeaconChain,
-  gossipedFinalityUpdate: altair.LightClientFinalityUpdate
+  gossipedFinalityUpdate: allForks.LightClientFinalityUpdate
 ): void {
   // [IGNORE] No other finality_update with a lower or equal finalized_header.slot was already forwarded on the network
   const gossipedFinalitySlot = gossipedFinalityUpdate.finalizedHeader.beacon.slot;
@@ -31,10 +31,10 @@ export function validateLightClientFinalityUpdate(
   }
 
   // [IGNORE] The received finality_update matches the locally computed one exactly
-  if (
-    localFinalityUpdate === null ||
-    !ssz.altair.LightClientFinalityUpdate.equals(gossipedFinalityUpdate, localFinalityUpdate)
-  ) {
+  const sszType = config.getLightClientForkTypes(gossipedFinalityUpdate.attestedHeader.beacon.slot)[
+    "LightClientFinalityUpdate"
+  ];
+  if (localFinalityUpdate === null || !sszType.equals(gossipedFinalityUpdate, localFinalityUpdate)) {
     throw new LightClientError(GossipAction.IGNORE, {
       code: LightClientErrorCode.FINALITY_UPDATE_NOT_MATCHING_LOCAL,
     });

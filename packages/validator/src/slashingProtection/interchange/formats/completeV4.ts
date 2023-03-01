@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {IInterchangeLodestar} from "../types.js";
+import {InterchangeLodestar} from "../types.js";
 import {fromOptionalHexString, numToString, toOptionalHexString} from "../../utils.js";
 
 /**
  * A complete record of all blocks and attestations signed by a set of validators
  * Spec from: https://hackmd.io/@sproul/Bk0Y0qdGD
  */
-export interface IInterchangeCompleteV4 {
+export type InterchangeCompleteV4 = {
   metadata: {
     interchange_format: "complete";
     interchange_format_version: "4";
@@ -80,12 +80,12 @@ export interface IInterchangeCompleteV4 {
       signing_root?: string;
     }[];
   }[];
-}
+};
 
 export function serializeInterchangeCompleteV4({
   data,
   genesisValidatorsRoot,
-}: IInterchangeLodestar): IInterchangeCompleteV4 {
+}: InterchangeLodestar): InterchangeCompleteV4 {
   return {
     metadata: {
       interchange_format: "complete",
@@ -107,7 +107,7 @@ export function serializeInterchangeCompleteV4({
   };
 }
 
-export function parseInterchangeCompleteV4(interchange: IInterchangeCompleteV4): IInterchangeLodestar {
+export function parseInterchangeCompleteV4(interchange: InterchangeCompleteV4): InterchangeLodestar {
   return {
     genesisValidatorsRoot: fromHexString(interchange.metadata.genesis_validators_root),
     data: interchange.data.map((validator) => ({

@@ -6,7 +6,7 @@ import {
   ZERO_HASH,
   blindedOrFullBlockHashTreeRoot,
 } from "@lodestar/state-transition";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_AGGREGATE_AND_PROOF,
   DOMAIN_BEACON_ATTESTER,
@@ -62,6 +62,11 @@ export type SignerRemote = {
   pubkey: PubkeyHex;
 };
 
+export enum BuilderSelection {
+  BuilderAlways = "builderalways",
+  MaxProfit = "maxprofit",
+}
+
 type DefaultProposerConfig = {
   graffiti: string;
   strictFeeRecipientCheck: boolean;
@@ -69,6 +74,7 @@ type DefaultProposerConfig = {
   builder: {
     enabled: boolean;
     gasLimit: number;
+    selection: BuilderSelection;
   };
 };
 
@@ -79,6 +85,7 @@ export type ProposerConfig = {
   builder?: {
     enabled?: boolean;
     gasLimit?: number;
+    selection?: BuilderSelection;
   };
 };
 
@@ -113,6 +120,7 @@ type ValidatorData = ProposerConfig & {
 export const defaultOptions = {
   suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
   defaultGasLimit: 30_000_000,
+  builderSelection: BuilderSelection.MaxProfit,
 };
 
 /**
@@ -125,7 +133,7 @@ export class ValidatorStore {
   private readonly defaultProposerConfig: DefaultProposerConfig;
 
   constructor(
-    private readonly config: IBeaconConfig,
+    private readonly config: BeaconConfig,
     private readonly slashingProtection: ISlashingProtection,
     private readonly indicesService: IndicesService,
     private readonly doppelgangerService: DoppelgangerService | null,
@@ -142,6 +150,7 @@ export class ValidatorStore {
       builder: {
         enabled: defaultConfig.builder?.enabled ?? false,
         gasLimit: defaultConfig.builder?.gasLimit ?? defaultOptions.defaultGasLimit,
+        selection: defaultConfig.builder?.selection ?? defaultOptions.builderSelection,
       },
     };
 
@@ -206,7 +215,11 @@ export class ValidatorStore {
   }
 
   isBuilderEnabled(pubkeyHex: PubkeyHex): boolean {
-    return (this.validators.get(pubkeyHex)?.builder || {}).enabled ?? this.defaultProposerConfig?.builder.enabled;
+    return (this.validators.get(pubkeyHex)?.builder || {}).enabled ?? this.defaultProposerConfig.builder.enabled;
+  }
+
+  getBuilderSelection(pubkeyHex: PubkeyHex): BuilderSelection {
+    return (this.validators.get(pubkeyHex)?.builder || {}).selection ?? this.defaultProposerConfig.builder.selection;
   }
 
   strictFeeRecipientCheck(pubkeyHex: PubkeyHex): boolean {
@@ -352,7 +365,7 @@ export class ValidatorStore {
       data: {epoch},
     };
 
-    return await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
+    return this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
   }
 
   async signAttestation(
@@ -484,7 +497,7 @@ export class ValidatorStore {
       data: {slot},
     };
 
-    return await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
+    return this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
   }
 
   async signSyncCommitteeSelectionProof(
@@ -506,7 +519,7 @@ export class ValidatorStore {
       data: {slot, subcommitteeIndex},
     };
 
-    return await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
+    return this.getSignature(pubkey, signingRoot, signingSlot, signableMessage);
   }
 
   async signVoluntaryExit(

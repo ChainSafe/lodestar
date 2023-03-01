@@ -62,7 +62,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
 
   let db: BeaconDb;
   before(async () => {
-    db = new BeaconDb({config, controller: new LevelDbController({name: ".tmpdb"}, {})});
+    db = new BeaconDb({config, controller: new LevelDbController({name: ".tmpdb"}, {logger})});
     await db.start();
   });
   after(async () => {
@@ -86,6 +86,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           disableArchiveOnCheckpoint: true,
           suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
           skipCreateStateCacheIfAvailable: true,
+          archiveStateEpochFrequency: 1024,
         },
         {
           config: state.config,
@@ -106,7 +107,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       return chain;
     },
     fn: async (chain) => {
-      const blocksImport = blocks.value.map((block) => getBlockInput.preEIP4844(chain.config, block));
+      const blocksImport = blocks.value.map((block) => getBlockInput.preDeneb(chain.config, block));
 
       await chain.processChainSegment(blocksImport, {
         // Only skip importing attestations for finalized sync. For head sync attestation are valuable.

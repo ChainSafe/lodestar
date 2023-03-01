@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import {allForks} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {JobItemQueue} from "../../util/queue/index.js";
-import {IMetrics} from "../../metrics/metrics.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import type {BeaconChain} from "../chain.js";
@@ -21,7 +20,7 @@ const QUEUE_MAX_LENGTH = 256;
 export class BlockProcessor {
   readonly jobQueue: JobItemQueue<[BlockInput[], ImportBlockOpts], void>;
 
-  constructor(chain: BeaconChain, metrics: IMetrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
+  constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
     this.jobQueue = new JobItemQueue<[BlockInput[], ImportBlockOpts], void>(
       (job, importOpts) => {
         return processBlocks.call(chain, job, {...opts, ...importOpts});

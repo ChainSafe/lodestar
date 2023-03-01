@@ -45,6 +45,98 @@
   "liveNow": false,
   "panels": [
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus_local"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "id": 54,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_discv5_discovered_status_total_count[$rate_interval])",
+          "legendFormat": "{{status}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Discovered ENR Relevancy Rate",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -140,7 +232,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "rate(lodestar_discovery_discovered_status_total_count[$rate_interval])",
@@ -235,7 +327,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "lodestar_discv5_connected_peer_count",
           "interval": "",
@@ -329,7 +421,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "sum(lodestar_discovery_dial_time_seconds_count{status=\"error\"})/sum(lodestar_discovery_dial_time_seconds_count)",
@@ -424,7 +516,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "rate(lodestar_discovery_total_dial_attempts[$rate_interval])",
@@ -519,7 +611,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(lodestar_discv5_sent_message_count[$rate_interval])",
           "interval": "",
@@ -613,7 +705,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(lodestar_discv5_rcvd_message_count[$rate_interval])",
           "interval": "",
@@ -812,7 +904,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "rate(lodestar_discovery_find_node_query_time_seconds_sum[$rate_interval])/rate(lodestar_discovery_find_node_query_time_seconds_count[$rate_interval])",
@@ -906,7 +998,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_discv5_kad_table_size",
@@ -1000,7 +1092,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "lodestar_discv5_active_session_count",
           "interval": "",
@@ -1093,7 +1185,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "sum(rate(lodestar_discovery_discovered_status_total_count{status=~\"attempt_dial|cached\"}[$rate_interval]))\n/\nsum(rate(lodestar_discovery_discovered_status_total_count{status=~\"dropped|attempt_dial|cached\"}[$rate_interval]))",
@@ -1187,7 +1279,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_discovery_cached_enrs_size",
@@ -1281,7 +1373,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "sum(rate(lodestar_discovery_discovered_status_total_count{status=~\"dropped|attempt_dial|cached\"}[$rate_interval]))\n/\nsum(rate(lodestar_discovery_discovered_status_total_count[$rate_interval]))",
@@ -1407,7 +1499,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "rate(lodestar_discovery_dial_time_seconds_sum[$rate_interval])/rate(lodestar_discovery_dial_time_seconds_count[$rate_interval])",
@@ -1607,7 +1699,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "builder",
           "expr": "discv5_worker_nodejs_heap_space_size_used_bytes",
@@ -1618,7 +1710,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "builder",
           "expr": "discv5_worker_nodejs_external_memory_bytes",
@@ -1712,7 +1804,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "builder",
           "expr": "rate(discv5_worker_nodejs_gc_duration_seconds_sum[$__rate_interval])",
@@ -1804,7 +1896,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "builder",
           "expr": "discv5_worker_nodejs_active_resources",
@@ -1897,7 +1989,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "builder",
           "expr": "discv5_worker_nodejs_eventloop_lag_seconds",
@@ -1989,7 +2081,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "builder",
           "expr": "discv5_worker_nodejs_active_handles",
@@ -2000,6 +2092,243 @@
       ],
       "title": "Active Handles",
       "type": "timeseries"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 56
+      },
+      "id": 52,
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 81
+          },
+          "id": 48,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
+              "editorMode": "code",
+              "expr": "rate(lodestar_discv5_decode_enr_error_count[$rate_interval]) / rate(lodestar_discv5_decode_enr_attempt_count[$rate_interval])",
+              "hide": false,
+              "legendFormat": "error rate",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "ENR decode error rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus_local"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "__systemRef": "hideSeriesFrom",
+                "matcher": {
+                  "id": "byNames",
+                  "options": {
+                    "mode": "exclude",
+                    "names": [
+                      "errors"
+                    ],
+                    "prefix": "All except:",
+                    "readOnly": true
+                  }
+                },
+                "properties": [
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": true
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 81
+          },
+          "id": 50,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
+              "editorMode": "code",
+              "expr": "rate(lodestar_discv5_decode_enr_error_count[$rate_interval])",
+              "legendFormat": "errors",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus_local"
+              },
+              "editorMode": "code",
+              "expr": "rate(lodestar_discv5_decode_enr_attempt_count[$rate_interval])",
+              "hide": false,
+              "legendFormat": "attempts",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "title": "ENR decode attempts",
+          "type": "timeseries"
+        }
+      ],
+      "title": "ENR decoding",
+      "type": "row"
     }
   ],
   "refresh": "10s",
@@ -2023,6 +2352,7 @@
         "name": "DS_PROMETHEUS",
         "options": [],
         "query": "prometheus",
+        "queryValue": "",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -2098,6 +2428,7 @@
           }
         ],
         "query": "1m,10m,30m,1h,6h,12h,1d,7d,14d,30d",
+        "queryValue": "",
         "refresh": 2,
         "skipUrlSync": false,
         "type": "interval"
@@ -2112,7 +2443,7 @@
             "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "beta-lg1k-hzax41"
+            "value": "unstable-lg1k-hzax41"
           }
         ],
         "hide": 0,
@@ -2123,13 +2454,26 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-24h",
     "to": "now"
   },
-  "timepicker": {},
-  "timezone": "",
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
+  "timezone": "utc",
   "title": "Lodestar - discv5",
   "uid": "lodestar_discv5",
   "version": 7,
-  "weekStart": ""
+  "weekStart": "monday"
 }

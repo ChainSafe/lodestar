@@ -2,8 +2,7 @@ import bls from "@chainsafe/bls/switchable";
 import {PointFormat, PublicKey, SecretKey} from "@chainsafe/bls/types";
 import {hash, Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {routes} from "@lodestar/api";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_SYNC_COMMITTEE,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
@@ -12,15 +11,13 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {altair, phase0, Slot, ssz, SyncPeriod} from "@lodestar/types";
+import {altair, phase0, Slot, ssz, SyncPeriod, allForks} from "@lodestar/types";
 import {SyncCommitteeFast} from "../../src/types.js";
 import {computeSigningRoot} from "../../src/utils/domain.js";
 import {getLcLoggerConsole} from "../../src/utils/logger.js";
 
 const CURRENT_SYNC_COMMITTEE_INDEX = 22;
 const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
-
-/* eslint-disable @typescript-eslint/naming-convention */
 
 /**
  * To enable debug logs run with
@@ -43,7 +40,7 @@ export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.
 }
 
 export function getSyncAggregateSigningRoot(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   syncAttestedBlockHeader: altair.LightClientHeader
 ): Uint8Array {
   const domain = config.getDomain(syncAttestedBlockHeader.beacon.slot, DOMAIN_SYNC_COMMITTEE);
@@ -60,7 +57,7 @@ export type SyncCommitteeKeys = {
   pks: PublicKey[];
   syncCommittee: altair.SyncCommittee;
   syncCommitteeFast: SyncCommitteeFast;
-  signHeader(config: IBeaconConfig, header: altair.LightClientHeader): altair.SyncAggregate;
+  signHeader(config: BeaconConfig, header: altair.LightClientHeader): altair.SyncAggregate;
   signAndAggregate(message: Uint8Array): altair.SyncAggregate;
 };
 
@@ -89,7 +86,7 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
     };
   }
 
-  function signHeader(config: IBeaconConfig, header: altair.LightClientHeader): altair.SyncAggregate {
+  function signHeader(config: BeaconConfig, header: altair.LightClientHeader): altair.SyncAggregate {
     return signAndAggregate(getSyncAggregateSigningRoot(config, header));
   }
 
@@ -111,7 +108,7 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
 /**
  * Creates LightClientUpdate that passes `assertValidLightClientUpdate` function, from mock data
  */
-export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeriod): altair.LightClientUpdate {
+export function computeLightclientUpdate(config: BeaconConfig, period: SyncPeriod): altair.LightClientUpdate {
   const updateSlot = period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
 
   const committee = getInteropSyncCommittee(period);
@@ -161,7 +158,7 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
 export function computeLightClientSnapshot(
   period: SyncPeriod
 ): {
-  snapshot: routes.lightclient.LightClientBootstrap;
+  snapshot: allForks.LightClientBootstrap;
   checkpointRoot: Uint8Array;
 } {
   const currentSyncCommittee = getInteropSyncCommittee(period).syncCommittee;

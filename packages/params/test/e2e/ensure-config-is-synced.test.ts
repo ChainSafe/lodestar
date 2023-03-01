@@ -8,7 +8,7 @@ import {loadConfigYaml} from "../yaml.js";
 // Not e2e, but slow. Run with e2e tests
 
 /** https://github.com/ethereum/consensus-specs/releases */
-const specConfigCommit = "v1.3.0-alpha.2";
+const specConfigCommit = "v1.3.0-rc.2";
 
 describe("Ensure config is synced", function () {
   this.timeout(60 * 1000);
@@ -37,7 +37,10 @@ async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: strin
   const downloadedParams = await Promise.all(
     Object.values(ForkName).map((forkName) =>
       axios({
-        url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/${forkName}.yaml`,
+        url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/${
+          // TODO eip4844: clean this up when specs are released with deneb
+          forkName === "deneb" ? "eip4844" : forkName
+        }.yaml`,
         timeout: 30 * 1000,
       }).then((response) => loadConfigYaml(response.data))
     )

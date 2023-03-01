@@ -51,6 +51,8 @@ function getObjectType(fork: ForkName, objectName: string): Type<unknown> {
   switch (objectName) {
     case "BeaconState":
       return ssz[fork].BeaconState;
+    case "BeaconBlockBody":
+      return ssz[fork].BeaconBlockBody;
     default:
       throw Error(`Unknown objectName ${objectName}`);
   }

@@ -2,14 +2,14 @@ export * from "./stateTransition.js";
 export * from "./constants/index.js";
 export * from "./util/index.js";
 export * from "./signatureSets/index.js";
-export * from "./metrics.js";
+export {BeaconStateTransitionMetrics} from "./metrics.js";
 
 export {
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
-  CachedBeaconStateEip4844,
+  CachedBeaconStateDeneb,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
   // Non-cached states
@@ -17,13 +17,19 @@ export {
   BeaconStateAltair,
   BeaconStateBellatrix,
   BeaconStateCapella,
-  BeaconStateEip4844,
+  BeaconStateDeneb,
   BeaconStateAllForks,
   BeaconStateExecutions,
 } from "./types.js";
 
 // Main state caches
-export {createCachedBeaconState, BeaconStateCache, isCachedBeaconState} from "./cache/stateCache.js";
+export {
+  createCachedBeaconState,
+  BeaconStateCache,
+  isCachedBeaconState,
+  isStateBalancesNodesPopulated,
+  isStateValidatorsNodesPopulated,
+} from "./cache/stateCache.js";
 export {EpochContext, EpochContextImmutableData, createEmptyEpochContextImmutableData} from "./cache/epochContext.js";
 export {EpochProcess, beforeProcessEpoch} from "./cache/epochProcess.js";
 
@@ -47,3 +53,4 @@ export {ExecutionPayloadStatus, DataAvailableStatus, BlockExternalData} from "./
 export {becomesNewEth1Data} from "./block/processEth1Data.js";
 // Withdrawals for new blocks
 export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
+export {executionPayloadToPayloadHeader} from "./block/processExecutionPayload.js";

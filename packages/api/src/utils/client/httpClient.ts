@@ -1,5 +1,5 @@
 import {fetch} from "cross-fetch";
-import {ErrorAborted, ILogger, TimeoutError} from "@lodestar/utils";
+import {ErrorAborted, Logger, TimeoutError} from "@lodestar/utils";
 import {ReqGeneric, RouteDef} from "../index.js";
 import {ApiClientResponse, ApiClientSuccessResponse} from "../../interfaces.js";
 import {stringifyQuery, urlJoin} from "./format.js";
@@ -84,7 +84,7 @@ export type HttpClientOptions = ({baseUrl: string} | {urls: (string | URLOpts)[]
 };
 
 export type HttpClientModules = {
-  logger?: ILogger;
+  logger?: Logger;
   metrics?: Metrics;
 };
 
@@ -94,7 +94,7 @@ export class HttpClient implements IHttpClient {
   private readonly getAbortSignal?: () => AbortSignal | undefined;
   private readonly fetch: typeof fetch;
   private readonly metrics: null | Metrics;
-  private readonly logger: null | ILogger;
+  private readonly logger: null | Logger;
 
   private readonly urlsOpts: URLOpts[] = [];
   private readonly urlsScore: number[];
@@ -149,15 +149,15 @@ export class HttpClient implements IHttpClient {
   }
 
   async json<T>(opts: FetchOpts): Promise<{status: HttpStatusCode; body: T}> {
-    return await this.requestWithBodyWithRetries<T>(opts, (res) => res.json() as Promise<T>);
+    return this.requestWithBodyWithRetries<T>(opts, (res) => res.json() as Promise<T>);
   }
 
   async request(opts: FetchOpts): Promise<{status: HttpStatusCode; body: void}> {
-    return await this.requestWithBodyWithRetries<void>(opts, async () => undefined);
+    return this.requestWithBodyWithRetries<void>(opts, async () => undefined);
   }
 
   async arrayBuffer(opts: FetchOpts): Promise<{status: HttpStatusCode; body: ArrayBuffer}> {
-    return await this.requestWithBodyWithRetries<ArrayBuffer>(opts, (res) => res.arrayBuffer());
+    return this.requestWithBodyWithRetries<ArrayBuffer>(opts, (res) => res.arrayBuffer());
   }
 
   private async requestWithBodyWithRetries<T>(

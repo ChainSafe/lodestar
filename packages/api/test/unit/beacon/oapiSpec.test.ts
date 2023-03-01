@@ -1,7 +1,7 @@
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {expect} from "chai";
-import {createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {OpenApiFile} from "../../utils/parseOpenApiSpec.js";
 import {routes} from "../../../src/beacon/index.js";
 import {ReqSerializers} from "../../../src/utils/types.js";
@@ -51,7 +51,7 @@ const getEventsReqSerializers = (): ReqSerializers<routes.events.Api, routes.eve
 });
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const config = createIChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2});
+const config = createChainForkConfig({...defaultChainConfig, ALTAIR_FORK_EPOCH: 1, BELLATRIX_FORK_EPOCH: 2});
 const reqSerializers = {
   ...routes.beacon.getReqSerializers(config),
   ...routes.config.getReqSerializers(),
@@ -110,7 +110,7 @@ describe("eventstream event data", () => {
     }
   });
 
-  const eventSerdes = routes.events.getEventSerdes();
+  const eventSerdes = routes.events.getEventSerdes(config);
   const knownTopics = new Set<string>(Object.values(routes.events.eventTypes));
 
   for (const [topic, {value}] of Object.entries(eventstreamExamples ?? {})) {

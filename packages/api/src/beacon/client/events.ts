@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {Api, BeaconEvent, routesData, getEventSerdes} from "../routes/events.js";
 import {stringifyQuery} from "../../utils/client/format.js";
 import {getEventSource} from "../../utils/client/eventSource.js";
@@ -7,8 +7,8 @@ import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 /**
  * REST HTTP client for events routes
  */
-export function getClient(_config: IChainForkConfig, baseUrl: string): Api {
-  const eventSerdes = getEventSerdes();
+export function getClient(config: ChainForkConfig, baseUrl: string): Api {
+  const eventSerdes = getEventSerdes(config);
 
   return {
     eventstream: async (topics, signal, onEvent) => {

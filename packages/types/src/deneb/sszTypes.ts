@@ -1,10 +1,13 @@
-import {ContainerType, ListCompositeType, ByteVectorType} from "@chainsafe/ssz";
+import {ContainerType, ListCompositeType, ByteVectorType, VectorCompositeType} from "@chainsafe/ssz";
 import {
   HISTORICAL_ROOTS_LIMIT,
   FIELD_ELEMENTS_PER_BLOB,
   MAX_BLOBS_PER_BLOCK,
   MAX_REQUEST_BLOCKS,
   BYTES_PER_FIELD_ELEMENT,
+  BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
+  EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+  SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
@@ -84,7 +87,7 @@ export const BeaconBlockAndBlobsSidecarByRootRequest = new ListCompositeType(Roo
 export const ExecutionPayload = new ContainerType(
   {
     ...bellatrixSsz.CommonExecutionPayloadType.fields,
-    excessDataGas: UintBn256, // New in EIP-4844
+    excessDataGas: UintBn256, // New in DENEB
     // Extra payload fields
     blockHash: Root,
     transactions: bellatrixSsz.Transactions,
@@ -96,7 +99,7 @@ export const ExecutionPayload = new ContainerType(
 export const ExecutionPayloadHeader = new ContainerType(
   {
     ...bellatrixSsz.CommonExecutionPayloadType.fields,
-    excessDataGas: UintBn256, // New in EIP-4844
+    excessDataGas: UintBn256, // New in DENEB
     blockHash: Root,
     transactionsRoot: Root,
     withdrawalsRoot: Root,
@@ -108,9 +111,9 @@ export const ExecutionPayloadHeader = new ContainerType(
 export const BeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,
-    executionPayload: ExecutionPayload, // Modified in EIP-4844
+    executionPayload: ExecutionPayload, // Modified in DENEB
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
-    blobKzgCommitments: BlobKzgCommitments, // New in EIP-4844
+    blobKzgCommitments: BlobKzgCommitments, // New in DENEB
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -118,14 +121,14 @@ export const BeaconBlockBody = new ContainerType(
 export const BeaconBlock = new ContainerType(
   {
     ...capellaSsz.BeaconBlock.fields,
-    body: BeaconBlockBody, // Modified in EIP-4844
+    body: BeaconBlockBody, // Modified in DENEB
   },
   {typeName: "BeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const SignedBeaconBlock = new ContainerType(
   {
-    message: BeaconBlock, // Modified in EIP-4844
+    message: BeaconBlock, // Modified in DENEB
     signature: BLSSignature,
   },
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
@@ -152,8 +155,8 @@ export const SignedBeaconBlockAndBlobsSidecar = new ContainerType(
 export const BlindedBeaconBlockBody = new ContainerType(
   {
     ...BeaconBlockBody.fields,
-    executionPayloadHeader: ExecutionPayloadHeader, // Modified in EIP-4844
-    blobKzgCommitments: BlobKzgCommitments, // New in EIP-4844
+    executionPayloadHeader: ExecutionPayloadHeader, // Modified in DENEB
+    blobKzgCommitments: BlobKzgCommitments, // New in DENEB
   },
   {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -161,14 +164,14 @@ export const BlindedBeaconBlockBody = new ContainerType(
 export const BlindedBeaconBlock = new ContainerType(
   {
     ...capellaSsz.BlindedBeaconBlock.fields,
-    body: BlindedBeaconBlockBody, // Modified in EIP-4844
+    body: BlindedBeaconBlockBody, // Modified in DENEB
   },
   {typeName: "BlindedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const SignedBlindedBeaconBlock = new ContainerType(
   {
-    message: BlindedBeaconBlock, // Modified in EIP-4844
+    message: BlindedBeaconBlock, // Modified in DENEB
     signature: BLSSignature,
   },
   {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
@@ -230,7 +233,7 @@ export const BeaconState = new ContainerType(
     currentSyncCommittee: altairSsz.SyncCommittee,
     nextSyncCommittee: altairSsz.SyncCommittee,
     // Execution
-    latestExecutionPayloadHeader: ExecutionPayloadHeader, // Modified in EIP-4844
+    latestExecutionPayloadHeader: ExecutionPayloadHeader, // Modified in DENEB
     // Withdrawals
     nextWithdrawalIndex: capellaSsz.BeaconState.fields.nextWithdrawalIndex,
     nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,
@@ -238,4 +241,63 @@ export const BeaconState = new ContainerType(
     historicalSummaries: capellaSsz.BeaconState.fields.historicalSummaries,
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
+);
+
+export const LightClientHeader = new ContainerType(
+  {
+    beacon: phase0Ssz.BeaconBlockHeader,
+    execution: ExecutionPayloadHeader,
+    executionBranch: new VectorCompositeType(Bytes32, EXECUTION_PAYLOAD_DEPTH),
+  },
+  {typeName: "LightClientHeader", jsonCase: "eth2"}
+);
+
+export const LightClientBootstrap = new ContainerType(
+  {
+    header: LightClientHeader,
+    currentSyncCommittee: altairSsz.SyncCommittee,
+    currentSyncCommitteeBranch: altairSsz.LightClientBootstrap.fields.currentSyncCommitteeBranch,
+  },
+  {typeName: "LightClientBootstrap", jsonCase: "eth2"}
+);
+
+export const LightClientUpdate = new ContainerType(
+  {
+    attestedHeader: LightClientHeader,
+    nextSyncCommittee: altairSsz.SyncCommittee,
+    nextSyncCommitteeBranch: altairSsz.LightClientUpdate.fields.nextSyncCommitteeBranch,
+    finalizedHeader: LightClientHeader,
+    finalityBranch: altairSsz.LightClientUpdate.fields.finalityBranch,
+    syncAggregate: altairSsz.SyncAggregate,
+    signatureSlot: Slot,
+  },
+  {typeName: "LightClientUpdate", jsonCase: "eth2"}
+);
+
+export const LightClientFinalityUpdate = new ContainerType(
+  {
+    attestedHeader: LightClientHeader,
+    finalizedHeader: LightClientHeader,
+    finalityBranch: altairSsz.LightClientFinalityUpdate.fields.finalityBranch,
+    syncAggregate: altairSsz.SyncAggregate,
+    signatureSlot: Slot,
+  },
+  {typeName: "LightClientFinalityUpdate", jsonCase: "eth2"}
+);
+
+export const LightClientOptimisticUpdate = new ContainerType(
+  {
+    attestedHeader: LightClientHeader,
+    syncAggregate: altairSsz.SyncAggregate,
+    signatureSlot: Slot,
+  },
+  {typeName: "LightClientOptimisticUpdate", jsonCase: "eth2"}
+);
+
+export const LightClientStore = new ContainerType(
+  {
+    snapshot: LightClientBootstrap,
+    validUpdates: new ListCompositeType(LightClientUpdate, EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH),
+  },
+  {typeName: "LightClientStore", jsonCase: "eth2"}
 );

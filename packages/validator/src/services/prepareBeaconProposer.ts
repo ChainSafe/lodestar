@@ -1,9 +1,9 @@
 import {Epoch, bellatrix} from "@lodestar/types";
 import {Api, ApiError, routes} from "@lodestar/api";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
-import {IClock, ILoggerVc, batchItems} from "../util/index.js";
+import {IClock, LoggerVc, batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
 
@@ -17,8 +17,8 @@ const REGISTRATION_CHUNK_SIZE = 512;
  * two epochs.
  */
 export function pollPrepareBeaconProposer(
-  config: IBeaconConfig,
-  logger: ILoggerVc,
+  config: BeaconConfig,
+  logger: LoggerVc,
   api: Api,
   clock: IClock,
   validatorStore: ValidatorStore,
@@ -66,8 +66,8 @@ export function pollPrepareBeaconProposer(
  * two epochs.
  */
 export function pollBuilderValidatorRegistration(
-  config: IBeaconConfig,
-  logger: ILoggerVc,
+  config: BeaconConfig,
+  logger: LoggerVc,
   api: Api,
   clock: IClock,
   validatorStore: ValidatorStore,

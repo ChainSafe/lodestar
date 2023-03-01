@@ -1,8 +1,8 @@
-import {readFileSync} from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {expect} from "chai";
-import {createIBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";
 import {verifyBlockSequence} from "../../../../src/sync/backfill/verify.js";
@@ -15,7 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe("backfill sync - verify block sequence", function () {
   //mainnet validators root
-  const beaconConfig = createIBeaconConfig(
+  const beaconConfig = createBeaconConfig(
     config,
     ssz.Root.fromJson("0x4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95")
   );
@@ -50,7 +50,7 @@ describe("backfill sync - verify block sequence", function () {
 
   //first 4 mainnet blocks
   function getBlocks(): phase0.SignedBeaconBlock[] {
-    const json = JSON.parse(readFileSync(path.join(__dirname, "./blocks.json"), "utf-8")) as unknown[];
+    const json = JSON.parse(fs.readFileSync(path.join(__dirname, "./blocks.json"), "utf-8")) as unknown[];
     return json.map((b) => {
       return ssz.phase0.SignedBeaconBlock.fromJson(b);
     });

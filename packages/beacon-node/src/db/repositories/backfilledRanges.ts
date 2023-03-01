@@ -1,6 +1,6 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {Slot, ssz} from "@lodestar/types";
-import {IDatabaseController, Bucket, Repository} from "@lodestar/db";
+import {DatabaseController, Bucket, Repository} from "@lodestar/db";
 import {bytesToInt} from "@lodestar/utils";
 
 /**
@@ -13,7 +13,7 @@ import {bytesToInt} from "@lodestar/utils";
  * jump directly to 800 and delete the key 1000.
  */
 export class BackfilledRanges extends Repository<Slot, Slot> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>) {
+  constructor(config: ChainForkConfig, db: DatabaseController<Uint8Array, Uint8Array>) {
     super(config, db, Bucket.backfilled_ranges, ssz.Slot);
   }
 

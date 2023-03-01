@@ -1,4 +1,4 @@
-import {allForks, capella, eip4844, Wei} from "@lodestar/types";
+import {allForks, capella, deneb, Wei, bellatrix} from "@lodestar/types";
 import {
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
@@ -18,6 +18,7 @@ import {
   dataToRootHex,
 } from "../../eth1/provider/utils.js";
 import {ExecutePayloadStatus, TransitionConfigurationV1, BlobsBundle, PayloadAttributes} from "./interface.js";
+import {WithdrawalV1} from "./payloadIdCache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -55,6 +56,17 @@ export type EngineApiRpcParamTypes = {
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
    */
   engine_getBlobsBundleV1: [QUANTITY];
+
+  /**
+   * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
+   *  */
+  engine_getPayloadBodiesByHashV1: DATA[];
+
+  /**
+   *  1. start: QUANTITY, 64 bits - Starting block number
+   *  2. count: QUANTITY, 64 bits - Number of blocks to return
+   */
+  engine_getPayloadBodiesByRangeV1: [start: QUANTITY, count: QUANTITY];
 };
 
 export type PayloadStatus = {
@@ -91,10 +103,18 @@ export type EngineApiRpcReturnTypes = {
   engine_exchangeTransitionConfigurationV1: TransitionConfigurationV1;
 
   engine_getBlobsBundleV1: BlobsBundleRpc;
+
+  engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
+
+  engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
 };
 
 type ExecutionPayloadRpcWithBlockValue = {executionPayload: ExecutionPayloadRpc; blockValue: QUANTITY};
 type ExecutionPayloadResponseV2 = ExecutionPayloadRpc | ExecutionPayloadRpcWithBlockValue;
+
+export type ExecutionPayloadBodyRpc = {transactions: DATA[]; withdrawals: WithdrawalV1[] | null};
+
+export type ExecutionPayloadBody = {transactions: bellatrix.Transaction[]; withdrawals: capella.Withdrawals | null};
 
 export type ExecutionPayloadRpc = {
   parentHash: DATA; // 32 bytes
@@ -112,7 +132,7 @@ export type ExecutionPayloadRpc = {
   blockHash: DATA; // 32 bytes
   transactions: DATA[];
   withdrawals?: WithdrawalRpc[]; // Capella hardfork
-  excessDataGas?: QUANTITY; // EIP-4844
+  excessDataGas?: QUANTITY; // DENEB
 };
 
 export type WithdrawalRpc = {
@@ -162,9 +182,9 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
     payload.withdrawals = withdrawals.map(serializeWithdrawal);
   }
 
-  // EIP-4844 adds excessDataGas to the ExecutionPayload
-  if ((data as eip4844.ExecutionPayload).excessDataGas !== undefined) {
-    payload.excessDataGas = numToQuantity((data as eip4844.ExecutionPayload).excessDataGas);
+  // DENEB adds excessDataGas to the ExecutionPayload
+  if ((data as deneb.ExecutionPayload).excessDataGas !== undefined) {
+    payload.excessDataGas = numToQuantity((data as deneb.ExecutionPayload).excessDataGas);
   }
 
   return payload;
@@ -217,14 +237,14 @@ export function parseExecutionPayload(
     (executionPayload as capella.ExecutionPayload).withdrawals = withdrawals.map((w) => deserializeWithdrawal(w));
   }
 
-  // EIP-4844 adds excessDataGas to the ExecutionPayload
-  if (ForkSeq[fork] >= ForkSeq.eip4844) {
+  // DENEB adds excessDataGas to the ExecutionPayload
+  if (ForkSeq[fork] >= ForkSeq.deneb) {
     if (data.excessDataGas == null) {
       throw Error(
-        `excessDataGas missing for ${fork} >= eip4844 executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+        `excessDataGas missing for ${fork} >= deneb executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as eip4844.ExecutionPayload).excessDataGas = quantityToBigint(data.excessDataGas);
+    (executionPayload as deneb.ExecutionPayload).excessDataGas = quantityToBigint(data.excessDataGas);
   }
 
   return {executionPayload, blockValue};
@@ -286,4 +306,29 @@ export function deserializeWithdrawal(serialized: WithdrawalRpc): capella.Withdr
     // Both CL and EL now deal in Gwei, just big-endian to little-endian conversion required
     amount: quantityToBigint(serialized.amount),
   } as capella.Withdrawal;
+}
+
+export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | null): ExecutionPayloadBody | null {
+  return data
+    ? {
+        transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
+        withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
+      }
+    : null;
+}
+
+export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null): ExecutionPayloadBodyRpc | null {
+  return data
+    ? {
+        transactions: data.transactions.map((tran) => bytesToData(tran)),
+        withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
+      }
+    : null;
+}
+
+export function assertReqSizeLimit(blockHashesReqCount: number, count: number): void {
+  if (blockHashesReqCount > count) {
+    throw new Error(`Requested blocks must not be > ${count}`);
+  }
+  return;
 }

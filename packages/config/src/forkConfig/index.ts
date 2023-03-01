@@ -1,12 +1,20 @@
-import {GENESIS_EPOCH, ForkName, SLOTS_PER_EPOCH, ForkSeq, isForkExecution, isForkBlobs} from "@lodestar/params";
+import {
+  GENESIS_EPOCH,
+  ForkName,
+  SLOTS_PER_EPOCH,
+  ForkSeq,
+  isForkLightClient,
+  isForkExecution,
+  isForkBlobs,
+} from "@lodestar/params";
 import {Slot, allForks, Version, ssz} from "@lodestar/types";
-import {IChainConfig} from "../chainConfig/index.js";
-import {IForkConfig, IForkInfo} from "./types.js";
+import {ChainConfig} from "../chainConfig/index.js";
+import {ForkConfig, ForkInfo} from "./types.js";
 
 export * from "./types.js";
 
-export function createIForkConfig(config: IChainConfig): IForkConfig {
-  const phase0: IForkInfo = {
+export function createForkConfig(config: ChainConfig): ForkConfig {
+  const phase0: ForkInfo = {
     name: ForkName.phase0,
     seq: ForkSeq.phase0,
     epoch: GENESIS_EPOCH,
@@ -15,7 +23,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     prevVersion: config.GENESIS_FORK_VERSION,
     prevForkName: ForkName.phase0,
   };
-  const altair: IForkInfo = {
+  const altair: ForkInfo = {
     name: ForkName.altair,
     seq: ForkSeq.altair,
     epoch: config.ALTAIR_FORK_EPOCH,
@@ -23,7 +31,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     prevVersion: config.GENESIS_FORK_VERSION,
     prevForkName: ForkName.phase0,
   };
-  const bellatrix: IForkInfo = {
+  const bellatrix: ForkInfo = {
     name: ForkName.bellatrix,
     seq: ForkSeq.bellatrix,
     epoch: config.BELLATRIX_FORK_EPOCH,
@@ -31,7 +39,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     prevVersion: config.ALTAIR_FORK_VERSION,
     prevForkName: ForkName.altair,
   };
-  const capella: IForkInfo = {
+  const capella: ForkInfo = {
     name: ForkName.capella,
     seq: ForkSeq.capella,
     epoch: config.CAPELLA_FORK_EPOCH,
@@ -39,9 +47,9 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     prevVersion: config.BELLATRIX_FORK_VERSION,
     prevForkName: ForkName.bellatrix,
   };
-  const eip4844: IForkInfo = {
-    name: ForkName.eip4844,
-    seq: ForkSeq.eip4844,
+  const deneb: ForkInfo = {
+    name: ForkName.deneb,
+    seq: ForkSeq.deneb,
     epoch: config.EIP4844_FORK_EPOCH,
     version: config.EIP4844_FORK_VERSION,
     prevVersion: config.CAPELLA_FORK_VERSION,
@@ -50,7 +58,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, bellatrix, capella, eip4844};
+  const forks = {phase0, altair, bellatrix, capella, deneb};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksAscendingEpochOrder = Object.values(forks);
@@ -62,7 +70,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
     forksDescendingEpochOrder,
 
     // Fork convenience methods
-    getForkInfo(slot: Slot): IForkInfo {
+    getForkInfo(slot: Slot): ForkInfo {
       const epoch = Math.floor(Math.max(slot, 0) / SLOTS_PER_EPOCH);
       // NOTE: forks must be sorted by descending epoch, latest fork first
       for (const fork of forksDescendingEpochOrder) {
@@ -95,6 +103,13 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
         throw Error(`Invalid slot=${slot} fork=${forkName} for blinded fork types`);
       }
       return ssz.allForksBlinded[forkName] as allForks.AllForksBlindedSSZTypes;
+    },
+    getLightClientForkTypes(slot: Slot): allForks.AllForksLightClientSSZTypes {
+      const forkName = this.getForkName(slot);
+      if (!isForkLightClient(forkName)) {
+        throw Error(`Invalid slot=${slot} fork=${forkName} for lightclient fork types`);
+      }
+      return ssz.allForksLightClient[forkName] as allForks.AllForksLightClientSSZTypes;
     },
     getBlobsForkTypes(slot: Slot): allForks.AllForksBlobsSSZTypes {
       const forkName = this.getForkName(slot);

@@ -1,14 +1,12 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString as b} from "@chainsafe/ssz";
-import {IChainConfig} from "../types.js";
+import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../presets/mainnet.js";
-
-/* eslint-disable max-len */
 
 // Ropsten beacon chain config:
 // https://github.com/eth-clients/merge-testnets/blob/main/ropsten-beacon-chain/config.yaml
 
-export const ropstenChainConfig: IChainConfig = {
+export const ropstenChainConfig: ChainConfig = {
   ...mainnet,
 
   CONFIG_NAME: "ropsten",

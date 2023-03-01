@@ -8,10 +8,10 @@ import {spawn, Worker} from "@chainsafe/threads";
 self = undefined;
 import bls from "@chainsafe/bls";
 import {Implementation, PointFormat} from "@chainsafe/bls/types";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
-import {IMetrics} from "../../../metrics/index.js";
+import {Metrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
@@ -20,8 +20,8 @@ import {chunkifyMaximizeChunkSize} from "./utils.js";
 import {defaultPoolSize} from "./poolSize.js";
 
 export type BlsMultiThreadWorkerPoolModules = {
-  logger: ILogger;
-  metrics: IMetrics | null;
+  logger: Logger;
+  metrics: Metrics | null;
 };
 
 export type BlsMultiThreadWorkerPoolOptions = {
@@ -55,6 +55,11 @@ const MAX_BUFFERED_SIGS = 32;
  * value needs revision
  */
 const MAX_BUFFER_WAIT_MS = 100;
+
+/**
+ * Max concurrent jobs on `canAcceptWork` status
+ */
+const MAX_JOBS_CAN_ACCEPT_WORK = 512;
 
 type WorkerApi = {
   verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult>;
@@ -96,8 +101,8 @@ type WorkerDescriptor = {
  *   sets into packages of work and send at once to a worker to distribute the latency cost
  */
 export class BlsMultiThreadWorkerPool implements IBlsVerifier {
-  private readonly logger: ILogger;
-  private readonly metrics: IMetrics | null;
+  private readonly logger: Logger;
+  private readonly metrics: Metrics | null;
 
   private readonly format: PointFormat;
   private readonly workers: WorkerDescriptor[];
@@ -110,6 +115,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   } | null = null;
   private blsVerifyAllMultiThread: boolean;
   private closed = false;
+  private workersBusy = 0;
 
   constructor(options: BlsMultiThreadWorkerPoolOptions, modules: BlsMultiThreadWorkerPoolModules) {
     const {logger, metrics} = modules;
@@ -127,8 +133,19 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.workers = this.createWorkers(implementation, defaultPoolSize);
 
     if (metrics) {
-      metrics.blsThreadPool.queueLength.addCollect(() => metrics.blsThreadPool.queueLength.set(this.jobs.length));
+      metrics.blsThreadPool.queueLength.addCollect(() => {
+        metrics.blsThreadPool.queueLength.set(this.jobs.length);
+        metrics.blsThreadPool.workersBusy.set(this.workersBusy);
+      });
     }
+  }
+
+  canAcceptWork(): boolean {
+    return (
+      this.workersBusy < defaultPoolSize &&
+      // TODO: Should also bound the jobs queue?
+      this.jobs.length < MAX_JOBS_CAN_ACCEPT_WORK
+    );
   }
 
   async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
@@ -252,7 +269,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       throw this.workers[0].status.error;
     }
 
-    return await new Promise<boolean>((resolve, reject) => {
+    return new Promise<boolean>((resolve, reject) => {
       const job = {resolve, reject, addedTimeMs: Date.now(), workReq};
 
       // Append batchable sets to `bufferedJobs`, starting a timeout to push them into `jobs`.
@@ -310,6 +327,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
     const workerApi = worker.status.workerApi;
     worker.status = {code: WorkerStatusCode.running, workerApi};
+    this.workersBusy++;
 
     try {
       let startedSigSets = 0;
@@ -375,6 +393,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     }
 
     worker.status = {code: WorkerStatusCode.idle, workerApi};
+    this.workersBusy--;
 
     // Potentially run a new job
     setTimeout(this.runJob, 0);

@@ -83,7 +83,7 @@ export type LodestarGitData = {
 /**
  * A collection of metrics used throughout the Gossipsub behaviour.
  */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) {
   // Using function style instead of class to prevent having to re-declare all MetricsPrometheus types.
 
@@ -406,6 +406,15 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
         name: "validator_db_write_items_total",
         help: "Total count of db write items",
         labelNames: ["bucket"],
+      }),
+      dbSizeTotal: register.gauge({
+        name: "validator_db_size_bytes_total",
+        help: "Approximate number of bytes of file system space used by db",
+      }),
+      dbApproximateSizeTime: register.histogram({
+        name: "validator_db_approximate_size_time_seconds",
+        help: "Time to approximate db size in seconds",
+        buckets: [0.0001, 0.001, 0.01, 0.1, 1],
       }),
     },
 

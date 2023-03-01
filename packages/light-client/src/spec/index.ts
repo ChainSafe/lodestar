@@ -1,29 +1,30 @@
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {UPDATE_TIMEOUT} from "@lodestar/params";
-import {altair, Slot} from "@lodestar/types";
+import {Slot, allForks} from "@lodestar/types";
 import {computeSyncPeriodAtSlot} from "../utils/index.js";
 import {getSyncCommitteeAtPeriod, processLightClientUpdate, ProcessUpdateOpts} from "./processLightClientUpdate.js";
 import {ILightClientStore, LightClientStore, LightClientStoreEvents} from "./store.js";
 import {ZERO_FINALITY_BRANCH, ZERO_HEADER, ZERO_NEXT_SYNC_COMMITTEE_BRANCH, ZERO_SYNC_COMMITTEE} from "./utils.js";
 
 export {isBetterUpdate, toLightClientUpdateSummary, LightClientUpdateSummary} from "./isBetterUpdate.js";
+export {upgradeLightClientHeader} from "./utils.js";
 
 export class LightclientSpec {
   readonly store: ILightClientStore;
 
   constructor(
-    config: IBeaconConfig,
+    config: BeaconConfig,
     private readonly opts: ProcessUpdateOpts & LightClientStoreEvents,
-    bootstrap: altair.LightClientBootstrap
+    bootstrap: allForks.LightClientBootstrap
   ) {
     this.store = new LightClientStore(config, bootstrap, opts);
   }
 
-  onUpdate(currentSlot: Slot, update: altair.LightClientUpdate): void {
+  onUpdate(currentSlot: Slot, update: allForks.LightClientUpdate): void {
     processLightClientUpdate(this.store, currentSlot, this.opts, update);
   }
 
-  onFinalityUpdate(currentSlot: Slot, finalityUpdate: altair.LightClientFinalityUpdate): void {
+  onFinalityUpdate(currentSlot: Slot, finalityUpdate: allForks.LightClientFinalityUpdate): void {
     this.onUpdate(currentSlot, {
       attestedHeader: finalityUpdate.attestedHeader,
       nextSyncCommittee: ZERO_SYNC_COMMITTEE,
@@ -35,7 +36,7 @@ export class LightclientSpec {
     });
   }
 
-  onOptimisticUpdate(currentSlot: Slot, optimisticUpdate: altair.LightClientOptimisticUpdate): void {
+  onOptimisticUpdate(currentSlot: Slot, optimisticUpdate: allForks.LightClientOptimisticUpdate): void {
     this.onUpdate(currentSlot, {
       attestedHeader: optimisticUpdate.attestedHeader,
       nextSyncCommittee: ZERO_SYNC_COMMITTEE,

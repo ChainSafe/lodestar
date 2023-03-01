@@ -4,7 +4,6 @@ import {ArchiverOpts} from "./archiver/index.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
 
-// eslint-disable-next-line @typescript-eslint/ban-types
 export type IChainOptions = BlockProcessOpts &
   ForkChoiceOpts &
   ArchiverOpts &
@@ -16,10 +15,6 @@ export type IChainOptions = BlockProcessOpts &
     skipCreateStateCacheIfAvailable?: boolean;
     suggestedFeeRecipient: string;
     maxSkipSlots?: number;
-    /** Window to inspect missed slots for enabling/disabling builder circuit breaker */
-    faultInspectionWindow?: number;
-    /** Number of missed slots allowed in the faultInspectionWindow for builder circuit*/
-    allowedFaults?: number;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
     /** Max number of produced blobs by local validators to cache */
@@ -61,4 +56,5 @@ export const defaultChainOptions: IChainOptions = {
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   assertCorrectProgressiveBalances: false,
+  archiveStateEpochFrequency: 1024,
 };

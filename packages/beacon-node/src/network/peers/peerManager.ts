@@ -3,17 +3,17 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {allForks, altair, phase0} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
-import {IMetrics} from "../../metrics/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {NetworkEvent, INetworkEventBus} from "../events.js";
 import {Libp2p} from "../interface.js";
 import {IReqRespBeaconNode, ReqRespMethod, RequestTypedContainer} from "../reqresp/ReqRespBeaconNode.js";
 import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
-import {ISubnetsService} from "../subnets/index.js";
+import {SubnetsService} from "../subnets/index.js";
 import {SubnetType} from "../metadata.js";
 import {Eth2Gossipsub} from "../gossip/gossipsub.js";
 import {PeersData, PeerData} from "./peersData.js";
@@ -82,14 +82,14 @@ export type PeerManagerOpts = {
 
 export type PeerManagerModules = {
   libp2p: Libp2p;
-  logger: ILogger;
-  metrics: IMetrics | null;
+  logger: Logger;
+  metrics: Metrics | null;
   reqResp: IReqRespBeaconNode;
   gossip: Eth2Gossipsub;
-  attnetsService: ISubnetsService;
-  syncnetsService: ISubnetsService;
+  attnetsService: SubnetsService;
+  syncnetsService: SubnetsService;
   chain: IBeaconChain;
-  config: IBeaconConfig;
+  config: BeaconConfig;
   peerRpcScores: IPeerRpcScoreStore;
   networkEventBus: INetworkEventBus;
   peersData: PeersData;
@@ -113,14 +113,14 @@ enum RelevantPeerStatus {
  */
 export class PeerManager {
   private libp2p: Libp2p;
-  private logger: ILogger;
-  private metrics: IMetrics | null;
+  private logger: Logger;
+  private metrics: Metrics | null;
   private reqResp: IReqRespBeaconNode;
   private gossipsub: Eth2Gossipsub;
-  private attnetsService: ISubnetsService;
-  private syncnetsService: ISubnetsService;
+  private attnetsService: SubnetsService;
+  private syncnetsService: SubnetsService;
   private chain: IBeaconChain;
-  private config: IBeaconConfig;
+  private config: BeaconConfig;
   private peerRpcScores: IPeerRpcScoreStore;
   /** If null, discovery is disabled */
   private discovery: PeerDiscovery | null;
@@ -629,7 +629,7 @@ export class PeerManager {
   }
 
   /** Register peer count metrics */
-  private async runPeerCountMetrics(metrics: IMetrics): Promise<void> {
+  private async runPeerCountMetrics(metrics: Metrics): Promise<void> {
     let total = 0;
 
     const peersByDirection = new Map<string, number>();

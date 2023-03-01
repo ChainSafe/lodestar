@@ -1,9 +1,10 @@
-import {altair, ssz} from "@lodestar/types";
+import {ssz, allForks} from "@lodestar/types";
+import {isForkLightClient} from "@lodestar/params";
 import {Encoding, ProtocolDefinitionGenerator} from "../types.js";
 import {getContextBytesLightclient} from "./utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const LightClientOptimisticUpdate: ProtocolDefinitionGenerator<null, altair.LightClientOptimisticUpdate> = (
+export const LightClientOptimisticUpdate: ProtocolDefinitionGenerator<null, allForks.LightClientOptimisticUpdate> = (
   modules,
   handler
 ) => {
@@ -13,7 +14,10 @@ export const LightClientOptimisticUpdate: ProtocolDefinitionGenerator<null, alta
     encoding: Encoding.SSZ_SNAPPY,
     handler,
     requestType: () => null,
-    responseType: () => ssz.altair.LightClientOptimisticUpdate,
+    responseType: (forkName) =>
+      isForkLightClient(forkName)
+        ? ssz.allForksLightClient[forkName].LightClientOptimisticUpdate
+        : ssz.altair.LightClientOptimisticUpdate,
     contextBytes: getContextBytesLightclient((update) => modules.config.getForkName(update.signatureSlot), modules),
     inboundRateLimits: {
       // Optimistic updates should not be requested more than once per slot.

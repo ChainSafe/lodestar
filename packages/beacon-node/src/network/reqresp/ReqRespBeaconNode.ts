@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Libp2p} from "libp2p";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   collectExactOne,
@@ -14,9 +14,9 @@ import {
 } from "@lodestar/reqresp";
 import {ReqRespOpts} from "@lodestar/reqresp/lib/ReqResp.js";
 import * as reqRespProtocols from "@lodestar/reqresp/protocols";
-import {allForks, altair, eip4844, phase0, Root} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
-import {IMetrics} from "../../metrics/metrics.js";
+import {allForks, altair, deneb, phase0, Root} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
+import {Metrics} from "../../metrics/metrics.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
 import {PeersData} from "../peers/peersData.js";
@@ -40,9 +40,9 @@ type ProtocolDefinitionAny = ProtocolDefinition<any, any>;
 export interface ReqRespBeaconNodeModules {
   libp2p: Libp2p;
   peersData: PeersData;
-  logger: ILogger;
-  config: IBeaconConfig;
-  metrics: IMetrics | null;
+  logger: Logger;
+  config: BeaconConfig;
+  metrics: Metrics | null;
   reqRespHandlers: ReqRespHandlers;
   metadata: MetadataController;
   peerRpcScores: IPeerRpcScoreStore;
@@ -67,8 +67,8 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   /** Track registered fork to only send to known protocols */
   private currentRegisteredFork: ForkSeq = ForkSeq.phase0;
 
-  private readonly config: IBeaconConfig;
-  protected readonly logger: ILogger;
+  private readonly config: BeaconConfig;
+  protected readonly logger: Logger;
 
   constructor(modules: ReqRespBeaconNodeModules, options: ReqRespBeaconNodeOpts = {}) {
     const {reqRespHandlers, networkEventBus, peersData, peerRpcScores, metadata, metrics, logger} = modules;
@@ -84,6 +84,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
           logger.debug("Do not serve request due to rate limit", {peerId: peerId.toString()});
           peerRpcScores.applyAction(peerId, PeerAction.Fatal, "rate_limit_rpc");
           metrics?.reqResp.rateLimitErrors.inc({method});
+        },
+        getPeerLogMetadata(peerId) {
+          return peersData.getPeerKind(peerId);
         },
       }
     );
@@ -201,9 +204,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     );
   }
 
-  async lightClientBootstrap(peerId: PeerId, request: Root): Promise<altair.LightClientBootstrap> {
+  async lightClientBootstrap(peerId: PeerId, request: Root): Promise<allForks.LightClientBootstrap> {
     return collectExactOne(
-      this.sendRequest<Root, altair.LightClientBootstrap>(
+      this.sendRequest<Root, allForks.LightClientBootstrap>(
         peerId,
         ReqRespMethod.LightClientBootstrap,
         [Version.V1],
@@ -212,9 +215,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     );
   }
 
-  async lightClientOptimisticUpdate(peerId: PeerId): Promise<altair.LightClientOptimisticUpdate> {
+  async lightClientOptimisticUpdate(peerId: PeerId): Promise<allForks.LightClientOptimisticUpdate> {
     return collectExactOne(
-      this.sendRequest<null, altair.LightClientOptimisticUpdate>(
+      this.sendRequest<null, allForks.LightClientOptimisticUpdate>(
         peerId,
         ReqRespMethod.LightClientOptimisticUpdate,
         [Version.V1],
@@ -223,9 +226,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     );
   }
 
-  async lightClientFinalityUpdate(peerId: PeerId): Promise<altair.LightClientFinalityUpdate> {
+  async lightClientFinalityUpdate(peerId: PeerId): Promise<allForks.LightClientFinalityUpdate> {
     return collectExactOne(
-      this.sendRequest<null, altair.LightClientFinalityUpdate>(
+      this.sendRequest<null, allForks.LightClientFinalityUpdate>(
         peerId,
         ReqRespMethod.LightClientFinalityUpdate,
         [Version.V1],
@@ -237,9 +240,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   async lightClientUpdatesByRange(
     peerId: PeerId,
     request: altair.LightClientUpdatesByRange
-  ): Promise<altair.LightClientUpdate[]> {
+  ): Promise<allForks.LightClientUpdate[]> {
     return collectMaxResponse(
-      this.sendRequest<altair.LightClientUpdatesByRange, altair.LightClientUpdate>(
+      this.sendRequest<altair.LightClientUpdatesByRange, allForks.LightClientUpdate>(
         peerId,
         ReqRespMethod.LightClientUpdatesByRange,
         [Version.V1],
@@ -251,10 +254,10 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
 
   async blobsSidecarsByRange(
     peerId: PeerId,
-    request: eip4844.BlobsSidecarsByRangeRequest
-  ): Promise<eip4844.BlobsSidecar[]> {
+    request: deneb.BlobsSidecarsByRangeRequest
+  ): Promise<deneb.BlobsSidecar[]> {
     return collectMaxResponse(
-      this.sendRequest<eip4844.BlobsSidecarsByRangeRequest, eip4844.BlobsSidecar>(
+      this.sendRequest<deneb.BlobsSidecarsByRangeRequest, deneb.BlobsSidecar>(
         peerId,
         ReqRespMethod.BlobsSidecarsByRange,
         [Version.V1],
@@ -266,10 +269,10 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
 
   async beaconBlockAndBlobsSidecarByRoot(
     peerId: PeerId,
-    request: eip4844.BeaconBlockAndBlobsSidecarByRootRequest
-  ): Promise<eip4844.SignedBeaconBlockAndBlobsSidecar[]> {
+    request: deneb.BeaconBlockAndBlobsSidecarByRootRequest
+  ): Promise<deneb.SignedBeaconBlockAndBlobsSidecar[]> {
     return collectMaxResponse(
-      this.sendRequest<eip4844.BeaconBlockAndBlobsSidecarByRootRequest, eip4844.SignedBeaconBlockAndBlobsSidecar>(
+      this.sendRequest<deneb.BeaconBlockAndBlobsSidecarByRootRequest, deneb.SignedBeaconBlockAndBlobsSidecar>(
         peerId,
         ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot,
         [Version.V1],
@@ -316,7 +319,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
       );
     }
 
-    if (ForkSeq[fork] >= ForkSeq.eip4844) {
+    if (ForkSeq[fork] >= ForkSeq.deneb) {
       protocols.push(
         reqRespProtocols.BeaconBlockAndBlobsSidecarByRoot(
           modules,

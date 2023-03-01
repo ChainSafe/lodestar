@@ -1,24 +1,23 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {capella, altair, phase0, ssz} from "@lodestar/types";
+import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {capella, phase0, ssz, allForks} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {getReqRespHandlers, Network} from "../../../src/network/index.js";
-import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
+import {getReqRespHandlers, Network, NetworkInitModules} from "../../../src/network/index.js";
+import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 import {GossipType, GossipHandlers} from "../../../src/network/gossip/index.js";
 
 import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
-import {createNode} from "../../utils/network.js";
+import {createNetworkModules, connect, onPeerConnect} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
-import {connect, onPeerConnect} from "../../utils/network.js";
 import {testLogger} from "../../utils/logger.js";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
-const opts: INetworkOptions = {
+const opts: NetworkOptions = {
   ...defaultNetworkOptions,
   maxPeers: 1,
   targetPeers: 1,
@@ -26,11 +25,12 @@ const opts: INetworkOptions = {
   localMultiaddrs: [],
   discv5FirstQueryDelayMs: 0,
   discv5: null,
+  skipParamsLog: true,
 };
 
 // Schedule all forks at ALTAIR_FORK_EPOCH to avoid generating the pubkeys cache
 /* eslint-disable @typescript-eslint/naming-convention */
-const config = createIChainForkConfig({
+const config = createChainForkConfig({
   ...defaultChainConfig,
   ALTAIR_FORK_EPOCH: 1,
   BELLATRIX_FORK_EPOCH: 1,
@@ -64,7 +64,7 @@ describe("gossipsub", function () {
       },
     });
 
-    const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
+    const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
@@ -84,28 +84,32 @@ describe("gossipsub", function () {
     const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = gossipHandlersPartial as GossipHandlers;
 
-    const [libp2pA, libp2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr)]);
     const loggerA = testLogger("A");
     const loggerB = testLogger("B");
 
-    const modules = {
+    const modules: Omit<NetworkInitModules, "opts" | "peerId" | "logger"> = {
       config: beaconConfig,
       chain,
-      db,
       reqRespHandlers,
       gossipHandlers,
       signal: controller.signal,
       metrics: null,
     };
-    const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: loggerA});
-    const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: loggerB});
-
-    await Promise.all([netA.start(), netB.start()]);
+    const netA = await Network.init({
+      ...modules,
+      ...(await createNetworkModules(multiaddr, undefined, opts)),
+      logger: loggerA,
+    });
+    const netB = await Network.init({
+      ...modules,
+      ...(await createNetworkModules(multiaddr, undefined, opts)),
+      logger: loggerB,
+    });
 
     afterEachCallbacks.push(async () => {
       await chain.close();
       controller.abort();
-      await Promise.all([netA.stop(), netB.stop()]);
+      await Promise.all([netA.close(), netB.close()]);
       sinon.restore();
     });
 
@@ -126,8 +130,8 @@ describe("gossipsub", function () {
     expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
@@ -158,8 +162,8 @@ describe("gossipsub", function () {
     expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
@@ -205,8 +209,8 @@ describe("gossipsub", function () {
     expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
@@ -225,8 +229,8 @@ describe("gossipsub", function () {
   });
 
   it("Publish and receive a LightClientOptimisticUpdate", async function () {
-    let onLightClientOptimisticUpdate: (ou: altair.LightClientOptimisticUpdate) => void;
-    const onLightClientOptimisticUpdatePromise = new Promise<altair.LightClientOptimisticUpdate>(
+    let onLightClientOptimisticUpdate: (ou: allForks.LightClientOptimisticUpdate) => void;
+    const onLightClientOptimisticUpdatePromise = new Promise<allForks.LightClientOptimisticUpdate>(
       (resolve) => (onLightClientOptimisticUpdate = resolve)
     );
 
@@ -240,8 +244,8 @@ describe("gossipsub", function () {
     expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
@@ -252,7 +256,7 @@ describe("gossipsub", function () {
       }
     }
 
-    const lightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+    const lightClientOptimisticUpdate = ssz.capella.LightClientOptimisticUpdate.defaultValue();
     lightClientOptimisticUpdate.signatureSlot = START_SLOT;
     await netA.gossip.publishLightClientOptimisticUpdate(lightClientOptimisticUpdate);
 
@@ -261,8 +265,8 @@ describe("gossipsub", function () {
   });
 
   it("Publish and receive a LightClientFinalityUpdate", async function () {
-    let onLightClientFinalityUpdate: (fu: altair.LightClientFinalityUpdate) => void;
-    const onLightClientFinalityUpdatePromise = new Promise<altair.LightClientFinalityUpdate>(
+    let onLightClientFinalityUpdate: (fu: allForks.LightClientFinalityUpdate) => void;
+    const onLightClientFinalityUpdatePromise = new Promise<allForks.LightClientFinalityUpdate>(
       (resolve) => (onLightClientFinalityUpdate = resolve)
     );
 
@@ -276,8 +280,8 @@ describe("gossipsub", function () {
     expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
@@ -288,7 +292,7 @@ describe("gossipsub", function () {
       }
     }
 
-    const lightClientFinalityUpdate = ssz.altair.LightClientFinalityUpdate.defaultValue();
+    const lightClientFinalityUpdate = ssz.capella.LightClientFinalityUpdate.defaultValue();
     lightClientFinalityUpdate.signatureSlot = START_SLOT;
     await netA.gossip.publishLightClientFinalityUpdate(lightClientFinalityUpdate);
 

@@ -9,8 +9,8 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   // This constant can also be derived from existing constants so it's not critical.
   // PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT]
   "PARTICIPATION_FLAG_WEIGHTS",
-  // TODO EIP-4844: This constant was added then removed on a spec re-write.
-  // When developing eip-4844 branch the tracked version still doesn't have released the removal
+  // TODO DENEB: This constant was added then removed on a spec re-write.
+  // When developing DENEB branch the tracked version still doesn't have released the removal
   "DOMAIN_BLOBS_SIDECAR",
 ]);
 

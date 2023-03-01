@@ -194,7 +194,6 @@ export class AggregatedAttestationPool {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 interface AttestationWithIndex {
   attestation: phase0.Attestation;
   trueBitsCount: number;

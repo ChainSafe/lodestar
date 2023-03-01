@@ -1,6 +1,6 @@
 global:
-  scrape_interval: 20s
-  scrape_timeout: 20s
+  scrape_interval: 5s
+  scrape_timeout: 5s
 
 # Tags (values starting with #) have to be replaced in the Dockerfile with sed
 # Modified datasource to work with a network_mode: host

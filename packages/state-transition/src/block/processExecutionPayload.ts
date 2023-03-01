@@ -1,4 +1,4 @@
-import {ssz, allForks, capella, eip4844} from "@lodestar/types";
+import {ssz, allForks, capella, deneb} from "@lodestar/types";
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
 import {ForkSeq} from "@lodestar/params";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
@@ -61,10 +61,20 @@ export function processExecutionPayload(
     }
   }
 
-  // For blinded or full payload -> return common header
-  const transactionsRoot = isExecutionPayload(payload)
-    ? ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions)
-    : payload.transactionsRoot;
+  const payloadHeader = isExecutionPayload(payload) ? executionPayloadToPayloadHeader(fork, payload) : payload;
+
+  // TODO Deneb: Types are not happy by default. Since it's a generic allForks type going through ViewDU
+  // transformation then into allForks, probably some weird intersection incompatibility happens
+  state.latestExecutionPayloadHeader = state.config
+    .getExecutionForkTypes(state.slot)
+    .ExecutionPayloadHeader.toViewDU(payloadHeader) as typeof state.latestExecutionPayloadHeader;
+}
+
+export function executionPayloadToPayloadHeader(
+  fork: ForkSeq,
+  payload: allForks.ExecutionPayload
+): allForks.ExecutionPayloadHeader {
+  const transactionsRoot = ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions);
 
   const bellatrixPayloadFields: allForks.ExecutionPayloadHeader = {
     parentHash: payload.parentHash,
@@ -89,16 +99,12 @@ export function processExecutionPayload(
     );
   }
 
-  if (fork >= ForkSeq.eip4844) {
+  if (fork >= ForkSeq.deneb) {
     // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
-    (bellatrixPayloadFields as eip4844.ExecutionPayloadHeader).excessDataGas = (payload as
-      | eip4844.ExecutionPayloadHeader
-      | eip4844.ExecutionPayload).excessDataGas;
+    (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).excessDataGas = (payload as
+      | deneb.ExecutionPayloadHeader
+      | deneb.ExecutionPayload).excessDataGas;
   }
 
-  // TODO EIP-4844: Types are not happy by default. Since it's a generic allForks type going through ViewDU
-  // transformation then into allForks, probably some weird intersection incompatibility happens
-  state.latestExecutionPayloadHeader = state.config
-    .getExecutionForkTypes(state.slot)
-    .ExecutionPayloadHeader.toViewDU(bellatrixPayloadFields) as typeof state.latestExecutionPayloadHeader;
+  return bellatrixPayloadFields;
 }

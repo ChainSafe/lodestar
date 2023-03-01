@@ -1,7 +1,7 @@
 import {ssz, allForks, bellatrix, Slot, Root, BLSPubkey} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ForkName, isForkExecution, isForkBlobs} from "@lodestar/params";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 
 import {
   ReturnTypes,
@@ -72,7 +72,7 @@ export type ReqTypes = {
   submitBlindedBlockV2: {body: unknown};
 };
 
-export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api, ReqTypes> {
+export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, ReqTypes> {
   return {
     status: reqEmpty,
     registerValidator: reqOnlyBody(ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1), Schema.ObjectArray),
@@ -101,7 +101,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     submitBlindedBlockV2: WithVersion((fork: ForkName) =>
       isForkBlobs(fork)
         ? ssz.allForksBlobs[fork].SignedBeaconBlockAndBlobsSidecar
-        : ssz.eip4844.SignedBeaconBlockAndBlobsSidecar
+        : ssz.deneb.SignedBeaconBlockAndBlobsSidecar
     ),
   };
 }

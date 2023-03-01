@@ -1,8 +1,8 @@
 import {
-  IChainConfig,
-  createIChainForkConfig,
-  createIChainConfig,
-  IChainForkConfig,
+  ChainConfig,
+  createChainForkConfig,
+  createChainConfig,
+  ChainForkConfig,
   chainConfigFromJson,
 } from "@lodestar/config";
 import {readFile} from "../util/index.js";
@@ -11,23 +11,23 @@ import {
   parseBeaconParamsArgs,
   parseTerminalPowArgs,
   ITerminalPowArgs,
-  IGlobalArgs,
+  GlobalArgs,
   defaultNetwork,
 } from "../options/index.js";
 import {IBeaconParamsUnparsed} from "./types.js";
 
-interface IBeaconParamsArgs {
+type BeaconParamsArgs = {
   network?: NetworkName;
   paramsFile?: string;
   additionalParamsCli: IBeaconParamsUnparsed;
-}
+};
 
 /**
  * Convenience method to parse yargs CLI args and call getBeaconParams
  * @see getBeaconConfig
  */
-export function getBeaconConfigFromArgs(args: IGlobalArgs): {config: IChainForkConfig; network: string} {
-  const config = createIChainForkConfig(getBeaconParamsFromArgs(args));
+export function getBeaconConfigFromArgs(args: GlobalArgs): {config: ChainForkConfig; network: string} {
+  const config = createChainForkConfig(getBeaconParamsFromArgs(args));
   return {
     config,
     network: args.network ?? config.CONFIG_NAME ?? defaultNetwork,
@@ -38,7 +38,7 @@ export function getBeaconConfigFromArgs(args: IGlobalArgs): {config: IChainForkC
  * Convenience method to parse yargs CLI args and call getBeaconParams
  * @see getBeaconParams
  */
-export function getBeaconParamsFromArgs(args: IGlobalArgs): IChainConfig {
+export function getBeaconParamsFromArgs(args: GlobalArgs): ChainConfig {
   return getBeaconParams({
     network: args.network,
     paramsFile: args.paramsFile,
@@ -50,11 +50,11 @@ export function getBeaconParamsFromArgs(args: IGlobalArgs): IChainConfig {
 }
 
 /**
- * Initializes IBeaconConfig with params
+ * Initializes BeaconConfig with params
  * @see getBeaconParams
  */
-export function getBeaconConfig(args: IBeaconParamsArgs): IChainForkConfig {
-  return createIChainForkConfig(getBeaconParams(args));
+export function getBeaconConfig(args: BeaconParamsArgs): ChainForkConfig {
+  return createChainForkConfig(getBeaconParams(args));
 }
 
 /**
@@ -63,17 +63,15 @@ export function getBeaconConfig(args: IBeaconParamsArgs): IChainForkConfig {
  * - existing params file
  * - CLI flags
  */
-export function getBeaconParams({network, paramsFile, additionalParamsCli}: IBeaconParamsArgs): IChainConfig {
+export function getBeaconParams({network, paramsFile, additionalParamsCli}: BeaconParamsArgs): ChainConfig {
   // Default network params
-  const networkParams: Partial<IChainConfig> = network ? getNetworkBeaconParams(network) : {};
+  const networkParams: Partial<ChainConfig> = network ? getNetworkBeaconParams(network) : {};
   // Existing user custom params from file
-  const fileParams: Partial<IChainConfig> = paramsFile
-    ? parsePartialIChainConfigJson(readBeaconParams(paramsFile))
-    : {};
+  const fileParams: Partial<ChainConfig> = paramsFile ? parsePartialChainConfigJson(readBeaconParams(paramsFile)) : {};
   // Params from CLI flags
-  const cliParams: Partial<IChainConfig> = parsePartialIChainConfigJson(additionalParamsCli);
+  const cliParams: Partial<ChainConfig> = parsePartialChainConfigJson(additionalParamsCli);
 
-  return createIChainConfig({
+  return createChainConfig({
     ...networkParams,
     ...fileParams,
     ...cliParams,
@@ -84,6 +82,6 @@ function readBeaconParams(filepath: string): IBeaconParamsUnparsed {
   return readFile(filepath) ?? {};
 }
 
-export function parsePartialIChainConfigJson(input: Record<string, unknown>): Partial<IChainConfig> {
+export function parsePartialChainConfigJson(input: Record<string, unknown>): Partial<ChainConfig> {
   return chainConfigFromJson(input);
 }

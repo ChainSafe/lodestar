@@ -7,7 +7,6 @@ import {unshuffleList} from "../../../src/index.js";
 // 4000000  1.5617 s   4.9690 s  (x3)
 
 describe("shuffle list", () => {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const seed = new Uint8Array([42, 32]);
 
   for (const listSize of [

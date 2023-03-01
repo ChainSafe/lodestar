@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
-import {IChainConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {fromHex} from "@lodestar/utils";
 
 import {linspace} from "../../util/numpy.js";
@@ -17,7 +17,7 @@ import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from
 /**
  * Binds return types to Ethereum JSON RPC methods
  */
-interface IEthJsonRpcReturnTypes {
+type EthJsonRpcReturnTypes = {
   eth_getBlockByNumber: EthJsonRpcBlockRaw | null;
   eth_getBlockByHash: EthJsonRpcBlockRaw | null;
   eth_blockNumber: string;
@@ -33,7 +33,7 @@ interface IEthJsonRpcReturnTypes {
     data: string;
     topics: string[];
   }[];
-}
+};
 
 // Define static options once to prevent extra allocations
 const getBlocksByNumberOpts: ReqOpts = {routeId: "getBlockByNumber_batched"};
@@ -48,7 +48,7 @@ export class Eth1Provider implements IEth1Provider {
   private readonly rpc: JsonRpcHttpClient;
 
   constructor(
-    config: Pick<IChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
+    config: Pick<ChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
     opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls" | "jwtSecretHex">,
     signal?: AbortSignal,
     metrics?: JsonRpcHttpClientMetrics | null
@@ -90,7 +90,7 @@ export class Eth1Provider implements IEth1Provider {
    */
   async getBlocksByNumber(fromBlock: number, toBlock: number): Promise<EthJsonRpcBlockRaw[]> {
     const method = "eth_getBlockByNumber";
-    const blocksArr = await this.rpc.fetchBatch<IEthJsonRpcReturnTypes[typeof method]>(
+    const blocksArr = await this.rpc.fetchBatch<EthJsonRpcReturnTypes[typeof method]>(
       linspace(fromBlock, toBlock).map((blockNumber) => ({method, params: [numToQuantity(blockNumber), false]})),
       getBlocksByNumberOpts
     );
@@ -104,7 +104,7 @@ export class Eth1Provider implements IEth1Provider {
   async getBlockByNumber(blockNumber: number | "latest"): Promise<EthJsonRpcBlockRaw | null> {
     const method = "eth_getBlockByNumber";
     const blockNumberHex = typeof blockNumber === "string" ? blockNumber : numToQuantity(blockNumber);
-    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
+    return this.rpc.fetch<EthJsonRpcReturnTypes[typeof method]>(
       // false = include only transaction roots, not full objects
       {method, params: [blockNumberHex, false]},
       getBlockByNumberOpts
@@ -113,7 +113,7 @@ export class Eth1Provider implements IEth1Provider {
 
   async getBlockByHash(blockHashHex: string): Promise<EthJsonRpcBlockRaw | null> {
     const method = "eth_getBlockByHash";
-    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
+    return this.rpc.fetch<EthJsonRpcReturnTypes[typeof method]>(
       // false = include only transaction roots, not full objects
       {method, params: [blockHashHex, false]},
       getBlockByHashOpts
@@ -122,7 +122,7 @@ export class Eth1Provider implements IEth1Provider {
 
   async getBlockNumber(): Promise<number> {
     const method = "eth_blockNumber";
-    const blockNumberRaw = await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
+    const blockNumberRaw = await this.rpc.fetch<EthJsonRpcReturnTypes[typeof method]>(
       {method, params: []},
       getBlockNumberOpts
     );
@@ -131,7 +131,7 @@ export class Eth1Provider implements IEth1Provider {
 
   async getCode(address: string): Promise<string> {
     const method = "eth_getCode";
-    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>({method, params: [address, "latest"]});
+    return this.rpc.fetch<EthJsonRpcReturnTypes[typeof method]>({method, params: [address, "latest"]});
   }
 
   async getLogs(options: {
@@ -146,7 +146,7 @@ export class Eth1Provider implements IEth1Provider {
       fromBlock: numToQuantity(options.fromBlock),
       toBlock: numToQuantity(options.toBlock),
     };
-    const logsRaw = await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>(
+    const logsRaw = await this.rpc.fetch<EthJsonRpcReturnTypes[typeof method]>(
       {method, params: [hexOptions]},
       getLogsOpts
     );

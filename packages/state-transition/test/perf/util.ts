@@ -3,7 +3,7 @@ import {allForks, phase0, ssz, Slot, altair} from "@lodestar/types";
 import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {createIBeaconConfig, createIChainForkConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {
   EPOCHS_PER_ETH1_VOTING_PERIOD,
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -62,7 +62,7 @@ const secretKeyByModIndex = new Map<number, SecretKey>();
 const epoch = 23638;
 export const perfStateEpoch = epoch;
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type, @typescript-eslint/explicit-module-boundary-types
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getPubkeys(vc = numValidators) {
   const pubkeysMod = interopPubkeysCached(keypairsMod);
   const pubkeysModObj = pubkeysMod.map((pk) => bls.PublicKey.fromBytes(pk, CoordType.jacobian));
@@ -132,7 +132,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
     const state = phase0State.clone();
     state.slot -= 1;
     phase0CachedState23637 = createCachedBeaconState(state, {
-      config: createIBeaconConfig(config, state.genesisValidatorsRoot),
+      config: createBeaconConfig(config, state.genesisValidatorsRoot),
       pubkey2index,
       index2pubkey,
     });
@@ -222,7 +222,7 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
   const {pubkey2index, index2pubkey} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
 
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const altairConfig = createIChainForkConfig({ALTAIR_FORK_EPOCH: 0});
+  const altairConfig = createChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
   const origState = generatePerformanceStateAltair(pubkeys);
 
@@ -230,7 +230,7 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
     const state = origState.clone();
     state.slot -= 1;
     altairCachedState23637 = createCachedBeaconState(state, {
-      config: createIBeaconConfig(altairConfig, state.genesisValidatorsRoot),
+      config: createBeaconConfig(altairConfig, state.genesisValidatorsRoot),
       pubkey2index,
       index2pubkey,
     });
@@ -436,7 +436,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
   }
 
   return createCachedBeaconState(state, {
-    config: createIBeaconConfig(config, state.genesisValidatorsRoot),
+    config: createBeaconConfig(config, state.genesisValidatorsRoot),
     pubkey2index,
     index2pubkey,
   });

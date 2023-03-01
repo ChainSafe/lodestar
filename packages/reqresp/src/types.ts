@@ -1,5 +1,5 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {IBeaconConfig, IForkConfig, IForkDigestContext} from "@lodestar/config";
+import {BeaconConfig, ForkConfig, ForkDigestContext} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
@@ -47,9 +47,7 @@ export interface InboundRateLimitQuota<Req = unknown> {
 // `protocolPrefix` is added runtime so not part of definition
 export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<Protocol, "protocolPrefix"> {
   handler: ReqRespHandler<Req, Resp>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   requestType: (fork: ForkName) => TypeSerializer<Req> | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   responseType: (fork: ForkName) => TypeSerializer<Resp>;
   ignoreResponse?: boolean;
   renderRequestBody?: (request: Req) => string;
@@ -59,7 +57,7 @@ export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<
 
 export type ProtocolDefinitionGenerator<Req, Res> = (
   // "inboundRateLimiter" is available only on handler context not on generator
-  modules: {config: IBeaconConfig},
+  modules: {config: BeaconConfig},
   handler: ReqRespHandler<Req, Res>
 ) => ProtocolDefinition<Req, Res>;
 
@@ -83,7 +81,7 @@ export type ContextBytesFactory<Response> =
   | {type: ContextBytesType.Empty}
   | {
       type: ContextBytesType.ForkDigest;
-      forkDigestContext: IForkDigestContext & Pick<IForkConfig, "getForkName">;
+      forkDigestContext: ForkDigestContext & Pick<ForkConfig, "getForkName">;
       forkFromResponse: (response: Response) => ForkName;
     };
 

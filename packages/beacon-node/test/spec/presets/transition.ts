@@ -5,7 +5,7 @@ import {
   stateTransition,
 } from "@lodestar/state-transition";
 import {allForks, ssz} from "@lodestar/types";
-import {createIChainForkConfig, IChainConfig} from "@lodestar/config";
+import {createChainForkConfig, ChainConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {bnToNum} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
@@ -46,13 +46,13 @@ export const transition = (skipTestNames?: string[]): TestRunnerFn<TransitionTes
 
       // testConfig is used here to load forkEpoch from meta.yaml
       const forkEpoch = bnToNum(meta.fork_epoch);
-      const testConfig = createIChainForkConfig(getTransitionConfig(forkNext, forkEpoch));
+      const testConfig = createChainForkConfig(getTransitionConfig(forkNext, forkEpoch));
 
       let state = createCachedBeaconStateTest(testcase.pre, testConfig);
       for (let i = 0; i < meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
         state = stateTransition(state, signedBlock, {
-          // TODO EIP-4844: Should assume valid and available for this test?
+          // TODO DENEB: Should assume valid and available for this test?
           executionPayloadStatus: ExecutionPayloadStatus.valid,
           dataAvailableStatus: DataAvailableStatus.available,
           verifyStateRoot: true,
@@ -87,7 +87,7 @@ export const transition = (skipTestNames?: string[]): TestRunnerFn<TransitionTes
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
-function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<IChainConfig> {
+function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<ChainConfig> {
   switch (fork) {
     case ForkName.phase0:
       throw Error("phase0 not allowed");
@@ -97,7 +97,7 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<IChainC
       return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: forkEpoch};
     case ForkName.capella:
       return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: forkEpoch};
-    case ForkName.eip4844:
+    case ForkName.deneb:
       return {ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0, CAPELLA_FORK_EPOCH: 0, EIP4844_FORK_EPOCH: forkEpoch};
   }
 }

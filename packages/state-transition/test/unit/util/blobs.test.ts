@@ -46,7 +46,7 @@ describe("blobs", () => {
   //   value: uint256 // 32 bytes
   //   data: ByteList[MAX_CALLDATA_SIZE] // 4 bytes offset
   //   access_list: List[AccessTuple, MAX_ACCESS_LIST_SIZE] // 4 bytes offset
-  //   max_fee_per_data_gas: uint256  # new in PR 5707, a.k.a. fee market change of EIP-4844 // 32 bytes offset
+  //   max_fee_per_data_gas: uint256  # new in PR 5707, a.k.a. fee market change of Deneb // 32 bytes offset
   //   blob_versioned_hashes: List[VersionedHash, MAX_VERSIONED_HASHES_LIST_SIZE] // 4 bytes offset
 
   // field_offset = 32 + 8 + 32 + 32 + 8 + 4 + 32 + 4 + 4 + 32 = 188

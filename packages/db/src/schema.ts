@@ -47,8 +47,8 @@ export enum Bucket {
 
   index_stateArchiveRootIndex = 26, // State Root -> slot
 
-  allForks_blobsSidecar = 27, // EIP-4844 BeaconBlockRoot -> BlobsSidecar
-  allForks_blobsSidecarArchive = 28, // EIP-4844 BeaconBlockSlot -> BlobsSidecar
+  allForks_blobsSidecar = 27, // DENEB BeaconBlockRoot -> BlobsSidecar
+  allForks_blobsSidecarArchive = 28, // DENEB BeaconBlockSlot -> BlobsSidecar
 
   // Lightclient server
   // altair_bestUpdatePerCommitteePeriod = 30, // DEPRECATED on v0.32.0
@@ -65,7 +65,8 @@ export enum Bucket {
   // TODO: May be redundant to block stores
   lightClient_checkpointHeader = 53, // BlockRoot -> phase0.BeaconBlockHeader
   // 54 was for bestPartialLightClientUpdate, allocate a fresh one
-  lightClient_bestLightClientUpdate = 55, // SyncPeriod -> LightClientUpdate
+  // lightClient_bestLightClientUpdate = 55, // SyncPeriod -> LightClientUpdate // DEPRECATED on v1.5.0
+  lightClient_bestLightClientUpdate = 56, // SyncPeriod -> [Slot, LightClientUpdate]
 
   validator_metaData = 41,
 

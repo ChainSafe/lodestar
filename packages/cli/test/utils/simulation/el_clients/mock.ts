@@ -1,14 +1,16 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import {ELClient, ELClientGenerator, ELGeneratorClientOptions, Runner, RunnerType} from "../interfaces.js";
+import {SHARED_JWT_SECRET} from "../constants.js";
+import {ELClient, ELClientGenerator} from "../interfaces.js";
+import {getNodePorts} from "../utils/ports.js";
 
-export const generateMockNode: ELClientGenerator<ELClient.Mock> = (
-  {id, ethPort, enginePort, ttd, jwtSecretHex}: ELGeneratorClientOptions,
-  runner: Runner<RunnerType.ChildProcess> | Runner<RunnerType.Docker>
-) => {
-  const ethRpcUrl = `http://127.0.0.1:${ethPort}`;
+export const generateMockNode: ELClientGenerator<ELClient.Mock> = (opts, runner) => {
+  const {id, ttd, nodeIndex} = opts;
+  const {
+    el: {enginePort, httpPort},
+  } = getNodePorts(nodeIndex);
+  const ethRpcUrl = `http://127.0.0.1:${httpPort}`;
   const engineRpcUrl = `http://127.0.0.1:${enginePort}`;
 
-  const job = runner.create(id, []);
+  const job = runner.create([]);
 
   return {
     client: ELClient.Mock,
@@ -16,7 +18,7 @@ export const generateMockNode: ELClientGenerator<ELClient.Mock> = (
     engineRpcUrl,
     ethRpcUrl,
     ttd,
-    jwtSecretHex,
+    jwtSecretHex: SHARED_JWT_SECRET,
     provider: null,
     job,
   };

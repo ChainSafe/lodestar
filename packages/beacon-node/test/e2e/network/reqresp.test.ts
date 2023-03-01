@@ -2,13 +2,13 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {expect} from "chai";
 import {BitArray} from "@chainsafe/ssz";
-import {createIBeaconConfig, createIChainForkConfig, IChainForkConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {
   Encoding,
   RequestError,
   RequestErrorCode,
-  IRequestErrorMetadata,
+  RequestErrorMetadata,
   HandlerTypeFromMessage,
   EncodedPayloadType,
   EncodedPayload,
@@ -19,13 +19,13 @@ import {allForks, altair, phase0, Root, ssz} from "@lodestar/types";
 import {sleep as _sleep} from "@lodestar/utils";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
 import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
-import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
+import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 import {ReqRespHandlers} from "../../../src/network/reqresp/handlers/index.js";
 import {ReqRespMethod} from "../../../src/network/reqresp/types.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {testLogger} from "../../utils/logger.js";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
-import {connect, createNode, onPeerConnect} from "../../utils/network.js";
+import {connect, createNetworkModules, onPeerConnect} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
 import {arrToSource} from "../../unit/network/reqresp/utils.js";
@@ -37,7 +37,7 @@ describe("network / ReqResp", function () {
   this.retries(2); // This test fail sometimes, with a 5% rate.
 
   const multiaddr = "/ip4/127.0.0.1/tcp/0";
-  const networkOptsDefault: INetworkOptions = {
+  const networkOptsDefault: NetworkOptions = {
     ...defaultNetworkOptions,
     maxPeers: 1,
     targetPeers: 1,
@@ -50,13 +50,13 @@ describe("network / ReqResp", function () {
   };
 
   // Schedule ALTAIR_FORK_EPOCH to trigger registering lightclient ReqResp protocols immediately
-  const config = createIChainForkConfig({
+  const config = createChainForkConfig({
     ...chainConfig,
     ALTAIR_FORK_EPOCH: 0,
   });
 
   const state = generateState({}, config);
-  const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
+  const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
   const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config: beaconConfig});
   const db = new StubbedBeaconDb();
 
@@ -80,10 +80,9 @@ describe("network / ReqResp", function () {
     reqRespOpts?: ReqRespBeaconNodeOpts
   ): Promise<[Network, Network]> {
     const controller = new AbortController();
+    const peerIdA = await createSecp256k1PeerId();
     const peerIdB = await createSecp256k1PeerId();
-    const [libp2pA, libp2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr, peerIdB)]);
 
-    // eslint-disable-next-line
     const notImplemented = async function* <T>(): AsyncIterable<T> {
       throw Error("not implemented");
     };
@@ -117,9 +116,16 @@ describe("network / ReqResp", function () {
       signal: controller.signal,
       metrics: null,
     };
-    const netA = new Network(opts, {...modules, libp2p: libp2pA, logger: testLogger("A")});
-    const netB = new Network(opts, {...modules, libp2p: libp2pB, logger: testLogger("B")});
-    await Promise.all([netA.start(), netB.start()]);
+    const netA = await Network.init({
+      ...modules,
+      ...(await createNetworkModules(multiaddr, peerIdA, opts)),
+      logger: testLogger("A"),
+    });
+    const netB = await Network.init({
+      ...modules,
+      ...(await createNetworkModules(multiaddr, peerIdB, opts)),
+      logger: testLogger("B"),
+    });
 
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
     await connect(netA, netB.peerId, netB.localMultiaddrs);
@@ -128,7 +134,7 @@ describe("network / ReqResp", function () {
     afterEachCallbacks.push(async () => {
       await chain.close();
       controller.abort();
-      await Promise.all([netA.stop(), netB.stop()]);
+      await Promise.all([netA.close(), netB.close()]);
     });
 
     return [netA, netB];
@@ -421,16 +427,16 @@ describe("network / ReqResp", function () {
 });
 
 /** Helper to reduce code-duplication */
-function formatMetadata(method: ReqRespMethod, encoding: Encoding, peer: PeerId): IRequestErrorMetadata {
+function formatMetadata(method: ReqRespMethod, encoding: Encoding, peer: PeerId): RequestErrorMetadata {
   return {method, encoding, peer: peer.toString()};
 }
 
-function getEmptyEncodedPayloadSignedBeaconBlock(config: IChainForkConfig): EncodedPayload<allForks.SignedBeaconBlock> {
+function getEmptyEncodedPayloadSignedBeaconBlock(config: ChainForkConfig): EncodedPayload<allForks.SignedBeaconBlock> {
   return wrapBlockAsEncodedPayload(config, config.getForkTypes(0).SignedBeaconBlock.defaultValue());
 }
 
 function wrapBlockAsEncodedPayload(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   block: allForks.SignedBeaconBlock
 ): EncodedPayload<allForks.SignedBeaconBlock> {
   return {

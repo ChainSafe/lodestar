@@ -68,7 +68,6 @@ function prepareTest() {
   return {resolves, log, logStrs};
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 function resolvablePromise<T>() {
   let resolve: ((value: T) => void) | null = null;
   const promise = new Promise<T>((_resolve) => {

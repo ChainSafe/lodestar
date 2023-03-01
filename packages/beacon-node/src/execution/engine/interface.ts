@@ -1,9 +1,10 @@
 import {ForkName} from "@lodestar/params";
-import {KZGCommitment, Blob} from "@lodestar/types/eip4844";
+import {KZGCommitment, Blob} from "@lodestar/types/deneb";
 import {RootHex, allForks, capella, Wei} from "@lodestar/types";
 
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
+import {ExecutionPayloadBody} from "./types.js";
 
 export {PayloadIdCache, PayloadId, WithdrawalV1};
 
@@ -136,4 +137,8 @@ export interface IExecutionEngine {
   exchangeTransitionConfigurationV1(
     transitionConfiguration: TransitionConfigurationV1
   ): Promise<TransitionConfigurationV1>;
+
+  getPayloadBodiesByHash(blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
+
+  getPayloadBodiesByRange(start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 }

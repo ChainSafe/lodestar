@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {ssz} from "@lodestar/types";
 import {Type} from "@chainsafe/ssz";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, ForkLightClient} from "@lodestar/params";
 import {replaceUintTypeWithUintBigintType} from "../utils/replaceUintTypeWithUintBigintType.js";
 import {parseSszStaticTestcase} from "../utils/sszTestCaseParser.js";
 import {runValidSszTest} from "../utils/runValidSszTest.js";
@@ -17,15 +17,6 @@ import {runValidSszTest} from "../utils/runValidSszTest.js";
 //
 // Docs: https://github.com/ethereum/consensus-specs/blob/master/tests/formats/ssz_static/core.md
 
-/* eslint-disable
-  @typescript-eslint/naming-convention,
-  @typescript-eslint/no-unsafe-assignment,
-  @typescript-eslint/no-unsafe-call,
-  @typescript-eslint/no-unsafe-member-access,
-  no-console
-*/
-
-// eslint-disable-next-line
 type Types = Record<string, Type<any>>;
 
 // Mapping of sszGeneric() fn arguments to the path in spec tests
@@ -48,6 +39,9 @@ export const sszStatic = (skippedTypes?: string[]) => (
 
   /* eslint-disable @typescript-eslint/strict-boolean-expressions */
   const sszType =
+    // Since lightclient types are not updated/declared at all forks, this allForksLightClient
+    // will help us get the right type for lightclient objects
+    ((ssz.allForksLightClient[fork as ForkLightClient] || {}) as Types)[typeName] ||
     (ssz[fork] as Types)[typeName] ||
     (ssz.capella as Types)[typeName] ||
     (ssz.bellatrix as Types)[typeName] ||

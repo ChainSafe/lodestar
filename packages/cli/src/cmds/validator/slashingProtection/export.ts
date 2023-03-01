@@ -1,23 +1,21 @@
 import path from "node:path";
 import {InterchangeFormatVersion} from "@lodestar/validator";
-import {ICliCommand, writeFile600Perm} from "../../../util/index.js";
-import {IGlobalArgs} from "../../../options/index.js";
+import {CliCommand, writeFile600Perm} from "../../../util/index.js";
+import {GlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";
-import {getCliLogger, ILogArgs} from "../../../util/index.js";
+import {getCliLogger, LogArgs} from "../../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {getValidatorPaths} from "../paths.js";
 import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
 
-/* eslint-disable no-console */
-
-interface IExportArgs {
+type ExportArgs = {
   file: string;
-}
+};
 
-export const exportCmd: ICliCommand<
-  IExportArgs,
-  ISlashingProtectionArgs & AccountValidatorArgs & IGlobalArgs & ILogArgs
+export const exportCmd: CliCommand<
+  ExportArgs,
+  ISlashingProtectionArgs & AccountValidatorArgs & GlobalArgs & LogArgs
 > = {
   command: "export",
 
@@ -54,7 +52,7 @@ export const exportCmd: ICliCommand<
     const formatVersion: InterchangeFormatVersion = {version: "4", format: "complete"};
     logger.info("Exporting the slashing protection logs", {...formatVersion, dbPath});
 
-    const {slashingProtection, metadata} = getSlashingProtection(args, network);
+    const {slashingProtection, metadata} = getSlashingProtection(args, network, logger);
 
     // When exporting validator DB should already have genesisValidatorsRoot persisted.
     // For legacy node and general fallback, fetch from:

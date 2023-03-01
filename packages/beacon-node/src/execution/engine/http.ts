@@ -3,9 +3,10 @@ import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 
 import {ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
-import {IMetrics} from "../../metrics/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
+import {numToQuantity} from "../../eth1/provider/utils.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -23,11 +24,14 @@ import {
   parseExecutionPayload,
   serializeExecutionPayload,
   serializePayloadAttributes,
+  ExecutionPayloadBody,
+  assertReqSizeLimit,
+  deserializeExecutionPayloadBody,
 } from "./types.js";
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
-  metrics?: IMetrics | null;
+  metrics?: Metrics | null;
 };
 
 export type ExecutionEngineHttpOpts = {
@@ -132,7 +136,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    */
   async notifyNewPayload(fork: ForkName, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
     const method =
-      ForkSeq[fork] >= ForkSeq.eip4844
+      ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_newPayloadV3"
         : ForkSeq[fork] >= ForkSeq.capella
         ? "engine_newPayloadV2"
@@ -289,7 +293,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     payloadId: PayloadId
   ): Promise<{executionPayload: allForks.ExecutionPayload; blockValue: Wei}> {
     const method =
-      ForkSeq[fork] >= ForkSeq.eip4844
+      ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_getPayloadV3"
         : ForkSeq[fork] >= ForkSeq.capella
         ? "engine_getPayloadV2"
@@ -333,10 +337,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     transitionConfiguration: TransitionConfigurationV1
   ): Promise<TransitionConfigurationV1> {
     const method = "engine_exchangeTransitionConfigurationV1";
-    return await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >(
+    return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
       {
         method,
         params: [transitionConfiguration],
@@ -347,6 +348,37 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   async prunePayloadIdCache(): Promise<void> {
     this.payloadIdCache.prune();
+  }
+
+  async getPayloadBodiesByHash(blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
+    const method = "engine_getPayloadBodiesByHashV1";
+    assertReqSizeLimit(blockHashes.length, 32);
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >({
+      method,
+      params: blockHashes,
+    });
+    return response.map(deserializeExecutionPayloadBody);
+  }
+
+  async getPayloadBodiesByRange(
+    startBlockNumber: number,
+    blockCount: number
+  ): Promise<(ExecutionPayloadBody | null)[]> {
+    const method = "engine_getPayloadBodiesByRangeV1";
+    assertReqSizeLimit(blockCount, 32);
+    const start = numToQuantity(startBlockNumber);
+    const count = numToQuantity(blockCount);
+    const response = await this.rpc.fetchWithRetries<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >({
+      method,
+      params: [start, count],
+    });
+    return response.map(deserializeExecutionPayloadBody);
   }
 }
 

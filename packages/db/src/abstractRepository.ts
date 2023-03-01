@@ -1,7 +1,7 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {Type} from "@chainsafe/ssz";
 import {BUCKET_LENGTH} from "./const.js";
-import {IFilterOptions, IKeyValue} from "./controller/index.js";
+import {FilterOptions, KeyValue} from "./controller/index.js";
 import {Db, DbReqOpts} from "./controller/interface.js";
 import {Bucket, encodeKey as _encodeKey} from "./schema.js";
 import {getBucketNameByValue} from "./util.js";
@@ -17,7 +17,7 @@ export type Id = Uint8Array | string | number | bigint;
  * indexed by root
  */
 export abstract class Repository<I extends Id, T> {
-  protected config: IChainForkConfig;
+  protected config: ChainForkConfig;
 
   protected db: Db;
 
@@ -30,7 +30,7 @@ export abstract class Repository<I extends Id, T> {
 
   protected type: Type<T>;
 
-  protected constructor(config: IChainForkConfig, db: Db, bucket: Bucket, type: Type<T>) {
+  protected constructor(config: ChainForkConfig, db: Db, bucket: Bucket, type: Type<T>) {
     this.config = config;
     this.db = db;
     this.bucket = bucket;
@@ -98,7 +98,7 @@ export abstract class Repository<I extends Id, T> {
     await this.delete(this.getId(value));
   }
 
-  async batchPut(items: IKeyValue<I, T>[]): Promise<void> {
+  async batchPut(items: KeyValue<I, T>[]): Promise<void> {
     await this.db.batchPut(
       Array.from({length: items.length}, (_, i) => ({
         key: this.encodeKey(items[i].key),
@@ -109,7 +109,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   // Similar to batchPut but we support value as Uint8Array
-  async batchPutBinary(items: IKeyValue<I, Uint8Array>[]): Promise<void> {
+  async batchPutBinary(items: KeyValue<I, Uint8Array>[]): Promise<void> {
     await this.db.batchPut(
       Array.from({length: items.length}, (_, i) => ({
         key: this.encodeKey(items[i].key),
@@ -139,12 +139,12 @@ export abstract class Repository<I extends Id, T> {
     await this.batchDelete(Array.from({length: values.length}, (ignored, i) => this.getId(values[i])));
   }
 
-  async keys(opts?: IFilterOptions<I>): Promise<I[]> {
+  async keys(opts?: FilterOptions<I>): Promise<I[]> {
     const data = await this.db.keys(this.dbFilterOptions(opts));
     return (data ?? []).map((data) => this.decodeKey(data));
   }
 
-  async *keysStream(opts?: IFilterOptions<I>): AsyncIterable<I> {
+  async *keysStream(opts?: FilterOptions<I>): AsyncIterable<I> {
     const keysStream = this.db.keysStream(this.dbFilterOptions(opts));
     const decodeKey = this.decodeKey.bind(this);
     for await (const key of keysStream) {
@@ -152,12 +152,12 @@ export abstract class Repository<I extends Id, T> {
     }
   }
 
-  async values(opts?: IFilterOptions<I>): Promise<T[]> {
+  async values(opts?: FilterOptions<I>): Promise<T[]> {
     const data = await this.db.values(this.dbFilterOptions(opts));
     return (data ?? []).map((data) => this.decodeValue(data));
   }
 
-  async *valuesStream(opts?: IFilterOptions<I>): AsyncIterable<T> {
+  async *valuesStream(opts?: FilterOptions<I>): AsyncIterable<T> {
     const valuesStream = this.db.valuesStream(this.dbFilterOptions(opts));
     const decodeValue = this.decodeValue.bind(this);
     for await (const value of valuesStream) {
@@ -165,11 +165,11 @@ export abstract class Repository<I extends Id, T> {
     }
   }
 
-  async *binaryEntriesStream(opts?: IFilterOptions<I>): AsyncIterable<IKeyValue<Uint8Array, Uint8Array>> {
+  async *binaryEntriesStream(opts?: FilterOptions<I>): AsyncIterable<KeyValue<Uint8Array, Uint8Array>> {
     yield* this.db.entriesStream(this.dbFilterOptions(opts));
   }
 
-  async entries(opts?: IFilterOptions<I>): Promise<IKeyValue<I, T>[]> {
+  async entries(opts?: FilterOptions<I>): Promise<KeyValue<I, T>[]> {
     const data = await this.db.entries(this.dbFilterOptions(opts));
     return (data ?? []).map((data) => ({
       key: this.decodeKey(data.key),
@@ -177,7 +177,7 @@ export abstract class Repository<I extends Id, T> {
     }));
   }
 
-  async *entriesStream(opts?: IFilterOptions<I>): AsyncIterable<IKeyValue<I, T>> {
+  async *entriesStream(opts?: FilterOptions<I>): AsyncIterable<KeyValue<I, T>> {
     const entriesStream = this.db.entriesStream(this.dbFilterOptions(opts));
     const decodeKey = this.decodeKey.bind(this);
     const decodeValue = this.decodeValue.bind(this);
@@ -225,7 +225,7 @@ export abstract class Repository<I extends Id, T> {
     return values[0];
   }
 
-  async firstEntry(): Promise<IKeyValue<I, T> | null> {
+  async firstEntry(): Promise<KeyValue<I, T> | null> {
     // Metrics accounted in this.entries()
     const entries = await this.entries({limit: 1, bucketId: this.bucketId});
     if (!entries.length) {
@@ -234,7 +234,7 @@ export abstract class Repository<I extends Id, T> {
     return entries[0];
   }
 
-  async lastEntry(): Promise<IKeyValue<I, T> | null> {
+  async lastEntry(): Promise<KeyValue<I, T> | null> {
     // Metrics accounted in this.entries()
     const entries = await this.entries({limit: 1, reverse: true, bucketId: this.bucketId});
     if (!entries.length) {
@@ -246,8 +246,8 @@ export abstract class Repository<I extends Id, T> {
   /**
    * Transforms opts from I to Uint8Array
    */
-  protected dbFilterOptions(opts?: IFilterOptions<I>): IFilterOptions<Uint8Array> {
-    const optsBuff: IFilterOptions<Uint8Array> = {
+  protected dbFilterOptions(opts?: FilterOptions<I>): FilterOptions<Uint8Array> {
+    const optsBuff: FilterOptions<Uint8Array> = {
       bucketId: this.bucketId,
     };
 

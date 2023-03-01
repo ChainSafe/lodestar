@@ -1,13 +1,13 @@
 import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
-export type IBeaconMetrics = ReturnType<typeof createBeaconMetrics>;
+export type BeaconMetrics = ReturnType<typeof createBeaconMetrics>;
 
 /**
  * Metrics from:
  * https://github.com/ethereum/beacon-metrics/ and
  * https://hackmd.io/D5FmoeFZScim_squBFl8oA
  */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function createBeaconMetrics(register: RegistryMetricCreator) {
   return {
     // From https://github.com/ethereum/beacon-metrics/blob/master/metrics.md

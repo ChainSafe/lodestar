@@ -6,7 +6,7 @@ import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 const ZERO_HASH = Buffer.alloc(32, 0);
 const ZERO_HASH_HEX = "0x" + ZERO_HASH.toString("hex");
 const randaoReveal = Buffer.alloc(96, 1);
-const graffiti = "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2";
+const graffiti = "a".repeat(32);
 
 export const testData: GenericServerTestCases<Api> = {
   getAttesterDuties: {

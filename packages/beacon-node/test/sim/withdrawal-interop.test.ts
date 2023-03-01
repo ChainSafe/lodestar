@@ -3,7 +3,7 @@ import {Context} from "mocha";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH, ForkName} from "@lodestar/params";
-import {IChainConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, capella, Slot} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
@@ -29,7 +29,7 @@ import {shell} from "./shell.js";
 // EL_BINARY_DIR=g11tech/geth:withdrawals EL_SCRIPT_DIR=gethdocker yarn mocha test/sim/withdrawal-interop.test.ts
 // ```
 
-/* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
+/* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 const retryAttempts = defaultExecutionEngineHttpOpts.retryAttempts;
@@ -91,43 +91,43 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         Index: 1,
         Validator: 65536,
         Recipient: "0x0100000000000000000000000000000000000000",
-        Amount: "452312848583266388373324160190187140051835877600158453279131187530910662656",
+        Amount: "04523128485832663883",
       },
       {
         Index: 2,
         Validator: 65537,
         Recipient: "0x0200000000000000000000000000000000000000",
-        Amount: "904625697166532776746648320380374280103671755200316906558262375061821325312",
+        Amount: "09046256971665327767",
       },
       {
         Index: 3,
         Validator: 65538,
         Recipient: "0x0300000000000000000000000000000000000000",
-        Amount: "1356938545749799165119972480570561420155507632800475359837393562592731987968",
+        Amount: "13569385457497991651",
       },
       {
         Index: 4,
         Validator: 65539,
         Recipient: "0x0400000000000000000000000000000000000000",
-        Amount: "1809251394333065553493296640760748560207343510400633813116524750123642650624",
+        Amount: "18446744073709551615",
       },
       {
         Index: 5,
         Validator: 65540,
         Recipient: "0x0500000000000000000000000000000000000000",
-        Amount: "2261564242916331941866620800950935700259179388000792266395655937654553313280",
+        Amount: "02261564242916331941",
       },
       {
         Index: 6,
         Validator: 65541,
         Recipient: "0x0600000000000000000000000000000000000000",
-        Amount: "2713877091499598330239944961141122840311015265600950719674787125185463975936",
+        Amount: "02713877091499598330",
       },
       {
         Index: 7,
         Validator: 65542,
         Recipient: "0x0700000000000000000000000000000000000000",
-        Amount: "3166189940082864718613269121331309980362851143201109172953918312716374638592",
+        Amount: "03166189940082864718",
       },
     ];
 
@@ -161,10 +161,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // 2. Get the payload
     const payloadAndBlockValue = await executionEngine.getPayload(ForkName.capella, payloadId);
     const payload = payloadAndBlockValue.executionPayload;
-    const blockHash = toHexString(payload.blockHash);
-    const expectedBlockHash = "0x64707e5574d14103a7f583e702f09e68ca1eb334e8eb0632a4272efe54f2fc7c";
-    if (blockHash !== expectedBlockHash) {
-      throw Error(`Invalid blockHash expected=${expectedBlockHash} actual=${blockHash}`);
+
+    const stateRoot = toHexString(payload.stateRoot);
+    const expectedStateRoot = "0x6160c5b91ea5ded26da07f6655762deddefdbed6ddab2edc60484cfb38ef16be";
+    if (stateRoot !== expectedStateRoot) {
+      throw Error(`Invalid stateRoot expected=${expectedStateRoot} actual=${stateRoot}`);
     }
 
     // 3. Execute the payload
@@ -206,7 +207,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
 
-    const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
+    const testParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
       SECONDS_PER_SLOT: 2,
     };
 

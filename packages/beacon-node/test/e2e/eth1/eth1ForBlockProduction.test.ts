@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import "mocha";
 import {promisify} from "node:util";
 import {expect} from "chai";
@@ -44,7 +43,7 @@ describe.skip("eth1 / Eth1Provider", function () {
     // Nuke DB to make sure it's empty
     await promisify<string>(leveldown.destroy)(dbLocation);
 
-    dbController = new LevelDbController({name: dbLocation}, {});
+    dbController = new LevelDbController({name: dbLocation}, {logger});
     db = new BeaconDb({
       config,
       controller: dbController,
@@ -79,7 +78,6 @@ describe.skip("eth1 / Eth1Provider", function () {
     });
 
     // Resolves when Eth1ForBlockProduction has fetched both blocks and deposits
-    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
     const {eth1Datas, deposits} = await (async function resolveWithEth1DataAndDeposits() {
       // eslint-disable-next-line no-constant-condition
       while (true) {

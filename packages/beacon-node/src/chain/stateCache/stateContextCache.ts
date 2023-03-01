@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {Epoch, RootHex} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
-import {IMetrics} from "../../metrics/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {MapTracker} from "./mapMetrics.js";
 
 const MAX_STATES = 3 * 32;
@@ -21,14 +21,14 @@ export class StateContextCache {
   private readonly cache: MapTracker<string, CachedBeaconStateAllForks>;
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new Map<Epoch, Set<string>>();
-  private readonly metrics: IMetrics["stateCache"] | null | undefined;
+  private readonly metrics: Metrics["stateCache"] | null | undefined;
   /**
    * Strong reference to prevent head state from being pruned.
    * null if head state is being regen and not available at the moment.
    */
   private head: {state: CachedBeaconStateAllForks; stateRoot: RootHex} | null = null;
 
-  constructor({maxStates = MAX_STATES, metrics}: {maxStates?: number; metrics?: IMetrics | null}) {
+  constructor({maxStates = MAX_STATES, metrics}: {maxStates?: number; metrics?: Metrics | null}) {
     this.maxStates = maxStates;
     this.cache = new MapTracker(metrics?.stateCache);
     if (metrics) {

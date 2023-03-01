@@ -6,7 +6,7 @@ import {PeerStatus} from "../../../network/index.js";
  * Format a list of connections from libp2p connections manager into the API's format NodePeer
  */
 export function formatNodePeer(peerIdStr: string, connections: Connection[]): routes.node.NodePeer {
-  const conn = getRevelantConnection(connections);
+  const conn = getRelevantConnection(connections);
 
   return {
     peerId: conn ? conn.remotePeer.toString() : peerIdStr,
@@ -24,7 +24,7 @@ export function formatNodePeer(peerIdStr: string, connections: Connection[]): ro
  * - Otherwise, the first closing connection
  * - Otherwise, the first closed connection
  */
-export function getRevelantConnection(connections: Connection[]): Connection | null {
+export function getRelevantConnection(connections: Connection[]): Connection | null {
   const byStatus = new Map<PeerStatus, Connection>();
   for (const conn of connections) {
     if (conn.stat.status === "OPEN") return conn;

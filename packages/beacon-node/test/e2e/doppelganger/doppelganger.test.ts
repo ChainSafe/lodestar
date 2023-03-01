@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {routes} from "@lodestar/api/beacon";
 import {BLSPubkey, Epoch, phase0, Slot, ssz} from "@lodestar/types";
-import {IChainConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {fromHexString} from "@chainsafe/ssz";
 import {Validator} from "@lodestar/validator";
@@ -15,7 +15,6 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {BeaconNode} from "../../../src/node/index.js";
 
-/* eslint-disable @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment */
 // TODO: Reconsider this tests latter.
 // Doppelganger testing can be split in two items:
 // 1. Can a running beacon node detect liveness of the validator?
@@ -34,7 +33,7 @@ describe.skip("doppelganger / doppelganger test", function () {
 
   const validatorCount = 1;
   const genesisSlotsDelay = 5;
-  const beaconParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
+  const beaconParams: Pick<ChainConfig, "SECONDS_PER_SLOT"> = {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
   };

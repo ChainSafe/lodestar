@@ -1,7 +1,7 @@
 import {Epoch, RootHex} from "@lodestar/types";
 import {BitArray} from "@chainsafe/ssz";
 import {MapDef} from "@lodestar/utils";
-import {IMetrics} from "../../metrics/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {isSuperSetOrEqual} from "../../util/bitArray.js";
 
 /**
@@ -35,7 +35,7 @@ export class SeenAggregatedAttestations {
   );
   private lowestPermissibleEpoch: Epoch = 0;
 
-  constructor(private readonly metrics: IMetrics | null) {}
+  constructor(private readonly metrics: Metrics | null) {}
 
   isKnown(targetEpoch: Epoch, attDataRoot: RootHex, aggregationBits: BitArray): boolean {
     const seenAggregationInfoArr = this.aggregateRootsByEpoch.getOrDefault(targetEpoch).getOrDefault(attDataRoot);

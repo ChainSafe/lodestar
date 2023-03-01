@@ -1,16 +1,22 @@
 import path from "node:path";
 import {setMaxListeners} from "node:events";
 import {LevelDbController} from "@lodestar/db";
-import {ProcessShutdownCallback, SlashingProtection, Validator, ValidatorProposerConfig} from "@lodestar/validator";
+import {
+  ProcessShutdownCallback,
+  SlashingProtection,
+  Validator,
+  ValidatorProposerConfig,
+  BuilderSelection,
+} from "@lodestar/validator";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
-import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@lodestar/beacon-node";
+import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer, MonitoringService} from "@lodestar/beacon-node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
-import {IGlobalArgs} from "../../options/index.js";
+import {GlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger, cleanOldLogFiles} from "../../util/index.js";
 import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
-import {IValidatorCliArgs, validatorMetricsDefaultOptions} from "./options.js";
+import {IValidatorCliArgs, validatorMetricsDefaultOptions, validatorMonitoringDefaultOptions} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
 import {logSigners} from "./signers/logSigners.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
@@ -21,7 +27,7 @@ import {KeymanagerRestApiServer} from "./keymanager/server.js";
 /**
  * Runs a validator client.
  */
-export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
+export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Promise<void> {
   const {config, network} = getBeaconConfigFromArgs(args);
 
   const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
@@ -94,8 +100,11 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   const dbOps = {
     config,
-    controller: new LevelDbController({name: dbPath}, {metrics: null}),
+    controller: new LevelDbController({name: dbPath}, {metrics: null, logger}),
   };
+  onGracefulShutdownCbs.push(() => dbOps.controller.stop());
+  await dbOps.controller.start();
+
   const slashingProtection = new SlashingProtection(dbOps);
 
   // Create metrics registry if metrics are enabled
@@ -116,6 +125,29 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
     onGracefulShutdownCbs.push(() => metricsServer.stop());
     await metricsServer.start();
+  }
+
+  if (args["monitoring.endpoint"]) {
+    if (register == null) {
+      throw new Error("Metrics must be enabled to use monitoring");
+    }
+
+    const {interval, initialDelay, requestTimeout, collectSystemStats} = validatorMonitoringDefaultOptions;
+
+    const monitoring = new MonitoringService(
+      "validator",
+      {
+        endpoint: args["monitoring.endpoint"],
+        interval: args["monitoring.interval"] ?? interval,
+        initialDelay: args["monitoring.initialDelay"] ?? initialDelay,
+        requestTimeout: args["monitoring.requestTimeout"] ?? requestTimeout,
+        collectSystemStats: args["monitoring.collectSystemStats"] ?? collectSystemStats,
+      },
+      {register, logger}
+    );
+
+    onGracefulShutdownCbs.push(() => monitoring.stop());
+    monitoring.start();
   }
 
   // This promise resolves once genesis is available.
@@ -176,10 +208,14 @@ function getProposerConfigFromArgs(
   }: {persistedKeysBackend: IPersistedKeysBackend; accountPaths: {proposerDir: string}}
 ): ValidatorProposerConfig {
   const defaultConfig = {
-    graffiti: args.graffiti || getDefaultGraffiti(),
+    graffiti: args.graffiti ?? getDefaultGraffiti(),
     strictFeeRecipientCheck: args.strictFeeRecipientCheck,
     feeRecipient: args.suggestedFeeRecipient ? parseFeeRecipient(args.suggestedFeeRecipient) : undefined,
-    builder: {enabled: args.builder, gasLimit: args.defaultGasLimit},
+    builder: {
+      enabled: args.builder,
+      gasLimit: args.defaultGasLimit,
+      selection: parseBuilderSelection(args["builder.selection"]),
+    },
   };
 
   let valProposerConfig: ValidatorProposerConfig;
@@ -203,4 +239,18 @@ function getProposerConfigFromArgs(
     }
   }
   return valProposerConfig;
+}
+
+function parseBuilderSelection(builderSelection?: string): BuilderSelection | undefined {
+  if (builderSelection) {
+    switch (builderSelection) {
+      case "maxprofit":
+        break;
+      case "builderalways":
+        break;
+      default:
+        throw Error("Invalid input for builder selection, check help.");
+    }
+  }
+  return builderSelection as BuilderSelection;
 }

@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@lodestar/params";
-import {IChainConfig} from "../types.js";
+import {ChainConfig} from "../types.js";
 
-export const chainConfig: IChainConfig = {
+export const chainConfig: ChainConfig = {
   PRESET_BASE: PresetName.mainnet,
   CONFIG_NAME: "mainnet",
 
@@ -41,7 +41,7 @@ export const chainConfig: IChainConfig = {
   CAPELLA_FORK_VERSION: b("0x03000000"),
   CAPELLA_FORK_EPOCH: Infinity,
 
-  // EIP-4844
+  // DENEB
   EIP4844_FORK_VERSION: b("0x04000000"),
   EIP4844_FORK_EPOCH: Infinity,
 

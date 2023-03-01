@@ -2,8 +2,6 @@ import {expect} from "chai";
 import * as constants from "@lodestar/params";
 import {ssz} from "../../src/index.js";
 
-/* eslint-disable @typescript-eslint/naming-convention */
-
 // NOTE: This test is here and not in lodestar-params, to prevent lodestar-params depending on SSZ
 // Since lodestar-params and lodestar-types are in the same mono-repo, running this test here is enough
 // guarantee that these constants are correct.

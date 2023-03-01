@@ -1,8 +1,8 @@
 import mitt from "mitt";
 import {init as initBls} from "@chainsafe/bls/switchable";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@lodestar/params";
-import {altair, phase0, RootHex, Slot, SyncPeriod} from "@lodestar/types";
-import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@lodestar/config";
+import {phase0, RootHex, Slot, SyncPeriod, allForks} from "@lodestar/types";
+import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {isErrorAborted, sleep} from "@lodestar/utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
@@ -28,12 +28,12 @@ export type GenesisData = {
 export type LightclientOpts = ProcessUpdateOpts;
 
 export type LightclientInitArgs = {
-  config: IChainForkConfig;
+  config: ChainForkConfig;
   logger?: ILcLogger;
   opts?: LightclientOpts;
   genesisData: GenesisData;
   transport: LightClientTransport;
-  bootstrap: altair.LightClientBootstrap;
+  bootstrap: allForks.LightClientBootstrap;
 };
 
 /** Provides some protection against a server client sending header updates too far away in the future */
@@ -95,7 +95,7 @@ type RunStatus =
  */
 export class Lightclient {
   readonly emitter: LightclientEmitter = mitt();
-  readonly config: IBeaconConfig;
+  readonly config: BeaconConfig;
   readonly logger: ILcLogger;
   readonly genesisValidatorsRoot: Uint8Array;
   readonly genesisTime: number;
@@ -112,7 +112,7 @@ export class Lightclient {
         ? fromHexString(genesisData.genesisValidatorsRoot)
         : genesisData.genesisValidatorsRoot;
 
-    this.config = createIBeaconConfig(config, this.genesisValidatorsRoot);
+    this.config = createBeaconConfig(config, this.genesisValidatorsRoot);
     this.logger = logger ?? getLcLoggerConsole();
     this.transport = transport;
 
@@ -172,7 +172,7 @@ export class Lightclient {
     this.status = {code: RunStatusCode.stopped};
   }
 
-  getHead(): altair.LightClientHeader {
+  getHead(): allForks.LightClientHeader {
     return this.lightclientSpec.store.optimisticHeader;
   }
 
@@ -286,7 +286,7 @@ export class Lightclient {
    * Processes new optimistic header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processOptimisticUpdate(optimisticUpdate: altair.LightClientOptimisticUpdate): void {
+  private processOptimisticUpdate(optimisticUpdate: allForks.LightClientOptimisticUpdate): void {
     this.lightclientSpec.onOptimisticUpdate(this.currentSlotWithTolerance(), optimisticUpdate);
   }
 
@@ -294,11 +294,11 @@ export class Lightclient {
    * Processes new header updates in only known synced sync periods.
    * This headerUpdate may update the head if there's enough participation.
    */
-  private processFinalizedUpdate(finalizedUpdate: altair.LightClientFinalityUpdate): void {
+  private processFinalizedUpdate(finalizedUpdate: allForks.LightClientFinalityUpdate): void {
     this.lightclientSpec.onFinalityUpdate(this.currentSlotWithTolerance(), finalizedUpdate);
   }
 
-  private processSyncCommitteeUpdate(update: altair.LightClientUpdate): void {
+  private processSyncCommitteeUpdate(update: allForks.LightClientUpdate): void {
     this.lightclientSpec.onUpdate(this.currentSlotWithTolerance(), update);
   }
 

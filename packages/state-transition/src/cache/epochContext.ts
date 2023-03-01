@@ -1,7 +1,7 @@
 import {CoordType} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, SyncPeriod} from "@lodestar/types";
-import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@lodestar/config";
+import {createBeaconConfig, BeaconConfig, ChainConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   DOMAIN_BEACON_PROPOSER,
@@ -25,7 +25,7 @@ import {
   getSeed,
   computeProposers,
 } from "../util/index.js";
-import {computeEpochShuffling, IEpochShuffling} from "../util/epochShuffling.js";
+import {computeEpochShuffling, EpochShuffling} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
@@ -42,7 +42,7 @@ import {
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
 
 export type EpochContextImmutableData = {
-  config: IBeaconConfig;
+  config: BeaconConfig;
   pubkey2index: PubkeyIndexMap;
   index2pubkey: Index2PubkeyCache;
 };
@@ -78,7 +78,7 @@ type ProposersDeferred = {computed: false; seed: Uint8Array} | {computed: true; 
  * - syncPeriod
  **/
 export class EpochContext {
-  config: IBeaconConfig;
+  config: BeaconConfig;
   /**
    * Unique globally shared pubkey registry. There should only exist one for the entire application.
    *
@@ -117,11 +117,11 @@ export class EpochContext {
    *
    * $VALIDATOR_COUNT x Number
    */
-  previousShuffling: IEpochShuffling;
+  previousShuffling: EpochShuffling;
   /** Same as previousShuffling */
-  currentShuffling: IEpochShuffling;
+  currentShuffling: EpochShuffling;
   /** Same as previousShuffling */
-  nextShuffling: IEpochShuffling;
+  nextShuffling: EpochShuffling;
   /**
    * Effective balances, for altair processAttestations()
    */
@@ -186,14 +186,14 @@ export class EpochContext {
   syncPeriod: SyncPeriod;
 
   constructor(data: {
-    config: IBeaconConfig;
+    config: BeaconConfig;
     pubkey2index: PubkeyIndexMap;
     index2pubkey: Index2PubkeyCache;
     proposers: number[];
     proposersNextEpoch: ProposersDeferred;
-    previousShuffling: IEpochShuffling;
-    currentShuffling: IEpochShuffling;
-    nextShuffling: IEpochShuffling;
+    previousShuffling: EpochShuffling;
+    currentShuffling: EpochShuffling;
+    nextShuffling: EpochShuffling;
     effectiveBalanceIncrements: EffectiveBalanceIncrements;
     syncParticipantReward: number;
     syncProposerReward: number;
@@ -645,8 +645,6 @@ export class EpochContext {
         for (let j = 0, committeeLength = slotCommittees[i].length; j < committeeLength; j++) {
           const validatorIndex = slotCommittees[i][j];
           if (requestedValidatorIndicesSet.has(validatorIndex)) {
-            // no-non-null-assertion: We know that if index is in set there must exist an entry in the map
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             duties.set(validatorIndex, {
               validatorIndex,
               committeeLength,
@@ -705,17 +703,17 @@ export class EpochContext {
     this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); // Optimize for aggregation
   }
 
-  getShufflingAtSlot(slot: Slot): IEpochShuffling {
+  getShufflingAtSlot(slot: Slot): EpochShuffling {
     const epoch = computeEpochAtSlot(slot);
     return this.getShufflingAtEpoch(epoch);
   }
 
-  getShufflingAtSlotOrNull(slot: Slot): IEpochShuffling | null {
+  getShufflingAtSlotOrNull(slot: Slot): EpochShuffling | null {
     const epoch = computeEpochAtSlot(slot);
     return this.getShufflingAtEpochOrNull(epoch);
   }
 
-  getShufflingAtEpoch(epoch: Epoch): IEpochShuffling {
+  getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
     const shuffling = this.getShufflingAtEpochOrNull(epoch);
     if (shuffling === null) {
       throw new Error(`Requesting slot committee out of range epoch: ${epoch} current: ${this.currentShuffling.epoch}`);
@@ -724,7 +722,7 @@ export class EpochContext {
     return shuffling;
   }
 
-  getShufflingAtEpochOrNull(epoch: Epoch): IEpochShuffling | null {
+  getShufflingAtEpochOrNull(epoch: Epoch): EpochShuffling | null {
     if (epoch === this.previousShuffling.epoch) {
       return this.previousShuffling;
     } else if (epoch === this.currentShuffling.epoch) {
@@ -814,11 +812,11 @@ type EpochContextErrorType = {
 export class EpochContextError extends LodestarError<EpochContextErrorType> {}
 
 export function createEmptyEpochContextImmutableData(
-  chainConfig: IChainConfig,
+  chainConfig: ChainConfig,
   state: Pick<BeaconStateAllForks, "genesisValidatorsRoot">
 ): EpochContextImmutableData {
   return {
-    config: createIBeaconConfig(chainConfig, state.genesisValidatorsRoot),
+    config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
     // This is a test state, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],

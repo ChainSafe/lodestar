@@ -1,6 +1,6 @@
 import {Slot, RootHex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
-import {IMetrics} from "../metrics/index.js";
+import {Metrics} from "../metrics/index.js";
 
 /**
  * To prevent our node from having to reprocess while struggling to sync,
@@ -24,7 +24,6 @@ enum ReprocessStatus {
 
 type AwaitingAttestationPromise = {
   resolve: (foundBlock: boolean) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   promise: Promise<boolean>;
   // there are multiple subnet/aggregated attestations waiting for same promise
   awaitingAttestationsCount: number;
@@ -52,7 +51,7 @@ export class ReprocessController {
   private readonly awaitingPromisesByRootBySlot: MapDef<Slot, Map<RootHex, AwaitingAttestationPromise>>;
   private awaitingPromisesCount = 0;
 
-  constructor(private readonly metrics: IMetrics | null) {
+  constructor(private readonly metrics: Metrics | null) {
     this.awaitingPromisesByRootBySlot = new MapDef(() => new Map<RootHex, AwaitingAttestationPromise>());
   }
 

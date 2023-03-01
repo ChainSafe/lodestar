@@ -19,7 +19,7 @@ export type ServerRoute<Req extends ReqGeneric = ReqGeneric> = {
   id: string;
 };
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/naming-convention */
+/* eslint-disable @typescript-eslint/naming-convention */
 
 /** Adaptor for Fastify v3.x.x route type which has a ton of arguments */
 export type FastifyHandler<Req extends ReqGeneric> = fastify.RouteHandlerMethod<

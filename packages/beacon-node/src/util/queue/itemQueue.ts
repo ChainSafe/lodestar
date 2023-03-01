@@ -1,7 +1,7 @@
 import {sleep} from "@lodestar/utils";
 import {LinkedList} from "../array.js";
 import {QueueError, QueueErrorCode} from "./errors.js";
-import {defaultQueueOpts, IQueueMetrics, JobQueueOpts, QueueType} from "./options.js";
+import {defaultQueueOpts, QueueMetrics, JobQueueOpts, QueueType} from "./options.js";
 
 /**
  * JobQueue that stores arguments in the job array instead of closures.
@@ -20,22 +20,29 @@ export class JobItemQueue<Args extends any[], R> {
     resolve: (result: R | PromiseLike<R>) => void;
     reject: (error?: Error) => void;
   }> = new LinkedList();
-  private readonly metrics?: IQueueMetrics;
+  private readonly metrics?: QueueMetrics;
   private runningJobs = 0;
   private lastYield = 0;
 
   constructor(
     private readonly itemProcessor: (...args: Args) => Promise<R>,
     opts: JobQueueOpts,
-    metrics?: IQueueMetrics
+    metrics?: QueueMetrics
   ) {
     this.opts = {...defaultQueueOpts, ...opts};
     this.opts.signal.addEventListener("abort", this.abortAllJobs, {once: true});
 
     if (metrics) {
       this.metrics = metrics;
-      metrics.length.addCollect(() => metrics.length.set(this.jobs.length));
+      metrics.length.addCollect(() => {
+        metrics.length.set(this.jobs.length);
+        metrics.concurrency.set(this.runningJobs);
+      });
     }
+  }
+
+  get jobLen(): number {
+    return this.jobs.length;
   }
 
   push(...args: Args): Promise<R> {

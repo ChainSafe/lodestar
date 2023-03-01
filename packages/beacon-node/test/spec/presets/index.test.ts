@@ -1,5 +1,6 @@
 import path from "node:path";
 import {ACTIVE_PRESET} from "@lodestar/params";
+
 import {RunnerType} from "../utils/types.js";
 import {SkipOpts, specTestIterator} from "../utils/specTestIterator.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
@@ -29,11 +30,12 @@ import {transition} from "./transition.js";
 // ],
 // ```
 const skipOpts: SkipOpts = {
+  // TODO: capella
+  // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
+  // Skip them for now to enable subsequently
   skippedPrefixes: [
-    // Skipped since this only test that withdrawals are de-activated.
-    // Enable once spec test v1.3.0 are released and withdrawals are active on eip4844
-    "eip4844/operations/bls_to_execution_change",
-    "eip4844/operations/withdrawals",
+    "capella/light_client/single_merkle_proof/BeaconBlockBody",
+    "deneb/light_client/single_merkle_proof/BeaconBlockBody",
   ],
 };
 

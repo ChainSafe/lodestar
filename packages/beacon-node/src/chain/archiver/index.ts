@@ -1,16 +1,16 @@
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconDb} from "../../db/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {IBeaconChain} from "../interface.js";
 import {ChainEvent} from "../emitter.js";
-import {StatesArchiver} from "./archiveStates.js";
+import {StatesArchiver, StatesArchiverOpts} from "./archiveStates.js";
 import {archiveBlocks} from "./archiveBlocks.js";
 
 const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 
-export type ArchiverOpts = {
+export type ArchiverOpts = StatesArchiverOpts & {
   disableArchiveOnCheckpoint?: boolean;
 };
 
@@ -26,11 +26,11 @@ export class Archiver {
   constructor(
     private readonly db: IBeaconDb,
     private readonly chain: IBeaconChain,
-    private readonly logger: ILogger,
+    private readonly logger: Logger,
     signal: AbortSignal,
     opts: ArchiverOpts
   ) {
-    this.statesArchiver = new StatesArchiver(chain.checkpointStateCache, db, logger);
+    this.statesArchiver = new StatesArchiver(chain.checkpointStateCache, db, logger, opts);
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
       maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN,
       signal,

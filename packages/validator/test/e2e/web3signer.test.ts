@@ -7,7 +7,7 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import {fromHex, toHex} from "@lodestar/utils";
 import {config} from "@lodestar/config/default";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {createIBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
 import {genesisData} from "@lodestar/config/networks";
 import {getClient, routes} from "@lodestar/api";
 import bls from "@chainsafe/bls";
@@ -19,7 +19,7 @@ import {testLogger} from "../utils/logger.js";
 
 const web3signerVersion = "22.8.1";
 
-/* eslint-disable no-console, @typescript-eslint/naming-convention */
+/* eslint-disable no-console */
 
 describe("web3signer signature test", function () {
   this.timeout("60s");
@@ -224,7 +224,7 @@ describe("web3signer signature test", function () {
     const indicesService = new IndicesService(logger, api, metrics);
     const slashingProtection = new SlashingProtectionDisabled();
     return new ValidatorStore(
-      createIBeaconConfig(config, genesisValidatorsRoot),
+      createBeaconConfig(config, genesisValidatorsRoot),
       slashingProtection,
       indicesService,
       doppelgangerService,

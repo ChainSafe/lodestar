@@ -1,7 +1,5 @@
 export {mainnetChainConfig as chainConfig} from "@lodestar/config/networks";
 
-/* eslint-disable max-len */
-
 export const depositContractDeployBlock = 11052984;
 export const genesisFileUrl =
   "https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/mainnet/genesis.ssz";

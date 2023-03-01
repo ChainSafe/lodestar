@@ -1,6 +1,6 @@
 # Contribution Guidelines
 
-Thanks for your contribution to Lodestar. It's people like you that push the Ethereum ecosystem forward.
+Thanks for your interest in contributing to Lodestar. It's people like you that push the Ethereum ecosystem forward.
 
 ## Prerequisites
 
@@ -9,7 +9,7 @@ Thanks for your contribution to Lodestar. It's people like you that push the Eth
 
 ## Getting Started
 
-- :gear: Run `lerna bootstrap` or `yarn install` to install dependencies.
+- :gear: Run `yarn` to install dependencies.
 - :gear: Run `yarn build` to build lib from source.
 - :package: A `lodestar` binary will be bundled in `./packages/cli/bin`.
 - :computer: Run `./lodestar --help` to get a list of available commands and arguments.
@@ -58,8 +58,10 @@ docker-compose -f docker-compose.yml -f docker-compose.validator.yml up -d
 
 ###### Dockerized metrics + local beacon node:
 
+Run a local beacon with `--metrics` enabled. Then start Prometheus + Grafana with all dashboards in `./dashboards` automatically loaded running:
+
 ```
-docker-compose -f docker/docker-compose.local.yml up -d
+./docker/docker-compose.local_dev.sh
 ```
 
 ## First Time Contributor?
@@ -96,7 +98,7 @@ Pull request titles must be:
 
 - Short and descriptive summary
 - Should be capitalized and written in imperative present tense
-- Not end with period
+- Not end with a period
 
 For example:
 

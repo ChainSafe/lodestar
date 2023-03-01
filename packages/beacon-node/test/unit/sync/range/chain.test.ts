@@ -1,5 +1,5 @@
 import {config} from "@lodestar/config/default";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, phase0, Slot, ssz} from "@lodestar/types";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -83,7 +83,7 @@ describe("sync / range / chain", () => {
           const shouldReject = badBlocks?.has(i);
           if (shouldReject) badBlocks?.delete(i);
           blocks.push(
-            getBlockInput.preEIP4844(config, {
+            getBlockInput.preDeneb(config, {
               message: generateEmptyBlock(i),
               signature: shouldReject ? REJECT_BLOCK : ACCEPT_BLOCK,
             })
@@ -124,7 +124,7 @@ describe("sync / range / chain", () => {
       const blocks: BlockInput[] = [];
       for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
         blocks.push(
-          getBlockInput.preEIP4844(config, {
+          getBlockInput.preDeneb(config, {
             message: generateEmptyBlock(i),
             signature: ACCEPT_BLOCK,
           })
@@ -166,7 +166,7 @@ describe("sync / range / chain", () => {
   }
 });
 
-function logSyncChainFns(logger: ILogger, fns: SyncChainFns): SyncChainFns {
+function logSyncChainFns(logger: Logger, fns: SyncChainFns): SyncChainFns {
   return {
     processChainSegment(blocks, syncType) {
       logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.block.message.slot).join(",")});

@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@lodestar/params";
-import {IChainConfig} from "../types.js";
+import {ChainConfig} from "../types.js";
 
-export const chainConfig: IChainConfig = {
+export const chainConfig: ChainConfig = {
   // Extends the minimal preset
   PRESET_BASE: PresetName.minimal,
   CONFIG_NAME: "minimal",
@@ -39,7 +39,7 @@ export const chainConfig: IChainConfig = {
   // Capella
   CAPELLA_FORK_VERSION: b("0x03000001"),
   CAPELLA_FORK_EPOCH: Infinity,
-  // EIP-4844
+  // Deneb
   EIP4844_FORK_VERSION: b("0x04000001"),
   EIP4844_FORK_EPOCH: Infinity,
 

@@ -12,7 +12,7 @@ import {GENESIS_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE
 import {Root, Slot, ValidatorIndex, ssz, Epoch} from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {toHex} from "@lodestar/utils";
-import {fromHexString} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -25,6 +25,7 @@ import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {ApiModules} from "../types.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {getValidatorStatus} from "../beacon/state/utils.js";
+import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
 
 /**
@@ -297,7 +298,12 @@ export function getValidatorApi({
         attEpoch <= headEpoch
           ? headState
           : // Will advance the state to the correct next epoch if necessary
-            await chain.regen.getBlockSlotState(headBlockRootHex, slot, RegenCaller.produceAttestationData);
+            await chain.regen.getBlockSlotState(
+              headBlockRootHex,
+              slot,
+              {dontTransferCache: true},
+              RegenCaller.produceAttestationData
+            );
 
       return {
         data: {
@@ -322,6 +328,14 @@ export function getValidatorApi({
      * @param beaconBlockRoot The block root for which to produce the contribution.
      */
     async produceSyncCommitteeContribution(slot, subcommitteeIndex, beaconBlockRoot) {
+      // when a validator is configured with multiple beacon node urls, this beaconBlockRoot may come from another beacon node
+      // and it hasn't been in our forkchoice since we haven't seen / processing that block
+      // see https://github.com/ChainSafe/lodestar/issues/5063
+      if (!chain.forkChoice.getBlock(beaconBlockRoot)) {
+        // if result of this call is false, i.e. block hasn't seen after 1 slot then the below notOnOptimisticBlockRoot call will throw error
+        await chain.waitForBlock(slot, toHexString(beaconBlockRoot));
+      }
+
       // Check the execution status as validator shouldn't contribute on an optimistic head
       notOnOptimisticBlockRoot(beaconBlockRoot);
 
@@ -506,10 +520,22 @@ export function getValidatorApi({
         signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
           try {
             // TODO: Validate in batch
-            const {indexedAttestation, committeeIndices} = await validateGossipAggregateAndProof(
+            // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+            const validateFn = () =>
+              validateGossipAggregateAndProof(
+                chain,
+                signedAggregateAndProof,
+                true // skip known attesters check
+              );
+            const {slot, beaconBlockRoot} = signedAggregateAndProof.message.aggregate.data;
+            // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node
+            // and the block hasn't been in our forkchoice since we haven't seen / processing that block
+            // see https://github.com/ChainSafe/lodestar/issues/5098
+            const {indexedAttestation, committeeIndices} = await validateGossipFnRetryUnknownRoot(
+              validateFn,
               chain,
-              signedAggregateAndProof,
-              true // skip known attesters check
+              slot,
+              beaconBlockRoot
             );
 
             chain.aggregatedAttestationPool.add(
@@ -564,12 +590,15 @@ export function getValidatorApi({
         contributionAndProofs.map(async (contributionAndProof, i) => {
           try {
             // TODO: Validate in batch
-            const {syncCommitteeParticipants} = await validateSyncCommitteeGossipContributionAndProof(
+            const {syncCommitteeParticipantIndices} = await validateSyncCommitteeGossipContributionAndProof(
               chain,
               contributionAndProof,
               true // skip known participants check
             );
-            chain.syncContributionAndProofPool.add(contributionAndProof.message, syncCommitteeParticipants);
+            chain.syncContributionAndProofPool.add(
+              contributionAndProof.message,
+              syncCommitteeParticipantIndices.length
+            );
             await network.gossip.publishContributionAndProof(contributionAndProof);
           } catch (e) {
             errors.push(e as Error);
@@ -598,7 +627,7 @@ export function getValidatorApi({
     async prepareBeaconCommitteeSubnet(subscriptions) {
       notWhileSyncing();
 
-      network.prepareBeaconCommitteeSubnet(
+      await network.prepareBeaconCommitteeSubnet(
         subscriptions.map(({validatorIndex, slot, isAggregator, committeesAtSlot, committeeIndex}) => ({
           validatorIndex: validatorIndex,
           subnet: computeSubnetForCommitteesAtSlot(slot, committeesAtSlot, committeeIndex),
@@ -646,7 +675,13 @@ export function getValidatorApi({
         }
       }
 
-      network.prepareSyncCommitteeSubnets(subs);
+      await network.prepareSyncCommitteeSubnets(subs);
+
+      if (metrics) {
+        for (const subscription of subscriptions) {
+          metrics.registerLocalValidatorInSyncCommittee(subscription.validatorIndex, subscription.untilEpoch);
+        }
+      }
     },
 
     async prepareBeaconProposer(proposers) {

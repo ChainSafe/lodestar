@@ -1,6 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {pruneSetToMax} from "@lodestar/utils";
-import {IMetrics} from "../../metrics/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadAttributesRpc} from "./types.js";
 
@@ -22,7 +22,7 @@ type FcuAttributes = {headBlockHash: DATA; finalizedBlockHash: DATA} & Omit<Payl
 
 export class PayloadIdCache {
   private readonly payloadIdByFcuAttributes = new Map<string, {payloadId: PayloadId; fullKey: string}>();
-  constructor(private readonly metrics?: IMetrics | null) {}
+  constructor(private readonly metrics?: Metrics | null) {}
 
   getFullKey({headBlockHash, finalizedBlockHash, timestamp, prevRandao, suggestedFeeRecipient}: FcuAttributes): string {
     return `${headBlockHash}-${finalizedBlockHash}-${timestamp}-${prevRandao}-${suggestedFeeRecipient}`;

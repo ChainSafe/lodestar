@@ -1,7 +1,7 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {IChainForkConfig} from "@lodestar/config";
-import {phase0, allForks, Slot, Root, ssz, RootHex, eip4844} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
+import {phase0, allForks, Slot, Root, ssz, RootHex, deneb} from "@lodestar/types";
 
 import {
   RoutesData,
@@ -196,7 +196,7 @@ export type Api = {
     blockId: BlockId
   ): Promise<
     ApiClientResponse<{
-      [HttpStatusCode.OK]: {executionOptimistic: ExecutionOptimistic; data: eip4844.BlobsSidecar};
+      [HttpStatusCode.OK]: {executionOptimistic: ExecutionOptimistic; data: deneb.BlobsSidecar};
     }>
   >;
 };
@@ -232,7 +232,7 @@ export type ReqTypes = {
   getBlobsSidecar: BlockIdOnlyReq;
 };
 
-export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api, ReqTypes> {
+export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, ReqTypes> {
   const blockIdOnlyReq: ReqSerializer<Api["getBlock"], BlockIdOnlyReq> = {
     writeReq: (block_id) => ({params: {block_id: String(block_id)}}),
     parseReq: ({params}) => [params.block_id],
@@ -294,6 +294,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getBlockHeader: ContainerDataExecutionOptimistic(BeaconHeaderResType),
     getBlockHeaders: ContainerDataExecutionOptimistic(ArrayOf(BeaconHeaderResType)),
     getBlockRoot: ContainerDataExecutionOptimistic(RootContainer),
-    getBlobsSidecar: ContainerDataExecutionOptimistic(ssz.eip4844.BlobsSidecar),
+    getBlobsSidecar: ContainerDataExecutionOptimistic(ssz.deneb.BlobsSidecar),
   };
 }

@@ -1,10 +1,10 @@
 import {EncodedPayload, EncodedPayloadType, ResponseError, RespStatus} from "@lodestar/reqresp";
-import {altair} from "@lodestar/types";
+import {allForks} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 
 export async function* onLightClientOptimisticUpdate(
   chain: IBeaconChain
-): AsyncIterable<EncodedPayload<altair.LightClientOptimisticUpdate>> {
+): AsyncIterable<EncodedPayload<allForks.LightClientOptimisticUpdate>> {
   const optimisticUpdate = chain.lightClientServer.getOptimisticUpdate();
   if (optimisticUpdate === null) {
     throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "No latest optimistic update available");
