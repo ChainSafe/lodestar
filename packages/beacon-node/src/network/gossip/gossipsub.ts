@@ -51,6 +51,7 @@ export type Eth2GossipsubOpts = {
   gossipsubDLow?: number;
   gossipsubDHigh?: number;
   gossipsubAwaitHandler?: boolean;
+  skipParamsLog?: boolean;
 };
 
 /**
@@ -138,7 +139,9 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
 
     // Having access to this data is CRUCIAL for debugging. While this is a massive log, it must not be deleted.
     // Scoring issues require this dump + current peer score stats to re-calculate scores.
-    this.logger.debug("Gossipsub score params", {params: JSON.stringify(scoreParams)});
+    if (!opts.skipParamsLog) {
+      this.logger.debug("Gossipsub score params", {params: JSON.stringify(scoreParams)});
+    }
   }
 
   /**
