@@ -5,7 +5,7 @@ import {capella, phase0, ssz, allForks} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {getReqRespHandlers, Network} from "../../../src/network/index.js";
+import {getReqRespHandlers, Network, NetworkInitModules} from "../../../src/network/index.js";
 import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 import {GossipType, GossipHandlers} from "../../../src/network/gossip/index.js";
 
@@ -25,6 +25,7 @@ const opts: NetworkOptions = {
   localMultiaddrs: [],
   discv5FirstQueryDelayMs: 0,
   discv5: null,
+  skipParamsLog: true,
 };
 
 // Schedule all forks at ALTAIR_FORK_EPOCH to avoid generating the pubkeys cache
@@ -86,10 +87,9 @@ describe("gossipsub", function () {
     const loggerA = testLogger("A");
     const loggerB = testLogger("B");
 
-    const modules = {
+    const modules: Omit<NetworkInitModules, "opts" | "peerId" | "logger"> = {
       config: beaconConfig,
       chain,
-      db,
       reqRespHandlers,
       gossipHandlers,
       signal: controller.signal,

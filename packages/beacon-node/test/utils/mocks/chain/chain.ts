@@ -225,6 +225,14 @@ export class MockBeaconChain implements IBeaconChain {
 
   async updateBeaconProposerData(): Promise<void> {}
   updateBuilderStatus(): void {}
+
+  regenCanAcceptWork(): boolean {
+    return true;
+  }
+
+  blsThreadPoolCanAcceptWork(): boolean {
+    return true;
+  }
 }
 
 const root = ssz.Root.defaultValue() as Uint8Array;

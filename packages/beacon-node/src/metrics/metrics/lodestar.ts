@@ -267,9 +267,25 @@ export function createLodestarMetrics(
     }),
     gossipValidationQueueConcurrency: register.gauge<"topic">({
       name: "lodestar_gossip_validation_queue_concurrency",
-      help: "Current concurrency of gossip validation queue",
+      help: "Current count of jobs being run on network processor for topic",
       labelNames: ["topic"],
     }),
+
+    networkProcessor: {
+      executeWorkCalls: register.gauge({
+        name: "lodestar_network_processor_execute_work_calls_total",
+        help: "Total calls to network processor execute work fn",
+      }),
+      jobsSubmitted: register.histogram({
+        name: "lodestar_network_processor_execute_jobs_submitted_total",
+        help: "Total calls to network processor execute work fn",
+        buckets: [0, 1, 5, 128],
+      }),
+      canNotAcceptWork: register.gauge({
+        name: "lodestar_network_processor_can_not_accept_work_total",
+        help: "Total times network processor can not accept work on executeWork",
+      }),
+    },
 
     discv5: {
       decodeEnrAttemptCount: register.counter({
@@ -537,6 +553,10 @@ export function createLodestarMetrics(
       queueLength: register.gauge({
         name: "lodestar_bls_thread_pool_queue_length",
         help: "Count of total block processor queue length",
+      }),
+      workersBusy: register.gauge({
+        name: "lodestar_bls_thread_pool_workers_busy",
+        help: "Count of current busy workers",
       }),
       totalJobsGroupsStarted: register.gauge({
         name: "lodestar_bls_thread_pool_job_groups_started_total",
