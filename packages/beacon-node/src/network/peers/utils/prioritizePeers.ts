@@ -245,7 +245,7 @@ function pruneExcessPeers(
 
   let outboundPeersEligibleForPruning = 0;
 
-  const sortedPeers = sortPeers(connectedPeers, dutiesByPeer);
+  const sortedPeers = sortPeersToPrune(connectedPeers, dutiesByPeer);
 
   const peersEligibleForPruning = sortedPeers
     // Then, iterate from highest score to lowest doing a manual filter for duties and outbound ratio
@@ -386,12 +386,13 @@ function pruneExcessPeers(
 }
 
 /**
+ * Sort peers ascending, peer-0 has the most chance to prune, peer-n has the least.
  * Shuffling first to break ties.
  * prefer sorting by dutied subnets first then number of long lived subnets,
  * peer score is the last criteria since they are supposed to be in the same score range,
  * bad score peers are removed by peer manager anyway
  */
-export function sortPeers(connectedPeers: PeerInfo[], dutiesByPeer: Map<PeerInfo, number>): PeerInfo[] {
+export function sortPeersToPrune(connectedPeers: PeerInfo[], dutiesByPeer: Map<PeerInfo, number>): PeerInfo[] {
   return shuffle(connectedPeers).sort((p1, p2) => {
     const dutiedSubnet1 = dutiesByPeer.get(p1) ?? 0;
     const dutiedSubnet2 = dutiesByPeer.get(p2) ?? 0;

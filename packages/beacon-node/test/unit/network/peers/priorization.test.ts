@@ -7,7 +7,7 @@ import {
   ExcessPeerDisconnectReason,
   prioritizePeers,
   PrioritizePeersOpts,
-  sortPeers,
+  sortPeersToPrune,
 } from "../../../../src/network/peers/utils/prioritizePeers.js";
 import {getAttnets, getSyncnets} from "../../../utils/network.js";
 import {RequestedSubnet} from "../../../../src/network/peers/utils/index.js";
@@ -263,7 +263,7 @@ describe("network / peers / priorization", async () => {
   }
 });
 
-describe("sortPeers", async function () {
+describe("sortPeersToPrune", async function () {
   const peers: PeerId[] = [];
   for (let i = 0; i < 8; i++) {
     const peer = await createSecp256k1PeerId();
@@ -291,10 +291,14 @@ describe("sortPeers", async function () {
       [connectedPeers[3], 0],
     ]);
 
-    expect(sortPeers(connectedPeers, dutiesByPeer).map((p) => p.id.toString())).to.be.deep.equals([
+    expect(sortPeersToPrune(connectedPeers, dutiesByPeer).map((p) => p.id.toString())).to.be.deep.equals([
+      // peer-0 is the worse and has the most chance to prune
       "peer-0",
+      // peer-1 is better than peer-0 in terms of score
       "peer-1",
+      // peer-2 has the most long lived subnets between 0/1/2
       "peer-2",
+      // peer-3 has the most dutied subnets
       "peer-3",
     ]);
   });
