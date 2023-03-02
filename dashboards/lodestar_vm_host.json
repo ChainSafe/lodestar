@@ -4251,7 +4251,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "lodestar_db_size_bytes_total",
               "interval": "",
               "legendFormat": "db size",
@@ -4368,7 +4368,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "validator_db_size_bytes_total",
               "interval": "",
               "legendFormat": "db size",

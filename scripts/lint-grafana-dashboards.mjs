@@ -32,7 +32,9 @@ if (filenames.length === 0) throw Error(`Empty dir ${dirpath}`);
  * @property {Templating} [templating]
  *
  * @typedef {Object} Panel
+ * @property {Datasource} [datasource]
  * @property {Target[]} [targets]
+ * @property {Panel[]} [panels]
  *
  * @typedef {Object} Target
  * @property {Datasource} [datasource]
@@ -74,27 +76,7 @@ for (const filename of filenames) {
   const json = JSON.parse(jsonStr);
 
   if (json.panels) {
-    for (const panel of json.panels) {
-      if (panel.targets) {
-        for (const target of panel.targets) {
-          // All panels must point to the datasource variable
-          if (target.datasource) {
-            target.datasource.type = "prometheus";
-            target.datasource.uid = "${DS_PROMETHEUS}";
-          }
-
-          // Disable exemplar
-          if (target.exemplar !== undefined) {
-            target.exemplar = false;
-          }
-
-          // Force usage of interval variable
-          if (target.expr) {
-            target.expr.replace(/\$__rate_interval/g, `$${variableNameRateInterval}`);
-          }
-        }
-      }
-    }
+    assertPanels(json.panels);
   }
 
   const LODESTAR_TAG = "lodestar";
@@ -224,5 +206,41 @@ function assertTemplatingListItemContent(json, varName, item) {
   } else {
     // Match replace content
     json.templating.list[index] = item;
+  }
+}
+
+/**
+ * @param {Panel[]} panels
+ */
+function assertPanels(panels) {
+  for (const panel of panels) {
+    // Panel datasource must point to the datasource variable
+    if (panel.datasource) {
+      panel.datasource.type = "prometheus";
+      panel.datasource.uid = `\${${variableNameDatasource}}`;
+    }
+    if (panel.targets) {
+      for (const target of panel.targets) {
+        // All panels must point to the datasource variable
+        if (target.datasource) {
+          target.datasource.type = "prometheus";
+          target.datasource.uid = `\${${variableNameDatasource}}`;
+        }
+
+        // Disable exemplar
+        if (target.exemplar !== undefined) {
+          target.exemplar = false;
+        }
+
+        // Force usage of interval variable
+        if (target.expr) {
+          target.expr.replace(/\$__rate_interval/g, `$${variableNameRateInterval}`);
+        }
+      }
+    }
+    // Recursively check nested panels
+    if (panel.panels) {
+      assertPanels(panel.panels);
+    }
   }
 }
