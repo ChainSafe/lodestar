@@ -9,34 +9,32 @@ type MiscOs = "lin" | "win" | "mac" | "unk";
  * Singleton class to collect and provide system information
  */
 class System {
-  private static instance?: System;
   // static data only needs to be collected once
   private staticDataCollected = false;
   // disk I/O is not measurable in some environments
   private diskIOMeasurable = true;
 
-  private _cpuCores = 0;
-  private _cpuThreads = 0;
-  private _cpuNodeSystemSecondsTotal = 0;
-  private _cpuNodeUserSecondsTotal = 0;
-  private _cpuNodeIdleSecondsTotal = 0;
-  private _memoryNodeBytesTotal = 0;
-  private _memoryNodeBytesFree = 0;
-  private _memoryNodeBytesCached = 0;
-  private _memoryNodeBytesBuffers = 0;
-  private _diskNodeBytesTotal = 0;
-  private _diskNodeBytesFree = 0;
-  private _diskNodeReadsTotal = 0;
-  private _diskNodeWritesTotal = 0;
-  private _networkNodeBytesTotalReceive = 0;
-  private _networkNodeBytesTotalTransmit = 0;
-  private _miscNodeBootTsSeconds = 0;
-  private _miscOs: MiscOs = "unk";
-
-  constructor() {
-    if (System.instance) return System.instance;
-    System.instance = this;
-  }
+  cpuCores = 0;
+  cpuThreads = 0;
+  cpuNodeSystemSecondsTotal = 0;
+  cpuNodeUserSecondsTotal = 0;
+  // Note: CPU I/O wait is not measured by os.cpus()
+  cpuNodeIOWaitSecondsTotal = 0;
+  cpuNodeIdleSecondsTotal = 0;
+  memoryNodeBytesTotal = 0;
+  memoryNodeBytesFree = 0;
+  memoryNodeBytesCached = 0;
+  memoryNodeBytesBuffers = 0;
+  diskNodeBytesTotal = 0;
+  diskNodeBytesFree = 0;
+  // Note: disk I/O seconds is currently unused by beaconcha.in
+  diskNodeIOSeconds = 0;
+  diskNodeReadsTotal = 0;
+  diskNodeWritesTotal = 0;
+  networkNodeBytesTotalReceive = 0;
+  networkNodeBytesTotalTransmit = 0;
+  miscNodeBootTsSeconds = 0;
+  miscOs: MiscOs = "unk";
 
   /**
    * Collect system data and update cached values
@@ -52,7 +50,7 @@ class System {
       this.collectNetworkData().catch((e) => debug("network", e)),
     ]);
 
-    this._miscNodeBootTsSeconds = this.getSystemBootTime();
+    this.miscNodeBootTsSeconds = this.getSystemBootTime();
   }
 
   private async collectStaticData(): Promise<void> {
@@ -61,10 +59,10 @@ class System {
     const cpu = await system.cpu();
     // Note: inside container this might be inaccurate as
     // physicalCores in some cases is the count of logical CPU cores
-    this._cpuCores = cpu.physicalCores;
-    this._cpuThreads = cpu.cores;
+    this.cpuCores = cpu.physicalCores;
+    this.cpuThreads = cpu.cores;
 
-    this._miscOs = this.getNormalizedOsVersion();
+    this.miscOs = this.getNormalizedOsVersion();
 
     this.staticDataCollected = true;
   }
@@ -81,17 +79,17 @@ class System {
     }
 
     // Note: currently beaconcha.in expects system CPU seconds to be everything
-    this._cpuNodeSystemSecondsTotal = Object.values(cpuTimes).reduce((total, time) => total + time, 0);
-    this._cpuNodeUserSecondsTotal = cpuTimes.user;
-    this._cpuNodeIdleSecondsTotal = cpuTimes.idle;
+    this.cpuNodeSystemSecondsTotal = Object.values(cpuTimes).reduce((total, time) => total + time, 0);
+    this.cpuNodeUserSecondsTotal = cpuTimes.user;
+    this.cpuNodeIdleSecondsTotal = cpuTimes.idle;
   }
 
   private async collectMemoryData(): Promise<void> {
     const memory = await system.mem();
-    this._memoryNodeBytesTotal = memory.total;
-    this._memoryNodeBytesFree = memory.free;
-    this._memoryNodeBytesCached = memory.cached;
-    this._memoryNodeBytesBuffers = memory.buffers;
+    this.memoryNodeBytesTotal = memory.total;
+    this.memoryNodeBytesFree = memory.free;
+    this.memoryNodeBytesCached = memory.cached;
+    this.memoryNodeBytesBuffers = memory.buffers;
   }
 
   private async collectDiskData(): Promise<void> {
@@ -100,16 +98,16 @@ class System {
     const rootFs = process.platform === "win32" ? process.cwd().split(path.sep)[0] : "/";
     // only consider root file system, if it does not exist use first entry in the list
     const fileSystem = fileSystems.find((fs) => fs.mount === rootFs) ?? fileSystems[0];
-    this._diskNodeBytesTotal = fileSystem.size;
-    this._diskNodeBytesFree = fileSystem.available;
+    this.diskNodeBytesTotal = fileSystem.size;
+    this.diskNodeBytesFree = fileSystem.available;
 
     if (this.diskIOMeasurable) {
       const disk = await system.disksIO();
       if (disk != null && disk.rIO !== 0) {
         // Note: rIO and wIO might not be available inside container
         // see https://github.com/sebhildebrandt/systeminformation/issues/777
-        this._diskNodeReadsTotal = disk.rIO;
-        this._diskNodeWritesTotal = disk.wIO;
+        this.diskNodeReadsTotal = disk.rIO;
+        this.diskNodeWritesTotal = disk.wIO;
       } else {
         this.diskIOMeasurable = false;
       }
@@ -121,8 +119,8 @@ class System {
     const [network] = await system.networkStats();
     // Note: rx_bytes and tx_bytes will be inaccurate if process
     // runs inside container as it only captures local network traffic
-    this._networkNodeBytesTotalReceive = network.rx_bytes;
-    this._networkNodeBytesTotalTransmit = network.tx_bytes;
+    this.networkNodeBytesTotalReceive = network.rx_bytes;
+    this.networkNodeBytesTotalTransmit = network.tx_bytes;
   }
 
   private getNormalizedOsVersion(): MiscOs {
@@ -140,84 +138,6 @@ class System {
 
   private getSystemBootTime(): number {
     return Math.floor(Date.now() / 1000 - os.uptime());
-  }
-
-  get cpuCores(): number {
-    return this._cpuCores;
-  }
-
-  get cpuThreads(): number {
-    return this._cpuThreads;
-  }
-
-  get cpuNodeSystemSecondsTotal(): number {
-    return this._cpuNodeSystemSecondsTotal;
-  }
-
-  get cpuNodeUserSecondsTotal(): number {
-    return this._cpuNodeUserSecondsTotal;
-  }
-
-  get cpuNodeIOWaitSecondsTotal(): number {
-    // Note: not measured by os.cpus()
-    return 0;
-  }
-
-  get cpuNodeIdleSecondsTotal(): number {
-    return this._cpuNodeIdleSecondsTotal;
-  }
-
-  get memoryNodeBytesTotal(): number {
-    return this._memoryNodeBytesTotal;
-  }
-
-  get memoryNodeBytesFree(): number {
-    return this._memoryNodeBytesFree;
-  }
-
-  get memoryNodeBytesCached(): number {
-    return this._memoryNodeBytesCached;
-  }
-
-  get memoryNodeBytesBuffers(): number {
-    return this._memoryNodeBytesBuffers;
-  }
-
-  get diskNodeBytesTotal(): number {
-    return this._diskNodeBytesTotal;
-  }
-
-  get diskNodeBytesFree(): number {
-    return this._diskNodeBytesFree;
-  }
-
-  get diskNodeIOSeconds(): number {
-    // Note: currently unused by beaconcha.in
-    return 0;
-  }
-
-  get diskNodeReadsTotal(): number {
-    return this._diskNodeReadsTotal;
-  }
-
-  get diskNodeWritesTotal(): number {
-    return this._diskNodeWritesTotal;
-  }
-
-  get networkNodeBytesTotalReceive(): number {
-    return this._networkNodeBytesTotalReceive;
-  }
-
-  get networkNodeBytesTotalTransmit(): number {
-    return this._networkNodeBytesTotalTransmit;
-  }
-
-  get miscNodeBootTsSeconds(): number {
-    return this._miscNodeBootTsSeconds;
-  }
-
-  get miscOs(): MiscOs {
-    return this._miscOs;
   }
 }
 
