@@ -1,7 +1,7 @@
 import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, capella, isBlindedBeaconBlock, Wei} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
-import {extendError, prettyBytes, racePromisesWithCutoff} from "@lodestar/utils";
+import {extendError, prettyBytes, racePromisesWithCutoff, RaceEvent} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, ApiError, ServerApi} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
@@ -12,6 +12,7 @@ import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 
 const ETH_TO_WEI = BigInt("1000000000000000000");
 const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 3_000;
+const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 
 type ProduceBlockOpts = {
   expectedFeeRecipient: string;
@@ -141,7 +142,15 @@ export class BlockProposingService {
     if (blindedBlockPromise !== null) {
       [blindedBlock, fullBlock] = await racePromisesWithCutoff(
         [blindedBlockPromise, fullBlockPromise],
-        BLOCK_PRODUCTION_RACE_CUTOFF_MS
+        BLOCK_PRODUCTION_RACE_CUTOFF_MS,
+        BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+        (event: RaceEvent) => {
+          this.logger.debug("Block production race (builder vs execution) event", {
+            event,
+            cutoffMs: BLOCK_PRODUCTION_RACE_CUTOFF_MS,
+            timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+          });
+        }
       );
       if (blindedBlock instanceof Error) {
         // error here means race cutoff exceeded
