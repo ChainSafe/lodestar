@@ -23,14 +23,17 @@ const statusToSimpleStatusMapping = (status: routes.beacon.ValidatorStatus): Sim
     case "active_exiting":
     case "active_slashed":
     case "active_ongoing":
-    case "withdrawal_possible":
       return "active";
+
+    case "withdrawal_possible":
     case "exited_slashed":
     case "exited_unslashed":
       return "exited";
+
     case "pending_initialized":
     case "pending_queued":
       return "pending";
+
     case "withdrawal_done":
       return "withdrawn";
   }
@@ -123,12 +126,12 @@ export class IndicesService {
 
     const newIndices = [];
 
-    const allValidators = new MapDef<SimpleValidatorStatus, number>(() => 0);
+    const allValidatorStatuses = new MapDef<SimpleValidatorStatus, number>(() => 0);
 
     for (const validatorState of res.response.data) {
       // Group all validators by status
       const status = statusToSimpleStatusMapping(validatorState.status);
-      allValidators.set(status, allValidators.getOrDefault(status) + 1);
+      allValidatorStatuses.set(status, allValidatorStatuses.getOrDefault(status) + 1);
 
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
       if (!this.pubkey2index.has(pubkeyHex)) {
@@ -142,15 +145,15 @@ export class IndicesService {
       }
     }
 
-    // Filter out validator statuses that are greater than 0
-    const statuses = Object.fromEntries(Array.from(allValidators.entries()).filter((entry) => entry[1] > 0));
+    // Retrieve the number of validators for each status
+    const statuses = Object.fromEntries(Array.from(allValidatorStatuses.entries()).filter((entry) => entry[1] > 0));
     // The number of validators that are not in the beacon chain
     const pendingCount = pubkeysHex.length - res.response.data.length;
     if (pendingCount > 0) {
-      statuses["pending"] += pendingCount;
+      allValidatorStatuses.set("pending", allValidatorStatuses.getOrDefault("pending") + pendingCount);
     }
     // The total number of validators
-    const total = Object.values(statuses).reduce((a, b) => a + b, 0);
+    const total = pubkeysHex.length;
     this.logger.info("Validator statuses", {...statuses, total});
 
     return newIndices;
