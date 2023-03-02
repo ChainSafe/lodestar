@@ -133,17 +133,9 @@ export class BlockProposingService {
     graffiti: string,
     {expectedFeeRecipient, strictFeeRecipientCheck, isBuilderEnabled, builderSelection}: ProduceBlockOpts
   ): Promise<{data: allForks.FullOrBlindedBeaconBlock} & {debugLogCtx: Record<string, string>}> => {
-    const blindedBlockPromise = isBuilderEnabled
-      ? this.produceBlindedBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
-          this.logger.error("Failed to produce builder block", {}, e as Error);
-          return null;
-        })
-      : null;
-
-    const fullBlockPromise = this.produceBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
-      this.logger.error("Failed to produce execution block", {}, e as Error);
-      return null;
-    });
+    // Start calls for building execution and builder blocks
+    const blindedBlockPromise = isBuilderEnabled ? this.produceBlindedBlock(slot, randaoReveal, graffiti) : null;
+    const fullBlockPromise = this.produceBlock(slot, randaoReveal, graffiti);
 
     let blindedBlock, fullBlock;
     if (blindedBlockPromise !== null) {
@@ -153,11 +145,11 @@ export class BlockProposingService {
       );
       if (blindedBlock instanceof Error) {
         // error here means race cutoff exceeded
-        this.logger.error("Failed to race builder block", {}, blindedBlock);
+        this.logger.error("Failed to produce builder block", {}, blindedBlock);
         blindedBlock = null;
       }
       if (fullBlock instanceof Error) {
-        this.logger.error("Failed to race execution block", {}, fullBlock);
+        this.logger.error("Failed to produce execution block", {}, fullBlock);
         fullBlock = null;
       }
     } else {
