@@ -39,9 +39,12 @@ type PromiseState<T> =
 export async function racePromisesWithCutoff<T>(inputs: Promise<T>[], cutoffMs: number): Promise<(Error | T)[]> {
   return new Promise((resolve, reject) => {
     try {
+      /** Track promises status and resolved values */
       const promisesStatus = [] as PromiseState<T>[];
+      /** Track if cutoff time has been reached */
       let deadLineFullFilled = false;
 
+      /** Utility to return resolved value/errors */
       const mapStatues = (): (Error | T)[] =>
         promisesStatus.map((pmStatus) => {
           switch (pmStatus.status) {
@@ -54,8 +57,12 @@ export async function racePromisesWithCutoff<T>(inputs: Promise<T>[], cutoffMs: 
           }
         });
 
+      /** Inspect promises states and see if the race can be resolved */
       const checkAndResolve = (): void => {
         if (deadLineFullFilled) {
+          // If deadline is fullfilled, then resolved if
+          //   - Any of the promises resolved, Or
+          //   - All of the promises were rejected
           let resolvedAny = false;
           let rejectedAll = true;
 
@@ -68,7 +75,7 @@ export async function racePromisesWithCutoff<T>(inputs: Promise<T>[], cutoffMs: 
             resolve(mapStatues());
           }
         } else {
-          // Return if all are resolved or rejected return, no point waiting any further
+          // If deadline is not yet complete resolve is there isn't any pending promise to resolve
           let anyPending = false;
           for (let index = 0; index < inputs.length; index++) {
             anyPending = anyPending || promisesStatus[index].status === PromiseStatus.pending;
@@ -79,6 +86,7 @@ export async function racePromisesWithCutoff<T>(inputs: Promise<T>[], cutoffMs: 
         }
       };
 
+      // Track and update the promises and try to see if we can resolve the race
       Array.from({length: inputs.length}, (_v, index) => {
         promisesStatus[index] = {status: PromiseStatus.pending, value: null};
 
@@ -86,24 +94,24 @@ export async function racePromisesWithCutoff<T>(inputs: Promise<T>[], cutoffMs: 
           .then((value) => {
             promisesStatus[index] = {status: PromiseStatus.resolved, value};
             if (deadLineFullFilled) {
+              // Post dealine we can safely resolve
               resolve(mapStatues());
             } else {
+              // Check and resolve if there are no more pending promises
               checkAndResolve();
             }
           })
           .catch((e: Error) => {
+            // Rejected promise, check and resolve
             promisesStatus[index] = {status: PromiseStatus.rejected, value: e};
             checkAndResolve();
           })
           .catch((e) => {
             reject(e);
           });
-        if (deadLineFullFilled) {
-          resolve(mapStatues());
-        }
       });
 
-      // IF there is no pending promise then just resolve
+      // IF there is no pending promise to wait for then just resolve
       checkAndResolve();
       // Wait for cutoff
       sleep(cutoffMs)
