@@ -145,15 +145,17 @@ export class IndicesService {
       }
     }
 
-    // Retrieve the number of validators for each status
-    const statuses = Object.fromEntries(Array.from(allValidatorStatuses.entries()).filter((entry) => entry[1] > 0));
     // The number of validators that are not in the beacon chain
     const pendingCount = pubkeysHex.length - res.response.data.length;
-    if (pendingCount > 0) {
-      allValidatorStatuses.set("pending", allValidatorStatuses.getOrDefault("pending") + pendingCount);
-    }
+
+    allValidatorStatuses.set("pending", allValidatorStatuses.getOrDefault("pending") + pendingCount);
+
+    // Retrieve the number of validators for each status
+    const statuses = Object.fromEntries(Array.from(allValidatorStatuses.entries()).filter((entry) => entry[1] > 0));
+
     // The total number of validators
     const total = pubkeysHex.length;
+
     this.logger.info("Validator statuses", {...statuses, total});
 
     return newIndices;
