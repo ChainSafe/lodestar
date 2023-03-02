@@ -37,8 +37,7 @@ type PromiseState<T> =
   | {status: PromiseStatus.pending; value: null};
 
 export async function racePromisesWithCutoff<T>(inputs: Promise<T>[], cutoffMs: number): Promise<(Error | T)[]> {
-  // eslint-disable-next-line no-async-promise-executor
-  return new Promise(async (resolve, reject) => {
+  return new Promise((resolve, reject) => {
     try {
       const promisesStatus = [] as PromiseState<T>[];
       let deadLineFullFilled = false;
@@ -69,8 +68,8 @@ export async function racePromisesWithCutoff<T>(inputs: Promise<T>[], cutoffMs: 
             resolve(mapStatues());
           }
         } else {
+          // Return if all are resolved or rejected return, no point waiting any further
           let anyPending = false;
-          // If all are resolved or rejected return, no point waiting any further
           for (let index = 0; index < inputs.length; index++) {
             anyPending = anyPending || promisesStatus[index].status === PromiseStatus.pending;
           }
@@ -107,10 +106,15 @@ export async function racePromisesWithCutoff<T>(inputs: Promise<T>[], cutoffMs: 
       // IF there is no pending promise then just resolve
       checkAndResolve();
       // Wait for cutoff
-      await sleep(cutoffMs);
-      // If any promise resolved return will all the resolves
-      deadLineFullFilled = true;
-      checkAndResolve();
+      sleep(cutoffMs)
+        .then(() => {
+          // If any promise resolved return will all the resolves
+          deadLineFullFilled = true;
+          checkAndResolve();
+        })
+        .catch((e) => {
+          reject(e);
+        });
     } catch (e) {
       reject(e);
     }
