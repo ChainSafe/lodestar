@@ -228,9 +228,16 @@ export class BlockProposingService {
       }
     }
 
-    const transactions = (fullOrBlindedBlock.data as bellatrix.BeaconBlock).body.executionPayload?.transactions.length;
+    const transactions = (fullOrBlindedBlock.data as bellatrix.BeaconBlock).body.executionPayload?.transactions?.length;
     const withdrawals = (fullOrBlindedBlock.data as capella.BeaconBlock).body.executionPayload?.withdrawals?.length;
-    Object.assign(debugLogCtx, {feeRecipient, transactions}, withdrawals !== undefined ? {withdrawals} : {});
+
+    // feeRecipient, transactions or withdrawals can end up undefined
+    Object.assign(
+      debugLogCtx,
+      feeRecipient !== undefined ? {feeRecipient} : {},
+      transactions !== undefined ? {transactions} : {},
+      withdrawals !== undefined ? {withdrawals} : {}
+    );
 
     return {...fullOrBlindedBlock, debugLogCtx};
   }
