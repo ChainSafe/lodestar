@@ -37,19 +37,13 @@ export function pollPrepareBeaconProposer(
     const indicesChunks = batchItems(validatorStore.getAllLocalIndices(), {batchSize: REGISTRATION_CHUNK_SIZE});
 
     for (const indices of indicesChunks) {
-      const proposers: routes.validator.ProposerPreparationData[] = [];
       try {
-        indices.forEach((index) => {
-          const feeRecipient = validatorStore.getFeeRecipientByIndex(index);
-          const pubKey = validatorStore.getPubkeyOfIndex(index);
-
-          proposers.push({
+        const proposers = indices.map(
+          (index): routes.validator.ProposerPreparationData => ({
             validatorIndex: String(index as number),
-            feeRecipient,
-          });
-
-          logger.info("Validator exists in beacon chain", {validatorIndex: index, feeRecipient, pubKey});
-        });
+            feeRecipient: validatorStore.getFeeRecipientByIndex(index),
+          })
+        );
         ApiError.assert(await api.validator.prepareBeaconProposer(proposers));
       } catch (e) {
         logger.error("Failed to register proposers with beacon", {epoch}, e as Error);
