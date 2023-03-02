@@ -10,4 +10,8 @@ export class BlsVerifierMock implements IBlsVerifier {
   async close(): Promise<void> {
     //
   }
+
+  canAcceptWork(): boolean {
+    return true;
+  }
 }

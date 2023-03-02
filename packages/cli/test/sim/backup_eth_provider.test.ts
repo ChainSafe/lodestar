@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {join} from "node:path";
+import path from "node:path";
 import {activePreset} from "@lodestar/params";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
@@ -41,7 +41,7 @@ const ttd = getEstimatedTTD({
 const env = await SimulationEnvironment.initWithDefaults(
   {
     id: "backup-eth-provider",
-    logsDir: join(logFilesDir, "backup-eth-provider"),
+    logsDir: path.join(logFilesDir, "backup-eth-provider"),
     chainConfig: {
       ALTAIR_FORK_EPOCH: altairForkEpoch,
       BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,

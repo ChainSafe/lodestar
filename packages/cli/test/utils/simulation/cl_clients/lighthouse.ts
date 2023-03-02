@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {writeFile} from "node:fs/promises";
-import {dirname, join} from "node:path";
+import path from "node:path";
 import got, {RequestError} from "got";
 import yaml from "js-yaml";
 import {HttpClient} from "@lodestar/api";
@@ -80,8 +80,8 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
         }
       : undefined,
     bootstrap: async () => {
-      await writeFile(join(rootDir, "config.yaml"), yaml.dump(chainConfigToJson(config)));
-      await writeFile(join(rootDir, "deploy_block.txt"), "0");
+      await writeFile(path.join(rootDir, "config.yaml"), yaml.dump(chainConfigToJson(config)));
+      await writeFile(path.join(rootDir, "deploy_block.txt"), "0");
     },
     cli: {
       command: isDocker ? "lighthouse" : (process.env.LIGHTHOUSE_BINARY_PATH as string),
@@ -118,7 +118,7 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
           id: `${id}-validator`,
           paths: {
             ...opts.paths,
-            logFilePath: join(dirname(logFilePath), `${id}-validator.log`),
+            logFilePath: path.join(path.dirname(logFilePath), `${id}-validator.log`),
           },
         },
         runner
@@ -193,7 +193,7 @@ export const generateLighthouseValidatorJobs = (opts: CLClientGeneratorOptions, 
       if (isDocker) {
         await updateKeystoresPath(
           validatorsDefinitionFilePath,
-          dirname(validatorsDefinitionFilePathMounted),
+          path.dirname(validatorsDefinitionFilePathMounted),
           validatorsDefinitionFilePath
         );
       }

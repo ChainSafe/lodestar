@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {EventEmitter} from "node:events";
 import {mkdir, writeFile} from "node:fs/promises";
-import {join} from "node:path";
-import {existsSync} from "node:fs";
+import path from "node:path";
+import fs from "node:fs";
 import tmp from "tmp";
 import {fromHexString} from "@chainsafe/ssz";
 import {nodeUtils} from "@lodestar/beacon-node";
@@ -122,7 +122,7 @@ export class SimulationEnvironment {
       id,
       genesisTime,
       controller: new AbortController(),
-      rootDir: join(tmp.dirSync({unsafeCleanup: true, tmpdir: "/tmp", template: "sim-XXXXXX"}).name, id),
+      rootDir: path.join(tmp.dirSync({unsafeCleanup: true, tmpdir: "/tmp", template: "sim-XXXXXX"}).name, id),
     });
 
     for (const client of clients) {
@@ -158,7 +158,7 @@ export class SimulationEnvironment {
 
     try {
       regsiterProcessHandler(this);
-      if (!existsSync(this.options.rootDir)) {
+      if (!fs.existsSync(this.options.rootDir)) {
         await mkdir(this.options.rootDir);
       }
 

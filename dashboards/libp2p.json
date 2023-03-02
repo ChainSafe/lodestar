@@ -698,7 +698,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -775,7 +775,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "rate(libp2p_tcp_listener_events_total[$rate_interval])",
@@ -790,7 +790,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -867,7 +867,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "rate(libp2p_tcp_listener_errors_total[$rate_interval])",
@@ -882,7 +882,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -977,7 +977,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "libp2p_tcp_listener_status_info",

@@ -1,4 +1,4 @@
-import path, {join} from "node:path";
+import path from "node:path";
 import {fileURLToPath} from "node:url";
 
 // Global variable __dirname no longer available in ES6 modules.
@@ -6,4 +6,4 @@ import {fileURLToPath} from "node:url";
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export const SPEC_TEST_LOCATION = join(__dirname, "../../../../node_modules/@chainsafe/eth2-spec-tests");
+export const SPEC_TEST_LOCATION = path.join(__dirname, "../../../../node_modules/@chainsafe/eth2-spec-tests");
