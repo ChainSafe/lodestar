@@ -135,7 +135,12 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         // Now eth deposit/merge tracker methods directly available on engine endpoints
         eth1: {enabled: false, providerUrls: [engineRpcUrl], jwtSecretHex},
         executionEngine: {urls: [engineRpcUrl], jwtSecretHex},
-        executionBuilder: {enabled: true, issueLocalFcUForBlockProduction: true},
+        executionBuilder: {
+          enabled: true,
+          issueLocalFcUForBlockProduction: true,
+          faultInspectionWindow: 32,
+          allowedFaults: 16,
+        },
         chain: {suggestedFeeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
       },
       validatorCount: validatorClientCount * validatorsPerClient,
