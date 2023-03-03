@@ -150,7 +150,7 @@ export class BlockProposingService {
         BLOCK_PRODUCTION_RACE_CUTOFF_MS,
         BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
         (event: RaceEvent, delayMs: number) => {
-          this.logger.debug("Block production race (builder vs execution) event", {
+          this.logger.debug("Block production race (builder vs execution)", {
             event,
             delayMs,
             cutoffMs: BLOCK_PRODUCTION_RACE_CUTOFF_MS,
