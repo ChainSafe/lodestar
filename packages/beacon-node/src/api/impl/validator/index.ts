@@ -217,6 +217,10 @@ export function getValidatorApi({
         graffiti: toGraffitiBuffer(graffiti || ""),
       });
       metrics?.blockProductionSuccess.inc();
+      logger.verbose("Produced blinded block", {
+        slot,
+        blockValue,
+      });
       return {data: block, version: config.getForkName(block.slot), blockValue};
     } finally {
       if (timer) timer({source: "builder"});
@@ -248,6 +252,11 @@ export function getValidatorApi({
       });
       metrics?.blockProductionSuccess.inc();
       metrics?.blockProductionNumAggregated.observe(block.body.attestations.length);
+      logger.verbose("Produced block", {
+        slot,
+        blockValue,
+        root: toHexString(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
+      });
       return {data: block, version: config.getForkName(block.slot), blockValue};
     } finally {
       if (timer) timer({source: "engine"});

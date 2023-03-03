@@ -143,6 +143,7 @@ export class PrepareNextSlotScheduler {
           // try/catch wrapper here.
           await prepareExecutionPayload(
             this.chain,
+            this.logger,
             fork as ForkExecution, // State is of execution type
             safeBlockHash,
             finalizedBlockHash,
