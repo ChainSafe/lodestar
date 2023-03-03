@@ -135,7 +135,6 @@ export class IndicesService {
 
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
       if (!this.pubkey2index.has(pubkeyHex)) {
-        //#TODO: We want to include the fee_recipient here, but it's not available in the API https://github.com/ChainSafe/lodestar/issues/5192
         this.logger.info("Validator exists in beacon chain", {
           validatorIndex: validatorState.index,
           pubKey: pubkeyHex,
@@ -156,7 +155,7 @@ export class IndicesService {
 
     // The total number of validators
     const total = pubkeysHex.length;
-    //#TODO: Refactor in https://github.com/ChainSafe/lodestar/issues/5158
+
     this.logger.info("Validator statuses", {...statuses, total});
 
     return newIndices;
