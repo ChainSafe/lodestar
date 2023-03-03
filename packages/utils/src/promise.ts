@@ -93,10 +93,19 @@ export async function racePromisesWithCutoff<T>(
   await Promise.allSettled(promises.map((promise) => Promise.race([promise, cutoffPromise])));
   if (cutoffObserved) {
     eventCb(RaceEvent.cutoff);
+    // If any one is resolved, then just simply return as we are post cutoff
+    const anyResolved = promisesStates.reduce(
+      (acc, pmState) => acc || pmState.status === PromiseStatus.resolved,
+      false
+    );
+    if (anyResolved) {
+      return mapStatues(promisesStates);
+    }
   } else {
     eventCb(RaceEvent.precutoff);
     return mapStatues(promisesStates);
   }
+
   // Post deadline resolve with any of the promise or all rejected before timeout
   await Promise.any(promises.map((promise) => Promise.race([promise, timeoutPromise]))).catch((_e) => {
     if (timeoutObserved) {
