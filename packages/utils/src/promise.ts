@@ -55,7 +55,7 @@ export enum RaceEvent {
   /** cutoff reached as some were pending till cutoff **/
   cutoff = "cutoff-reached",
   /** atleast one resolved till cutoff so no race required */
-  preraceresolution = "resolution-prerace",
+  resolvedatcutoff = "resolved-at-cutoff",
   /** if none reject/resolve before cutoff but one resolves or all reject before timeout */
   pretimeout = "pretimeout-return",
   /** timeout reached as none resolved and some were pending till timeout*/
@@ -101,15 +101,16 @@ export async function racePromisesWithCutoff<T>(
   // Wait till cutoff time unless all original promises resolve/reject early
   await Promise.allSettled(promises.map((promise) => Promise.race([promise, cutoffPromise])));
   if (cutoffObserved) {
-    eventCb(RaceEvent.cutoff);
     // If any is resolved, then just simply return as we are post cutoff
     const anyResolved = promisesStates.reduce(
       (acc, pmState) => acc || pmState.status === PromiseStatus.resolved,
       false
     );
     if (anyResolved) {
-      eventCb(RaceEvent.preraceresolution);
+      eventCb(RaceEvent.resolvedatcutoff);
       return mapStatuesToResponses(promisesStates);
+    } else {
+      eventCb(RaceEvent.cutoff);
     }
   } else {
     eventCb(RaceEvent.precutoff);

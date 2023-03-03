@@ -34,7 +34,7 @@ describe("racePromisesWithCutoff", () => {
       "some resolve pre-cutoff with no race post cutoff",
       [100, -200, -1100, 1200],
       ["100", "-200", "pending", "pending"],
-      [RaceEvent.cutoff, RaceEvent.preraceresolution],
+      [RaceEvent.resolvedatcutoff],
     ],
     [
       "some reject pre-cutoff, with race resolution pre-timeout",
@@ -52,7 +52,7 @@ describe("racePromisesWithCutoff", () => {
       "some resolve/reject pre-cutoff, some resolve/reject pre-timeout but no race beyond cutoff",
       [100, -200, -1100, 1100, 1700, -1700],
       ["100", "-200", "pending", "pending", "pending", "pending"],
-      [RaceEvent.cutoff, RaceEvent.preraceresolution],
+      [RaceEvent.resolvedatcutoff],
     ],
     [
       "none resolve/reject pre-cutoff with race resolution pre timeout",
