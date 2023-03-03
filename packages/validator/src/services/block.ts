@@ -11,7 +11,12 @@ import {ValidatorStore, BuilderSelection} from "./validatorStore.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 
 const ETH_TO_WEI = BigInt("1000000000000000000");
+/**
+ * Cutoff time to wait for execution and builder block production apis to resolve
+ * Post this time, race execution and builder to pick whatever resolves first
+ */
 const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 3_000;
+/** Overall timeout for execution and block production apis */
 const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 
 type ProduceBlockOpts = {

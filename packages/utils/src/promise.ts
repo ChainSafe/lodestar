@@ -102,6 +102,7 @@ export async function racePromisesWithCutoff<T>(
       false
     );
     if (anyResolved) {
+      eventCb(RaceEvent.pretimeout);
       return mapStatuesToResponses(promisesStates);
     }
   } else {
@@ -110,12 +111,15 @@ export async function racePromisesWithCutoff<T>(
   }
 
   // Post deadline resolve with any of the promise or all rejected before timeout
-  await Promise.any(promises.map((promise) => Promise.race([promise, timeoutPromise]))).catch((_e) => {
-    if (timeoutObserved) {
-      eventCb(RaceEvent.timeout);
-    } else {
-      eventCb(RaceEvent.pretimeout);
-    }
-  });
+  await Promise.any(promises.map((promise) => Promise.race([promise, timeoutPromise]))).catch(
+    // just ignore if all reject as we will returned mapped rejections
+    // eslint-disable-next-line  @typescript-eslint/no-empty-function
+    (_e) => {}
+  );
+  if (timeoutObserved) {
+    eventCb(RaceEvent.timeout);
+  } else {
+    eventCb(RaceEvent.pretimeout);
+  }
   return mapStatuesToResponses(promisesStates);
 }

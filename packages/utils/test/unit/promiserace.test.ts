@@ -1,9 +1,9 @@
 import {expect} from "chai";
 import {racePromisesWithCutoff, RaceEvent} from "../../src/promise.js";
 
-describe("assert", () => {
+describe("racePromisesWithCutoff", () => {
   const cutoff = 1000;
-  const timeout = 3000;
+  const timeout = 1500;
 
   const resolveAfter = (value: string, delay: number): Promise<string> =>
     new Promise((resolve) => {
@@ -21,6 +21,55 @@ describe("assert", () => {
   const testcases: [string, number[], (string | Error)[], RaceEvent[]][] = [
     ["all resolve pre-cutoff", [100, 200], ["100", "200"], [RaceEvent.precutoff]],
     ["all resolve/reject pre-cutoff", [100, -200], ["100", "-200"], [RaceEvent.precutoff]],
+    [
+      "some resolve/reject pre-cutoff, all resolve/reject pre-timeout",
+      [100, -200, -1100, 1200],
+      ["100", "-200", "pending", "pending"],
+      [RaceEvent.cutoff, RaceEvent.pretimeout],
+    ],
+    [
+      "some reject pre-cutoff, all resolve pre-timeout",
+      [-100, -200, -1100, 1100, 1200],
+      ["-100", "-200", "-1100", "1100", "pending"],
+      [RaceEvent.cutoff, RaceEvent.pretimeout],
+    ],
+    [
+      "some resolve/reject pre-cutoff, some resolve/reject post-cutoff, some resolve/reject post-timeout",
+      [100, -200, -1100, 1100, 1700, -1700],
+      ["100", "-200", "pending", "pending", "pending", "pending"],
+      [RaceEvent.cutoff, RaceEvent.pretimeout],
+    ],
+    [
+      "none resolve/reject pre-cutoff, some resolve/reject post-cutoff, some resolve/reject post-timeout",
+      [-1100, 1200, 1700],
+      ["-1100", "1200", "pending"],
+      [RaceEvent.cutoff, RaceEvent.pretimeout],
+    ],
+    [
+      "none resolve/reject pre-cutoff, some resolve post-cutoff, some resolve/reject post-timeout",
+      [1100, 1200, 1700],
+      ["1100", "pending", "pending"],
+      [RaceEvent.cutoff, RaceEvent.pretimeout],
+    ],
+    [
+      "none resolve/reject pre-cutoff, some reject post-cutoff, some resolve/reject post-timeout",
+      [-1100, -1200, 1700, -1800],
+      ["-1100", "-1200", "pending", "pending"],
+      [RaceEvent.cutoff, RaceEvent.timeout],
+    ],
+    [
+      "some reject pre-cutoff, some reject pre-timeout, some resolve/reject post-timeout",
+      [-100, -1100, -1200, 1700, -1800],
+      ["-100", "-1100", "-1200", "pending", "pending"],
+      [RaceEvent.cutoff, RaceEvent.timeout],
+    ],
+    [
+      "all reject post-cutoff, pre-timeout",
+      [-1100, -1200],
+      ["-1100", "-1200"],
+      [RaceEvent.cutoff, RaceEvent.pretimeout],
+    ],
+    ["none resolve/reject pre-timeout", [1600, -1700], ["pending", "pending"], [RaceEvent.cutoff, RaceEvent.timeout]],
   ];
 
   for (const [name, promises, results, events] of testcases) {
