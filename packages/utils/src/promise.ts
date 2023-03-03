@@ -56,6 +56,10 @@ export enum RaceEvent {
   timeout = "timeout-reached",
 }
 
+/**
+ * Wait for promises to resolve till cutoff and then race them beyond the cutoff with an overall timeout
+ * @return resolved values or rejections or still pending errors corresponding to input promises
+ */
 export async function racePromisesWithCutoff<T>(
   promises: Promise<T>[],
   cutoffMs: number,
