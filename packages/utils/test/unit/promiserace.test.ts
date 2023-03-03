@@ -85,7 +85,7 @@ describe("racePromisesWithCutoff", () => {
         }
       });
       const testEvents: RaceEvent[] = [];
-      const testResults = await racePromisesWithCutoff(testPromises, cutoff, timeout, (event) =>
+      const testResults = await racePromisesWithCutoff(testPromises, cutoff, timeout, (event, _delayMs) =>
         testEvents.push(event)
       );
       const testResultsCmp = testResults.map((res: string | Error) => (res instanceof Error ? res.message : res));

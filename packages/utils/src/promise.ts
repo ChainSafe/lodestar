@@ -70,7 +70,7 @@ export async function racePromisesWithCutoff<T>(
   promises: Promise<T>[],
   cutoffMs: number,
   timeoutMs: number,
-  eventCb: (event: RaceEvent) => void
+  eventCb: (event: RaceEvent, delayMs: number) => void
 ): Promise<(Error | T)[]> {
   // start the cutoff and timeout timers
   let cutoffObserved = false;
@@ -83,6 +83,7 @@ export async function racePromisesWithCutoff<T>(
     timeoutObserved = true;
     throw e;
   });
+  const startTime = Date.now();
 
   // Track promises status and resolved values/rejected errors
   // Even if the promises reject with the following decoration promises will not throw
@@ -107,13 +108,13 @@ export async function racePromisesWithCutoff<T>(
       false
     );
     if (anyResolved) {
-      eventCb(RaceEvent.resolvedatcutoff);
+      eventCb(RaceEvent.resolvedatcutoff, Date.now() - startTime);
       return mapStatuesToResponses(promisesStates);
     } else {
-      eventCb(RaceEvent.cutoff);
+      eventCb(RaceEvent.cutoff, Date.now() - startTime);
     }
   } else {
-    eventCb(RaceEvent.precutoff);
+    eventCb(RaceEvent.precutoff, Date.now() - startTime);
     return mapStatuesToResponses(promisesStates);
   }
 
@@ -124,9 +125,9 @@ export async function racePromisesWithCutoff<T>(
     (_e) => {}
   );
   if (timeoutObserved) {
-    eventCb(RaceEvent.timeout);
+    eventCb(RaceEvent.timeout, Date.now() - startTime);
   } else {
-    eventCb(RaceEvent.pretimeout);
+    eventCb(RaceEvent.pretimeout, Date.now() - startTime);
   }
   return mapStatuesToResponses(promisesStates);
 }

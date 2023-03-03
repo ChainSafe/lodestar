@@ -149,9 +149,10 @@ export class BlockProposingService {
         [blindedBlockPromise, fullBlockPromise],
         BLOCK_PRODUCTION_RACE_CUTOFF_MS,
         BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
-        (event: RaceEvent) => {
+        (event: RaceEvent, delayMs: number) => {
           this.logger.debug("Block production race (builder vs execution) event", {
             event,
+            delayMs,
             cutoffMs: BLOCK_PRODUCTION_RACE_CUTOFF_MS,
             timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
           });
