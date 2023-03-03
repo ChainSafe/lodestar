@@ -4,8 +4,9 @@ import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
-import {ApiError} from "@lodestar/api";
+import {ApiError, Metrics as ApiMetrics} from "@lodestar/api";
 import {validateBlobsAndKzgCommitments} from "../../chain/produceBlock/validateBlobsAndKzgCommitments.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {IExecutionBuilder} from "./interface.js";
 
 export type ExecutionBuilderHttpOpts = {
@@ -34,10 +35,13 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   faultInspectionWindow: number;
   allowedFaults: number;
 
-  constructor(opts: ExecutionBuilderHttpOpts, config: ChainForkConfig) {
+  constructor(opts: ExecutionBuilderHttpOpts, config: ChainForkConfig, metrics: Metrics | null = null) {
     const baseUrl = opts.urls[0];
     if (!baseUrl) throw Error("No Url provided for executionBuilder");
-    this.api = getClient({baseUrl, timeoutMs: opts.timeout}, {config});
+    this.api = getClient(
+      {baseUrl, timeoutMs: opts.timeout},
+      {config, metrics: metrics?.builderHttpClient as ApiMetrics | undefined}
+    );
     this.config = config;
     this.issueLocalFcUForBlockProduction = opts.issueLocalFcUForBlockProduction;
 
