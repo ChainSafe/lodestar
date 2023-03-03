@@ -119,15 +119,3 @@ export async function racePromisesWithCutoff<T>(
   });
   return mapStatuesToResponses(promisesStates);
 }
-
-// Some testcases vectors
-// p1 = Promise.resolve("3")
-// p2 = new Promise((resolve, reject) => {setTimeout(() => {resolve("foo");}, 50000);});
-// p3 = new Promise((resolve, reject) => {setTimeout(() => {resolve("foo");}, 15000);});
-// p4 = new Promise((resolve, reject) => {setTimeout(() => {reject(Error("foo"));}, 50000);});
-// p5 = Promise.reject(Error("rejectme"))
-
-// utl.racePromisesWithCutoff([p2,p3,p4,p5],1000,9000,(event)=>{console.log({event})}).then(values=>{console.log({values})})
-// utl.racePromisesWithCutoff([p2,p3,p4,p5],1000).then(values=>{console.log({values})})
-// utl.racePromisesWithCutoff([p3,p4,p5],1000).then(values=>{console.log({values})})
-// utl.racePromisesWithCutoff([p4,p5],1000).then(values=>{console.log({values})})
