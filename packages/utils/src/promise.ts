@@ -50,9 +50,13 @@ function mapStatuesToResponses<T>(promisesStates: PromiseState<T>[]): (Error | T
 }
 
 export enum RaceEvent {
+  /** all reject/resolve before cutoff */
   precutoff = "precutoff-return",
+  /** cutoff reached as some were pending till cutoff **/
   cutoff = "cutoff-reached",
+  /** if none reject/resolve before cutoff but one resolves or all reject before timeout */
   pretimeout = "pretimeout-return",
+  /** timeout reached as none resolved and some were pending till timeout*/
   timeout = "timeout-reached",
 }
 
