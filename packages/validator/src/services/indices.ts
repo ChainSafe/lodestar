@@ -135,10 +135,10 @@ export class IndicesService {
 
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
       if (!this.pubkey2index.has(pubkeyHex)) {
-        //#TODO: We want to include the fee_recipient here, but it's not available in the API
+        //#TODO: We want to include the fee_recipient here, but it's not available in the API https://github.com/ChainSafe/lodestar/issues/5192
         this.logger.info("Validator exists in beacon chain", {
           validatorIndex: validatorState.index,
-          pubKey: validatorState.validator.pubkey,
+          pubKey: pubkeyHex,
         });
         this.pubkey2index.set(pubkeyHex, validatorState.index);
         this.index2pubkey.set(validatorState.index, pubkeyHex);
