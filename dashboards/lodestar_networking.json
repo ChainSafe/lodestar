@@ -1713,7 +1713,7 @@
           "expr": "increase(lodestar_peers_requested_total_to_disconnect[$rate_interval])",
           "hide": false,
           "interval": "",
-          "legendFormat": "to disconnect",
+          "legendFormat": "to disconnect {{reason}}",
           "refId": "B"
         }
       ],
