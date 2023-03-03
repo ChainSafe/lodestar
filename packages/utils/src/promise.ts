@@ -54,6 +54,8 @@ export enum RaceEvent {
   precutoff = "precutoff-return",
   /** cutoff reached as some were pending till cutoff **/
   cutoff = "cutoff-reached",
+  /** atleast one resolved till cutoff so no race required */
+  preraceresolution = "resolution-prerace",
   /** if none reject/resolve before cutoff but one resolves or all reject before timeout */
   pretimeout = "pretimeout-return",
   /** timeout reached as none resolved and some were pending till timeout*/
@@ -106,7 +108,7 @@ export async function racePromisesWithCutoff<T>(
       false
     );
     if (anyResolved) {
-      eventCb(RaceEvent.pretimeout);
+      eventCb(RaceEvent.preraceresolution);
       return mapStatuesToResponses(promisesStates);
     }
   } else {
