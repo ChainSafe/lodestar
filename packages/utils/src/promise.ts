@@ -74,9 +74,8 @@ export async function racePromisesWithCutoff<T>(
     throw e;
   });
 
-  // Track promises status and resolved values
-  // even if the promises reject, but with the following decoration promises will now
-  // not throw
+  // Track promises status and resolved values/rejected errors
+  // Even if the promises reject with the following decoration promises will not throw
   const promisesStates = [] as PromiseState<T>[];
   promises.forEach((promise, index) => {
     promisesStates[index] = {status: PromiseStatus.pending, value: null};
@@ -93,7 +92,7 @@ export async function racePromisesWithCutoff<T>(
   await Promise.allSettled(promises.map((promise) => Promise.race([promise, cutoffPromise])));
   if (cutoffObserved) {
     eventCb(RaceEvent.cutoff);
-    // If any one is resolved, then just simply return as we are post cutoff
+    // If any is resolved, then just simply return as we are post cutoff
     const anyResolved = promisesStates.reduce(
       (acc, pmState) => acc || pmState.status === PromiseStatus.resolved,
       false
