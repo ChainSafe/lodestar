@@ -36,7 +36,7 @@ type PromiseState<T> =
   | {status: PromiseStatus.rejected; value: Error}
   | {status: PromiseStatus.pending; value: null};
 
-function mapStatues<T>(promisesStates: PromiseState<T>[]): (Error | T)[] {
+function mapStatuesToResponses<T>(promisesStates: PromiseState<T>[]): (Error | T)[] {
   return promisesStates.map((pmStatus) => {
     switch (pmStatus.status) {
       case PromiseStatus.resolved:
@@ -102,11 +102,11 @@ export async function racePromisesWithCutoff<T>(
       false
     );
     if (anyResolved) {
-      return mapStatues(promisesStates);
+      return mapStatuesToResponses(promisesStates);
     }
   } else {
     eventCb(RaceEvent.precutoff);
-    return mapStatues(promisesStates);
+    return mapStatuesToResponses(promisesStates);
   }
 
   // Post deadline resolve with any of the promise or all rejected before timeout
@@ -117,7 +117,7 @@ export async function racePromisesWithCutoff<T>(
       eventCb(RaceEvent.pretimeout);
     }
   });
-  return mapStatues(promisesStates);
+  return mapStatuesToResponses(promisesStates);
 }
 
 // Some testcases vectors
