@@ -219,7 +219,7 @@ export function getValidatorApi({
       metrics?.blockProductionSuccess.inc();
       return {data: block, version: config.getForkName(block.slot), blockValue};
     } finally {
-      if (timer) timer();
+      if (timer) timer({source: "builder"});
     }
   };
 
@@ -250,7 +250,7 @@ export function getValidatorApi({
       metrics?.blockProductionNumAggregated.observe(block.body.attestations.length);
       return {data: block, version: config.getForkName(block.slot), blockValue};
     } finally {
-      if (timer) timer();
+      if (timer) timer({source: "engine"});
     }
   };
 
