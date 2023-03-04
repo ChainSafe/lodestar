@@ -156,10 +156,10 @@ export class BlockProposingService {
           const eventRef = index !== undefined ? {source: promisesOrder[index]} : {};
           this.logger.debug("Block production race (builder vs execution)", {
             event,
+            ...eventRef,
             delayMs,
             cutoffMs: BLOCK_PRODUCTION_RACE_CUTOFF_MS,
             timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
-            ...eventRef,
           });
         }
       );
