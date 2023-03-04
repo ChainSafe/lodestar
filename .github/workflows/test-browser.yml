@@ -1,4 +1,8 @@
 name: Browser tests
+# only one can run at a time.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 on:
   push:
