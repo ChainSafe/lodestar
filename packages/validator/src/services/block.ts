@@ -145,16 +145,21 @@ export class BlockProposingService {
 
     let blindedBlock, fullBlock;
     if (blindedBlockPromise !== null) {
+      // reference index of promises in the race
+      const promisesOrder = [BlockSource.builder, BlockSource.engine];
       [blindedBlock, fullBlock] = await racePromisesWithCutoff(
         [blindedBlockPromise, fullBlockPromise],
         BLOCK_PRODUCTION_RACE_CUTOFF_MS,
         BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
-        (event: RaceEvent, delayMs: number) => {
+        // Callback to log the race events for better debugging capability
+        (event: RaceEvent, delayMs: number, index?: number) => {
+          const eventRef = index !== undefined ? {source: promisesOrder[index]} : {};
           this.logger.debug("Block production race (builder vs execution)", {
             event,
             delayMs,
             cutoffMs: BLOCK_PRODUCTION_RACE_CUTOFF_MS,
             timeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+            ...eventRef,
           });
         }
       );

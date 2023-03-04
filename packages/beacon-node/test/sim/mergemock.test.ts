@@ -138,8 +138,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         executionBuilder: {
           enabled: true,
           issueLocalFcUForBlockProduction: true,
-          faultInspectionWindow: 32,
-          allowedFaults: 16,
         },
         chain: {suggestedFeeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
       },

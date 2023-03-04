@@ -36,7 +36,7 @@ type PromiseState<T> =
   | {status: PromiseStatus.rejected; value: Error}
   | {status: PromiseStatus.pending; value: null};
 
-function mapStatuesToResponses<T>(promisesStates: PromiseState<T>[]): (Error | T)[] {
+function mapStatusesToResponses<T>(promisesStates: PromiseState<T>[]): (Error | T)[] {
   return promisesStates.map((pmStatus) => {
     switch (pmStatus.status) {
       case PromiseStatus.resolved:
@@ -60,6 +60,12 @@ export enum RaceEvent {
   pretimeout = "pretimeout-return",
   /** timeout reached as none resolved and some were pending till timeout*/
   timeout = "timeout-reached",
+
+  // events for the promises for better tracking
+  /** promise resolved */
+  resolved = "resolved",
+  /** promise rejected */
+  rejected = "rejected",
 }
 
 /**
@@ -70,7 +76,7 @@ export async function racePromisesWithCutoff<T>(
   promises: Promise<T>[],
   cutoffMs: number,
   timeoutMs: number,
-  eventCb: (event: RaceEvent, delayMs: number) => void
+  eventCb: (event: RaceEvent, delayMs: number, index?: number) => void
 ): Promise<(Error | T)[]> {
   // start the cutoff and timeout timers
   let cutoffObserved = false;
@@ -92,9 +98,11 @@ export async function racePromisesWithCutoff<T>(
     promisesStates[index] = {status: PromiseStatus.pending, value: null};
     promise
       .then((value) => {
+        eventCb(RaceEvent.resolved, Date.now() - startTime, index);
         promisesStates[index] = {status: PromiseStatus.resolved, value};
       })
       .catch((e: Error) => {
+        eventCb(RaceEvent.rejected, Date.now() - startTime, index);
         promisesStates[index] = {status: PromiseStatus.rejected, value: e};
       });
   });
@@ -109,13 +117,13 @@ export async function racePromisesWithCutoff<T>(
     );
     if (anyResolved) {
       eventCb(RaceEvent.resolvedatcutoff, Date.now() - startTime);
-      return mapStatuesToResponses(promisesStates);
+      return mapStatusesToResponses(promisesStates);
     } else {
       eventCb(RaceEvent.cutoff, Date.now() - startTime);
     }
   } else {
     eventCb(RaceEvent.precutoff, Date.now() - startTime);
-    return mapStatuesToResponses(promisesStates);
+    return mapStatusesToResponses(promisesStates);
   }
 
   // Post deadline resolve with any of the promise or all rejected before timeout
@@ -129,5 +137,5 @@ export async function racePromisesWithCutoff<T>(
   } else {
     eventCb(RaceEvent.pretimeout, Date.now() - startTime);
   }
-  return mapStatuesToResponses(promisesStates);
+  return mapStatusesToResponses(promisesStates);
 }
