@@ -2,11 +2,14 @@ import Web3 from "web3";
 import {LightNode} from "./interfaces.js";
 import {makeProvableProvider} from "./web3_provider.js";
 
-const provider = new Web3.providers.HttpProvider("https://lodestar-mainnetrpc.chainsafe.io");
-const proveableProvider = await makeProvableProvider(provider, {
+const provider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io");
+const proveableProvider = makeProvableProvider(provider, {
   mode: LightNode.Rest,
-  urls: ["https://lodestar-mainnet.chainsafe.io"],
+  urls: ["https://lodestar-sepolia.chainsafe.io"],
+  network: "sepolia",
 });
+
+await proveableProvider.rootProvider.sync();
 
 console.log(proveableProvider.rootProvider.getStatus());
 
