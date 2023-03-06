@@ -103,23 +103,27 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
     },
 
-    blockProductionTime: register.histogram({
+    blockProductionTime: register.histogram<"source">({
       name: "beacon_block_production_seconds",
       help: "Full runtime of block production",
-      buckets: [0.1, 1, 10],
+      buckets: [0.1, 1, 2, 4, 10],
+      labelNames: ["source"],
     }),
-    blockProductionRequests: register.gauge({
+    blockProductionRequests: register.gauge<"source">({
       name: "beacon_block_production_requests_total",
       help: "Count of all block production requests",
+      labelNames: ["source"],
     }),
-    blockProductionSuccess: register.gauge({
+    blockProductionSuccess: register.gauge<"source">({
       name: "beacon_block_production_successes_total",
       help: "Count of blocks successfully produced",
+      labelNames: ["source"],
     }),
-    blockProductionNumAggregated: register.histogram({
+    blockProductionNumAggregated: register.histogram<"source">({
       name: "beacon_block_production_num_aggregated_total",
       help: "Count of all aggregated attestations in our produced block",
       buckets: [32, 64, 96, 128],
+      labelNames: ["source"],
     }),
 
     blockPayload: {

@@ -28,7 +28,7 @@ import {
 } from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, ForkExecution, isForkExecution} from "@lodestar/params";
-import {toHex, sleep} from "@lodestar/utils";
+import {toHex, sleep, Logger} from "@lodestar/utils";
 
 import type {BeaconChain} from "../chain.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from "../../execution/index.js";
@@ -129,6 +129,8 @@ export async function produceBlockBody<T extends BlockType>(
     voluntaryExits,
   };
 
+  this.logger.verbose("Produced phase0 beacon block body", {slot: blockSlot, numAttestations: attestations.length});
+
   const blockEpoch = computeEpochAtSlot(blockSlot);
 
   if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
@@ -154,6 +156,7 @@ export async function produceBlockBody<T extends BlockType>(
       if (this.executionBuilder.issueLocalFcUForBlockProduction) {
         await prepareExecutionPayload(
           this,
+          this.logger,
           fork,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
@@ -173,6 +176,7 @@ export async function produceBlockBody<T extends BlockType>(
       );
       (blockBody as allForks.BlindedBeaconBlockBody).executionPayloadHeader = builderRes.header;
       blockValue = builderRes.blockValue;
+      this.logger.verbose("Fetched execution payload header from builder", {slot: blockSlot, blockValue});
       if (ForkSeq[fork] >= ForkSeq.deneb) {
         const {blobKzgCommitments} = builderRes;
         if (blobKzgCommitments === undefined) {
@@ -194,6 +198,7 @@ export async function produceBlockBody<T extends BlockType>(
         // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#constructing-the-beaconblockbody
         const prepareRes = await prepareExecutionPayload(
           this,
+          this.logger,
           fork,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
@@ -225,6 +230,13 @@ export async function produceBlockBody<T extends BlockType>(
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
           this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
+          this.logger.verbose("Fetched execution payload from engine", {
+            slot: blockSlot,
+            blockValue,
+            prepType,
+            payloadId,
+            fetchedTime,
+          });
           if (executionPayload.transactions.length === 0) {
             this.metrics?.blockPayload.emptyPayloads.inc({prepType});
           }
@@ -302,6 +314,7 @@ export async function prepareExecutionPayload(
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
   },
+  logger: Logger,
   fork: ForkExecution,
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
@@ -361,6 +374,7 @@ export async function prepareExecutionPayload(
       finalizedBlockHash,
       attributes
     );
+    logger.verbose("Prepared payload id from execution engine", {payloadId});
   }
 
   // Should never happen, notifyForkchoiceUpdate() with payload attributes always

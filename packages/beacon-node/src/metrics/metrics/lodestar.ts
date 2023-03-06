@@ -1405,6 +1405,34 @@ export function createLodestarMetrics(
       }),
     },
 
+    builderHttpClient: {
+      requestTime: register.histogram<"routeId">({
+        name: "vc_builder_http_client_request_time_seconds",
+        help: "Histogram of builder http client request time by routeId",
+        labelNames: ["routeId"],
+        // Expected times are ~ 50-500ms, but in an overload NodeJS they can be greater
+        buckets: [0.01, 0.1, 1, 5],
+      }),
+
+      requestErrors: register.gauge<"routeId">({
+        name: "vc_builder_http_client_request_errors_total",
+        help: "Total count of errors on builder http client requests by routeId",
+        labelNames: ["routeId"],
+      }),
+
+      requestToFallbacks: register.gauge<"routeId">({
+        name: "vc_builder_http_client_request_to_fallbacks_total",
+        help: "Total count of requests to fallback URLs on builder http API by routeId",
+        labelNames: ["routeId"],
+      }),
+
+      urlsScore: register.gauge<"urlIndex">({
+        name: "vc_builder_http_client_urls_score",
+        help: "Current score of builder http URLs by url index",
+        labelNames: ["urlIndex"],
+      }),
+    },
+
     db: {
       dbReadReq: register.gauge<"bucket">({
         name: "lodestar_db_read_req_total",

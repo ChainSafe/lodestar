@@ -88,6 +88,8 @@ export type HttpClientModules = {
   metrics?: Metrics;
 };
 
+export {Metrics};
+
 export class HttpClient implements IHttpClient {
   private readonly globalTimeoutMs: number;
   private readonly globalBearerToken: string | null;
