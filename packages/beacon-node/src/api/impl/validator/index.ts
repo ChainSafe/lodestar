@@ -9,7 +9,7 @@ import {
   getCurrentSlot,
 } from "@lodestar/state-transition";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {Root, Slot, ValidatorIndex, ssz, Epoch} from "@lodestar/types";
+import {Root, Slot, ValidatorIndex, ssz, Epoch, BlockSource} from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {toHex} from "@lodestar/utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
@@ -190,8 +190,9 @@ export function getValidatorApi({
     randaoReveal,
     graffiti
   ) {
+    const source = BlockSource.builder;
     let timer;
-    metrics?.blockProductionRequests.inc({source: "builder"});
+    metrics?.blockProductionRequests.inc({source});
     try {
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
@@ -216,8 +217,8 @@ export function getValidatorApi({
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
       });
-      metrics?.blockProductionSuccess.inc({source: "builder"});
-      metrics?.blockProductionNumAggregated.observe({source: "builder"}, block.body.attestations.length);
+      metrics?.blockProductionSuccess.inc({source});
+      metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
       logger.verbose("Produced blinded block", {
         slot,
         blockValue,
@@ -225,7 +226,7 @@ export function getValidatorApi({
       });
       return {data: block, version: config.getForkName(block.slot), blockValue};
     } finally {
-      if (timer) timer({source: "builder"});
+      if (timer) timer({source});
     }
   };
 
@@ -234,8 +235,9 @@ export function getValidatorApi({
     randaoReveal,
     graffiti
   ) {
+    const source = BlockSource.engine;
     let timer;
-    metrics?.blockProductionRequests.inc({source: "engine"});
+    metrics?.blockProductionRequests.inc({source});
     try {
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
@@ -252,8 +254,8 @@ export function getValidatorApi({
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
       });
-      metrics?.blockProductionSuccess.inc({source: "engine"});
-      metrics?.blockProductionNumAggregated.observe({source: "engine"}, block.body.attestations.length);
+      metrics?.blockProductionSuccess.inc({source});
+      metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
       logger.verbose("Produced execution block", {
         slot,
         blockValue,
@@ -261,7 +263,7 @@ export function getValidatorApi({
       });
       return {data: block, version: config.getForkName(block.slot), blockValue};
     } finally {
-      if (timer) timer({source: "engine"});
+      if (timer) timer({source});
     }
   };
 

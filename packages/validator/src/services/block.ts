@@ -1,4 +1,14 @@
-import {BLSPubkey, Slot, BLSSignature, allForks, bellatrix, capella, isBlindedBeaconBlock, Wei} from "@lodestar/types";
+import {
+  BLSPubkey,
+  Slot,
+  BLSSignature,
+  allForks,
+  bellatrix,
+  capella,
+  isBlindedBeaconBlock,
+  Wei,
+  BlockSource,
+} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {extendError, prettyBytes, racePromisesWithCutoff, RaceEvent} from "@lodestar/utils";
@@ -26,10 +36,6 @@ type ProduceBlockOpts = {
   builderSelection: BuilderSelection;
 };
 
-enum BlockSource {
-  builder = "builder",
-  engine = "engine",
-}
 /**
  * Service that sets up and handles validator block proposal duties.
  */
