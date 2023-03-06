@@ -191,7 +191,7 @@ export function getValidatorApi({
     graffiti
   ) {
     let timer;
-    metrics?.blockProductionRequests.inc();
+    metrics?.blockProductionRequests.inc({source: "builder"});
     try {
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
@@ -216,10 +216,12 @@ export function getValidatorApi({
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
       });
-      metrics?.blockProductionSuccess.inc();
+      metrics?.blockProductionSuccess.inc({source: "builder"});
+      metrics?.blockProductionNumAggregated.observe({source: "builder"}, block.body.attestations.length);
       logger.verbose("Produced blinded block", {
         slot,
         blockValue,
+        root: toHexString(config.getBlindedForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
       });
       return {data: block, version: config.getForkName(block.slot), blockValue};
     } finally {
@@ -233,7 +235,7 @@ export function getValidatorApi({
     graffiti
   ) {
     let timer;
-    metrics?.blockProductionRequests.inc();
+    metrics?.blockProductionRequests.inc({source: "engine"});
     try {
       notWhileSyncing();
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
@@ -250,9 +252,9 @@ export function getValidatorApi({
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
       });
-      metrics?.blockProductionSuccess.inc();
-      metrics?.blockProductionNumAggregated.observe(block.body.attestations.length);
-      logger.verbose("Produced block", {
+      metrics?.blockProductionSuccess.inc({source: "engine"});
+      metrics?.blockProductionNumAggregated.observe({source: "engine"}, block.body.attestations.length);
+      logger.verbose("Produced execution block", {
         slot,
         blockValue,
         root: toHexString(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
