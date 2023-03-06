@@ -1345,6 +1345,13 @@ export function createLodestarMetrics(
         // Provide max resolution on problematic values around 1 second
         buckets: [0.1, 0.5, 1, 2, 5, 15],
       }),
+      streamTime: register.histogram<"routeId">({
+        name: "lodestar_eth1_http_client_stream_time_seconds",
+        help: "eth1 JsonHttpClient - streaming time by routeId",
+        labelNames: ["routeId"],
+        // Provide max resolution on problematic values around 1 second
+        buckets: [0.1, 0.5, 1, 2, 5, 15],
+      }),
       requestErrors: register.gauge<"routeId">({
         name: "lodestar_eth1_http_client_request_errors_total",
         help: "eth1 JsonHttpClient - total count of request errors",
@@ -1375,6 +1382,13 @@ export function createLodestarMetrics(
       requestTime: register.histogram<"routeId">({
         name: "lodestar_execution_engine_http_client_request_time_seconds",
         help: "ExecutionEngineHttp client - histogram or roundtrip request times",
+        labelNames: ["routeId"],
+        // Provide max resolution on problematic values around 1 second
+        buckets: [0.1, 0.5, 1, 2, 5, 15],
+      }),
+      streamTime: register.histogram<"routeId">({
+        name: "lodestar_execution_engine_http_client_stream_time_seconds",
+        help: "ExecutionEngineHttp client - streaming time by routeId",
         labelNames: ["routeId"],
         // Provide max resolution on problematic values around 1 second
         buckets: [0.1, 0.5, 1, 2, 5, 15],
