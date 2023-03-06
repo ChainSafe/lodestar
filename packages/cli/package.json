@@ -83,7 +83,7 @@
     "js-yaml": "^3.14.0",
     "lockfile": "^1.0.4",
     "lodash": "^4.17.15",
-    "prom-client": "^14.1.0",
+    "prom-client": "^14.2.0",
     "rimraf": "^3.0.0",
     "source-map-support": "^0.5.19",
     "uint8arrays": "^3.1.0",
