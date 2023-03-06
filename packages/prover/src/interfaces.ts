@@ -34,9 +34,8 @@ export interface SendAsyncProvider {
 
 export type Web3Provider = EIP1193Provider | RequestProvider | SendProvider | SendAsyncProvider;
 
-export type ELRequestVerifier<A = unknown, R = unknown> = (opts: {
+export type ELVerifiedRequestHandler<A = unknown, R = unknown> = (opts: {
   payload: ELRequestPayload<A>;
-  response: ELResponse<R>;
   handler: ELRequestMethod;
   rootProvider: ProofProvider;
-}) => Promise<boolean>;
+}) => Promise<ELResponse<R>>;

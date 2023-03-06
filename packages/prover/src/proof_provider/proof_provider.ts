@@ -8,7 +8,9 @@ import {computeSyncPeriodAtSlot} from "@lodestar/light-client/utils";
 import {allForks, capella} from "@lodestar/types";
 import {MAX_PAYLOAD_HISTORY, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "../constants.js";
 import {RootProviderOptions as RootProviderInitOptions} from "../interfaces.js";
-import {assertLightClient, getExecutionPayloads, getGenesisData, hexToBuffer, numberToHex} from "../utils.js";
+import {assertLightClient} from "../utils/assertion.js";
+import {getExecutionPayloads, getGenesisData} from "../utils/consensus.js";
+import {numberToHex, hexToBuffer} from "../utils/conversion.js";
 import {OrderedMap} from "./ordered_map.js";
 
 interface RootProviderOptions extends RootProviderInitOptions {
@@ -62,17 +64,17 @@ export class ProofProvider {
     const startSlot = headSlot;
     const endSlot = headSlot - MAX_PAYLOAD_HISTORY;
     const payloads = await getExecutionPayloads(this.options.api, startSlot, endSlot);
-    for (const [i, payload] of payloads.entries()) {
+    for (const [slot, payload] of Object.entries(payloads)) {
       const blockNumber = numberToHex(payload.blockNumber);
       this.payloads.set(blockNumber, payload);
-      this.slotsMap[startSlot + i] = blockNumber;
+      this.slotsMap[parseInt(slot)] = blockNumber;
     }
 
     // Load the finalized payload from the CL
     const finalizedSlot = this.lightClient.getFinalized().beacon.slot;
-    const [finalizedPayload] = await getExecutionPayloads(this.options.api, finalizedSlot, finalizedSlot);
-    const finalizedBlockNumber = numberToHex(finalizedPayload.blockNumber);
-    this.finalizedPayloads.set(finalizedBlockNumber, finalizedPayload);
+    const finalizedPayload = await getExecutionPayloads(this.options.api, finalizedSlot, finalizedSlot);
+    const finalizedBlockNumber = numberToHex(finalizedPayload[finalizedSlot].blockNumber);
+    this.finalizedPayloads.set(finalizedBlockNumber, finalizedPayload[finalizedSlot]);
     this.slotsMap[finalizedSlot] = finalizedBlockNumber;
   }
 
@@ -128,12 +130,11 @@ export class ProofProvider {
       // 3. or update the blockHash
     }
 
-    const [newPayload] = await getExecutionPayloads(this.options.api, blockSlot, blockSlot);
-
-    this.payloads.set(blockNumber, newPayload);
+    const newPayloads = await getExecutionPayloads(this.options.api, blockSlot, blockSlot);
+    this.payloads.set(blockNumber, newPayloads[blockSlot]);
     this.slotsMap[blockSlot] = blockNumber;
     if (finalized) {
-      this.finalizedPayloads.set(blockNumber, newPayload);
+      this.finalizedPayloads.set(blockNumber, newPayloads[blockSlot]);
     }
   }
 

@@ -2,8 +2,8 @@ import {NetworkName} from "@lodestar/config/networks";
 import {LightNode, SendProvider, Web3Provider} from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "./types.js";
-import {isSendProvider} from "./utils.js";
-import {verifyWeb3Response} from "./verifier.js";
+import {isSendProvider} from "./utils/assertion.js";
+import {processVerifiedELRequest} from "./utils/execution.js";
 
 type ProvableProviderInitOpts = {network?: NetworkName; checkpoint?: string} & (
   | {mode: LightNode.Rest; urls: string[]}
@@ -50,8 +50,7 @@ function handleSendProvider(provider: SendProvider, rootProvider: ProofProvider)
     });
 
   function newSend(payload: ELRequestPayload, callback: (err?: Error | null, response?: ELResponse) => void): void {
-    handler(payload)
-      .then((response) => verifyWeb3Response({payload, response, handler, rootProvider}))
+    processVerifiedELRequest({payload, handler, rootProvider})
       .then((response) => callback(undefined, response))
       .catch((err) => callback(err, undefined));
   }
