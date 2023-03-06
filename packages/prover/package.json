@@ -53,6 +53,7 @@
     "@lodestar/api": "1.5.0",
     "@lodestar/types": "1.5.0",
     "@lodestar/config": "1.5.0",
+    "@lodestar/light-client": "1.5.0",
     "@ethereumjs/trie": "^5.0.4",
     "@ethereumjs/util": "^8.0.5",
     "@ethereumjs/rlp": "^4.0.1",    

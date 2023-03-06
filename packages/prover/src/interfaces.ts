@@ -1,5 +1,6 @@
+import {ChainForkConfig} from "@lodestar/config";
 import {NetworkName} from "@lodestar/config/networks";
-import {RootProvider} from "./root_provider/root_provider.js";
+import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "./types.js";
 
 export enum LightNode {
@@ -7,10 +8,10 @@ export enum LightNode {
   P2P = "P2P",
 }
 
-export interface RootProviderInitOptions {
+export interface RootProviderOptions {
   network: NetworkName;
   signal: AbortSignal;
-  checkpoint?: string;
+  config?: ChainForkConfig;
 }
 
 export type ELRequestMethod = (payload: ELRequestPayload) => Promise<ELResponse | undefined>;
@@ -37,5 +38,5 @@ export type ELRequestVerifier<A = unknown, R = unknown> = (opts: {
   payload: ELRequestPayload<A>;
   response: ELResponse<R>;
   handler: ELRequestMethod;
-  rootProvider: RootProvider;
+  rootProvider: ProofProvider;
 }) => Promise<boolean>;

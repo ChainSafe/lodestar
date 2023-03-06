@@ -1,5 +1,5 @@
 import {ELRequestMethod, ELRequestVerifier} from "./interfaces.js";
-import {RootProvider} from "./root_provider/root_provider.js";
+import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "./types.js";
 import {validateGetBalance} from "./web3_requests/eth_getBalance.js";
 
@@ -15,7 +15,7 @@ export async function verifyWeb3Response({
   payload: ELRequestPayload;
   response: ELResponse | undefined;
   handler: ELRequestMethod;
-  rootProvider: RootProvider;
+  rootProvider: ProofProvider;
 }): Promise<ELResponse | undefined> {
   const verifier = supportedWeb3Methods[payload.method];
 

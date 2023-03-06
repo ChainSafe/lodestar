@@ -181,6 +181,10 @@ export class Lightclient {
     return this.lightclientSpec.store.optimisticHeader;
   }
 
+  getFinalized(): allForks.LightClientHeader {
+    return this.lightclientSpec.store.finalizedHeader;
+  }
+
   async sync(fromPeriod: SyncPeriod, toPeriod: SyncPeriod): Promise<void> {
     // Initialize the BLS implementation. This may requires initializing the WebAssembly instance
     // so why it's a an async process. This should be initialized once before any bls operations.

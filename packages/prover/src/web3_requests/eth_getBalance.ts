@@ -9,8 +9,13 @@ export const validateGetBalance: ELRequestVerifier<[address: string, block?: num
   const {
     params: [address, block],
   } = payload;
-  const blockHashes = rootProvider.getBlockRoots(block ?? "latest");
+  const executionPayload = rootProvider.getExecutionPayload(block ?? "latest");
   const proof = await getELProof(handler, [address, [], block ?? "latest"]);
 
-  return isValidAccount({address: hexToBuffer(address), storageKeys: [], stateRoot: blockHashes.el.stateRoot, proof});
+  return isValidAccount({
+    address: hexToBuffer(address),
+    storageKeys: [],
+    stateRoot: executionPayload.stateRoot,
+    proof,
+  });
 };

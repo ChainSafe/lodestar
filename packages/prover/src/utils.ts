@@ -1,13 +1,13 @@
+import {RLP} from "@ethereumjs/rlp";
 import {Trie} from "@ethereumjs/trie";
 import {Account} from "@ethereumjs/util";
-import {RLP} from "@ethereumjs/rlp";
 import {keccak256} from "ethereum-cryptography/keccak.js";
-import {Bytes32} from "@lodestar/types";
-import {Api} from "@lodestar/api/beacon";
 import {ApiError} from "@lodestar/api";
-import {GenesisData} from "@lodestar/light-client";
-import {ELProof} from "./types.js";
+import {Api} from "@lodestar/api/beacon";
+import {GenesisData, Lightclient} from "@lodestar/light-client";
+import {allForks, Bytes32, capella} from "@lodestar/types";
 import {ELRequestMethod, SendAsyncProvider, SendProvider, Web3Provider} from "./interfaces.js";
+import {ELProof} from "./types.js";
 
 export function numberToHex(n: number | bigint): string {
   return "0x" + n.toString(16);
@@ -18,7 +18,7 @@ export function hexToNumber(n: string): number {
 }
 
 export function bufferToHex(buffer: Buffer | Uint8Array): string {
-  return "0x" + buffer.toString("hex");
+  return "0x" + Buffer.from(buffer).toString("hex");
 }
 
 export function hexToBuffer(v: string): Buffer {
@@ -113,7 +113,7 @@ export async function getGenesisData(api: Pick<Api, "beacon">): Promise<GenesisD
 
   return {
     genesisTime: Number(res.response.data.genesisTime),
-    genesisValidatorsRoot: bufferToHex(res.response.data.genesisValidatorsRoot),
+    genesisValidatorsRoot: res.response.data.genesisValidatorsRoot,
   };
 }
 
@@ -123,4 +123,36 @@ export function isSendProvider(provider: Web3Provider): provider is SendProvider
 
 export function isSendAsyncProvider(provider: Web3Provider): provider is SendAsyncProvider {
   return "sendAsync" in provider && typeof provider.sendAsync === "function";
+}
+
+export function assertLightClient(client?: Lightclient): asserts client is Lightclient {
+  if (!client) {
+    throw new Error("Light client is not initialized yet.");
+  }
+}
+
+export async function getExecutionPayloads(
+  api: Api,
+  startSlot: number,
+  endSlot: number
+): Promise<allForks.ExecutionPayload[]> {
+  [startSlot, endSlot] = [Math.min(startSlot, endSlot), Math.max(startSlot, endSlot)];
+
+  const payloads: allForks.ExecutionPayload[] = [];
+  const res = await api.beacon.getBlockV2(endSlot);
+  ApiError.assert(res);
+  let payload = (res.response.data as capella.SignedBeaconBlock).message.body.executionPayload;
+
+  for (let slot = endSlot - 1; slot >= startSlot; slot--) {
+    const res = await api.beacon.getBlockV2(slot);
+    ApiError.assert(res);
+    const nextPayload = (res.response.data as capella.SignedBeaconBlock).message.body.executionPayload;
+    if (payload.blockHash === nextPayload.parentHash) {
+      payloads.push(payload);
+    }
+    payload = nextPayload;
+  }
+  payloads.push(payload);
+
+  return payloads;
 }
