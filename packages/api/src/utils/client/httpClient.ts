@@ -285,9 +285,11 @@ export class HttpClient implements IHttpClient {
         throw new HttpError(`${res.statusText}: ${getErrorMessage(errBody)}`, res.status, url);
       }
 
+      const streamTimer = this.metrics?.streamTime.startTimer({routeId});
+      const body = await getBody(res);
+      streamTimer?.();
       this.logger?.debug("HttpClient response", {routeId});
-
-      return {status: res.status, body: await getBody(res)};
+      return {status: res.status, body};
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
 
