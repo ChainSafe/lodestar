@@ -14,7 +14,7 @@ import {BeaconNode} from "../../../../../src/node/nodejs.js";
 import {waitForEvent} from "../../../../utils/events/resolver.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
-describe.only("lightclient api", function () {
+describe("lightclient api", function () {
   this.timeout("10 min");
 
   const SECONDS_PER_SLOT = 1;
