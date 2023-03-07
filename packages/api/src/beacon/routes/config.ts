@@ -15,6 +15,7 @@ import {
 } from "../../utils/index.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {ApiClientResponse} from "../../interfaces.js";
+import {EncodingFormat} from "./shared.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -29,14 +30,24 @@ export type Api = {
   /**
    * Get deposit contract address.
    * Retrieve Eth1 deposit contract address and chain ID.
+   * Depending on `Accept` header it can be returned either as json or as bytes serialized by SSZ
    */
-  getDepositContract(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: DepositContract}}>>;
+  getDepositContract(format?: "json"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: DepositContract}}>>;
+  getDepositContract(format: "ssz"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>>;
+  getDepositContract(
+    format?: EncodingFormat
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array | {data: DepositContract}}>>;
 
   /**
    * Get scheduled upcoming forks.
    * Retrieve all scheduled upcoming forks this node is aware of.
+   * Depending on `Accept` header it can be returned either as json or as bytes serialized by SSZ
    */
   getForkSchedule(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: phase0.Fork[]}}>>;
+  getForkSchedule(format: "ssz"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>>;
+  getForkSchedule(
+    format?: EncodingFormat
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array | {data: phase0.Fork[]}}>>;
 
   /**
    * Retrieve specification configuration used on this node.  The configuration should include:
@@ -47,8 +58,13 @@ export type Api = {
    * Values are returned with following format:
    * - any value starting with 0x in the spec is returned as a hex string
    * - numeric values are returned as a quoted integer
+   * Depending on `Accept` header it can be returned either as json or as bytes serialized by SSZ
    */
   getSpec(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: Record<string, string>}}>>;
+  getSpec(format: "ssz"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>>;
+  getSpec(
+    format?: EncodingFormat
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array | {data: Record<string, string>}}>>;
 };
 
 /**

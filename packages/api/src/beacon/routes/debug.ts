@@ -19,11 +19,9 @@ import {
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {ApiClientResponse} from "../../interfaces.js";
 import {ExecutionOptimistic, StateId} from "./beacon/state.js";
+import {EncodingFormat, mimeTypeSSZ} from "./shared.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
-
-export type EncodingFormat = "json" | "ssz";
-export const mimeTypeSSZ = "application/octet-stream";
 
 const stringType = new StringType();
 const protoNodeSszType = new ContainerType(
