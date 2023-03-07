@@ -485,6 +485,7 @@ export class LightClientServer {
       this.logger.debug("sync committee below required MIN_SYNC_COMMITTEE_PARTICIPANTS", {
         syncPeriod,
         attestedPeriod,
+        syncAggregateParticipation,
       });
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "ignore_sync_committee_low"});
       return;
