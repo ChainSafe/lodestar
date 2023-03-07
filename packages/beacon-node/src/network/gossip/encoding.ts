@@ -2,7 +2,7 @@ import {compress, uncompress} from "snappyjs";
 import xxhashFactory from "xxhash-wasm";
 import {Message} from "@libp2p/interface-pubsub";
 import {digest} from "@chainsafe/as-sha256";
-import {intToBytes} from "@lodestar/utils";
+import {intToBytes, toHex} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {RPC} from "@chainsafe/libp2p-gossipsub/message";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
@@ -27,8 +27,7 @@ export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
 }
 
 export function msgIdToStrFn(msgId: Uint8Array): string {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-  return Buffer.prototype.toString.call(msgId, "hex");
+  return toHex(msgId);
 }
 
 /**
