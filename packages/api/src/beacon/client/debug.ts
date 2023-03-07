@@ -4,7 +4,7 @@ import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {generateGenericJsonClient, getFetchOptsSerializers, IHttpClient} from "../../utils/client/index.js";
 import {ReturnTypes} from "../../utils/types.js";
 import {StateId} from "../routes/beacon/state.js";
-import {Api, getReqSerializers, getReturnTypes, ReqTypes, routesData, StateFormat} from "../routes/debug.js";
+import {Api, getReqSerializers, getReturnTypes, ReqTypes, routesData, EncodingFormat} from "../routes/debug.js";
 
 // As Jul 2022, it takes up to 3 mins to download states so make this 5 mins for reservation
 const GET_STATE_TIMEOUT_MS = 5 * 60 * 1000;
@@ -31,7 +31,7 @@ export function getClient(_config: ChainForkConfig, httpClient: IHttpClient): Ap
     // TODO: Debug the type issue
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
-    async getState(stateId: string, format?: StateFormat) {
+    async getState(stateId: string, format?: EncodingFormat) {
       if (format === "ssz") {
         const res = await httpClient.arrayBuffer({
           ...fetchOptsSerializers.getState(stateId, format),
@@ -49,7 +49,7 @@ export function getClient(_config: ChainForkConfig, httpClient: IHttpClient): Ap
     // TODO: Debug the type issue
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
-    async getStateV2(stateId: StateId, format?: StateFormat) {
+    async getStateV2(stateId: StateId, format?: EncodingFormat) {
       if (format === "ssz") {
         const res = await httpClient.arrayBuffer({
           ...fetchOptsSerializers.getStateV2(stateId, format),

@@ -22,7 +22,7 @@ import {ExecutionOptimistic, StateId} from "./beacon/state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-export type StateFormat = "json" | "ssz";
+export type EncodingFormat = "json" | "ssz";
 export const mimeTypeSSZ = "application/octet-stream";
 
 const stringType = new StringType();
@@ -56,22 +56,55 @@ type ProtoNodeApiType = ValueOf<typeof protoNodeSszType>;
 export type Api = {
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
+   * Depending on `Accept` header it can be returned either as json or as bytes serialized by SSZ
    */
-  getDebugChainHeads(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {slot: Slot; root: RootHex}[]}}>>;
+  getDebugChainHeads(
+    format?: "json"
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {slot: Slot; root: RootHex}[]}}>>;
+  getDebugChainHeads(format: "ssz"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>>;
+  getDebugChainHeads(
+    format?: EncodingFormat
+  ): Promise<
+    | ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array | {data: {slot: Slot; root: RootHex}[]}}>
+    | ApiClientResponse<{[HttpStatusCode.OK]: {data: {slot: Slot; root: RootHex}[]}}>
+    | ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>
+  >;
 
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
+   * Depending on `Accept` header it can be returned either as json or as bytes serialized by SSZ
    */
-  getDebugChainHeadsV2(): Promise<
+  getDebugChainHeadsV2(
+    format?: "json"
+  ): Promise<
     ApiClientResponse<{
       [HttpStatusCode.OK]: {data: {slot: Slot; root: RootHex; executionOptimistic: ExecutionOptimistic}[]};
+    }>
+  >;
+  getDebugChainHeadsV2(
+    format: "ssz"
+  ): Promise<
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: Uint8Array;
+    }>
+  >;
+  getDebugChainHeadsV2(
+    format?: EncodingFormat
+  ): Promise<
+    ApiClientResponse<{
+      [HttpStatusCode.OK]: Uint8Array | {data: {slot: Slot; root: RootHex; executionOptimistic: ExecutionOptimistic}[]};
     }>
   >;
 
   /**
    * Dump all ProtoArray's nodes to debug
+   * Depending on `Accept` header it can be returned either as json or as bytes serialized by SSZ
    */
-  getProtoArrayNodes(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: ProtoNodeApiType[]}}>>;
+  getProtoArrayNodes(format?: "json"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: ProtoNodeApiType[]}}>>;
+  getProtoArrayNodes(format: "ssz"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>>;
+  getProtoArrayNodes(
+    format?: EncodingFormat
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array | {data: ProtoNodeApiType[]}}>>;
 
   /**
    * Get full BeaconState object
@@ -90,7 +123,7 @@ export type Api = {
   getState(stateId: StateId, format: "ssz"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>>;
   getState(
     stateId: StateId,
-    format?: StateFormat
+    format?: EncodingFormat
   ): Promise<
     ApiClientResponse<{
       [HttpStatusCode.OK]: Uint8Array | {data: allForks.BeaconState; executionOptimistic: ExecutionOptimistic};
@@ -116,7 +149,7 @@ export type Api = {
   getStateV2(stateId: StateId, format: "ssz"): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array}>>;
   getStateV2(
     stateId: StateId,
-    format?: StateFormat
+    format?: EncodingFormat
   ): Promise<
     ApiClientResponse<{
       [HttpStatusCode.OK]:
