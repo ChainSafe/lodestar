@@ -243,6 +243,11 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
       help: "Current count of indices in IndicesService",
     }),
 
+    activeIndices: register.gauge({
+      name: "vc_active_validators_count",
+      help: "Current count of active validators",
+    }),
+
     discoveredIndices: register.gauge({
       name: "vc_discovered_indices_total",
       help: "Total count of validator indices discovered",
