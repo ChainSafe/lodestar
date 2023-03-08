@@ -15,18 +15,18 @@ You can use the `@lodestar/prover` in two ways, as a Web3 Provider and as proxy.
 
 ```ts
 import Web3 from "web3";
-import {makeProvableProvider, LightNode} from "@lodestar/prover";
+import {createVerifiedExecutionProvider, LightNode} from "@lodestar/prover";
 
-const provider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io");
-const proveableProvider = makeProvableProvider(provider, {
+const {provider, proofProvider} = createVerifiedExecutionProvider(
+  new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io"), {
   mode: LightNode.Rest,
   urls: ["https://lodestar-sepolia.chainsafe.io"],
   network: "sepolia",
 });
 
-await proveableProvider.rootProvider.sync();
+await proofProvider.sync();
 
-const web3 = new Web3(proveableProvider);
+const web3 = new Web3(provider);
 
 const address = "0xf97e180c050e5Ab072211Ad2C213Eb5AEE4DF134";
 const balance = await web3.eth.getBalance(address, "latest");

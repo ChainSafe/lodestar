@@ -1,5 +1,5 @@
 import {LightNode} from "../../../interfaces.js";
-import {createVerifiedExecutionProxy, VerifiedProxyOptions} from "../../../proxy.js";
+import {createVerifiedExecutionProxy, VerifiedProxyOptions} from "../../../web3_proxy.js";
 import {stdLogger} from "../../../utils/logger.js";
 import {parseStartArgs, StartArgs} from "./options.js";
 

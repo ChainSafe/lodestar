@@ -19,10 +19,10 @@ type ProvableProviderInitOpts = {network?: NetworkName; checkpoint?: string} & (
 
 const defaultNetwork = "mainnet";
 
-export function makeProvableProvider<T extends Web3Provider>(
+export function createVerifiedExecutionProvider<T extends Web3Provider>(
   provider: T,
   opts: ProvableProviderInitOpts
-): T & {rootProvider: ProofProvider} {
+): {provider: T; proofProvider: ProofProvider} {
   const controller = new AbortController();
   const proofProvider =
     opts.mode === LightNode.Rest
@@ -37,22 +37,22 @@ export function makeProvableProvider<T extends Web3Provider>(
         });
 
   if (isSendProvider(provider)) {
-    return Object.assign(handleSendProvider(provider, proofProvider) as T, {rootProvider: proofProvider});
+    return {provider: handleSendProvider(provider, proofProvider) as T, proofProvider: proofProvider};
   }
 
   if (isRequestProvider(provider)) {
-    return Object.assign(handleRequestProvider(provider, proofProvider) as T, {rootProvider: proofProvider});
+    return {provider: handleRequestProvider(provider, proofProvider) as T, proofProvider: proofProvider};
   }
 
   if (isSendAsyncProvider(provider)) {
-    return Object.assign(handleSendAsyncProvider(provider, proofProvider) as T, {rootProvider: proofProvider});
+    return {provider: handleSendAsyncProvider(provider, proofProvider) as T, proofProvider: proofProvider};
   }
 
   if (isEIP1193Provider(provider)) {
-    return Object.assign(handleEIP1193Provider(provider, proofProvider) as T, {rootProvider: proofProvider});
+    return {provider: handleEIP1193Provider(provider, proofProvider) as T, proofProvider: proofProvider};
   }
 
-  return Object.assign(provider, {rootProvider: proofProvider});
+  return {provider, proofProvider: proofProvider};
 }
 
 function handleSendProvider(provider: SendProvider, rootProvider: ProofProvider): SendProvider {
