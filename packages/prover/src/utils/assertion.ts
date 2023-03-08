@@ -1,5 +1,12 @@
 import {Lightclient} from "@lodestar/light-client";
-import {EIP1193Provider, RequestProvider, SendAsyncProvider, SendProvider, Web3Provider} from "../interfaces.js";
+import {
+  EIP1193Provider,
+  EthersProvider,
+  RequestProvider,
+  SendAsyncProvider,
+  SendProvider,
+  Web3Provider,
+} from "../interfaces.js";
 
 export function assertLightClient(client?: Lightclient): asserts client is Lightclient {
   if (!client) {
@@ -23,10 +30,19 @@ export function isSendAsyncProvider(provider: Web3Provider): provider is SendAsy
   );
 }
 
-export function isEIP1193Provider(provider: EIP1193Provider): provider is EIP1193Provider {
+export function isEIP1193Provider(provider: Web3Provider): provider is EIP1193Provider {
   return (
     "request" in provider &&
     typeof provider.request === "function" &&
     provider.request.constructor.name === "AsyncFunction"
+  );
+}
+
+export function isEthersProvider(provider: Web3Provider): provider is EthersProvider {
+  return (
+    "send" in provider &&
+    typeof provider.send === "function" &&
+    provider.send.constructor.name === "AsyncFunction" &&
+    provider.send.length === 2
   );
 }

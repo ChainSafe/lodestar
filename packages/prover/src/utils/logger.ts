@@ -1,4 +1,3 @@
-import {stderr, stdout} from "process";
 import {LogData, Logger, LoggerChildOpts} from "@lodestar/utils";
 import {ELRequestPayload} from "../types.js";
 
@@ -11,9 +10,17 @@ const printLogData = (data: LogData): string => {
   return JSON.stringify(data);
 };
 
-const stdLogHandler = (level: string) => {
+const stdLogHandler = (level: string): ((message: string, context?: LogData, error?: Error | undefined) => void) => {
+  if (process === undefined) {
+    return (message: string, context?: LogData, error?: Error | undefined): void => {
+      // eslint-disable-next-line no-console
+      console.log(
+        `${level}: ${message} ${context === undefined ? "" : printLogData(context)} ${error ? error.stack : ""}`
+      );
+    };
+  }
   return (message: string, context?: LogData, error?: Error | undefined): void => {
-    const stream = level === "err" ? stderr : stdout;
+    const stream = level === "error" ? process.stderr : process.stdout;
     stream.write(
       `${level}: ${message} ${context === undefined ? "" : printLogData(context)} ${error ? error.stack : ""}\n`
     );
@@ -21,7 +28,7 @@ const stdLogHandler = (level: string) => {
 };
 
 export const stdLogger: Logger = {
-  error: stdLogHandler("err"),
+  error: stdLogHandler("error"),
   warn: stdLogHandler("warn"),
   info: stdLogHandler("info"),
   debug: stdLogHandler("debug"),

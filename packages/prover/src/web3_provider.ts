@@ -1,6 +1,7 @@
 import {NetworkName} from "@lodestar/config/networks";
 import {
   EIP1193Provider,
+  EthersProvider,
   LightNode,
   RequestProvider,
   SendAsyncProvider,
@@ -9,7 +10,13 @@ import {
 } from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "./types.js";
-import {isEIP1193Provider, isRequestProvider, isSendAsyncProvider, isSendProvider} from "./utils/assertion.js";
+import {
+  isEIP1193Provider,
+  isEthersProvider,
+  isRequestProvider,
+  isSendAsyncProvider,
+  isSendProvider,
+} from "./utils/assertion.js";
 import {processAndVerifyRequest} from "./utils/execution.js";
 
 type ProvableProviderInitOpts = {network?: NetworkName; checkpoint?: string} & (
@@ -38,6 +45,10 @@ export function createVerifiedExecutionProvider<T extends Web3Provider>(
 
   if (isSendProvider(provider)) {
     return {provider: handleSendProvider(provider, proofProvider) as T, proofProvider: proofProvider};
+  }
+
+  if (isEthersProvider(provider)) {
+    return {provider: handleEthersProvider(provider, proofProvider) as T, proofProvider: proofProvider};
   }
 
   if (isRequestProvider(provider)) {
@@ -119,4 +130,19 @@ function handleEIP1193Provider(provider: EIP1193Provider, rootProvider: ProofPro
   }
 
   return Object.assign(provider, {request: newRequest});
+}
+
+function handleEthersProvider(provider: EthersProvider, rootProvider: ProofProvider): EthersProvider {
+  const send = provider.send.bind(provider);
+  const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> => send(payload.method, payload.params);
+
+  async function newSend(method: string, params: Array<unknown>): Promise<ELResponse | undefined> {
+    return processAndVerifyRequest({
+      payload: {jsonrpc: "2.0", id: 0, method, params},
+      handler,
+      proofProvider: rootProvider,
+    });
+  }
+
+  return Object.assign(provider, {send: newSend});
 }

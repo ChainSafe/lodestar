@@ -15,10 +15,8 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./lib/index.js"
-    },
-    "./proxy": {
-      "import": "./lib/proxy.js"
+      "import": "./lib/index.js",
+      "browser": "./lib/index.web.js"
     }
   },
   "bin": {
@@ -53,6 +51,7 @@
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
+    "test:browsers": "yarn karma start karma.config.cjs",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
@@ -72,7 +71,8 @@
   "devDependencies": {
     "@types/http-proxy": "^1.17.10",
     "@types/yargs": "^15.0.9",
-    "web3": "^1.8.2"
+    "web3": "^1.8.2",
+    "ethers": "^6.1.0"
   },
   "peerDependencies": {
   },

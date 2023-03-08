@@ -32,7 +32,11 @@ export interface SendAsyncProvider {
   sendAsync(payload: ELRequestPayload): Promise<ELResponse>;
 }
 
-export type Web3Provider = EIP1193Provider | RequestProvider | SendProvider | SendAsyncProvider;
+export interface EthersProvider {
+  send(method: string, params: Array<unknown>): Promise<ELResponse>;
+}
+
+export type Web3Provider = SendProvider | EthersProvider | SendAsyncProvider | RequestProvider | EIP1193Provider;
 
 export type ELVerifiedRequestHandler<A = unknown, R = unknown> = (opts: {
   payload: ELRequestPayload<A>;

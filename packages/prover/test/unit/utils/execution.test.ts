@@ -1,6 +1,10 @@
 import {expect} from "chai";
+import chai from "chai";
+import chaiAsPromised from "chai-as-promised";
 import {ELProof, ELStorageProof} from "../../../src/types.js";
 import {isValidAccount, isValidStorageKeys} from "../../../src/utils/execution.js";
+
+chai.use(chaiAsPromised);
 
 describe("uitls/verification", () => {
   describe("isValidAccount", () => {
