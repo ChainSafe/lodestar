@@ -15,7 +15,21 @@ export function assertLightClient(client?: Lightclient): asserts client is Light
 }
 
 export function isSendProvider(provider: Web3Provider): provider is SendProvider {
-  return "send" in provider && typeof provider.send === "function" && provider.send.length > 1;
+  return (
+    "send" in provider &&
+    typeof provider.send === "function" &&
+    provider.send.length > 1 &&
+    provider.send.constructor.name !== "AsyncFunction"
+  );
+}
+
+export function isEthersProvider(provider: Web3Provider): provider is EthersProvider {
+  return (
+    "send" in provider &&
+    typeof provider.send === "function" &&
+    provider.send.length > 1 &&
+    provider.send.constructor.name === "AsyncFunction"
+  );
 }
 
 export function isRequestProvider(provider: Web3Provider): provider is RequestProvider {
@@ -35,14 +49,5 @@ export function isEIP1193Provider(provider: Web3Provider): provider is EIP1193Pr
     "request" in provider &&
     typeof provider.request === "function" &&
     provider.request.constructor.name === "AsyncFunction"
-  );
-}
-
-export function isEthersProvider(provider: Web3Provider): provider is EthersProvider {
-  return (
-    "send" in provider &&
-    typeof provider.send === "function" &&
-    provider.send.constructor.name === "AsyncFunction" &&
-    provider.send.length === 2
   );
 }

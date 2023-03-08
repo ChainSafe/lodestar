@@ -52,6 +52,7 @@
     "test": "yarn test:unit && yarn test:e2e",
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test:browsers": "yarn karma start karma.config.cjs",
+    "test:e2e": "mocha 'test/e2e/**/*.test.ts'",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {

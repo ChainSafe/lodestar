@@ -133,6 +133,7 @@ function handleEIP1193Provider(provider: EIP1193Provider, rootProvider: ProofPro
 }
 
 function handleEthersProvider(provider: EthersProvider, rootProvider: ProofProvider): EthersProvider {
+  console.log("handling ethers provider");
   const send = provider.send.bind(provider);
   const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> => send(payload.method, payload.params);
 
