@@ -24,7 +24,7 @@ export function makeProvableProvider<T extends Web3Provider>(
   opts: ProvableProviderInitOpts
 ): T & {rootProvider: ProofProvider} {
   const controller = new AbortController();
-  const rootProvider =
+  const proofProvider =
     opts.mode === LightNode.Rest
       ? ProofProvider.buildWithRestApi(opts.urls, {
           network: opts.network ?? defaultNetwork,
@@ -37,22 +37,22 @@ export function makeProvableProvider<T extends Web3Provider>(
         });
 
   if (isSendProvider(provider)) {
-    return Object.assign(handleSendProvider(provider, rootProvider) as T, {rootProvider});
+    return Object.assign(handleSendProvider(provider, proofProvider) as T, {rootProvider: proofProvider});
   }
 
   if (isRequestProvider(provider)) {
-    return Object.assign(handleRequestProvider(provider, rootProvider) as T, {rootProvider});
+    return Object.assign(handleRequestProvider(provider, proofProvider) as T, {rootProvider: proofProvider});
   }
 
   if (isSendAsyncProvider(provider)) {
-    return Object.assign(handleSendAsyncProvider(provider, rootProvider) as T, {rootProvider});
+    return Object.assign(handleSendAsyncProvider(provider, proofProvider) as T, {rootProvider: proofProvider});
   }
 
   if (isEIP1193Provider(provider)) {
-    return Object.assign(handleEIP1193Provider(provider, rootProvider) as T, {rootProvider});
+    return Object.assign(handleEIP1193Provider(provider, proofProvider) as T, {rootProvider: proofProvider});
   }
 
-  return Object.assign(provider, {rootProvider});
+  return Object.assign(provider, {rootProvider: proofProvider});
 }
 
 function handleSendProvider(provider: SendProvider, rootProvider: ProofProvider): SendProvider {
@@ -69,7 +69,7 @@ function handleSendProvider(provider: SendProvider, rootProvider: ProofProvider)
     });
 
   function newSend(payload: ELRequestPayload, callback: (err?: Error | null, response?: ELResponse) => void): void {
-    processVerifiedELRequest({payload, handler, rootProvider})
+    processVerifiedELRequest({payload, handler, proofProvider: rootProvider})
       .then((response) => callback(undefined, response))
       .catch((err) => callback(err, undefined));
   }
@@ -91,7 +91,7 @@ function handleRequestProvider(provider: RequestProvider, rootProvider: ProofPro
     });
 
   function newRequest(payload: ELRequestPayload, callback: (err?: Error | null, response?: ELResponse) => void): void {
-    processVerifiedELRequest({payload, handler, rootProvider})
+    processVerifiedELRequest({payload, handler, proofProvider: rootProvider})
       .then((response) => callback(undefined, response))
       .catch((err) => callback(err, undefined));
   }
@@ -104,7 +104,7 @@ function handleSendAsyncProvider(provider: SendAsyncProvider, rootProvider: Proo
   const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> => sendAsync(payload);
 
   async function newSendAsync(payload: ELRequestPayload): Promise<ELResponse | undefined> {
-    return processVerifiedELRequest({payload, handler, rootProvider});
+    return processVerifiedELRequest({payload, handler, proofProvider: rootProvider});
   }
 
   return Object.assign(provider, {sendAsync: newSendAsync});
@@ -115,7 +115,7 @@ function handleEIP1193Provider(provider: EIP1193Provider, rootProvider: ProofPro
   const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> => request(payload);
 
   async function newRequest(payload: ELRequestPayload): Promise<ELResponse | undefined> {
-    return processVerifiedELRequest({payload, handler, rootProvider});
+    return processVerifiedELRequest({payload, handler, proofProvider: rootProvider});
   }
 
   return Object.assign(provider, {request: newRequest});

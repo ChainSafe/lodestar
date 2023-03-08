@@ -9,16 +9,16 @@ const supportedELRequests: Record<string, ELVerifiedRequestHandler<any, any>> = 
 export async function processVerifiedELRequest({
   payload,
   handler,
-  rootProvider,
+  proofProvider,
 }: {
   payload: ELRequestPayload;
   handler: ELRequestMethod;
-  rootProvider: ProofProvider;
+  proofProvider: ProofProvider;
 }): Promise<ELResponse | undefined> {
   const verifiedHandler = supportedELRequests[payload.method];
 
   if (verifiedHandler !== undefined) {
-    return verifiedHandler({payload, handler, rootProvider});
+    return verifiedHandler({payload, handler, rootProvider: proofProvider});
   }
 
   // eslint-disable-next-line no-console
