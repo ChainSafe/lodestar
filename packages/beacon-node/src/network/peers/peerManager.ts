@@ -635,6 +635,7 @@ export class PeerManager {
     // do not disconnect Nimbus peer
     if (peer.toString() === NIMBUS_PEER_ID) {
       this.logger.info("Ignore disconnecting Nimbus peer", {peerId: peer.toString(), goodbye});
+      return;
     }
     try {
       const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
