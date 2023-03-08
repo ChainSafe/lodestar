@@ -3,7 +3,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, NIMBUS_PEER_ID} from "@lodestar/config";
 import {allForks, altair, phase0} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
@@ -263,6 +263,9 @@ export class PeerManager {
    */
   private onPing(peer: PeerId, seqNumber: phase0.Ping): void {
     // if the sequence number is unknown update the peer's metadata
+    if (peer.toString() === NIMBUS_PEER_ID) {
+      this.logger.verbose("Lodestar receives ping requests from Nimbus", {peerId: NIMBUS_PEER_ID});
+    }
     const metadata = this.connectedPeers.get(peer.toString())?.metadata;
     if (!metadata || metadata.seqNumber < seqNumber) {
       void this.requestMetadata(peer);
@@ -276,6 +279,9 @@ export class PeerManager {
     // Store metadata always in case the peer updates attnets but not the sequence number
     // Trust that the peer always sends the latest metadata (From Lighthouse)
     const peerData = this.connectedPeers.get(peer.toString());
+    if (peer.toString() === NIMBUS_PEER_ID) {
+      this.logger.verbose("Lodestar receives metadata requests from Nimbus", {peerId: NIMBUS_PEER_ID});
+    }
     if (peerData) {
       peerData.metadata = {
         seqNumber: metadata.seqNumber,
@@ -309,6 +315,9 @@ export class PeerManager {
   private onStatus(peer: PeerId, status: phase0.Status): void {
     // reset the to-status timer of this peer
     const peerData = this.connectedPeers.get(peer.toString());
+    if (peer.toString() === NIMBUS_PEER_ID) {
+      this.logger.verbose("Lodestar receives status requests from Nimbus", {peerId: NIMBUS_PEER_ID});
+    }
     if (peerData) peerData.lastStatusUnixTsMs = Date.now();
 
     let isIrrelevant: boolean;
@@ -351,7 +360,13 @@ export class PeerManager {
 
   private async requestMetadata(peer: PeerId): Promise<void> {
     try {
+      if (peer.toString() === NIMBUS_PEER_ID) {
+        this.logger.verbose("Lodestar is requesting metadata from Nimbus", {peerId: NIMBUS_PEER_ID});
+      }
       this.onMetadata(peer, await this.reqResp.metadata(peer));
+      if (peer.toString() === NIMBUS_PEER_ID) {
+        this.logger.verbose("Lodestar done requesting metadata from Nimbus", {peerId: NIMBUS_PEER_ID});
+      }
     } catch (e) {
       // TODO: Downvote peer here or in the reqResp layer
     }
@@ -405,7 +420,7 @@ export class PeerManager {
     for (const peer of connectedPeers) {
       switch (this.peerRpcScores.getScoreState(peer)) {
         case ScoreState.Banned:
-          void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.BANNED);
+            void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.BANNED);
           break;
         case ScoreState.Disconnected:
           void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.SCORE_TOO_LOW);
@@ -579,6 +594,12 @@ export class PeerManager {
         const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
         peerData.agentVersion = agentVersion;
         peerData.agentClient = clientFromAgentVersion(agentVersion);
+        // test gossiping with Nimbus
+        if (peerData.agentClient !== ClientKind.Nimbus) {
+          // void this.goodbyeAndDisconnect(peerData.peerId, GoodByeReasonCode.TOO_MANY_PEERS);
+          // says goodbye 40k per sec, should skip
+          void this.libp2p.hangUp(peerData.peerId);
+        }
       }
     }, 1000);
   };
@@ -611,6 +632,10 @@ export class PeerManager {
   }
 
   private async goodbyeAndDisconnect(peer: PeerId, goodbye: GoodByeReasonCode): Promise<void> {
+    // do not disconnect Nimbus peer
+    if (peer.toString() === NIMBUS_PEER_ID) {
+      this.logger.info("Ignore disconnecting Nimbus peer", {peerId: peer.toString(), goodbye});
+    }
     try {
       const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
       this.metrics?.peerGoodbyeSent.inc({reason});

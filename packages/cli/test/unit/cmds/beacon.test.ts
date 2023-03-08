@@ -174,3 +174,11 @@ async function runBeaconHandlerInit(args: Partial<BeaconArgs & GlobalArgs>) {
     ...args,
   } as BeaconArgs & GlobalArgs);
 }
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+async function runInitPeerIdAndEnr(args: Partial<BeaconArgs & GlobalArgs>) {
+  const args2 = {...args, dataDir: testFilesDir} as BeaconArgs & GlobalArgs;
+  const {config} = getBeaconConfigFromArgs(args2);
+  const logger = initLogger(args2, testFilesDir, config);
+  return initPeerIdAndEnr(args2, testFilesDir, logger);
+}

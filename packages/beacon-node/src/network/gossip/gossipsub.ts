@@ -142,6 +142,8 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
     if (!opts.skipParamsLog) {
       this.logger.debug("Gossipsub score params", {params: JSON.stringify(scoreParams)});
     }
+    // @ts-ignore
+    this.log.log = logger.debug.bind(logger);
   }
 
   /**

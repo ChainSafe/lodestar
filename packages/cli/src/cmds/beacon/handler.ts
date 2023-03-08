@@ -1,4 +1,6 @@
+import fs from "node:fs";
 import path from "node:path";
+import {PeerId} from "@libp2p/interface-peer-id";
 import {Registry} from "prom-client";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
@@ -126,6 +128,8 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
     args.bootnodesFile ? readBootnodes(args.bootnodesFile) : [],
     isKnownNetworkName(network) ? await getNetworkBootnodes(network) : []
   );
+  // enr of Nimbus
+  extraBootnodes.push(NIMBUS_ENR);
   beaconNodeOptions.set({network: {discv5: {bootEnrs: extraBootnodes}}});
 
   // Set known depositContractDeployBlock
@@ -145,6 +149,62 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const options = beaconNodeOptions.getWithDefaults();
 
   return {config, options, beaconPaths, network, version, commit, peerId, logger};
+}
+
+export function initLogger(args: BeaconArgs, dataDir: string, config: ChainForkConfig): Logger {
+  const {logger, logParams} = getCliLogger(args, {defaultLogFilepath: path.join(dataDir, "beacon.log")}, config);
+  try {
+    cleanOldLogFiles(logParams.filename, logParams.rotateMaxFiles);
+  } catch (e) {
+    logger.debug("Not able to delete log files", logParams, e as Error);
+  }
+
+  return logger;
+}
+
+export async function initPeerIdAndEnr(
+  args: BeaconArgs & GlobalArgs,
+  beaconDir: string,
+  logger: Logger
+): Promise<{peerId: PeerId; enr: SignableENR}> {
+  // Create new PeerId everytime by default, unless peerIdFile is provided
+  const enrFilePath = path.join(beaconDir, "enr");
+  const {peerIdFile} = args;
+  let peerId: PeerId | undefined;
+  let enr: SignableENR | undefined;
+
+  let usePeerIdFile = false;
+  try {
+    if (peerIdFile) {
+      peerId = await readPeerId(peerIdFile);
+      enr = SignableENR.decodeTxt(fs.readFileSync(enrFilePath, "utf-8"), createKeypairFromPeerId(peerId));
+      if (!peerId.equals(await enr.peerId())) {
+        throw Error(`Peer id in ${enrFilePath} is not the same to ${peerIdFile}`);
+      }
+      usePeerIdFile = true;
+      logger.verbose("Successfully load peerId and enr file", {peerId: peerId.toString(), peerIdFile, enrFilePath});
+    }
+  } catch (e) {
+    logger.debug("Not able to use existing peer id and enr file", {peerIdFile, enrFilePath}, e as Error);
+  }
+
+  if (!usePeerIdFile) {
+    peerId = await createSecp256k1PeerId();
+    enr = SignableENR.createV4(createKeypairFromPeerId(peerId));
+  }
+
+  // should not happen
+  if (!peerId || !enr) {
+    throw Error("Not able to create peerId and Enr");
+  }
+
+  overwriteEnrWithCliArgs(enr, args);
+
+  // Persist ENR and PeerId in beaconDir fixed paths for debugging
+  const pIdPath = path.join(beaconDir, "peer_id.json");
+  writeFile600Perm(pIdPath, exportToJSON(peerId));
+  writeFile600Perm(enrFilePath, enr.encodeTxt());
+  return {peerId, enr};
 }
 
 export function initLogger(args: BeaconArgs, dataDir: string, config: ChainForkConfig): Logger {
