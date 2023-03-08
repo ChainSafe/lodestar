@@ -1,8 +1,7 @@
 import {ELVerifiedRequestHandler} from "../interfaces.js";
-import {hexToBuffer, numberToHex} from "../utils/conversion.js";
-import {getELProof} from "../utils/execution.js";
+import {numberToHex} from "../utils/conversion.js";
+import {getELProof, isValidAccount, isValidStorageKeys} from "../utils/execution.js";
 import {generateRPCResponseForPayload, generateUnverifiedResponseForPayload} from "../utils/json_rpc.js";
-import {isValidAccount, isValidStorageKeys} from "../utils/verification.js";
 
 export const ethGetBalance: ELVerifiedRequestHandler<[address: string, block?: number | string], string> = async ({
   handler,
@@ -17,7 +16,7 @@ export const ethGetBalance: ELVerifiedRequestHandler<[address: string, block?: n
 
   if (
     (await isValidAccount({
-      address: hexToBuffer(address),
+      address: address,
       stateRoot: executionPayload.stateRoot,
       proof,
     })) &&

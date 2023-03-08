@@ -7,7 +7,7 @@ import {Logger} from "@lodestar/utils";
 import {LightNode} from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "./types.js";
-import {processVerifiedELRequest} from "./utils/execution.js";
+import {processAndVerifyRequest} from "./utils/execution.js";
 import {logRequest} from "./utils/logger.js";
 import {generateRPCResponseForPayload} from "./utils/json_rpc.js";
 import {fetchRequestPayload, fetchResponseBody} from "./utils/req_resp.js";
@@ -80,7 +80,7 @@ export function createVerifiedExecutionProxy(
       .then((data) => {
         payload = data;
         logRequest({payload, logger});
-        return processVerifiedELRequest({payload, proofProvider, handler});
+        return processAndVerifyRequest({payload, proofProvider, handler});
       })
       .then((response) => {
         res.write(JSON.stringify(response));

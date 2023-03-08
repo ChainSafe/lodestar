@@ -31,3 +31,5 @@ export interface ELProof {
     readonly proof: string[];
   }[];
 }
+export type ELStorageProof = Pick<ELProof, "storageHash" | "storageProof">;
+export type HexString = string;

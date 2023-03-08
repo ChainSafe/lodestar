@@ -10,7 +10,7 @@ import {
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "./types.js";
 import {isEIP1193Provider, isRequestProvider, isSendAsyncProvider, isSendProvider} from "./utils/assertion.js";
-import {processVerifiedELRequest} from "./utils/execution.js";
+import {processAndVerifyRequest} from "./utils/execution.js";
 
 type ProvableProviderInitOpts = {network?: NetworkName; checkpoint?: string} & (
   | {mode: LightNode.Rest; urls: string[]}
@@ -69,7 +69,7 @@ function handleSendProvider(provider: SendProvider, rootProvider: ProofProvider)
     });
 
   function newSend(payload: ELRequestPayload, callback: (err?: Error | null, response?: ELResponse) => void): void {
-    processVerifiedELRequest({payload, handler, proofProvider: rootProvider})
+    processAndVerifyRequest({payload, handler, proofProvider: rootProvider})
       .then((response) => callback(undefined, response))
       .catch((err) => callback(err, undefined));
   }
@@ -91,7 +91,7 @@ function handleRequestProvider(provider: RequestProvider, rootProvider: ProofPro
     });
 
   function newRequest(payload: ELRequestPayload, callback: (err?: Error | null, response?: ELResponse) => void): void {
-    processVerifiedELRequest({payload, handler, proofProvider: rootProvider})
+    processAndVerifyRequest({payload, handler, proofProvider: rootProvider})
       .then((response) => callback(undefined, response))
       .catch((err) => callback(err, undefined));
   }
@@ -104,7 +104,7 @@ function handleSendAsyncProvider(provider: SendAsyncProvider, rootProvider: Proo
   const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> => sendAsync(payload);
 
   async function newSendAsync(payload: ELRequestPayload): Promise<ELResponse | undefined> {
-    return processVerifiedELRequest({payload, handler, proofProvider: rootProvider});
+    return processAndVerifyRequest({payload, handler, proofProvider: rootProvider});
   }
 
   return Object.assign(provider, {sendAsync: newSendAsync});
@@ -115,7 +115,7 @@ function handleEIP1193Provider(provider: EIP1193Provider, rootProvider: ProofPro
   const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> => request(payload);
 
   async function newRequest(payload: ELRequestPayload): Promise<ELResponse | undefined> {
-    return processVerifiedELRequest({payload, handler, proofProvider: rootProvider});
+    return processAndVerifyRequest({payload, handler, proofProvider: rootProvider});
   }
 
   return Object.assign(provider, {request: newRequest});
