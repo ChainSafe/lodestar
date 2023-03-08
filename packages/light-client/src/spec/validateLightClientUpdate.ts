@@ -1,4 +1,5 @@
 import {Root, ssz, allForks} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
 import bls from "@chainsafe/bls/switchable";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
 import {
@@ -13,10 +14,18 @@ import {
 import {getParticipantPubkeys, sumBits} from "../utils/utils.js";
 import {isValidMerkleBranch} from "../utils/index.js";
 import {SyncCommitteeFast} from "../types.js";
-import {isFinalityUpdate, isSyncCommitteeUpdate, isZeroedHeader, isZeroedSyncCommittee, ZERO_HASH} from "./utils.js";
+import {
+  isFinalityUpdate,
+  isSyncCommitteeUpdate,
+  isZeroedHeader,
+  isZeroedSyncCommittee,
+  ZERO_HASH,
+  isValidLightClientHeader,
+} from "./utils.js";
 import {ILightClientStore} from "./store.js";
 
 export function validateLightClientUpdate(
+  config: ChainForkConfig,
   store: ILightClientStore,
   update: allForks.LightClientUpdate,
   syncCommittee: SyncCommitteeFast
@@ -24,6 +33,10 @@ export function validateLightClientUpdate(
   // Verify sync committee has sufficient participants
   if (sumBits(update.syncAggregate.syncCommitteeBits) < MIN_SYNC_COMMITTEE_PARTICIPANTS) {
     throw Error("Sync committee has not sufficient participants");
+  }
+
+  if (!isValidLightClientHeader(config, update.attestedHeader)) {
+    throw Error("Attested Header is not Valid Light Client Header");
   }
 
   // Sanity check that slots are in correct order
@@ -48,12 +61,16 @@ export function validateLightClientUpdate(
   } else {
     let finalizedRoot: Root;
 
-    if (update.finalizedHeader.beacon.slot == GENESIS_SLOT) {
+    if (update.finalizedHeader.beacon.slot === GENESIS_SLOT) {
       if (!isZeroedHeader(update.finalizedHeader.beacon)) {
         throw Error("finalizedHeader must be zero for not finality update");
       }
       finalizedRoot = ZERO_HASH;
     } else {
+      if (!isValidLightClientHeader(config, update.finalizedHeader)) {
+        throw Error("Finalized Header is not valid Light Client Header");
+      }
+
       finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader.beacon);
     }
 
