@@ -16,7 +16,13 @@
   "exports": {
     ".": {
       "import": "./lib/index.js"
+    },
+    "./proxy": {
+      "import": "./lib/proxy.js"
     }
+  },
+  "bin": {
+    "lodestar-prover": "lib/cli/index.js"
   },
   "typesVersions": {
     "*": {
@@ -50,16 +56,22 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@lodestar/api": "1.5.0",
-    "@lodestar/types": "1.5.0",
-    "@lodestar/config": "1.5.0",
-    "@lodestar/light-client": "1.5.0",
+    "@lodestar/api": "^1.5.0",
+    "@lodestar/types": "^1.5.0",
+    "@lodestar/utils": "^1.5.0",
+    "@lodestar/config": "^1.5.0",
+    "@lodestar/light-client": "^1.5.0",
     "@ethereumjs/trie": "^5.0.4",
     "@ethereumjs/util": "^8.0.5",
     "@ethereumjs/rlp": "^4.0.1",    
-    "ethereum-cryptography": "^1.2.0"
+    "ethereum-cryptography": "^1.2.0",
+    "http-proxy": "^1.18.1",
+    "yargs": "^16.1.0",
+    "source-map-support": "^0.5.19"
   },
   "devDependencies": {
+    "@types/http-proxy": "^1.17.10",
+    "@types/yargs": "^15.0.9",
     "web3": "^1.8.2"
   },
   "peerDependencies": {

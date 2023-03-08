@@ -33,6 +33,19 @@ const balance = await web3.eth.getBalance(address, "latest");
 console.log({balance, address});
 ```
 
+You can also invoke the package as binary.
+
+```bash
+npm -i g @lodestar/prover 
+
+lodestar-prover start \
+  --network sepolia \
+  --execution-rpc https://lodestar-sepoliarpc.chainsafe.io \
+  --mode rest \
+  --beacon-rpc https://lodestar-sepolia.chainsafe.io \
+  --port 8080
+```
+
 ## Prerequisites
 
 - [Lerna](https://github.com/lerna/lerna)
