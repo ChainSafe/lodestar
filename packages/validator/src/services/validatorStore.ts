@@ -228,6 +228,10 @@ export class ValidatorStore {
     );
   }
 
+  getValidatorKeys(): PubkeyHex[] {
+    return Array.from(this.validators.keys());
+  }
+
   getGasLimit(pubkeyHex: PubkeyHex): number {
     const validatorData = this.validators.get(pubkeyHex);
     if (validatorData === undefined) {

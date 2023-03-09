@@ -192,41 +192,6 @@ function createValidatorStats(): ClientStats {
       defaultValue: 0,
       description: "Number of validator keys that are currently active",
     }),
-    validatorPending: new MetricProperty({
-      jsonKey: "validator_pending",
-      metricName: "vc_pending_validators_count",
-      jsonType: JsonType.Number,
-      defaultValue: 0,
-      description: "Number of validator keys that are currently pending",
-    }),
-    validatorSlashed: new MetricProperty({
-      jsonKey: "validator_slashed",
-      metricName: "vc_slashed_validators_count",
-      jsonType: JsonType.Number,
-      defaultValue: 0,
-      description: "Number of validator keys that are currently slashed",
-    }),
-    validatorExited: new MetricProperty({
-      jsonKey: "validator_exited",
-      metricName: "vc_exited_validators_count",
-      jsonType: JsonType.Number,
-      defaultValue: 0,
-      description: "Number of validator keys that are currently exited",
-    }),
-    withdrawableValidator: new MetricProperty({
-      jsonKey: "withdrawable_validator",
-      metricName: "vc_withdrawable_validators_count",
-      jsonType: JsonType.Number,
-      defaultValue: 0,
-      description: "Number of validator keys that are currently withdrawable",
-    }),
-    validatorBalance: new MetricProperty({
-      jsonKey: "validator_balance",
-      metricName: "vc_balance_gwei",
-      jsonType: JsonType.Number,
-      defaultValue: 0,
-      description: "Total balance of all validator keys",
-    }),
   };
 }
 

@@ -243,11 +243,6 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
       help: "Current count of indices in IndicesService",
     }),
 
-    activeIndices: register.gauge({
-      name: "vc_active_validators_count",
-      help: "Current count of active validators",
-    }),
-
     discoveredIndices: register.gauge({
       name: "vc_discovered_indices_total",
       help: "Total count of validator indices discovered",
@@ -328,6 +323,12 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
     beaconHealth: register.gauge({
       name: "vc_beacon_health",
       help: `Current health status of the beacon(s) the validator is connected too. ${renderEnumNumeric(BeaconHealth)}`,
+    }),
+
+    validatorStatuses: register.gauge<{status: string}>({
+      name: "vc_validator_status",
+      help: "Current statuses of the validators.",
+      labelNames: ["status"],
     }),
 
     restApiClient: {

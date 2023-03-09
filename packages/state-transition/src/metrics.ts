@@ -1,4 +1,5 @@
 import {Epoch} from "@lodestar/types";
+import {routes} from "@chainsafe/lodestar-api";
 import {CachedBeaconStateAllForks} from "./types.js";
 import {AttesterStatus} from "./util/attesterStatus.js";
 
@@ -17,7 +18,7 @@ export type BeaconStateTransitionMetrics = {
   postStateBalancesNodesPopulatedHit: Gauge;
   postStateValidatorsNodesPopulatedMiss: Gauge;
   postStateValidatorsNodesPopulatedHit: Gauge;
-  registerValidatorStatuses: (currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]) => void;
+  registerValidatorAttestationStatuses: (currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]) => void;
 };
 
 type LabelValues<T extends string> = Partial<Record<T, string | number>>;

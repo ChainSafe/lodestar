@@ -21,7 +21,12 @@ export enum OpSource {
 export type ValidatorMonitor = {
   registerLocalValidator(index: number): void;
   registerLocalValidatorInSyncCommittee(index: number, untilEpoch: Epoch): void;
-  registerValidatorStatuses(currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]): void;
+  registerValidatorAttestationStatuses(currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]): void;
+  registerValidatorStatuses: (
+    currentEpoch: Epoch,
+    statuses: Map<number, SimpleValidatorStatus>,
+    balances?: number[]
+  ) => void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
   registerImportedBlock(block: allForks.BeaconBlock, data: {proposerBalanceDelta: number}): void;
   submitUnaggregatedAttestation(
@@ -203,7 +208,7 @@ export function createValidatorMonitor(
       }
     },
 
-    registerValidatorStatuses(currentEpoch, statuses, balances) {
+    registerValidatorAttestationStatuses(currentEpoch, statuses, balances) {
       // Prevent registering status for the same epoch twice. processEpoch() may be ran more than once for the same epoch.
       if (currentEpoch <= lastRegisteredStatusEpoch) {
         return;
@@ -283,6 +288,28 @@ export function createValidatorMonitor(
             // inclusionDistance is not available in summary since altair
             inclusionDistance,
           });
+        }
+      }
+    },
+
+    registerValidatorStatuses(currentEpoch, statuses, balances) {
+      // Prevent registering status for the same epoch twice. processEpoch() may be ran more than once for the same epoch.
+      if (currentEpoch <= lastRegisteredStatusEpoch) {
+        return;
+      }
+      lastRegisteredStatusEpoch = currentEpoch;
+
+      for (const monitoredValidator of validators.values()) {
+        const index = monitoredValidator.index;
+        const status = statuses[index];
+
+        switch (status) {
+          case "":
+            metrics.validatorMonitor.validatorsActive.inc();
+        }
+        const balance = balances?.[index];
+        if (balance !== undefined) {
+          metrics.validatorMonitor.validatorBalances.set({index}, balance);
         }
       }
     },

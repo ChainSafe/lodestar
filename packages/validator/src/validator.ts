@@ -2,7 +2,7 @@ import {DatabaseApiOptions} from "@lodestar/db";
 import {BLSPubkey, ssz} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
-import {Logger} from "@lodestar/utils";
+import {Logger, MapDef} from "@lodestar/utils";
 import {getClient, Api, routes, ApiError} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
@@ -37,6 +37,9 @@ export type ValidatorOptions = {
   closed?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
 };
+
+// To assist with logging statuses, we only log the statuses that are not active_exiting or withdrawal_possible
+export type SimpleValidatorStatus = "pending" | "active" | "exited" | "withdrawn";
 
 // TODO: Extend the timeout, and let it be customizable
 /// The global timeout for HTTP requests to the beacon node.
@@ -165,6 +168,15 @@ export class Validator {
             .then((health) => metrics.beaconHealth.set(health))
             .catch((e) => this.logger.error("Error on fetchBeaconHealth", {}, e))
         );
+        this.clock.runEveryEpoch(() =>
+          this.fetchValidatorStatuses(this.validatorStore.getValidatorKeys())
+            .then((statuses) => {
+              for (const [status, amount] of statuses) {
+                metrics.validatorStatuses.inc({status}, amount);
+              }
+            })
+            .catch((e) => this.logger.error("Error on fetchValidatorStatuses", {}, e))
+        );
       }
     }
   }
@@ -265,6 +277,36 @@ export class Validator {
       return BeaconHealth.ERROR;
     }
   }
+
+  private async fetchValidatorStatuses(pubkeysHex: string[]): Promise<MapDef<SimpleValidatorStatus, number>> {
+    const res = await this.api.beacon.getStateValidators("head", {
+      id: pubkeysHex,
+    });
+    ApiError.assert(res, "Can not fetch state validators from beacon node");
+
+    const allValidatorStatuses = new MapDef<SimpleValidatorStatus, number>(() => 0);
+
+    for (const validatorState of res.response.data) {
+      // Group all validators by status
+      const status = statusToSimpleStatusMapping(validatorState.status);
+      allValidatorStatuses.set(status, allValidatorStatuses.getOrDefault(status) + 1);
+    }
+
+    // The number of validators that are not in the beacon chain
+    const pendingCount = pubkeysHex.length - res.response.data.length;
+
+    allValidatorStatuses.set("pending", allValidatorStatuses.getOrDefault("pending") + pendingCount);
+
+    // Retrieve the number of validators for each status
+    const statuses = Object.fromEntries(Array.from(allValidatorStatuses.entries()).filter((entry) => entry[1] > 0));
+
+    // The total number of validators
+    const total = pubkeysHex.length;
+
+    this.logger.info("Validator statuses", {...statuses, total});
+
+    return allValidatorStatuses;
+  }
 }
 
 /** Assert the same genesisValidatorRoot and genesisTime */
@@ -296,5 +338,27 @@ async function assertEqualGenesis(opts: ValidatorOptions, genesis: Genesis): Pro
   } else {
     await metaDataRepository.setGenesisTime(nodeGenesisTime);
     opts.logger.info("Persisted genesisTime", nodeGenesisTime);
+  }
+}
+
+function statusToSimpleStatusMapping(status: routes.beacon.ValidatorStatus): SimpleValidatorStatus {
+  switch (status) {
+    case "active":
+    case "active_exiting":
+    case "active_slashed":
+    case "active_ongoing":
+      return "active";
+
+    case "withdrawal_possible":
+    case "exited_slashed":
+    case "exited_unslashed":
+      return "exited";
+
+    case "pending_initialized":
+    case "pending_queued":
+      return "pending";
+
+    case "withdrawal_done":
+      return "withdrawn";
   }
 }
