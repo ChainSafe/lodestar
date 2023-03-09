@@ -113,7 +113,7 @@ export function validateLightClientUpdate(
 
   const signingRoot = ssz.phase0.SigningData.hashTreeRoot({
     objectRoot: ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.attestedHeader.beacon),
-    domain: store.config.getDomain(update.signatureSlot, DOMAIN_SYNC_COMMITTEE),
+    domain: store.config.getDomain(update.signatureSlot - 1, DOMAIN_SYNC_COMMITTEE),
   });
 
   if (!isValidBlsAggregate(participantPubkeys, signingRoot, update.syncAggregate.syncCommitteeSignature)) {
