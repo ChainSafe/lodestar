@@ -1,46 +1,86 @@
-import {LogData, Logger, LoggerChildOpts} from "@lodestar/utils";
-import {ELRequestPayload} from "../types.js";
+import winston from "winston";
+import Transport from "winston-transport";
+import {LogData, Logger, LoggerChildOpts, createWinstonLogger} from "@lodestar/utils";
+import {LogOptions} from "../interfaces.js";
 
-const printLogData = (data: LogData): string => {
-  if (!Array.isArray(data) && data !== null && typeof data === "object") {
-    return Object.entries(data)
-      .map(([key, value]) => `${key}=${value}`)
-      .join(" ");
-  }
-  return JSON.stringify(data);
-};
+type BrowserLogLevels = "error" | "warn" | "info" | "debug";
 
-const stdLogHandler = (level: string): ((message: string, context?: LogData, error?: Error | undefined) => void) => {
-  if (process === undefined) {
-    return (message: string, context?: LogData, error?: Error | undefined): void => {
-      // eslint-disable-next-line no-console
-      console.log(
-        `${level}: ${message} ${context === undefined ? "" : printLogData(context)} ${error ? error.stack : ""}`
-      );
-    };
-  }
-  return (message: string, context?: LogData, error?: Error | undefined): void => {
-    const stream = level === "error" ? process.stderr : process.stdout;
-    stream.write(
-      `${level}: ${message} ${context === undefined ? "" : printLogData(context)} ${error ? error.stack : ""}\n`
-    );
+class BrowserConsole extends Transport {
+  name = "BrowserConsole";
+  private levels: Record<BrowserLogLevels, number> = {
+    error: 0,
+    warn: 1,
+    info: 2,
+    debug: 4,
   };
-};
 
-export const stdLogger: Logger = {
-  error: stdLogHandler("error"),
-  warn: stdLogHandler("warn"),
-  info: stdLogHandler("info"),
-  debug: stdLogHandler("debug"),
-  verbose: stdLogHandler("verb"),
+  private methods: Record<BrowserLogLevels, string> = {
+    error: "error",
+    warn: "warn",
+    info: "info",
+    debug: "log",
+  };
+
+  constructor(opts: winston.transport.TransportStreamOptions | undefined) {
+    super(opts);
+    this.level = opts?.level && this.levels.hasOwnProperty(opts.level) ? opts.level : "info";
+  }
+
+  log(method: string | number, message: unknown): void {
+    setImmediate(() => {
+      this.emit("logged", method);
+    });
+
+    const val = this.levels[method as BrowserLogLevels];
+    const mappedMethod = this.methods[method as BrowserLogLevels];
+
+    if (val <= this.levels[this.level as BrowserLogLevels]) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, no-console, @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      console[mappedMethod](message);
+    }
+  }
+}
+
+const emptyLogger: Logger = {
+  // eslint-disable-next-line func-names
+  error: function (_message: string, _context?: LogData, _error?: Error | undefined): void {
+    // Do nothing
+  },
+  // eslint-disable-next-line func-names
+  warn: function (_message: string, _context?: LogData, _error?: Error | undefined): void {
+    // Do nothing
+  },
+  // eslint-disable-next-line func-names
+  info: function (_message: string, _context?: LogData, _error?: Error | undefined): void {
+    // Do nothing
+  },
+  // eslint-disable-next-line func-names
+  verbose: function (_message: string, _context?: LogData, _error?: Error | undefined): void {
+    // Do nothing
+  },
+  // eslint-disable-next-line func-names
+  debug: function (_message: string, _context?: LogData, _error?: Error | undefined): void {
+    // Do nothing
+  },
   // eslint-disable-next-line func-names
   child: function (_options: LoggerChildOpts): Logger {
-    throw new Error("Not supported.");
+    return emptyLogger;
   },
 };
 
-export function logRequest({logger, payload}: {logger: Logger; payload: ELRequestPayload}): void {
-  logger.debug(
-    `Req method=${payload.method} params=${payload.params === undefined ? "" : JSON.stringify(payload.params)}`
-  );
+export function getLogger(opts: LogOptions): Logger {
+  if (opts.logger) return opts.logger;
+
+  // Code is running in the node environment
+  if (opts.logLevel && process !== undefined) {
+    return createWinstonLogger({level: opts.logLevel, module: "prover"}, [new winston.transports.Console()]);
+  }
+
+  if (opts.logLevel && process === undefined) {
+    return createWinstonLogger({level: opts.logLevel, module: "prover"}, [new BrowserConsole({level: opts.logLevel})]);
+  }
+
+  // For the case when user don't want to fill in the logs of consumer browser
+  return emptyLogger;
 }

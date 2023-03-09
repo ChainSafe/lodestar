@@ -5,6 +5,7 @@ import {hideBin} from "yargs/helpers";
 import {registerCommandToYargs} from "../utils/command.js";
 import {getVersionData} from "../utils/version.js";
 import {cmds} from "./cmds/index.js";
+import {globalOptions} from "./options.js";
 
 const {version} = getVersionData();
 const topBanner = `🌟 Lodestar Prover Proxy: Ethereum RPC proxy for RPC responses, verified against the trusted block hashes.
@@ -30,6 +31,7 @@ export function getLodestarProverCli(): yargs.Argv {
       // Manually processing options is typesafe tho more verbose
       "dot-notation": false,
     })
+    .options(globalOptions)
     // blank scriptName so that help text doesn't display the cli name before each command
     .scriptName("")
     .demandCommand(1)

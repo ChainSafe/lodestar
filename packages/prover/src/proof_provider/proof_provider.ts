@@ -5,6 +5,7 @@ import {Lightclient, LightclientEvent, RunStatusCode} from "@lodestar/light-clie
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {isForkWithdrawals} from "@lodestar/params";
 import {allForks, capella} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
 import {LCTransport, RootProviderInitOptions} from "../interfaces.js";
 import {assertLightClient} from "../utils/assertion.js";
 import {
@@ -13,6 +14,7 @@ import {
   getSyncCheckpoint,
   getUnFinalizedRangeForPayloads,
 } from "../utils/consensus.js";
+import {bufferToHex} from "../utils/conversion.js";
 import {PayloadStore} from "./payload_store.js";
 
 type RootProviderOptions = Omit<RootProviderInitOptions, "transport"> & {
@@ -23,13 +25,15 @@ type RootProviderOptions = Omit<RootProviderInitOptions, "transport"> & {
 
 export class ProofProvider {
   private store: PayloadStore;
+  private logger: Logger;
 
   // Make sure readyPromise doesn't throw unhandled exceptions
   private readyPromise?: Promise<void>;
   lightClient?: Lightclient;
 
   constructor(private opts: RootProviderOptions) {
-    this.store = new PayloadStore({api: opts.api});
+    this.store = new PayloadStore({api: opts.api, logger: opts.logger});
+    this.logger = opts.logger;
   }
 
   async waitToBeReady(): Promise<void> {
@@ -40,7 +44,10 @@ export class ProofProvider {
     if (opts.transport === LCTransport.P2P) {
       throw new Error("P2P mode not supported yet");
     }
-
+    opts.logger.info("Creating ProofProvider instance with REST APIs", {
+      network: opts.network,
+      urls: opts.urls.join(","),
+    });
     const config = createChainForkConfig(networksChainConfig[opts.network]);
     const api = getClient({urls: opts.urls}, {config});
     const transport = new LightClientRestTransport(api);
@@ -66,11 +73,12 @@ export class ProofProvider {
     if (this.lightClient !== undefined) {
       throw Error("Light client already initialized and syncing.");
     }
-
+    this.logger.info("Starting sync for proof provider");
     const {api, config, transport} = this.opts;
     const checkpointRoot = await getSyncCheckpoint(api, wsCheckpoint);
     const genesisData = await getGenesisData(api);
 
+    this.logger.info("Initializing lightclient", {checkpointRoot: bufferToHex(checkpointRoot)});
     this.lightClient = await Lightclient.initializeFromCheckpointRoot({
       checkpointRoot,
       config,
@@ -88,21 +96,36 @@ export class ProofProvider {
         }
       };
       this.lightClient?.emitter.on(LightclientEvent.statusChange, lightClientStarted);
+      this.logger.info("Initiating lightclient");
       this.lightClient?.start();
     });
+    this.logger.info("Lightclient synced", this.getStatus());
     this.registerEvents();
 
     // Load the payloads from the CL
+    this.logger.info("Building EL payload history");
     const {start, end} = await getUnFinalizedRangeForPayloads(this.lightClient);
-    const payloads = await getExecutionPayloads(this.opts.api, start, end);
+    const payloads = await getExecutionPayloads({
+      api: this.opts.api,
+      startSlot: start,
+      endSlot: end,
+      logger: this.logger,
+    });
     for (const payload of Object.values(payloads)) {
       this.store.set(payload, false);
     }
 
     // Load the finalized payload from the CL
     const finalizedSlot = this.lightClient.getFinalized().beacon.slot;
-    const finalizedPayload = await getExecutionPayloads(this.opts.api, finalizedSlot, finalizedSlot);
+    this.logger.debug("Getting finalized slot from lightclient", {finalizedSlot});
+    const finalizedPayload = await getExecutionPayloads({
+      api: this.opts.api,
+      startSlot: finalizedSlot,
+      endSlot: finalizedSlot,
+      logger: this.logger,
+    });
     this.store.set(finalizedPayload[finalizedSlot], true);
+    this.logger.info("Proof provider ready");
   }
 
   getStatus(): {latest: number; finalized: number; status: RunStatusCode} {
@@ -172,17 +195,13 @@ export class ProofProvider {
 
     this.lightClient.emitter.on(LightclientEvent.lightClientFinalityHeader, async (data) => {
       await this.processLCHeader(data, true).catch((e) => {
-        // Will be replaced with logger in next PR.
-        // eslint-disable-next-line no-console
-        console.error(e);
+        this.logger.error("Error processing finality update", null, e);
       });
     });
 
     this.lightClient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (data) => {
       await this.processLCHeader(data).catch((e) => {
-        // Will be replaced with logger in next PR.
-        // eslint-disable-next-line no-console
-        console.error(e);
+        this.logger.error("Error processing optimistic update", null, e);
       });
     });
   }

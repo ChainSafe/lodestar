@@ -6,12 +6,13 @@ import {generateRPCResponseForPayload, generateUnverifiedResponseForPayload} fro
 export const ethGetBalance: ELVerifiedRequestHandler<[address: string, block?: number | string], string> = async ({
   handler,
   payload,
-  rootProvider,
+  logger,
+  proofProvider,
 }) => {
   const {
     params: [address, block],
   } = payload;
-  const executionPayload = await rootProvider.getExecutionPayload(block ?? "latest");
+  const executionPayload = await proofProvider.getExecutionPayload(block ?? "latest");
   const proof = await getELProof(handler, [address, [], bufferToHex(executionPayload.blockHash)]);
 
   if (
@@ -25,5 +26,6 @@ export const ethGetBalance: ELVerifiedRequestHandler<[address: string, block?: n
     return generateRPCResponseForPayload(payload, proof.balance);
   }
 
+  logger.error("Request could not be verified.");
   return generateUnverifiedResponseForPayload(payload, "eth_getBalance request can not be verified.");
 };
