@@ -1,7 +1,18 @@
 import {BitArray, byteArrayEquals} from "@chainsafe/ssz";
-import {FINALIZED_ROOT_DEPTH, NEXT_SYNC_COMMITTEE_DEPTH, ForkSeq, ForkName} from "@lodestar/params";
+
+import {
+  FINALIZED_ROOT_DEPTH,
+  NEXT_SYNC_COMMITTEE_DEPTH,
+  ForkSeq,
+  ForkName,
+  BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
+  BLOCK_BODY_EXECUTION_PAYLOAD_INDEX as EXECUTION_PAYLOAD_INDEX,
+} from "@lodestar/params";
 import {altair, phase0, ssz, allForks, capella, deneb} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
+
+import {isValidMerkleBranch} from "../utils/verifyMerkleBranch.js";
 
 export const GENESIS_SLOT = 0;
 export const ZERO_HASH = new Uint8Array(32);
@@ -90,4 +101,42 @@ export function upgradeLightClientHeader(
     // eslint-disable-next-line no-fallthrough
   }
   return upgradedHeader;
+}
+
+export function isValidLightClientHeader(config: ChainForkConfig, header: allForks.LightClientHeader): boolean {
+  const epoch = computeEpochAtSlot(header.beacon.slot);
+
+  if (epoch < config.CAPELLA_FORK_EPOCH) {
+    return (
+      ((header as capella.LightClientHeader).execution === undefined ||
+        ssz.capella.ExecutionPayloadHeader.equals(
+          (header as capella.LightClientHeader).execution,
+          ssz.capella.LightClientHeader.fields.execution.defaultValue()
+        )) &&
+      ((header as capella.LightClientHeader).executionBranch === undefined ||
+        ssz.capella.LightClientHeader.fields.executionBranch.equals(
+          ssz.capella.LightClientHeader.fields.executionBranch.defaultValue(),
+          (header as capella.LightClientHeader).executionBranch
+        ))
+    );
+  }
+
+  if (epoch < config.EIP4844_FORK_EPOCH) {
+    if (
+      (header as deneb.LightClientHeader).execution.excessDataGas &&
+      (header as deneb.LightClientHeader).execution.excessDataGas !== BigInt(0)
+    ) {
+      return false;
+    }
+  }
+
+  return isValidMerkleBranch(
+    config
+      .getExecutionForkTypes(header.beacon.slot)
+      .ExecutionPayloadHeader.hashTreeRoot((header as capella.LightClientHeader).execution),
+    (header as capella.LightClientHeader).executionBranch,
+    EXECUTION_PAYLOAD_DEPTH,
+    EXECUTION_PAYLOAD_INDEX,
+    header.beacon.bodyRoot
+  );
 }
