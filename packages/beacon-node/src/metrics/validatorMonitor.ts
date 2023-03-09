@@ -5,6 +5,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types/phase0";
+import {routes} from "@lodestar/api";
 import {LodestarMetrics} from "./metrics/lodestar.js";
 
 /** The validator monitor collects per-epoch data about each monitored validator.
@@ -24,8 +25,9 @@ export type ValidatorMonitor = {
   registerValidatorAttestationStatuses(currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]): void;
   registerValidatorStatuses: (
     currentEpoch: Epoch,
-    statuses: Map<number, SimpleValidatorStatus>,
-    balances?: number[]
+    status: routes.beacon.ValidatorStatus,
+    index: number,
+    balance: number
   ) => void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
   registerImportedBlock(block: allForks.BeaconBlock, data: {proposerBalanceDelta: number}): void;
@@ -292,26 +294,37 @@ export function createValidatorMonitor(
       }
     },
 
-    registerValidatorStatuses(currentEpoch, statuses, balances) {
+    registerValidatorStatuses(currentEpoch, status, index, balance) {
       // Prevent registering status for the same epoch twice. processEpoch() may be ran more than once for the same epoch.
       if (currentEpoch <= lastRegisteredStatusEpoch) {
         return;
       }
       lastRegisteredStatusEpoch = currentEpoch;
 
-      for (const monitoredValidator of validators.values()) {
-        const index = monitoredValidator.index;
-        const status = statuses[index];
-
-        switch (status) {
-          case "":
-            metrics.validatorMonitor.validatorsActive.inc();
-        }
-        const balance = balances?.[index];
-        if (balance !== undefined) {
-          metrics.validatorMonitor.validatorBalances.set({index}, balance);
-        }
+      switch (status) {
+        case "active":
+        case "active_exiting":
+        case "active_slashed":
+        case "active_ongoing":
+          metrics.validatorMonitor.validatorsActive.inc();
+          break;
+        case "exited_unslashed":
+        case "withdrawal_done":
+          metrics.validatorMonitor.validatorsExited.inc();
+          break;
+        case "pending_initialized":
+        case "pending_queued":
+          metrics.validatorMonitor.validatorsPending.inc();
+          break;
+        case "withdrawal_possible":
+          metrics.validatorMonitor.withdrawableValidators.inc();
+          break;
+        case "exited_slashed":
+          metrics.validatorMonitor.validatorsSlashed.inc();
+          break;
       }
+
+      metrics.validatorMonitor.validatorBalances.set({index}, balance);
     },
 
     registerBeaconBlock(src, seenTimestampSec, block) {

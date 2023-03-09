@@ -1,5 +1,4 @@
 import {Epoch} from "@lodestar/types";
-import {routes} from "@chainsafe/lodestar-api";
 import {CachedBeaconStateAllForks} from "./types.js";
 import {AttesterStatus} from "./util/attesterStatus.js";
 

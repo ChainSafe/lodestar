@@ -736,6 +736,9 @@ export function getValidatorApi({
 
         const validator = headState.validators.getReadonly(validatorIndex);
         const status = getValidatorStatus(validator, currentEpoch);
+
+        metrics?.registerValidatorStatuses(currentEpoch, status, validatorIndex, validator.effectiveBalance);
+
         return (
           status === "active" ||
           status === "active_exiting" ||
