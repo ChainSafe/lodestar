@@ -42,7 +42,7 @@ jobs:
 
       # Only install c-kzg if required. See https://github.com/ChainSafe/lodestar/pull/4888
       # Install in workspace root, else there are weird type errors with NodeJS types
-      - run: yarn add --ignore-workspace-root-check c-kzg
+      - run: yarn add --ignore-workspace-root-check c-kzg@1.0.7
 
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
