@@ -326,7 +326,7 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
     }),
 
     validatorStatuses: register.gauge<{status: string}>({
-      name: "vc_validator_status",
+      name: "vc_validator_status_count",
       help: "Current statuses of the validators.",
       labelNames: ["status"],
     }),

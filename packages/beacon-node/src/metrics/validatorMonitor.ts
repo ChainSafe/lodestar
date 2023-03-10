@@ -306,21 +306,21 @@ export function createValidatorMonitor(
         case "active_exiting":
         case "active_slashed":
         case "active_ongoing":
-          metrics.validatorMonitor.validatorsActive.inc();
+          metrics.validatorMonitor.validatorStatus.inc({status: "active"});
           break;
         case "exited_unslashed":
         case "withdrawal_done":
-          metrics.validatorMonitor.validatorsExited.inc();
+          metrics.validatorMonitor.validatorStatus.inc({status: "exited"});
           break;
         case "pending_initialized":
         case "pending_queued":
-          metrics.validatorMonitor.validatorsPending.inc();
+          metrics.validatorMonitor.validatorStatus.inc({status: "pending"});
           break;
         case "withdrawal_possible":
-          metrics.validatorMonitor.withdrawableValidators.inc();
+          metrics.validatorMonitor.validatorStatus.inc({status: "withdrawalable"});
           break;
         case "exited_slashed":
-          metrics.validatorMonitor.validatorsSlashed.inc();
+          metrics.validatorMonitor.validatorStatus.inc({status: "slashed"});
           break;
       }
 

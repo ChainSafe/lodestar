@@ -188,6 +188,7 @@ function createValidatorStats(): ClientStats {
     validatorActive: new MetricProperty({
       jsonKey: "validator_active",
       metricName: "vc_active_validators_count",
+      withLabel: {name: "status", value: "active"},
       jsonType: JsonType.Number,
       defaultValue: 0,
       description: "Number of validator keys that are currently active",

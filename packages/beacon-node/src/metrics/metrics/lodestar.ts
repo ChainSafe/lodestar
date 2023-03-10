@@ -821,25 +821,10 @@ export function createLodestarMetrics(
         name: "validator_monitor_validators",
         help: "Count of validators that are specifically monitored by this beacon node",
       }),
-      validatorsActive: register.gauge({
-        name: "validator_monitor_validators_active",
+      validatorStatus: register.gauge<"status">({
+        name: "validator_monitor_validators_status",
         help: "Count of validators monitored by this beacon node that are active",
-      }),
-      validatorsPending: register.gauge({
-        name: "validator_monitor_validators_pending",
-        help: "Count of validators monitored by this beacon node that are pending activation",
-      }),
-      validatorsExited: register.gauge({
-        name: "validator_monitor_validators_exited",
-        help: "Count of validators monitored by this beacon node that are exited",
-      }),
-      validatorsSlashed: register.gauge({
-        name: "validator_monitor_validators_slashed",
-        help: "Count of validators monitored by this beacon node that are slashed",
-      }),
-      withdrawableValidators: register.gauge({
-        name: "validator_monitor_validators_withdrawable",
-        help: "Count of validators monitored by this beacon node that are withdrawable",
+        labelNames: ["status"],
       }),
       validatorBalances: register.gauge<"index">({
         name: "validator_monitor_validator_balances",
