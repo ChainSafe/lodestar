@@ -3,6 +3,7 @@ import {PointFormat, Signature} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "@lodestar/utils";
+import {BeaconClock} from "../clock/interface.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
@@ -60,6 +61,8 @@ export class AttestationPool {
   );
   private lowestPermissibleSlot = 0;
 
+  constructor(private readonly clock: BeaconClock, private readonly cutOffSecFromSlot: number) {}
+
   /** Returns current count of pre-aggregated attestations with unique data */
   getAttestationCount(): number {
     let attestationCount = 0;
@@ -77,7 +80,8 @@ export class AttestationPool {
    * `SignedAggregateAndProof`.
    *
    * If the attestation is too old (low slot) to be included in the pool it is simply dropped
-   * and no error is returned.
+   * and no error is returned. Also if it's at clock slot but come to the pool later than 2/3
+   * of slot time, it's dropped too since it's not helpful for the validator anymore
    *
    * Expects the attestation to be fully validated:
    * - Valid signature
@@ -92,6 +96,11 @@ export class AttestationPool {
     // Reject any attestations that are too old.
     if (slot < lowestPermissibleSlot) {
       return InsertOutcome.Old;
+    }
+
+    // Reject attestations in the current slot but come to this pool very late
+    if (this.clock.secFromSlot(slot) > this.cutOffSecFromSlot) {
+      return InsertOutcome.Late;
     }
 
     // Limit object per slot
@@ -130,12 +139,12 @@ export class AttestationPool {
   }
 
   /**
-   * Removes any attestations with a slot lower than `current_slot` and bars any future
-   * attestations with a slot lower than `current_slot - SLOTS_RETAINED`.
+   * Removes any attestations with a slot lower than `current_slot - SLOTS_RETAINED`.
+   * Not intested in attestations in old slots, we only preaggregate attestations for the current slot.
    */
   prune(clockSlot: Slot): void {
     pruneBySlot(this.attestationByRootBySlot, clockSlot, SLOTS_RETAINED);
-    this.lowestPermissibleSlot = Math.max(clockSlot - SLOTS_RETAINED, 0);
+    this.lowestPermissibleSlot = clockSlot;
   }
 
   /**

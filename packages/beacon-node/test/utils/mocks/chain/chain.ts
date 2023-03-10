@@ -83,9 +83,9 @@ export class MockBeaconChain implements IBeaconChain {
   reprocessController: ReprocessController;
 
   // Ops pool
-  readonly attestationPool = new AttestationPool();
+  readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool = new AggregatedAttestationPool();
-  readonly syncCommitteeMessagePool = new SyncCommitteeMessagePool();
+  readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
   readonly opPool = new OpPool();
 
@@ -126,6 +126,8 @@ export class MockBeaconChain implements IBeaconChain {
       emitter: this.emitter,
       signal: this.abortController.signal,
     });
+    this.attestationPool = new AttestationPool(this.clock, (2 / 3) * this.config.SECONDS_PER_SLOT);
+    this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(this.clock, (2 / 3) * this.config.SECONDS_PER_SLOT);
     this.forkChoice = mockForkChoice();
     this.stateCache = new StateContextCache({});
     this.checkpointStateCache = new CheckpointStateCache({});

@@ -4,6 +4,7 @@ import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params
 import {altair, Root, Slot, SubcommitteeIndex} from "@lodestar/types";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "@lodestar/utils";
+import {BeaconClock} from "../clock/interface.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
@@ -44,6 +45,8 @@ export class SyncCommitteeMessagePool {
   >(() => new MapDef<Subnet, Map<BlockRootHex, ContributionFast>>(() => new Map<BlockRootHex, ContributionFast>()));
   private lowestPermissibleSlot = 0;
 
+  constructor(private readonly clock: BeaconClock, private readonly cutOffSecFromSlot: number) {}
+
   /** Returns current count of unique ContributionFast by block root and subnet */
   get size(): number {
     let count = 0;
@@ -64,6 +67,11 @@ export class SyncCommitteeMessagePool {
     // Reject if too old.
     if (slot < lowestPermissibleSlot) {
       throw new OpPoolError({code: OpPoolErrorCode.SLOT_TOO_LOW, slot, lowestPermissibleSlot});
+    }
+
+    // validator gets SyncCommitteeContribution at 2/3 of slot, it's no use to preaggregate later than that time
+    if (this.clock.secFromSlot(slot) > this.cutOffSecFromSlot) {
+      throw new OpPoolError({code: OpPoolErrorCode.LATE_MESSAGE, slot});
     }
 
     // Limit object per slot
@@ -106,7 +114,7 @@ export class SyncCommitteeMessagePool {
    */
   prune(clockSlot: Slot): void {
     pruneBySlot(this.contributionsByRootBySubnetBySlot, clockSlot, SLOTS_RETAINED);
-    this.lowestPermissibleSlot = Math.max(clockSlot - SLOTS_RETAINED, 0);
+    this.lowestPermissibleSlot = Math.max(clockSlot, 0);
   }
 }
 
