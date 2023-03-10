@@ -821,9 +821,9 @@ export function createLodestarMetrics(
         name: "validator_monitor_validators",
         help: "Count of validators that are specifically monitored by this beacon node",
       }),
-      validatorStatus: register.gauge<"status">({
+      validatorStatuses: register.gauge<"status">({
         name: "validator_monitor_validators_status",
-        help: "Count of validators monitored by this beacon node that are active",
+        help: "Statuses of the various validators monitored by this beacon node",
         labelNames: ["status"],
       }),
       validatorBalances: register.gauge<"index">({

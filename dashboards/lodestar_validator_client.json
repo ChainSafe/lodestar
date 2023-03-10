@@ -490,7 +490,7 @@
       "type": "stat"
     },
     {
-       "datasource": {
+      "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
@@ -545,7 +545,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "vc_active_validators_count",
+          "expr": "vc_active_validators_count{status=~\"active\"}",
           "interval": "",
           "legendFormat": "",
           "refId": "A"

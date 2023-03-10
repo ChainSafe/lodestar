@@ -110,7 +110,7 @@
       "title": "Validators connected",
       "type": "stat"
     },
-     {
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
