@@ -11,6 +11,8 @@ export enum InsertOutcome {
   AlreadyKnown = "AlreadyKnown",
   /** Not existing in the pool but it's too old to add. No changes were made. */
   Old = "Old",
+  /** Attestation comes to the pool at > 2/3 of slot. No changes were made */
+  Late = "Late",
   /** The data is know, and the new participants have been added to the aggregated signature */
   Aggregated = "Aggregated",
   /** The data is not better than the existing data*/
@@ -20,12 +22,15 @@ export enum InsertOutcome {
 export enum OpPoolErrorCode {
   /** The given object slot was too low to be stored. No changes were made. */
   SLOT_TOO_LOW = "OP_POOL_ERROR_SLOT_TOO_LOW",
+  /** Good slot but it comes to the pool at late time */
+  LATE_MESSAGE = "OP_POOL_ERROR_LATE_MESSAGE",
   /** Reached max number of unique objects per slot. This is a DoS protection function. */
   REACHED_MAX_PER_SLOT = "OP_POOL_ERROR_REACHED_MAX_PER_SLOT",
 }
 
 export type OpPoolErrorType =
   | {code: OpPoolErrorCode.SLOT_TOO_LOW; slot: Slot; lowestPermissibleSlot: Slot}
+  | {code: OpPoolErrorCode.LATE_MESSAGE; slot: Slot}
   | {code: OpPoolErrorCode.REACHED_MAX_PER_SLOT};
 
 export class OpPoolError extends LodestarError<OpPoolErrorType> {}
