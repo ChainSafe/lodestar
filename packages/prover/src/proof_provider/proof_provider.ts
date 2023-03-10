@@ -4,6 +4,7 @@ import {networksChainConfig} from "@lodestar/config/networks";
 import {Lightclient, LightclientEvent, RunStatusCode} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {computeSyncPeriodAtSlot} from "@lodestar/light-client/utils";
+import {isForkExecution} from "@lodestar/params";
 import {allForks, capella} from "@lodestar/types";
 import {MAX_PAYLOAD_HISTORY, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "../constants.js";
 import {RootProviderOptions as RootProviderInitOptions} from "../interfaces.js";
@@ -134,11 +135,31 @@ export class ProofProvider {
   }
 
   async update(update: allForks.LightClientHeader, finalized = false): Promise<void> {
-    const blockNumber = numberToHex((update as capella.LightClientHeader).execution.blockNumber);
-    const blockSlot = update.beacon.slot;
-    const payload = this.payloads.get(blockNumber);
+    const fork = this.options.config.getForkName(update.beacon.slot);
 
-    if (payload && (update as capella.LightClientHeader).execution.blockHash !== payload.blockHash) {
+    if (!isForkExecution(fork)) {
+      return;
+    }
+
+    if (isForkExecution(fork) && !("execution" in update)) {
+      throw new Error("Execution payload is required for execution fork");
+    }
+
+    const newPayload = (update as capella.LightClientHeader).execution;
+    const blockNumber = numberToHex(newPayload.blockNumber);
+    const blockSlot = update.beacon.slot;
+    const existingPayload = this.payloads.get(blockNumber);
+
+    if (existingPayload && existingPayload.blockHash === newPayload.blockHash) {
+      if (finalized) {
+        this.finalizedPayloads.set(blockNumber, existingPayload);
+      }
+
+      // We payload have the payload for this block
+      return;
+    }
+
+    if (existingPayload && existingPayload.blockHash !== newPayload.blockHash) {
       // TODO: Need to decide either
       // 1. throw an error
       // 2. or just ignore it
@@ -161,23 +182,19 @@ export class ProofProvider {
     });
 
     this.lightClient.emitter.on(LightclientEvent.lightClientFinalityUpdate, async (data) => {
-      // We don't have execution header before capella fork
-      // and we can not use it for verification
-      if ((data as capella.LightClientHeader).execution === undefined) {
-        return;
-      }
-
-      await this.update(data, true);
+      await this.update(data, true).catch((e) => {
+        // Will be replaced with logger in next PR.
+        // eslint-disable-next-line no-console
+        console.error(e);
+      });
     });
 
     this.lightClient.emitter.on(LightclientEvent.lightClientOptimisticUpdate, async (data) => {
-      // We don't have execution header before capella fork
-      // and we can not use it for verification
-      if ((data as capella.LightClientHeader).execution === undefined) {
-        return;
-      }
-
-      await this.update(data);
+      await this.update(data).catch((e) => {
+        // Will be replaced with logger in next PR.
+        // eslint-disable-next-line no-console
+        console.error(e);
+      });
     });
   }
 }
