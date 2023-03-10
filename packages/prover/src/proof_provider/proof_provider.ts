@@ -1,4 +1,3 @@
-import {ApiError} from "@lodestar/api";
 import {Api, getClient} from "@lodestar/api/beacon";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {networksChainConfig} from "@lodestar/config/networks";
@@ -9,8 +8,8 @@ import {allForks, capella} from "@lodestar/types";
 import {MAX_PAYLOAD_HISTORY, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "../constants.js";
 import {RootProviderOptions as RootProviderInitOptions} from "../interfaces.js";
 import {assertLightClient} from "../utils/assertion.js";
-import {getExecutionPayloads, getGenesisData} from "../utils/consensus.js";
-import {numberToHex, hexToBuffer} from "../utils/conversion.js";
+import {getExecutionPayloads, getGenesisData, getSyncCheckpoint} from "../utils/consensus.js";
+import {numberToHex} from "../utils/conversion.js";
 import {OrderedMap} from "./ordered_map.js";
 
 interface RootProviderOptions extends RootProviderInitOptions {
@@ -22,13 +21,20 @@ interface RootProviderOptions extends RootProviderInitOptions {
 export class ProofProvider {
   private payloads: OrderedMap<string, allForks.ExecutionPayload> = new OrderedMap();
   private finalizedPayloads: OrderedMap<string, allForks.ExecutionPayload> = new OrderedMap();
+  private readyPromise: Promise<void>;
 
   // Map to match CL slot to EL block number
   private slotsMap: {[slot: number]: string} = {};
 
   lightClient?: Lightclient;
 
-  constructor(private options: RootProviderOptions) {}
+  constructor(private options: RootProviderOptions) {
+    this.readyPromise = this.sync(options.checkpoint);
+  }
+
+  async waitToBeReady(): Promise<void> {
+    return this.readyPromise;
+  }
 
   static buildWithRestApi(urls: string[], opts: RootProviderInitOptions): ProofProvider {
     const config = createChainForkConfig(networksChainConfig[opts.network]);
@@ -36,20 +42,29 @@ export class ProofProvider {
     const transport = new LightClientRestTransport(api);
 
     return new ProofProvider({
-      signal: opts.signal,
-      transport,
+      ...opts,
+      config,
       api,
-      config: config,
-      network: opts.network ?? "mainnet",
+      transport,
     });
   }
 
-  async sync(checkpoint?: string): Promise<void> {
-    if (checkpoint && checkpoint.length !== 32) {
-      throw Error(`Checkpoint root must be 32 bytes long: ${checkpoint.length}`);
+  private async sync(checkpoint?: string): Promise<void> {
+    if (this.lightClient !== undefined) {
+      throw Error("Light client already initialized and syncing.");
     }
 
-    await this.initLightClient(checkpoint);
+    const {api, config, transport} = this.options;
+    const checkpointRoot = await getSyncCheckpoint(api, checkpoint);
+    const genesisData = await getGenesisData(api);
+
+    this.lightClient = await Lightclient.initializeFromCheckpointRoot({
+      checkpointRoot,
+      config,
+      transport,
+      genesisData,
+    });
+
     assertLightClient(this.lightClient);
     this.lightClient.start();
     this.registerEvents();
@@ -136,27 +151,6 @@ export class ProofProvider {
     if (finalized) {
       this.finalizedPayloads.set(blockNumber, newPayloads[blockSlot]);
     }
-  }
-
-  private async initLightClient(checkpoint?: string): Promise<void> {
-    const {api, config, transport} = this.options;
-    const genesisData = await getGenesisData(api);
-    let syncCheckpoint: Uint8Array;
-
-    if (checkpoint) {
-      syncCheckpoint = hexToBuffer(checkpoint);
-    } else {
-      const res = await api.beacon.getStateFinalityCheckpoints("head");
-      ApiError.assert(res);
-      syncCheckpoint = res.response.data.finalized.root;
-    }
-
-    this.lightClient = await Lightclient.initializeFromCheckpointRoot({
-      checkpointRoot: syncCheckpoint,
-      config,
-      transport,
-      genesisData,
-    });
   }
 
   private registerEvents(): void {

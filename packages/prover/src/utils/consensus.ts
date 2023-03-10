@@ -1,7 +1,8 @@
 import {Api} from "@lodestar/api/beacon";
-import {allForks, capella} from "@lodestar/types";
+import {allForks, Bytes32, capella} from "@lodestar/types";
 import {GenesisData} from "@lodestar/light-client";
 import {ApiError} from "@lodestar/api";
+import {hexToBuffer} from "./conversion.js";
 
 export async function fetchNearestBlock(
   api: Api,
@@ -54,4 +55,21 @@ export async function getGenesisData(api: Pick<Api, "beacon">): Promise<GenesisD
     genesisTime: Number(res.response.data.genesisTime),
     genesisValidatorsRoot: res.response.data.genesisValidatorsRoot,
   };
+}
+
+export async function getSyncCheckpoint(api: Pick<Api, "beacon">, checkpoint?: string): Promise<Bytes32> {
+  if (checkpoint && checkpoint.length !== 32) {
+    throw Error(`Checkpoint root must be 32 bytes long: ${checkpoint.length}`);
+  }
+  let syncCheckpoint: Uint8Array;
+
+  if (checkpoint) {
+    syncCheckpoint = hexToBuffer(checkpoint);
+  } else {
+    const res = await api.beacon.getStateFinalityCheckpoints("head");
+    ApiError.assert(res);
+    syncCheckpoint = res.response.data.finalized.root;
+  }
+
+  return syncCheckpoint;
 }

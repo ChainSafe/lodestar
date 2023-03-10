@@ -22,9 +22,8 @@ const {provider, proofProvider} = createVerifiedExecutionProvider(
   mode: LightNode.Rest,
   urls: ["https://lodestar-sepolia.chainsafe.io"],
   network: "sepolia",
+  checkpoint: "trusted-checkpoint"
 });
-
-await proofProvider.sync();
 
 const web3 = new Web3(provider);
 

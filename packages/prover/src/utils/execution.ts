@@ -24,6 +24,7 @@ export async function processAndVerifyRequest({
   handler: ELRequestMethod;
   proofProvider: ProofProvider;
 }): Promise<ELResponse | undefined> {
+  await proofProvider.waitToBeReady();
   const verifiedHandler = supportedELRequests[payload.method];
 
   if (verifiedHandler !== undefined) {

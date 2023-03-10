@@ -5,7 +5,10 @@ import {LightNode} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
 
 describe("web3_provider", () => {
-  describe("createVerifiedExecutionProvider", () => {
+  describe("createVerifiedExecutionProvider", function () {
+    // As the code will try to sync the light client, it may take a while
+    this.timeout(10000);
+
     describe("web3", () => {
       it("should connect to the network and call non-verified method", async () => {
         const {provider} = createVerifiedExecutionProvider(

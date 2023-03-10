@@ -16,6 +16,7 @@ export type VerifiedProxyOptions = {
   network: NetworkName;
   executionRpcUrl: string;
   logger: Logger;
+  checkpoint?: string;
 } & ({mode: LightNode.Rest; urls: string[]} | {mode: LightNode.P2P; bootnodes: string[]});
 
 export function createVerifiedExecutionProxy(

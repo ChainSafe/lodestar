@@ -12,6 +12,7 @@ export interface RootProviderOptions {
   network: NetworkName;
   signal: AbortSignal;
   config?: ChainForkConfig;
+  checkpoint?: string;
 }
 
 export type ELRequestMethod = (payload: ELRequestPayload) => Promise<ELResponse | undefined>;

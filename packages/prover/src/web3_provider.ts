@@ -36,11 +36,13 @@ export function createVerifiedExecutionProvider<T extends Web3Provider>(
       ? ProofProvider.buildWithRestApi(opts.urls, {
           network: opts.network ?? defaultNetwork,
           signal: controller.signal,
+          checkpoint: opts.checkpoint,
         })
       : // Implement other mode
         ProofProvider.buildWithRestApi(opts.bootnodes, {
           network: opts.network ?? defaultNetwork,
           signal: controller.signal,
+          checkpoint: opts.checkpoint,
         });
 
   if (isSendProvider(provider)) {

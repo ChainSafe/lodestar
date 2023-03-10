@@ -7,11 +7,20 @@ import {parseStartArgs, StartArgs} from "./options.js";
  * Runs a beacon node.
  */
 export async function startHandler(args: StartArgs): Promise<void> {
-  const {network, mode, beaconBootNodes, executionRpcUrl, beaconRpcUrls: beaconRpcUrls, port} = parseStartArgs(args);
+  const {
+    network,
+    mode,
+    beaconBootNodes,
+    executionRpcUrl,
+    beaconRpcUrls: beaconRpcUrls,
+    port,
+    checkpoint,
+  } = parseStartArgs(args);
   const options: VerifiedProxyOptions = {
     logger: stdLogger,
     network,
     executionRpcUrl,
+    checkpoint,
     ...(mode === LightNode.Rest
       ? {mode: LightNode.Rest, urls: beaconRpcUrls}
       : {mode: LightNode.P2P, bootnodes: beaconBootNodes}),
@@ -21,5 +30,5 @@ export async function startHandler(args: StartArgs): Promise<void> {
 
   server.listen(port);
 
-  await proofProvider.sync();
+  await proofProvider.waitToBeReady();
 }

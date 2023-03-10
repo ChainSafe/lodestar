@@ -9,6 +9,7 @@ export type StartArgs = {
   mode: "rest" | "p2p";
   "beacon-rpc"?: string[];
   "beacon-bootnode"?: string[];
+  checkpoint?: string;
 };
 
 export type StartOptions = {
@@ -18,6 +19,7 @@ export type StartOptions = {
   mode: LightNode;
   beaconRpcUrls: string[];
   beaconBootNodes: string[];
+  checkpoint?: string;
 };
 
 export const startOptions: CliCommandOptions<StartArgs> = {
@@ -57,6 +59,12 @@ export const startOptions: CliCommandOptions<StartArgs> = {
     array: true,
     demandOption: false,
   },
+
+  checkpoint: {
+    description:
+      "The trusted checkpoint root to start the lightclient. If not provided will initialize from the latest finalized slot.",
+    type: "string",
+  },
 };
 
 export function parseStartArgs(args: StartArgs): StartOptions {
@@ -68,5 +76,6 @@ export function parseStartArgs(args: StartArgs): StartOptions {
     mode: args["mode"] === "p2p" ? LightNode.P2P : LightNode.Rest,
     beaconRpcUrls: args["mode"] === "rest" ? args["beacon-rpc"] ?? [] : [],
     beaconBootNodes: args["mode"] === "p2p" ? args["beacon-bootnode"] ?? [] : [],
+    checkpoint: args["checkpoint"],
   };
 }
