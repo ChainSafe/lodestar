@@ -255,15 +255,13 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       const {indexedAttestation} = validationResult;
       metrics?.registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation);
 
-      // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
-      // but don't import them, to save CPU and RAM
-      if (!attnetsService.shouldProcess(subnet, attestation.data.slot)) {
-        return;
-      }
-
       try {
-        const insertOutcome = chain.attestationPool.add(attestation);
-        metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
+        // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
+        // but don't add to attestation poolm, to save CPU and RAM
+        if (attnetsService.shouldProcess(subnet, attestation.data.slot)) {
+          const insertOutcome = chain.attestationPool.add(attestation);
+          metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
+        }
       } catch (e) {
         logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
       }
