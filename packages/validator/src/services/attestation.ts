@@ -64,14 +64,57 @@ export class AttestationService {
     await Promise.race([sleep(this.clock.msToSlot(slot + 1 / 3), signal), this.emitter.waitForBlockSlot(slot)]);
     this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
 
-    // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
-    // Produce a single attestation for all committees, and clone mutate before signing
-    // Downstream tooling may require that produceAttestation is called with a 'real' committee index
-    // So we pick the first duty's committee index - see https://github.com/ChainSafe/lodestar/issues/4687
-    const attestationNoCommittee = await this.produceAttestation(duties[0].duty.committeeIndex, slot);
+    // TODO: Move to options
+    const skipAttestationGrouping = true;
+
+    if (skipAttestationGrouping) {
+      // TODO: Explain in detail with distributed validators need to not have this optimization
+      const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(duties);
+      await Promise.all(
+        Array.from(dutiesByCommitteeIndex.entries()).map(([index, duties]) =>
+          this.produceAttestationDefault(duties, slot, index, signal)
+        )
+      );
+    } else {
+      // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
+      // Produce a single attestation for all committees, and clone mutate before signing
+      await this.runAttestationTaskGrouped(duties, slot, signal);
+    }
+  };
+
+  private async produceAttestationDefault(
+    dutiesSameCommittee: AttDutyAndProof[],
+    slot: Slot,
+    index: number,
+    signal: AbortSignal
+  ): Promise<void> {
+    const attestation = await this.produceAttestation(index, slot);
 
     // Step 1. Mutate, and sign `Attestation` for each validator. Then publish all `Attestations` in one go
-    await this.signAndPublishAttestations(slot, attestationNoCommittee, duties);
+    await this.signAndPublishAttestations(slot, attestation, dutiesSameCommittee);
+
+    // Step 2. after all attestations are submitted, make an aggregate.
+    // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
+    await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
+    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
+
+    // Then download, sign and publish a `SignedAggregateAndProof` for each
+    // validator that is elected to aggregate for this `slot` and
+    // `committeeIndex`.
+    await this.produceAndPublishAggregates(attestation, dutiesSameCommittee);
+  }
+
+  private async runAttestationTaskGrouped(
+    dutiesAll: AttDutyAndProof[],
+    slot: Slot,
+    signal: AbortSignal
+  ): Promise<void> {
+    // Downstream tooling may require that produceAttestation is called with a 'real' committee index
+    // So we pick the first duty's committee index - see https://github.com/ChainSafe/lodestar/issues/4687
+    const attestationNoCommittee = await this.produceAttestation(dutiesAll[0].duty.committeeIndex, slot);
+
+    // Step 1. Mutate, and sign `Attestation` for each validator. Then publish all `Attestations` in one go
+    await this.signAndPublishAttestations(slot, attestationNoCommittee, dutiesAll);
 
     // Step 2. after all attestations are submitted, make an aggregate.
     // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
@@ -84,12 +127,12 @@ export class AttestationService {
     // validator that is elected to aggregate for this `slot` and
     // `committeeIndex`.
     await Promise.all(
-      Array.from(dutiesByCommitteeIndex.entries()).map(([index, duties]) => {
+      Array.from(dutiesByCommitteeIndex.entries()).map(([index, dutiesSameCommittee]) => {
         const attestationData: phase0.AttestationData = {...attestationNoCommittee, index};
-        return this.produceAndPublishAggregates(attestationData, duties);
+        return this.produceAndPublishAggregates(attestationData, dutiesSameCommittee);
       })
     );
-  };
+  }
 
   /**
    * Performs the first step of the attesting process: downloading one `Attestation` object.
