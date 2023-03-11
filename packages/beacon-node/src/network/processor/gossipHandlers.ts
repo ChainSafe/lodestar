@@ -257,7 +257,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       try {
         // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
-        // but don't add to attestation poolm, to save CPU and RAM
+        // but don't add to attestation pool, to save CPU and RAM
         if (attnetsService.shouldProcess(subnet, attestation.data.slot)) {
           const insertOutcome = chain.attestationPool.add(attestation);
           metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
