@@ -209,28 +209,30 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         throw e;
       }
 
-      // Handler
-      const {indexedAttestation, committeeIndices} = validationResult;
-      metrics?.registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation);
-      const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
+      // Handler is not urgent, execute in the next event loop
+      setTimeout(() => {
+        const {indexedAttestation, committeeIndices} = validationResult;
+        metrics?.registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation);
+        const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
-      chain.aggregatedAttestationPool.add(
-        aggregatedAttestation,
-        indexedAttestation.attestingIndices.length,
-        committeeIndices
-      );
+        chain.aggregatedAttestationPool.add(
+          aggregatedAttestation,
+          indexedAttestation.attestingIndices.length,
+          committeeIndices
+        );
 
-      if (!options.dontSendGossipAttestationsToForkchoice) {
-        try {
-          chain.forkChoice.onAttestation(indexedAttestation);
-        } catch (e) {
-          logger.debug(
-            "Error adding gossip aggregated attestation to forkchoice",
-            {slot: aggregatedAttestation.data.slot},
-            e as Error
-          );
+        if (!options.dontSendGossipAttestationsToForkchoice) {
+          try {
+            chain.forkChoice.onAttestation(indexedAttestation);
+          } catch (e) {
+            logger.debug(
+              "Error adding gossip aggregated attestation to forkchoice",
+              {slot: aggregatedAttestation.data.slot},
+              e as Error
+            );
+          }
         }
-      }
+      }, 0);
     },
 
     [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec) => {
@@ -251,30 +253,32 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         throw e;
       }
 
-      // Handler
-      const {indexedAttestation} = validationResult;
-      metrics?.registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation);
+      // Handler is not urgent, execute in the next event loop
+      setTimeout(() => {
+        const {indexedAttestation} = validationResult;
+        metrics?.registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation);
 
-      // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
-      // but don't import them, to save CPU and RAM
-      if (!attnetsService.shouldProcess(subnet, attestation.data.slot)) {
-        return;
-      }
-
-      try {
-        const insertOutcome = chain.attestationPool.add(attestation);
-        metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
-      }
-
-      if (!options.dontSendGossipAttestationsToForkchoice) {
-        try {
-          chain.forkChoice.onAttestation(indexedAttestation);
-        } catch (e) {
-          logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
+        // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
+        // but don't import them, to save CPU and RAM
+        if (!attnetsService.shouldProcess(subnet, attestation.data.slot)) {
+          return;
         }
-      }
+
+        try {
+          const insertOutcome = chain.attestationPool.add(attestation);
+          metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
+        } catch (e) {
+          logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
+        }
+
+        if (!options.dontSendGossipAttestationsToForkchoice) {
+          try {
+            chain.forkChoice.onAttestation(indexedAttestation);
+          } catch (e) {
+            logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
+          }
+        }
+      }, 0);
     },
 
     [GossipType.attester_slashing]: async (attesterSlashing) => {
@@ -293,25 +297,27 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     [GossipType.proposer_slashing]: async (proposerSlashing) => {
       await validateGossipProposerSlashing(chain, proposerSlashing);
 
-      // Handler
-
-      try {
-        chain.opPool.insertProposerSlashing(proposerSlashing);
-      } catch (e) {
-        logger.error("Error adding attesterSlashing to pool", {}, e as Error);
-      }
+      // Handler is not urgent, execute in the next event loop
+      setTimeout(() => {
+        try {
+          chain.opPool.insertProposerSlashing(proposerSlashing);
+        } catch (e) {
+          logger.error("Error adding attesterSlashing to pool", {}, e as Error);
+        }
+      });
     },
 
     [GossipType.voluntary_exit]: async (voluntaryExit) => {
       await validateGossipVoluntaryExit(chain, voluntaryExit);
 
-      // Handler
-
-      try {
-        chain.opPool.insertVoluntaryExit(voluntaryExit);
-      } catch (e) {
-        logger.error("Error adding voluntaryExit to pool", {}, e as Error);
-      }
+      // Handler is not urgent, execute in the next event loop
+      setTimeout(() => {
+        try {
+          chain.opPool.insertVoluntaryExit(voluntaryExit);
+        } catch (e) {
+          logger.error("Error adding voluntaryExit to pool", {}, e as Error);
+        }
+      });
     },
 
     [GossipType.sync_committee_contribution_and_proof]: async (contributionAndProof) => {
@@ -325,14 +331,16 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         throw e;
       });
 
-      // Handler
-      metrics?.registerGossipSyncContributionAndProof(contributionAndProof.message, syncCommitteeParticipantIndices);
+      // Handler is not urgent, execute in the next event loop
+      setTimeout(() => {
+        metrics?.registerGossipSyncContributionAndProof(contributionAndProof.message, syncCommitteeParticipantIndices);
 
-      try {
-        chain.syncContributionAndProofPool.add(contributionAndProof.message, syncCommitteeParticipantIndices.length);
-      } catch (e) {
-        logger.error("Error adding to contributionAndProof pool", {}, e as Error);
-      }
+        try {
+          chain.syncContributionAndProofPool.add(contributionAndProof.message, syncCommitteeParticipantIndices.length);
+        } catch (e) {
+          logger.error("Error adding to contributionAndProof pool", {}, e as Error);
+        }
+      });
     },
 
     [GossipType.sync_committee]: async (syncCommittee, {subnet}) => {
@@ -346,13 +354,14 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         throw e;
       }
 
-      // Handler
-
-      try {
-        chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
-      } catch (e) {
-        logger.error("Error adding to syncCommittee pool", {subnet}, e as Error);
-      }
+      // Handler is not urgent, execute in the next event loop
+      setTimeout(() => {
+        try {
+          chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
+        } catch (e) {
+          logger.error("Error adding to syncCommittee pool", {subnet}, e as Error);
+        }
+      });
     },
 
     [GossipType.light_client_finality_update]: async (lightClientFinalityUpdate) => {
@@ -367,12 +376,14 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     [GossipType.bls_to_execution_change]: async (blsToExecutionChange, _topic) => {
       await validateBlsToExecutionChange(chain, blsToExecutionChange);
 
-      // Handler
-      try {
-        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
-      } catch (e) {
-        logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
-      }
+      // Handler is not urgent, execute in the next event loop
+      setTimeout(() => {
+        try {
+          chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+        } catch (e) {
+          logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
+        }
+      });
     },
   };
 }
