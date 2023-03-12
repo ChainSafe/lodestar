@@ -728,6 +728,8 @@ export function getValidatorApi({
       // Spec: https://ethereum.github.io/builder-specs/#/Builder/registerValidator
       const headState = chain.getHeadState();
       const currentEpoch = chain.clock.currentEpoch;
+      const validatorStatuses: routes.beacon.ValidatorStatus[] = [];
+      const validatorBalances: number[] = [];
 
       const filteredRegistrations = registrations.filter((registration) => {
         const {pubkey} = registration.message;
@@ -737,7 +739,8 @@ export function getValidatorApi({
         const validator = headState.validators.getReadonly(validatorIndex);
         const status = getValidatorStatus(validator, currentEpoch);
 
-        metrics?.registerValidatorStatuses(currentEpoch, status, validatorIndex, validator.effectiveBalance);
+        validatorStatuses[validatorIndex] = status;
+        validatorBalances[validatorIndex] = validator.effectiveBalance;
 
         return (
           status === "active" ||
@@ -748,6 +751,8 @@ export function getValidatorApi({
           status === "pending_queued"
         );
       });
+
+      metrics?.registerValidatorStatuses(currentEpoch, validatorStatuses, validatorBalances);
 
       return chain.executionBuilder?.registerValidator(filteredRegistrations);
     },

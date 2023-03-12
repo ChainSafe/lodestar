@@ -25,9 +25,8 @@ export type ValidatorMonitor = {
   registerValidatorAttestationStatuses(currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]): void;
   registerValidatorStatuses: (
     currentEpoch: Epoch,
-    status: routes.beacon.ValidatorStatus,
-    index: number,
-    balance: number
+    statuses: routes.beacon.ValidatorStatus[],
+    balances: number[]
   ) => void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
   registerImportedBlock(block: allForks.BeaconBlock, data: {proposerBalanceDelta: number}): void;
@@ -294,37 +293,43 @@ export function createValidatorMonitor(
       }
     },
 
-    registerValidatorStatuses(currentEpoch, status, index, balance) {
+    registerValidatorStatuses(currentEpoch, statuses, balances) {
       // Prevent registering status for the same epoch twice. processEpoch() may be ran more than once for the same epoch.
       if (currentEpoch <= lastRegisteredStatusEpoch) {
         return;
       }
       lastRegisteredStatusEpoch = currentEpoch;
 
-      switch (status) {
-        case "active":
-        case "active_exiting":
-        case "active_slashed":
-        case "active_ongoing":
-          metrics.validatorMonitor.validatorStatuses.inc({status: "active"});
-          break;
-        case "exited_unslashed":
-        case "withdrawal_done":
-          metrics.validatorMonitor.validatorStatuses.inc({status: "exited"});
-          break;
-        case "pending_initialized":
-        case "pending_queued":
-          metrics.validatorMonitor.validatorStatuses.inc({status: "pending"});
-          break;
-        case "withdrawal_possible":
-          metrics.validatorMonitor.validatorStatuses.inc({status: "withdrawable"});
-          break;
-        case "exited_slashed":
-          metrics.validatorMonitor.validatorStatuses.inc({status: "slashed"});
-          break;
-      }
+      metrics.validatorMonitor.validatorStatuses.reset();
 
-      metrics.validatorMonitor.validatorBalances.set({index}, balance);
+      for (const monitoredValidator of validators.values()) {
+        const index = monitoredValidator.index;
+
+        switch (statuses[index]) {
+          case "active":
+          case "active_exiting":
+          case "active_slashed":
+          case "active_ongoing":
+            metrics.validatorMonitor.validatorStatuses.inc({status: "active"});
+            break;
+          case "exited_unslashed":
+          case "withdrawal_done":
+            metrics.validatorMonitor.validatorStatuses.inc({status: "exited"});
+            break;
+          case "pending_initialized":
+          case "pending_queued":
+            metrics.validatorMonitor.validatorStatuses.inc({status: "pending"});
+            break;
+          case "withdrawal_possible":
+            metrics.validatorMonitor.validatorStatuses.inc({status: "withdrawable"});
+            break;
+          case "exited_slashed":
+            metrics.validatorMonitor.validatorStatuses.inc({status: "slashed"});
+            break;
+        }
+
+        metrics.validatorMonitor.validatorBalances.set({index}, balances[index]);
+      }
     },
 
     registerBeaconBlock(src, seenTimestampSec, block) {
