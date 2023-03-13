@@ -20,19 +20,24 @@ export type NetworkProcessorOpts = GossipHandlerOpts & {
   maxGossipTopicConcurrency?: number;
 };
 
-const executeGossipWorkOrderObj: Record<GossipType, true> = {
+/**
+ * True if we want to process gossip object immediately, false if we check for bls and regen
+ * in order to process the gossip object.
+ */
+const executeGossipWorkOrderObj: Record<GossipType, boolean> = {
+  // gossip block verify signatures on main thread, hence we want to bypass the bls check
   [GossipType.beacon_block]: true,
-  [GossipType.beacon_block_and_blobs_sidecar]: true,
-  [GossipType.beacon_aggregate_and_proof]: true,
-  [GossipType.beacon_attestation]: true,
-  [GossipType.voluntary_exit]: true,
-  [GossipType.proposer_slashing]: true,
-  [GossipType.attester_slashing]: true,
-  [GossipType.sync_committee_contribution_and_proof]: true,
-  [GossipType.sync_committee]: true,
-  [GossipType.light_client_finality_update]: true,
-  [GossipType.light_client_optimistic_update]: true,
-  [GossipType.bls_to_execution_change]: true,
+  [GossipType.beacon_block_and_blobs_sidecar]: false,
+  [GossipType.beacon_aggregate_and_proof]: false,
+  [GossipType.beacon_attestation]: false,
+  [GossipType.voluntary_exit]: false,
+  [GossipType.proposer_slashing]: false,
+  [GossipType.attester_slashing]: false,
+  [GossipType.sync_committee_contribution_and_proof]: false,
+  [GossipType.sync_committee]: false,
+  [GossipType.light_client_finality_update]: false,
+  [GossipType.light_client_optimistic_update]: false,
+  [GossipType.bls_to_execution_change]: false,
 };
 const executeGossipWorkOrder = Object.keys(executeGossipWorkOrderObj) as (keyof typeof executeGossipWorkOrderObj)[];
 
@@ -123,13 +128,14 @@ export class NetworkProcessor {
     let jobsSubmitted = 0;
 
     job_loop: while (jobsSubmitted < MAX_JOBS_SUBMITTED_PER_TICK) {
-      // Check canAcceptWork before calling queue.next() since it consumes the items
-      if (!this.chain.blsThreadPoolCanAcceptWork() || !this.chain.regenCanAcceptWork()) {
-        this.metrics?.networkProcessor.canNotAcceptWork.inc();
-        break;
-      }
-
       for (const topic of executeGossipWorkOrder) {
+        // Check canAcceptWork before calling queue.next() since it consumes the items
+        // beacon block is guaranteed to be processed immedately
+        const ensureAcceptWork = executeGossipWorkOrderObj[topic];
+        if (!ensureAcceptWork && (!this.chain.blsThreadPoolCanAcceptWork() || !this.chain.regenCanAcceptWork())) {
+          this.metrics?.networkProcessor.canNotAcceptWork.inc();
+          break job_loop;
+        }
         if (
           this.opts.maxGossipTopicConcurrency !== undefined &&
           this.gossipTopicConcurrency[topic] > this.opts.maxGossipTopicConcurrency
