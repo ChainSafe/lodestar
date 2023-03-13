@@ -314,7 +314,7 @@ export class Validator {
 
     if (metrics) {
       for (const [status, amount] of allValidatorStatuses) {
-        metrics.validatorStatuses.inc({status}, amount);
+        metrics.validatorStatuses.set({status}, amount);
       }
     }
 

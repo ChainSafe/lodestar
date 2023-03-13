@@ -109,10 +109,6 @@ export class IndicesService {
     for (const validatorState of res.response.data) {
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
       if (!this.validatorPubKeyExists(pubkeyHex)) {
-        this.logger.info("Validator exists in beacon chain", {
-          validatorIndex: validatorState.index,
-          pubKey: pubkeyHex,
-        });
         this.pubkey2index.set(pubkeyHex, validatorState.index);
         this.index2pubkey.set(validatorState.index, pubkeyHex);
         newIndices.push(validatorState.index);
