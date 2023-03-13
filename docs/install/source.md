@@ -26,12 +26,6 @@ Switch to created directory.
 cd lodestar
 ```
 
-<!-- prettier-ignore-start -->
-!!! warning
-    `git clone` will check out the default `unstable` branch. If you are running Lodestar in production, we recommend to either use the `stable` branch
-    by running `git switch stable` or to use a specific version by running `git checkout <version>`, e.g. `git checkout v1.3.0`.
-<!-- prettier-ignore-end -->
-
 ## Install packages
 
 Install across all packages. Lodestar follows a [monorepo](https://github.com/lerna/lerna) structure, so all commands below must be run in the project root. Use the `--ignore-optional` flag to prevent downloading the Ethereum Consensus spec tests.
