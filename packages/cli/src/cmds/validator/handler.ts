@@ -51,6 +51,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   const {version, commit} = getVersionData();
   logger.info("Lodestar", {network, version, commit});
+  if (args.distributed) logger.info("Client is configured to run as part of a distributed validator cluster");
   logger.info("Connecting to LevelDB database", {path: validatorPaths.validatorsDbDir});
 
   const dbPath = validatorPaths.validatorsDbDir;
@@ -167,6 +168,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       scAfterBlockDelaySlotFraction: args.scAfterBlockDelaySlotFraction,
       disableAttestationGrouping: args.disableAttestationGrouping,
       valProposerConfig,
+      distributed: args.distributed,
     },
     metrics
   );

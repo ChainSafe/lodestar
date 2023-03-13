@@ -37,6 +37,7 @@ export type ValidatorOptions = {
   doppelgangerProtectionEnabled?: boolean;
   closed?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
+  distributed?: boolean;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -126,7 +127,7 @@ export class Validator {
       metrics,
       {
         afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
-        disableAttestationGrouping: opts.disableAttestationGrouping,
+        disableAttestationGrouping: opts.disableAttestationGrouping || opts.distributed,
       }
     );
 

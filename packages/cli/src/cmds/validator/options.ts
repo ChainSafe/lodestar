@@ -53,6 +53,8 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     "externalSigner.pubkeys"?: string[];
     "externalSigner.fetch"?: boolean;
 
+    distributed?: boolean;
+
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;
@@ -284,6 +286,14 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     description: "Fetch then list of pubkeys to validate from an external signer",
     type: "boolean",
     group: "externalSignerUrl",
+  },
+
+  // Distributed validator
+
+  distributed: {
+    description: "Enables specific features required to run as part of a distributed validator cluster",
+    default: false,
+    type: "boolean",
   },
 
   // Metrics
