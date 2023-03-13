@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {SignerLocal, SignerType} from "@lodestar/validator";
@@ -76,6 +77,7 @@ export async function writeKeystoreCache(
   const secretKeyConcatenatedBytes = Buffer.concat(secretKeys);
   const publicConcatenatedBytes = Buffer.concat(publicKeys);
   const keystore = await Keystore.create(password, secretKeyConcatenatedBytes, publicConcatenatedBytes, cacheFilepath);
+  if (!fs.existsSync(path.dirname(cacheFilepath))) fs.mkdirSync(path.dirname(cacheFilepath), {recursive: true});
   lockFilepath(cacheFilepath);
   fs.writeFileSync(cacheFilepath, keystore.stringify());
   unlockFilepath(cacheFilepath);

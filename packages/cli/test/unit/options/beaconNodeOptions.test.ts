@@ -48,6 +48,8 @@ describe("options / beaconNodeOptions", () => {
       builder: false,
       "builder.urls": ["http://localhost:8661"],
       "builder.timeout": 12000,
+      "builder.faultInspectionWindow": 32,
+      "builder.allowedFaults": 16,
 
       metrics: true,
       "metrics.port": 8765,
@@ -81,6 +83,7 @@ describe("options / beaconNodeOptions", () => {
       "network.gossipsubDHigh": 6,
       "network.gossipsubAwaitHandler": true,
       "network.rateLimitMultiplier": 1,
+      "network.maxGossipTopicConcurrency": 64,
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
@@ -134,6 +137,8 @@ describe("options / beaconNodeOptions", () => {
         enabled: false,
         urls: ["http://localhost:8661"],
         timeout: 12000,
+        faultInspectionWindow: 32,
+        allowedFaults: 16,
       },
       metrics: {
         enabled: true,
@@ -167,6 +172,7 @@ describe("options / beaconNodeOptions", () => {
         gossipsubAwaitHandler: true,
         mdns: false,
         rateLimitMultiplier: 1,
+        maxGossipTopicConcurrency: 64,
       },
       sync: {
         isSingleNode: true,

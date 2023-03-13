@@ -331,7 +331,15 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
         help: "Histogram of REST API client request time by routeId",
         labelNames: ["routeId"],
         // Expected times are ~ 50-500ms, but in an overload NodeJS they can be greater
-        buckets: [0.01, 0.1, 1, 5],
+        buckets: [0.01, 0.1, 1, 2, 5],
+      }),
+
+      streamTime: register.histogram<{routeId: string}>({
+        name: "vc_rest_api_client_stream_time_seconds",
+        help: "Histogram of REST API client streaming time by routeId",
+        labelNames: ["routeId"],
+        // Expected times are ~ 50-500ms, but in an overload NodeJS they can be greater
+        buckets: [0.01, 0.1, 1, 2, 5],
       }),
 
       requestErrors: register.gauge<{routeId: string}>({

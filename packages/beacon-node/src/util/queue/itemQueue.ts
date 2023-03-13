@@ -34,8 +34,15 @@ export class JobItemQueue<Args extends any[], R> {
 
     if (metrics) {
       this.metrics = metrics;
-      metrics.length.addCollect(() => metrics.length.set(this.jobs.length));
+      metrics.length.addCollect(() => {
+        metrics.length.set(this.jobs.length);
+        metrics.concurrency.set(this.runningJobs);
+      });
     }
+  }
+
+  get jobLen(): number {
+    return this.jobs.length;
   }
 
   push(...args: Args): Promise<R> {

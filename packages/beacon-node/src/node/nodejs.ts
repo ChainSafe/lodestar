@@ -205,7 +205,7 @@ export class BeaconNode {
       }),
       executionEngine: initializeExecutionEngine(opts.executionEngine, {metrics, signal}),
       executionBuilder: opts.executionBuilder.enabled
-        ? initializeExecutionBuilder(opts.executionBuilder, config)
+        ? initializeExecutionBuilder(opts.executionBuilder, config, metrics)
         : undefined,
     });
 
@@ -265,7 +265,7 @@ export class BeaconNode {
       ? new HttpMetricsServer(opts.metrics, {
           register: metrics.register,
           getOtherMetrics: async (): Promise<string> => {
-            return (await network.discv5()?.metrics()) ?? "";
+            return network.metrics();
           },
           logger: logger.child({module: LoggerModule.metrics}),
         })

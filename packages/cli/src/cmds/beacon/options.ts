@@ -16,6 +16,7 @@ type BeaconExtraArgs = {
   dbDir?: string;
   persistInvalidSszObjectsDir?: string;
   peerStoreDir?: string;
+  persistNetworkIdentity?: boolean;
 };
 
 export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
@@ -89,6 +90,12 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     description: "Peer store directory",
     defaultDescription: defaultBeaconPaths.peerStoreDir,
     type: "string",
+  },
+
+  persistNetworkIdentity: {
+    hidden: true,
+    description: "Whether to reuse the same peer-id across restarts",
+    type: "boolean",
   },
 };
 

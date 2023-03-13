@@ -95,7 +95,12 @@ export class PrepareNextSlotScheduler {
       // No need to wait for this or the clock drift
       // Pre Bellatrix: we only do precompute state transition for the last slot of epoch
       // For Bellatrix, we always do the `processSlots()` to prepare payload for the next slot
-      const prepareState = await this.chain.regen.getBlockSlotState(headRoot, prepareSlot, RegenCaller.precomputeEpoch);
+      const prepareState = await this.chain.regen.getBlockSlotState(
+        headRoot,
+        prepareSlot,
+        {dontTransferCache: true},
+        RegenCaller.precomputeEpoch
+      );
 
       // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot
       //  + when gossip block comes, we need to validate and run state transition
@@ -138,6 +143,7 @@ export class PrepareNextSlotScheduler {
           // try/catch wrapper here.
           await prepareExecutionPayload(
             this.chain,
+            this.logger,
             fork as ForkExecution, // State is of execution type
             safeBlockHash,
             finalizedBlockHash,

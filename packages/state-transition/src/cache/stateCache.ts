@@ -15,7 +15,15 @@ export type BeaconStateCache = {
   epochCtx: EpochContext;
   /** Count of clones created from this BeaconStateCache instance. readonly to prevent accidental usage downstream */
   readonly clonedCount: number;
+  readonly clonedCountWithTransferCache: number;
+  readonly createdWithTransferCache: boolean;
 };
+
+type Mutable<T> = {
+  -readonly [P in keyof T]: T[P];
+};
+
+type BeaconStateCacheMutable = Mutable<BeaconStateCache>;
 
 /**
  * `BeaconState` with various caches
@@ -133,6 +141,8 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
     config: immutableData.config,
     epochCtx: EpochContext.createFromState(state, immutableData, opts),
     clonedCount: 0,
+    clonedCountWithTransferCache: 0,
+    createdWithTransferCache: false,
   });
 }
 
@@ -146,22 +156,30 @@ export function getCachedBeaconState<T extends BeaconStateAllForks>(
   const cachedState = state as T & BeaconStateCache;
   cachedState.config = cache.config;
   cachedState.epochCtx = cache.epochCtx;
-  (cachedState as {clonedCount: number}).clonedCount = cache.clonedCount;
+  (cachedState as BeaconStateCacheMutable).clonedCount = cache.clonedCount;
+  (cachedState as BeaconStateCacheMutable).clonedCountWithTransferCache = cache.clonedCountWithTransferCache;
+  (cachedState as BeaconStateCacheMutable).createdWithTransferCache = cache.createdWithTransferCache;
 
   // Overwrite .clone function to preserve cache
   // TreeViewDU.clone() creates a new object that does not have the attached cache
   const viewDUClone = cachedState.clone.bind(cachedState);
 
-  function clone(this: T & BeaconStateCache): T & BeaconStateCache {
-    const viewDUCloned = viewDUClone();
+  function clone(this: T & BeaconStateCache, dontTransferCache?: boolean): T & BeaconStateCache {
+    const viewDUCloned = viewDUClone(dontTransferCache);
 
     // Override `readonly` attribute in single place where `.clonedCount` is incremented
-    (this as {clonedCount: number}).clonedCount++;
+    (this as BeaconStateCacheMutable).clonedCount++;
+
+    if (!dontTransferCache) {
+      (this as BeaconStateCacheMutable).clonedCountWithTransferCache++;
+    }
 
     return getCachedBeaconState(viewDUCloned, {
       config: this.config,
       epochCtx: this.epochCtx.clone(),
       clonedCount: 0,
+      clonedCountWithTransferCache: 0,
+      createdWithTransferCache: !dontTransferCache,
     }) as T & BeaconStateCache;
   }
 
@@ -177,4 +195,15 @@ export function isCachedBeaconState<T extends BeaconStateAllForks>(
   state: T | (T & BeaconStateCache)
 ): state is T & BeaconStateCache {
   return (state as T & BeaconStateCache).epochCtx !== undefined;
+}
+
+// Given a CachedBeaconState, check if validators array internal cache is populated.
+// This cache is populated during epoch transition, and should be preserved for performance.
+// If the cache is missing too often, means that our clone strategy is not working well.
+export function isStateValidatorsNodesPopulated(state: CachedBeaconStateAllForks): boolean {
+  return state.validators["nodesPopulated"] === true;
+}
+
+export function isStateBalancesNodesPopulated(state: CachedBeaconStateAllForks): boolean {
+  return state.balances["nodesPopulated"] === true;
 }

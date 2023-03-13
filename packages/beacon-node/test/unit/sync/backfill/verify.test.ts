@@ -1,4 +1,4 @@
-import {readFileSync} from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {expect} from "chai";
@@ -50,7 +50,7 @@ describe("backfill sync - verify block sequence", function () {
 
   //first 4 mainnet blocks
   function getBlocks(): phase0.SignedBeaconBlock[] {
-    const json = JSON.parse(readFileSync(path.join(__dirname, "./blocks.json"), "utf-8")) as unknown[];
+    const json = JSON.parse(fs.readFileSync(path.join(__dirname, "./blocks.json"), "utf-8")) as unknown[];
     return json.map((b) => {
       return ssz.phase0.SignedBeaconBlock.fromJson(b);
     });

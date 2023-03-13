@@ -265,6 +265,27 @@ export function createLodestarMetrics(
       labelNames: ["topic"],
       buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
     }),
+    gossipValidationQueueConcurrency: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_queue_concurrency",
+      help: "Current count of jobs being run on network processor for topic",
+      labelNames: ["topic"],
+    }),
+
+    networkProcessor: {
+      executeWorkCalls: register.gauge({
+        name: "lodestar_network_processor_execute_work_calls_total",
+        help: "Total calls to network processor execute work fn",
+      }),
+      jobsSubmitted: register.histogram({
+        name: "lodestar_network_processor_execute_jobs_submitted_total",
+        help: "Total calls to network processor execute work fn",
+        buckets: [0, 1, 5, 128],
+      }),
+      canNotAcceptWork: register.gauge({
+        name: "lodestar_network_processor_can_not_accept_work_total",
+        help: "Total times network processor can not accept work on executeWork",
+      }),
+    },
 
     discv5: {
       decodeEnrAttemptCount: register.counter({
@@ -338,6 +359,10 @@ export function createLodestarMetrics(
         help: "Time from job added to the regen queue to starting in seconds",
         buckets: [0.01, 0.1, 1, 10, 100],
       }),
+      concurrency: register.gauge({
+        name: "lodestar_regen_queue_concurrency",
+        help: "Current concurrency of regen queue",
+      }),
     },
 
     blockProcessorQueue: {
@@ -358,6 +383,10 @@ export function createLodestarMetrics(
         name: "lodestar_block_processor_queue_job_wait_time_seconds",
         help: "Time from job added to the block processor queue to starting in seconds",
         buckets: [0.01, 0.1, 1, 10, 100],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_block_processor_queue_concurrency",
+        help: "Current concurrency of block processor queue",
       }),
     },
 
@@ -381,6 +410,10 @@ export function createLodestarMetrics(
         help: "Time from job added to the engine http processor queue to starting in seconds",
         // Ideally it should be picked up < 100 of ms and could run upto 100 of secs
         buckets: [0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1, 2, 5, 10, 25, 50, 100],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_engine_http_processor_queue_concurrency_total",
+        help: "Current concurrency of engine http processor queue",
       }),
     },
 
@@ -520,6 +553,10 @@ export function createLodestarMetrics(
       queueLength: register.gauge({
         name: "lodestar_bls_thread_pool_queue_length",
         help: "Count of total block processor queue length",
+      }),
+      workersBusy: register.gauge({
+        name: "lodestar_bls_thread_pool_workers_busy",
+        help: "Count of current busy workers",
       }),
       totalJobsGroupsStarted: register.gauge({
         name: "lodestar_bls_thread_pool_job_groups_started_total",
@@ -1308,6 +1345,13 @@ export function createLodestarMetrics(
         // Provide max resolution on problematic values around 1 second
         buckets: [0.1, 0.5, 1, 2, 5, 15],
       }),
+      streamTime: register.histogram<"routeId">({
+        name: "lodestar_eth1_http_client_stream_time_seconds",
+        help: "eth1 JsonHttpClient - streaming time by routeId",
+        labelNames: ["routeId"],
+        // Provide max resolution on problematic values around 1 second
+        buckets: [0.1, 0.5, 1, 2, 5, 15],
+      }),
       requestErrors: register.gauge<"routeId">({
         name: "lodestar_eth1_http_client_request_errors_total",
         help: "eth1 JsonHttpClient - total count of request errors",
@@ -1342,6 +1386,13 @@ export function createLodestarMetrics(
         // Provide max resolution on problematic values around 1 second
         buckets: [0.1, 0.5, 1, 2, 5, 15],
       }),
+      streamTime: register.histogram<"routeId">({
+        name: "lodestar_execution_engine_http_client_stream_time_seconds",
+        help: "ExecutionEngineHttp client - streaming time by routeId",
+        labelNames: ["routeId"],
+        // Provide max resolution on problematic values around 1 second
+        buckets: [0.1, 0.5, 1, 2, 5, 15],
+      }),
       requestErrors: register.gauge<"routeId">({
         name: "lodestar_execution_engine_http_client_request_errors_total",
         help: "ExecutionEngineHttp client - total count of request errors",
@@ -1365,6 +1416,39 @@ export function createLodestarMetrics(
       configUrlsCount: register.gauge({
         name: "lodestar_execution_engine_http_client_config_urls_count",
         help: "ExecutionEngineHttp client - static config urls count",
+      }),
+    },
+
+    builderHttpClient: {
+      requestTime: register.histogram<"routeId">({
+        name: "vc_builder_http_client_request_time_seconds",
+        help: "Histogram of builder http client request time by routeId",
+        labelNames: ["routeId"],
+        // Expected times are ~ 50-500ms, but in an overload NodeJS they can be greater
+        buckets: [0.01, 0.1, 1, 5],
+      }),
+      streamTime: register.histogram<"routeId">({
+        name: "vc_builder_http_client_stream_time_seconds",
+        help: "Builder api - streaming time by routeId",
+        labelNames: ["routeId"],
+        // Provide max resolution on problematic values around 1 second
+        buckets: [0.1, 0.5, 1, 2, 5, 15],
+      }),
+      requestErrors: register.gauge<"routeId">({
+        name: "vc_builder_http_client_request_errors_total",
+        help: "Total count of errors on builder http client requests by routeId",
+        labelNames: ["routeId"],
+      }),
+      requestToFallbacks: register.gauge<"routeId">({
+        name: "vc_builder_http_client_request_to_fallbacks_total",
+        help: "Total count of requests to fallback URLs on builder http API by routeId",
+        labelNames: ["routeId"],
+      }),
+
+      urlsScore: register.gauge<"urlIndex">({
+        name: "vc_builder_http_client_urls_score",
+        help: "Current score of builder http URLs by url index",
+        labelNames: ["urlIndex"],
       }),
     },
 

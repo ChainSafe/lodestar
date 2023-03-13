@@ -1,4 +1,4 @@
-import fs, {WriteFileOptions} from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import stream from "node:stream";
 import {promisify} from "node:util";
@@ -67,7 +67,7 @@ export function stringify(obj: unknown, fileFormat: FileFormat): string {
  *
  * Serialize either to json, yaml, or toml
  */
-export function writeFile(filepath: string, obj: unknown, options: WriteFileOptions = "utf-8"): void {
+export function writeFile(filepath: string, obj: unknown, options: fs.WriteFileOptions = "utf-8"): void {
   mkdir(path.dirname(filepath));
   const fileFormat = path.extname(filepath).substr(1);
   fs.writeFileSync(filepath, typeof obj === "string" ? obj : stringify(obj, fileFormat as FileFormat), options);
@@ -78,7 +78,7 @@ export function writeFile(filepath: string, obj: unknown, options: WriteFileOpti
  * *Note*: 600: Owner has full read and write access to the file,
  * while no other user can access the file
  */
-export function writeFile600Perm(filepath: string, obj: unknown, options?: WriteFileOptions): void {
+export function writeFile600Perm(filepath: string, obj: unknown, options?: fs.WriteFileOptions): void {
   writeFile(filepath, obj, options);
   fs.chmodSync(filepath, "0600");
 }

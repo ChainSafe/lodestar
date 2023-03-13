@@ -33,6 +33,7 @@ export type StateTransitionOpts = BlockExternalData &
     verifyStateRoot?: boolean;
     verifyProposer?: boolean;
     verifySignatures?: boolean;
+    dontTransferCache?: boolean;
   };
 
 /**
@@ -54,7 +55,7 @@ export function stateTransition(
   const blockSlot = block.slot;
 
   // .clone() before mutating state in state transition
-  let postState = state.clone();
+  let postState = state.clone(options.dontTransferCache);
 
   if (metrics) {
     onStateCloneMetrics(postState, metrics, "stateTransition");
@@ -119,11 +120,11 @@ export function stateTransition(
 export function processSlots(
   state: CachedBeaconStateAllForks,
   slot: Slot,
-  epochProcessOpts?: EpochProcessOpts,
+  epochProcessOpts?: EpochProcessOpts & {dontTransferCache?: boolean},
   metrics?: BeaconStateTransitionMetrics | null
 ): CachedBeaconStateAllForks {
   // .clone() before mutating state in state transition
-  let postState = state.clone();
+  let postState = state.clone(epochProcessOpts?.dontTransferCache);
 
   if (metrics) {
     onStateCloneMetrics(postState, metrics, "processSlots");

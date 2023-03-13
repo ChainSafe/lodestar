@@ -9,3 +9,9 @@ export {ts as allForks} from "./allForks/index.js";
 
 /** Common non-spec type to represent roots as strings */
 export type RootHex = string;
+
+/** Handy enum to represent the block production source */
+export enum BlockSource {
+  builder = "builder",
+  engine = "engine",
+}

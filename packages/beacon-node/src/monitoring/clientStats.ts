@@ -1,6 +1,6 @@
 import {DynamicProperty, MetricProperty, StaticProperty} from "./properties.js";
 import {Client} from "./service.js";
-import * as system from "./system.js";
+import system from "./system.js";
 import {ClientStats, JsonType, ProcessType} from "./types.js";
 
 // Definition of client stats based on specification
@@ -200,97 +200,97 @@ function createSystemStats(): ClientStats {
     ...createCommonStats(ProcessType.System),
     cpuCores: new DynamicProperty({
       jsonKey: "cpu_cores",
-      provider: system.getCpuCores,
+      provider: () => system.cpuCores,
       description: "Number of CPU cores available",
     }),
     cpuThreads: new DynamicProperty({
       jsonKey: "cpu_threads",
-      provider: system.getCpuThreads,
+      provider: () => system.cpuThreads,
       description: "Number of CPU threads available",
     }),
     cpuNodeSystemSecondsTotal: new DynamicProperty({
       jsonKey: "cpu_node_system_seconds_total",
-      provider: system.getCpuNodeSystemSecondsTotal,
+      provider: () => system.cpuNodeSystemSecondsTotal,
       description: "CPU seconds consumed by all processes",
     }),
     cpuNodeUserSecondsTotal: new DynamicProperty({
       jsonKey: "cpu_node_user_seconds_total",
-      provider: system.getCpuNodeUserSecondsTotal,
+      provider: () => system.cpuNodeUserSecondsTotal,
       description: "CPU seconds consumed by user processes",
     }),
     cpuNodeIOWaitSecondsTotal: new DynamicProperty({
       jsonKey: "cpu_node_iowait_seconds_total",
-      provider: system.getCpuNodeIOWaitSecondsTotal,
+      provider: () => system.cpuNodeIOWaitSecondsTotal,
       description: "CPU seconds spent in I/O wait state",
     }),
     cpuNodeIdleSecondsTotal: new DynamicProperty({
       jsonKey: "cpu_node_idle_seconds_total",
-      provider: system.getCpuNodeIdleSecondsTotal,
+      provider: () => system.cpuNodeIdleSecondsTotal,
       description: "CPU seconds spent in idle state",
     }),
     memoryNodeBytesTotal: new DynamicProperty({
       jsonKey: "memory_node_bytes_total",
-      provider: system.getMemoryNodeBytesTotal,
+      provider: () => system.memoryNodeBytesTotal,
       description: "Total amount of memory in bytes available",
     }),
     memoryNodeBytesFree: new DynamicProperty({
       jsonKey: "memory_node_bytes_free",
-      provider: system.getMemoryNodeBytesFree,
+      provider: () => system.memoryNodeBytesFree,
       description: "Amount of free memory in bytes",
     }),
     memoryNodeBytesCached: new DynamicProperty({
       jsonKey: "memory_node_bytes_cached",
-      provider: system.getMemoryNodeBytesCached,
+      provider: () => system.memoryNodeBytesCached,
       description: "Amount of memory in bytes used by cache",
     }),
     memoryNodeBytesBuffers: new DynamicProperty({
       jsonKey: "memory_node_bytes_buffers",
-      provider: system.getMemoryNodeBytesBuffers,
+      provider: () => system.memoryNodeBytesBuffers,
       description: "Amount of memory in bytes used by buffers",
     }),
     diskNodeBytesTotal: new DynamicProperty({
       jsonKey: "disk_node_bytes_total",
-      provider: system.getDiskNodeBytesTotal,
+      provider: () => system.diskNodeBytesTotal,
       description: "Total amount of available disk space in bytes",
     }),
     diskNodeBytesFree: new DynamicProperty({
       jsonKey: "disk_node_bytes_free",
-      provider: system.getDiskNodeBytesFree,
+      provider: () => system.diskNodeBytesFree,
       description: "Amount of free disk space in bytes",
     }),
     diskNodeIOSeconds: new DynamicProperty({
       jsonKey: "disk_node_io_seconds",
-      provider: system.getDiskNodeIOSeconds,
+      provider: () => system.diskNodeIOSeconds,
       description: "Total time spent in seconds on disk I/O operations",
     }),
     diskNodeReadsTotal: new DynamicProperty({
       jsonKey: "disk_node_reads_total",
-      provider: system.getDiskNodeReadsTotal,
+      provider: () => system.diskNodeReadsTotal,
       description: "Total number of disk read I/O operations",
     }),
     diskNodeWritesTotal: new DynamicProperty({
       jsonKey: "disk_node_writes_total",
-      provider: system.getDiskNodeWritesTotal,
+      provider: () => system.diskNodeWritesTotal,
       description: "Total number of disk write I/O operations",
     }),
     networkNodeBytesTotalReceive: new DynamicProperty({
       jsonKey: "network_node_bytes_total_receive",
-      provider: system.getNetworkNodeBytesTotalReceive,
+      provider: () => system.networkNodeBytesTotalReceive,
       description: "Total amount of bytes received over the network",
     }),
     networkNodeBytesTotalTransmit: new DynamicProperty({
       jsonKey: "network_node_bytes_total_transmit",
-      provider: system.getNetworkNodeBytesTotalTransmit,
+      provider: () => system.networkNodeBytesTotalTransmit,
       description: "Total amount of bytes transmitted over the network",
     }),
     miscNodeBootTsSeconds: new DynamicProperty({
       jsonKey: "misc_node_boot_ts_seconds",
-      provider: system.getMiscNodeBootTsSeconds,
+      provider: () => system.miscNodeBootTsSeconds,
       description: "Unix timestamp in seconds of boot time",
     }),
     miscOs: new DynamicProperty({
       jsonKey: "misc_os",
-      provider: system.getMiscOs,
+      provider: () => system.miscOs,
       description: "Operating system, can be one of: lin, win, mac, unk for unknown",
     }),
   };

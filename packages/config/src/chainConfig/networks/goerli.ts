@@ -31,4 +31,7 @@ export const goerliChainConfig: ChainConfig = {
   // Bellatrix
   BELLATRIX_FORK_VERSION: b("0x02001020"),
   BELLATRIX_FORK_EPOCH: 112260,
+  // Capella
+  CAPELLA_FORK_VERSION: b("0x03001020"),
+  CAPELLA_FORK_EPOCH: 162304,
 };
