@@ -21,7 +21,7 @@ type RootProviderOptions = RootProviderInitOptions & {
 
 export class ProofProvider {
   private payloads: OrderedMap<string, allForks.ExecutionPayload> = new OrderedMap();
-  private finalizedPayloads: OrderedMap<string, allForks.ExecutionPayload> = new OrderedMap();
+  private finalizedSlot = 0;
   private readyPromise?: Promise<void>;
 
   // Map to match CL slot to EL block number
@@ -95,7 +95,7 @@ export class ProofProvider {
     const finalizedSlot = this.lightClient.getFinalized().beacon.slot;
     const finalizedPayload = await getExecutionPayloads(this.options.api, finalizedSlot, finalizedSlot);
     const finalizedBlockNumber = numberToHex(finalizedPayload[finalizedSlot].blockNumber);
-    this.finalizedPayloads.set(finalizedBlockNumber, finalizedPayload[finalizedSlot]);
+    this.finalizedSlot = finalizedSlot;
     this.slotsMap[finalizedSlot] = finalizedBlockNumber;
   }
 
@@ -113,7 +113,7 @@ export class ProofProvider {
     assertLightClient(this.lightClient);
 
     if (typeof blockNumber === "string" && blockNumber === "finalized") {
-      const payload = this.finalizedPayloads.last;
+      const payload = this.payloads.get(this.slotsMap[this.finalizedSlot]);
       if (!payload) throw new Error("No finalized payload");
       return payload;
     }
@@ -157,7 +157,7 @@ export class ProofProvider {
 
     if (existingPayload && existingPayload.blockHash === newPayload.blockHash) {
       if (finalized) {
-        this.finalizedPayloads.set(blockNumber, existingPayload);
+        this.finalizedSlot = blockSlot;
       }
 
       // We payload have the payload for this block
@@ -175,7 +175,7 @@ export class ProofProvider {
     this.payloads.set(blockNumber, newPayloads[blockSlot]);
     this.slotsMap[blockSlot] = blockNumber;
     if (finalized) {
-      this.finalizedPayloads.set(blockNumber, newPayloads[blockSlot]);
+      this.finalizedSlot = blockSlot;
     }
   }
 
