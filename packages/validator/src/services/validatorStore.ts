@@ -172,6 +172,10 @@ export class ValidatorStore {
     return this.indicesService.index2pubkey.get(index);
   }
 
+  getIndexOfPubkey(pubkey: PubkeyHex): ValidatorIndex | undefined {
+    return this.indicesService.pubkey2index.get(pubkey);
+  }
+
   pollValidatorIndices(): Promise<ValidatorIndex[]> {
     // Consumers will call this function every epoch forever. If everyone has been discovered, skip
     return this.indicesService.indexCount >= this.validators.size

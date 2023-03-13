@@ -162,20 +162,29 @@ export class Validator {
       this.clock.start(this.controller.signal);
       this.chainHeaderTracker.start(this.controller.signal);
 
+      const validatorKeys = this.validatorStore.getValidatorKeys();
+
+      for (const pubkeyHex in validatorKeys) {
+        if (!indicesService.validatorPubKeyExists(pubkeyHex)) {
+          this.logger.info("Validator exists in beacon chain", {
+            validatorIndex: validatorStore.getIndexOfPubkey(pubkeyHex),
+            pubKey: pubkeyHex,
+            feeRecipient: validatorStore.getFeeRecipient(pubkeyHex),
+          });
+        }
+      }
+
+      this.clock.runEveryEpoch(() =>
+        this.fetchValidatorStatuses(validatorKeys, metrics).catch((e) =>
+          this.logger.error("Error on fetchValidatorStatuses", {}, e)
+        )
+      );
+
       if (metrics) {
         this.clock.runEverySlot(() =>
           this.fetchBeaconHealth()
             .then((health) => metrics.beaconHealth.set(health))
             .catch((e) => this.logger.error("Error on fetchBeaconHealth", {}, e))
-        );
-        this.clock.runEveryEpoch(() =>
-          this.fetchValidatorStatuses(this.validatorStore.getValidatorKeys())
-            .then((statuses) => {
-              for (const [status, amount] of statuses) {
-                metrics.validatorStatuses.inc({status}, amount);
-              }
-            })
-            .catch((e) => this.logger.error("Error on fetchValidatorStatuses", {}, e))
         );
       }
     }
@@ -278,7 +287,7 @@ export class Validator {
     }
   }
 
-  private async fetchValidatorStatuses(pubkeysHex: string[]): Promise<MapDef<SimpleValidatorStatus, number>> {
+  private async fetchValidatorStatuses(pubkeysHex: string[], metrics: Metrics | null): Promise<void> {
     const res = await this.api.beacon.getStateValidators("head", {
       id: pubkeysHex,
     });
@@ -303,9 +312,13 @@ export class Validator {
     // The total number of validators
     const total = pubkeysHex.length;
 
-    this.logger.info("Validator statuses", {...statuses, total});
+    if (metrics) {
+      for (const [status, amount] of allValidatorStatuses) {
+        metrics.validatorStatuses.inc({status}, amount);
+      }
+    }
 
-    return allValidatorStatuses;
+    this.logger.info("Validator statuses", {...statuses, total});
   }
 }
 

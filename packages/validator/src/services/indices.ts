@@ -36,6 +36,11 @@ export class IndicesService {
     return this.pubkey2index.get(pubKey);
   }
 
+  /** Returns the validator pubkey for a given validator index */
+  validatorPubKeyExists(index: string): boolean {
+    return this.pubkey2index.has(index);
+  }
+
   /** Return all known indices from the validatorStore pubkeys */
   getAllLocalIndices(): ValidatorIndex[] {
     return Array.from(this.index2pubkey.keys());
@@ -103,7 +108,7 @@ export class IndicesService {
 
     for (const validatorState of res.response.data) {
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
-      if (!this.pubkey2index.has(pubkeyHex)) {
+      if (!this.validatorPubKeyExists(pubkeyHex)) {
         this.logger.info("Validator exists in beacon chain", {
           validatorIndex: validatorState.index,
           pubKey: pubkeyHex,
