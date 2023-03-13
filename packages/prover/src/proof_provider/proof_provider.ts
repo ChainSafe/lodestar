@@ -139,20 +139,20 @@ export class ProofProvider {
     throw new Error(`Invalid blockNumber "${blockNumber}"`);
   }
 
-  async update(update: allForks.LightClientHeader, finalized = false): Promise<void> {
-    const fork = this.options.config.getForkName(update.beacon.slot);
+  async update(lcHeader: allForks.LightClientHeader, finalized = false): Promise<void> {
+    const fork = this.options.config.getForkName(lcHeader.beacon.slot);
 
     if (!isForkExecution(fork)) {
       return;
     }
 
-    if (isForkExecution(fork) && !("execution" in update)) {
+    if (isForkExecution(fork) && !("execution" in lcHeader)) {
       throw new Error("Execution payload is required for execution fork");
     }
 
-    const newPayload = (update as capella.LightClientHeader).execution;
+    const newPayload = (lcHeader as capella.LightClientHeader).execution;
     const blockNumber = numberToHex(newPayload.blockNumber);
-    const blockSlot = update.beacon.slot;
+    const blockSlot = lcHeader.beacon.slot;
     const existingPayload = this.payloads.get(blockNumber);
 
     if (existingPayload && existingPayload.blockHash === newPayload.blockHash) {
