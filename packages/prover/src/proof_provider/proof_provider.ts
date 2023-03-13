@@ -6,10 +6,10 @@ import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {computeSyncPeriodAtSlot} from "@lodestar/light-client/utils";
 import {isForkExecution} from "@lodestar/params";
 import {allForks, capella} from "@lodestar/types";
-import {MAX_PAYLOAD_HISTORY, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "../constants.js";
+import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "../constants.js";
 import {LightNode, RootProviderOptions as RootProviderInitOptions} from "../interfaces.js";
 import {assertLightClient} from "../utils/assertion.js";
-import {getExecutionPayloads, getGenesisData, getSyncCheckpoint} from "../utils/consensus.js";
+import {getExecutionPayloads, getGenesisData, getSlotLimitsForPayloads, getSyncCheckpoint} from "../utils/consensus.js";
 import {numberToHex} from "../utils/conversion.js";
 import {OrderedMap} from "./ordered_map.js";
 
@@ -83,9 +83,8 @@ export class ProofProvider {
     );
 
     // Load the payloads from the CL
-    const startSlot = headSlot;
-    const endSlot = headSlot - MAX_PAYLOAD_HISTORY;
-    const payloads = await getExecutionPayloads(this.options.api, startSlot, endSlot);
+    const {start, end} = await getSlotLimitsForPayloads(this.lightClient);
+    const payloads = await getExecutionPayloads(this.options.api, start, end);
     for (const [slot, payload] of Object.entries(payloads)) {
       const blockNumber = numberToHex(payload.blockNumber);
       this.payloads.set(blockNumber, payload);

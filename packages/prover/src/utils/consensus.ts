@@ -1,7 +1,8 @@
 import {Api} from "@lodestar/api/beacon";
 import {allForks, Bytes32, capella} from "@lodestar/types";
-import {GenesisData} from "@lodestar/light-client";
+import {GenesisData, Lightclient} from "@lodestar/light-client";
 import {ApiError} from "@lodestar/api";
+import {MAX_PAYLOAD_HISTORY} from "../constants.js";
 import {hexToBuffer} from "./conversion.js";
 
 export async function fetchNearestBlock(
@@ -18,6 +19,17 @@ export async function fetchNearestBlock(
   }
 
   throw new Error(`Can not fetch nearest block for slot=${slot}`);
+}
+
+export async function getSlotLimitsForPayloads(lightClient: Lightclient): Promise<{start: number; end: number}> {
+  const headSlot = lightClient.getHead().beacon.slot;
+  const finalizeSlot = lightClient.getFinalized().beacon.slot;
+  const endSlot = headSlot - MAX_PAYLOAD_HISTORY;
+
+  return {
+    start: headSlot,
+    end: endSlot < finalizeSlot ? finalizeSlot : endSlot,
+  };
 }
 
 export async function getExecutionPayloads(
