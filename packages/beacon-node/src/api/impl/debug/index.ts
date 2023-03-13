@@ -27,7 +27,7 @@ export function getDebugApi({
       };
     },
 
-    async getProtoArrayNodes() {
+    async getProtoArrayNodes(format?: routes.debug.StateFormat) {
       const nodes = chain.forkChoice.getAllNodes().map((node) => ({
         ...node,
         executionPayloadBlockHash: node.executionPayloadBlockHash ?? "",
@@ -35,7 +35,11 @@ export function getDebugApi({
         bestChild: String(node.bestChild),
         bestDescendant: String(node.bestDescendant),
       }));
-      return {data: nodes};
+      if (format === "ssz") {
+        return nodes.serialize();
+      } else {
+        return {data: nodes};
+      }
     },
 
     async getState(stateId: string | number, format?: routes.debug.StateFormat) {

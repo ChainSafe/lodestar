@@ -4,7 +4,8 @@ import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {generateGenericJsonClient, getFetchOptsSerializers, IHttpClient} from "../../utils/client/index.js";
 import {ReturnTypes} from "../../utils/types.js";
 import {StateId} from "../routes/beacon/state.js";
-import {Api, getReqSerializers, getReturnTypes, ReqTypes, routesData, EncodingFormat} from "../routes/debug.js";
+import {Api, getReqSerializers, getReturnTypes, ReqTypes, routesData} from "../routes/debug.js";
+import {EncodingFormat} from "../routes/shared.js";
 
 // As Jul 2022, it takes up to 3 mins to download states so make this 5 mins for reservation
 const GET_STATE_TIMEOUT_MS = 5 * 60 * 1000;
