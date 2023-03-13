@@ -27,7 +27,7 @@ export type NetworkProcessorOpts = GossipHandlerOpts & {
 const executeGossipWorkOrderObj: Record<GossipType, boolean> = {
   // gossip block verify signatures on main thread, hence we want to bypass the bls check
   [GossipType.beacon_block]: true,
-  [GossipType.beacon_block_and_blobs_sidecar]: false,
+  [GossipType.beacon_block_and_blobs_sidecar]: true,
   [GossipType.beacon_aggregate_and_proof]: false,
   [GossipType.beacon_attestation]: false,
   [GossipType.voluntary_exit]: false,
