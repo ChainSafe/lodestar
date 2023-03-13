@@ -31,19 +31,11 @@ export function createVerifiedExecutionProvider<T extends Web3Provider>(
   opts: ProvableProviderInitOpts
 ): {provider: T; proofProvider: ProofProvider} {
   const controller = new AbortController();
-  const proofProvider =
-    opts.mode === LightNode.Rest
-      ? ProofProvider.buildWithRestApi(opts.urls, {
-          network: opts.network ?? defaultNetwork,
-          signal: controller.signal,
-          checkpoint: opts.checkpoint,
-        })
-      : // Implement other mode
-        ProofProvider.buildWithRestApi(opts.bootnodes, {
-          network: opts.network ?? defaultNetwork,
-          signal: controller.signal,
-          checkpoint: opts.checkpoint,
-        });
+  const proofProvider = ProofProvider.init({
+    ...opts,
+    network: opts.network ?? defaultNetwork,
+    signal: controller.signal,
+  });
 
   if (isSendProvider(provider)) {
     return {provider: handleSendProvider(provider, proofProvider) as T, proofProvider: proofProvider};

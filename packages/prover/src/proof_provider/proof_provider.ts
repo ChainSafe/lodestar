@@ -7,47 +7,53 @@ import {computeSyncPeriodAtSlot} from "@lodestar/light-client/utils";
 import {isForkExecution} from "@lodestar/params";
 import {allForks, capella} from "@lodestar/types";
 import {MAX_PAYLOAD_HISTORY, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "../constants.js";
-import {RootProviderOptions as RootProviderInitOptions} from "../interfaces.js";
+import {LightNode, RootProviderOptions as RootProviderInitOptions} from "../interfaces.js";
 import {assertLightClient} from "../utils/assertion.js";
 import {getExecutionPayloads, getGenesisData, getSyncCheckpoint} from "../utils/consensus.js";
 import {numberToHex} from "../utils/conversion.js";
 import {OrderedMap} from "./ordered_map.js";
 
-interface RootProviderOptions extends RootProviderInitOptions {
+type RootProviderOptions = RootProviderInitOptions & {
   transport: LightClientRestTransport;
   api: Api;
   config: ChainForkConfig;
-}
+};
 
 export class ProofProvider {
   private payloads: OrderedMap<string, allForks.ExecutionPayload> = new OrderedMap();
   private finalizedPayloads: OrderedMap<string, allForks.ExecutionPayload> = new OrderedMap();
-  private readyPromise: Promise<void>;
+  private readyPromise?: Promise<void>;
 
   // Map to match CL slot to EL block number
   private slotsMap: {[slot: number]: string} = {};
 
   lightClient?: Lightclient;
 
-  constructor(private options: RootProviderOptions) {
-    this.readyPromise = this.sync(options.checkpoint);
-  }
+  constructor(private options: RootProviderOptions) {}
 
   async waitToBeReady(): Promise<void> {
     return this.readyPromise;
   }
 
-  static buildWithRestApi(urls: string[], opts: RootProviderInitOptions): ProofProvider {
+  static init(opts: RootProviderInitOptions): ProofProvider {
+    if (opts.mode === LightNode.P2P) {
+      throw new Error("P2P mode not supported yet");
+    }
+
     const config = createChainForkConfig(networksChainConfig[opts.network]);
-    const api = getClient({urls}, {config});
+    const api = getClient({urls: opts.urls}, {config});
     const transport = new LightClientRestTransport(api);
 
-    return new ProofProvider({
+    const provider = new ProofProvider({
       ...opts,
       config,
       api,
       transport,
     });
+
+    provider.readyPromise = provider.sync(opts.checkpoint);
+
+    return provider;
   }
 
   private async sync(checkpoint?: string): Promise<void> {

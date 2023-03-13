@@ -8,12 +8,12 @@ export enum LightNode {
   P2P = "P2P",
 }
 
-export interface RootProviderOptions {
+export type RootProviderOptions = {
   network: NetworkName;
   signal: AbortSignal;
   config?: ChainForkConfig;
   checkpoint?: string;
-}
+} & ({mode: LightNode.Rest; urls: string[]} | {mode: LightNode.P2P; bootnodes: string[]});
 
 export type ELRequestMethod = (payload: ELRequestPayload) => Promise<ELResponse | undefined>;
 

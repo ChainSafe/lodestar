@@ -22,19 +22,14 @@ export type VerifiedProxyOptions = {
 export function createVerifiedExecutionProxy(
   opts: VerifiedProxyOptions
 ): {server: http.Server; proofProvider: ProofProvider} {
-  const {mode, executionRpcUrl: executionUrl, logger, network} = opts;
+  const {executionRpcUrl: executionUrl, logger, network} = opts;
   const controller = new AbortController();
-  const proofProvider =
-    mode === LightNode.Rest
-      ? ProofProvider.buildWithRestApi(opts.urls, {
-          network: network,
-          signal: controller.signal,
-        })
-      : // Implement other mode
-        ProofProvider.buildWithRestApi(opts.bootnodes, {
-          network: opts.network,
-          signal: controller.signal,
-        });
+
+  const proofProvider = ProofProvider.init({
+    ...opts,
+    network: network,
+    signal: controller.signal,
+  });
 
   const proxy = httpProxy.createProxy({
     target: executionUrl,
