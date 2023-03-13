@@ -1436,13 +1436,18 @@ export function createLodestarMetrics(
         // Expected times are ~ 50-500ms, but in an overload NodeJS they can be greater
         buckets: [0.01, 0.1, 1, 5],
       }),
-
+      streamTime: register.histogram<"routeId">({
+        name: "vc_builder_http_client_stream_time_seconds",
+        help: "Builder api - streaming time by routeId",
+        labelNames: ["routeId"],
+        // Provide max resolution on problematic values around 1 second
+        buckets: [0.1, 0.5, 1, 2, 5, 15],
+      }),
       requestErrors: register.gauge<"routeId">({
         name: "vc_builder_http_client_request_errors_total",
         help: "Total count of errors on builder http client requests by routeId",
         labelNames: ["routeId"],
       }),
-
       requestToFallbacks: register.gauge<"routeId">({
         name: "vc_builder_http_client_request_to_fallbacks_total",
         help: "Total count of requests to fallback URLs on builder http API by routeId",

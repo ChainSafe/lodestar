@@ -154,7 +154,7 @@ export class Lightclient {
     // Fetch bootstrap state with proof at the trusted block root
     const {data: bootstrap} = await transport.getBootstrap(toHexString(checkpointRoot));
 
-    validateLightClientBootstrap(checkpointRoot, bootstrap);
+    validateLightClientBootstrap(args.config, checkpointRoot, bootstrap);
 
     return new Lightclient({...args, bootstrap});
   }
