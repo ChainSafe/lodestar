@@ -61,7 +61,11 @@ export class AttestationPool {
   );
   private lowestPermissibleSlot = 0;
 
-  constructor(private readonly clock: BeaconClock, private readonly cutOffSecFromSlot: number) {}
+  constructor(
+    private readonly clock: BeaconClock,
+    private readonly cutOffSecFromSlot: number,
+    private readonly preaggregateSlotDistance = 0
+  ) {}
 
   /** Returns current count of pre-aggregated attestations with unique data */
   getAttestationCount(): number {
@@ -144,7 +148,8 @@ export class AttestationPool {
    */
   prune(clockSlot: Slot): void {
     pruneBySlot(this.attestationByRootBySlot, clockSlot, SLOTS_RETAINED);
-    this.lowestPermissibleSlot = clockSlot;
+    // by default preaggregateSlotDistance is 0, i.e only accept attestations in the same clock slot.
+    this.lowestPermissibleSlot = Math.max(clockSlot - this.preaggregateSlotDistance, 0);
   }
 
   /**

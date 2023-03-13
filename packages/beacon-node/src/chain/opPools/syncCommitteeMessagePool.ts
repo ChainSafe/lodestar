@@ -45,7 +45,11 @@ export class SyncCommitteeMessagePool {
   >(() => new MapDef<Subnet, Map<BlockRootHex, ContributionFast>>(() => new Map<BlockRootHex, ContributionFast>()));
   private lowestPermissibleSlot = 0;
 
-  constructor(private readonly clock: BeaconClock, private readonly cutOffSecFromSlot: number) {}
+  constructor(
+    private readonly clock: BeaconClock,
+    private readonly cutOffSecFromSlot: number,
+    private readonly preaggregateSlotDistance = 0
+  ) {}
 
   /** Returns current count of unique ContributionFast by block root and subnet */
   get size(): number {
@@ -114,7 +118,8 @@ export class SyncCommitteeMessagePool {
    */
   prune(clockSlot: Slot): void {
     pruneBySlot(this.contributionsByRootBySubnetBySlot, clockSlot, SLOTS_RETAINED);
-    this.lowestPermissibleSlot = Math.max(clockSlot, 0);
+    // by default preaggregateSlotDistance is 0, i.e only accept SyncCommitteeMessage in the same clock slot.
+    this.lowestPermissibleSlot = Math.max(clockSlot - this.preaggregateSlotDistance, 0);
   }
 }
 
