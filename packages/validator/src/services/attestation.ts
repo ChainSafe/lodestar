@@ -12,7 +12,7 @@ import {groupAttDutiesByCommitteeIndex} from "./utils.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
 
-type AttestationServiceOpts = {
+export type AttestationServiceOpts = {
   afterBlockDelaySlotFraction?: number;
   disableAttestationGrouping?: boolean;
 };

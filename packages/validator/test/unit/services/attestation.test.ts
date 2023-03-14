@@ -4,7 +4,7 @@ import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {HttpStatusCode} from "@lodestar/api";
-import {AttestationService} from "../../../src/services/attestation.js";
+import {AttestationService, AttestationServiceOpts} from "../../../src/services/attestation.js";
 import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
@@ -37,9 +37,28 @@ describe("AttestationService", function () {
 
   let controller: AbortController; // To stop clock
   beforeEach(() => (controller = new AbortController()));
-  afterEach(() => controller.abort());
+  afterEach(() => {
+    controller.abort();
+    sandbox.resetHistory();
+  });
 
-  it("Should produce, sign, and publish an attestation + aggregate", async () => {
+  context("With attestation grouping enabled", () => {
+    const opts: AttestationServiceOpts = {disableAttestationGrouping: false};
+
+    it("Should produce, sign, and publish an attestation + aggregate", async () => {
+      await testAttestationTasks(opts);
+    });
+  });
+
+  context("With attestation grouping disabled", () => {
+    const opts: AttestationServiceOpts = {disableAttestationGrouping: true};
+
+    it("Should produce, sign, and publish an attestation + aggregate", async () => {
+      await testAttestationTasks(opts);
+    });
+  });
+
+  async function testAttestationTasks(opts?: AttestationServiceOpts): Promise<void> {
     const clock = new ClockMock();
     const attestationService = new AttestationService(
       loggerVc,
@@ -48,7 +67,8 @@ describe("AttestationService", function () {
       validatorStore,
       emitter,
       chainHeadTracker,
-      null
+      null,
+      opts
     );
 
     const attestation = ssz.phase0.Attestation.defaultValue();
@@ -121,5 +141,5 @@ describe("AttestationService", function () {
       [[aggregate]], // 1 arg, = aggregate[]
       "wrong publishAggregateAndProofs() args"
     );
-  });
+  }
 });
