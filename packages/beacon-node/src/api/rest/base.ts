@@ -1,4 +1,4 @@
-import querystring from "querystring";
+import qs from "qs";
 import fastify, {FastifyError, FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
 import bearerAuthPlugin from "fastify-bearer-auth";
@@ -43,7 +43,15 @@ export class RestApiServer {
     const server = fastify({
       logger: false,
       ajv: {customOptions: {coerceTypes: "array"}},
-      querystringParser: querystring.parse,
+      querystringParser: (str) =>
+        qs.parse(str, {
+          // defaults to 20 but Beacon API spec allows max items of 30
+          arrayLimit: 30,
+          // array as comma-separated values must be supported to be OpenAPI spec compliant
+          comma: true,
+          // default limit of 1000 seems unnecessarily high, let's reduce it a bit
+          parameterLimit: 100,
+        }),
       bodyLimit: opts.bodyLimit,
     });
 
