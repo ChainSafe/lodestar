@@ -300,6 +300,14 @@ export function createValidatorMonitor(
       }
       lastRegisteredStatusEpoch = currentEpoch;
 
+      const statusCount = {
+        active: 0,
+        exited: 0,
+        pending: 0,
+        withdrawable: 0,
+        slashed: 0,
+      };
+
       metrics.validatorMonitor.validatorStatuses.reset();
 
       for (const monitoredValidator of validators.values()) {
@@ -310,25 +318,29 @@ export function createValidatorMonitor(
           case "active_exiting":
           case "active_slashed":
           case "active_ongoing":
-            metrics.validatorMonitor.validatorStatuses.inc({status: "active"});
+            statusCount.active++;
             break;
           case "exited_unslashed":
           case "withdrawal_done":
-            metrics.validatorMonitor.validatorStatuses.inc({status: "exited"});
+            statusCount.exited++;
             break;
           case "pending_initialized":
           case "pending_queued":
-            metrics.validatorMonitor.validatorStatuses.inc({status: "pending"});
+            statusCount.pending++;
             break;
           case "withdrawal_possible":
-            metrics.validatorMonitor.validatorStatuses.inc({status: "withdrawable"});
+            statusCount.withdrawable++;
             break;
           case "exited_slashed":
-            metrics.validatorMonitor.validatorStatuses.inc({status: "slashed"});
+            statusCount.slashed++;
             break;
         }
 
         metrics.validatorMonitor.validatorBalances.set({index}, balances[index]);
+      }
+
+      for (const [status, count] of Object.entries(statusCount)) {
+        metrics.validatorMonitor.validatorStatuses.set({status}, count);
       }
     },
 
