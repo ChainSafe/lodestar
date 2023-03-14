@@ -6,7 +6,7 @@
 
 ### Getting started
 
-- Follow the installation method for [source install](install/source.md), [NPM install](install/npm.md), or [Docker install](install/docker.md) to install Lodestar. Or use our [comprehensive setup guide](https://hackmd.io/@philknows/rk5cDvKmK).
+- Follow the installation method for [source install](install/source.md), [NPM install](install/npm.md), or [Docker install](install/docker.md) to install Lodestar. Or use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart).
 - Use [Lodestar libraries](libraries) in your next Ethereum Typescript project.
 - Run a beacon node on [mainnet or a public testnet](usage/beacon-management.md).
 - Utilize the whole stack by [starting a local testnet](usage/local).

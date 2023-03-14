@@ -24,5 +24,5 @@ docker run chainsafe/lodestar --help
 ```
 <!-- prettier-ignore-start -->
 !!! info
-    Docker is the recommended setup for Lodestar. Use our [comprehensive setup guide](https://hackmd.io/@philknows/rk5cDvKmK) with Docker for detailed instructions.
+    Docker is the recommended setup for Lodestar. Use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart) with Docker for detailed instructions.
 <!-- prettier-ignore-end -->
