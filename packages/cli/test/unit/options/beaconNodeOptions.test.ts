@@ -83,7 +83,6 @@ describe("options / beaconNodeOptions", () => {
       "network.gossipsubDHigh": 6,
       "network.gossipsubAwaitHandler": true,
       "network.rateLimitMultiplier": 1,
-      "network.maxGossipTopicConcurrency": 64,
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
@@ -172,7 +171,6 @@ describe("options / beaconNodeOptions", () => {
         gossipsubAwaitHandler: true,
         mdns: false,
         rateLimitMultiplier: 1,
-        maxGossipTopicConcurrency: 64,
       },
       sync: {
         isSingleNode: true,
