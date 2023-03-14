@@ -23,7 +23,6 @@ export type NetworkArgs = {
   "network.gossipsubDHigh": number;
   "network.gossipsubAwaitHandler": boolean;
   "network.rateLimitMultiplier": number;
-  "network.maxGossipTopicConcurrency"?: number;
 
   /** @deprecated This option is deprecated and should be removed in next major release. */
   "network.requestCountPeerLimit": number;
@@ -68,7 +67,6 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     gossipsubAwaitHandler: args["network.gossipsubAwaitHandler"],
     mdns: args["mdns"],
     rateLimitMultiplier: args["network.rateLimitMultiplier"],
-    maxGossipTopicConcurrency: args["network.maxGossipTopicConcurrency"],
   };
 }
 
@@ -237,12 +235,6 @@ export const options: CliCommandOptions<NetworkArgs> = {
     description: "The multiplier to increase the rate limits. Set to zero to disable rate limiting.",
     hidden: true,
     defaultDescription: String(defaultOptions.network.rateLimitMultiplier),
-    group: "network",
-  },
-
-  "network.maxGossipTopicConcurrency": {
-    type: "number",
-    hidden: true,
     group: "network",
   },
 };
