@@ -145,9 +145,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     HYSTERESIS_DOWNWARD_MULTIPLIER: true,
     HYSTERESIS_UPWARD_MULTIPLIER: true,
 
-    // Fork choice
-    SAFE_SLOTS_TO_UPDATE_JUSTIFIED: true,
-
     // Gwei Values
     MIN_DEPOSIT_AMOUNT: true,
     MAX_EFFECTIVE_BALANCE: true,

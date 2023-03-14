@@ -11,9 +11,6 @@ export interface BeaconPreset {
   HYSTERESIS_DOWNWARD_MULTIPLIER: number;
   HYSTERESIS_UPWARD_MULTIPLIER: number;
 
-  // Fork choice
-  SAFE_SLOTS_TO_UPDATE_JUSTIFIED: number;
-
   // Gwei Values
   MIN_DEPOSIT_AMOUNT: number;
   MAX_EFFECTIVE_BALANCE: number;
