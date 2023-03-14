@@ -132,11 +132,11 @@ export class NetworkProcessor {
     let jobsSubmitted = 0;
 
     job_loop: while (jobsSubmitted < MAX_JOBS_SUBMITTED_PER_TICK) {
+      // Check canAcceptWork before calling queue.next() since it consumes the items
+      const canAcceptWork = this.chain.blsThreadPoolCanAcceptWork() && this.chain.regenCanAcceptWork();
       for (const topic of executeGossipWorkOrder) {
-        // Check canAcceptWork before calling queue.next() since it consumes the items
         // beacon block is guaranteed to be processed immedately
-        const bypassQueue = executeGossipWorkOrderObj[topic]?.bypassQueue ?? false;
-        if (!bypassQueue && (!this.chain.blsThreadPoolCanAcceptWork() || !this.chain.regenCanAcceptWork())) {
+        if (!canAcceptWork && !executeGossipWorkOrderObj[topic]?.bypassQueue) {
           this.metrics?.networkProcessor.canNotAcceptWork.inc();
           break job_loop;
         }
