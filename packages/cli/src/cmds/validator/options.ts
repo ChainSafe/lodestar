@@ -196,7 +196,6 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     hidden: true,
     description:
       "Disables attestation service grouping optimization, attestation tasks will be executed per committee instead of just once for all committees.",
-    default: false,
     type: "boolean",
   },
 
@@ -292,7 +291,6 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   distributed: {
     description: "Enables specific features required to run as part of a distributed validator cluster",
-    default: false,
     type: "boolean",
   },
 
