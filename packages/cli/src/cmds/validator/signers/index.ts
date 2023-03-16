@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 import bls from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@lodestar/state-transition";
@@ -108,29 +109,43 @@ export async function getSignersFromArgs(
 
   // Read keys from local account manager
   else {
+    const keystoreSigners: Signer[] = [];
+
     const persistedKeysBackend = new PersistedKeysBackend(accountPaths);
 
-    // Read and decrypt local keystores, imported via keymanager api or import cmd
-    const keystoreDefinitions = persistedKeysBackend.readAllKeystores();
+    const files = fs.readdirSync(accountPaths.keystoresDir);
+    // Temporary value, we should calculate the batch size based on the number of keystores and resources available
+    const batchSize = 10;
 
-    const needle = showProgress({
-      total: keystoreDefinitions.length,
-      frequencyMs: KEYSTORE_IMPORT_PROGRESS_MS,
-      signal: signal,
-      progress: ({ratePerSec, percentage, current, total}) => {
-        logger.info(
-          `${percentage.toFixed(0)}% of local keystores imported. current=${current} total=${total} rate=${(
-            ratePerSec * 60
-          ).toFixed(2)}keys/m`
-        );
-      },
-    });
+    for (let i = 0; i < persistedKeysBackend.getDirSize(); i++) {
+      // Read and decrypt local keystores, imported via keymanager api or import cmd
+      const keystoreDefinitions = await persistedKeysBackend.readKeyStoresInBatches(
+        files,
+        accountPaths.keystoresDir,
+        batchSize
+      );
 
-    const keystoreSigners = await decryptKeystoreDefinitions(keystoreDefinitions, {
-      ...args,
-      onDecrypt: needle,
-      cacheFilePath: path.join(accountPaths.cacheDir, "local_keystores.cache"),
-    });
+      const needle = showProgress({
+        total: keystoreDefinitions.length,
+        frequencyMs: KEYSTORE_IMPORT_PROGRESS_MS,
+        signal: signal,
+        progress: ({ratePerSec, percentage, current, total}) => {
+          logger.info(
+            `${percentage.toFixed(0)}% of local keystores imported. current=${current} total=${total} rate=${(
+              ratePerSec * 60
+            ).toFixed(2)}keys/m`
+          );
+        },
+      });
+
+      const keystoreSignersBatch = await decryptKeystoreDefinitions(keystoreDefinitions, {
+        ...args,
+        onDecrypt: needle,
+        cacheFilePath: path.join(accountPaths.cacheDir, "local_keystores.cache"),
+      });
+
+      keystoreSigners.concat(keystoreSignersBatch);
+    }
 
     // Read local remote keys, imported via keymanager api
     const signerDefinitions = persistedKeysBackend.readAllRemoteKeys();
