@@ -99,7 +99,7 @@
     "@chainsafe/as-sha256": "^0.3.1",
     "@chainsafe/bls": "7.1.1",
     "@chainsafe/discv5": "^3.0.0",
-    "@chainsafe/libp2p-gossipsub": "github://tuyennhv/js-libp2p-gossipsub.git#tuyennhv_debug_gossipsub_8",
+    "@chainsafe/libp2p-gossipsub": "github://tuyennhv/js-libp2p-gossipsub.git#tuyennhv_debug_gossipsub_9",
     "@chainsafe/libp2p-noise": "^11.0.0",
     "@chainsafe/persistent-merkle-tree": "^0.5.0",
     "@chainsafe/snappy-stream": "^5.1.2",
