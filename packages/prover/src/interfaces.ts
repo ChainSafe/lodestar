@@ -3,17 +3,17 @@ import {NetworkName} from "@lodestar/config/networks";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "./types.js";
 
-export enum LightNode {
+export enum LCTransport {
   Rest = "Rest",
   P2P = "P2P",
 }
 
-export type RootProviderOptions = {
+export type RootProviderInitOptions = {
   network: NetworkName;
   signal: AbortSignal;
   config?: ChainForkConfig;
-  checkpoint?: string;
-} & ({mode: LightNode.Rest; urls: string[]} | {mode: LightNode.P2P; bootnodes: string[]});
+  wsCheckpoint?: string;
+} & ({transport: LCTransport.Rest; urls: string[]} | {transport: LCTransport.P2P; bootnodes: string[]});
 
 export type ELRequestMethod = (payload: ELRequestPayload) => Promise<ELResponse | undefined>;
 

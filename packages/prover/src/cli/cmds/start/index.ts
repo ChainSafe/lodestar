@@ -1,8 +1,8 @@
 import {CliCommand, CliCommandOptions} from "../../../utils/command.js";
-import {startHandler} from "./handler.js";
+import {proverProxyStartHandler} from "./handler.js";
 import {StartArgs, startOptions} from "./options.js";
 
-export const start: CliCommand<StartArgs> = {
+export const proverProxyStartCommand: CliCommand<StartArgs> = {
   command: "start",
   describe: "Start proxy server",
   examples: [
@@ -13,5 +13,5 @@ export const start: CliCommand<StartArgs> = {
     },
   ],
   options: startOptions as CliCommandOptions<StartArgs>,
-  handler: startHandler,
+  handler: proverProxyStartHandler,
 };

@@ -1,3 +1,3 @@
-import {start} from "./start/index.js";
+import {proverProxyStartCommand} from "./start/index.js";
 
-export const cmds = [start];
+export const cmds = [proverProxyStartCommand];

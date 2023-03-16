@@ -1,5 +1,5 @@
 import {ELVerifiedRequestHandler} from "../interfaces.js";
-import {numberToHex} from "../utils/conversion.js";
+import {bufferToHex} from "../utils/conversion.js";
 import {getELProof, isValidAccount, isValidStorageKeys} from "../utils/execution.js";
 import {generateRPCResponseForPayload, generateUnverifiedResponseForPayload} from "../utils/json_rpc.js";
 
@@ -12,7 +12,7 @@ export const ethGetBalance: ELVerifiedRequestHandler<[address: string, block?: n
     params: [address, block],
   } = payload;
   const executionPayload = rootProvider.getExecutionPayload(block ?? "latest");
-  const proof = await getELProof(handler, [address, [], numberToHex(executionPayload.blockNumber)]);
+  const proof = await getELProof(handler, [address, [], bufferToHex(executionPayload.blockHash)]);
 
   if (
     (await isValidAccount({

@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import Web3 from "web3";
 import {ethers} from "ethers";
-import {LightNode} from "../../src/interfaces.js";
+import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
 
 describe("web3_provider", () => {
@@ -14,7 +14,7 @@ describe("web3_provider", () => {
         const {provider} = createVerifiedExecutionProvider(
           new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io"),
           {
-            mode: LightNode.Rest,
+            transport: LCTransport.Rest,
             urls: ["https://lodestar-sepolia.chainsafe.io"],
             network: "sepolia",
           }
@@ -32,7 +32,7 @@ describe("web3_provider", () => {
         const {provider} = createVerifiedExecutionProvider(
           new ethers.JsonRpcProvider("https://lodestar-sepoliarpc.chainsafe.io"),
           {
-            mode: LightNode.Rest,
+            transport: LCTransport.Rest,
             urls: ["https://lodestar-sepolia.chainsafe.io"],
             network: "sepolia",
           }

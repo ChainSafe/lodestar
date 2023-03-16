@@ -4,7 +4,7 @@ import url from "node:url";
 import httpProxy from "http-proxy";
 import {NetworkName} from "@lodestar/config/networks";
 import {Logger} from "@lodestar/utils";
-import {LightNode} from "./interfaces.js";
+import {LCTransport} from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "./types.js";
 import {processAndVerifyRequest} from "./utils/execution.js";
@@ -16,8 +16,8 @@ export type VerifiedProxyOptions = {
   network: NetworkName;
   executionRpcUrl: string;
   logger: Logger;
-  checkpoint?: string;
-} & ({mode: LightNode.Rest; urls: string[]} | {mode: LightNode.P2P; bootnodes: string[]});
+  wsCheckpoint?: string;
+} & ({transport: LCTransport.Rest; urls: string[]} | {transport: LCTransport.P2P; bootnodes: string[]});
 
 export function createVerifiedExecutionProxy(
   opts: VerifiedProxyOptions

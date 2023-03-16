@@ -3,40 +3,40 @@ import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {networksChainConfig} from "@lodestar/config/networks";
 import {Lightclient, LightclientEvent, RunStatusCode} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
-import {computeSyncPeriodAtSlot} from "@lodestar/light-client/utils";
 import {isForkExecution} from "@lodestar/params";
-import {allForks, capella} from "@lodestar/types";
-import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "../constants.js";
-import {LightNode, RootProviderOptions as RootProviderInitOptions} from "../interfaces.js";
+import {allForks, capella, ssz} from "@lodestar/types";
+import {LCTransport, RootProviderInitOptions} from "../interfaces.js";
 import {assertLightClient} from "../utils/assertion.js";
-import {getExecutionPayloads, getGenesisData, getSlotLimitsForPayloads, getSyncCheckpoint} from "../utils/consensus.js";
-import {numberToHex} from "../utils/conversion.js";
-import {OrderedMap} from "./ordered_map.js";
+import {
+  getExecutionPayloads,
+  getGenesisData,
+  getSyncCheckpoint,
+  getUnFinalizedRangeForPayloads,
+} from "../utils/consensus.js";
+import {PayloadStore} from "./payload_store.js";
 
-type RootProviderOptions = RootProviderInitOptions & {
+type RootProviderOptions = Omit<RootProviderInitOptions, "transport"> & {
   transport: LightClientRestTransport;
   api: Api;
   config: ChainForkConfig;
 };
 
 export class ProofProvider {
-  private payloads: OrderedMap<string, allForks.ExecutionPayload> = new OrderedMap();
-  private finalizedSlot = 0;
+  private store: PayloadStore;
+
   private readyPromise?: Promise<void>;
-
-  // Map to match CL slot to EL block number
-  private slotsMap: {[slot: number]: string} = {};
-
   lightClient?: Lightclient;
 
-  constructor(private options: RootProviderOptions) {}
+  constructor(private opts: RootProviderOptions) {
+    this.store = new PayloadStore({api: opts.api});
+  }
 
   async waitToBeReady(): Promise<void> {
     return this.readyPromise;
   }
 
   static init(opts: RootProviderInitOptions): ProofProvider {
-    if (opts.mode === LightNode.P2P) {
+    if (opts.transport === LCTransport.P2P) {
       throw new Error("P2P mode not supported yet");
     }
 
@@ -51,18 +51,18 @@ export class ProofProvider {
       transport,
     });
 
-    provider.readyPromise = provider.sync(opts.checkpoint);
+    provider.readyPromise = provider.sync(opts.wsCheckpoint);
 
     return provider;
   }
 
-  private async sync(checkpoint?: string): Promise<void> {
+  private async sync(wsCheckpoint?: string): Promise<void> {
     if (this.lightClient !== undefined) {
       throw Error("Light client already initialized and syncing.");
     }
 
-    const {api, config, transport} = this.options;
-    const checkpointRoot = await getSyncCheckpoint(api, checkpoint);
+    const {api, config, transport} = this.opts;
+    const checkpointRoot = await getSyncCheckpoint(api, wsCheckpoint);
     const genesisData = await getGenesisData(api);
 
     this.lightClient = await Lightclient.initializeFromCheckpointRoot({
@@ -73,39 +73,45 @@ export class ProofProvider {
     });
 
     assertLightClient(this.lightClient);
-    this.lightClient.start();
+    // Wait for the lightclient to start
+    await new Promise<void>((resolve) => {
+      const lightClientStarted = (status: RunStatusCode): void => {
+        if (status === RunStatusCode.started) {
+          this.lightClient?.emitter.off(LightclientEvent.statusChange, lightClientStarted);
+          resolve();
+        }
+      };
+      this.lightClient?.emitter.on(LightclientEvent.statusChange, lightClientStarted);
+      this.lightClient?.start();
+    });
     this.registerEvents();
 
-    const headSlot = this.lightClient.getHead().beacon.slot;
-    await this.lightClient?.sync(
-      computeSyncPeriodAtSlot(headSlot - MAX_REQUEST_LIGHT_CLIENT_UPDATES),
-      computeSyncPeriodAtSlot(headSlot)
-    );
-
     // Load the payloads from the CL
-    const {start, end} = await getSlotLimitsForPayloads(this.lightClient);
-    const payloads = await getExecutionPayloads(this.options.api, start, end);
-    for (const [slot, payload] of Object.entries(payloads)) {
-      const blockNumber = numberToHex(payload.blockNumber);
-      this.payloads.set(blockNumber, payload);
-      this.slotsMap[parseInt(slot)] = blockNumber;
+    const {start, end} = await getUnFinalizedRangeForPayloads(this.lightClient);
+    const payloads = await getExecutionPayloads(this.opts.api, start, end);
+    for (const payload of Object.values(payloads)) {
+      this.store.set(payload, false);
     }
 
     // Load the finalized payload from the CL
     const finalizedSlot = this.lightClient.getFinalized().beacon.slot;
-    const finalizedPayload = await getExecutionPayloads(this.options.api, finalizedSlot, finalizedSlot);
-    const finalizedBlockNumber = numberToHex(finalizedPayload[finalizedSlot].blockNumber);
-    this.finalizedSlot = finalizedSlot;
-    this.slotsMap[finalizedSlot] = finalizedBlockNumber;
+    const finalizedPayload = await getExecutionPayloads(this.opts.api, finalizedSlot, finalizedSlot);
+    this.store.set(finalizedPayload[finalizedSlot], true);
   }
 
   getStatus(): {latest: number; finalized: number; status: RunStatusCode} {
-    assertLightClient(this.lightClient);
+    if (!this.lightClient) {
+      return {
+        latest: 0,
+        finalized: 0,
+        status: RunStatusCode.uninitialized,
+      };
+    }
 
     return {
       latest: this.lightClient.getHead().beacon.slot,
       finalized: this.lightClient.getFinalized().beacon.slot,
-      status: this.lightClient.getStatus(),
+      status: this.lightClient.status,
     };
   }
 
@@ -113,25 +119,19 @@ export class ProofProvider {
     assertLightClient(this.lightClient);
 
     if (typeof blockNumber === "string" && blockNumber === "finalized") {
-      const payload = this.payloads.get(this.slotsMap[this.finalizedSlot]);
+      const payload = this.store.finalized;
       if (!payload) throw new Error("No finalized payload");
       return payload;
     }
 
     if (typeof blockNumber === "string" && blockNumber === "latest") {
-      const payload = this.payloads.last;
+      const payload = this.store.latest;
       if (!payload) throw new Error("No latest payload");
       return payload;
     }
 
-    if (typeof blockNumber === "string" && blockNumber.startsWith("0x")) {
-      const payload = this.payloads.get(blockNumber);
-      if (!payload) throw new Error(`No payload for blockNumber ${blockNumber}`);
-      return payload;
-    }
-
-    if (typeof blockNumber === "number") {
-      const payload = this.payloads.get(numberToHex(blockNumber));
+    if ((typeof blockNumber === "string" && blockNumber.startsWith("0x")) || typeof blockNumber === "number") {
+      const payload = this.store.get(blockNumber);
       if (!payload) throw new Error(`No payload for blockNumber ${blockNumber}`);
       return payload;
     }
@@ -139,63 +139,40 @@ export class ProofProvider {
     throw new Error(`Invalid blockNumber "${blockNumber}"`);
   }
 
-  async update(lcHeader: allForks.LightClientHeader, finalized = false): Promise<void> {
-    const fork = this.options.config.getForkName(lcHeader.beacon.slot);
+  async processLCHeader(lcHeader: allForks.LightClientHeader, finalized = false): Promise<void> {
+    const fork = this.opts.config.getForkName(lcHeader.beacon.slot);
 
     if (!isForkExecution(fork)) {
       return;
     }
 
-    if (isForkExecution(fork) && !("execution" in lcHeader)) {
+    if (
+      isForkExecution(fork) &&
+      (!("execution" in lcHeader) || lcHeader.execution === ssz.capella.ExecutionPayloadHeader.defaultValue())
+    ) {
       throw new Error("Execution payload is required for execution fork");
     }
 
-    const newPayload = (lcHeader as capella.LightClientHeader).execution;
-    const blockNumber = numberToHex(newPayload.blockNumber);
-    const blockSlot = lcHeader.beacon.slot;
-    const existingPayload = this.payloads.get(blockNumber);
-
-    if (existingPayload && existingPayload.blockHash === newPayload.blockHash) {
-      if (finalized) {
-        this.finalizedSlot = blockSlot;
-      }
-
-      // We payload have the payload for this block
-      return;
-    }
-
-    if (existingPayload && existingPayload.blockHash !== newPayload.blockHash) {
-      // TODO: Need to decide either
-      // 1. throw an error
-      // 2. or just ignore it
-      // 3. or update the blockHash
-    }
-
-    const newPayloads = await getExecutionPayloads(this.options.api, blockSlot, blockSlot);
-    this.payloads.set(blockNumber, newPayloads[blockSlot]);
-    this.slotsMap[blockSlot] = blockNumber;
-    if (finalized) {
-      this.finalizedSlot = blockSlot;
-    }
+    await this.store.processLCHeader(lcHeader as capella.LightClientHeader, finalized);
   }
 
   private registerEvents(): void {
     assertLightClient(this.lightClient);
 
-    this.options.signal.addEventListener("abort", () => {
+    this.opts.signal.addEventListener("abort", () => {
       this.lightClient?.stop();
     });
 
-    this.lightClient.emitter.on(LightclientEvent.lightClientFinalityUpdate, async (data) => {
-      await this.update(data, true).catch((e) => {
+    this.lightClient.emitter.on(LightclientEvent.lightClientFinalityHeader, async (data) => {
+      await this.processLCHeader(data, true).catch((e) => {
         // Will be replaced with logger in next PR.
         // eslint-disable-next-line no-console
         console.error(e);
       });
     });
 
-    this.lightClient.emitter.on(LightclientEvent.lightClientOptimisticUpdate, async (data) => {
-      await this.update(data).catch((e) => {
+    this.lightClient.emitter.on(LightclientEvent.lightClientOptimisticHeader, async (data) => {
+      await this.processLCHeader(data).catch((e) => {
         // Will be replaced with logger in next PR.
         // eslint-disable-next-line no-console
         console.error(e);

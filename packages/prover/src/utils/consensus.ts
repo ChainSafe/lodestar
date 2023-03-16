@@ -21,7 +21,7 @@ export async function fetchNearestBlock(
   throw new Error(`Can not fetch nearest block for slot=${slot}`);
 }
 
-export async function getSlotLimitsForPayloads(lightClient: Lightclient): Promise<{start: number; end: number}> {
+export async function getUnFinalizedRangeForPayloads(lightClient: Lightclient): Promise<{start: number; end: number}> {
   const headSlot = lightClient.getHead().beacon.slot;
   const finalizeSlot = lightClient.getFinalized().beacon.slot;
   const endSlot = headSlot - MAX_PAYLOAD_HISTORY;

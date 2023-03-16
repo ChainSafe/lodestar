@@ -2,7 +2,7 @@ import {NetworkName} from "@lodestar/config/networks";
 import {
   EIP1193Provider,
   EthersProvider,
-  LightNode,
+  LCTransport,
   RequestProvider,
   SendAsyncProvider,
   SendProvider,
@@ -19,9 +19,9 @@ import {
 } from "./utils/assertion.js";
 import {processAndVerifyRequest} from "./utils/execution.js";
 
-type ProvableProviderInitOpts = {network?: NetworkName; checkpoint?: string} & (
-  | {mode: LightNode.Rest; urls: string[]}
-  | {mode: LightNode.P2P; bootnodes: string[]}
+type ProvableProviderInitOpts = {network?: NetworkName; wsCheckpoint?: string} & (
+  | {transport: LCTransport.Rest; urls: string[]}
+  | {transport: LCTransport.P2P; bootnodes: string[]}
 );
 
 const defaultNetwork = "mainnet";
