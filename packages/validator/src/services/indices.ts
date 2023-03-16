@@ -122,6 +122,9 @@ export class IndicesService {
 
   private async fetchValidatorIndices(pubkeysHex: string[]): Promise<ValidatorIndex[]> {
     const res = await this.api.beacon.getStateValidators("head", {id: pubkeysHex});
+    if (res.status === 404) {
+      this.logger.warn("Validator pubkey not found in state");
+    }
     ApiError.assert(res, "Can not fetch state validators from beacon node");
 
     const newIndices = [];
