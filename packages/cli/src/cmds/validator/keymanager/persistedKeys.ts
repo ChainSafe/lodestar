@@ -66,6 +66,10 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     }
   }
 
+  getDirSize(): number {
+    return fs.readdirSync(this.paths.keystoresDir).length;
+  }
+
   deleteProposerConfig(pubkeyHex: PubkeyHex): void {
     if (fs.existsSync(this.paths.proposerDir)) {
       const {proposerDirPath} = this.getValidatorPaths(pubkeyHex);
@@ -110,6 +114,65 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
         });
       }
     }
+
+    return keystoreDefinitions;
+  }
+
+  async readKeyStoresInBatches(files: string[], path: string, batchSize: number): Promise<LocalKeystoreDefinition[]> {
+    const numBatches = Math.ceil(files.length / batchSize);
+
+    const batches = Array.from({length: numBatches}, (_, i) => {
+      const start = i * batchSize;
+      const end = start + batchSize;
+      return files.slice(start, end);
+    });
+
+    const allKeystoreDefinitions = await Promise.all(
+      batches
+        .map((batch) => {
+          return new Promise<LocalKeystoreDefinition[]>((resolve, reject) => {
+            return this.readKeystoreByBatch(path, batch, resolve, reject);
+          });
+        })
+        .flat()
+    );
+
+    return allKeystoreDefinitions.flat();
+  }
+
+  readKeystoreByBatch(
+    path: string,
+    batch: string[],
+    resolve: (value: LocalKeystoreDefinition[]) => void,
+    reject: (err: Error) => void
+  ): LocalKeystoreDefinition[] {
+    const keystoreDefinitions: LocalKeystoreDefinition[] = [];
+
+    Promise.all(
+      batch.map((pubkey) => {
+        const {dirpath, keystoreFilepath, passphraseFilepath} = this.getValidatorPaths(pubkey);
+
+        return new Promise<void>((resolve, reject) => {
+          fs.stat(dirpath, (error, stats) => {
+            if (error) {
+              reject(error);
+            } else if (stats.isDirectory()) {
+              keystoreDefinitions.push({
+                keystorePath: keystoreFilepath,
+                password: readPassphraseFile(passphraseFilepath),
+              });
+              resolve();
+            }
+          });
+        });
+      })
+    )
+      .then(() => {
+        resolve(keystoreDefinitions);
+      })
+      .catch((err) => {
+        reject(err);
+      });
 
     return keystoreDefinitions;
   }
