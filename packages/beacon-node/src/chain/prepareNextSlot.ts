@@ -2,12 +2,13 @@ import {computeEpochAtSlot, isExecutionStateType, computeTimeAtSlot} from "@lode
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {Logger, sleep} from "@lodestar/utils";
+import {Logger, sleep, fromHex} from "@lodestar/utils";
+import {routes} from "@lodestar/api";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";
 import {TransitionConfigurationV1} from "../execution/engine/interface.js";
 import {ChainEvent} from "./emitter.js";
-import {prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
+import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBlock/produceBlockBody.js";
 import {IBeaconChain} from "./interface.js";
 import {RegenCaller} from "./regen/index.js";
 
@@ -155,6 +156,17 @@ export class PrepareNextSlotScheduler {
             proposerIndex,
             feeRecipient,
           });
+        }
+
+        // If emitPayloadAttributes is true emit a SSE payloadAttributes event
+        if (this.chain.opts.emitPayloadAttributes === true) {
+          const data = await getPayloadAttributesForSSE(fork as ForkExecution, this.chain, {
+            prepareState,
+            prepareSlot,
+            parentBlockRoot: fromHex(headRoot),
+            feeRecipient: "0x0000000000000000000000000000000000000000000000000000000000000000",
+          });
+          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
         }
       }
     } catch (e) {

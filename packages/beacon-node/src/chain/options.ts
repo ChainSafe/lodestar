@@ -44,6 +44,7 @@ export type BlockProcessOpts = {
    * will still issue fcU for block proposal
    */
   disableImportExecutionFcU?: boolean;
+  emitPayloadAttributes?: boolean;
 };
 
 export const defaultChainOptions: IChainOptions = {
@@ -57,4 +58,5 @@ export const defaultChainOptions: IChainOptions = {
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,
+  emitPayloadAttributes: false,
 };
