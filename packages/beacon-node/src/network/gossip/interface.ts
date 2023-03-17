@@ -4,7 +4,7 @@ import {Message, TopicValidatorResult} from "@libp2p/interface-pubsub";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
-import {allForks, altair, capella, deneb, phase0} from "@lodestar/types";
+import {allForks, altair, capella, deneb, phase0, SlotRoot} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
@@ -151,9 +151,12 @@ export type GossipBeaconNode = {
 export type GossipValidatorFn = (
   topic: GossipTopic,
   msg: Message,
+  object: GossipTypeMap[GossipType] | null,
   propagationSource: PeerIdStr,
   seenTimestampSec: number
-) => Promise<TopicValidatorResult>;
+) => Promise<
+  {type: "done"; result: TopicValidatorResult} | {type: "retryUnknownBlock"; gossipObject: GossipTypeMap[GossipType]}
+>;
 
 export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
 
@@ -167,6 +170,7 @@ export type GossipHandlerFn = (
   peerIdStr: string,
   seenTimestampSec: number
 ) => Promise<void>;
+
 export type GossipHandlers = {
   [K in GossipType]: (
     object: GossipTypeMap[K],
@@ -175,6 +179,11 @@ export type GossipHandlers = {
     seenTimestampSec: number
   ) => Promise<void>;
 };
+
+export type UnknownBlockFns = {
+  [K in GossipType]: (object: GossipTypeMap[K]) => SlotRoot;
+};
+export type UnknownBlockFromGossipObjectFn = (object: GossipTypeMap[GossipType]) => SlotRoot;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ResolvedType<F extends (...args: any) => Promise<any>> = F extends (...args: any) => Promise<infer T>

@@ -3,6 +3,7 @@ import {LodestarError} from "@lodestar/utils";
 export enum GossipAction {
   IGNORE = "IGNORE",
   REJECT = "REJECT",
+  RETRY_UNKNOWN_BLOCK = "RETRY_UNKNOWN_BLOCK",
 }
 
 export class GossipActionError<T extends {code: string}> extends LodestarError<T> {

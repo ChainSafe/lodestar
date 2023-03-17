@@ -29,31 +29,36 @@ export type ValidatorFnModules = {
 export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: ValidatorFnModules): GossipValidatorFn {
   const {logger, metrics} = modules;
 
-  return async function gossipValidatorFn(topic, msg, propagationSource, seenTimestampSec) {
+  return async function gossipValidatorFn(topic, msg, obj, propagationSource, seenTimestampSec) {
     const type = topic.type;
 
     // Define in scope above try {} to be used in catch {} if object was parsed
-    let gossipObject;
-    try {
-      // Deserialize object from bytes ONLY after being picked up from the validation queue
+    let gossipObject = obj;
+    // Deserialize object from bytes ONLY after being picked up from the validation queue
+    // Do not need to deserialize if it's a retry
+    if (gossipObject) {
+      metrics?.gossipValidationReprocess.inc({topic: type});
+    } else {
       try {
         const sszType = getGossipSSZType(topic);
         gossipObject = sszType.deserialize(msg.data);
       } catch (e) {
         // TODO: Log the error or do something better with it
-        return TopicValidatorResult.Reject;
+        return {type: "done", result: TopicValidatorResult.Reject};
       }
+    }
 
+    try {
       await (gossipHandlers[topic.type] as GossipHandlerFn)(gossipObject, topic, propagationSource, seenTimestampSec);
 
       metrics?.gossipValidationAccept.inc({topic: type});
 
-      return TopicValidatorResult.Accept;
+      return {type: "done", result: TopicValidatorResult.Accept};
     } catch (e) {
       if (!(e instanceof GossipActionError)) {
         // not deserve to log error here, it looks too dangerous to users
         logger.debug(`Gossip validation ${type} threw a non-GossipActionError`, {}, e as Error);
-        return TopicValidatorResult.Ignore;
+        return {type: "done", result: TopicValidatorResult.Ignore};
       }
 
       // Metrics on specific error reason
@@ -63,11 +68,15 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
       switch (e.action) {
         case GossipAction.IGNORE:
           metrics?.gossipValidationIgnore.inc({topic: type});
-          return TopicValidatorResult.Ignore;
+          return {type: "done", result: TopicValidatorResult.Ignore};
 
         case GossipAction.REJECT:
           metrics?.gossipValidationReject.inc({topic: type});
-          return TopicValidatorResult.Reject;
+          return {type: "done", result: TopicValidatorResult.Reject};
+
+        case GossipAction.RETRY_UNKNOWN_BLOCK:
+          metrics?.gossipValidationRetry.inc({topic: type});
+          return {type: "retryUnknownBlock", gossipObject};
       }
     }
   };

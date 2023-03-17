@@ -226,7 +226,8 @@ function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): Pro
 
   const headBlock = chain.forkChoice.getBlock(beaconBlockRoot);
   if (headBlock === null) {
-    throw new AttestationError(GossipAction.IGNORE, {
+    // should retry the attestation when a block with beaconBlockRoot comes
+    throw new AttestationError(GossipAction.RETRY_UNKNOWN_BLOCK, {
       code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT,
       root: toHexString(beaconBlockRoot as typeof beaconBlockRoot),
     });

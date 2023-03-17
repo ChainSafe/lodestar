@@ -237,6 +237,16 @@ export function createLodestarMetrics(
       help: "Count of total gossip validation reject",
       labelNames: ["topic"],
     }),
+    gossipValidationRetry: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_retry_total",
+      help: "Count of total gossip validation retry",
+      labelNames: ["topic"],
+    }),
+    gossipValidationReprocess: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_reprocess_total",
+      help: "Count of total gossip validation reprocess",
+      labelNames: ["topic"],
+    }),
     gossipValidationError: register.gauge<"topic" | "error">({
       name: "lodestar_gossip_validation_error_total",
       help: "Count of total gossip validation errors detailed",
@@ -1188,8 +1198,8 @@ export function createLodestarMetrics(
       }),
     },
 
-    // reprocess attestations
-    reprocessAttestations: {
+    // reprocess api attestations
+    reprocessApiAttestations: {
       total: register.gauge({
         name: "lodestar_reprocess_attestations_total",
         help: "Total number of attestations waiting to reprocess",
@@ -1198,7 +1208,7 @@ export function createLodestarMetrics(
         name: "lodestar_reprocess_attestations_resolve_total",
         help: "Total number of attestations are reprocessed",
       }),
-      waitTimeBeforeResolve: register.gauge({
+      waitSecBeforeResolve: register.gauge({
         name: "lodestar_reprocess_attestations_wait_time_resolve_seconds",
         help: "Time to wait for unknown block in seconds",
       }),
@@ -1207,8 +1217,37 @@ export function createLodestarMetrics(
         help: "Total number of attestations are rejected to reprocess",
         labelNames: ["reason"],
       }),
-      waitTimeBeforeReject: register.gauge<"reason">({
+      waitSecBeforeReject: register.gauge<"reason">({
         name: "lodestar_reprocess_attestations_wait_time_reject_seconds",
+        help: "Time to wait for unknown block before being rejected",
+      }),
+    },
+
+    // reprocess gossip attestations
+    reprocessGossipAttestations: {
+      total: register.gauge({
+        name: "lodestar_reprocess_gossip_attestations_total",
+        help: "Total number of gossip attestations waiting to reprocess",
+      }),
+      countPerSlot: register.gauge({
+        name: "lodestar_reprocess_gossip_attestations_per_slot_total",
+        help: "Total number of gossip attestations waiting to reprocess pet slot",
+      }),
+      resolve: register.gauge({
+        name: "lodestar_reprocess_gossip_attestations_resolve_total",
+        help: "Total number of gossip attestations are reprocessed",
+      }),
+      waitSecBeforeResolve: register.gauge({
+        name: "lodestar_reprocess_gossip_attestations_wait_time_resolve_seconds",
+        help: "Time to wait for unknown block in seconds",
+      }),
+      reject: register.gauge<"reason">({
+        name: "lodestar_reprocess_gossip_attestations_reject_total",
+        help: "Total number of attestations are rejected to reprocess",
+        labelNames: ["reason"],
+      }),
+      waitSecBeforeReject: register.gauge<"reason">({
+        name: "lodestar_reprocess_gossip_attestations_wait_time_reject_seconds",
         help: "Time to wait for unknown block before being rejected",
       }),
     },

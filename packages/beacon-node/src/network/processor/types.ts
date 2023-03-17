@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Message} from "@libp2p/interface-pubsub";
-import {GossipTopic} from "../gossip/index.js";
+import {GossipTopic, GossipType, GossipTypeMap} from "../gossip/index.js";
 
 export type GossipAttestationsWork = {
   messages: PendingGossipsubMessage[];
@@ -14,4 +14,9 @@ export type PendingGossipsubMessage = {
   propagationSource: PeerId;
   seenTimestampSec: number;
   startProcessUnixSec: number | null;
+  gossipObject: GossipTypeMap[GossipType] | null;
+};
+
+export type WaitingGossipsubMessage = PendingGossipsubMessage & {
+  addedTimeMs: number;
 };

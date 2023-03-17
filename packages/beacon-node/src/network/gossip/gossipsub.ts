@@ -404,6 +404,7 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
       propagationSource,
       seenTimestampSec,
       startProcessUnixSec: null,
+      gossipObject: null,
     });
   }
 

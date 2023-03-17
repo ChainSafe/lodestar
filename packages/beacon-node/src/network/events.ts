@@ -19,7 +19,12 @@ export enum NetworkEvent {
 
   // Network processor events
   pendingGossipsubMessage = "gossip.pendingGossipsubMessage",
+  reprocessGossipsubMessage = "gossip.reprocessGossipsubMessage",
   gossipMessageValidationResult = "gossip.messageValidationResult",
+}
+
+export enum ReprocessGossipMessageType {
+  unknownBlock = "unknownBlock",
 }
 
 export type NetworkEvents = {
@@ -28,6 +33,7 @@ export type NetworkEvents = {
   [NetworkEvent.reqRespRequest]: (request: RequestTypedContainer, peer: PeerId) => void;
   [NetworkEvent.unknownBlockParent]: (blockInput: BlockInput, peerIdStr: string) => void;
   [NetworkEvent.pendingGossipsubMessage]: (data: PendingGossipsubMessage) => void;
+  [NetworkEvent.reprocessGossipsubMessage]: (data: PendingGossipsubMessage, type: ReprocessGossipMessageType) => void;
   [NetworkEvent.gossipMessageValidationResult]: (
     msgId: string,
     propagationSource: PeerId,
