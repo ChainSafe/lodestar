@@ -15,14 +15,14 @@ You can use the `@lodestar/prover` in two ways, as a Web3 Provider and as proxy.
 
 ```ts
 import Web3 from "web3";
-import {createVerifiedExecutionProvider, LightNode} from "@lodestar/prover";
+import {createVerifiedExecutionProvider, LCTransport} from "@lodestar/prover";
 
 const {provider, proofProvider} = createVerifiedExecutionProvider(
   new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io"), {
-  mode: LightNode.Rest,
+  transport: LCTransport.Rest,
   urls: ["https://lodestar-sepolia.chainsafe.io"],
   network: "sepolia",
-  checkpoint: "trusted-checkpoint"
+  wsCheckpoint: "trusted-checkpoint"
 });
 
 const web3 = new Web3(provider);

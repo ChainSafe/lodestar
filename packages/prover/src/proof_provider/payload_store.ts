@@ -83,8 +83,9 @@ export class PayloadStore {
 
     const existingCLRoot = this.rootsMap.get(blockCLRoot);
     const existingPayload = existingCLRoot ? this.payloads.get(existingCLRoot) : undefined;
+    const existingELRoot = existingPayload ? bufferToHex(existingPayload.blockHash) : undefined;
 
-    if (existingPayload && existingPayload.blockHash === header.execution.blockHash) {
+    if (existingPayload && existingELRoot === blockELRoot) {
       if (finalized) {
         this.finalizedBlockRoot = blockELRoot;
       }
@@ -94,8 +95,9 @@ export class PayloadStore {
       return;
     }
 
-    if (existingPayload && existingPayload.blockHash !== header.execution.blockHash) {
+    if (existingPayload && existingELRoot !== blockELRoot) {
       // Re-org happened, we need to update the payload
+      this.payloads.delete(blockELRoot);
       this.rootsMap.set(blockCLRoot, blockELRoot);
     }
 
