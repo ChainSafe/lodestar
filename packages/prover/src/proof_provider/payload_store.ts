@@ -1,5 +1,6 @@
 import {Api} from "@lodestar/api";
 import {allForks, capella} from "@lodestar/types";
+import {MAX_PAYLOAD_HISTORY} from "../constants.js";
 import {getExecutionPayloadForBlockNumber, getExecutionPayloads} from "../utils/consensus.js";
 import {bufferToHex, hexToNumber} from "../utils/conversion.js";
 import {OrderedMap} from "./ordered_map.js";
@@ -132,5 +133,22 @@ export class PayloadStore {
 
     this.payloads.set(blockELRoot, (await getExecutionPayloads(this.opts.api, blockSlot, blockSlot))[blockSlot]);
     this.latestBlockRoot = blockELRoot;
+    this.prune();
+  }
+
+  private prune(): void {
+    if (this.finalizedRoots.size > MAX_PAYLOAD_HISTORY) {
+      for (
+        let blockNumber = this.finalizedRoots.max - MAX_PAYLOAD_HISTORY;
+        blockNumber > this.finalizedRoots.min;
+        blockNumber--
+      ) {
+        const blockELRoot = this.finalizedRoots.get(blockNumber);
+        if (blockELRoot) {
+          this.payloads.delete(blockELRoot);
+          this.finalizedRoots.delete(blockNumber);
+        }
+      }
+    }
   }
 }
