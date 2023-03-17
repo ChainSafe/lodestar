@@ -39,7 +39,7 @@ export const chainConfig: ChainConfig = {
 
   // Capella
   CAPELLA_FORK_VERSION: b("0x03000000"),
-  CAPELLA_FORK_EPOCH: Infinity,
+  CAPELLA_FORK_EPOCH: 194048, // April 12 (epoch: 194048    slot: 6209536    UTC: 4/12/2023, 10:27:35 PM)
 
   // DENEB
   EIP4844_FORK_VERSION: b("0x04000000"),
