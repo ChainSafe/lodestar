@@ -115,7 +115,7 @@ export class ProofProvider {
     };
   }
 
-  getExecutionPayload(blockNumber: number | string | "finalized" | "latest"): allForks.ExecutionPayload {
+  async getExecutionPayload(blockNumber: number | string | "finalized" | "latest"): Promise<allForks.ExecutionPayload> {
     assertLightClient(this.lightClient);
 
     if (typeof blockNumber === "string" && blockNumber === "finalized") {
@@ -131,7 +131,7 @@ export class ProofProvider {
     }
 
     if ((typeof blockNumber === "string" && blockNumber.startsWith("0x")) || typeof blockNumber === "number") {
-      const payload = this.store.get(blockNumber);
+      const payload = await this.store.get(blockNumber);
       if (!payload) throw new Error(`No payload for blockNumber ${blockNumber}`);
       return payload;
     }

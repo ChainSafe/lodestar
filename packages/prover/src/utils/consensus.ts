@@ -59,6 +59,24 @@ export async function getExecutionPayloads(
   return payloads;
 }
 
+export async function getExecutionPayloadForBlockNumber(
+  api: Api,
+  startSlot: number,
+  blockNumber: number
+): Promise<Record<number, allForks.ExecutionPayload>> {
+  const payloads: Record<number, allForks.ExecutionPayload> = {};
+
+  let block = (await fetchNearestBlock(api, startSlot, "down")) as capella.SignedBeaconBlock;
+  payloads[block.message.slot] = block.message.body.executionPayload;
+
+  while (payloads[block.message.slot].blockNumber !== blockNumber) {
+    const previousBlock = (await fetchNearestBlock(api, block.message.slot - 1, "down")) as capella.SignedBeaconBlock;
+    block = previousBlock;
+  }
+
+  return payloads;
+}
+
 export async function getGenesisData(api: Pick<Api, "beacon">): Promise<GenesisData> {
   const res = await api.beacon.getGenesis();
   ApiError.assert(res);

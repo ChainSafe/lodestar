@@ -11,7 +11,7 @@ export const ethGetBalance: ELVerifiedRequestHandler<[address: string, block?: n
   const {
     params: [address, block],
   } = payload;
-  const executionPayload = rootProvider.getExecutionPayload(block ?? "latest");
+  const executionPayload = await rootProvider.getExecutionPayload(block ?? "latest");
   const proof = await getELProof(handler, [address, [], bufferToHex(executionPayload.blockHash)]);
 
   if (
