@@ -275,10 +275,10 @@ export function initializeBeaconStateFromEth1(
       ssz.capella.ExecutionPayloadHeader.defaultViewDU();
   }
 
-  if (GENESIS_SLOT >= config.EIP4844_FORK_EPOCH) {
+  if (GENESIS_SLOT >= config.DENEB_FORK_EPOCH) {
     const stateDeneb = state as CompositeViewDU<typeof ssz.deneb.BeaconState>;
-    stateDeneb.fork.previousVersion = config.EIP4844_FORK_VERSION;
-    stateDeneb.fork.currentVersion = config.EIP4844_FORK_VERSION;
+    stateDeneb.fork.previousVersion = config.DENEB_FORK_VERSION;
+    stateDeneb.fork.currentVersion = config.DENEB_FORK_VERSION;
     stateDeneb.latestExecutionPayloadHeader =
       (executionPayloadHeader as CompositeViewDU<typeof ssz.deneb.ExecutionPayloadHeader>) ??
       ssz.deneb.ExecutionPayloadHeader.defaultViewDU();

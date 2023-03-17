@@ -11,7 +11,7 @@ describe("isValidLightClientHeader", function () {
     ALTAIR_FORK_EPOCH: 0,
     BELLATRIX_FORK_EPOCH: 0,
     CAPELLA_FORK_EPOCH: 1,
-    EIP4844_FORK_EPOCH: Infinity,
+    DENEB_FORK_EPOCH: Infinity,
   });
 
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);

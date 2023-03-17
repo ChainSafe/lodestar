@@ -193,7 +193,7 @@ function processSlotsWithTransientCache(
       if (stateSlot === config.CAPELLA_FORK_EPOCH) {
         postState = upgradeStateToCapella(postState as CachedBeaconStateBellatrix) as CachedBeaconStateAllForks;
       }
-      if (stateSlot === config.EIP4844_FORK_EPOCH) {
+      if (stateSlot === config.DENEB_FORK_EPOCH) {
         postState = upgradeStateToDeneb(postState as CachedBeaconStateCapella) as CachedBeaconStateAllForks;
       }
     } else {

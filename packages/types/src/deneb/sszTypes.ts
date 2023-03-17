@@ -86,23 +86,16 @@ export const BeaconBlockAndBlobsSidecarByRootRequest = new ListCompositeType(Roo
 
 export const ExecutionPayload = new ContainerType(
   {
-    ...bellatrixSsz.CommonExecutionPayloadType.fields,
+    ...capellaSsz.ExecutionPayload.fields,
     excessDataGas: UintBn256, // New in DENEB
-    // Extra payload fields
-    blockHash: Root,
-    transactions: bellatrixSsz.Transactions,
-    withdrawals: capellaSsz.Withdrawals, // New in capella
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
 export const ExecutionPayloadHeader = new ContainerType(
   {
-    ...bellatrixSsz.CommonExecutionPayloadType.fields,
+    ...capellaSsz.ExecutionPayloadHeader.fields,
     excessDataGas: UintBn256, // New in DENEB
-    blockHash: Root,
-    transactionsRoot: Root,
-    withdrawalsRoot: Root,
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );

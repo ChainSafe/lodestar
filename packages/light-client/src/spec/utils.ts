@@ -121,7 +121,7 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: allFor
     );
   }
 
-  if (epoch < config.EIP4844_FORK_EPOCH) {
+  if (epoch < config.DENEB_FORK_EPOCH) {
     if (
       (header as deneb.LightClientHeader).execution.excessDataGas &&
       (header as deneb.LightClientHeader).execution.excessDataGas !== BigInt(0)
