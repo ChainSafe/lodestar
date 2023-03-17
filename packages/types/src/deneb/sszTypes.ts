@@ -13,7 +13,6 @@ import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
-import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 
 const {UintNum64, Slot, Root, BLSSignature, UintBn256, Bytes32, Bytes48, Bytes96, BLSPubkey} = primitiveSsz;
 

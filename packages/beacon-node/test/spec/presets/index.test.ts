@@ -33,6 +33,7 @@ const skipOpts: SkipOpts = {
   // To be enabled in decouple blobs PR: https://github.com/ChainSafe/lodestar/pull/5181
   skippedForks: ["deneb"],
   // To be enabled with the fork choice safe slots to justified removal PR
+  // https://github.com/ChainSafe/lodestar/pull/5126
   skippedRunners: ["fork_choice"],
   // TODO: capella
   // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
