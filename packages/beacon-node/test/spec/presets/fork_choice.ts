@@ -6,7 +6,7 @@ import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createBeaconConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, isForkBlobs} from "@lodestar/params";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
@@ -42,8 +42,10 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
 ) => {
   return {
     testFunction: async (testcase) => {
-      await initCKZG();
-      loadEthereumTrustedSetup();
+      if (isForkBlobs(fork)) {
+        await initCKZG();
+        loadEthereumTrustedSetup();
+      }
 
       const {steps, anchorState} = testcase;
       const currentSlot = anchorState.slot;
