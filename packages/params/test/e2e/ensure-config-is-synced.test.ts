@@ -37,10 +37,7 @@ async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: strin
   const downloadedParams = await Promise.all(
     Object.values(ForkName).map((forkName) =>
       axios({
-        url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/${
-          // TODO eip4844: clean this up when specs are released with deneb
-          forkName === "deneb" ? "eip4844" : forkName
-        }.yaml`,
+        url: `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/presets/${preset}/${forkName}.yaml`,
         timeout: 30 * 1000,
       }).then((response) => loadConfigYaml(response.data))
     )
