@@ -7,7 +7,7 @@ import fs from "node:fs";
 export function readPassphraseFile(passphraseFile: string): string {
   const data = fs.readFileSync(passphraseFile, "utf8");
   // Remove trailing new lines '\n' or '\r' if any
-  const passphrase = data.replace(/[\n|\r]+$/g, "");
+  const passphrase = data.replace(/[\n\r]+$/g, "");
 
   // Validate the passphraseFile contents to prevent the user to create a wallet with a password
   // that is the contents a random unintended file
