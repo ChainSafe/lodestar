@@ -83,7 +83,6 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
           // we don't use these in fork choice spec tests
           disablePrepareNextSlot: true,
           assertCorrectProgressiveBalances,
-          computeUnrealized: true,
         },
         {
           config: createBeaconConfig(config, state.genesisValidatorsRoot),
