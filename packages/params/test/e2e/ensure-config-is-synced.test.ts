@@ -8,7 +8,7 @@ import {loadConfigYaml} from "../yaml.js";
 // Not e2e, but slow. Run with e2e tests
 
 /** https://github.com/ethereum/consensus-specs/releases */
-const specConfigCommit = "v1.3.0-rc.2";
+const specConfigCommit = "v1.3.0-rc.4";
 
 describe("Ensure config is synced", function () {
   this.timeout(60 * 1000);
