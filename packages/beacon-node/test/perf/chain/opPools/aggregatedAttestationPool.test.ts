@@ -107,10 +107,6 @@ describe("getAttestationsForBlock", () => {
         checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
         balances: originalState.epochCtx.effectiveBalanceIncrements,
       },
-      bestJustified: {
-        checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
-        balances: originalState.epochCtx.effectiveBalanceIncrements,
-      },
       unrealizedJustified: {
         checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
         balances: originalState.epochCtx.effectiveBalanceIncrements,

@@ -83,7 +83,6 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
           // we don't use these in fork choice spec tests
           disablePrepareNextSlot: true,
           assertCorrectProgressiveBalances,
-          computeUnrealized: false,
         },
         {
           config: createBeaconConfig(config, state.genesisValidatorsRoot),
@@ -246,14 +245,6 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
                 `Invalid finalized checkpoint at step ${i}`
               );
             }
-            if (step.checks.best_justified_checkpoint) {
-              expect(
-                toSpecTestCheckpoint((chain.forkChoice as ForkChoice).getBestJustifiedCheckpoint())
-              ).to.be.deep.equal(
-                step.checks.best_justified_checkpoint,
-                `Invalid best justified checkpoint at step ${i}`
-              );
-            }
           }
 
           // None of the above
@@ -398,7 +389,6 @@ type Checks = {
     time?: bigint;
     justified_checkpoint?: SpecTestCheckpoint;
     finalized_checkpoint?: SpecTestCheckpoint;
-    best_justified_checkpoint?: SpecTestCheckpoint;
     proposer_boost_root?: RootHex;
   };
 };
