@@ -70,12 +70,12 @@ export class SyncCommitteeMessagePool {
 
     // Reject if too old.
     if (slot < lowestPermissibleSlot) {
-      throw new OpPoolError({code: OpPoolErrorCode.SLOT_TOO_LOW, slot, lowestPermissibleSlot});
+      return InsertOutcome.Old;
     }
 
     // validator gets SyncCommitteeContribution at 2/3 of slot, it's no use to preaggregate later than that time
     if (this.clock.secFromSlot(slot) > this.cutOffSecFromSlot) {
-      throw new OpPoolError({code: OpPoolErrorCode.LATE_MESSAGE, slot});
+      return InsertOutcome.Late;
     }
 
     // Limit object per slot

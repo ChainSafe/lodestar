@@ -22,15 +22,12 @@ export enum InsertOutcome {
 export enum OpPoolErrorCode {
   /** The given object slot was too low to be stored. No changes were made. */
   SLOT_TOO_LOW = "OP_POOL_ERROR_SLOT_TOO_LOW",
-  /** Good slot but it comes to the pool at late time */
-  LATE_MESSAGE = "OP_POOL_ERROR_LATE_MESSAGE",
   /** Reached max number of unique objects per slot. This is a DoS protection function. */
   REACHED_MAX_PER_SLOT = "OP_POOL_ERROR_REACHED_MAX_PER_SLOT",
 }
 
 export type OpPoolErrorType =
   | {code: OpPoolErrorCode.SLOT_TOO_LOW; slot: Slot; lowestPermissibleSlot: Slot}
-  | {code: OpPoolErrorCode.LATE_MESSAGE; slot: Slot}
   | {code: OpPoolErrorCode.REACHED_MAX_PER_SLOT};
 
 export class OpPoolError extends LodestarError<OpPoolErrorType> {}
