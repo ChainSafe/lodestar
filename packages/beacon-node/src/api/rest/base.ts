@@ -45,12 +45,12 @@ export class RestApiServer {
       ajv: {customOptions: {coerceTypes: "array"}},
       querystringParser: (str) =>
         qs.parse(str, {
-          // defaults to 20 but Beacon API spec allows max items of 30
-          arrayLimit: 30,
-          // array as comma-separated values must be supported to be OpenAPI spec compliant
+          // Array as comma-separated values must be supported to be OpenAPI spec compliant
           comma: true,
-          // default limit of 1000 seems unnecessarily high, let's reduce it a bit
-          parameterLimit: 100,
+          // Drop support for array query strings like `id[0]=1&id[1]=2&id[2]=3` as those are not required to
+          // be OpenAPI spec compliant and results are inconsistent, see https://github.com/ljharb/qs/issues/331.
+          // The schema validation will catch this and throw an error as parsed query string results in an object.
+          parseArrays: false,
         }),
       bodyLimit: opts.bodyLimit,
     });

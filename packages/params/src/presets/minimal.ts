@@ -19,11 +19,6 @@ export const minimalPreset: BeaconPreset = {
   // 5 (plus 1.25)
   HYSTERESIS_UPWARD_MULTIPLIER: 5,
 
-  // Fork Choice
-  // ---------------------------------------------------------------
-  // 2**1 (= 1)
-  SAFE_SLOTS_TO_UPDATE_JUSTIFIED: 2,
-
   // Gwei values
   // ---------------------------------------------------------------
   // 2**0 * 10**9 (= 1,000,000,000) Gwei

@@ -10,7 +10,7 @@ export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
 
   const server = fastify({
     ajv: {customOptions: {coerceTypes: "array"}},
-    querystringParser: (str) => qs.parse(str, {comma: true}),
+    querystringParser: (str) => qs.parse(str, {comma: true, parseArrays: false}),
   });
 
   server.addHook("onError", (request, reply, error, done) => {

@@ -32,7 +32,7 @@ export function isForkExecution(fork: ForkName): fork is ForkExecution {
 
 export type ForkWithdrawals = Exclude<ForkExecution, ForkName.bellatrix>;
 export function isForkWithdrawals(fork: ForkName): fork is ForkWithdrawals {
-  return isForkExecution(fork) && fork !== ForkName.capella;
+  return isForkExecution(fork) && fork !== ForkName.bellatrix;
 }
 
 export type ForkBlobs = Exclude<ForkExecution, ForkName.bellatrix | ForkName.capella>;

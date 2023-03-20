@@ -1,11 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {fromHex} from "@lodestar/utils";
-import {
-  SAFE_SLOTS_TO_UPDATE_JUSTIFIED,
-  SLOTS_PER_HISTORICAL_ROOT,
-  SLOTS_PER_EPOCH,
-  INTERVALS_PER_SLOT,
-} from "@lodestar/params";
+import {SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH, INTERVALS_PER_SLOT} from "@lodestar/params";
 import {bellatrix, Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@lodestar/types";
 import {
   computeSlotsSinceEpochStart,
@@ -50,7 +45,6 @@ import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalan
 export type ForkChoiceOpts = {
   proposerBoostEnabled?: boolean;
   computeUnrealized?: boolean;
-  countUnrealizedFull?: boolean;
 };
 
 /**
@@ -131,31 +125,7 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_ancestor
    */
   getAncestor(blockRoot: RootHex, ancestorSlot: Slot): RootHex {
-    const block = this.protoArray.getBlock(blockRoot);
-    if (!block) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
-        root: blockRoot,
-      });
-    }
-
-    if (block.slot > ancestorSlot) {
-      // Search for a slot that is lte the target slot.
-      // We check for lower slots to account for skip slots.
-      for (const node of this.protoArray.iterateAncestorNodes(blockRoot)) {
-        if (node.slot <= ancestorSlot) {
-          return node.blockRoot;
-        }
-      }
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.UNKNOWN_ANCESTOR,
-        descendantRoot: blockRoot,
-        ancestorSlot,
-      });
-    } else {
-      // Root is older or equal than queried slot, thus a skip slot. Return most recent root prior to slot.
-      return blockRoot;
-    }
+    return this.protoArray.getAncestor(blockRoot, ancestorSlot);
   }
 
   /**
@@ -284,10 +254,6 @@ export class ForkChoice implements IForkChoice {
     return this.fcStore.justified.checkpoint;
   }
 
-  getBestJustifiedCheckpoint(): CheckpointWithHex {
-    return this.fcStore.bestJustified.checkpoint;
-  }
-
   /**
    * Add `block` to the fork choice DAG.
    *
@@ -394,20 +360,19 @@ export class ForkChoice implements IForkChoice {
     //  1. Its prudent to fail fast and not try importing a block in forkChoice.
     //  2. Also the data to run such a validation is readily available there.
 
-    const currentJustifiedCheckpoint = toCheckpointWithHex(state.currentJustifiedCheckpoint);
-    const stateJustifiedEpoch = currentJustifiedCheckpoint.epoch;
-
     const justifiedCheckpoint = toCheckpointWithHex(state.currentJustifiedCheckpoint);
     const finalizedCheckpoint = toCheckpointWithHex(state.finalizedCheckpoint);
+    const stateJustifiedEpoch = justifiedCheckpoint.epoch;
 
     // Justified balances for `justifiedCheckpoint` are new to the fork-choice. Compute them on demand only if
     // the justified checkpoint changes
-    this.updateCheckpoints(state.slot, justifiedCheckpoint, finalizedCheckpoint, () =>
+    this.updateCheckpoints(justifiedCheckpoint, finalizedCheckpoint, () =>
       this.fcStore.justifiedBalancesGetter(justifiedCheckpoint, state)
     );
 
     const blockEpoch = computeEpochAtSlot(slot);
 
+    // same logic to compute_pulled_up_tip because a lot of varible could be reused here
     // If the parent checkpoints are already at the same epoch as the block being imported,
     // it's impossible for the unrealized checkpoints to differ from the parent's. This
     // holds true because:
@@ -422,7 +387,10 @@ export class ForkChoice implements IForkChoice {
     let unrealizedJustifiedCheckpoint: CheckpointWithHex;
     let unrealizedFinalizedCheckpoint: CheckpointWithHex;
     if (this.opts?.computeUnrealized) {
-      if (parentBlock.unrealizedJustifiedEpoch === blockEpoch && parentBlock.unrealizedFinalizedEpoch >= blockEpoch) {
+      if (
+        parentBlock.unrealizedJustifiedEpoch === blockEpoch &&
+        parentBlock.unrealizedFinalizedEpoch + 1 >= blockEpoch
+      ) {
         // reuse from parent, happens at 1/3 last blocks of epoch as monitored in mainnet
         unrealizedJustifiedCheckpoint = {
           epoch: parentBlock.unrealizedJustifiedEpoch,
@@ -459,13 +427,7 @@ export class ForkChoice implements IForkChoice {
 
     // If block is from past epochs, try to update store's justified & finalized checkpoints right away
     if (blockEpoch < computeEpochAtSlot(currentSlot)) {
-      // Compute justified balances for unrealizedJustifiedCheckpoint on demand
-      if (unrealizedJustifiedCheckpoint === undefined) {
-        throw Error();
-      }
-      this.updateCheckpoints(state.slot, unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
-        this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint as CheckpointWithHex, state)
-      );
+      this.pullUpStoreCheckpoints();
     }
 
     const targetSlot = computeStartSlotAtEpoch(blockEpoch);
@@ -884,54 +846,13 @@ export class ForkChoice implements IForkChoice {
     return executionStatus;
   }
 
-  /**
-   * Returns `true` if the given `store` should be updated to set
-   * `state.current_justified_checkpoint` its `justified_checkpoint`.
-   *
-   * ## Specification
-   *
-   * Is equivalent to:
-   *
-   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#should_update_justified_checkpoint
-   */
-  private shouldUpdateJustifiedCheckpoint(newJustifiedCheckpoint: CheckpointWithHex, stateSlot: Slot): boolean {
-    // To address the bouncing attack, only update conflicting justified checkpoints in the first 1/3 of the epoch.
-    // Otherwise, delay consideration until the next epoch boundary with bestJustifiedCheckpoint
-    // See https://ethresear.ch/t/prevention-of-bouncing-attack-on-ffg/6114 for more detailed analysis and discussion.
-    if (computeSlotsSinceEpochStart(this.fcStore.currentSlot) < SAFE_SLOTS_TO_UPDATE_JUSTIFIED) {
-      return true;
-    }
-
-    const justifiedSlot = computeStartSlotAtEpoch(this.fcStore.justified.checkpoint.epoch);
-
-    // This sanity check is not in the spec, but the invariant is implied
-    if (justifiedSlot >= stateSlot) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ATTEMPT_TO_REVERT_JUSTIFICATION,
-        store: justifiedSlot,
-        state: stateSlot,
-      });
-    }
-
-    // at regular sync time we don't want to wait for clock time next epoch to update bestJustifiedCheckpoint
-    if (computeEpochAtSlot(stateSlot) < computeEpochAtSlot(this.fcStore.currentSlot)) {
-      return true;
-    }
-
-    // We know that the slot for `new_justified_checkpoint.root` is not greater than
-    // `state.slot`, since a state cannot justify its own slot.
-    //
-    // We know that `new_justified_checkpoint.root` is an ancestor of `state`, since a `state`
-    // only ever justifies ancestors.
-    //
-    // A prior `if` statement protects against a justified_slot that is greater than
-    // `state.slot`
-    const justifiedAncestor = this.getAncestor(toHexString(newJustifiedCheckpoint.root), justifiedSlot);
-    if (justifiedAncestor !== this.fcStore.justified.checkpoint.rootHex) {
-      return false;
-    }
-
-    return true;
+  private pullUpStoreCheckpoints(): void {
+    this.updateCheckpoints(
+      this.fcStore.unrealizedJustified.checkpoint,
+      this.fcStore.unrealizedFinalizedCheckpoint,
+      // Provide pre-computed balances for unrealizedJustified, will never trigger .justifiedBalancesGetter()
+      () => this.fcStore.unrealizedJustified.balances
+    );
   }
 
   /**
@@ -951,32 +872,23 @@ export class ForkChoice implements IForkChoice {
    *
    * **`on_tick`**
    * May need the justified balances of:
-   * - bestJustified: Already available in `CheckpointHexWithBalance`
    * - unrealizedJustified: Already available in `CheckpointHexWithBalance`
    * Since this balances are already available the getter is just `() => balances`, without cache interaction
    */
   private updateCheckpoints(
-    stateSlot: Slot,
     justifiedCheckpoint: CheckpointWithHex,
     finalizedCheckpoint: CheckpointWithHex,
     getJustifiedBalances: () => JustifiedBalances
   ): void {
     // Update justified checkpoint.
     if (justifiedCheckpoint.epoch > this.fcStore.justified.checkpoint.epoch) {
-      if (justifiedCheckpoint.epoch > this.fcStore.bestJustified.checkpoint.epoch) {
-        this.fcStore.bestJustified = {checkpoint: justifiedCheckpoint, balances: getJustifiedBalances()};
-      }
-
-      if (this.shouldUpdateJustifiedCheckpoint(justifiedCheckpoint, stateSlot)) {
-        this.fcStore.justified = {checkpoint: justifiedCheckpoint, balances: getJustifiedBalances()};
-        this.justifiedProposerBoostScore = null;
-      }
+      this.fcStore.justified = {checkpoint: justifiedCheckpoint, balances: getJustifiedBalances()};
+      this.justifiedProposerBoostScore = null;
     }
 
     // Update finalized checkpoint.
     if (finalizedCheckpoint.epoch > this.fcStore.finalizedCheckpoint.epoch) {
       this.fcStore.finalizedCheckpoint = finalizedCheckpoint;
-      this.fcStore.justified = {checkpoint: justifiedCheckpoint, balances: getJustifiedBalances()};
       this.justifiedProposerBoostScore = null;
     }
   }
@@ -1209,28 +1121,8 @@ export class ForkChoice implements IForkChoice {
       return;
     }
 
-    // Reason: A better justifiedCheckpoint from a block is only updated immediately if in the first 1/3 of the epoch
-    // This addresses a bouncing attack, see https://ethresear.ch/t/prevention-of-bouncing-attack-on-ffg/6114
-    if (this.fcStore.bestJustified.checkpoint.epoch > this.fcStore.justified.checkpoint.epoch) {
-      // TODO: Is this check necessary? It checks that bestJustifiedCheckpoint is still descendant of finalized
-      // From https://github.com/ChainSafe/lodestar/commit/6a0745e9db27dfce67b6e6c25bba452283dbbea9#
-      const finalizedSlot = computeStartSlotAtEpoch(this.fcStore.finalizedCheckpoint.epoch);
-      const ancestorAtFinalizedSlot = this.getAncestor(this.fcStore.bestJustified.checkpoint.rootHex, finalizedSlot);
-      if (ancestorAtFinalizedSlot === this.fcStore.finalizedCheckpoint.rootHex) {
-        // Provide pre-computed balances for bestJustified, will never trigger .justifiedBalancesGetter()
-        this.fcStore.justified = this.fcStore.bestJustified;
-        this.justifiedProposerBoostScore = null;
-      }
-    }
-
     // Update store.justified_checkpoint if a better unrealized justified checkpoint is known
-    this.updateCheckpoints(
-      time,
-      this.fcStore.unrealizedJustified.checkpoint,
-      this.fcStore.unrealizedFinalizedCheckpoint,
-      // Provide pre-computed balances for unrealizedJustified, will never trigger .justifiedBalancesGetter()
-      () => this.fcStore.unrealizedJustified.balances
-    );
+    this.pullUpStoreCheckpoints();
   }
 }
 

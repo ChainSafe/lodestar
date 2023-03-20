@@ -18,7 +18,7 @@ export async function startServer(
   const server = fastify({
     logger: false,
     ajv: {customOptions: {coerceTypes: "array"}},
-    querystringParser: (str) => qs.parse(str, {comma: true}),
+    querystringParser: (str) => qs.parse(str, {comma: true, parseArrays: false}),
   });
 
   registerRoutes(server, config, api, ["lightclient", "proof", "events"]);

@@ -40,8 +40,8 @@ export const chainConfig: ChainConfig = {
   CAPELLA_FORK_VERSION: b("0x03000001"),
   CAPELLA_FORK_EPOCH: Infinity,
   // Deneb
-  EIP4844_FORK_VERSION: b("0x04000001"),
-  EIP4844_FORK_EPOCH: Infinity,
+  DENEB_FORK_VERSION: b("0x04000001"),
+  DENEB_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------

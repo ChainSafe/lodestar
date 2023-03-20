@@ -16,7 +16,7 @@ export function upgradeStateToDeneb(stateCapella: CachedBeaconStateCapella): Cac
 
   stateDeneb.fork = ssz.phase0.Fork.toViewDU({
     previousVersion: stateCapella.fork.currentVersion,
-    currentVersion: config.EIP4844_FORK_VERSION,
+    currentVersion: config.DENEB_FORK_VERSION,
     epoch: stateCapella.epochCtx.epoch,
   });
 

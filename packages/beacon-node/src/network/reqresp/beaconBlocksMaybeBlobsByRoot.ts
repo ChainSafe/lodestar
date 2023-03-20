@@ -52,7 +52,7 @@ async function beaconBlockAndBlobsSidecarByRootFallback(
   if (resBlockBlobs.err) {
     // From the spec, if the block is from before the fork, errors with 3: ResourceUnavailable
     // > Clients MUST support requesting blocks and sidecars since minimum_request_epoch, where
-    //   minimum_request_epoch = max(finalized_epoch, current_epoch - MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS, EIP4844_FORK_EPOCH).
+    //   minimum_request_epoch = max(finalized_epoch, current_epoch - MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS, DENEB_FORK_EPOCH).
     //   If any root in the request content references a block earlier than minimum_request_epoch,
     //   peers SHOULD respond with error code 3: ResourceUnavailable.
     // Ref: https://github.com/ethereum/consensus-specs/blob/aede132f4999ed54b98d35e27aca9451042a1ee9/specs/eip4844/p2p-interface.md#beaconblockandblobssidecarbyroot-v1

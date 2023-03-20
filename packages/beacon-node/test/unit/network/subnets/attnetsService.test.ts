@@ -8,14 +8,14 @@ import {
 } from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
 import {BeaconStateAllForks, getCurrentSlot} from "@lodestar/state-transition";
-import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
-import {generateState} from "../../utils/state.js";
-import {testLogger} from "../../utils/logger.js";
-import {MetadataController} from "../../../src/network/metadata.js";
-import {Eth2Gossipsub, GossipType} from "../../../src/network/gossip/index.js";
-import {AttnetsService, CommitteeSubscription, ShuffleFn} from "../../../src/network/subnets/index.js";
-import {ChainEvent, IBeaconChain} from "../../../src/chain/index.js";
-import {ZERO_HASH} from "../../../src/constants/index.js";
+import {MockBeaconChain} from "../../../utils/mocks/chain/chain.js";
+import {generateState} from "../../../utils/state.js";
+import {testLogger} from "../../../utils/logger.js";
+import {MetadataController} from "../../../../src/network/metadata.js";
+import {Eth2Gossipsub, GossipType} from "../../../../src/network/gossip/index.js";
+import {AttnetsService, CommitteeSubscription, ShuffleFn} from "../../../../src/network/subnets/index.js";
+import {ChainEvent, IBeaconChain} from "../../../../src/chain/index.js";
+import {ZERO_HASH} from "../../../../src/constants/index.js";
 
 describe("AttnetsService", function () {
   const COMMITTEE_SUBNET_SUBSCRIPTION = 10;
@@ -193,6 +193,7 @@ describe("AttnetsService", function () {
     randomSubnet = COMMITTEE_SUBNET_SUBSCRIPTION;
     const aggregatorSubscription: CommitteeSubscription = {...subscription, isAggregator: true};
     service.addCommitteeSubscriptions([aggregatorSubscription]);
+    expect(service.shouldProcess(subscription.subnet, subscription.slot)).to.be.true;
     expect(service.getActiveSubnets()).to.be.deep.equal([{subnet: COMMITTEE_SUBNET_SUBSCRIPTION, toSlot: 101}]);
     // committee subnet is same to random subnet
     expect(gossipStub.subscribeTopic).to.be.calledOnce;
@@ -201,5 +202,11 @@ describe("AttnetsService", function () {
     sandbox.clock.tick((aggregatorSubscription.slot + 2) * SECONDS_PER_SLOT * 1000);
     // don't unsubscribe bc random subnet is still there
     expect(gossipStub.unsubscribeTopic).to.be.not.called;
+  });
+
+  it("should not process if no aggregator at dutied slot", () => {
+    expect(subscription.isAggregator).to.be.false;
+    service.addCommitteeSubscriptions([subscription]);
+    expect(service.shouldProcess(subscription.subnet, subscription.slot)).to.be.false;
   });
 });
