@@ -2,7 +2,7 @@ import {DatabaseApiOptions} from "@lodestar/db";
 import {BLSPubkey, ssz} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
-import {Logger, MapDef} from "@lodestar/utils";
+import {Logger, MapDef, prettyBytes} from "@lodestar/utils";
 import {getClient, Api, routes, ApiError} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
@@ -167,8 +167,8 @@ export class Validator {
       for (const pubkeyHex in validatorKeys) {
         if (!indicesService.validatorPubKeyExists(pubkeyHex)) {
           this.logger.info("Validator exists in beacon chain", {
-            validatorIndex: validatorStore.getIndexOfPubkey(pubkeyHex),
-            pubKey: pubkeyHex,
+            index: validatorStore.getIndexOfPubkey(pubkeyHex),
+            pubKey: prettyBytes(pubkeyHex),
             feeRecipient: validatorStore.getFeeRecipient(pubkeyHex),
           });
         }
