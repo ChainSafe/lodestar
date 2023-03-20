@@ -98,7 +98,7 @@ export class RestApiServer {
 
       const {operationId} = res.context.config as RouteConfig;
 
-      if (err instanceof ApiError && err.statusCode < 500) {
+      if (err instanceof ApiError) {
         this.logger.warn(`Req ${req.id} ${operationId} failed`, {reason: err.message});
       } else {
         this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);
