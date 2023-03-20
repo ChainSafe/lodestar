@@ -97,7 +97,12 @@ export class RestApiServer {
       if (err instanceof ErrorAborted || err instanceof NodeIsSyncing) return;
 
       const {operationId} = res.context.config as RouteConfig;
-      this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);
+
+      if (err instanceof ApiError && err.statusCode < 500) {
+        this.logger.warn(`Req ${req.id} ${operationId} failed`, {reason: err.message});
+      } else {
+        this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);
+      }
       metrics?.errors.inc({operationId});
     });
 
