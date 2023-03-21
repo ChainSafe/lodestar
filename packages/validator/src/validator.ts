@@ -164,13 +164,15 @@ export class Validator {
 
       const validatorKeys = this.validatorStore.getValidatorKeys();
 
-      for (const pubkeyHex in validatorKeys) {
-        if (!indicesService.validatorPubKeyExists(pubkeyHex)) {
-          this.logger.info("Validator exists in beacon chain", {
-            index: validatorStore.getIndexOfPubkey(pubkeyHex),
-            pubKey: prettyBytes(pubkeyHex),
-            feeRecipient: validatorStore.getFeeRecipient(pubkeyHex),
-          });
+      if (validatorKeys.length > 0) {
+        for (const pubkeyHex in validatorKeys) {
+          if (!indicesService.validatorPubKeyExists(pubkeyHex)) {
+            this.logger.info("Validator exists in beacon chain", {
+              index: validatorStore.getIndexOfPubkey(pubkeyHex),
+              pubKey: prettyBytes(pubkeyHex),
+              feeRecipient: validatorStore.getFeeRecipient(pubkeyHex),
+            });
+          }
         }
       }
 
