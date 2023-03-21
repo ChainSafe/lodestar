@@ -372,5 +372,10 @@ export class AttnetsService implements IAttnetsService {
     metrics.attnetsService.committeeSubnets.set(this.committeeSubnets.size);
     metrics.attnetsService.subscriptionsCommittee.set(this.subscriptionsCommittee.size);
     metrics.attnetsService.subscriptionsRandom.set(this.subscriptionsRandom.size);
+    let aggregatorCount = 0;
+    for (const subnets of this.aggregatorSlotSubnet.values()) {
+      aggregatorCount += subnets.size;
+    }
+    metrics.attnetsService.aggregatorSlotSubnetCount.set(aggregatorCount);
   }
 }
