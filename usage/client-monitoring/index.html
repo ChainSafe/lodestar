@@ -10,20 +10,20 @@
       
       
       
-        <link rel="canonical" href="https://chainsafe.github.io/lodestar/install/source/">
+        <link rel="canonical" href="https://chainsafe.github.io/lodestar/usage/client-monitoring/">
       
       
-        <link rel="prev" href="../..">
+        <link rel="prev" href="../mev-integration/">
       
       
-        <link rel="next" href="../npm/">
+        <link rel="next" href="../../reference/cli/">
       
       <link rel="icon" href="../../assets/round-icon.ico">
       <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-9.1.3">
     
     
       
-        <title>Install from source - Lodestar Documentation</title>
+        <title>Client monitoring - Lodestar Documentation</title>
       
     
     
@@ -77,7 +77,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#install-from-source" class="md-skip">
+        <a href="#client-monitoring" class="md-skip">
           Skip to content
         </a>
       
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Install from source
+              Client monitoring
             
           </span>
         </div>
@@ -253,16 +253,14 @@
 
   
   
-    
-  
   
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
       
       
       
-      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
       
       
       
@@ -271,7 +269,7 @@
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
         <label class="md-nav__title" for="__nav_2">
           <span class="md-nav__icon md-icon"></span>
           Installation
@@ -282,80 +280,11 @@
               
   
   
-    
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          Install from source
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../install/source/" class="md-nav__link">
         Install from source
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
-    Prerequisites
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#clone-repository" class="md-nav__link">
-    Clone repository
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#install-packages" class="md-nav__link">
-    Install packages
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#build-source-code" class="md-nav__link">
-    Build source code
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#lodestar-cli" class="md-nav__link">
-    Lodestar CLI
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -367,7 +296,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../npm/" class="md-nav__link">
+      <a href="../../install/npm/" class="md-nav__link">
         Install from NPM
       </a>
     </li>
@@ -381,7 +310,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../docker/" class="md-nav__link">
+      <a href="../../install/docker/" class="md-nav__link">
         Install with Docker
       </a>
     </li>
@@ -401,14 +330,16 @@
 
   
   
+    
+  
   
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
       
       
       
-      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
       
       
       
@@ -417,7 +348,7 @@
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
         <label class="md-nav__title" for="__nav_3">
           <span class="md-nav__icon md-icon"></span>
           Using Lodestar
@@ -430,7 +361,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../usage/beacon-management/" class="md-nav__link">
+      <a href="../beacon-management/" class="md-nav__link">
         Beacon management
       </a>
     </li>
@@ -444,7 +375,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../usage/local/" class="md-nav__link">
+      <a href="../local/" class="md-nav__link">
         Local testnet
       </a>
     </li>
@@ -458,7 +389,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../usage/validator-management/" class="md-nav__link">
+      <a href="../validator-management/" class="md-nav__link">
         Validator management
       </a>
     </li>
@@ -472,7 +403,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../usage/prometheus-grafana/" class="md-nav__link">
+      <a href="../prometheus-grafana/" class="md-nav__link">
         Prometheus & Grafana Setup
       </a>
     </li>
@@ -486,7 +417,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../usage/mev-integration/" class="md-nav__link">
+      <a href="../mev-integration/" class="md-nav__link">
         MEV Builder Integration
       </a>
     </li>
@@ -498,11 +429,72 @@
               
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="../../usage/client-monitoring/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Client monitoring
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         Client monitoring
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    Configuration
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#remote-endpoint-url" class="md-nav__link">
+    Remote endpoint URL
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monitoring-interval" class="md-nav__link">
+    Monitoring interval
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -669,37 +661,29 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
-    Prerequisites
+  <a href="#configuration" class="md-nav__link">
+    Configuration
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#remote-endpoint-url" class="md-nav__link">
+    Remote endpoint URL
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#clone-repository" class="md-nav__link">
-    Clone repository
+        
+          <li class="md-nav__item">
+  <a href="#monitoring-interval" class="md-nav__link">
+    Monitoring interval
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#install-packages" class="md-nav__link">
-    Install packages
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#build-source-code" class="md-nav__link">
-    Build source code
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#lodestar-cli" class="md-nav__link">
-    Lodestar CLI
-  </a>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -721,51 +705,43 @@
   
 
 
-<h1 id="install-from-source">Install from source<a class="headerlink" href="#install-from-source" title="Permanent link">&para;</a></h1>
-<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
-<p>Make sure to have <a href="https://classic.yarnpkg.com/en/docs/install">Yarn installed</a>. It is also recommended to <a href="https://github.com/nvm-sh/nvm">install NVM (Node Version Manager)</a> and use the LTS version (currently v18) of <a href="https://nodejs.org/en/">NodeJS</a>.</p>
+<h1 id="client-monitoring">Client monitoring<a class="headerlink" href="#client-monitoring" title="Permanent link">&para;</a></h1>
+<p>Lodestar has the ability to send client stats to a remote service for collection.
+At the moment, the main service offering remote monitoring is <a href="https://beaconcha.in/">beaconcha.in</a>.</p>
+<p>Instructions for setting up client monitoring with <em>beaconcha.in</em> can be found in their docs about
+<a href="https://kb.beaconcha.in/beaconcha.in-explorer/mobile-app-less-than-greater-than-beacon-node">Mobile App &lt;&gt; Node Monitoring</a>
+and in your <a href="https://beaconcha.in/user/settings#app">account settings</a>.</p>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<p>Lodestar provides CLI options to configure monitoring on both the beacon node and validator client.</p>
+<h3 id="remote-endpoint-url">Remote endpoint URL<a class="headerlink" href="#remote-endpoint-url" title="Permanent link">&para;</a></h3>
+<p>Client monitoring can be enabled by setting the <code>--monitoring.endpoint</code> flag to a remote service endpoint URL.
+As monitoring relies on metrics data, it is required that metrics are also enabled by supplying the <code>--metrics</code> flag.</p>
+<div class="highlight"><pre><span></span><code>lodestar<span class="w"> </span>beacon<span class="w"> </span>--monitoring.endpoint<span class="w"> </span><span class="s2">&quot;https://beaconcha.in/api/v1/client/metrics?apikey={apikey}&amp;machine={machineName}&quot;</span><span class="w"> </span>--metrics
+</code></pre></div>
+<p>In case of <em>beaconcha.in</em>, the API key can be found in your <a href="https://beaconcha.in/user/settings#api">account settings</a>.
+Setting the machine is optional but it is especially useful if you are monitoring multiple nodes.</p>
 <!-- prettier-ignore-start -->
-<div class="admonition info">
-<p class="admonition-title">Info</p>
-<p>NodeJS versions older than the current LTS are not supported by Lodestar. We recommend running the latest Node LTS.</p>
-</div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Node Version Manager (NVM) will only install NodeJS for use with the active user. If you intend on setting up Lodestar to run under another user, we recommend using <a href="https://github.com/nodesource/distributions/blob/master/README.md#installation-instructions">Nodesource's source for NodeJS</a> so you can install NodeJS globally.</p>
+<p>When sending data to a remote service you should be conscious about security:</p>
+<ul>
+<li>Only use a service that you trust as this will send information which may identify you
+  and associate your validators, IP address and other personal information.</li>
+<li>Always use a HTTPS connection (i.e. a URL starting with <code>https://</code>) to prevent the traffic
+  from being intercepted in transit and leaking information.</li>
+</ul>
 </div>
 <!-- prettier-ignore-end -->
 
-<h2 id="clone-repository">Clone repository<a class="headerlink" href="#clone-repository" title="Permanent link">&para;</a></h2>
-<p>Clone the repo locally.</p>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/chainsafe/lodestar.git
+<p>More details about the data sent to the remote service can be found in the <a href="https://docs.google.com/document/d/1qPWAVRjPCENlyAjUBwGkHMvz9qLdd_6u9DPZcNxDBpc">specification</a>.</p>
+<p>It is also possible to print out the data sent to the remote service by enabling debug logs which can be done by supplying the <code>--logLevel debug</code> flag.</p>
+<h3 id="monitoring-interval">Monitoring interval<a class="headerlink" href="#monitoring-interval" title="Permanent link">&para;</a></h3>
+<p>It is possible to adjust the interval between sending client stats to the remote service by setting the <code>--monitoring.interval</code> flag.
+It takes an integer value in milliseconds, the default is <code>60000</code> which means data is sent once a minute.</p>
+<p>For example, setting an interval of <code>300000</code> would mean the data is only sent every 5 minutes.</p>
+<div class="highlight"><pre><span></span><code>lodestar<span class="w"> </span>beacon<span class="w"> </span>--monitoring.interval<span class="w"> </span><span class="m">300000</span>
 </code></pre></div>
-<p>Switch to created directory.</p>
-<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>lodestar
-</code></pre></div>
-<!-- prettier-ignore-start -->
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p><code>git clone</code> will check out the default <code>unstable</code> branch. If you are running Lodestar in production, we recommend to either use the <code>stable</code> branch
-by running <code>git switch stable</code> or to use a specific version by running <code>git checkout &lt;version&gt;</code>, e.g. <code>git checkout v1.3.0</code>.</p>
-</div>
-<!-- prettier-ignore-end -->
-
-<h2 id="install-packages">Install packages<a class="headerlink" href="#install-packages" title="Permanent link">&para;</a></h2>
-<p>Install across all packages. Lodestar follows a <a href="https://github.com/lerna/lerna">monorepo</a> structure, so all commands below must be run in the project root. Use the <code>--ignore-optional</code> flag to prevent downloading the Ethereum Consensus spec tests.</p>
-<div class="highlight"><pre><span></span><code>yarn<span class="w"> </span>install<span class="w"> </span>--ignore-optional
-</code></pre></div>
-<h2 id="build-source-code">Build source code<a class="headerlink" href="#build-source-code" title="Permanent link">&para;</a></h2>
-<p>Build across all packages.</p>
-<div class="highlight"><pre><span></span><code>yarn<span class="w"> </span>run<span class="w"> </span>build
-</code></pre></div>
-<p>Or if you are using <a href="https://lerna.js.org/">Lerna</a>:</p>
-<div class="highlight"><pre><span></span><code>lerna<span class="w"> </span>bootstrap
-</code></pre></div>
-<h2 id="lodestar-cli">Lodestar CLI<a class="headerlink" href="#lodestar-cli" title="Permanent link">&para;</a></h2>
-<p>Lodestar should now be ready for use.</p>
-<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>--help
-</code></pre></div>
-<p>See <a href="../../reference/cli/">Command Line Reference</a> for further information.</p>
+<p>Increasing the monitoring interval can be useful if you are running into rate limit errors when posting large amounts of data for multiple nodes.</p>
 
 
 
