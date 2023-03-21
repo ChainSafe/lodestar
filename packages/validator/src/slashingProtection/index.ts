@@ -1,7 +1,7 @@
 import {BLSPubkey, Root} from "@lodestar/types";
-import {DatabaseService, IDatabaseApiOptions} from "@lodestar/db";
+import {DatabaseService, DatabaseApiOptions} from "@lodestar/db";
 import {toHexString} from "@chainsafe/ssz";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {uniqueVectorArr} from "../slashingProtection/utils.js";
 import {BlockBySlotRepository, SlashingProtectionBlockService} from "./block/index.js";
 import {
@@ -11,7 +11,7 @@ import {
 } from "./attestation/index.js";
 import {ISlashingProtection} from "./interface.js";
 import {
-  IInterchangeLodestar,
+  InterchangeLodestar,
   Interchange,
   InterchangeFormatVersion,
   parseInterchange,
@@ -32,7 +32,7 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
   private blockService: SlashingProtectionBlockService;
   private attestationService: SlashingProtectionAttestationService;
 
-  constructor(opts: IDatabaseApiOptions) {
+  constructor(opts: DatabaseApiOptions) {
     super(opts);
     const blockBySlotRepository = new BlockBySlotRepository(opts);
     const attestationByTargetRepository = new AttestationByTargetRepository(opts);
@@ -56,7 +56,7 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
     await this.attestationService.checkAndInsertAttestation(pubKey, attestation);
   }
 
-  async importInterchange(interchange: Interchange, genesisValidatorsRoot: Root, logger?: ILogger): Promise<void> {
+  async importInterchange(interchange: Interchange, genesisValidatorsRoot: Root, logger?: Logger): Promise<void> {
     const {data} = parseInterchange(interchange, genesisValidatorsRoot);
     for (const validator of data) {
       logger?.info(`Importing logs for Validator ${toHexString(validator.pubkey)}`);
@@ -69,9 +69,9 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
     genesisValidatorsRoot: Root,
     pubkeys: BLSPubkey[],
     formatVersion: InterchangeFormatVersion,
-    logger?: ILogger
+    logger?: Logger
   ): Promise<Interchange> {
-    const validatorData: IInterchangeLodestar["data"] = [];
+    const validatorData: InterchangeLodestar["data"] = [];
     for (const pubkey of pubkeys) {
       logger?.info(`Exporting logs for Validator ${toHexString(pubkey)}`);
       validatorData.push({

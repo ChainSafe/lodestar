@@ -20,7 +20,7 @@ import {
   getAttesterSlashableIndices,
 } from "@lodestar/state-transition";
 import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
-import {IChainConfig, IChainForkConfig} from "@lodestar/config";
+import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 
 import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {
@@ -30,6 +30,7 @@ import {
   ExecutionStatus,
   MaybeValidExecutionStatus,
   LVHExecResponse,
+  ProtoNode,
 } from "../protoArray/interface.js";
 import {ProtoArray} from "../protoArray/protoArray.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
@@ -107,7 +108,7 @@ export class ForkChoice implements IForkChoice {
    * This is useful if the existing components have been loaded from disk after a process restart.
    */
   constructor(
-    private readonly config: IChainForkConfig,
+    private readonly config: ChainForkConfig,
     private readonly fcStore: IForkChoiceStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
@@ -268,6 +269,11 @@ export class ForkChoice implements IForkChoice {
   /** Very expensive function, iterates the entire ProtoArray. Called only in debug API */
   getHeads(): ProtoBlock[] {
     return this.protoArray.nodes.filter((node) => node.bestChild === undefined);
+  }
+
+  /** This is for the debug API only */
+  getAllNodes(): ProtoNode[] {
+    return this.protoArray.nodes;
   }
 
   getFinalizedCheckpoint(): CheckpointWithHex {
@@ -767,7 +773,7 @@ export class ForkChoice implements IForkChoice {
     return blocksAtSlot;
   }
 
-  /** Returns the distance of common ancestor of nodes to newNode. Returns null if newNode is descendant of prevNode */
+  /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */
   getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult {
     const prevNode = this.protoArray.getNode(prevBlock.blockRoot);
     const newNode = this.protoArray.getNode(newBlock.blockRoot);
@@ -786,7 +792,7 @@ export class ForkChoice implements IForkChoice {
       return {code: AncestorStatus.Descendant};
     }
 
-    return {code: AncestorStatus.CommonAncestor, depth: newNode.slot - commonAncestor.slot};
+    return {code: AncestorStatus.CommonAncestor, depth: Math.max(newNode.slot, prevNode.slot) - commonAncestor.slot};
   }
 
   /**
@@ -1237,7 +1243,7 @@ export class ForkChoice implements IForkChoice {
  * imported merge block.
  */
 export function assertValidTerminalPowBlock(
-  config: IChainConfig,
+  config: ChainConfig,
   block: bellatrix.BeaconBlock,
   preCachedData: {
     executionStatus: ExecutionStatus.Syncing | ExecutionStatus.Valid;

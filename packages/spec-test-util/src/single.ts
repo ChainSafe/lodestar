@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {basename, join, parse} from "node:path";
+import path from "node:path";
 import {expect} from "chai";
 import {uncompress} from "snappyjs";
 import {loadYaml} from "@lodestar/utils";
@@ -38,7 +38,7 @@ export function toExpandedInputType(inputType: InputType | ExpandedInputType): E
   };
 }
 
-export interface ISpecTestOptions<TestCase extends {meta?: any}, Result> {
+export interface SpecTestOptions<TestCase extends {meta?: any}, Result> {
   /**
    * If directory contains both ssz or yaml file version,
    * you can choose which one to use. Default is ssz snappy.
@@ -79,7 +79,7 @@ export interface ISpecTestOptions<TestCase extends {meta?: any}, Result> {
   timeout?: number;
 }
 
-const defaultOptions: ISpecTestOptions<any, any> = {
+const defaultOptions: SpecTestOptions<any, any> = {
   inputTypes: {},
   inputProcessing: {},
   sszTypes: {},
@@ -94,7 +94,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
   name: string,
   testCaseDirectoryPath: string,
   testFunction: (testCase: TestCase, directoryName: string) => Result | Promise<Result>,
-  options: Partial<ISpecTestOptions<TestCase, Result>>
+  options: Partial<SpecTestOptions<TestCase, Result>>
 ): void {
   options = {...defaultOptions, ...options};
   if (!isDirectory(testCaseDirectoryPath)) {
@@ -107,7 +107,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
     }
 
     for (const testSubDirname of fs.readdirSync(testCaseDirectoryPath)) {
-      const testSubDirPath = join(testCaseDirectoryPath, testSubDirname);
+      const testSubDirPath = path.join(testCaseDirectoryPath, testSubDirname);
       if (!isDirectory(testSubDirPath)) {
         continue;
       }
@@ -116,7 +116,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
       const testName = `${name}/${testSubDirname}`;
       it(testName, async function () {
         // some tests require to load meta.yaml first in order to know respective ssz types.
-        const metaFilePath = join(testSubDirPath, "meta.yaml");
+        const metaFilePath = path.join(testSubDirPath, "meta.yaml");
         const meta: TestCase["meta"] = fs.existsSync(metaFilePath)
           ? loadYaml(fs.readFileSync(metaFilePath, "utf8"))
           : undefined;
@@ -152,18 +152,18 @@ export function loadYamlFile(path: string): Record<string, unknown> {
 
 function loadInputFiles<TestCase extends {meta?: any}, Result>(
   directory: string,
-  options: ISpecTestOptions<TestCase, Result>,
+  options: SpecTestOptions<TestCase, Result>,
   meta?: TestCase["meta"]
 ): TestCase {
   const testCase: any = {};
   fs.readdirSync(directory)
-    .map((name) => join(directory, name))
+    .map((name) => path.join(directory, name))
     .filter((file) => {
       if (isDirectory(file)) {
         return false;
       }
       if (!options.inputTypes) throw Error("inputTypes is not defined");
-      const name = parse(file).name as keyof NonNullable<TestCase>;
+      const name = path.parse(file).name as keyof NonNullable<TestCase>;
       const inputType = toExpandedInputType(options.inputTypes[name] ?? InputType.SSZ_SNAPPY);
       // set options.inputTypes[name] with expanded input type
       options.inputTypes[name] = inputType;
@@ -171,7 +171,7 @@ function loadInputFiles<TestCase extends {meta?: any}, Result>(
       return file.endsWith(extension);
     })
     .forEach((file) => {
-      const inputName = basename(file).replace(".ssz_snappy", "").replace(".ssz", "").replace(".yaml", "");
+      const inputName = path.basename(file).replace(".ssz_snappy", "").replace(".ssz", "").replace(".yaml", "");
       const inputType = getInputType(file);
       testCase[inputName] = deserializeInputFile(file, inputName, inputType, options, meta);
       switch (inputType) {
@@ -205,7 +205,7 @@ function deserializeInputFile<TestCase extends {meta?: any}, Result>(
   file: string,
   inputName: string,
   inputType: InputType,
-  options: ISpecTestOptions<TestCase, Result>,
+  options: SpecTestOptions<TestCase, Result>,
   meta?: TestCase["meta"]
 ): any {
   if (inputType === InputType.YAML) {

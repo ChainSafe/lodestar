@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {ssz} from "@lodestar/types";
 import {Type} from "@chainsafe/ssz";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, ForkLightClient} from "@lodestar/params";
 import {replaceUintTypeWithUintBigintType} from "../utils/replaceUintTypeWithUintBigintType.js";
 import {parseSszStaticTestcase} from "../utils/sszTestCaseParser.js";
 import {runValidSszTest} from "../utils/runValidSszTest.js";
@@ -26,7 +26,7 @@ type Types = Record<string, Type<any>>;
 // tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
 //
 
-export const sszStatic = (skippedTypes?: string[], overrideSSZTypes?: Record<string, Types>) => (
+export const sszStatic = (skippedTypes?: string[]) => (
   fork: ForkName,
   typeName: string,
   testSuite: string,
@@ -39,7 +39,9 @@ export const sszStatic = (skippedTypes?: string[], overrideSSZTypes?: Record<str
 
   /* eslint-disable @typescript-eslint/strict-boolean-expressions */
   const sszType =
-    (((overrideSSZTypes ?? {})[fork] ?? {}) as Types)[typeName] ||
+    // Since lightclient types are not updated/declared at all forks, this allForksLightClient
+    // will help us get the right type for lightclient objects
+    ((ssz.allForksLightClient[fork as ForkLightClient] || {}) as Types)[typeName] ||
     (ssz[fork] as Types)[typeName] ||
     (ssz.capella as Types)[typeName] ||
     (ssz.bellatrix as Types)[typeName] ||

@@ -89,6 +89,6 @@ export class SlashingProtectionBlockService {
   }
 
   async listPubkeys(): Promise<BLSPubkey[]> {
-    return await this.blockBySlot.listPubkeys();
+    return this.blockBySlot.listPubkeys();
   }
 }

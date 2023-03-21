@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {allForks} from "@lodestar/types";
 import {
   computeStartSlotAtEpoch,
@@ -17,7 +17,7 @@ import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors/index.js
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateGossipBlock(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   chain: IBeaconChain,
   signedBlock: allForks.SignedBeaconBlock,
   fork: ForkName
@@ -117,7 +117,7 @@ export async function validateGossipBlock(
   // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is retrieved).
   // [REJECT] The block's parent (defined by block.parent_root) passes validation.
   const blockState = await chain.regen
-    .getBlockSlotState(parentRoot, blockSlot, RegenCaller.validateGossipBlock)
+    .getBlockSlotState(parentRoot, blockSlot, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
     .catch(() => {
       throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
     });

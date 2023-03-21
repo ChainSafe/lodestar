@@ -1,6 +1,6 @@
 import {Epoch, phase0, ValidatorIndex} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks} from "../types.js";
 
 /**
@@ -35,6 +35,6 @@ export function getActiveValidatorIndices(state: BeaconStateAllForks, epoch: Epo
   return indices;
 }
 
-export function getChurnLimit(config: IChainForkConfig, activeValidatorCount: number): number {
+export function getChurnLimit(config: ChainForkConfig, activeValidatorCount: number): number {
   return Math.max(config.MIN_PER_EPOCH_CHURN_LIMIT, intDiv(activeValidatorCount, config.CHURN_LIMIT_QUOTIENT));
 }

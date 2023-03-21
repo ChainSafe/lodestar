@@ -3,11 +3,11 @@ import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
 import {toHexString} from "@chainsafe/ssz";
-import {IFilterOptions} from "@lodestar/db";
+import {FilterOptions} from "@lodestar/db";
 import {Eth1Error, Eth1ErrorCode} from "../errors.js";
 import {DepositTree} from "../../db/repositories/depositDataRoot.js";
 
-export type DepositGetter<T> = (indexRange: IFilterOptions<number>, eth1Data: phase0.Eth1Data) => Promise<T[]>;
+export type DepositGetter<T> = (indexRange: FilterOptions<number>, eth1Data: phase0.Eth1Data) => Promise<T[]>;
 
 export async function getDeposits<T>(
   // eth1_deposit_index represents the next deposit index to be added

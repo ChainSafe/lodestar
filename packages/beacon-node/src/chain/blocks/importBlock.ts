@@ -1,10 +1,11 @@
-import {capella, ssz, allForks} from "@lodestar/types";
-import {MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {capella, ssz, allForks, altair} from "@lodestar/types";
+import {ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAltair,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  isStateValidatorsNodesPopulated,
   RootCache,
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
@@ -329,6 +330,10 @@ export async function importBlock(
   // This adds the state necessary to process the next block
   this.stateCache.add(postState);
 
+  if (!isStateValidatorsNodesPopulated(postState)) {
+    this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
+  }
+
   if (block.message.slot % SLOTS_PER_EPOCH === 0) {
     // Cache state to preserve epoch transition work
     const checkpointState = postState;
@@ -384,6 +389,13 @@ export async function importBlock(
   this.metrics?.parentBlockDistance.observe(block.message.slot - parentBlockSlot);
   this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
   this.metrics?.registerImportedBlock(block.message, fullyVerifiedBlock);
+  if (this.config.getForkSeq(block.message.slot) >= ForkSeq.altair) {
+    this.metrics?.registerSyncAggregateInBlock(
+      blockEpoch,
+      (block as altair.SignedBeaconBlock).message.body.syncAggregate,
+      fullyVerifiedBlock.postState.epochCtx.currentSyncCommitteeIndexed.validatorIndices
+    );
+  }
 
   const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
 

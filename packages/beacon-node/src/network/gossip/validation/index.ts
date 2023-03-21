@@ -1,7 +1,7 @@
 import {TopicValidatorResult} from "@libp2p/interface-pubsub";
-import {IChainForkConfig} from "@lodestar/config";
-import {ILogger, mapValues} from "@lodestar/utils";
-import {IMetrics} from "../../../metrics/index.js";
+import {ChainForkConfig} from "@lodestar/config";
+import {Logger, mapValues} from "@lodestar/utils";
+import {Metrics} from "../../../metrics/index.js";
 import {getGossipSSZType} from "../topic.js";
 import {
   GossipJobQueues,
@@ -15,9 +15,9 @@ import {GossipActionError, GossipAction} from "../../../chain/errors/index.js";
 import {createValidationQueues} from "./queue.js";
 
 type ValidatorFnModules = {
-  config: IChainForkConfig;
-  logger: ILogger;
-  metrics: IMetrics | null;
+  config: ChainForkConfig;
+  logger: Logger;
+  metrics: Metrics | null;
 };
 
 /**
@@ -39,7 +39,7 @@ export function createValidatorFnsByType(
     jobQueues,
     (jobQueue): GossipValidatorFn => {
       return async function gossipValidatorFnWithQueue(topic, gossipMsg, propagationSource, seenTimestampSec) {
-        return await jobQueue.push(topic, gossipMsg, propagationSource, seenTimestampSec);
+        return jobQueue.push(topic, gossipMsg, propagationSource, seenTimestampSec);
       };
     }
   );

@@ -134,6 +134,7 @@ module.exports = {
     "no-consecutive-blank-lines": 0,
     "no-console": "error",
     "no-var": "error",
+    "no-return-await": "error",
     "object-curly-spacing": ["error", "never"],
     "object-literal-sort-keys": 0,
     "no-prototype-builtins": 0,
@@ -145,19 +146,22 @@ module.exports = {
       {
         patterns: ["../lib/*", "@chainsafe/*/lib/*"],
         paths: [
-          {name: "child_process", message: "Please use node:child_process instead."},
-          {name: "crypto", message: "Please use node:crypto instead."},
-          {name: "fs", message: "Please use node:fs instead."},
-          {name: "http", message: "Please use node:http instead."},
-          {name: "net", message: "Please use node:net instead."},
-          {name: "os", message: "Please use node:os instead."},
-          {name: "path", message: "Please use node:path instead."},
-          {name: "stream", message: "Please use node:stream instead."},
-          {name: "util", message: "Please use node:util instead."},
-          {name: "url", message: "Please use node:url instead."},
+          ...restrictNodeModuleImports(
+            "child_process",
+            "crypto",
+            "fs",
+            "http",
+            "net",
+            "os",
+            "path",
+            "stream",
+            "util",
+            "url"
+          ),
         ],
       },
     ],
+    "no-restricted-syntax": ["error", ...restrictImportDestructuring("node:fs", "node:os", "node:path")],
     // Force to add names to all functions to ease CPU profiling
     "func-names": ["error", "always"],
 
@@ -240,3 +244,14 @@ module.exports = {
     },
   ],
 };
+
+function restrictNodeModuleImports(...modules) {
+  return modules.map((module) => ({name: module, message: `Please use 'node:${module}' instead.`}));
+}
+
+function restrictImportDestructuring(...modules) {
+  return modules.map((module) => ({
+    selector: `ImportDeclaration[source.value='${module}'] ImportSpecifier`,
+    message: `Importing from '${module}' using destructuring is restricted.`,
+  }));
+}

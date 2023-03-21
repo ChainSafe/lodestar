@@ -5,7 +5,7 @@ import {PresetName} from "@lodestar/params";
 /**
  * Run-time chain configuration
  */
-export type IChainConfig = {
+export type ChainConfig = {
   PRESET_BASE: PresetName;
   /**
    * Free-form short name of the network that this configuration applies to - known
@@ -70,7 +70,7 @@ export type IChainConfig = {
   MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS: number;
 };
 
-export const chainConfigTypes: SpecTypes<IChainConfig> = {
+export const chainConfigTypes: SpecTypes<ChainConfig> = {
   PRESET_BASE: "string",
   CONFIG_NAME: "string",
 

@@ -1,8 +1,8 @@
 import {ByteVectorType, CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
 import {Root, ssz} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {bytesToInt} from "@lodestar/utils";
-import {Db, Bucket, Repository, IKeyValue} from "@lodestar/db";
+import {Db, Bucket, Repository, KeyValue} from "@lodestar/db";
 
 // TODO: Review where is best to put this type
 export type DepositTree = CompositeViewDU<ListCompositeType<ByteVectorType>>;
@@ -10,7 +10,7 @@ export type DepositTree = CompositeViewDU<ListCompositeType<ByteVectorType>>;
 export class DepositDataRootRepository extends Repository<number, Root> {
   private depositRootTree?: DepositTree;
 
-  constructor(config: IChainForkConfig, db: Db) {
+  constructor(config: ChainForkConfig, db: Db) {
     super(config, db, Bucket.index_depositDataRoot, ssz.Root);
   }
 
@@ -29,7 +29,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
     await this.depositRootTreeSet(index, value);
   }
 
-  async batchPut(items: IKeyValue<number, Root>[]): Promise<void> {
+  async batchPut(items: KeyValue<number, Root>[]): Promise<void> {
     await super.batchPut(items);
     for (const {key, value} of items) {
       await this.depositRootTreeSet(key, value);

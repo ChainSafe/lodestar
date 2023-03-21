@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api/beacon";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {ApiError} from "@lodestar/api";
-import {CLClientKeys, SimulationAssertion} from "../interfaces.js";
+import {CLClient, CLClientKeys, SimulationAssertion} from "../interfaces.js";
 import {arrayEquals} from "../utils/index.js";
 import {neverMatcher} from "./matchers.js";
 
@@ -26,6 +26,9 @@ export const nodeAssertion: SimulationAssertion<"node", string> = {
       if (keys.length === 0) {
         continue;
       }
+
+      // There is an authrntication issue with the lighthouse keymanager client
+      if (node.cl.client == CLClient.Lighthouse) continue;
 
       const res = await node.cl.keyManager.listKeys();
       ApiError.assert(res);

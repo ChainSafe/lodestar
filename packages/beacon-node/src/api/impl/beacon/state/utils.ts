@@ -12,7 +12,7 @@ import {
 } from "@lodestar/state-transition";
 import {BLSPubkey, phase0} from "@lodestar/types";
 import {stateTransition, processSlots} from "@lodestar/state-transition";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {Epoch, ValidatorIndex, Slot} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
@@ -33,7 +33,7 @@ type ResolveStateIdOpts = {
 };
 
 export async function resolveStateId(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
   stateId: routes.beacon.StateId,
@@ -48,7 +48,7 @@ export async function resolveStateId(
 }
 
 async function resolveStateIdOrNull(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
   stateId: routes.beacon.StateId,
@@ -56,11 +56,11 @@ async function resolveStateIdOrNull(
 ): Promise<{state: BeaconStateAllForks | null; executionOptimistic: boolean}> {
   stateId = String(stateId).toLowerCase();
   if (stateId === "head" || stateId === "genesis" || stateId === "finalized" || stateId === "justified") {
-    return await stateByName(db, chain.stateCache, chain.forkChoice, stateId);
+    return stateByName(db, chain.stateCache, chain.forkChoice, stateId);
   }
 
   if (stateId.startsWith("0x")) {
-    return await stateByRoot(db, chain.stateCache, chain.forkChoice, stateId);
+    return stateByRoot(db, chain.stateCache, chain.forkChoice, stateId);
   }
 
   // state id must be slot
@@ -68,7 +68,7 @@ async function resolveStateIdOrNull(
   if (isNaN(slot) && isNaN(slot - 0)) {
     throw new ValidationError(`Invalid state id '${stateId}'`, "stateId");
   }
-  return await stateBySlot(config, db, chain.stateCache, chain.forkChoice, slot, opts);
+  return stateBySlot(config, db, chain.stateCache, chain.forkChoice, slot, opts);
 }
 
 /**
@@ -180,7 +180,7 @@ async function stateByRoot(
 }
 
 async function stateBySlot(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   db: IBeaconDb,
   stateCache: StateContextCache,
   forkChoice: IForkChoice,
@@ -229,7 +229,7 @@ export function filterStateValidatorsByStatus(
  * Get the archived state nearest to `slot`.
  */
 async function getNearestArchivedState(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   db: IBeaconDb,
   slot: Slot
 ): Promise<CachedBeaconStateAllForks> {
@@ -241,7 +241,7 @@ async function getNearestArchivedState(
 }
 
 async function getFinalizedState(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   db: IBeaconDb,
   forkChoice: IForkChoice,
   slot: Slot

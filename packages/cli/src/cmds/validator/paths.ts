@@ -1,12 +1,13 @@
 import path from "node:path";
-import {IGlobalArgs} from "../../options/index.js";
-import {IGlobalPaths, getGlobalPaths} from "../../paths/global.js";
+import {GlobalArgs} from "../../options/index.js";
+import {GlobalPaths, getGlobalPaths} from "../../paths/global.js";
 
 export type IValidatorPaths = {
   validatorsDbDir: string;
 };
 
 export type AccountPaths = {
+  cacheDir: string;
   keystoresDir: string;
   secretsDir: string;
   remoteKeysDir: string;
@@ -23,9 +24,9 @@ export type AccountPaths = {
  * ```
  */
 export function getValidatorPaths(
-  args: Partial<IValidatorPaths> & Pick<IGlobalArgs, "dataDir">,
+  args: Partial<IValidatorPaths> & Pick<GlobalArgs, "dataDir">,
   network: string
-): IValidatorPaths & IGlobalPaths {
+): IValidatorPaths & GlobalPaths {
   // Compute global paths first
   const globalPaths = getGlobalPaths(args, network);
 
@@ -64,21 +65,23 @@ export const defaultValidatorPaths = getValidatorPaths({dataDir: "$dataDir"}, "$
  *     └── 0xa329f988c16993768299643d918a2694892c012765d896a16f.json
  * ```
  */
-// Using Pick<IGlobalArgs, "dataDir"> make changes in IGlobalArgs throw a type error here
+// Using Pick<GlobalArgs, "dataDir"> make changes in GlobalArgs throw a type error here
 export function getAccountPaths(
-  args: Partial<AccountPaths> & Pick<IGlobalArgs, "dataDir">,
+  args: Partial<AccountPaths> & Pick<GlobalArgs, "dataDir">,
   network: string
-): AccountPaths & IGlobalPaths {
+): AccountPaths & GlobalPaths {
   // Compute global paths first
   const globalPaths = getGlobalPaths(args, network);
 
   const dataDir = globalPaths.dataDir;
+  const cacheDir = args.cacheDir || path.join(dataDir, "cache");
   const keystoresDir = args.keystoresDir || path.join(dataDir, "keystores");
   const secretsDir = args.secretsDir || path.join(dataDir, "secrets");
   const remoteKeysDir = args.remoteKeysDir || path.join(dataDir, "remoteKeys");
   const proposerDir = args.proposerDir || path.join(dataDir, "proposerConfigs");
   return {
     ...globalPaths,
+    cacheDir,
     keystoresDir,
     secretsDir,
     remoteKeysDir,

@@ -26,9 +26,10 @@ import {
   serializeExecutionPayload,
   ExecutionPayloadRpc,
   BlobsBundleRpc,
+  ExecutionPayloadBodyRpc,
 } from "./types.js";
 import {ExecutePayloadStatus, PayloadIdCache} from "./interface.js";
-import {IJsonRpcBackend} from "./utils.js";
+import {JsonRpcBackend} from "./utils.js";
 
 const INTEROP_GAS_LIMIT = 30e6;
 const PRUNE_PAYLOAD_ID_AFTER_MS = 5000;
@@ -57,7 +58,7 @@ type PreparedPayload = {
 /**
  * Mock ExecutionEngine for fast prototyping and unit testing
  */
-export class ExecutionEngineMockBackend implements IJsonRpcBackend {
+export class ExecutionEngineMockBackend implements JsonRpcBackend {
   // Public state to check if notifyForkchoiceUpdate() is called properly
   headBlockHash = ZERO_HASH_HEX;
   safeBlockHash = ZERO_HASH_HEX;
@@ -98,7 +99,22 @@ export class ExecutionEngineMockBackend implements IJsonRpcBackend {
       engine_getPayloadV3: this.getPayload.bind(this),
       engine_exchangeTransitionConfigurationV1: this.exchangeTransitionConfigurationV1.bind(this),
       engine_getBlobsBundleV1: this.getBlobsBundle.bind(this),
+      engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
+      engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
     };
+  }
+
+  private getPayloadBodiesByHash(
+    _blockHex: EngineApiRpcParamTypes["engine_getPayloadBodiesByHashV1"][0]
+  ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByHashV1"] {
+    return [] as ExecutionPayloadBodyRpc[];
+  }
+
+  private getPayloadBodiesByRange(
+    _start: EngineApiRpcParamTypes["engine_getPayloadBodiesByRangeV1"][0],
+    _count: EngineApiRpcParamTypes["engine_getPayloadBodiesByRangeV1"][1]
+  ): EngineApiRpcReturnTypes["engine_getPayloadBodiesByRangeV1"] {
+    return [] as ExecutionPayloadBodyRpc[];
   }
 
   /**

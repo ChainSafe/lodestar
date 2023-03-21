@@ -3,7 +3,7 @@ import {Registry} from "prom-client";
 import {ENR, SignableENR} from "@chainsafe/discv5";
 import {Libp2p} from "../interface.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
-import {defaultDiscv5Options, defaultNetworkOptions, INetworkOptions} from "../options.js";
+import {defaultDiscv5Options, defaultNetworkOptions, NetworkOptions} from "../options.js";
 import {isLocalMultiAddr, clearMultiaddrUDP} from "../util.js";
 import {createNodejsLibp2p as _createNodejsLibp2p} from "./bundle.js";
 
@@ -22,7 +22,7 @@ export type NodeJsLibp2pOpts = {
  */
 export async function createNodeJsLibp2p(
   peerIdOrPromise: PeerId | Promise<PeerId>,
-  networkOpts: Partial<INetworkOptions> = {},
+  networkOpts: Partial<NetworkOptions> = {},
   nodeJsLibp2pOpts: NodeJsLibp2pOpts = {}
 ): Promise<Libp2p> {
   const peerId = await Promise.resolve(peerIdOrPromise);

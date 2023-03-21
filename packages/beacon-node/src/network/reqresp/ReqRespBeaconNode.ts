@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Libp2p} from "libp2p";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   collectExactOne,
@@ -15,8 +15,8 @@ import {
 import {ReqRespOpts} from "@lodestar/reqresp/lib/ReqResp.js";
 import * as reqRespProtocols from "@lodestar/reqresp/protocols";
 import {allForks, altair, deneb, phase0, Root} from "@lodestar/types";
-import {ILogger} from "@lodestar/utils";
-import {IMetrics} from "../../metrics/metrics.js";
+import {Logger} from "@lodestar/utils";
+import {Metrics} from "../../metrics/metrics.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
 import {PeersData} from "../peers/peersData.js";
@@ -40,9 +40,9 @@ type ProtocolDefinitionAny = ProtocolDefinition<any, any>;
 export interface ReqRespBeaconNodeModules {
   libp2p: Libp2p;
   peersData: PeersData;
-  logger: ILogger;
-  config: IBeaconConfig;
-  metrics: IMetrics | null;
+  logger: Logger;
+  config: BeaconConfig;
+  metrics: Metrics | null;
   reqRespHandlers: ReqRespHandlers;
   metadata: MetadataController;
   peerRpcScores: IPeerRpcScoreStore;
@@ -67,8 +67,8 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   /** Track registered fork to only send to known protocols */
   private currentRegisteredFork: ForkSeq = ForkSeq.phase0;
 
-  private readonly config: IBeaconConfig;
-  protected readonly logger: ILogger;
+  private readonly config: BeaconConfig;
+  protected readonly logger: Logger;
 
   constructor(modules: ReqRespBeaconNodeModules, options: ReqRespBeaconNodeOpts = {}) {
     const {reqRespHandlers, networkEventBus, peersData, peerRpcScores, metadata, metrics, logger} = modules;
@@ -84,6 +84,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
           logger.debug("Do not serve request due to rate limit", {peerId: peerId.toString()});
           peerRpcScores.applyAction(peerId, PeerAction.Fatal, "rate_limit_rpc");
           metrics?.reqResp.rateLimitErrors.inc({method});
+        },
+        getPeerLogMetadata(peerId) {
+          return peersData.getPeerKind(peerId);
         },
       }
     );

@@ -1,8 +1,8 @@
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot, Epoch} from "@lodestar/types";
-import {IBeaconClock} from "../../src/chain/clock/index.js";
+import {BeaconClock} from "../../src/chain/clock/index.js";
 
-export class ClockStatic implements IBeaconClock {
+export class ClockStatic implements BeaconClock {
   constructor(readonly currentSlot: Slot) {}
 
   get currentEpoch(): Epoch {

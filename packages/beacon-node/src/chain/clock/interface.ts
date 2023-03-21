@@ -8,7 +8,7 @@ import {Epoch, Slot} from "@lodestar/types";
  * - `SECONDS_PER_SLOT` - # of seconds per slot
  * - `SLOTS_PER_EPOCH` - # of slots per epoch
  */
-export interface IBeaconClock {
+export type BeaconClock = {
   readonly currentSlot: Slot;
   /**
    * If it's too close to next slot, maxCurrentSlot = currentSlot + 1
@@ -33,4 +33,4 @@ export interface IBeaconClock {
    * Return second from a slot to either toSec or now.
    */
   secFromSlot(slot: Slot, toSec?: number): number;
-}
+};

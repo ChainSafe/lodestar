@@ -1,5 +1,6 @@
 import {Discv5, ENRData, SignableENRData} from "@chainsafe/discv5";
 import {Observable} from "@chainsafe/threads/observable";
+import {ChainConfig} from "@lodestar/config";
 
 // TODO export IDiscv5Config so we don't need this convoluted type
 type Discv5Config = Parameters<typeof Discv5["create"]>[0]["config"];
@@ -12,6 +13,8 @@ export interface Discv5WorkerData {
   config: Discv5Config;
   bootEnrs: string[];
   metrics: boolean;
+  chainConfig: ChainConfig;
+  genesisValidatorsRoot: Uint8Array;
 }
 
 /**
@@ -27,6 +30,8 @@ export type Discv5WorkerApi = {
 
   /** Return the ENRs currently in the kad table */
   kadValues(): Promise<ENRData[]>;
+  /** emit the ENRs currently in the kad table */
+  discoverKadValues(): Promise<void>;
   /** Begin a random search through the DHT, return discovered ENRs */
   findRandomNode(): Promise<ENRData[]>;
   /** Stream of discovered ENRs */

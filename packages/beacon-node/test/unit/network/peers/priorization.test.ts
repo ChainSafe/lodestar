@@ -7,6 +7,7 @@ import {
   ExcessPeerDisconnectReason,
   prioritizePeers,
   PrioritizePeersOpts,
+  sortPeersToPrune,
 } from "../../../../src/network/peers/utils/prioritizePeers.js";
 import {getAttnets, getSyncnets} from "../../../utils/network.js";
 import {RequestedSubnet} from "../../../../src/network/peers/utils/index.js";
@@ -61,8 +62,8 @@ describe("network / peers / priorization", async () => {
       connectedPeers: [
         {id: peers[0], direction: null, syncnets: none, attnets: getAttnets([3]), score: 0},
         {id: peers[1], direction: null, syncnets: none, attnets: getAttnets([5]), score: -5},
-        {id: peers[2], direction: null, syncnets: none, attnets: getAttnets([5]), score: -20},
-        {id: peers[3], direction: null, syncnets: none, attnets: getAttnets([5]), score: -40},
+        {id: peers[2], direction: null, syncnets: none, attnets: getAttnets([5]), score: -10},
+        {id: peers[3], direction: null, syncnets: none, attnets: getAttnets([5, 6, 7]), score: -19},
       ],
       activeAttnets: [3],
       activeSyncnets: [],
@@ -70,7 +71,8 @@ describe("network / peers / priorization", async () => {
       expectedResult: {
         // Peers sorted by score, excluding with future duties
         peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
-          [ExcessPeerDisconnectReason.LOW_SCORE, [peers[3], peers[2], peers[1]]],
+          // peer3 should be the last since it has most subnets
+          [ExcessPeerDisconnectReason.LOW_SCORE, [peers[2], peers[1], peers[3]]],
         ]),
         peersToConnect: 0,
         attnetQueries: [],
@@ -112,7 +114,7 @@ describe("network / peers / priorization", async () => {
       ],
       activeAttnets: [3],
       activeSyncnets: [2],
-      opts: {targetPeers: 1, maxPeers: 1, targetSubnetPeers: 1},
+      opts: {targetPeers: 2, maxPeers: 2, targetSubnetPeers: 1},
       expectedResult: {
         // Peers sorted by long lived subnets
         peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
@@ -140,11 +142,33 @@ describe("network / peers / priorization", async () => {
       ],
       activeAttnets: [3],
       activeSyncnets: [2],
-      opts: {targetPeers: 1, maxPeers: 1, targetSubnetPeers: 1},
+      opts: {targetPeers: 4, maxPeers: 4, targetSubnetPeers: 1},
       expectedResult: {
         // Peers sorted by long lived subnets
         peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
           [ExcessPeerDisconnectReason.TOO_GROUPED_SUBNET, [peers[3]]],
+        ]),
+        peersToConnect: 0,
+        attnetQueries: [],
+        syncnetQueries: [],
+      },
+    },
+    {
+      id: "Ensure to prune to target peers",
+      connectedPeers: [
+        {id: peers[0], direction: null, syncnets: none, attnets: getAttnets([1, 2, 3]), score: 0},
+        {id: peers[1], direction: null, syncnets: none, attnets: getAttnets([1, 2]), score: -1.9},
+        {id: peers[2], direction: null, syncnets: none, attnets: getAttnets([3, 4]), score: -1.8},
+        {id: peers[3], direction: null, syncnets: none, attnets: getAttnets([4]), score: -1},
+        {id: peers[4], direction: null, syncnets: none, attnets: getAttnets([5]), score: -1.5},
+      ],
+      activeAttnets: [1, 2, 3],
+      activeSyncnets: [],
+      opts: {targetPeers: 1, maxPeers: 1, targetSubnetPeers: 2},
+      expectedResult: {
+        peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
+          // the order is based on sortPeers() logic
+          [ExcessPeerDisconnectReason.FIND_BETTER_PEERS, [peers[4], peers[3], peers[2], peers[1]]],
         ]),
         peersToConnect: 0,
         attnetQueries: [],
@@ -198,7 +222,8 @@ describe("network / peers / priorization", async () => {
       expectedResult: {
         // Peers sorted by score, excluding with future duties
         peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
-          [ExcessPeerDisconnectReason.LOW_SCORE, [peers[5], peers[3]]],
+          // peer 3 has better score but fewer long lived subnets
+          [ExcessPeerDisconnectReason.LOW_SCORE, [peers[3], peers[5]]],
         ]),
         peersToConnect: 0,
         attnetQueries: [{subnet: 3, maxPeersToDiscover: 1, toSlot: 0}],
@@ -236,4 +261,45 @@ describe("network / peers / priorization", async () => {
   function toReqSubnet(subnets: number[]): RequestedSubnet[] {
     return subnets.map((subnet) => ({subnet, toSlot: 0}));
   }
+});
+
+describe("sortPeersToPrune", async function () {
+  const peers: PeerId[] = [];
+  for (let i = 0; i < 8; i++) {
+    const peer = await createSecp256k1PeerId();
+    peer.toString = () => `peer-${i}`;
+    peers.push(peer);
+  }
+  const none = BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT);
+
+  it("should sort peers by dutied subnets then long lived subnets then score", () => {
+    const connectedPeers = [
+      {id: peers[3], direction: null, syncnets: none, attnets: getAttnets([0, 4]), score: -1},
+      {id: peers[2], direction: null, syncnets: none, attnets: getAttnets([2, 3, 5]), score: 0},
+      {id: peers[1], direction: null, syncnets: none, attnets: getAttnets([3, 5]), score: -1},
+      {id: peers[0], direction: null, syncnets: none, attnets: getAttnets([6, 7]), score: -1.9},
+    ].map((p) => ({
+      ...p,
+      attnetsTrueBitIndices: p.attnets?.getTrueBitIndexes() ?? [],
+      syncnetsTrueBitIndices: p.syncnets?.getTrueBitIndexes() ?? [],
+    }));
+
+    const dutiesByPeer = new Map<typeof connectedPeers[0], number>([
+      [connectedPeers[0], 2],
+      [connectedPeers[1], 0],
+      [connectedPeers[2], 0],
+      [connectedPeers[3], 0],
+    ]);
+
+    expect(sortPeersToPrune(connectedPeers, dutiesByPeer).map((p) => p.id.toString())).to.be.deep.equals([
+      // peer-0 is the worse and has the most chance to prune
+      "peer-0",
+      // peer-1 is better than peer-0 in terms of score
+      "peer-1",
+      // peer-2 has the most long lived subnets between 0/1/2
+      "peer-2",
+      // peer-3 has the most dutied subnets
+      "peer-3",
+    ]);
+  });
 });

@@ -1,7 +1,7 @@
 import {BitArray, byteArrayEquals} from "@chainsafe/ssz";
 import {FINALIZED_ROOT_DEPTH, NEXT_SYNC_COMMITTEE_DEPTH, ForkSeq, ForkName} from "@lodestar/params";
 import {altair, phase0, ssz, allForks, capella, deneb} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 
 export const GENESIS_SLOT = 0;
 export const ZERO_HASH = new Uint8Array(32);
@@ -48,16 +48,25 @@ export function isZeroedSyncCommittee(syncCommittee: altair.SyncCommittee): bool
 }
 
 export function upgradeLightClientHeader(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   targetFork: ForkName,
   header: altair.LightClientHeader
 ): allForks.LightClientHeader {
-  const upgradedHeader = header;
-
   const headerFork = config.getForkName(header.beacon.slot);
-  switch (headerFork) {
-    case ForkName.phase0:
-      throw Error(`Invalid target fork=${headerFork} for LightClientHeader`);
+  if (ForkSeq[headerFork] >= ForkSeq[targetFork]) {
+    throw Error(`Invalid upgrade request from headerFork=${headerFork} to targetFork=${targetFork}`);
+  }
+
+  // We are modifying the same header object, may be we could create a copy, but its
+  // not required as of now
+  const upgradedHeader = header as allForks.LightClientHeader;
+  const startUpgradeFromFork = Object.values(ForkName)[ForkSeq[headerFork] + 1];
+
+  switch (startUpgradeFromFork) {
+    default:
+      throw Error(
+        `Invalid startUpgradeFromFork=${startUpgradeFromFork} for headerFork=${headerFork} in upgradeLightClientHeader to targetFork=${targetFork}`
+      );
 
     case ForkName.altair:
     case ForkName.bellatrix:

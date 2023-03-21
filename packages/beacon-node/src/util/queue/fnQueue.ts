@@ -1,12 +1,12 @@
 import {JobItemQueue} from "./itemQueue.js";
-import {IQueueMetrics, JobQueueOpts} from "./options.js";
+import {QueueMetrics, JobQueueOpts} from "./options.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Fn<R> = (...args: any) => Promise<R>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class JobFnQueue extends JobItemQueue<[Fn<any>], any> {
-  constructor(opts: JobQueueOpts, metrics?: IQueueMetrics) {
+  constructor(opts: JobQueueOpts, metrics?: QueueMetrics) {
     super((fn) => fn(), opts, metrics);
   }
 

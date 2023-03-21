@@ -13,11 +13,11 @@ async function createFromParts(multihash: Uint8Array, privKey?: Uint8Array, pubK
   if (privKey != null) {
     const key = await unmarshalPrivateKey(privKey);
 
-    return await createFromPrivKey(key);
+    return createFromPrivKey(key);
   } else if (pubKey != null) {
     const key = unmarshalPublicKey(pubKey);
 
-    return await createFromPubKey(key);
+    return createFromPubKey(key);
   }
 
   return peerIdFromBytes(multihash);
@@ -37,7 +37,7 @@ export function exportToJSON(peerId: PeerId, excludePrivateKey?: boolean): PeerI
 }
 
 export async function createFromJSON(obj: PeerIdJSON): Promise<PeerId> {
-  return await createFromParts(
+  return createFromParts(
     uint8ArrayFromString(obj.id, "base58btc"),
     obj.privKey != null ? uint8ArrayFromString(obj.privKey, "base64pad") : undefined,
     obj.pubKey != null ? uint8ArrayFromString(obj.pubKey, "base64pad") : undefined
@@ -49,5 +49,5 @@ export function writePeerId(filepath: string, peerId: PeerId): void {
 }
 
 export async function readPeerId(filepath: string): Promise<PeerId> {
-  return await createFromJSON(readFile(filepath));
+  return createFromJSON(readFile(filepath));
 }

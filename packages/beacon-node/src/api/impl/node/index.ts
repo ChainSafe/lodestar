@@ -1,11 +1,10 @@
 import {routes, ServerApi} from "@lodestar/api";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
-import {IApiOptions} from "../../options.js";
-import {formatNodePeer, getRevelantConnection} from "./utils.js";
+import {ApiOptions} from "../../options.js";
 
 export function getNodeApi(
-  opts: IApiOptions,
+  opts: ApiOptions,
   {network, sync}: Pick<ApiModules, "network" | "sync">
 ): ServerApi<routes.node.Api> {
   return {
@@ -22,28 +21,26 @@ export function getNodeApi(
           enr: enr?.encodeTxt() || "",
           discoveryAddresses,
           p2pAddresses: network.localMultiaddrs.map((m) => m.toString()),
-          metadata: network.metadata,
+          metadata: await network.getMetadata(),
         },
       };
     },
 
     async getPeer(peerIdStr) {
-      const connections = network.getConnectionsByPeer().get(peerIdStr);
-      if (!connections) {
+      const peer = await network.dumpPeer(peerIdStr);
+      if (!peer) {
         throw new ApiError(404, "Node has not seen this peer");
       }
-      return {data: formatNodePeer(peerIdStr, connections)};
+      return {data: peer};
     },
 
     async getPeers(filters) {
       const {state, direction} = filters || {};
-      const peers = Array.from(network.getConnectionsByPeer().entries())
-        .map(([peerIdStr, connections]) => formatNodePeer(peerIdStr, connections))
-        .filter(
-          (nodePeer) =>
-            (!state || state.length === 0 || state.includes(nodePeer.state)) &&
-            (!direction || direction.length === 0 || (nodePeer.direction && direction.includes(nodePeer.direction)))
-        );
+      const peers = (await network.dumpPeers()).filter(
+        (nodePeer) =>
+          (!state || state.length === 0 || state.includes(nodePeer.state)) &&
+          (!direction || direction.length === 0 || (nodePeer.direction && direction.includes(nodePeer.direction)))
+      );
 
       return {
         data: peers,
@@ -53,35 +50,19 @@ export function getNodeApi(
 
     async getPeerCount() {
       // TODO: Implement disconnect count with on-disk persistence
-      let disconnected = 0;
-      let connecting = 0;
-      let connected = 0;
-      let disconnecting = 0;
+      const data = {
+        disconnected: 0,
+        connecting: 0,
+        connected: 0,
+        disconnecting: 0,
+      };
 
-      for (const connections of network.getConnectionsByPeer().values()) {
-        const relevantConnection = getRevelantConnection(connections);
-        switch (relevantConnection?.stat.status) {
-          case "OPEN":
-            connected++;
-            break;
-          case "CLOSING":
-            disconnecting++;
-            break;
-          case "CLOSED":
-            disconnected++;
-            break;
-          default:
-            connecting++;
-        }
+      for (const peer of await network.dumpPeers()) {
+        data[peer.state]++;
       }
 
       return {
-        data: {
-          disconnected,
-          connecting,
-          connected,
-          disconnecting,
-        },
+        data,
       };
     },
 

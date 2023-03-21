@@ -2,7 +2,7 @@ import {
   AttesterFlags,
   FLAG_ELIGIBLE_ATTESTER,
   hasMarkers,
-  IAttesterStatus,
+  AttesterStatus,
   toAttesterFlags,
 } from "../../../src/index.js";
 import {CachedBeaconStatePhase0, CachedBeaconStateAltair, EpochProcess} from "../../../src/types.js";
@@ -45,9 +45,9 @@ export function generateBalanceDeltasEpochProcess(
 
 export type FlagFactors = Record<keyof AttesterFlags, number> | number;
 
-function generateStatuses(vc: number, flagFactors: FlagFactors): IAttesterStatus[] {
+function generateStatuses(vc: number, flagFactors: FlagFactors): AttesterStatus[] {
   const totalProposers = 32;
-  const statuses = new Array<IAttesterStatus>(vc);
+  const statuses = new Array<AttesterStatus>(vc);
 
   for (let i = 0; i < vc; i++) {
     // Set to number to set all validators to the same value

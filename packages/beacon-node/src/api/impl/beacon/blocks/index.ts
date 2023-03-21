@@ -197,7 +197,7 @@ export function getBeaconBlockApi({
       } else {
         signedBlock = await executionBuilder.submitBlindedBlock(signedBlindedBlock);
       }
-      return await this.publishBlock(signedBlock);
+      return this.publishBlock(signedBlock);
     },
 
     async publishBlock(signedBlock) {

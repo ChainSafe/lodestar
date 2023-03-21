@@ -1,17 +1,17 @@
 import all from "it-all";
-import {IChainForkConfig} from "@lodestar/config";
-import {Db, Repository, IKeyValue, IFilterOptions, Bucket} from "@lodestar/db";
+import {ChainForkConfig} from "@lodestar/config";
+import {Db, Repository, KeyValue, FilterOptions, Bucket} from "@lodestar/db";
 import {Slot, Root, allForks, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
 import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex.js";
 import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./blockArchiveIndex.js";
 
-export interface IBlockFilterOptions extends IFilterOptions<Slot> {
+export interface BlockFilterOptions extends FilterOptions<Slot> {
   step?: number;
 }
 
-export type BlockArchiveBatchPutBinaryItem = IKeyValue<Slot, Uint8Array> & {
+export type BlockArchiveBatchPutBinaryItem = KeyValue<Slot, Uint8Array> & {
   slot: Slot;
   blockRoot: Root;
   parentRoot: Root;
@@ -21,7 +21,7 @@ export type BlockArchiveBatchPutBinaryItem = IKeyValue<Slot, Uint8Array> & {
  * Stores finalized blocks. Block slot is identifier.
  */
 export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeaconBlock> {
-  constructor(config: IChainForkConfig, db: Db) {
+  constructor(config: ChainForkConfig, db: Db) {
     const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used
     super(config, db, Bucket.allForks_blockArchive, type);
   }
@@ -58,7 +58,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     ]);
   }
 
-  async batchPut(items: IKeyValue<Slot, allForks.SignedBeaconBlock>[]): Promise<void> {
+  async batchPut(items: KeyValue<Slot, allForks.SignedBeaconBlock>[]): Promise<void> {
     await Promise.all([
       super.batchPut(items),
       Array.from(items).map((item) => {
@@ -100,7 +100,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     ]);
   }
 
-  async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<allForks.SignedBeaconBlock> {
+  async *valuesStream(opts?: BlockFilterOptions): AsyncIterable<allForks.SignedBeaconBlock> {
     const firstSlot = this.getFirstSlot(opts);
     const valuesStream = super.valuesStream(opts);
     const step = (opts && opts.step) || 1;
@@ -112,7 +112,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     }
   }
 
-  async values(opts?: IBlockFilterOptions): Promise<allForks.SignedBeaconBlock[]> {
+  async values(opts?: BlockFilterOptions): Promise<allForks.SignedBeaconBlock[]> {
     return all(this.valuesStream(opts));
   }
 
@@ -120,17 +120,17 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
 
   async getByRoot(root: Root): Promise<allForks.SignedBeaconBlock | null> {
     const slot = await this.getSlotByRoot(root);
-    return slot !== null ? await this.get(slot) : null;
+    return slot !== null ? this.get(slot) : null;
   }
 
-  async getBinaryEntryByRoot(root: Root): Promise<IKeyValue<Slot, Buffer> | null> {
+  async getBinaryEntryByRoot(root: Root): Promise<KeyValue<Slot, Buffer> | null> {
     const slot = await this.getSlotByRoot(root);
-    return slot !== null ? ({key: slot, value: await this.getBinary(slot)} as IKeyValue<Slot, Buffer>) : null;
+    return slot !== null ? ({key: slot, value: await this.getBinary(slot)} as KeyValue<Slot, Buffer>) : null;
   }
 
   async getByParentRoot(root: Root): Promise<allForks.SignedBeaconBlock | null> {
     const slot = await this.getSlotByParentRoot(root);
-    return slot !== null ? await this.get(slot) : null;
+    return slot !== null ? this.get(slot) : null;
   }
 
   async getSlotByRoot(root: Root): Promise<Slot | null> {
@@ -148,7 +148,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     return Number.isInteger(slot) ? slot : null;
   }
 
-  private getFirstSlot(opts?: IBlockFilterOptions): Slot {
+  private getFirstSlot(opts?: BlockFilterOptions): Slot {
     const dbFilterOpts = this.dbFilterOptions(opts);
     const firstSlot = dbFilterOpts.gt
       ? this.decodeKey(dbFilterOpts.gt) + 1

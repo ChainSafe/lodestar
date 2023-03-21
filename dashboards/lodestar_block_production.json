@@ -47,7 +47,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
         "h": 1,
@@ -61,7 +61,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A"
         }
@@ -359,7 +359,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -436,7 +436,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "expr": "rate(lodestar_api_rest_errors_total{operationId=~\"produceBlockV2|produceBlindedBlock|publishBlock|publishBlindedBlock\"}[$rate_interval])",
@@ -1036,7 +1036,7 @@
             "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "hetzner-lido-prod-bn-1"
+            "value": "unstable-lg1k-hzax41"
           }
         ],
         "hide": 0,
@@ -1064,9 +1064,9 @@
       "1d"
     ]
   },
-  "timezone": "",
+  "timezone": "utc",
   "title": "Lodestar - block production",
   "uid": "lodestar_block_production",
   "version": 5,
-  "weekStart": ""
+  "weekStart": "monday"
 }

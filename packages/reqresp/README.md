@@ -15,9 +15,9 @@ Typescript REST client for the [Ethereum Consensus API spec](https://github.com/
 import {Libp2p} from "libp2p";
 import {EncodedPayloadType, ReqResp} from "@lodestar/reqresp";
 import {Ping} from "@lodestar/reqresp/protocols";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 
-async function getReqResp(libp2p: Libp2p, logger: ILogger): Promise<void> {
+async function getReqResp(libp2p: Libp2p, logger: Logger): Promise<void> {
   const reqResp = new ReqResp({libp2p, logger, metricsRegister: null});
 
   // Register a PONG handler to respond with caller's Ping request

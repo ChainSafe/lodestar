@@ -1,18 +1,18 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {IBeaconDb} from "../db/index.js";
 
 export class Eth1DataCache {
   db: IBeaconDb;
-  config: IChainForkConfig;
+  config: ChainForkConfig;
 
-  constructor(config: IChainForkConfig, db: IBeaconDb) {
+  constructor(config: ChainForkConfig, db: IBeaconDb) {
     this.config = config;
     this.db = db;
   }
 
   async get({timestampRange}: {timestampRange: {gte: number; lte: number}}): Promise<phase0.Eth1DataOrdered[]> {
-    return await this.db.eth1Data.values(timestampRange);
+    return this.db.eth1Data.values(timestampRange);
   }
 
   async add(eth1Datas: (phase0.Eth1DataOrdered & {timestamp: number})[]): Promise<void> {

@@ -1,14 +1,15 @@
 export type Metrics = {
-  requestTime: IHistogram<"routeId">;
-  requestErrors: IGauge<"routeId">;
-  requestToFallbacks: IGauge<"routeId">;
-  urlsScore: IGauge<"urlIndex">;
+  requestTime: Histogram<"routeId">;
+  streamTime: Histogram<"routeId">;
+  requestErrors: Gauge<"routeId">;
+  requestToFallbacks: Gauge<"routeId">;
+  urlsScore: Gauge<"urlIndex">;
 };
 
 type LabelValues<T extends string> = Partial<Record<T, string | number>>;
-type CollectFn<T extends string> = (metric: IGauge<T>) => void;
+type CollectFn<T extends string> = (metric: Gauge<T>) => void;
 
-export interface IGauge<T extends string> {
+export interface Gauge<T extends string> {
   /**
    * Increment gauge for given labels
    * @param labels Object with label keys and values
@@ -38,7 +39,7 @@ export interface IGauge<T extends string> {
   addCollect(collectFn: CollectFn<T>): void;
 }
 
-export interface IHistogram<T extends string> {
+export interface Histogram<T extends string> {
   /**
    * Start a timer where the value in seconds will observed
    * @param labels Object with label keys and values

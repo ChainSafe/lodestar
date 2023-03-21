@@ -12,10 +12,10 @@ on:
 jobs:
   tag:
     name: Check tag
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -44,12 +44,12 @@ jobs:
 
   npm:
     name: Publish to NPM & Github
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     needs: tag
     if: needs.tag.outputs.is_rc == 'true'
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Needs full depth for changelog generation
       - uses: actions/setup-node@v2
@@ -126,11 +126,11 @@ jobs:
 
   docker:
     name: Publish to Docker Hub
-    runs-on: ubuntu-latest
+    runs-on: buildjet-4vcpu-ubuntu-2204
     needs: [tag, npm]
     if: needs.tag.outputs.is_rc == 'true'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: scripts/await-release.sh ${{ needs.tag.outputs.tag }} rc 900
       # https://github.com/docker/setup-qemu-action
       - name: Set up QEMU

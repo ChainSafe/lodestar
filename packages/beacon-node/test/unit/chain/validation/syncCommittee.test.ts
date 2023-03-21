@@ -2,7 +2,7 @@ import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
 import {altair, Epoch, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {LocalClock} from "../../../../src/chain/clock/index.js";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError.js";
@@ -26,7 +26,7 @@ describe("Sync Committee Signature validation", function () {
   const altairForkEpoch = 2020;
   const currentSlot = SLOTS_PER_EPOCH * (altairForkEpoch + 1);
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIChainForkConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch}));
+  const config = createChainForkConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch}));
   // all validators have same pubkey
   const validatorIndexInSyncCommittee = 15;
 

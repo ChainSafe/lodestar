@@ -10,7 +10,7 @@ import {getKeymanagerTestRunner} from "../utils/keymanagerTestRunners.js";
 import {getKeystoresStr} from "../utils/keystores.js";
 
 describeCliTest("import keystores from api, test DefaultProposerConfig", function ({spawnCli}) {
-  const dataDir = path.join(testFilesDir, "import-keystores-test");
+  const dataDir = path.join(testFilesDir, "proposer-config-test");
 
   const defaultOptions = {
     suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",

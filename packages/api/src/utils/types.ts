@@ -1,6 +1,6 @@
 import {isBasicType, ListBasicType, Type, isCompositeType, ListCompositeType, ArrayType} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {objectToExpectedCase} from "@lodestar/utils";
 import {APIClientHandler, ApiClientResponseData, APIServerHandler, ClientApi} from "../interfaces.js";
 import {Schema, SchemaDefinition} from "./schema.js";
@@ -17,8 +17,8 @@ export type RouteGroupDefinition<
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 > = {
   routesData: RoutesData<Api>;
-  getReqSerializers: (config: IChainForkConfig) => ReqSerializers<Api, ReqTypes>;
-  getReturnTypes: (config: IChainForkConfig) => ReturnTypes<ClientApi<Api>>;
+  getReqSerializers: (config: ChainForkConfig) => ReqSerializers<Api, ReqTypes>;
+  getReturnTypes: (config: ChainForkConfig) => ReturnTypes<ClientApi<Api>>;
 };
 
 export type RouteDef = {

@@ -9,6 +9,7 @@ export {BeaconPreset} from "./interface.js";
 export {
   ForkName,
   ForkSeq,
+  ForkLightClient,
   ForkExecution,
   ForkBlobs,
   isForkExecution,

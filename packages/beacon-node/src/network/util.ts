@@ -1,4 +1,4 @@
-import {networkInterfaces} from "node:os";
+import os from "node:os";
 import type {PeerId} from "@libp2p/interface-peer-id";
 import type {Multiaddr} from "@multiformats/multiaddr";
 import type {Connection} from "@libp2p/interface-connection";
@@ -22,7 +22,7 @@ export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
     throw new Error("Invalid udp multiaddr");
   }
 
-  const interfaces = networkInterfaces();
+  const interfaces = os.networkInterfaces();
   const tuples = multiaddr.tuples();
   const family = tuples[0][0];
   const isIPv4: boolean = family === 4;

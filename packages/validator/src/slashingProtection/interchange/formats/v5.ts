@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {IInterchangeLodestar} from "../types.js";
+import {InterchangeLodestar} from "../types.js";
 import {fromOptionalHexString, numToString, toOptionalHexString} from "../../utils.js";
 
 /**
  * A complete record of all blocks and attestations signed by a set of validators
  * Spec from: https://eips.ethereum.org/EIPS/eip-3076
  */
-export interface IInterchangeV5 {
+export type InterchangeV5 = {
   metadata: {
     interchange_format_version: "5";
     /**
@@ -79,9 +79,9 @@ export interface IInterchangeV5 {
       signing_root?: string;
     }[];
   }[];
-}
+};
 
-export function serializeInterchangeV5({data, genesisValidatorsRoot}: IInterchangeLodestar): IInterchangeV5 {
+export function serializeInterchangeV5({data, genesisValidatorsRoot}: InterchangeLodestar): InterchangeV5 {
   return {
     metadata: {
       interchange_format_version: "5",
@@ -102,7 +102,7 @@ export function serializeInterchangeV5({data, genesisValidatorsRoot}: IInterchan
   };
 }
 
-export function parseInterchangeV5(interchange: IInterchangeV5): IInterchangeLodestar {
+export function parseInterchangeV5(interchange: InterchangeV5): InterchangeLodestar {
   return {
     genesisValidatorsRoot: fromHexString(interchange.metadata.genesis_validators_root),
     data: interchange.data.map((validator) => ({

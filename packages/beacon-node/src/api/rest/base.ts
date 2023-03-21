@@ -1,9 +1,9 @@
-import querystring from "querystring";
+import qs from "qs";
 import fastify, {FastifyError, FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
 import bearerAuthPlugin from "fastify-bearer-auth";
 import {RouteConfig} from "@lodestar/api/beacon/server";
-import {ErrorAborted, ILogger} from "@lodestar/utils";
+import {ErrorAborted, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
 import {IGauge, IHistogram} from "../../metrics/index.js";
 import {ApiError, NodeIsSyncing} from "../impl/errors.js";
@@ -18,7 +18,7 @@ export type RestApiServerOpts = {
 };
 
 export type RestApiServerModules = {
-  logger: ILogger;
+  logger: Logger;
   metrics: RestApiServerMetrics | null;
 };
 
@@ -33,7 +33,7 @@ export type RestApiServerMetrics = SocketMetrics & {
  */
 export class RestApiServer {
   protected readonly server: FastifyInstance;
-  protected readonly logger: ILogger;
+  protected readonly logger: Logger;
   private readonly activeSockets: HttpActiveSocketsTracker;
 
   constructor(private readonly opts: RestApiServerOpts, modules: RestApiServerModules) {
@@ -43,7 +43,15 @@ export class RestApiServer {
     const server = fastify({
       logger: false,
       ajv: {customOptions: {coerceTypes: "array"}},
-      querystringParser: querystring.parse,
+      querystringParser: (str) =>
+        qs.parse(str, {
+          // defaults to 20 but Beacon API spec allows max items of 30
+          arrayLimit: 30,
+          // array as comma-separated values must be supported to be OpenAPI spec compliant
+          comma: true,
+          // default limit of 1000 seems unnecessarily high, let's reduce it a bit
+          parameterLimit: 100,
+        }),
       bodyLimit: opts.bodyLimit,
     });
 

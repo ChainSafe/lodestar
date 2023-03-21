@@ -9,7 +9,7 @@ import {
   defaultExecutionEngineHttpOpts,
 } from "./http.js";
 import {ExecutionEngineMockOpts, ExecutionEngineMockBackend} from "./mock.js";
-import {ExecutionEngineMockJsonRpcClient, IJsonRpcBackend} from "./utils.js";
+import {ExecutionEngineMockJsonRpcClient, JsonRpcBackend} from "./utils.js";
 
 export {IExecutionEngine, ExecutionEngineHttp, ExecutionEngineDisabled, defaultExecutionEngineHttpOpts};
 
@@ -20,7 +20,7 @@ export type ExecutionEngineOpts =
 export const defaultExecutionEngineOpts: ExecutionEngineOpts = defaultExecutionEngineHttpOpts;
 
 export function getExecutionEngineFromBackend(
-  backend: IJsonRpcBackend,
+  backend: JsonRpcBackend,
   modules: ExecutionEngineModules
 ): IExecutionEngine {
   const rpc = new ExecutionEngineMockJsonRpcClient(backend);

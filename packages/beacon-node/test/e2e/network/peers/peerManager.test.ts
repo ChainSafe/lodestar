@@ -7,7 +7,7 @@ import {config} from "@lodestar/config/default";
 import {BitArray} from "@chainsafe/ssz";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {createIBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
 import {IReqRespBeaconNode, ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.js";
 import {PeerRpcScoreStore, PeerManager} from "../../../../src/network/peers/index.js";
 import {Eth2Gossipsub, getConnectionsMap, NetworkEvent, NetworkEventBus} from "../../../../src/network/index.js";
@@ -43,7 +43,7 @@ describe("network / peers / PeerManager", function () {
         root: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
       },
     });
-    const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
+    const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,

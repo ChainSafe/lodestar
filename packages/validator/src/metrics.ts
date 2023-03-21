@@ -331,7 +331,15 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
         help: "Histogram of REST API client request time by routeId",
         labelNames: ["routeId"],
         // Expected times are ~ 50-500ms, but in an overload NodeJS they can be greater
-        buckets: [0.01, 0.1, 1, 5],
+        buckets: [0.01, 0.1, 1, 2, 5],
+      }),
+
+      streamTime: register.histogram<{routeId: string}>({
+        name: "vc_rest_api_client_stream_time_seconds",
+        help: "Histogram of REST API client streaming time by routeId",
+        labelNames: ["routeId"],
+        // Expected times are ~ 50-500ms, but in an overload NodeJS they can be greater
+        buckets: [0.01, 0.1, 1, 2, 5],
       }),
 
       requestErrors: register.gauge<{routeId: string}>({
@@ -406,6 +414,15 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
         name: "validator_db_write_items_total",
         help: "Total count of db write items",
         labelNames: ["bucket"],
+      }),
+      dbSizeTotal: register.gauge({
+        name: "validator_db_size_bytes_total",
+        help: "Approximate number of bytes of file system space used by db",
+      }),
+      dbApproximateSizeTime: register.histogram({
+        name: "validator_db_approximate_size_time_seconds",
+        help: "Time to approximate db size in seconds",
+        buckets: [0.0001, 0.001, 0.01, 0.1, 1],
       }),
     },
 

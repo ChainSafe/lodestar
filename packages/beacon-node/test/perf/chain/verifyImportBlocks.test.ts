@@ -62,7 +62,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
 
   let db: BeaconDb;
   before(async () => {
-    db = new BeaconDb({config, controller: new LevelDbController({name: ".tmpdb"}, {})});
+    db = new BeaconDb({config, controller: new LevelDbController({name: ".tmpdb"}, {logger})});
     await db.start();
   });
   after(async () => {
@@ -86,6 +86,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           disableArchiveOnCheckpoint: true,
           suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
           skipCreateStateCacheIfAvailable: true,
+          archiveStateEpochFrequency: 1024,
         },
         {
           config: state.config,

@@ -156,10 +156,10 @@ export class SlashingProtectionAttestationService {
    * Interchange import / export functionality
    */
   async exportAttestations(pubkey: BLSPubkey): Promise<SlashingProtectionAttestation[]> {
-    return await this.attestationByTarget.getAll(pubkey);
+    return this.attestationByTarget.getAll(pubkey);
   }
 
   async listPubkeys(): Promise<BLSPubkey[]> {
-    return await this.attestationByTarget.listPubkeys();
+    return this.attestationByTarget.listPubkeys();
   }
 }

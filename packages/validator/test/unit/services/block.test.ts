@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
-import {createIChainForkConfig} from "@lodestar/config";
+import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {sleep} from "@lodestar/utils";
 import {ssz} from "@lodestar/types";
@@ -22,7 +22,7 @@ describe("BlockDutiesService", function () {
     sinon.SinonStubbedInstance<ValidatorStore>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
-  const config = createIChainForkConfig(mainnetConfig);
+  const config = createChainForkConfig(mainnetConfig);
 
   before(() => {
     const secretKeys = Array.from({length: 2}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));

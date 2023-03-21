@@ -7,20 +7,20 @@ import {
   computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
 import {phase0, allForks, ssz} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
-import {ILogger, toHex} from "@lodestar/utils";
+import {ChainForkConfig} from "@lodestar/config";
+import {Logger, toHex} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {GENESIS_SLOT, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Eth1Provider} from "../eth1/index.js";
-import {IMetrics} from "../metrics/index.js";
+import {Metrics} from "../metrics/index.js";
 import {Eth1Options} from "../eth1/options.js";
 import {GenesisBuilder} from "./genesis/genesis.js";
-import {IGenesisResult} from "./genesis/interface.js";
+import {GenesisResult} from "./genesis/interface.js";
 
 export async function persistGenesisResult(
   db: IBeaconDb,
-  genesisResult: IGenesisResult,
+  genesisResult: GenesisResult,
   genesisBlock: allForks.SignedBeaconBlock
 ): Promise<void> {
   await Promise.all([
@@ -36,7 +36,7 @@ export async function persistGenesisResult(
 }
 
 export async function persistAnchorState(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   db: IBeaconDb,
   anchorState: BeaconStateAllForks
 ): Promise<void> {
@@ -53,7 +53,7 @@ export async function persistAnchorState(
 }
 
 export function createGenesisBlock(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   genesisState: BeaconStateAllForks
 ): allForks.SignedBeaconBlock {
   const types = config.getForkTypes(GENESIS_SLOT);
@@ -73,9 +73,9 @@ export async function initStateFromEth1({
   opts,
   signal,
 }: {
-  config: IChainForkConfig;
+  config: ChainForkConfig;
   db: IBeaconDb;
-  logger: ILogger;
+  logger: Logger;
   opts: Eth1Options;
   signal: AbortSignal;
 }): Promise<CachedBeaconStateAllForks> {
@@ -137,9 +137,9 @@ export async function initStateFromEth1({
  * Restore the latest beacon state from db
  */
 export async function initStateFromDb(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   db: IBeaconDb,
-  logger: ILogger
+  logger: Logger
 ): Promise<BeaconStateAllForks> {
   const state = await db.stateArchive.lastValue();
   if (!state) {
@@ -159,9 +159,9 @@ export async function initStateFromDb(
  * Initialize and persist an anchor state (either weak subjectivity or genesis)
  */
 export async function initStateFromAnchorState(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   db: IBeaconDb,
-  logger: ILogger,
+  logger: Logger,
   anchorState: BeaconStateAllForks,
   {
     isWithinWeakSubjectivityPeriod,
@@ -200,7 +200,7 @@ export async function initStateFromAnchorState(
   return anchorState;
 }
 
-export function initBeaconMetrics(metrics: IMetrics, state: BeaconStateAllForks): void {
+export function initBeaconMetrics(metrics: Metrics, state: BeaconStateAllForks): void {
   metrics.headSlot.set(state.slot);
   metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
   metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
@@ -208,7 +208,7 @@ export function initBeaconMetrics(metrics: IMetrics, state: BeaconStateAllForks)
 }
 
 export function computeAnchorCheckpoint(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   anchorState: BeaconStateAllForks
 ): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
   let blockHeader;

@@ -1,11 +1,11 @@
-import {computeEpochAtSlot, IAttesterStatus, parseAttesterFlags} from "@lodestar/state-transition";
-import {ILogger} from "@lodestar/utils";
-import {allForks} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {computeEpochAtSlot, AttesterStatus, parseAttesterFlags} from "@lodestar/state-transition";
+import {Logger} from "@lodestar/utils";
+import {allForks, altair} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@lodestar/types/phase0";
-import {ILodestarMetrics} from "./metrics/lodestar.js";
+import {LodestarMetrics} from "./metrics/lodestar.js";
 
 /** The validator monitor collects per-epoch data about each monitored validator.
  * Historical data will be kept around for `HISTORIC_EPOCHS` before it is pruned.
@@ -18,9 +18,10 @@ export enum OpSource {
   gossip = "gossip",
 }
 
-export interface IValidatorMonitor {
+export type ValidatorMonitor = {
   registerLocalValidator(index: number): void;
-  registerValidatorStatuses(currentEpoch: Epoch, statuses: IAttesterStatus[], balances?: number[]): void;
+  registerLocalValidatorInSyncCommittee(index: number, untilEpoch: Epoch): void;
+  registerValidatorStatuses(currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
   registerImportedBlock(block: allForks.BeaconBlock, data: {proposerBalanceDelta: number}): void;
   submitUnaggregatedAttestation(
@@ -41,8 +42,13 @@ export interface IValidatorMonitor {
     indexedAttestation: IndexedAttestation
   ): void;
   registerAttestationInBlock(indexedAttestation: IndexedAttestation, parentSlot: Slot, correctHead: boolean): void;
+  registerGossipSyncContributionAndProof(
+    syncContributionAndProof: altair.ContributionAndProof,
+    syncCommitteeParticipantIndices: ValidatorIndex[]
+  ): void;
+  registerSyncAggregateInBlock(epoch: Epoch, syncAggregate: altair.SyncAggregate, syncCommitteeIndices: number[]): void;
   scrapeMetrics(slotClock: Slot): void;
-}
+};
 
 /** Information required to reward some validator during the current and previous epoch. */
 type ValidatorStatus = {
@@ -77,7 +83,7 @@ type ValidatorStatus = {
   inclusionDistance: number;
 };
 
-function statusToSummary(status: IAttesterStatus): ValidatorStatus {
+function statusToSummary(status: AttesterStatus): ValidatorStatus {
   const flags = parseAttesterFlags(status.flags);
   return {
     isSlashed: flags.unslashed,
@@ -121,6 +127,12 @@ type EpochSummary = {
   aggregates: number;
   /** The delay between when the aggregate should have been produced and when it was observed. */
   aggregateMinDelay: Seconds | null;
+  /** Count of times validator expected in sync aggregate participated */
+  syncCommitteeHits: number;
+  /** Count of times validator expected in sync aggregate failed to participate */
+  syncCommitteeMisses: number;
+  /** Number of times a validator's sync signature was seen in an aggregate */
+  syncSignatureAggregateInclusions: number;
 };
 
 function withEpochSummary(validator: MonitoredValidator, epoch: Epoch, fn: (summary: EpochSummary) => void): void {
@@ -137,6 +149,9 @@ function withEpochSummary(validator: MonitoredValidator, epoch: Epoch, fn: (summ
       aggregates: 0,
       aggregateMinDelay: null,
       attestationCorrectHead: null,
+      syncCommitteeHits: 0,
+      syncCommitteeMisses: 0,
+      syncSignatureAggregateInclusions: 0,
     };
     validator.summaries.set(epoch, summary);
   }
@@ -160,14 +175,15 @@ type MonitoredValidator = {
   index: number;
   /// A history of the validator over time. */
   summaries: Map<Epoch, EpochSummary>;
+  inSyncCommitteeUntilEpoch: number;
 };
 
 export function createValidatorMonitor(
-  metrics: ILodestarMetrics,
-  config: IChainForkConfig,
+  metrics: LodestarMetrics,
+  config: ChainForkConfig,
   genesisTime: number,
-  logger: ILogger
-): IValidatorMonitor {
+  logger: Logger
+): ValidatorMonitor {
   /** The validators that require additional monitoring. */
   const validators = new Map<ValidatorIndex, MonitoredValidator>();
 
@@ -176,7 +192,14 @@ export function createValidatorMonitor(
   return {
     registerLocalValidator(index) {
       if (!validators.has(index)) {
-        validators.set(index, {index, summaries: new Map<Epoch, EpochSummary>()});
+        validators.set(index, {index, summaries: new Map<Epoch, EpochSummary>(), inSyncCommitteeUntilEpoch: -1});
+      }
+    },
+
+    registerLocalValidatorInSyncCommittee(index, untilEpoch) {
+      const validator = validators.get(index);
+      if (validator) {
+        validator.inSyncCommitteeUntilEpoch = Math.max(untilEpoch, validator.inSyncCommitteeUntilEpoch ?? -1);
       }
     },
 
@@ -417,6 +440,36 @@ export function createValidatorMonitor(
       }
     },
 
+    registerGossipSyncContributionAndProof(syncContributionAndProof, syncCommitteeParticipantIndices) {
+      const epoch = computeEpochAtSlot(syncContributionAndProof.contribution.slot);
+
+      for (const index of syncCommitteeParticipantIndices) {
+        const validator = validators.get(index);
+        if (validator) {
+          metrics.validatorMonitor.syncSignatureInAggregateTotal.inc();
+
+          withEpochSummary(validator, epoch, (summary) => {
+            summary.syncSignatureAggregateInclusions += 1;
+          });
+        }
+      }
+    },
+
+    registerSyncAggregateInBlock(epoch, syncAggregate, syncCommitteeIndices) {
+      for (let i = 0; i < syncCommitteeIndices.length; i++) {
+        const validator = validators.get(syncCommitteeIndices[i]);
+        if (validator) {
+          withEpochSummary(validator, epoch, (summary) => {
+            if (syncAggregate.syncCommitteeBits.get(i)) {
+              summary.syncCommitteeHits++;
+            } else {
+              summary.syncCommitteeMisses++;
+            }
+          });
+        }
+      }
+    },
+
     /**
      * Scrape `self` for metrics.
      * Should be called whenever Prometheus is scraping.
@@ -444,8 +497,20 @@ export function createValidatorMonitor(
       metrics.validatorMonitor.prevEpochAttestationAggregateInclusions.reset();
       metrics.validatorMonitor.prevEpochAttestationBlockInclusions.reset();
       metrics.validatorMonitor.prevEpochAttestationBlockMinInclusionDistance.reset();
+      metrics.validatorMonitor.prevEpochSyncSignatureAggregateInclusions.reset();
+
+      let validatorsInSyncCommittee = 0;
+      let prevEpochSyncCommitteeHits = 0;
+      let prevEpochSyncCommitteeMisses = 0;
 
       for (const validator of validators.values()) {
+        // Participation in sync committee
+        const validatorInSyncCommittee = validator.inSyncCommitteeUntilEpoch >= epoch;
+        if (validatorInSyncCommittee) {
+          validatorsInSyncCommittee++;
+        }
+
+        // Prev-epoch summary
         const summary = validator.summaries.get(previousEpoch);
         if (!summary) {
           continue;
@@ -472,7 +537,22 @@ export function createValidatorMonitor(
         metrics.validatorMonitor.prevEpochAggregatesTotal.observe(summary.aggregates);
         if (summary.aggregateMinDelay !== null)
           metrics.validatorMonitor.prevEpochAggregatesMinDelaySeconds.observe(summary.aggregateMinDelay);
+
+        // Sync committee
+        prevEpochSyncCommitteeHits += summary.syncCommitteeHits;
+        prevEpochSyncCommitteeMisses += summary.syncCommitteeMisses;
+
+        // Only observe if included in sync committee to prevent distorting metrics
+        if (validatorInSyncCommittee) {
+          metrics.validatorMonitor.prevEpochSyncSignatureAggregateInclusions.observe(
+            summary.syncSignatureAggregateInclusions
+          );
+        }
       }
+
+      metrics.validatorMonitor.validatorsInSyncCommittee.set(validatorsInSyncCommittee);
+      metrics.validatorMonitor.prevEpochSyncCommitteeHits.set(prevEpochSyncCommitteeHits);
+      metrics.validatorMonitor.prevEpochSyncCommitteeMisses.set(prevEpochSyncCommitteeMisses);
     },
   };
 }

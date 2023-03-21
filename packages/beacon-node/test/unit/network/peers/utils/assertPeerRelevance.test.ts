@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {phase0} from "@lodestar/types";
 import {MockBeaconChain} from "../../../../utils/mocks/chain/chain.js";
 import {assertPeerRelevance, IrrelevantPeerCode} from "../../../../../src/network/peers/utils/assertPeerRelevance.js";
-import {IBeaconClock} from "../../../../../src/chain/clock/index.js";
+import {BeaconClock} from "../../../../../src/chain/clock/index.js";
 
 describe("network / peers / utils / assertPeerRelevance", () => {
   const correctForkDigest = Buffer.alloc(4, 0);
@@ -41,17 +41,6 @@ describe("network / peers / utils / assertPeerRelevance", () => {
         headSlot: 100, // Too far from current slot (= 0)
       },
       irrelevantType: {code: IrrelevantPeerCode.DIFFERENT_CLOCKS, slotDiff: 100},
-    },
-    {
-      id: "Reject non zeroed genesis",
-      remote: {
-        forkDigest: correctForkDigest,
-        finalizedRoot: differedRoot, // non zero root
-        finalizedEpoch: 0, // at genesis
-        headRoot: ZERO_HASH,
-        headSlot: 0,
-      },
-      irrelevantType: {code: IrrelevantPeerCode.GENESIS_NONZERO, root: differedRoot},
     },
     {
       id: "Accept a finalized epoch equal to ours, with same root",
@@ -103,7 +92,7 @@ describe("network / peers / utils / assertPeerRelevance", () => {
         }),
         clock: {
           currentSlot: currentSlot ?? 0,
-        } as Partial<IBeaconClock>,
+        } as Partial<BeaconClock>,
       } as Partial<MockBeaconChain>) as MockBeaconChain;
 
       expect(assertPeerRelevance(remote, chain)).to.deep.equal(irrelevantType);

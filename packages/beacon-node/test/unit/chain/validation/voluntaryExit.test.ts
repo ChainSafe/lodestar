@@ -13,7 +13,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import bls from "@chainsafe/bls";
 import {PointFormat} from "@chainsafe/bls/types";
-import {createIBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {StubbedChainMutable} from "../../../utils/stub/index.js";
 import {generateState} from "../../../utils/state.js";
@@ -67,7 +67,7 @@ describe("validate voluntary exit", () => {
     signedVoluntaryExit = {message: voluntaryExit, signature: sk.sign(signingRoot).toBytes()};
     const _state = generateState(stateEmpty, config);
 
-    state = createCachedBeaconStateTest(_state, createIBeaconConfig(config, _state.genesisValidatorsRoot));
+    state = createCachedBeaconStateTest(_state, createBeaconConfig(config, _state.genesisValidatorsRoot));
   });
 
   beforeEach(() => {

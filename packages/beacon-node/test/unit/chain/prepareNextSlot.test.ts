@@ -4,7 +4,7 @@ import {config} from "@lodestar/config/default";
 import {ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {WinstonLogger} from "@lodestar/utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {BeaconChain, ChainEventEmitter} from "../../../src/chain/index.js";
 import {IBeaconChain} from "../../../src/chain/interface.js";
 import {LocalClock} from "../../../src/chain/clock/index.js";
@@ -59,7 +59,7 @@ describe("PrepareNextSlot scheduler", () => {
     executionEngineStub = sandbox.createStubInstance(ExecutionEngineHttp) as SinonStubbedInstance<ExecutionEngineHttp> &
       ExecutionEngineHttp;
     ((chainStub as unknown) as {executionEngine: IExecutionEngine}).executionEngine = executionEngineStub;
-    ((chainStub as unknown) as {config: IChainForkConfig}).config = (config as unknown) as IChainForkConfig;
+    ((chainStub as unknown) as {config: ChainForkConfig}).config = (config as unknown) as ChainForkConfig;
     scheduler = new PrepareNextSlotScheduler(chainStub, config, null, loggerStub, abortController.signal);
   });
 

@@ -47,7 +47,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
         "h": 1,
@@ -61,7 +61,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A"
         }
@@ -72,7 +72,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -151,7 +151,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "rate(lodestar_engine_http_processor_queue_job_time_seconds_sum[$rate_interval])",
@@ -167,7 +167,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -248,7 +248,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "12*rate(lodestar_engine_http_processor_queue_job_time_seconds_count[6m])",
@@ -264,7 +264,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -345,7 +345,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "delta(lodestar_engine_http_processor_queue_job_time_seconds_sum[$rate_interval])/delta(lodestar_engine_http_processor_queue_job_time_seconds_count[$rate_interval])",
@@ -361,7 +361,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -442,7 +442,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "delta(lodestar_engine_http_processor_queue_dropped_jobs_total[$rate_interval])/(delta(lodestar_engine_http_processor_queue_job_time_seconds_count[$rate_interval])+delta(lodestar_engine_http_processor_queue_dropped_jobs_total[$rate_interval]))",
@@ -458,7 +458,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -539,7 +539,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "delta(lodestar_engine_http_processor_queue_job_wait_time_seconds_sum[$rate_interval])/delta(lodestar_engine_http_processor_queue_job_wait_time_seconds_count[$rate_interval])",
@@ -555,7 +555,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -636,7 +636,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_engine_http_processor_queue_length",
@@ -653,7 +653,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
         "h": 1,
@@ -667,7 +667,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A"
         }
@@ -678,7 +678,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -758,7 +758,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
           "exemplar": false,
@@ -776,7 +776,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -820,7 +820,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_execution_engine_http_client_config_urls_count",
@@ -836,7 +836,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -916,7 +916,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_execution_engine_http_client_active_requests",
@@ -932,7 +932,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1012,7 +1012,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "rate(lodestar_execution_engine_http_client_request_retries_total[$rate_interval])",
@@ -1028,7 +1028,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1108,7 +1108,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "rate(lodestar_execution_engine_http_client_request_time_seconds_sum[32m])\n/\nrate(lodestar_execution_engine_http_client_request_time_seconds_count[32m])",
@@ -1125,7 +1125,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1205,7 +1205,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "rate(lodestar_execution_engine_http_client_request_errors_total[$rate_interval])",
@@ -1217,7 +1217,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "rate(lodestar_execution_engine_http_client_request_used_fallback_url_total[$rate_interval])",
@@ -1233,7 +1233,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1311,7 +1311,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "1 - sum(rate(lodestar_execution_engine_http_client_request_time_seconds_bucket{le=\"1\"}[32m])) by (routeId) / sum(rate(lodestar_execution_engine_http_client_request_time_seconds_count[32m])) by (routeId)",
@@ -1326,7 +1326,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1403,7 +1403,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "builder",
           "expr": "rate(lodestar_execution_engine_notify_new_payload_result_total[1h])",
@@ -1419,7 +1419,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
         "h": 1,
@@ -1433,7 +1433,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A"
         }
@@ -1444,7 +1444,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1524,7 +1524,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_eth1_remote_highest_block",
@@ -1536,7 +1536,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_eth1_last_processed_deposit_block_number",
@@ -1548,7 +1548,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_eth1_last_fetched_block_block_number",
@@ -1564,7 +1564,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1623,7 +1623,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_eth1_deposit_tracker_is_caughtup",
@@ -1638,7 +1638,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1682,7 +1682,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_eth1_http_client_config_urls_count",
@@ -1698,7 +1698,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1743,7 +1743,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_eth1_follow_distance_seconds_config",
@@ -1759,7 +1759,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1804,7 +1804,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_eth1_last_fetched_block_timestamp",
@@ -1822,7 +1822,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1902,7 +1902,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_eth1_follow_distance_dynamic",
@@ -1914,7 +1914,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_eth1_blocks_batch_size_dynamic",
@@ -1926,7 +1926,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_eth1_logs_batch_size_dynamic",
@@ -1942,7 +1942,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2022,7 +2022,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "rate(lodestar_eth1_http_client_request_time_seconds_sum[32m])/rate(lodestar_eth1_http_client_request_time_seconds_count[32m])",
@@ -2039,7 +2039,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2119,7 +2119,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_eth1_http_client_request_errors_total",
@@ -2130,7 +2130,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "rate(lodestar_eth1_deposit_tracker_update_errors_total[$rate_interval])",
@@ -2142,7 +2142,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "rate(lodestar_eth1_http_client_request_used_fallback_url_total[$rate_interval])",
@@ -2158,7 +2158,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2235,7 +2235,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "12*rate(lodestar_eth1_http_client_request_time_seconds_count[32m])",
@@ -2250,7 +2250,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2327,7 +2327,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "rate(lodestar_eth1_blocks_fetched_total[32m])",
@@ -2339,7 +2339,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "rate(lodestar_eth1_deposit_events_fetched_total[32m])",
@@ -2356,7 +2356,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
         "h": 1,
@@ -2369,7 +2369,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2435,7 +2435,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "lodestar_eth1_merge_status",
@@ -2451,7 +2451,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2501,7 +2501,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "lodestar_eth1_merge_ttd",
@@ -2518,7 +2518,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2569,7 +2569,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "Prometheus"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "(lodestar_eth1_merge_ttd - lodestar_eth1_latest_block_ttd)\n/\nrate(lodestar_eth1_latest_block_ttd[32m])",
@@ -2585,7 +2585,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2636,7 +2636,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "Prometheus"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "(time()\n+\n(lodestar_eth1_merge_ttd - lodestar_eth1_latest_block_ttd)\n/\nrate(lodestar_eth1_latest_block_ttd[32m])\n)*1000",
@@ -2652,7 +2652,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2696,7 +2696,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "lodestar_eth1_parent_blocks_fetched_total",
@@ -2712,7 +2712,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2762,7 +2762,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "lodestar_eth1_merge_block_details",
@@ -2779,7 +2779,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2829,7 +2829,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "lodestar_eth1_merge_block_details",
@@ -2846,7 +2846,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2889,7 +2889,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "lodestar_eth1_merge_td_factor",
@@ -2905,7 +2905,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2948,7 +2948,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "lodestar_eth1_latest_block_ttd",
@@ -2964,7 +2964,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3008,7 +3008,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "lodestar_eth1_latest_block_timestamp * 1000",
@@ -3024,7 +3024,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3067,7 +3067,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "lodestar_eth1_latest_block_number",
@@ -3083,7 +3083,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3126,7 +3126,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "lodestar_eth1_get_terminal_pow_block_promise_cache_hit_total",
@@ -3142,7 +3142,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3192,7 +3192,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "lodestar_eth1_merge_block_details",
@@ -3209,7 +3209,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3286,7 +3286,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "lodestar_eth1_latest_block_ttd",
@@ -3298,7 +3298,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "lodestar_eth1_merge_ttd",
@@ -3314,7 +3314,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3391,7 +3391,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(lodestar_eth1_poll_merge_block_errors_total[$rate_interval])",
@@ -3409,7 +3409,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A"
         }
@@ -3451,8 +3451,8 @@
         "auto_min": "10s",
         "current": {
           "selected": false,
-          "text": "30m",
-          "value": "30m"
+          "text": "1h",
+          "value": "1h"
         },
         "hide": 0,
         "label": "rate() interval",
@@ -3474,12 +3474,12 @@
             "value": "10m"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "30m",
             "value": "30m"
           },
           {
-            "selected": false,
+            "selected": true,
             "text": "1h",
             "value": "1h"
           },
@@ -3530,7 +3530,7 @@
             "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "nogroup-ctvpss-0"
+            "value": "unstable-lg1k-hzax41"
           }
         ],
         "hide": 0,
@@ -3558,9 +3558,9 @@
       "1d"
     ]
   },
-  "timezone": "",
+  "timezone": "utc",
   "title": "Lodestar - execution engine",
   "uid": "lodestar_execution_engine",
   "version": 7,
-  "weekStart": ""
+  "weekStart": "monday"
 }

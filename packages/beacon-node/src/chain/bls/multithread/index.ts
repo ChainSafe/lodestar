@@ -8,10 +8,10 @@ import {spawn, Worker} from "@chainsafe/threads";
 self = undefined;
 import bls from "@chainsafe/bls";
 import {Implementation, PointFormat} from "@chainsafe/bls/types";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
-import {IMetrics} from "../../../metrics/index.js";
+import {Metrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
@@ -20,8 +20,8 @@ import {chunkifyMaximizeChunkSize} from "./utils.js";
 import {defaultPoolSize} from "./poolSize.js";
 
 export type BlsMultiThreadWorkerPoolModules = {
-  logger: ILogger;
-  metrics: IMetrics | null;
+  logger: Logger;
+  metrics: Metrics | null;
 };
 
 export type BlsMultiThreadWorkerPoolOptions = {
@@ -96,8 +96,8 @@ type WorkerDescriptor = {
  *   sets into packages of work and send at once to a worker to distribute the latency cost
  */
 export class BlsMultiThreadWorkerPool implements IBlsVerifier {
-  private readonly logger: ILogger;
-  private readonly metrics: IMetrics | null;
+  private readonly logger: Logger;
+  private readonly metrics: Metrics | null;
 
   private readonly format: PointFormat;
   private readonly workers: WorkerDescriptor[];
@@ -252,7 +252,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       throw this.workers[0].status.error;
     }
 
-    return await new Promise<boolean>((resolve, reject) => {
+    return new Promise<boolean>((resolve, reject) => {
       const job = {resolve, reject, addedTimeMs: Date.now(), workReq};
 
       // Append batchable sets to `bufferedJobs`, starting a timeout to push them into `jobs`.

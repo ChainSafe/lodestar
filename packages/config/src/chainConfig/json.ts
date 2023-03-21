@@ -1,12 +1,12 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {IChainConfig, chainConfigTypes, SpecValue, SpecValueTypeName} from "./types.js";
+import {ChainConfig, chainConfigTypes, SpecValue, SpecValueTypeName} from "./types.js";
 
 const MAX_UINT64_JSON = "18446744073709551615";
 
-export function chainConfigToJson(config: IChainConfig): Record<string, string> {
+export function chainConfigToJson(config: ChainConfig): Record<string, string> {
   const json: Record<string, string> = {};
 
-  for (const key of Object.keys(chainConfigTypes) as (keyof IChainConfig)[]) {
+  for (const key of Object.keys(chainConfigTypes) as (keyof ChainConfig)[]) {
     const value = config[key];
     if (value !== undefined) {
       json[key] = serializeSpecValue(value, chainConfigTypes[key]);
@@ -16,10 +16,10 @@ export function chainConfigToJson(config: IChainConfig): Record<string, string> 
   return json;
 }
 
-export function chainConfigFromJson(json: Record<string, unknown>): IChainConfig {
-  const config = {} as IChainConfig;
+export function chainConfigFromJson(json: Record<string, unknown>): ChainConfig {
+  const config = {} as ChainConfig;
 
-  for (const key of Object.keys(chainConfigTypes) as (keyof IChainConfig)[]) {
+  for (const key of Object.keys(chainConfigTypes) as (keyof ChainConfig)[]) {
     const value = json[key];
     if (value !== undefined) {
       config[key] = deserializeSpecValue(json[key], chainConfigTypes[key], key) as never;

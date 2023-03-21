@@ -4,7 +4,7 @@ import fetch from "cross-fetch";
 
 import {ErrorAborted, TimeoutError, retry} from "@lodestar/utils";
 import {IGauge, IHistogram} from "../../metrics/interface.js";
-import {IJson, IRpcPayload} from "../interface.js";
+import {IJson, RpcPayload} from "../interface.js";
 import {encodeJwtToken} from "./jwt.js";
 /**
  * Limits the amount of response text printed with RPC or parsing errors
@@ -12,11 +12,11 @@ import {encodeJwtToken} from "./jwt.js";
 const maxStringLengthToPrint = 500;
 const REQUEST_TIMEOUT = 30 * 1000;
 
-interface IRpcResponse<R> extends IRpcResponseError {
+interface RpcResponse<R> extends RpcResponseError {
   result?: R;
 }
 
-interface IRpcResponseError {
+interface RpcResponseError {
   jsonrpc: "2.0";
   id: number;
   error: {
@@ -37,6 +37,7 @@ export type ReqOpts = {
 
 export type JsonRpcHttpClientMetrics = {
   requestTime: IHistogram<"routeId">;
+  streamTime: IHistogram<"routeId">;
   requestErrors: IGauge<"routeId">;
   requestUsedFallbackUrl: IGauge<"routeId">;
   activeRequests: IGauge<"routeId">;
@@ -45,9 +46,9 @@ export type JsonRpcHttpClientMetrics = {
 };
 
 export interface IJsonRpcHttpClient {
-  fetch<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R>;
-  fetchWithRetries<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R>;
-  fetchBatch<R>(rpcPayloadArr: IRpcPayload[], opts?: ReqOpts): Promise<R[]>;
+  fetch<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R>;
+  fetchWithRetries<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R>;
+  fetchBatch<R>(rpcPayloadArr: RpcPayload[], opts?: ReqOpts): Promise<R[]>;
 }
 
 export class JsonRpcHttpClient implements IJsonRpcHttpClient {
@@ -105,24 +106,24 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   /**
    * Perform RPC request
    */
-  async fetch<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
-    const res: IRpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
+  async fetch<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
+    const res: RpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
     return parseRpcResponse(res, payload);
   }
 
   /**
    * Perform RPC request with retry
    */
-  async fetchWithRetries<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
+  async fetchWithRetries<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
     const routeId = opts?.routeId ?? "unknown";
 
-    const res = await retry<IRpcResponse<R>>(
+    const res = await retry<RpcResponse<R>>(
       async (attempt) => {
         /** If this is a retry, increment the retry counter for this method */
         if (attempt > 1) {
           this.opts?.metrics?.retryCount.inc({routeId});
         }
-        return await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
+        return this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
       },
       {
         retries: opts?.retryAttempts ?? this.opts?.retryAttempts ?? 1,
@@ -137,18 +138,18 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    * Perform RPC batched request
    * Type-wise assumes all requests results have the same type
    */
-  async fetchBatch<R>(rpcPayloadArr: IRpcPayload[], opts?: ReqOpts): Promise<R[]> {
+  async fetchBatch<R>(rpcPayloadArr: RpcPayload[], opts?: ReqOpts): Promise<R[]> {
     if (rpcPayloadArr.length === 0) return [];
 
-    const resArr: IRpcResponse<R>[] = await this.fetchJson(
+    const resArr: RpcResponse<R>[] = await this.fetchJson(
       rpcPayloadArr.map(({method, params}) => ({jsonrpc: "2.0", method, params, id: this.id++})),
       opts
     );
 
     if (!Array.isArray(resArr)) {
       // Nethermind may reply to batch request with a JSON RPC error
-      if ((resArr as IRpcResponseError).error !== undefined) {
-        throw new ErrorJsonRpcResponse(resArr as IRpcResponseError, "batch");
+      if ((resArr as RpcResponseError).error !== undefined) {
+        throw new ErrorJsonRpcResponse(resArr as RpcResponseError, "batch");
       }
 
       throw Error(`expected array of results, got ${resArr} - ${jsonSerializeTry(resArr)}`);
@@ -230,14 +231,18 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         signal: controller.signal,
       });
 
-      const body = await res.text();
+      const streamTimer = this.metrics?.streamTime.startTimer({routeId});
+      const bodyText = await res.text();
       if (!res.ok) {
         // Infura errors:
         // - No project ID: Forbidden: {"jsonrpc":"2.0","id":0,"error":{"code":-32600,"message":"project ID is required","data":{"reason":"project ID not provided","see":"https://infura.io/dashboard"}}}
-        throw new HttpRpcError(res.status, `${res.statusText}: ${body.slice(0, maxStringLengthToPrint)}`);
+        throw new HttpRpcError(res.status, `${res.statusText}: ${bodyText.slice(0, maxStringLengthToPrint)}`);
       }
 
-      return parseJson(body);
+      const bodyJson = parseJson<R>(bodyText);
+      streamTimer?.();
+
+      return bodyJson;
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
 
@@ -261,7 +266,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   }
 }
 
-function parseRpcResponse<R, P>(res: IRpcResponse<R>, payload: IRpcPayload<P>): R {
+function parseRpcResponse<R, P>(res: RpcResponse<R>, payload: RpcPayload<P>): R {
   if (res.result !== undefined) {
     return res.result;
   } else if (res.error !== undefined) {
@@ -292,9 +297,9 @@ export class ErrorParseJson extends Error {
 
 /** JSON RPC endpoint returned status code == 200, but with error property set */
 export class ErrorJsonRpcResponse extends Error {
-  response: IRpcResponseError;
+  response: RpcResponseError;
 
-  constructor(res: IRpcResponseError, payloadMethod: string) {
+  constructor(res: RpcResponseError, payloadMethod: string) {
     const errorMessage =
       typeof res.error === "object"
         ? typeof res.error.message === "string"

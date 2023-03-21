@@ -1,4 +1,4 @@
-import {ILevelDbControllerMetrics} from "@lodestar/db";
+import {LevelDbControllerMetrics} from "@lodestar/db";
 import {
   AttesterSlashingRepository,
   BlockArchiveRepository,
@@ -67,5 +67,5 @@ export interface IBeaconDb {
   /**  Stop the connection to the db instance and close the db store. */
   stop(): Promise<void>;
   /** To inject metrics after CLI initialization */
-  setMetrics(metrics: ILevelDbControllerMetrics): void;
+  setMetrics(metrics: LevelDbControllerMetrics): void;
 }
