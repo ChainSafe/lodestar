@@ -1,5 +1,5 @@
-import {Registry} from "prom-client";
-import {JsonRecord, JsonType, MetricObject, MetricValue, MetricWithGetter, RecordValue} from "./types.js";
+import {MetricObjectWithValues, MetricValue as MetricValueObject, Registry} from "prom-client";
+import {JsonRecord, JsonType, MetricValue, RecordValue} from "./types.js";
 
 type PropertyDefinition = {
   /** Key of value to be sent to remote service */
@@ -86,7 +86,7 @@ export class MetricProperty<T extends RecordValue> implements ClientStatsPropert
     const metric = register.getSingleMetric(this.definition.metricName);
 
     if (metric) {
-      const metricObject = await (metric as MetricWithGetter).get();
+      const metricObject = await metric.get();
 
       const metricValue = this.extractMetricValue(metricObject);
 
@@ -106,7 +106,7 @@ export class MetricProperty<T extends RecordValue> implements ClientStatsPropert
     return {key: this.definition.jsonKey, value: this.definition.defaultValue};
   }
 
-  private extractMetricValue(metricObject: MetricObject): MetricValue | undefined {
+  private extractMetricValue(metricObject: MetricObjectWithValues<MetricValueObject<string>>): MetricValue | undefined {
     const {withLabel, fromLabel} = this.definition;
 
     if (withLabel) {
