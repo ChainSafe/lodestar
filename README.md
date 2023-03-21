@@ -27,18 +27,21 @@
 - :rotating_light: Please note our [security policy](./SECURITY.md).
 - :mailbox_with_mail: Sign up to our [mailing list](https://chainsafe.typeform.com/lodestar) for announcements and any critical information about Lodestar.
 
-## Prerequisites
+### Prerequisites
 
 - :gear: [NodeJS](https://nodejs.org/) (LTS)
 - :toolbox: [Yarn](https://yarnpkg.com/)/[Lerna](https://lerna.js.org/)
 
-###### Developer Quickstart:
+### Developer Quickstart:
 
 ```bash
 lerna bootstrap
 yarn build
+lerna run test:unit
 ./lodestar --help
 ```
+
+More tests and dev-info within [CONTRIBUTING.md](https://github.com/ChainSafe/lodestar/blob/unstable/CONTRIBUTING.md#tests).
 
 ## Architecture Overview
 
