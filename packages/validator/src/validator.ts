@@ -164,15 +164,21 @@ export class Validator {
 
       const validatorKeys = this.validatorStore.getValidatorKeys();
 
-      if (validatorKeys.length > 0) {
-        for (const pubkeyHex in validatorKeys) {
-          if (!indicesService.validatorPubKeyExists(pubkeyHex)) {
-            this.logger.info("Validator exists in beacon chain", {
-              index: validatorStore.getIndexOfPubkey(pubkeyHex),
-              pubKey: prettyBytes(pubkeyHex),
-              feeRecipient: validatorStore.getFeeRecipient(pubkeyHex),
-            });
-          }
+      for (const pubkeyHex in validatorKeys) {
+        let feeRecipient = "";
+
+        try {
+          feeRecipient = validatorStore.getFeeRecipient(pubkeyHex);
+        } catch (e) {
+          this.logger.warn("Cannot retrieve Fee Recipient", {}, e as Error);
+        }
+
+        if (!indicesService.validatorPubKeyExists(pubkeyHex)) {
+          this.logger.info("Validator exists in beacon chain", {
+            index: validatorStore.getIndexOfPubkey(pubkeyHex),
+            pubKey: prettyBytes(pubkeyHex),
+            feeRecipient,
+          });
         }
       }
 
