@@ -193,7 +193,9 @@ export class BlockProposingService {
       let selectedBlock;
       switch (builderSelection) {
         case BuilderSelection.MaxProfit: {
-          if (engineBlockValue >= builderBlockValue) {
+          // If blockValues are zero, than choose builder as most likely beacon didn't provide blockValues
+          // and builder blocks are most likely thresholded by a min bid
+          if (engineBlockValue >= builderBlockValue && engineBlockValue !== BigInt(0)) {
             selectedSource = BlockSource.engine;
             selectedBlock = fullBlock;
           } else {

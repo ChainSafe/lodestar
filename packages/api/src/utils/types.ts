@@ -189,7 +189,8 @@ export function WithBlockValue<T extends {data: unknown}>(type: TypeJson<T>): Ty
     }),
     fromJson: ({block_value, ...data}: T & {block_value: string}) => ({
       ...type.fromJson(data),
-      blockValue: BigInt(block_value),
+      // For cross client usage where beacon or validator are of separate clients, blockValue could be missing
+      blockValue: BigInt(block_value ?? "0"),
     }),
   };
 }
