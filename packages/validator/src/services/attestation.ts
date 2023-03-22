@@ -76,7 +76,9 @@ export class AttestationService {
       const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(duties);
       await Promise.all(
         Array.from(dutiesByCommitteeIndex.entries()).map(([index, duties]) =>
-          this.runAttestationTasksPerCommittee(duties, slot, index, signal)
+          this.runAttestationTasksPerCommittee(duties, slot, index, signal).catch((e) => {
+            this.logger.error("Error on attestation routine", {slot, index}, e);
+          })
         )
       );
     } else {
