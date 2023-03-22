@@ -59,8 +59,16 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       headSlotTimeSeries.addPoint(headSlot, Math.floor(Date.now() / 1000));
 
       const peersRow = `peers: ${connectedPeerCount}`;
-      const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
-      const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
+      const headExecutionInfo = getHeadExecutionInfo(config, clockEpoch, headState, headInfo);
+      // headExecutionInfo has space prefix if its a non empty string
+      const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}${headExecutionInfo}`;
+
+      const finalizedInfo = chain.forkChoice.getBlock(finalizedRoot);
+      const headFinalizedInfo = finalizedInfo
+        ? getFinalizedExecutionInfo(config, clockEpoch, headState, finalizedInfo)
+        : "";
+      // headFinalizedInfo has space prefix if its a non empty string
+      const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}${headFinalizedInfo}`;
 
       // Give info about empty slots if head < clock
       const skippedSlots = clockSlot - headInfo.slot;
@@ -81,8 +89,6 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
         logger.info(`TTD in ${timeLeft} current TD ${tdProgress.td} / ${tdProgress.ttd}`);
       }
 
-      const executionInfo = getExecutionInfo(config, clockEpoch, headState, headInfo);
-
       let nodeState: string[];
       switch (sync.state) {
         case SyncState.SyncingFinalized:
@@ -98,7 +104,6 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
             `${slotsPerSecond.toPrecision(3)} slots/s`,
             clockSlotRow,
             headRow,
-            ...executionInfo,
             finalizedCheckpointRow,
             peersRow,
           ];
@@ -107,13 +112,13 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
 
         case SyncState.Synced: {
           // Synced - clock - head - finalized - peers
-          nodeState = ["Synced", clockSlotRow, headRow, ...executionInfo, finalizedCheckpointRow, peersRow];
+          nodeState = ["Synced", clockSlotRow, headRow, finalizedCheckpointRow, peersRow];
           break;
         }
 
         case SyncState.Stalled: {
           // Searching peers - peers - head - finalized - clock
-          nodeState = ["Searching peers", peersRow, clockSlotRow, headRow, ...executionInfo, finalizedCheckpointRow];
+          nodeState = ["Searching peers", peersRow, clockSlotRow, headRow, finalizedCheckpointRow];
         }
       }
       logger.info(nodeState.join(" - "));
@@ -146,14 +151,14 @@ function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain): number {
   return msToNextSlot > msPerSlot / 2 ? msToNextSlot - msPerSlot / 2 : msToNextSlot + msPerSlot / 2;
 }
 
-function getExecutionInfo(
+function getHeadExecutionInfo(
   config: BeaconConfig,
   clockEpoch: Epoch,
   headState: CachedBeaconStateAllForks,
   headInfo: ProtoBlock
-): string[] {
+): string {
   if (clockEpoch < config.BELLATRIX_FORK_EPOCH) {
-    return [];
+    return "";
   } else {
     const executionStatusStr = headInfo.executionStatus.toLowerCase();
 
@@ -164,14 +169,37 @@ function getExecutionInfo(
           headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
         const executionPayloadNumberInfo =
           headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
-        return [
-          `execution: ${executionStatusStr}(${executionPayloadNumberInfo}: ${prettyBytes(executionPayloadHashInfo)})`,
-        ];
+        return ` exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytes(
+          executionPayloadHashInfo
+        )})`;
       } else {
-        return [`execution: ${executionStatusStr}`];
+        return ` exec-block: ${executionStatusStr}`;
       }
     } else {
-      return [];
+      return "";
     }
+  }
+}
+
+function getFinalizedExecutionInfo(
+  config: BeaconConfig,
+  clockEpoch: Epoch,
+  headState: CachedBeaconStateAllForks,
+  finalizedInfo: ProtoBlock
+): string {
+  if (
+    clockEpoch >= config.BELLATRIX_FORK_EPOCH &&
+    isExecutionCachedStateType(headState) &&
+    isMergeTransitionComplete(headState)
+  ) {
+    const executionStatusStr = finalizedInfo.executionStatus.toLowerCase();
+    // If finalized is post merge, then pick number else just display premerge status
+    const finalizedStatus =
+      finalizedInfo.executionStatus !== ExecutionStatus.PreMerge
+        ? `${finalizedInfo.executionPayloadNumber}`
+        : executionStatusStr;
+    return ` (exec-block: ${finalizedStatus})`;
+  } else {
+    return "";
   }
 }
