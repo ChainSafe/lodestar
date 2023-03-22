@@ -41,7 +41,7 @@ lerna run test:unit
 ./lodestar --help
 ```
 
-More tests and dev-info within [CONTRIBUTING.md](https://github.com/ChainSafe/lodestar/blob/unstable/CONTRIBUTING.md#tests).
+More tests and dev-info within [CONTRIBUTING.md](/CONTRIBUTING.md#tests).
 
 ## Architecture Overview
 
