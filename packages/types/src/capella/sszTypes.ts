@@ -260,3 +260,20 @@ export const LightClientStore = new ContainerType(
   },
   {typeName: "LightClientStore", jsonCase: "eth2"}
 );
+
+// PayloadAttributes primarily for SSE event
+export const PayloadAttributes = new ContainerType(
+  {
+    ...bellatrixSsz.PayloadAttributes.fields,
+    withdrawals: Withdrawals,
+  },
+  {typeName: "PayloadAttributes", jsonCase: "eth2"}
+);
+
+export const SSEPayloadAttributes = new ContainerType(
+  {
+    ...bellatrixSsz.SSEPayloadAttributesCommon.fields,
+    payloadAttributes: PayloadAttributes,
+  },
+  {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
+);

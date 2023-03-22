@@ -23,6 +23,7 @@ export type FullOrBlindedExecutionPayload = ExecutionPayload | ExecutionPayloadH
 
 export type BuilderBid = ValueOf<typeof ssz.BuilderBid>;
 export type SignedBuilderBid = ValueOf<typeof ssz.SignedBuilderBid>;
+export type SSEPayloadAttributes = ValueOf<typeof ssz.SSEPayloadAttributes>;
 
 export type LightClientHeader = ValueOf<typeof ssz.LightClientHeader>;
 export type LightClientBootstrap = ValueOf<typeof ssz.LightClientBootstrap>;
