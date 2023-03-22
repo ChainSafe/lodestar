@@ -181,7 +181,7 @@ export function getValidatorApi({
 
     if (protoBeaconBlock.executionStatus === ExecutionStatus.Syncing)
       throw new NodeIsSyncing(
-        `Block's execution payload not yet validated, executionPayloadBlockHash=${protoBeaconBlock.executionPayloadBlockHash}`
+        `Block's execution payload not yet validated, executionPayloadBlockHash=${protoBeaconBlock.executionPayloadBlockHash} number=${protoBeaconBlock.executionPayloadNumber}`
       );
   }
 
