@@ -1,5 +1,3 @@
-import {PeerId} from "@libp2p/interface-peer-id";
-import {TopicValidatorResult} from "@libp2p/interface-pubsub";
 import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {PublishOpts, SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
@@ -16,7 +14,8 @@ import {PeersData} from "../peers/peersData.js";
 import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
 import {Libp2p} from "../interface.js";
-import {NetworkEvent, NetworkEventBus} from "../events.js";
+import {NetworkEventBus} from "../events.js";
+import {PendingGossipsubMessage} from "../processor/types.js";
 import {GossipBeaconNode, GossipTopic, GossipTopicMap, GossipType, GossipTypeMap} from "./interface.js";
 import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic, getCoreTopicsAtFork} from "./topic.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
@@ -54,6 +53,8 @@ export type Eth2GossipsubOpts = {
   skipParamsLog?: boolean;
 };
 
+export type PendingGossipsubMessageHandler = (message: PendingGossipsubMessage) => void;
+
 /**
  * Wrapper around js-libp2p-gossipsub with the following extensions:
  * - Eth2 message id
@@ -76,6 +77,7 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
+  private gossipMessageHandler: PendingGossipsubMessageHandler | undefined;
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
     const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
@@ -135,7 +137,6 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
     }
 
     this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
-    this.events.on(NetworkEvent.gossipMessageValidationResult, this.onValidationResult.bind(this));
 
     // Having access to this data is CRUCIAL for debugging. While this is a massive log, it must not be deleted.
     // Scoring issues require this dump + current peer score stats to re-calculate scores.
@@ -282,6 +283,10 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
     );
   }
 
+  subscribePendingGossipsubMessage(handler: PendingGossipsubMessageHandler): void {
+    this.gossipMessageHandler = handler;
+  }
+
   private getGossipTopicString(topic: GossipTopic): string {
     return stringifyGossipTopic(this.config, topic);
   }
@@ -397,18 +402,15 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
     const seenTimestampSec = Date.now() / 1000;
 
     // Emit message to network processor
-    this.events.emit(NetworkEvent.pendingGossipsubMessage, {
-      topic,
-      msg,
-      msgId,
-      propagationSource,
-      seenTimestampSec,
-      startProcessUnixSec: null,
-    });
-  }
-
-  private onValidationResult(msgId: string, propagationSource: PeerId, acceptance: TopicValidatorResult): void {
-    this.reportMessageValidationResult(msgId, propagationSource, acceptance);
+    if (this.gossipMessageHandler)
+      this.gossipMessageHandler({
+        topic,
+        msg,
+        msgId,
+        propagationSource,
+        seenTimestampSec,
+        startProcessUnixSec: null,
+      });
   }
 }
 

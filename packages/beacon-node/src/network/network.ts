@@ -230,9 +230,20 @@ export class Network implements INetwork {
     );
 
     const networkProcessor = new NetworkProcessor(
-      {attnetsService, chain, config, logger, metrics, peerRpcScores, events: networkEventBus, gossipHandlers},
+      {
+        attnetsService,
+        chain,
+        config,
+        logger,
+        metrics,
+        peerRpcScores,
+        events: networkEventBus,
+        gossipHandlers,
+        gossipsub: gossip,
+      },
       opts
     );
+    gossip.subscribePendingGossipsubMessage(networkProcessor.onPendingGossipsubMessage.bind(networkProcessor));
 
     await libp2p.start();
 

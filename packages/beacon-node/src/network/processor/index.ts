@@ -1,8 +1,9 @@
 import {Logger, mapValues} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {NetworkEvent, NetworkEventBus} from "../events.js";
+import {NetworkEventBus} from "../events.js";
 import {GossipType} from "../gossip/interface.js";
+import {Eth2Gossipsub} from "../gossip/index.js";
 import {createGossipQueues} from "./gossipQueues.js";
 import {NetworkWorker, NetworkWorkerModules} from "./worker.js";
 import {PendingGossipsubMessage} from "./types.js";
@@ -14,6 +15,7 @@ export type NetworkProcessorModules = NetworkWorkerModules &
     events: NetworkEventBus;
     logger: Logger;
     metrics: Metrics | null;
+    gossipsub: Eth2Gossipsub;
   };
 
 export type NetworkProcessorOpts = GossipHandlerOpts & {
@@ -68,13 +70,11 @@ export class NetworkProcessor {
   private readonly gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
 
   constructor(modules: NetworkProcessorModules, private readonly opts: NetworkProcessorOpts) {
-    const {chain, events, logger, metrics} = modules;
+    const {chain, logger, metrics} = modules;
     this.chain = chain;
     this.metrics = metrics;
     this.logger = logger;
     this.worker = new NetworkWorker(modules, opts);
-
-    events.on(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage.bind(this));
 
     if (metrics) {
       metrics.gossipValidationQueueLength.addCollect(() => {
@@ -105,7 +105,7 @@ export class NetworkProcessor {
     return queue.getAll();
   }
 
-  private onPendingGossipsubMessage(data: PendingGossipsubMessage): void {
+  onPendingGossipsubMessage(data: PendingGossipsubMessage): void {
     const droppedJob = this.gossipQueues[data.topic.type].add(data);
     if (droppedJob) {
       // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
