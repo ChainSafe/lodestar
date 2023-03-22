@@ -28,8 +28,8 @@ const gossipQueueOpts: {
   [GossipType.sync_committee]: {maxLength: 4096, type: QueueType.LIFO},
   [GossipType.light_client_finality_update]: {maxLength: 1024, type: QueueType.FIFO},
   [GossipType.light_client_optimistic_update]: {maxLength: 1024, type: QueueType.FIFO},
-  // check ??  MAX_BLS_TO_EXECUTION_CHANGES	2**4 (= 16)
-  [GossipType.bls_to_execution_change]: {maxLength: 1024, type: QueueType.FIFO},
+  // lighthouse has bls changes queue set to their max 16384 to handle large spike at capella
+  [GossipType.bls_to_execution_change]: {maxLength: 16384, type: QueueType.FIFO},
 };
 
 type GossipQueueOpts = {
