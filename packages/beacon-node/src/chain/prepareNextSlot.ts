@@ -164,6 +164,8 @@ export class PrepareNextSlotScheduler {
             prepareState,
             prepareSlot,
             parentBlockRoot: fromHex(headRoot),
+            // The likely consumers of this API are builders and will anyway ignore the
+            // feeRecipient, so just pass zero hash for now till a real use case arises
             feeRecipient: "0x0000000000000000000000000000000000000000000000000000000000000000",
           });
           this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
