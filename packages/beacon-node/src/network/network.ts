@@ -243,7 +243,6 @@ export class Network implements INetwork {
       },
       opts
     );
-    gossip.subscribePendingGossipsubMessage(networkProcessor.onPendingGossipsubMessage.bind(networkProcessor));
 
     await libp2p.start();
 

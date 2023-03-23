@@ -70,11 +70,13 @@ export class NetworkProcessor {
   private readonly gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
 
   constructor(modules: NetworkProcessorModules, private readonly opts: NetworkProcessorOpts) {
-    const {chain, logger, metrics} = modules;
+    const {chain, logger, metrics, gossip} = modules;
     this.chain = chain;
     this.metrics = metrics;
     this.logger = logger;
     this.worker = new NetworkWorker(modules, opts);
+
+    gossip.subscribePendingGossipsubMessage(this.onPendingGossipsubMessage.bind(this));
 
     if (metrics) {
       metrics.gossipValidationQueueLength.addCollect(() => {
@@ -105,7 +107,7 @@ export class NetworkProcessor {
     return queue.getAll();
   }
 
-  onPendingGossipsubMessage(data: PendingGossipsubMessage): void {
+  private onPendingGossipsubMessage(data: PendingGossipsubMessage): void {
     const droppedJob = this.gossipQueues[data.topic.type].add(data);
     if (droppedJob) {
       // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
