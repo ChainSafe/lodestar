@@ -150,6 +150,27 @@ We're currently experimenting with hosting the majority of lodestar packages and
   - Error: One or more main functionalities are not working, preventing some functions from working properly.
   - Fatal: One or more main functionalities are not working and preventing the application from fulfilling its duties.
 
+## Logging policy
+
+### Logging Levels
+
+- `error`: Critical issues that prevent the application from functioning correctly or cause significant disruption to users. Examples include failed network connections, crashes, or data corruption.
+- `warn`: Situations that may lead to critical issues if not addressed but do not prevent the application from functioning. Examples include configuration issues, deprecated features, or temporary network disruptions.
+- `info`: General sporadic informational about the node's state. Examples include initialization messages, infrequent periodic status updates, or high-level progress reports.
+- `verbose`: _TBD_
+- `debug`: Detailed diagnostic information that can help developers or users troubleshoot specific issues. Examples include individual request logs for every REST API, networking interactions, or internal components status changes.
+
+### Guideliness
+
+1. Always use the appropriate log level as defined above. Log messages should be clear and concise, providing enough information to understand the context and severity of the issue.
+2. Avoid excessive logging. Log only the information that is necessary for understanding and troubleshooting issues. Over-logging can make it more difficult for users to find relevant information.
+3. Do not log sensitive data, such as private keys, user credentials, or personal information.
+4. Do not log arbitrary data from the network as ASCII or UTF8 at levels higher or equal to the current default level.
+5. Use clear and concise language. Prefer to log variables in JSON format `log.debug("Action", {slot})` instead of formating the text yourself `log.debug('slot=${slot}')`.
+6. Include only relevant context in log messages, sufficient to debug the issue or action it refers to.
+
+Contributors must chose the log level carefully to ensure a consistent experience for every type of user:
+
 ## Contributing to Grafana dashboards
 
 To edit or extend an existing Grafana dashboard with minimal diff:
