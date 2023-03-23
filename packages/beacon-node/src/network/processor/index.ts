@@ -15,7 +15,7 @@ export type NetworkProcessorModules = NetworkWorkerModules &
     events: NetworkEventBus;
     logger: Logger;
     metrics: Metrics | null;
-    gossipsub: Eth2Gossipsub;
+    gossip: Eth2Gossipsub;
   };
 
 export type NetworkProcessorOpts = GossipHandlerOpts & {

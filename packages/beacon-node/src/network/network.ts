@@ -239,7 +239,7 @@ export class Network implements INetwork {
         peerRpcScores,
         events: networkEventBus,
         gossipHandlers,
-        gossipsub: gossip,
+        gossip,
       },
       opts
     );
