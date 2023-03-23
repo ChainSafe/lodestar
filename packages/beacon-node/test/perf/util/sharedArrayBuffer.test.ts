@@ -46,18 +46,11 @@ class StatusCacheReader {
   }
 }
 
-/**
- * 16_000 items: push then shift  - LinkedList is >200x faster than regular array
- *               push then pop - LinkedList is >10x faster than regular array
- * 24_000 items: push then shift  - LinkedList is >350x faster than regular array
- *               push then pop - LinkedList is >10x faster than regular array
- */
 describe("SharedArrayBuffer vs MessageChannel", () => {
   setBenchOpts({noThreshold: true});
 
   itBench({
     id: "set and get status - MessageChannel",
-    runsFactor: 1000,
     before: () => {
       const channel = new MessageChannel();
       return {
@@ -84,7 +77,6 @@ describe("SharedArrayBuffer vs MessageChannel", () => {
 
   itBench({
     id: "set and get status - SharedArrayBuffer",
-    runsFactor: 1000,
     before: () => {
       const buffer = new SharedArrayBuffer(STATUS_BUFFER_SIZE);
       const reader = new StatusCacheReader(buffer);
@@ -104,14 +96,12 @@ describe("SharedArrayBuffer vs MessageChannel", () => {
 
   itBench({
     id: "serialize/deserialize status - structuredClone",
-    runsFactor: 1000,
     beforeEach: () => ssz.phase0.Status.defaultValue(),
     fn: (status) => void structuredClone(status),
   });
 
   itBench({
     id: "serialize/deserialize status - ssz",
-    runsFactor: 1000,
     beforeEach: () => ssz.phase0.Status.defaultValue(),
     fn: (status) => void ssz.phase0.Status.deserialize(ssz.phase0.Status.serialize(status)),
   });
