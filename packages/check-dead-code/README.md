@@ -1,0 +1,472 @@
+# lodestar-check-dead-code
+
+A package to test whether other lodestar packages have dead code / unused exports.
+
+## Usage
+
+```bash
+yarn test:unit
+```
+
+Example output:
+
+```
+  No dead-code
+    1) Should not be different from the list of expected unused exported values
+
+
+  0 passing (16s)
+  1 failing
+
+  1) No dead-code
+       Should not be different from the list of expected unused exported values:
+
+      AssertionError: expected { '@lodestar/api': [ …(51) ], …(46) } to equal {}
+      + expected - actual
+
+      -{
+      -  "@chainsafe/lodestar": [
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "mergeBeaconNodeOptions"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "mergeBeaconNodeOptionsWithDefaults"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "getBeaconParamsFromArgs"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "getBeaconConfig"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "parsePartialChainConfigJson"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "createFromJSON"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "PeerIdJSON"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "fetchBootnodes"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "WeakSubjectivityFetchOptions"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "IParamsArgs"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "defaultGlobalPaths"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "getEthersSigner"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "parse"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "stringify"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "writeFile"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "readFileIfExists"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "downloadOrCopyFile"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "downloadFile"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "yamlSchema"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "FileFormat"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "readAndGetGitData"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "shouldDeleteLogFile"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "LOG_FILE_DISABLE_KEYWORD"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "LOG_LEVEL_DEFAULT"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "LOG_FILE_LEVEL_DEFAULT"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "LOG_DAILY_ROTATE_DEFAULT"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "sleep"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "Lockfile"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "initLogger"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "getCheckpointFromState"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "overwriteEnrWithCliArgs"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "beaconExtraOptions"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "DebugArgs"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "debugOptions"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "BeaconPathsPartial"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "DEFAULT_BEACON_NODE_URL"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "KeymanagerArgs"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "keymanagerOptions"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "IValidatorPaths"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "AccountPaths"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "readRemoteSignerDefinition"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "writeRemoteSignerDefinition"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "ImportStatus"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "DeletionStatus"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "KeymanagerRestApiServerOpts"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "KeymanagerRestApiServerModules"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "isVotingKeystore"
+      -    }
+      -  ]
+      -  "@lodestar/api": [
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "HttpErrorCodes"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "HttpSuccessCodes"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "IHttpClient"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "HttpClientOptions"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "HttpClientModules"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "Metrics"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "ApiNamespace"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "APIClientHandler"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "ApiClientSuccessResponse"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "ApiClientSErrorResponse"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "ApiClientResponse"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "ApiClientResponseData"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "GenericRequestObject"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "GenericResponseObject"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "ClientApi"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "ImportStatus"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "DeletionStatus"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "ImportRemoteKeyStatus"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "DeleteRemoteKeyStatus"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "ResponseStatus"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "SignerDefinition"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "KeystoreStr"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "SlashingProtectionData"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "PubkeyHex"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "FeeRecipientData"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "GasLimitData"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "compileRouteUrlFormater"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "toColonNotationPath"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "getFastifySchema"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "SchemaDefinition"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "RouteGroupDefinition"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "ReqGenArg"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "KeysOfNonVoidResolveValues"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "querySerializeProofPathsArr"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "queryParseProofPathsArr"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "queryParseProofPaths"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "fromU64StrOpt"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "toU64StrOpt"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "U64"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "serializeSSEEvent"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "registerRoutes"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "RouteConfig"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "registerRoutes"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "RouteConfig"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "registerRoutes"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "RouteConfig"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "getFetchOptsSerializer"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "URLOpts"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "Gauge"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "Histogram"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "FastifyHandler"
+      -    }
+      -  ]
+      -  "@lodestar/api/beacon": [
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "serializeSSEEvent"
+      -    }
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "registerRoutes"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "RouteConfig"
+      -    }
+      -  ]
+      -  "@lodestar/api/beacon/server": [
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "serializeSSEEvent"
+      -    }
+      -  ]
+      -  "@lodestar/api/builder": [
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "registerRoutes"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      "value": "RouteConfig"
+      -    }
+      -  ]
+      -  "@lodestar/api/builder/server": [
+      -    {
+      -      "isUsedInModule": false
+      -      "value": "registerRoutes"
+      -    }
+      -    {
+      -      "isUsedInModule": true
+      -      
+      +{}
+```
+
+If the test fails:
+- for each exported values:
+  - if `isUsedInModule` is `true`, then you simply need to remove the `export` keyword
+  - if `isUsedInModule` is `false`, then this value is dead code and you need to delete it entirely
+
+## License
+
+Apache-2.0 [ChainSafe Systems](https://chainsafe.io)

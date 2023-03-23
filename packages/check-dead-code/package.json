@@ -1,0 +1,44 @@
+{
+  "name": "@lodestar/check-dead-code",
+  "description": "Utility to test whether the lodestar packages export unused values",
+  "license": "Apache-2.0",
+  "author": "ChainSafe Systems",
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com:ChainSafe/lodestar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar/issues"
+  },
+  "version": "1.5.1",
+  "type": "module",
+  "exports": "./lib/index.js",
+  "files": [
+    "lib/**/*.d.ts",
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "*.d.ts",
+    "*.js"
+  ],
+  "scripts": {
+    "clean": "rm -rf lib && rm -f *.tsbuildinfo",
+    "check-types": "tsc",
+    "lint": "eslint --color --ext .ts test/",
+    "lint:fix": "yarn run lint --fix",
+    "pretest": "yarn run check-types",
+    "test:unit": "mocha --reporter-option maxDiffSize=0 'test/**/*.test.ts'",
+    "check-readme": "typescript-docs-verifier"
+  },
+  "types": "lib/index.d.ts",
+  "dependencies": {
+    "@vscode/ripgrep": "^1.15.0"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "ethereum",
+    "eth-consensus",
+    "beacon",
+    "blockchain"
+  ]
+}
