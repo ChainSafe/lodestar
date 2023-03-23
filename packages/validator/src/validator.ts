@@ -33,9 +33,11 @@ export type ValidatorOptions = {
   abortController: AbortController;
   afterBlockDelaySlotFraction?: number;
   scAfterBlockDelaySlotFraction?: number;
+  disableAttestationGrouping?: boolean;
   doppelgangerProtectionEnabled?: boolean;
   closed?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
+  distributed?: boolean;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -123,7 +125,10 @@ export class Validator {
       emitter,
       chainHeaderTracker,
       metrics,
-      {afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction}
+      {
+        afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
+        disableAttestationGrouping: opts.disableAttestationGrouping || opts.distributed,
+      }
     );
 
     this.syncCommitteeService = new SyncCommitteeService(

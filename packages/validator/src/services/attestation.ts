@@ -12,8 +12,9 @@ import {groupAttDutiesByCommitteeIndex} from "./utils.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
 
-type AttestationServiceOpts = {
+export type AttestationServiceOpts = {
   afterBlockDelaySlotFraction?: number;
+  disableAttestationGrouping?: boolean;
 };
 
 /**
@@ -64,32 +65,78 @@ export class AttestationService {
     await Promise.race([sleep(this.clock.msToSlot(slot + 1 / 3), signal), this.emitter.waitForBlockSlot(slot)]);
     this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
 
-    // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
-    // Produce a single attestation for all committees, and clone mutate before signing
-    // Downstream tooling may require that produceAttestation is called with a 'real' committee index
-    // So we pick the first duty's committee index - see https://github.com/ChainSafe/lodestar/issues/4687
-    const attestationNoCommittee = await this.produceAttestation(duties[0].duty.committeeIndex, slot);
+    if (this.opts?.disableAttestationGrouping) {
+      // Attestation service grouping optimization must be disabled in a distributed validator cluster as
+      // middleware clients such as Charon (https://github.com/ObolNetwork/charon) expect the actual committee index
+      // to be sent to produceAttestationData endpoint. This is required because the middleware client itself
+      // calls produceAttestationData on the beacon node for each validator and there is a slight chance that
+      // the `beacon_block_root` (LMD GHOST vote) changes between calls which would cause a conflict between
+      // attestations submitted by Lodestar and other VCs in the cluster, resulting in aggregation failure.
+      // See https://github.com/ChainSafe/lodestar/issues/5103 for further details and references.
+      const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(duties);
+      await Promise.all(
+        Array.from(dutiesByCommitteeIndex.entries()).map(([index, duties]) =>
+          this.runAttestationTasksPerCommittee(duties, slot, index, signal).catch((e) => {
+            this.logger.error("Error on attestation routine", {slot, index}, e);
+          })
+        )
+      );
+    } else {
+      // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
+      // Produce a single attestation for all committees and submit unaggregated attestations in one go.
+      await this.runAttestationTasksGrouped(duties, slot, signal);
+    }
+  };
 
-    // Step 1. Mutate, and sign `Attestation` for each validator. Then publish all `Attestations` in one go
-    await this.signAndPublishAttestations(slot, attestationNoCommittee, duties);
+  private async runAttestationTasksPerCommittee(
+    dutiesSameCommittee: AttDutyAndProof[],
+    slot: Slot,
+    index: number,
+    signal: AbortSignal
+  ): Promise<void> {
+    // Produce attestation with actual committee index
+    const attestation = await this.produceAttestation(index, slot);
+
+    // Step 1. Sign `Attestation` for each validator. Then publish all `Attestations` in one go
+    await this.signAndPublishAttestations(slot, attestation, dutiesSameCommittee);
 
     // Step 2. after all attestations are submitted, make an aggregate.
-    // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
+    // First, wait until the `aggregation_production_instant` (2/3rds of the way through the slot)
     await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
     this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
 
-    const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(this.dutiesService.getDutiesAtSlot(slot));
+    // Then download, sign and publish a `SignedAggregateAndProof` for each
+    // validator that is elected to aggregate for this `slot` and `committeeIndex`.
+    await this.produceAndPublishAggregates(attestation, dutiesSameCommittee);
+  }
+
+  private async runAttestationTasksGrouped(
+    dutiesAll: AttDutyAndProof[],
+    slot: Slot,
+    signal: AbortSignal
+  ): Promise<void> {
+    // Produce a single attestation for all committees, and clone mutate before signing
+    const attestationNoCommittee = await this.produceAttestation(0, slot);
+
+    // Step 1. Mutate, and sign `Attestation` for each validator. Then publish all `Attestations` in one go
+    await this.signAndPublishAttestations(slot, attestationNoCommittee, dutiesAll);
+
+    // Step 2. after all attestations are submitted, make an aggregate.
+    // First, wait until the `aggregation_production_instant` (2/3rds of the way through the slot)
+    await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
+    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
+
+    const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(dutiesAll);
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each
-    // validator that is elected to aggregate for this `slot` and
-    // `committeeIndex`.
+    // validator that is elected to aggregate for this `slot` and `committeeIndex`.
     await Promise.all(
-      Array.from(dutiesByCommitteeIndex.entries()).map(([index, duties]) => {
+      Array.from(dutiesByCommitteeIndex.entries()).map(([index, dutiesSameCommittee]) => {
         const attestationData: phase0.AttestationData = {...attestationNoCommittee, index};
-        return this.produceAndPublishAggregates(attestationData, duties);
+        return this.produceAndPublishAggregates(attestationData, dutiesSameCommittee);
       })
     );
-  };
+  }
 
   /**
    * Performs the first step of the attesting process: downloading one `Attestation` object.
@@ -97,8 +144,7 @@ export class AttestationService {
    * For a validator client with many validators this allows to do a single call for all committees
    * in a slot, saving resources in both the vc and beacon node
    *
-   * A committee index is still passed in for the benefit of downstream tooling -
-   * see https://github.com/ChainSafe/lodestar/issues/4687
+   * Note: the actual committeeIndex must be passed in if attestation grouping is disabled
    */
   private async produceAttestation(committeeIndex: number, slot: Slot): Promise<phase0.AttestationData> {
     // Produce one attestation data per slot and committeeIndex
