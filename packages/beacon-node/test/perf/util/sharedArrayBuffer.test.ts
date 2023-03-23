@@ -101,4 +101,18 @@ describe("SharedArrayBuffer vs MessageChannel", () => {
       reader.get();
     },
   });
+
+  itBench({
+    id: "serialize/deserialize status - structuredClone",
+    runsFactor: 1000,
+    beforeEach: () => ssz.phase0.Status.defaultValue(),
+    fn: (status) => void structuredClone(status),
+  });
+
+  itBench({
+    id: "serialize/deserialize status - ssz",
+    runsFactor: 1000,
+    beforeEach: () => ssz.phase0.Status.defaultValue(),
+    fn: (status) => void ssz.phase0.Status.deserialize(ssz.phase0.Status.serialize(status)),
+  });
 });
