@@ -9,6 +9,7 @@ import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@
 import {allForks, altair, phase0, capella, deneb} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {upgradeLightClientFinalityUpdate, upgradeLightClientOptimisticUpdate} from "@lodestar/light-client";
 
 import {Metrics} from "../../metrics/index.js";
 import {Eth2Context} from "../../chain/index.js";
@@ -266,6 +267,10 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
 
   async publishLightClientFinalityUpdate(lightClientFinalityUpdate: allForks.LightClientFinalityUpdate): Promise<void> {
     const fork = this.config.getForkName(lightClientFinalityUpdate.signatureSlot);
+    const attestedFork = this.config.getForkName(lightClientFinalityUpdate.attestedHeader.beacon.slot);
+    if (attestedFork !== fork) {
+      lightClientFinalityUpdate = upgradeLightClientFinalityUpdate(this.config, fork, lightClientFinalityUpdate);
+    }
     await this.publishObject<GossipType.light_client_finality_update>(
       {type: GossipType.light_client_finality_update, fork},
       lightClientFinalityUpdate
@@ -276,6 +281,10 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
     lightClientOptimisitcUpdate: allForks.LightClientOptimisticUpdate
   ): Promise<void> {
     const fork = this.config.getForkName(lightClientOptimisitcUpdate.signatureSlot);
+    const attestedFork = this.config.getForkName(lightClientOptimisitcUpdate.attestedHeader.beacon.slot);
+    if (attestedFork !== fork) {
+      lightClientOptimisitcUpdate = upgradeLightClientOptimisticUpdate(this.config, fork, lightClientOptimisitcUpdate);
+    }
     await this.publishObject<GossipType.light_client_optimistic_update>(
       {type: GossipType.light_client_optimistic_update, fork},
       lightClientOptimisitcUpdate
