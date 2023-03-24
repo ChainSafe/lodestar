@@ -15,5 +15,5 @@ export function prettyBytes(root: Uint8Array | string): string {
  */
 export function prettyBytesShort(root: Uint8Array | string): string {
   const str = typeof root === "string" ? root : toHexString(root);
-  return `${str.slice(0, 6)}…}`;
+  return `${str.slice(0, 6)}…`;
 }
