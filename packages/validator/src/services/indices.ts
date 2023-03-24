@@ -36,7 +36,7 @@ export class IndicesService {
     return this.pubkey2index.get(pubKey);
   }
 
-  /** Returns the validator pubkey for a given validator index */
+  /** Returns if a pubkey for a given validator index exists */
   validatorPubKeyExists(index: string): boolean {
     return this.pubkey2index.has(index);
   }

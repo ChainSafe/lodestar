@@ -17,7 +17,7 @@ export type BeaconStateTransitionMetrics = {
   postStateBalancesNodesPopulatedHit: Gauge;
   postStateValidatorsNodesPopulatedMiss: Gauge;
   postStateValidatorsNodesPopulatedHit: Gauge;
-  registerValidatorAttestationStatuses: (currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]) => void;
+  registerValidatorAttestationStatuses: (currentEpoch: Epoch, statuses: AttesterStatus[]) => void;
 };
 
 type LabelValues<T extends string> = Partial<Record<T, string | number>>;

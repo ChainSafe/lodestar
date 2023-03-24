@@ -17,7 +17,7 @@ import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "./slas
 import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.js";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
-import {ValidatorStore, Signer, ValidatorProposerConfig} from "./services/validatorStore.js";
+import {ValidatorStore, Signer, ValidatorProposerConfig, defaultOptions} from "./services/validatorStore.js";
 import {ProcessShutdownCallback, PubkeyHex} from "./types.js";
 import {BeaconHealth, Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
@@ -162,15 +162,15 @@ export class Validator {
       this.clock.start(this.controller.signal);
       this.chainHeaderTracker.start(this.controller.signal);
 
-      const validatorKeys = this.validatorStore.getValidatorKeys();
+      const validatorKeys = this.validatorStore.votingPubkeys();
 
       for (const pubkeyHex in validatorKeys) {
-        let feeRecipient = "";
+        let feeRecipient = defaultOptions.suggestedFeeRecipient;
 
         try {
           feeRecipient = validatorStore.getFeeRecipient(pubkeyHex);
         } catch (e) {
-          this.logger.warn("Cannot retrieve Fee Recipient", {}, e as Error);
+          this.logger.warn("Cannot retrieve fee recipient", {}, e as Error);
         }
 
         if (!indicesService.validatorPubKeyExists(pubkeyHex)) {
@@ -303,8 +303,8 @@ export class Validator {
 
     const allValidatorStatuses = new MapDef<SimpleValidatorStatus, number>(() => 0);
 
+    // Group all validators by status
     for (const validatorState of res.response.data) {
-      // Group all validators by status
       const status = statusToSimpleStatusMapping(validatorState.status);
       allValidatorStatuses.set(status, allValidatorStatuses.getOrDefault(status) + 1);
     }
@@ -321,8 +321,8 @@ export class Validator {
     const total = pubkeysHex.length;
 
     if (metrics) {
-      for (const [status, amount] of allValidatorStatuses) {
-        metrics.validatorStatuses.set({status}, amount);
+      for (const [status, count] of allValidatorStatuses) {
+        metrics.validatorStatuses.set({status}, count);
       }
     }
 

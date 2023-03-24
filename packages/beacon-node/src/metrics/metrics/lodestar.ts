@@ -822,13 +822,13 @@ export function createLodestarMetrics(
         help: "Count of validators that are specifically monitored by this beacon node",
       }),
       validatorStatuses: register.gauge<"status">({
-        name: "validator_monitor_validators_status",
+        name: "validator_monitor_validators_statuses",
         help: "Statuses of the various validators monitored by this beacon node",
         labelNames: ["status"],
       }),
       validatorBalances: register.gauge<"index">({
         name: "validator_monitor_validator_balances",
-        help: "Balance of validator",
+        help: "Balance of validators monitored by this beacon node",
         labelNames: ["index"],
       }),
       validatorsInSyncCommittee: register.gauge({
@@ -837,12 +837,6 @@ export function createLodestarMetrics(
       }),
 
       // Validator Monitor Metrics (per-epoch summaries)
-      // Only track prevEpochOnChainBalance per index
-      prevEpochOnChainBalance: register.gauge<"index">({
-        name: "validator_monitor_prev_epoch_on_chain_balance",
-        help: "Balance of validator after an epoch",
-        labelNames: ["index"],
-      }),
       prevEpochOnChainAttesterHit: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_attester_hit_total",
         help: "Incremented if validator's submitted attestation is included in some blocks",

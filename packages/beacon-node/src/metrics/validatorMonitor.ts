@@ -22,7 +22,7 @@ export enum OpSource {
 export type ValidatorMonitor = {
   registerLocalValidator(index: number): void;
   registerLocalValidatorInSyncCommittee(index: number, untilEpoch: Epoch): void;
-  registerValidatorAttestationStatuses(currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]): void;
+  registerValidatorAttestationStatuses(currentEpoch: Epoch, statuses: AttesterStatus[]): void;
   registerValidatorStatuses: (
     currentEpoch: Epoch,
     statuses: routes.beacon.ValidatorStatus[],
@@ -209,7 +209,7 @@ export function createValidatorMonitor(
       }
     },
 
-    registerValidatorAttestationStatuses(currentEpoch, statuses, balances) {
+    registerValidatorAttestationStatuses(currentEpoch, statuses) {
       // Prevent registering status for the same epoch twice. processEpoch() may be ran more than once for the same epoch.
       if (currentEpoch <= lastRegisteredStatusEpoch) {
         return;
@@ -274,11 +274,6 @@ export function createValidatorMonitor(
           metrics.validatorMonitor.prevEpochOnChainAttesterMiss.inc();
         }
 
-        const balance = balances?.[index];
-        if (balance !== undefined) {
-          metrics.validatorMonitor.prevEpochOnChainBalance.set({index}, balance);
-        }
-
         if (!summary.isPrevSourceAttester || !summary.isPrevTargetAttester || !summary.isPrevHeadAttester) {
           logger.debug("Failed attestation in previous epoch", {
             validatorIndex: index,
@@ -307,8 +302,6 @@ export function createValidatorMonitor(
         withdrawable: 0,
         slashed: 0,
       };
-
-      metrics.validatorMonitor.validatorStatuses.reset();
 
       for (const monitoredValidator of validators.values()) {
         const index = monitoredValidator.index;
@@ -532,8 +525,6 @@ export function createValidatorMonitor(
      * Should be called whenever Prometheus is scraping.
      */
     scrapeMetrics(slotClock) {
-      metrics.validatorMonitor.validatorsConnected.set(validators.size);
-
       const epoch = computeEpochAtSlot(slotClock);
       const slotInEpoch = slotClock % SLOTS_PER_EPOCH;
 

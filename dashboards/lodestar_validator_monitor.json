@@ -167,7 +167,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "validator_monitor_validators_status",
+          "expr": "validator_monitor_validators_statuses",
           "hide": false,
           "interval": "",
           "legendFormat": "{{status}}",
