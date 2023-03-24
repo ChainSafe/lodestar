@@ -117,3 +117,46 @@ In case you really trust `checkpointSyncUrl` then you may skip providing `wssChe
     Please use this option very carefully (and at your own risk), a malicious server URL can put you on the wrong chain with a danger of you losing your funds by social engineering.
 If possible, validate your `wssCheckpoint` from multiple places (e.g. different client distributions) or from other trusted sources. This will highly reduce the risk of starting off on a malicious chain.
 <!-- prettier-ignore-end -->
+
+### Guide to the sync logs
+
+Lodestar beacon sync log aims to provide information of utmost importance  about your node and yet be suucint at the same time. You may see the sync logs in the following format:
+
+`[Sync status] - [Head info] - [Finalized info] - [Peers info]`
+
+See the following example of different kinds of sync log:
+```
+Mar-24 11:09:05.434[]                 info: Syncing - 10 minutes left - 6.32 slots/s - head: 6065535 (clock: 6069343) 0x6c82…486d exec-block: valid(16893200 0xadfe…) - finalized: 0x14bd…d8d6:189545 - peers: 7
+Mar-24 11:09:17.473[]                 info: Syncing - 9.8 minutes left - 6.35 slots/s - head: 6065599 (clock: 6069344) 0xb659…7109 exec-block: valid(16893264 0xf32f…) - finalized: 0xb551…b203:189548 - peers: 9
+Mar-24 11:16:29.187[]                 info: Syncing - 3.4 minutes left - 4.77 slots/s - head: 6068415 (clock-965) 0xeddf…e97b exec-block: valid(16896048 0x5d16…) - finalized: 0xd7ba…8386:189636 - peers: 9
+valid(16896681 0xc9a6…9b3a) - finalized: 0x495d…f884:189656 - peers: 10
+Mar-24 11:18:53.033[]                 info: Syncing - 42 seconds left - 5.77 slots/s - head: 6069151 (clock-241) 0xdb52…77b7 exec-block: valid(16896777 0x0c24…) - finalized: 0x6777…d015:189659 - peers: 17
+Mar-24 11:19:17.031[]                 info: Syncing - 18 seconds left - 6.55 slots/s - head: 6069279 (clock-115) 0xd6bb…4ecd exec-block: valid(16896905 0x6599…) - finalized: 0x4658…51b6:189663 - peers: 11
+Mar-24 11:19:29.047[]                 info: Syncing - 7.8 seconds left - 6.67 slots/s - head: 6069343 (clock-52) 0xf111…4552 exec-block: valid(16896968 0x6a16…) - finalized: 0x4e1e…3499:189665 - peers: 14
+Mar-24 11:19:35.675[network]          info: Subscribed gossip core topics
+Mar-24 11:37:29.001[]                 info: Synced - head: 6069482 0xa9fd…ddab exec-block: valid(16897109 0x4951…) - finalized: 0xec9e…9cc1:189669 - peers: 27
+Mar-24 11:37:17.000[]                 info: Synced - head: 6069482 (clock-1) 0x88b2…fb8c exec-block: valid(16897108 0x90c9…) - finalized: 0xec9e…9cc1:189669 - peers: 31
+Mar-24 11:37:29.001[]                 info: Synced - head: 6069484 0xa9fd…ddab exec-block: valid(16897109 0x4951…) - finalized: 0xec9e…9cc1:189669 - peers: 27
+```
+
+1. Sync status: Takes three values : `Synced` or `Syncing` (along with sync speed info) or `Searching` if node is is still looking for viable peers from where it can download blocks.
+
+2. Head info: It specifies where the local chain head is (slot of the local chain head + corresponding execution block status, its number and hash) and whether the `head` divergies from `clock` as they are supposed to be same in a perfectly functioning blockchain world.
+
+It further takes the following format:
+
+a) If `clock - head > 1000`:
+`head: 6065535 (clock: 6069343) 0x6c82…486d exec-block: valid(16896873 0x029b…)`
+b) If `clock - head  < 1000`:
+`head: 6069247 (clock-146) 0x824f…7bbd exec-block: valid(16896873 0x029b…)`
+c) If `clock === head`:
+`head: 6069485 0xa9fd…ddab exec-block: valid(16897109 0x4951…)`
+d) Again if a slot is skipped in the blockchain or the node didn't recieve `gossip` for the new block:
+`head: 6069482 (clock - 1) 0x88b2…fb8c exec-block: valid(16897108 0x90c9…)`
+
+3. Finalized info: What is the current local `finalized` checkpoint in the format of `[checkpoint root]:[checkpoint epoch]`, for e.g.: `0xd7ba…8386:189636`
+
+4. Peer info: Current total number of outbound or inbound peers, for e.g.: `peers: 27`
+
+
+For more insight into lodestar beacon functioning, you may setup lodestar metrics and use prepared grafana dashboards that you may find in the repo.
