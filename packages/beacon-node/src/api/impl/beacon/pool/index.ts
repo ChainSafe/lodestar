@@ -64,12 +64,13 @@ export function getBeaconPoolApi({
               slot,
               beaconBlockRoot
             );
-            const sentPeers = await network.gossip.publishBeaconAttestation(attestation, subnet);
-            metrics?.submitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
+
             if (network.attnetsService.shouldProcess(subnet, slot)) {
               const insertOutcome = chain.attestationPool.add(attestation);
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }
+            const sentPeers = await network.gossip.publishBeaconAttestation(attestation, subnet);
+            metrics?.submitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
           } catch (e) {
             errors.push(e as Error);
             logger.error(
