@@ -22,12 +22,8 @@ export enum OpSource {
 export type ValidatorMonitor = {
   registerLocalValidator(index: number): void;
   registerLocalValidatorInSyncCommittee(index: number, untilEpoch: Epoch): void;
-  registerValidatorAttestationStatuses(currentEpoch: Epoch, statuses: AttesterStatus[]): void;
-  registerValidatorStatuses: (
-    currentEpoch: Epoch,
-    statuses: routes.beacon.ValidatorStatus[],
-    balances: number[]
-  ) => void;
+  registerValidatorAttestationStatuses(currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]): void;
+  registerValidatorStatuses: (currentEpoch: Epoch, statuses: routes.beacon.ValidatorStatus[]) => void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
   registerImportedBlock(block: allForks.BeaconBlock, data: {proposerBalanceDelta: number}): void;
   submitUnaggregatedAttestation(
@@ -209,7 +205,7 @@ export function createValidatorMonitor(
       }
     },
 
-    registerValidatorAttestationStatuses(currentEpoch, statuses) {
+    registerValidatorAttestationStatuses(currentEpoch, statuses, balances) {
       // Prevent registering status for the same epoch twice. processEpoch() may be ran more than once for the same epoch.
       if (currentEpoch <= lastRegisteredStatusEpoch) {
         return;
@@ -274,6 +270,11 @@ export function createValidatorMonitor(
           metrics.validatorMonitor.prevEpochOnChainAttesterMiss.inc();
         }
 
+        const balance = balances?.[index];
+        if (balance !== undefined) {
+          metrics.validatorMonitor.prevEpochOnChainBalance.set({index}, balance);
+        }
+
         if (!summary.isPrevSourceAttester || !summary.isPrevTargetAttester || !summary.isPrevHeadAttester) {
           logger.debug("Failed attestation in previous epoch", {
             validatorIndex: index,
@@ -288,7 +289,7 @@ export function createValidatorMonitor(
       }
     },
 
-    registerValidatorStatuses(currentEpoch, statuses, balances) {
+    registerValidatorStatuses(currentEpoch, statuses) {
       // Prevent registering status for the same epoch twice. processEpoch() may be ran more than once for the same epoch.
       if (currentEpoch <= lastRegisteredStatusEpoch) {
         return;
@@ -328,8 +329,6 @@ export function createValidatorMonitor(
             statusCount.slashed++;
             break;
         }
-
-        metrics.validatorMonitor.validatorBalances.set({index}, balances[index]);
       }
 
       for (const [status, count] of Object.entries(statusCount)) {
@@ -525,6 +524,8 @@ export function createValidatorMonitor(
      * Should be called whenever Prometheus is scraping.
      */
     scrapeMetrics(slotClock) {
+      metrics.validatorMonitor.validatorsConnected.set(validators.size);
+
       const epoch = computeEpochAtSlot(slotClock);
       const slotInEpoch = slotClock % SLOTS_PER_EPOCH;
 

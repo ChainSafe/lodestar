@@ -729,7 +729,6 @@ export function getValidatorApi({
       const headState = chain.getHeadState();
       const currentEpoch = chain.clock.currentEpoch;
       const validatorStatuses: routes.beacon.ValidatorStatus[] = [];
-      const validatorBalances: number[] = [];
 
       const filteredRegistrations = registrations.filter((registration) => {
         const {pubkey} = registration.message;
@@ -740,7 +739,6 @@ export function getValidatorApi({
         const status = getValidatorStatus(validator, currentEpoch);
 
         validatorStatuses[validatorIndex] = status;
-        validatorBalances[validatorIndex] = validator.effectiveBalance;
 
         return (
           status === "active" ||
@@ -752,7 +750,7 @@ export function getValidatorApi({
         );
       });
 
-      metrics?.registerValidatorStatuses(currentEpoch, validatorStatuses, validatorBalances);
+      metrics?.registerValidatorStatuses(currentEpoch, validatorStatuses);
 
       return chain.executionBuilder?.registerValidator(filteredRegistrations);
     },
