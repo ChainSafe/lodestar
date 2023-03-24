@@ -372,7 +372,7 @@ export class ForkChoice implements IForkChoice {
 
     const blockEpoch = computeEpochAtSlot(slot);
 
-    // same logic to compute_pulled_up_tip because a lot of varible could be reused here
+    // same logic to compute_pulled_up_tip in the spec, making it inline because of reusing variables
     // If the parent checkpoints are already at the same epoch as the block being imported,
     // it's impossible for the unrealized checkpoints to differ from the parent's. This
     // holds true because:
@@ -415,19 +415,15 @@ export class ForkChoice implements IForkChoice {
 
     // Un-realized checkpoints
     // Update best known unrealized justified & finalized checkpoints
-    if (unrealizedJustifiedCheckpoint.epoch > this.fcStore.unrealizedJustified.checkpoint.epoch) {
-      this.fcStore.unrealizedJustified = {
-        checkpoint: unrealizedJustifiedCheckpoint,
-        balances: this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state),
-      };
-    }
-    if (unrealizedFinalizedCheckpoint.epoch > this.fcStore.unrealizedFinalizedCheckpoint.epoch) {
-      this.fcStore.unrealizedFinalizedCheckpoint = unrealizedFinalizedCheckpoint;
-    }
+    this.updateUnrealizedCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
+      this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
+    );
 
     // If block is from past epochs, try to update store's justified & finalized checkpoints right away
     if (blockEpoch < computeEpochAtSlot(currentSlot)) {
-      this.pullUpStoreCheckpoints();
+      this.updateCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
+        this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
+      );
     }
 
     const targetSlot = computeStartSlotAtEpoch(blockEpoch);
@@ -846,15 +842,6 @@ export class ForkChoice implements IForkChoice {
     return executionStatus;
   }
 
-  private pullUpStoreCheckpoints(): void {
-    this.updateCheckpoints(
-      this.fcStore.unrealizedJustified.checkpoint,
-      this.fcStore.unrealizedFinalizedCheckpoint,
-      // Provide pre-computed balances for unrealizedJustified, will never trigger .justifiedBalancesGetter()
-      () => this.fcStore.unrealizedJustified.balances
-    );
-  }
-
   /**
    * Why `getJustifiedBalances` getter?
    * - updateCheckpoints() is called in both on_block and on_tick.
@@ -890,6 +877,25 @@ export class ForkChoice implements IForkChoice {
     if (finalizedCheckpoint.epoch > this.fcStore.finalizedCheckpoint.epoch) {
       this.fcStore.finalizedCheckpoint = finalizedCheckpoint;
       this.justifiedProposerBoostScore = null;
+    }
+  }
+
+  /**
+   * Update unrealized checkpoints in store if necessary
+   */
+  private updateUnrealizedCheckpoints(
+    unrealizedJustifiedCheckpoint: CheckpointWithHex,
+    unrealizedFinalizedCheckpoint: CheckpointWithHex,
+    getJustifiedBalances: () => JustifiedBalances
+  ): void {
+    if (unrealizedJustifiedCheckpoint.epoch > this.fcStore.unrealizedJustified.checkpoint.epoch) {
+      this.fcStore.unrealizedJustified = {
+        checkpoint: unrealizedJustifiedCheckpoint,
+        balances: getJustifiedBalances(),
+      };
+    }
+    if (unrealizedFinalizedCheckpoint.epoch > this.fcStore.unrealizedFinalizedCheckpoint.epoch) {
+      this.fcStore.unrealizedFinalizedCheckpoint = unrealizedFinalizedCheckpoint;
     }
   }
 
@@ -1121,8 +1127,12 @@ export class ForkChoice implements IForkChoice {
       return;
     }
 
-    // Update store.justified_checkpoint if a better unrealized justified checkpoint is known
-    this.pullUpStoreCheckpoints();
+    // If a new epoch, pull-up justification and finalization from previous epoch
+    this.updateCheckpoints(
+      this.fcStore.unrealizedJustified.checkpoint,
+      this.fcStore.unrealizedFinalizedCheckpoint,
+      () => this.fcStore.unrealizedJustified.balances
+    );
   }
 }
 
