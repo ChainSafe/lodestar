@@ -2,7 +2,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
-import {ErrorAborted, Logger, sleep, prettyBytes} from "@lodestar/utils";
+import {ErrorAborted, Logger, sleep, prettyBytes, prettyBytesShort} from "@lodestar/utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, isExecutionCachedStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
 import {IBeaconChain} from "../chain/index.js";
@@ -60,19 +60,15 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
 
       const peersRow = `peers: ${connectedPeerCount}`;
       const headExecutionInfo = getHeadExecutionInfo(config, clockEpoch, headState, headInfo);
-      // headExecutionInfo has space prefix if its a non empty string
-      const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}${headExecutionInfo}`;
-
-      const finalizedInfo = chain.forkChoice.getBlock(finalizedRoot);
-      const headFinalizedInfo = finalizedInfo
-        ? getFinalizedExecutionInfo(config, clockEpoch, headState, finalizedInfo)
-        : "";
-      // headFinalizedInfo has space prefix if its a non empty string
-      const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}${headFinalizedInfo}`;
-
       // Give info about empty slots if head < clock
       const skippedSlots = clockSlot - headInfo.slot;
-      const clockSlotRow = `slot: ${clockSlot}` + (skippedSlots > 0 ? ` (skipped ${skippedSlots})` : "");
+      const clockInfo =
+        skippedSlots > 1000 ? ` (clock: ${clockSlot})` : skippedSlots > 0 ? ` (clock-${skippedSlots})` : "";
+
+      // headExecutionInfo & clockInfo and  has space prefix if its a non empty string
+      const headRow = `head: ${headInfo.slot}${clockInfo} ${prettyBytes(headInfo.blockRoot)}${headExecutionInfo}`;
+      // headFinalizedInfo has space prefix if its a non empty string
+      const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
 
       // Log in TD progress in separate line to not clutter regular status update.
       // This line will only exist between BELLATRIX_FORK_EPOCH and TTD, a window of some days / weeks max.
@@ -102,7 +98,6 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
             "Syncing",
             `${timeLeft} left`,
             `${slotsPerSecond.toPrecision(3)} slots/s`,
-            clockSlotRow,
             headRow,
             finalizedCheckpointRow,
             peersRow,
@@ -112,13 +107,13 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
 
         case SyncState.Synced: {
           // Synced - clock - head - finalized - peers
-          nodeState = ["Synced", clockSlotRow, headRow, finalizedCheckpointRow, peersRow];
+          nodeState = ["Synced", headRow, finalizedCheckpointRow, peersRow];
           break;
         }
 
         case SyncState.Stalled: {
           // Searching peers - peers - head - finalized - clock
-          nodeState = ["Searching peers", peersRow, clockSlotRow, headRow, finalizedCheckpointRow];
+          nodeState = ["Searching peers", peersRow, headRow, finalizedCheckpointRow];
         }
       }
       logger.info(nodeState.join(" - "));
@@ -169,7 +164,7 @@ function getHeadExecutionInfo(
           headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
         const executionPayloadNumberInfo =
           headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
-        return ` exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytes(
+        return ` exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
           executionPayloadHashInfo
         )})`;
       } else {
@@ -178,28 +173,5 @@ function getHeadExecutionInfo(
     } else {
       return "";
     }
-  }
-}
-
-function getFinalizedExecutionInfo(
-  config: BeaconConfig,
-  clockEpoch: Epoch,
-  headState: CachedBeaconStateAllForks,
-  finalizedInfo: ProtoBlock
-): string {
-  if (
-    clockEpoch >= config.BELLATRIX_FORK_EPOCH &&
-    isExecutionCachedStateType(headState) &&
-    isMergeTransitionComplete(headState)
-  ) {
-    const executionStatusStr = finalizedInfo.executionStatus.toLowerCase();
-    // If finalized is post merge, then pick number else just display premerge status
-    const finalizedStatus =
-      finalizedInfo.executionStatus !== ExecutionStatus.PreMerge
-        ? `${finalizedInfo.executionPayloadNumber}`
-        : executionStatusStr;
-    return ` (exec-block: ${finalizedStatus})`;
-  } else {
-    return "";
   }
 }

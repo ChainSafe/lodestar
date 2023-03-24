@@ -8,3 +8,12 @@ export function prettyBytes(root: Uint8Array | string): string {
   const str = typeof root === "string" ? root : toHexString(root);
   return `${str.slice(0, 6)}…${str.slice(-4)}`;
 }
+
+/**
+ * Format bytes as `0x1234…`
+ * Paired with block numbers or slots, it can still act as a decent identify-able format
+ */
+export function prettyBytesShort(root: Uint8Array | string): string {
+  const str = typeof root === "string" ? root : toHexString(root);
+  return `${str.slice(0, 6)}…}`;
+}
