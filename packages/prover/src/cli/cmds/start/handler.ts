@@ -7,23 +7,16 @@ import {parseStartArgs, StartArgs} from "./options.js";
  * Runs a beacon node.
  */
 export async function proverProxyStartHandler(args: StartArgs): Promise<void> {
-  const {
-    network,
-    transport,
-    beaconBootnodes: beaconBootNodes,
-    executionUrl: executionRpcUrl,
-    beaconUrls: beaconRpcUrls,
-    port,
-    wsCheckpoint,
-  } = parseStartArgs(args);
+  const opts = parseStartArgs(args);
+  const {network, executionRpcUrl, port, wsCheckpoint} = opts;
   const options: VerifiedProxyOptions = {
     logger: stdLogger,
     network,
     executionRpcUrl,
     wsCheckpoint,
-    ...(transport === LCTransport.Rest
-      ? {transport: LCTransport.Rest, urls: beaconRpcUrls}
-      : {transport: LCTransport.P2P, bootnodes: beaconBootNodes}),
+    ...(opts.transport === LCTransport.Rest
+      ? {transport: LCTransport.Rest, urls: opts.urls}
+      : {transport: LCTransport.P2P, bootnodes: opts.bootnodes}),
   };
 
   const {server, proofProvider} = createVerifiedExecutionProxy(options);

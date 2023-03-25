@@ -74,6 +74,7 @@ export class PayloadStore {
     }
 
     let blockELRoot = this.finalizedRoots.get(blockNumber);
+    // check if we have payload cached locally else fetch from api
     if (!blockELRoot) {
       const payloads = await getExecutionPayloadForBlockNumber(this.opts.api, this.finalizedRoots.min, blockNumber);
       for (const payload of Object.values(payloads)) {
@@ -92,7 +93,13 @@ export class PayloadStore {
   set(payload: allForks.ExecutionPayload, finalized: boolean): void {
     const blockRoot = bufferToHex(payload.blockHash);
     this.payloads.set(blockRoot, payload);
-    this.latestBlockRoot = blockRoot;
+
+    if (this.latestBlockRoot) {
+      const latestPayload = this.payloads.get(this.latestBlockRoot);
+      if (latestPayload && latestPayload.blockNumber < payload.blockNumber) {
+        this.latestBlockRoot = blockRoot;
+      }
+    }
 
     if (finalized) {
       this.finalizedRoots.set(payload.blockNumber, blockRoot);
@@ -106,48 +113,71 @@ export class PayloadStore {
     const blockCLRoot = bufferToHex(header.beacon.stateRoot);
     const existingELRoot = this.unfinalizedRoots.get(blockCLRoot);
 
+    // ==== Finalized blocks ====
+    // if the block is finalized, we need to update the finalizedRoots map
     if (finalized) {
+      this.finalizedRoots.set(blockNumber, blockELRoot);
+
+      // If the block is finalized and we already have the payload
+      // We can remove it from the unfinalizedRoots map and do nothing else
       if (existingELRoot) {
         this.unfinalizedRoots.delete(blockCLRoot);
-      } else {
+      }
+
+      // If the block is finalized and we do not have the payload
+      // We need to fetch and set the payload
+      else if (finalized && !existingELRoot) {
         this.payloads.set(
           bufferToHex(header.execution.blockHash),
           (await getExecutionPayloads(this.opts.api, blockSlot, blockSlot))[blockSlot]
         );
       }
-      this.finalizedRoots.set(blockNumber, blockELRoot);
 
       return;
     }
 
+    // ==== Unfinalized blocks ====
+    // We already have the payload for this block
     if (existingELRoot && existingELRoot === blockELRoot) {
-      // We already have the payload for this block
       return;
     }
 
+    // Re-org happened, we need to update the payload
     if (existingELRoot && existingELRoot !== blockELRoot) {
-      // Re-org happened, we need to update the payload
       this.payloads.delete(existingELRoot);
       this.unfinalizedRoots.set(blockCLRoot, blockELRoot);
     }
 
-    this.payloads.set(blockELRoot, (await getExecutionPayloads(this.opts.api, blockSlot, blockSlot))[blockSlot]);
-    this.latestBlockRoot = blockELRoot;
+    // We do not have the payload for this block, we need to fetch it
+    const payload = (await getExecutionPayloads(this.opts.api, blockSlot, blockSlot))[blockSlot];
+    this.set(payload, false);
     this.prune();
   }
 
   private prune(): void {
-    if (this.finalizedRoots.size > MAX_PAYLOAD_HISTORY) {
-      for (
-        let blockNumber = this.finalizedRoots.max - MAX_PAYLOAD_HISTORY;
-        blockNumber > this.finalizedRoots.min;
-        blockNumber--
-      ) {
-        const blockELRoot = this.finalizedRoots.get(blockNumber);
-        if (blockELRoot) {
-          this.payloads.delete(blockELRoot);
-          this.finalizedRoots.delete(blockNumber);
-        }
+    if (this.finalizedRoots.size <= MAX_PAYLOAD_HISTORY) return;
+
+    for (
+      let blockNumber = this.finalizedRoots.max - MAX_PAYLOAD_HISTORY;
+      blockNumber > this.finalizedRoots.min;
+      blockNumber--
+    ) {
+      const blockELRoot = this.finalizedRoots.get(blockNumber);
+      if (blockELRoot) {
+        this.payloads.delete(blockELRoot);
+        this.finalizedRoots.delete(blockNumber);
+      }
+    }
+
+    for (const [clRoot, elRoot] of this.unfinalizedRoots) {
+      const payload = this.payloads.get(elRoot);
+      if (!payload) {
+        this.unfinalizedRoots.delete(clRoot);
+        continue;
+      }
+
+      if (payload.blockNumber < this.finalizedRoots.min) {
+        this.unfinalizedRoots.delete(clRoot);
       }
     }
   }

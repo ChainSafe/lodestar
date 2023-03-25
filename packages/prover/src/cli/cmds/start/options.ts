@@ -5,7 +5,7 @@ import {CliCommandOptions} from "../../../utils/command.js";
 export type StartArgs = {
   port: number;
   network: string;
-  "execution-url": string;
+  "execution-rpc-url": string;
   transport: "rest" | "p2p";
   "beacon-urls"?: string[];
   "beacon-bootnodes"?: string[];
@@ -14,13 +14,10 @@ export type StartArgs = {
 
 export type StartOptions = {
   network: NetworkName;
-  executionUrl: string;
+  executionRpcUrl: string;
   port: number;
-  transport: LCTransport;
-  beaconUrls: string[];
-  beaconBootnodes: string[];
   wsCheckpoint?: string;
-};
+} & ({transport: LCTransport.Rest; urls: string[]} | {transport: LCTransport.P2P; bootnodes: string[]});
 
 export const startOptions: CliCommandOptions<StartArgs> = {
   port: {
@@ -35,7 +32,7 @@ export const startOptions: CliCommandOptions<StartArgs> = {
     choices: Object.keys(networksChainConfig),
   },
 
-  "execution-url": {
+  "execution-rpc-url": {
     description: "RPC url for the execution node.",
     type: "string",
   },
@@ -72,10 +69,10 @@ export function parseStartArgs(args: StartArgs): StartOptions {
   return {
     port: args["port"],
     network: args["network"] as NetworkName,
-    executionUrl: args["execution-url"],
+    executionRpcUrl: args["execution-rpc-url"],
     transport: args["transport"] === "p2p" ? LCTransport.P2P : LCTransport.Rest,
-    beaconUrls: args["transport"] === "rest" ? args["beacon-urls"] ?? [] : [],
-    beaconBootnodes: args["transport"] === "p2p" ? args["beacon-bootnodes"] ?? [] : [],
+    urls: args["transport"] === "rest" ? args["beacon-urls"] ?? [] : [],
+    bootnodes: args["transport"] === "p2p" ? args["beacon-bootnodes"] ?? [] : [],
     wsCheckpoint: args["ws-checkpoint"],
   };
 }

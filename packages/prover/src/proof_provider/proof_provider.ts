@@ -24,6 +24,7 @@ type RootProviderOptions = Omit<RootProviderInitOptions, "transport"> & {
 export class ProofProvider {
   private store: PayloadStore;
 
+  // Make sure readyPromise doesn't throw unhandled exceptions
   private readyPromise?: Promise<void>;
   lightClient?: Lightclient;
 
@@ -51,7 +52,12 @@ export class ProofProvider {
       transport,
     });
 
-    provider.readyPromise = provider.sync(opts.wsCheckpoint);
+    provider.readyPromise = provider.sync(opts.wsCheckpoint).catch((e) => {
+      // TODO: will be replaced by logger in the next PR.
+      // eslint-disable-next-line no-console
+      console.error("Error while syncing", e);
+      return Promise.reject("Error while syncing");
+    });
 
     return provider;
   }
@@ -146,9 +152,10 @@ export class ProofProvider {
       return;
     }
 
+    const sszType = this.opts.config.getExecutionForkTypes(lcHeader.beacon.slot).ExecutionPayloadHeader;
     if (
       isForkExecution(fork) &&
-      (!("execution" in lcHeader) || lcHeader.execution === ssz.capella.ExecutionPayloadHeader.defaultValue())
+      (!("execution" in lcHeader) || sszType.equals(lcHeader.execution, sszType.defaultValue()))
     ) {
       throw new Error("Execution payload is required for execution fork");
     }
