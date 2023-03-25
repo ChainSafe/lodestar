@@ -8,11 +8,12 @@ import {
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   BLOCK_BODY_EXECUTION_PAYLOAD_INDEX as EXECUTION_PAYLOAD_INDEX,
 } from "@lodestar/params";
-import {altair, phase0, ssz, allForks, capella, deneb} from "@lodestar/types";
+import {altair, phase0, ssz, allForks, capella, deneb, Slot} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
-import {isValidMerkleBranch} from "../utils/verifyMerkleBranch.js";
+import {isValidMerkleBranch, computeSyncPeriodAtSlot} from "../utils/index.js";
+import {LightClientStore} from "./store.js";
 
 export const GENESIS_SLOT = 0;
 export const ZERO_HASH = new Uint8Array(32);
@@ -139,4 +140,63 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: allFor
     EXECUTION_PAYLOAD_INDEX,
     header.beacon.bodyRoot
   );
+}
+
+export function upgradeLightClientUpdate(
+  config: ChainForkConfig,
+  targetFork: ForkName,
+  update: allForks.LightClientUpdate
+): allForks.LightClientUpdate {
+  update.attestedHeader = upgradeLightClientHeader(config, targetFork, update.attestedHeader);
+  update.finalizedHeader = upgradeLightClientHeader(config, targetFork, update.finalizedHeader);
+
+  return update;
+}
+
+export function upgradeLightClientFinalityUpdate(
+  config: ChainForkConfig,
+  targetFork: ForkName,
+  finalityUpdate: allForks.LightClientFinalityUpdate
+): allForks.LightClientFinalityUpdate {
+  finalityUpdate.attestedHeader = upgradeLightClientHeader(config, targetFork, finalityUpdate.attestedHeader);
+  finalityUpdate.finalizedHeader = upgradeLightClientHeader(config, targetFork, finalityUpdate.finalizedHeader);
+
+  return finalityUpdate;
+}
+
+export function upgradeLightClientOptimisticUpdate(
+  config: ChainForkConfig,
+  targetFork: ForkName,
+  optimisticUpdate: allForks.LightClientOptimisticUpdate
+): allForks.LightClientOptimisticUpdate {
+  optimisticUpdate.attestedHeader = upgradeLightClientHeader(config, targetFork, optimisticUpdate.attestedHeader);
+
+  return optimisticUpdate;
+}
+
+/**
+ * Currently this upgradation is not required because all processing is done based on the
+ * summary that the store generates and maintains. In case store needs to be saved to disk,
+ * this could be required depending on the format the store is saved to the disk
+ */
+export function upgradeLightClientStore(
+  config: ChainForkConfig,
+  targetFork: ForkName,
+  store: LightClientStore,
+  signatureSlot: Slot
+): LightClientStore {
+  const updateSignaturePeriod = computeSyncPeriodAtSlot(signatureSlot);
+  const bestValidUpdate = store.bestValidUpdates.get(updateSignaturePeriod);
+
+  if (bestValidUpdate) {
+    store.bestValidUpdates.set(updateSignaturePeriod, {
+      update: upgradeLightClientUpdate(config, targetFork, bestValidUpdate.update),
+      summary: bestValidUpdate.summary,
+    });
+  }
+
+  store.finalizedHeader = upgradeLightClientHeader(config, targetFork, store.finalizedHeader);
+  store.optimisticHeader = upgradeLightClientHeader(config, targetFork, store.optimisticHeader);
+
+  return store;
 }
