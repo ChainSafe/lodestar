@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import bls from "@chainsafe/bls";
+import type {SecretKey} from "@chainsafe/bls/types";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {Signer, SignerType, ProposerConfig, SignerLocal} from "@lodestar/validator";
 import {DeletionStatus, ImportStatus, PubkeyHex, SignerDefinition} from "@lodestar/api/keymanager";
@@ -337,38 +338,14 @@ export async function decryptKeystoreDefinitions(
   const signers: SignerLocal[] = [];
   const passwords: string[] = [];
 
-  for (const [index, {keystorePath, password}] of keystoreDefinitions.entries()) {
-    try {
-      lockFilepath(keystorePath);
-    } catch (e) {
-      if (opts.force) {
-        // Ignore error, maybe log?
-      } else {
-        throw e;
-      }
-    }
+  const keystores = await batchKeystores(keystoreDefinitions);
 
-    const keystore = Keystore.parse(fs.readFileSync(keystorePath, "utf8"));
-
-    // PPS: OOM error issue while decripting validators in parallel
-    // https://github.com/ChainSafe/lodestar/issues/4166
-    //
-    // Below call has been serialized as a hotfix for now as even for 10 vals
-    // it causes 2.5GB memory hog, which doesn't go down even when the promise
-    // resolves and all validators have been decrypted.
-    //
-    // return await Promise.all(validators.map(async (validator) =>
-    //  validator.votingKeypair(this.secretsDir)));
-    //
-    // The new serialized decryption takes full 5 minutes to decrypt 100 validators
-    // on a 100% single core engagement! This needs to be invesigated deeply and
-    // fixed most prefered to the above `Promise.all(...)` flow
-    //
-    const secretKeyBytes = await keystore.decrypt(password);
+  for (const [index, [password, keystore]] of Array.from(keystores.entries()).entries()) {
+    const secretKey = await decryptKeystore(keystore, password);
 
     const signer: SignerLocal = {
       type: SignerType.Local,
-      secretKey: bls.SecretKey.fromBytes(secretKeyBytes),
+      secretKey,
     };
 
     signers.push(signer);
@@ -377,13 +354,37 @@ export async function decryptKeystoreDefinitions(
     if (opts?.onDecrypt) {
       opts?.onDecrypt(index, signer);
     }
-  }
 
-  if (opts.cacheFilePath) {
-    await writeKeystoreCache(opts.cacheFilePath, signers, passwords);
+    if (opts.cacheFilePath) {
+      await writeKeystoreCache(opts.cacheFilePath, signers, passwords);
+    }
   }
 
   return signers;
+}
+
+export async function batchKeystores(keystoreDefinitions: LocalKeystoreDefinition[]): Promise<Map<string, Keystore>> {
+  const keystores: Map<string, Keystore> = new Map();
+
+  await Promise.all(
+    keystoreDefinitions.map(async ({keystorePath, password}) => {
+      try {
+        lockFilepath(keystorePath);
+      } catch (e) {
+        //#TODO: log (`Failed to lock keystore ${keystorePath}`, e);
+      }
+
+      const keystore = Keystore.parse(fs.readFileSync(keystorePath, "utf8"));
+      keystores.set(password, keystore);
+    })
+  );
+
+  return keystores;
+}
+
+export async function decryptKeystore(keystore: Keystore, password: string): Promise<SecretKey> {
+  const secretKeyBytes = await keystore.decrypt(password);
+  return bls.SecretKey.fromBytes(secretKeyBytes);
 }
 
 /**
