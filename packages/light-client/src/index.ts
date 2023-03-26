@@ -125,11 +125,11 @@ export class Lightclient {
       {
         allowForcedUpdates: ALLOW_FORCED_UPDATES,
         onSetFinalizedHeader: (header) => {
-          this.emitter.emit(LightclientEvent.lightClientOptimisticHeader, header);
+          this.emitter.emit(LightclientEvent.lightClientFinalityHeader, header);
           this.logger.debug("Updated state.finalizedHeader", {slot: header.beacon.slot});
         },
         onSetOptimisticHeader: (header) => {
-          this.emitter.emit(LightclientEvent.lightClientFinalityHeader, header);
+          this.emitter.emit(LightclientEvent.lightClientOptimisticHeader, header);
           this.logger.debug("Updated state.optimisticHeader", {slot: header.beacon.slot});
         },
       },
