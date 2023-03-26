@@ -106,7 +106,7 @@ describe("sync", () => {
 
     // Sync periods to current
     await new Promise<void>((resolve) => {
-      lightclient.emitter.on(LightclientEvent.lightClientFinalityUpdate, (header) => {
+      lightclient.emitter.on(LightclientEvent.lightClientFinalityHeader, (header) => {
         if (computeSyncPeriodAtSlot(header.beacon.slot) >= targetPeriod) {
           resolve();
         }
@@ -128,7 +128,7 @@ describe("sync", () => {
     // Track head + reference states with some known data
     const syncCommittee = getInteropSyncCommittee(targetPeriod);
     await new Promise<void>((resolve) => {
-      lightclient.emitter.on(LightclientEvent.lightClientOptimisticUpdate, (header) => {
+      lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, (header) => {
         if (header.beacon.slot === targetSlot) {
           resolve();
         }
