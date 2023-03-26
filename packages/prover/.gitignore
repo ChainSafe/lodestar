@@ -1,0 +1,10 @@
+node_modules/
+lib
+.nyc_output/
+coverage/**
+.DS_Store
+*.swp
+.idea
+yarn-error.log
+package-lock.json
+dist*
