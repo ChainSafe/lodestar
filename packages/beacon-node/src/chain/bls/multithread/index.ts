@@ -56,11 +56,6 @@ const MAX_BUFFERED_SIGS = 32;
  */
 const MAX_BUFFER_WAIT_MS = 100;
 
-/**
- * Max concurrent jobs on `canAcceptWork` status
- */
-const MAX_JOBS_CAN_ACCEPT_WORK = 512;
-
 type WorkerApi = {
   verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult>;
 };
@@ -115,7 +110,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   } | null = null;
   private blsVerifyAllMultiThread: boolean;
   private closed = false;
-  private workersBusy = 0;
 
   constructor(options: BlsMultiThreadWorkerPoolOptions, modules: BlsMultiThreadWorkerPoolModules) {
     const {logger, metrics} = modules;
@@ -133,19 +127,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.workers = this.createWorkers(implementation, defaultPoolSize);
 
     if (metrics) {
-      metrics.blsThreadPool.queueLength.addCollect(() => {
-        metrics.blsThreadPool.queueLength.set(this.jobs.length);
-        metrics.blsThreadPool.workersBusy.set(this.workersBusy);
-      });
+      metrics.blsThreadPool.queueLength.addCollect(() => metrics.blsThreadPool.queueLength.set(this.jobs.length));
     }
-  }
-
-  canAcceptWork(): boolean {
-    return (
-      this.workersBusy < defaultPoolSize &&
-      // TODO: Should also bound the jobs queue?
-      this.jobs.length < MAX_JOBS_CAN_ACCEPT_WORK
-    );
   }
 
   async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
@@ -327,7 +310,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
     const workerApi = worker.status.workerApi;
     worker.status = {code: WorkerStatusCode.running, workerApi};
-    this.workersBusy++;
 
     try {
       let startedSigSets = 0;
@@ -393,7 +375,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     }
 
     worker.status = {code: WorkerStatusCode.idle, workerApi};
-    this.workersBusy--;
 
     // Potentially run a new job
     setTimeout(this.runJob, 0);
