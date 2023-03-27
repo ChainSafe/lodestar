@@ -198,14 +198,19 @@ export class AttestationService {
     this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
 
     // Step 2. Publish all `Attestations` in one go
+    const logCtx = {
+      slot,
+      // log index if attestations are published per committee
+      ...(this.opts?.disableAttestationGrouping && {index: attestationNoCommittee.index}),
+    };
     try {
       ApiError.assert(await this.api.beacon.submitPoolAttestations(signedAttestations));
-      this.logger.info("Published attestations", {slot, count: signedAttestations.length});
+      this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
       this.metrics?.publishedAttestations.inc(signedAttestations.length);
     } catch (e) {
       // Note: metric counts only 1 since we don't know how many signedAttestations are invalid
       this.metrics?.attestaterError.inc({error: "publish"});
-      this.logger.error("Error publishing attestations", {slot}, e as Error);
+      this.logger.error("Error publishing attestations", logCtx, e as Error);
     }
   }
 
