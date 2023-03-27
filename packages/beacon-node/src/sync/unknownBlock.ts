@@ -223,6 +223,8 @@ export class UnknownBlockSync {
           case BlockErrorCode.PARENT_UNKNOWN:
           case BlockErrorCode.PRESTATE_MISSING:
             // Should no happen, mark as pending to try again latter
+            // This potentially an orphaned block
+            this.metrics?.syncUnknownBlock.orphanedBlocks.inc();
             this.logger.error("Attempted to process block but its parent was still unknown", errorData, res.err);
             pendingBlock.status = PendingBlockStatus.pending;
             break;
@@ -244,6 +246,8 @@ export class UnknownBlockSync {
       else {
         this.logger.error("Unknown error processing block from unknown parent sync", errorData, res.err);
         pendingBlock.status = PendingBlockStatus.pending;
+        // This potentially an orphaned block
+        this.metrics?.syncUnknownBlock.orphanedBlocks.inc();
       }
     }
   }

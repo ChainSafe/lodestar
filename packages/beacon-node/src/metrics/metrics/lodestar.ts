@@ -657,6 +657,10 @@ export function createLodestarMetrics(
         name: "lodestar_sync_unknown_block_known_bad_blocks_size",
         help: "Current size of UnknownBlockSync known bad blocks cache",
       }),
+      orphanedBlocks: register.gauge({
+        name: "lodestar_sync_orphaned_blocks_total",
+        help: "Total count of blocks proposed but not included in the canonical chain",
+      }),
       processedBlocksSuccess: register.gauge({
         name: "lodestar_sync_unknown_block_processed_blocks_success_total",
         help: "Total number of processed blocks successes in UnknownBlockSync",
