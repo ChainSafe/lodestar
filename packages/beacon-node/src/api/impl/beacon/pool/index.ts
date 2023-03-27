@@ -1,7 +1,7 @@
 import {routes, ServerApi} from "@lodestar/api";
-import {Epoch, ssz} from "@lodestar/types";
+import {Epoch, phase0, ssz} from "@lodestar/types";
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {validateGossipAttestation} from "../../../../chain/validation/index.js";
+import {validateApiAttestations, validateGossipAttestation} from "../../../../chain/validation/index.js";
 import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateGossipProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
 import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
@@ -10,6 +10,8 @@ import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCom
 import {ApiModules} from "../../types.js";
 import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors/index.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
+import {wrapError} from "../../../../util/wrapError.js";
+import {byteArrayEquals} from "../../../../util/bytes.js";
 
 export function getBeaconPoolApi({
   chain,
@@ -17,6 +19,53 @@ export function getBeaconPoolApi({
   metrics,
   network,
 }: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): ServerApi<routes.beacon.pool.Api> {
+  const submitPoolAttestationsOneByOne = async (attestations: phase0.Attestation[]): Promise<void> => {
+    const seenTimestampSec = Date.now() / 1000;
+    const errors: Error[] = [];
+
+    await Promise.all(
+      attestations.map(async (attestation, i) => {
+        try {
+          // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+          const validateFn = () => validateGossipAttestation(chain, attestation, null);
+          const {slot, beaconBlockRoot} = attestation.data;
+          // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
+          // and the block hasn't been in our forkchoice since we haven't seen / processing that block
+          // see https://github.com/ChainSafe/lodestar/issues/5098
+          const {indexedAttestation, subnet} = await validateGossipFnRetryUnknownRoot(
+            validateFn,
+            chain,
+            slot,
+            beaconBlockRoot
+          );
+
+          const sentPeers = await network.gossip.publishBeaconAttestation(attestation, subnet);
+          metrics?.submitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
+          if (network.attnetsService.shouldProcess(subnet, slot)) {
+            const insertOutcome = chain.attestationPool.add(attestation);
+            metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
+          }
+        } catch (e) {
+          errors.push(e as Error);
+          logger.error(
+            `Error on submitPoolAttestations [${i}]`,
+            {slot: attestation.data.slot, index: attestation.data.index},
+            e as Error
+          );
+          if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
+            chain.persistInvalidSszValue(ssz.phase0.Attestation, attestation, "api_reject");
+          }
+        }
+      })
+    );
+
+    if (errors.length > 1) {
+      throw Error("Multiple errors on submitPoolAttestations\n" + errors.map((e) => e.message).join("\n"));
+    } else if (errors.length === 1) {
+      throw errors[0];
+    }
+  };
+
   return {
     async getPoolAttestations(filters) {
       // Already filtered by slot
@@ -47,49 +96,38 @@ export function getBeaconPoolApi({
 
     async submitPoolAttestations(attestations) {
       const seenTimestampSec = Date.now() / 1000;
-      const errors: Error[] = [];
+      const count = attestations.length;
+      if (count <= 1 || !isSameData(attestations)) {
+        logger.verbose("Api attestations don't have same attestation data or less than 2", {count});
+        return submitPoolAttestationsOneByOne(attestations);
+      }
 
+      const {slot, beaconBlockRoot} = attestations[0].data;
+      // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+      const validateBatchFn = () => validateApiAttestations(chain, attestations);
+      const batchResult = await wrapError(
+        validateGossipFnRetryUnknownRoot(validateBatchFn, chain, slot, beaconBlockRoot)
+      );
+
+      if (batchResult.err) {
+        // try our best to spread valid attestations
+        logger.verbose("Api attestations failed batch validation, re-validate one by one", {count});
+        return submitPoolAttestationsOneByOne(attestations);
+      }
+
+      // pass batch validation, handle in batch, same logic to submitPoolAttestationsOneByOne()
+      const validationResults = batchResult.result;
       await Promise.all(
         attestations.map(async (attestation, i) => {
-          try {
-            // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-            const validateFn = () => validateGossipAttestation(chain, attestation, null);
-            const {slot, beaconBlockRoot} = attestation.data;
-            // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
-            // and the block hasn't been in our forkchoice since we haven't seen / processing that block
-            // see https://github.com/ChainSafe/lodestar/issues/5098
-            const {indexedAttestation, subnet} = await validateGossipFnRetryUnknownRoot(
-              validateFn,
-              chain,
-              slot,
-              beaconBlockRoot
-            );
-
-            if (network.attnetsService.shouldProcess(subnet, slot)) {
-              const insertOutcome = chain.attestationPool.add(attestation);
-              metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
-            }
-            const sentPeers = await network.gossip.publishBeaconAttestation(attestation, subnet);
-            metrics?.submitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
-          } catch (e) {
-            errors.push(e as Error);
-            logger.error(
-              `Error on submitPoolAttestations [${i}]`,
-              {slot: attestation.data.slot, index: attestation.data.index},
-              e as Error
-            );
-            if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-              chain.persistInvalidSszValue(ssz.phase0.Attestation, attestation, "api_reject");
-            }
+          const {indexedAttestation, subnet} = validationResults[i];
+          const sentPeers = await network.gossip.publishBeaconAttestation(attestation, subnet);
+          metrics?.submitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
+          if (network.attnetsService.shouldProcess(subnet, attestation.data.slot)) {
+            const insertOutcome = chain.attestationPool.add(attestation);
+            metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
           }
         })
       );
-
-      if (errors.length > 1) {
-        throw Error("Multiple errors on submitPoolAttestations\n" + errors.map((e) => e.message).join("\n"));
-      } else if (errors.length === 1) {
-        throw errors[0];
-      }
     },
 
     async submitPoolAttesterSlashings(attesterSlashing) {
@@ -223,4 +261,25 @@ export function getBeaconPoolApi({
       }
     },
   };
+}
+
+function isSameData(attestations: phase0.Attestation[]): boolean {
+  if (attestations.length <= 1) {
+    return true;
+  }
+  const {slot: attSlot, beaconBlockRoot: attBlock, source: attSource, target: attTarget} = attestations[0].data;
+
+  for (let i = 1; i < attestations.length; i++) {
+    const {slot, beaconBlockRoot, source, target} = attestations[i].data;
+    if (
+      slot !== attSlot ||
+      !byteArrayEquals(beaconBlockRoot, attBlock) ||
+      !ssz.phase0.Checkpoint.equals(target, attTarget) ||
+      !ssz.phase0.Checkpoint.equals(source, attSource)
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }

@@ -4,7 +4,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {processSlots} from "@lodestar/state-transition";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
-import {validateGossipAttestation} from "../../../../src/chain/validation/index.js";
+import {validateApiAttestations, validateGossipAttestation} from "../../../../src/chain/validation/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {memoOnce} from "../../../utils/cache.js";
@@ -27,7 +27,7 @@ describe("chain / validation / attestation", () => {
       currentSlot: stateSlot,
       attSlot: opts?.currentSlot ?? stateSlot,
       attIndex: 1,
-      bitIndex: 1,
+      bitIndex: 0,
       targetRoot: KNOWN_TARGET_ROOT,
       beaconBlockRoot: KNOWN_BEACON_BLOCK_ROOT,
       state: getState(),
@@ -35,10 +35,20 @@ describe("chain / validation / attestation", () => {
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  function getValidAttestation() {
+    // bitIndex = 1 means 2nd validator index inside the committee to avoid ATTESTATION_ERROR_ATTESTATION_ALREADY_KNOWN
+    return getValidData({bitIndex: 1}).attestation;
+  }
+
   it("Valid", async () => {
     const {chain, attestation, subnet} = getValidData();
 
     await validateGossipAttestation(chain, attestation, subnet);
+    await validateApiAttestations(chain, [
+      getValidData({bitIndex: 1}).attestation,
+      getValidData({bitIndex: 2}).attestation,
+    ]);
   });
 
   it("BAD_TARGET_EPOCH", async () => {
@@ -47,21 +57,21 @@ describe("chain / validation / attestation", () => {
     // Change target epoch to it doesn't match data.slot
     attestation.data.target.epoch += 1;
 
-    await expectError(chain, attestation, subnet, AttestationErrorCode.BAD_TARGET_EPOCH);
+    await expectError(chain, [attestation, getValidAttestation()], subnet, AttestationErrorCode.BAD_TARGET_EPOCH);
   });
 
   it("PAST_SLOT", async () => {
     // Set attestation at a very old slot
     const {chain, attestation, subnet} = getValidData({attSlot: stateSlot - SLOTS_PER_EPOCH - 3});
 
-    await expectError(chain, attestation, subnet, AttestationErrorCode.PAST_SLOT);
+    await expectError(chain, [attestation, getValidAttestation()], subnet, AttestationErrorCode.PAST_SLOT);
   });
 
   it("FUTURE_SLOT", async () => {
     // Set attestation to a future slot
     const {chain, attestation, subnet} = getValidData({attSlot: stateSlot + 2});
 
-    await expectError(chain, attestation, subnet, AttestationErrorCode.FUTURE_SLOT);
+    await expectError(chain, [attestation, getValidAttestation()], subnet, AttestationErrorCode.FUTURE_SLOT);
   });
 
   it("NOT_EXACTLY_ONE_AGGREGATION_BIT_SET - 0 bits", async () => {
@@ -70,7 +80,12 @@ describe("chain / validation / attestation", () => {
     const {chain, attestation, subnet} = getValidData({bitIndex});
     attestation.aggregationBits.set(bitIndex, false);
 
-    await expectError(chain, attestation, subnet, AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET);
+    await expectError(
+      chain,
+      [attestation, getValidAttestation()],
+      subnet,
+      AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
+    );
   });
 
   it("NOT_EXACTLY_ONE_AGGREGATION_BIT_SET - 2 bits", async () => {
@@ -79,7 +94,12 @@ describe("chain / validation / attestation", () => {
     const {chain, attestation, subnet} = getValidData({bitIndex});
     attestation.aggregationBits.set(bitIndex + 1, true);
 
-    await expectError(chain, attestation, subnet, AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET);
+    await expectError(
+      chain,
+      [attestation, getValidAttestation()],
+      subnet,
+      AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
+    );
   });
 
   it("UNKNOWN_BEACON_BLOCK_ROOT", async () => {
@@ -87,7 +107,12 @@ describe("chain / validation / attestation", () => {
     // Set beaconBlockRoot to a root not known by the fork choice
     attestation.data.beaconBlockRoot = UNKNOWN_ROOT;
 
-    await expectError(chain, attestation, subnet, AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT);
+    await expectError(
+      chain,
+      [attestation, getValidAttestation()],
+      subnet,
+      AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT
+    );
   });
 
   it("INVALID_TARGET_ROOT", async () => {
@@ -95,7 +120,7 @@ describe("chain / validation / attestation", () => {
     // Set target.root to an unknown root
     attestation.data.target.root = UNKNOWN_ROOT;
 
-    await expectError(chain, attestation, subnet, AttestationErrorCode.INVALID_TARGET_ROOT);
+    await expectError(chain, [attestation, getValidAttestation()], subnet, AttestationErrorCode.INVALID_TARGET_ROOT);
   });
 
   it("NO_COMMITTEE_FOR_SLOT_AND_INDEX", async () => {
@@ -108,7 +133,12 @@ describe("chain / validation / attestation", () => {
       getState: async () => committeeState,
     } as Partial<IStateRegenerator>) as IStateRegenerator;
 
-    await expectError(chain, attestation, subnet, AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX);
+    await expectError(
+      chain,
+      [attestation, getValidAttestation()],
+      subnet,
+      AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX
+    );
   });
 
   it("WRONG_NUMBER_OF_AGGREGATION_BITS", async () => {
@@ -119,7 +149,12 @@ describe("chain / validation / attestation", () => {
       attestation.aggregationBits.bitLen + 1
     );
 
-    await expectError(chain, attestation, subnet, AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS);
+    await expectError(
+      chain,
+      [attestation, getValidAttestation()],
+      subnet,
+      AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS
+    );
   });
 
   it("INVALID_SUBNET_ID", async () => {
@@ -127,7 +162,12 @@ describe("chain / validation / attestation", () => {
     // Pass a different subnet value than the correct one
     const invalidSubnet = subnet === 0 ? 1 : 0;
 
-    await expectError(chain, attestation, invalidSubnet, AttestationErrorCode.INVALID_SUBNET_ID);
+    await expectError(
+      chain,
+      [attestation, getValidAttestation()],
+      invalidSubnet,
+      AttestationErrorCode.INVALID_SUBNET_ID
+    );
   });
 
   it("ATTESTATION_ALREADY_KNOWN", async () => {
@@ -135,7 +175,12 @@ describe("chain / validation / attestation", () => {
     // Register attester as already seen
     chain.seenAttesters.add(attestation.data.target.epoch, validatorIndex);
 
-    await expectError(chain, attestation, subnet, AttestationErrorCode.ATTESTATION_ALREADY_KNOWN);
+    await expectError(
+      chain,
+      [attestation, getValidAttestation()],
+      subnet,
+      AttestationErrorCode.ATTESTATION_ALREADY_KNOWN
+    );
   });
 
   it("INVALID_SIGNATURE", async () => {
@@ -145,16 +190,20 @@ describe("chain / validation / attestation", () => {
     attestation.aggregationBits.set(bitIndex, false);
     attestation.aggregationBits.set(bitIndex + 1, true);
 
-    await expectError(chain, attestation, subnet, AttestationErrorCode.INVALID_SIGNATURE);
+    await expectError(chain, [attestation, getValidAttestation()], subnet, AttestationErrorCode.INVALID_SIGNATURE);
   });
 
   /** Alias to reduce code duplication */
   async function expectError(
     chain: IBeaconChain,
-    attestation: phase0.Attestation,
+    attestations: phase0.Attestation[],
     subnet: number,
     errorCode: AttestationErrorCode
   ): Promise<void> {
-    await expectRejectedWithLodestarError(validateGossipAttestation(chain, attestation, subnet), errorCode);
+    await expectRejectedWithLodestarError(validateGossipAttestation(chain, attestations[0], subnet), errorCode);
+    // validateApiAttestations never throw INVALID_SUBNET_ID error
+    if (errorCode !== AttestationErrorCode.INVALID_SUBNET_ID) {
+      await expectRejectedWithLodestarError(validateApiAttestations(chain, attestations), errorCode);
+    }
   }
 });

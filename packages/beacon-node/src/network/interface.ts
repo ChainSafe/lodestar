@@ -13,8 +13,8 @@ import {INetworkEventBus} from "./events.js";
 import {GossipBeaconNode, GossipType} from "./gossip/index.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
 import {IReqRespBeaconNode} from "./reqresp/ReqRespBeaconNode.js";
-import {PendingGossipsubMessage} from "./processor/types.js";
 import {AttnetsService, CommitteeSubscription} from "./subnets/index.js";
+import {PendingGossipsubMessage} from "./processor/types.js";
 
 export type PeerSearchOptions = {
   supportsProtocols?: string[];
