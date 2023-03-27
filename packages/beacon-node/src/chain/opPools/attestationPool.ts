@@ -143,8 +143,8 @@ export class AttestationPool {
   }
 
   /**
-   * Removes any attestations with a slot lower than `current_slot - SLOTS_RETAINED`.
-   * Not intested in attestations in old slots, we only preaggregate attestations for the current slot.
+   * Removes any attestations with a slot lower than `current_slot - preaggregateSlotDistance`.
+   * By default, not interested in attestations in old slots, we only preaggregate attestations for the current slot.
    */
   prune(clockSlot: Slot): void {
     pruneBySlot(this.attestationByRootBySlot, clockSlot, SLOTS_RETAINED);
