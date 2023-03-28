@@ -36,6 +36,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     graffiti: string;
     afterBlockDelaySlotFraction?: number;
     scAfterBlockDelaySlotFraction?: number;
+    disableAttestationGrouping?: boolean;
     suggestedFeeRecipient?: string;
     proposerSettingsFile?: string;
     strictFeeRecipientCheck?: boolean;
@@ -51,6 +52,8 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     "externalSigner.url"?: string;
     "externalSigner.pubkeys"?: string[];
     "externalSigner.fetch"?: boolean;
+
+    distributed?: boolean;
 
     interopIndexes?: string;
     fromMnemonic?: string;
@@ -189,6 +192,13 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "number",
   },
 
+  disableAttestationGrouping: {
+    hidden: true,
+    description:
+      "Disables attestation service grouping optimization, attestation tasks will be executed per committee instead of just once for all committees.",
+    type: "boolean",
+  },
+
   proposerSettingsFile: {
     description:
       "A yaml file to specify detailed default and per validator pubkey customized proposer configs. PS: This feature and its format is in alpha and subject to change",
@@ -275,6 +285,13 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     description: "Fetch then list of pubkeys to validate from an external signer",
     type: "boolean",
     group: "externalSignerUrl",
+  },
+
+  // Distributed validator
+
+  distributed: {
+    description: "Enables specific features required to run as part of a distributed validator cluster",
+    type: "boolean",
   },
 
   // Metrics

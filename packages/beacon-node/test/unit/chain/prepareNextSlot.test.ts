@@ -5,8 +5,10 @@ import {ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {WinstonLogger} from "@lodestar/utils";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
+import {routes} from "@lodestar/api";
 import {BeaconChain, ChainEventEmitter} from "../../../src/chain/index.js";
 import {IBeaconChain} from "../../../src/chain/interface.js";
+import {IChainOptions} from "../../../src/chain/options.js";
 import {LocalClock} from "../../../src/chain/clock/index.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
 import {StateRegenerator} from "../../../src/chain/regen/index.js";
@@ -17,8 +19,9 @@ import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
 import {ExecutionEngineHttp} from "../../../src/execution/engine/http.js";
 import {IExecutionEngine} from "../../../src/execution/engine/interface.js";
 import {StubbedChainMutable} from "../../utils/stub/index.js";
+import {zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
 
-type StubbedChain = StubbedChainMutable<"clock" | "forkChoice" | "emitter" | "regen">;
+type StubbedChain = StubbedChainMutable<"clock" | "forkChoice" | "emitter" | "regen" | "opts">;
 
 describe("PrepareNextSlot scheduler", () => {
   const sandbox = sinon.createSandbox();
@@ -33,7 +36,8 @@ describe("PrepareNextSlot scheduler", () => {
   let getForkStub: SinonStubFn<typeof config["getForkName"]>;
   let updateBuilderStatus: SinonStubFn<IBeaconChain["updateBuilderStatus"]>;
   let executionEngineStub: SinonStubbedInstance<ExecutionEngineHttp> & ExecutionEngineHttp;
-
+  const emitPayloadAttributes = true;
+  const proposerIndex = 0;
   beforeEach(() => {
     sandbox.useFakeTimers();
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
@@ -42,9 +46,8 @@ describe("PrepareNextSlot scheduler", () => {
     chainStub.clock = clockStub;
     forkChoiceStub = sandbox.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
     chainStub.forkChoice = forkChoiceStub;
-    const emitterStub = sandbox.createStubInstance(ChainEventEmitter) as SinonStubbedInstance<ChainEventEmitter> &
-      ChainEventEmitter;
-    chainStub.emitter = emitterStub;
+    const emitter = new ChainEventEmitter();
+    chainStub.emitter = emitter;
     regenStub = sandbox.createStubInstance(StateRegenerator) as SinonStubbedInstance<StateRegenerator> &
       StateRegenerator;
     chainStub.regen = regenStub;
@@ -60,6 +63,8 @@ describe("PrepareNextSlot scheduler", () => {
       ExecutionEngineHttp;
     ((chainStub as unknown) as {executionEngine: IExecutionEngine}).executionEngine = executionEngineStub;
     ((chainStub as unknown) as {config: ChainForkConfig}).config = (config as unknown) as ChainForkConfig;
+    chainStub.opts = {emitPayloadAttributes} as IChainOptions;
+
     scheduler = new PrepareNextSlotScheduler(chainStub, config, null, loggerStub, abortController.signal);
   });
 
@@ -135,12 +140,15 @@ describe("PrepareNextSlot scheduler", () => {
   });
 
   it("bellatrix - should prepare payload", async () => {
+    const spy = sinon.spy();
+    chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
     getForkStub.returns(ForkName.bellatrix);
-    chainStub.recomputeForkChoiceHead.returns({slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    chainStub.recomputeForkChoiceHead.returns({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     forkChoiceStub.getJustifiedBlock.returns({} as ProtoBlock);
     forkChoiceStub.getFinalizedBlock.returns({} as ProtoBlock);
     updateBuilderStatus.returns(void 0);
     const state = generateCachedBellatrixState();
+    sinon.stub(state.epochCtx, "getBeaconProposer").returns(proposerIndex);
     regenStub.getBlockSlotState.resolves(state);
     beaconProposerCacheStub.get.returns("0x fee recipient address");
     ((executionEngineStub as unknown) as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
@@ -157,5 +165,6 @@ describe("PrepareNextSlot scheduler", () => {
     expect(forkChoiceStub.getFinalizedBlock, "expect forkChoice.getFinalizedBlock to be called").to.be.called;
     expect(executionEngineStub.notifyForkchoiceUpdate, "expect executionEngine.notifyForkchoiceUpdate to be called").to
       .be.calledOnce;
+    expect(spy).to.be.calledOnce;
   });
 });

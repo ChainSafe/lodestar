@@ -1,15 +1,4 @@
-import {Metric} from "prom-client";
 import {ClientStatsProperty} from "./properties.js";
-
-// get methods are missing in prom-client type definitions
-// see https://github.com/siimon/prom-client/pull/531
-export type MetricWithGetter = Metric & {
-  get(): Promise<MetricObject>;
-};
-
-export type MetricObject = {
-  values: Array<{value: number; labels: Record<string, string>}>;
-};
 
 export type MetricValue = string | number;
 

@@ -19,6 +19,7 @@ import {LightClientTransport} from "./transport/interface.js";
 // Re-export types
 export {LightclientEvent} from "./events.js";
 export {SyncCommitteeFast} from "./types.js";
+export {upgradeLightClientFinalityUpdate, upgradeLightClientOptimisticUpdate} from "./spec/utils.js";
 
 export type GenesisData = {
   genesisTime: number;
@@ -154,7 +155,7 @@ export class Lightclient {
     // Fetch bootstrap state with proof at the trusted block root
     const {data: bootstrap} = await transport.getBootstrap(toHexString(checkpointRoot));
 
-    validateLightClientBootstrap(checkpointRoot, bootstrap);
+    validateLightClientBootstrap(args.config, checkpointRoot, bootstrap);
 
     return new Lightclient({...args, bootstrap});
   }

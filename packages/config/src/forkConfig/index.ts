@@ -50,8 +50,8 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
   const deneb: ForkInfo = {
     name: ForkName.deneb,
     seq: ForkSeq.deneb,
-    epoch: config.EIP4844_FORK_EPOCH,
-    version: config.EIP4844_FORK_VERSION,
+    epoch: config.DENEB_FORK_EPOCH,
+    version: config.DENEB_FORK_VERSION,
     prevVersion: config.CAPELLA_FORK_VERSION,
     prevForkName: ForkName.capella,
   };

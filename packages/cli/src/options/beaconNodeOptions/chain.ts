@@ -13,11 +13,11 @@ export type ChainArgs = {
   "chain.proposerBoostEnabled": boolean;
   "chain.disableImportExecutionFcU": boolean;
   "chain.computeUnrealized": boolean;
-  "chain.countUnrealizedFull": boolean;
   "chain.assertCorrectProgressiveBalances": boolean;
   "chain.maxSkipSlots": number;
   "safe-slots-to-import-optimistically": number;
   "chain.archiveStateEpochFrequency": number;
+  emitPayloadAttributes: boolean;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -32,11 +32,11 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     proposerBoostEnabled: args["chain.proposerBoostEnabled"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     computeUnrealized: args["chain.computeUnrealized"],
-    countUnrealizedFull: args["chain.countUnrealizedFull"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
+    emitPayloadAttributes: args["emitPayloadAttributes"],
   };
 }
 
@@ -46,6 +46,13 @@ export const options: CliCommandOptions<ChainArgs> = {
     description:
       "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling produceBlock.",
     defaultDescription: defaultOptions.chain.suggestedFeeRecipient,
+    group: "chain",
+  },
+
+  emitPayloadAttributes: {
+    type: "boolean",
+    defaultDescription: String(defaultOptions.chain.emitPayloadAttributes),
+    description: "Flag to SSE emit execution payloadAttributes before every slot",
     group: "chain",
   },
 
@@ -101,14 +108,6 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "boolean",
     description: "Compute unrealized checkpoints and use it in fork choice or not",
-    defaultDescription: String(defaultOptions.chain.computeUnrealized),
-    group: "chain",
-  },
-
-  "chain.countUnrealizedFull": {
-    hidden: true,
-    type: "boolean",
-    description: "Compute unrealized checkpoints and fully use it",
     defaultDescription: String(defaultOptions.chain.computeUnrealized),
     group: "chain",
   },

@@ -28,7 +28,7 @@ import {
 } from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, ForkExecution, isForkExecution} from "@lodestar/params";
-import {toHex, sleep, Logger} from "@lodestar/utils";
+import {toHex, sleep, Logger, fromHex} from "@lodestar/utils";
 
 import type {BeaconChain} from "../chain.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from "../../execution/index.js";
@@ -418,7 +418,7 @@ async function prepareExecutionPayloadHeader(
   return chain.executionBuilder.getHeader(state.slot, parentHash, proposerPubKey);
 }
 
-async function getExecutionPayloadParentHash(
+export async function getExecutionPayloadParentHash(
   chain: {
     eth1: IEth1ForBlockProduction;
     config: ChainForkConfig;
@@ -449,6 +449,51 @@ async function getExecutionPayloadParentHash(
       // Signify merge via producing on top of the last PoW block
       return {isPremerge: false, parentHash: terminalPowBlockHash};
     }
+  }
+}
+
+export async function getPayloadAttributesForSSE(
+  fork: ForkExecution,
+  chain: {
+    eth1: IEth1ForBlockProduction;
+    config: ChainForkConfig;
+  },
+  {
+    prepareState,
+    prepareSlot,
+    parentBlockRoot,
+    feeRecipient,
+  }: {prepareState: CachedBeaconStateExecutions; prepareSlot: Slot; parentBlockRoot: Root; feeRecipient: string}
+): Promise<allForks.SSEPayloadAttributes> {
+  const parentHashRes = await getExecutionPayloadParentHash(chain, prepareState);
+
+  if (!parentHashRes.isPremerge) {
+    const {parentHash} = parentHashRes;
+    const timestamp = computeTimeAtSlot(chain.config, prepareSlot, prepareState.genesisTime);
+    const prevRandao = getRandaoMix(prepareState, prepareState.epochCtx.epoch);
+    const payloadAttributes = {
+      timestamp,
+      prevRandao,
+      suggestedFeeRecipient: fromHex(feeRecipient),
+    };
+
+    if (ForkSeq[fork] >= ForkSeq.capella) {
+      (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = getExpectedWithdrawals(
+        prepareState as CachedBeaconStateCapella
+      ).withdrawals;
+    }
+
+    const ssePayloadAttributes: allForks.SSEPayloadAttributes = {
+      proposerIndex: prepareState.epochCtx.getBeaconProposer(prepareSlot),
+      proposalSlot: prepareSlot,
+      proposalBlockNumber: prepareState.latestExecutionPayloadHeader.blockNumber + 1,
+      parentBlockRoot,
+      parentBlockHash: parentHash,
+      payloadAttributes,
+    };
+    return ssePayloadAttributes;
+  } else {
+    throw Error("The execution is still pre-merge");
   }
 }
 

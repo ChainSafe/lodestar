@@ -31,7 +31,7 @@ export const zhejiangChainConfig: ChainConfig = {
   CAPELLA_FORK_VERSION: b("0x00000072"),
   CAPELLA_FORK_EPOCH: 1350,
   // Deneb
-  EIP4844_FORK_VERSION: b("0x00000073"),
+  DENEB_FORK_VERSION: b("0x00000073"),
 
   // Deposit contract
   // ---------------------------------------------------------------

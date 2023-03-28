@@ -6,7 +6,7 @@ import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createBeaconConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, isForkBlobs} from "@lodestar/params";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
@@ -42,8 +42,10 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
 ) => {
   return {
     testFunction: async (testcase) => {
-      await initCKZG();
-      loadEthereumTrustedSetup();
+      if (isForkBlobs(fork)) {
+        await initCKZG();
+        loadEthereumTrustedSetup();
+      }
 
       const {steps, anchorState} = testcase;
       const currentSlot = anchorState.slot;
@@ -81,7 +83,6 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
           // we don't use these in fork choice spec tests
           disablePrepareNextSlot: true,
           assertCorrectProgressiveBalances,
-          computeUnrealized: false,
         },
         {
           config: createBeaconConfig(config, state.genesisValidatorsRoot),
@@ -244,14 +245,6 @@ export const forkChoiceTest = (opts: {onlyPredefinedResponses: boolean}): TestRu
                 `Invalid finalized checkpoint at step ${i}`
               );
             }
-            if (step.checks.best_justified_checkpoint) {
-              expect(
-                toSpecTestCheckpoint((chain.forkChoice as ForkChoice).getBestJustifiedCheckpoint())
-              ).to.be.deep.equal(
-                step.checks.best_justified_checkpoint,
-                `Invalid best justified checkpoint at step ${i}`
-              );
-            }
           }
 
           // None of the above
@@ -396,7 +389,6 @@ type Checks = {
     time?: bigint;
     justified_checkpoint?: SpecTestCheckpoint;
     finalized_checkpoint?: SpecTestCheckpoint;
-    best_justified_checkpoint?: SpecTestCheckpoint;
     proposer_boost_root?: RootHex;
   };
 };

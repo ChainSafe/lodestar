@@ -176,8 +176,8 @@ describe("monitoring / service", () => {
 
         // Validation of sent data happens inside the mocked remote service
         // which returns a 500 error if data does not match expected schema.
-        // Fail test if error was logged due to a 500 response.
-        expect(logger.error).to.not.have.been.calledOnce;
+        // Fail test if warning was logged due to a 500 response.
+        expect(logger.warn).to.not.have.been.calledWithMatch("Failed to send client stats");
       });
     });
 
@@ -192,12 +192,12 @@ describe("monitoring / service", () => {
 
     it("should properly handle errors if remote service is unreachable", async () => {
       const differentPort = Number(remoteServiceUrl.port) - 1;
-      const endpoint = `http://127.0.0.1:${differentPort}`;
+      const endpoint = `http://127.0.0.1:${differentPort}/`;
       const service = new MonitoringService("beacon", {endpoint}, {register, logger});
 
       await service.send();
 
-      assertError({name: "FetchError"});
+      assertError({message: `request to ${endpoint} failed, reason: connect ECONNREFUSED ${new URL(endpoint).host}`});
     });
 
     it("should abort pending requests if timeout is reached", async () => {
@@ -231,10 +231,9 @@ describe("monitoring / service", () => {
       setTimeout(() => service.stop(), 10);
     });
 
-    function assertError(error: {name?: string; message?: string}): void {
-      expect(logger.error).to.have.been.calledOnce;
-      // errors are not thrown and need to be asserted based on the error log
-      expect(logger.error).to.have.been.calledWithMatch("Failed to send client stats", {}, error);
+    function assertError(error: {message: string}): void {
+      // errors are not thrown and need to be asserted based on the log
+      expect(logger.warn).to.have.been.calledWithMatch("Failed to send client stats", {reason: error.message});
     }
   });
 

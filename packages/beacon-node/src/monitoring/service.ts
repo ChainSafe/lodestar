@@ -131,7 +131,7 @@ export class MonitoringService {
 
           this.logger.debug(`Sent client stats to ${this.remoteServiceHost}`, {data: JSON.stringify(data)});
         } catch (e) {
-          this.logger.error(`Failed to send client stats to ${this.remoteServiceHost}`, {}, e as Error);
+          this.logger.warn(`Failed to send client stats to ${this.remoteServiceHost}`, {reason: (e as Error).message});
         } finally {
           this.pendingRequest = undefined;
         }

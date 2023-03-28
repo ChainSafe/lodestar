@@ -41,7 +41,7 @@ export async function archiveBlocks(
   const finalizedNonCanonicalBlocks = forkChoice.getAllNonAncestorBlocks(finalizedCheckpoint.rootHex);
 
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous
-  const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.EIP4844_FORK_EPOCH;
+  const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.DENEB_FORK_EPOCH;
 
   const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
@@ -82,7 +82,7 @@ export async function archiveBlocks(
   // Keep only `[max(GENESIS_EPOCH, current_epoch - MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS), current_epoch]`
   if (finalizedPostDeneb) {
     const blobsSidecarMinEpoch = currentEpoch - config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS;
-    if (blobsSidecarMinEpoch >= config.EIP4844_FORK_EPOCH) {
+    if (blobsSidecarMinEpoch >= config.DENEB_FORK_EPOCH) {
       const slotsToDelete = await db.blobsSidecarArchive.keys({lt: computeStartSlotAtEpoch(blobsSidecarMinEpoch)});
       if (slotsToDelete.length > 0) {
         await db.blobsSidecarArchive.batchDelete(slotsToDelete);

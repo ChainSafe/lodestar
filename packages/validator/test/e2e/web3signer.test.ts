@@ -12,12 +12,14 @@ import {genesisData} from "@lodestar/config/networks";
 import {getClient, routes} from "@lodestar/api";
 import bls from "@chainsafe/bls";
 import {ssz} from "@lodestar/types";
-import {FAR_FUTURE_EPOCH} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
 import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} from "../../src/index.js";
 import {IndicesService} from "../../src/services/indices.js";
 import {testLogger} from "../utils/logger.js";
 
 const web3signerVersion = "22.8.1";
+/** Till what version is the image updated for signature verification */
+const validTillSignatureForkSeq = ForkSeq.bellatrix;
 
 /* eslint-disable no-console */
 
@@ -115,7 +117,8 @@ describe("web3signer signature test", function () {
 
   for (const fork of config.forksAscendingEpochOrder) {
     it(`signBlock ${fork.name}`, async function () {
-      if (fork.epoch === FAR_FUTURE_EPOCH) {
+      // Only test till the fork the signer version supports
+      if (ForkSeq[fork.name] > validTillSignatureForkSeq) {
         this.skip();
       }
 

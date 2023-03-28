@@ -11,7 +11,7 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   "PARTICIPATION_FLAG_WEIGHTS",
   // TODO DENEB: This constant was added then removed on a spec re-write.
   // When developing DENEB branch the tracked version still doesn't have released the removal
-  "DOMAIN_BLOBS_SIDECAR",
+  "DOMAIN_BLOB_SIDECAR",
 ]);
 
 describe("api / impl / config", function () {

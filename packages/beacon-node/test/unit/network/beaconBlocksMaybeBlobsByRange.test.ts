@@ -26,7 +26,7 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
     ALTAIR_FORK_EPOCH: 0,
     BELLATRIX_FORK_EPOCH: 0,
     CAPELLA_FORK_EPOCH: 0,
-    EIP4844_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 0,
   });
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
