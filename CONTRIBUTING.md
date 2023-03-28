@@ -157,7 +157,7 @@ We're currently experimenting with hosting the majority of lodestar packages and
 - `error`: Critical issues that prevent the application from functioning correctly or cause significant disruption to users. Examples include failed network connections, crashes, or data corruption.
 - `warn`: Situations that may lead to critical issues if not addressed but do not prevent the application from functioning. Examples include configuration issues, deprecated features, or temporary network disruptions.
 - `info`: General sporadic informational about the node's state. Examples include initialization messages, infrequent periodic status updates, or high-level progress reports.
-- `verbose`: _TBD_
+- `verbose`: High-level state changes to internal modules. Examples include chain and state updates.
 - `debug`: Detailed diagnostic information that can help developers or users troubleshoot specific issues. Examples include individual request logs for every REST API, networking interactions, or internal components status changes.
 
 ### Guideliness
