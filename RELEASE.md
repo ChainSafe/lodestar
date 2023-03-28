@@ -67,13 +67,13 @@ Tagging a release candidate will trigger CI to publish to NPM, dockerhub, and Gi
 
 Once a release candidate is created, the Lodestar team begins a testing period.
 
-If there is a bug discovered during the testing period which significantly impacts performance, security, or stability, and it is determined that it is no longer prudent to promote the `rc.x` candidate to `stable`, then it will await a bug fix by the team. The fix will be committed, maybe back-ported to `unstable` and we publish and promote the new commit to `rc.x+1`. The 3 day testing period will reset.
+If there is a bug discovered during the testing period which significantly impacts performance, security, or stability, and it is determined that it is no longer prudent to promote the `rc.x` candidate to `stable`, then it will await a bug fix by the team. The fix will be committed to `unstable` first, then cherrypicked into the `rc/v1.1.0` branch. Then we publish and promote the new commit to `rc.x+1`. The 3 day testing period will reset.
 
 For example: After 3-5 days of testing, is performance equal to or better than latest stable?
 
 - **Yes**: Continue to the next release step
 - **No**: If it a small issue fixable quickly (hot-fix)?
-  - **Yes**: push fixes to branch, go to step 2, incrementing the rc version
+  - **Yes**: Merge fix(es) to `unstable`, push the fix(es) to `rc/v1.1.0` branch, go to step 2, incrementing the rc version
   - **No**: abort the release. Close the `v1.1.0 release` PR, delete the branch, and start the whole release process over.
 
 ### 4. Merge release candidate
@@ -185,10 +185,9 @@ Have someone else review the release notes and then edit the release.
 
 The release should be announced on the following social channels:
 
-- Email: with Mailchimp.
-- Discord: Use the #lodestar-announcements channel. Tag @everyone and ensure it is published to all downstream channels.
-- Twitter: Short and sweet in a single tweet with twitter.com/lodestar_eth
-- Reddit: TODO: get Lodestar account.
+- Discord: Use the #lodestar-announcements channel. Ensure it is published to all downstream channels
+- Twitter: Short and sweet in a single tweet or thread with twitter.com/lodestar_eth
+- Blog post (if necessary): To outline specific changes that require additional context for users
 
 # Release Manager Checklist
 This section is to guide the Release Manager tasked with the next version release to ensure all items have been completed.
