@@ -166,7 +166,7 @@ export async function fetchWeakSubjectivityState(
       return res.response;
     });
 
-    logger.info("Download completed");
+    logger.info("Download completed", {stateId});
     const wsState = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
 
     return {
