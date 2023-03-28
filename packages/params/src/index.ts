@@ -13,6 +13,7 @@ export {
   ForkExecution,
   ForkBlobs,
   isForkExecution,
+  isForkWithdrawals,
   isForkBlobs,
   isForkLightClient,
 } from "./forkName.js";

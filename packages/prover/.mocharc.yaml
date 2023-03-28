@@ -1,0 +1,8 @@
+colors: true
+timeout: 2000
+exit: true
+extension: ["ts"]
+require:
+  - ./test/setup.ts
+node-option:
+  - "loader=ts-node/esm"

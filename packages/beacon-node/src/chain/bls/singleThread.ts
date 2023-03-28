@@ -37,9 +37,4 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
   async close(): Promise<void> {
     // nothing to do
   }
-
-  canAcceptWork(): boolean {
-    // Since sigs are verified blocking the main thread, there's no mechanism to throttle
-    return true;
-  }
 }
