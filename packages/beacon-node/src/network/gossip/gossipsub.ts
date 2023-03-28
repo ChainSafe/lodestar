@@ -406,14 +406,16 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
     const seenTimestampSec = Date.now() / 1000;
 
     // Emit message to network processor
-    this.events.emit(NetworkEvent.pendingGossipsubMessage, {
-      topic,
-      msg,
-      msgId,
-      propagationSource,
-      seenTimestampSec,
-      startProcessUnixSec: null,
-    });
+    setTimeout(() => {
+      this.events.emit(NetworkEvent.pendingGossipsubMessage, {
+        topic,
+        msg,
+        msgId,
+        propagationSource,
+        seenTimestampSec,
+        startProcessUnixSec: null,
+      });
+    }, 0);
   }
 
   private onValidationResult(msgId: string, propagationSource: PeerId, acceptance: TopicValidatorResult): void {

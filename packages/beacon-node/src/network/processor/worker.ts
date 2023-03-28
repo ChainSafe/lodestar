@@ -47,6 +47,15 @@ export class NetworkWorker {
       );
     }
 
-    this.events.emit(NetworkEvent.gossipMessageValidationResult, message.msgId, message.propagationSource, acceptance);
+    setTimeout(
+      () =>
+        this.events.emit(
+          NetworkEvent.gossipMessageValidationResult,
+          message.msgId,
+          message.propagationSource,
+          acceptance
+        ),
+      0
+    );
   }
 }
