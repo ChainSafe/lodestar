@@ -47,6 +47,9 @@ export class NetworkWorker {
       );
     }
 
+    // Use setTimeout to yield to the macro queue
+    // This is mostly due to too many attestation messages, and a gossipsub RPC may
+    // contain multiple of them. This helps avoid the I/O lag issue.
     setTimeout(
       () =>
         this.events.emit(
