@@ -1,12 +1,7 @@
 import {ssz} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
-import {
-  getLatestBlockRoot,
-  isWithinWeakSubjectivityPeriod,
-  BeaconStateAllForks,
-  computeCheckpointEpochAtStateSlot,
-} from "@lodestar/state-transition";
+import {isWithinWeakSubjectivityPeriod, BeaconStateAllForks} from "@lodestar/state-transition";
 import {
   IBeaconDb,
   IBeaconNodeOptions,
@@ -18,17 +13,13 @@ import {Checkpoint} from "@lodestar/types/phase0";
 
 import {downloadOrLoadFile} from "../../util/index.js";
 import {defaultNetwork, GlobalArgs} from "../../options/globalOptions.js";
-import {fetchWeakSubjectivityState, getCheckpointFromArg, getGenesisFileUrl} from "../../networks/index.js";
+import {
+  fetchWeakSubjectivityState,
+  getCheckpointFromArg,
+  getGenesisFileUrl,
+  getCheckpointFromState,
+} from "../../networks/index.js";
 import {BeaconArgs} from "./options.js";
-
-export function getCheckpointFromState(state: BeaconStateAllForks): Checkpoint {
-  return {
-    // the correct checkpoint is based on state's slot, its latestBlockHeader's slot's epoch can be
-    // behind the state
-    epoch: computeCheckpointEpochAtStateSlot(state.slot),
-    root: getLatestBlockRoot(state),
-  };
-}
 
 async function initAndVerifyWeakSubjectivityState(
   config: BeaconConfig,
