@@ -1,4 +1,5 @@
 {
+  "private": true,
   "name": "@lodestar/prover",
   "description": "A Typescript implementation of the Ethereum Consensus light client",
   "license": "Apache-2.0",
