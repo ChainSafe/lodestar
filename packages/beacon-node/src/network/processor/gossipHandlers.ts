@@ -347,9 +347,10 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       // Handler
 
       try {
-        chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
+        const insertOutcome = chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
+        metrics?.opPool.syncCommitteeMessagePoolInsertOutcome.inc({insertOutcome});
       } catch (e) {
-        logger.error("Error adding to syncCommittee pool", {subnet}, e as Error);
+        logger.debug("Error adding to syncCommittee pool", {subnet}, e as Error);
       }
     },
 

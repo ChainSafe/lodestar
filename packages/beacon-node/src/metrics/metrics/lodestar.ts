@@ -808,6 +808,11 @@ export function createLodestarMetrics(
         name: "lodestar_oppool_sync_committee_message_pool_size",
         help: "Current size of the SyncCommitteeMessagePool unique by slot subnet and block root",
       }),
+      syncCommitteeMessagePoolInsertOutcome: register.counter<"insertOutcome">({
+        name: "lodestar_oppool_sync_committee_message_insert_outcome_total",
+        help: "Total number of InsertOutcome as a result of adding a SyncCommitteeMessage to pool",
+        labelNames: ["insertOutcome"],
+      }),
       syncContributionAndProofPoolSize: register.gauge({
         name: "lodestar_oppool_sync_contribution_and_proof_pool_pool_size",
         help: "Current size of the SyncContributionAndProofPool unique by slot subnet and block root",

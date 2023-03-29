@@ -12,6 +12,7 @@ export type ChainArgs = {
   // "chain.persistInvalidSszObjectsDir": string;
   "chain.proposerBoostEnabled": boolean;
   "chain.disableImportExecutionFcU": boolean;
+  "chain.preaggregateSlotDistance": number;
   "chain.computeUnrealized": boolean;
   "chain.assertCorrectProgressiveBalances": boolean;
   "chain.maxSkipSlots": number;
@@ -31,6 +32,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     persistInvalidSszObjectsDir: undefined as any,
     proposerBoostEnabled: args["chain.proposerBoostEnabled"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
+    preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
     computeUnrealized: args["chain.computeUnrealized"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
@@ -101,6 +103,13 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "boolean",
     description: "Disable issuing FcUs to the execution engine on block import",
+    group: "chain",
+  },
+
+  "chain.preaggregateSlotDistance": {
+    hidden: true,
+    type: "number",
+    description: "Only preaggregate attestations or sync committee message since clockSlot - preaggregateSlotDistance",
     group: "chain",
   },
 
