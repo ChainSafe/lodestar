@@ -39,8 +39,6 @@ describe("node api implementation", function () {
     syncStub = sinon.createStubInstance(BeaconSync);
     api = getNodeApi(defaultApiOptions, {network: networkStub, sync: syncStub});
     peerId = await createSecp256k1PeerId();
-    sinon.stub(networkStub, "peerId").get(() => peerId);
-    sinon.stub(networkStub, "localMultiaddrs").get(() => [multiaddr("/ip4/127.0.0.1/tcp/36000")]);
   });
 
   describe("getNetworkIdentity", function () {
@@ -48,12 +46,17 @@ describe("node api implementation", function () {
       const keypair = createKeypairFromPeerId(peerId);
       const enr = SignableENR.createV4(keypair);
       enr.setLocationMultiaddr(multiaddr("/ip4/127.0.0.1/tcp/36001"));
-      networkStub.getEnr.returns(Promise.resolve(enr));
-      networkStub.getMetadata.returns(
+      networkStub.getNetworkIdentity.returns(
         Promise.resolve({
-          attnets: BitArray.fromBoolArray([true]),
-          syncnets: BitArray.fromBitLen(0),
-          seqNumber: BigInt(1),
+          peerId: peerId.toString(),
+          p2pAddresses: ["/ip4/127.0.0.1/tcp/36000"],
+          discoveryAddresses: ["/ip4/127.0.0.1/tcp/36001"],
+          enr: enr.encodeTxt(),
+          metadata: {
+            attnets: BitArray.fromBoolArray([true]),
+            syncnets: BitArray.fromBitLen(0),
+            seqNumber: BigInt(1),
+          },
         })
       );
       const {data: identity} = await api.getNetworkIdentity();
@@ -64,12 +67,6 @@ describe("node api implementation", function () {
       expect(identity.p2pAddresses.length).to.equal(1);
       expect(identity.p2pAddresses[0]).to.equal("/ip4/127.0.0.1/tcp/36000");
       expect(identity.metadata).to.not.null;
-    });
-
-    it("should get node identity - no enr", async function () {
-      networkStub.getEnr.returns(Promise.resolve(undefined));
-      const {data: identity} = await api.getNetworkIdentity();
-      expect(identity.enr).equal("");
     });
   });
 

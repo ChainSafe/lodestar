@@ -16,11 +16,11 @@ import {ReqRespOpts} from "@lodestar/reqresp/lib/ReqResp.js";
 import * as reqRespProtocols from "@lodestar/reqresp/protocols";
 import {allForks, altair, deneb, phase0, Root} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {Metrics} from "../../metrics/metrics.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
 import {PeersData} from "../peers/peersData.js";
 import {IPeerRpcScoreStore, PeerAction} from "../peers/score.js";
+import {NetworkCoreMetrics} from "../core/metrics.js";
 import {ReqRespHandlers} from "./handlers/index.js";
 import {IReqRespBeaconNode} from "./interface.js";
 import {onOutgoingReqRespError} from "./score.js";
@@ -42,11 +42,11 @@ export interface ReqRespBeaconNodeModules {
   peersData: PeersData;
   logger: Logger;
   config: BeaconConfig;
-  metrics: Metrics | null;
+  metrics: NetworkCoreMetrics | null;
   reqRespHandlers: ReqRespHandlers;
   metadata: MetadataController;
   peerRpcScores: IPeerRpcScoreStore;
-  networkEventBus: INetworkEventBus;
+  events: INetworkEventBus;
 }
 
 export type ReqRespBeaconNodeOpts = ReqRespOpts;
@@ -61,7 +61,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   private readonly reqRespHandlers: ReqRespHandlers;
   private readonly metadataController: MetadataController;
   private readonly peerRpcScores: IPeerRpcScoreStore;
-  private readonly networkEventBus: INetworkEventBus;
+  private readonly events: INetworkEventBus;
   private readonly peersData: PeersData;
 
   /** Track registered fork to only send to known protocols */
@@ -71,7 +71,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   protected readonly logger: Logger;
 
   constructor(modules: ReqRespBeaconNodeModules, options: ReqRespBeaconNodeOpts = {}) {
-    const {reqRespHandlers, networkEventBus, peersData, peerRpcScores, metadata, metrics, logger} = modules;
+    const {reqRespHandlers, events, peersData, peerRpcScores, metadata, metrics, logger} = modules;
 
     super(
       {
@@ -97,7 +97,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     this.config = modules.config;
     this.logger = logger;
     this.metadataController = metadata;
-    this.networkEventBus = networkEventBus;
+    this.events = events;
   }
 
   async start(): Promise<void> {
@@ -343,7 +343,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     // Allow onRequest to return and close the stream
     // For Goodbye there may be a race condition where the listener of `receivedGoodbye`
     // disconnects in the same syncronous call, preventing the stream from ending cleanly
-    setTimeout(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, req, peerId), 0);
+    setTimeout(() => this.events.emit(NetworkEvent.reqRespRequest, req, peerId), 0);
   }
 
   protected onIncomingRequest(peerId: PeerId, protocol: ProtocolDefinition): void {

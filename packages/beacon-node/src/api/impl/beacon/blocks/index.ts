@@ -228,7 +228,8 @@ export function getBeaconBlockApi({
       await promiseAllMaybeAsync([
         // Send the block, regardless of whether or not it is valid. The API
         // specification is very clear that this is the desired behaviour.
-        () => network.publishBeaconBlockMaybeBlobs(blockForImport),
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        () => network.gossip.publishBeaconBlockMaybeBlobs(blockForImport).then(() => {}),
 
         () =>
           chain.processBlock(blockForImport).catch((e) => {

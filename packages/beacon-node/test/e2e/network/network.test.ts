@@ -9,8 +9,8 @@ import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+
 import {Network, NetworkEvent, ReqRespMethod, getReqRespHandlers} from "../../../src/network/index.js";
 import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 import {GoodByeReasonCode} from "../../../src/constants/index.js";
@@ -20,9 +20,7 @@ import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
 import {createNetworkModules, connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/network.js";
 import {testLogger} from "../../utils/logger.js";
-import {CommitteeSubscription} from "../../../src/network/subnets/index.js";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
-import {ENRKey} from "../../../src/network/metadata.js";
 import {memoOnce} from "../../utils/cache.js";
 
 let port = 9000;
@@ -121,8 +119,8 @@ describe("network", function () {
   it("should create a peer on connect", async function () {
     const [{network: netA}, {network: netB}] = await createTestNodesAB();
     await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
   });
 
   it("should delete a peer on disconnect", async function () {
@@ -138,12 +136,13 @@ describe("network", function () {
     await disconnection;
     await sleep(400);
 
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(0);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(0);
+    expect(netA.getConnectedPeerCount()).to.equal(0);
+    expect(netB.getConnectedPeerCount()).to.equal(0);
   });
 
   // Current implementation of discv5 consumer doesn't allow to deterministically force a peer to be found
   // a random find node lookup can yield no results if there are too few peers in the DHT
+  /*
   it.skip("should connect to new peer by subnet", async function () {
     const [{network: netBootnode}, {network: netA}, {network: netB}] = await Promise.all([
       createTestNode("bootnode"),
@@ -185,7 +184,7 @@ describe("network", function () {
     //   return [enrB];
     // };
 
-    await netA.prepareBeaconCommitteeSubnet([subscription]);
+    await netA.prepareBeaconCommitteeSubnets([subscription]);
     await connected;
 
     expect(netA.getConnectionsByPeer().has(netB.peerId.toString())).to.be.equal(
@@ -193,6 +192,7 @@ describe("network", function () {
       "netA has not connected to peerB"
     );
   });
+  */
 
   it("Should goodbye peers on stop", async function () {
     const [{network: netA}, {network: netB}] = await createTestNodesAB();
@@ -221,11 +221,11 @@ describe("network", function () {
   it("Should subscribe to gossip core topics on demand", async () => {
     const {network: netA} = await createTestNode("A");
 
-    expect(netA.gossip.getTopics().length).to.equal(0);
+    expect(netA.isSubscribedToGossipCoreTopics()).to.equal(false);
     await netA.subscribeGossipCoreTopics();
-    expect(netA.gossip.getTopics().length).to.equal(13);
+    expect(netA.isSubscribedToGossipCoreTopics()).to.equal(true);
     await netA.unsubscribeGossipCoreTopics();
-    expect(netA.gossip.getTopics().length).to.equal(0);
+    expect(netA.isSubscribedToGossipCoreTopics()).to.equal(false);
     await netA.close();
   });
 });

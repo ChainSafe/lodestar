@@ -1,7 +1,7 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
+import {multiaddr as _multiaddr} from "@multiformats/multiaddr";
 import {expect} from "chai";
-import {BitArray} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {
@@ -143,24 +143,14 @@ describe("network / ReqResp", function () {
   it("should send/receive a ping message", async function () {
     const [netA, netB] = await createAndConnectPeers();
 
-    // Modify the metadata to make the seqNumber non-zero
-    netB.metadata.attnets = BitArray.fromBitLen(0);
-    netB.metadata.attnets = BitArray.fromBitLen(0);
-    const expectedPong = netB.metadata.seqNumber;
-    expect(expectedPong.toString()).to.deep.equal("2", "seqNumber");
-
     const pong = await netA.reqResp.ping(netB.peerId);
-    expect(pong.toString()).to.deep.equal(expectedPong.toString(), "Wrong response body");
+    expect(pong.toString()).to.deep.equal("0", "Wrong response body");
   });
 
   it("should send/receive a metadata message - altair", async function () {
     const [netA, netB] = await createAndConnectPeers();
 
-    const metadata: altair.Metadata = {
-      seqNumber: netB.metadata.seqNumber,
-      attnets: netB.metadata.attnets,
-      syncnets: netB.metadata.syncnets,
-    };
+    const metadata: altair.Metadata = (await netB.getNetworkIdentity()).metadata as altair.Metadata;
 
     const receivedMetadata = await netA.reqResp.metadata(netB.peerId);
     expect(receivedMetadata).to.deep.equal(metadata, "Wrong response body");

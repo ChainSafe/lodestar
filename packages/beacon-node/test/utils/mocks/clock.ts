@@ -6,7 +6,7 @@ import {BeaconClock} from "../../../src/chain/index.js";
  * Mock clock that does not progress time unless calling setSlot()
  */
 export class ClockStopped implements BeaconClock {
-  constructor(private slot: Slot) {}
+  constructor(private slot: Slot, readonly genesisTime = 0) {}
 
   get currentSlot(): Slot {
     return this.slot;

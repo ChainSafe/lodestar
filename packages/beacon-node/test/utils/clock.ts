@@ -3,7 +3,7 @@ import {Slot, Epoch} from "@lodestar/types";
 import {BeaconClock} from "../../src/chain/clock/index.js";
 
 export class ClockStatic implements BeaconClock {
-  constructor(readonly currentSlot: Slot) {}
+  constructor(readonly currentSlot: Slot, readonly genesisTime = 0) {}
 
   get currentEpoch(): Epoch {
     return computeEpochAtSlot(this.currentSlot);

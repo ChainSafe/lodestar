@@ -225,3 +225,19 @@ function parseEncodingStr(encodingStr: string): GossipEncoding {
       throw Error(`Unknown encoding ${encodingStr}`);
   }
 }
+
+// TODO: Review which yes, and which not
+export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean> = {
+  [GossipType.beacon_block]: true,
+  [GossipType.beacon_block_and_blobs_sidecar]: true,
+  [GossipType.beacon_aggregate_and_proof]: true,
+  [GossipType.beacon_attestation]: true,
+  [GossipType.voluntary_exit]: true,
+  [GossipType.proposer_slashing]: false, // Why not this ones?
+  [GossipType.attester_slashing]: false,
+  [GossipType.sync_committee_contribution_and_proof]: true,
+  [GossipType.sync_committee]: true,
+  [GossipType.light_client_finality_update]: false,
+  [GossipType.light_client_optimistic_update]: false,
+  [GossipType.bls_to_execution_change]: true,
+};

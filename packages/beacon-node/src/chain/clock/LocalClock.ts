@@ -1,3 +1,4 @@
+import EventEmitter from "node:events";
 import {Epoch, Slot} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ErrorAborted} from "@lodestar/utils";
@@ -6,16 +7,16 @@ import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@lodestar/s
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
-import {BeaconClock} from "./interface.js";
+import {ClockEvent, EventedBeaconClock} from "./interface.js";
 
 /**
  * A local clock, the clock time is assumed to be trusted
  */
-export class LocalClock implements BeaconClock {
+export class LocalClock extends EventEmitter implements EventedBeaconClock {
+  readonly genesisTime: number;
   private readonly config: ChainForkConfig;
-  private readonly genesisTime: number;
   private timeoutId: number | NodeJS.Timeout;
-  private readonly emitter: ChainEventEmitter;
+  private readonly emitter?: ChainEventEmitter;
   private readonly signal: AbortSignal;
   private _currentSlot: number;
 
@@ -27,9 +28,11 @@ export class LocalClock implements BeaconClock {
   }: {
     config: ChainForkConfig;
     genesisTime: number;
-    emitter: ChainEventEmitter;
+    emitter?: ChainEventEmitter;
     signal: AbortSignal;
   }) {
+    super();
+
     this.config = config;
     this.genesisTime = genesisTime;
     this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
@@ -112,17 +115,20 @@ export class LocalClock implements BeaconClock {
       };
 
       const onDone = (): void => {
-        this.emitter.off(ChainEvent.clockSlot, onSlot);
+        this.off(ClockEvent.slot, onSlot);
+        this.emitter?.off(ChainEvent.clockSlot, onSlot);
         this.signal.removeEventListener("abort", onAbort);
         resolve();
       };
 
       const onAbort = (): void => {
-        this.emitter.off(ChainEvent.clockSlot, onSlot);
+        this.off(ClockEvent.slot, onSlot);
+        this.emitter?.off(ChainEvent.clockSlot, onSlot);
         reject(new ErrorAborted());
       };
 
-      this.emitter.on(ChainEvent.clockSlot, onSlot);
+      this.on(ClockEvent.slot, onSlot);
+      this.emitter?.on(ChainEvent.clockSlot, onSlot);
       this.signal.addEventListener("abort", onAbort, {once: true});
     });
   }
@@ -138,13 +144,15 @@ export class LocalClock implements BeaconClock {
       const previousSlot = this._currentSlot;
       this._currentSlot++;
 
-      this.emitter.emit(ChainEvent.clockSlot, this._currentSlot);
+      this.emit(ClockEvent.slot, this._currentSlot);
+      this.emitter?.emit(ChainEvent.clockSlot, this._currentSlot);
 
       const previousEpoch = computeEpochAtSlot(previousSlot);
       const currentEpoch = computeEpochAtSlot(this._currentSlot);
 
       if (previousEpoch < currentEpoch) {
-        this.emitter.emit(ChainEvent.clockEpoch, currentEpoch);
+        this.emit(ClockEvent.epoch, currentEpoch);
+        this.emitter?.emit(ChainEvent.clockEpoch, currentEpoch);
       }
     }
     //recursively invoke onNextSlot

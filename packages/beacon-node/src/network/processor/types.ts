@@ -1,5 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Message} from "@libp2p/interface-pubsub";
+import {Slot} from "@lodestar/types";
 import {GossipTopic} from "../gossip/index.js";
 
 export type GossipAttestationsWork = {
@@ -14,4 +15,6 @@ export type PendingGossipsubMessage = {
   propagationSource: PeerId;
   seenTimestampSec: number;
   startProcessUnixSec: number | null;
+  /** From AttnetsService and SyncnetsService signaling if message only needs to be validated */
+  importUpToSlot: Slot | null;
 };

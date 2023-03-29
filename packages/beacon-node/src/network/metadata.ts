@@ -3,7 +3,7 @@ import {ForkName} from "@lodestar/params";
 import {altair, Epoch, phase0, ssz} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
-import {IBeaconChain} from "../chain/index.js";
+import {BeaconClock} from "../chain/index.js";
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
 import {getCurrentAndNextFork} from "./forks.js";
 
@@ -24,7 +24,7 @@ export type MetadataOpts = {
 
 export type MetadataModules = {
   config: BeaconConfig;
-  chain: IBeaconChain;
+  clock: BeaconClock;
   logger: Logger;
 };
 
@@ -36,13 +36,13 @@ export type MetadataModules = {
 export class MetadataController {
   private setEnrValue?: (key: string, value: Uint8Array) => Promise<void>;
   private config: BeaconConfig;
-  private chain: IBeaconChain;
+  private clock: BeaconClock;
   private _metadata: altair.Metadata;
   private logger: Logger;
 
   constructor(opts: MetadataOpts, modules: MetadataModules) {
     this.config = modules.config;
-    this.chain = modules.chain;
+    this.clock = modules.clock;
     this.logger = modules.logger;
     this._metadata = opts.metadata || ssz.altair.Metadata.defaultValue();
   }
@@ -51,7 +51,7 @@ export class MetadataController {
     this.setEnrValue = setEnrValue;
     if (this.setEnrValue) {
       // updateEth2Field() MUST be called with clock epoch
-      this.updateEth2Field(this.chain.clock.currentEpoch);
+      this.updateEth2Field(this.clock.currentEpoch);
 
       void this.setEnrValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
       // Any fork after altair included

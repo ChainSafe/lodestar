@@ -6,7 +6,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {INetwork, Network} from "../../src/network/index.js";
 import {createNodejsLibp2p, Libp2pOptions} from "../../src/network/nodejs/index.js";
 import {Libp2p} from "../../src/network/interface.js";
-import {Libp2pEvent} from "../../src/constants/index.js";
+import {NetworkEvent} from "../../src/network/events.js";
 import {defaultNetworkOptions, NetworkOptions} from "../../src/network/options.js";
 
 export async function createNode(multiaddr: string, inPeerId?: PeerId, opts?: Partial<Libp2pOptions>): Promise<Libp2p> {
@@ -45,15 +45,11 @@ export async function disconnect(network: INetworkDebug, peer: PeerId): Promise<
 }
 
 export function onPeerConnect(network: Network): Promise<void> {
-  return new Promise<void>((resolve) =>
-    network["libp2p"].connectionManager.addEventListener(Libp2pEvent.peerConnect, () => resolve())
-  );
+  return new Promise<void>((resolve) => network.events.addListener(NetworkEvent.peerConnected, () => resolve()));
 }
 
 export function onPeerDisconnect(network: Network): Promise<void> {
-  return new Promise<void>((resolve) =>
-    network["libp2p"].connectionManager.addEventListener(Libp2pEvent.peerDisconnect, () => resolve())
-  );
+  return new Promise<void>((resolve) => network.events.addListener(NetworkEvent.peerDisconnected, () => resolve()));
 }
 
 /**

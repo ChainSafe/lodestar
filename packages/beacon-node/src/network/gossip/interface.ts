@@ -1,15 +1,16 @@
 import {EventEmitter} from "events";
 import {Libp2p} from "libp2p";
-import {Message, TopicValidatorResult} from "@libp2p/interface-pubsub";
+import {Message, PublishResult, TopicValidatorResult} from "@libp2p/interface-pubsub";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
-import {allForks, altair, capella, deneb, phase0} from "@lodestar/types";
+import {allForks, altair, capella, deneb, phase0, Slot} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {NetworkEvent} from "../events.js";
 import {JobItemQueue} from "../../util/queue/index.js";
+import {BlockInput} from "../../chain/blocks/types.js";
 
 export enum GossipType {
   beacon_block = "beacon_block",
@@ -122,19 +123,24 @@ export type GossipModules = {
   chain: IBeaconChain;
 };
 
-export type GossipBeaconNode = {
-  publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<void>;
-  publishSignedBeaconBlockAndBlobsSidecar(item: deneb.SignedBeaconBlockAndBlobsSidecar): Promise<void>;
-  publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number>;
-  publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number>;
-  publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void>;
-  publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<void>;
-  publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void>;
-  publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<void>;
-  publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: number): Promise<void>;
-  publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<void>;
-  publishLightClientFinalityUpdate(lightClientFinalityUpdate: allForks.LightClientFinalityUpdate): Promise<void>;
-  publishLightClientOptimisticUpdate(lightClientOptimisitcUpdate: allForks.LightClientOptimisticUpdate): Promise<void>;
+export type PublisherBeaconNode = {
+  publishBeaconBlockMaybeBlobs(signedBlock: BlockInput): Promise<PublishResult>;
+  publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<PublishResult>;
+  publishSignedBeaconBlockAndBlobsSidecar(item: deneb.SignedBeaconBlockAndBlobsSidecar): Promise<PublishResult>;
+  publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<PublishResult>;
+  publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<PublishResult>;
+  publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<PublishResult>;
+  publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<PublishResult>;
+  publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<PublishResult>;
+  publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<PublishResult>;
+  publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: number): Promise<PublishResult>;
+  publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<PublishResult>;
+  publishLightClientFinalityUpdate(
+    lightClientFinalityUpdate: allForks.LightClientFinalityUpdate
+  ): Promise<PublishResult>;
+  publishLightClientOptimisticUpdate(
+    lightClientOptimisticUpdate: allForks.LightClientOptimisticUpdate
+  ): Promise<PublishResult>;
 };
 
 /**
@@ -172,7 +178,8 @@ export type GossipHandlers = {
     object: GossipTypeMap[K],
     topic: GossipTopicMap[K],
     peerIdStr: string,
-    seenTimestampSec: number
+    seenTimestampSec: number,
+    importUpToSlot: Slot | null
   ) => Promise<void>;
 };
 

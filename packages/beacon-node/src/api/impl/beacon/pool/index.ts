@@ -66,8 +66,13 @@ export function getBeaconPoolApi({
             );
 
             const insertOutcome = chain.attestationPool.add(attestation);
-            const sentPeers = await network.gossip.publishBeaconAttestation(attestation, subnet);
-            metrics?.submitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
+            const result = await network.gossip.publishBeaconAttestation(attestation, subnet);
+            metrics?.submitUnaggregatedAttestation(
+              seenTimestampSec,
+              indexedAttestation,
+              subnet,
+              result.recipients.length
+            );
             metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
           } catch (e) {
             errors.push(e as Error);

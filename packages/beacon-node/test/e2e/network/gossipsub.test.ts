@@ -127,8 +127,8 @@ describe("gossipsub", function () {
     });
 
     await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
 
     await netA.subscribeGossipCoreTopics();
     await netB.subscribeGossipCoreTopics();
@@ -136,8 +136,8 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = netA.gossip.getTopics()[0];
-      if (topicStr && netA.gossip.getMeshPeers(topicStr).length > 0) {
+      const scoreStats = await netA.dumpGossipPeerScoreStats();
+      if (Object.values(scoreStats).some((stats) => Object.keys(stats.topics).length)) {
         break;
       }
     }
@@ -159,8 +159,8 @@ describe("gossipsub", function () {
     });
 
     await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
 
     await netA.subscribeGossipCoreTopics();
     await netB.subscribeGossipCoreTopics();
@@ -168,8 +168,8 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = netA.gossip.getTopics()[0];
-      if (topicStr && netA.gossip.getMeshPeers(topicStr).length > 0) {
+      const scoreStats = await netA.dumpGossipPeerScoreStats();
+      if (Object.values(scoreStats).some((stats) => Object.keys(stats.topics).length)) {
         break;
       }
     }
@@ -206,8 +206,8 @@ describe("gossipsub", function () {
     });
 
     await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
 
     await netA.subscribeGossipCoreTopics();
     await netB.subscribeGossipCoreTopics();
@@ -215,8 +215,8 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = netA.gossip.getTopics()[0];
-      if (topicStr && netA.gossip.getMeshPeers(topicStr).length > 0) {
+      const scoreStats = await netA.dumpGossipPeerScoreStats();
+      if (Object.values(scoreStats).some((stats) => Object.keys(stats.topics).length)) {
         break;
       }
     }
@@ -241,8 +241,8 @@ describe("gossipsub", function () {
     });
 
     await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
 
     await netA.subscribeGossipCoreTopics();
     await netB.subscribeGossipCoreTopics();
@@ -250,8 +250,8 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = netA.gossip.getTopics()[0];
-      if (topicStr && netA.gossip.getMeshPeers(topicStr).length > 0) {
+      const scoreStats = await netA.dumpGossipPeerScoreStats();
+      if (Object.values(scoreStats).some((stats) => Object.keys(stats.topics).length)) {
         break;
       }
     }
@@ -277,8 +277,8 @@ describe("gossipsub", function () {
     });
 
     await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
 
     await netA.subscribeGossipCoreTopics();
     await netB.subscribeGossipCoreTopics();
@@ -286,8 +286,8 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = netA.gossip.getTopics()[0];
-      if (topicStr && netA.gossip.getMeshPeers(topicStr).length > 0) {
+      const scoreStats = await netA.dumpGossipPeerScoreStats();
+      if (Object.values(scoreStats).some((stats) => Object.keys(stats.topics).length)) {
         break;
       }
     }

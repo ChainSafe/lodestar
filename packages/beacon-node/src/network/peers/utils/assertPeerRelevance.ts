@@ -1,6 +1,6 @@
 import {computeStartSlotAtEpoch, getBlockRootAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {Epoch, ForkDigest, Root, phase0, ssz} from "@lodestar/types";
+import {Epoch, ForkDigest, Root, phase0, ssz, Slot} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../chain/index.js";
 
@@ -22,9 +22,14 @@ type IrrelevantPeerType =
  * Process a `Status` message to determine if a peer is relevant to us. If the peer is
  * irrelevant the reason is returned.
  */
-export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain): IrrelevantPeerType | null {
-  const local = chain.getStatus();
-
+export function assertPeerRelevance(
+  remote: phase0.Status,
+  local: phase0.Status,
+  currentSlot: Slot,
+  // Make chain optional to allow assertPeerRelevance in a worker without access to chain
+  // TODO refactor to avoid usage of chain entirely
+  chain?: IBeaconChain
+): IrrelevantPeerType | null {
   // The node is on a different network/fork
   if (!ssz.ForkDigest.equals(local.forkDigest, remote.forkDigest)) {
     return {
@@ -37,7 +42,7 @@ export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain):
   // The remote's head is on a slot that is significantly ahead of what we consider the
   // current slot. This could be because they are using a different genesis time, or that
   // their or our system's clock is incorrect.
-  const slotDiff = remote.headSlot - Math.max(chain.clock.currentSlot, 0);
+  const slotDiff = remote.headSlot - Math.max(currentSlot, 0);
   if (slotDiff > FUTURE_SLOT_TOLERANCE) {
     return {code: IrrelevantPeerCode.DIFFERENT_CLOCKS, slotDiff};
   }
@@ -55,8 +60,9 @@ export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain):
     const expectedRoot =
       remote.finalizedEpoch === local.finalizedEpoch
         ? local.finalizedRoot
-        : // This will get the latest known block at the start of the epoch.
-          getRootAtHistoricalEpoch(chain, remote.finalizedEpoch);
+        : chain // This will get the latest known block at the start of the epoch.
+        ? getRootAtHistoricalEpoch(chain, remote.finalizedEpoch)
+        : null;
 
     if (expectedRoot !== null && !ssz.Root.equals(remoteRoot, expectedRoot)) {
       return {

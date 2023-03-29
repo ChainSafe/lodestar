@@ -5,11 +5,11 @@ import {BeaconConfig} from "@lodestar/config";
 import {Logger, pruneSetToMax, sleep} from "@lodestar/utils";
 import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {Metrics} from "../../metrics/index.js";
 import {Libp2p} from "../interface.js";
 import {ENRKey, SubnetType} from "../metadata.js";
 import {getConnectionsMap, getDefaultDialer, prettyPrintPeerId} from "../util.js";
 import {Discv5Worker} from "../discv5/index.js";
+import {NetworkCoreMetrics} from "../core/metrics.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 
@@ -28,7 +28,7 @@ export type PeerDiscoveryOpts = {
 export type PeerDiscoveryModules = {
   libp2p: Libp2p;
   peerRpcScores: IPeerRpcScoreStore;
-  metrics: Metrics | null;
+  metrics: NetworkCoreMetrics | null;
   logger: Logger;
   config: BeaconConfig;
 };
@@ -74,7 +74,7 @@ export class PeerDiscovery {
   readonly discv5: Discv5Worker;
   private libp2p: Libp2p;
   private peerRpcScores: IPeerRpcScoreStore;
-  private metrics: Metrics | null;
+  private metrics: NetworkCoreMetrics | null;
   private logger: Logger;
   private config: BeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();

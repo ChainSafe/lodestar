@@ -265,7 +265,7 @@ export class BeaconNode {
       ? new HttpMetricsServer(opts.metrics, {
           register: metrics.register,
           getOtherMetrics: async (): Promise<string> => {
-            return network.metrics();
+            return network.scrapeMetrics();
           },
           logger: logger.child({module: LoggerModule.metrics}),
         })

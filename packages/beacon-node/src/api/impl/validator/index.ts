@@ -556,8 +556,8 @@ export function getValidatorApi({
               indexedAttestation.attestingIndices.length,
               committeeIndices
             );
-            const sentPeers = await network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof);
-            metrics?.submitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
+            const response = await network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof);
+            metrics?.submitAggregatedAttestation(seenTimestampSec, indexedAttestation, response.recipients.length);
           } catch (e) {
             if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
               logger.debug("Ignoring known signedAggregateAndProof");
@@ -640,7 +640,7 @@ export function getValidatorApi({
     async prepareBeaconCommitteeSubnet(subscriptions) {
       notWhileSyncing();
 
-      await network.prepareBeaconCommitteeSubnet(
+      await network.prepareBeaconCommitteeSubnets(
         subscriptions.map(({validatorIndex, slot, isAggregator, committeesAtSlot, committeeIndex}) => ({
           validatorIndex: validatorIndex,
           subnet: computeSubnetForCommitteesAtSlot(slot, committeesAtSlot, committeeIndex),

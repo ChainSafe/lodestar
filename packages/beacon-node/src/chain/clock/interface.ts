@@ -1,4 +1,16 @@
-import {Epoch, Slot} from "@lodestar/types";
+import type EventEmitter from "node:events";
+import type StrictEventEmitter from "strict-event-emitter-types";
+import type {Epoch, Slot} from "@lodestar/types";
+
+export const enum ClockEvent {
+  slot = "clock:slot",
+  epoch = "clock:epoch",
+}
+
+export type ClockEvents = {
+  [ClockEvent.slot]: (slot: Slot) => void;
+  [ClockEvent.epoch]: (epoch: Epoch) => void;
+};
 
 /**
  * Tracks the current chain time, measured in `Slot`s and `Epoch`s
@@ -9,6 +21,7 @@ import {Epoch, Slot} from "@lodestar/types";
  * - `SLOTS_PER_EPOCH` - # of slots per epoch
  */
 export type BeaconClock = {
+  readonly genesisTime: Slot;
   readonly currentSlot: Slot;
   /**
    * If it's too close to next slot, maxCurrentSlot = currentSlot + 1
@@ -34,3 +47,5 @@ export type BeaconClock = {
    */
   secFromSlot(slot: Slot, toSec?: number): number;
 };
+
+export type EventedBeaconClock = BeaconClock & StrictEventEmitter<EventEmitter, ClockEvents>;
