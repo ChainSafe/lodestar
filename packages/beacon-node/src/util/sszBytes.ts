@@ -34,10 +34,11 @@ export function getSlotFromAttestationSerialized(data: Uint8Array): Slot {
 }
 
 export function getBlockRootFromAttestationSerialized(data: Uint8Array): BlockRootHex {
-  return toHex(data.subarray(ATTESTATION_BEACON_BLOCK_ROOT_OFFSET, ATTESTATION_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE));
+  return toHex(data.slice(ATTESTATION_BEACON_BLOCK_ROOT_OFFSET, ATTESTATION_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE));
 }
 
 export function getAttDataHashFromAttestationSerialized(data: Uint8Array): AttDataHash {
+  // base64 is a bit efficient than hex
   return Buffer.from(data.slice(ATTESTATION_SLOT_OFFSET, ATTESTATION_SLOT_OFFSET + 128)).toString("base64");
 }
 
@@ -52,14 +53,12 @@ export function getSlotFromSignedAggregateAndProofSerialized(data: Uint8Array): 
 
 export function getBlockRootFromSignedAggregateAndProofSerialized(data: Uint8Array): BlockRootHex {
   return toHex(
-    data.subarray(
-      SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET,
-      SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET + ROOT_SIZE
-    )
+    data.slice(SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET, SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET + ROOT_SIZE)
   );
 }
 
 export function getAttDataHashFromSignedAggregateAndProofSerialized(data: Uint8Array): AttDataHash {
+  // base64 is a bit efficient than hex
   return Buffer.from(
     data.slice(SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET, SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + 128)
   ).toString("base64");
