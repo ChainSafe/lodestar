@@ -96,9 +96,9 @@ export class BeaconChain implements IBeaconChain {
   readonly reprocessController: ReprocessController;
 
   // Ops pool
-  readonly attestationPool = new AttestationPool();
+  readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool = new AggregatedAttestationPool();
-  readonly syncCommitteeMessagePool = new SyncCommitteeMessagePool();
+  readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
   readonly opPool = new OpPool();
 
@@ -184,6 +184,14 @@ export class BeaconChain implements IBeaconChain {
       : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
     if (!clock) clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
+
+    const preAggregateCutOffTime = (2 / 3) * this.config.SECONDS_PER_SLOT;
+    this.attestationPool = new AttestationPool(clock, preAggregateCutOffTime, this.opts?.preaggregateSlotDistance);
+    this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(
+      clock,
+      preAggregateCutOffTime,
+      this.opts?.preaggregateSlotDistance
+    );
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
