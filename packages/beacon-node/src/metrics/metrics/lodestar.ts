@@ -321,6 +321,10 @@ export function createLodestarMetrics(
         help: "Count of unsubscribe_subnets calls",
         labelNames: ["subnet", "src"],
       }),
+      aggregatorSlotSubnetCount: register.gauge({
+        name: "lodestar_attnets_service_aggregator_slot_subnet_total",
+        help: "Count of aggregator per slot and subnet",
+      }),
     },
 
     syncnetsService: {
