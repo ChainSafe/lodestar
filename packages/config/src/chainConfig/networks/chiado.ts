@@ -38,4 +38,7 @@ export const chiadoChainConfig: ChainConfig = {
   // Bellatrix
   BELLATRIX_FORK_VERSION: b("0x0200006f"),
   BELLATRIX_FORK_EPOCH: 180,
+  // Capella
+  CAPELLA_FORK_VERSION: b("0x0300006f"),
+  CAPELLA_FORK_EPOCH: Infinity,
 };
