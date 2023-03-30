@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {Uint8ArrayList} from "uint8arraylist";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {LodestarError, fromHex, Logger} from "@lodestar/utils";
-import {DuplexProtocolDefinition, ProtocolDefinition, RespStatus} from "../../../src/index.js";
+import {DuplexProtocolDefinition, RespStatus} from "../../../src/index.js";
 import {sszSnappyPing} from "../../fixtures/messages.js";
 import {Ping} from "../../../src/protocols/index.js";
 import {expectEqualByteChunks, MockLibP2pStream} from "../../utils/index.js";
