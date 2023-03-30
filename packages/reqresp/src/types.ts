@@ -45,7 +45,7 @@ export interface InboundRateLimitQuota<Req = unknown> {
 }
 
 // `protocolPrefix` is added runtime so not part of definition
-export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<Protocol, "protocolPrefix"> {
+export interface DuplexProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<Protocol, "protocolPrefix"> {
   handler: ReqRespHandler<Req, Resp>;
   requestType: (fork: ForkName) => TypeSerializer<Req> | null;
   responseType: (fork: ForkName) => TypeSerializer<Resp>;
@@ -55,13 +55,29 @@ export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<
   inboundRateLimits?: InboundRateLimitQuota<Req>;
 }
 
-export type ProtocolDefinitionGenerator<Req, Res> = (
+export interface DialOnlyProtocolDefinition<Req = unknown, Resp = unknown>
+  extends Omit<DuplexProtocolDefinition<Req, Resp>, "handler" | "inboundRateLimits" | "renderRequestBody"> {
+  handler?: never;
+  inboundRateLimits?: never;
+  renderRequestBody?: never;
+}
+
+export type ProtocolDefinition<Req = unknown, Resp = unknown> =
+  | DialOnlyProtocolDefinition<Req, Resp>
+  | DuplexProtocolDefinition<Req, Resp>;
+
+export type MixedProtocolDefinitionGenerator<Req, Res> = <H extends ReqRespHandler<Req, Res> | undefined = undefined>(
   // "inboundRateLimiter" is available only on handler context not on generator
   modules: {config: BeaconConfig},
-  handler: ReqRespHandler<Req, Res>
-) => ProtocolDefinition<Req, Res>;
+  handler?: H
+) => H extends undefined ? DialOnlyProtocolDefinition<Req, Res> : DuplexProtocolDefinition<Req, Res>;
 
-export type HandlerTypeFromMessage<T> = T extends ProtocolDefinitionGenerator<infer Req, infer Res>
+export type DuplexProtocolDefinitionGenerator<Req, Res> = (
+  modules: {config: BeaconConfig},
+  handler: ReqRespHandler<Req, Res>
+) => DuplexProtocolDefinition<Req, Res>;
+
+export type HandlerTypeFromMessage<T> = T extends DuplexProtocolDefinitionGenerator<infer Req, infer Res>
   ? ReqRespHandler<Req, Res>
   : never;
 
@@ -77,12 +93,12 @@ export enum Encoding {
 
 export const CONTEXT_BYTES_FORK_DIGEST_LENGTH = 4;
 
-export type ContextBytesFactory<Response> =
+export type ContextBytesFactory<Resp> =
   | {type: ContextBytesType.Empty}
   | {
       type: ContextBytesType.ForkDigest;
       forkDigestContext: ForkDigestContext & Pick<ForkConfig, "getForkName">;
-      forkFromResponse: (response: Response) => ForkName;
+      forkFromResponse: (response: Resp) => ForkName;
     };
 
 export type ContextBytes = {type: ContextBytesType.Empty} | {type: ContextBytesType.ForkDigest; forkSlot: Slot};

@@ -6,7 +6,13 @@ import {Logger} from "@lodestar/utils";
 import {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "./request/index.js";
 import {handleRequest} from "./response/index.js";
-import {Encoding, ProtocolDefinition, ReqRespRateLimiterOpts} from "./types.js";
+import {
+  DialOnlyProtocolDefinition,
+  Encoding,
+  ProtocolDefinition,
+  ReqRespRateLimiterOpts,
+  DuplexProtocolDefinition,
+} from "./types.js";
 import {formatProtocolID} from "./utils/protocolId.js";
 import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
 
@@ -50,7 +56,11 @@ export class ReqResp {
   private readonly protocolPrefix: string;
 
   /** `${protocolPrefix}/${method}/${version}/${encoding}` */
-  private readonly registeredProtocols = new Map<ProtocolID, ProtocolDefinition>();
+  // Use any to avoid TS error on registering protocol
+  // Type 'unknown' is not assignable to type 'Resp'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private readonly registeredProtocols = new Map<ProtocolID, ProtocolDefinition<any, any>>();
+  private readonly dialOnlyProtocols = new Map<ProtocolID, boolean>();
 
   constructor(modules: ReqRespProtocolModules, private readonly opts: ReqRespOpts = {}) {
     this.libp2p = modules.libp2p;
@@ -61,26 +71,43 @@ export class ReqResp {
   }
 
   /**
+   * Register protocol which will be used only to dial to other peers
+   * The libp2p instance will not handle that protocol
+   *
+   * Made it explicit method to avoid any developer mistake
+   */
+  registerDialOnlyProtocol<Req, Resp>(
+    protocol: DialOnlyProtocolDefinition<Req, Resp>,
+    opts?: ReqRespRegisterOpts
+  ): void {
+    const protocolID = this.formatProtocolID(protocol);
+
+    // libp2p will throw on error on duplicates, allow to overwrite behavior
+    if (opts?.ignoreIfDuplicate && this.registeredProtocols.has(protocolID)) {
+      return;
+    }
+
+    this.registeredProtocols.set(protocolID, protocol);
+    this.dialOnlyProtocols.set(protocolID, true);
+  }
+
+  /**
    * Register protocol as supported and to libp2p.
    * async because libp2p registar persists the new protocol list in the peer-store.
    * Throws if the same protocol is registered twice.
    * Can be called at any time, no concept of started / stopped
    */
   async registerProtocol<Req, Resp>(
-    protocol: ProtocolDefinition<Req, Resp>,
+    protocol: DuplexProtocolDefinition<Req, Resp>,
     opts?: ReqRespRegisterOpts
   ): Promise<void> {
     const protocolID = this.formatProtocolID(protocol);
+    const {handler: _handler, renderRequestBody: _renderRequestBody, inboundRateLimits, ...rest} = protocol;
+    this.registerDialOnlyProtocol(rest, opts);
+    this.dialOnlyProtocols.set(protocolID, false);
 
-    // libp2p will throw on error on duplicates, allow to overwrite behaviour
-    if (opts?.ignoreIfDuplicate && this.registeredProtocols.has(protocolID)) {
-      return;
-    }
-
-    this.registeredProtocols.set(protocolID, protocol as ProtocolDefinition);
-
-    if (protocol.inboundRateLimits) {
-      this.rateLimiter.initRateLimits(protocolID, protocol.inboundRateLimits);
+    if (inboundRateLimits) {
+      this.rateLimiter.initRateLimits(protocolID, inboundRateLimits);
     }
 
     return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID));
@@ -135,7 +162,7 @@ export class ReqResp {
     this.metrics?.outgoingRequests.inc({method});
     const timer = this.metrics?.outgoingRequestRoundtripTime.startTimer({method});
 
-    const protocols: ProtocolDefinition[] = [];
+    const protocols: (ProtocolDefinition | DialOnlyProtocolDefinition)[] = [];
     const protocolIDs: string[] = [];
 
     for (const version of versions) {
@@ -178,6 +205,10 @@ export class ReqResp {
 
   private getRequestHandler<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>, protocolID: string) {
     return async ({connection, stream}: {connection: Connection; stream: Stream}) => {
+      if (this.dialOnlyProtocols.get(protocolID)) {
+        throw new Error(`Received request on dial only protocol '${protocolID}'`);
+      }
+
       const peerId = connection.remotePeer;
       const peerClient = this.opts.getPeerLogMetadata?.(peerId.toString());
       const {method} = protocol;
@@ -192,7 +223,7 @@ export class ReqResp {
           logger: this.logger,
           stream,
           peerId,
-          protocol,
+          protocol: protocol as DuplexProtocolDefinition<Req, Resp>,
           protocolID,
           rateLimiter: this.rateLimiter,
           signal: this.controller.signal,

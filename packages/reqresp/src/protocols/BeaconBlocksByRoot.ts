@@ -1,6 +1,6 @@
 import {allForks, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {ContextBytesType, Encoding, ProtocolDefinitionGenerator, ProtocolDefinition} from "../types.js";
+import {ContextBytesType, DuplexProtocolDefinitionGenerator, Encoding, ProtocolDefinition} from "../types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 const BeaconBlocksByRootCommon: Pick<
@@ -18,7 +18,7 @@ const BeaconBlocksByRootCommon: Pick<
   },
 };
 
-export const BeaconBlocksByRoot: ProtocolDefinitionGenerator<
+export const BeaconBlocksByRoot: DuplexProtocolDefinitionGenerator<
   phase0.BeaconBlocksByRootRequest,
   allForks.SignedBeaconBlock
 > = (_modules, handler) => {
@@ -31,7 +31,7 @@ export const BeaconBlocksByRoot: ProtocolDefinitionGenerator<
   };
 };
 
-export const BeaconBlocksByRootV2: ProtocolDefinitionGenerator<
+export const BeaconBlocksByRootV2: DuplexProtocolDefinitionGenerator<
   phase0.BeaconBlocksByRootRequest,
   allForks.SignedBeaconBlock
 > = (modules, handler) => {

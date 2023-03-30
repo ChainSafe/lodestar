@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {Uint8ArrayList} from "uint8arraylist";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {LodestarError, fromHex, Logger} from "@lodestar/utils";
-import {ProtocolDefinition, RespStatus} from "../../../src/index.js";
+import {DuplexProtocolDefinition, ProtocolDefinition, RespStatus} from "../../../src/index.js";
 import {sszSnappyPing} from "../../fixtures/messages.js";
 import {Ping} from "../../../src/protocols/index.js";
 import {expectEqualByteChunks, MockLibP2pStream} from "../../utils/index.js";
@@ -14,7 +14,7 @@ import {ReqRespRateLimiter} from "../../../src/rate_limiter/ReqRespRateLimiter.j
 
 const testCases: {
   id: string;
-  protocol: ProtocolDefinition<any, any>;
+  protocol: DuplexProtocolDefinition<any, any>;
   requestChunks: Uint8ArrayList[];
   expectedResponseChunks: Uint8Array[];
   expectedError?: LodestarError<any>;

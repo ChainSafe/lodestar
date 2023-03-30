@@ -7,6 +7,7 @@ import {
   ProtocolDefinition,
   EncodedPayload,
   EncodedPayloadType,
+  DuplexProtocolDefinition,
 } from "../types.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 
@@ -20,7 +21,7 @@ import {RespStatus, RpcResponseStatusError} from "../interface.js";
  * Note: `response` has zero or more chunks (denoted by `<>*`)
  */
 export function responseEncodeSuccess<Req, Resp>(
-  protocol: ProtocolDefinition<Req, Resp>
+  protocol: DuplexProtocolDefinition<Req, Resp>
 ): (source: AsyncIterable<EncodedPayload<Resp>>) => AsyncIterable<Buffer> {
   return async function* responseEncodeSuccessTransform(source) {
     for await (const chunk of source) {

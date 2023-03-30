@@ -1,6 +1,6 @@
 import {MAX_REQUEST_BLOCKS} from "@lodestar/params";
 import {allForks, phase0, ssz} from "@lodestar/types";
-import {ContextBytesType, Encoding, ProtocolDefinition, ProtocolDefinitionGenerator} from "../types.js";
+import {ContextBytesType, Encoding, ProtocolDefinition, DuplexProtocolDefinitionGenerator} from "../types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 const BeaconBlocksByRangeCommon: Pick<
@@ -18,7 +18,7 @@ const BeaconBlocksByRangeCommon: Pick<
   },
 };
 
-export const BeaconBlocksByRange: ProtocolDefinitionGenerator<
+export const BeaconBlocksByRange: DuplexProtocolDefinitionGenerator<
   phase0.BeaconBlocksByRangeRequest,
   allForks.SignedBeaconBlock
 > = (_modules, handler) => {
@@ -31,7 +31,7 @@ export const BeaconBlocksByRange: ProtocolDefinitionGenerator<
   };
 };
 
-export const BeaconBlocksByRangeV2: ProtocolDefinitionGenerator<
+export const BeaconBlocksByRangeV2: DuplexProtocolDefinitionGenerator<
   phase0.BeaconBlocksByRangeRequest,
   allForks.SignedBeaconBlock
 > = (modules, handler) => {

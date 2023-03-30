@@ -5,7 +5,7 @@ import {allForks, altair, phase0, ssz} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as messagesDef from "../../src/protocols/index.js";
-import {EncodedPayloadType, ProtocolDefinition, TypeSerializer} from "../../src/types.js";
+import {EncodedPayloadType, ProtocolDefinition, ReqRespHandler, TypeSerializer} from "../../src/types.js";
 import {ZERO_HASH} from "../utils/index.js";
 
 type MessageFixture<T> = {
@@ -140,7 +140,7 @@ export const getAllMessages = (
   ping: messagesDef.Ping(getEmptyHandler()),
   goodbye: messagesDef.Goodbye(modules, getEmptyHandler()),
   metadata: messagesDef.Metadata(modules, getEmptyHandler()),
-  status: messagesDef.Status(modules, getEmptyHandler()),
+  status: messagesDef.Status(modules, getEmptyHandler() as ReqRespHandler<phase0.Status, phase0.Status>),
   blocksByRange: messagesDef.BeaconBlocksByRange(modules, getEmptyHandler()),
   blocksByRangeV2: messagesDef.BeaconBlocksByRangeV2(modules, getEmptyHandler()),
   blocksByRoot: messagesDef.BeaconBlocksByRoot(modules, getEmptyHandler()),

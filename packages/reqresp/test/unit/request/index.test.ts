@@ -7,7 +7,7 @@ import sinon from "sinon";
 import {Uint8ArrayList} from "uint8arraylist";
 import {Logger, LodestarError, sleep} from "@lodestar/utils";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "../../../src/request/index.js";
-import {EncodedPayloadType, Encoding, ProtocolDefinition} from "../../../src/types.js";
+import {DuplexProtocolDefinition, EncodedPayloadType, Encoding, ProtocolDefinition} from "../../../src/types.js";
 import {messages, sszSnappyPing, sszSnappySignedBeaconBlockPhase0} from "../../fixtures/messages.js";
 import {createStubbedLogger} from "../../mocks/logger.js";
 import {getValidPeerId} from "../../utils/peer.js";
@@ -65,7 +65,7 @@ describe("request / sendRequest", () => {
             new MockLibP2pStream(
               responseEncode(
                 [{status: RespStatus.SUCCESS, payload: {type: EncodedPayloadType.ssz, data: requestBody}}],
-                protocols[0]
+                protocols[0] as DuplexProtocolDefinition<any, any>
               ),
               protocols[0].method
             )
