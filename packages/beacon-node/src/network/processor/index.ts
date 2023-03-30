@@ -1,12 +1,17 @@
-import {Logger, mapValues} from "@lodestar/utils";
+import {TopicValidatorResult} from "@libp2p/interface-pubsub";
+import {Logger, MapDef, mapValues} from "@lodestar/utils";
+import {RootHex, Slot} from "@lodestar/types";
+import {routes} from "@lodestar/api";
 import {IBeaconChain} from "../../chain/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {GossipType} from "../gossip/interface.js";
+import {ChainEvent} from "../../chain/emitter.js";
 import {createGossipQueues} from "./gossipQueues.js";
 import {NetworkWorker, NetworkWorkerModules} from "./worker.js";
 import {PendingGossipsubMessage} from "./types.js";
 import {ValidatorFnsModules, GossipHandlerOpts} from "./gossipHandlers.js";
+import {createBlockSlotRootFns} from "./extractSlotRootFns.js";
 
 export type NetworkProcessorModules = NetworkWorkerModules &
   ValidatorFnsModules & {
@@ -20,33 +25,41 @@ export type NetworkProcessorOpts = GossipHandlerOpts & {
   maxGossipTopicConcurrency?: number;
 };
 
-type WorkOpts = {
-  bypassQueue?: boolean;
-};
-
-/**
- * True if we want to process gossip object immediately, false if we check for bls and regen
- * in order to process the gossip object.
- */
-const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
-  // gossip block verify signatures on main thread, hence we want to bypass the bls check
-  [GossipType.beacon_block]: {bypassQueue: true},
-  [GossipType.beacon_block_and_blobs_sidecar]: {bypassQueue: true},
-  [GossipType.beacon_aggregate_and_proof]: {},
-  [GossipType.beacon_attestation]: {},
-  [GossipType.voluntary_exit]: {},
-  [GossipType.proposer_slashing]: {},
-  [GossipType.attester_slashing]: {},
-  [GossipType.sync_committee_contribution_and_proof]: {},
-  [GossipType.sync_committee]: {},
-  [GossipType.light_client_finality_update]: {},
-  [GossipType.light_client_optimistic_update]: {},
-  [GossipType.bls_to_execution_change]: {},
+const executeGossipWorkOrderObj: Record<GossipType, true> = {
+  [GossipType.beacon_block]: true,
+  [GossipType.beacon_block_and_blobs_sidecar]: true,
+  [GossipType.beacon_aggregate_and_proof]: true,
+  [GossipType.beacon_attestation]: true,
+  [GossipType.voluntary_exit]: true,
+  [GossipType.proposer_slashing]: true,
+  [GossipType.attester_slashing]: true,
+  [GossipType.sync_committee_contribution_and_proof]: true,
+  [GossipType.sync_committee]: true,
+  [GossipType.light_client_finality_update]: true,
+  [GossipType.light_client_optimistic_update]: true,
+  [GossipType.bls_to_execution_change]: true,
 };
 const executeGossipWorkOrder = Object.keys(executeGossipWorkOrderObj) as (keyof typeof executeGossipWorkOrderObj)[];
 
 // TODO: Arbitrary constant, check metrics
 const MAX_JOBS_SUBMITTED_PER_TICK = 128;
+
+// How many attestations (aggregate + unaggregate) we keep before new ones get dropped.
+const MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS = 16_384;
+
+/**
+ * Reprocess reject reason for metrics
+ */
+enum ReprocessRejectReason {
+  /**
+   * There are too many attestations that have unknown block root.
+   */
+  reached_limit = "reached_limit",
+  /**
+   * The awaiting attestation is pruned per clock slot.
+   */
+  expired = "expired",
+}
 
 /**
  * Network processor handles the gossip queues and throtles processing to not overload the main thread
@@ -71,19 +84,32 @@ const MAX_JOBS_SUBMITTED_PER_TICK = 128;
 export class NetworkProcessor {
   private readonly worker: NetworkWorker;
   private readonly chain: IBeaconChain;
+  private readonly events: NetworkEventBus;
   private readonly logger: Logger;
   private readonly metrics: Metrics | null;
   private readonly gossipQueues = createGossipQueues<PendingGossipsubMessage>();
   private readonly gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
+  private readonly extractBlockSlotRootFns = createBlockSlotRootFns();
+  // we may not receive the block for Attestation and SignedAggregateAndProof messages, in that case PendingGossipsubMessage needs
+  // to be stored in this Map and reprocessed once the block comes
+  private readonly awaitingGossipsubMessagesByRootBySlot: MapDef<Slot, MapDef<RootHex, Set<PendingGossipsubMessage>>>;
+  private unknownBlockGossipsubMessagesCount = 0;
 
   constructor(modules: NetworkProcessorModules, private readonly opts: NetworkProcessorOpts) {
     const {chain, events, logger, metrics} = modules;
     this.chain = chain;
+    this.events = events;
     this.metrics = metrics;
     this.logger = logger;
     this.worker = new NetworkWorker(modules, opts);
 
     events.on(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage.bind(this));
+    this.chain.emitter.on(routes.events.EventType.block, this.onBlockProcessed.bind(this));
+    this.chain.emitter.on(ChainEvent.clockSlot, this.onClockSlot.bind(this));
+
+    this.awaitingGossipsubMessagesByRootBySlot = new MapDef(
+      () => new MapDef<RootHex, Set<PendingGossipsubMessage>>(() => new Set())
+    );
 
     if (metrics) {
       metrics.gossipValidationQueueLength.addCollect(() => {
@@ -91,12 +117,19 @@ export class NetworkProcessor {
           metrics.gossipValidationQueueLength.set({topic}, this.gossipQueues[topic].length);
           metrics.gossipValidationQueueConcurrency.set({topic}, this.gossipTopicConcurrency[topic]);
         }
+        metrics.reprocessGossipAttestations.countPerSlot.set(this.unknownBlockGossipsubMessagesCount);
       });
     }
 
     // TODO: Pull new work when available
     // this.bls.onAvailable(() => this.executeWork());
     // this.regen.onAvailable(() => this.executeWork());
+  }
+
+  async stop(): Promise<void> {
+    this.events.off(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage);
+    this.chain.emitter.off(routes.events.EventType.block, this.onBlockProcessed);
+    this.chain.emitter.off(ChainEvent.clockSlot, this.onClockSlot);
   }
 
   dropAllJobs(): void {
@@ -114,15 +147,77 @@ export class NetworkProcessor {
     return queue.getAll();
   }
 
-  private onPendingGossipsubMessage(data: PendingGossipsubMessage): void {
-    const droppedJob = this.gossipQueues[data.topic.type].add(data);
+  private onPendingGossipsubMessage(message: PendingGossipsubMessage): void {
+    const extractBlockSlotRootFn = this.extractBlockSlotRootFns[message.topic.type];
+    // check block root of Attestation and SignedAggregateAndProof messages
+    if (extractBlockSlotRootFn) {
+      const {slot, root: rootHex} = extractBlockSlotRootFn(message.msg.data);
+      if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
+        if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
+          this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.reached_limit});
+          return;
+        }
+
+        const awaitingGossipsubMessagesByRoot = this.awaitingGossipsubMessagesByRootBySlot.getOrDefault(slot);
+        const awaitingGossipsubMessages = awaitingGossipsubMessagesByRoot.getOrDefault(rootHex);
+        awaitingGossipsubMessages.add(message);
+        this.unknownBlockGossipsubMessagesCount++;
+      }
+    }
+
+    // bypass the check for other messages
+    this.pushPendingGossipsubMessageToQueue(message);
+  }
+
+  private pushPendingGossipsubMessageToQueue(message: PendingGossipsubMessage): void {
+    const topicType = message.topic.type;
+    const droppedJob = this.gossipQueues[topicType].add(message);
     if (droppedJob) {
       // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
-      this.metrics?.gossipValidationQueueDroppedJobs.inc({topic: data.topic.type});
+      this.metrics?.gossipValidationQueueDroppedJobs.inc({topic: message.topic.type});
     }
 
     // Tentatively perform work
     this.executeWork();
+  }
+
+  private onBlockProcessed({slot, block: rootHex}: {slot: Slot; block: string; executionOptimistic: boolean}): void {
+    const byRootGossipsubMessages = this.awaitingGossipsubMessagesByRootBySlot.getOrDefault(slot);
+    const waitingGossipsubMessages = byRootGossipsubMessages.getOrDefault(rootHex);
+    if (waitingGossipsubMessages.size === 0) {
+      return;
+    }
+
+    this.metrics?.reprocessGossipAttestations.resolve.inc(waitingGossipsubMessages.size);
+    const now = Date.now();
+    waitingGossipsubMessages.forEach((msg) => {
+      this.metrics?.reprocessGossipAttestations.waitSecBeforeResolve.set((now - msg.seenTimestampSec) / 1000);
+      this.pushPendingGossipsubMessageToQueue(msg);
+    });
+
+    byRootGossipsubMessages.delete(rootHex);
+  }
+
+  private onClockSlot(clockSlot: Slot): void {
+    const now = Date.now();
+    for (const [slot, gossipMessagesByRoot] of this.awaitingGossipsubMessagesByRootBySlot.entries()) {
+      if (slot < clockSlot) {
+        for (const gossipMessages of gossipMessagesByRoot.values()) {
+          gossipMessages.forEach((message) => {
+            this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.expired});
+            this.metrics?.reprocessGossipAttestations.waitSecBeforeReject.set((now - message.seenTimestampSec) / 1000);
+            this.events.emit(
+              NetworkEvent.gossipMessageValidationResult,
+              message.msgId,
+              message.propagationSource,
+              TopicValidatorResult.Ignore
+            );
+          });
+        }
+        this.awaitingGossipsubMessagesByRootBySlot.delete(slot);
+      }
+    }
+    this.unknownBlockGossipsubMessagesCount = 0;
   }
 
   private executeWork(): void {
@@ -133,13 +228,12 @@ export class NetworkProcessor {
 
     job_loop: while (jobsSubmitted < MAX_JOBS_SUBMITTED_PER_TICK) {
       // Check canAcceptWork before calling queue.next() since it consumes the items
-      const canAcceptWork = this.chain.blsThreadPoolCanAcceptWork() && this.chain.regenCanAcceptWork();
+      if (!this.chain.blsThreadPoolCanAcceptWork() || !this.chain.regenCanAcceptWork()) {
+        this.metrics?.networkProcessor.canNotAcceptWork.inc();
+        break;
+      }
+
       for (const topic of executeGossipWorkOrder) {
-        // beacon block is guaranteed to be processed immedately
-        if (!canAcceptWork && !executeGossipWorkOrderObj[topic]?.bypassQueue) {
-          this.metrics?.networkProcessor.canNotAcceptWork.inc();
-          break job_loop;
-        }
         if (
           this.opts.maxGossipTopicConcurrency !== undefined &&
           this.gossipTopicConcurrency[topic] > this.opts.maxGossipTopicConcurrency

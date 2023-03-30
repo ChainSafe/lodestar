@@ -1,10 +1,14 @@
 import {SlotRootHex} from "@lodestar/types";
-import {getBlockRootFromAttestationSerialized, getSlotFromAttestationSerialized} from "../../util/sszBytes.js";
+import {
+  getBlockRootFromAttestationSerialized,
+  getBlockRootFromSignedAggregateAndProofSerialized,
+  getSlotFromAttestationSerialized,
+  getSlotFromSignedAggregateAndProofSerialized,
+} from "../../util/sszBytes.js";
 import {GossipType} from "../gossip/index.js";
-import {ExtractSlotRootFns} from "./types.js";
+import {ExtractSlotRootFns as BlockSlotRootFns} from "./types.js";
 
-// need unit tests for this function to verify it works as expected
-export function createExtractSlotRootFns(): ExtractSlotRootFns {
+export function createBlockSlotRootFns(): BlockSlotRootFns {
   return {
     [GossipType.beacon_attestation]: (data: Uint8Array): SlotRootHex => {
       return {
@@ -12,7 +16,11 @@ export function createExtractSlotRootFns(): ExtractSlotRootFns {
         root: getBlockRootFromAttestationSerialized(data),
       };
     },
-    // TODO
-    // [GossipType.beacon_aggregate_and_proof]: returnNull,
+    [GossipType.beacon_aggregate_and_proof]: (data: Uint8Array): SlotRootHex => {
+      return {
+        slot: getSlotFromSignedAggregateAndProofSerialized(data),
+        root: getBlockRootFromSignedAggregateAndProofSerialized(data),
+      };
+    },
   };
 }
