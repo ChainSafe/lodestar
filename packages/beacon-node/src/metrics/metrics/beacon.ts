@@ -103,6 +103,16 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       }),
     },
 
+    blocksProposedAndIncluded: register.gauge({
+      name: "vc_blocks_proposed_and_included_total",
+      help: "Total count of blocks proposed and included in the canonical chain",
+    }),
+
+    blocksOrphaned: register.gauge({
+      name: "vc_missed_blocks_total",
+      help: "Total count of blocks missed",
+    }),
+
     blockProductionTime: register.histogram<"source">({
       name: "beacon_block_production_seconds",
       help: "Full runtime of block production",

@@ -86,6 +86,8 @@ export interface IBeaconChain {
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 
+  readonly blockProposerIndices: Map<Uint8Array, ValidatorIndex>;
+
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly producedBlobsSidecarCache: Map<RootHex, deneb.BlobsSidecar>;

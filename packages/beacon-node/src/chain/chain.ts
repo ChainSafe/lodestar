@@ -112,6 +112,8 @@ export class BeaconChain implements IBeaconChain {
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
+  readonly blockProposerIndices = new Map<Uint8Array, ValidatorIndex>();
+
   // Global state caches
   readonly pubkey2index: PubkeyIndexMap;
   readonly index2pubkey: Index2PubkeyCache;
@@ -686,10 +688,21 @@ export class BeaconChain implements IBeaconChain {
     this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
 
     // TODO: Improve using regen here
-    const headState = this.stateCache.get(this.forkChoice.getHead().stateRoot);
+    const stateRoot = this.forkChoice.getHead().stateRoot;
+    const headState = this.stateCache.get(stateRoot);
     const finalizedState = this.checkpointStateCache.get(cp);
     if (headState) {
       this.opPool.pruneAll(headState, finalizedState);
+    }
+    this.trackBlocksIncluded(stateRoot);
+  }
+
+  private trackBlocksIncluded(stateRoot: string): void {
+    // Determine if canonical block contains the validator index
+    if (this.blockProposerIndices.get(fromHexString(stateRoot)) !== undefined) {
+      this.metrics?.blocksProposedAndIncluded.inc();
+    } else {
+      this.metrics?.blocksOrphaned.inc();
     }
   }
 
