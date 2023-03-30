@@ -2,7 +2,6 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, ApiError, routes} from "@lodestar/api";
-
 import {IClock, differenceHex, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -182,23 +181,5 @@ export class BlockDutiesService {
         this.proposers.delete(epoch);
       }
     }
-  }
-
-  private async isIncludedInCanonicalChain(slot: Slot): Promise<boolean> {
-    //#TODO: figure out how to get the latest proposed block and compare it to the canonical block
-
-    // const canonicalBlock = this.chain.getCanonicalBlockAtSlot(slot);
-    // if (!canonicalBlock) {
-    //   this.logger.warn("Block not included in canonical chain", {slot});
-    //   return false;
-    // }
-
-    // if (canonicalBlock) {
-    //   this.metrics?.blocksProduced.inc();
-    //   this.logger.info("Successfully produced block", {slot});
-    //   return true;
-    // }
-
-    return false;
   }
 }

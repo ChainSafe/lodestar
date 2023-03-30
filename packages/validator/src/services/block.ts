@@ -110,7 +110,6 @@ export class BlockProposingService {
         builderSelection,
       }).catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "produce"});
-        this.metrics?.missedBlocks.inc();
         throw extendError(e, "Failed to produce block");
       });
 
@@ -123,13 +122,11 @@ export class BlockProposingService {
 
       await this.publishBlockWrapper(signedBlock).catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "publish"});
-        this.metrics?.missedBlocks.inc();
         throw extendError(e, "Failed to publish block");
       });
       this.logger.info("Published block", {...logCtx, graffiti, ...block.debugLogCtx});
       this.metrics?.blocksPublished.inc();
     } catch (e) {
-      this.metrics?.missedBlocks.inc();
       this.logger.error("Error proposing block", logCtx, e as Error);
     }
   }

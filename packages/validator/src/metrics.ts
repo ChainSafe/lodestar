@@ -224,16 +224,6 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
       labelNames: ["error"],
     }),
 
-    blocksProposedAndIncluded: register.gauge({
-      name: "vc_blocks_proposed_and_included_total",
-      help: "Total count of blocks proposed and included in the canonical chain",
-    }),
-
-    missedBlocks: register.gauge({
-      name: "vc_missed_blocks_total",
-      help: "Total count of blocks missed",
-    }),
-
     // BlockDutiesService
 
     proposerDutiesEpochCount: register.gauge({
