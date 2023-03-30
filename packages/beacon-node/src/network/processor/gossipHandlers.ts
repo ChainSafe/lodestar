@@ -236,9 +236,13 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec) => {
       let validationResult: {indexedAttestation: phase0.IndexedAttestation; subnet: number};
       try {
+        metrics?.gossipAttestationTotal.inc();
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
         const validateFn = () => validateGossipAttestation(chain, attestation, subnet);
         const {slot, beaconBlockRoot} = attestation.data;
+        if (chain.clock.currentSlot === slot) {
+          metrics?.gossipAttestationSameSlot.inc();
+        }
         // If an attestation refers to a block root that's not known, it will wait for 1 slot max
         // See https://github.com/ChainSafe/lodestar/pull/3564 for reasoning and results
         // Waiting here requires minimal code and automatically affects attestation, and aggregate validation

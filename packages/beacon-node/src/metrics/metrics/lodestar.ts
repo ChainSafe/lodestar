@@ -270,7 +270,14 @@ export function createLodestarMetrics(
       help: "Current count of jobs being run on network processor for topic",
       labelNames: ["topic"],
     }),
-
+    gossipAttestationSameSlot: register.gauge({
+      name: "lodestar_gossip_attestation_same_slot_total",
+      help: "Count of total gossip attestation same slot",
+    }),
+    gossipAttestationTotal: register.gauge({
+      name: "lodestar_gossip_attestation_total",
+      help: "Count of total gossip attestation",
+    }),
     networkProcessor: {
       executeWorkCalls: register.gauge({
         name: "lodestar_network_processor_execute_work_calls_total",
