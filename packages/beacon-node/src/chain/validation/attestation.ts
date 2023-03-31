@@ -172,6 +172,8 @@ export async function validateGossipAttestation(
  *   - Validate a lot of data once
  *   - Regen state once
  *   - Verify signatures in the same batch
+ * Since these attestations are from API, it's more likely that they are valid.
+ * If one of them is not valid, the API will fallback to validate them one by one.
  */
 export async function validateApiAttestations(
   chain: IBeaconChain,
@@ -314,7 +316,9 @@ export async function validateApiAttestations(
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
   }
 
-  validatorIndices.forEach((validatorIndex) => chain.seenAttesters.add(targetEpoch, validatorIndex));
+  for (const validatorIndex of validatorIndices) {
+    chain.seenAttesters.add(targetEpoch, validatorIndex);
+  }
 
   return validationResults;
 }
