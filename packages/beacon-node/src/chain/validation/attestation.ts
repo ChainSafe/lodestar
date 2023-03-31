@@ -7,6 +7,7 @@ import {
   CachedBeaconStateAllForks,
   getIndexedAttestationSignatureSet,
   ISignatureSet,
+  cloneIndexedAttestationSignatureSet,
 } from "@lodestar/state-transition";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
@@ -245,6 +246,10 @@ export async function validateApiAttestations(
   const signatureSets: ISignatureSet[] = [];
   const validationResults: ValidationResult[] = [];
   const validatorIndices: ValidatorIndex[] = [];
+  const attIndex = attData.index;
+  const committeeIndices = getCommitteeIndices(attHeadState, attSlot, attIndex);
+  let firstSignatureSet: ISignatureSet | null = null;
+
   for (const attestation of attestations) {
     // [REJECT] The attestation is unaggregated -- that is, it has exactly one participating validator
     // (len([bit for bit in attestation.aggregation_bits if bit]) == 1, i.e. exactly 1 bit is set).
@@ -259,9 +264,6 @@ export async function validateApiAttestations(
 
     // [REJECT] The committee index is within the expected range
     // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
-    const attIndex = attData.index;
-    const committeeIndices = getCommitteeIndices(attHeadState, attSlot, attIndex);
-
     const validatorIndex = committeeIndices[bitIndex];
     validatorIndices.push(validatorIndex);
 
@@ -294,7 +296,13 @@ export async function validateApiAttestations(
       signature: attestation.signature,
     };
 
-    signatureSets.push(getIndexedAttestationSignatureSet(attHeadState, indexedAttestation));
+    if (!firstSignatureSet) {
+      firstSignatureSet = getIndexedAttestationSignatureSet(attHeadState, indexedAttestation);
+      signatureSets.push(firstSignatureSet);
+    } else {
+      // computing signing root is not cheap, use same signing root from the first signature set since they have same attestation.data
+      signatureSets.push(cloneIndexedAttestationSignatureSet(attHeadState, indexedAttestation, firstSignatureSet));
+    }
 
     // Now that the attestation has been fully verified, store that we have received a valid attestation from this validator.
     //
