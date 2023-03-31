@@ -1,4 +1,3 @@
-import {TopicValidatorResult} from "@libp2p/interface-pubsub";
 import {Logger, MapDef, mapValues} from "@lodestar/utils";
 import {RootHex, Slot} from "@lodestar/types";
 import {routes} from "@lodestar/api";
@@ -199,12 +198,12 @@ export class NetworkProcessor {
 
     this.metrics?.reprocessGossipAttestations.resolve.inc(waitingGossipsubMessages.size);
     const now = Date.now();
-    waitingGossipsubMessages.forEach((msg) => {
-      this.metrics?.reprocessGossipAttestations.waitSecBeforeResolve.set((now - msg.seenTimestampSec) / 1000);
+    for (const message of waitingGossipsubMessages) {
+      this.metrics?.reprocessGossipAttestations.waitSecBeforeResolve.set((now - message.seenTimestampSec) / 1000);
       // TODO: in the worse case, there could be up to 16_000 attestations waiting gossipsub messages
       // don't push to the queue at once
-      this.pushPendingGossipsubMessageToQueue(msg);
-    });
+      this.pushPendingGossipsubMessageToQueue(message);
+    }
 
     byRootGossipsubMessages.delete(rootHex);
   }
@@ -214,11 +213,11 @@ export class NetworkProcessor {
     for (const [slot, gossipMessagesByRoot] of this.awaitingGossipsubMessagesByRootBySlot.entries()) {
       if (slot < clockSlot) {
         for (const gossipMessages of gossipMessagesByRoot.values()) {
-          gossipMessages.forEach((message) => {
+          for (const message of gossipMessages) {
             this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.expired});
             this.metrics?.reprocessGossipAttestations.waitSecBeforeReject.set((now - message.seenTimestampSec) / 1000);
             // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
-          });
+          }
         }
         this.awaitingGossipsubMessagesByRootBySlot.delete(slot);
       }
