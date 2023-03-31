@@ -154,22 +154,21 @@ We're currently experimenting with hosting the majority of lodestar packages and
 
 ### Logging Levels
 
+Contributors must chose the log level carefully to ensure a consistent experience for every type of user:
+
 - `error`: Critical issues that prevent the application from functioning correctly or cause significant disruption to users. Examples include failed network connections, crashes, or data corruption.
 - `warn`: Situations that may lead to critical issues if not addressed but do not prevent the application from functioning. Examples include configuration issues, deprecated features, or temporary network disruptions.
 - `info`: General sporadic informational about the node's state. Examples include initialization messages, infrequent periodic status updates, or high-level progress reports.
 - `debug`: Detailed diagnostic information that can help developers or users troubleshoot specific issues. Examples include individual request logs for every REST API, networking interactions, or internal components status changes. Alias to `verbose`.
 - `trace`: Reserved for extremely verbose logs such a step by step execution traces of individual network packets or similar granular actions
 
-### Guideliness
+### Logging guidelines
 
-1. Always use the appropriate log level as defined above.
-2. Avoid excessive logging. Log messages should be clear and concise, providing enough information to understand the context and severity of the issue.
-3. Do not log sensitive data, such as private keys, user credentials, or personal information.
-4. Do not log arbitrary data from the network as ASCII or UTF8 at levels higher or equal to `info`.
-5. Use clear and concise language. Prefer to log variables in JSON format `log.debug("Action", {slot})` instead of formating the text yourself `log.debug('slot=${slot}')`.
-6. Include only relevant context in log messages, sufficient to debug the issue or action it refers to.
-
-Contributors must chose the log level carefully to ensure a consistent experience for every type of user:
+- Avoid excessive logging. Log messages should be clear and concise, providing enough information to understand the context and severity of the issue.
+- Do not log sensitive data, such as private keys, user credentials, or personal information.
+- Do not log arbitrary data from the network as ASCII or UTF8 at levels higher or equal to `info`.
+- Use clear and concise language. Prefer to log variables in JSON format `log.debug("Action", {slot})` instead of formatting the text yourself `log.debug('slot=${slot}')`.
+- Include only relevant context in log messages, sufficient to debug the issue or action it refers to.
 
 ## Contributing to Grafana dashboards
 
