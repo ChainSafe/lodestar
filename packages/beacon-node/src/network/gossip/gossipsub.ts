@@ -405,15 +405,19 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
     // Get seenTimestamp before adding the message to the queue or add async delays
     const seenTimestampSec = Date.now() / 1000;
 
-    // Emit message to network processor
-    this.events.emit(NetworkEvent.pendingGossipsubMessage, {
-      topic,
-      msg,
-      msgId,
-      propagationSource,
-      seenTimestampSec,
-      startProcessUnixSec: null,
-    });
+    // Emit message to network processor, use setTimeout to yield to the macro queue
+    // This is mostly due to too many attestation messages, and a gossipsub RPC may
+    // contain multiple of them. This helps avoid the I/O lag issue.
+    setTimeout(() => {
+      this.events.emit(NetworkEvent.pendingGossipsubMessage, {
+        topic,
+        msg,
+        msgId,
+        propagationSource,
+        seenTimestampSec,
+        startProcessUnixSec: null,
+      });
+    }, 0);
   }
 
   private onValidationResult(msgId: string, propagationSource: PeerId, acceptance: TopicValidatorResult): void {
