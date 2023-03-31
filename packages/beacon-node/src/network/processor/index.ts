@@ -11,7 +11,7 @@ import {createGossipQueues} from "./gossipQueues.js";
 import {NetworkWorker, NetworkWorkerModules} from "./worker.js";
 import {PendingGossipsubMessage} from "./types.js";
 import {ValidatorFnsModules, GossipHandlerOpts} from "./gossipHandlers.js";
-import {createBlockSlotRootFns} from "./extractSlotRootFns.js";
+import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
 
 export type NetworkProcessorModules = NetworkWorkerModules &
   ValidatorFnsModules & {
@@ -89,7 +89,7 @@ export class NetworkProcessor {
   private readonly metrics: Metrics | null;
   private readonly gossipQueues = createGossipQueues<PendingGossipsubMessage>();
   private readonly gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
-  private readonly extractBlockSlotRootFns = createBlockSlotRootFns();
+  private readonly extractBlockSlotRootFns = createExtractBlockSlotRootFns();
   // we may not receive the block for Attestation and SignedAggregateAndProof messages, in that case PendingGossipsubMessage needs
   // to be stored in this Map and reprocessed once the block comes
   private readonly awaitingGossipsubMessagesByRootBySlot: MapDef<Slot, MapDef<RootHex, Set<PendingGossipsubMessage>>>;
@@ -192,6 +192,8 @@ export class NetworkProcessor {
     const now = Date.now();
     waitingGossipsubMessages.forEach((msg) => {
       this.metrics?.reprocessGossipAttestations.waitSecBeforeResolve.set((now - msg.seenTimestampSec) / 1000);
+      // TODO: in the worse case, there could be up to 16_000 attestations waiting gossipsub messages
+      // don't push to the queue at once
       this.pushPendingGossipsubMessageToQueue(msg);
     });
 
