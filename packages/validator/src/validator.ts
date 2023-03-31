@@ -81,6 +81,7 @@ export class Validator {
         {
           urls: typeof opts.api === "string" ? [opts.api] : opts.api,
           // Validator would need the beacon to respond within the slot
+          // See https://github.com/ChainSafe/lodestar/issues/5315 for rationale
           timeoutMs: config.SECONDS_PER_SLOT * 1000,
           getAbortSignal: () => this.controller.signal,
         },
