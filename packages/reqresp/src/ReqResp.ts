@@ -9,9 +9,9 @@ import {handleRequest} from "./response/index.js";
 import {
   DialOnlyProtocolDefinition,
   Encoding,
-  ProtocolDefinition,
+  MixedProtocolDefinition,
   ReqRespRateLimiterOpts,
-  DuplexProtocolDefinition,
+  ProtocolDefinition,
 } from "./types.js";
 import {formatProtocolID} from "./utils/protocolId.js";
 import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
@@ -59,7 +59,7 @@ export class ReqResp {
   // Use any to avoid TS error on registering protocol
   // Type 'unknown' is not assignable to type 'Resp'
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private readonly registeredProtocols = new Map<ProtocolID, ProtocolDefinition<any, any>>();
+  private readonly registeredProtocols = new Map<ProtocolID, MixedProtocolDefinition<any, any>>();
   private readonly dialOnlyProtocols = new Map<ProtocolID, boolean>();
 
   constructor(modules: ReqRespProtocolModules, private readonly opts: ReqRespOpts = {}) {
@@ -98,7 +98,7 @@ export class ReqResp {
    * Can be called at any time, no concept of started / stopped
    */
   async registerProtocol<Req, Resp>(
-    protocol: DuplexProtocolDefinition<Req, Resp>,
+    protocol: ProtocolDefinition<Req, Resp>,
     opts?: ReqRespRegisterOpts
   ): Promise<void> {
     const protocolID = this.formatProtocolID(protocol);
@@ -162,7 +162,7 @@ export class ReqResp {
     this.metrics?.outgoingRequests.inc({method});
     const timer = this.metrics?.outgoingRequestRoundtripTime.startTimer({method});
 
-    const protocols: (ProtocolDefinition | DialOnlyProtocolDefinition)[] = [];
+    const protocols: (MixedProtocolDefinition | DialOnlyProtocolDefinition)[] = [];
     const protocolIDs: string[] = [];
 
     for (const version of versions) {
@@ -203,7 +203,7 @@ export class ReqResp {
     }
   }
 
-  private getRequestHandler<Req, Resp>(protocol: ProtocolDefinition<Req, Resp>, protocolID: string) {
+  private getRequestHandler<Req, Resp>(protocol: MixedProtocolDefinition<Req, Resp>, protocolID: string) {
     return async ({connection, stream}: {connection: Connection; stream: Stream}) => {
       if (this.dialOnlyProtocols.get(protocolID)) {
         throw new Error(`Received request on dial only protocol '${protocolID}'`);
@@ -216,14 +216,14 @@ export class ReqResp {
       this.metrics?.incomingRequests.inc({method});
       const timer = this.metrics?.incomingRequestHandlerTime.startTimer({method});
 
-      this.onIncomingRequest?.(peerId, protocol as ProtocolDefinition);
+      this.onIncomingRequest?.(peerId, protocol as MixedProtocolDefinition);
 
       try {
         await handleRequest<Req, Resp>({
           logger: this.logger,
           stream,
           peerId,
-          protocol: protocol as DuplexProtocolDefinition<Req, Resp>,
+          protocol: protocol as ProtocolDefinition<Req, Resp>,
           protocolID,
           rateLimiter: this.rateLimiter,
           signal: this.controller.signal,
@@ -247,12 +247,12 @@ export class ReqResp {
     };
   }
 
-  protected onIncomingRequest(_peerId: PeerId, _protocol: ProtocolDefinition): void {
+  protected onIncomingRequest(_peerId: PeerId, _protocol: MixedProtocolDefinition): void {
     // Override
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected onIncomingRequestError(_protocol: ProtocolDefinition<any, any>, _error: RequestError): void {
+  protected onIncomingRequestError(_protocol: MixedProtocolDefinition<any, any>, _error: RequestError): void {
     // Override
   }
 
@@ -266,7 +266,7 @@ export class ReqResp {
    * ```
    * https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#protocol-identification
    */
-  protected formatProtocolID(protocol: Pick<ProtocolDefinition, "method" | "version" | "encoding">): string {
+  protected formatProtocolID(protocol: Pick<MixedProtocolDefinition, "method" | "version" | "encoding">): string {
     return formatProtocolID(this.protocolPrefix, protocol.method, protocol.version, protocol.encoding);
   }
 }

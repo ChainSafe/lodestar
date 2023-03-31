@@ -45,7 +45,7 @@ export interface InboundRateLimitQuota<Req = unknown> {
 }
 
 // `protocolPrefix` is added runtime so not part of definition
-export interface DuplexProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<Protocol, "protocolPrefix"> {
+export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<Protocol, "protocolPrefix"> {
   handler: ReqRespHandler<Req, Resp>;
   requestType: (fork: ForkName) => TypeSerializer<Req> | null;
   responseType: (fork: ForkName) => TypeSerializer<Resp>;
@@ -56,26 +56,26 @@ export interface DuplexProtocolDefinition<Req = unknown, Resp = unknown> extends
 }
 
 export interface DialOnlyProtocolDefinition<Req = unknown, Resp = unknown>
-  extends Omit<DuplexProtocolDefinition<Req, Resp>, "handler" | "inboundRateLimits" | "renderRequestBody"> {
+  extends Omit<ProtocolDefinition<Req, Resp>, "handler" | "inboundRateLimits" | "renderRequestBody"> {
   handler?: never;
   inboundRateLimits?: never;
   renderRequestBody?: never;
 }
 
-export type ProtocolDefinition<Req = unknown, Resp = unknown> =
+export type MixedProtocolDefinition<Req = unknown, Resp = unknown> =
   | DialOnlyProtocolDefinition<Req, Resp>
-  | DuplexProtocolDefinition<Req, Resp>;
+  | ProtocolDefinition<Req, Resp>;
 
 export type MixedProtocolDefinitionGenerator<Req, Res> = <H extends ReqRespHandler<Req, Res> | undefined = undefined>(
   // "inboundRateLimiter" is available only on handler context not on generator
   modules: {config: BeaconConfig},
   handler?: H
-) => H extends undefined ? DialOnlyProtocolDefinition<Req, Res> : DuplexProtocolDefinition<Req, Res>;
+) => H extends undefined ? DialOnlyProtocolDefinition<Req, Res> : ProtocolDefinition<Req, Res>;
 
 export type DuplexProtocolDefinitionGenerator<Req, Res> = (
   modules: {config: BeaconConfig},
   handler: ReqRespHandler<Req, Res>
-) => DuplexProtocolDefinition<Req, Res>;
+) => ProtocolDefinition<Req, Res>;
 
 export type HandlerTypeFromMessage<T> = T extends DuplexProtocolDefinitionGenerator<infer Req, infer Res>
   ? ReqRespHandler<Req, Res>

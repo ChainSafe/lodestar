@@ -1,9 +1,9 @@
 import {allForks, ssz} from "@lodestar/types";
-import {ContextBytesType, DuplexProtocolDefinitionGenerator, Encoding, ProtocolDefinition} from "../types.js";
+import {ContextBytesType, DuplexProtocolDefinitionGenerator, Encoding, MixedProtocolDefinition} from "../types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 const MetadataCommon: Pick<
-  ProtocolDefinition<null, allForks.Metadata>,
+  MixedProtocolDefinition<null, allForks.Metadata>,
   "method" | "encoding" | "requestType" | "renderRequestBody" | "inboundRateLimits"
 > = {
   method: "metadata",

@@ -8,7 +8,7 @@ import {
   CONTEXT_BYTES_FORK_DIGEST_LENGTH,
   ContextBytesFactory,
   TypeSerializer,
-  ProtocolDefinition,
+  MixedProtocolDefinition,
 } from "../types.js";
 import {RespStatus} from "../interface.js";
 
@@ -28,7 +28,7 @@ enum StreamStatus {
  * ```
  */
 export function responseDecode<Resp>(
-  protocol: ProtocolDefinition,
+  protocol: MixedProtocolDefinition,
   cbs: {
     onFirstHeader: () => void;
     onFirstResponseChunk: () => void;

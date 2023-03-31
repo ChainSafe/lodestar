@@ -1,10 +1,10 @@
 import {MAX_REQUEST_BLOCKS} from "@lodestar/params";
 import {allForks, phase0, ssz} from "@lodestar/types";
-import {ContextBytesType, Encoding, ProtocolDefinition, DuplexProtocolDefinitionGenerator} from "../types.js";
+import {ContextBytesType, Encoding, MixedProtocolDefinition, DuplexProtocolDefinitionGenerator} from "../types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 const BeaconBlocksByRangeCommon: Pick<
-  ProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>,
+  MixedProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>,
   "method" | "encoding" | "requestType" | "renderRequestBody" | "inboundRateLimits"
 > = {
   method: "beacon_blocks_by_range",

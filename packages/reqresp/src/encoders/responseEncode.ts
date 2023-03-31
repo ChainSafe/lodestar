@@ -4,10 +4,10 @@ import {encodeErrorMessage} from "../utils/index.js";
 import {
   ContextBytesType,
   ContextBytesFactory,
-  ProtocolDefinition,
+  MixedProtocolDefinition,
   EncodedPayload,
   EncodedPayloadType,
-  DuplexProtocolDefinition,
+  ProtocolDefinition,
 } from "../types.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 
@@ -21,7 +21,7 @@ import {RespStatus, RpcResponseStatusError} from "../interface.js";
  * Note: `response` has zero or more chunks (denoted by `<>*`)
  */
 export function responseEncodeSuccess<Req, Resp>(
-  protocol: DuplexProtocolDefinition<Req, Resp>
+  protocol: ProtocolDefinition<Req, Resp>
 ): (source: AsyncIterable<EncodedPayload<Resp>>) => AsyncIterable<Buffer> {
   return async function* responseEncodeSuccessTransform(source) {
     for await (const chunk of source) {
@@ -53,7 +53,7 @@ export function responseEncodeSuccess<Req, Resp>(
  * fn yields exactly one `<error_response>` and afterwards the stream must be terminated
  */
 export async function* responseEncodeError(
-  protocol: Pick<ProtocolDefinition, "encoding">,
+  protocol: Pick<MixedProtocolDefinition, "encoding">,
   status: RpcResponseStatusError,
   errorMessage: string
 ): AsyncGenerator<Buffer> {

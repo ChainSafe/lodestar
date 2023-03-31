@@ -4,7 +4,7 @@ import {Stream} from "@libp2p/interface-connection";
 import {Uint8ArrayList} from "uint8arraylist";
 import {Logger, TimeoutError, withTimeout} from "@lodestar/utils";
 import {prettyPrintPeerId} from "../utils/index.js";
-import {DuplexProtocolDefinition} from "../types.js";
+import {ProtocolDefinition} from "../types.js";
 import {requestDecode} from "../encoders/requestDecode.js";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
 import {RespStatus} from "../interface.js";
@@ -21,7 +21,7 @@ export interface HandleRequestOpts<Req, Resp> {
   logger: Logger;
   stream: Stream;
   peerId: PeerId;
-  protocol: DuplexProtocolDefinition<Req, Resp>;
+  protocol: ProtocolDefinition<Req, Resp>;
   protocolID: string;
   rateLimiter: ReqRespRateLimiter;
   signal?: AbortSignal;
