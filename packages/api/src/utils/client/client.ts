@@ -1,8 +1,9 @@
-import {mapValues} from "@lodestar/utils";
+import {TimeoutError, mapValues} from "@lodestar/utils";
 import {compileRouteUrlFormater} from "../urlFormat.js";
 import {RouteDef, ReqGeneric, ReturnTypes, TypeJson, ReqSerializer, ReqSerializers, RoutesData} from "../types.js";
 import {APIClientHandler} from "../../interfaces.js";
 import {FetchOpts, HttpError, IHttpClient} from "./httpClient.js";
+import {HttpStatusCode} from "./httpStatusCode.js";
 
 // See /packages/api/src/routes/index.ts for reasoning
 
@@ -81,6 +82,13 @@ export function generateGenericJsonClient<
           return {ok: false, error: {code: err.status, message: err.message, operationId: routeId}} as ReturnType<
             Api[keyof Api]
           >;
+        }
+
+        if (err instanceof TimeoutError) {
+          return {
+            ok: false,
+            error: {code: HttpStatusCode.INTERNAL_SERVER_ERROR, message: err.message, operationId: routeId},
+          } as ReturnType<Api[keyof Api]>;
         }
 
         throw err;
