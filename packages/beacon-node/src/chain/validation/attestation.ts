@@ -13,6 +13,7 @@ import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
+import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
 
 export async function validateGossipAttestation(
   chain: IBeaconChain,
@@ -67,10 +68,13 @@ export async function validateGossipAttestation(
 
   let committeeIndices: number[];
   let attHeadState: CachedBeaconStateAllForks;
+  let cachedAttDataOrAttHeadState:
+    | {cachedAttData: AttestationDataCacheEntry; attHeadState: null}
+    | {cachedAttData: null; attHeadState: CachedBeaconStateAllForks};
 
   if (cachedAttData) {
     committeeIndices = cachedAttData.committeeIndices;
-    attHeadState = cachedAttData.state;
+    cachedAttDataOrAttHeadState = {cachedAttData, attHeadState: null};
   } else {
     // Attestations must be for a known block. If the block is unknown, we simply drop the
     // attestation and do not delay consideration for later.
@@ -103,6 +107,7 @@ export async function validateGossipAttestation(
           error: e as Error,
         });
       });
+    cachedAttDataOrAttHeadState = {cachedAttData: null, attHeadState};
 
     // [REJECT] The committee index is within the expected range
     // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
@@ -130,10 +135,10 @@ export async function validateGossipAttestation(
   // where committees_per_slot = get_committee_count_per_slot(state, attestation.data.target.epoch),
   // which may be pre-computed along with the committee information for the signature check.
   let expectedSubnet: number;
-  if (cachedAttData) {
-    expectedSubnet = cachedAttData.subnet;
+  if (cachedAttDataOrAttHeadState.cachedAttData) {
+    expectedSubnet = cachedAttDataOrAttHeadState.cachedAttData.subnet;
   } else {
-    expectedSubnet = attHeadState.epochCtx.computeSubnetForSlot(attSlot, attIndex);
+    expectedSubnet = cachedAttDataOrAttHeadState.attHeadState.epochCtx.computeSubnetForSlot(attSlot, attIndex);
     if (subnet !== null && subnet !== expectedSubnet) {
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.INVALID_SUBNET_ID,
@@ -160,17 +165,18 @@ export async function validateGossipAttestation(
     signature: attestation.signature,
   };
   let signatureSet: ISignatureSet;
-  if (cachedAttData) {
+  if (cachedAttDataOrAttHeadState.cachedAttData) {
+    const {index2pubkey, signatureSet: signatureSetToClone} = cachedAttDataOrAttHeadState.cachedAttData;
     // there could be up to 6% of cpu time to compute signing root if we don't clone the signature set
-    signatureSet = cloneIndexedAttestationSignatureSet(attHeadState, indexedAttestation, cachedAttData.signatureSet);
+    signatureSet = cloneIndexedAttestationSignatureSet(index2pubkey, indexedAttestation, signatureSetToClone);
   } else {
-    signatureSet = getIndexedAttestationSignatureSet(attHeadState, indexedAttestation);
+    signatureSet = getIndexedAttestationSignatureSet(cachedAttDataOrAttHeadState.attHeadState, indexedAttestation);
   }
 
   // add cached attestation data before verifying signature
-  if (attDataHash && !cachedAttData) {
+  if (attDataHash && !cachedAttDataOrAttHeadState.cachedAttData) {
     chain.seenAttestationDatas.add(attDataHash, {
-      state: attHeadState,
+      index2pubkey: cachedAttDataOrAttHeadState.attHeadState.epochCtx.index2pubkey,
       committeeIndices,
       signatureSet,
       subnet: expectedSubnet,

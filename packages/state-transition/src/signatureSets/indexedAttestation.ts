@@ -2,6 +2,7 @@ import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {allForks, phase0, ssz} from "@lodestar/types";
 import {computeSigningRoot, computeStartSlotAtEpoch, ISignatureSet, SignatureSetType} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
+import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
 
 export function getAttestationWithIndicesSignatureSet(
   state: CachedBeaconStateAllForks,
@@ -32,14 +33,13 @@ export function getIndexedAttestationSignatureSet(
  * Be careful with this function, it assume `signatureSetSameAttData` is from the same attestation data.
  */
 export function cloneIndexedAttestationSignatureSet(
-  state: CachedBeaconStateAllForks,
+  index2pubkey: Index2PubkeyCache,
   indexedAttestation: phase0.IndexedAttestation,
   signatureSetSameAttData: ISignatureSet
 ): ISignatureSet {
-  const {epochCtx} = state;
   return {
     type: SignatureSetType.aggregate,
-    pubkeys: indexedAttestation.attestingIndices.map((i) => epochCtx.index2pubkey[i]),
+    pubkeys: indexedAttestation.attestingIndices.map((i) => index2pubkey[i]),
     signingRoot: signatureSetSameAttData.signingRoot,
     signature: indexedAttestation.signature,
   };

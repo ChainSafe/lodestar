@@ -1,10 +1,12 @@
-import {CachedBeaconStateAllForks, ISignatureSet} from "@lodestar/state-transition";
+import {Index2PubkeyCache, ISignatureSet} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {Metrics} from "../../metrics/metrics.js";
 import {AttDataHash} from "../../util/sszBytes.js";
 
 export type AttestationDataCacheEntry = {
-  state: CachedBeaconStateAllForks;
+  // shared across application so this does not take memory
+  index2pubkey: Index2PubkeyCache;
+  // shared with shuffling data, so this does not take memory
   committeeIndices: number[];
   signatureSet: ISignatureSet;
   subnet: number;
