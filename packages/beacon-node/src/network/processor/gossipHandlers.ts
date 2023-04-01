@@ -233,11 +233,15 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec) => {
+    [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec, dataHash) => {
       let validationResult: {indexedAttestation: phase0.IndexedAttestation; subnet: number};
       try {
+        // should not happen
+        if (!dataHash) {
+          throw new Error("Missing attestation data hash");
+        }
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        const validateFn = () => validateGossipAttestation(chain, attestation, subnet);
+        const validateFn = () => validateGossipAttestation(chain, attestation, subnet, dataHash);
         const {slot, beaconBlockRoot} = attestation.data;
         // If an attestation refers to a block root that's not known, it will wait for 1 slot max
         // See https://github.com/ChainSafe/lodestar/pull/3564 for reasoning and results

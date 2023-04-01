@@ -6,6 +6,8 @@ import {
   computeEpochAtSlot,
   CachedBeaconStateAllForks,
   getIndexedAttestationSignatureSet,
+  cloneIndexedAttestationSignatureSet,
+  ISignatureSet,
 } from "@lodestar/state-transition";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
@@ -16,7 +18,9 @@ export async function validateGossipAttestation(
   chain: IBeaconChain,
   attestation: phase0.Attestation,
   /** Optional, to allow verifying attestations through API with unknown subnet */
-  subnet: number | null
+  subnet: number | null,
+  // available for gossip attestations, null for api attestations
+  attDataHash: string | null = null
 ): Promise<{indexedAttestation: phase0.IndexedAttestation; subnet: number}> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
@@ -29,12 +33,15 @@ export async function validateGossipAttestation(
   // Run the checks that happen before an indexed attestation is constructed.
   const attData = attestation.data;
   const attSlot = attData.slot;
+  const attIndex = attData.index;
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
 
+  const cachedAttData = attDataHash ? chain.seenAttestationDatas.get(attDataHash) : null;
+
   // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
-  if (targetEpoch !== attEpoch) {
+  if (!cachedAttData && targetEpoch !== attEpoch) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.BAD_TARGET_EPOCH,
     });
@@ -43,7 +50,9 @@ export async function validateGossipAttestation(
   // [IGNORE] attestation.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (within a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
   //  -- i.e. attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= attestation.data.slot
   // (a client MAY queue future attestations for processing at the appropriate slot).
-  verifyPropagationSlotRange(chain, attSlot);
+  if (!cachedAttData) {
+    verifyPropagationSlotRange(chain, attSlot);
+  }
 
   // [REJECT] The attestation is unaggregated -- that is, it has exactly one participating validator
   // (len([bit for bit in attestation.aggregation_bits if bit]) == 1, i.e. exactly 1 bit is set).
@@ -56,42 +65,49 @@ export async function validateGossipAttestation(
     });
   }
 
-  // Attestations must be for a known block. If the block is unknown, we simply drop the
-  // attestation and do not delay consideration for later.
-  //
-  // TODO (LH): Enforce a maximum skip distance for unaggregated attestations.
+  let committeeIndices: number[];
+  let attHeadState: CachedBeaconStateAllForks;
 
-  // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip
-  // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
-  const attHeadBlock = verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
+  if (cachedAttData) {
+    committeeIndices = cachedAttData.committeeIndices;
+    attHeadState = cachedAttData.state;
+  } else {
+    // Attestations must be for a known block. If the block is unknown, we simply drop the
+    // attestation and do not delay consideration for later.
+    //
+    // TODO (LH): Enforce a maximum skip distance for unaggregated attestations.
 
-  // [REJECT] The block being voted for (attestation.data.beacon_block_root) passes validation.
-  // > Altready check in `verifyHeadBlockAndTargetRoot()`
+    // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip
+    // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
+    const attHeadBlock = verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
 
-  // [IGNORE] The current finalized_checkpoint is an ancestor of the block defined by attestation.data.beacon_block_root
-  // -- i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
-  // > Altready check in `verifyHeadBlockAndTargetRoot()`
+    // [REJECT] The block being voted for (attestation.data.beacon_block_root) passes validation.
+    // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
-  // [REJECT] The attestation's target block is an ancestor of the block named in the LMD vote
-  //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) == attestation.data.target.root
-  // > Altready check in `verifyHeadBlockAndTargetRoot()`
+    // [IGNORE] The current finalized_checkpoint is an ancestor of the block defined by attestation.data.beacon_block_root
+    // -- i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
+    // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
-  // Using the target checkpoint state here caused unstable memory issue
-  // See https://github.com/ChainSafe/lodestar/issues/4896
-  // TODO: https://github.com/ChainSafe/lodestar/issues/4900
-  const attHeadState = await chain.regen
-    .getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAttestation)
-    .catch((e: Error) => {
-      throw new AttestationError(GossipAction.REJECT, {
-        code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
-        error: e as Error,
+    // [REJECT] The attestation's target block is an ancestor of the block named in the LMD vote
+    //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) == attestation.data.target.root
+    // > Altready check in `verifyHeadBlockAndTargetRoot()`
+
+    // Using the target checkpoint state here caused unstable memory issue
+    // See https://github.com/ChainSafe/lodestar/issues/4896
+    // TODO: https://github.com/ChainSafe/lodestar/issues/4900
+    attHeadState = await chain.regen
+      .getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAttestation)
+      .catch((e: Error) => {
+        throw new AttestationError(GossipAction.REJECT, {
+          code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
+          error: e as Error,
+        });
       });
-    });
 
-  // [REJECT] The committee index is within the expected range
-  // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
-  const attIndex = attData.index;
-  const committeeIndices = getCommitteeIndices(attHeadState, attSlot, attIndex);
+    // [REJECT] The committee index is within the expected range
+    // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
+    committeeIndices = getCommitteeIndices(attHeadState, attSlot, attIndex);
+  }
 
   const validatorIndex = committeeIndices[bitIndex];
 
@@ -113,13 +129,18 @@ export async function validateGossipAttestation(
   // -- i.e. compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index) == subnet_id,
   // where committees_per_slot = get_committee_count_per_slot(state, attestation.data.target.epoch),
   // which may be pre-computed along with the committee information for the signature check.
-  const expectedSubnet = attHeadState.epochCtx.computeSubnetForSlot(attSlot, attIndex);
-  if (subnet !== null && subnet !== expectedSubnet) {
-    throw new AttestationError(GossipAction.REJECT, {
-      code: AttestationErrorCode.INVALID_SUBNET_ID,
-      received: subnet,
-      expected: expectedSubnet,
-    });
+  let expectedSubnet: number;
+  if (cachedAttData) {
+    expectedSubnet = cachedAttData.subnet;
+  } else {
+    expectedSubnet = attHeadState.epochCtx.computeSubnetForSlot(attSlot, attIndex);
+    if (subnet !== null && subnet !== expectedSubnet) {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.INVALID_SUBNET_ID,
+        received: subnet,
+        expected: expectedSubnet,
+      });
+    }
   }
 
   // [IGNORE] There has been no other valid attestation seen on an attestation subnet that has an
@@ -138,7 +159,24 @@ export async function validateGossipAttestation(
     data: attData,
     signature: attestation.signature,
   };
-  const signatureSet = getIndexedAttestationSignatureSet(attHeadState, indexedAttestation);
+  let signatureSet: ISignatureSet;
+  if (cachedAttData) {
+    // there could be up to 6% of cpu time to compute signing root if we don't clone the signature set
+    signatureSet = cloneIndexedAttestationSignatureSet(attHeadState, indexedAttestation, cachedAttData.signatureSet);
+  } else {
+    signatureSet = getIndexedAttestationSignatureSet(attHeadState, indexedAttestation);
+  }
+
+  // add cached attestation data before verifying signature
+  if (attDataHash && !cachedAttData) {
+    chain.seenAttestationDatas.add(attDataHash, {
+      state: attHeadState,
+      committeeIndices,
+      signatureSet,
+      subnet: expectedSubnet,
+    });
+  }
+
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
   }

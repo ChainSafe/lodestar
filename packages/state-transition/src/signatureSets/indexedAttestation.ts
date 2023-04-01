@@ -27,6 +27,24 @@ export function getIndexedAttestationSignatureSet(
   return getAttestationWithIndicesSignatureSet(state, indexedAttestation, indexedAttestation.attestingIndices);
 }
 
+/**
+ * Create signature set for indexed attestation with same attestation data as another indexed attestation.
+ * Be careful with this function, it assume `signatureSetSameAttData` is from the same attestation data.
+ */
+export function cloneIndexedAttestationSignatureSet(
+  state: CachedBeaconStateAllForks,
+  indexedAttestation: phase0.IndexedAttestation,
+  signatureSetSameAttData: ISignatureSet
+): ISignatureSet {
+  const {epochCtx} = state;
+  return {
+    type: SignatureSetType.aggregate,
+    pubkeys: indexedAttestation.attestingIndices.map((i) => epochCtx.index2pubkey[i]),
+    signingRoot: signatureSetSameAttData.signingRoot,
+    signature: indexedAttestation.signature,
+  };
+}
+
 export function getAttestationsSignatureSets(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.SignedBeaconBlock

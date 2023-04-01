@@ -42,6 +42,7 @@ import {CheckpointBalancesCache} from "../../../../src/chain/balancesCache.js";
 import {IChainOptions} from "../../../../src/chain/options.js";
 import {BlockAttributes} from "../../../../src/chain/produceBlock/produceBlockBody.js";
 import {ReqRespBlockResponse} from "../../../../src/network/index.js";
+import {SeenAttestationDatas} from "../../../../src/chain/seenCache/seenAttestationData.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -96,6 +97,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof(null);
+  readonly seenAttestationDatas = new SeenAttestationDatas(0, null);
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
   readonly beaconProposerCache = new BeaconProposerCache({

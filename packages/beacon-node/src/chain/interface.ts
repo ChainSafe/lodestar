@@ -31,6 +31,7 @@ import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
+import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -83,6 +84,7 @@ export interface IBeaconChain {
   readonly seenBlockProposers: SeenBlockProposers;
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
+  readonly seenAttestationDatas: SeenAttestationDatas;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 

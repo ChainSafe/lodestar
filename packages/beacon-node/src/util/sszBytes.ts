@@ -2,6 +2,7 @@ import {RootHex, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 
 export type BlockRootHex = RootHex;
+export type AttDataHash = string;
 
 // class Attestation(Container):
 //   aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE] - offset 4
@@ -36,7 +37,7 @@ export function getBlockRootFromAttestationSerialized(data: Uint8Array): BlockRo
   return toHex(data.subarray(ATTESTATION_BEACON_BLOCK_ROOT_OFFSET, ATTESTATION_BEACON_BLOCK_ROOT_OFFSET + ROOT_SIZE));
 }
 
-export function getAttDataHashFromAttestationSerialized(data: Uint8Array): string {
+export function getAttDataHashFromAttestationSerialized(data: Uint8Array): AttDataHash {
   return Buffer.from(data.slice(ATTESTATION_SLOT_OFFSET, ATTESTATION_SLOT_OFFSET + 128)).toString("base64");
 }
 
@@ -58,7 +59,7 @@ export function getBlockRootFromSignedAggregateAndProofSerialized(data: Uint8Arr
   );
 }
 
-export function getAttDataHashFromSignedAggregateAndProofSerialized(data: Uint8Array): string {
+export function getAttDataHashFromSignedAggregateAndProofSerialized(data: Uint8Array): AttDataHash {
   return Buffer.from(
     data.slice(SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET, SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + 128)
   ).toString("base64");

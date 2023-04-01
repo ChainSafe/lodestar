@@ -5,12 +5,15 @@ import {Metrics} from "../../metrics/index.js";
 import {getGossipSSZType} from "../gossip/topic.js";
 import {GossipValidatorFn, GossipHandlers, GossipHandlerFn} from "../gossip/interface.js";
 import {GossipActionError, GossipAction} from "../../chain/errors/index.js";
+import {getGossipDataHashFns} from "./gossipDataHashFns.js";
 
 export type ValidatorFnModules = {
   config: ChainForkConfig;
   logger: Logger;
   metrics: Metrics | null;
 };
+
+const dataHashFns = getGossipDataHashFns();
 
 /**
  * Returns a GossipSub validator function from a GossipHandlerFn. GossipHandlerFn may throw GossipActionError if one
@@ -44,7 +47,19 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
         return TopicValidatorResult.Reject;
       }
 
-      await (gossipHandlers[topic.type] as GossipHandlerFn)(gossipObject, topic, propagationSource, seenTimestampSec);
+      let dataHash: string | undefined;
+      const dataHashFn = dataHashFns[type];
+      if (dataHashFn) {
+        dataHash = dataHashFn(msg.data);
+      }
+
+      await (gossipHandlers[type] as GossipHandlerFn)(
+        gossipObject,
+        topic,
+        propagationSource,
+        seenTimestampSec,
+        dataHash
+      );
 
       metrics?.gossipValidationAccept.inc({topic: type});
 

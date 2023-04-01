@@ -1152,6 +1152,24 @@ export function createLodestarMetrics(
           help: "Total times SeenContributionAndProof.isKnown returning true",
         }),
       },
+      attestationData: {
+        total: register.gauge({
+          name: "lodestar_seen_cache_attestation_data_total",
+          help: "Total number of attestation data in SeenAttestationData",
+        }),
+        hit: register.gauge({
+          name: "lodestar_seen_cache_attestation_data_hit_total",
+          help: "Total number of attestation data hit in SeenAttestationData",
+        }),
+        miss: register.gauge({
+          name: "lodestar_seen_cache_attestation_data_miss_total",
+          help: "Total number of attestation data miss in SeenAttestationData",
+        }),
+        reject: register.gauge({
+          name: "lodestar_seen_cache_attestation_data_reject_total",
+          help: "Total number of attestation data rejected in SeenAttestationData",
+        }),
+      },
     },
 
     regenFnCallTotal: register.gauge<"entrypoint" | "caller">({
