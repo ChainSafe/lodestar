@@ -29,18 +29,17 @@ export function getIndexedAttestationSignatureSet(
 }
 
 /**
- * Create signature set for indexed attestation with same attestation data as another indexed attestation.
- * Be careful with this function, it assume `signatureSetSameAttData` is from the same attestation data.
+ * Be careful with this function, it assume `signingRootSameAttData` is from the same attestation data.
  */
-export function cloneIndexedAttestationSignatureSet(
+export function getIndexedAttestationSignatureSetFromCache(
   index2pubkey: Index2PubkeyCache,
   indexedAttestation: phase0.IndexedAttestation,
-  signatureSetSameAttData: ISignatureSet
+  signingRootSameAttData: Uint8Array
 ): ISignatureSet {
   return {
     type: SignatureSetType.aggregate,
     pubkeys: indexedAttestation.attestingIndices.map((i) => index2pubkey[i]),
-    signingRoot: signatureSetSameAttData.signingRoot,
+    signingRoot: signingRootSameAttData,
     signature: indexedAttestation.signature,
   };
 }

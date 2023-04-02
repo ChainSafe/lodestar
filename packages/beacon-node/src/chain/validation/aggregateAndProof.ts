@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
-import {phase0, ssz, ValidatorIndex} from "@lodestar/types";
+import {phase0, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
 import {
   computeEpochAtSlot,
   isAggregatorFromCommitteeLength,
@@ -15,7 +15,11 @@ export async function validateGossipAggregateAndProof(
   chain: IBeaconChain,
   signedAggregateAndProof: phase0.SignedAggregateAndProof,
   skipValidationKnownAttesters = false
-): Promise<{indexedAttestation: phase0.IndexedAttestation; committeeIndices: ValidatorIndex[]}> {
+): Promise<{
+  indexedAttestation: phase0.IndexedAttestation;
+  committeeIndices: ValidatorIndex[];
+  attDataRootHex: RootHex;
+}> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot
@@ -27,7 +31,7 @@ export async function validateGossipAggregateAndProof(
   const aggregate = aggregateAndProof.aggregate;
   const {aggregationBits} = aggregate;
   const attData = aggregate.data;
-  const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
+  const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
   const attSlot = attData.slot;
   const attIndex = attData.index;
   const attEpoch = computeEpochAtSlot(attSlot);
@@ -59,12 +63,12 @@ export async function validateGossipAggregateAndProof(
   // is a non-strict superset has _not_ already been seen.
   if (
     !skipValidationKnownAttesters &&
-    chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRoot, aggregationBits)
+    chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRootHex, aggregationBits)
   ) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
       targetEpoch,
-      aggregateRoot: attDataRoot,
+      aggregateRoot: attDataRootHex,
     });
   }
 
@@ -145,10 +149,10 @@ export async function validateGossipAggregateAndProof(
   chain.seenAggregators.add(targetEpoch, aggregatorIndex);
   chain.seenAggregatedAttestations.add(
     targetEpoch,
-    attDataRoot,
+    attDataRootHex,
     {aggregationBits, trueBitCount: attestingIndices.length},
     false
   );
 
-  return {indexedAttestation, committeeIndices};
+  return {indexedAttestation, committeeIndices, attDataRootHex};
 }

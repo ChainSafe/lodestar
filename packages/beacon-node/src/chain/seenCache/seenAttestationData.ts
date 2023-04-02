@@ -1,21 +1,23 @@
-import {Index2PubkeyCache, ISignatureSet} from "@lodestar/state-transition";
-import {Slot} from "@lodestar/types";
+import {Index2PubkeyCache} from "@lodestar/state-transition";
+import {RootHex, Slot} from "@lodestar/types";
 import {Metrics} from "../../metrics/metrics.js";
 import {AttDataHash} from "../../util/sszBytes.js";
 
 export type AttestationDataCacheEntry = {
   // shared across application so this does not take memory
   index2pubkey: Index2PubkeyCache;
-  // shared with shuffling data, so this does not take memory
+  // part of shuffling data, so this does not take memory
   committeeIndices: number[];
-  signatureSet: ISignatureSet;
+  // IndexedAttestationData signing root, 32 bytes
+  signingRoot: Uint8Array;
+  // to be consumed by forkchoice
+  attDataRootHex: RootHex;
   subnet: number;
 };
 
 /**
  * There are maximum 64 committees per slot, asuming 1 committee may have up to 3 different data due to some nodes
  * are not up to date, we can have up to 192 different attestation data per slot.
- * TODO: check memory cost of this cache, do we need the state there?
  */
 const MAX_CACHE_SIZE = 200;
 

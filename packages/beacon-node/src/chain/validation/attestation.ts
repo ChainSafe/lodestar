@@ -1,4 +1,4 @@
-import {phase0, Epoch, Root, Slot} from "@lodestar/types";
+import {phase0, Epoch, Root, Slot, RootHex, ssz} from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
@@ -6,7 +6,7 @@ import {
   computeEpochAtSlot,
   CachedBeaconStateAllForks,
   getIndexedAttestationSignatureSet,
-  cloneIndexedAttestationSignatureSet,
+  getIndexedAttestationSignatureSetFromCache,
   ISignatureSet,
 } from "@lodestar/state-transition";
 import {IBeaconChain} from "..";
@@ -22,7 +22,7 @@ export async function validateGossipAttestation(
   subnet: number | null,
   // available for gossip attestations, null for api attestations
   attDataHash: string | null = null
-): Promise<{indexedAttestation: phase0.IndexedAttestation; subnet: number}> {
+): Promise<{indexedAttestation: phase0.IndexedAttestation; subnet: number; attDataRootHex: RootHex}> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot
@@ -166,21 +166,29 @@ export async function validateGossipAttestation(
   };
   let signatureSet: ISignatureSet;
   if (cachedAttDataOrAttHeadState.cachedAttData) {
-    const {index2pubkey, signatureSet: signatureSetToClone} = cachedAttDataOrAttHeadState.cachedAttData;
+    const {index2pubkey, signingRoot} = cachedAttDataOrAttHeadState.cachedAttData;
     // there could be up to 6% of cpu time to compute signing root if we don't clone the signature set
-    signatureSet = cloneIndexedAttestationSignatureSet(index2pubkey, indexedAttestation, signatureSetToClone);
+    signatureSet = getIndexedAttestationSignatureSetFromCache(index2pubkey, indexedAttestation, signingRoot);
   } else {
     signatureSet = getIndexedAttestationSignatureSet(cachedAttDataOrAttHeadState.attHeadState, indexedAttestation);
   }
 
   // add cached attestation data before verifying signature
-  if (attDataHash && !cachedAttDataOrAttHeadState.cachedAttData) {
-    chain.seenAttestationDatas.add(attDataHash, {
-      index2pubkey: cachedAttDataOrAttHeadState.attHeadState.epochCtx.index2pubkey,
-      committeeIndices,
-      signatureSet,
-      subnet: expectedSubnet,
-    });
+  let attDataRootHex: RootHex;
+  if (cachedAttDataOrAttHeadState.cachedAttData) {
+    attDataRootHex = cachedAttDataOrAttHeadState.cachedAttData.attDataRootHex;
+  } else {
+    attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
+    if (attDataHash) {
+      chain.seenAttestationDatas.add(attDataHash, {
+        index2pubkey: cachedAttDataOrAttHeadState.attHeadState.epochCtx.index2pubkey,
+        committeeIndices,
+        signingRoot: signatureSet.signingRoot,
+        subnet: expectedSubnet,
+        // precompute this to be used in forkchoice
+        attDataRootHex: toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData)),
+      });
+    }
   }
 
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
@@ -202,7 +210,7 @@ export async function validateGossipAttestation(
 
   chain.seenAttesters.add(targetEpoch, validatorIndex);
 
-  return {indexedAttestation, subnet: expectedSubnet};
+  return {indexedAttestation, subnet: expectedSubnet, attDataRootHex};
 }
 
 /**

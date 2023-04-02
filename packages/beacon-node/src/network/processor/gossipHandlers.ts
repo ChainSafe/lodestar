@@ -2,7 +2,7 @@ import {peerIdFromString} from "@libp2p/peer-id";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger, prettyBytes} from "@lodestar/utils";
-import {phase0, Root, Slot, ssz} from "@lodestar/types";
+import {phase0, Root, RootHex, Slot, ssz} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {Metrics} from "../../metrics/index.js";
 import {OpSource} from "../../metrics/validatorMonitor.js";
@@ -192,7 +192,11 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     },
 
     [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {
-      let validationResult: {indexedAttestation: phase0.IndexedAttestation; committeeIndices: number[]};
+      let validationResult: {
+        indexedAttestation: phase0.IndexedAttestation;
+        committeeIndices: number[];
+        attDataRootHex: RootHex;
+      };
       try {
         // If an attestation refers to a block root that's not known, it will wait for 1 slot max
         // See https://github.com/ChainSafe/lodestar/pull/3564 for reasoning and results
@@ -210,7 +214,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
 
       // Handler
-      const {indexedAttestation, committeeIndices} = validationResult;
+      const {indexedAttestation, committeeIndices, attDataRootHex} = validationResult;
       metrics?.registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation);
       const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
@@ -222,7 +226,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       if (!options.dontSendGossipAttestationsToForkchoice) {
         try {
-          chain.forkChoice.onAttestation(indexedAttestation);
+          chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
         } catch (e) {
           logger.debug(
             "Error adding gossip aggregated attestation to forkchoice",
@@ -234,7 +238,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     },
 
     [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec, dataHash) => {
-      let validationResult: {indexedAttestation: phase0.IndexedAttestation; subnet: number};
+      let validationResult: {indexedAttestation: phase0.IndexedAttestation; subnet: number; attDataRootHex: RootHex};
       try {
         // should not happen
         if (!dataHash) {
@@ -256,7 +260,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
 
       // Handler
-      const {indexedAttestation} = validationResult;
+      const {indexedAttestation, attDataRootHex} = validationResult;
       metrics?.registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation);
 
       try {
@@ -272,7 +276,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       if (!options.dontSendGossipAttestationsToForkchoice) {
         try {
-          chain.forkChoice.onAttestation(indexedAttestation);
+          chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
         } catch (e) {
           logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
         }

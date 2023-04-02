@@ -1,13 +1,12 @@
 import crypto from "node:crypto";
-import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
-import bls from "@chainsafe/bls";
+import {toHexString} from "@chainsafe/ssz";
 import {AttestationDataCacheEntry, SeenAttestationDatas} from "../../src/chain/seenCache/seenAttestationData.js";
 import {testRunnerMemory} from "./testRunnerMemory.js";
 
 /**
- * SeenAttestationDatas 64 keys  - 59686.7 bytes / instance
- * SeenAttestationDatas 128 keys - 119251.5 bytes / instance
- * SeenAttestationDatas 200 keys - 186071.2 bytes / instance
+ * SeenAttestationDatas 64 keys  - 88039.8 bytes / instance
+ * SeenAttestationDatas 128 keys - 177436.8 bytes / instance
+ * SeenAttestationDatas 200 keys - 276592.0 bytes / instance
  */
 testRunnerMemoryBpi([
   {
@@ -29,18 +28,12 @@ function getRandomSeenAttestationDatas(n: number): SeenAttestationDatas {
   for (let i = 0; i < n; i++) {
     const attDataBytes = crypto.randomBytes(128);
     const key = Buffer.from(attDataBytes).toString("base64");
-    const secretKey = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
-    const signatureSet = {
-      type: SignatureSetType.aggregate,
-      pubkeys: [secretKey.toPublicKey()],
-      signingRoot: crypto.randomBytes(32),
-      signature: crypto.randomBytes(96),
-    } as ISignatureSet;
     // skip index2pubkey and committeeIndices as they are shared
-    const attDataCacheEntry = {
-      signatureSet,
+    const attDataCacheEntry = ({
+      signingRoot: crypto.randomBytes(32),
+      attDataRootHex: toHexString(crypto.randomBytes(32)),
       subnet: i,
-    } as AttestationDataCacheEntry;
+    } as unknown) as AttestationDataCacheEntry;
     seenAttestationDatas.add(key, attDataCacheEntry);
   }
   return seenAttestationDatas;
