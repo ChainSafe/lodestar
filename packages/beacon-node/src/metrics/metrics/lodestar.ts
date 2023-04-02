@@ -1165,9 +1165,10 @@ export function createLodestarMetrics(
           name: "lodestar_seen_cache_attestation_data_miss_total",
           help: "Total number of attestation data miss in SeenAttestationData",
         }),
-        reject: register.gauge({
+        reject: register.gauge<"reason">({
           name: "lodestar_seen_cache_attestation_data_reject_total",
           help: "Total number of attestation data rejected in SeenAttestationData",
+          labelNames: ["reason"],
         }),
       },
     },

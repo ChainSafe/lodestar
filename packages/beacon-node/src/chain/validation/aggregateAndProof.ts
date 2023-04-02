@@ -23,8 +23,6 @@ export async function validateGossipAggregateAndProof(
   committeeIndices: ValidatorIndex[];
   attDataRootHex: RootHex;
 }> {
-  const cachedAttData = attDataHash ? chain.seenAttestationDatas.get(attDataHash) : null;
-
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot
@@ -36,10 +34,11 @@ export async function validateGossipAggregateAndProof(
   const aggregate = aggregateAndProof.aggregate;
   const {aggregationBits} = aggregate;
   const attData = aggregate.data;
+  const attSlot = attData.slot;
+  const cachedAttData = attDataHash ? chain.seenAttestationDatas.get(attSlot, attDataHash) : null;
   const attDataRootHex = cachedAttData
     ? cachedAttData.attDataRootHex
     : toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
-  const attSlot = attData.slot;
   const attIndex = attData.index;
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;

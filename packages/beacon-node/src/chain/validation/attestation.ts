@@ -39,7 +39,7 @@ export async function validateGossipAttestation(
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
 
-  const cachedAttData = attDataHash ? chain.seenAttestationDatas.get(attDataHash) : null;
+  const cachedAttData = attDataHash ? chain.seenAttestationDatas.get(attSlot, attDataHash) : null;
 
   // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
   if (!cachedAttData && targetEpoch !== attEpoch) {
@@ -180,7 +180,7 @@ export async function validateGossipAttestation(
   } else {
     attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
     if (attDataHash) {
-      chain.seenAttestationDatas.add(attDataHash, {
+      chain.seenAttestationDatas.add(attSlot, attDataHash, {
         index2pubkey: cachedAttDataOrAttHeadState.attHeadState.epochCtx.index2pubkey,
         committeeIndices,
         signingRoot: signatureSet.signingRoot,

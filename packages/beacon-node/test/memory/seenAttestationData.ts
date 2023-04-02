@@ -25,6 +25,7 @@ testRunnerMemoryBpi([
 
 function getRandomSeenAttestationDatas(n: number): SeenAttestationDatas {
   const seenAttestationDatas = new SeenAttestationDatas(0, null);
+  const slot = 1000;
   for (let i = 0; i < n; i++) {
     const attDataBytes = crypto.randomBytes(128);
     const key = Buffer.from(attDataBytes).toString("base64");
@@ -34,7 +35,7 @@ function getRandomSeenAttestationDatas(n: number): SeenAttestationDatas {
       attDataRootHex: toHexString(crypto.randomBytes(32)),
       subnet: i,
     } as unknown) as AttestationDataCacheEntry;
-    seenAttestationDatas.add(key, attDataCacheEntry);
+    seenAttestationDatas.add(slot, key, attDataCacheEntry);
   }
   return seenAttestationDatas;
 }

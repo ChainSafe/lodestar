@@ -197,7 +197,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
     this.seenContributionAndProof = new SeenContributionAndProof(metrics);
-    this.seenAttestationDatas = new SeenAttestationDatas(clock.currentSlot, metrics);
+    this.seenAttestationDatas = new SeenAttestationDatas(undefined, metrics);
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
     this.checkpointBalancesCache = new CheckpointBalancesCache();
