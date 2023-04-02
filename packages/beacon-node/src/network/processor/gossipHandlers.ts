@@ -191,19 +191,31 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
     },
 
-    [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {
+    [GossipType.beacon_aggregate_and_proof]: async (
+      signedAggregateAndProof,
+      _topic,
+      _peer,
+      seenTimestampSec,
+      attDataHash
+    ) => {
+      // should not happen
+      if (!attDataHash) {
+        throw new Error("Missing attestation data hash");
+      }
+
       let validationResult: {
         indexedAttestation: phase0.IndexedAttestation;
         committeeIndices: number[];
         attDataRootHex: RootHex;
       };
+
       try {
         // If an attestation refers to a block root that's not known, it will wait for 1 slot max
         // See https://github.com/ChainSafe/lodestar/pull/3564 for reasoning and results
         // Waiting here requires minimal code and automatically affects attestation, and aggregate validation
         // both from gossip and the API. I also prevents having to catch and re-throw in multiple places.
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        const validateFn = () => validateGossipAggregateAndProof(chain, signedAggregateAndProof);
+        const validateFn = () => validateGossipAggregateAndProof(chain, signedAggregateAndProof, false, attDataHash);
         const {slot, beaconBlockRoot} = signedAggregateAndProof.message.aggregate.data;
         validationResult = await validateGossipFnRetryUnknownRoot(validateFn, chain, slot, beaconBlockRoot);
       } catch (e) {
@@ -237,15 +249,15 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec, dataHash) => {
+    [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec, attDataHash) => {
       let validationResult: {indexedAttestation: phase0.IndexedAttestation; subnet: number; attDataRootHex: RootHex};
       try {
         // should not happen
-        if (!dataHash) {
+        if (!attDataHash) {
           throw new Error("Missing attestation data hash");
         }
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        const validateFn = () => validateGossipAttestation(chain, attestation, subnet, dataHash);
+        const validateFn = () => validateGossipAttestation(chain, attestation, subnet, attDataHash);
         const {slot, beaconBlockRoot} = attestation.data;
         // If an attestation refers to a block root that's not known, it will wait for 1 slot max
         // See https://github.com/ChainSafe/lodestar/pull/3564 for reasoning and results
