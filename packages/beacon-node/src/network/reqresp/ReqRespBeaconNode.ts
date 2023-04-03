@@ -5,7 +5,6 @@ import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   collectExactOne,
   collectMaxResponse,
-  DuplexProtocolDefinition,
   EncodedPayload,
   EncodedPayloadType,
   Encoding,
@@ -36,7 +35,7 @@ export {IReqRespBeaconNode};
 export type ReqRespBlockResponse = EncodedPayload<allForks.SignedBeaconBlock>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ProtocolDefinitionAny = DuplexProtocolDefinition<any, any>;
+type ProtocolDefinitionAny = ProtocolDefinition<any, any>;
 
 export interface ReqRespBeaconNodeModules {
   libp2p: Libp2p;
@@ -290,7 +289,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   private getProtocolsAtFork(fork: ForkName): ProtocolDefinitionAny[] {
     const modules = {config: this.config};
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const protocols: DuplexProtocolDefinition<any, any>[] = [
+    const protocols: ProtocolDefinition<any, any>[] = [
       reqRespProtocols.Ping(this.onPing.bind(this)),
       reqRespProtocols.Status(modules, this.onStatus.bind(this)),
       reqRespProtocols.Goodbye(modules, this.onGoodbye.bind(this)),
