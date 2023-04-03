@@ -186,6 +186,7 @@ export async function validateGossipAttestation(
         signingRoot: signatureSet.signingRoot,
         subnet: expectedSubnet,
         // precompute this to be used in forkchoice
+        // root of AttestationData was already cached during getIndexedAttestationSignatureSet
         attDataRootHex: toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData)),
       });
     }
