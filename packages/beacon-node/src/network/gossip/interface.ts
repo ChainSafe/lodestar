@@ -166,7 +166,7 @@ export type GossipHandlerFn = (
   topic: GossipTopicMap[GossipType],
   peerIdStr: string,
   seenTimestampSec: number,
-  dataHash?: string
+  gossipSerializedData: Uint8Array
 ) => Promise<void>;
 export type GossipHandlers = {
   [K in GossipType]: (
@@ -174,12 +174,8 @@ export type GossipHandlers = {
     topic: GossipTopicMap[K],
     peerIdStr: string,
     seenTimestampSec: number,
-    dataHash?: string
+    gossipSerializedData: Uint8Array
   ) => Promise<void>;
-};
-
-export type GossipDataHashFns = {
-  [K in GossipType]?: (serializedData: Uint8Array) => string;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

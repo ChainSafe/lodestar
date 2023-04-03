@@ -198,13 +198,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       _topic,
       _peer,
       seenTimestampSec,
-      attDataHash
+      gossipSerializedData
     ) => {
-      // should not happen
-      if (!attDataHash) {
-        throw new Error("Missing attestation data hash");
-      }
-
       let validationResult: AggregateAndProofValidationResult;
 
       try {
@@ -213,7 +208,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         // Waiting here requires minimal code and automatically affects attestation, and aggregate validation
         // both from gossip and the API. I also prevents having to catch and re-throw in multiple places.
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        const validateFn = () => validateGossipAggregateAndProof(chain, signedAggregateAndProof, false, attDataHash);
+        const validateFn = () =>
+          validateGossipAggregateAndProof(chain, signedAggregateAndProof, false, gossipSerializedData);
         const {slot, beaconBlockRoot} = signedAggregateAndProof.message.aggregate.data;
         validationResult = await validateGossipFnRetryUnknownRoot(validateFn, chain, slot, beaconBlockRoot);
       } catch (e) {
@@ -248,15 +244,11 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec, attDataHash) => {
+    [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec, gossipSerializedData) => {
       let validationResult: AttestationValidationResult;
       try {
-        // should not happen
-        if (!attDataHash) {
-          throw new Error("Missing attestation data hash");
-        }
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        const validateFn = () => validateGossipAttestation(chain, attestation, subnet, attDataHash);
+        const validateFn = () => validateGossipAttestation(chain, attestation, subnet, gossipSerializedData);
         const {slot, beaconBlockRoot} = attestation.data;
         // If an attestation refers to a block root that's not known, it will wait for 1 slot max
         // See https://github.com/ChainSafe/lodestar/pull/3564 for reasoning and results

@@ -10,6 +10,7 @@ import {
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
+import {getAttDataHashFromSignedAggregateAndProofSerialized} from "../../util/sszBytes.js";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";
 import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation.js";
 
@@ -23,8 +24,11 @@ export async function validateGossipAggregateAndProof(
   chain: IBeaconChain,
   signedAggregateAndProof: phase0.SignedAggregateAndProof,
   skipValidationKnownAttesters = false,
-  attDataHash: string | null = null
+  gossipSerializedData: Uint8Array | null = null
 ): Promise<AggregateAndProofValidationResult> {
+  const attDataHash = gossipSerializedData
+    ? getAttDataHashFromSignedAggregateAndProofSerialized(gossipSerializedData)
+    : null;
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot

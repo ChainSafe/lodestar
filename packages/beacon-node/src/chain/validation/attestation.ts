@@ -14,6 +14,7 @@ import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/in
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
+import {getAttDataHashFromAttestationSerialized} from "../../util/sszBytes.js";
 
 export type AttestationValidationResult = {
   indexedAttestation: phase0.IndexedAttestation;
@@ -27,8 +28,9 @@ export async function validateGossipAttestation(
   /** Optional, to allow verifying attestations through API with unknown subnet */
   subnet: number | null,
   // available for gossip attestations, null for api attestations
-  attDataHash: string | null = null
+  gossipSerializedData: Uint8Array | null = null
 ): Promise<AttestationValidationResult> {
+  const attDataHash = gossipSerializedData ? getAttDataHashFromAttestationSerialized(gossipSerializedData) : null;
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot
