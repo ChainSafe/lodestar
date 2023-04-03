@@ -1,9 +1,9 @@
 import {MAX_REQUEST_BLOCKS} from "@lodestar/params";
 import {deneb, ssz} from "@lodestar/types";
-import {ContextBytesType, Encoding, ProtocolDefinitionGenerator} from "../types.js";
+import {ContextBytesType, DuplexProtocolDefinitionGenerator, Encoding} from "../types.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const BlobsSidecarsByRange: ProtocolDefinitionGenerator<
+export const BlobsSidecarsByRange: DuplexProtocolDefinitionGenerator<
   deneb.BlobsSidecarsByRangeRequest,
   deneb.BlobsSidecar
 > = (modules, handler) => {

@@ -5,7 +5,7 @@ import {allForks, altair, phase0, ssz} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as messagesDef from "../../src/protocols/index.js";
-import {EncodedPayloadType, ProtocolDefinition, TypeSerializer} from "../../src/types.js";
+import {EncodedPayloadType, MixedProtocolDefinition, ReqRespHandler, TypeSerializer} from "../../src/types.js";
 import {ZERO_HASH} from "../utils/index.js";
 
 type MessageFixture<T> = {
@@ -128,19 +128,19 @@ const getEmptyHandler = <T = unknown>() => async function* emptyHandler(): Async
 export const getAllMessages = (
   modules: {config: BeaconConfig} = {config: createBeaconConfig(chainConfig, ZERO_HASH)}
 ): {
-  ping: ProtocolDefinition<phase0.Ping, phase0.Ping>;
-  goodbye: ProtocolDefinition<phase0.Goodbye, phase0.Goodbye>;
-  metadata: ProtocolDefinition<null, allForks.Metadata>;
-  status: ProtocolDefinition<phase0.Status, phase0.Status>;
-  blocksByRange: ProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
-  blocksByRangeV2: ProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
-  blocksByRoot: ProtocolDefinition<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
-  blocksByRootV2: ProtocolDefinition<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
+  ping: MixedProtocolDefinition<phase0.Ping, phase0.Ping>;
+  goodbye: MixedProtocolDefinition<phase0.Goodbye, phase0.Goodbye>;
+  metadata: MixedProtocolDefinition<null, allForks.Metadata>;
+  status: MixedProtocolDefinition<phase0.Status, phase0.Status>;
+  blocksByRange: MixedProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
+  blocksByRangeV2: MixedProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
+  blocksByRoot: MixedProtocolDefinition<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
+  blocksByRootV2: MixedProtocolDefinition<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
 } => ({
   ping: messagesDef.Ping(getEmptyHandler()),
   goodbye: messagesDef.Goodbye(modules, getEmptyHandler()),
   metadata: messagesDef.Metadata(modules, getEmptyHandler()),
-  status: messagesDef.Status(modules, getEmptyHandler()),
+  status: messagesDef.Status(modules, getEmptyHandler() as ReqRespHandler<phase0.Status, phase0.Status>),
   blocksByRange: messagesDef.BeaconBlocksByRange(modules, getEmptyHandler()),
   blocksByRangeV2: messagesDef.BeaconBlocksByRangeV2(modules, getEmptyHandler()),
   blocksByRoot: messagesDef.BeaconBlocksByRoot(modules, getEmptyHandler()),
