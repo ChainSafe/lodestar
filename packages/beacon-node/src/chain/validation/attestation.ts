@@ -15,6 +15,12 @@ import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
 
+export type AttestationValidationResult = {
+  indexedAttestation: phase0.IndexedAttestation;
+  subnet: number;
+  attDataRootHex: RootHex;
+};
+
 export async function validateGossipAttestation(
   chain: IBeaconChain,
   attestation: phase0.Attestation,
@@ -22,7 +28,7 @@ export async function validateGossipAttestation(
   subnet: number | null,
   // available for gossip attestations, null for api attestations
   attDataHash: string | null = null
-): Promise<{indexedAttestation: phase0.IndexedAttestation; subnet: number; attDataRootHex: RootHex}> {
+): Promise<AttestationValidationResult> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot
@@ -187,7 +193,7 @@ export async function validateGossipAttestation(
         subnet: expectedSubnet,
         // precompute this to be used in forkchoice
         // root of AttestationData was already cached during getIndexedAttestationSignatureSet
-        attDataRootHex: toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData)),
+        attDataRootHex,
       });
     }
   }

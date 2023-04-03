@@ -2,7 +2,7 @@ import {peerIdFromString} from "@libp2p/peer-id";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger, prettyBytes} from "@lodestar/utils";
-import {phase0, Root, RootHex, Slot, ssz} from "@lodestar/types";
+import {Root, Slot, ssz} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {Metrics} from "../../metrics/index.js";
 import {OpSource} from "../../metrics/validatorMonitor.js";
@@ -28,6 +28,8 @@ import {
   validateSyncCommitteeGossipContributionAndProof,
   validateGossipVoluntaryExit,
   validateBlsToExecutionChange,
+  AttestationValidationResult,
+  AggregateAndProofValidationResult,
 } from "../../chain/validation/index.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {PeerAction, PeerRpcScoreStore} from "../peers/index.js";
@@ -203,11 +205,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         throw new Error("Missing attestation data hash");
       }
 
-      let validationResult: {
-        indexedAttestation: phase0.IndexedAttestation;
-        committeeIndices: number[];
-        attDataRootHex: RootHex;
-      };
+      let validationResult: AggregateAndProofValidationResult;
 
       try {
         // If an attestation refers to a block root that's not known, it will wait for 1 slot max
@@ -250,7 +248,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     },
 
     [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec, attDataHash) => {
-      let validationResult: {indexedAttestation: phase0.IndexedAttestation; subnet: number; attDataRootHex: RootHex};
+      let validationResult: AttestationValidationResult;
       try {
         // should not happen
         if (!attDataHash) {

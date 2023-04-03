@@ -27,7 +27,7 @@ enum RejectReason {
 }
 
 /**
- * There are maximum 64 committees per slot, asuming 1 committee may have up to 3 different data due to some nodes
+ * There are maximum 64 committees per slot, assuming 1 committee may have up to 3 different data due to some nodes
  * are not up to date, we can have up to 192 different attestation data per slot.
  */
 const DEFAULT_MAX_CACHE_SIZE_PER_SLOT = 200;

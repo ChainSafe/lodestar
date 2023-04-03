@@ -13,16 +13,18 @@ import {RegenCaller} from "../regen/index.js";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";
 import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation.js";
 
+export type AggregateAndProofValidationResult = {
+  indexedAttestation: phase0.IndexedAttestation;
+  committeeIndices: ValidatorIndex[];
+  attDataRootHex: RootHex;
+};
+
 export async function validateGossipAggregateAndProof(
   chain: IBeaconChain,
   signedAggregateAndProof: phase0.SignedAggregateAndProof,
   skipValidationKnownAttesters = false,
   attDataHash: string | null = null
-): Promise<{
-  indexedAttestation: phase0.IndexedAttestation;
-  committeeIndices: ValidatorIndex[];
-  attDataRootHex: RootHex;
-}> {
+): Promise<AggregateAndProofValidationResult> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot
