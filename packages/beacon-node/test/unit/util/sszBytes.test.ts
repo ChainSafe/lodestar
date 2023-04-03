@@ -4,6 +4,7 @@ import {fromHex, toHex} from "@lodestar/utils";
 import {
   getAttDataBase64FromAttestationSerialized,
   getAttDataBase64FromSignedAggregateAndProofSerialized,
+  getAggregateionBitsFromAttestationSerialized,
   getBlockRootFromAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromAttestationSerialized,
@@ -27,6 +28,9 @@ describe("attestation SSZ serialized picking", () => {
 
       expect(getSlotFromAttestationSerialized(bytes)).equals(attestation.data.slot);
       expect(getBlockRootFromAttestationSerialized(bytes)).equals(toHex(attestation.data.beaconBlockRoot));
+      expect(getAggregateionBitsFromAttestationSerialized(bytes).toBoolArray()).to.be.deep.equals(
+        attestation.aggregationBits.toBoolArray()
+      );
 
       const attDataBase64 = ssz.phase0.AttestationData.serialize(attestation.data);
       expect(getAttDataBase64FromAttestationSerialized(bytes)).to.be.equal(
