@@ -230,6 +230,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       chain.aggregatedAttestationPool.add(
         aggregatedAttestation,
+        attDataRootHex,
         indexedAttestation.attestingIndices.length,
         committeeIndices
       );
@@ -277,7 +278,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
         // but don't add to attestation pool, to save CPU and RAM
         if (attnetsService.shouldProcess(subnet, attestation.data.slot)) {
-          const insertOutcome = chain.attestationPool.add(attestation);
+          const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
           metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
         }
       } catch (e) {

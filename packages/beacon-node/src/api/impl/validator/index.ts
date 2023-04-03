@@ -544,7 +544,7 @@ export function getValidatorApi({
             // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
-            const {indexedAttestation, committeeIndices} = await validateGossipFnRetryUnknownRoot(
+            const {indexedAttestation, committeeIndices, attDataRootHex} = await validateGossipFnRetryUnknownRoot(
               validateFn,
               chain,
               slot,
@@ -553,6 +553,7 @@ export function getValidatorApi({
 
             chain.aggregatedAttestationPool.add(
               signedAggregateAndProof.message.aggregate,
+              attDataRootHex,
               indexedAttestation.attestingIndices.length,
               committeeIndices
             );
