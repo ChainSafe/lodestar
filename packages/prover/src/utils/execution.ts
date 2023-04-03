@@ -3,6 +3,7 @@ import {Trie} from "@ethereumjs/trie";
 import {Account} from "@ethereumjs/util";
 import {keccak256} from "ethereum-cryptography/keccak.js";
 import {Bytes32} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
 import {ethGetBalance} from "../verified_requests/eth_getBalance.js";
 import {ELRequestPayload, ELResponse, ELProof, ELStorageProof, HexString} from "../types.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
@@ -19,20 +20,23 @@ export async function processAndVerifyRequest({
   payload,
   handler,
   proofProvider,
+  logger,
 }: {
   payload: ELRequestPayload;
   handler: ELRequestMethod;
   proofProvider: ProofProvider;
+  logger: Logger;
 }): Promise<ELResponse | undefined> {
   await proofProvider.waitToBeReady();
+  logger.debug("Processing request", {method: payload.method, params: JSON.stringify(payload.params)});
   const verifiedHandler = supportedELRequests[payload.method];
 
   if (verifiedHandler !== undefined) {
-    return verifiedHandler({payload, handler, rootProvider: proofProvider});
+    logger.verbose("Verified request handler found", {method: payload.method});
+    return verifiedHandler({payload, handler, proofProvider, logger});
   }
 
-  // eslint-disable-next-line no-console
-  console.warn(`Request handler for ${payload.method} is not implemented.`);
+  logger.warn("Verified request handler not found. Falling back to proxy.", {method: payload.method});
   return handler(payload);
 }
 

@@ -1,5 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {NetworkName} from "@lodestar/config/networks";
+import {Logger, LogLevel} from "@lodestar/utils";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "./types.js";
 
@@ -11,9 +12,10 @@ export enum LCTransport {
 export type RootProviderInitOptions = {
   network: NetworkName;
   signal: AbortSignal;
+  logger: Logger;
   config?: ChainForkConfig;
   wsCheckpoint?: string;
-} & ({transport: LCTransport.Rest; urls: string[]} | {transport: LCTransport.P2P; bootnodes: string[]});
+} & ConsensusNodeOptions;
 
 export type ELRequestMethod = (payload: ELRequestPayload) => Promise<ELResponse | undefined>;
 
@@ -47,5 +49,14 @@ export type Web3Provider = SendProvider | EthersProvider | SendAsyncProvider | R
 export type ELVerifiedRequestHandler<A = unknown, R = unknown> = (opts: {
   payload: ELRequestPayload<A>;
   handler: ELRequestMethod;
-  rootProvider: ProofProvider;
+  proofProvider: ProofProvider;
+  logger: Logger;
 }) => Promise<ELResponse<R>>;
+
+// Either a logger is provided by user or user specify a log level
+// If both are skipped then we don't log anything (useful for browser plugins)
+export type LogOptions = {logger?: Logger; logLevel?: never} | {logLevel?: LogLevel; logger?: never};
+
+export type ConsensusNodeOptions =
+  | {transport: LCTransport.Rest; urls: string[]}
+  | {transport: LCTransport.P2P; bootnodes: string[]};
