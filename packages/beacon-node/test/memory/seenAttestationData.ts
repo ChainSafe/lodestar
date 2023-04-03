@@ -24,7 +24,7 @@ testRunnerMemoryBpi([
 ]);
 
 function getRandomSeenAttestationDatas(n: number): SeenAttestationDatas {
-  const seenAttestationDatas = new SeenAttestationDatas(0, null);
+  const seenAttestationDatas = new SeenAttestationDatas(null);
   const slot = 1000;
   for (let i = 0; i < n; i++) {
     const attDataBytes = crypto.randomBytes(128);

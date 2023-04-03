@@ -97,7 +97,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof(null);
-  readonly seenAttestationDatas = new SeenAttestationDatas(0, null);
+  readonly seenAttestationDatas = new SeenAttestationDatas(null);
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
   readonly beaconProposerCache = new BeaconProposerCache({

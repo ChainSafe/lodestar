@@ -1153,9 +1153,13 @@ export function createLodestarMetrics(
         }),
       },
       attestationData: {
-        total: register.gauge({
-          name: "lodestar_seen_cache_attestation_data_total",
-          help: "Total number of attestation data in SeenAttestationData",
+        totalSlot: register.gauge({
+          name: "lodestar_seen_cache_attestation_data_slot_total",
+          help: "Total number of slots of attestation data in SeenAttestationData",
+        }),
+        countPerSlot: register.gauge({
+          name: "lodestar_seen_cache_attestation_data_per_slot_total",
+          help: "Total number of attestation data per slot in SeenAttestationData",
         }),
         hit: register.gauge({
           name: "lodestar_seen_cache_attestation_data_hit_total",
