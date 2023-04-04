@@ -3,7 +3,12 @@ import sinon from "sinon";
 import {CompositeTypeAny, toHexString, TreeView} from "@chainsafe/ssz";
 import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64, RootHex, deneb, Wei} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
-import {BeaconStateAllForks, CachedBeaconStateAllForks, Index2PubkeyCache, PubkeyIndexMap} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  Index2PubkeyCache,
+  PubkeyIndexMap,
+} from "@lodestar/state-transition";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus, AncestorStatus} from "@lodestar/fork-choice";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {Logger} from "@lodestar/utils";
