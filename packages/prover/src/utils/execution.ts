@@ -4,17 +4,22 @@ import {Account} from "@ethereumjs/util";
 import {keccak256} from "ethereum-cryptography/keccak.js";
 import {Bytes32} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {ethGetBalance} from "../verified_requests/eth_getBalance.js";
-import {ELRequestPayload, ELResponse, ELProof, ELStorageProof, HexString} from "../types.js";
+import {ELRequestHandler, ELVerifiedRequestHandler} from "../interfaces.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
-import {ELRequestMethod, ELVerifiedRequestHandler} from "../interfaces.js";
+import {ELProof, ELRequestPayload, ELResponse, ELStorageProof, HexString} from "../types.js";
+import {eth_getBalance} from "../verified_requests/eth_getBalance.js";
+import {eth_getTransactionCount} from "../verified_requests/eth_getTransactionCount.js";
 import {hexToBuffer, padLeft} from "./conversion.js";
 
 const emptyAccountSerialize = new Account().serialize();
 const storageKeyLength = 32;
 
-// eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any
-const supportedELRequests: Record<string, ELVerifiedRequestHandler<any, any>> = {eth_getBalance: ethGetBalance};
+/* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
+const supportedELRequests: Record<string, ELVerifiedRequestHandler<any, any>> = {
+  eth_getBalance: eth_getBalance,
+  eth_getTransactionCount: eth_getTransactionCount,
+};
+/* eslint-enable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any*/
 
 export async function processAndVerifyRequest({
   payload,
@@ -23,7 +28,7 @@ export async function processAndVerifyRequest({
   logger,
 }: {
   payload: ELRequestPayload;
-  handler: ELRequestMethod;
+  handler: ELRequestHandler;
   proofProvider: ProofProvider;
   logger: Logger;
 }): Promise<ELResponse | undefined> {
@@ -41,7 +46,7 @@ export async function processAndVerifyRequest({
 }
 
 export async function getELProof(
-  handler: ELRequestMethod,
+  handler: ELRequestHandler,
   args: [address: string, storageKeys: string[], block: number | string]
 ): Promise<ELProof> {
   // TODO: Find better way to generate random id
@@ -69,20 +74,26 @@ export async function isValidAccount({
   const trie = await Trie.create();
   const key = keccak256(hexToBuffer(address));
 
-  const expectedAccountRLP = await trie.verifyProof(
-    Buffer.from(stateRoot),
-    Buffer.from(key),
-    proof.accountProof.map(hexToBuffer)
-  );
+  try {
+    const expectedAccountRLP = await trie.verifyProof(
+      Buffer.from(stateRoot),
+      Buffer.from(key),
+      proof.accountProof.map(hexToBuffer)
+    );
 
-  // Shresth Agrawal (2022) Patronum source code. https://github.com/lightclients/patronum
-  const account = Account.fromAccountData({
-    nonce: BigInt(proof.nonce),
-    balance: BigInt(proof.balance),
-    storageRoot: proof.storageHash,
-    codeHash: proof.codeHash,
-  });
-  return account.serialize().equals(expectedAccountRLP ? expectedAccountRLP : emptyAccountSerialize);
+    // Shresth Agrawal (2022) Patronum source code. https://github.com/lightclients/patronum
+    const account = Account.fromAccountData({
+      nonce: BigInt(proof.nonce),
+      balance: BigInt(proof.balance),
+      storageRoot: proof.storageHash,
+      codeHash: proof.codeHash,
+    });
+    return account.serialize().equals(expectedAccountRLP ? expectedAccountRLP : emptyAccountSerialize);
+  } catch (err) {
+    if ((err as Error).message === "Invalid proof provided") return false;
+
+    throw err;
+  }
 }
 
 export async function isValidStorageKeys({
@@ -97,15 +108,22 @@ export async function isValidStorageKeys({
   for (let i = 0; i < storageKeys.length; i++) {
     const sp = proof.storageProof[i];
     const key = keccak256(padLeft(hexToBuffer(storageKeys[i]), storageKeyLength));
-    const expectedStorageRLP = await trie.verifyProof(
-      hexToBuffer(proof.storageHash),
-      Buffer.from(key),
-      sp.proof.map(hexToBuffer)
-    );
-    const isStorageValid =
-      (!expectedStorageRLP && sp.value === "0x0") ||
-      (!!expectedStorageRLP && expectedStorageRLP.equals(RLP.encode(sp.value)));
-    if (!isStorageValid) return false;
+    try {
+      const expectedStorageRLP = await trie.verifyProof(
+        hexToBuffer(proof.storageHash),
+        Buffer.from(key),
+        sp.proof.map(hexToBuffer)
+      );
+
+      const isStorageValid =
+        (!expectedStorageRLP && sp.value === "0x0") ||
+        (!!expectedStorageRLP && expectedStorageRLP.equals(RLP.encode(sp.value)));
+      if (!isStorageValid) return false;
+    } catch (err) {
+      if ((err as Error).message === "Invalid proof provided") return false;
+
+      throw err;
+    }
   }
 
   return true;

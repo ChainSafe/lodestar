@@ -4,12 +4,10 @@ import {getELProof, isValidAccount, isValidStorageKeys} from "../utils/execution
 import {generateRPCResponseForPayload, generateUnverifiedResponseForPayload} from "../utils/json_rpc.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const eth_getBalance: ELVerifiedRequestHandler<[address: string, block?: number | string], string> = async ({
-  handler,
-  payload,
-  logger,
-  proofProvider,
-}) => {
+export const eth_getTransactionCount: ELVerifiedRequestHandler<
+  [address: string, block?: number | string],
+  string
+> = async ({handler, payload, logger, proofProvider}) => {
   const {
     params: [address, block],
   } = payload;
@@ -24,9 +22,9 @@ export const eth_getBalance: ELVerifiedRequestHandler<[address: string, block?: 
     })) &&
     (await isValidStorageKeys({storageKeys: [], proof}))
   ) {
-    return generateRPCResponseForPayload(payload, proof.balance);
+    return generateRPCResponseForPayload(payload, proof.nonce);
   }
 
   logger.error("Request could not be verified.");
-  return generateUnverifiedResponseForPayload(payload, "eth_getBalance request can not be verified.");
+  return generateUnverifiedResponseForPayload(payload, "eth_getTransactionCount request can not be verified.");
 };
