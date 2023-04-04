@@ -6,10 +6,10 @@ import {NetworkName} from "@lodestar/config/networks";
 import {ConsensusNodeOptions, LogOptions} from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "./types.js";
-import {processAndVerifyRequest} from "./utils/execution.js";
 import {generateRPCResponseForPayload} from "./utils/json_rpc.js";
 import {getLogger} from "./utils/logger.js";
 import {fetchRequestPayload, fetchResponseBody} from "./utils/req_resp.js";
+import {processAndVerifyRequest} from "./utils/process.js";
 
 export type VerifiedProxyOptions = {
   network: NetworkName;
