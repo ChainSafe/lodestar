@@ -113,7 +113,6 @@ export class BeaconChain implements IBeaconChain {
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
   readonly blockProposerIndices = new Map<Uint8Array, ValidatorIndex>();
-  readonly missedBlocks: Map<ValidatorIndex, Slot> = new Map<ValidatorIndex, Slot>();
 
   // Global state caches
   readonly pubkey2index: PubkeyIndexMap;
