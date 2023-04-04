@@ -36,3 +36,29 @@ export function verifySignatureSet(signatureSet: ISignatureSet): boolean {
       throw Error("Unknown signature set type");
   }
 }
+
+export function createSingleSignatureSetFromComponents(
+  pubkey: PublicKey,
+  signingRoot: Root,
+  signature: Uint8Array
+): ISignatureSet {
+  return {
+    type: SignatureSetType.single,
+    pubkey,
+    signingRoot,
+    signature,
+  };
+}
+
+export function createAggregateSignatureSetFromComponents(
+  pubkeys: PublicKey[],
+  signingRoot: Root,
+  signature: Uint8Array
+): ISignatureSet {
+  return {
+    type: SignatureSetType.aggregate,
+    pubkeys,
+    signingRoot,
+    signature,
+  };
+}

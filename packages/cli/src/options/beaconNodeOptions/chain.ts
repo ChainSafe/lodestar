@@ -13,6 +13,7 @@ export type ChainArgs = {
   "chain.proposerBoostEnabled": boolean;
   "chain.disableImportExecutionFcU": boolean;
   "chain.preaggregateSlotDistance": number;
+  "chain.attDataCacheSlotDistance": number;
   "chain.computeUnrealized": boolean;
   "chain.assertCorrectProgressiveBalances": boolean;
   "chain.maxSkipSlots": number;
@@ -33,6 +34,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     proposerBoostEnabled: args["chain.proposerBoostEnabled"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
+    attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
     computeUnrealized: args["chain.computeUnrealized"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
@@ -110,6 +112,13 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "number",
     description: "Only preaggregate attestations or sync committee message since clockSlot - preaggregateSlotDistance",
+    group: "chain",
+  },
+
+  "chain.attDataCacheSlotDistance": {
+    hidden: true,
+    type: "number",
+    description: "Only cache AttestationData since clockSlot - attDataCacheSlotDistance",
     group: "chain",
   },
 

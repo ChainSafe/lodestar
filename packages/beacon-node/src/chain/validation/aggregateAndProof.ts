@@ -1,21 +1,31 @@
 import {toHexString} from "@chainsafe/ssz";
-import {phase0, ssz, ValidatorIndex} from "@lodestar/types";
+import {phase0, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
 import {
   computeEpochAtSlot,
   isAggregatorFromCommitteeLength,
   getIndexedAttestationSignatureSet,
+  ISignatureSet,
+  createAggregateSignatureSetFromComponents,
 } from "@lodestar/state-transition";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
+import {getAttDataHashFromSignedAggregateAndProofSerialized} from "../../util/sszBytes.js";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";
 import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation.js";
+
+export type AggregateAndProofValidationResult = {
+  indexedAttestation: phase0.IndexedAttestation;
+  committeeIndices: ValidatorIndex[];
+  attDataRootHex: RootHex;
+};
 
 export async function validateGossipAggregateAndProof(
   chain: IBeaconChain,
   signedAggregateAndProof: phase0.SignedAggregateAndProof,
-  skipValidationKnownAttesters = false
-): Promise<{indexedAttestation: phase0.IndexedAttestation; committeeIndices: ValidatorIndex[]}> {
+  skipValidationKnownAttesters = false,
+  serializedData: Uint8Array | null = null
+): Promise<AggregateAndProofValidationResult> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot
@@ -27,22 +37,27 @@ export async function validateGossipAggregateAndProof(
   const aggregate = aggregateAndProof.aggregate;
   const {aggregationBits} = aggregate;
   const attData = aggregate.data;
-  const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
   const attSlot = attData.slot;
+
+  const attDataHash = serializedData ? getAttDataHashFromSignedAggregateAndProofSerialized(serializedData) : null;
+  const cachedAttData = attDataHash ? chain.seenAttestationDatas.get(attSlot, attDataHash) : null;
+
   const attIndex = attData.index;
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
 
-  // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
-  if (targetEpoch !== attEpoch) {
-    throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.BAD_TARGET_EPOCH});
-  }
+  if (!cachedAttData) {
+    // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
+    if (targetEpoch !== attEpoch) {
+      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.BAD_TARGET_EPOCH});
+    }
 
-  // [IGNORE] aggregate.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
-  // -- i.e. aggregate.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= aggregate.data.slot
-  // (a client MAY queue future aggregates for processing at the appropriate slot).
-  verifyPropagationSlotRange(chain, attSlot);
+    // [IGNORE] aggregate.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+    // -- i.e. aggregate.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= aggregate.data.slot
+    // (a client MAY queue future aggregates for processing at the appropriate slot).
+    verifyPropagationSlotRange(chain, attSlot);
+  }
 
   // [IGNORE] The aggregate is the first valid aggregate received for the aggregator with
   // index aggregate_and_proof.aggregator_index for the epoch aggregate.data.target.epoch.
@@ -57,14 +72,17 @@ export async function validateGossipAggregateAndProof(
 
   // _[IGNORE]_ A valid aggregate attestation defined by `hash_tree_root(aggregate.data)` whose `aggregation_bits`
   // is a non-strict superset has _not_ already been seen.
+  const attDataRootHex = cachedAttData
+    ? cachedAttData.attDataRootHex
+    : toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
   if (
     !skipValidationKnownAttesters &&
-    chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRoot, aggregationBits)
+    chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRootHex, aggregationBits)
   ) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
       targetEpoch,
-      aggregateRoot: attDataRoot,
+      aggregateRoot: attDataRootHex,
     });
   }
 
@@ -88,7 +106,9 @@ export async function validateGossipAggregateAndProof(
       });
     });
 
-  const committeeIndices: number[] = getCommitteeIndices(attHeadState, attSlot, attIndex);
+  const committeeIndices: number[] = cachedAttData
+    ? cachedAttData.committeeIndices
+    : getCommitteeIndices(attHeadState, attSlot, attIndex);
 
   const attestingIndices = aggregate.aggregationBits.intersectValues(committeeIndices);
   const indexedAttestation: phase0.IndexedAttestation = {
@@ -122,11 +142,24 @@ export async function validateGossipAggregateAndProof(
   // [REJECT] The aggregator signature, signed_aggregate_and_proof.signature, is valid.
   // [REJECT] The signature of aggregate is valid.
   const aggregator = attHeadState.epochCtx.index2pubkey[aggregateAndProof.aggregatorIndex];
+  let indexedAttestationSignatureSet: ISignatureSet;
+  if (cachedAttData) {
+    const {signingRoot} = cachedAttData;
+    indexedAttestationSignatureSet = createAggregateSignatureSetFromComponents(
+      indexedAttestation.attestingIndices.map((i) => chain.index2pubkey[i]),
+      signingRoot,
+      indexedAttestation.signature
+    );
+  } else {
+    indexedAttestationSignatureSet = getIndexedAttestationSignatureSet(attHeadState, indexedAttestation);
+  }
   const signatureSets = [
     getSelectionProofSignatureSet(attHeadState, attSlot, aggregator, signedAggregateAndProof),
     getAggregateAndProofSignatureSet(attHeadState, attEpoch, aggregator, signedAggregateAndProof),
-    getIndexedAttestationSignatureSet(attHeadState, indexedAttestation),
+    indexedAttestationSignatureSet,
   ];
+  // no need to write to SeenAttestationDatas
+
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
   }
@@ -145,10 +178,10 @@ export async function validateGossipAggregateAndProof(
   chain.seenAggregators.add(targetEpoch, aggregatorIndex);
   chain.seenAggregatedAttestations.add(
     targetEpoch,
-    attDataRoot,
+    attDataRootHex,
     {aggregationBits, trueBitCount: attestingIndices.length},
     false
   );
 
-  return {indexedAttestation, committeeIndices};
+  return {indexedAttestation, committeeIndices, attDataRootHex};
 }

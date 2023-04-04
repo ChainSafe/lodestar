@@ -1,5 +1,5 @@
 import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, Index2PubkeyCache, PubkeyIndexMap} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/utils";
@@ -31,6 +31,7 @@ import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
+import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -68,6 +69,8 @@ export interface IBeaconChain {
   readonly regen: IStateRegenerator;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;
+  readonly pubkey2index: PubkeyIndexMap;
+  readonly index2pubkey: Index2PubkeyCache;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -83,6 +86,7 @@ export interface IBeaconChain {
   readonly seenBlockProposers: SeenBlockProposers;
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
+  readonly seenAttestationDatas: SeenAttestationDatas;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 
