@@ -20,9 +20,10 @@ export const eth_getBalance: ELVerifiedRequestHandler<[address: string, block?: 
     (await isValidAccount({
       address: address,
       stateRoot: executionPayload.stateRoot,
+      logger,
       proof,
     })) &&
-    (await isValidStorageKeys({storageKeys: [], proof}))
+    (await isValidStorageKeys({storageKeys: [], proof, logger}))
   ) {
     return generateRPCResponseForPayload(payload, proof.balance);
   }

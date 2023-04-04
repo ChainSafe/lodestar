@@ -4,11 +4,15 @@ import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "../types.js";
 import {eth_getBalance} from "../verified_requests/eth_getBalance.js";
 import {eth_getTransactionCount} from "../verified_requests/eth_getTransactionCount.js";
+import {eth_getBlockByHash} from "../verified_requests/eth_getBlockByHash.js";
+import {eth_getBlockByNumber} from "../verified_requests/eth_getBlockByNumber.js";
 
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
 export const supportedELRequests: Record<string, ELVerifiedRequestHandler<any, any>> = {
   eth_getBalance: eth_getBalance,
   eth_getTransactionCount: eth_getTransactionCount,
+  eth_getBlockByHash: eth_getBlockByHash,
+  eth_getBlockByNumber: eth_getBlockByNumber,
 };
 /* eslint-enable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any*/
 

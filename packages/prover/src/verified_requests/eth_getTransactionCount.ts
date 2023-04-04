@@ -19,8 +19,9 @@ export const eth_getTransactionCount: ELVerifiedRequestHandler<
       address: address,
       stateRoot: executionPayload.stateRoot,
       proof,
+      logger,
     })) &&
-    (await isValidStorageKeys({storageKeys: [], proof}))
+    (await isValidStorageKeys({storageKeys: [], proof, logger}))
   ) {
     return generateRPCResponseForPayload(payload, proof.nonce);
   }

@@ -1,9 +1,15 @@
 import {ELRequestHandler} from "../../src/interfaces.js";
-import {ELProof} from "../../src/types.js";
+import {ELBlock, ELProof} from "../../src/types.js";
 
-export function createELRequestHandlerMock({accountProof}: {accountProof: ELProof}): ELRequestHandler {
+export function createELRequestHandlerMock<P = unknown, R = unknown>({
+  accountProof,
+  block,
+}: {
+  accountProof?: ELProof;
+  block?: ELBlock;
+}): ELRequestHandler<P, R> {
   return async function handler(payload) {
-    if (payload.method === "eth_getProof") {
+    if (payload.method === "eth_getProof" && accountProof) {
       return {
         jsonrpc: "2.0",
         id: payload.id,
@@ -11,6 +17,14 @@ export function createELRequestHandlerMock({accountProof}: {accountProof: ELProo
       };
     }
 
+    if ((payload.method === "eth_getBlockByHash" || payload.method === "eth_getBlockByNumber") && block) {
+      return {
+        jsonrpc: "2.0",
+        id: payload.id,
+        result: block,
+      };
+    }
+
     return {jsonrpc: "2.0", id: payload.id, result: null};
-  };
+  } as ELRequestHandler<P, R>;
 }
