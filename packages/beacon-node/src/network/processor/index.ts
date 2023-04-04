@@ -1,4 +1,4 @@
-import {Logger, MapDef, mapValues} from "@lodestar/utils";
+import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
 import {RootHex, Slot} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {IBeaconChain} from "../../chain/interface.js";
@@ -53,6 +53,14 @@ const MAX_JOBS_SUBMITTED_PER_TICK = 128;
 
 // How many attestations (aggregate + unaggregate) we keep before new ones get dropped.
 const MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS = 16_384;
+
+// We don't want to process too many attestations in a single tick
+// As seen on mainnet, utilization rate for attestation topic is 80_000% (800x) - 90_000% (900x)
+// so make this constant go with that number
+const MAX_UNKNOWN_BLOCK_GOSSIP_OBJECTS_PER_TICK = 1024;
+
+// Same motivation to JobItemQueue, we don't want to block the vent loop
+const PROCESS_UNKNOWN_BLOCK_GOSSIP_OBJECTS_YIELD_EVERY_MS = 50;
 
 /**
  * Reprocess reject reason for metrics
@@ -189,7 +197,14 @@ export class NetworkProcessor {
     this.executeWork();
   }
 
-  private onBlockProcessed({slot, block: rootHex}: {slot: Slot; block: string; executionOptimistic: boolean}): void {
+  private async onBlockProcessed({
+    slot,
+    block: rootHex,
+  }: {
+    slot: Slot;
+    block: string;
+    executionOptimistic: boolean;
+  }): Promise<void> {
     const byRootGossipsubMessages = this.awaitingGossipsubMessagesByRootBySlot.getOrDefault(slot);
     const waitingGossipsubMessages = byRootGossipsubMessages.getOrDefault(rootHex);
     if (waitingGossipsubMessages.size === 0) {
@@ -198,11 +213,18 @@ export class NetworkProcessor {
 
     this.metrics?.reprocessGossipAttestations.resolve.inc(waitingGossipsubMessages.size);
     const now = Date.now();
+    let count = 0;
+    // TODO: we can group attestations to process in batches but since we have the SeenAttestationDatas
+    // cache, it may not be necessary at this time
     for (const message of waitingGossipsubMessages) {
       this.metrics?.reprocessGossipAttestations.waitSecBeforeResolve.set((now - message.seenTimestampSec) / 1000);
-      // TODO: in the worse case, there could be up to 16_000 attestations waiting gossipsub messages
-      // don't push to the queue at once
       this.pushPendingGossipsubMessageToQueue(message);
+      count++;
+      // don't want to block the event loop, worse case it'd wait for 16_084 / 1024 * 50ms = 800ms which is not a big deal
+      if (count === MAX_UNKNOWN_BLOCK_GOSSIP_OBJECTS_PER_TICK) {
+        count = 0;
+        await sleep(PROCESS_UNKNOWN_BLOCK_GOSSIP_OBJECTS_YIELD_EVERY_MS);
+      }
     }
 
     byRootGossipsubMessages.delete(rootHex);
