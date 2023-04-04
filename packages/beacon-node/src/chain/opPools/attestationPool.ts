@@ -1,4 +1,4 @@
-import {phase0, Slot, Root, ssz} from "@lodestar/types";
+import {phase0, Slot, Root, RootHex} from "@lodestar/types";
 import {PointFormat, Signature} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, toHexString} from "@chainsafe/ssz";
@@ -93,7 +93,7 @@ export class AttestationPool {
    * - Valid committeeIndex
    * - Valid data
    */
-  add(attestation: phase0.Attestation): InsertOutcome {
+  add(attestation: phase0.Attestation, attDataRootHex: RootHex): InsertOutcome {
     const slot = attestation.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
@@ -113,17 +113,14 @@ export class AttestationPool {
       throw new OpPoolError({code: OpPoolErrorCode.REACHED_MAX_PER_SLOT});
     }
 
-    const dataRoot = ssz.phase0.AttestationData.hashTreeRoot(attestation.data);
-    const dataRootHex = toHexString(dataRoot);
-
     // Pre-aggregate the contribution with existing items
-    const aggregate = aggregateByRoot.get(dataRootHex);
+    const aggregate = aggregateByRoot.get(attDataRootHex);
     if (aggregate) {
       // Aggregate mutating
       return aggregateAttestationInto(aggregate, attestation);
     } else {
       // Create new aggregate
-      aggregateByRoot.set(dataRootHex, attestationToAggregate(attestation));
+      aggregateByRoot.set(attDataRootHex, attestationToAggregate(attestation));
       return InsertOutcome.NewData;
     }
   }

@@ -478,7 +478,7 @@ export class ForkChoice implements IForkChoice {
    * The supplied `attestation` **must** pass the `in_valid_indexed_attestation` function as it
    * will not be run here.
    */
-  onAttestation(attestation: phase0.IndexedAttestation, attDataRoot?: string, forceImport?: boolean): void {
+  onAttestation(attestation: phase0.IndexedAttestation, attDataRoot: string, forceImport?: boolean): void {
     // Ignore any attestations to the zero hash.
     //
     // This is an edge case that results from the spec aliasing the zero hash to the genesis
@@ -913,7 +913,7 @@ export class ForkChoice implements IForkChoice {
     slot: Slot,
     blockRootHex: string,
     targetEpoch: Epoch,
-    attDataRoot?: string,
+    attDataRoot: string,
     // forceImport attestation even if too old, mostly used in spec tests
     forceImport?: boolean
   ): void {
@@ -931,19 +931,8 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
-    const attestationData = indexedAttestation.data;
-    // AttestationData is expected to internally cache its root to make this hashTreeRoot() call free
-    const attestationCacheKey = attDataRoot ?? toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestationData));
-
-    if (!this.validatedAttestationDatas.has(attestationCacheKey)) {
-      this.validateAttestationData(
-        indexedAttestation.data,
-        slot,
-        blockRootHex,
-        targetEpoch,
-        attestationCacheKey,
-        forceImport
-      );
+    if (!this.validatedAttestationDatas.has(attDataRoot)) {
+      this.validateAttestationData(indexedAttestation.data, slot, blockRootHex, targetEpoch, attDataRoot, forceImport);
     }
   }
 
@@ -952,7 +941,7 @@ export class ForkChoice implements IForkChoice {
     slot: Slot,
     beaconBlockRootHex: string,
     targetEpoch: Epoch,
-    attestationCacheKey: string,
+    attDataRoot: string,
     // forceImport attestation even if too old, mostly used in spec tests
     forceImport?: boolean
   ): void {
@@ -1054,7 +1043,7 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
-    this.validatedAttestationDatas.add(attestationCacheKey);
+    this.validatedAttestationDatas.add(attDataRoot);
   }
 
   /**

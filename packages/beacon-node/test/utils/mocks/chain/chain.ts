@@ -3,7 +3,12 @@ import sinon from "sinon";
 import {CompositeTypeAny, toHexString, TreeView} from "@chainsafe/ssz";
 import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64, RootHex, deneb, Wei} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
-import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  Index2PubkeyCache,
+  PubkeyIndexMap,
+} from "@lodestar/state-transition";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus, AncestorStatus} from "@lodestar/fork-choice";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {Logger} from "@lodestar/utils";
@@ -42,6 +47,7 @@ import {CheckpointBalancesCache} from "../../../../src/chain/balancesCache.js";
 import {IChainOptions} from "../../../../src/chain/options.js";
 import {BlockAttributes} from "../../../../src/chain/produceBlock/produceBlockBody.js";
 import {ReqRespBlockResponse} from "../../../../src/network/index.js";
+import {SeenAttestationDatas} from "../../../../src/chain/seenCache/seenAttestationData.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -81,6 +87,8 @@ export class MockBeaconChain implements IBeaconChain {
   emitter: ChainEventEmitter;
   lightClientServer: LightClientServer;
   reprocessController: ReprocessController;
+  readonly pubkey2index: PubkeyIndexMap;
+  readonly index2pubkey: Index2PubkeyCache;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -96,6 +104,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof(null);
+  readonly seenAttestationDatas = new SeenAttestationDatas(null);
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
   readonly beaconProposerCache = new BeaconProposerCache({
@@ -152,6 +161,8 @@ export class MockBeaconChain implements IBeaconChain {
       }
     );
     this.reprocessController = new ReprocessController(null);
+    this.pubkey2index = new PubkeyIndexMap();
+    this.index2pubkey = [];
   }
 
   validatorSeenAtEpoch(): boolean {
