@@ -5,7 +5,7 @@ import {
   isAggregatorFromCommitteeLength,
   getIndexedAttestationSignatureSet,
   ISignatureSet,
-  getIndexedAttestationSignatureSetFromCache,
+  createAggregateSignatureSetFromComponents,
 } from "@lodestar/state-transition";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
@@ -24,11 +24,8 @@ export async function validateGossipAggregateAndProof(
   chain: IBeaconChain,
   signedAggregateAndProof: phase0.SignedAggregateAndProof,
   skipValidationKnownAttesters = false,
-  gossipSerializedData: Uint8Array | null = null
+  serializedData: Uint8Array | null = null
 ): Promise<AggregateAndProofValidationResult> {
-  const attDataHash = gossipSerializedData
-    ? getAttDataHashFromSignedAggregateAndProofSerialized(gossipSerializedData)
-    : null;
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot
@@ -41,24 +38,24 @@ export async function validateGossipAggregateAndProof(
   const {aggregationBits} = aggregate;
   const attData = aggregate.data;
   const attSlot = attData.slot;
+
+  const attDataHash = serializedData ? getAttDataHashFromSignedAggregateAndProofSerialized(serializedData) : null;
   const cachedAttData = attDataHash ? chain.seenAttestationDatas.get(attSlot, attDataHash) : null;
-  const attDataRootHex = cachedAttData
-    ? cachedAttData.attDataRootHex
-    : toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
+
   const attIndex = attData.index;
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
 
-  // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
-  if (!cachedAttData && targetEpoch !== attEpoch) {
-    throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.BAD_TARGET_EPOCH});
-  }
-
-  // [IGNORE] aggregate.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
-  // -- i.e. aggregate.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= aggregate.data.slot
-  // (a client MAY queue future aggregates for processing at the appropriate slot).
   if (!cachedAttData) {
+    // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
+    if (targetEpoch !== attEpoch) {
+      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.BAD_TARGET_EPOCH});
+    }
+
+    // [IGNORE] aggregate.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+    // -- i.e. aggregate.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= aggregate.data.slot
+    // (a client MAY queue future aggregates for processing at the appropriate slot).
     verifyPropagationSlotRange(chain, attSlot);
   }
 
@@ -75,6 +72,9 @@ export async function validateGossipAggregateAndProof(
 
   // _[IGNORE]_ A valid aggregate attestation defined by `hash_tree_root(aggregate.data)` whose `aggregation_bits`
   // is a non-strict superset has _not_ already been seen.
+  const attDataRootHex = cachedAttData
+    ? cachedAttData.attDataRootHex
+    : toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
   if (
     !skipValidationKnownAttesters &&
     chain.seenAggregatedAttestations.isKnown(targetEpoch, attDataRootHex, aggregationBits)
@@ -144,11 +144,11 @@ export async function validateGossipAggregateAndProof(
   const aggregator = attHeadState.epochCtx.index2pubkey[aggregateAndProof.aggregatorIndex];
   let indexedAttestationSignatureSet: ISignatureSet;
   if (cachedAttData) {
-    const {index2pubkey, signingRoot} = cachedAttData;
-    indexedAttestationSignatureSet = getIndexedAttestationSignatureSetFromCache(
-      index2pubkey,
-      indexedAttestation,
-      signingRoot
+    const {signingRoot} = cachedAttData;
+    indexedAttestationSignatureSet = createAggregateSignatureSetFromComponents(
+      indexedAttestation.attestingIndices.map((i) => chain.index2pubkey[i]),
+      signingRoot,
+      indexedAttestation.signature
     );
   } else {
     indexedAttestationSignatureSet = getIndexedAttestationSignatureSet(attHeadState, indexedAttestation);

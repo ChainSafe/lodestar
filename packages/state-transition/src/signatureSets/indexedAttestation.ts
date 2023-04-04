@@ -1,24 +1,33 @@
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {allForks, phase0, ssz} from "@lodestar/types";
-import {computeSigningRoot, computeStartSlotAtEpoch, ISignatureSet, SignatureSetType} from "../util/index.js";
+import {
+  computeSigningRoot,
+  computeStartSlotAtEpoch,
+  createAggregateSignatureSetFromComponents,
+  ISignatureSet,
+} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
-import {Index2PubkeyCache} from "../cache/pubkeyCache.js";
+
+export function getAttestationDataSigningRoot(
+  state: CachedBeaconStateAllForks,
+  data: phase0.AttestationData
+): Uint8Array {
+  const slot = computeStartSlotAtEpoch(data.target.epoch);
+  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_ATTESTER, slot);
+
+  return computeSigningRoot(ssz.phase0.AttestationData, data, domain);
+}
 
 export function getAttestationWithIndicesSignatureSet(
   state: CachedBeaconStateAllForks,
   attestation: Pick<phase0.Attestation, "data" | "signature">,
-  indices: number[]
+  attestingIndices: number[]
 ): ISignatureSet {
-  const {epochCtx} = state;
-  const slot = computeStartSlotAtEpoch(attestation.data.target.epoch);
-  const domain = state.config.getDomain(state.slot, DOMAIN_BEACON_ATTESTER, slot);
-
-  return {
-    type: SignatureSetType.aggregate,
-    pubkeys: indices.map((i) => epochCtx.index2pubkey[i]),
-    signingRoot: computeSigningRoot(ssz.phase0.AttestationData, attestation.data, domain),
-    signature: attestation.signature,
-  };
+  return createAggregateSignatureSetFromComponents(
+    attestingIndices.map((i) => state.epochCtx.index2pubkey[i]),
+    getAttestationDataSigningRoot(state, attestation.data),
+    attestation.signature
+  );
 }
 
 export function getIndexedAttestationSignatureSet(
@@ -26,22 +35,6 @@ export function getIndexedAttestationSignatureSet(
   indexedAttestation: phase0.IndexedAttestation
 ): ISignatureSet {
   return getAttestationWithIndicesSignatureSet(state, indexedAttestation, indexedAttestation.attestingIndices);
-}
-
-/**
- * Be careful with this function, it assume `signingRootSameAttData` is from the same attestation data.
- */
-export function getIndexedAttestationSignatureSetFromCache(
-  index2pubkey: Index2PubkeyCache,
-  indexedAttestation: phase0.IndexedAttestation,
-  signingRootSameAttData: Uint8Array
-): ISignatureSet {
-  return {
-    type: SignatureSetType.aggregate,
-    pubkeys: indexedAttestation.attestingIndices.map((i) => index2pubkey[i]),
-    signingRoot: signingRootSameAttData,
-    signature: indexedAttestation.signature,
-  };
 }
 
 export function getAttestationsSignatureSets(

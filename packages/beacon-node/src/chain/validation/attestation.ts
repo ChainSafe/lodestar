@@ -5,15 +5,14 @@ import {toHexString} from "@chainsafe/ssz";
 import {
   computeEpochAtSlot,
   CachedBeaconStateAllForks,
-  getIndexedAttestationSignatureSet,
-  getIndexedAttestationSignatureSetFromCache,
   ISignatureSet,
+  getAttestationDataSigningRoot,
+  createAggregateSignatureSetFromComponents,
 } from "@lodestar/state-transition";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
-import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
 import {getAttDataHashFromAttestationSerialized} from "../../util/sszBytes.js";
 
 export type AttestationValidationResult = {
@@ -28,9 +27,8 @@ export async function validateGossipAttestation(
   /** Optional, to allow verifying attestations through API with unknown subnet */
   subnet: number | null,
   // available for gossip attestations, null for api attestations
-  gossipSerializedData: Uint8Array | null = null
+  serializedData: Uint8Array | null = null
 ): Promise<AttestationValidationResult> {
-  const attDataHash = gossipSerializedData ? getAttDataHashFromAttestationSerialized(gossipSerializedData) : null;
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot
@@ -47,19 +45,20 @@ export async function validateGossipAttestation(
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
 
+  const attDataHash = serializedData ? getAttDataHashFromAttestationSerialized(serializedData) : null;
   const cachedAttData = attDataHash ? chain.seenAttestationDatas.get(attSlot, attDataHash) : null;
 
-  // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
-  if (!cachedAttData && targetEpoch !== attEpoch) {
-    throw new AttestationError(GossipAction.REJECT, {
-      code: AttestationErrorCode.BAD_TARGET_EPOCH,
-    });
-  }
-
-  // [IGNORE] attestation.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (within a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
-  //  -- i.e. attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= attestation.data.slot
-  // (a client MAY queue future attestations for processing at the appropriate slot).
   if (!cachedAttData) {
+    // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
+    if (targetEpoch !== attEpoch) {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.BAD_TARGET_EPOCH,
+      });
+    }
+
+    // [IGNORE] attestation.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (within a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+    //  -- i.e. attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= attestation.data.slot
+    // (a client MAY queue future attestations for processing at the appropriate slot).
     verifyPropagationSlotRange(chain, attSlot);
   }
 
@@ -75,14 +74,12 @@ export async function validateGossipAttestation(
   }
 
   let committeeIndices: number[];
-  let attHeadState: CachedBeaconStateAllForks;
-  let cachedAttDataOrAttHeadState:
-    | {cachedAttData: AttestationDataCacheEntry; attHeadState: null}
-    | {cachedAttData: null; attHeadState: CachedBeaconStateAllForks};
-
+  let getSigningRoot: () => Uint8Array;
+  let expectedSubnet: number;
   if (cachedAttData) {
     committeeIndices = cachedAttData.committeeIndices;
-    cachedAttDataOrAttHeadState = {cachedAttData, attHeadState: null};
+    getSigningRoot = () => cachedAttData.signingRoot;
+    expectedSubnet = cachedAttData.subnet;
   } else {
     // Attestations must be for a known block. If the block is unknown, we simply drop the
     // attestation and do not delay consideration for later.
@@ -107,7 +104,7 @@ export async function validateGossipAttestation(
     // Using the target checkpoint state here caused unstable memory issue
     // See https://github.com/ChainSafe/lodestar/issues/4896
     // TODO: https://github.com/ChainSafe/lodestar/issues/4900
-    attHeadState = await chain.regen
+    const attHeadState = await chain.regen
       .getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAttestation)
       .catch((e: Error) => {
         throw new AttestationError(GossipAction.REJECT, {
@@ -115,18 +112,19 @@ export async function validateGossipAttestation(
           error: e as Error,
         });
       });
-    cachedAttDataOrAttHeadState = {cachedAttData: null, attHeadState};
 
     // [REJECT] The committee index is within the expected range
     // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
     committeeIndices = getCommitteeIndices(attHeadState, attSlot, attIndex);
+    getSigningRoot = () => getAttestationDataSigningRoot(attHeadState, attData);
+    expectedSubnet = attHeadState.epochCtx.computeSubnetForSlot(attSlot, attIndex);
   }
 
   const validatorIndex = committeeIndices[bitIndex];
 
   // [REJECT] The number of aggregation bits matches the committee size
   // -- i.e. len(attestation.aggregation_bits) == len(get_beacon_committee(state, data.slot, data.index)).
-  // > TODO: Is this necessary? Lighthouse does not do this check
+  // > TODO: Is this necessary? Lighthouse does not do this check.
   if (aggregationBits.bitLen !== committeeIndices.length) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS,
@@ -142,18 +140,12 @@ export async function validateGossipAttestation(
   // -- i.e. compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index) == subnet_id,
   // where committees_per_slot = get_committee_count_per_slot(state, attestation.data.target.epoch),
   // which may be pre-computed along with the committee information for the signature check.
-  let expectedSubnet: number;
-  if (cachedAttDataOrAttHeadState.cachedAttData) {
-    expectedSubnet = cachedAttDataOrAttHeadState.cachedAttData.subnet;
-  } else {
-    expectedSubnet = cachedAttDataOrAttHeadState.attHeadState.epochCtx.computeSubnetForSlot(attSlot, attIndex);
-    if (subnet !== null && subnet !== expectedSubnet) {
-      throw new AttestationError(GossipAction.REJECT, {
-        code: AttestationErrorCode.INVALID_SUBNET_ID,
-        received: subnet,
-        expected: expectedSubnet,
-      });
-    }
+  if (subnet !== null && subnet !== expectedSubnet) {
+    throw new AttestationError(GossipAction.REJECT, {
+      code: AttestationErrorCode.INVALID_SUBNET_ID,
+      received: subnet,
+      expected: expectedSubnet,
+    });
   }
 
   // [IGNORE] There has been no other valid attestation seen on an attestation subnet that has an
@@ -167,29 +159,28 @@ export async function validateGossipAttestation(
   }
 
   // [REJECT] The signature of attestation is valid.
-  const indexedAttestation: phase0.IndexedAttestation = {
-    attestingIndices: [validatorIndex],
-    data: attData,
-    signature: attestation.signature,
-  };
+  const attestingIndices = [validatorIndex];
   let signatureSet: ISignatureSet;
-  if (cachedAttDataOrAttHeadState.cachedAttData) {
-    const {index2pubkey, signingRoot} = cachedAttDataOrAttHeadState.cachedAttData;
-    // there could be up to 6% of cpu time to compute signing root if we don't clone the signature set
-    signatureSet = getIndexedAttestationSignatureSetFromCache(index2pubkey, indexedAttestation, signingRoot);
-  } else {
-    signatureSet = getIndexedAttestationSignatureSet(cachedAttDataOrAttHeadState.attHeadState, indexedAttestation);
-  }
-
-  // add cached attestation data before verifying signature
   let attDataRootHex: RootHex;
-  if (cachedAttDataOrAttHeadState.cachedAttData) {
-    attDataRootHex = cachedAttDataOrAttHeadState.cachedAttData.attDataRootHex;
+  if (cachedAttData) {
+    // there could be up to 6% of cpu time to compute signing root if we don't clone the signature set
+    signatureSet = createAggregateSignatureSetFromComponents(
+      attestingIndices.map((i) => chain.index2pubkey[i]),
+      cachedAttData.signingRoot,
+      attestation.signature
+    );
+    attDataRootHex = cachedAttData.attDataRootHex;
   } else {
+    signatureSet = createAggregateSignatureSetFromComponents(
+      attestingIndices.map((i) => chain.index2pubkey[i]),
+      getSigningRoot(),
+      attestation.signature
+    );
+
+    // add cached attestation data before verifying signature
     attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
     if (attDataHash) {
       chain.seenAttestationDatas.add(attSlot, attDataHash, {
-        index2pubkey: cachedAttDataOrAttHeadState.attHeadState.epochCtx.index2pubkey,
         committeeIndices,
         signingRoot: signatureSet.signingRoot,
         subnet: expectedSubnet,
@@ -219,6 +210,11 @@ export async function validateGossipAttestation(
 
   chain.seenAttesters.add(targetEpoch, validatorIndex);
 
+  const indexedAttestation: phase0.IndexedAttestation = {
+    attestingIndices,
+    data: attData,
+    signature: attestation.signature,
+  };
   return {indexedAttestation, subnet: expectedSubnet, attDataRootHex};
 }
 

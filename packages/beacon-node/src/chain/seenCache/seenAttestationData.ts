@@ -1,4 +1,3 @@
-import {Index2PubkeyCache} from "@lodestar/state-transition";
 import {RootHex, Slot} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -6,8 +5,6 @@ import {AttDataHash} from "../../util/sszBytes.js";
 import {InsertOutcome} from "../opPools/types.js";
 
 export type AttestationDataCacheEntry = {
-  // shared across application so this does not take memory
-  index2pubkey: Index2PubkeyCache;
   // part of shuffling data, so this does not take memory
   committeeIndices: number[];
   // IndexedAttestationData signing root, 32 bytes
