@@ -213,7 +213,7 @@ export function getBeaconBlockApi({
 
       // TODO: Validate block
 
-      chain.blockProposerIndices.set(signedBlock.message.stateRoot, signedBlock.message.proposerIndex);
+      chain.blockProposerIndices.set(toHexString(signedBlock.message.stateRoot), signedBlock.message.proposerIndex);
 
       metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
 

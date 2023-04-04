@@ -86,7 +86,7 @@ export interface IBeaconChain {
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 
-  readonly blockProposerIndices: Map<Uint8Array, ValidatorIndex>;
+  readonly blockProposerIndices: Map<string, ValidatorIndex>;
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;

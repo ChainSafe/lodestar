@@ -112,7 +112,7 @@ export class BeaconChain implements IBeaconChain {
   // Seen cache for liveness checks
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
-  readonly blockProposerIndices = new Map<Uint8Array, ValidatorIndex>();
+  readonly blockProposerIndices = new Map<string, ValidatorIndex>();
 
   // Global state caches
   readonly pubkey2index: PubkeyIndexMap;
@@ -699,7 +699,7 @@ export class BeaconChain implements IBeaconChain {
 
   private trackBlocksIncluded(stateRoot: string): void {
     // Determine if canonical block contains the validator index
-    if (this.blockProposerIndices.get(fromHexString(stateRoot)) !== undefined) {
+    if (this.blockProposerIndices.get(stateRoot) !== undefined) {
       this.metrics?.blocksProposedAndIncluded.inc();
     } else {
       this.metrics?.blocksOrphaned.inc();
