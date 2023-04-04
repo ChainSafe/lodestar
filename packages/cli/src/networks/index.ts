@@ -44,9 +44,7 @@ export type WeakSubjectivityFetchOptions = {
 // log to screen every 30s when downloading state from a lodestar node
 const GET_STATE_LOG_INTERVAL = 30 * 1000;
 
-export function getNetworkData(
-  network: NetworkName
-): {
+export function getNetworkData(network: NetworkName): {
   chainConfig: ChainConfig;
   depositContractDeployBlock: number;
   genesisFileUrl: string | null;

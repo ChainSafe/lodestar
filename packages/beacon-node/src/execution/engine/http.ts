@@ -142,11 +142,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         ? "engine_newPayloadV2"
         : "engine_newPayloadV1";
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
-    const {status, latestValidHash, validationError} = await (this.rpcFetchQueue.push({
-      method,
-      params: [serializedExecutionPayload],
-      methodOpts: notifyNewPayloadOpts,
-    }) as Promise<EngineApiRpcReturnTypes[typeof method]>)
+    const {status, latestValidHash, validationError} = await (
+      this.rpcFetchQueue.push({
+        method,
+        params: [serializedExecutionPayload],
+        methodOpts: notifyNewPayloadOpts,
+      }) as Promise<EngineApiRpcReturnTypes[typeof method]>
+    )
       // If there are errors by EL like connection refused, internal error, they need to be
       // treated separate from being INVALID. For now, just pass the error upstream.
       .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {

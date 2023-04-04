@@ -59,7 +59,7 @@ export function generateGenericJsonClient<
   returnTypes: ReturnTypes<Api>,
   fetchFn: IHttpClient
 ): Api {
-  return (mapValues(routesData, (routeDef, routeId) => {
+  return mapValues(routesData, (routeDef, routeId) => {
     const fetchOptsSerializer = getFetchOptsSerializer(routeDef, reqSerializers[routeId], routeId as string);
     const returnType = returnTypes[routeId as keyof ReturnTypes<Api>] as TypeJson<any> | null;
 
@@ -94,5 +94,5 @@ export function generateGenericJsonClient<
         throw err;
       }
     };
-  }) as unknown) as Api;
+  }) as unknown as Api;
 }

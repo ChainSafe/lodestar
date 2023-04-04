@@ -254,7 +254,7 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): Beaco
   if (!altairState) {
     const pubkeys = pubkeysArg || getPubkeys().pubkeys;
     const statePhase0 = buildPerformanceStatePhase0();
-    const state = (statePhase0 as allForks.BeaconState) as altair.BeaconState;
+    const state = statePhase0 as allForks.BeaconState as altair.BeaconState;
 
     state.previousEpochParticipation = newFilledArray(pubkeys.length, 0b111);
     state.currentEpochParticipation = state.previousEpochParticipation;

@@ -19,9 +19,10 @@ export type VerifiedProxyOptions = {
 } & LogOptions &
   ConsensusNodeOptions;
 
-export function createVerifiedExecutionProxy(
-  opts: VerifiedProxyOptions
-): {server: http.Server; proofProvider: ProofProvider} {
+export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
+  server: http.Server;
+  proofProvider: ProofProvider;
+} {
   const {executionRpcUrl, network} = opts;
   const signal = opts.signal ?? new AbortController().signal;
   const logger = getLogger(opts);

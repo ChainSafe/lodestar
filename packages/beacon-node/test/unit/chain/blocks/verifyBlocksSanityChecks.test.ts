@@ -162,7 +162,7 @@ function getForkChoice(knownBlocks: allForks.SignedBeaconBlock[], finalizedEpoch
     blocks.set(protoBlock.blockRoot, protoBlock);
   }
 
-  return ({
+  return {
     getBlockHex(blockRoot) {
       return blocks.get(blockRoot) ?? null;
     },
@@ -172,16 +172,16 @@ function getForkChoice(knownBlocks: allForks.SignedBeaconBlock[], finalizedEpoch
     getFinalizedCheckpoint() {
       return {epoch: finalizedEpoch, root: Buffer.alloc(32), rootHex: ""};
     },
-  } as Partial<IForkChoice>) as IForkChoice;
+  } as Partial<IForkChoice> as IForkChoice;
 }
 
 function toProtoBlock(block: allForks.SignedBeaconBlock): ProtoBlock {
-  return ({
+  return {
     slot: block.message.slot,
     blockRoot: toHex(ssz.phase0.BeaconBlock.hashTreeRoot((block as allForks.SignedBeaconBlock).message)),
     parentRoot: toHex(block.message.parentRoot),
     stateRoot: toHex(block.message.stateRoot),
-  } as Partial<ProtoBlock>) as ProtoBlock;
+  } as Partial<ProtoBlock> as ProtoBlock;
 }
 
 function slots(blocks: allForks.SignedBeaconBlock[]): Slot[] {

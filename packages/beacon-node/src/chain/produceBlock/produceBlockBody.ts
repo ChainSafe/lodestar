@@ -109,12 +109,8 @@ export async function produceBlockBody<T extends BlockType>(
   //   }
   // }
 
-  const [
-    attesterSlashings,
-    proposerSlashings,
-    voluntaryExits,
-    blsToExecutionChanges,
-  ] = this.opPool.getSlashingsAndExits(currentState);
+  const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] =
+    this.opPool.getSlashingsAndExits(currentState);
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
   const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
 
@@ -207,9 +203,8 @@ export async function produceBlockBody<T extends BlockType>(
         );
 
         if (prepareRes.isPremerge) {
-          (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
-            fork
-          ].ExecutionPayload.defaultValue();
+          (blockBody as allForks.ExecutionBlockBody).executionPayload =
+            ssz.allForksExecution[fork].ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
           blockValue = BigInt(0);
         } else {
@@ -276,9 +271,8 @@ export async function produceBlockBody<T extends BlockType>(
             {},
             e as Error
           );
-          (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
-            fork
-          ].ExecutionPayload.defaultValue();
+          (blockBody as allForks.ExecutionBlockBody).executionPayload =
+            ssz.allForksExecution[fork].ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
           blockValue = BigInt(0);
         } else {

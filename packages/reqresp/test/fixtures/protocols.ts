@@ -53,14 +53,10 @@ export const numberToStringProtocol: MixedProtocolDefinitionGenerator<NumToStrRe
   };
 }) as MixedProtocolDefinitionGenerator<NumToStrReqType, NumToStrRespType>;
 
-export const numberToStringProtocolHandler: ReqRespHandler<
-  NumToStrReqType,
-  NumToStrRespType
-> = async function* numberToStringProtocolHandler(
-  req: NumToStrReqType
-): AsyncIterable<EncodedPayload<NumToStrRespType>> {
-  yield {
-    type: EncodedPayloadType.ssz,
-    data: {value: [...Buffer.from(req.value.toString(), "utf-8")]},
+export const numberToStringProtocolHandler: ReqRespHandler<NumToStrReqType, NumToStrRespType> =
+  async function* numberToStringProtocolHandler(req: NumToStrReqType): AsyncIterable<EncodedPayload<NumToStrRespType>> {
+    yield {
+      type: EncodedPayloadType.ssz,
+      data: {value: [...Buffer.from(req.value.toString(), "utf-8")]},
+    };
   };
-};

@@ -18,7 +18,7 @@ describe("ResResp", () => {
   let logger: Logger;
 
   beforeEach(() => {
-    libp2p = ({
+    libp2p = {
       dialProtocol: sinon
         .stub()
         .resolves(
@@ -31,7 +31,7 @@ describe("ResResp", () => {
           )
         ),
       handle: sinon.spy(),
-    } as unknown) as Libp2p;
+    } as unknown as Libp2p;
 
     logger = createStubbedLogger();
 

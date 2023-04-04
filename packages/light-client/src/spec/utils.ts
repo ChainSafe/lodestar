@@ -80,26 +80,29 @@ export function upgradeLightClientHeader(
         `Invalid startUpgradeFromFork=${startUpgradeFromFork} for headerFork=${headerFork} in upgradeLightClientHeader to targetFork=${targetFork}`
       );
 
+    // eslint-disable-next-line no-fallthrough
     case ForkName.altair:
     case ForkName.bellatrix:
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.bellatrix) break;
-    // eslint-disable-next-line no-fallthrough
 
+    // eslint-disable-next-line no-fallthrough
     case ForkName.capella:
-      (upgradedHeader as capella.LightClientHeader).execution = ssz.capella.LightClientHeader.fields.execution.defaultValue();
-      (upgradedHeader as capella.LightClientHeader).executionBranch = ssz.capella.LightClientHeader.fields.executionBranch.defaultValue();
+      (upgradedHeader as capella.LightClientHeader).execution =
+        ssz.capella.LightClientHeader.fields.execution.defaultValue();
+      (upgradedHeader as capella.LightClientHeader).executionBranch =
+        ssz.capella.LightClientHeader.fields.executionBranch.defaultValue();
 
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.capella) break;
-    // eslint-disable-next-line no-fallthrough
 
+    // eslint-disable-next-line no-fallthrough
     case ForkName.deneb:
-      (upgradedHeader as deneb.LightClientHeader).execution.excessDataGas = ssz.deneb.LightClientHeader.fields.execution.fields.excessDataGas.defaultValue();
+      (upgradedHeader as deneb.LightClientHeader).execution.excessDataGas =
+        ssz.deneb.LightClientHeader.fields.execution.fields.excessDataGas.defaultValue();
 
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.deneb) break;
-    // eslint-disable-next-line no-fallthrough
   }
   return upgradedHeader;
 }

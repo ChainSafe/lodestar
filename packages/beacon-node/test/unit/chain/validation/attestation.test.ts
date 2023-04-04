@@ -104,9 +104,9 @@ describe("chain / validation / attestation", () => {
     // simulate https://github.com/ChainSafe/lodestar/issues/4396
     // this way we cannot get committeeIndices
     const committeeState = processSlots(getState(), attestation.data.slot + 2 * SLOTS_PER_EPOCH);
-    (chain as {regen: IStateRegenerator}).regen = ({
+    (chain as {regen: IStateRegenerator}).regen = {
       getState: async () => committeeState,
-    } as Partial<IStateRegenerator>) as IStateRegenerator;
+    } as Partial<IStateRegenerator> as IStateRegenerator;
 
     await expectError(chain, attestation, subnet, AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX);
   });
