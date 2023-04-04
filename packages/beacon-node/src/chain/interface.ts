@@ -88,6 +88,8 @@ export interface IBeaconChain {
 
   readonly blockProposerIndices: Map<Uint8Array, ValidatorIndex>;
 
+  readonly missedBlocks: Map<ValidatorIndex, Slot>;
+
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly producedBlobsSidecarCache: Map<RootHex, deneb.BlobsSidecar>;

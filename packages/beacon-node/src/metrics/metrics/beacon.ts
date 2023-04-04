@@ -104,12 +104,17 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     },
 
     blocksProposedAndIncluded: register.gauge({
-      name: "vc_blocks_proposed_and_included_total",
+      name: "beacon_blocks_proposed_and_included_total",
       help: "Total count of blocks proposed and included in the canonical chain",
     }),
 
     blocksOrphaned: register.gauge({
-      name: "vc_missed_blocks_total",
+      name: "beacon_orphaned_blocks_total",
+      help: "Total count of blocks orphaned",
+    }),
+
+    blocksMissed: register.gauge({
+      name: "beacon_blocks_missed_total",
       help: "Total count of blocks missed",
     }),
 

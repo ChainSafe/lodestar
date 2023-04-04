@@ -108,6 +108,8 @@ export class MockBeaconChain implements IBeaconChain {
 
   readonly producedBlobsSidecarCache = new Map<RootHex, deneb.BlobsSidecar>();
 
+  readonly blockProposerIndices: Map<Uint8Array, number>;
+
   constructor({genesisTime, chainId, networkId, state, config}: MockChainParams) {
     this.logger = testLogger();
     this.genesisTime = genesisTime ?? state.genesisTime;
@@ -152,6 +154,7 @@ export class MockBeaconChain implements IBeaconChain {
       }
     );
     this.reprocessController = new ReprocessController(null);
+    this.blockProposerIndices = new Map();
   }
 
   validatorSeenAtEpoch(): boolean {
