@@ -154,13 +154,12 @@ We're currently experimenting with hosting the majority of lodestar packages and
 
 ### Logging Levels
 
-Contributors must chose the log level carefully to ensure a consistent experience for every type of user:
+Contributors must choose the log level carefully to ensure a consistent experience for every type of user:
 
 - `error`: Critical issues that prevent the application from functioning correctly or cause significant disruption to users. Examples include failed network connections, crashes, or data corruption.
 - `warn`: Situations that may lead to critical issues if not addressed but do not prevent the application from functioning. Examples include configuration issues, deprecated features, or temporary network disruptions.
 - `info`: General sporadic informational about the node's state. Examples include initialization messages, infrequent periodic status updates, or high-level progress reports.
 - `debug`: Detailed diagnostic information that can help developers or users troubleshoot specific issues. Examples include individual request logs for every REST API, networking interactions, or internal components status changes. Alias to `verbose`.
-- `trace`: Reserved for extremely verbose logs such a step by step execution traces of individual network packets or similar granular actions
 
 ### Logging guidelines
 
