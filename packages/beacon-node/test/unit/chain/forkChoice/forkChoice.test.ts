@@ -110,9 +110,9 @@ describe("LodestarForkChoice", function () {
       const attestation0 = createIndexedAttestation(source, targetBlock, orphanedBlock, 0);
       const attestation1 = createIndexedAttestation(source, targetBlock, parentBlock, 1);
       const attestation2 = createIndexedAttestation(source, targetBlock, childBlock, 2);
-      forkChoice.onAttestation(attestation0);
-      forkChoice.onAttestation(attestation1);
-      forkChoice.onAttestation(attestation2);
+      forkChoice.onAttestation(attestation0, toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation0.data)));
+      forkChoice.onAttestation(attestation1, toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation1.data)));
+      forkChoice.onAttestation(attestation2, toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation2.data)));
       head = forkChoice.getHead();
       // with votes, head becomes the child block
       expect(head.slot).to.be.equal(childBlock.message.slot);
@@ -284,7 +284,7 @@ describe("LodestarForkChoice", function () {
           },
           signature: Buffer.alloc(96),
         };
-        forkChoice.onAttestation(attestation);
+        forkChoice.onAttestation(attestation, toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data)));
       }
 
       // Z stays on next epoch, a child of X which potentially reorg Y

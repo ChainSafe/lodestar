@@ -44,7 +44,13 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
         return TopicValidatorResult.Reject;
       }
 
-      await (gossipHandlers[topic.type] as GossipHandlerFn)(gossipObject, topic, propagationSource, seenTimestampSec);
+      await (gossipHandlers[type] as GossipHandlerFn)(
+        gossipObject,
+        topic,
+        propagationSource,
+        seenTimestampSec,
+        msg.data
+      );
 
       metrics?.gossipValidationAccept.inc({topic: type});
 
