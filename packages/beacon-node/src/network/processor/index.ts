@@ -174,6 +174,7 @@ export class NetworkProcessor {
           return;
         }
 
+        this.metrics?.reprocessGossipAttestations.total.inc();
         const awaitingGossipsubMessagesByRoot = this.awaitingGossipsubMessagesByRootBySlot.getOrDefault(slot);
         const awaitingGossipsubMessages = awaitingGossipsubMessagesByRoot.getOrDefault(rootHex);
         awaitingGossipsubMessages.add(message);
@@ -212,12 +213,12 @@ export class NetworkProcessor {
     }
 
     this.metrics?.reprocessGossipAttestations.resolve.inc(waitingGossipsubMessages.size);
-    const now = Date.now();
+    const nowSec = Date.now() / 1000;
     let count = 0;
     // TODO: we can group attestations to process in batches but since we have the SeenAttestationDatas
     // cache, it may not be necessary at this time
     for (const message of waitingGossipsubMessages) {
-      this.metrics?.reprocessGossipAttestations.waitSecBeforeResolve.set((now - message.seenTimestampSec) / 1000);
+      this.metrics?.reprocessGossipAttestations.waitSecBeforeResolve.set(nowSec - message.seenTimestampSec);
       this.pushPendingGossipsubMessageToQueue(message);
       count++;
       // don't want to block the event loop, worse case it'd wait for 16_084 / 1024 * 50ms = 800ms which is not a big deal
@@ -231,13 +232,13 @@ export class NetworkProcessor {
   }
 
   private onClockSlot(clockSlot: Slot): void {
-    const now = Date.now();
+    const nowSec = Date.now() / 1000;
     for (const [slot, gossipMessagesByRoot] of this.awaitingGossipsubMessagesByRootBySlot.entries()) {
       if (slot < clockSlot) {
         for (const gossipMessages of gossipMessagesByRoot.values()) {
           for (const message of gossipMessages) {
             this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.expired});
-            this.metrics?.reprocessGossipAttestations.waitSecBeforeReject.set((now - message.seenTimestampSec) / 1000);
+            this.metrics?.reprocessGossipAttestations.waitSecBeforeReject.set(nowSec - message.seenTimestampSec);
             // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
           }
         }
