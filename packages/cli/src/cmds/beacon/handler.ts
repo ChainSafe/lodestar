@@ -79,7 +79,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       metricsRegistries,
     });
 
-    if (args.attachToGlobalThis) ((globalThis as unknown) as {bn: BeaconNode}).bn = node;
+    if (args.attachToGlobalThis) (globalThis as unknown as {bn: BeaconNode}).bn = node;
 
     onGracefulShutdown(async () => {
       if (args.persistNetworkIdentity) {

@@ -1,29 +1,23 @@
 import {ELVerifiedRequestHandler} from "../interfaces.js";
-import {bufferToHex} from "../utils/conversion.js";
-import {getELProof, isValidAccount, isValidStorageKeys} from "../utils/execution.js";
+import {fetchAndVerifyAccount} from "../utils/execution.js";
 import {generateRPCResponseForPayload, generateUnverifiedResponseForPayload} from "../utils/json_rpc.js";
 
-export const ethGetBalance: ELVerifiedRequestHandler<[address: string, block?: number | string], string> = async ({
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export const eth_getBalance: ELVerifiedRequestHandler<[address: string, block?: number | string], string> = async ({
   handler,
   payload,
-  rootProvider,
+  logger,
+  proofProvider,
 }) => {
   const {
     params: [address, block],
   } = payload;
-  const executionPayload = await rootProvider.getExecutionPayload(block ?? "latest");
-  const proof = await getELProof(handler, [address, [], bufferToHex(executionPayload.blockHash)]);
+  const result = await fetchAndVerifyAccount({proofProvider, logger, handler, address, block});
 
-  if (
-    (await isValidAccount({
-      address: address,
-      stateRoot: executionPayload.stateRoot,
-      proof,
-    })) &&
-    (await isValidStorageKeys({storageKeys: [], proof}))
-  ) {
-    return generateRPCResponseForPayload(payload, proof.balance);
+  if (result.valid) {
+    return generateRPCResponseForPayload(payload, result.data.balance);
   }
 
+  logger.error("Request could not be verified.");
   return generateUnverifiedResponseForPayload(payload, "eth_getBalance request can not be verified.");
 };

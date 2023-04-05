@@ -127,7 +127,7 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
       dataTransform: new DataTransformSnappy(
         isFinite(config.BELLATRIX_FORK_EPOCH) ? GOSSIP_MAX_SIZE_BELLATRIX : GOSSIP_MAX_SIZE
       ),
-      metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
+      metricsRegister: modules.metrics ? (modules.metrics.register as unknown as MetricsRegister) : null,
       metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
       asyncValidation: true,
 

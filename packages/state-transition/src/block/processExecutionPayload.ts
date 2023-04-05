@@ -101,9 +101,9 @@ export function executionPayloadToPayloadHeader(
 
   if (fork >= ForkSeq.deneb) {
     // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
-    (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).excessDataGas = (payload as
-      | deneb.ExecutionPayloadHeader
-      | deneb.ExecutionPayload).excessDataGas;
+    (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).excessDataGas = (
+      payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
+    ).excessDataGas;
   }
 
   return bellatrixPayloadFields;

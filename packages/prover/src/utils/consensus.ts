@@ -2,6 +2,7 @@ import {Api} from "@lodestar/api/beacon";
 import {allForks, Bytes32, capella} from "@lodestar/types";
 import {GenesisData, Lightclient} from "@lodestar/light-client";
 import {ApiError} from "@lodestar/api";
+import {Logger} from "@lodestar/utils";
 import {MAX_PAYLOAD_HISTORY} from "../constants.js";
 import {hexToBuffer} from "./conversion.js";
 
@@ -32,13 +33,19 @@ export async function getUnFinalizedRangeForPayloads(lightClient: Lightclient): 
   };
 }
 
-export async function getExecutionPayloads(
-  api: Api,
-  startSlot: number,
-  endSlot: number
-): Promise<Record<number, allForks.ExecutionPayload>> {
+export async function getExecutionPayloads({
+  api,
+  startSlot,
+  endSlot,
+  logger,
+}: {
+  api: Api;
+  startSlot: number;
+  endSlot: number;
+  logger: Logger;
+}): Promise<Record<number, allForks.ExecutionPayload>> {
   [startSlot, endSlot] = [Math.min(startSlot, endSlot), Math.max(startSlot, endSlot)];
-
+  logger.debug("Fetching EL payloads", {startSlot, endSlot});
   const payloads: Record<number, allForks.ExecutionPayload> = {};
 
   let slot = endSlot;

@@ -1,5 +1,6 @@
 import {Api} from "@lodestar/api";
 import {allForks, capella} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
 import {MAX_PAYLOAD_HISTORY} from "../constants.js";
 import {getExecutionPayloadForBlockNumber, getExecutionPayloads} from "../utils/consensus.js";
 import {bufferToHex, hexToNumber} from "../utils/conversion.js";
@@ -23,7 +24,7 @@ export class PayloadStore {
 
   private latestBlockRoot: BlockELRoot | null = null;
 
-  constructor(private opts: {api: Api}) {}
+  constructor(private opts: {api: Api; logger: Logger}) {}
 
   get finalized(): allForks.ExecutionPayload | undefined {
     const finalizedMaxRoot = this.finalizedRoots.get(this.finalizedRoots.max);
@@ -129,7 +130,14 @@ export class PayloadStore {
       else if (finalized && !existingELRoot) {
         this.payloads.set(
           bufferToHex(header.execution.blockHash),
-          (await getExecutionPayloads(this.opts.api, blockSlot, blockSlot))[blockSlot]
+          (
+            await getExecutionPayloads({
+              api: this.opts.api,
+              startSlot: blockSlot,
+              endSlot: blockSlot,
+              logger: this.opts.logger,
+            })
+          )[blockSlot]
         );
       }
 
@@ -149,7 +157,14 @@ export class PayloadStore {
     }
 
     // We do not have the payload for this block, we need to fetch it
-    const payload = (await getExecutionPayloads(this.opts.api, blockSlot, blockSlot))[blockSlot];
+    const payload = (
+      await getExecutionPayloads({
+        api: this.opts.api,
+        startSlot: blockSlot,
+        endSlot: blockSlot,
+        logger: this.opts.logger,
+      })
+    )[blockSlot];
     this.set(payload, false);
     this.prune();
   }

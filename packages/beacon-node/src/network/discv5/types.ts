@@ -3,7 +3,7 @@ import {Observable} from "@chainsafe/threads/observable";
 import {ChainConfig} from "@lodestar/config";
 
 // TODO export IDiscv5Config so we don't need this convoluted type
-type Discv5Config = Parameters<typeof Discv5["create"]>[0]["config"];
+type Discv5Config = Parameters<(typeof Discv5)["create"]>[0]["config"];
 
 /** discv5 worker constructor data */
 export interface Discv5WorkerData {

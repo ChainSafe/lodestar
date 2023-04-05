@@ -143,7 +143,7 @@ class MapDef<K, V> extends Map<K, V> {
 type LivenessMap = Map<Epoch, Map<ValidatorIndex, boolean>>;
 
 function getMockBeaconApi(livenessMap: LivenessMap): Api {
-  return ({
+  return {
     validator: {
       async getLiveness(indices, epoch) {
         return {
@@ -161,7 +161,7 @@ function getMockBeaconApi(livenessMap: LivenessMap): Api {
         };
       },
     } as Partial<Api["validator"]>,
-  } as Partial<Api>) as Api;
+  } as Partial<Api> as Api;
 }
 
 class ClockMockMsToSlot extends ClockMock {

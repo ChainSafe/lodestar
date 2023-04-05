@@ -14,10 +14,9 @@ Lodestar provides CLI options to configure monitoring on both the beacon node an
 ### Remote endpoint URL
 
 Client monitoring can be enabled by setting the `--monitoring.endpoint` flag to a remote service endpoint URL.
-As monitoring relies on metrics data, it is required that metrics are also enabled by supplying the `--metrics` flag.
 
 ```bash
-lodestar beacon --monitoring.endpoint "https://beaconcha.in/api/v1/client/metrics?apikey={apikey}&machine={machineName}" --metrics
+lodestar beacon --monitoring.endpoint "https://beaconcha.in/api/v1/client/metrics?apikey={apikey}&machine={machineName}"
 ```
 
 In case of *beaconcha.in*, the API key can be found in your [account settings](https://beaconcha.in/user/settings#api).

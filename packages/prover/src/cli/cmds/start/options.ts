@@ -1,10 +1,8 @@
-import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {LCTransport} from "../../../interfaces.js";
 import {CliCommandOptions} from "../../../utils/command.js";
 
 export type StartArgs = {
   port: number;
-  network: string;
   "execution-rpc-url": string;
   transport: "rest" | "p2p";
   "beacon-urls"?: string[];
@@ -13,7 +11,6 @@ export type StartArgs = {
 };
 
 export type StartOptions = {
-  network: NetworkName;
   executionRpcUrl: string;
   port: number;
   wsCheckpoint?: string;
@@ -25,13 +22,6 @@ export const startOptions: CliCommandOptions<StartArgs> = {
     type: "number",
     default: 8080,
   },
-
-  network: {
-    description: "Specify the network to connect.",
-    type: "string",
-    choices: Object.keys(networksChainConfig),
-  },
-
   "execution-rpc-url": {
     description: "RPC url for the execution node.",
     type: "string",
@@ -68,7 +58,6 @@ export function parseStartArgs(args: StartArgs): StartOptions {
   // Remove undefined values to allow deepmerge to inject default values downstream
   return {
     port: args["port"],
-    network: args["network"] as NetworkName,
     executionRpcUrl: args["execution-rpc-url"],
     transport: args["transport"] === "p2p" ? LCTransport.P2P : LCTransport.Rest,
     urls: args["transport"] === "rest" ? args["beacon-urls"] ?? [] : [],

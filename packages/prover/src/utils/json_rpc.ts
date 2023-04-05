@@ -10,12 +10,17 @@ export function generateRPCResponseForPayload<P, R, E = unknown>(
     readonly message: string;
   }
 ): ELResponse<R> {
-  return {
-    jsonrpc: payload.jsonrpc,
-    id: payload.id,
-    result: res,
-    error,
-  };
+  return error
+    ? {
+        jsonrpc: payload.jsonrpc,
+        id: payload.id,
+        error,
+      }
+    : {
+        jsonrpc: payload.jsonrpc,
+        id: payload.id,
+        result: res,
+      };
 }
 
 export function generateUnverifiedResponseForPayload<P, D = unknown>(
@@ -23,13 +28,26 @@ export function generateUnverifiedResponseForPayload<P, D = unknown>(
   message: string,
   data?: D
 ): ELResponse<never, D> {
-  return {
-    jsonrpc: payload.jsonrpc,
-    id: payload.id,
-    error: {
-      code: UNVERIFIED_RESPONSE_CODE,
-      message,
-      data,
-    },
-  };
+  return data !== undefined || data !== null
+    ? {
+        jsonrpc: payload.jsonrpc,
+        id: payload.id,
+        error: {
+          code: UNVERIFIED_RESPONSE_CODE,
+          message,
+        },
+      }
+    : {
+        jsonrpc: payload.jsonrpc,
+        id: payload.id,
+        error: {
+          code: UNVERIFIED_RESPONSE_CODE,
+          message,
+          data,
+        },
+      };
+}
+
+export function isValidResponse<R, E>(response: ELResponse<R, E>): response is ELResponse<R, never> {
+  return response.error === undefined;
 }

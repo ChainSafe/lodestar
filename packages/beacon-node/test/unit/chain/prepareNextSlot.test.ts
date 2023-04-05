@@ -33,7 +33,7 @@ describe("PrepareNextSlot scheduler", () => {
   let regenStub: SinonStubbedInstance<StateRegenerator> & StateRegenerator;
   let loggerStub: SinonStubbedInstance<WinstonLogger> & WinstonLogger;
   let beaconProposerCacheStub: SinonStubbedInstance<BeaconProposerCache> & BeaconProposerCache;
-  let getForkStub: SinonStubFn<typeof config["getForkName"]>;
+  let getForkStub: SinonStubFn<(typeof config)["getForkName"]>;
   let updateBuilderStatus: SinonStubFn<IBeaconChain["updateBuilderStatus"]>;
   let executionEngineStub: SinonStubbedInstance<ExecutionEngineHttp> & ExecutionEngineHttp;
   const emitPayloadAttributes = true;
@@ -55,14 +55,13 @@ describe("PrepareNextSlot scheduler", () => {
     beaconProposerCacheStub = sandbox.createStubInstance(
       BeaconProposerCache
     ) as SinonStubbedInstance<BeaconProposerCache> & BeaconProposerCache;
-    ((chainStub as unknown) as {beaconProposerCache: BeaconProposerCache})[
-      "beaconProposerCache"
-    ] = beaconProposerCacheStub;
+    (chainStub as unknown as {beaconProposerCache: BeaconProposerCache})["beaconProposerCache"] =
+      beaconProposerCacheStub;
     getForkStub = sandbox.stub(config, "getForkName");
     executionEngineStub = sandbox.createStubInstance(ExecutionEngineHttp) as SinonStubbedInstance<ExecutionEngineHttp> &
       ExecutionEngineHttp;
-    ((chainStub as unknown) as {executionEngine: IExecutionEngine}).executionEngine = executionEngineStub;
-    ((chainStub as unknown) as {config: ChainForkConfig}).config = (config as unknown) as ChainForkConfig;
+    (chainStub as unknown as {executionEngine: IExecutionEngine}).executionEngine = executionEngineStub;
+    (chainStub as unknown as {config: ChainForkConfig}).config = config as unknown as ChainForkConfig;
     chainStub.opts = {emitPayloadAttributes} as IChainOptions;
 
     scheduler = new PrepareNextSlotScheduler(chainStub, config, null, loggerStub, abortController.signal);
@@ -151,7 +150,7 @@ describe("PrepareNextSlot scheduler", () => {
     sinon.stub(state.epochCtx, "getBeaconProposer").returns(proposerIndex);
     regenStub.getBlockSlotState.resolves(state);
     beaconProposerCacheStub.get.returns("0x fee recipient address");
-    ((executionEngineStub as unknown) as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
+    (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
 
     await Promise.all([
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 2),

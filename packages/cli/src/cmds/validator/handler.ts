@@ -108,11 +108,11 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   const slashingProtection = new SlashingProtection(dbOps);
 
-  // Create metrics registry if metrics are enabled
+  // Create metrics registry if metrics are enabled or monitoring endpoint is configured
   // Send version and network data for static registries
 
-  const register = args["metrics"] ? new RegistryMetricCreator() : null;
-  const metrics = register && getMetrics((register as unknown) as MetricsRegister, {version, commit, network});
+  const register = args["metrics"] || args["monitoring.endpoint"] ? new RegistryMetricCreator() : null;
+  const metrics = register && getMetrics(register as unknown as MetricsRegister, {version, commit, network});
 
   // Start metrics server if metrics are enabled.
   // Collect NodeJS metrics defined in the Lodestar repo
@@ -120,19 +120,18 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
   if (metrics) {
     collectNodeJSMetrics(register);
 
-    const port = args["metrics.port"] ?? validatorMetricsDefaultOptions.port;
-    const address = args["metrics.address"] ?? validatorMetricsDefaultOptions.address;
-    const metricsServer = new HttpMetricsServer({port, address}, {register, logger});
+    // only start server if metrics are explicitly enabled
+    if (args["metrics"]) {
+      const port = args["metrics.port"] ?? validatorMetricsDefaultOptions.port;
+      const address = args["metrics.address"] ?? validatorMetricsDefaultOptions.address;
+      const metricsServer = new HttpMetricsServer({port, address}, {register, logger});
 
-    onGracefulShutdownCbs.push(() => metricsServer.stop());
-    await metricsServer.start();
+      onGracefulShutdownCbs.push(() => metricsServer.stop());
+      await metricsServer.start();
+    }
   }
 
   if (args["monitoring.endpoint"]) {
-    if (register == null) {
-      throw new Error("Metrics must be enabled to use monitoring");
-    }
-
     const {interval, initialDelay, requestTimeout, collectSystemStats} = validatorMonitoringDefaultOptions;
 
     const monitoring = new MonitoringService(
@@ -144,7 +143,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
         requestTimeout: args["monitoring.requestTimeout"] ?? requestTimeout,
         collectSystemStats: args["monitoring.collectSystemStats"] ?? collectSystemStats,
       },
-      {register, logger}
+      {register: register as RegistryMetricCreator, logger}
     );
 
     onGracefulShutdownCbs.push(() => monitoring.stop());

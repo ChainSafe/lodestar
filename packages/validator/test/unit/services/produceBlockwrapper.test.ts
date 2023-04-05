@@ -89,7 +89,7 @@ describe("Produce Block with BuilderSelection", function () {
       };
       const {
         debugLogCtx: {source},
-      } = ((await produceBlockWrapper(144897, randaoReveal, "", produceBlockOpts)) as unknown) as {
+      } = (await produceBlockWrapper(144897, randaoReveal, "", produceBlockOpts)) as unknown as {
         debugLogCtx: {source: string};
       };
       expect(source).to.equal(finalSelection, "blindedBlock must be returned");

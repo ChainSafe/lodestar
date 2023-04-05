@@ -53,9 +53,7 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockV2(
-    blockId: BlockId
-  ): Promise<
+  getBlockV2(blockId: BlockId): Promise<
     ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
@@ -74,9 +72,7 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockAttestations(
-    blockId: BlockId
-  ): Promise<
+  getBlockAttestations(blockId: BlockId): Promise<
     ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
@@ -94,9 +90,7 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockHeader(
-    blockId: BlockId
-  ): Promise<
+  getBlockHeader(blockId: BlockId): Promise<
     ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
@@ -114,9 +108,7 @@ export type Api = {
    * @param slot
    * @param parentRoot
    */
-  getBlockHeaders(
-    filters: Partial<{slot: Slot; parentRoot: string}>
-  ): Promise<
+  getBlockHeaders(filters: Partial<{slot: Slot; parentRoot: string}>): Promise<
     ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
@@ -134,9 +126,7 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockRoot(
-    blockId: BlockId
-  ): Promise<
+  getBlockRoot(blockId: BlockId): Promise<
     ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
@@ -160,9 +150,7 @@ export type Api = {
    * @param requestBody The `SignedBeaconBlock` object composed of `BeaconBlock` object (produced by beacon node) and validator signature.
    * @returns any The block was validated successfully and has been broadcast. It has also been integrated into the beacon node's database.
    */
-  publishBlock(
-    block: allForks.SignedBeaconBlock
-  ): Promise<
+  publishBlock(block: allForks.SignedBeaconBlock): Promise<
     ApiClientResponse<
       {
         [HttpStatusCode.OK]: void;
@@ -175,9 +163,7 @@ export type Api = {
    * Publish a signed blinded block by submitting it to the mev relay and patching in the block
    * transactions beacon node gets in response.
    */
-  publishBlindedBlock(
-    block: allForks.SignedBlindedBeaconBlock
-  ): Promise<
+  publishBlindedBlock(block: allForks.SignedBlindedBeaconBlock): Promise<
     ApiClientResponse<
       {
         [HttpStatusCode.OK]: void;
@@ -192,9 +178,7 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlobsSidecar(
-    blockId: BlockId
-  ): Promise<
+  getBlobsSidecar(blockId: BlockId): Promise<
     ApiClientResponse<{
       [HttpStatusCode.OK]: {executionOptimistic: ExecutionOptimistic; data: deneb.BlobsSidecar};
     }>
@@ -245,7 +229,7 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
 
   const AllForksSignedBeaconBlock: TypeJson<allForks.SignedBeaconBlock> = {
     toJson: (data) => getSignedBeaconBlockType(data).toJson(data),
-    fromJson: (data) => getSignedBeaconBlockType((data as unknown) as allForks.SignedBeaconBlock).fromJson(data),
+    fromJson: (data) => getSignedBeaconBlockType(data as unknown as allForks.SignedBeaconBlock).fromJson(data),
   };
 
   const getSignedBlindedBeaconBlockType = (
@@ -256,7 +240,7 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
   const AllForksSignedBlindedBeaconBlock: TypeJson<allForks.SignedBlindedBeaconBlock> = {
     toJson: (data) => getSignedBlindedBeaconBlockType(data).toJson(data),
     fromJson: (data) =>
-      getSignedBlindedBeaconBlockType((data as unknown) as allForks.SignedBlindedBeaconBlock).fromJson(data),
+      getSignedBlindedBeaconBlockType(data as unknown as allForks.SignedBlindedBeaconBlock).fromJson(data),
   };
 
   return {

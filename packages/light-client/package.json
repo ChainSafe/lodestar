@@ -69,6 +69,7 @@
     "@lodestar/api": "^1.6.0",
     "@lodestar/config": "^1.6.0",
     "@lodestar/params": "^1.6.0",
+    "@lodestar/state-transition": "^1.6.0",
     "@lodestar/types": "^1.6.0",
     "@lodestar/utils": "^1.6.0",
     "cross-fetch": "^3.1.4",
