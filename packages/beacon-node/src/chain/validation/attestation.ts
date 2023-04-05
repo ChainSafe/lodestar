@@ -14,6 +14,7 @@ import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/in
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {getAttDataBase64FromAttestationSerialized} from "../../util/sszBytes.js";
+import {nullableResult} from "../../util/wrapError.js";
 
 export type AttestationValidationResult = {
   indexedAttestation: phase0.IndexedAttestation;
@@ -45,7 +46,9 @@ export async function validateGossipAttestation(
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
 
-  const attDataBase64 = serializedData ? getAttDataBase64FromAttestationSerialized(serializedData) : null;
+  const attDataBase64 = serializedData
+    ? nullableResult(getAttDataBase64FromAttestationSerialized)(serializedData)
+    : null;
   const cachedAttData = attDataBase64 ? chain.seenAttestationDatas.get(attSlot, attDataBase64) : null;
 
   if (!cachedAttData) {

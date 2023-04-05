@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {wrapError} from "../../../src/util/wrapError.js";
+import {nullableResult, wrapError} from "../../../src/util/wrapError.js";
 
 describe("util / wrapError", () => {
   const error = Error("test-error");
@@ -28,5 +28,20 @@ describe("util / wrapError", () => {
 
     expect(resErr).to.deep.equal({err: error}, "Wrong resErr");
     expect(resOk).to.deep.equal({err: null, result: true}, "Wrong resOk");
+  });
+});
+
+describe("util/nullableResult", () => {
+  function throwNoAwait(shouldThrow: boolean): boolean {
+    if (shouldThrow) throw Error("test-error");
+    else return true;
+  }
+
+  it("Handle error and result with throwNoAwait", () => {
+    const resErr = nullableResult(throwNoAwait)(true);
+    const resOk = nullableResult(throwNoAwait)(false);
+
+    expect(resErr).to.equal(null, "Wrong resErr");
+    expect(resOk).to.equal(true, "Wrong resOk");
   });
 });

@@ -166,8 +166,10 @@ export class NetworkProcessor {
     const extractBlockSlotRootFn = this.extractBlockSlotRootFns[message.topic.type];
     // check block root of Attestation and SignedAggregateAndProof messages
     if (extractBlockSlotRootFn) {
-      const {slot, root: rootHex} = extractBlockSlotRootFn(message.msg.data);
-      if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
+      const slotRoot = extractBlockSlotRootFn(message.msg.data);
+      // if slotRoot is null, it means the msg.data is invalid
+      // in that case message will be rejected when deserializing data in later phase (gossipValidatorFn)
+      if (slotRoot && !this.chain.forkChoice.hasBlockHex(slotRoot.root)) {
         if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
           // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
           this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.reached_limit});
@@ -175,8 +177,8 @@ export class NetworkProcessor {
         }
 
         this.metrics?.reprocessGossipAttestations.total.inc();
-        const awaitingGossipsubMessagesByRoot = this.awaitingGossipsubMessagesByRootBySlot.getOrDefault(slot);
-        const awaitingGossipsubMessages = awaitingGossipsubMessagesByRoot.getOrDefault(rootHex);
+        const awaitingGossipsubMessagesByRoot = this.awaitingGossipsubMessagesByRootBySlot.getOrDefault(slotRoot.slot);
+        const awaitingGossipsubMessages = awaitingGossipsubMessagesByRoot.getOrDefault(slotRoot.root);
         awaitingGossipsubMessages.add(message);
         this.unknownBlockGossipsubMessagesCount++;
       }

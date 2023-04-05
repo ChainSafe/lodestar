@@ -18,5 +18,5 @@ export type PendingGossipsubMessage = {
 };
 
 export type ExtractSlotRootFns = {
-  [K in GossipType]?: (data: Uint8Array) => SlotRootHex;
+  [K in GossipType]?: (data: Uint8Array) => SlotRootHex | null;
 };

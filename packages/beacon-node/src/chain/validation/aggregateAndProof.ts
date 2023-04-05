@@ -11,6 +11,7 @@ import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {getAttDataBase64FromSignedAggregateAndProofSerialized} from "../../util/sszBytes.js";
+import {nullableResult} from "../../util/wrapError.js";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";
 import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation.js";
 
@@ -39,7 +40,9 @@ export async function validateGossipAggregateAndProof(
   const attData = aggregate.data;
   const attSlot = attData.slot;
 
-  const attDataBase64 = serializedData ? getAttDataBase64FromSignedAggregateAndProofSerialized(serializedData) : null;
+  const attDataBase64 = serializedData
+    ? nullableResult(getAttDataBase64FromSignedAggregateAndProofSerialized)(serializedData)
+    : null;
   const cachedAttData = attDataBase64 ? chain.seenAttestationDatas.get(attSlot, attDataBase64) : null;
 
   const attIndex = attData.index;

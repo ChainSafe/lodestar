@@ -20,3 +20,20 @@ export async function wrapError<T>(promise: Promise<T>): Promise<Result<T>> {
     return {err: err as Error};
   }
 }
+
+/**
+ * Wraps a function to return either function's result or null if error happens.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function nullableResult<T extends (...args: any[]) => any>(
+  fn: T
+): (...args: Parameters<T>) => ReturnType<T> | null {
+  return (...args: Parameters<T>): ReturnType<T> | null => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return fn(...args);
+    } catch (e) {
+      return null;
+    }
+  };
+}
