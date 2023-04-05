@@ -1,14 +1,11 @@
-import {FAILSAFE_SCHEMA} from "js-yaml";
+import yml, {FAILSAFE_SCHEMA, Type} from "js-yaml";
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import nullType from "js-yaml/lib/type/null.js";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import boolType from "js-yaml/lib/type/bool.js";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import floatType from "js-yaml/lib/type/float.js";
 import {intType} from "./int.js";
 
-export const schema = FAILSAFE_SCHEMA.extend({implicit: [nullType, boolType, intType, floatType], explicit: []});
+export const schema = FAILSAFE_SCHEMA.extend({
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-expect-error
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  implicit: [yml.types.null as Type, yml.types.bool as Type, intType, yml.types.float as Type],
+  explicit: [],
+});
