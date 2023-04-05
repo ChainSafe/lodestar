@@ -6,9 +6,10 @@ import {keccak256} from "ethereum-cryptography/keccak.js";
 import {Bytes32, allForks} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {ELRequestHandler} from "../interfaces.js";
-import {ELBlock, ELProof, ELStorageProof, HexString} from "../types.js";
+import {ELBlock, ELProof, ELRequestPayload, ELResponse, ELStorageProof, HexString} from "../types.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {blockDataFromELBlock, bufferToHex, hexToBuffer, padLeft} from "./conversion.js";
+import {isValidResponse} from "./json_rpc.js";
 
 const emptyAccountSerialize = new Account().serialize();
 const storageKeyLength = 32;
@@ -44,7 +45,7 @@ export async function fetchAndVerifyAccount({
   proofProvider: ProofProvider;
   logger: Logger;
   block?: number | string;
-}): Promise<ELProof | undefined> {
+}): Promise<{data: ELProof; valid: true} | {valid: false; data?: undefined}> {
   const executionPayload = await proofProvider.getExecutionPayload(block ?? "latest");
   const proof = await getELProof(handler, [address, [], bufferToHex(executionPayload.blockHash)]);
   if (
@@ -56,10 +57,43 @@ export async function fetchAndVerifyAccount({
     })) &&
     (await isValidStorageKeys({storageKeys: [], proof, logger}))
   ) {
-    return proof;
+    return {data: proof, valid: true};
   }
 
-  return undefined;
+  return {valid: false};
+}
+
+export async function fetchAndVerifyBlock({
+  payload,
+  proofProvider,
+  logger,
+  handler,
+}: {
+  payload: ELRequestPayload<[block: string | number, hydrated: boolean]>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handler: ELRequestHandler<any, any>;
+  proofProvider: ProofProvider;
+  logger: Logger;
+}): Promise<{data: ELResponse<ELBlock>; valid: true} | {valid: false; data?: undefined}> {
+  const executionPayload = await proofProvider.getExecutionPayload(payload.params[0]);
+  const elResponse = await (handler as ELRequestHandler<[block: string | number, hydrated: boolean], ELBlock>)(payload);
+
+  // If response is not valid from the EL we don't need to verify it
+  if (elResponse && !isValidResponse(elResponse)) return {data: elResponse, valid: true};
+
+  if (
+    elResponse &&
+    elResponse.result &&
+    (await isValidBlock({
+      logger,
+      block: elResponse.result,
+      executionPayload,
+    }))
+  ) {
+    return {data: elResponse, valid: true};
+  }
+
+  return {valid: false};
 }
 
 export async function isValidAccount({

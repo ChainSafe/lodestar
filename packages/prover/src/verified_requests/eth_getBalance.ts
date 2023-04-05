@@ -12,10 +12,10 @@ export const eth_getBalance: ELVerifiedRequestHandler<[address: string, block?: 
   const {
     params: [address, block],
   } = payload;
-  const proof = await fetchAndVerifyAccount({proofProvider, logger, handler, address, block});
+  const result = await fetchAndVerifyAccount({proofProvider, logger, handler, address, block});
 
-  if (proof) {
-    return generateRPCResponseForPayload(payload, proof.balance);
+  if (result.valid) {
+    return generateRPCResponseForPayload(payload, result.data.balance);
   }
 
   logger.error("Request could not be verified.");

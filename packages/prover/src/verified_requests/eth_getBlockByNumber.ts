@@ -1,29 +1,17 @@
 import {ELVerifiedRequestHandler} from "../interfaces.js";
 import {ELBlock} from "../types.js";
-import {isValidBlock} from "../utils/execution.js";
-import {generateUnverifiedResponseForPayload, isValidResponse} from "../utils/json_rpc.js";
+import {fetchAndVerifyBlock} from "../utils/execution.js";
+import {generateUnverifiedResponseForPayload} from "../utils/json_rpc.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const eth_getBlockByNumber: ELVerifiedRequestHandler<
   [block: string | number, hydrated: boolean],
   ELBlock
 > = async ({handler, payload, logger, proofProvider}) => {
-  const executionPayload = await proofProvider.getExecutionPayload(payload.params[0]);
-  const elResponse = await handler(payload);
+  const result = await fetchAndVerifyBlock({payload, proofProvider, logger, handler});
 
-  // If response is not valid from the EL we don't need to verify it
-  if (elResponse && !isValidResponse(elResponse)) return elResponse;
-
-  if (
-    elResponse &&
-    elResponse.result &&
-    (await isValidBlock({
-      logger,
-      block: elResponse.result,
-      executionPayload,
-    }))
-  ) {
-    return elResponse;
+  if (result.valid) {
+    return result.data;
   }
 
   logger.error("Request could not be verified.");

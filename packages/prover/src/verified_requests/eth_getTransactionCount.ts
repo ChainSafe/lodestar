@@ -10,10 +10,10 @@ export const eth_getTransactionCount: ELVerifiedRequestHandler<
   const {
     params: [address, block],
   } = payload;
-  const proof = await fetchAndVerifyAccount({proofProvider, logger, handler, address, block});
+  const result = await fetchAndVerifyAccount({proofProvider, logger, handler, address, block});
 
-  if (proof) {
-    return generateRPCResponseForPayload(payload, proof.nonce);
+  if (result.valid) {
+    return generateRPCResponseForPayload(payload, result.data.nonce);
   }
 
   logger.error("Request could not be verified.");
