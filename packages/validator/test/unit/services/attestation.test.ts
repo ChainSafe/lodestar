@@ -85,7 +85,6 @@ describe("AttestationService", function () {
           pubkey: pubkeys[0],
         },
         selectionProof: ZERO_HASH,
-        isAggregator: true,
       },
     ];
 

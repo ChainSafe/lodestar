@@ -1,4 +1,4 @@
-import {phase0, Slot, ssz} from "@lodestar/types";
+import {BLSSignature, phase0, Slot, ssz} from "@lodestar/types";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
 import {Api, ApiError, routes} from "@lodestar/api";
@@ -246,7 +246,7 @@ export class AttestationService {
     const logCtx = {slot: attestation.slot, index: attestation.index};
 
     // No validator is aggregator, skip
-    if (duties.every(({isAggregator}) => !isAggregator)) {
+    if (duties.every(({selectionProof}) => selectionProof === null)) {
       return;
     }
 
@@ -262,11 +262,11 @@ export class AttestationService {
     const signedAggregateAndProofs: phase0.SignedAggregateAndProof[] = [];
 
     await Promise.all(
-      duties.map(async ({duty, selectionProof, isAggregator}) => {
+      duties.map(async ({duty, selectionProof}) => {
         const logCtxValidator = {...logCtx, validatorIndex: duty.validatorIndex};
         try {
           // Produce signed aggregates only for validators that are subscribed aggregators.
-          if (isAggregator) {
+          if (selectionProof !== null) {
             signedAggregateAndProofs.push(
               await this.validatorStore.signAggregateAndProof(duty, selectionProof, aggregate.data)
             );
@@ -293,11 +293,12 @@ export class AttestationService {
   }
 
   /**
-   * Performs additional steps required if validator is part of distributed cluster
+   * Performs additional attestation aggregation tasks required if validator is part of distributed cluster
    *
    * 1. Exchange partial for combined selection proofs
    * 2. Determine validators that should aggregate attestations
-   * 3. Resubscribe aggregators on beacon committee subnets
+   * 3. Mutate duty objects to set selection proofs for aggregators
+   * 4. Resubscribe validators as aggregators on beacon committee subnets
    *
    * See https://docs.google.com/document/d/1q9jOTPcYQa-3L8luRvQJ-M0eegtba4Nmon3dpO79TMk/mobilebasic
    */
@@ -306,21 +307,23 @@ export class AttestationService {
     slot: number,
     signal: AbortSignal
   ): Promise<void> {
-    const partialSelections: routes.validator.BeaconCommitteeSelection[] = duties.map(({duty, selectionProof}) => ({
-      validatorIndex: duty.validatorIndex,
-      slot,
-      selectionProof,
-    }));
+    const partialSelections: routes.validator.BeaconCommitteeSelection[] = duties.map(
+      ({duty, partialSelectionProof}) => ({
+        validatorIndex: duty.validatorIndex,
+        slot,
+        selectionProof: partialSelectionProof as BLSSignature,
+      })
+    );
 
-    this.logger.debug("Submitting partial selection proofs", {slot, count: partialSelections.length});
+    this.logger.debug("Submitting partial beacon committee selection proofs", {slot, count: partialSelections.length});
 
     const res = await Promise.race([
       this.api.validator.submitBeaconCommitteeSelections(partialSelections),
-      // Exit aggregations flow if there is no response after 1/3 of slot as
+      // Exit attestation aggregation flow if there is no response after 1/3 of slot as
       // beacon node would likely not have enough time to prepare an aggregate attestation.
       // Note that the aggregations flow is not explicitly exited but rather will be skipped
       // due to the fact that calculation of `is_aggregator` in duties service is not done
-      // and defaulted to `isAggregator=false`, meaning no validator will be an aggregator.
+      // and selectionProof is set to null, meaning no validator will be considered an aggregator.
       sleep(this.clock.msToSlot(slot + 1 / 3), signal),
     ]);
 
@@ -330,27 +333,27 @@ export class AttestationService {
     ApiError.assert(res);
 
     const combinedSelections = res.response.data;
-    this.logger.debug("Received combined selection proofs", {slot, count: combinedSelections.length});
+    this.logger.debug("Received combined beacon committee selection proofs", {slot, count: combinedSelections.length});
 
     const beaconCommitteeSubscriptions: routes.validator.BeaconCommitteeSubscription[] = [];
 
     for (const dutyAndProof of duties) {
       const {validatorIndex, committeeIndex, committeeLength, committeesAtSlot} = dutyAndProof.duty;
-      const selection = combinedSelections.find((s) => s.validatorIndex === validatorIndex);
       const logCtxValidator = {slot, index: committeeIndex, validatorIndex};
 
-      if (!selection) {
-        this.logger.warn("Did not receive combined selection proof", logCtxValidator);
+      const combinedSelection = combinedSelections.find((s) => s.validatorIndex === validatorIndex && s.slot === slot);
+
+      if (!combinedSelection) {
+        this.logger.warn("Did not receive combined beacon committee selection proof", logCtxValidator);
         continue;
       }
 
-      const isAggregator = isAggregatorFromCommitteeLength(committeeLength, selection.selectionProof);
-
-      // Replace partial with combined selection proof by mutating object
-      dutyAndProof.selectionProof = selection.selectionProof;
-      dutyAndProof.isAggregator = isAggregator;
+      const isAggregator = isAggregatorFromCommitteeLength(committeeLength, combinedSelection.selectionProof);
 
       if (isAggregator) {
+        // Update selection proof by mutating duty object
+        dutyAndProof.selectionProof = combinedSelection.selectionProof;
+
         // Only push subnet subscriptions with `isAggregator=true` as all validators
         // with duties for slot are already subscribed to subnets with `isAggregator=false`.
         beaconCommitteeSubscriptions.push({
@@ -368,7 +371,7 @@ export class AttestationService {
     if (beaconCommitteeSubscriptions.length > 0) {
       try {
         ApiError.assert(await this.api.validator.prepareBeaconCommitteeSubnet(beaconCommitteeSubscriptions));
-        this.logger.debug("Resubscribed validators as aggregators on beacon committee subnet", {
+        this.logger.debug("Resubscribed validators as aggregators on beacon committee subnets", {
           slot,
           count: beaconCommitteeSubscriptions.length,
         });

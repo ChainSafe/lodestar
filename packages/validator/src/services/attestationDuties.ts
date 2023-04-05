@@ -24,10 +24,10 @@ const SUBSCRIPTIONS_PER_REQUEST = 8738;
 /** Neatly joins the server-generated `AttesterData` with the locally-generated `selectionProof`. */
 export type AttDutyAndProof = {
   duty: routes.validator.AttesterDuty;
-  /** Locally-generated selection proof, only partial if validator is part of distributed cluster */
-  selectionProof: BLSSignature;
-  /** Whether the validator is an aggregator */
-  isAggregator: boolean;
+  /** This value is only set to not null if the proof indicates that the validator is an aggregator. */
+  selectionProof: BLSSignature | null;
+  /** This value will only be set if validator is part of distributed cluster and only has a key share */
+  partialSelectionProof?: BLSSignature;
 };
 
 // To assist with readability
@@ -183,14 +183,14 @@ export class AttestationDutiesService {
     for (const epoch of [currentEpoch, nextEpoch]) {
       const epochDuties = this.dutiesByIndexByEpoch.get(epoch)?.dutiesByIndex;
       if (epochDuties) {
-        for (const {duty, isAggregator} of epochDuties.values()) {
+        for (const {duty, selectionProof} of epochDuties.values()) {
           if (indexSet.has(duty.validatorIndex)) {
             beaconCommitteeSubscriptions.push({
               validatorIndex: duty.validatorIndex,
               committeesAtSlot: duty.committeesAtSlot,
               committeeIndex: duty.committeeIndex,
               slot: duty.slot,
-              isAggregator,
+              isAggregator: selectionProof !== null,
             });
           }
         }
@@ -337,11 +337,18 @@ export class AttestationDutiesService {
     if (this.opts?.distributedAggregationSelection) {
       // Validator in distributed cluster only has a key share, not the full private key.
       // Passing a partial selection proof to `is_aggregator` would produce incorrect result.
-      // Attestation service will combine selection proofs and determine aggregators at beginning of the slot.
-      return {duty, selectionProof, isAggregator: false};
+      // Attestation service will exchange partial for combined selection proofs retrieved from
+      // distributed validator middleware client and determine aggregators at beginning of every slot.
+      return {duty, selectionProof: null, partialSelectionProof: selectionProof};
     }
 
-    return {duty, selectionProof, isAggregator: isAggregatorFromCommitteeLength(duty.committeeLength, selectionProof)};
+    const isAggregator = isAggregatorFromCommitteeLength(duty.committeeLength, selectionProof);
+
+    return {
+      duty,
+      // selectionProof === null is used to check if is aggregator
+      selectionProof: isAggregator ? selectionProof : null,
+    };
   }
 
   /** Run once per epoch to prune duties map */
