@@ -19,7 +19,7 @@ import {ZERO_HASH} from "../../../constants/index.js";
 import {SyncState} from "../../../sync/index.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {toGraffitiBuffer} from "../../../util/graffiti.js";
-import {ApiError, NodeIsSyncing} from "../errors.js";
+import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {ApiModules} from "../types.js";
@@ -696,6 +696,14 @@ export function getValidatorApi({
 
     async prepareBeaconProposer(proposers) {
       await chain.updateBeaconProposerData(chain.clock.currentEpoch, proposers);
+    },
+
+    async submitBeaconCommitteeSelections() {
+      throw new OnlySupportedByDVT();
+    },
+
+    async submitSyncCommitteeSelections() {
+      throw new OnlySupportedByDVT();
     },
 
     async getLiveness(indices: ValidatorIndex[], epoch: Epoch) {
