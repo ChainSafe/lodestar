@@ -2,8 +2,8 @@ import {expect} from "chai";
 import {Epoch, phase0, RootHex, Slot, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {
-  getAttDataHashFromAttestationSerialized,
-  getAttDataHashFromSignedAggregateAndProofSerialized,
+  getAttDataBase64FromAttestationSerialized,
+  getAttDataBase64FromSignedAggregateAndProofSerialized,
   getBlockRootFromAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromAttestationSerialized,
@@ -28,8 +28,10 @@ describe("attestation SSZ serialized peaking", () => {
       expect(getSlotFromAttestationSerialized(bytes)).equals(attestation.data.slot);
       expect(getBlockRootFromAttestationSerialized(bytes)).equals(toHex(attestation.data.beaconBlockRoot));
 
-      const attDataHash = ssz.phase0.AttestationData.serialize(attestation.data);
-      expect(getAttDataHashFromAttestationSerialized(bytes)).to.be.equal(Buffer.from(attDataHash).toString("base64"));
+      const attDataBase64 = ssz.phase0.AttestationData.serialize(attestation.data);
+      expect(getAttDataBase64FromAttestationSerialized(bytes)).to.be.equal(
+        Buffer.from(attDataBase64).toString("base64")
+      );
     });
   }
 });
@@ -56,9 +58,9 @@ describe("aggregateAndProof SSZ serialized peaking", () => {
         toHex(signedAggregateAndProof.message.aggregate.data.beaconBlockRoot)
       );
 
-      const attDataHash = ssz.phase0.AttestationData.serialize(signedAggregateAndProof.message.aggregate.data);
-      expect(getAttDataHashFromSignedAggregateAndProofSerialized(bytes)).to.be.equal(
-        Buffer.from(attDataHash).toString("base64")
+      const attDataBase64 = ssz.phase0.AttestationData.serialize(signedAggregateAndProof.message.aggregate.data);
+      expect(getAttDataBase64FromSignedAggregateAndProofSerialized(bytes)).to.be.equal(
+        Buffer.from(attDataBase64).toString("base64")
       );
     });
   }

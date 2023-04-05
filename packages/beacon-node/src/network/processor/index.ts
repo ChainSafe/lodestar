@@ -55,11 +55,11 @@ const MAX_JOBS_SUBMITTED_PER_TICK = 128;
 const MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS = 16_384;
 
 // We don't want to process too many attestations in a single tick
-// As seen on mainnet, utilization rate for attestation topic is 80_000% (800x) - 90_000% (900x)
-// so make this constant go with that number
+// As seen on mainnet, attestation concurrency metric ranges from 1000 to 2000
+// so make this constant a little bit conservative
 const MAX_UNKNOWN_BLOCK_GOSSIP_OBJECTS_PER_TICK = 1024;
 
-// Same motivation to JobItemQueue, we don't want to block the vent loop
+// Same motivation to JobItemQueue, we don't want to block the event loop
 const PROCESS_UNKNOWN_BLOCK_GOSSIP_OBJECTS_YIELD_EVERY_MS = 50;
 
 /**

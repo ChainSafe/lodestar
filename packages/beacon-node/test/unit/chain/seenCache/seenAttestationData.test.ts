@@ -16,37 +16,37 @@ describe("SeenAttestationDatas", () => {
     cache.add(100, "100a", {attDataRootHex: "100a"} as AttestationDataCacheEntry);
   });
 
-  const addTestCases: {slot: number; attDataHash: string; expected: InsertOutcome}[] = [
-    {slot: 98, attDataHash: "98a", expected: InsertOutcome.Old},
-    {slot: 99, attDataHash: "99a", expected: InsertOutcome.AlreadyKnown},
-    {slot: 99, attDataHash: "99c", expected: InsertOutcome.ReachLimit},
-    {slot: 100, attDataHash: "100b", expected: InsertOutcome.NewData},
+  const addTestCases: {slot: number; attDataBase64: string; expected: InsertOutcome}[] = [
+    {slot: 98, attDataBase64: "98a", expected: InsertOutcome.Old},
+    {slot: 99, attDataBase64: "99a", expected: InsertOutcome.AlreadyKnown},
+    {slot: 99, attDataBase64: "99c", expected: InsertOutcome.ReachLimit},
+    {slot: 100, attDataBase64: "100b", expected: InsertOutcome.NewData},
   ];
 
   for (const testCase of addTestCases) {
-    it(`add slot ${testCase.slot} data ${testCase.attDataHash} should return ${testCase.expected}`, () => {
+    it(`add slot ${testCase.slot} data ${testCase.attDataBase64} should return ${testCase.expected}`, () => {
       expect(
-        cache.add(testCase.slot, testCase.attDataHash, {
-          attDataRootHex: testCase.attDataHash,
+        cache.add(testCase.slot, testCase.attDataBase64, {
+          attDataRootHex: testCase.attDataBase64,
         } as AttestationDataCacheEntry)
       ).to.equal(testCase.expected);
     });
   }
 
-  const getTestCases: {slot: number; attDataHash: string; expectedNull: boolean}[] = [
-    {slot: 98, attDataHash: "98a", expectedNull: true},
-    {slot: 99, attDataHash: "99unknown", expectedNull: true},
-    {slot: 99, attDataHash: "99a", expectedNull: false},
+  const getTestCases: {slot: number; attDataBase64: string; expectedNull: boolean}[] = [
+    {slot: 98, attDataBase64: "98a", expectedNull: true},
+    {slot: 99, attDataBase64: "99unknown", expectedNull: true},
+    {slot: 99, attDataBase64: "99a", expectedNull: false},
   ];
 
   for (const testCase of getTestCases) {
-    it(`get slot ${testCase.slot} data ${testCase.attDataHash} should return ${
+    it(`get slot ${testCase.slot} data ${testCase.attDataBase64} should return ${
       testCase.expectedNull ? "null" : "not null"
     }`, () => {
       if (testCase.expectedNull) {
-        expect(cache.get(testCase.slot, testCase.attDataHash)).to.be.null;
+        expect(cache.get(testCase.slot, testCase.attDataBase64)).to.be.null;
       } else {
-        expect(cache.get(testCase.slot, testCase.attDataHash)).to.not.be.null;
+        expect(cache.get(testCase.slot, testCase.attDataBase64)).to.not.be.null;
       }
     });
   }
