@@ -129,6 +129,7 @@ export class Validator {
       {
         afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
         disableAttestationGrouping: opts.disableAttestationGrouping || opts.distributed,
+        distributedAggregationSelection: opts.distributed,
       }
     );
 

@@ -3,7 +3,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {chainConfig} from "@lodestar/config/default";
 import bls from "@chainsafe/bls";
-import {toHexString} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {HttpStatusCode, routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -35,6 +35,11 @@ describe("AttestationDutiesService", function () {
     status: "active",
     validator: ssz.phase0.Validator.defaultValue(),
   };
+  const signedAttSelectionProof = fromHexString(
+    "0x8d80fe4be57500d2fe4f99c7d5586d9bd65ea4f9e4def0591020dd66f7d1daad" +
+      "1cea7520beb815423e2bc8316949ac2606da80d5d00df34f352b5a946d6a4bb4" +
+      "7e402f5d1167dec97af9742e61820625c5c792ddd2b8796962243d8e8cbeadee"
+  );
 
   before(() => {
     const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
@@ -96,8 +101,8 @@ describe("AttestationDutiesService", function () {
       Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(epoch)?.dutiesByIndex || new Map())
     ).to.deep.equal(
       {
-        // Since the ZERO_HASH won't pass the isAggregator test, selectionProof is null
-        [index]: {duty, selectionProof: null},
+        // Since the ZERO_HASH won't pass the isAggregator test
+        [index]: {duty, selectionProof: signedAttSelectionProof, isAggregator: false},
       },
       "Wrong dutiesService.attesters Map at current epoch"
     );
@@ -105,14 +110,14 @@ describe("AttestationDutiesService", function () {
       Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(epoch + 1)?.dutiesByIndex || new Map())
     ).to.deep.equal(
       {
-        // Since the ZERO_HASH won't pass the isAggregator test, selectionProof is null
-        [index]: {duty, selectionProof: null},
+        // Since the ZERO_HASH won't pass the isAggregator test
+        [index]: {duty, selectionProof: signedAttSelectionProof, isAggregator: false},
       },
       "Wrong dutiesService.attesters Map at next epoch"
     );
 
     expect(dutiesService.getDutiesAtSlot(slot)).to.deep.equal(
-      [{duty, selectionProof: null}],
+      [{duty, selectionProof: signedAttSelectionProof, isAggregator: false}],
       "Wrong getAttestersAtSlot()"
     );
 
@@ -165,13 +170,13 @@ describe("AttestationDutiesService", function () {
     // first confirm duties for this and next epoch should be persisted
     expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(0)?.dutiesByIndex || new Map())).to.deep.equal(
       {
-        4: {duty: duty, selectionProof: null},
+        4: {duty: duty, selectionProof: signedAttSelectionProof, isAggregator: false},
       },
       "Wrong dutiesService.attesters Map at current epoch"
     );
     expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(1)?.dutiesByIndex || new Map())).to.deep.equal(
       {
-        4: {duty: duty, selectionProof: null},
+        4: {duty: duty, selectionProof: signedAttSelectionProof, isAggregator: false},
       },
       "Wrong dutiesService.attesters Map at current epoch"
     );

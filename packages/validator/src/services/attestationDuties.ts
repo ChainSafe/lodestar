@@ -24,12 +24,18 @@ const SUBSCRIPTIONS_PER_REQUEST = 8738;
 /** Neatly joins the server-generated `AttesterData` with the locally-generated `selectionProof`. */
 export type AttDutyAndProof = {
   duty: routes.validator.AttesterDuty;
-  /** This value is only set to not null if the proof indicates that the validator is an aggregator. */
-  selectionProof: BLSSignature | null;
+  /** Locally-generated selection proof, only partial if validator is part of distributed cluster */
+  selectionProof: BLSSignature;
+  /** Whether the validator is an aggregator */
+  isAggregator: boolean;
 };
 
 // To assist with readability
 type AttDutiesAtEpoch = {dependentRoot: RootHex; dutiesByIndex: Map<ValidatorIndex, AttDutyAndProof>};
+
+type AttestationDutiesServiceOpts = {
+  distributedAggregationSelection?: boolean;
+};
 
 export class AttestationDutiesService {
   /** Maps a validator public key to their duties for each epoch */
@@ -46,7 +52,8 @@ export class AttestationDutiesService {
     private clock: IClock,
     private readonly validatorStore: ValidatorStore,
     chainHeadTracker: ChainHeaderTracker,
-    private readonly metrics: Metrics | null
+    private readonly metrics: Metrics | null,
+    private readonly opts?: AttestationDutiesServiceOpts
   ) {
     // Running this task every epoch is safe since a re-org of two epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
@@ -176,14 +183,14 @@ export class AttestationDutiesService {
     for (const epoch of [currentEpoch, nextEpoch]) {
       const epochDuties = this.dutiesByIndexByEpoch.get(epoch)?.dutiesByIndex;
       if (epochDuties) {
-        for (const {duty, selectionProof} of epochDuties.values()) {
+        for (const {duty, isAggregator} of epochDuties.values()) {
           if (indexSet.has(duty.validatorIndex)) {
             beaconCommitteeSubscriptions.push({
               validatorIndex: duty.validatorIndex,
               committeesAtSlot: duty.committeesAtSlot,
               committeeIndex: duty.committeeIndex,
               slot: duty.slot,
-              isAggregator: selectionProof !== null,
+              isAggregator,
             });
           }
         }
@@ -326,13 +333,15 @@ export class AttestationDutiesService {
 
   private async getDutyAndProof(duty: routes.validator.AttesterDuty): Promise<AttDutyAndProof> {
     const selectionProof = await this.validatorStore.signAttestationSelectionProof(duty.pubkey, duty.slot);
-    const isAggregator = isAggregatorFromCommitteeLength(duty.committeeLength, selectionProof);
 
-    return {
-      duty,
-      // selectionProof === null is used to check if is aggregator
-      selectionProof: isAggregator ? selectionProof : null,
-    };
+    if (this.opts?.distributedAggregationSelection) {
+      // Validator in distributed cluster only has a key share, not the full private key.
+      // Passing a partial selection proof to `is_aggregator` would produce incorrect result.
+      // Attestation service will combine selection proofs and determine aggregators at beginning of the slot.
+      return {duty, selectionProof, isAggregator: false};
+    }
+
+    return {duty, selectionProof, isAggregator: isAggregatorFromCommitteeLength(duty.committeeLength, selectionProof)};
   }
 
   /** Run once per epoch to prune duties map */

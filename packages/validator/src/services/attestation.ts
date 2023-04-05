@@ -1,7 +1,7 @@
 import {phase0, Slot, ssz} from "@lodestar/types";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
-import {Api, ApiError} from "@lodestar/api";
+import {Api, ApiError, routes} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
@@ -15,6 +15,7 @@ import {ValidatorEventEmitter} from "./emitter.js";
 export type AttestationServiceOpts = {
   afterBlockDelaySlotFraction?: number;
   disableAttestationGrouping?: boolean;
+  distributedAggregationSelection?: boolean;
 };
 
 /**
@@ -42,7 +43,9 @@ export class AttestationService {
     private readonly metrics: Metrics | null,
     private readonly opts?: AttestationServiceOpts
   ) {
-    this.dutiesService = new AttestationDutiesService(logger, api, clock, validatorStore, chainHeadTracker, metrics);
+    this.dutiesService = new AttestationDutiesService(logger, api, clock, validatorStore, chainHeadTracker, metrics, {
+      distributedAggregationSelection: opts?.distributedAggregationSelection,
+    });
 
     // At most every slot, check existing duties from AttestationDutiesService and run tasks
     clock.runEverySlot(this.runAttestationTasks);
@@ -57,6 +60,18 @@ export class AttestationService {
     const duties = this.dutiesService.getDutiesAtSlot(slot);
     if (duties.length === 0) {
       return;
+    }
+
+    if (this.opts?.distributedAggregationSelection) {
+      // Validator in distributed cluster only has a key share, not the full private key.
+      // The partial selection proofs must be exchanged for combined selection proofs by
+      // calling submitBeaconCommitteeSelections on the distributed validator middleware client.
+      // This will run in parallel to other attestation tasks but must be finished before starting
+      // attestation aggregation as it is required to correctly determine if validator is aggregator
+      // and to produce a AggregateAndProof that can be threshold aggregated by the middleware client.
+      this.runDistributedAggregationSelectionTasks(duties, slot, signal).catch((e) =>
+        this.logger.error("Error on attestation aggregation selection", {slot}, e)
+      );
     }
 
     // A validator should create and broadcast the attestation to the associated attestation subnet when either
@@ -231,7 +246,7 @@ export class AttestationService {
     const logCtx = {slot: attestation.slot, index: attestation.index};
 
     // No validator is aggregator, skip
-    if (duties.every(({selectionProof}) => selectionProof === null)) {
+    if (duties.every(({isAggregator}) => !isAggregator)) {
       return;
     }
 
@@ -247,11 +262,11 @@ export class AttestationService {
     const signedAggregateAndProofs: phase0.SignedAggregateAndProof[] = [];
 
     await Promise.all(
-      duties.map(async ({duty, selectionProof}) => {
+      duties.map(async ({duty, selectionProof, isAggregator}) => {
         const logCtxValidator = {...logCtx, validatorIndex: duty.validatorIndex};
         try {
           // Produce signed aggregates only for validators that are subscribed aggregators.
-          if (selectionProof !== null) {
+          if (isAggregator) {
             signedAggregateAndProofs.push(
               await this.validatorStore.signAggregateAndProof(duty, selectionProof, aggregate.data)
             );
@@ -273,6 +288,92 @@ export class AttestationService {
         this.metrics?.publishedAggregates.inc(signedAggregateAndProofs.length);
       } catch (e) {
         this.logger.error("Error publishing aggregateAndProofs", logCtx, e as Error);
+      }
+    }
+  }
+
+  /**
+   * Performs additional steps required if validator is part of distributed cluster
+   *
+   * 1. Exchange partial for combined selection proofs
+   * 2. Determine validators that should aggregate attestations
+   * 3. Resubscribe aggregators on beacon committee subnets
+   *
+   * See https://docs.google.com/document/d/1q9jOTPcYQa-3L8luRvQJ-M0eegtba4Nmon3dpO79TMk/mobilebasic
+   */
+  private async runDistributedAggregationSelectionTasks(
+    duties: AttDutyAndProof[],
+    slot: number,
+    signal: AbortSignal
+  ): Promise<void> {
+    const partialSelections: routes.validator.BeaconCommitteeSelection[] = duties.map(({duty, selectionProof}) => ({
+      validatorIndex: duty.validatorIndex,
+      slot,
+      selectionProof,
+    }));
+
+    this.logger.debug("Submitting partial selection proofs", {slot, count: partialSelections.length});
+
+    const res = await Promise.race([
+      this.api.validator.submitBeaconCommitteeSelections(partialSelections),
+      // Exit aggregations flow if there is no response after 1/3 of slot as
+      // beacon node would likely not have enough time to prepare an aggregate attestation.
+      // Note that the aggregations flow is not explicitly exited but rather will be skipped
+      // due to the fact that calculation of `is_aggregator` in duties service is not done
+      // and defaulted to `isAggregator=false`, meaning no validator will be an aggregator.
+      sleep(this.clock.msToSlot(slot + 1 / 3), signal),
+    ]);
+
+    if (!res) {
+      throw new Error("No response after 1/3 of slot");
+    }
+    ApiError.assert(res);
+
+    const combinedSelections = res.response.data;
+    this.logger.debug("Received combined selection proofs", {slot, count: combinedSelections.length});
+
+    const beaconCommitteeSubscriptions: routes.validator.BeaconCommitteeSubscription[] = [];
+
+    for (const dutyAndProof of duties) {
+      const {validatorIndex, committeeIndex, committeeLength, committeesAtSlot} = dutyAndProof.duty;
+      const selection = combinedSelections.find((s) => s.validatorIndex === validatorIndex);
+      const logCtxValidator = {slot, index: committeeIndex, validatorIndex};
+
+      if (!selection) {
+        this.logger.warn("Did not receive combined selection proof", logCtxValidator);
+        continue;
+      }
+
+      const isAggregator = isAggregatorFromCommitteeLength(committeeLength, selection.selectionProof);
+
+      // Replace partial with combined selection proof by mutating object
+      dutyAndProof.selectionProof = selection.selectionProof;
+      dutyAndProof.isAggregator = isAggregator;
+
+      if (isAggregator) {
+        // Only push subnet subscriptions with `isAggregator=true` as all validators
+        // with duties for slot are already subscribed to subnets with `isAggregator=false`.
+        beaconCommitteeSubscriptions.push({
+          validatorIndex,
+          committeesAtSlot,
+          committeeIndex,
+          slot,
+          isAggregator,
+        });
+        this.logger.debug("Resubscribing validator as aggregator on beacon committee subnet", logCtxValidator);
+      }
+    }
+
+    // If there are any subscriptions with aggregators, push them out to the beacon node.
+    if (beaconCommitteeSubscriptions.length > 0) {
+      try {
+        ApiError.assert(await this.api.validator.prepareBeaconCommitteeSubnet(beaconCommitteeSubscriptions));
+        this.logger.debug("Resubscribed validators as aggregators on beacon committee subnet", {
+          slot,
+          count: beaconCommitteeSubscriptions.length,
+        });
+      } catch (e) {
+        this.logger.error("Failed to resubscribe to beacon committee subnets", {slot}, e as Error);
       }
     }
   }
