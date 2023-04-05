@@ -63,10 +63,10 @@
     "@lodestar/params": "^1.6.0",
     "@lodestar/types": "^1.6.0",
     "@lodestar/utils": "^1.6.0",
-    "it-all": "^2.0.0",
+    "it-all": "^3.0.1",
     "snappyjs": "^0.7.0",
-    "stream-to-it": "^0.2.0",
-    "uint8arraylist": "^2.3.2",
+    "stream-to-it": "^0.2.4",
+    "uint8arraylist": "^2.4.3",
     "varint": "^6.0.0"
   },
   "peerDependencies": {

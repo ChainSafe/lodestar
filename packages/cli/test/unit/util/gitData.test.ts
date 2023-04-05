@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {expect} from "chai";
-import findUp from "find-up";
+import {findUpSync} from "find-up";
 import {gitDataPath, readGitDataFile} from "../../../src/util/gitData/gitDataPath.js";
 import {getGitData} from "../../../src/util/index.js";
 
@@ -24,7 +24,7 @@ describe("util / gitData", function () {
   });
 
   it("gitData path must be included in the package.json", () => {
-    const pkgJsonPath = findUp.sync("package.json", {cwd: __dirname});
+    const pkgJsonPath = findUpSync("package.json", {cwd: __dirname});
     if (!pkgJsonPath) {
       throw Error("No package.json found");
     }

@@ -1,7 +1,7 @@
 import qs from "qs";
 import fastify, {FastifyError, FastifyInstance} from "fastify";
-import fastifyCors from "fastify-cors";
-import bearerAuthPlugin from "fastify-bearer-auth";
+import fastifyCors from "@fastify/cors";
+import bearerAuthPlugin from "@fastify/bearer-auth";
 import {RouteConfig} from "@lodestar/api/beacon/server";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
