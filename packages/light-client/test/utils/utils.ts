@@ -155,9 +155,7 @@ export function computeLightclientUpdate(config: BeaconConfig, period: SyncPerio
 /**
  * Creates a LightClientBootstrap that passes validation
  */
-export function computeLightClientSnapshot(
-  period: SyncPeriod
-): {
+export function computeLightClientSnapshot(period: SyncPeriod): {
   snapshot: allForks.LightClientBootstrap;
   checkpointRoot: Uint8Array;
 } {

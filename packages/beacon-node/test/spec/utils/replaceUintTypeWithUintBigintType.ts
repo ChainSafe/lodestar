@@ -18,7 +18,7 @@ import {
  */
 export function replaceUintTypeWithUintBigintType<T extends Type<any>>(type: T): T {
   if (type instanceof UintNumberType && type.byteLength === 8) {
-    return (new UintBigintType(type.byteLength) as unknown) as T;
+    return new UintBigintType(type.byteLength) as unknown as T;
   }
 
   // For Container iterate and replace all sub properties
@@ -27,21 +27,21 @@ export function replaceUintTypeWithUintBigintType<T extends Type<any>>(type: T):
     for (const key of Object.keys(fields) as (keyof typeof fields)[]) {
       fields[key] = replaceUintTypeWithUintBigintType(fields[key]);
     }
-    return (new ContainerType(fields, type.opts) as unknown) as T;
+    return new ContainerType(fields, type.opts) as unknown as T;
   }
 
   // For List or vectors replace the subType
   if (type instanceof ListBasicType) {
-    return (new ListBasicType(replaceUintTypeWithUintBigintType(type.elementType), type.limit) as unknown) as T;
+    return new ListBasicType(replaceUintTypeWithUintBigintType(type.elementType), type.limit) as unknown as T;
   }
   if (type instanceof VectorBasicType) {
-    return (new VectorBasicType(replaceUintTypeWithUintBigintType(type.elementType), type.length) as unknown) as T;
+    return new VectorBasicType(replaceUintTypeWithUintBigintType(type.elementType), type.length) as unknown as T;
   }
   if (type instanceof ListCompositeType) {
-    return (new ListCompositeType(replaceUintTypeWithUintBigintType(type.elementType), type.limit) as unknown) as T;
+    return new ListCompositeType(replaceUintTypeWithUintBigintType(type.elementType), type.limit) as unknown as T;
   }
   if (type instanceof VectorCompositeType) {
-    return (new VectorCompositeType(replaceUintTypeWithUintBigintType(type.elementType), type.length) as unknown) as T;
+    return new VectorCompositeType(replaceUintTypeWithUintBigintType(type.elementType), type.length) as unknown as T;
   }
 
   return type;

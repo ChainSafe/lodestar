@@ -185,50 +185,47 @@ export function getValidatorApi({
       );
   }
 
-  const produceBlindedBlock: ServerApi<routes.validator.Api>["produceBlindedBlock"] = async function produceBlindedBlock(
-    slot,
-    randaoReveal,
-    graffiti
-  ) {
-    const source = BlockSource.builder;
-    let timer;
-    metrics?.blockProductionRequests.inc({source});
-    try {
-      notWhileSyncing();
-      await waitForSlot(slot); // Must never request for a future slot > currentSlot
+  const produceBlindedBlock: ServerApi<routes.validator.Api>["produceBlindedBlock"] =
+    async function produceBlindedBlock(slot, randaoReveal, graffiti) {
+      const source = BlockSource.builder;
+      let timer;
+      metrics?.blockProductionRequests.inc({source});
+      try {
+        notWhileSyncing();
+        await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      // Error early for builder if builder flow not active
-      if (!chain.executionBuilder) {
-        throw Error("Execution builder not set");
+        // Error early for builder if builder flow not active
+        if (!chain.executionBuilder) {
+          throw Error("Execution builder not set");
+        }
+        if (!chain.executionBuilder.status) {
+          throw Error("Execution builder disabled");
+        }
+
+        // Process the queued attestations in the forkchoice for correct head estimation
+        // forkChoice.updateTime() might have already been called by the onSlot clock
+        // handler, in which case this should just return.
+        chain.forkChoice.updateTime(slot);
+        chain.forkChoice.updateHead();
+
+        timer = metrics?.blockProductionTime.startTimer();
+        const {block, blockValue} = await chain.produceBlindedBlock({
+          slot,
+          randaoReveal,
+          graffiti: toGraffitiBuffer(graffiti || ""),
+        });
+        metrics?.blockProductionSuccess.inc({source});
+        metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
+        logger.verbose("Produced blinded block", {
+          slot,
+          blockValue,
+          root: toHexString(config.getBlindedForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
+        });
+        return {data: block, version: config.getForkName(block.slot), blockValue};
+      } finally {
+        if (timer) timer({source});
       }
-      if (!chain.executionBuilder.status) {
-        throw Error("Execution builder disabled");
-      }
-
-      // Process the queued attestations in the forkchoice for correct head estimation
-      // forkChoice.updateTime() might have already been called by the onSlot clock
-      // handler, in which case this should just return.
-      chain.forkChoice.updateTime(slot);
-      chain.forkChoice.updateHead();
-
-      timer = metrics?.blockProductionTime.startTimer();
-      const {block, blockValue} = await chain.produceBlindedBlock({
-        slot,
-        randaoReveal,
-        graffiti: toGraffitiBuffer(graffiti || ""),
-      });
-      metrics?.blockProductionSuccess.inc({source});
-      metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-      logger.verbose("Produced blinded block", {
-        slot,
-        blockValue,
-        root: toHexString(config.getBlindedForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
-      });
-      return {data: block, version: config.getForkName(block.slot), blockValue};
-    } finally {
-      if (timer) timer({source});
-    }
-  };
+    };
 
   const produceBlock: ServerApi<routes.validator.Api>["produceBlockV2"] = async function produceBlock(
     slot,

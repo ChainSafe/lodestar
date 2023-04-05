@@ -78,9 +78,9 @@ export function objectToExpectedCase<T extends Record<string, unknown> | Record<
   if (Array.isArray(obj)) {
     const newArr: unknown[] = [];
     for (let i = 0; i < obj.length; i++) {
-      newArr[i] = objectToExpectedCase(obj[i], expectedCase);
+      newArr[i] = objectToExpectedCase(obj[i] as T, expectedCase);
     }
-    return (newArr as unknown) as T;
+    return newArr as unknown as T;
   }
 
   if (Object(obj) === obj) {

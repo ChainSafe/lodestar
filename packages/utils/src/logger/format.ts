@@ -61,7 +61,7 @@ function jsonLogFormat(opts: LoggerOptions): Format {
     format((_info) => {
       const info = _info as WinstonInfoArg;
       info.context = logCtxToJson(info.context);
-      info.error = (logCtxToJson(info.error) as unknown) as Error;
+      info.error = logCtxToJson(info.error) as unknown as Error;
       return info;
     })(),
     format.json()

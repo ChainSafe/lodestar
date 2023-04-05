@@ -84,7 +84,7 @@ describe("network / peers / PeerManager", function () {
         networkEventBus,
         attnetsService: mockSubnetsService,
         syncnetsService: mockSubnetsService,
-        gossip: ({getScore: () => 0, scoreParams: {decayInterval: 1000}} as unknown) as Eth2Gossipsub,
+        gossip: {getScore: () => 0, scoreParams: {decayInterval: 1000}} as unknown as Eth2Gossipsub,
         peersData: new PeersData(),
       },
       {

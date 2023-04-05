@@ -4,6 +4,6 @@ export async function getEventSource(): Promise<typeof EventSource> {
   if (globalThis.EventSource) {
     return EventSource;
   } else {
-    return ((await import("eventsource")).default as unknown) as typeof EventSource;
+    return (await import("eventsource")).default as unknown as typeof EventSource;
   }
 }

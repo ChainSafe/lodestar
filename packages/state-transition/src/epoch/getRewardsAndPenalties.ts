@@ -94,13 +94,8 @@ export function getRewardsAndPenaltiesAltair(
       rewardPenaltyItemCache.set(effectiveBalanceIncrement, rewardPenaltyItem);
     }
 
-    const {
-      timelySourceReward,
-      timelySourcePenalty,
-      timelyTargetReward,
-      timelyTargetPenalty,
-      timelyHeadReward,
-    } = rewardPenaltyItem;
+    const {timelySourceReward, timelySourcePenalty, timelyTargetReward, timelyTargetPenalty, timelyHeadReward} =
+      rewardPenaltyItem;
 
     // same logic to getFlagIndexDeltas
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {

@@ -17,7 +17,7 @@ export function requestDecode<Req, Resp>(
     const type = protocol.requestType(ForkName.phase0);
     if (type === null) {
       // method has no body
-      return (null as unknown) as Req;
+      return null as unknown as Req;
     }
 
     // Request has a single payload, so return immediately

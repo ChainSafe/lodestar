@@ -73,7 +73,7 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     const fork = state.config.getForkSeq(state.slot);
     blockFns.processExecutionPayload(
       fork,
-      (state as CachedBeaconStateAllForks) as CachedBeaconStateBellatrix,
+      state as CachedBeaconStateAllForks as CachedBeaconStateBellatrix,
       testCase.execution_payload,
       {
         executionPayloadStatus: testCase.execution.execution_valid

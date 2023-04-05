@@ -127,7 +127,7 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
   }
 
   const httpClient = new HttpClient({baseUrl: `http://127.0.0.1:${httpPort}`});
-  const api = (getClient({baseUrl: `http://127.0.0.1:${httpPort}`}, {config}) as unknown) as LighthouseAPI;
+  const api = getClient({baseUrl: `http://127.0.0.1:${httpPort}`}, {config}) as unknown as LighthouseAPI;
   api.lighthouse = {
     async getPeers() {
       return httpClient.json({url: "/lighthouse/peers", method: "GET"});

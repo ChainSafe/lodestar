@@ -60,9 +60,7 @@ export type Api = {
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
    */
-  getBootstrap(
-    blockRoot: string
-  ): Promise<
+  getBootstrap(blockRoot: string): Promise<
     ApiClientResponse<{
       [HttpStatusCode.OK]: {
         version: ForkName;

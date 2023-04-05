@@ -28,6 +28,6 @@ export class BlobsSidecarArchiveRepository extends Repository<Slot, deneb.BlobsS
   }
 
   decodeKey(data: Uint8Array): number {
-    return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
+    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
   }
 }

@@ -58,7 +58,7 @@ describe("request / sendRequest", () => {
 
   for (const {id, protocols, expectedReturn, requestBody} of testCases) {
     it(id, async () => {
-      libp2p = ({
+      libp2p = {
         dialProtocol: sinon
           .stub()
           .resolves(
@@ -70,7 +70,7 @@ describe("request / sendRequest", () => {
               protocols[0].method
             )
           ),
-      } as unknown) as Libp2p;
+      } as unknown as Libp2p;
 
       const responses = await pipe(
         sendRequest(
@@ -143,9 +143,9 @@ describe("request / sendRequest", () => {
 
     for (const {id, source, opts, error} of timeoutTestCases) {
       it(id, async () => {
-        libp2p = ({
+        libp2p = {
           dialProtocol: sinon.stub().resolves(new MockLibP2pStream(source(), messages.ping.method)),
-        } as unknown) as Libp2p;
+        } as unknown as Libp2p;
 
         await expectRejectedWithLodestarError(
           pipe(

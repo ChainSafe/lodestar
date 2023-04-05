@@ -300,9 +300,7 @@ function scoreParameterDecayWithBase(decayTimeMs: number, decayIntervalMs: numbe
   return Math.pow(decayToZero, 1 / ticks);
 }
 
-function expectedAggregatorCountPerSlot(
-  activeValidatorCount: number
-): {
+function expectedAggregatorCountPerSlot(activeValidatorCount: number): {
   aggregatorsPerslot: number;
   committeesPerSlot: number;
 } {

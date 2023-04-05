@@ -43,7 +43,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
   }
 
   decodeKey(data: Uint8Array): number {
-    return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
+    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
   }
 
   // Overrides to index
@@ -103,7 +103,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
   async *valuesStream(opts?: BlockFilterOptions): AsyncIterable<allForks.SignedBeaconBlock> {
     const firstSlot = this.getFirstSlot(opts);
     const valuesStream = super.valuesStream(opts);
-    const step = (opts && opts.step) || 1;
+    const step = (opts && opts.step) ?? 1;
 
     for await (const value of valuesStream) {
       if ((value.message.slot - firstSlot) % step === 0) {

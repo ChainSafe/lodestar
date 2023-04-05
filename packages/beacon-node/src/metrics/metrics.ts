@@ -38,7 +38,7 @@ export function createMetrics(
   // Merge external registries
   for (const externalRegister of externalRegistries) {
     for (const metric of externalRegister.getMetricsAsArray()) {
-      register.registerMetric((metric as unknown) as Metric<string>);
+      register.registerMetric(metric as unknown as Metric<string>);
     }
   }
 
