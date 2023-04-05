@@ -51,3 +51,7 @@ export function isEIP1193Provider(provider: Web3Provider): provider is EIP1193Pr
     provider.request.constructor.name === "AsyncFunction"
   );
 }
+
+export function isTruthy<T = unknown>(value: T): value is Exclude<T, undefined | null> {
+  return value !== undefined && value !== null && value !== false;
+}

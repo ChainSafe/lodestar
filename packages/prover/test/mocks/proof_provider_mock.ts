@@ -8,7 +8,7 @@ export function createProofProviderMock({
 }: {
   executionPayload: allForks.ExecutionPayload;
 }): ProofProvider {
-  return ({
+  return {
     getExecutionPayload: sinon.stub().resolves(executionPayload),
-  } as unknown) as ProofProvider;
+  } as unknown as ProofProvider;
 }

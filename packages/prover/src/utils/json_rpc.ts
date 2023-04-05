@@ -47,3 +47,7 @@ export function generateUnverifiedResponseForPayload<P, D = unknown>(
         },
       };
 }
+
+export function isValidResponse<R, E>(response: ELResponse<R, E>): response is ELResponse<R, never> {
+  return response.error === undefined;
+}

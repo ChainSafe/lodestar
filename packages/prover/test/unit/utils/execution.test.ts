@@ -4,6 +4,7 @@ import chaiAsPromised from "chai-as-promised";
 import {ELProof, ELStorageProof} from "../../../src/types.js";
 import {isValidAccount, isValidStorageKeys} from "../../../src/utils/execution.js";
 import {invalidAccountProof, invalidStorageProof, validAccountProof, validStorageProof} from "../../fixtures/index.js";
+import {createMockLogger} from "../../mocks/logger_mock.js";
 
 chai.use(chaiAsPromised);
 
@@ -18,6 +19,7 @@ describe("uitls/execution", () => {
           proof: validAccountProof,
           address,
           stateRoot,
+          logger: createMockLogger(),
         })
       ).eventually.to.be.true;
     });
@@ -35,6 +37,7 @@ describe("uitls/execution", () => {
           proof,
           address,
           stateRoot,
+          logger: createMockLogger(),
         })
       ).eventually.to.be.false;
     });
@@ -48,6 +51,7 @@ describe("uitls/execution", () => {
           proof: invalidAccountProof,
           address,
           stateRoot,
+          logger: createMockLogger(),
         })
       ).eventually.to.be.false;
     });
@@ -61,6 +65,7 @@ describe("uitls/execution", () => {
         isValidStorageKeys({
           proof: validStorageProof,
           storageKeys,
+          logger: createMockLogger(),
         })
       ).eventually.to.be.true;
     });
@@ -70,6 +75,7 @@ describe("uitls/execution", () => {
 
       await expect(
         isValidStorageKeys({
+          logger: createMockLogger(),
           proof: invalidStorageProof,
           storageKeys,
         })
@@ -93,6 +99,7 @@ describe("uitls/execution", () => {
         isValidStorageKeys({
           proof,
           storageKeys,
+          logger: createMockLogger(),
         })
       ).eventually.to.be.false;
     });
@@ -108,6 +115,7 @@ describe("uitls/execution", () => {
         isValidStorageKeys({
           proof,
           storageKeys,
+          logger: createMockLogger(),
         })
       ).eventually.to.be.true;
     });

@@ -11,7 +11,7 @@ import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
 describe("verified_requests / eth_getBalance", () => {
   it("should return the valid json-rpc response for a valid account", async () => {
     const address = "0xf97e180c050e5ab072211ad2c213eb5aee4df134";
-    const opts: ELVerifiedRequestHandlerOpts<[address: string, block?: string | number | undefined]> = {
+    const opts: ELVerifiedRequestHandlerOpts<[address: string, block?: string | number | undefined], string> = {
       handler: createELRequestHandlerMock({accountProof: validAccountProof}),
       logger: createMockLogger(),
       proofProvider: createProofProviderMock({executionPayload: validExecutionPayload}),
@@ -30,7 +30,7 @@ describe("verified_requests / eth_getBalance", () => {
 
   it("should return the json-rpc response with error for an invalid account", async () => {
     const address = "0xf97e180c050e5ab072211ad2c213eb5aee4df134";
-    const opts: ELVerifiedRequestHandlerOpts<[address: string, block?: string | number | undefined]> = {
+    const opts: ELVerifiedRequestHandlerOpts<[address: string, block?: string | number | undefined], string> = {
       handler: createELRequestHandlerMock({accountProof: invalidAccountProof}),
       logger: createMockLogger(),
       proofProvider: createProofProviderMock({executionPayload: validExecutionPayload}),

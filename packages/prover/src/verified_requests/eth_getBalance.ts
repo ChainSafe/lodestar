@@ -1,6 +1,5 @@
 import {ELVerifiedRequestHandler} from "../interfaces.js";
-import {bufferToHex} from "../utils/conversion.js";
-import {getELProof, isValidAccount, isValidStorageKeys} from "../utils/execution.js";
+import {fetchAndVerifyAccount} from "../utils/execution.js";
 import {generateRPCResponseForPayload, generateUnverifiedResponseForPayload} from "../utils/json_rpc.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -13,18 +12,10 @@ export const eth_getBalance: ELVerifiedRequestHandler<[address: string, block?: 
   const {
     params: [address, block],
   } = payload;
-  const executionPayload = await proofProvider.getExecutionPayload(block ?? "latest");
-  const proof = await getELProof(handler, [address, [], bufferToHex(executionPayload.blockHash)]);
+  const result = await fetchAndVerifyAccount({proofProvider, logger, handler, address, block});
 
-  if (
-    (await isValidAccount({
-      address: address,
-      stateRoot: executionPayload.stateRoot,
-      proof,
-    })) &&
-    (await isValidStorageKeys({storageKeys: [], proof}))
-  ) {
-    return generateRPCResponseForPayload(payload, proof.balance);
+  if (result.valid) {
+    return generateRPCResponseForPayload(payload, result.data.balance);
   }
 
   logger.error("Request could not be verified.");
