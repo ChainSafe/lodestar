@@ -7,6 +7,7 @@ import {Bytes32, allForks} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {ELRequestHandler} from "../interfaces.js";
 import {ELBlock, ELProof, ELStorageProof, HexString} from "../types.js";
+import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {blockDataFromELBlock, bufferToHex, hexToBuffer, padLeft} from "./conversion.js";
 
 const emptyAccountSerialize = new Account().serialize();
@@ -28,6 +29,37 @@ export async function getELProof(
     throw new Error("Can not find proof for given address.");
   }
   return proof.result as ELProof;
+}
+
+export async function fetchAndVerifyAccount({
+  address,
+  proofProvider,
+  logger,
+  handler,
+  block,
+}: {
+  address: HexString;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handler: ELRequestHandler<any, any>;
+  proofProvider: ProofProvider;
+  logger: Logger;
+  block?: number | string;
+}): Promise<ELProof | undefined> {
+  const executionPayload = await proofProvider.getExecutionPayload(block ?? "latest");
+  const proof = await getELProof(handler, [address, [], bufferToHex(executionPayload.blockHash)]);
+  if (
+    (await isValidAccount({
+      address: address,
+      stateRoot: executionPayload.stateRoot,
+      proof,
+      logger,
+    })) &&
+    (await isValidStorageKeys({storageKeys: [], proof, logger}))
+  ) {
+    return proof;
+  }
+
+  return undefined;
 }
 
 export async function isValidAccount({

@@ -1,6 +1,5 @@
 import {ELVerifiedRequestHandler} from "../interfaces.js";
-import {bufferToHex} from "../utils/conversion.js";
-import {getELProof, isValidAccount, isValidStorageKeys} from "../utils/execution.js";
+import {fetchAndVerifyAccount} from "../utils/execution.js";
 import {generateRPCResponseForPayload, generateUnverifiedResponseForPayload} from "../utils/json_rpc.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -11,18 +10,9 @@ export const eth_getTransactionCount: ELVerifiedRequestHandler<
   const {
     params: [address, block],
   } = payload;
-  const executionPayload = await proofProvider.getExecutionPayload(block ?? "latest");
-  const proof = await getELProof(handler, [address, [], bufferToHex(executionPayload.blockHash)]);
+  const proof = await fetchAndVerifyAccount({proofProvider, logger, handler, address, block});
 
-  if (
-    (await isValidAccount({
-      address: address,
-      stateRoot: executionPayload.stateRoot,
-      proof,
-      logger,
-    })) &&
-    (await isValidStorageKeys({storageKeys: [], proof, logger}))
-  ) {
+  if (proof) {
     return generateRPCResponseForPayload(payload, proof.nonce);
   }
 
