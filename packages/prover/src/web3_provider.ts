@@ -19,8 +19,8 @@ import {
   isSendAsyncProvider,
   isSendProvider,
 } from "./utils/assertion.js";
-import {processAndVerifyRequest} from "./utils/execution.js";
 import {getLogger} from "./utils/logger.js";
+import {processAndVerifyRequest} from "./utils/process.js";
 
 type ProvableProviderInitOpts = {network?: NetworkName; wsCheckpoint?: string; signal?: AbortSignal} & LogOptions &
   ConsensusNodeOptions;
