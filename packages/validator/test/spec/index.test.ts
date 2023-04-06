@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import {LevelDbController} from "@lodestar/db";
 import {config} from "@lodestar/config/default";
 import {

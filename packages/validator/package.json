@@ -63,6 +63,7 @@
     "strict-event-emitter-types": "^2.0.0"
   },
   "devDependencies": {
+    "rimraf": "^4.4.1",
     "bigint-buffer": "^1.1.5",
     "testcontainers": "^9.4.0"
   }

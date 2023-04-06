@@ -18,7 +18,7 @@ describe("encoders / responseEncode", () => {
         const encodedChunks = await pipe(responseEncode(responseChunks, protocol as ProtocolDefinition<any, any>), all);
 
         expectEqualByteChunks(
-          encodedChunks,
+          encodedChunks as Uint8Array[],
           chunks.map((c) => c.subarray())
         );
       });
