@@ -142,7 +142,10 @@ export class Validator {
       emitter,
       chainHeaderTracker,
       metrics,
-      {scAfterBlockDelaySlotFraction: opts.scAfterBlockDelaySlotFraction}
+      {
+        scAfterBlockDelaySlotFraction: opts.scAfterBlockDelaySlotFraction,
+        distributedAggregationSelection: opts.distributed,
+      }
     );
 
     this.config = config;
