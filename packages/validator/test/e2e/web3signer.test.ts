@@ -84,7 +84,7 @@ describe("web3signer signature test", function () {
     // using the latest image to be alerted in case there is a breaking change
     startedContainer = await new GenericContainer(`consensys/web3signer:${web3signerVersion}`)
       .withHealthCheck({
-        test: `curl -f http://localhost:${port}/healthcheck || exit 1`,
+        test: ["CMD-SHELL", `curl -f http://localhost:${port}/healthcheck || exit 1`],
         interval: 1000,
         timeout: 3000,
         retries: 5,
@@ -92,8 +92,8 @@ describe("web3signer signature test", function () {
       })
       .withWaitStrategy(Wait.forHealthCheck())
       .withExposedPorts(port)
-      .withBindMount(configDirPathHost, configDirPathContainer, "ro")
-      .withCmd([
+      .withBindMounts([{source: configDirPathHost, target: configDirPathContainer, mode: "ro"}])
+      .withCommand([
         "eth2",
         `--keystores-path=${configDirPathContainer}`,
         // Don't use path.join here, the container is running on unix filesystem

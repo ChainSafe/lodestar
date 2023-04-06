@@ -69,7 +69,7 @@
   },
   "dependencies": {
     "@chainsafe/persistent-merkle-tree": "^0.5.0",
-    "@chainsafe/ssz": "^0.10.1",
+    "@chainsafe/ssz": "^0.10.2",
     "@lodestar/config": "^1.6.0",
     "@lodestar/params": "^1.6.0",
     "@lodestar/types": "^1.6.0",
@@ -81,7 +81,7 @@
   "devDependencies": {
     "@types/eventsource": "^1.1.11",
     "@types/qs": "^6.9.7",
-    "ajv": "^8.11.0",
+    "ajv": "^8.12.0",
     "fastify": "3.29.4"
   },
   "peerDependencies": {

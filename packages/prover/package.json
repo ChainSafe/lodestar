@@ -69,16 +69,16 @@
     "ethereum-cryptography": "^1.2.0",
     "http-proxy": "^1.18.1",
     "yargs": "^16.1.0",
-    "source-map-support": "^0.5.19",
-    "find-up": "^5.0.0",
-    "winston": "^3.3.3",
+    "source-map-support": "^0.5.21",
+    "find-up": "^6.3.0",
+    "winston": "^3.8.2",
     "winston-transport": "^4.5.0"
   },
   "devDependencies": {
     "@types/http-proxy": "^1.17.10",
     "@types/yargs": "^15.0.9",
-    "web3": "^1.8.2",
-    "ethers": "^6.1.0"
+    "web3": "^1.9.0",
+    "ethers": "^6.2.3"
   },
   "peerDependencies": {
   },

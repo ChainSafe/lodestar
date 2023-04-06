@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import findUp from "find-up";
+import {findUpSync} from "find-up";
 import {readAndGetGitData} from "./gitData/index.js";
 
 // Global variable __dirname no longer available in ES6 modules.
@@ -58,7 +58,7 @@ export function getVersionData(): {
 
 /** Read version information from lerna.json */
 function readVersionFromLernaJson(): string | undefined {
-  const filePath = findUp.sync("lerna.json", {cwd: __dirname});
+  const filePath = findUpSync("lerna.json", {cwd: __dirname});
   if (!filePath) return undefined;
 
   const lernaJson = JSON.parse(fs.readFileSync(filePath, "utf8")) as VersionJson;
@@ -67,7 +67,7 @@ function readVersionFromLernaJson(): string | undefined {
 
 /** Read version information from package.json */
 function readCliPackageJson(): string | undefined {
-  const filePath = findUp.sync("package.json", {cwd: __dirname});
+  const filePath = findUpSync("package.json", {cwd: __dirname});
   if (!filePath) return undefined;
 
   const packageJson = JSON.parse(fs.readFileSync(filePath, "utf8")) as VersionJson;

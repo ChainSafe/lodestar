@@ -4,12 +4,11 @@ import stream from "node:stream";
 import {promisify} from "node:util";
 import got from "got";
 import yaml from "js-yaml";
-const {load, dump, FAILSAFE_SCHEMA, Schema, Type} = yaml;
+const {load, dump, FAILSAFE_SCHEMA, Type} = yaml;
 
 import {mkdir} from "./fs.js";
 
-export const yamlSchema = new Schema({
-  include: [FAILSAFE_SCHEMA],
+export const yamlSchema = FAILSAFE_SCHEMA.extend({
   implicit: [
     new Type("tag:yaml.org,2002:str", {
       kind: "scalar",
