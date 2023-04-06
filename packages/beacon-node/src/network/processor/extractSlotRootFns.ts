@@ -5,7 +5,6 @@ import {
   getSlotFromAttestationSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
 } from "../../util/sszBytes.js";
-import {nullableResult} from "../../util/wrapError.js";
 import {GossipType} from "../gossip/index.js";
 import {ExtractSlotRootFns} from "./types.js";
 
@@ -15,21 +14,23 @@ import {ExtractSlotRootFns} from "./types.js";
  */
 export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
   return {
-    [GossipType.beacon_attestation]: nullableResult(getSlotRootFromAttestationSerialized),
-    [GossipType.beacon_aggregate_and_proof]: nullableResult(getSlotRootFromAggregateAndProofSerialized),
-  };
-}
+    [GossipType.beacon_attestation]: (data: Uint8Array): SlotRootHex | null => {
+      const slot = getSlotFromAttestationSerialized(data);
+      const root = getBlockRootFromAttestationSerialized(data);
 
-function getSlotRootFromAttestationSerialized(data: Uint8Array): SlotRootHex {
-  return {
-    slot: getSlotFromAttestationSerialized(data),
-    root: getBlockRootFromAttestationSerialized(data),
-  };
-}
+      if (slot === null || root === null) {
+        return null;
+      }
+      return {slot, root};
+    },
+    [GossipType.beacon_aggregate_and_proof]: (data: Uint8Array): SlotRootHex | null => {
+      const slot = getSlotFromSignedAggregateAndProofSerialized(data);
+      const root = getBlockRootFromSignedAggregateAndProofSerialized(data);
 
-function getSlotRootFromAggregateAndProofSerialized(data: Uint8Array): SlotRootHex {
-  return {
-    slot: getSlotFromSignedAggregateAndProofSerialized(data),
-    root: getBlockRootFromSignedAggregateAndProofSerialized(data),
+      if (slot === null || root === null) {
+        return null;
+      }
+      return {slot, root};
+    },
   };
 }
