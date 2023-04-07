@@ -2,15 +2,15 @@ import {expect} from "chai";
 import {Epoch, phase0, RootHex, Slot, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {
-  getAttDataHashFromAttestationSerialized,
-  getAttDataHashFromSignedAggregateAndProofSerialized,
+  getAttDataBase64FromAttestationSerialized,
+  getAttDataBase64FromSignedAggregateAndProofSerialized,
   getBlockRootFromAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromAttestationSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
 } from "../../../src/util/sszBytes.js";
 
-describe("attestation SSZ serialized peaking", () => {
+describe("attestation SSZ serialized picking", () => {
   const testCases: phase0.Attestation[] = [
     ssz.phase0.Attestation.defaultValue(),
     attestationFromValues(
@@ -28,10 +28,33 @@ describe("attestation SSZ serialized peaking", () => {
       expect(getSlotFromAttestationSerialized(bytes)).equals(attestation.data.slot);
       expect(getBlockRootFromAttestationSerialized(bytes)).equals(toHex(attestation.data.beaconBlockRoot));
 
-      const attDataHash = ssz.phase0.AttestationData.serialize(attestation.data);
-      expect(getAttDataHashFromAttestationSerialized(bytes)).to.be.equal(Buffer.from(attDataHash).toString("base64"));
+      const attDataBase64 = ssz.phase0.AttestationData.serialize(attestation.data);
+      expect(getAttDataBase64FromAttestationSerialized(bytes)).to.be.equal(
+        Buffer.from(attDataBase64).toString("base64")
+      );
     });
   }
+
+  it("getSlotFromAttestationSerialized - invalid data", () => {
+    const invalidSlotDataSizes = [0, 4, 11];
+    for (const size of invalidSlotDataSizes) {
+      expect(getSlotFromAttestationSerialized(Buffer.alloc(size))).to.be.null;
+    }
+  });
+
+  it("getBlockRootFromAttestationSerialized - invalid data", () => {
+    const invalidBlockRootDataSizes = [0, 4, 20, 49];
+    for (const size of invalidBlockRootDataSizes) {
+      expect(getBlockRootFromAttestationSerialized(Buffer.alloc(size))).to.be.null;
+    }
+  });
+
+  it("getAttDataBase64FromAttestationSerialized - invalid data", () => {
+    const invalidAttDataBase64DataSizes = [0, 4, 100, 128, 131];
+    for (const size of invalidAttDataBase64DataSizes) {
+      expect(getAttDataBase64FromAttestationSerialized(Buffer.alloc(size))).to.be.null;
+    }
+  });
 });
 
 describe("aggregateAndProof SSZ serialized peaking", () => {
@@ -56,12 +79,33 @@ describe("aggregateAndProof SSZ serialized peaking", () => {
         toHex(signedAggregateAndProof.message.aggregate.data.beaconBlockRoot)
       );
 
-      const attDataHash = ssz.phase0.AttestationData.serialize(signedAggregateAndProof.message.aggregate.data);
-      expect(getAttDataHashFromSignedAggregateAndProofSerialized(bytes)).to.be.equal(
-        Buffer.from(attDataHash).toString("base64")
+      const attDataBase64 = ssz.phase0.AttestationData.serialize(signedAggregateAndProof.message.aggregate.data);
+      expect(getAttDataBase64FromSignedAggregateAndProofSerialized(bytes)).to.be.equal(
+        Buffer.from(attDataBase64).toString("base64")
       );
     });
   }
+
+  it("getSlotFromSignedAggregateAndProofSerialized - invalid data", () => {
+    const invalidSlotDataSizes = [0, 4, 11];
+    for (const size of invalidSlotDataSizes) {
+      expect(getSlotFromSignedAggregateAndProofSerialized(Buffer.alloc(size))).to.be.null;
+    }
+  });
+
+  it("getBlockRootFromSignedAggregateAndProofSerialized - invalid data", () => {
+    const invalidBlockRootDataSizes = [0, 4, 20, 227];
+    for (const size of invalidBlockRootDataSizes) {
+      expect(getBlockRootFromSignedAggregateAndProofSerialized(Buffer.alloc(size))).to.be.null;
+    }
+  });
+
+  it("getAttDataBase64FromSignedAggregateAndProofSerialized - invalid data", () => {
+    const invalidAttDataBase64DataSizes = [0, 4, 100, 128, 339];
+    for (const size of invalidAttDataBase64DataSizes) {
+      expect(getAttDataBase64FromSignedAggregateAndProofSerialized(Buffer.alloc(size))).to.be.null;
+    }
+  });
 });
 
 function attestationFromValues(

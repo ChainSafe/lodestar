@@ -1,7 +1,7 @@
 import {RootHex, Slot} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
-import {AttDataHash} from "../../util/sszBytes.js";
+import {AttDataBase64} from "../../util/sszBytes.js";
 import {InsertOutcome} from "../opPools/types.js";
 
 export type AttestationDataCacheEntry = {
@@ -39,8 +39,8 @@ const DEFAULT_CACHE_SLOT_DISTANCE = 2;
  * Having this cache help saves a lot of cpu time since most of the gossip attestations are on the same slot.
  */
 export class SeenAttestationDatas {
-  private cacheEntryByAttDataHashBySlot = new MapDef<Slot, Map<AttDataHash, AttestationDataCacheEntry>>(
-    () => new Map<AttDataHash, AttestationDataCacheEntry>()
+  private cacheEntryByAttDataBase64BySlot = new MapDef<Slot, Map<AttDataBase64, AttestationDataCacheEntry>>(
+    () => new Map<AttDataBase64, AttestationDataCacheEntry>()
   );
   private lowestPermissibleSlot = 0;
 
@@ -54,30 +54,30 @@ export class SeenAttestationDatas {
   }
 
   // TODO: Move InsertOutcome type definition to a common place
-  add(slot: Slot, attDataHash: AttDataHash, cacheEntry: AttestationDataCacheEntry): InsertOutcome {
+  add(slot: Slot, attDataBase64: AttDataBase64, cacheEntry: AttestationDataCacheEntry): InsertOutcome {
     if (slot < this.lowestPermissibleSlot) {
       this.metrics?.seenCache.attestationData.reject.inc({reason: RejectReason.too_old});
       return InsertOutcome.Old;
     }
 
-    const cacheEntryByAttDataHash = this.cacheEntryByAttDataHashBySlot.getOrDefault(slot);
-    if (cacheEntryByAttDataHash.has(attDataHash)) {
+    const cacheEntryByAttDataBase64 = this.cacheEntryByAttDataBase64BySlot.getOrDefault(slot);
+    if (cacheEntryByAttDataBase64.has(attDataBase64)) {
       this.metrics?.seenCache.attestationData.reject.inc({reason: RejectReason.already_known});
       return InsertOutcome.AlreadyKnown;
     }
 
-    if (cacheEntryByAttDataHash.size >= this.maxCacheSizePerSlot) {
+    if (cacheEntryByAttDataBase64.size >= this.maxCacheSizePerSlot) {
       this.metrics?.seenCache.attestationData.reject.inc({reason: RejectReason.reached_limit});
       return InsertOutcome.ReachLimit;
     }
 
-    cacheEntryByAttDataHash.set(attDataHash, cacheEntry);
+    cacheEntryByAttDataBase64.set(attDataBase64, cacheEntry);
     return InsertOutcome.NewData;
   }
 
-  get(slot: Slot, attDataHash: AttDataHash): AttestationDataCacheEntry | null {
-    const cacheEntryByAttDataHash = this.cacheEntryByAttDataHashBySlot.get(slot);
-    const cacheEntry = cacheEntryByAttDataHash?.get(attDataHash);
+  get(slot: Slot, attDataBase64: AttDataBase64): AttestationDataCacheEntry | null {
+    const cacheEntryByAttDataBase64 = this.cacheEntryByAttDataBase64BySlot.get(slot);
+    const cacheEntry = cacheEntryByAttDataBase64?.get(attDataBase64);
     if (cacheEntry) {
       this.metrics?.seenCache.attestationData.hit.inc();
     } else {
@@ -88,17 +88,19 @@ export class SeenAttestationDatas {
 
   onSlot(clockSlot: Slot): void {
     this.lowestPermissibleSlot = Math.max(clockSlot - this.cacheSlotDistance, 0);
-    for (const slot of this.cacheEntryByAttDataHashBySlot.keys()) {
+    for (const slot of this.cacheEntryByAttDataBase64BySlot.keys()) {
       if (slot < this.lowestPermissibleSlot) {
-        this.cacheEntryByAttDataHashBySlot.delete(slot);
+        this.cacheEntryByAttDataBase64BySlot.delete(slot);
       }
     }
   }
 
   private onScrapeLodestarMetrics(metrics: Metrics): void {
-    metrics?.seenCache.attestationData.totalSlot.set(this.cacheEntryByAttDataHashBySlot.size);
+    metrics?.seenCache.attestationData.totalSlot.set(this.cacheEntryByAttDataBase64BySlot.size);
     // only track current slot
     const currentSlot = this.lowestPermissibleSlot + this.cacheSlotDistance;
-    metrics?.seenCache.attestationData.countPerSlot.set(this.cacheEntryByAttDataHashBySlot.get(currentSlot)?.size ?? 0);
+    metrics?.seenCache.attestationData.countPerSlot.set(
+      this.cacheEntryByAttDataBase64BySlot.get(currentSlot)?.size ?? 0
+    );
   }
 }

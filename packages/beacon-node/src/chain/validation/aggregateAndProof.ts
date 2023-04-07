@@ -10,7 +10,7 @@ import {
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
-import {getAttDataHashFromSignedAggregateAndProofSerialized} from "../../util/sszBytes.js";
+import {getAttDataBase64FromSignedAggregateAndProofSerialized} from "../../util/sszBytes.js";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";
 import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation.js";
 
@@ -39,8 +39,8 @@ export async function validateGossipAggregateAndProof(
   const attData = aggregate.data;
   const attSlot = attData.slot;
 
-  const attDataHash = serializedData ? getAttDataHashFromSignedAggregateAndProofSerialized(serializedData) : null;
-  const cachedAttData = attDataHash ? chain.seenAttestationDatas.get(attSlot, attDataHash) : null;
+  const attDataBase64 = serializedData ? getAttDataBase64FromSignedAggregateAndProofSerialized(serializedData) : null;
+  const cachedAttData = attDataBase64 ? chain.seenAttestationDatas.get(attSlot, attDataBase64) : null;
 
   const attIndex = attData.index;
   const attEpoch = computeEpochAtSlot(attSlot);

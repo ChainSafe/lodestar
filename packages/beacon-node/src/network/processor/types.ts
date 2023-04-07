@@ -1,6 +1,7 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Message} from "@libp2p/interface-pubsub";
-import {GossipTopic} from "../gossip/index.js";
+import {SlotRootHex} from "@lodestar/types";
+import {GossipTopic, GossipType} from "../gossip/index.js";
 
 export type GossipAttestationsWork = {
   messages: PendingGossipsubMessage[];
@@ -14,4 +15,8 @@ export type PendingGossipsubMessage = {
   propagationSource: PeerId;
   seenTimestampSec: number;
   startProcessUnixSec: number | null;
+};
+
+export type ExtractSlotRootFns = {
+  [K in GossipType]?: (data: Uint8Array) => SlotRootHex | null;
 };
