@@ -116,6 +116,7 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
       //
       // TODO: figure out a way to dynamically transition to the size
       dataTransform: new DataTransformSnappy(
+        gossipTopicCache,
         isFinite(config.BELLATRIX_FORK_EPOCH) ? GOSSIP_MAX_SIZE_BELLATRIX : GOSSIP_MAX_SIZE
       ),
       metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
