@@ -8,7 +8,7 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {Epoch, Slot, ssz} from "@lodestar/types";
-import {Logger, randBetween} from "@lodestar/utils";
+import {Logger, MapDef, randBetween} from "@lodestar/utils";
 import {shuffle} from "../../util/shuffle.js";
 import {GossipTopic, GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
@@ -45,6 +45,11 @@ export class AttnetsService implements IAttnetsService {
   private subscriptionsCommittee = new SubnetMap();
   /** Same as `subscriptionsCommittee` but for long-lived subnets. May overlap with `subscriptionsCommittee` */
   private subscriptionsRandom = new SubnetMap();
+  /**
+   * Map of an aggregator at a slot and subnet
+   * Used to determine if we should process an attestation.
+   */
+  private aggregatorSlotSubnet = new MapDef<Slot, Set<number>>(() => new Set());
 
   /**
    * A collection of seen validators. These dictate how many random subnets we should be
@@ -119,6 +124,7 @@ export class AttnetsService implements IAttnetsService {
       if (isAggregator) {
         // need exact slot here
         subnetsToSubscribe.push({subnet, toSlot: slot});
+        this.aggregatorSlotSubnet.getOrDefault(slot).add(subnet);
       }
     }
 
@@ -141,7 +147,10 @@ export class AttnetsService implements IAttnetsService {
    * Check if a subscription is still active before handling a gossip object
    */
   shouldProcess(subnet: number, slot: Slot): boolean {
-    return this.subscriptionsCommittee.isActiveAtSlot(subnet, slot);
+    if (!this.aggregatorSlotSubnet.has(slot)) {
+      return false;
+    }
+    return this.aggregatorSlotSubnet.getOrDefault(slot).has(subnet);
   }
 
   /** Returns the latest Slot subscription is active, null if no subscription */
@@ -189,6 +198,7 @@ export class AttnetsService implements IAttnetsService {
     try {
       const slot = computeStartSlotAtEpoch(epoch);
       this.pruneExpiredKnownValidators(slot);
+      this.pruneExpiredAggregator(slot);
     } catch (e) {
       this.logger.error("Error on AttnetsService.onEpoch", {epoch}, e as Error);
     }
@@ -249,6 +259,18 @@ export class AttnetsService implements IAttnetsService {
     }
 
     if (deletedKnownValidators) this.rebalanceRandomSubnets();
+  }
+
+  /**
+   * No need to track aggregator for past slots.
+   * @param currentSlot
+   */
+  private pruneExpiredAggregator(currentSlot: Slot): void {
+    for (const slot of this.aggregatorSlotSubnet.keys()) {
+      if (currentSlot > slot) {
+        this.aggregatorSlotSubnet.delete(slot);
+      }
+    }
   }
 
   /**
@@ -355,5 +377,10 @@ export class AttnetsService implements IAttnetsService {
     metrics.attnetsService.committeeSubnets.set(this.committeeSubnets.size);
     metrics.attnetsService.subscriptionsCommittee.set(this.subscriptionsCommittee.size);
     metrics.attnetsService.subscriptionsRandom.set(this.subscriptionsRandom.size);
+    let aggregatorCount = 0;
+    for (const subnets of this.aggregatorSlotSubnet.values()) {
+      aggregatorCount += subnets.size;
+    }
+    metrics.attnetsService.aggregatorSlotSubnetCount.set(aggregatorCount);
   }
 }

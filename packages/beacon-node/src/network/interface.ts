@@ -8,9 +8,9 @@ import {phase0} from "@lodestar/types";
 import {BlockInput} from "../chain/blocks/types.js";
 import {INetworkEventBus} from "./events.js";
 import {GossipType, PublisherBeaconNode} from "./gossip/index.js";
+import {IReqRespBeaconNode} from "./reqresp/ReqRespBeaconNode.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {INetworkCore} from "./core/types.js";
-import {IReqRespBeaconNode} from "./reqresp/interface.js";
 
 export type PeerSearchOptions = {
   supportsProtocols?: string[];

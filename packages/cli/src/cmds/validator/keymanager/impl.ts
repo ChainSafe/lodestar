@@ -278,39 +278,37 @@ export class KeymanagerApi implements Api {
   async importRemoteKeys(
     remoteSigners: Pick<SignerDefinition, "pubkey" | "url">[]
   ): ReturnType<Api["importRemoteKeys"]> {
-    const results = remoteSigners.map(
-      ({pubkey, url}): ResponseStatus<ImportRemoteKeyStatus> => {
-        try {
-          if (!isValidatePubkeyHex(pubkey)) {
-            throw Error(`Invalid pubkey ${pubkey}`);
-          }
-          if (!isValidHttpUrl(url)) {
-            throw Error(`Invalid URL ${url}`);
-          }
-
-          // Check if key exists
-          if (this.validator.validatorStore.hasVotingPubkey(pubkey)) {
-            return {status: ImportRemoteKeyStatus.duplicate};
-          }
-
-          // Else try to add it
-
-          this.validator.validatorStore.addSigner({type: SignerType.Remote, pubkey, url});
-
-          this.persistedKeysBackend.writeRemoteKey({
-            pubkey,
-            url,
-            // Always write, even if it's already persisted for consistency.
-            // The in-memory validatorStore is the ground truth to decide duplicates
-            persistIfDuplicate: true,
-          });
-
-          return {status: ImportRemoteKeyStatus.imported};
-        } catch (e) {
-          return {status: ImportRemoteKeyStatus.error, message: (e as Error).message};
+    const results = remoteSigners.map(({pubkey, url}): ResponseStatus<ImportRemoteKeyStatus> => {
+      try {
+        if (!isValidatePubkeyHex(pubkey)) {
+          throw Error(`Invalid pubkey ${pubkey}`);
         }
+        if (!isValidHttpUrl(url)) {
+          throw Error(`Invalid URL ${url}`);
+        }
+
+        // Check if key exists
+        if (this.validator.validatorStore.hasVotingPubkey(pubkey)) {
+          return {status: ImportRemoteKeyStatus.duplicate};
+        }
+
+        // Else try to add it
+
+        this.validator.validatorStore.addSigner({type: SignerType.Remote, pubkey, url});
+
+        this.persistedKeysBackend.writeRemoteKey({
+          pubkey,
+          url,
+          // Always write, even if it's already persisted for consistency.
+          // The in-memory validatorStore is the ground truth to decide duplicates
+          persistIfDuplicate: true,
+        });
+
+        return {status: ImportRemoteKeyStatus.imported};
+      } catch (e) {
+        return {status: ImportRemoteKeyStatus.error, message: (e as Error).message};
       }
-    );
+    });
 
     return {
       data: results,
@@ -323,34 +321,30 @@ export class KeymanagerApi implements Api {
    * DELETE should never return a 404 response, even if all pubkeys from request.pubkeys have no existing keystores.
    */
   async deleteRemoteKeys(pubkeys: PubkeyHex[]): ReturnType<Api["deleteRemoteKeys"]> {
-    const results = pubkeys.map(
-      (pubkeyHex): ResponseStatus<DeleteRemoteKeyStatus> => {
-        try {
-          if (!isValidatePubkeyHex(pubkeyHex)) {
-            throw Error(`Invalid pubkey ${pubkeyHex}`);
-          }
-
-          const signer = this.validator.validatorStore.getSigner(pubkeyHex);
-
-          // Remove key from live local signer
-          const deletedFromMemory =
-            signer && signer?.type === SignerType.Remote
-              ? this.validator.validatorStore.removeSigner(pubkeyHex)
-              : false;
-
-          // TODO: Remove duties
-
-          const deletedFromDisk = this.persistedKeysBackend.deleteRemoteKey(pubkeyHex);
-
-          return {
-            status:
-              deletedFromMemory || deletedFromDisk ? DeleteRemoteKeyStatus.deleted : DeleteRemoteKeyStatus.not_found,
-          };
-        } catch (e) {
-          return {status: DeleteRemoteKeyStatus.error, message: (e as Error).message};
+    const results = pubkeys.map((pubkeyHex): ResponseStatus<DeleteRemoteKeyStatus> => {
+      try {
+        if (!isValidatePubkeyHex(pubkeyHex)) {
+          throw Error(`Invalid pubkey ${pubkeyHex}`);
         }
+
+        const signer = this.validator.validatorStore.getSigner(pubkeyHex);
+
+        // Remove key from live local signer
+        const deletedFromMemory =
+          signer && signer?.type === SignerType.Remote ? this.validator.validatorStore.removeSigner(pubkeyHex) : false;
+
+        // TODO: Remove duties
+
+        const deletedFromDisk = this.persistedKeysBackend.deleteRemoteKey(pubkeyHex);
+
+        return {
+          status:
+            deletedFromMemory || deletedFromDisk ? DeleteRemoteKeyStatus.deleted : DeleteRemoteKeyStatus.not_found,
+        };
+      } catch (e) {
+        return {status: DeleteRemoteKeyStatus.error, message: (e as Error).message};
       }
-    );
+    });
 
     return {
       data: results,

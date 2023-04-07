@@ -280,10 +280,12 @@ describe("network / ReqResp", function () {
       expect(
         ssz.altair.LightClientUpdate.equals(
           returnedUpdate,
-          (lightClientUpdates[i] as {
-            type: EncodedPayloadType.ssz;
-            data: altair.LightClientUpdate;
-          }).data
+          (
+            lightClientUpdates[i] as {
+              type: EncodedPayloadType.ssz;
+              data: altair.LightClientUpdate;
+            }
+          ).data
         )
       ).to.equal(true, `Wrong returnedUpdate[${i}]`);
     }

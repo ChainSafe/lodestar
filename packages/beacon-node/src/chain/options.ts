@@ -5,6 +5,8 @@ import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
 
 export type IChainOptions = BlockProcessOpts &
+  PoolOpts &
+  SeenCacheOpts &
   ForkChoiceOpts &
   ArchiverOpts &
   LightClientServerOpts & {
@@ -45,6 +47,20 @@ export type BlockProcessOpts = {
    */
   disableImportExecutionFcU?: boolean;
   emitPayloadAttributes?: boolean;
+};
+
+export type PoolOpts = {
+  /**
+   * Only preaggregate attestation/sync committee message since clockSlot - preaggregateSlotDistance
+   */
+  preaggregateSlotDistance?: number;
+};
+
+export type SeenCacheOpts = {
+  /**
+   * Slot distance from current slot to cache AttestationData
+   */
+  attDataCacheSlotDistance?: number;
 };
 
 export const defaultChainOptions: IChainOptions = {

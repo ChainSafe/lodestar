@@ -85,9 +85,9 @@ export const reqOnlyBody = <T>(
 /** SSZ factory helper + typed. limit = 1e6 as a big enough random number */
 export function ArrayOf<T>(elementType: Type<T>): ArrayType<Type<T>, unknown, unknown> {
   if (isCompositeType(elementType)) {
-    return (new ListCompositeType(elementType, Infinity) as unknown) as ArrayType<Type<T>, unknown, unknown>;
+    return new ListCompositeType(elementType, Infinity) as unknown as ArrayType<Type<T>, unknown, unknown>;
   } else if (isBasicType(elementType)) {
-    return (new ListBasicType(elementType, Infinity) as unknown) as ArrayType<Type<T>, unknown, unknown>;
+    return new ListBasicType(elementType, Infinity) as unknown as ArrayType<Type<T>, unknown, unknown>;
   } else {
     throw Error(`Unknown type ${elementType.typeName}`);
   }
@@ -142,7 +142,7 @@ export function ContainerDataExecutionOptimistic<T>(
 export function WithVersion<T>(getType: (fork: ForkName) => TypeJson<T>): TypeJson<{data: T; version: ForkName}> {
   return {
     toJson: ({data, version}) => ({
-      data: getType(version || ForkName.phase0).toJson(data),
+      data: getType(version ?? ForkName.phase0).toJson(data),
       version,
     }),
     fromJson: ({data, version}: {data: unknown; version: string}) => {
@@ -150,7 +150,7 @@ export function WithVersion<T>(getType: (fork: ForkName) => TypeJson<T>): TypeJs
       version = version.toLowerCase();
 
       // Un-safe external data, validate version is known ForkName value
-      if (!ForkName[version as ForkName]) throw Error(`Invalid version ${version}`);
+      if (!(version in ForkName)) throw Error(`Invalid version ${version}`);
 
       return {
         data: getType(version as ForkName).fromJson(data),
@@ -168,7 +168,7 @@ export function WithExecutionOptimistic<T extends {data: unknown}>(
 ): TypeJson<T & {executionOptimistic: boolean}> {
   return {
     toJson: ({executionOptimistic, ...data}) => ({
-      ...(type.toJson((data as unknown) as T) as Record<string, unknown>),
+      ...(type.toJson(data as unknown as T) as Record<string, unknown>),
       execution_optimistic: executionOptimistic,
     }),
     fromJson: ({execution_optimistic, ...data}: T & {execution_optimistic: boolean}) => ({
@@ -184,7 +184,7 @@ export function WithExecutionOptimistic<T extends {data: unknown}>(
 export function WithBlockValue<T extends {data: unknown}>(type: TypeJson<T>): TypeJson<T & {blockValue: bigint}> {
   return {
     toJson: ({blockValue, ...data}) => ({
-      ...(type.toJson((data as unknown) as T) as Record<string, unknown>),
+      ...(type.toJson(data as unknown as T) as Record<string, unknown>),
       block_value: blockValue.toString(),
     }),
     fromJson: ({block_value, ...data}: T & {block_value: string}) => ({
@@ -211,7 +211,7 @@ export function jsonType<T extends Record<string, unknown> | Record<string, unkn
 export function sameType<T>(): TypeJson<T> {
   return {
     toJson: (val) => val as unknown,
-    fromJson: (json) => (json as unknown) as T,
+    fromJson: (json) => json as unknown as T,
   };
 }
 

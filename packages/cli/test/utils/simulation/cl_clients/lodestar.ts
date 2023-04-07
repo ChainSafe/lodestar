@@ -23,7 +23,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
   const rcConfigPath = path.join(rootDir, "rc_config.json");
   const paramsPath = path.join(rootDir, "params.json");
 
-  const rcConfig = ({
+  const rcConfig = {
     network: "dev",
     preset: "minimal",
     dataDir: rootDir,
@@ -49,7 +49,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     "jwt-secret": jwtsecretFilePath,
     paramsFile: paramsPath,
     ...clientOptions,
-  } as unknown) as BeaconArgs & GlobalArgs;
+  } as unknown as BeaconArgs & GlobalArgs;
 
   if (engineMock) {
     rcConfig["eth1"] = false;
@@ -125,7 +125,7 @@ export const generateLodestarValidatorJobs = (opts: CLClientGeneratorOptions): J
     throw Error("Attempting to run a vc with keys.type == 'no-keys'");
   }
 
-  const rcConfig = ({
+  const rcConfig = {
     network: "dev",
     preset: "minimal",
     dataDir: rootDir,
@@ -140,7 +140,7 @@ export const generateLodestarValidatorJobs = (opts: CLClientGeneratorOptions): J
     logFile: "none",
     importKeystores: keystoresDir,
     importKeystoresPassword: keystoresSecretFilePath,
-  } as unknown) as IValidatorCliArgs & GlobalArgs;
+  } as unknown as IValidatorCliArgs & GlobalArgs;
 
   return {
     id,

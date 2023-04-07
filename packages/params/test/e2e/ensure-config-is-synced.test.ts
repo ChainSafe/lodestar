@@ -46,7 +46,7 @@ async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: strin
   // Merge all the fetched yamls for the different forks
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const beaconPresetRaw: Record<string, unknown> = Object.assign(
-    ...((downloadedParams as unknown) as [input: Record<string, unknown>])
+    ...(downloadedParams as unknown as [input: Record<string, unknown>])
   );
 
   // As of December 2021 the presets don't include any hex strings

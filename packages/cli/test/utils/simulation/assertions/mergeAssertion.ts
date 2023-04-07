@@ -13,7 +13,7 @@ export const mergeAssertion: SimulationAssertion<"merge", string> = {
     for (const node of nodes) {
       const res = await node.cl.api.debug.getStateV2("head");
       ApiError.assert(res);
-      const state = (res.response.data as unknown) as BeaconStateAllForks;
+      const state = res.response.data as unknown as BeaconStateAllForks;
 
       if (!(isExecutionStateType(state) && isMergeTransitionComplete(state))) {
         errors.push(

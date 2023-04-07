@@ -1,16 +1,21 @@
 import {expect} from "chai";
+import sinon, {SinonStubbedInstance} from "sinon";
 import bls from "@chainsafe/bls";
 import {altair} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {SyncCommitteeMessagePool} from "../../../../src/chain/opPools/index.js";
+import {LocalClock} from "../../../../src/chain/clock/LocalClock.js";
 
 describe("chain / opPools / SyncCommitteeMessagePool", function () {
+  const sandbox = sinon.createSandbox();
   let cache: SyncCommitteeMessagePool;
   const subcommitteeIndex = 2;
   const indexInSubcommittee = 3;
   const beaconBlockRoot = Buffer.alloc(32, 1);
   const slot = 10;
   let syncCommittee: altair.SyncCommitteeMessage;
+  let clockStub: SinonStubbedInstance<LocalClock>;
+  const cutOffTime = 1;
 
   before("Init BLS", async () => {
     const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
@@ -23,11 +28,17 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
   });
 
   beforeEach(() => {
-    cache = new SyncCommitteeMessagePool();
+    clockStub = sandbox.createStubInstance(LocalClock);
+    cache = new SyncCommitteeMessagePool(clockStub, cutOffTime);
     cache.add(subcommitteeIndex, syncCommittee, indexInSubcommittee);
   });
 
+  afterEach(function () {
+    sandbox.restore();
+  });
+
   it("should preaggregate SyncCommitteeContribution", () => {
+    clockStub.secFromSlot.returns(0);
     let contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
     expect(contribution).to.be.not.null;
     const newSecretKey = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));

@@ -188,6 +188,7 @@ describe("AttnetsService", function () {
     randomSubnet = COMMITTEE_SUBNET_SUBSCRIPTION;
     const aggregatorSubscription: CommitteeSubscription = {...subscription, isAggregator: true};
     service.addCommitteeSubscriptions([aggregatorSubscription]);
+    expect(service.shouldProcess(subscription.subnet, subscription.slot)).to.be.true;
     expect(service.getActiveSubnets()).to.be.deep.equal([{subnet: COMMITTEE_SUBNET_SUBSCRIPTION, toSlot: 101}]);
     // committee subnet is same to random subnet
     expect(gossipStub.subscribeTopic).to.be.calledOnce;
@@ -196,5 +197,11 @@ describe("AttnetsService", function () {
     sandbox.clock.tick((aggregatorSubscription.slot + 2) * SECONDS_PER_SLOT * 1000);
     // don't unsubscribe bc random subnet is still there
     expect(gossipStub.unsubscribeTopic).to.be.not.called;
+  });
+
+  it("should not process if no aggregator at dutied slot", () => {
+    expect(subscription.isAggregator).to.be.false;
+    service.addCommitteeSubscriptions([subscription]);
+    expect(service.shouldProcess(subscription.subnet, subscription.slot)).to.be.false;
   });
 });

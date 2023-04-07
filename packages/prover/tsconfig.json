@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    // To fix error "Duplicate identifier 'Buffer'"
+    // This can save time during compilation at the expense of type-system accuracy. 
+    // For example, two libraries could define two copies of the same type in an inconsistent way. 
+    // Rather than doing a full check of all d.ts files, TypeScript will type check
+    // the code you specifically refer to in your app’s source code.
+    // https://www.typescriptlang.org/tsconfig#skipLibCheck
+    "skipLibCheck": true
+  }
+}

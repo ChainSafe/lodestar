@@ -61,10 +61,10 @@ export class ReprocessController {
    * @returns true if blockFound
    */
   waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean> {
-    this.metrics?.reprocessAttestations.total.inc();
+    this.metrics?.reprocessApiAttestations.total.inc();
 
     if (this.awaitingPromisesCount >= MAXIMUM_QUEUED_ATTESTATIONS) {
-      this.metrics?.reprocessAttestations.reject.inc({reason: ReprocessStatus.reached_limit});
+      this.metrics?.reprocessApiAttestations.reject.inc({reason: ReprocessStatus.reached_limit});
       return Promise.resolve(false);
     }
 
@@ -116,8 +116,8 @@ export class ReprocessController {
       const {resolve, addedTimeMs, awaitingAttestationsCount} = awaitingPromise;
       resolve(true);
       this.awaitingPromisesCount -= awaitingAttestationsCount;
-      this.metrics?.reprocessAttestations.resolve.inc(awaitingAttestationsCount);
-      this.metrics?.reprocessAttestations.waitTimeBeforeResolve.set((Date.now() - addedTimeMs) / 1000);
+      this.metrics?.reprocessApiAttestations.resolve.inc(awaitingAttestationsCount);
+      this.metrics?.reprocessApiAttestations.waitSecBeforeResolve.set((Date.now() - addedTimeMs) / 1000);
     }
 
     // prune
@@ -140,8 +140,8 @@ export class ReprocessController {
         for (const awaitingPromise of awaitingPromisesByRoot.values()) {
           const {resolve, addedTimeMs} = awaitingPromise;
           resolve(false);
-          this.metrics?.reprocessAttestations.waitTimeBeforeReject.set((now - addedTimeMs) / 1000);
-          this.metrics?.reprocessAttestations.reject.inc({reason: ReprocessStatus.expired});
+          this.metrics?.reprocessApiAttestations.waitSecBeforeReject.set((now - addedTimeMs) / 1000);
+          this.metrics?.reprocessApiAttestations.reject.inc({reason: ReprocessStatus.expired});
         }
 
         // prune

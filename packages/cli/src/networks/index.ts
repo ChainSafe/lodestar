@@ -1,12 +1,13 @@
 import fs from "node:fs";
 import got from "got";
-import {SLOTS_PER_EPOCH, ForkName} from "@lodestar/params";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ApiError, getClient} from "@lodestar/api";
 import {getStateTypeFromBytes} from "@lodestar/beacon-node";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {Checkpoint} from "@lodestar/types/phase0";
+import {Slot} from "@lodestar/types";
 import {fromHex, callFnWhenAwait, Logger} from "@lodestar/utils";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {BeaconStateAllForks, getLatestBlockRoot, computeCheckpointEpochAtStateSlot} from "@lodestar/state-transition";
 import {parseBootnodesFile} from "../util/format.js";
 import * as mainnet from "./mainnet.js";
 import * as dev from "./dev.js";
@@ -43,9 +44,7 @@ export type WeakSubjectivityFetchOptions = {
 // log to screen every 30s when downloading state from a lodestar node
 const GET_STATE_LOG_INTERVAL = 30 * 1000;
 
-export function getNetworkData(
-  network: NetworkName
-): {
+export function getNetworkData(network: NetworkName): {
   chainConfig: ChainConfig;
   depositContractDeployBlock: number;
   genesisFileUrl: string | null;
@@ -140,20 +139,21 @@ export async function fetchWeakSubjectivityState(
   {checkpointSyncUrl, wssCheckpoint}: {checkpointSyncUrl: string; wssCheckpoint?: string}
 ): Promise<{wsState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
   try {
-    let wsCheckpoint;
+    let wsCheckpoint: Checkpoint | null;
+    let stateId: Slot | "finalized";
+
     const api = getClient({baseUrl: checkpointSyncUrl}, {config});
     if (wssCheckpoint) {
       wsCheckpoint = getCheckpointFromArg(wssCheckpoint);
+      stateId = wsCheckpoint.epoch * SLOTS_PER_EPOCH;
     } else {
-      const res = await api.beacon.getStateFinalityCheckpoints("head");
-      ApiError.assert(res, "Can not fetch finalized checkpoint");
-      wsCheckpoint = res.response.data.finalized;
+      // Fetch current finalized state and extract checkpoint from it
+      stateId = "finalized";
+      wsCheckpoint = null;
     }
-    const stateSlot = wsCheckpoint.epoch * SLOTS_PER_EPOCH;
-    const getStatePromise =
-      config.getForkName(stateSlot) === ForkName.phase0
-        ? api.debug.getState(`${stateSlot}`, "ssz")
-        : api.debug.getStateV2(`${stateSlot}`, "ssz");
+
+    // getStateV2 should be available for all forks including phase0
+    const getStatePromise = api.debug.getStateV2(stateId, "ssz");
 
     const stateBytes = await callFnWhenAwait(
       getStatePromise,
@@ -164,11 +164,12 @@ export async function fetchWeakSubjectivityState(
       return res.response;
     });
 
-    logger.info("Download completed");
+    logger.info("Download completed", {stateId});
+    const wsState = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
 
     return {
-      wsState: getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes),
-      wsCheckpoint,
+      wsState,
+      wsCheckpoint: wsCheckpoint ?? getCheckpointFromState(wsState),
     };
   } catch (e) {
     throw new Error("Unable to fetch weak subjectivity state: " + (e as Error).message);
@@ -182,4 +183,13 @@ export function getCheckpointFromArg(checkpointStr: string): Checkpoint {
     throw new Error(`Could not parse checkpoint string: ${checkpointStr}`);
   }
   return {root: fromHex(match[1]), epoch: parseInt(match[2])};
+}
+
+export function getCheckpointFromState(state: BeaconStateAllForks): Checkpoint {
+  return {
+    // the correct checkpoint is based on state's slot, its latestBlockHeader's slot's epoch can be
+    // behind the state
+    epoch: computeCheckpointEpochAtStateSlot(state.slot),
+    root: getLatestBlockRoot(state),
+  };
 }

@@ -1,6 +1,6 @@
 import path from "node:path";
 import {expect} from "chai";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import {fromHexString} from "@chainsafe/ssz";
 import {LevelDbController} from "@lodestar/db";
 import {config} from "@lodestar/config/default";

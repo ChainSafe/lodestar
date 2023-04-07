@@ -13,6 +13,7 @@ export {
   ForkExecution,
   ForkBlobs,
   isForkExecution,
+  isForkWithdrawals,
   isForkBlobs,
   isForkLightClient,
 } from "./forkName.js";
@@ -37,7 +38,7 @@ presetStatus.frozen = true;
  * The active preset can be manually overridden with `setActivePreset`
  */
 export const ACTIVE_PRESET =
-  userSelectedPreset || PresetName[process?.env?.LODESTAR_PRESET as PresetName] || PresetName.mainnet;
+  userSelectedPreset ?? PresetName[process?.env?.LODESTAR_PRESET as PresetName] ?? PresetName.mainnet;
 export const activePreset = presets[ACTIVE_PRESET];
 
 // These variables must be exported individually and explicitly

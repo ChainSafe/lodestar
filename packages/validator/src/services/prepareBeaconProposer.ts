@@ -94,18 +94,16 @@ export function pollBuilderValidatorRegistration(
       for (const pubkeyHexes of pubkeyHexesChunks) {
         try {
           const registrations = await Promise.all(
-            pubkeyHexes.map(
-              (pubkeyHex): Promise<bellatrix.SignedValidatorRegistrationV1> => {
-                // Just to make typescript happy as it can't figure out we have filtered
-                // undefined pubkeys above
-                if (pubkeyHex === undefined) {
-                  throw Error("All undefined pubkeys should have been filtered out");
-                }
-                const feeRecipient = validatorStore.getFeeRecipient(pubkeyHex);
-                const gasLimit = validatorStore.getGasLimit(pubkeyHex);
-                return validatorStore.getValidatorRegistration(pubkeyHex, {feeRecipient, gasLimit}, slot);
+            pubkeyHexes.map((pubkeyHex): Promise<bellatrix.SignedValidatorRegistrationV1> => {
+              // Just to make typescript happy as it can't figure out we have filtered
+              // undefined pubkeys above
+              if (pubkeyHex === undefined) {
+                throw Error("All undefined pubkeys should have been filtered out");
               }
-            )
+              const feeRecipient = validatorStore.getFeeRecipient(pubkeyHex);
+              const gasLimit = validatorStore.getGasLimit(pubkeyHex);
+              return validatorStore.getValidatorRegistration(pubkeyHex, {feeRecipient, gasLimit}, slot);
+            })
           );
           ApiError.assert(await api.validator.registerValidator(registrations));
         } catch (e) {

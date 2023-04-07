@@ -64,11 +64,11 @@ describe("sync", () => {
     const proofServerApi = new ProofServerApiMock();
     // Start server
     const opts: ServerOpts = {host: "127.0.0.1", port: 15000};
-    await startServer(opts, config, ({
+    await startServer(opts, config, {
       lightclient: lightclientServerApi,
       events: eventsServerApi,
       proof: proofServerApi,
-    } as Partial<{[K in keyof Api]: ServerApi<Api[K]>}>) as {[K in keyof Api]: ServerApi<Api[K]>});
+    } as Partial<{[K in keyof Api]: ServerApi<Api[K]>}> as {[K in keyof Api]: ServerApi<Api[K]>});
 
     // Populate initial snapshot
     const {snapshot, checkpointRoot} = computeLightClientSnapshot(initialPeriod);
@@ -106,7 +106,7 @@ describe("sync", () => {
 
     // Sync periods to current
     await new Promise<void>((resolve) => {
-      lightclient.emitter.on(LightclientEvent.lightClientFinalityUpdate, (header) => {
+      lightclient.emitter.on(LightclientEvent.lightClientFinalityHeader, (header) => {
         if (computeSyncPeriodAtSlot(header.beacon.slot) >= targetPeriod) {
           resolve();
         }
@@ -128,7 +128,7 @@ describe("sync", () => {
     // Track head + reference states with some known data
     const syncCommittee = getInteropSyncCommittee(targetPeriod);
     await new Promise<void>((resolve) => {
-      lightclient.emitter.on(LightclientEvent.lightClientOptimisticUpdate, (header) => {
+      lightclient.emitter.on(LightclientEvent.lightClientOptimisticHeader, (header) => {
         if (header.beacon.slot === targetSlot) {
           resolve();
         }
@@ -141,7 +141,7 @@ describe("sync", () => {
 
         // Provide the state to the lightclient server impl. Only the last one to test proof fetching
         if (slot === targetSlot) {
-          proofServerApi.states.set(toHexString(stateRoot), (state as BeaconStateAllForks) as BeaconStateAltair);
+          proofServerApi.states.set(toHexString(stateRoot), state as BeaconStateAllForks as BeaconStateAltair);
         }
 
         // Emit a new head update with the custom state root

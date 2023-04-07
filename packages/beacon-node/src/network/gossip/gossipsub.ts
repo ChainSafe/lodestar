@@ -116,9 +116,10 @@ export class Eth2Gossipsub extends GossipSub {
       //
       // TODO: figure out a way to dynamically transition to the size
       dataTransform: new DataTransformSnappy(
+        gossipTopicCache,
         isFinite(config.BELLATRIX_FORK_EPOCH) ? GOSSIP_MAX_SIZE_BELLATRIX : GOSSIP_MAX_SIZE
       ),
-      metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
+      metricsRegister: modules.metrics ? (modules.metrics.register as unknown as MetricsRegister) : null,
       metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
       asyncValidation: true,
 
@@ -282,16 +283,19 @@ export class Eth2Gossipsub extends GossipSub {
     const importUpToSlot =
       topic.type === GossipType.beacon_attestation ? this.attnetsService.activeUpToSlot(topic.subnet) : null;
 
-    // Emit message to network processor
-    this.events.emit(NetworkEvent.pendingGossipsubMessage, {
-      topic,
-      msg,
-      msgId,
-      propagationSource,
-      seenTimestampSec,
-      startProcessUnixSec: null,
-      importUpToSlot,
-    });
+    // Emit message to network processor, use setTimeout to yield to the macro queue
+    // This is mostly due to too many attestation messages, and a gossipsub RPC may
+    // contain multiple of them. This helps avoid the I/O lag issue.
+    setTimeout(() => {
+      this.events.emit(NetworkEvent.pendingGossipsubMessage, {
+        topic,
+        msg,
+        msgId,
+        propagationSource,
+        seenTimestampSec,
+        startProcessUnixSec: null,
+      });
+    }, 0);
   }
 
   private onValidationResult(msgId: string, propagationSource: PeerId, acceptance: TopicValidatorResult): void {

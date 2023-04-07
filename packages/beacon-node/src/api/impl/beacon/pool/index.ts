@@ -53,27 +53,29 @@ export function getBeaconPoolApi({
         attestations.map(async (attestation, i) => {
           try {
             // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-            const validateFn = () => validateGossipAttestation(chain, attestation, null);
+            const validateFn = () => validateGossipAttestation(chain, attestation, null, null);
             const {slot, beaconBlockRoot} = attestation.data;
             // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
-            const {indexedAttestation, subnet} = await validateGossipFnRetryUnknownRoot(
+            const {indexedAttestation, subnet, attDataRootHex} = await validateGossipFnRetryUnknownRoot(
               validateFn,
               chain,
               slot,
               beaconBlockRoot
             );
 
-            const insertOutcome = chain.attestationPool.add(attestation);
-            const result = await network.gossip.publishBeaconAttestation(attestation, subnet);
+            if (network.attnetsService.shouldProcess(subnet, slot)) {
+              const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
+              metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
+            }
+            const response = await network.gossip.publishBeaconAttestation(attestation, subnet);
             metrics?.submitUnaggregatedAttestation(
               seenTimestampSec,
               indexedAttestation,
               subnet,
-              result.recipients.length
+              response.recipients.length
             );
-            metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
           } catch (e) {
             errors.push(e as Error);
             logger.error(
@@ -207,7 +209,7 @@ export function getBeaconPoolApi({
             }
 
             errors.push(e as Error);
-            logger.error(
+            logger.debug(
               `Error on submitPoolSyncCommitteeSignatures [${i}]`,
               {slot: signature.slot, validatorIndex: signature.validatorIndex},
               e as Error

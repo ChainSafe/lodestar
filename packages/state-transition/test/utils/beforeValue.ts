@@ -10,7 +10,7 @@ export type LazyValue<T> = {value: T};
  * ```
  */
 export function beforeValue<T>(fn: () => T | Promise<T>, timeout?: number): LazyValue<T> {
-  let value: T = (null as unknown) as T;
+  let value: T = null as unknown as T;
 
   before(async function () {
     this.timeout(timeout ?? 300_000);

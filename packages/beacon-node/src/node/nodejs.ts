@@ -164,7 +164,11 @@ export class BeaconNode {
     await db.pruneHotDb();
 
     let metrics = null;
-    if (opts.metrics.enabled) {
+    if (
+      opts.metrics.enabled ||
+      // monitoring relies on metrics data
+      opts.monitoring.endpoint
+    ) {
       metrics = createMetrics(
         opts.metrics,
         config,
@@ -179,11 +183,8 @@ export class BeaconNode {
 
     let monitoring = null;
     if (opts.monitoring.endpoint) {
-      if (metrics == null) {
-        throw new Error("Metrics must be enabled to use monitoring");
-      }
       monitoring = new MonitoringService("beacon", opts.monitoring, {
-        register: metrics.register,
+        register: (metrics as Metrics).register,
         logger: logger.child({module: LoggerModule.monitoring}),
       });
       monitoring.start();
@@ -261,9 +262,10 @@ export class BeaconNode {
       metrics,
     });
 
-    const metricsServer = metrics
+    // only start server if metrics are explicitly enabled
+    const metricsServer = opts.metrics.enabled
       ? new HttpMetricsServer(opts.metrics, {
-          register: metrics.register,
+          register: (metrics as Metrics).register,
           getOtherMetrics: async (): Promise<string> => {
             return network.scrapeMetrics();
           },

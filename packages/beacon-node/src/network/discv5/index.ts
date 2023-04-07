@@ -79,7 +79,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
 
     this.status.subscription.unsubscribe();
     await this.status.workerApi.close();
-    await Thread.terminate((this.status.workerApi as unknown) as Thread);
+    await Thread.terminate(this.status.workerApi as unknown as Thread);
 
     this.status = {status: "stopped"};
   }

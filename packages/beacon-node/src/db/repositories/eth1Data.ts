@@ -9,7 +9,7 @@ export class Eth1DataRepository extends Repository<number, phase0.Eth1DataOrdere
   }
 
   decodeKey(data: Buffer): number {
-    return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
+    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

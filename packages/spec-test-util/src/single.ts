@@ -29,7 +29,7 @@ type SszTypeGeneric = {
 };
 
 export function toExpandedInputType(inputType: InputType | ExpandedInputType): ExpandedInputType {
-  if ((inputType as ExpandedInputType).type) {
+  if ((inputType as ExpandedInputType).type !== undefined) {
     return inputType as ExpandedInputType;
   }
   return {

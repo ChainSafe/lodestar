@@ -14,56 +14,55 @@ type ImportArgs = {
   file: string;
 };
 
-export const importCmd: CliCommand<
-  ImportArgs,
-  ISlashingProtectionArgs & AccountValidatorArgs & GlobalArgs & LogArgs
-> = {
-  command: "import",
+export const importCmd: CliCommand<ImportArgs, ISlashingProtectionArgs & AccountValidatorArgs & GlobalArgs & LogArgs> =
+  {
+    command: "import",
 
-  describe: "Import an interchange file.",
+    describe: "Import an interchange file.",
 
-  examples: [
-    {
-      command: "validator slashing-protection import --network goerli --file interchange.json",
-      description: "Import an interchange file to the slashing protection DB",
+    examples: [
+      {
+        command: "validator slashing-protection import --network goerli --file interchange.json",
+        description: "Import an interchange file to the slashing protection DB",
+      },
+    ],
+
+    options: {
+      file: {
+        description: "The slashing protection interchange file to import (.json).",
+        demandOption: true,
+        type: "string",
+      },
     },
-  ],
 
-  options: {
-    file: {
-      description: "The slashing protection interchange file to import (.json).",
-      demandOption: true,
-      type: "string",
+    handler: async (args) => {
+      const {config, network} = getBeaconConfigFromArgs(args);
+      const validatorPaths = getValidatorPaths(args, network);
+      // slashingProtection commands are fast so do not require logFile feature
+      const {logger} = getCliLogger(
+        args,
+        {defaultLogFilepath: path.join(validatorPaths.dataDir, "validator.log")},
+        config
+      );
+
+      const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
+
+      logger.info("Importing the slashing protection logs", {dbPath});
+
+      const {slashingProtection, metadata} = getSlashingProtection(args, network, logger);
+
+      // Fetch genesisValidatorsRoot from:
+      // - existing cached in validator DB
+      // - known genesis data from existing network
+      // - else fetch from beacon node
+      const genesisValidatorsRoot =
+        (await metadata.getGenesisValidatorsRoot()) ?? (await getGenesisValidatorsRoot(args));
+
+      logger.verbose("Reading the slashing protection logs", {file: args.file});
+      const interchangeStr = await fs.promises.readFile(args.file, "utf8");
+      const interchangeJson = JSON.parse(interchangeStr) as Interchange;
+
+      await slashingProtection.importInterchange(interchangeJson, genesisValidatorsRoot, logger);
+      logger.info("Import completed successfully");
     },
-  },
-
-  handler: async (args) => {
-    const {config, network} = getBeaconConfigFromArgs(args);
-    const validatorPaths = getValidatorPaths(args, network);
-    // slashingProtection commands are fast so do not require logFile feature
-    const {logger} = getCliLogger(
-      args,
-      {defaultLogFilepath: path.join(validatorPaths.dataDir, "validator.log")},
-      config
-    );
-
-    const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
-
-    logger.info("Importing the slashing protection logs", {dbPath});
-
-    const {slashingProtection, metadata} = getSlashingProtection(args, network, logger);
-
-    // Fetch genesisValidatorsRoot from:
-    // - existing cached in validator DB
-    // - known genesis data from existing network
-    // - else fetch from beacon node
-    const genesisValidatorsRoot = (await metadata.getGenesisValidatorsRoot()) ?? (await getGenesisValidatorsRoot(args));
-
-    logger.verbose("Reading the slashing protection logs", {file: args.file});
-    const interchangeStr = await fs.promises.readFile(args.file, "utf8");
-    const interchangeJson = JSON.parse(interchangeStr) as Interchange;
-
-    await slashingProtection.importInterchange(interchangeJson, genesisValidatorsRoot, logger);
-    logger.info("Import completed successfully");
-  },
-};
+  };
