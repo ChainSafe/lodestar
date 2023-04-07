@@ -328,7 +328,7 @@ export class AttestationService {
     ]);
 
     if (!res) {
-      throw new Error("No response after 1/3 of slot");
+      throw new Error("submitBeaconCommitteeSelections did not resolve after 1/3 of slot");
     }
     ApiError.assert(res);
 

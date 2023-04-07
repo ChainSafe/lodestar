@@ -273,7 +273,7 @@ export class SyncCommitteeService {
     ]);
 
     if (!res) {
-      throw new Error("No response after 2/3 of slot");
+      throw new Error("submitSyncCommitteeSelections did not resolve after 2/3 of slot");
     }
     ApiError.assert(res);
 
