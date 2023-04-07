@@ -13,7 +13,7 @@ import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
-import {getAttDataHashFromAttestationSerialized} from "../../util/sszBytes.js";
+import {getAttDataBase64FromAttestationSerialized} from "../../util/sszBytes.js";
 
 export type AttestationValidationResult = {
   indexedAttestation: phase0.IndexedAttestation;
@@ -45,8 +45,8 @@ export async function validateGossipAttestation(
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
 
-  const attDataHash = serializedData ? getAttDataHashFromAttestationSerialized(serializedData) : null;
-  const cachedAttData = attDataHash ? chain.seenAttestationDatas.get(attSlot, attDataHash) : null;
+  const attDataBase64 = serializedData ? getAttDataBase64FromAttestationSerialized(serializedData) : null;
+  const cachedAttData = attDataBase64 ? chain.seenAttestationDatas.get(attSlot, attDataBase64) : null;
 
   if (!cachedAttData) {
     // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
@@ -179,8 +179,8 @@ export async function validateGossipAttestation(
 
     // add cached attestation data before verifying signature
     attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData));
-    if (attDataHash) {
-      chain.seenAttestationDatas.add(attSlot, attDataHash, {
+    if (attDataBase64) {
+      chain.seenAttestationDatas.add(attSlot, attDataBase64, {
         committeeIndices,
         signingRoot: signatureSet.signingRoot,
         subnet: expectedSubnet,
