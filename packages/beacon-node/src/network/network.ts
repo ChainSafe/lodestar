@@ -20,7 +20,6 @@ import {ReqRespBeaconNode, ReqRespHandlers, beaconBlocksMaybeBlobsByRange} from 
 import {beaconBlocksMaybeBlobsByRoot} from "./reqresp/beaconBlocksMaybeBlobsByRoot.js";
 import {
   Eth2Gossipsub,
-  getGossipHandlers,
   GossipHandlers,
   GossipTopicTypeMap,
   GossipType,
@@ -37,6 +36,8 @@ import {PeersData} from "./peers/peersData.js";
 import {getConnectionsMap, isPublishToZeroPeersError} from "./util.js";
 import {Discv5Worker} from "./discv5/index.js";
 import {createNodeJsLibp2p} from "./nodejs/util.js";
+import {NetworkProcessor} from "./processor/index.js";
+import {PendingGossipsubMessage} from "./processor/types.js";
 
 // How many changes to batch cleanup
 const CACHED_BLS_BATCH_CLEANUP_LIMIT = 10;
@@ -50,6 +51,7 @@ type NetworkModules = {
   signal: AbortSignal;
   peersData: PeersData;
   networkEventBus: NetworkEventBus;
+  networkProcessor: NetworkProcessor;
   metadata: MetadataController;
   peerRpcScores: PeerRpcScoreStore;
   reqResp: ReqRespBeaconNode;
@@ -84,6 +86,7 @@ export class Network implements INetwork {
   private readonly opts: NetworkOptions;
   private readonly peersData: PeersData;
 
+  private readonly networkProcessor: NetworkProcessor;
   private readonly peerManager: PeerManager;
   private readonly libp2p: Libp2p;
   private readonly logger: Logger;
@@ -106,6 +109,7 @@ export class Network implements INetwork {
       signal,
       peersData,
       networkEventBus,
+      networkProcessor,
       metadata,
       peerRpcScores,
       reqResp,
@@ -123,7 +127,7 @@ export class Network implements INetwork {
     this.signal = signal;
     this.peersData = peersData;
     this.events = networkEventBus;
-    this.metadata = metadata;
+    (this.networkProcessor = networkProcessor), (this.metadata = metadata);
     this.peerRpcScores = peerRpcScores;
     this.reqResp = reqResp;
     this.gossip = gossip;
@@ -146,8 +150,8 @@ export class Network implements INetwork {
     peerStoreDir,
     chain,
     reqRespHandlers,
-    gossipHandlers,
     signal,
+    gossipHandlers,
   }: NetworkInitModules): Promise<Network> {
     const clock = chain.clock;
     const peersData = new PeersData();
@@ -196,16 +200,13 @@ export class Network implements INetwork {
       libp2p,
       logger,
       metrics,
-      signal,
-      gossipHandlers:
-        gossipHandlers ??
-        getGossipHandlers({chain, config, logger, attnetsService, peerRpcScores, networkEventBus, metrics}, opts),
       eth2Context: {
         activeValidatorCount: chain.getHeadState().epochCtx.currentShuffling.activeIndices.length,
         currentSlot: clock.currentSlot,
         currentEpoch: clock.currentEpoch,
       },
       peersData,
+      events: networkEventBus,
     });
 
     const syncnetsService = new SyncnetsService(config, chain, gossip, metadata, logger, metrics, opts);
@@ -225,6 +226,11 @@ export class Network implements INetwork {
         networkEventBus,
         peersData,
       },
+      opts
+    );
+
+    const networkProcessor = new NetworkProcessor(
+      {attnetsService, chain, config, logger, metrics, peerRpcScores, events: networkEventBus, gossipHandlers},
       opts
     );
 
@@ -260,6 +266,7 @@ export class Network implements INetwork {
       signal,
       peersData,
       networkEventBus,
+      networkProcessor,
       metadata,
       peerRpcScores,
       reqResp,
@@ -411,9 +418,7 @@ export class Network implements INetwork {
     }
 
     // Drop all the gossip validation queues
-    for (const jobQueue of Object.values(this.gossip.jobQueues)) {
-      jobQueue.dropAllJobs();
-    }
+    this.networkProcessor.dropAllJobs();
   }
 
   isSubscribedToGossipCoreTopics(): boolean {
@@ -445,24 +450,6 @@ export class Network implements INetwork {
     }));
   }
 
-  async dumpGossipQueueItems(gossipType: string): Promise<routes.lodestar.GossipQueueItem[]> {
-    const jobQueue = this.gossip.jobQueues[gossipType as GossipType];
-    if (jobQueue === undefined) {
-      throw Error(`Unknown gossipType ${gossipType}, known values: ${Object.keys(jobQueue).join(", ")}`);
-    }
-
-    return jobQueue.getItems().map((item) => {
-      const [topic, message, propagationSource, seenTimestampSec] = item.args;
-      return {
-        topic: topic,
-        propagationSource,
-        data: message.data,
-        addedTimeMs: item.addedTimeMs,
-        seenTimestampSec,
-      };
-    });
-  }
-
   async dumpPeerScoreStats(): Promise<PeerScoreStats> {
     return this.peerRpcScores.dumpPeerScoreStats();
   }
@@ -473,6 +460,10 @@ export class Network implements INetwork {
 
   async dumpDiscv5KadValues(): Promise<string[]> {
     return (await this.discv5?.kadValues())?.map((enr) => enr.encodeTxt()) ?? [];
+  }
+
+  async dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]> {
+    return this.networkProcessor.dumpGossipQueue(gossipType);
   }
 
   /**

@@ -4,9 +4,9 @@ import {BeaconConfig} from "@lodestar/config";
 import {Logger, prettyBytes} from "@lodestar/utils";
 import {phase0, Root, Slot, ssz} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
-import {Metrics} from "../../../metrics/index.js";
-import {OpSource} from "../../../metrics/validatorMonitor.js";
-import {IBeaconChain} from "../../../chain/index.js";
+import {Metrics} from "../../metrics/index.js";
+import {OpSource} from "../../metrics/validatorMonitor.js";
+import {IBeaconChain} from "../../chain/index.js";
 import {
   AttestationError,
   AttestationErrorCode,
@@ -16,8 +16,8 @@ import {
   GossipAction,
   GossipActionError,
   SyncCommitteeError,
-} from "../../../chain/errors/index.js";
-import {GossipHandlers, GossipType} from "../interface.js";
+} from "../../chain/errors/index.js";
+import {GossipHandlers, GossipType} from "../gossip/interface.js";
 import {
   validateGossipAggregateAndProof,
   validateGossipAttestation,
@@ -28,14 +28,14 @@ import {
   validateSyncCommitteeGossipContributionAndProof,
   validateGossipVoluntaryExit,
   validateBlsToExecutionChange,
-} from "../../../chain/validation/index.js";
-import {NetworkEvent, NetworkEventBus} from "../../events.js";
-import {PeerAction, PeerRpcScoreStore} from "../../peers/index.js";
-import {validateLightClientFinalityUpdate} from "../../../chain/validation/lightClientFinalityUpdate.js";
-import {validateLightClientOptimisticUpdate} from "../../../chain/validation/lightClientOptimisticUpdate.js";
-import {validateGossipBlobsSidecar} from "../../../chain/validation/blobsSidecar.js";
-import {BlockInput, getBlockInput} from "../../../chain/blocks/types.js";
-import {AttnetsService} from "../../subnets/attnetsService.js";
+} from "../../chain/validation/index.js";
+import {NetworkEvent, NetworkEventBus} from "../events.js";
+import {PeerAction, PeerRpcScoreStore} from "../peers/index.js";
+import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
+import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
+import {validateGossipBlobsSidecar} from "../../chain/validation/blobsSidecar.js";
+import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
+import {AttnetsService} from "../subnets/attnetsService.js";
 
 /**
  * Gossip handler options as part of network options
@@ -52,13 +52,13 @@ export const defaultGossipHandlerOpts = {
   dontSendGossipAttestationsToForkchoice: false,
 };
 
-type ValidatorFnsModules = {
+export type ValidatorFnsModules = {
   attnetsService: AttnetsService;
   chain: IBeaconChain;
   config: BeaconConfig;
   logger: Logger;
   metrics: Metrics | null;
-  networkEventBus: NetworkEventBus;
+  events: NetworkEventBus;
   peerRpcScores: PeerRpcScoreStore;
 };
 
@@ -79,7 +79,7 @@ const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
  * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
-  const {attnetsService, chain, config, metrics, networkEventBus, peerRpcScores, logger} = modules;
+  const {attnetsService, chain, config, metrics, events, peerRpcScores, logger} = modules;
 
   async function validateBeaconBlock(
     blockInput: BlockInput,
@@ -109,7 +109,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       if (e instanceof BlockGossipError) {
         if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
           logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
-          networkEventBus.emit(NetworkEvent.unknownBlockParent, blockInput, peerIdStr);
+          events.emit(NetworkEvent.unknownBlockParent, blockInput, peerIdStr);
         }
       }
 
