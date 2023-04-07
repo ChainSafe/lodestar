@@ -8,13 +8,13 @@ import {
 } from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
 import {getCurrentSlot} from "@lodestar/state-transition";
-import {testLogger} from "../../utils/logger.js";
-import {MetadataController} from "../../../src/network/metadata.js";
-import {Eth2Gossipsub, GossipType} from "../../../src/network/gossip/index.js";
-import {AttnetsService, CommitteeSubscription, ShuffleFn} from "../../../src/network/subnets/index.js";
-import {ZERO_HASH} from "../../../src/constants/index.js";
-import {LocalClock} from "../../../src/chain/clock/LocalClock.js";
-import {ClockEvent} from "../../../src/chain/clock/interface.js";
+import {testLogger} from "../../../utils/logger.js";
+import {MetadataController} from "../../../../src/network/metadata.js";
+import {Eth2Gossipsub, GossipType} from "../../../../src/network/gossip/index.js";
+import {AttnetsService, CommitteeSubscription, ShuffleFn} from "../../../../src/network/subnets/index.js";
+import {ZERO_HASH} from "../../../../src/constants/index.js";
+import {LocalClock} from "../../../../src/chain/clock/LocalClock.js";
+import {ClockEvent} from "../../../../src/chain/clock/interface.js";
 
 describe("AttnetsService", function () {
   const COMMITTEE_SUBNET_SUBSCRIPTION = 10;

@@ -434,7 +434,7 @@ export class NetworkCore implements INetworkCore {
       const activeForks = getActiveForks(this.config, epoch);
       for (let i = 0; i < activeForks.length; i++) {
         // Only when a new fork is scheduled post this one
-        if (activeForks[i + 1]) {
+        if (activeForks[i + 1] !== undefined) {
           const prevFork = activeForks[i];
           const nextFork = activeForks[i + 1];
           const forkEpoch = this.config.forks[nextFork].epoch;

@@ -610,7 +610,8 @@ export function createLodestarMetrics(
       }),
       prevEpochOnChainSourceAttesterMiss: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
-        help: "Incremented if the validator is not flagged as a previous epoch source attester during per epoch processing",
+        help:
+          "Incremented if the validator is not flagged as a previous epoch source attester during per epoch processing",
       }),
       prevEpochOnChainHeadAttesterHit: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_head_attester_hit_total",
@@ -618,7 +619,8 @@ export function createLodestarMetrics(
       }),
       prevEpochOnChainHeadAttesterMiss: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_head_attester_miss_total",
-        help: "Incremented if the validator is not flagged as a previous epoch head attester during per epoch processing",
+        help:
+          "Incremented if the validator is not flagged as a previous epoch head attester during per epoch processing",
       }),
       prevOnChainAttesterCorrectHead: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_attester_correct_head_total",
@@ -634,7 +636,8 @@ export function createLodestarMetrics(
       }),
       prevEpochOnChainTargetAttesterMiss: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
-        help: "Incremented if the validator is not flagged as a previous epoch target attester during per epoch processing",
+        help:
+          "Incremented if the validator is not flagged as a previous epoch target attester during per epoch processing",
       }),
       prevEpochOnChainInclusionDistance: register.histogram({
         name: "validator_monitor_prev_epoch_on_chain_inclusion_distance",
