@@ -123,7 +123,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     bls: new BlsSingleThreadVerifier({metrics: null}),
     waitForBlock: () => Promise.resolve(false),
     index2pubkey: state.epochCtx.index2pubkey,
-  } as Partial<IBeaconChain>) as IBeaconChain;
+  } as Partial<IBeaconChain> as IBeaconChain;
 
   return {chain, attestation, subnet, validatorIndex};
 }

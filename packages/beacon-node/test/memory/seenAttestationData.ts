@@ -30,11 +30,11 @@ function getRandomSeenAttestationDatas(n: number): SeenAttestationDatas {
     const attDataBytes = crypto.randomBytes(128);
     const key = Buffer.from(attDataBytes).toString("base64");
     // skip index2pubkey and committeeIndices as they are shared
-    const attDataCacheEntry = ({
+    const attDataCacheEntry = {
       signingRoot: crypto.randomBytes(32),
       attDataRootHex: toHexString(crypto.randomBytes(32)),
       subnet: i,
-    } as unknown) as AttestationDataCacheEntry;
+    } as unknown as AttestationDataCacheEntry;
     seenAttestationDatas.add(slot, key, attDataCacheEntry);
   }
   return seenAttestationDatas;
