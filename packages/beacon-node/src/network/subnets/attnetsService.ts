@@ -32,6 +32,15 @@ enum SubnetSource {
 }
 
 /**
+ * Data to be shared to the network from the attnets service
+ *
+ * "Everything needed here to determine if a gossip/api attestation should be processed"
+ */
+export type SimpleAttnetsServiceState = {
+  aggregatorSlotSubnet: Map<Slot, Set<number>>;
+};
+
+/**
  * Manage random (long lived) subnets and committee (short lived) subnets.
  */
 export class AttnetsService implements IAttnetsService {
@@ -153,9 +162,8 @@ export class AttnetsService implements IAttnetsService {
     return this.aggregatorSlotSubnet.getOrDefault(slot).has(subnet);
   }
 
-  /** Returns the latest Slot subscription is active, null if no subscription */
-  activeUpToSlot(subnet: number): Slot | null {
-    return this.subscriptionsCommittee.activeUpToSlot(subnet);
+  getSimpleAttnetsServiceState(): SimpleAttnetsServiceState {
+    return {aggregatorSlotSubnet: this.aggregatorSlotSubnet};
   }
 
   /** Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork  */
@@ -382,5 +390,28 @@ export class AttnetsService implements IAttnetsService {
       aggregatorCount += subnets.size;
     }
     metrics.attnetsService.aggregatorSlotSubnetCount.set(aggregatorCount);
+  }
+}
+
+/**
+ * Some attnet subscription functionality is needed to be mirrored on the chain side of the thread boundary to determine if attestations should be processed
+ */
+export class SimpleAttnetsService {
+  /**
+   * Map of an aggregator at a slot and subnet
+   * Used to determine if we should process an attestation.
+   */
+  private aggregatorSlotSubnet = new Map<Slot, Set<number>>();
+
+  updateState(state: SimpleAttnetsServiceState): void {
+    this.aggregatorSlotSubnet = state.aggregatorSlotSubnet;
+  }
+
+  shouldProcess(subnet: number, slot: Slot): boolean {
+    const slotAggregators = this.aggregatorSlotSubnet.get(slot);
+    if (!slotAggregators) {
+      return false;
+    }
+    return slotAggregators.has(subnet);
   }
 }

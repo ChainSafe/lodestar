@@ -19,7 +19,7 @@ import {beaconBlocksMaybeBlobsByRoot} from "./reqresp/beaconBlocksMaybeBlobsByRo
 import {GossipHandlers, GossipType, PublisherBeaconNode} from "./gossip/index.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus} from "./events.js";
-import {CommitteeSubscription} from "./subnets/index.js";
+import {CommitteeSubscription, SimpleAttnetsService, SimpleAttnetsServiceState} from "./subnets/index.js";
 import {isPublishToZeroPeersError} from "./util.js";
 import {NetworkProcessor} from "./processor/index.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
@@ -35,6 +35,7 @@ type NetworkModules = {
   config: BeaconConfig;
   logger: Logger;
   chain: IBeaconChain;
+  attnetsService: SimpleAttnetsService;
   metrics: Metrics | null;
   core: INetworkCore;
   signal: AbortSignal;
@@ -68,6 +69,7 @@ export class Network implements INetwork {
   private readonly logger: Logger;
   private readonly config: BeaconConfig;
   private readonly chain: IBeaconChain;
+  private readonly attnetsService: SimpleAttnetsService;
   private readonly signal: AbortSignal;
 
   private connectedPeers = new Map<PeerIdStr, PeerId>();
@@ -88,6 +90,7 @@ export class Network implements INetwork {
       signal,
       events,
       networkProcessor,
+      attnetsService,
     } = modules;
     this.peerId = peerId;
     this.localMultiaddrs = localMultiaddrs;
@@ -95,6 +98,7 @@ export class Network implements INetwork {
     this.config = config;
     this.logger = logger;
     this.chain = chain;
+    this.attnetsService = attnetsService;
     this.signal = signal;
     this.events = events;
     this.networkProcessor = networkProcessor;
@@ -108,6 +112,7 @@ export class Network implements INetwork {
     this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     this.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
+    this.events.on(NetworkEvent.attnetSubscriptionChange, this.onAttnetSubscriptionChange);
     modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
   }
 
@@ -128,6 +133,7 @@ export class Network implements INetwork {
     const initialStatus = chain.getStatus();
     const metricsRegistry = metrics ? new RegistryMetricCreator() : null;
     const clock = chain.clock as EventedBeaconClock;
+    const attnetsService = new SimpleAttnetsService();
     const core = await NetworkCore.init({
       opts,
       config,
@@ -142,7 +148,16 @@ export class Network implements INetwork {
       initialStatus,
     });
     const networkProcessor = new NetworkProcessor(
-      {chain, config, logger, metrics, reportPeer: core.reportPeer.bind(core), events, gossipHandlers},
+      {
+        chain,
+        config,
+        logger,
+        metrics,
+        reportPeer: core.reportPeer.bind(core),
+        events,
+        gossipHandlers,
+        shouldProcessAttestation: attnetsService.shouldProcess.bind(attnetsService),
+      },
       opts
     );
 
@@ -158,6 +173,7 @@ export class Network implements INetwork {
       logger,
       metrics,
       chain,
+      attnetsService,
       core,
       signal,
       events,
@@ -262,6 +278,10 @@ export class Network implements INetwork {
 
   isSubscribedToGossipCoreTopics(): boolean {
     return this.subscribedToCoreTopics;
+  }
+
+  shouldProcessAttestation(subnet: number, slot: number): boolean {
+    return this.attnetsService.shouldProcess(subnet, slot);
   }
 
   async getNetworkIdentity(): Promise<routes.node.NetworkIdentity> {
@@ -429,6 +449,10 @@ export class Network implements INetwork {
 
   private onPeerDisconnected = (peerId: PeerId): void => {
     this.connectedPeers.delete(peerId.toString());
+  };
+
+  private onAttnetSubscriptionChange = (state: SimpleAttnetsServiceState): void => {
+    this.attnetsService.updateState(state);
   };
 
   private waitOneThirdOfSlot = async (slot: number): Promise<void> => {

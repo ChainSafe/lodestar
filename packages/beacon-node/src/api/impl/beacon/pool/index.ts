@@ -65,7 +65,7 @@ export function getBeaconPoolApi({
               beaconBlockRoot
             );
 
-            if (network.attnetsService.shouldProcess(subnet, slot)) {
+            if (network.shouldProcessAttestation(subnet, slot)) {
               const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }

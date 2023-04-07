@@ -119,7 +119,7 @@ export class Eth2Gossipsub extends GossipSub {
         gossipTopicCache,
         isFinite(config.BELLATRIX_FORK_EPOCH) ? GOSSIP_MAX_SIZE_BELLATRIX : GOSSIP_MAX_SIZE
       ),
-      metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
+      metricsRegister: modules.metrics ? (modules.metrics.register as unknown as MetricsRegister) : null,
       metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
       asyncValidation: true,
 
@@ -278,11 +278,6 @@ export class Eth2Gossipsub extends GossipSub {
     // Get seenTimestamp before adding the message to the queue or add async delays
     const seenTimestampSec = Date.now() / 1000;
 
-    // Only beacon_attestation has conditional subscriptions
-    // TODO: Also syncnets?
-    const importUpToSlot =
-      topic.type === GossipType.beacon_attestation ? this.attnetsService.activeUpToSlot(topic.subnet) : null;
-
     // Emit message to network processor, use setTimeout to yield to the macro queue
     // This is mostly due to too many attestation messages, and a gossipsub RPC may
     // contain multiple of them. This helps avoid the I/O lag issue.
@@ -294,7 +289,6 @@ export class Eth2Gossipsub extends GossipSub {
         propagationSource,
         seenTimestampSec,
         startProcessUnixSec: null,
-        importUpToSlot,
       });
     }, 0);
   }

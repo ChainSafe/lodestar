@@ -4,7 +4,7 @@ import {Registrar} from "@libp2p/interface-registrar";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {ConnectionManager} from "@libp2p/interface-connection-manager";
 import {Multiaddr} from "@multiformats/multiaddr";
-import {phase0} from "@lodestar/types";
+import {Slot, phase0} from "@lodestar/types";
 import {BlockInput} from "../chain/blocks/types.js";
 import {INetworkEventBus} from "./events.js";
 import {GossipType, PublisherBeaconNode} from "./gossip/index.js";
@@ -30,6 +30,8 @@ export interface INetwork
   getConnectedPeers(): PeerId[];
   getConnectedPeerCount(): number;
   isSubscribedToGossipCoreTopics(): boolean;
+
+  shouldProcessAttestation(subnet: number, slot: Slot): boolean;
 
   // TODO move these reqresp methods into their respective module
   beaconBlocksMaybeBlobsByRange(peerId: PeerId, request: phase0.BeaconBlocksByRangeRequest): Promise<BlockInput[]>;

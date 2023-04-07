@@ -61,6 +61,7 @@ export type ValidatorFnsModules = {
   metrics: Metrics | null;
   events: NetworkEventBus;
   reportPeer: INetworkCore["reportPeer"];
+  shouldProcessAttestation: (subnet: number, slot: Slot) => boolean;
 };
 
 const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
@@ -80,7 +81,7 @@ const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
  * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
-  const {chain, config, metrics, events, reportPeer, logger} = modules;
+  const {chain, config, metrics, events, reportPeer, shouldProcessAttestation, logger} = modules;
 
   async function validateBeaconBlock(
     blockInput: BlockInput,
@@ -245,7 +246,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec, gossipSerializedData, importUpToSlot) => {
+    [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec, gossipSerializedData) => {
       let validationResult: AttestationValidationResult;
       try {
         // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -267,17 +268,10 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       const {indexedAttestation, attDataRootHex} = validationResult;
       metrics?.registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation);
 
-      // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
-      // but don't import them, to save CPU and RAM
-      // ACTIVE: >=, toSlot >= slot
-      if (importUpToSlot !== null && importUpToSlot >= attestation.data.slot) {
-        return;
-      }
-
       try {
         // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
         // but don't add to attestation pool, to save CPU and RAM
-        if (attnetsService.shouldProcess(subnet, attestation.data.slot)) {
+        if (shouldProcessAttestation(subnet, attestation.data.slot)) {
           const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
           metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
         }

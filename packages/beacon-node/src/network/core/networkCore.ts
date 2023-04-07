@@ -16,7 +16,7 @@ import {MetadataController} from "../metadata.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "../forks.js";
 import {PeerManager} from "../peers/peerManager.js";
 import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore, PeerScoreStats} from "../peers/index.js";
-import {INetworkEventBus, NetworkEventBus} from "../events.js";
+import {INetworkEventBus, NetworkEvent, NetworkEventBus} from "../events.js";
 import {AttnetsService, CommitteeSubscription, SyncnetsService} from "../subnets/index.js";
 import {PeersData} from "../peers/peersData.js";
 import {getConnectionsMap} from "../util.js";
@@ -297,7 +297,11 @@ export class NetworkCore implements INetworkCore {
    */
   async prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
     this.attnetsService.addCommitteeSubscriptions(subscriptions);
-    if (subscriptions.length > 0) this.peerManager.onCommitteeSubscriptions();
+    if (subscriptions.length > 0) {
+      this.peerManager.onCommitteeSubscriptions();
+
+      this.events.emit(NetworkEvent.attnetSubscriptionChange, this.attnetsService.getSimpleAttnetsServiceState());
+    }
   }
 
   async prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void> {
