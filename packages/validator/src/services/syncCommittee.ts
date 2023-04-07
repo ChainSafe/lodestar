@@ -261,7 +261,9 @@ export class SyncCommitteeService {
     this.logger.debug("Submitting partial sync committee selection proofs", {slot, count: partialSelections.length});
 
     const res = await Promise.race([
-      this.api.validator.submitSyncCommitteeSelections(partialSelections),
+      this.api.validator
+        .submitSyncCommitteeSelections(partialSelections)
+        .catch((e) => this.logger.error("Error on submitSyncCommitteeSelections", {slot}, e)),
       // Exit sync committee contributions flow if there is no response after 2/3 of slot.
       // This is in contrast to attestations aggregations flow which is already exited at 1/3 of the slot
       // because for sync committee is not required to resubscribe to subnets as beacon node will assume
