@@ -9,7 +9,7 @@ import {validateBlsToExecutionChange} from "../../../../chain/validation/blsToEx
 import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCommittee.js";
 import {ApiModules} from "../../types.js";
 import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors/index.js";
-import {validateGossipFnRetryUnknownRoot} from "../../../../network/gossip/handlers/index.js";
+import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
 
 export function getBeaconPoolApi({
   chain,

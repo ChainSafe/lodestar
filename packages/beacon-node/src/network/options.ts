@@ -1,15 +1,16 @@
 import {generateKeypair, IDiscv5DiscoveryInputOptions, KeypairType, SignableENR} from "@chainsafe/discv5";
 import {Eth2GossipsubOpts} from "./gossip/gossipsub.js";
-import {defaultGossipHandlerOpts, GossipHandlerOpts} from "./gossip/handlers/index.js";
+import {defaultGossipHandlerOpts} from "./processor/gossipHandlers.js";
 import {PeerManagerOpts} from "./peers/index.js";
 import {ReqRespBeaconNodeOpts} from "./reqresp/ReqRespBeaconNode.js";
+import {NetworkProcessorOpts} from "./processor/index.js";
 
 // Since Network is eventually intended to be run in a separate thread, ensure that all options are cloneable using structuredClone
 export interface NetworkOptions
   extends PeerManagerOpts,
     // remove all Functions
     Omit<ReqRespBeaconNodeOpts, "getPeerLogMetadata" | "onRateLimit">,
-    GossipHandlerOpts,
+    NetworkProcessorOpts,
     Eth2GossipsubOpts {
   localMultiaddrs: string[];
   bootMultiaddrs?: string[];

@@ -60,7 +60,7 @@ export function getLodestarApi({
 
     async getGossipQueueItems(gossipType: GossipType | string) {
       return {
-        data: await network.dumpGossipQueueItems(gossipType),
+        data: await network.dumpGossipQueue(gossipType as GossipType),
       };
     },
 
