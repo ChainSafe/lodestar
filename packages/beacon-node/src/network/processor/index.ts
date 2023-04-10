@@ -292,6 +292,8 @@ export class NetworkProcessor {
       break;
     }
 
-    this.metrics?.networkProcessor.jobsSubmitted.observe(jobsSubmitted);
+    if (jobsSubmitted > 0) {
+      this.metrics?.networkProcessor.jobsSubmitted.observe(jobsSubmitted);
+    }
   }
 }
