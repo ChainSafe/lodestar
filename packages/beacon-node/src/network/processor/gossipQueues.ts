@@ -2,10 +2,26 @@ import {mapValues} from "@lodestar/utils";
 import {LinkedList} from "../../util/array.js";
 import {GossipType} from "../gossip/interface.js";
 
-enum QueueType {
+export enum QueueType {
   FIFO = "FIFO",
   LIFO = "LIFO",
 }
+
+export enum DropType {
+  count = "count",
+  ratio = "ratio",
+}
+
+type DropOpts =
+  | {
+      type: DropType.count;
+      count: number;
+    }
+  | {
+      type: DropType.ratio;
+      start: number;
+      step: number;
+    };
 
 /**
  * Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
@@ -14,59 +30,112 @@ const gossipQueueOpts: {
   [K in GossipType]: GossipQueueOpts;
 } = {
   // validation gossip block asap
-  [GossipType.beacon_block]: {maxLength: 1024, type: QueueType.FIFO},
+  [GossipType.beacon_block]: {maxLength: 1024, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
   // TODO DENEB: What's a good queue max given that now blocks are much bigger?
-  [GossipType.beacon_block_and_blobs_sidecar]: {maxLength: 32, type: QueueType.FIFO},
+  [GossipType.beacon_block_and_blobs_sidecar]: {
+    maxLength: 32,
+    type: QueueType.FIFO,
+    dropOpts: {type: DropType.count, count: 1},
+  },
   // lighthoue has aggregate_queue 4096 and unknown_block_aggregate_queue 1024, we use single queue
-  [GossipType.beacon_aggregate_and_proof]: {maxLength: 5120, type: QueueType.LIFO},
+  [GossipType.beacon_aggregate_and_proof]: {
+    maxLength: 5120,
+    type: QueueType.LIFO,
+    dropOpts: {type: DropType.count, count: 1},
+  },
   // lighthouse has attestation_queue 16384 and unknown_block_attestation_queue 8192, we use single queue
-  [GossipType.beacon_attestation]: {maxLength: 24576, type: QueueType.LIFO},
-  [GossipType.voluntary_exit]: {maxLength: 4096, type: QueueType.FIFO},
-  [GossipType.proposer_slashing]: {maxLength: 4096, type: QueueType.FIFO},
-  [GossipType.attester_slashing]: {maxLength: 4096, type: QueueType.FIFO},
-  [GossipType.sync_committee_contribution_and_proof]: {maxLength: 4096, type: QueueType.LIFO},
-  [GossipType.sync_committee]: {maxLength: 4096, type: QueueType.LIFO},
-  [GossipType.light_client_finality_update]: {maxLength: 1024, type: QueueType.FIFO},
-  [GossipType.light_client_optimistic_update]: {maxLength: 1024, type: QueueType.FIFO},
+  // this topic may cause node to be overload and drop 100% of lower priority queues
+  // so we want to drop it by ratio until node is stable enough (queue is empty)
+  // start with dropping 10% of the queue, then increase 1% more each time. Reset when queue is empty
+  [GossipType.beacon_attestation]: {
+    maxLength: 24576,
+    type: QueueType.LIFO,
+    dropOpts: {type: DropType.ratio, start: 0.1, step: 0.01},
+  },
+  [GossipType.voluntary_exit]: {maxLength: 4096, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
+  [GossipType.proposer_slashing]: {maxLength: 4096, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
+  [GossipType.attester_slashing]: {maxLength: 4096, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
+  [GossipType.sync_committee_contribution_and_proof]: {
+    maxLength: 4096,
+    type: QueueType.LIFO,
+    dropOpts: {type: DropType.count, count: 1},
+  },
+  [GossipType.sync_committee]: {maxLength: 4096, type: QueueType.LIFO, dropOpts: {type: DropType.count, count: 1}},
+  [GossipType.light_client_finality_update]: {
+    maxLength: 1024,
+    type: QueueType.FIFO,
+    dropOpts: {type: DropType.count, count: 1},
+  },
+  [GossipType.light_client_optimistic_update]: {
+    maxLength: 1024,
+    type: QueueType.FIFO,
+    dropOpts: {type: DropType.count, count: 1},
+  },
   // lighthouse has bls changes queue set to their max 16384 to handle large spike at capella
-  [GossipType.bls_to_execution_change]: {maxLength: 16384, type: QueueType.FIFO},
+  [GossipType.bls_to_execution_change]: {
+    maxLength: 16384,
+    type: QueueType.FIFO,
+    dropOpts: {type: DropType.count, count: 1},
+  },
 };
 
 type GossipQueueOpts = {
   type: QueueType;
   maxLength: number;
+  dropOpts: DropOpts;
 };
 
 export class GossipQueue<T> {
   private readonly list = new LinkedList<T>();
+  private _dropRatio = 0;
 
-  constructor(private readonly opts: GossipQueueOpts) {}
+  constructor(private readonly opts: GossipQueueOpts) {
+    if (opts.dropOpts.type === DropType.ratio) {
+      const {start, step} = opts.dropOpts;
+      if (start <= 0 || start > 1) {
+        throw Error(`Invalid drop ratio start ${start} step ${step}`);
+      }
+      this._dropRatio = opts.dropOpts.start;
+    }
+  }
 
   get length(): number {
     return this.list.length;
+  }
+
+  get dropRatio(): number {
+    return this._dropRatio;
   }
 
   clear(): void {
     this.list.clear();
   }
 
-  add(item: T): T | null {
-    let droppedItem: T | null = null;
-
-    if (this.list.length + 1 > this.opts.maxLength) {
-      // LIFO -> keep latest job, drop oldest, FIFO -> drop latest job
-      switch (this.opts.type) {
-        case QueueType.LIFO:
-          droppedItem = this.list.shift();
-          break;
-        case QueueType.FIFO:
-          return item;
-      }
+  /**
+   * Add item to gossip queue.
+   * Return number of items dropped
+   */
+  add(item: T): number {
+    if (this.length === 0 && this.opts.dropOpts.type === DropType.ratio) {
+      // reset drop ratio when queue is empty
+      this._dropRatio = this.opts.dropOpts.start;
     }
 
     this.list.push(item);
 
-    return droppedItem;
+    if (this.list.length <= this.opts.maxLength) {
+      return 0;
+    }
+
+    // overload, need to drop more items
+    if (this.opts.dropOpts.type === DropType.count) {
+      return this.dropByCount(this.opts.dropOpts.count);
+    } else {
+      const droppedCount = this.dropByRatio(this._dropRatio);
+      // increase drop ratio the next time queue is full
+      this._dropRatio = Math.min(1, this._dropRatio + this.opts.dropOpts.step);
+      return droppedCount;
+    }
   }
 
   next(): T | null {
@@ -81,6 +150,58 @@ export class GossipQueue<T> {
 
   getAll(): T[] {
     return this.list.toArray();
+  }
+
+  /**
+   * Drop up to some ratio of items from the queue
+   * ratio is from 0 to 1 inclusive
+   * Return number of items dropped
+   */
+  private dropByRatio(ratio: number): number {
+    if (ratio < 0 || ratio > 1) {
+      throw Error(`Invalid ratio ${ratio}`);
+    }
+
+    if (ratio === 0) {
+      return 0;
+    }
+
+    if (ratio === 1) {
+      const numDeleted = this.length;
+      this.clear();
+      return numDeleted;
+    }
+
+    const count = Math.floor(this.list.length * ratio);
+    return this.dropByCount(count);
+  }
+
+  /**
+   * Drop up to some number of items from the queue
+   * Return number of items dropped
+   */
+  private dropByCount(count: number): number {
+    if (count <= 0) {
+      return 0;
+    }
+
+    if (count >= this.length) {
+      const numDeleted = this.length;
+      this.clear();
+      return numDeleted;
+    }
+
+    let i = 0;
+    while (i < count && this.length > 0) {
+      if (this.opts.type === QueueType.LIFO) {
+        this.list.shift();
+      } else {
+        this.list.pop();
+      }
+      i++;
+    }
+
+    return i;
   }
 }
 

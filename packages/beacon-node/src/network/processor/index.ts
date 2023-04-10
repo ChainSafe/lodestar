@@ -130,6 +130,7 @@ export class NetworkProcessor {
       metrics.gossipValidationQueueLength.addCollect(() => {
         for (const topic of executeGossipWorkOrder) {
           metrics.gossipValidationQueueLength.set({topic}, this.gossipQueues[topic].length);
+          metrics.gossipValidationQueueDropRatio.set({topic}, this.gossipQueues[topic].dropRatio);
           metrics.gossipValidationQueueConcurrency.set({topic}, this.gossipTopicConcurrency[topic]);
         }
         metrics.reprocessGossipAttestations.countPerSlot.set(this.unknownBlockGossipsubMessagesCount);
@@ -190,10 +191,10 @@ export class NetworkProcessor {
 
   private pushPendingGossipsubMessageToQueue(message: PendingGossipsubMessage): void {
     const topicType = message.topic.type;
-    const droppedJob = this.gossipQueues[topicType].add(message);
-    if (droppedJob) {
+    const droppedCount = this.gossipQueues[topicType].add(message);
+    if (droppedCount) {
       // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
-      this.metrics?.gossipValidationQueueDroppedJobs.inc({topic: message.topic.type});
+      this.metrics?.gossipValidationQueueDroppedJobs.inc({topic: message.topic.type}, droppedCount);
     }
 
     // Tentatively perform work
