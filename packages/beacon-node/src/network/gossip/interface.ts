@@ -4,7 +4,7 @@ import {Message, PublishResult, TopicValidatorResult} from "@libp2p/interface-pu
 import StrictEventEmitter from "strict-event-emitter-types";
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
-import {allForks, altair, capella, deneb, phase0, Slot} from "@lodestar/types";
+import {allForks, altair, capella, deneb, phase0} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
@@ -180,8 +180,7 @@ export type GossipHandlers = {
     topic: GossipTopicMap[K],
     peerIdStr: string,
     seenTimestampSec: number,
-    gossipSerializedData: Uint8Array,
-    importUpToSlot: Slot | null
+    gossipSerializedData: Uint8Array
   ) => Promise<void>;
 };
 
