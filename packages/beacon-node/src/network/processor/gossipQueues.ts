@@ -23,6 +23,10 @@ type DropOpts =
       step: number;
     };
 
+// Having a drop ratio of 1 will empty the queue which is too severe
+// Worse case drop 95% of the queue
+const MAX_DROP_RATIO = 0.95;
+
 /**
  * Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
  */
@@ -46,11 +50,11 @@ const gossipQueueOpts: {
   // lighthouse has attestation_queue 16384 and unknown_block_attestation_queue 8192, we use single queue
   // this topic may cause node to be overload and drop 100% of lower priority queues
   // so we want to drop it by ratio until node is stable enough (queue is empty)
-  // start with dropping 10% of the queue, then increase 1% more each time. Reset when queue is empty
+  // start with dropping 1% of the queue, then increase 1% more each time. Reset when queue is empty
   [GossipType.beacon_attestation]: {
     maxLength: 24576,
     type: QueueType.LIFO,
-    dropOpts: {type: DropType.ratio, start: 0.1, step: 0.01},
+    dropOpts: {type: DropType.ratio, start: 0.01, step: 0.01},
   },
   [GossipType.voluntary_exit]: {maxLength: 4096, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
   [GossipType.proposer_slashing]: {maxLength: 4096, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
@@ -87,7 +91,13 @@ type GossipQueueOpts = {
 
 export class GossipQueue<T> {
   private readonly list = new LinkedList<T>();
+  // Increase _dropRatio gradually, retest its initial value if node is in good status
   private _dropRatio = 0;
+  // this is to avoid the case we drop 90% of the queue, then queue is empty and we consider
+  // node is in good status
+  private recentDrop = false;
+  // set recentDrop to false after we process up to maxLength items
+  private processedCountSinceDrop = 0;
 
   constructor(private readonly opts: GossipQueueOpts) {
     if (opts.dropOpts.type === DropType.ratio) {
@@ -116,8 +126,9 @@ export class GossipQueue<T> {
    * Return number of items dropped
    */
   add(item: T): number {
-    if (this.length === 0 && this.opts.dropOpts.type === DropType.ratio) {
-      // reset drop ratio when queue is empty
+    // this signals the node is not overloaded anymore
+    if (this.opts.dropOpts.type === DropType.ratio && !this.recentDrop && this.length === 0) {
+      // reset drop ratio to see if node is comfortable with it
       this._dropRatio = this.opts.dropOpts.start;
     }
 
@@ -131,21 +142,36 @@ export class GossipQueue<T> {
     if (this.opts.dropOpts.type === DropType.count) {
       return this.dropByCount(this.opts.dropOpts.count);
     } else {
+      this.recentDrop = true;
       const droppedCount = this.dropByRatio(this._dropRatio);
       // increase drop ratio the next time queue is full
-      this._dropRatio = Math.min(1, this._dropRatio + this.opts.dropOpts.step);
+      this._dropRatio = Math.min(MAX_DROP_RATIO, this._dropRatio + this.opts.dropOpts.step);
       return droppedCount;
     }
   }
 
   next(): T | null {
+    let item: T | null = null;
     // LIFO -> pop() remove last item, FIFO -> shift() remove first item
     switch (this.opts.type) {
       case QueueType.LIFO:
-        return this.list.pop();
+        item = this.list.pop();
+        break;
       case QueueType.FIFO:
-        return this.list.shift();
+        item = this.list.shift();
+        break;
     }
+
+    // it's ok to mark recent drop as false if we dropped <50% of the queue the last time
+    if (this.opts.dropOpts.type === DropType.ratio && this.recentDrop && item !== null) {
+      this.processedCountSinceDrop++;
+      if (this.processedCountSinceDrop >= this.opts.maxLength) {
+        this.recentDrop = false;
+        this.processedCountSinceDrop = 0;
+      }
+    }
+
+    return item;
   }
 
   getAll(): T[] {
