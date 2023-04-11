@@ -9,7 +9,8 @@ import {defaultNetwork, GlobalArgs} from "../../../options/index.js";
 import {assertValidPubkeysHex, isValidHttpUrl, parseRange, YargsError} from "../../../util/index.js";
 import {getAccountPaths} from "../paths.js";
 import {IValidatorCliArgs} from "../options.js";
-import {decryptKeystoreDefinitions, PersistedKeysBackend} from "../keymanager/persistedKeys.js";
+import {PersistedKeysBackend} from "../keymanager/persistedKeys.js";
+import {decryptKeystoreDefinitions} from "../keymanager/decryptKeystoreDefinitions/index.js";
 import {showProgress} from "../../../util/progress.js";
 import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./importExternalKeystores.js";
 
