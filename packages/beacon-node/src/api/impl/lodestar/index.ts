@@ -1,3 +1,7 @@
+import childProcess from "node:child_process";
+import fs from "node:fs";
+import util from "node:util";
+import path from "node:path";
 import {peerIdFromString} from "@libp2p/peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
 import {routes, ServerApi} from "@lodestar/api";
@@ -21,6 +25,7 @@ export function getLodestarApi({
   sync,
 }: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): ServerApi<routes.lodestar.Api> {
   let writingHeapdump = false;
+  let writingHeatmap: string | undefined = undefined;
 
   return {
     async writeHeapdump(dirpath = ".") {
@@ -46,6 +51,38 @@ export function getLodestarApi({
         return {data: {filepath}};
       } finally {
         writingHeapdump = false;
+      }
+    },
+
+    async writeHeatMap(timeInSec = 30, dirpath = ".") {
+      try {
+        const outFile = path.resolve(dirpath, "perf.data");
+        if (writingHeatmap) {
+          throw new Error("Currently running perf is: " + writingHeatmap);
+        }
+        writingHeatmap = outFile;
+        const exec = util.promisify(childProcess.exec);
+        exec(`perf record -p ${process.pid} -F 99 -g -o ${outFile} -- sleep ${timeInSec}`).finally(() => {
+          writingHeatmap = undefined;
+        });
+        return {data: outFile};
+      } catch (err) {
+        return {data: JSON.stringify(err), code: 500};
+      }
+    },
+
+    async getHeatMap(filepath: string) {
+      try {
+        const stat = await fs.promises.stat(filepath).catch(() => undefined);
+        if (!stat?.isFile()) {
+          throw new Error("File not found");
+        }
+        if (writingHeatmap === filepath) {
+          throw new Error("Currently running perf is: " + writingHeatmap);
+        }
+        return {data: await fs.promises.readFile(filepath, "utf8")};
+      } catch (err) {
+        return {data: JSON.stringify(err), code: 500};
       }
     },
 

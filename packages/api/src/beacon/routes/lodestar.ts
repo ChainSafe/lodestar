@@ -76,6 +76,13 @@ export type LodestarNodePeer = NodePeer & {
 export type Api = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
   writeHeapdump(dirpath?: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
+  /** Trigger to collect a heat map for `timeInSec` and write it to disk at `dirpath` */
+  writeHeatMap(
+    timeInSec?: number,
+    dirpath?: string
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
+  /** Returns the heat map data stored at the filepath as JSON string */
+  getHeatMap(filePath: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: string}}>>;
   /** TODO: description */
   getLatestWeakSubjectivityCheckpointEpoch(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: Epoch}}>>;
   /** TODO: description */
@@ -126,6 +133,8 @@ export type Api = {
  */
 export const routesData: RoutesData<Api> = {
   writeHeapdump: {url: "/eth/v1/lodestar/writeheapdump", method: "POST"},
+  writeHeatMap: {url: "/eth/v1/lodestar/writeheatmap", method: "POST"},
+  getHeatMap: {url: "/eth/v1/lodestar/getheatmap", method: "POST"},
   getLatestWeakSubjectivityCheckpointEpoch: {url: "/eth/v1/lodestar/ws_epoch", method: "GET"},
   getSyncChainsDebugState: {url: "/eth/v1/lodestar/sync-chains-debug-state", method: "GET"},
   getGossipQueueItems: {url: "/eth/v1/lodestar/gossip-queue-items/:gossipType", method: "GET"},
@@ -147,6 +156,8 @@ export const routesData: RoutesData<Api> = {
 
 export type ReqTypes = {
   writeHeapdump: {query: {dirpath?: string}};
+  writeHeatMap: {query: {dirpath?: string; timeInSec?: number}};
+  getHeatMap: {query: {filepath: string}};
   getLatestWeakSubjectivityCheckpointEpoch: ReqEmpty;
   getSyncChainsDebugState: ReqEmpty;
   getGossipQueueItems: {params: {gossipType: string}};
@@ -172,6 +183,16 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       writeReq: (dirpath) => ({query: {dirpath}}),
       parseReq: ({query}) => [query.dirpath],
       schema: {query: {dirpath: Schema.String}},
+    },
+    writeHeatMap: {
+      writeReq: (timeInSec, dirpath) => ({query: {timeInSec, dirpath}}),
+      parseReq: ({query}) => [query.timeInSec, query.dirpath],
+      schema: {query: {timeInSec: Schema.Uint, dirpath: Schema.String}},
+    },
+    getHeatMap: {
+      writeReq: (filepath) => ({query: {filepath}}),
+      parseReq: ({query}) => [query.filepath],
+      schema: {query: {filepath: Schema.String}},
     },
     getLatestWeakSubjectivityCheckpointEpoch: reqEmpty,
     getSyncChainsDebugState: reqEmpty,
@@ -216,6 +237,8 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 export function getReturnTypes(): ReturnTypes<Api> {
   return {
     writeHeapdump: sameType(),
+    writeHeatMap: sameType(),
+    getHeatMap: sameType(),
     getLatestWeakSubjectivityCheckpointEpoch: sameType(),
     getSyncChainsDebugState: jsonType("snake"),
     getGossipQueueItems: jsonType("snake"),
