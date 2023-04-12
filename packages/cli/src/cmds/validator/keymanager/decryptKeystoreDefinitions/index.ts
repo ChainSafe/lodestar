@@ -1,5 +1,5 @@
 import {spawn, ModuleThread, Pool, QueuedTask, Worker} from "@chainsafe/threads";
-import {Signer, SignerLocal, SignerType} from "@lodestar/validator";
+import {SignerLocal, SignerType} from "@lodestar/validator";
 import bls from "@chainsafe/bls";
 import {LocalKeystoreDefinition} from "../interface.js";
 import {clearKeystoreCache, loadKeystoreCache, writeKeystoreCache} from "../keystoreCache.js";
@@ -13,7 +13,7 @@ import {DecryptKeystoreWorkerAPI, KeystoreDecryptOptions} from "./types.js";
 export async function decryptKeystoreDefinitions(
   keystoreDefinitions: LocalKeystoreDefinition[],
   opts: KeystoreDecryptOptions
-): Promise<Signer[]> {
+): Promise<SignerLocal[]> {
   if (opts.cacheFilePath) {
     try {
       const signers = await loadKeystoreCache(opts.cacheFilePath, keystoreDefinitions);
@@ -31,8 +31,15 @@ export async function decryptKeystoreDefinitions(
   const passwords: string[] = [];
   const tasks: QueuedTask<ModuleThread<DecryptKeystoreWorkerAPI>, Uint8Array>[] = [];
   const errors: Error[] = [];
-
-  const pool = Pool(() => spawn<DecryptKeystoreWorkerAPI>(new Worker("./worker.js")), defaultPoolSize);
+  const pool = Pool(
+    () =>
+      spawn<DecryptKeystoreWorkerAPI>(new Worker("./worker.js"), {
+        // A Lodestar Node may do very expensive task at start blocking the event loop and causing
+        // the initialization to timeout. The number below is big enough to almost disable the timeout
+        timeout: 5 * 60 * 1000,
+      }),
+    defaultPoolSize
+  );
   for (const [index, definition] of keystoreDefinitions.entries()) {
     try {
       lockFilepath(definition.keystorePath);
@@ -73,7 +80,7 @@ export async function decryptKeystoreDefinitions(
 
   try {
     // only resolves if there are no errored tasks
-    await pool.completed();
+    await pool.completed(true);
   } catch (e) {
     // If an error occurs, the program isn't going to be running,
     // so we should unlock all lockfiles we created

@@ -99,6 +99,7 @@ export async function getSignersFromArgs(
       ...args,
       onDecrypt: needle,
       cacheFilePath: path.join(accountPaths.cacheDir, "imported_keystores.cache"),
+      logger,
     });
   }
 
@@ -131,6 +132,7 @@ export async function getSignersFromArgs(
       ...args,
       onDecrypt: needle,
       cacheFilePath: path.join(accountPaths.cacheDir, "local_keystores.cache"),
+      logger,
     });
 
     // Read local remote keys, imported via keymanager api
