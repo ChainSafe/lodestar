@@ -6,6 +6,7 @@ import {eth_getBalance} from "../verified_requests/eth_getBalance.js";
 import {eth_getTransactionCount} from "../verified_requests/eth_getTransactionCount.js";
 import {eth_getBlockByHash} from "../verified_requests/eth_getBlockByHash.js";
 import {eth_getBlockByNumber} from "../verified_requests/eth_getBlockByNumber.js";
+import {eth_getCode} from "../verified_requests/eth_getCode.js";
 
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
 export const supportedELRequests: Record<string, ELVerifiedRequestHandler<any, any>> = {
@@ -13,6 +14,7 @@ export const supportedELRequests: Record<string, ELVerifiedRequestHandler<any, a
   eth_getTransactionCount: eth_getTransactionCount,
   eth_getBlockByHash: eth_getBlockByHash,
   eth_getBlockByNumber: eth_getBlockByNumber,
+  eth_getCode: eth_getCode,
 };
 /* eslint-enable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any*/
 

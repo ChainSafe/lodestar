@@ -1,7 +1,7 @@
 import {Block} from "@ethereumjs/block";
 import {RLP} from "@ethereumjs/rlp";
 import {Trie} from "@ethereumjs/trie";
-import {Account} from "@ethereumjs/util";
+import {Account, KECCAK256_NULL_S} from "@ethereumjs/util";
 import {keccak256} from "ethereum-cryptography/keccak.js";
 import {Bytes32, allForks} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -13,6 +13,26 @@ import {isValidResponse} from "./json_rpc.js";
 
 const emptyAccountSerialize = new Account().serialize();
 const storageKeyLength = 32;
+
+export async function getELCode(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handler: ELRequestHandler<[address: string, block: number | string], string>,
+  args: [address: string, block: number | string]
+): Promise<string> {
+  // TODO: Find better way to generate random id
+  const codeResult = await handler({
+    jsonrpc: "2.0",
+    method: "eth_getCode",
+    params: args,
+    id: (Math.random() * 10000).toFixed(0),
+  });
+
+  if (!codeResult || !codeResult.result) {
+    throw new Error("Can not find code for given address.");
+  }
+
+  return codeResult.result;
+}
 
 export async function getELProof(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -58,6 +78,31 @@ export async function fetchAndVerifyAccount({
     (await isValidStorageKeys({storageKeys: [], proof, logger}))
   ) {
     return {data: proof, valid: true};
+  }
+
+  return {valid: false};
+}
+
+export async function fetchAndVerifyCode({
+  address,
+  proofProvider,
+  logger,
+  handler,
+  codeHash,
+  block,
+}: {
+  address: HexString;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handler: ELRequestHandler<any, any>;
+  proofProvider: ProofProvider;
+  logger: Logger;
+  codeHash: HexString;
+  block?: number | string;
+}): Promise<{data: string; valid: true} | {valid: false; data?: undefined}> {
+  const executionPayload = await proofProvider.getExecutionPayload(block ?? "latest");
+  const code = await getELCode(handler, [address, bufferToHex(executionPayload.blockHash)]);
+  if (await isValidCodeHash({codeHash, codeResponse: code, logger})) {
+    return {data: code, valid: true};
   }
 
   return {valid: false};
@@ -195,4 +240,18 @@ export async function isValidBlock({
   }
 
   return true;
+}
+
+export async function isValidCodeHash({
+  codeHash,
+  codeResponse,
+}: {
+  codeHash: string;
+  codeResponse: string;
+  logger: Logger;
+}): Promise<boolean> {
+  // if there is no code hash for that address
+  if (codeResponse === "0x" && codeHash === `0x${KECCAK256_NULL_S}`) return true;
+
+  return bufferToHex(keccak256(hexToBuffer(codeResponse))) === codeHash;
 }
