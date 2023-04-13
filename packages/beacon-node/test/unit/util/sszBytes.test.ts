@@ -4,11 +4,12 @@ import {fromHex, toHex} from "@lodestar/utils";
 import {
   getAttDataBase64FromAttestationSerialized,
   getAttDataBase64FromSignedAggregateAndProofSerialized,
-  getAggregateionBitsFromAttestationSerialized,
+  getAggregateionBitsFromAttestationSerialized as getAggregationBitsFromAttestationSerialized,
   getBlockRootFromAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromAttestationSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
+  getSignatureFromAttestationSerialized,
 } from "../../../src/util/sszBytes.js";
 
 describe("attestation SSZ serialized picking", () => {
@@ -28,9 +29,10 @@ describe("attestation SSZ serialized picking", () => {
 
       expect(getSlotFromAttestationSerialized(bytes)).equals(attestation.data.slot);
       expect(getBlockRootFromAttestationSerialized(bytes)).equals(toHex(attestation.data.beaconBlockRoot));
-      expect(getAggregateionBitsFromAttestationSerialized(bytes).toBoolArray()).to.be.deep.equals(
+      expect(getAggregationBitsFromAttestationSerialized(bytes)?.toBoolArray()).to.be.deep.equals(
         attestation.aggregationBits.toBoolArray()
       );
+      expect(getSignatureFromAttestationSerialized(bytes)).to.be.deep.equals(attestation.signature);
 
       const attDataBase64 = ssz.phase0.AttestationData.serialize(attestation.data);
       expect(getAttDataBase64FromAttestationSerialized(bytes)).to.be.equal(
@@ -57,6 +59,20 @@ describe("attestation SSZ serialized picking", () => {
     const invalidAttDataBase64DataSizes = [0, 4, 100, 128, 131];
     for (const size of invalidAttDataBase64DataSizes) {
       expect(getAttDataBase64FromAttestationSerialized(Buffer.alloc(size))).to.be.null;
+    }
+  });
+
+  it("getAggregateionBitsFromAttestationSerialized - invalid data", () => {
+    const invalidAggregationBitsDataSizes = [0, 4, 100, 128, 227];
+    for (const size of invalidAggregationBitsDataSizes) {
+      expect(getAggregationBitsFromAttestationSerialized(Buffer.alloc(size))).to.be.null;
+    }
+  });
+
+  it("getSignatureFromAttestationSerialized - invalid data", () => {
+    const invalidSignatureDataSizes = [0, 4, 100, 128, 227];
+    for (const size of invalidSignatureDataSizes) {
+      expect(getSignatureFromAttestationSerialized(Buffer.alloc(size))).to.be.null;
     }
   });
 });

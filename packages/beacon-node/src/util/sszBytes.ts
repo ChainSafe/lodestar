@@ -1,5 +1,5 @@
-import { BitArray } from "@chainsafe/ssz";
-import {RootHex, Slot} from "@lodestar/types";
+import {BitArray} from "@chainsafe/ssz";
+import {BLSSignature, RootHex, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 
 export type BlockRootHex = RootHex;
@@ -26,22 +26,23 @@ export type AttDataBase64 = string;
 //    aggregate: Attestation          - offset 4
 //    selectionProof: BLSSignature    - data 96
 
-const ATTESTATION_SLOT_OFFSET = 4;
-const ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = ATTESTATION_SLOT_OFFSET + 8 + 8;
+const VARIABLE_FIELD_OFFSET = 4;
+const ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = VARIABLE_FIELD_OFFSET + 8 + 8;
 const ROOT_SIZE = 32;
 const SLOT_SIZE = 8;
 const ATTESTATION_DATA_SIZE = 128;
+const SIGNATURE_SIZE = 96;
 
 /**
  * Extract slot from attestation serialized bytes.
  * Return null if data is not long enough to extract slot.
  */
 export function getSlotFromAttestationSerialized(data: Uint8Array): Slot | null {
-  if (data.length < ATTESTATION_SLOT_OFFSET + SLOT_SIZE) {
+  if (data.length < VARIABLE_FIELD_OFFSET + SLOT_SIZE) {
     return null;
   }
 
-  return getSlotFromOffset(data, ATTESTATION_SLOT_OFFSET);
+  return getSlotFromOffset(data, VARIABLE_FIELD_OFFSET);
 }
 
 /**
@@ -61,24 +62,51 @@ export function getBlockRootFromAttestationSerialized(data: Uint8Array): BlockRo
  * Return null if data is not long enough to extract attestation data.
  */
 export function getAttDataBase64FromAttestationSerialized(data: Uint8Array): AttDataBase64 | null {
-  if (data.length < ATTESTATION_SLOT_OFFSET + ATTESTATION_DATA_SIZE) {
+  if (data.length < VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE) {
     return null;
   }
 
   // base64 is a bit efficient than hex
-  return Buffer.from(data.slice(ATTESTATION_SLOT_OFFSET, ATTESTATION_SLOT_OFFSET + ATTESTATION_DATA_SIZE)).toString(
+  return Buffer.from(data.slice(VARIABLE_FIELD_OFFSET, VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE)).toString(
     "base64"
   );
 }
 
-export function getAggregateionBitsFromAttestationSerialized(data: Uint8Array): BitArray {
-  const {uint8Array, bitLen} = deserializeUint8ArrayBitListFromBytes(data, 4 + 128 + 96, data.length);
+/**
+ * Extract aggregation bits from attestation serialized bytes.
+ * Return null if data is not long enough to extract aggregation bits.
+ */
+export function getAggregateionBitsFromAttestationSerialized(data: Uint8Array): BitArray | null {
+  if (data.length < VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE) {
+    return null;
+  }
+
+  const {uint8Array, bitLen} = deserializeUint8ArrayBitListFromBytes(
+    data,
+    VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE,
+    data.length
+  );
   return new BitArray(uint8Array, bitLen);
+}
+
+/**
+ * Extract signature from attestation serialized bytes.
+ * Return null if data is not long enough to extract signature.
+ */
+export function getSignatureFromAttestationSerialized(data: Uint8Array): BLSSignature | null {
+  if (data.length < VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE) {
+    return null;
+  }
+
+  return data.subarray(
+    VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE,
+    VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE
+  );
 }
 
 const AGGREGATE_AND_PROOF_OFFSET = 4 + 96;
 const AGGREGATE_OFFSET = AGGREGATE_AND_PROOF_OFFSET + 8 + 4 + 96;
-const SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET = AGGREGATE_OFFSET + ATTESTATION_SLOT_OFFSET;
+const SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET = AGGREGATE_OFFSET + VARIABLE_FIELD_OFFSET;
 const SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + 8 + 8;
 
 /**
