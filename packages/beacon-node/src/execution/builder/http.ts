@@ -18,6 +18,8 @@ export type ExecutionBuilderHttpOpts = {
 
   // Only required for merge-mock runs, no need to expose it to cli
   issueLocalFcUForBlockProduction?: boolean;
+  // Add User-Agent header to all requests
+  userAgent?: string;
 };
 
 export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
@@ -38,7 +40,14 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
   constructor(opts: ExecutionBuilderHttpOpts, config: ChainForkConfig, metrics: Metrics | null = null) {
     const baseUrl = opts.urls[0];
     if (!baseUrl) throw Error("No Url provided for executionBuilder");
-    this.api = getClient({baseUrl, timeoutMs: opts.timeout}, {config, metrics: metrics?.builderHttpClient});
+    this.api = getClient(
+      {
+        baseUrl,
+        timeoutMs: opts.timeout,
+        extraHeaders: opts.userAgent ? {"User-Agent": opts.userAgent} : undefined,
+      },
+      {config, metrics: metrics?.builderHttpClient}
+    );
     this.config = config;
     this.issueLocalFcUForBlockProduction = opts.issueLocalFcUForBlockProduction;
 
