@@ -2,7 +2,6 @@ import {TopicValidatorResult} from "@libp2p/interface-pubsub";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
-import {getGossipSSZType} from "../gossip/topic.js";
 import {GossipValidatorFn, GossipHandlers, GossipHandlerFn} from "../gossip/interface.js";
 import {GossipActionError, GossipAction} from "../../chain/errors/index.js";
 
@@ -32,25 +31,8 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
   return async function gossipValidatorFn(topic, msg, propagationSource, seenTimestampSec) {
     const type = topic.type;
 
-    // Define in scope above try {} to be used in catch {} if object was parsed
-    let gossipObject;
     try {
-      // Deserialize object from bytes ONLY after being picked up from the validation queue
-      try {
-        const sszType = getGossipSSZType(topic);
-        gossipObject = sszType.deserialize(msg.data);
-      } catch (e) {
-        // TODO: Log the error or do something better with it
-        return TopicValidatorResult.Reject;
-      }
-
-      await (gossipHandlers[type] as GossipHandlerFn)(
-        gossipObject,
-        topic,
-        propagationSource,
-        seenTimestampSec,
-        msg.data
-      );
+      await (gossipHandlers[type] as GossipHandlerFn)(msg.data, topic, propagationSource, seenTimestampSec);
 
       metrics?.gossipValidationAccept.inc({topic: type});
 

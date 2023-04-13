@@ -1,7 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {capella, phase0, ssz, allForks} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -117,12 +116,12 @@ describe("gossipsub", function () {
   }
 
   it("Publish and receive a voluntaryExit", async function () {
-    let onVoluntaryExit: (ve: phase0.SignedVoluntaryExit) => void;
-    const onVoluntaryExitPromise = new Promise<phase0.SignedVoluntaryExit>((resolve) => (onVoluntaryExit = resolve));
+    let onVoluntaryExit: (ve: Uint8Array) => void;
+    const onVoluntaryExitPromise = new Promise<Uint8Array>((resolve) => (onVoluntaryExit = resolve));
 
     const {netA, netB, controller} = await mockModules({
-      [GossipType.voluntary_exit]: async (voluntaryExit) => {
-        onVoluntaryExit(voluntaryExit);
+      [GossipType.voluntary_exit]: async (sszSerializedData) => {
+        onVoluntaryExit(sszSerializedData);
       },
     });
 
@@ -146,11 +145,11 @@ describe("gossipsub", function () {
     await netA.gossip.publishVoluntaryExit(voluntaryExit);
 
     const receivedVoluntaryExit = await onVoluntaryExitPromise;
-    expect(receivedVoluntaryExit).to.deep.equal(voluntaryExit);
+    expect(receivedVoluntaryExit).to.deep.equal(ssz.phase0.SignedVoluntaryExit.serialize(voluntaryExit));
   });
 
   it("Publish and receive 1000 voluntaryExits", async function () {
-    const receivedVoluntaryExits: phase0.SignedVoluntaryExit[] = [];
+    const receivedVoluntaryExits: Uint8Array[] = [];
 
     const {netA, netB, controller} = await mockModules({
       [GossipType.voluntary_exit]: async (voluntaryExit) => {
@@ -194,10 +193,8 @@ describe("gossipsub", function () {
   });
 
   it("Publish and receive a blsToExecutionChange", async function () {
-    let onBlsToExecutionChange: (blsToExec: capella.SignedBLSToExecutionChange) => void;
-    const onBlsToExecutionChangePromise = new Promise<capella.SignedBLSToExecutionChange>(
-      (resolve) => (onBlsToExecutionChange = resolve)
-    );
+    let onBlsToExecutionChange: (blsToExec: Uint8Array) => void;
+    const onBlsToExecutionChangePromise = new Promise<Uint8Array>((resolve) => (onBlsToExecutionChange = resolve));
 
     const {netA, netB, controller} = await mockModules({
       [GossipType.bls_to_execution_change]: async (blsToExec) => {
@@ -229,8 +226,8 @@ describe("gossipsub", function () {
   });
 
   it("Publish and receive a LightClientOptimisticUpdate", async function () {
-    let onLightClientOptimisticUpdate: (ou: allForks.LightClientOptimisticUpdate) => void;
-    const onLightClientOptimisticUpdatePromise = new Promise<allForks.LightClientOptimisticUpdate>(
+    let onLightClientOptimisticUpdate: (ou: Uint8Array) => void;
+    const onLightClientOptimisticUpdatePromise = new Promise<Uint8Array>(
       (resolve) => (onLightClientOptimisticUpdate = resolve)
     );
 
@@ -265,8 +262,8 @@ describe("gossipsub", function () {
   });
 
   it("Publish and receive a LightClientFinalityUpdate", async function () {
-    let onLightClientFinalityUpdate: (fu: allForks.LightClientFinalityUpdate) => void;
-    const onLightClientFinalityUpdatePromise = new Promise<allForks.LightClientFinalityUpdate>(
+    let onLightClientFinalityUpdate: (fu: Uint8Array) => void;
+    const onLightClientFinalityUpdatePromise = new Promise<Uint8Array>(
       (resolve) => (onLightClientFinalityUpdate = resolve)
     );
 

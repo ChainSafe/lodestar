@@ -13,21 +13,40 @@ import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
-import {getAttDataBase64FromAttestationSerialized} from "../../util/sszBytes.js";
+import {
+  AttDataBase64,
+  getAggregateionBitsFromAttestationSerialized,
+  getAttDataBase64FromAttestationSerialized,
+  getSignatureFromAttestationSerialized,
+  getSlotFromAttestationSerialized,
+} from "../../util/sszBytes.js";
+import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
 
 export type AttestationValidationResult = {
+  attestation: phase0.Attestation;
   indexedAttestation: phase0.IndexedAttestation;
   subnet: number;
   attDataRootHex: RootHex;
 };
 
+type AttestationOrBytes =
+  // for api
+  | {attestation: phase0.Attestation; bytes: null}
+  // for gossip
+  | {
+      attestation: null;
+      bytes: Uint8Array;
+    };
+
+/**
+ * Only deserialize the attestation if needed, use the cached AttestationData instead
+ * This is to avoid deserializing similar attestation multiple times which could help the gc
+ */
 export async function validateGossipAttestation(
   chain: IBeaconChain,
-  attestation: phase0.Attestation,
+  attestationOrBytes: AttestationOrBytes,
   /** Optional, to allow verifying attestations through API with unknown subnet */
-  subnet: number | null,
-  // available for gossip attestations, null for api attestations
-  serializedData: Uint8Array | null = null
+  subnet: number | null
 ): Promise<AttestationValidationResult> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
@@ -38,17 +57,41 @@ export async function validateGossipAttestation(
 
   // verify_early_checks
   // Run the checks that happen before an indexed attestation is constructed.
-  const attData = attestation.data;
+
+  let attestationOrCache:
+    | {attestation: phase0.Attestation; cache: null}
+    | {attestation: null; cache: AttestationDataCacheEntry};
+  let attDataBase64: AttDataBase64 | null;
+  if (attestationOrBytes.bytes) {
+    // gossip
+    attDataBase64 = getAttDataBase64FromAttestationSerialized(attestationOrBytes.bytes);
+    // TODO any better way to get cached AttestationData without attSlot?
+    // we get it from the extractSlotRootFns already, maybe just reuse it from there
+    const attSlot = getSlotFromAttestationSerialized(attestationOrBytes.bytes);
+    const cachedAttData =
+      attSlot !== null && attDataBase64 !== null ? chain.seenAttestationDatas.get(attSlot, attDataBase64) : null;
+    if (cachedAttData === null) {
+      // only deserialize on the first AttestationData that's not cached
+      attestationOrCache = {attestation: ssz.phase0.Attestation.deserialize(attestationOrBytes.bytes), cache: null};
+    } else {
+      attestationOrCache = {attestation: null, cache: cachedAttData};
+    }
+  } else {
+    // api
+    attDataBase64 = null;
+    attestationOrCache = {attestation: attestationOrBytes.attestation, cache: null};
+  }
+
+  const attData: phase0.AttestationData = attestationOrCache.attestation
+    ? attestationOrCache.attestation.data
+    : attestationOrCache.cache.attestationData;
   const attSlot = attData.slot;
   const attIndex = attData.index;
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
 
-  const attDataBase64 = serializedData ? getAttDataBase64FromAttestationSerialized(serializedData) : null;
-  const cachedAttData = attDataBase64 ? chain.seenAttestationDatas.get(attSlot, attDataBase64) : null;
-
-  if (!cachedAttData) {
+  if (!attestationOrCache.cache) {
     // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
     if (targetEpoch !== attEpoch) {
       throw new AttestationError(GossipAction.REJECT, {
@@ -59,13 +102,21 @@ export async function validateGossipAttestation(
     // [IGNORE] attestation.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (within a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
     //  -- i.e. attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= attestation.data.slot
     // (a client MAY queue future attestations for processing at the appropriate slot).
-    verifyPropagationSlotRange(chain, attSlot);
+    verifyPropagationSlotRange(chain, attestationOrCache.attestation.data.slot);
   }
 
   // [REJECT] The attestation is unaggregated -- that is, it has exactly one participating validator
   // (len([bit for bit in attestation.aggregation_bits if bit]) == 1, i.e. exactly 1 bit is set).
   // > TODO: Do this check **before** getting the target state but don't recompute zipIndexes
-  const aggregationBits = attestation.aggregationBits;
+  const aggregationBits = attestationOrBytes.attestation
+    ? attestationOrBytes.attestation.aggregationBits
+    : getAggregateionBitsFromAttestationSerialized(attestationOrBytes.bytes);
+  if (aggregationBits === null) {
+    throw new AttestationError(GossipAction.REJECT, {
+      code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
+    });
+  }
+
   const bitIndex = aggregationBits.getSingleTrueBit();
   if (bitIndex === null) {
     throw new AttestationError(GossipAction.REJECT, {
@@ -76,10 +127,11 @@ export async function validateGossipAttestation(
   let committeeIndices: number[];
   let getSigningRoot: () => Uint8Array;
   let expectedSubnet: number;
-  if (cachedAttData) {
-    committeeIndices = cachedAttData.committeeIndices;
-    getSigningRoot = () => cachedAttData.signingRoot;
-    expectedSubnet = cachedAttData.subnet;
+  if (attestationOrCache.cache) {
+    committeeIndices = attestationOrCache.cache.committeeIndices;
+    const signingRoot = attestationOrCache.cache.signingRoot;
+    getSigningRoot = () => signingRoot;
+    expectedSubnet = attestationOrCache.cache.subnet;
   } else {
     // Attestations must be for a known block. If the block is unknown, we simply drop the
     // attestation and do not delay consideration for later.
@@ -88,7 +140,12 @@ export async function validateGossipAttestation(
 
     // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip
     // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
-    const attHeadBlock = verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
+    const attHeadBlock = verifyHeadBlockAndTargetRoot(
+      chain,
+      attestationOrCache.attestation.data.beaconBlockRoot,
+      attestationOrCache.attestation.data.target.root,
+      attEpoch
+    );
 
     // [REJECT] The block being voted for (attestation.data.beacon_block_root) passes validation.
     // > Altready check in `verifyHeadBlockAndTargetRoot()`
@@ -162,19 +219,28 @@ export async function validateGossipAttestation(
   const attestingIndices = [validatorIndex];
   let signatureSet: ISignatureSet;
   let attDataRootHex: RootHex;
-  if (cachedAttData) {
+  const signature = attestationOrBytes.attestation
+    ? attestationOrBytes.attestation.signature
+    : getSignatureFromAttestationSerialized(attestationOrBytes.bytes);
+  if (signature === null) {
+    throw new AttestationError(GossipAction.REJECT, {
+      code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
+    });
+  }
+
+  if (attestationOrCache.cache) {
     // there could be up to 6% of cpu time to compute signing root if we don't clone the signature set
     signatureSet = createAggregateSignatureSetFromComponents(
       attestingIndices.map((i) => chain.index2pubkey[i]),
-      cachedAttData.signingRoot,
-      attestation.signature
+      attestationOrCache.cache.signingRoot,
+      signature
     );
-    attDataRootHex = cachedAttData.attDataRootHex;
+    attDataRootHex = attestationOrCache.cache.attDataRootHex;
   } else {
     signatureSet = createAggregateSignatureSetFromComponents(
       attestingIndices.map((i) => chain.index2pubkey[i]),
       getSigningRoot(),
-      attestation.signature
+      signature
     );
 
     // add cached attestation data before verifying signature
@@ -187,6 +253,7 @@ export async function validateGossipAttestation(
         // precompute this to be used in forkchoice
         // root of AttestationData was already cached during getIndexedAttestationSignatureSet
         attDataRootHex,
+        attestationData: attData,
       });
     }
   }
@@ -213,9 +280,17 @@ export async function validateGossipAttestation(
   const indexedAttestation: phase0.IndexedAttestation = {
     attestingIndices,
     data: attData,
-    signature: attestation.signature,
+    signature,
   };
-  return {indexedAttestation, subnet: expectedSubnet, attDataRootHex};
+
+  const attestation: phase0.Attestation = attestationOrCache.attestation
+    ? attestationOrCache.attestation
+    : {
+        aggregationBits,
+        data: attData,
+        signature,
+      };
+  return {attestation, indexedAttestation, subnet: expectedSubnet, attDataRootHex};
 }
 
 /**

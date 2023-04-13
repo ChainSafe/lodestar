@@ -1,4 +1,4 @@
-import {RootHex, Slot} from "@lodestar/types";
+import {phase0, RootHex, Slot} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {AttDataBase64} from "../../util/sszBytes.js";
@@ -9,8 +9,9 @@ export type AttestationDataCacheEntry = {
   committeeIndices: number[];
   // IndexedAttestationData signing root, 32 bytes
   signingRoot: Uint8Array;
-  // to be consumed by forkchoice
+  // to be consumed by forkchoice and oppool
   attDataRootHex: RootHex;
+  attestationData: phase0.AttestationData;
   subnet: number;
 };
 

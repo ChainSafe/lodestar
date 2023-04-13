@@ -162,19 +162,18 @@ export type GossipJobQueues = {
 };
 
 export type GossipHandlerFn = (
-  object: GossipTypeMap[GossipType],
+  gossipSerializedData: Uint8Array,
   topic: GossipTopicMap[GossipType],
   peerIdStr: string,
-  seenTimestampSec: number,
-  gossipSerializedData: Uint8Array
+  seenTimestampSec: number
 ) => Promise<void>;
+
 export type GossipHandlers = {
   [K in GossipType]: (
-    object: GossipTypeMap[K],
+    gossipSerializedData: Uint8Array,
     topic: GossipTopicMap[K],
     peerIdStr: string,
-    seenTimestampSec: number,
-    gossipSerializedData: Uint8Array
+    seenTimestampSec: number
   ) => Promise<void>;
 };
 
