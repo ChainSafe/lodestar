@@ -119,8 +119,9 @@ A similar process for a stable release is used, with the three differences.
 #### All-in-one script (for example version `v1.1.1`, stable commit `8eb8dce`):
 
 - Select the latest commit from `stable` as the "hotfix release candidate" for a new hotfix version release.
+- `git fetch origin stable`
 - `git checkout stable`
-- `yarn release:create-rc 1.1.1 8eb8dce`
+- `yarn release:create-rc 1.1.1`
   - Must be run locally from a write-access account capable of triggering CI.
 - Switch to the hotfix release branch and cherrypick the inclusion(s) from the `unstable` branch to the hotfix release.
   - `git checkout rc/v1.1.1`
