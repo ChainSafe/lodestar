@@ -1,4 +1,5 @@
 import {Logger} from "@lodestar/utils";
+import {NetworkName} from "@lodestar/config/networks";
 import {ELRequestHandler} from "../interfaces.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {ELBlock, ELProof, ELRequestPayload, ELResponse, HexString} from "../types.js";
@@ -60,6 +61,7 @@ export async function fetchAndVerifyAccount({
 }): Promise<{data: ELProof; valid: true} | {valid: false; data?: undefined}> {
   const executionPayload = await proofProvider.getExecutionPayload(block ?? "latest");
   const proof = await getELProof(handler, [address, [], bufferToHex(executionPayload.blockHash)]);
+
   if (
     (await isValidAccount({
       address: address,
@@ -106,12 +108,14 @@ export async function fetchAndVerifyBlock({
   proofProvider,
   logger,
   handler,
+  network,
 }: {
   payload: ELRequestPayload<[block: string | number, hydrated: boolean]>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handler: ELRequestHandler<any, any>;
   proofProvider: ProofProvider;
   logger: Logger;
+  network: NetworkName;
 }): Promise<{data: ELResponse<ELBlock>; valid: true} | {valid: false; data?: undefined}> {
   const executionPayload = await proofProvider.getExecutionPayload(payload.params[0]);
   const elResponse = await (handler as ELRequestHandler<[block: string | number, hydrated: boolean], ELBlock>)(payload);
@@ -126,6 +130,7 @@ export async function fetchAndVerifyBlock({
       logger,
       block: elResponse.result,
       executionPayload,
+      network,
     }))
   ) {
     return {data: elResponse, valid: true};

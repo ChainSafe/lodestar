@@ -59,6 +59,7 @@ export interface ELBlock {
   readonly transactionsRoot: string;
   readonly stateRoot: string;
   readonly receiptsRoot: string;
+  readonly withdrawalsRoot: string;
   readonly logsBloom: string;
   readonly nonce: string;
   readonly difficulty: string;

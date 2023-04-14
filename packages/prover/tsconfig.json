@@ -7,6 +7,8 @@
     // Rather than doing a full check of all d.ts files, TypeScript will type check
     // the code you specifically refer to in your app’s source code.
     // https://www.typescriptlang.org/tsconfig#skipLibCheck
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    // To be used in the test fixtures
+    "resolveJsonModule": true
   }
 }

@@ -2,7 +2,7 @@ import {expect} from "chai";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {ELProof, ELStorageProof} from "../../../src/types.js";
-import {isValidAccount, isValidStorageKeys} from "../../../src/utils/execution.js";
+import {isValidAccount, isValidStorageKeys} from "../../../src/utils/verification.js";
 import {invalidAccountProof, invalidStorageProof, validAccountProof, validStorageProof} from "../../fixtures/index.js";
 import {createMockLogger} from "../../mocks/logger_mock.js";
 

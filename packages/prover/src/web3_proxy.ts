@@ -83,7 +83,7 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
       .then((data) => {
         payload = data;
         logger.debug("Received request", {method: payload.method});
-        return processAndVerifyRequest({payload, proofProvider, handler, logger});
+        return processAndVerifyRequest({payload, proofProvider, handler, logger, network});
       })
       .then((response) => {
         logger.debug("Sending response", {method: payload.method});
