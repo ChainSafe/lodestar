@@ -12,7 +12,7 @@ import {groupSyncDutiesBySubcommitteeIndex, SubcommitteeDuty} from "./utils.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
 
-type SyncCommitteeServiceOpts = {
+export type SyncCommitteeServiceOpts = {
   scAfterBlockDelaySlotFraction?: number;
   distributedAggregationSelection?: boolean;
 };
