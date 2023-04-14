@@ -169,20 +169,24 @@ export class NetworkProcessor {
       const slotRoot = extractBlockSlotRootFn(message.msg.data);
       // if slotRoot is null, it means the msg.data is invalid
       // in that case message will be rejected when deserializing data in later phase (gossipValidatorFn)
-      if (slotRoot && !this.chain.forkChoice.hasBlockHex(slotRoot.root)) {
-        if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
-          // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
-          this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.reached_limit});
+      if (slotRoot) {
+        // msgSlot is only available for beacon_attestation and aggregate_and_proof
+        const {slot, root} = slotRoot;
+        message.msgSlot = slot;
+        if (!this.chain.forkChoice.hasBlockHex(root)) {
+          if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
+            // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
+            this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.reached_limit});
+            return;
+          }
+
+          this.metrics?.reprocessGossipAttestations.total.inc();
+          const awaitingGossipsubMessagesByRoot = this.awaitingGossipsubMessagesByRootBySlot.getOrDefault(slot);
+          const awaitingGossipsubMessages = awaitingGossipsubMessagesByRoot.getOrDefault(root);
+          awaitingGossipsubMessages.add(message);
+          this.unknownBlockGossipsubMessagesCount++;
           return;
         }
-
-        this.metrics?.reprocessGossipAttestations.total.inc();
-        const awaitingGossipsubMessagesByRoot = this.awaitingGossipsubMessagesByRootBySlot.getOrDefault(slotRoot.slot);
-        const awaitingGossipsubMessages = awaitingGossipsubMessagesByRoot.getOrDefault(slotRoot.root);
-        // msgSlot is only available for beacon_attestation and aggregate_and_proof
-        message.msgSlot = slotRoot.slot;
-        awaitingGossipsubMessages.add(message);
-        this.unknownBlockGossipsubMessagesCount++;
       }
     }
 
