@@ -258,7 +258,8 @@ export class NetworkProcessor {
 
     job_loop: while (jobsSubmitted < MAX_JOBS_SUBMITTED_PER_TICK) {
       // Check canAcceptWork before calling queue.next() since it consumes the items
-      const canAcceptWork = this.chain.blsThreadPoolCanAcceptWork() && this.chain.regenCanAcceptWork();
+      const canAcceptWork =
+        this.chain.blsThreadPoolCanAcceptWork() && this.chain.regenCanAcceptWork() && this.chain.canAcceptWork();
 
       for (const topic of executeGossipWorkOrder) {
         // beacon block is guaranteed to be processed immedately

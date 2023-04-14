@@ -17,7 +17,7 @@ import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lode
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, pruneSetToMax, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
-import {ForkSeq} from "@lodestar/params";
+import {ForkName, ForkSeq} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -26,7 +26,12 @@ import {bytesToData, numToQuantity} from "../eth1/provider/utils.js";
 import {wrapError} from "../util/wrapError.js";
 import {ckzg} from "../util/kzg.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
-import {IExecutionEngine, IExecutionBuilder, TransitionConfigurationV1} from "../execution/index.js";
+import {
+  IExecutionEngine,
+  IExecutionBuilder,
+  TransitionConfigurationV1,
+  ExecutePayloadResponse,
+} from "../execution/index.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
@@ -72,6 +77,11 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
  */
 const DEFAULT_MAX_CACHED_BLOBS_SIDECAR = 8;
 const MAX_RETAINED_SLOTS_CACHED_BLOBS_SIDECAR = 8;
+/**
+ * It's not likely the execution engine takes more than 500ms to return to notifyNewPayload
+ * If it does, it's likely the node is overloaded due to mainly gossip validation.
+ */
+const EXECUTION_ENGINE_NOTIFY_NEW_PAYLOAD_TIMEOUT = 500;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -131,6 +141,7 @@ export class BeaconChain implements IBeaconChain {
   private abortController = new AbortController();
   private successfulExchangeTransition = false;
   private readonly exchangeTransitionConfigurationEverySlots: number;
+  private isWaitingForNotifyNewPayload = false;
 
   private processShutdownCallback: ProcessShutdownCallback;
 
@@ -290,6 +301,25 @@ export class BeaconChain implements IBeaconChain {
 
   blsThreadPoolCanAcceptWork(): boolean {
     return this.bls.canAcceptWork();
+  }
+
+  canAcceptWork(): boolean {
+    return !this.isWaitingForNotifyNewPayload;
+  }
+
+  async notifyNewPayload(fork: ForkName, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
+    let isSettled = false;
+    const promise = this.executionEngine.notifyNewPayload(fork, executionPayload).finally(() => {
+      isSettled = true;
+      this.isWaitingForNotifyNewPayload = false;
+    });
+
+    setTimeout(() => {
+      if (!isSettled) {
+        this.isWaitingForNotifyNewPayload = true;
+      }
+    }, EXECUTION_ENGINE_NOTIFY_NEW_PAYLOAD_TIMEOUT);
+    return promise;
   }
 
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean {

@@ -48,6 +48,9 @@ import {IChainOptions} from "../../../../src/chain/options.js";
 import {BlockAttributes} from "../../../../src/chain/produceBlock/produceBlockBody.js";
 import {ReqRespBlockResponse} from "../../../../src/network/index.js";
 import {SeenAttestationDatas} from "../../../../src/chain/seenCache/seenAttestationData.js";
+import { ForkName } from "@lodestar/params";
+import { IExecutionBuilder, ExecutePayloadResponse, ExecutePayloadStatus } from "../../../../src/execution/index.js";
+import { ZERO_HASH_HEX } from "../../../../src/constants/constants.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -163,6 +166,15 @@ export class MockBeaconChain implements IBeaconChain {
     this.reprocessController = new ReprocessController(null);
     this.pubkey2index = new PubkeyIndexMap();
     this.index2pubkey = [];
+  }
+  executionBuilder?: IExecutionBuilder | undefined;
+
+  notifyNewPayload(): Promise<ExecutePayloadResponse> {
+    throw Error("Not implemented");
+  }
+
+  canAcceptWork(): boolean {
+    return true;
   }
 
   validatorSeenAtEpoch(): boolean {

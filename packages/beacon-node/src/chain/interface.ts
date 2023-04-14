@@ -5,8 +5,9 @@ import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/utils";
 
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {ForkName} from "@lodestar/params";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
-import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
+import {IExecutionEngine, IExecutionBuilder, ExecutePayloadResponse} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {BeaconClock} from "./clock/interface.js";
 import {ChainEventEmitter} from "./emitter.js";
@@ -138,8 +139,10 @@ export interface IBeaconChain {
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void;
   updateBuilderStatus(clockSlot: Slot): void;
 
+  notifyNewPayload(fork: ForkName, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse>;
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
+  canAcceptWork(): boolean;
 }
 
 export type SSZObjectType =
