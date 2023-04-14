@@ -109,9 +109,56 @@ Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Githu
 
 If a stable version requires an immediate hot-fix before the next release, a hot-fix release is started.
 
-The same process for a stable release is used, with the two differences.
+A similar process for a stable release is used, with the three differences.
 - The candidate commit must be chosen from the `stable` branch instead of the `unstable` branch.
 - Depending on the severity of the bug being fixed, the testing window may be decreased.
+- All hotfixes are committed with an `unstable` first strategy rather than directly on the RC branch itself. Hotfixes are always merged to `unstable` first, then cherry-picked into hotfix release candidates.
+
+### 1. Create hotfix release candidate from `stable` branch
+
+#### All-in-one script (for example version `v1.1.1`, stable commit `8eb8dce`):
+
+- Select the latest commit from `stable` as the "hotfix release candidate" for a new hotfix version release.
+- `git fetch origin stable`
+- `git checkout stable`
+- `yarn release:create-rc 1.1.1`
+  - Must be run locally from a write-access account capable of triggering CI.
+- Switch to the hotfix release branch and cherrypick the inclusion(s) from the `unstable` branch to the hotfix release.
+  - `git checkout rc/v1.1.1`
+  - `git cherry-pick {commit}`
+- Open draft PR from `rc/v1.1.1` to `stable` with the title `v1.1.1 release`.
+
+#### Manual steps (for example version `v1.1.1`, commit `8eb8dce`):
+
+- Select the latest commit from `stable` as the "hotfix release candidate" for a new hotfix release.
+- Checkout `stable` branch
+  - `git checkout stable`
+- Create a new release branch `rc/v1.1.1` at commit `8eb8dce`
+  - `git checkout -b rc/v1.1.1 8eb8dce`
+- Set monorepo version to `v.1.1.1`.
+  - `lerna version v1.1.1 --no-git-tag-version --force-publish --yes`
+- Commit changes
+  - `git commit -am "v1.1.1"`
+  - `git push origin rc/v1.1.1`
+Open draft PR from `rc/v1.1.1` to `stable` with the title `v1.1.1 release`.
+
+### 2. Tag release candidate
+
+Tagging a release candidate will trigger CI to publish to NPM, dockerhub, and Github releases.
+
+#### All-in-one script (for example version `v1.1.1`, commit `f3df9f8`):
+
+- Select the latest commit from `rc/v1.1.1` to tag and publish.
+- `yarn release:tag-rc 1.1.1`
+  - Must be run locally from a write-access account capable of triggering CI.
+
+#### Manual steps (for example version `v1.1.1`, commit `f3df9f8`):
+
+- Tag latest commit as `v1.1.1-rc.0` with an annotated tag, and push the tag.
+  - `git tag -am "v1.1.1-rc.0" v1.1.1-rc.0`
+  - `git push origin v1.1.1-rc.0`
+
+Continue following the "test release candidate" and "merge release candidate" sections. Testing window may be modified depending on the severity of the bug fixed.
 
 ## Dev release
 
