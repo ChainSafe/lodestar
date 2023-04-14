@@ -28,11 +28,16 @@ export type ValidatorFnModules = {
 export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: ValidatorFnModules): GossipValidatorFn {
   const {logger, metrics} = modules;
 
-  return async function gossipValidatorFn(topic, msg, propagationSource, seenTimestampSec) {
+  return async function gossipValidatorFn(topic, msg, propagationSource, seenTimestampSec, msgSlot) {
     const type = topic.type;
 
     try {
-      await (gossipHandlers[type] as GossipHandlerFn)(msg.data, topic, propagationSource, seenTimestampSec);
+      await (gossipHandlers[type] as GossipHandlerFn)(
+        {serializedData: msg.data, msgSlot},
+        topic,
+        propagationSource,
+        seenTimestampSec
+      );
 
       metrics?.gossipValidationAccept.inc({topic: type});
 

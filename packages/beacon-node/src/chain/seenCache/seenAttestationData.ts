@@ -11,6 +11,8 @@ export type AttestationDataCacheEntry = {
   signingRoot: Uint8Array;
   // to be consumed by forkchoice and oppool
   attDataRootHex: RootHex;
+  // caching this for 3 slots take 600 instances max, this is nothing compared to attestations processed per slot
+  // for example in a mainnet node subscribing to all subnets, attestations are processed up to 20k per slot
   attestationData: phase0.AttestationData;
   subnet: number;
 };

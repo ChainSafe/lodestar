@@ -4,7 +4,7 @@ import {Message, TopicValidatorResult} from "@libp2p/interface-pubsub";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
-import {allForks, altair, capella, deneb, phase0} from "@lodestar/types";
+import {allForks, altair, capella, deneb, phase0, Slot} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
@@ -152,7 +152,8 @@ export type GossipValidatorFn = (
   topic: GossipTopic,
   msg: Message,
   propagationSource: PeerIdStr,
-  seenTimestampSec: number
+  seenTimestampSec: number,
+  msgSlot?: Slot
 ) => Promise<TopicValidatorResult>;
 
 export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
@@ -161,8 +162,13 @@ export type GossipJobQueues = {
   [K in GossipType]: JobItemQueue<Parameters<GossipValidatorFn>, ResolvedType<GossipValidatorFn>>;
 };
 
+export type GossipData = {
+  serializedData: Uint8Array;
+  msgSlot?: Slot;
+};
+
 export type GossipHandlerFn = (
-  gossipSerializedData: Uint8Array,
+  gossipData: GossipData,
   topic: GossipTopicMap[GossipType],
   peerIdStr: string,
   seenTimestampSec: number
@@ -170,7 +176,7 @@ export type GossipHandlerFn = (
 
 export type GossipHandlers = {
   [K in GossipType]: (
-    gossipSerializedData: Uint8Array,
+    gossipData: GossipData,
     topic: GossipTopicMap[K],
     peerIdStr: string,
     seenTimestampSec: number

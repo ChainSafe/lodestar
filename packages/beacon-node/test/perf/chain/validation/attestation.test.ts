@@ -19,7 +19,7 @@ describe("validate gossip attestation", () => {
       id: `validate gossip attestation - ${id}`,
       beforeEach: () => chain.seenAttesters["validatorIndexesByEpoch"].clear(),
       fn: async () => {
-        await validateGossipAttestation(chain, {attestation: att, bytes: null}, subnet);
+        await validateGossipAttestation(chain, {attestation: att, serializedData: null}, subnet);
       },
     });
   }

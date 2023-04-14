@@ -15,10 +15,9 @@ import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
 import {
   AttDataBase64,
-  getAggregateionBitsFromAttestationSerialized,
+  getAggregationBitsFromAttestationSerialized,
   getAttDataBase64FromAttestationSerialized,
   getSignatureFromAttestationSerialized,
-  getSlotFromAttestationSerialized,
 } from "../../util/sszBytes.js";
 import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
 
@@ -31,11 +30,13 @@ export type AttestationValidationResult = {
 
 type AttestationOrBytes =
   // for api
-  | {attestation: phase0.Attestation; bytes: null}
+  | {attestation: phase0.Attestation; serializedData: null}
   // for gossip
   | {
       attestation: null;
-      bytes: Uint8Array;
+      serializedData: Uint8Array;
+      // available in after NetworkProcessor since we check for unknown block root attestations
+      attSlot: Slot;
     };
 
 /**
@@ -60,21 +61,19 @@ export async function validateGossipAttestation(
 
   let attestationOrCache:
     | {attestation: phase0.Attestation; cache: null}
-    | {attestation: null; cache: AttestationDataCacheEntry};
+    | {attestation: null; cache: AttestationDataCacheEntry; serializedData: Uint8Array};
   let attDataBase64: AttDataBase64 | null;
-  if (attestationOrBytes.bytes) {
+  if (attestationOrBytes.serializedData) {
     // gossip
-    attDataBase64 = getAttDataBase64FromAttestationSerialized(attestationOrBytes.bytes);
-    // TODO any better way to get cached AttestationData without attSlot?
-    // we get it from the extractSlotRootFns already, maybe just reuse it from there
-    const attSlot = getSlotFromAttestationSerialized(attestationOrBytes.bytes);
-    const cachedAttData =
-      attSlot !== null && attDataBase64 !== null ? chain.seenAttestationDatas.get(attSlot, attDataBase64) : null;
+    attDataBase64 = getAttDataBase64FromAttestationSerialized(attestationOrBytes.serializedData);
+    const attSlot = attestationOrBytes.attSlot;
+    const cachedAttData = attDataBase64 !== null ? chain.seenAttestationDatas.get(attSlot, attDataBase64) : null;
     if (cachedAttData === null) {
+      const attestation = ssz.phase0.Attestation.deserialize(attestationOrBytes.serializedData);
       // only deserialize on the first AttestationData that's not cached
-      attestationOrCache = {attestation: ssz.phase0.Attestation.deserialize(attestationOrBytes.bytes), cache: null};
+      attestationOrCache = {attestation, cache: null};
     } else {
-      attestationOrCache = {attestation: null, cache: cachedAttData};
+      attestationOrCache = {attestation: null, cache: cachedAttData, serializedData: attestationOrBytes.serializedData};
     }
   } else {
     // api
@@ -108,9 +107,9 @@ export async function validateGossipAttestation(
   // [REJECT] The attestation is unaggregated -- that is, it has exactly one participating validator
   // (len([bit for bit in attestation.aggregation_bits if bit]) == 1, i.e. exactly 1 bit is set).
   // > TODO: Do this check **before** getting the target state but don't recompute zipIndexes
-  const aggregationBits = attestationOrBytes.attestation
-    ? attestationOrBytes.attestation.aggregationBits
-    : getAggregateionBitsFromAttestationSerialized(attestationOrBytes.bytes);
+  const aggregationBits = attestationOrCache.attestation
+    ? attestationOrCache.attestation.aggregationBits
+    : getAggregationBitsFromAttestationSerialized(attestationOrCache.serializedData);
   if (aggregationBits === null) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,
@@ -219,9 +218,9 @@ export async function validateGossipAttestation(
   const attestingIndices = [validatorIndex];
   let signatureSet: ISignatureSet;
   let attDataRootHex: RootHex;
-  const signature = attestationOrBytes.attestation
-    ? attestationOrBytes.attestation.signature
-    : getSignatureFromAttestationSerialized(attestationOrBytes.bytes);
+  const signature = attestationOrCache.attestation
+    ? attestationOrCache.attestation.signature
+    : getSignatureFromAttestationSerialized(attestationOrCache.serializedData);
   if (signature === null) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_SERIALIZED_BYTES,

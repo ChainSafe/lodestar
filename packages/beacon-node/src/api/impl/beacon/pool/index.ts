@@ -53,7 +53,7 @@ export function getBeaconPoolApi({
         attestations.map(async (attestation, i) => {
           try {
             // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-            const validateFn = () => validateGossipAttestation(chain, {attestation, bytes: null}, null);
+            const validateFn = () => validateGossipAttestation(chain, {attestation, serializedData: null}, null);
             const {slot, beaconBlockRoot} = attestation.data;
             // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block

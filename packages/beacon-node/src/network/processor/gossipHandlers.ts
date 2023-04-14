@@ -168,8 +168,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
   }
 
   return {
-    [GossipType.beacon_block]: async (gossipSerializedData, topic, peerIdStr, seenTimestampSec) => {
-      const signedBlock = ssz[topic.fork].SignedBeaconBlock.deserialize(gossipSerializedData);
+    [GossipType.beacon_block]: async ({serializedData}, topic, peerIdStr, seenTimestampSec) => {
+      const signedBlock = ssz[topic.fork].SignedBeaconBlock.deserialize(serializedData);
       // TODO Deneb: Can blocks be received by this topic?
       if (config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb) {
         throw new GossipActionError(GossipAction.REJECT, {code: "POST_DENEB_BLOCK"});
@@ -180,8 +180,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
     },
 
-    [GossipType.beacon_block_and_blobs_sidecar]: async (gossipSerializedData, topic, peerIdStr, seenTimestampSec) => {
-      const blockAndBlocks = ssz.deneb.SignedBeaconBlockAndBlobsSidecar.deserialize(gossipSerializedData);
+    [GossipType.beacon_block_and_blobs_sidecar]: async ({serializedData}, topic, peerIdStr, seenTimestampSec) => {
+      const blockAndBlocks = ssz.deneb.SignedBeaconBlockAndBlobsSidecar.deserialize(serializedData);
       const {beaconBlock, blobsSidecar} = blockAndBlocks;
       // TODO Deneb: Should throw for pre fork blocks?
       if (config.getForkSeq(beaconBlock.message.slot) < ForkSeq.deneb) {
@@ -195,17 +195,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
     },
 
-    [GossipType.beacon_aggregate_and_proof]: async (gossipSerializedData, _topic, _peer, seenTimestampSec) => {
+    [GossipType.beacon_aggregate_and_proof]: async ({serializedData}, _topic, _peer, seenTimestampSec) => {
       let validationResult: AggregateAndProofValidationResult;
-      const signedAggregateAndProof = ssz.phase0.SignedAggregateAndProof.deserialize(gossipSerializedData);
+      const signedAggregateAndProof = ssz.phase0.SignedAggregateAndProof.deserialize(serializedData);
 
       try {
-        validationResult = await validateGossipAggregateAndProof(
-          chain,
-          signedAggregateAndProof,
-          false,
-          gossipSerializedData
-        );
+        validationResult = await validateGossipAggregateAndProof(chain, signedAggregateAndProof, false, serializedData);
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
           chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "gossip_reject");
@@ -238,18 +233,21 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.beacon_attestation]: async (gossipSerializedData, {subnet}, _peer, seenTimestampSec) => {
+    [GossipType.beacon_attestation]: async ({serializedData, msgSlot}, {subnet}, _peer, seenTimestampSec) => {
+      if (msgSlot === undefined) {
+        throw Error("msgSlot is undefined for beacon_attestation topic");
+      }
       // do not deserialize gossipSerializedData here, it's done in validateGossipAttestation only if needed
       let validationResult: AttestationValidationResult;
       try {
         validationResult = await validateGossipAttestation(
           chain,
-          {attestation: null, bytes: gossipSerializedData},
+          {attestation: null, serializedData, attSlot: msgSlot},
           subnet
         );
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszBytes(ssz.phase0.Attestation.typeName, gossipSerializedData, "gossip_reject");
+          chain.persistInvalidSszBytes(ssz.phase0.Attestation.typeName, serializedData, "gossip_reject");
         }
         throw e;
       }
@@ -278,8 +276,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.attester_slashing]: async (gossipSerializedData) => {
-      const attesterSlashing = ssz.phase0.AttesterSlashing.deserialize(gossipSerializedData);
+    [GossipType.attester_slashing]: async ({serializedData}) => {
+      const attesterSlashing = ssz.phase0.AttesterSlashing.deserialize(serializedData);
       await validateGossipAttesterSlashing(chain, attesterSlashing);
 
       // Handler
@@ -292,8 +290,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.proposer_slashing]: async (gossipSerializedData) => {
-      const proposerSlashing = ssz.phase0.ProposerSlashing.deserialize(gossipSerializedData);
+    [GossipType.proposer_slashing]: async ({serializedData}) => {
+      const proposerSlashing = ssz.phase0.ProposerSlashing.deserialize(serializedData);
       await validateGossipProposerSlashing(chain, proposerSlashing);
 
       // Handler
@@ -305,8 +303,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.voluntary_exit]: async (gossipSerializedData) => {
-      const voluntaryExit = ssz.phase0.SignedVoluntaryExit.deserialize(gossipSerializedData);
+    [GossipType.voluntary_exit]: async ({serializedData}) => {
+      const voluntaryExit = ssz.phase0.SignedVoluntaryExit.deserialize(serializedData);
       await validateGossipVoluntaryExit(chain, voluntaryExit);
 
       // Handler
@@ -318,8 +316,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.sync_committee_contribution_and_proof]: async (gossipSerializedData) => {
-      const contributionAndProof = ssz.altair.SignedContributionAndProof.deserialize(gossipSerializedData);
+    [GossipType.sync_committee_contribution_and_proof]: async ({serializedData}) => {
+      const contributionAndProof = ssz.altair.SignedContributionAndProof.deserialize(serializedData);
       const {syncCommitteeParticipantIndices} = await validateSyncCommitteeGossipContributionAndProof(
         chain,
         contributionAndProof
@@ -340,8 +338,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.sync_committee]: async (gossipSerializedData, {subnet}) => {
-      const syncCommittee = ssz.altair.SyncCommitteeMessage.deserialize(gossipSerializedData);
+    [GossipType.sync_committee]: async ({serializedData}, {subnet}) => {
+      const syncCommittee = ssz.altair.SyncCommitteeMessage.deserialize(serializedData);
       let indexInSubcommittee = 0;
       try {
         indexInSubcommittee = (await validateGossipSyncCommittee(chain, syncCommittee, subnet)).indexInSubcommittee;
@@ -362,25 +360,25 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.light_client_finality_update]: async (gossipSerializedData, topic) => {
+    [GossipType.light_client_finality_update]: async ({serializedData}, topic) => {
       const sszType = isForkLightClient(topic.fork)
         ? ssz.allForksLightClient[topic.fork].LightClientFinalityUpdate
         : ssz.altair.LightClientFinalityUpdate;
-      const lightClientFinalityUpdate = sszType.deserialize(gossipSerializedData);
+      const lightClientFinalityUpdate = sszType.deserialize(serializedData);
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
     },
 
-    [GossipType.light_client_optimistic_update]: async (gossipSerializedData, topic) => {
+    [GossipType.light_client_optimistic_update]: async ({serializedData}, topic) => {
       const sszType = isForkLightClient(topic.fork)
         ? ssz.allForksLightClient[topic.fork].LightClientOptimisticUpdate
         : ssz.altair.LightClientOptimisticUpdate;
-      const lightClientOptimisticUpdate = sszType.deserialize(gossipSerializedData);
+      const lightClientOptimisticUpdate = sszType.deserialize(serializedData);
       validateLightClientOptimisticUpdate(config, chain, lightClientOptimisticUpdate);
     },
 
     // blsToExecutionChange is to be generated and validated against GENESIS_FORK_VERSION
-    [GossipType.bls_to_execution_change]: async (gossipSerializedData, _topic) => {
-      const blsToExecutionChange = ssz.capella.SignedBLSToExecutionChange.deserialize(gossipSerializedData);
+    [GossipType.bls_to_execution_change]: async ({serializedData}, _topic) => {
+      const blsToExecutionChange = ssz.capella.SignedBLSToExecutionChange.deserialize(serializedData);
       await validateBlsToExecutionChange(chain, blsToExecutionChange);
 
       // Handler

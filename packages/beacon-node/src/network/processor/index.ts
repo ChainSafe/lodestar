@@ -179,6 +179,8 @@ export class NetworkProcessor {
         this.metrics?.reprocessGossipAttestations.total.inc();
         const awaitingGossipsubMessagesByRoot = this.awaitingGossipsubMessagesByRootBySlot.getOrDefault(slotRoot.slot);
         const awaitingGossipsubMessages = awaitingGossipsubMessagesByRoot.getOrDefault(slotRoot.root);
+        // msgSlot is only available for beacon_attestation and aggregate_and_proof
+        message.msgSlot = slotRoot.slot;
         awaitingGossipsubMessages.add(message);
         this.unknownBlockGossipsubMessagesCount++;
       }

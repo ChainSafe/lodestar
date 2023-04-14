@@ -38,7 +38,7 @@ describe("chain / validation / attestation", () => {
   it("Valid", async () => {
     const {chain, attestation, subnet} = getValidData();
 
-    await validateGossipAttestation(chain, {attestation, bytes: null}, subnet);
+    await validateGossipAttestation(chain, {attestation, serializedData: null}, subnet);
   });
 
   it("BAD_TARGET_EPOCH", async () => {
@@ -156,7 +156,7 @@ describe("chain / validation / attestation", () => {
     errorCode: AttestationErrorCode
   ): Promise<void> {
     await expectRejectedWithLodestarError(
-      validateGossipAttestation(chain, {attestation, bytes: null}, subnet),
+      validateGossipAttestation(chain, {attestation, serializedData: null}, subnet),
       errorCode
     );
   }

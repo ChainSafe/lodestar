@@ -4,7 +4,7 @@ import {fromHex, toHex} from "@lodestar/utils";
 import {
   getAttDataBase64FromAttestationSerialized,
   getAttDataBase64FromSignedAggregateAndProofSerialized,
-  getAggregateionBitsFromAttestationSerialized as getAggregationBitsFromAttestationSerialized,
+  getAggregationBitsFromAttestationSerialized as getAggregationBitsFromAttestationSerialized,
   getBlockRootFromAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromAttestationSerialized,

@@ -76,7 +76,7 @@ export function getAttDataBase64FromAttestationSerialized(data: Uint8Array): Att
  * Extract aggregation bits from attestation serialized bytes.
  * Return null if data is not long enough to extract aggregation bits.
  */
-export function getAggregateionBitsFromAttestationSerialized(data: Uint8Array): BitArray | null {
+export function getAggregationBitsFromAttestationSerialized(data: Uint8Array): BitArray | null {
   if (data.length < VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE) {
     return null;
   }
