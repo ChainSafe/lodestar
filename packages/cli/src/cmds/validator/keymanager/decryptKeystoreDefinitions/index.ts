@@ -20,6 +20,7 @@ export async function decryptKeystoreDefinitions(
       if (opts?.onDecrypt) {
         opts?.onDecrypt(signers.length - 1);
       }
+      opts.logger.debug("Loaded keystores via keystore cache");
       return signers;
     } catch {
       // Some error loading the cache, ignore and invalidate cache
@@ -45,7 +46,9 @@ export async function decryptKeystoreDefinitions(
       lockFilepath(definition.keystorePath);
     } catch (e) {
       if (opts.force) {
-        // Ignore error, maybe log?
+        opts.logger.warn("Keystore forcefully loaded even though lockfile could not be acquired", {
+          path: definition.keystorePath,
+        });
       } else {
         throw e;
       }
@@ -95,6 +98,7 @@ export async function decryptKeystoreDefinitions(
 
   if (opts.cacheFilePath) {
     await writeKeystoreCache(opts.cacheFilePath, signers, passwords);
+    opts.logger.debug("Written keystores to keystore cache");
   }
 
   return signers;

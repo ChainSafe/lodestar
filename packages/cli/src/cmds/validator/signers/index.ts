@@ -44,7 +44,7 @@ const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 export async function getSignersFromArgs(
   args: IValidatorCliArgs & GlobalArgs,
   network: string,
-  {logger, signal}: {logger: Pick<Logger, "info">; signal: AbortSignal}
+  {logger, signal}: {logger: Pick<Logger, "info" | "warn" | "debug">; signal: AbortSignal}
 ): Promise<Signer[]> {
   const accountPaths = getAccountPaths(args, network);
 

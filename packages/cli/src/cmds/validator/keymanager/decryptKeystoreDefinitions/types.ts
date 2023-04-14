@@ -10,5 +10,5 @@ export type KeystoreDecryptOptions = {
   onDecrypt?: (index: number) => void;
   // Try to use the cache file if it exists
   cacheFilePath?: string;
-  logger: Pick<Logger, "info">;
+  logger: Pick<Logger, "info" | "warn" | "debug">;
 };
