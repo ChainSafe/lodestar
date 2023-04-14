@@ -337,7 +337,7 @@ export class AttestationDutiesService {
     if (this.opts?.distributedAggregationSelection) {
       // Validator in distributed cluster only has a key share, not the full private key.
       // Passing a partial selection proof to `is_aggregator` would produce incorrect result.
-      // Attestation service will exchange partial for combined selection proofs retrieved from
+      // AttestationService will exchange partial for combined selection proofs retrieved from
       // distributed validator middleware client and determine aggregators at beginning of every slot.
       return {duty, selectionProof: null, partialSelectionProof: selectionProof};
     }

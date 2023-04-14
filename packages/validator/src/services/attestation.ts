@@ -324,7 +324,7 @@ export class AttestationService {
       // Exit attestation aggregation flow if there is no response after 1/3 of slot as
       // beacon node would likely not have enough time to prepare an aggregate attestation.
       // Note that the aggregations flow is not explicitly exited but rather will be skipped
-      // due to the fact that calculation of `is_aggregator` in duties service is not done
+      // due to the fact that calculation of `is_aggregator` in AttestationDutiesService is not done
       // and selectionProof is set to null, meaning no validator will be considered an aggregator.
       sleep(this.clock.msToSlot(slot + 1 / 3), signal),
     ]);

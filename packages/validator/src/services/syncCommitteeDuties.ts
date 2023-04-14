@@ -295,7 +295,7 @@ export class SyncCommitteeDutiesService {
       if (this.opts?.distributedAggregationSelection) {
         // Validator in distributed cluster only has a key share, not the full private key.
         // Passing a partial selection proof to `is_sync_committee_aggregator` would produce incorrect result.
-        // Sync committee service will exchange partial for combined selection proofs retrieved from
+        // SyncCommitteeService will exchange partial for combined selection proofs retrieved from
         // distributed validator middleware client and determine aggregators at beginning of every slot.
         dutiesAndProofs.push({
           selectionProof: null,

@@ -269,7 +269,7 @@ export class SyncCommitteeService {
       // because for sync committee is not required to resubscribe to subnets as beacon node will assume
       // validator always aggregates. This allows us to wait until we have to produce sync committee contributions.
       // Note that the sync committee contributions flow is not explicitly exited but rather will be skipped
-      // due to the fact that calculation of `is_sync_committee_aggregator` in duties service is not done
+      // due to the fact that calculation of `is_sync_committee_aggregator` in SyncCommitteeDutiesService is not done
       // and selectionProof is set to null, meaning no validator will be considered an aggregator.
       sleep(this.clock.msToSlot(slot + 2 / 3), signal),
     ]);
