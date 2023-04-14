@@ -277,7 +277,7 @@ export class SyncCommitteeService {
     if (!res) {
       throw new Error("submitSyncCommitteeSelections did not resolve after 2/3 of slot");
     }
-    ApiError.assert(res);
+    ApiError.assert(res, "Error receiving combined selection proofs");
 
     const combinedSelections = res.response.data;
     this.logger.debug("Received combined sync committee selection proofs", {slot, count: combinedSelections.length});

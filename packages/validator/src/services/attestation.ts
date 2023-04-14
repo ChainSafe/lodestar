@@ -332,7 +332,7 @@ export class AttestationService {
     if (!res) {
       throw new Error("submitBeaconCommitteeSelections did not resolve after 1/3 of slot");
     }
-    ApiError.assert(res);
+    ApiError.assert(res, "Error receiving combined selection proofs");
 
     const combinedSelections = res.response.data;
     this.logger.debug("Received combined beacon committee selection proofs", {slot, count: combinedSelections.length});
