@@ -371,15 +371,14 @@ export class AttestationService {
 
     // If there are any subscriptions with aggregators, push them out to the beacon node.
     if (beaconCommitteeSubscriptions.length > 0) {
-      try {
-        ApiError.assert(await this.api.validator.prepareBeaconCommitteeSubnet(beaconCommitteeSubscriptions));
-        this.logger.debug("Resubscribed validators as aggregators on beacon committee subnets", {
-          slot,
-          count: beaconCommitteeSubscriptions.length,
-        });
-      } catch (e) {
-        this.logger.error("Failed to resubscribe to beacon committee subnets", {slot}, e as Error);
-      }
+      ApiError.assert(
+        await this.api.validator.prepareBeaconCommitteeSubnet(beaconCommitteeSubscriptions),
+        "Failed to resubscribe to beacon committee subnets"
+      );
+      this.logger.debug("Resubscribed validators as aggregators on beacon committee subnets", {
+        slot,
+        count: beaconCommitteeSubscriptions.length,
+      });
     }
   }
 }
