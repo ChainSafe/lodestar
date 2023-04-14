@@ -12,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.4.3",
+  "version": "1.7.2",
   "type": "module",
   "exports": {
     ".": {
@@ -57,30 +57,28 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@lodestar/api": "^1.5.0",
-    "@lodestar/types": "^1.5.0",
-    "@lodestar/utils": "^1.5.0",
-    "@lodestar/config": "^1.5.0",
-    "@lodestar/light-client": "^1.5.0",
+    "@ethereumjs/block": "^4.2.1",
+    "@ethereumjs/rlp": "^4.0.1",
     "@ethereumjs/trie": "^5.0.4",
     "@ethereumjs/util": "^8.0.5",
-    "@ethereumjs/block": "^4.2.1",
-    "@ethereumjs/rlp": "^4.0.1",    
+    "@lodestar/api": "^1.7.2",
+    "@lodestar/config": "^1.7.2",
+    "@lodestar/light-client": "^1.7.2",
+    "@lodestar/types": "^1.7.2",
+    "@lodestar/utils": "^1.7.2",
     "ethereum-cryptography": "^1.2.0",
-    "http-proxy": "^1.18.1",
-    "yargs": "^16.1.0",
-    "source-map-support": "^0.5.21",
     "find-up": "^6.3.0",
+    "http-proxy": "^1.18.1",
+    "source-map-support": "^0.5.21",
     "winston": "^3.8.2",
-    "winston-transport": "^4.5.0"
+    "winston-transport": "^4.5.0",
+    "yargs": "^16.1.0"
   },
   "devDependencies": {
     "@types/http-proxy": "^1.17.10",
     "@types/yargs": "^15.0.9",
-    "web3": "^1.9.0",
-    "ethers": "^6.2.3"
-  },
-  "peerDependencies": {
+    "ethers": "^6.2.3",
+    "web3": "^1.9.0"
   },
   "keywords": [
     "ethereum",
