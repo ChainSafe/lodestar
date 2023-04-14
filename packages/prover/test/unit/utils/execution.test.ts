@@ -1,24 +1,31 @@
 import {expect} from "chai";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
+import deepmerge from "deepmerge";
 import {ELProof, ELStorageProof} from "../../../src/types.js";
 import {isValidAccount, isValidStorageKeys} from "../../../src/utils/verification.js";
-import {invalidAccountProof, invalidStorageProof, validAccountProof, validStorageProof} from "../../fixtures/index.js";
+import {invalidStorageProof, validStorageProof} from "../../fixtures/index.js";
 import {createMockLogger} from "../../mocks/logger_mock.js";
+import eoaProof from "../../fixtures/sepolia/eth_getBalance_eoa_proof.json" assert {type: "json"};
+import {hexToBuffer} from "../../../src/utils/conversion.js";
+
+const address = eoaProof.request.params[0] as string;
+const validAccountProof = eoaProof.response.result as unknown as ELProof;
+const validStateRoot = hexToBuffer(eoaProof.executionPayload.state_root);
+
+const invalidAccountProof = deepmerge(validAccountProof, {});
+delete invalidAccountProof.accountProof[0];
 
 chai.use(chaiAsPromised);
 
 describe("uitls/execution", () => {
   describe("isValidAccount", () => {
     it("should return true if account is valid", async () => {
-      const address = "0xf97e180c050e5ab072211ad2c213eb5aee4df134";
-      const stateRoot = Buffer.from("7c0f9a6f21d82c2d7690db7aa36c9938de11891071eed6e50ff8b06b5ae7018a", "hex");
-
       await expect(
         isValidAccount({
           proof: validAccountProof,
           address,
-          stateRoot,
+          stateRoot: validStateRoot,
           logger: createMockLogger(),
         })
       ).eventually.to.be.true;
