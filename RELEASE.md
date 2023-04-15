@@ -15,7 +15,7 @@ The causes for a release are varied, however here are several common ones:
 - To include a major bug-fix, optimization, or feature.
 - To include a series of small changes which have shown to improve performance, usability, etc.
 - If significant or risky PRs are waiting to merge and we wish to try and isolate those changes to a future release. I.e., to leave a "clean slate" for future PRs to apply to.
-- An external team or entity needs a specific feature that the team has agreed to publish
+- An external team or entity needs a specific feature that the team has agreed to publish.
 
 To start a new release, one of the Lodestar developers will communicate this via the Lodestar chat channel and seek consensus from the other developers.
 
@@ -24,7 +24,7 @@ To start a new release, one of the Lodestar developers will communicate this via
 #### All-in-one script (for example version `v1.1.0`, commit `9fceb02`):
 
 - The team selects a commit from `unstable` as a "release candidate" for a new version release.
-  - NOTE: In some rare circumstances, the team may select a commit from `stable`. This may happen if a tight deadline needs to be met and `unstable` can't be stabilized in time. We should avoid doing this unless absolutely necessary as merge conflicts and unintended consequences of cherrypicking commits may arise.
+  - NOTE: In some rare circumstances, the team may select a commit from `stable`. This may happen if a tight deadline needs to be met and `unstable` can't be stabilized in time. We should avoid doing this unless absolutely necessary as merge conflicts and unintended consequences of cherry-picking commits may arise.
 - `yarn release:create-rc 1.1.0 9fceb02`
   - Must be run locally from a write-access account capable of triggering CI.
   - This script may alternatively be run on the checked out `HEAD`:
