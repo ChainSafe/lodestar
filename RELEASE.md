@@ -24,7 +24,7 @@ To start a new release, one of the Lodestar developers will communicate this via
 #### All-in-one script (for example version `v1.1.0`, commit `9fceb02`):
 
 - The team selects a commit from `unstable` as a "release candidate" for a new version release.
-  - NOTE: In some rare circumstances, the team may select a commit from `stable`. This may happen if a tight deadline needs to be met and `unstable` can't be stablized in time.
+  - NOTE: In some rare circumstances, the team may select a commit from `stable`. This may happen if a tight deadline needs to be met and `unstable` can't be stabilized in time. We should avoid doing this unless absolutely necessary as merge conflicts and unintended consequences of cherrypicking commits may arise.
 - `yarn release:create-rc 1.1.0 9fceb02`
   - Must be run locally from a write-access account capable of triggering CI.
   - This script may alternatively be run on the checked out `HEAD`:
