@@ -223,7 +223,7 @@ describe("gossipsub", function () {
     await netA.gossip.publishBlsToExecutionChange(blsToExec);
 
     const receivedblsToExec = await onBlsToExecutionChangePromise;
-    expect(receivedblsToExec).to.deep.equal(blsToExec);
+    expect(receivedblsToExec).to.deep.equal(ssz.capella.SignedBLSToExecutionChange.serialize(blsToExec));
   });
 
   it("Publish and receive a LightClientOptimisticUpdate", async function () {
@@ -259,7 +259,9 @@ describe("gossipsub", function () {
     await netA.gossip.publishLightClientOptimisticUpdate(lightClientOptimisticUpdate);
 
     const optimisticUpdate = await onLightClientOptimisticUpdatePromise;
-    expect(optimisticUpdate).to.deep.equal(lightClientOptimisticUpdate);
+    expect(optimisticUpdate).to.deep.equal(
+      ssz.capella.LightClientOptimisticUpdate.serialize(lightClientOptimisticUpdate)
+    );
   });
 
   it("Publish and receive a LightClientFinalityUpdate", async function () {
@@ -295,6 +297,6 @@ describe("gossipsub", function () {
     await netA.gossip.publishLightClientFinalityUpdate(lightClientFinalityUpdate);
 
     const optimisticUpdate = await onLightClientFinalityUpdatePromise;
-    expect(optimisticUpdate).to.deep.equal(lightClientFinalityUpdate);
+    expect(optimisticUpdate).to.deep.equal(ssz.capella.LightClientFinalityUpdate.serialize(lightClientFinalityUpdate));
   });
 });
