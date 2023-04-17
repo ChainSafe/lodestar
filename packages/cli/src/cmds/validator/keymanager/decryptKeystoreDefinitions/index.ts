@@ -28,8 +28,8 @@ export async function decryptKeystoreDefinitions(
     }
   }
 
-  const signers: SignerLocal[] = [];
-  const passwords: string[] = [];
+  const signers = new Array(keystoreDefinitions.length) as SignerLocal[];
+  const passwords = new Array(keystoreDefinitions.length) as string[];
   const tasks: QueuedTask<ModuleThread<DecryptKeystoreWorkerAPI>, Uint8Array>[] = [];
   const errors: Error[] = [];
   const pool = Pool(
@@ -63,8 +63,8 @@ export async function decryptKeystoreDefinitions(
           secretKey: bls.SecretKey.fromBytes(secretKeyBytes),
         };
 
-        signers.push(signer);
-        passwords.push(definition.password);
+        signers[index] = signer;
+        passwords[index] = definition.password;
 
         if (opts?.onDecrypt) {
           opts?.onDecrypt(index);
