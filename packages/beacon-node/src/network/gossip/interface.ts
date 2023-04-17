@@ -65,6 +65,10 @@ export type GossipTopicMap = {
  */
 export type GossipTopic = GossipTopicMap[keyof GossipTopicMap];
 
+export type SSZTypeOfGossipTopic<T extends GossipTopic> = T extends {type: infer K extends GossipType}
+  ? GossipTypeMap[K]
+  : never;
+
 export type GossipTypeMap = {
   [GossipType.beacon_block]: allForks.SignedBeaconBlock;
   [GossipType.beacon_block_and_blobs_sidecar]: deneb.SignedBeaconBlockAndBlobsSidecar;

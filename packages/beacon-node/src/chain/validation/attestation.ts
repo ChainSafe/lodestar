@@ -20,6 +20,7 @@ import {
   getSignatureFromAttestationSerialized,
 } from "../../util/sszBytes.js";
 import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
+import {sszDeserializeAttestation} from "../../network/gossip/topic.js";
 
 export type AttestationValidationResult = {
   attestation: phase0.Attestation;
@@ -28,14 +29,14 @@ export type AttestationValidationResult = {
   attDataRootHex: RootHex;
 };
 
-type AttestationOrBytes =
+export type AttestationOrBytes =
   // for api
   | {attestation: phase0.Attestation; serializedData: null}
   // for gossip
   | {
       attestation: null;
       serializedData: Uint8Array;
-      // available in after NetworkProcessor since we check for unknown block root attestations
+      // available in NetworkProcessor since we check for unknown block root attestations
       attSlot: Slot;
     };
 
@@ -69,7 +70,7 @@ export async function validateGossipAttestation(
     const attSlot = attestationOrBytes.attSlot;
     const cachedAttData = attDataBase64 !== null ? chain.seenAttestationDatas.get(attSlot, attDataBase64) : null;
     if (cachedAttData === null) {
-      const attestation = ssz.phase0.Attestation.deserialize(attestationOrBytes.serializedData);
+      const attestation = sszDeserializeAttestation(attestationOrBytes.serializedData);
       // only deserialize on the first AttestationData that's not cached
       attestationOrCache = {attestation, cache: null};
     } else {

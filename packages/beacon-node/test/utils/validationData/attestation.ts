@@ -17,6 +17,7 @@ import {BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
 import {signCached} from "../cache.js";
 import {ClockStatic} from "../clock.js";
 import {SeenAggregatedAttestations} from "../../../src/chain/seenCache/seenAggregateAndProof.js";
+import {SeenAttestationDatas} from "../../../src/chain/seenCache/seenAttestationData.js";
 
 export type AttestationValidDataOpts = {
   currentSlot?: Slot;
@@ -120,6 +121,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     regen,
     seenAttesters: new SeenAttesters(),
     seenAggregatedAttestations: new SeenAggregatedAttestations(null),
+    seenAttestationDatas: new SeenAttestationDatas(null, 0, 0),
     bls: new BlsSingleThreadVerifier({metrics: null}),
     waitForBlock: () => Promise.resolve(false),
     index2pubkey: state.epochCtx.index2pubkey,
