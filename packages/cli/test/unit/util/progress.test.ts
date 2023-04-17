@@ -28,14 +28,16 @@ describe("progress", () => {
       const frequencyMs = 50;
       const total = 8;
       const needle = showProgress({total, signal: new AbortController().signal, frequencyMs, progress});
+      sandbox.clock.tick(frequencyMs);
       needle(1);
       sandbox.clock.tick(frequencyMs);
       needle(3);
       sandbox.clock.tick(frequencyMs);
 
-      expect(progress).to.be.calledTwice;
-      expect(progress.firstCall.args[0]).to.eql({total, current: 2, ratePerSec: 40, percentage: 25});
-      expect(progress.secondCall.args[0]).to.eql({total, current: 4, ratePerSec: 40, percentage: 50});
+      expect(progress).to.be.calledThrice;
+      expect(progress.firstCall.args[0]).to.eql({total, current: 0, ratePerSec: 0, percentage: 0});
+      expect(progress.secondCall.args[0]).to.eql({total, current: 2, ratePerSec: 40, percentage: 25});
+      expect(progress.thirdCall.args[0]).to.eql({total, current: 4, ratePerSec: 40, percentage: 50});
     });
 
     it("should call progress with correct values when reach total", () => {
