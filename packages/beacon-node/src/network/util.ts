@@ -1,4 +1,4 @@
-import {networkInterfaces} from "node:os";
+import os from "node:os";
 import type {PeerId} from "@libp2p/interface-peer-id";
 import type {Multiaddr} from "@multiformats/multiaddr";
 import type {Connection} from "@libp2p/interface-connection";
@@ -22,7 +22,7 @@ export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
     throw new Error("Invalid udp multiaddr");
   }
 
-  const interfaces = networkInterfaces();
+  const interfaces = os.networkInterfaces();
   const tuples = multiaddr.tuples();
   const family = tuples[0][0];
   const isIPv4: boolean = family === 4;
@@ -71,7 +71,7 @@ export function prettyPrintPeerId(peerId: PeerId): string {
  */
 // Compat function for type mismatch reasons
 export function getConnectionsMap(connectionManager: ConnectionManager): Map<string, Connection[]> {
-  return ((connectionManager as unknown) as DefaultConnectionManager)["connections"] as Map<string, Connection[]>;
+  return (connectionManager as unknown as DefaultConnectionManager)["connections"] as Map<string, Connection[]>;
 }
 
 export function getConnection(connectionManager: ConnectionManager, peerIdStr: string): Connection | undefined {
@@ -84,5 +84,5 @@ export function isPublishToZeroPeersError(e: Error): boolean {
 }
 
 export function getDefaultDialer(libp2p: Libp2p): DefaultDialer {
-  return ((libp2p as unknown) as {components: Components}).components.dialer as DefaultDialer;
+  return (libp2p as unknown as {components: Components}).components.dialer as DefaultDialer;
 }

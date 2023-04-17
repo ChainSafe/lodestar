@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@lodestar/params";
-import {IChainConfig} from "../types.js";
+import {ChainConfig} from "../types.js";
 
-export const chainConfig: IChainConfig = {
+export const chainConfig: ChainConfig = {
   PRESET_BASE: PresetName.mainnet,
   CONFIG_NAME: "mainnet",
 
@@ -39,11 +39,11 @@ export const chainConfig: IChainConfig = {
 
   // Capella
   CAPELLA_FORK_VERSION: b("0x03000000"),
-  CAPELLA_FORK_EPOCH: Infinity,
+  CAPELLA_FORK_EPOCH: 194048, // April 12 (epoch: 194048    slot: 6209536    UTC: 4/12/2023, 10:27:35 PM)
 
   // DENEB
-  EIP4844_FORK_VERSION: b("0x04000000"),
-  EIP4844_FORK_EPOCH: Infinity,
+  DENEB_FORK_VERSION: b("0x04000000"),
+  DENEB_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------

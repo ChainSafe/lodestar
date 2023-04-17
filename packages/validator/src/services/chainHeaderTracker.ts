@@ -1,5 +1,5 @@
 import {Api, routes} from "@lodestar/api";
-import {ILogger} from "@lodestar/utils";
+import {Logger} from "@lodestar/utils";
 import {Slot, Root, RootHex} from "@lodestar/types";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {fromHexString} from "@chainsafe/ssz";
@@ -25,7 +25,7 @@ export class ChainHeaderTracker {
   private readonly fns: RunEveryFn[] = [];
 
   constructor(
-    private readonly logger: ILogger,
+    private readonly logger: Logger,
     private readonly api: Api,
     private readonly emitter: ValidatorEventEmitter
   ) {}

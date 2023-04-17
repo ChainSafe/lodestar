@@ -1,5 +1,5 @@
 import {fetch} from "cross-fetch";
-import {ErrorAborted, ILogger, TimeoutError} from "@lodestar/utils";
+import {ErrorAborted, Logger, TimeoutError} from "@lodestar/utils";
 import {ReqGeneric, RouteDef} from "../index.js";
 import {ApiClientResponse, ApiClientSuccessResponse} from "../../interfaces.js";
 import {stringifyQuery, urlJoin} from "./format.js";
@@ -84,9 +84,11 @@ export type HttpClientOptions = ({baseUrl: string} | {urls: (string | URLOpts)[]
 };
 
 export type HttpClientModules = {
-  logger?: ILogger;
+  logger?: Logger;
   metrics?: Metrics;
 };
+
+export {Metrics};
 
 export class HttpClient implements IHttpClient {
   private readonly globalTimeoutMs: number;
@@ -94,7 +96,7 @@ export class HttpClient implements IHttpClient {
   private readonly getAbortSignal?: () => AbortSignal | undefined;
   private readonly fetch: typeof fetch;
   private readonly metrics: null | Metrics;
-  private readonly logger: null | ILogger;
+  private readonly logger: null | Logger;
 
   private readonly urlsOpts: URLOpts[] = [];
   private readonly urlsScore: number[];
@@ -285,9 +287,11 @@ export class HttpClient implements IHttpClient {
         throw new HttpError(`${res.statusText}: ${getErrorMessage(errBody)}`, res.status, url);
       }
 
+      const streamTimer = this.metrics?.streamTime.startTimer({routeId});
+      const body = await getBody(res);
+      streamTimer?.();
       this.logger?.debug("HttpClient response", {routeId});
-
-      return {status: res.status, body: await getBody(res)};
+      return {status: res.status, body};
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
 

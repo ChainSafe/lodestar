@@ -118,9 +118,9 @@ describe("chain / validation / aggregateAndProof", () => {
       getState(),
       signedAggregateAndProof.message.aggregate.data.slot + 2 * SLOTS_PER_EPOCH
     );
-    (chain as {regen: IStateRegenerator}).regen = ({
+    (chain as {regen: IStateRegenerator}).regen = {
       getState: async () => committeeState,
-    } as Partial<IStateRegenerator>) as IStateRegenerator;
+    } as Partial<IStateRegenerator> as IStateRegenerator;
 
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX);
   });

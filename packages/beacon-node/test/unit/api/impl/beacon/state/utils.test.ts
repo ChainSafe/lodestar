@@ -11,7 +11,6 @@ import {
   getStateValidatorIndex,
 } from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {IBeaconChain} from "../../../../../../src/chain/index.js";
-import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/chain/archiver/archiveStates.js";
 import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 import {generateCachedAltairState, generateCachedState, generateState} from "../../../../../utils/state.js";
 import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
@@ -26,10 +25,10 @@ describe("beacon state api utils", function () {
     it("resolve head state id - success", async function () {
       const getHead = sinon.stub().returns(generateProtoBlock({stateRoot: otherRoot}));
       const get = sinon.stub().returns(generateCachedState());
-      const chainStub = ({
+      const chainStub = {
         forkChoice: {getHead},
         stateCache: {get},
-      } as unknown) as IBeaconChain;
+      } as unknown as IBeaconChain;
 
       const state = await resolveStateId(config, chainStub, dbStub, "head");
       expect(state).to.not.be.null;
@@ -40,10 +39,10 @@ describe("beacon state api utils", function () {
     it("resolve finalized state id - success", async function () {
       const getFinalizedBlock = sinon.stub().returns(generateProtoBlock());
       const get = sinon.stub().returns(generateCachedState());
-      const chainStub = ({
+      const chainStub = {
         forkChoice: {getFinalizedBlock},
         stateCache: {get},
-      } as unknown) as IBeaconChain;
+      } as unknown as IBeaconChain;
 
       const state = await resolveStateId(config, chainStub, dbStub, "finalized");
       expect(state).to.not.be.null;
@@ -54,10 +53,10 @@ describe("beacon state api utils", function () {
     it("resolve justified state id - success", async function () {
       const getJustifiedBlock = sinon.stub().returns(generateProtoBlock());
       const get = sinon.stub().returns(generateCachedState());
-      const chainStub = ({
+      const chainStub = {
         forkChoice: {getJustifiedBlock},
         stateCache: {get},
-      } as unknown) as IBeaconChain;
+      } as unknown as IBeaconChain;
 
       const state = await resolveStateId(config, chainStub, dbStub, "justified");
       expect(state).to.not.be.null;
@@ -67,7 +66,7 @@ describe("beacon state api utils", function () {
 
     it("resolve state by root", async function () {
       const get = sinon.stub().returns(generateCachedState());
-      const chainStub = ({stateCache: {get}, forkChoice: {getBlock: sinon.stub()}} as unknown) as IBeaconChain;
+      const chainStub = {stateCache: {get}, forkChoice: {getBlock: sinon.stub()}} as unknown as IBeaconChain;
 
       const state = await resolveStateId(config, chainStub, dbStub, otherRoot);
       expect(state).to.not.be.null;
@@ -80,10 +79,10 @@ describe("beacon state api utils", function () {
         .withArgs(123)
         .returns(generateProtoBlock({stateRoot: otherRoot}));
       const get = sinon.stub().returns(generateCachedState());
-      const chainStub = ({
+      const chainStub = {
         forkChoice: {getCanonicalBlockAtSlot},
         stateCache: {get},
-      } as unknown) as IBeaconChain;
+      } as unknown as IBeaconChain;
 
       const state = await resolveStateId(config, chainStub, dbStub, "123");
       expect(state).to.not.be.null;
@@ -91,7 +90,7 @@ describe("beacon state api utils", function () {
     });
 
     it("resolve state on unarchived finalized slot", async function () {
-      const nearestArchiveSlot = PERSIST_STATE_EVERY_EPOCHS * SLOTS_PER_EPOCH;
+      const nearestArchiveSlot = 1024 * SLOTS_PER_EPOCH;
       const finalizedEpoch = 1028;
       const requestedSlot = 1026 * SLOTS_PER_EPOCH;
 
@@ -100,9 +99,9 @@ describe("beacon state api utils", function () {
         .stub()
         .onSecondCall()
         .returns(generateProtoBlock({stateRoot: otherRoot}));
-      const chainStub = ({
+      const chainStub = {
         forkChoice: {getCanonicalBlockAtSlot, getFinalizedCheckpoint},
-      } as unknown) as IBeaconChain;
+      } as unknown as IBeaconChain;
       const nearestState = generateState({slot: nearestArchiveSlot});
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       const blockArchiveValuesStream = sinon.stub().returns({async *[Symbol.asyncIterator]() {}});

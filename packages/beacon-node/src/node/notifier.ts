@@ -1,8 +1,8 @@
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {ErrorAborted, ILogger, sleep, prettyBytes} from "@lodestar/utils";
+import {ErrorAborted, Logger, sleep, prettyBytes} from "@lodestar/utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, isExecutionCachedStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
 import {IBeaconChain} from "../chain/index.js";
@@ -18,8 +18,8 @@ type NodeNotifierModules = {
   network: INetwork;
   chain: IBeaconChain;
   sync: IBeaconSync;
-  config: IBeaconConfig;
-  logger: ILogger;
+  config: BeaconConfig;
+  logger: Logger;
   signal: AbortSignal;
 };
 
@@ -37,7 +37,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
 
   try {
     while (!signal.aborted) {
-      const connectedPeerCount = network.getConnectedPeers().length;
+      const connectedPeerCount = network.getConnectedPeerCount();
 
       if (connectedPeerCount <= WARN_PEER_COUNT) {
         if (!hasLowPeerCount) {
@@ -139,7 +139,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
   }
 }
 
-function timeToNextHalfSlot(config: IBeaconConfig, chain: IBeaconChain): number {
+function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain): number {
   const msPerSlot = config.SECONDS_PER_SLOT * 1000;
   const msFromGenesis = Date.now() - chain.genesisTime * 1000;
   const msToNextSlot = msPerSlot - (msFromGenesis % msPerSlot);
@@ -147,7 +147,7 @@ function timeToNextHalfSlot(config: IBeaconConfig, chain: IBeaconChain): number 
 }
 
 function getExecutionInfo(
-  config: IBeaconConfig,
+  config: BeaconConfig,
   clockEpoch: Epoch,
   headState: CachedBeaconStateAllForks,
   headInfo: ProtoBlock

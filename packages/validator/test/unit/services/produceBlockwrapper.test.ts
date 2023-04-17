@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {createIChainForkConfig} from "@lodestar/config";
+import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
@@ -18,7 +18,7 @@ describe("Produce Block with BuilderSelection", function () {
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
     sinon.SinonStubbedInstance<ValidatorStore>;
 
-  const config = createIChainForkConfig(mainnetConfig);
+  const config = createChainForkConfig(mainnetConfig);
 
   const clock = new ClockMock();
   const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null);
@@ -89,7 +89,7 @@ describe("Produce Block with BuilderSelection", function () {
       };
       const {
         debugLogCtx: {source},
-      } = ((await produceBlockWrapper(144897, randaoReveal, "", produceBlockOpts)) as unknown) as {
+      } = (await produceBlockWrapper(144897, randaoReveal, "", produceBlockOpts)) as unknown as {
         debugLogCtx: {source: string};
       };
       expect(source).to.equal(finalSelection, "blindedBlock must be returned");

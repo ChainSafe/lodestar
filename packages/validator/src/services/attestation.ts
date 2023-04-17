@@ -1,9 +1,9 @@
-import {phase0, Slot, ssz} from "@lodestar/types";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {BLSSignature, phase0, Slot, ssz} from "@lodestar/types";
+import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
-import {Api, ApiError} from "@lodestar/api";
+import {Api, ApiError, routes} from "@lodestar/api";
 import {toHexString} from "@chainsafe/ssz";
-import {IClock, ILoggerVc} from "../util/index.js";
+import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -12,8 +12,10 @@ import {groupAttDutiesByCommitteeIndex} from "./utils.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
 
-type AttestationServiceOpts = {
+export type AttestationServiceOpts = {
   afterBlockDelaySlotFraction?: number;
+  disableAttestationGrouping?: boolean;
+  distributedAggregationSelection?: boolean;
 };
 
 /**
@@ -32,7 +34,7 @@ export class AttestationService {
   private readonly dutiesService: AttestationDutiesService;
 
   constructor(
-    private readonly logger: ILoggerVc,
+    private readonly logger: LoggerVc,
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
@@ -41,7 +43,9 @@ export class AttestationService {
     private readonly metrics: Metrics | null,
     private readonly opts?: AttestationServiceOpts
   ) {
-    this.dutiesService = new AttestationDutiesService(logger, api, clock, validatorStore, chainHeadTracker, metrics);
+    this.dutiesService = new AttestationDutiesService(logger, api, clock, validatorStore, chainHeadTracker, metrics, {
+      distributedAggregationSelection: opts?.distributedAggregationSelection,
+    });
 
     // At most every slot, check existing duties from AttestationDutiesService and run tasks
     clock.runEverySlot(this.runAttestationTasks);
@@ -58,38 +62,96 @@ export class AttestationService {
       return;
     }
 
+    if (this.opts?.distributedAggregationSelection) {
+      // Validator in distributed cluster only has a key share, not the full private key.
+      // The partial selection proofs must be exchanged for combined selection proofs by
+      // calling submitBeaconCommitteeSelections on the distributed validator middleware client.
+      // This will run in parallel to other attestation tasks but must be finished before starting
+      // attestation aggregation as it is required to correctly determine if validator is aggregator
+      // and to produce a AggregateAndProof that can be threshold aggregated by the middleware client.
+      this.runDistributedAggregationSelectionTasks(duties, slot, signal).catch((e) =>
+        this.logger.error("Error on attestation aggregation selection", {slot}, e)
+      );
+    }
+
     // A validator should create and broadcast the attestation to the associated attestation subnet when either
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
     // (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot) -- whichever comes first.
     await Promise.race([sleep(this.clock.msToSlot(slot + 1 / 3), signal), this.emitter.waitForBlockSlot(slot)]);
     this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
 
-    // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
-    // Produce a single attestation for all committees, and clone mutate before signing
-    // Downstream tooling may require that produceAttestation is called with a 'real' committee index
-    // So we pick the first duty's committee index - see https://github.com/ChainSafe/lodestar/issues/4687
-    const attestationNoCommittee = await this.produceAttestation(duties[0].duty.committeeIndex, slot);
+    if (this.opts?.disableAttestationGrouping) {
+      // Attestation service grouping optimization must be disabled in a distributed validator cluster as
+      // middleware clients such as Charon (https://github.com/ObolNetwork/charon) expect the actual committee index
+      // to be sent to produceAttestationData endpoint. This is required because the middleware client itself
+      // calls produceAttestationData on the beacon node for each validator and there is a slight chance that
+      // the `beacon_block_root` (LMD GHOST vote) changes between calls which would cause a conflict between
+      // attestations submitted by Lodestar and other VCs in the cluster, resulting in aggregation failure.
+      // See https://github.com/ChainSafe/lodestar/issues/5103 for further details and references.
+      const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(duties);
+      await Promise.all(
+        Array.from(dutiesByCommitteeIndex.entries()).map(([index, duties]) =>
+          this.runAttestationTasksPerCommittee(duties, slot, index, signal).catch((e) => {
+            this.logger.error("Error on attestation routine", {slot, index}, e);
+          })
+        )
+      );
+    } else {
+      // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
+      // Produce a single attestation for all committees and submit unaggregated attestations in one go.
+      await this.runAttestationTasksGrouped(duties, slot, signal);
+    }
+  };
 
-    // Step 1. Mutate, and sign `Attestation` for each validator. Then publish all `Attestations` in one go
-    await this.signAndPublishAttestations(slot, attestationNoCommittee, duties);
+  private async runAttestationTasksPerCommittee(
+    dutiesSameCommittee: AttDutyAndProof[],
+    slot: Slot,
+    index: number,
+    signal: AbortSignal
+  ): Promise<void> {
+    // Produce attestation with actual committee index
+    const attestation = await this.produceAttestation(index, slot);
+
+    // Step 1. Sign `Attestation` for each validator. Then publish all `Attestations` in one go
+    await this.signAndPublishAttestations(slot, attestation, dutiesSameCommittee);
 
     // Step 2. after all attestations are submitted, make an aggregate.
-    // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
+    // First, wait until the `aggregation_production_instant` (2/3rds of the way through the slot)
     await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
     this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
 
-    const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(this.dutiesService.getDutiesAtSlot(slot));
+    // Then download, sign and publish a `SignedAggregateAndProof` for each
+    // validator that is elected to aggregate for this `slot` and `committeeIndex`.
+    await this.produceAndPublishAggregates(attestation, dutiesSameCommittee);
+  }
+
+  private async runAttestationTasksGrouped(
+    dutiesAll: AttDutyAndProof[],
+    slot: Slot,
+    signal: AbortSignal
+  ): Promise<void> {
+    // Produce a single attestation for all committees, and clone mutate before signing
+    const attestationNoCommittee = await this.produceAttestation(0, slot);
+
+    // Step 1. Mutate, and sign `Attestation` for each validator. Then publish all `Attestations` in one go
+    await this.signAndPublishAttestations(slot, attestationNoCommittee, dutiesAll);
+
+    // Step 2. after all attestations are submitted, make an aggregate.
+    // First, wait until the `aggregation_production_instant` (2/3rds of the way through the slot)
+    await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
+    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
+
+    const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(dutiesAll);
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each
-    // validator that is elected to aggregate for this `slot` and
-    // `committeeIndex`.
+    // validator that is elected to aggregate for this `slot` and `committeeIndex`.
     await Promise.all(
-      Array.from(dutiesByCommitteeIndex.entries()).map(([index, duties]) => {
+      Array.from(dutiesByCommitteeIndex.entries()).map(([index, dutiesSameCommittee]) => {
         const attestationData: phase0.AttestationData = {...attestationNoCommittee, index};
-        return this.produceAndPublishAggregates(attestationData, duties);
+        return this.produceAndPublishAggregates(attestationData, dutiesSameCommittee);
       })
     );
-  };
+  }
 
   /**
    * Performs the first step of the attesting process: downloading one `Attestation` object.
@@ -97,8 +159,7 @@ export class AttestationService {
    * For a validator client with many validators this allows to do a single call for all committees
    * in a slot, saving resources in both the vc and beacon node
    *
-   * A committee index is still passed in for the benefit of downstream tooling -
-   * see https://github.com/ChainSafe/lodestar/issues/4687
+   * Note: the actual committeeIndex must be passed in if attestation grouping is disabled
    */
   private async produceAttestation(committeeIndex: number, slot: Slot): Promise<phase0.AttestationData> {
     // Produce one attestation data per slot and committeeIndex
@@ -152,14 +213,19 @@ export class AttestationService {
     this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
 
     // Step 2. Publish all `Attestations` in one go
+    const logCtx = {
+      slot,
+      // log index if attestations are published per committee
+      ...(this.opts?.disableAttestationGrouping && {index: attestationNoCommittee.index}),
+    };
     try {
       ApiError.assert(await this.api.beacon.submitPoolAttestations(signedAttestations));
-      this.logger.info("Published attestations", {slot, count: signedAttestations.length});
+      this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
       this.metrics?.publishedAttestations.inc(signedAttestations.length);
     } catch (e) {
       // Note: metric counts only 1 since we don't know how many signedAttestations are invalid
       this.metrics?.attestaterError.inc({error: "publish"});
-      this.logger.error("Error publishing attestations", {slot}, e as Error);
+      this.logger.error("Error publishing attestations", logCtx, e as Error);
     }
   }
 
@@ -223,6 +289,96 @@ export class AttestationService {
       } catch (e) {
         this.logger.error("Error publishing aggregateAndProofs", logCtx, e as Error);
       }
+    }
+  }
+
+  /**
+   * Performs additional attestation aggregation tasks required if validator is part of distributed cluster
+   *
+   * 1. Exchange partial for combined selection proofs
+   * 2. Determine validators that should aggregate attestations
+   * 3. Mutate duty objects to set selection proofs for aggregators
+   * 4. Resubscribe validators as aggregators on beacon committee subnets
+   *
+   * See https://docs.google.com/document/d/1q9jOTPcYQa-3L8luRvQJ-M0eegtba4Nmon3dpO79TMk/mobilebasic
+   */
+  private async runDistributedAggregationSelectionTasks(
+    duties: AttDutyAndProof[],
+    slot: number,
+    signal: AbortSignal
+  ): Promise<void> {
+    const partialSelections: routes.validator.BeaconCommitteeSelection[] = duties.map(
+      ({duty, partialSelectionProof}) => ({
+        validatorIndex: duty.validatorIndex,
+        slot,
+        selectionProof: partialSelectionProof as BLSSignature,
+      })
+    );
+
+    this.logger.debug("Submitting partial beacon committee selection proofs", {slot, count: partialSelections.length});
+
+    const res = await Promise.race([
+      this.api.validator
+        .submitBeaconCommitteeSelections(partialSelections)
+        .catch((e) => this.logger.error("Error on submitBeaconCommitteeSelections", {slot}, e)),
+      // Exit attestation aggregation flow if there is no response after 1/3 of slot as
+      // beacon node would likely not have enough time to prepare an aggregate attestation.
+      // Note that the aggregations flow is not explicitly exited but rather will be skipped
+      // due to the fact that calculation of `is_aggregator` in AttestationDutiesService is not done
+      // and selectionProof is set to null, meaning no validator will be considered an aggregator.
+      sleep(this.clock.msToSlot(slot + 1 / 3), signal),
+    ]);
+
+    if (!res) {
+      throw new Error("submitBeaconCommitteeSelections did not resolve after 1/3 of slot");
+    }
+    ApiError.assert(res, "Error receiving combined selection proofs");
+
+    const combinedSelections = res.response.data;
+    this.logger.debug("Received combined beacon committee selection proofs", {slot, count: combinedSelections.length});
+
+    const beaconCommitteeSubscriptions: routes.validator.BeaconCommitteeSubscription[] = [];
+
+    for (const dutyAndProof of duties) {
+      const {validatorIndex, committeeIndex, committeeLength, committeesAtSlot} = dutyAndProof.duty;
+      const logCtxValidator = {slot, index: committeeIndex, validatorIndex};
+
+      const combinedSelection = combinedSelections.find((s) => s.validatorIndex === validatorIndex && s.slot === slot);
+
+      if (!combinedSelection) {
+        this.logger.warn("Did not receive combined beacon committee selection proof", logCtxValidator);
+        continue;
+      }
+
+      const isAggregator = isAggregatorFromCommitteeLength(committeeLength, combinedSelection.selectionProof);
+
+      if (isAggregator) {
+        // Update selection proof by mutating duty object
+        dutyAndProof.selectionProof = combinedSelection.selectionProof;
+
+        // Only push subnet subscriptions with `isAggregator=true` as all validators
+        // with duties for slot are already subscribed to subnets with `isAggregator=false`.
+        beaconCommitteeSubscriptions.push({
+          validatorIndex,
+          committeesAtSlot,
+          committeeIndex,
+          slot,
+          isAggregator,
+        });
+        this.logger.debug("Resubscribing validator as aggregator on beacon committee subnet", logCtxValidator);
+      }
+    }
+
+    // If there are any subscriptions with aggregators, push them out to the beacon node.
+    if (beaconCommitteeSubscriptions.length > 0) {
+      ApiError.assert(
+        await this.api.validator.prepareBeaconCommitteeSubnet(beaconCommitteeSubscriptions),
+        "Failed to resubscribe to beacon committee subnets"
+      );
+      this.logger.debug("Resubscribed validators as aggregators on beacon committee subnets", {
+        slot,
+        count: beaconCommitteeSubscriptions.length,
+      });
     }
   }
 }

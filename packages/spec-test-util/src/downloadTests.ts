@@ -13,16 +13,16 @@ export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-sp
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const logEmpty = (): void => {};
 
-export interface IDownloadTestsOptions {
+export type DownloadTestsOptions = {
   specVersion: string;
   outputDir: string;
   /** Root Github URL `https://github.com/ethereum/consensus-spec-tests` */
   specTestsRepoUrl: string;
   /** Release files names to download without prefix `["general", "mainnet", "minimal"]` */
   testsToDownload: string[];
-}
+};
 
-export interface IDownloadGenericTestsOptions<TestNames extends string> {
+export interface DownloadGenericTestsOptions<TestNames extends string> {
   specVersion: string;
   outputDir: string;
   specTestsRepoUrl: string;
@@ -32,7 +32,7 @@ export interface IDownloadGenericTestsOptions<TestNames extends string> {
 /**
  * Download spec tests
  */
-export async function downloadTests(opts: IDownloadTestsOptions, log: (msg: string) => void = logEmpty): Promise<void> {
+export async function downloadTests(opts: DownloadTestsOptions, log: (msg: string) => void = logEmpty): Promise<void> {
   await downloadGenericSpecTests(opts, log);
 }
 
@@ -41,7 +41,7 @@ export async function downloadTests(opts: IDownloadTestsOptions, log: (msg: stri
  * Used by spec tests and SlashingProtectionInterchangeTest
  */
 export async function downloadGenericSpecTests<TestNames extends string>(
-  {specVersion, specTestsRepoUrl, outputDir, testsToDownload}: IDownloadGenericTestsOptions<TestNames>,
+  {specVersion, specTestsRepoUrl, outputDir, testsToDownload}: DownloadGenericTestsOptions<TestNames>,
   log: (msg: string) => void = logEmpty
 ): Promise<void> {
   log(`outputDir = ${outputDir}`);

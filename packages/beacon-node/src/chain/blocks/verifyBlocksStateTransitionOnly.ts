@@ -5,9 +5,9 @@ import {
   DataAvailableStatus,
 } from "@lodestar/state-transition";
 import {deneb} from "@lodestar/types";
-import {ErrorAborted, ILogger, sleep} from "@lodestar/utils";
-import {IChainForkConfig} from "@lodestar/config";
-import {IMetrics} from "../../metrics/index.js";
+import {ErrorAborted, Logger, sleep} from "@lodestar/utils";
+import {ChainForkConfig} from "@lodestar/config";
+import {Metrics} from "../../metrics/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {byteArrayEquals} from "../../util/bytes.js";
@@ -25,8 +25,8 @@ import {BlockInput, BlockInputType, ImportBlockOpts} from "./types.js";
 export async function verifyBlocksStateTransitionOnly(
   preState0: CachedBeaconStateAllForks,
   blocks: BlockInput[],
-  logger: ILogger,
-  metrics: IMetrics | null,
+  logger: Logger,
+  metrics: Metrics | null,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{postStates: CachedBeaconStateAllForks[]; proposerBalanceDeltas: number[]}> {
@@ -65,8 +65,12 @@ export async function verifyBlocksStateTransitionOnly(
       metrics
     );
 
+    const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer();
+    const stateRoot = postState.hashTreeRoot();
+    hashTreeRootTimer?.();
+
     // Check state root matches
-    if (!byteArrayEquals(block.message.stateRoot, postState.hashTreeRoot())) {
+    if (!byteArrayEquals(block.message.stateRoot, stateRoot)) {
       throw new BlockError(block, {
         code: BlockErrorCode.INVALID_STATE_ROOT,
         root: postState.hashTreeRoot(),
@@ -105,7 +109,7 @@ export async function verifyBlocksStateTransitionOnly(
 }
 
 function maybeValidateBlobs(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   blockInput: BlockInput,
   opts: ImportBlockOpts
 ): DataAvailableStatus {
@@ -128,9 +132,5 @@ function maybeValidateBlobs(
 
     case BlockInputType.preDeneb:
       return DataAvailableStatus.preDeneb;
-
-    // TODO: Ok to assume old data available?
-    case BlockInputType.postDenebOldBlobs:
-      return DataAvailableStatus.available;
   }
 }

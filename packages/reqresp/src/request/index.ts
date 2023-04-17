@@ -2,8 +2,8 @@ import {pipe} from "it-pipe";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Libp2p} from "libp2p";
 import {Uint8ArrayList} from "uint8arraylist";
-import {ErrorAborted, ILogger, withTimeout, TimeoutError} from "@lodestar/utils";
-import {ProtocolDefinition} from "../types.js";
+import {ErrorAborted, Logger, withTimeout, TimeoutError} from "@lodestar/utils";
+import {MixedProtocolDefinition} from "../types.js";
 import {prettyPrintPeerId, abortableSource} from "../utils/index.js";
 import {ResponseError} from "../response/index.js";
 import {requestEncode} from "../encoders/requestEncode.js";
@@ -12,7 +12,7 @@ import {
   RequestError,
   RequestErrorCode,
   RequestInternalError,
-  IRequestErrorMetadata,
+  RequestErrorMetadata,
   responseStatusErrorToRequestError,
 } from "./errors.js";
 
@@ -36,7 +36,7 @@ export interface SendRequestOpts {
 }
 
 type SendRequestModules = {
-  logger: ILogger;
+  logger: Logger;
   libp2p: Libp2p;
   peerClient?: string;
 };
@@ -55,7 +55,7 @@ type SendRequestModules = {
 export async function* sendRequest<Req, Resp>(
   {logger, libp2p, peerClient}: SendRequestModules,
   peerId: PeerId,
-  protocols: ProtocolDefinition[],
+  protocols: MixedProtocolDefinition[],
   protocolIDs: string[],
   requestBody: Req,
   signal?: AbortSignal,
@@ -86,7 +86,7 @@ export async function* sendRequest<Req, Resp>(
     // From Altair block query methods have V1 and V2. Both protocols should be requested.
     // On stream negotiation `libp2p.dialProtocol` will pick the available protocol and return
     // the picked protocol in `connection.protocol`
-    const protocolsMap = new Map<string, ProtocolDefinition>(
+    const protocolsMap = new Map<string, MixedProtocolDefinition>(
       protocols.map((protocol, i) => [protocolIDs[i], protocol])
     );
 
@@ -211,7 +211,7 @@ export async function* sendRequest<Req, Resp>(
   } catch (e) {
     logger.verbose("Req  error", logCtx, e as Error);
 
-    const metadata: IRequestErrorMetadata = {method, encoding, peer: peerIdStr};
+    const metadata: RequestErrorMetadata = {method, encoding, peer: peerIdStr};
 
     if (e instanceof ResponseError) {
       throw new RequestError(responseStatusErrorToRequestError(e), metadata);

@@ -5,10 +5,10 @@ import {ErrorAborted, TimeoutError} from "@lodestar/utils";
 import {HttpClient, HttpError} from "../../../src/utils/client/index.js";
 import {HttpStatusCode} from "../../../src/utils/client/httpStatusCode.js";
 
-interface IUser {
+type User = {
   id?: number;
   name: string;
-}
+};
 
 describe("httpClient json client", () => {
   const afterEachCallbacks: (() => Promise<any> | any)[] = [];
@@ -48,7 +48,7 @@ describe("httpClient json client", () => {
       handler: async () => ({test: 1}),
     });
 
-    const {body: resBody, status} = await httpClient.json<IUser>({url, method: "GET"});
+    const {body: resBody, status} = await httpClient.json<User>({url, method: "GET"});
 
     expect(status).to.equal(HttpStatusCode.OK);
     expect(resBody).to.deep.equal({test: 1}, "Wrong res body");
@@ -72,7 +72,7 @@ describe("httpClient json client", () => {
       },
     });
 
-    const {body: resBodyReceived, status} = await httpClient.json<IUser>({url, method: "POST", query, body});
+    const {body: resBodyReceived, status} = await httpClient.json<User>({url, method: "POST", query, body});
 
     expect(status).to.equal(HttpStatusCode.OK);
     expect(resBodyReceived).to.deep.equal(resBody, "Wrong resBody");

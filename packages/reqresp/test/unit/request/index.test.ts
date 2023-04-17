@@ -5,28 +5,28 @@ import {expect} from "chai";
 import {Libp2p} from "libp2p";
 import sinon from "sinon";
 import {Uint8ArrayList} from "uint8arraylist";
-import {ILogger, LodestarError, sleep} from "@lodestar/utils";
+import {Logger, LodestarError, sleep} from "@lodestar/utils";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "../../../src/request/index.js";
-import {EncodedPayloadType, Encoding, ProtocolDefinition} from "../../../src/types.js";
+import {ProtocolDefinition, EncodedPayloadType, Encoding, MixedProtocolDefinition} from "../../../src/types.js";
 import {messages, sszSnappyPing, sszSnappySignedBeaconBlockPhase0} from "../../fixtures/messages.js";
 import {createStubbedLogger} from "../../mocks/logger.js";
 import {getValidPeerId} from "../../utils/peer.js";
 import {MockLibP2pStream} from "../../utils/index.js";
 import {responseEncode} from "../../utils/response.js";
 import {RespStatus} from "../../../src/interface.js";
-import {IRequestErrorMetadata} from "../../../src/index.js";
+import {RequestErrorMetadata} from "../../../src/index.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 
 describe("request / sendRequest", () => {
   let controller: AbortController;
-  let logger: ILogger;
+  let logger: Logger;
   let peerId: PeerId;
   let libp2p: Libp2p;
   const sandbox = sinon.createSandbox();
 
   const testCases: {
     id: string;
-    protocols: ProtocolDefinition<any, any>[];
+    protocols: MixedProtocolDefinition<any, any>[];
     requestBody: unknown;
     maxResponses?: number;
     expectedReturn: unknown[];
@@ -58,19 +58,19 @@ describe("request / sendRequest", () => {
 
   for (const {id, protocols, expectedReturn, requestBody} of testCases) {
     it(id, async () => {
-      libp2p = ({
+      libp2p = {
         dialProtocol: sinon
           .stub()
           .resolves(
             new MockLibP2pStream(
               responseEncode(
                 [{status: RespStatus.SUCCESS, payload: {type: EncodedPayloadType.ssz, data: requestBody}}],
-                protocols[0]
+                protocols[0] as ProtocolDefinition<any, any>
               ),
               protocols[0].method
             )
           ),
-      } as unknown) as Libp2p;
+      } as unknown as Libp2p;
 
       const responses = await pipe(
         sendRequest(
@@ -89,7 +89,7 @@ describe("request / sendRequest", () => {
 
   describe("timeout cases", () => {
     const peerId = getValidPeerId();
-    const metadata: IRequestErrorMetadata = {
+    const metadata: RequestErrorMetadata = {
       method: messages.ping.method,
       encoding: Encoding.SSZ_SNAPPY,
       peer: peerId.toString(),
@@ -143,16 +143,16 @@ describe("request / sendRequest", () => {
 
     for (const {id, source, opts, error} of timeoutTestCases) {
       it(id, async () => {
-        libp2p = ({
+        libp2p = {
           dialProtocol: sinon.stub().resolves(new MockLibP2pStream(source(), messages.ping.method)),
-        } as unknown) as Libp2p;
+        } as unknown as Libp2p;
 
         await expectRejectedWithLodestarError(
           pipe(
             sendRequest(
               {logger, libp2p},
               peerId,
-              [messages.ping as ProtocolDefinition],
+              [messages.ping as MixedProtocolDefinition],
               [messages.ping.method],
               sszSnappyPing.payload.data,
               controller.signal,

@@ -1,11 +1,11 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {PeerInfo} from "@libp2p/interface-peer-info";
-import {IBeaconConfig} from "@lodestar/config";
-import {ILogger, pruneSetToMax, sleep} from "@lodestar/utils";
+import {BeaconConfig} from "@lodestar/config";
+import {Logger, pruneSetToMax, sleep} from "@lodestar/utils";
 import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {IMetrics} from "../../metrics/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {Libp2p} from "../interface.js";
 import {ENRKey, SubnetType} from "../metadata.js";
 import {getConnectionsMap, getDefaultDialer, prettyPrintPeerId} from "../util.js";
@@ -28,9 +28,9 @@ export type PeerDiscoveryOpts = {
 export type PeerDiscoveryModules = {
   libp2p: Libp2p;
   peerRpcScores: IPeerRpcScoreStore;
-  metrics: IMetrics | null;
-  logger: ILogger;
-  config: IBeaconConfig;
+  metrics: Metrics | null;
+  logger: Logger;
+  config: BeaconConfig;
 };
 
 type PeerIdStr = string;
@@ -74,9 +74,9 @@ export class PeerDiscovery {
   readonly discv5: Discv5Worker;
   private libp2p: Libp2p;
   private peerRpcScores: IPeerRpcScoreStore;
-  private metrics: IMetrics | null;
-  private logger: ILogger;
-  private config: IBeaconConfig;
+  private metrics: Metrics | null;
+  private logger: Logger;
+  private config: BeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};
   private peersToConnect = 0;

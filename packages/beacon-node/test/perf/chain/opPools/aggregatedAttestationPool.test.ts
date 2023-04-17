@@ -10,6 +10,7 @@ import {
 import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH, TIMELY_SOURCE_FLAG_INDEX} from "@lodestar/params";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray} from "@lodestar/fork-choice";
+import {ssz} from "@lodestar/types";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {computeAnchorCheckpoint} from "../../../../src/chain/initState.js";
@@ -107,10 +108,6 @@ describe("getAttestationsForBlock", () => {
         checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
         balances: originalState.epochCtx.effectiveBalanceIncrements,
       },
-      bestJustified: {
-        checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
-        balances: originalState.epochCtx.effectiveBalanceIncrements,
-      },
       unrealizedJustified: {
         checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
         balances: originalState.epochCtx.effectiveBalanceIncrements,
@@ -166,7 +163,12 @@ function getAggregatedAttestationPool(state: CachedBeaconStateAltair): Aggregate
       const committee = state.epochCtx.getBeaconCommittee(slot, committeeIndex);
       // all attestation has full participation so getAttestationsForBlock() has to do a lot of filter
       // aggregate_and_proof messages
-      pool.add(attestation, committee.length, committee);
+      pool.add(
+        attestation,
+        toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data)),
+        committee.length,
+        committee
+      );
     }
   }
   return pool;

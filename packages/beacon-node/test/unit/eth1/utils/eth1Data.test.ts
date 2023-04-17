@@ -14,7 +14,7 @@ import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
 import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
 
 describe("eth1 / util / getEth1DataForBlocks", function () {
-  interface ITestCase {
+  type TestCase = {
     id: string;
     blocks: Eth1Block[];
     deposits: phase0.DepositEvent[];
@@ -22,9 +22,9 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
     lastProcessedDepositBlockNumber: number;
     expectedEth1Data?: Partial<phase0.Eth1Data & Eth1Block>[];
     error?: Eth1ErrorCode;
-  }
+  };
 
-  const testCases: (() => ITestCase)[] = [
+  const testCases: (() => TestCase)[] = [
     () => {
       // Result must contain all blocks from eth1Blocks, with backfilled eth1Data
       const expectedEth1Data = [
@@ -94,15 +94,8 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
   ];
 
   for (const testCase of testCases) {
-    const {
-      id,
-      blocks,
-      deposits,
-      depositRootTree,
-      lastProcessedDepositBlockNumber,
-      expectedEth1Data,
-      error,
-    } = testCase();
+    const {id, blocks, deposits, depositRootTree, lastProcessedDepositBlockNumber, expectedEth1Data, error} =
+      testCase();
     it(id, async function () {
       const eth1DatasPromise = getEth1DataForBlocks(
         blocks,
@@ -126,15 +119,15 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
 });
 
 describe("eth1 / util / getDepositsByBlockNumber", function () {
-  interface ITestCase {
+  type TestCase = {
     id: string;
     fromBlock: number;
     toBlock: number;
     deposits: phase0.DepositEvent[];
     expectedResult: phase0.DepositEvent[];
-  }
+  };
 
-  const testCases: (() => ITestCase)[] = [
+  const testCases: (() => TestCase)[] = [
     () => {
       const deposit0 = getMockDeposit({blockNumber: 0, index: 0});
       return {
@@ -201,12 +194,12 @@ describe("eth1 / util / getDepositsByBlockNumber", function () {
 });
 
 describe("eth1 / util / getDepositRootByDepositCount", function () {
-  interface ITestCase {
+  type TestCase = {
     id: string;
     depositCounts: number[];
     depositRootTree: DepositTree;
     expectedMap: Map<number, Root>;
-  }
+  };
 
   const fullRootMap = new Map<number, Root>();
   const fullDepositRootTree = ssz.phase0.DepositDataRootList.defaultViewDU();
@@ -215,7 +208,7 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
     fullRootMap.set(fullDepositRootTree.length, fullDepositRootTree.hashTreeRoot());
   }
 
-  const testCases: (() => ITestCase)[] = [
+  const testCases: (() => TestCase)[] = [
     () => {
       return {
         id: "Roots are computed correctly, all values match",

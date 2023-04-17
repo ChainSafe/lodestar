@@ -55,12 +55,16 @@ if (!semver.gt(versionMMP, currentVersion)) {
 const currentBranch = getCurrentBranch();
 if (semver.patch(versionMMP) === 0) {
   // New version release candidate
-  // This script must be run from unstable branch
-  if (currentBranch !== UNSTABLE_BRANCH) {
+  // This script must be run from unstable or stable branch
+  if (currentBranch === STABLE_BRANCH) {
+    console.warn(`Warning: Creating a new release from branch ${STABLE_BRANCH}. In most cases, a new release should be based off branch ${UNSTABLE_BRANCH} and only hotfixes should be based off branch ${STABLE_BRANCH}`);
+    assertCommitExistsInBranch(commit, STABLE_BRANCH);
+  } else if (currentBranch === UNSTABLE_BRANCH) {
+    assertCommitExistsInBranch(commit, UNSTABLE_BRANCH);
+  } else {
     throw Error(`Must be run in branch '${UNSTABLE_BRANCH}' but is in '${currentBranch}'`);
   }
 
-  assertCommitExistsInBranch(commit, UNSTABLE_BRANCH);
 } else {
   // Hot-fix release candidate
   // This script must be run from unstable branch

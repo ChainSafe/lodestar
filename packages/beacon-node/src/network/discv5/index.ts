@@ -11,22 +11,22 @@ import {
   SignableENR,
 } from "@chainsafe/discv5";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
-import {chainConfigFromJson, chainConfigToJson, IBeaconConfig} from "@lodestar/config";
-import {ILogger} from "@lodestar/utils";
-import {IMetrics} from "../../metrics/metrics.js";
+import {chainConfigFromJson, chainConfigToJson, BeaconConfig} from "@lodestar/config";
+import {Logger} from "@lodestar/utils";
+import {Metrics} from "../../metrics/metrics.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 
 export type Discv5Opts = {
   peerId: PeerId;
   discv5: Omit<IDiscv5DiscoveryInputOptions, "metrics" | "searchInterval" | "enabled">;
-  logger: ILogger;
-  config: IBeaconConfig;
-  metrics?: IMetrics;
+  logger: Logger;
+  config: BeaconConfig;
+  metrics?: Metrics;
 };
 
-export interface IDiscv5Events {
+export type Discv5Events = {
   discovered: (enr: ENR) => void;
-}
+};
 
 type Discv5WorkerStatus =
   | {status: "stopped"}
@@ -35,8 +35,8 @@ type Discv5WorkerStatus =
 /**
  * Wrapper class abstracting the details of discv5 worker instantiation and message-passing
  */
-export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, IDiscv5Events>}) {
-  private logger: ILogger;
+export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, Discv5Events>}) {
+  private logger: Logger;
   private status: Discv5WorkerStatus;
   private keypair: IKeypair;
 
@@ -79,7 +79,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
 
     this.status.subscription.unsubscribe();
     await this.status.workerApi.close();
-    await Thread.terminate((this.status.workerApi as unknown) as Thread);
+    await Thread.terminate(this.status.workerApi as unknown as Thread);
 
     this.status = {status: "stopped"};
   }

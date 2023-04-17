@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString as b} from "@chainsafe/ssz";
-import {IChainConfig} from "../types.js";
+import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../presets/mainnet.js";
 
-export const goerliChainConfig: IChainConfig = {
+export const goerliChainConfig: ChainConfig = {
   ...mainnet,
 
   CONFIG_NAME: "goerli",
@@ -31,4 +31,7 @@ export const goerliChainConfig: IChainConfig = {
   // Bellatrix
   BELLATRIX_FORK_VERSION: b("0x02001020"),
   BELLATRIX_FORK_EPOCH: 112260,
+  // Capella
+  CAPELLA_FORK_VERSION: b("0x03001020"),
+  CAPELLA_FORK_EPOCH: 162304,
 };

@@ -5,6 +5,8 @@ import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
 
 export type IChainOptions = BlockProcessOpts &
+  PoolOpts &
+  SeenCacheOpts &
   ForkChoiceOpts &
   ArchiverOpts &
   LightClientServerOpts & {
@@ -15,10 +17,6 @@ export type IChainOptions = BlockProcessOpts &
     skipCreateStateCacheIfAvailable?: boolean;
     suggestedFeeRecipient: string;
     maxSkipSlots?: number;
-    /** Window to inspect missed slots for enabling/disabling builder circuit breaker */
-    faultInspectionWindow?: number;
-    /** Number of missed slots allowed in the faultInspectionWindow for builder circuit*/
-    allowedFaults?: number;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
     /** Max number of produced blobs by local validators to cache */
@@ -48,6 +46,21 @@ export type BlockProcessOpts = {
    * will still issue fcU for block proposal
    */
   disableImportExecutionFcU?: boolean;
+  emitPayloadAttributes?: boolean;
+};
+
+export type PoolOpts = {
+  /**
+   * Only preaggregate attestation/sync committee message since clockSlot - preaggregateSlotDistance
+   */
+  preaggregateSlotDistance?: number;
+};
+
+export type SeenCacheOpts = {
+  /**
+   * Slot distance from current slot to cache AttestationData
+   */
+  attDataCacheSlotDistance?: number;
 };
 
 export const defaultChainOptions: IChainOptions = {
@@ -56,8 +69,9 @@ export const defaultChainOptions: IChainOptions = {
   disableBlsBatchVerify: false,
   proposerBoostEnabled: true,
   computeUnrealized: true,
-  countUnrealizedFull: false,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   assertCorrectProgressiveBalances: false,
+  archiveStateEpochFrequency: 1024,
+  emitPayloadAttributes: false,
 };

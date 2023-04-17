@@ -1,9 +1,9 @@
-import {IChainConfig, chainConfigToJson} from "@lodestar/config";
+import {ChainConfig, chainConfigToJson} from "@lodestar/config";
 import {activePreset, BeaconPreset, presetToJson} from "@lodestar/params";
 
 export class NotEqualParamsError extends Error {}
 
-type ConfigWithPreset = IChainConfig & BeaconPreset;
+type ConfigWithPreset = ChainConfig & BeaconPreset;
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -22,7 +22,7 @@ type ConfigWithPreset = IChainConfig & BeaconPreset;
  * So this check only compares a specific list of parameters that are consensus critical, ignoring the rest. Typed
  * config and preset ensure new parameters are labeled critical or ignore, facilitating maintenance of the list.
  */
-export function assertEqualParams(localConfig: IChainConfig, externalSpecJson: Record<string, string>): void {
+export function assertEqualParams(localConfig: ChainConfig, externalSpecJson: Record<string, string>): void {
   // Before comparing, add preset which is bundled in api impl config route.
   // config and preset must be serialized to JSON for safe comparisions.
   const localSpecJson = {
@@ -68,11 +68,11 @@ export function assertEqualParams(localConfig: IChainConfig, externalSpecJson: R
   }
 }
 
-function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWithPreset, boolean> {
+function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWithPreset, boolean> {
   const altairForkRelevant = localConfig.ALTAIR_FORK_EPOCH < Infinity;
   const bellatrixForkRelevant = localConfig.BELLATRIX_FORK_EPOCH < Infinity;
   const capellaForkRelevant = localConfig.CAPELLA_FORK_EPOCH < Infinity;
-  const denebForkRelevant = localConfig.EIP4844_FORK_EPOCH < Infinity;
+  const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -103,8 +103,8 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
     CAPELLA_FORK_VERSION: capellaForkRelevant,
     CAPELLA_FORK_EPOCH: capellaForkRelevant,
     // Deneb
-    EIP4844_FORK_VERSION: denebForkRelevant,
-    EIP4844_FORK_EPOCH: denebForkRelevant,
+    DENEB_FORK_VERSION: denebForkRelevant,
+    DENEB_FORK_EPOCH: denebForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: true,
@@ -144,9 +144,6 @@ function getSpecCriticalParams(localConfig: IChainConfig): Record<keyof ConfigWi
     HYSTERESIS_QUOTIENT: true,
     HYSTERESIS_DOWNWARD_MULTIPLIER: true,
     HYSTERESIS_UPWARD_MULTIPLIER: true,
-
-    // Fork choice
-    SAFE_SLOTS_TO_UPDATE_JUSTIFIED: true,
 
     // Gwei Values
     MIN_DEPOSIT_AMOUNT: true,

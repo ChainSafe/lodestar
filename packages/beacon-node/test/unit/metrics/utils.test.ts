@@ -15,7 +15,7 @@ describe("Metrics Gauge collect fn", () => {
     const metrics = await register.getMetricsAsJSON();
     const metric = metrics.find((m) => m.name === name);
     if (!metric) throw Error(`Metric ${name} not found`);
-    return ((metric as unknown) as {values: MetricValue[]}).values;
+    return (metric as unknown as {values: MetricValue[]}).values;
   }
 
   it("Use no collect function", async () => {

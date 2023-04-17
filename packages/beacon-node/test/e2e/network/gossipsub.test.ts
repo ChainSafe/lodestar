@@ -1,12 +1,12 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {createIBeaconConfig, createIChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {capella, phase0, ssz, allForks} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {getReqRespHandlers, Network} from "../../../src/network/index.js";
-import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
+import {getReqRespHandlers, Network, NetworkInitModules} from "../../../src/network/index.js";
+import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 import {GossipType, GossipHandlers} from "../../../src/network/gossip/index.js";
 
 import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
@@ -17,7 +17,7 @@ import {testLogger} from "../../utils/logger.js";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
-const opts: INetworkOptions = {
+const opts: NetworkOptions = {
   ...defaultNetworkOptions,
   maxPeers: 1,
   targetPeers: 1,
@@ -25,11 +25,12 @@ const opts: INetworkOptions = {
   localMultiaddrs: [],
   discv5FirstQueryDelayMs: 0,
   discv5: null,
+  skipParamsLog: true,
 };
 
 // Schedule all forks at ALTAIR_FORK_EPOCH to avoid generating the pubkeys cache
 /* eslint-disable @typescript-eslint/naming-convention */
-const config = createIChainForkConfig({
+const config = createChainForkConfig({
   ...defaultChainConfig,
   ALTAIR_FORK_EPOCH: 1,
   BELLATRIX_FORK_EPOCH: 1,
@@ -63,7 +64,7 @@ describe("gossipsub", function () {
       },
     });
 
-    const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
+    const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
@@ -86,10 +87,9 @@ describe("gossipsub", function () {
     const loggerA = testLogger("A");
     const loggerB = testLogger("B");
 
-    const modules = {
+    const modules: Omit<NetworkInitModules, "opts" | "peerId" | "logger"> = {
       config: beaconConfig,
       chain,
-      db,
       reqRespHandlers,
       gossipHandlers,
       signal: controller.signal,
@@ -130,8 +130,8 @@ describe("gossipsub", function () {
     expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
@@ -162,8 +162,8 @@ describe("gossipsub", function () {
     expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
@@ -209,8 +209,8 @@ describe("gossipsub", function () {
     expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
@@ -244,8 +244,8 @@ describe("gossipsub", function () {
     expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
@@ -280,8 +280,8 @@ describe("gossipsub", function () {
     expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
 
-    netA.subscribeGossipCoreTopics();
-    netB.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
+    await netB.subscribeGossipCoreTopics();
 
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {

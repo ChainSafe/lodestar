@@ -1,9 +1,9 @@
 import {Epoch, bellatrix} from "@lodestar/types";
 import {Api, ApiError, routes} from "@lodestar/api";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
-import {IClock, ILoggerVc, batchItems} from "../util/index.js";
+import {IClock, LoggerVc, batchItems} from "../util/index.js";
 import {Metrics} from "../metrics.js";
 import {ValidatorStore} from "./validatorStore.js";
 
@@ -17,8 +17,8 @@ const REGISTRATION_CHUNK_SIZE = 512;
  * two epochs.
  */
 export function pollPrepareBeaconProposer(
-  config: IBeaconConfig,
-  logger: ILoggerVc,
+  config: BeaconConfig,
+  logger: LoggerVc,
   api: Api,
   clock: IClock,
   validatorStore: ValidatorStore,
@@ -66,8 +66,8 @@ export function pollPrepareBeaconProposer(
  * two epochs.
  */
 export function pollBuilderValidatorRegistration(
-  config: IBeaconConfig,
-  logger: ILoggerVc,
+  config: BeaconConfig,
+  logger: LoggerVc,
   api: Api,
   clock: IClock,
   validatorStore: ValidatorStore,
@@ -94,18 +94,16 @@ export function pollBuilderValidatorRegistration(
       for (const pubkeyHexes of pubkeyHexesChunks) {
         try {
           const registrations = await Promise.all(
-            pubkeyHexes.map(
-              (pubkeyHex): Promise<bellatrix.SignedValidatorRegistrationV1> => {
-                // Just to make typescript happy as it can't figure out we have filtered
-                // undefined pubkeys above
-                if (pubkeyHex === undefined) {
-                  throw Error("All undefined pubkeys should have been filtered out");
-                }
-                const feeRecipient = validatorStore.getFeeRecipient(pubkeyHex);
-                const gasLimit = validatorStore.getGasLimit(pubkeyHex);
-                return validatorStore.getValidatorRegistration(pubkeyHex, {feeRecipient, gasLimit}, slot);
+            pubkeyHexes.map((pubkeyHex): Promise<bellatrix.SignedValidatorRegistrationV1> => {
+              // Just to make typescript happy as it can't figure out we have filtered
+              // undefined pubkeys above
+              if (pubkeyHex === undefined) {
+                throw Error("All undefined pubkeys should have been filtered out");
               }
-            )
+              const feeRecipient = validatorStore.getFeeRecipient(pubkeyHex);
+              const gasLimit = validatorStore.getGasLimit(pubkeyHex);
+              return validatorStore.getValidatorRegistration(pubkeyHex, {feeRecipient, gasLimit}, slot);
+            })
           );
           ApiError.assert(await api.validator.registerValidator(registrations));
         } catch (e) {

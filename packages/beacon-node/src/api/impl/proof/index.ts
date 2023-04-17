@@ -1,11 +1,12 @@
 import {routes, ServerApi} from "@lodestar/api";
-import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
+import {createProof, ProofType} from "@chainsafe/persistent-merkle-tree";
 import {ApiModules} from "../types.js";
 import {resolveStateId} from "../beacon/state/utils.js";
-import {IApiOptions} from "../../options.js";
+import {resolveBlockId} from "../beacon/blocks/utils.js";
+import {ApiOptions} from "../../options.js";
 
 export function getProofApi(
-  opts: IApiOptions,
+  opts: ApiOptions,
   {chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">
 ): ServerApi<routes.proof.Api> {
   // It's currently possible to request gigantic proofs (eg: a proof of the entire beacon state)
@@ -13,29 +14,36 @@ export function getProofApi(
   const maxGindicesInProof = opts.maxGindicesInProof ?? 512;
 
   return {
-    async getStateProof(stateId, jsonPaths) {
+    async getStateProof(stateId, descriptor) {
+      // descriptor.length / 2 is a rough approximation of # of gindices
+      if (descriptor.length / 2 > maxGindicesInProof) {
+        throw new Error("Requested proof is too large.");
+      }
+
       const {state} = await resolveStateId(config, chain, db, stateId);
 
       // Commit any changes before computing the state root. In normal cases the state should have no changes here
       state.commit();
       const stateNode = state.node;
-      const tree = new Tree(stateNode);
 
-      const gindexes = state.type.tree_createProofGindexes(stateNode, jsonPaths);
-      // TODO: Is it necessary to de-duplicate?
-      //       It's not a problem if we overcount gindexes
-      const gindicesSet = new Set(gindexes);
+      const data = createProof(stateNode, {type: ProofType.compactMulti, descriptor});
 
-      if (gindicesSet.size > maxGindicesInProof) {
+      return {data};
+    },
+    async getBlockProof(blockId, descriptor) {
+      // descriptor.length / 2 is a rough approximation of # of gindices
+      if (descriptor.length / 2 > maxGindicesInProof) {
         throw new Error("Requested proof is too large.");
       }
 
-      return {
-        data: tree.getProof({
-          type: ProofType.treeOffset,
-          gindices: Array.from(gindicesSet),
-        }),
-      };
+      const {block} = await resolveBlockId(chain.forkChoice, db, blockId);
+
+      // Commit any changes before computing the state root. In normal cases the state should have no changes here
+      const blockNode = config.getForkTypes(block.message.slot).BeaconBlock.toView(block.message).node;
+
+      const data = createProof(blockNode, {type: ProofType.compactMulti, descriptor});
+
+      return {data};
     },
   };
 }

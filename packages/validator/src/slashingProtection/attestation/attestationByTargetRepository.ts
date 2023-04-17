@@ -1,6 +1,6 @@
 import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
 import {intToBytes, bytesToInt} from "@lodestar/utils";
-import {Bucket, DB_PREFIX_LENGTH, encodeKey, IDatabaseApiOptions, uintLen} from "@lodestar/db";
+import {Bucket, DB_PREFIX_LENGTH, encodeKey, DatabaseApiOptions, uintLen} from "@lodestar/db";
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {LodestarValidatorDatabaseController} from "../../types.js";
 import {SlashingProtectionAttestation} from "../types.js";
@@ -16,7 +16,7 @@ export class AttestationByTargetRepository {
   protected db: LodestarValidatorDatabaseController;
   protected bucket = Bucket.phase0_slashingProtectionAttestationByTarget;
 
-  constructor(opts: IDatabaseApiOptions) {
+  constructor(opts: DatabaseApiOptions) {
     this.db = opts.controller;
     this.type = new ContainerType({
       sourceEpoch: ssz.Epoch,

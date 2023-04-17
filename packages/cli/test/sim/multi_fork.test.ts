@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {join} from "node:path";
+import path from "node:path";
 import {activePreset} from "@lodestar/params";
 import {sleep, toHexString} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
@@ -42,10 +42,10 @@ const ttd = getEstimatedTTD({
   additionalSlots: additionalSlotsForTTD,
 });
 
-const env = SimulationEnvironment.initWithDefaults(
+const env = await SimulationEnvironment.initWithDefaults(
   {
     id: "multi-fork",
-    logsDir: join(logFilesDir, "multi-fork"),
+    logsDir: path.join(logFilesDir, "multi-fork"),
     chainConfig: {
       ALTAIR_FORK_EPOCH: altairForkEpoch,
       BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
@@ -56,8 +56,8 @@ const env = SimulationEnvironment.initWithDefaults(
   [
     {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32, mining: true},
     {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32, remote: true},
-    {id: "node-3", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
-    {id: "node-4", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32},
+    {id: "node-3", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32},
+    {id: "node-4", cl: CLClient.Lighthouse, el: ELClient.Geth, keysCount: 32},
   ]
 );
 
@@ -90,7 +90,7 @@ await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePrese
 // ========================================================
 const headForRangeSync = await env.nodes[0].cl.api.beacon.getBlockHeader("head");
 ApiError.assert(headForRangeSync);
-const rangeSync = env.createNodePair({
+const rangeSync = await env.createNodePair({
   id: "range-sync-node",
   cl: CLClient.Lodestar,
   el: ELClient.Geth,
@@ -102,7 +102,7 @@ const rangeSync = env.createNodePair({
 const res = await env.nodes[0].cl.api.beacon.getStateFinalityCheckpoints("head");
 ApiError.assert(res);
 const headForCheckpointSync = res.response.data.finalized;
-const checkpointSync = env.createNodePair({
+const checkpointSync = await env.createNodePair({
   id: "checkpoint-sync-node",
   cl: {
     type: CLClient.Lodestar,
@@ -138,7 +138,7 @@ await checkpointSync.el.job.stop();
 
 // Unknown block sync
 // ========================================================
-const unknownBlockSync = env.createNodePair({
+const unknownBlockSync = await env.createNodePair({
   id: "unknown-block-sync-node",
   cl: {
     type: CLClient.Lodestar,

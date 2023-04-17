@@ -1,9 +1,9 @@
-import {Bucket, encodeKey, IDatabaseApiOptions} from "@lodestar/db";
+import {Bucket, encodeKey, DatabaseApiOptions} from "@lodestar/db";
 import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
 import {intToBytes} from "@lodestar/utils";
 import {Type} from "@chainsafe/ssz";
 import {LodestarValidatorDatabaseController} from "../../types.js";
-import {IDistanceEntry, IDistanceStore} from "./interface.js";
+import {DistanceEntry, IDistanceStore} from "./interface.js";
 
 /**
  * Manages validator db storage of min/max ranges for min/max surround vote slashing protection.
@@ -12,7 +12,7 @@ export class DistanceStoreRepository implements IDistanceStore {
   minSpan: SpanDistanceRepository;
   maxSpan: SpanDistanceRepository;
 
-  constructor(opts: IDatabaseApiOptions) {
+  constructor(opts: DatabaseApiOptions) {
     this.minSpan = new SpanDistanceRepository(opts, Bucket.index_slashingProtectionMinSpanDistance);
     this.maxSpan = new SpanDistanceRepository(opts, Bucket.index_slashingProtectionMaxSpanDistance);
   }
@@ -23,7 +23,7 @@ class SpanDistanceRepository {
   protected db: LodestarValidatorDatabaseController;
   protected bucket: Bucket;
 
-  constructor(opts: IDatabaseApiOptions, bucket: Bucket) {
+  constructor(opts: DatabaseApiOptions, bucket: Bucket) {
     this.db = opts.controller;
     this.type = ssz.Epoch;
     this.bucket = bucket;
@@ -34,7 +34,7 @@ class SpanDistanceRepository {
     return distance && this.type.deserialize(distance);
   }
 
-  async setBatch(pubkey: BLSPubkey, values: IDistanceEntry[]): Promise<void> {
+  async setBatch(pubkey: BLSPubkey, values: DistanceEntry[]): Promise<void> {
     await this.db.batchPut(
       values.map((value) => ({
         key: this.encodeKey(pubkey, value.source),

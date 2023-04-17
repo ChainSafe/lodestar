@@ -7,8 +7,8 @@ import {
   ContextBytesType,
   CONTEXT_BYTES_FORK_DIGEST_LENGTH,
   ContextBytesFactory,
-  ProtocolDefinition,
   TypeSerializer,
+  MixedProtocolDefinition,
 } from "../types.js";
 import {RespStatus} from "../interface.js";
 
@@ -28,7 +28,7 @@ enum StreamStatus {
  * ```
  */
 export function responseDecode<Resp>(
-  protocol: ProtocolDefinition,
+  protocol: MixedProtocolDefinition,
   cbs: {
     onFirstHeader: () => void;
     onFirstResponseChunk: () => void;
@@ -62,7 +62,7 @@ export function responseDecode<Resp>(
         throw new ResponseError(status, errorMessage);
       }
 
-      const forkName = await readContextBytes<Resp>(protocol.contextBytes, bufferedSource);
+      const forkName = await readContextBytes(protocol.contextBytes, bufferedSource);
       const type = protocol.responseType(forkName) as TypeSerializer<Resp>;
 
       yield await readEncodedPayload<Resp>(bufferedSource, protocol.encoding, type);
@@ -132,8 +132,8 @@ export async function readErrorMessage(bufferedSource: BufferedSource): Promise<
  * While `<context-bytes>` has a single type of `ForkDigest`, this function only parses the `ForkName`
  * of the `ForkDigest` or defaults to `phase0`
  */
-export async function readContextBytes<Resp>(
-  contextBytes: ContextBytesFactory<Resp>,
+export async function readContextBytes(
+  contextBytes: ContextBytesFactory<unknown>,
   bufferedSource: BufferedSource
 ): Promise<ForkName> {
   switch (contextBytes.type) {

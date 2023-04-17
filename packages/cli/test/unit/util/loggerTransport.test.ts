@@ -3,26 +3,26 @@ import path from "node:path";
 import rimraf from "rimraf";
 import {expect} from "chai";
 import {config} from "@lodestar/config/default";
-import {ILogger, LodestarError, LogData, LogFormat, logFormats, LogLevel} from "@lodestar/utils";
-import {getCliLogger, ILogArgs, LOG_FILE_DISABLE_KEYWORD} from "../../../src/util/logger.js";
+import {Logger, LodestarError, LogData, LogFormat, logFormats, LogLevel} from "@lodestar/utils";
+import {getCliLogger, LogArgs, LOG_FILE_DISABLE_KEYWORD} from "../../../src/util/logger.js";
 
 describe("winston logger format and options", () => {
-  interface ITestCase {
+  type TestCase = {
     id: string;
     message: string;
     context?: LogData;
     error?: Error;
     output: {[P in LogFormat]: string};
-  }
+  };
   /* eslint-disable quotes */
-  const testCases: (ITestCase | (() => ITestCase))[] = [
+  const testCases: (TestCase | (() => TestCase))[] = [
     {
       id: "regular log with metadata",
       message: "foo bar",
       context: {meta: "data"},
       output: {
         human: "[]                 \u001b[33mwarn\u001b[39m: foo bar meta=data",
-        json: `{"message":"foo bar","context":{"meta":"data"},"level":"warn","module":""}`,
+        json: `{"context":{"meta":"data"},"level":"warn","message":"foo bar","module":""}`,
       },
     },
 
@@ -32,7 +32,7 @@ describe("winston logger format and options", () => {
       context: {data: BigInt(1)},
       output: {
         human: "[]                 \u001b[33mwarn\u001b[39m: big int data=1",
-        json: `{"message":"big int","context":{"data":"1"},"level":"warn","module":""}`,
+        json: `{"context":{"data":"1"},"level":"warn","message":"big int","module":""}`,
       },
     },
 
@@ -46,7 +46,7 @@ describe("winston logger format and options", () => {
         error: error,
         output: {
           human: `[]                 \u001b[33mwarn\u001b[39m: foo bar code=SAMPLE_ERROR, data=foo=bar\n${error.stack}`,
-          json: `{"message":"foo bar","error":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","module":""}`,
+          json: `{"error":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","message":"foo bar","module":""}`,
         },
       };
     },
@@ -65,7 +65,7 @@ describe("winston logger format and options", () => {
 
         logger.warn(message, context, error);
 
-        expect(stdoutHook.chunks.join("").trim()).to.equal(output[format]);
+        expect(stdoutHook.chunks.join("").trim()).to.deep.equal(output[format]);
 
         stdoutHook.restore();
       });
@@ -138,7 +138,7 @@ describe("winston transport log to file", () => {
   });
 });
 
-function getCliLoggerTest(logArgs: Partial<ILogArgs>): ILogger {
+function getCliLoggerTest(logArgs: Partial<LogArgs>): Logger {
   return getCliLogger(
     {logFile: LOG_FILE_DISABLE_KEYWORD, ...logArgs},
     {defaultLogFilepath: "logger_transport_test.log"},

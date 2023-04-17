@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {IEpochShuffling} from "@lodestar/state-transition";
+import {EpochShuffling} from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Root} from "@lodestar/types";
@@ -10,7 +10,7 @@ import {ZERO_HASH} from "../../../../src/constants/index.js";
 describe("StateContextCache", function () {
   let cache: StateContextCache;
   let key1: Root, key2: Root;
-  const shuffling: IEpochShuffling = {
+  const shuffling: EpochShuffling = {
     epoch: 0,
     activeIndices: [],
     shuffling: [],

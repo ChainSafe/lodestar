@@ -26,8 +26,8 @@ describe("Eth1DepositDataTracker", function () {
   );
   sinon
     .stub(
-      (eth1DepositDataTracker as never) as {
-        getLastProcessedDepositBlockNumber: typeof eth1DepositDataTracker["getLastProcessedDepositBlockNumber"];
+      eth1DepositDataTracker as never as {
+        getLastProcessedDepositBlockNumber: (typeof eth1DepositDataTracker)["getLastProcessedDepositBlockNumber"];
       },
       "getLastProcessedDepositBlockNumber"
     )

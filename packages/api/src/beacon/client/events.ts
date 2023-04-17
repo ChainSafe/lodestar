@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {Api, BeaconEvent, routesData, getEventSerdes} from "../routes/events.js";
 import {stringifyQuery} from "../../utils/client/format.js";
 import {getEventSource} from "../../utils/client/eventSource.js";
@@ -7,7 +7,7 @@ import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 /**
  * REST HTTP client for events routes
  */
-export function getClient(config: IChainForkConfig, baseUrl: string): Api {
+export function getClient(config: ChainForkConfig, baseUrl: string): Api {
   const eventSerdes = getEventSerdes(config);
 
   return {
@@ -32,7 +32,7 @@ export function getClient(config: IChainForkConfig, baseUrl: string): Api {
           // `eventSource.onerror` events are informative but don't indicate the EventSource closed
           // The only way to abort the connection from the client is via eventSource.close()
           eventSource.onerror = function onerror(err) {
-            const errEs = (err as unknown) as EventSourceError;
+            const errEs = err as unknown as EventSourceError;
             // Consider 400 and 500 status errors unrecoverable, close the eventsource
             if (errEs.status === 400) {
               reject(Error(`400 Invalid topics: ${errEs.message}`));

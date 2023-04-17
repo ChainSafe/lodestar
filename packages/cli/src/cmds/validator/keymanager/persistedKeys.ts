@@ -226,9 +226,7 @@ export class PersistedKeysBackend implements IPersistedKeysBackend {
     };
   }
 
-  private getValidatorPaths(
-    pubkey: PubkeyHex
-  ): {
+  private getValidatorPaths(pubkey: PubkeyHex): {
     dirpath: string;
     keystoreFilepath: string;
     passphraseFilepath: string;

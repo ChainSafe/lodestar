@@ -1,9 +1,9 @@
-import querystring from "querystring";
+import qs from "qs";
 import fastify, {FastifyInstance} from "fastify";
-import fastifyCors from "fastify-cors";
+import fastifyCors from "@fastify/cors";
 import {Api, ServerApi} from "@lodestar/api";
 import {registerRoutes} from "@lodestar/api/beacon/server";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 
 export type ServerOpts = {
   port: number;
@@ -12,13 +12,13 @@ export type ServerOpts = {
 
 export async function startServer(
   opts: ServerOpts,
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   api: {[K in keyof Api]: ServerApi<Api[K]>}
 ): Promise<FastifyInstance> {
   const server = fastify({
     logger: false,
     ajv: {customOptions: {coerceTypes: "array"}},
-    querystringParser: querystring.parse,
+    querystringParser: (str) => qs.parse(str, {comma: true, parseArrays: false}),
   });
 
   registerRoutes(server, config, api, ["lightclient", "proof", "events"]);

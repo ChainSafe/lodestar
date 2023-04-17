@@ -5,6 +5,7 @@ import {
   CachedBeaconStateAltair,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  isStateValidatorsNodesPopulated,
   RootCache,
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
@@ -328,6 +329,10 @@ export async function importBlock(
   //
   // This adds the state necessary to process the next block
   this.stateCache.add(postState);
+
+  if (!isStateValidatorsNodesPopulated(postState)) {
+    this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
+  }
 
   if (block.message.slot % SLOTS_PER_EPOCH === 0) {
     // Cache state to preserve epoch transition work

@@ -1,9 +1,9 @@
 import {allForks, ssz} from "@lodestar/types";
-import {ContextBytesType, Encoding, ProtocolDefinition, ProtocolDefinitionGenerator} from "../types.js";
+import {ContextBytesType, DuplexProtocolDefinitionGenerator, Encoding, MixedProtocolDefinition} from "../types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 const MetadataCommon: Pick<
-  ProtocolDefinition<null, allForks.Metadata>,
+  MixedProtocolDefinition<null, allForks.Metadata>,
   "method" | "encoding" | "requestType" | "renderRequestBody" | "inboundRateLimits"
 > = {
   method: "metadata",
@@ -15,7 +15,7 @@ const MetadataCommon: Pick<
   },
 };
 
-export const Metadata: ProtocolDefinitionGenerator<null, allForks.Metadata> = (modules, handler) => {
+export const Metadata: DuplexProtocolDefinitionGenerator<null, allForks.Metadata> = (modules, handler) => {
   return {
     ...MetadataCommon,
     version: 1,
@@ -25,7 +25,7 @@ export const Metadata: ProtocolDefinitionGenerator<null, allForks.Metadata> = (m
   };
 };
 
-export const MetadataV2: ProtocolDefinitionGenerator<null, allForks.Metadata> = (modules, handler) => {
+export const MetadataV2: DuplexProtocolDefinitionGenerator<null, allForks.Metadata> = (modules, handler) => {
   return {
     ...MetadataCommon,
     version: 2,

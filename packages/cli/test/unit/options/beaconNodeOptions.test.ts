@@ -2,7 +2,7 @@ import fs from "node:fs";
 import {expect} from "chai";
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
-import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
+import {parseBeaconNodeArgs, BeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {getTestdirPath} from "../../utils.js";
 
 describe("options / beaconNodeOptions", () => {
@@ -23,12 +23,15 @@ describe("options / beaconNodeOptions", () => {
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
       "chain.disableImportExecutionFcU": false,
+      "chain.preaggregateSlotDistance": 1,
+      "chain.attDataCacheSlotDistance": 2,
       "chain.computeUnrealized": true,
-      "chain.countUnrealizedFull": true,
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
       "safe-slots-to-import-optimistically": 256,
+      "chain.archiveStateEpochFrequency": 1024,
+      emitPayloadAttributes: false,
 
       eth1: true,
       "eth1.providerUrl": "http://my.node:8545",
@@ -47,10 +50,18 @@ describe("options / beaconNodeOptions", () => {
       builder: false,
       "builder.urls": ["http://localhost:8661"],
       "builder.timeout": 12000,
+      "builder.faultInspectionWindow": 32,
+      "builder.allowedFaults": 16,
 
       metrics: true,
       "metrics.port": 8765,
       "metrics.address": "0.0.0.0",
+
+      "monitoring.endpoint": "https://beaconcha.in/api/v1/client/metrics?apikey=secretKey&machine=machine1",
+      "monitoring.interval": 60000,
+      "monitoring.initialDelay": 30000,
+      "monitoring.requestTimeout": 10000,
+      "monitoring.collectSystemStats": true,
 
       discv5: true,
       listenAddress: "127.0.0.1",
@@ -74,12 +85,13 @@ describe("options / beaconNodeOptions", () => {
       "network.gossipsubDHigh": 6,
       "network.gossipsubAwaitHandler": true,
       "network.rateLimitMultiplier": 1,
+      "network.maxGossipTopicConcurrency": 64,
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
       "sync.backfillBatchSize": 64,
       "sync.disableRangeSync": false,
-    } as IBeaconNodeArgs;
+    } as BeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       api: {
@@ -100,12 +112,15 @@ describe("options / beaconNodeOptions", () => {
         persistInvalidSszObjects: true,
         proposerBoostEnabled: false,
         disableImportExecutionFcU: false,
+        preaggregateSlotDistance: 1,
+        attDataCacheSlotDistance: 2,
         computeUnrealized: true,
-        countUnrealizedFull: true,
         safeSlotsToImportOptimistically: 256,
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         assertCorrectProgressiveBalances: true,
         maxSkipSlots: 100,
+        archiveStateEpochFrequency: 1024,
+        emitPayloadAttributes: false,
       },
       eth1: {
         enabled: true,
@@ -126,11 +141,20 @@ describe("options / beaconNodeOptions", () => {
         enabled: false,
         urls: ["http://localhost:8661"],
         timeout: 12000,
+        faultInspectionWindow: 32,
+        allowedFaults: 16,
       },
       metrics: {
         enabled: true,
         port: 8765,
         address: "0.0.0.0",
+      },
+      monitoring: {
+        endpoint: "https://beaconcha.in/api/v1/client/metrics?apikey=secretKey&machine=machine1",
+        interval: 60000,
+        initialDelay: 30000,
+        requestTimeout: 10000,
+        collectSystemStats: true,
       },
       network: {
         discv5: {
@@ -152,6 +176,7 @@ describe("options / beaconNodeOptions", () => {
         gossipsubAwaitHandler: true,
         mdns: false,
         rateLimitMultiplier: 1,
+        maxGossipTopicConcurrency: 64,
       },
       sync: {
         isSingleNode: true,
@@ -175,7 +200,7 @@ describe("options / beaconNodeOptions", () => {
       eth1: true,
       "execution.urls": ["http://my.node:8551"],
       "jwt-secret": jwtSecretFile,
-    } as IBeaconNodeArgs;
+    } as BeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
       eth1: {

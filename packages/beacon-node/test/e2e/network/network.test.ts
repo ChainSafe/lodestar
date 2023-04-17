@@ -5,14 +5,14 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {SignableENR} from "@chainsafe/discv5";
-import {createIBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Network, NetworkEvent, ReqRespMethod, getReqRespHandlers} from "../../../src/network/index.js";
-import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options.js";
+import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 import {GoodByeReasonCode} from "../../../src/constants/index.js";
 
 import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
@@ -34,17 +34,15 @@ describe("network", function () {
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
-    while (afterEachCallbacks.length > 0) {
-      const callback = afterEachCallbacks.pop();
-      if (callback) await callback();
-    }
+    await Promise.all(afterEachCallbacks.map((cb) => cb()));
+    afterEachCallbacks.splice(0, afterEachCallbacks.length);
   });
 
   let controller: AbortController;
   beforeEach(() => (controller = new AbortController()));
   afterEach(() => controller.abort());
 
-  async function getOpts(peerId: PeerId): Promise<INetworkOptions> {
+  async function getOpts(peerId: PeerId): Promise<NetworkOptions> {
     const bindAddrUdp = `/ip4/0.0.0.0/udp/${port++}`;
     const enr = SignableENR.createFromPeerId(peerId);
     enr.setLocationMultiaddr(multiaddr(bindAddrUdp));
@@ -56,12 +54,7 @@ describe("network", function () {
       bootMultiaddrs: [],
       localMultiaddrs: [],
       discv5FirstQueryDelayMs: 0,
-      discv5: {
-        enr,
-        bindAddr: bindAddrUdp,
-        bootEnrs: [],
-        enabled: true,
-      },
+      discv5: null,
     };
   }
 
@@ -73,7 +66,7 @@ describe("network", function () {
         root: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
       },
     });
-    const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
+    const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
     return {block, state, config: beaconConfig};
   });
 
@@ -158,9 +151,9 @@ describe("network", function () {
       createTestNode("B"),
     ]);
 
-    if (!netBootnode.discv5()) throw Error("discv5 in bootnode is not enabled");
-    if (!netA.discv5()) throw Error("discv5 in A is not enabled");
-    if (!netB.discv5()) throw Error("discv5 in B is not enabled");
+    if (!netBootnode.discv5) throw Error("discv5 in bootnode is not enabled");
+    if (!netA.discv5) throw Error("discv5 in A is not enabled");
+    if (!netB.discv5) throw Error("discv5 in B is not enabled");
 
     const subscription: CommitteeSubscription = {
       validatorIndex: 2000,
@@ -173,7 +166,7 @@ describe("network", function () {
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
 
     // Add subnets to B ENR
-    await netB.discv5()?.setEnrValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(netB.metadata.attnets));
+    await netB.discv5?.setEnrValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(netB.metadata.attnets));
 
     // A knows about bootnode
     // TODO discv5 worker thread no longer allows adding an ENR
@@ -192,7 +185,7 @@ describe("network", function () {
     //   return [enrB];
     // };
 
-    netA.prepareBeaconCommitteeSubnet([subscription]);
+    await netA.prepareBeaconCommitteeSubnet([subscription]);
     await connected;
 
     expect(netA.getConnectionsByPeer().has(netB.peerId.toString())).to.be.equal(
@@ -229,9 +222,9 @@ describe("network", function () {
     const {network: netA} = await createTestNode("A");
 
     expect(netA.gossip.getTopics().length).to.equal(0);
-    netA.subscribeGossipCoreTopics();
+    await netA.subscribeGossipCoreTopics();
     expect(netA.gossip.getTopics().length).to.equal(13);
-    netA.unsubscribeGossipCoreTopics();
+    await netA.unsubscribeGossipCoreTopics();
     expect(netA.gossip.getTopics().length).to.equal(0);
     await netA.close();
   });

@@ -9,14 +9,14 @@ import {
   BuilderSelection,
 } from "@lodestar/validator";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
-import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@lodestar/beacon-node";
+import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer, MonitoringService} from "@lodestar/beacon-node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
-import {IGlobalArgs} from "../../options/index.js";
+import {GlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger, cleanOldLogFiles} from "../../util/index.js";
 import {onGracefulShutdown, parseFeeRecipient, parseProposerConfig} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
-import {IValidatorCliArgs, validatorMetricsDefaultOptions} from "./options.js";
+import {IValidatorCliArgs, validatorMetricsDefaultOptions, validatorMonitoringDefaultOptions} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
 import {logSigners} from "./signers/logSigners.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
@@ -27,7 +27,7 @@ import {KeymanagerRestApiServer} from "./keymanager/server.js";
 /**
  * Runs a validator client.
  */
-export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
+export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Promise<void> {
   const {config, network} = getBeaconConfigFromArgs(args);
 
   const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
@@ -51,6 +51,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   const {version, commit} = getVersionData();
   logger.info("Lodestar", {network, version, commit});
+  if (args.distributed) logger.info("Client is configured to run as part of a distributed validator cluster");
   logger.info("Connecting to LevelDB database", {path: validatorPaths.validatorsDbDir});
 
   const dbPath = validatorPaths.validatorsDbDir;
@@ -100,18 +101,18 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   const dbOps = {
     config,
-    controller: new LevelDbController({name: dbPath}, {metrics: null}),
+    controller: new LevelDbController({name: dbPath}, {metrics: null, logger}),
   };
   onGracefulShutdownCbs.push(() => dbOps.controller.stop());
   await dbOps.controller.start();
 
   const slashingProtection = new SlashingProtection(dbOps);
 
-  // Create metrics registry if metrics are enabled
+  // Create metrics registry if metrics are enabled or monitoring endpoint is configured
   // Send version and network data for static registries
 
-  const register = args["metrics"] ? new RegistryMetricCreator() : null;
-  const metrics = register && getMetrics((register as unknown) as MetricsRegister, {version, commit, network});
+  const register = args["metrics"] || args["monitoring.endpoint"] ? new RegistryMetricCreator() : null;
+  const metrics = register && getMetrics(register as unknown as MetricsRegister, {version, commit, network});
 
   // Start metrics server if metrics are enabled.
   // Collect NodeJS metrics defined in the Lodestar repo
@@ -119,12 +120,34 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   if (metrics) {
     collectNodeJSMetrics(register);
 
-    const port = args["metrics.port"] ?? validatorMetricsDefaultOptions.port;
-    const address = args["metrics.address"] ?? validatorMetricsDefaultOptions.address;
-    const metricsServer = new HttpMetricsServer({port, address}, {register, logger});
+    // only start server if metrics are explicitly enabled
+    if (args["metrics"]) {
+      const port = args["metrics.port"] ?? validatorMetricsDefaultOptions.port;
+      const address = args["metrics.address"] ?? validatorMetricsDefaultOptions.address;
+      const metricsServer = new HttpMetricsServer({port, address}, {register, logger});
 
-    onGracefulShutdownCbs.push(() => metricsServer.stop());
-    await metricsServer.start();
+      onGracefulShutdownCbs.push(() => metricsServer.stop());
+      await metricsServer.start();
+    }
+  }
+
+  if (args["monitoring.endpoint"]) {
+    const {interval, initialDelay, requestTimeout, collectSystemStats} = validatorMonitoringDefaultOptions;
+
+    const monitoring = new MonitoringService(
+      "validator",
+      {
+        endpoint: args["monitoring.endpoint"],
+        interval: args["monitoring.interval"] ?? interval,
+        initialDelay: args["monitoring.initialDelay"] ?? initialDelay,
+        requestTimeout: args["monitoring.requestTimeout"] ?? requestTimeout,
+        collectSystemStats: args["monitoring.collectSystemStats"] ?? collectSystemStats,
+      },
+      {register: register as RegistryMetricCreator, logger}
+    );
+
+    onGracefulShutdownCbs.push(() => monitoring.stop());
+    monitoring.start();
   }
 
   // This promise resolves once genesis is available.
@@ -142,7 +165,9 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       doppelgangerProtectionEnabled,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
       scAfterBlockDelaySlotFraction: args.scAfterBlockDelaySlotFraction,
+      disableAttestationGrouping: args.disableAttestationGrouping,
       valProposerConfig,
+      distributed: args.distributed,
     },
     metrics
   );

@@ -11,14 +11,14 @@ import {getSeed} from "./seed.js";
 import {unshuffleList} from "./shuffle.js";
 
 /**
- * Readonly interface for IEpochShuffling.
+ * Readonly interface for EpochShuffling.
  */
-export interface IReadonlyEpochShuffling {
+export type ReadonlyEpochShuffling = {
   readonly epoch: Epoch;
   readonly committees: Readonly<ValidatorIndex[][][]>;
-}
+};
 
-export interface IEpochShuffling {
+export type EpochShuffling = {
   /**
    * Epoch being shuffled
    */
@@ -48,7 +48,7 @@ export interface IEpochShuffling {
    * Committees per slot, for fast attestation verification
    */
   committeesPerSlot: number;
-}
+};
 
 export function computeCommitteeCount(activeValidatorCount: number): number {
   const validatorsPerSlot = intDiv(activeValidatorCount, SLOTS_PER_EPOCH);
@@ -60,7 +60,7 @@ export function computeEpochShuffling(
   state: BeaconStateAllForks,
   activeIndices: ValidatorIndex[],
   epoch: Epoch
-): IEpochShuffling {
+): EpochShuffling {
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
 
   // copy

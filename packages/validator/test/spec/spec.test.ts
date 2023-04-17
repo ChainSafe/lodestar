@@ -1,6 +1,6 @@
 import path from "node:path";
 import {expect} from "chai";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import {fromHexString} from "@chainsafe/ssz";
 import {LevelDbController} from "@lodestar/db";
 import {config} from "@lodestar/config/default";
@@ -13,13 +13,14 @@ import {
   SlashingProtectionBlock,
   SlashingProtectionAttestation,
 } from "../../src/slashingProtection/index.js";
+import {testLogger} from "../utils/logger.js";
 import {loadTestCases} from "../utils/spec.js";
 import {SPEC_TEST_LOCATION} from "./params.js";
 
 describe("slashing-protection-interchange-tests", () => {
   const testCases = loadTestCases(path.join(SPEC_TEST_LOCATION, "/tests/generated"));
   const dbLocation = "./.__testdb";
-  const controller = new LevelDbController({name: dbLocation}, {});
+  const controller = new LevelDbController({name: dbLocation}, {logger: testLogger()});
 
   after(() => {
     rimraf.sync(dbLocation);

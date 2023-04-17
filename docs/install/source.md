@@ -7,6 +7,7 @@ Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install).
 <!-- prettier-ignore-start -->
 !!! info
     NodeJS versions older than the current LTS are not supported by Lodestar. We recommend running the latest Node LTS.
+    It is important to make sure the NodeJS version is not changed after reboot by setting a default `nvm alias default <version> && nvm use default`.
 
 !!! note
     Node Version Manager (NVM) will only install NodeJS for use with the active user. If you intend on setting up Lodestar to run under another user, we recommend using [Nodesource's source for NodeJS](https://github.com/nodesource/distributions/blob/master/README.md#installation-instructions) so you can install NodeJS globally.
@@ -14,10 +15,10 @@ Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install).
 
 ## Clone repository
 
-Clone the repo locally.
+Clone the repo locally and build from the stable release branch.
 
 ```bash
-git clone https://github.com/chainsafe/lodestar.git
+git clone -b stable https://github.com/chainsafe/lodestar.git
 ```
 
 Switch to created directory.
@@ -25,12 +26,6 @@ Switch to created directory.
 ```bash
 cd lodestar
 ```
-
-<!-- prettier-ignore-start -->
-!!! warning
-    `git clone` will check out the default `unstable` branch. If you are running Lodestar in production, we recommend to either use the `stable` branch
-    by running `git switch stable` or to use a specific version by running `git checkout <version>`, e.g. `git checkout v1.3.0`.
-<!-- prettier-ignore-end -->
 
 ## Install packages
 

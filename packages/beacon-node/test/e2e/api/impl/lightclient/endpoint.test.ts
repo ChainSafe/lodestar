@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {createIBeaconConfig, IChainConfig} from "@lodestar/config";
+import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {ApiError, getClient, routes} from "@lodestar/api";
 import {sleep} from "@lodestar/utils";
@@ -20,9 +20,9 @@ describe("lightclient api", function () {
   const SECONDS_PER_SLOT = 1;
   const ALTAIR_FORK_EPOCH = 0;
   const restPort = 9596;
-  const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+  const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
-  const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
+  const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
   const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
   const loggerNodeA = testLogger("Node-A", testLoggerOpts);
   const validatorCount = 2;
@@ -71,22 +71,31 @@ describe("lightclient api", function () {
     }
   });
 
-  it("getUpdates()", async function () {
+  const waitForBestUpdate = async (): Promise<void> => {
+    // should see this event in 5 slots
+    await waitForEvent(
+      bn.chain.emitter,
+      routes.events.EventType.lightClientOptimisticUpdate,
+      5 * SECONDS_PER_SLOT * 1000
+    );
+    // wait for 1 slot to persist the best update
     await sleep(2 * SECONDS_PER_SLOT * 1000);
+  };
+
+  it("getUpdates()", async function () {
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
+    await waitForBestUpdate();
     const res = await client.getUpdates(0, 1);
     ApiError.assert(res);
     const updates = res.response;
-    const slot = bn.chain.clock.currentSlot;
     expect(updates.length).to.be.equal(1);
-    // at slot 2 we got attestedHeader for slot 1
-    expect(updates[0].data.attestedHeader.beacon.slot).to.be.equal(slot - 1);
+    // best update could be any slots
     // version is set
     expect(updates[0].version).to.be.equal(ForkName.altair);
   });
 
   it("getOptimisticUpdate()", async function () {
-    await sleep(2 * SECONDS_PER_SLOT * 1000);
+    await waitForBestUpdate();
     const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
     const res = await client.getOptimisticUpdate();
     ApiError.assert(res);
@@ -109,8 +118,7 @@ describe("lightclient api", function () {
   });
 
   it("getCommitteeRoot() for the 1st period", async function () {
-    // call this right away causes "No partialUpdate available for period 0"
-    await sleep(2 * SECONDS_PER_SLOT * 1000);
+    await waitForBestUpdate();
 
     const lightclient = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
     const committeeRes = await lightclient.getCommitteeRoot(0, 1);

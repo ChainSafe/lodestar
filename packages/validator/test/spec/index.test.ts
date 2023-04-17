@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import {LevelDbController} from "@lodestar/db";
 import {config} from "@lodestar/config/default";
 import {
@@ -9,10 +9,11 @@ import {
   InvalidBlockError,
   InvalidAttestationError,
 } from "../../src/slashingProtection/index.js";
+import {testLogger} from "../utils/logger.js";
 
 describe("slashing-protection custom tests", () => {
   const dbLocation = "./.__testdb_2";
-  const controller = new LevelDbController({name: dbLocation}, {});
+  const controller = new LevelDbController({name: dbLocation}, {logger: testLogger()});
   const pubkey = Buffer.alloc(96, 1);
 
   before(async () => {

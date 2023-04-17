@@ -76,6 +76,7 @@ nav:
       - Validator management: usage/validator-management.md
       - Prometheus & Grafana Setup: usage/prometheus-grafana.md
       - MEV Builder Integration: usage/mev-integration.md 
+      - Client monitoring: usage/client-monitoring.md
   - Reference:
       - Command line: reference/cli.md
   - Libraries: libraries/index.md

@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString as b} from "@chainsafe/ssz";
 import {PresetName} from "@lodestar/params";
-import {IChainConfig} from "../types.js";
+import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../presets/mainnet.js";
 
-export const chiadoChainConfig: IChainConfig = {
+export const chiadoChainConfig: ChainConfig = {
   ...mainnet,
 
   // NOTE: Only add diff values
@@ -38,4 +38,7 @@ export const chiadoChainConfig: IChainConfig = {
   // Bellatrix
   BELLATRIX_FORK_VERSION: b("0x0200006f"),
   BELLATRIX_FORK_EPOCH: 180,
+  // Capella
+  CAPELLA_FORK_VERSION: b("0x0300006f"),
+  CAPELLA_FORK_EPOCH: Infinity,
 };

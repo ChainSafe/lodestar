@@ -215,3 +215,28 @@ export const SignedBuilderBid = new ContainerType(
   },
   {typeName: "SignedBuilderBid", jsonCase: "eth2"}
 );
+
+// PayloadAttributes primarily for SSE event
+export const PayloadAttributes = new ContainerType(
+  {timestamp: UintNum64, prevRandao: Bytes32, suggestedFeeRecipient: ExecutionAddress},
+  {typeName: "PayloadAttributes", jsonCase: "eth2"}
+);
+
+export const SSEPayloadAttributesCommon = new ContainerType(
+  {
+    proposerIndex: UintNum64,
+    proposalSlot: Slot,
+    proposalBlockNumber: UintNum64,
+    parentBlockRoot: Root,
+    parentBlockHash: Root,
+  },
+  {typeName: "SSEPayloadAttributesCommon", jsonCase: "eth2"}
+);
+
+export const SSEPayloadAttributes = new ContainerType(
+  {
+    ...SSEPayloadAttributesCommon.fields,
+    payloadAttributes: PayloadAttributes,
+  },
+  {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
+);

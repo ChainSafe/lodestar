@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
 import {Db, Bucket, Repository} from "@lodestar/db";
 
@@ -7,7 +7,7 @@ import {Db, Bucket, Repository} from "@lodestar/db";
  * Removed when included on chain or old
  */
 export class DepositEventRepository extends Repository<number, phase0.DepositEvent> {
-  constructor(config: IChainForkConfig, db: Db) {
+  constructor(config: ChainForkConfig, db: Db) {
     super(config, db, Bucket.phase0_depositEvent, ssz.phase0.DepositEvent);
   }
 

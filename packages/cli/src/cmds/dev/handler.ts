@@ -1,9 +1,8 @@
 import fs from "node:fs";
-import {promisify} from "node:util";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import {toHex, fromHex} from "@lodestar/utils";
 import {nodeUtils} from "@lodestar/beacon-node";
-import {IGlobalArgs} from "../../options/index.js";
+import {GlobalArgs} from "../../options/index.js";
 import {mkdir, onGracefulShutdown} from "../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {getBeaconPaths} from "../beacon/paths.js";
@@ -16,7 +15,7 @@ import {writeTestnetFiles} from "./files.js";
 /**
  * Run a beacon node with validator
  */
-export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
+export async function devHandler(args: IDevArgs & GlobalArgs): Promise<void> {
   const {config} = getBeaconConfigFromArgs(args);
 
   if (args.dumpTestnetFiles) {
@@ -38,8 +37,8 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   // Remove slashing protection db. Otherwise the validators won't be able to propose nor attest
   // until the clock reach a higher slot than the previous run of the dev command
   if (args.genesisTime === undefined) {
-    await promisify(rimraf)(beaconDbDir);
-    await promisify(rimraf)(validatorsDbDir);
+    await rimraf(beaconDbDir);
+    await rimraf(validatorsDbDir);
   }
 
   mkdir(beaconDbDir);
@@ -47,8 +46,8 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
 
   if (args.reset) {
     onGracefulShutdown(async () => {
-      await promisify(rimraf)(beaconDbDir);
-      await promisify(rimraf)(validatorsDbDir);
+      await rimraf(beaconDbDir);
+      await rimraf(validatorsDbDir);
     });
   }
 
@@ -80,6 +79,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     // Note: recycle entire validator handler:
     // - keystore handling
     // - metrics
+    // - monitoring
     // - keymanager server
     await validatorHandler(args);
   }

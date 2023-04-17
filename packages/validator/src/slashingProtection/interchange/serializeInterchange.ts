@@ -1,10 +1,10 @@
 import {InterchangeError, InterchangeErrorErrorCode} from "./errors.js";
-import {Interchange, InterchangeFormatVersion, IInterchangeLodestar} from "./types.js";
+import {Interchange, InterchangeFormatVersion, InterchangeLodestar} from "./types.js";
 import {serializeInterchangeCompleteV4} from "./formats/completeV4.js";
 import {serializeInterchangeV5} from "./formats/v5.js";
 
 export function serializeInterchange(
-  interchangeLodestar: IInterchangeLodestar,
+  interchangeLodestar: InterchangeLodestar,
   {format, version}: InterchangeFormatVersion
 ): Interchange {
   // version >= v5.0.0

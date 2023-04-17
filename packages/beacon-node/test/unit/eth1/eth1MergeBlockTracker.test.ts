@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {IChainConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {IEth1Provider} from "../../../src/index.js";
@@ -14,19 +14,19 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
   const logger = testLogger();
 
   const terminalTotalDifficulty = 1000;
-  let config: IChainConfig;
+  let config: ChainConfig;
   let controller: AbortController;
   beforeEach(() => (controller = new AbortController()));
   afterEach(() => controller.abort());
   beforeEach(() => {
-    config = ({
+    config = {
       // Set time units to 0 to make the test as fast as possible
       SECONDS_PER_ETH1_BLOCK: 0,
       SECONDS_PER_SLOT: 0,
       // Hardcode TTD to a low value
       TERMINAL_TOTAL_DIFFICULTY: BigInt(terminalTotalDifficulty),
       TERMINAL_BLOCK_HASH: ZERO_HASH,
-    } as Partial<IChainConfig>) as IChainConfig;
+    } as Partial<ChainConfig> as ChainConfig;
   });
 
   it("Should find terminal pow block through TERMINAL_BLOCK_HASH", async () => {

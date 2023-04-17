@@ -1,11 +1,11 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Slot} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
-import {ILogger, toHex} from "@lodestar/utils";
+import {Logger, toHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {IKeyValue} from "@lodestar/db";
-import {IChainForkConfig} from "@lodestar/config";
+import {KeyValue} from "@lodestar/db";
+import {ChainForkConfig} from "@lodestar/config";
 import {IBeaconDb} from "../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../db/repositories/index.js";
 import {LightClientServer} from "../lightClient/index.js";
@@ -28,11 +28,11 @@ type BlockRootSlot = {slot: Slot; root: Uint8Array};
  * the next run should not reprocess finalzied block of this run.
  */
 export async function archiveBlocks(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   db: IBeaconDb,
   forkChoice: IForkChoice,
   lightclientServer: LightClientServer,
-  logger: ILogger,
+  logger: Logger,
   finalizedCheckpoint: {rootHex: string; epoch: Epoch},
   currentEpoch: Epoch
 ): Promise<void> {
@@ -41,7 +41,7 @@ export async function archiveBlocks(
   const finalizedNonCanonicalBlocks = forkChoice.getAllNonAncestorBlocks(finalizedCheckpoint.rootHex);
 
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous
-  const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.EIP4844_FORK_EPOCH;
+  const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.DENEB_FORK_EPOCH;
 
   const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
@@ -82,7 +82,7 @@ export async function archiveBlocks(
   // Keep only `[max(GENESIS_EPOCH, current_epoch - MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS), current_epoch]`
   if (finalizedPostDeneb) {
     const blobsSidecarMinEpoch = currentEpoch - config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS;
-    if (blobsSidecarMinEpoch >= config.EIP4844_FORK_EPOCH) {
+    if (blobsSidecarMinEpoch >= config.DENEB_FORK_EPOCH) {
       const slotsToDelete = await db.blobsSidecarArchive.keys({lt: computeStartSlotAtEpoch(blobsSidecarMinEpoch)});
       if (slotsToDelete.length > 0) {
         await db.blobsSidecarArchive.batchDelete(slotsToDelete);
@@ -148,7 +148,7 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot
 }
 
 async function migrateBlobsSidecarFromHotToColdDb(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   db: IBeaconDb,
   blocks: BlockRootSlot[]
 ): Promise<void> {
@@ -160,7 +160,7 @@ async function migrateBlobsSidecarFromHotToColdDb(
     if (canonicalBlocks.length === 0) return;
 
     // load Buffer instead of ssz deserialized to improve performance
-    const canonicalBlobsSidecarEntries: IKeyValue<Slot, Uint8Array>[] = await Promise.all(
+    const canonicalBlobsSidecarEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
       canonicalBlocks
         .filter((block) => config.getForkSeq(block.slot) >= ForkSeq.deneb)
         .map(async (block) => {

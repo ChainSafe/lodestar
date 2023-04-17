@@ -1,16 +1,21 @@
 import {allForks, bellatrix, Slot, Root, BLSPubkey, ssz, deneb, Wei} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {ApiError} from "@lodestar/api";
 import {validateBlobsAndKzgCommitments} from "../../chain/produceBlock/validateBlobsAndKzgCommitments.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {IExecutionBuilder} from "./interface.js";
 
 export type ExecutionBuilderHttpOpts = {
   enabled: boolean;
   urls: string[];
   timeout?: number;
+  faultInspectionWindow?: number;
+  allowedFaults?: number;
+
   // Only required for merge-mock runs, no need to expose it to cli
   issueLocalFcUForBlockProduction?: boolean;
 };
@@ -23,17 +28,37 @@ export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
 
 export class ExecutionBuilderHttp implements IExecutionBuilder {
   readonly api: BuilderApi;
-  readonly config: IChainForkConfig;
+  readonly config: ChainForkConfig;
   readonly issueLocalFcUForBlockProduction?: boolean;
   // Builder needs to be explicity enabled using updateStatus
   status = false;
+  faultInspectionWindow: number;
+  allowedFaults: number;
 
-  constructor(opts: ExecutionBuilderHttpOpts, config: IChainForkConfig) {
+  constructor(opts: ExecutionBuilderHttpOpts, config: ChainForkConfig, metrics: Metrics | null = null) {
     const baseUrl = opts.urls[0];
     if (!baseUrl) throw Error("No Url provided for executionBuilder");
-    this.api = getClient({baseUrl, timeoutMs: opts.timeout}, {config});
+    this.api = getClient({baseUrl, timeoutMs: opts.timeout}, {config, metrics: metrics?.builderHttpClient});
     this.config = config;
     this.issueLocalFcUForBlockProduction = opts.issueLocalFcUForBlockProduction;
+
+    /**
+     * Beacon clients select randomized values from the following ranges when initializing
+     * the circuit breaker (so at boot time and once for each unique boot).
+     *
+     * ALLOWED_FAULTS: between 1 and SLOTS_PER_EPOCH // 2
+     * FAULT_INSPECTION_WINDOW: between SLOTS_PER_EPOCH and 2 * SLOTS_PER_EPOCH
+     *
+     */
+    this.faultInspectionWindow = Math.max(
+      opts.faultInspectionWindow ?? SLOTS_PER_EPOCH + Math.floor(Math.random() * SLOTS_PER_EPOCH),
+      SLOTS_PER_EPOCH
+    );
+    // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/2
+    this.allowedFaults = Math.min(
+      opts.allowedFaults ?? Math.floor(this.faultInspectionWindow / 2),
+      Math.floor(this.faultInspectionWindow / 2)
+    );
   }
 
   updateStatus(shouldEnable: boolean): void {

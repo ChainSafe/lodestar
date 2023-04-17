@@ -3,13 +3,15 @@ import {IForkChoice} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache/index.js";
-import {IMetrics} from "../../metrics/index.js";
+import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
-import {IStateRegenerator, RegenCaller, RegenFnName} from "./interface.js";
+import {IStateRegenerator, RegenCaller, RegenFnName, StateCloneOpts} from "./interface.js";
 import {StateRegenerator, RegenModules} from "./regen.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 
 const REGEN_QUEUE_MAX_LEN = 256;
+// TODO: Should this constant be lower than above? 256 feels high
+const REGEN_CAN_ACCEPT_WORK_THRESHOLD = 16;
 
 type QueuedStateRegeneratorModules = RegenModules & {
   signal: AbortSignal;
@@ -31,7 +33,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   private forkChoice: IForkChoice;
   private stateCache: StateContextCache;
   private checkpointStateCache: CheckpointStateCache;
-  private metrics: IMetrics | null;
+  private metrics: Metrics | null;
 
   constructor(modules: QueuedStateRegeneratorModules) {
     this.regen = new StateRegenerator(modules);
@@ -46,11 +48,19 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.metrics = modules.metrics;
   }
 
+  canAcceptWork(): boolean {
+    return this.jobQueue.jobLen < REGEN_CAN_ACCEPT_WORK_THRESHOLD;
+  }
+
   /**
    * Get the state to run with `block`.
    * - State after `block.parentRoot` dialed forward to block.slot
    */
-  async getPreState(block: allForks.BeaconBlock, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
+  async getPreState(
+    block: allForks.BeaconBlock,
+    opts: StateCloneOpts,
+    rCaller: RegenCaller
+  ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getPreState});
 
     // First attempt to fetch the state from caches before queueing
@@ -93,10 +103,14 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
     // The state is not immediately available in the caches, enqueue the job
     this.metrics?.regenFnQueuedTotal.inc({caller: rCaller, entrypoint: RegenFnName.getPreState});
-    return this.jobQueue.push({key: "getPreState", args: [block, rCaller]});
+    return this.jobQueue.push({key: "getPreState", args: [block, opts, rCaller]});
   }
 
-  async getCheckpointState(cp: phase0.Checkpoint, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
+  async getCheckpointState(
+    cp: phase0.Checkpoint,
+    opts: StateCloneOpts,
+    rCaller: RegenCaller
+  ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getCheckpointState});
 
     // First attempt to fetch the state from cache before queueing
@@ -107,14 +121,19 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
     // The state is not immediately available in the caches, enqueue the job
     this.metrics?.regenFnQueuedTotal.inc({caller: rCaller, entrypoint: RegenFnName.getCheckpointState});
-    return this.jobQueue.push({key: "getCheckpointState", args: [cp, rCaller]});
+    return this.jobQueue.push({key: "getCheckpointState", args: [cp, opts, rCaller]});
   }
 
-  async getBlockSlotState(blockRoot: RootHex, slot: Slot, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
+  async getBlockSlotState(
+    blockRoot: RootHex,
+    slot: Slot,
+    opts: StateCloneOpts,
+    rCaller: RegenCaller
+  ): Promise<CachedBeaconStateAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getBlockSlotState});
 
     // The state is not immediately available in the caches, enqueue the job
-    return this.jobQueue.push({key: "getBlockSlotState", args: [blockRoot, slot, rCaller]});
+    return this.jobQueue.push({key: "getBlockSlotState", args: [blockRoot, slot, opts, rCaller]});
   }
 
   async getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {

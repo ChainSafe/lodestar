@@ -1,6 +1,6 @@
 import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {Api, ApiError} from "@lodestar/api";
-import {ILogger, sleep} from "@lodestar/utils";
+import {Logger, sleep} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ProcessShutdownCallback, PubkeyHex} from "../types.js";
 import {IClock} from "../util/index.js";
@@ -38,7 +38,7 @@ export class DoppelgangerService {
   private readonly doppelgangerStateByPubkey = new Map<PubkeyHex, DoppelgangerState>();
 
   constructor(
-    private readonly logger: ILogger,
+    private readonly logger: Logger,
     private readonly clock: IClock,
     private readonly api: Api,
     private readonly indicesService: IndicesService,

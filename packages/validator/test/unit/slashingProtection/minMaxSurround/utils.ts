@@ -1,5 +1,5 @@
 import {BLSPubkey, ssz} from "@lodestar/types";
-import {IDistanceStore, IDistanceEntry} from "../../../../src/slashingProtection/minMaxSurround/index.js";
+import {IDistanceStore, DistanceEntry} from "../../../../src/slashingProtection/minMaxSurround/index.js";
 
 export const emptyPubkey = ssz.BLSPubkey.defaultValue();
 export class DistanceMapStore {
@@ -12,7 +12,7 @@ export class DistanceMapStore {
     return this.map.get(epoch) ?? null;
   }
 
-  async setBatch(pubkey: BLSPubkey, values: IDistanceEntry[]): Promise<void> {
+  async setBatch(pubkey: BLSPubkey, values: DistanceEntry[]): Promise<void> {
     for (const {source, distance} of values) {
       this.map.set(source, distance);
     }

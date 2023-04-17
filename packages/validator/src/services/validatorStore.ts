@@ -6,7 +6,7 @@ import {
   ZERO_HASH,
   blindedOrFullBlockHashTreeRoot,
 } from "@lodestar/state-transition";
-import {IBeaconConfig} from "@lodestar/config";
+import {BeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_AGGREGATE_AND_PROOF,
   DOMAIN_BEACON_ATTESTER,
@@ -120,7 +120,7 @@ type ValidatorData = ProposerConfig & {
 export const defaultOptions = {
   suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
   defaultGasLimit: 30_000_000,
-  builderSelection: BuilderSelection.BuilderAlways,
+  builderSelection: BuilderSelection.MaxProfit,
 };
 
 /**
@@ -133,7 +133,7 @@ export class ValidatorStore {
   private readonly defaultProposerConfig: DefaultProposerConfig;
 
   constructor(
-    private readonly config: IBeaconConfig,
+    private readonly config: BeaconConfig,
     private readonly slashingProtection: ISlashingProtection,
     private readonly indicesService: IndicesService,
     private readonly doppelgangerService: DoppelgangerService | null,

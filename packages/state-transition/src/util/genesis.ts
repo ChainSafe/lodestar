@@ -1,4 +1,4 @@
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -30,7 +30,7 @@ type DepositDataRootViewDU = CompositeViewDU<DepositDataRootListType>;
  * @param config
  * @param state
  */
-export function isValidGenesisState(config: IChainForkConfig, state: BeaconStateAllForks): boolean {
+export function isValidGenesisState(config: ChainForkConfig, state: BeaconStateAllForks): boolean {
   return state.genesisTime >= config.MIN_GENESIS_TIME && isValidGenesisValidators(config, state);
 }
 
@@ -39,7 +39,7 @@ export function isValidGenesisState(config: IChainForkConfig, state: BeaconState
  * @param config
  * @param state
  */
-export function isValidGenesisValidators(config: IChainForkConfig, state: BeaconStateAllForks): boolean {
+export function isValidGenesisValidators(config: ChainForkConfig, state: BeaconStateAllForks): boolean {
   return (
     getActiveValidatorIndices(state, computeEpochAtSlot(GENESIS_SLOT)).length >=
     config.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT
@@ -52,7 +52,7 @@ export function isValidGenesisValidators(config: IChainForkConfig, state: Beacon
  * SLOW CODE - 🐢
  */
 export function getGenesisBeaconState(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   genesisEth1Data: phase0.Eth1Data,
   latestBlockHeader: phase0.BeaconBlockHeader
 ): BeaconStateAllForks {
@@ -93,7 +93,7 @@ export function getGenesisBeaconState(
 
 /**
  * Apply eth1 block hash to state.
- * @param config IChainForkConfig
+ * @param config ChainForkConfig
  * @param state BeaconState
  * @param eth1BlockHash eth1 block hash
  */
@@ -108,11 +108,7 @@ export function applyEth1BlockHash(state: CachedBeaconStateAllForks, eth1BlockHa
  * @param state BeaconState
  * @param eth1Timestamp eth1 block timestamp
  */
-export function applyTimestamp(
-  config: IChainForkConfig,
-  state: CachedBeaconStateAllForks,
-  eth1Timestamp: number
-): void {
+export function applyTimestamp(config: ChainForkConfig, state: CachedBeaconStateAllForks, eth1Timestamp: number): void {
   state.genesisTime = eth1Timestamp + config.GENESIS_DELAY;
 }
 
@@ -123,14 +119,14 @@ export function applyTimestamp(
  *
  * SLOW CODE - 🐢
  *
- * @param config IChainForkConfig
+ * @param config ChainForkConfig
  * @param state BeaconState
  * @param newDeposits new deposits
  * @param fullDepositDataRootList full list of deposit data root from index 0
  * @returns active validator indices
  */
 export function applyDeposits(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   state: CachedBeaconStateAllForks,
   newDeposits: phase0.Deposit[],
   fullDepositDataRootList?: DepositDataRootViewDU
@@ -208,7 +204,7 @@ export function applyDeposits(
  * SLOW CODE - 🐢
  */
 export function initializeBeaconStateFromEth1(
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   immutableData: EpochContextImmutableData,
   eth1BlockHash: Bytes32,
   eth1Timestamp: TimeSeconds,
@@ -279,10 +275,10 @@ export function initializeBeaconStateFromEth1(
       ssz.capella.ExecutionPayloadHeader.defaultViewDU();
   }
 
-  if (GENESIS_SLOT >= config.EIP4844_FORK_EPOCH) {
+  if (GENESIS_SLOT >= config.DENEB_FORK_EPOCH) {
     const stateDeneb = state as CompositeViewDU<typeof ssz.deneb.BeaconState>;
-    stateDeneb.fork.previousVersion = config.EIP4844_FORK_VERSION;
-    stateDeneb.fork.currentVersion = config.EIP4844_FORK_VERSION;
+    stateDeneb.fork.previousVersion = config.DENEB_FORK_VERSION;
+    stateDeneb.fork.currentVersion = config.DENEB_FORK_VERSION;
     stateDeneb.latestExecutionPayloadHeader =
       (executionPayloadHeader as CompositeViewDU<typeof ssz.deneb.ExecutionPayloadHeader>) ??
       ssz.deneb.ExecutionPayloadHeader.defaultViewDU();

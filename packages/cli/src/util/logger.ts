@@ -3,10 +3,10 @@ import fs from "node:fs";
 import DailyRotateFile from "winston-daily-rotate-file";
 import TransportStream from "winston-transport";
 import winston from "winston";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
-  ILogger,
+  Logger,
   LogLevel,
   createWinstonLogger,
   TimestampFormat,
@@ -14,7 +14,7 @@ import {
   LogFormat,
   logFormats,
 } from "@lodestar/utils";
-import {IGlobalArgs} from "../options/globalOptions.js";
+import {GlobalArgs} from "../options/globalOptions.js";
 import {ConsoleDynamicLevel} from "./loggerConsoleTransport.js";
 
 export const LOG_FILE_DISABLE_KEYWORD = "none";
@@ -23,7 +23,7 @@ export const LOG_FILE_LEVEL_DEFAULT = LogLevel.debug;
 export const LOG_DAILY_ROTATE_DEFAULT = 5;
 const DATE_PATTERN = "YYYY-MM-DD";
 
-export interface ILogArgs {
+export type LogArgs = {
   logLevel?: LogLevel;
   logFile?: string;
   logFileLevel?: LogLevel;
@@ -32,17 +32,17 @@ export interface ILogArgs {
   logPrefix?: string;
   logFormat?: string;
   logLevelModule?: string[];
-}
+};
 
 /**
  * Setup a CLI logger, common for beacon, validator and dev commands
  */
 export function getCliLogger(
-  args: ILogArgs & Pick<IGlobalArgs, "dataDir">,
+  args: LogArgs & Pick<GlobalArgs, "dataDir">,
   paths: {defaultLogFilepath: string},
-  config: IChainForkConfig,
+  config: ChainForkConfig,
   opts?: {hideTimestamp?: boolean}
-): {logger: ILogger; logParams: {filename: string; rotateMaxFiles: number}} {
+): {logger: Logger; logParams: {filename: string; rotateMaxFiles: number}} {
   const consoleTransport = new ConsoleDynamicLevel({
     // Set defaultLevel, not level for dynamic level setting of ConsoleDynamicLvevel
     defaultLevel: args.logLevel ?? LOG_LEVEL_DEFAULT,

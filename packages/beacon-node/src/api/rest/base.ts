@@ -1,9 +1,9 @@
-import querystring from "querystring";
+import qs from "qs";
 import fastify, {FastifyError, FastifyInstance} from "fastify";
-import fastifyCors from "fastify-cors";
-import bearerAuthPlugin from "fastify-bearer-auth";
+import fastifyCors from "@fastify/cors";
+import bearerAuthPlugin from "@fastify/bearer-auth";
 import {RouteConfig} from "@lodestar/api/beacon/server";
-import {ErrorAborted, ILogger} from "@lodestar/utils";
+import {ErrorAborted, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
 import {IGauge, IHistogram} from "../../metrics/index.js";
 import {ApiError, NodeIsSyncing} from "../impl/errors.js";
@@ -18,7 +18,7 @@ export type RestApiServerOpts = {
 };
 
 export type RestApiServerModules = {
-  logger: ILogger;
+  logger: Logger;
   metrics: RestApiServerMetrics | null;
 };
 
@@ -33,7 +33,7 @@ export type RestApiServerMetrics = SocketMetrics & {
  */
 export class RestApiServer {
   protected readonly server: FastifyInstance;
-  protected readonly logger: ILogger;
+  protected readonly logger: Logger;
   private readonly activeSockets: HttpActiveSocketsTracker;
 
   constructor(private readonly opts: RestApiServerOpts, modules: RestApiServerModules) {
@@ -43,7 +43,15 @@ export class RestApiServer {
     const server = fastify({
       logger: false,
       ajv: {customOptions: {coerceTypes: "array"}},
-      querystringParser: querystring.parse,
+      querystringParser: (str) =>
+        qs.parse(str, {
+          // Array as comma-separated values must be supported to be OpenAPI spec compliant
+          comma: true,
+          // Drop support for array query strings like `id[0]=1&id[1]=2&id[2]=3` as those are not required to
+          // be OpenAPI spec compliant and results are inconsistent, see https://github.com/ljharb/qs/issues/331.
+          // The schema validation will catch this and throw an error as parsed query string results in an object.
+          parseArrays: false,
+        }),
       bodyLimit: opts.bodyLimit,
     });
 
@@ -89,7 +97,12 @@ export class RestApiServer {
       if (err instanceof ErrorAborted || err instanceof NodeIsSyncing) return;
 
       const {operationId} = res.context.config as RouteConfig;
-      this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);
+
+      if (err instanceof ApiError) {
+        this.logger.warn(`Req ${req.id} ${operationId} failed`, {reason: err.message});
+      } else {
+        this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);
+      }
       metrics?.errors.inc({operationId});
     });
 

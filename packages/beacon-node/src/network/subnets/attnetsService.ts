@@ -1,5 +1,5 @@
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
@@ -8,14 +8,14 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {Epoch, Slot, ssz} from "@lodestar/types";
-import {ILogger, randBetween} from "@lodestar/utils";
+import {Logger, MapDef, randBetween} from "@lodestar/utils";
 import {shuffle} from "../../util/shuffle.js";
 import {ChainEvent, IBeaconChain} from "../../chain/index.js";
 import {GossipTopic, GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {SubnetMap, RequestedSubnet} from "../peers/utils/index.js";
 import {getActiveForks} from "../forks.js";
-import {IMetrics} from "../../metrics/metrics.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {IAttnetsService, CommitteeSubscription, SubnetsServiceOpts, RandBetweenFn, ShuffleFn} from "./interface.js";
 
 /**
@@ -45,6 +45,11 @@ export class AttnetsService implements IAttnetsService {
   private subscriptionsCommittee = new SubnetMap();
   /** Same as `subscriptionsCommittee` but for long-lived subnets. May overlap with `subscriptionsCommittee` */
   private subscriptionsRandom = new SubnetMap();
+  /**
+   * Map of an aggregator at a slot and subnet
+   * Used to determine if we should process an attestation.
+   */
+  private aggregatorSlotSubnet = new MapDef<Slot, Set<number>>(() => new Set());
 
   /**
    * A collection of seen validators. These dictate how many random subnets we should be
@@ -57,15 +62,15 @@ export class AttnetsService implements IAttnetsService {
   private shuffleFn: ShuffleFn;
 
   constructor(
-    private readonly config: IChainForkConfig,
+    private readonly config: ChainForkConfig,
     private readonly chain: IBeaconChain,
     private readonly gossip: {
       subscribeTopic: (topic: GossipTopic) => void;
       unsubscribeTopic: (topic: GossipTopic) => void;
     },
     private readonly metadata: MetadataController,
-    private readonly logger: ILogger,
-    private readonly metrics: IMetrics | null,
+    private readonly logger: Logger,
+    private readonly metrics: Metrics | null,
     private readonly opts?: SubnetsServiceOpts
   ) {
     // if subscribeAllSubnets, we act like we have >= ATTESTATION_SUBNET_COUNT validators connecting to this node
@@ -119,6 +124,7 @@ export class AttnetsService implements IAttnetsService {
       if (isAggregator) {
         // need exact slot here
         subnetsToSubscribe.push({subnet, toSlot: slot});
+        this.aggregatorSlotSubnet.getOrDefault(slot).add(subnet);
       }
     }
 
@@ -141,7 +147,10 @@ export class AttnetsService implements IAttnetsService {
    * Check if a subscription is still active before handling a gossip object
    */
   shouldProcess(subnet: number, slot: Slot): boolean {
-    return this.subscriptionsCommittee.isActiveAtSlot(subnet, slot);
+    if (!this.aggregatorSlotSubnet.has(slot)) {
+      return false;
+    }
+    return this.aggregatorSlotSubnet.getOrDefault(slot).has(subnet);
   }
 
   /** Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork  */
@@ -184,6 +193,7 @@ export class AttnetsService implements IAttnetsService {
     try {
       const slot = computeStartSlotAtEpoch(epoch);
       this.pruneExpiredKnownValidators(slot);
+      this.pruneExpiredAggregator(slot);
     } catch (e) {
       this.logger.error("Error on AttnetsService.onEpoch", {epoch}, e as Error);
     }
@@ -244,6 +254,18 @@ export class AttnetsService implements IAttnetsService {
     }
 
     if (deletedKnownValidators) this.rebalanceRandomSubnets();
+  }
+
+  /**
+   * No need to track aggregator for past slots.
+   * @param currentSlot
+   */
+  private pruneExpiredAggregator(currentSlot: Slot): void {
+    for (const slot of this.aggregatorSlotSubnet.keys()) {
+      if (currentSlot > slot) {
+        this.aggregatorSlotSubnet.delete(slot);
+      }
+    }
   }
 
   /**
@@ -346,9 +368,14 @@ export class AttnetsService implements IAttnetsService {
     );
   }
 
-  private onScrapeLodestarMetrics(metrics: IMetrics): void {
+  private onScrapeLodestarMetrics(metrics: Metrics): void {
     metrics.attnetsService.committeeSubnets.set(this.committeeSubnets.size);
     metrics.attnetsService.subscriptionsCommittee.set(this.subscriptionsCommittee.size);
     metrics.attnetsService.subscriptionsRandom.set(this.subscriptionsRandom.size);
+    let aggregatorCount = 0;
+    for (const subnets of this.aggregatorSlotSubnet.values()) {
+      aggregatorCount += subnets.size;
+    }
+    metrics.attnetsService.aggregatorSlotSubnetCount.set(aggregatorCount);
   }
 }

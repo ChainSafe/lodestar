@@ -114,6 +114,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  comment:
+    name: Comment on included PRs
+    runs-on: buildjet-4vcpu-ubuntu-2204
+    needs: [tag, npm]
+    if: needs.tag.outputs.is_stable == 'true'
+    steps:
+      - uses: nflaig/release-comment-on-pr@v1
+        with:
+          token: ${{ secrets.GH_PAGES_TOKEN }}
+
   docker:
     name: Publish to Docker Hub
     runs-on: buildjet-4vcpu-ubuntu-2204

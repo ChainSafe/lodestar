@@ -1,18 +1,18 @@
 import {Epoch, Slot} from "@lodestar/types";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {ErrorAborted} from "@lodestar/utils";
 import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
-import {IBeaconClock} from "./interface.js";
+import {BeaconClock} from "./interface.js";
 
 /**
  * A local clock, the clock time is assumed to be trusted
  */
-export class LocalClock implements IBeaconClock {
-  private readonly config: IChainForkConfig;
+export class LocalClock implements BeaconClock {
+  private readonly config: ChainForkConfig;
   private readonly genesisTime: number;
   private timeoutId: number | NodeJS.Timeout;
   private readonly emitter: ChainEventEmitter;
@@ -25,7 +25,7 @@ export class LocalClock implements IBeaconClock {
     emitter,
     signal,
   }: {
-    config: IChainForkConfig;
+    config: ChainForkConfig;
     genesisTime: number;
     emitter: ChainEventEmitter;
     signal: AbortSignal;

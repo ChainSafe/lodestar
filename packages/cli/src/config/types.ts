@@ -1,3 +1,3 @@
-import {IChainConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 
-export type IBeaconParamsUnparsed = Partial<{[P in keyof IChainConfig]: string | number}>;
+export type IBeaconParamsUnparsed = Partial<{[P in keyof ChainConfig]: string | number}>;

@@ -84,19 +84,19 @@ describe("signatureSets", () => {
   });
 });
 
-interface IBlockProposerData {
+type BlockProposerData = {
   proposerIndex: ValidatorIndex;
   signature: BLSSignature;
-}
+};
 
-function getMockProposerSlashings(data1: IBlockProposerData, data2: IBlockProposerData): phase0.ProposerSlashing {
+function getMockProposerSlashings(data1: BlockProposerData, data2: BlockProposerData): phase0.ProposerSlashing {
   return {
     signedHeader1: getMockSignedBeaconBlockHeaderBigint(data1),
     signedHeader2: getMockSignedBeaconBlockHeaderBigint(data2),
   };
 }
 
-function getMockSignedBeaconBlockHeaderBigint(data: IBlockProposerData): phase0.SignedBeaconBlockHeaderBigint {
+function getMockSignedBeaconBlockHeaderBigint(data: BlockProposerData): phase0.SignedBeaconBlockHeaderBigint {
   return {
     message: {
       slot: BigInt(0),
@@ -109,19 +109,19 @@ function getMockSignedBeaconBlockHeaderBigint(data: IBlockProposerData): phase0.
   };
 }
 
-interface IIndexAttestationData {
+type IndexAttestationData = {
   attestingIndices: ValidatorIndex[];
   signature: BLSSignature;
-}
+};
 
-function getMockAttesterSlashings(data1: IIndexAttestationData, data2: IIndexAttestationData): phase0.AttesterSlashing {
+function getMockAttesterSlashings(data1: IndexAttestationData, data2: IndexAttestationData): phase0.AttesterSlashing {
   return {
     attestation1: getMockIndexAttestationBn(data1),
     attestation2: getMockIndexAttestationBn(data2),
   };
 }
 
-function getMockIndexAttestationBn(data: IIndexAttestationData): phase0.IndexedAttestationBigint {
+function getMockIndexAttestationBn(data: IndexAttestationData): phase0.IndexedAttestationBigint {
   return {
     attestingIndices: data.attestingIndices,
     data: getAttestationDataBigint(),
@@ -157,12 +157,12 @@ function getMockAttestations(bitLen: number): phase0.Attestation {
   };
 }
 
-interface ISignedVoluntaryExitData {
+type SignedVoluntaryExitData = {
   signature: BLSSignature;
   validatorIndex: ValidatorIndex;
-}
+};
 
-function getMockSignedVoluntaryExit(data: ISignedVoluntaryExitData): phase0.SignedVoluntaryExit {
+function getMockSignedVoluntaryExit(data: SignedVoluntaryExitData): phase0.SignedVoluntaryExit {
   return {
     message: {
       epoch: 0,
@@ -172,12 +172,12 @@ function getMockSignedVoluntaryExit(data: ISignedVoluntaryExitData): phase0.Sign
   };
 }
 
-interface ISignedBLStoExecutionChange {
+type SignedBLStoExecutionChange = {
   signature: BLSSignature;
   validatorIndex: ValidatorIndex;
-}
+};
 
-function getMockSignedBlsToExecutionChange(data: ISignedBLStoExecutionChange): capella.SignedBLSToExecutionChange {
+function getMockSignedBlsToExecutionChange(data: SignedBLStoExecutionChange): capella.SignedBLSToExecutionChange {
   return {
     message: {
       validatorIndex: data.validatorIndex,

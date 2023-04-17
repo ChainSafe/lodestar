@@ -1,11 +1,11 @@
 import {Uint8ArrayList} from "uint8arraylist";
-import {createIBeaconConfig, IBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {allForks, altair, phase0, ssz} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as messagesDef from "../../src/protocols/index.js";
-import {EncodedPayloadType, ProtocolDefinition, TypeSerializer} from "../../src/types.js";
+import {EncodedPayloadType, MixedProtocolDefinition, ReqRespHandler, TypeSerializer} from "../../src/types.js";
 import {ZERO_HASH} from "../utils/index.js";
 
 type MessageFixture<T> = {
@@ -126,21 +126,21 @@ export const sszSnappySignedBeaconBlockAltair: MessageFixture<altair.SignedBeaco
 const getEmptyHandler = <T = unknown>() => async function* emptyHandler(): AsyncGenerator<T> {};
 
 export const getAllMessages = (
-  modules: {config: IBeaconConfig} = {config: createIBeaconConfig(chainConfig, ZERO_HASH)}
+  modules: {config: BeaconConfig} = {config: createBeaconConfig(chainConfig, ZERO_HASH)}
 ): {
-  ping: ProtocolDefinition<phase0.Ping, phase0.Ping>;
-  goodbye: ProtocolDefinition<phase0.Goodbye, phase0.Goodbye>;
-  metadata: ProtocolDefinition<null, allForks.Metadata>;
-  status: ProtocolDefinition<phase0.Status, phase0.Status>;
-  blocksByRange: ProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
-  blocksByRangeV2: ProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
-  blocksByRoot: ProtocolDefinition<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
-  blocksByRootV2: ProtocolDefinition<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
+  ping: MixedProtocolDefinition<phase0.Ping, phase0.Ping>;
+  goodbye: MixedProtocolDefinition<phase0.Goodbye, phase0.Goodbye>;
+  metadata: MixedProtocolDefinition<null, allForks.Metadata>;
+  status: MixedProtocolDefinition<phase0.Status, phase0.Status>;
+  blocksByRange: MixedProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
+  blocksByRangeV2: MixedProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
+  blocksByRoot: MixedProtocolDefinition<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
+  blocksByRootV2: MixedProtocolDefinition<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
 } => ({
   ping: messagesDef.Ping(getEmptyHandler()),
   goodbye: messagesDef.Goodbye(modules, getEmptyHandler()),
   metadata: messagesDef.Metadata(modules, getEmptyHandler()),
-  status: messagesDef.Status(modules, getEmptyHandler()),
+  status: messagesDef.Status(modules, getEmptyHandler() as ReqRespHandler<phase0.Status, phase0.Status>),
   blocksByRange: messagesDef.BeaconBlocksByRange(modules, getEmptyHandler()),
   blocksByRangeV2: messagesDef.BeaconBlocksByRangeV2(modules, getEmptyHandler()),
   blocksByRoot: messagesDef.BeaconBlocksByRoot(modules, getEmptyHandler()),
@@ -155,6 +155,6 @@ if (slotBlockAltair - slotBlockPhase0 < SLOTS_PER_EPOCH) {
 }
 const ALTAIR_FORK_EPOCH = Math.floor(slotBlockAltair / SLOTS_PER_EPOCH);
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const beaconConfig = createIBeaconConfig({...chainConfig, ALTAIR_FORK_EPOCH}, ZERO_HASH);
+export const beaconConfig = createBeaconConfig({...chainConfig, ALTAIR_FORK_EPOCH}, ZERO_HASH);
 
 export const messages = getAllMessages({config: beaconConfig});

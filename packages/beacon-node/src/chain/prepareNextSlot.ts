@@ -1,13 +1,14 @@
 import {computeEpochAtSlot, isExecutionStateType, computeTimeAtSlot} from "@lodestar/state-transition";
-import {IChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {ILogger, sleep} from "@lodestar/utils";
+import {Logger, sleep, fromHex} from "@lodestar/utils";
+import {routes} from "@lodestar/api";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
-import {IMetrics} from "../metrics/index.js";
+import {Metrics} from "../metrics/index.js";
 import {TransitionConfigurationV1} from "../execution/engine/interface.js";
 import {ChainEvent} from "./emitter.js";
-import {prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
+import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBlock/produceBlockBody.js";
 import {IBeaconChain} from "./interface.js";
 import {RegenCaller} from "./regen/index.js";
 
@@ -32,9 +33,9 @@ export class PrepareNextSlotScheduler {
   private transitionConfig: TransitionConfigurationV1 | null = null;
   constructor(
     private readonly chain: IBeaconChain,
-    private readonly config: IChainForkConfig,
-    private readonly metrics: IMetrics | null,
-    private readonly logger: ILogger,
+    private readonly config: ChainForkConfig,
+    private readonly metrics: Metrics | null,
+    private readonly logger: Logger,
     private readonly signal: AbortSignal
   ) {
     this.chain.emitter.on(ChainEvent.clockSlot, this.prepareForNextSlot);
@@ -95,7 +96,12 @@ export class PrepareNextSlotScheduler {
       // No need to wait for this or the clock drift
       // Pre Bellatrix: we only do precompute state transition for the last slot of epoch
       // For Bellatrix, we always do the `processSlots()` to prepare payload for the next slot
-      const prepareState = await this.chain.regen.getBlockSlotState(headRoot, prepareSlot, RegenCaller.precomputeEpoch);
+      const prepareState = await this.chain.regen.getBlockSlotState(
+        headRoot,
+        prepareSlot,
+        {dontTransferCache: true},
+        RegenCaller.precomputeEpoch
+      );
 
       // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot
       //  + when gossip block comes, we need to validate and run state transition
@@ -138,6 +144,7 @@ export class PrepareNextSlotScheduler {
           // try/catch wrapper here.
           await prepareExecutionPayload(
             this.chain,
+            this.logger,
             fork as ForkExecution, // State is of execution type
             safeBlockHash,
             finalizedBlockHash,
@@ -149,6 +156,19 @@ export class PrepareNextSlotScheduler {
             proposerIndex,
             feeRecipient,
           });
+        }
+
+        // If emitPayloadAttributes is true emit a SSE payloadAttributes event
+        if (this.chain.opts.emitPayloadAttributes === true) {
+          const data = await getPayloadAttributesForSSE(fork as ForkExecution, this.chain, {
+            prepareState,
+            prepareSlot,
+            parentBlockRoot: fromHex(headRoot),
+            // The likely consumers of this API are builders and will anyway ignore the
+            // feeRecipient, so just pass zero hash for now till a real use case arises
+            feeRecipient: "0x0000000000000000000000000000000000000000000000000000000000000000",
+          });
+          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
         }
       }
     } catch (e) {

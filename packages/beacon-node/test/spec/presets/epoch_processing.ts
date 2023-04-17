@@ -47,48 +47,48 @@ type EpochProcessingTestCase = {
  * @param fork
  * @param epochProcessFns Describe with which function to run each directory of tests
  */
-export const epochProcessing = (
-  skipTestNames?: string[]
-): TestRunnerFn<EpochProcessingTestCase, BeaconStateAllForks> => (fork, testName) => {
-  const config = getConfig(fork);
+export const epochProcessing =
+  (skipTestNames?: string[]): TestRunnerFn<EpochProcessingTestCase, BeaconStateAllForks> =>
+  (fork, testName) => {
+    const config = getConfig(fork);
 
-  const epochProcessFn = epochProcessFns[testName];
-  if (epochProcessFn === undefined) {
-    throw Error(`No epochProcessFn for ${testName}`);
-  }
+    const epochProcessFn = epochProcessFns[testName];
+    if (epochProcessFn === undefined) {
+      throw Error(`No epochProcessFn for ${testName}`);
+    }
 
-  return {
-    testFunction: (testcase) => {
-      const stateTB = testcase.pre.clone();
-      const state = createCachedBeaconStateTest(stateTB, config);
+    return {
+      testFunction: (testcase) => {
+        const stateTB = testcase.pre.clone();
+        const state = createCachedBeaconStateTest(stateTB, config);
 
-      const epochProcess = beforeProcessEpoch(state, {assertCorrectProgressiveBalances});
+        const epochProcess = beforeProcessEpoch(state, {assertCorrectProgressiveBalances});
 
-      if (testcase.post === undefined) {
-        // If post.ssz_snappy is not value, the sub-transition processing is aborted
-        // https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md#postssz_snappy
-        expect(() => epochProcessFn(state, epochProcess)).to.throw();
-      } else {
-        epochProcessFn(state, epochProcess);
-      }
+        if (testcase.post === undefined) {
+          // If post.ssz_snappy is not value, the sub-transition processing is aborted
+          // https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md#postssz_snappy
+          expect(() => epochProcessFn(state, epochProcess)).to.throw();
+        } else {
+          epochProcessFn(state, epochProcess);
+        }
 
-      state.commit();
+        state.commit();
 
-      return state;
-    },
-    options: {
-      inputTypes: inputTypeSszTreeViewDU,
-      sszTypes: {
-        pre: ssz[fork].BeaconState,
-        post: ssz[fork].BeaconState,
+        return state;
       },
-      getExpected: (testCase) => testCase.post,
-      expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconState(fork, expected, actual);
+      options: {
+        inputTypes: inputTypeSszTreeViewDU,
+        sszTypes: {
+          pre: ssz[fork].BeaconState,
+          post: ssz[fork].BeaconState,
+        },
+        getExpected: (testCase) => testCase.post,
+        expectFunc: (testCase, expected, actual) => {
+          expectEqualBeaconState(fork, expected, actual);
+        },
+        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+        shouldSkip: (_testcase, name, _index) =>
+          skipTestNames !== undefined && skipTestNames.some((skipTestName) => name.includes(skipTestName)),
       },
-      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-      shouldSkip: (_testcase, name, _index) =>
-        skipTestNames !== undefined && skipTestNames.some((skipTestName) => name.includes(skipTestName)),
-    },
+    };
   };
-};

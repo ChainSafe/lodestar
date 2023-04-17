@@ -1,4 +1,4 @@
-import querystring from "querystring";
+import qs from "qs";
 import fastify, {FastifyInstance} from "fastify";
 import Sinon from "sinon";
 import {mapValues} from "@lodestar/utils";
@@ -10,7 +10,7 @@ export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
 
   const server = fastify({
     ajv: {customOptions: {coerceTypes: "array"}},
-    querystringParser: querystring.parse,
+    querystringParser: (str) => qs.parse(str, {comma: true, parseArrays: false}),
   });
 
   server.addHook("onError", (request, reply, error, done) => {

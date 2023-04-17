@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString as b} from "@chainsafe/ssz";
-import {IChainConfig} from "../types.js";
+import {ChainConfig} from "../types.js";
 import {chainConfig as mainnet} from "../presets/mainnet.js";
 
 // Zhejiang beacon chain config:
 // https://github.com/eth-clients/merge-testnets/blob/main/sepolia-beacon-chain/config.yaml
 
-export const zhejiangChainConfig: IChainConfig = {
+export const zhejiangChainConfig: ChainConfig = {
   ...mainnet,
 
   CONFIG_NAME: "zhejiang",
@@ -31,7 +31,7 @@ export const zhejiangChainConfig: IChainConfig = {
   CAPELLA_FORK_VERSION: b("0x00000072"),
   CAPELLA_FORK_EPOCH: 1350,
   // Deneb
-  EIP4844_FORK_VERSION: b("0x00000073"),
+  DENEB_FORK_VERSION: b("0x00000073"),
 
   // Deposit contract
   // ---------------------------------------------------------------

@@ -12,14 +12,16 @@ import {
  *   - For phase0, we need to create the cache through beforeProcessEpoch
  *   - For other forks, use the progressive balances inside EpochContext
  */
-export function computeUnrealizedCheckpoints(
-  state: CachedBeaconStateAllForks
-): {justifiedCheckpoint: phase0.Checkpoint; finalizedCheckpoint: phase0.Checkpoint} {
+export function computeUnrealizedCheckpoints(state: CachedBeaconStateAllForks): {
+  justifiedCheckpoint: phase0.Checkpoint;
+  finalizedCheckpoint: phase0.Checkpoint;
+} {
   let stateRealizedCheckpoints: CachedBeaconStateAllForks;
 
   // For phase0, we need to create the cache through beforeProcessEpoch
   if (state.config.getForkSeq(state.slot) === ForkSeq.phase0) {
-    stateRealizedCheckpoints = state.clone();
+    // Clone state to mutate below         true = do not transfer cache
+    stateRealizedCheckpoints = state.clone(true);
     const epochProcess = beforeProcessEpoch(stateRealizedCheckpoints);
     processJustificationAndFinalization(stateRealizedCheckpoints, epochProcess);
   }
@@ -33,8 +35,8 @@ export function computeUnrealizedCheckpoints(
 
     // Clone state and use progressive balances
     else {
-      // Clone state to mutate below           false = do not transfer cache
-      stateRealizedCheckpoints = state.clone(false);
+      // Clone state to mutate below         true = do not transfer cache
+      stateRealizedCheckpoints = state.clone(true);
 
       weighJustificationAndFinalization(
         stateRealizedCheckpoints,

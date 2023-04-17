@@ -8,7 +8,7 @@ import {
   BeaconStateBellatrix,
 } from "@lodestar/state-transition";
 import {allForks, altair, bellatrix, ssz} from "@lodestar/types";
-import {createIBeaconConfig, IChainForkConfig} from "@lodestar/config";
+import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 
 import bls from "@chainsafe/bls";
@@ -31,7 +31,7 @@ type TestBeaconState = Partial<allForks.BeaconState>;
  */
 export function generateState(
   opts: TestBeaconState = {},
-  config: IChainForkConfig = minimalConfig,
+  config: ChainForkConfig = minimalConfig,
   withPubkey = false
 ): BeaconStateAllForks {
   const stateSlot = opts.slot ?? 0;
@@ -100,7 +100,7 @@ export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAl
   const config = getConfig(ForkName.phase0);
   const state = generateState(opts, config);
   return createCachedBeaconState(state, {
-    config: createIBeaconConfig(config, state.genesisValidatorsRoot),
+    config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a performance test, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
@@ -114,7 +114,7 @@ export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoc
   const config = getConfig(ForkName.altair, altairForkEpoch);
   const state = generateState(opts, config);
   return createCachedBeaconState(state, {
-    config: createIBeaconConfig(config, state.genesisValidatorsRoot),
+    config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a performance test, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
@@ -128,7 +128,7 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
   const config = getConfig(ForkName.bellatrix);
   const state = generateState(opts, config);
   return createCachedBeaconState(state as BeaconStateBellatrix, {
-    config: createIBeaconConfig(config, state.genesisValidatorsRoot),
+    config: createBeaconConfig(config, state.genesisValidatorsRoot),
     // This is a performance test, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
