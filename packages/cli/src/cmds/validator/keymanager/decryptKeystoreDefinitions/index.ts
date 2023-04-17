@@ -4,7 +4,7 @@ import bls from "@chainsafe/bls";
 import {LocalKeystoreDefinition} from "../interface.js";
 import {clearKeystoreCache, loadKeystoreCache, writeKeystoreCache} from "../keystoreCache.js";
 import {lockFilepath, unlockFilepath} from "../../../../util/lockfile.js";
-import {defaultPoolSize} from "./poolSize.js";
+import {calculateThreadpoolConcurrency} from "./poolSize.js";
 import {DecryptKeystoreWorkerAPI, KeystoreDecryptOptions} from "./types.js";
 
 /**
@@ -32,6 +32,7 @@ export async function decryptKeystoreDefinitions(
   const passwords = new Array(keystoreDefinitions.length) as string[];
   const tasks: QueuedTask<ModuleThread<DecryptKeystoreWorkerAPI>, Uint8Array>[] = [];
   const errors: Error[] = [];
+  const {numWorkers, jobConcurrency} = calculateThreadpoolConcurrency();
   const pool = Pool(
     () =>
       spawn<DecryptKeystoreWorkerAPI>(new Worker("./worker.js"), {
@@ -39,7 +40,10 @@ export async function decryptKeystoreDefinitions(
         // the initialization to timeout. The number below is big enough to almost disable the timeout
         timeout: 5 * 60 * 1000,
       }),
-    defaultPoolSize
+    {
+      concurrency: jobConcurrency,
+      size: numWorkers,
+    }
   );
   for (const [index, definition] of keystoreDefinitions.entries()) {
     try {
