@@ -2,7 +2,7 @@ import {Logger} from "@lodestar/utils";
 import {LocalKeystoreDefinition} from "../interface.js";
 
 export type DecryptKeystoreWorkerAPI = {
-  decryptKeystoreDefinition({keystorePath, password}: LocalKeystoreDefinition, force: boolean): Promise<Uint8Array>;
+  decryptKeystoreDefinition({keystorePath, password}: LocalKeystoreDefinition): Promise<Uint8Array>;
 };
 
 export type KeystoreDecryptOptions = {

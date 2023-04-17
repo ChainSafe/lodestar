@@ -54,7 +54,7 @@ export async function decryptKeystoreDefinitions(
       }
     }
 
-    const task = pool.queue((thread) => thread.decryptKeystoreDefinition(definition, Boolean(opts.ignoreLockFile)));
+    const task = pool.queue((thread) => thread.decryptKeystoreDefinition(definition));
     tasks.push(task);
     task
       .then((secretKeyBytes: Uint8Array) => {
