@@ -60,6 +60,7 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
 
         case GossipAction.REJECT:
           metrics?.gossipValidationReject.inc({topic: type});
+          logger.debug(`Gossip validation ${type} rejected`, {}, e);
           return TopicValidatorResult.Reject;
       }
     }
