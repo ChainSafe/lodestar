@@ -24,7 +24,7 @@ export function getFetchOptsSerializer<Fn extends (...args: any) => any, ReqType
   return function getFetchOpts(...args: Parameters<Fn>): FetchOpts {
     const req = reqSerializer.writeReq(...args);
     return {
-      url: urlFormater(req.params || {}),
+      url: urlFormater(req.params ?? {}),
       method: routeDef.method,
       query: req.query,
       body: req.body as unknown,
