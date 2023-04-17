@@ -1,47 +1,26 @@
+/* eslint-disable no-console */
 import fs from "node:fs";
 import path from "node:path";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import {expect} from "chai";
+import sinon from "sinon";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {fromHex} from "@lodestar/utils";
-import {ReturnType as ValidatorListReturnType} from "../../src/cmds/validator/list.js";
 import {testFilesDir} from "../utils.js";
 import {getCliInMemoryRunner} from "../utils/inMemoryRunner.js";
-
-/* eslint-disable no-console */
-
-type ConsoleKeys = "log" | "warn" | "error";
-const consoleKeys: ConsoleKeys[] = ["log", "warn", "error"];
 
 describe("cmds / validator", function () {
   const lodestar = getCliInMemoryRunner();
 
   const dataDir = testFilesDir;
 
-  const consoleData: {[P in ConsoleKeys]: string} = {
-    log: "",
-    warn: "",
-    error: "",
-  };
-  const consoleCache: {[P in ConsoleKeys]: typeof console.log} = {
-    log: console.log,
-    warn: console.warn,
-    error: console.error,
-  };
-
-  beforeEach("Hijack console", () => {
-    for (const key of consoleKeys) {
-      consoleData[key] = "";
-      console[key] = (...args: any[]) => {
-        consoleData.log += args.map(String).join(" ");
-      };
-    }
+  beforeEach(() => {
+    sinon.spy(console, "info");
+    sinon.spy(console, "log");
   });
 
-  afterEach("Release console", () => {
-    for (const key of consoleKeys) {
-      console[key] = consoleCache[key];
-    }
+  afterEach(() => {
+    sinon.restore();
   });
 
   before("Clean dataDir", () => {
@@ -62,28 +41,23 @@ describe("cmds / validator", function () {
     fs.writeFileSync(passphraseFilepath, passphrase);
     fs.writeFileSync(keystoreFilepath, keystore.stringify());
 
-    const res = await lodestar<ValidatorListReturnType>([
-      // ⏎
+    await lodestar([
       "validator import",
       `--dataDir ${dataDir}`,
       `--keystore ${keystoreFilepath}`,
       `--passphraseFile ${passphraseFilepath}`,
     ]);
 
-    console.log(res);
+    expect(console.log).be.calledWith(`Imported keystore ${pkHex} ${keystoreFilepath}`);
   });
 
   it("should list validators", async function () {
     fs.mkdirSync(path.join(dataDir, "keystores"), {recursive: true});
     fs.mkdirSync(path.join(dataDir, "secrets"), {recursive: true});
 
-    const validatorPubKeys = await lodestar<ValidatorListReturnType>([
-      // ⏎
-      "validator list",
-      `--dataDir ${dataDir}`,
-    ]);
+    await lodestar(["validator list", `--dataDir ${dataDir}`]);
 
-    // No keys are imported before this test. TODO: Import some
-    expect(validatorPubKeys.sort()).to.deep.equal([pkHex], "Wrong validator pubkeys");
+    expect(console.info).calledWith("1 local keystores");
+    expect(console.info).calledWith(pkHex);
   });
 });

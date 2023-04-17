@@ -91,13 +91,13 @@
     "winston": "^3.8.2",
     "winston-daily-rotate-file": "^4.7.1",
     "winston-transport": "^4.5.0",
-    "yargs": "^16.1.0"
+    "yargs": "^17.7.1"
   },
   "devDependencies": {
     "@types/expand-tilde": "^2.0.0",
     "@types/got": "^9.6.12",
     "@types/inquirer": "^9.0.3",
     "@types/lodash": "^4.14.192",
-    "@types/yargs": "^15.0.9"
+    "@types/yargs": "^17.0.24"
   }
 }

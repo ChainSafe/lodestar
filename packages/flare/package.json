@@ -64,9 +64,9 @@
     "@lodestar/state-transition": "^1.7.2",
     "@lodestar/types": "^1.7.2",
     "source-map-support": "^0.5.21",
-    "yargs": "^16.1.0"
+    "yargs": "^17.7.1"
   },
   "devDependencies": {
-    "@types/yargs": "^15.0.9"
+    "@types/yargs": "^17.0.24"
   }
 }

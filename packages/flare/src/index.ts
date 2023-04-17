@@ -6,7 +6,7 @@ import "source-map-support/register.js";
 
 const flare = getCli();
 
-flare
+void flare
   .fail((msg, err) => {
     if (msg) {
       // Show command help message when no command is provided

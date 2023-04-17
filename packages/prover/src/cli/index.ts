@@ -7,7 +7,7 @@ import "source-map-support/register.js";
 
 const prover = getLodestarProverCli();
 
-prover
+void prover
   .fail((msg, err) => {
     if (msg) {
       // Show command help message when no command is provided
