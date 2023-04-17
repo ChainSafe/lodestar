@@ -134,6 +134,7 @@ export interface IBeaconChain {
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
 
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
+  persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
   /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void;
   updateBuilderStatus(clockSlot: Slot): void;

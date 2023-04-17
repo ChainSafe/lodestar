@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Message} from "@libp2p/interface-pubsub";
-import {SlotRootHex} from "@lodestar/types";
+import {Slot, SlotRootHex} from "@lodestar/types";
 import {GossipTopic, GossipType} from "../gossip/index.js";
 
 export type GossipAttestationsWork = {
@@ -10,6 +10,8 @@ export type GossipAttestationsWork = {
 export type PendingGossipsubMessage = {
   topic: GossipTopic;
   msg: Message;
+  // only available for beacon_attestation and aggregate_and_proof
+  msgSlot?: Slot;
   msgId: string;
   // TODO: Refactor into accepting string (requires gossipsub changes) for easier multi-threading
   propagationSource: PeerId;

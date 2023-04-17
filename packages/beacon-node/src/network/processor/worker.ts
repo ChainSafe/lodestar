@@ -33,7 +33,8 @@ export class NetworkWorker {
       message.topic,
       message.msg,
       message.propagationSource.toString(),
-      message.seenTimestampSec
+      message.seenTimestampSec,
+      message.msgSlot
     );
 
     if (message.startProcessUnixSec !== null) {

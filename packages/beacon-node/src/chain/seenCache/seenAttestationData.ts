@@ -1,4 +1,4 @@
-import {RootHex, Slot} from "@lodestar/types";
+import {phase0, RootHex, Slot} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {AttDataBase64} from "../../util/sszBytes.js";
@@ -9,8 +9,11 @@ export type AttestationDataCacheEntry = {
   committeeIndices: number[];
   // IndexedAttestationData signing root, 32 bytes
   signingRoot: Uint8Array;
-  // to be consumed by forkchoice
+  // to be consumed by forkchoice and oppool
   attDataRootHex: RootHex;
+  // caching this for 3 slots take 600 instances max, this is nothing compared to attestations processed per slot
+  // for example in a mainnet node subscribing to all subnets, attestations are processed up to 20k per slot
+  attestationData: phase0.AttestationData;
   subnet: number;
 };
 

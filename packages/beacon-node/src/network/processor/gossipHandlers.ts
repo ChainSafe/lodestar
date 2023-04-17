@@ -38,6 +38,7 @@ import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightC
 import {validateGossipBlobsSidecar} from "../../chain/validation/blobsSidecar.js";
 import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
 import {AttnetsService} from "../subnets/attnetsService.js";
+import {sszDeserialize} from "../gossip/topic.js";
 
 /**
  * Gossip handler options as part of network options
@@ -168,7 +169,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
   }
 
   return {
-    [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
+    [GossipType.beacon_block]: async ({serializedData}, topic, peerIdStr, seenTimestampSec) => {
+      const signedBlock = sszDeserialize(topic, serializedData);
       // TODO Deneb: Can blocks be received by this topic?
       if (config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb) {
         throw new GossipActionError(GossipAction.REJECT, {code: "POST_DENEB_BLOCK"});
@@ -179,7 +181,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
     },
 
-    [GossipType.beacon_block_and_blobs_sidecar]: async (blockAndBlocks, topic, peerIdStr, seenTimestampSec) => {
+    [GossipType.beacon_block_and_blobs_sidecar]: async ({serializedData}, topic, peerIdStr, seenTimestampSec) => {
+      const blockAndBlocks = sszDeserialize(topic, serializedData);
       const {beaconBlock, blobsSidecar} = blockAndBlocks;
       // TODO Deneb: Should throw for pre fork blocks?
       if (config.getForkSeq(beaconBlock.message.slot) < ForkSeq.deneb) {
@@ -193,25 +196,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
     },
 
-    [GossipType.beacon_aggregate_and_proof]: async (
-      signedAggregateAndProof,
-      _topic,
-      _peer,
-      seenTimestampSec,
-      gossipSerializedData
-    ) => {
+    [GossipType.beacon_aggregate_and_proof]: async ({serializedData}, topic, _peer, seenTimestampSec) => {
       let validationResult: AggregateAndProofValidationResult;
+      const signedAggregateAndProof = sszDeserialize(topic, serializedData);
 
       try {
-        // If an attestation refers to a block root that's not known, it will wait for 1 slot max
-        // See https://github.com/ChainSafe/lodestar/pull/3564 for reasoning and results
-        // Waiting here requires minimal code and automatically affects attestation, and aggregate validation
-        // both from gossip and the API. I also prevents having to catch and re-throw in multiple places.
-        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        const validateFn = () =>
-          validateGossipAggregateAndProof(chain, signedAggregateAndProof, false, gossipSerializedData);
-        const {slot, beaconBlockRoot} = signedAggregateAndProof.message.aggregate.data;
-        validationResult = await validateGossipFnRetryUnknownRoot(validateFn, chain, slot, beaconBlockRoot);
+        validationResult = await validateGossipAggregateAndProof(chain, signedAggregateAndProof, false, serializedData);
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
           chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "gossip_reject");
@@ -244,32 +234,33 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec, gossipSerializedData) => {
+    [GossipType.beacon_attestation]: async ({serializedData, msgSlot}, {subnet}, _peer, seenTimestampSec) => {
+      if (msgSlot === undefined) {
+        throw Error("msgSlot is undefined for beacon_attestation topic");
+      }
+      // do not deserialize gossipSerializedData here, it's done in validateGossipAttestation only if needed
       let validationResult: AttestationValidationResult;
       try {
-        // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-        const validateFn = () => validateGossipAttestation(chain, attestation, subnet, gossipSerializedData);
-        const {slot, beaconBlockRoot} = attestation.data;
-        // If an attestation refers to a block root that's not known, it will wait for 1 slot max
-        // See https://github.com/ChainSafe/lodestar/pull/3564 for reasoning and results
-        // Waiting here requires minimal code and automatically affects attestation, and aggregate validation
-        // both from gossip and the API. I also prevents having to catch and re-throw in multiple places.
-        validationResult = await validateGossipFnRetryUnknownRoot(validateFn, chain, slot, beaconBlockRoot);
+        validationResult = await validateGossipAttestation(
+          chain,
+          {attestation: null, serializedData, attSlot: msgSlot},
+          subnet
+        );
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszValue(ssz.phase0.Attestation, attestation, "gossip_reject");
+          chain.persistInvalidSszBytes(ssz.phase0.Attestation.typeName, serializedData, "gossip_reject");
         }
         throw e;
       }
 
       // Handler
-      const {indexedAttestation, attDataRootHex} = validationResult;
+      const {indexedAttestation, attDataRootHex, attestation} = validationResult;
       metrics?.registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation);
 
       try {
         // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
         // but don't add to attestation pool, to save CPU and RAM
-        if (attnetsService.shouldProcess(subnet, attestation.data.slot)) {
+        if (attnetsService.shouldProcess(subnet, indexedAttestation.data.slot)) {
           const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
           metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
         }
@@ -286,7 +277,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.attester_slashing]: async (attesterSlashing) => {
+    [GossipType.attester_slashing]: async ({serializedData}, topic) => {
+      const attesterSlashing = sszDeserialize(topic, serializedData);
       await validateGossipAttesterSlashing(chain, attesterSlashing);
 
       // Handler
@@ -299,7 +291,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.proposer_slashing]: async (proposerSlashing) => {
+    [GossipType.proposer_slashing]: async ({serializedData}, topic) => {
+      const proposerSlashing = sszDeserialize(topic, serializedData);
       await validateGossipProposerSlashing(chain, proposerSlashing);
 
       // Handler
@@ -311,7 +304,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.voluntary_exit]: async (voluntaryExit) => {
+    [GossipType.voluntary_exit]: async ({serializedData}, topic) => {
+      const voluntaryExit = sszDeserialize(topic, serializedData);
       await validateGossipVoluntaryExit(chain, voluntaryExit);
 
       // Handler
@@ -323,7 +317,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.sync_committee_contribution_and_proof]: async (contributionAndProof) => {
+    [GossipType.sync_committee_contribution_and_proof]: async ({serializedData}, topic) => {
+      const contributionAndProof = sszDeserialize(topic, serializedData);
       const {syncCommitteeParticipantIndices} = await validateSyncCommitteeGossipContributionAndProof(
         chain,
         contributionAndProof
@@ -344,7 +339,9 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.sync_committee]: async (syncCommittee, {subnet}) => {
+    [GossipType.sync_committee]: async ({serializedData}, topic) => {
+      const syncCommittee = sszDeserialize(topic, serializedData);
+      const {subnet} = topic;
       let indexInSubcommittee = 0;
       try {
         indexInSubcommittee = (await validateGossipSyncCommittee(chain, syncCommittee, subnet)).indexInSubcommittee;
@@ -365,16 +362,19 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.light_client_finality_update]: async (lightClientFinalityUpdate) => {
+    [GossipType.light_client_finality_update]: async ({serializedData}, topic) => {
+      const lightClientFinalityUpdate = sszDeserialize(topic, serializedData);
       validateLightClientFinalityUpdate(config, chain, lightClientFinalityUpdate);
     },
 
-    [GossipType.light_client_optimistic_update]: async (lightClientOptimisticUpdate) => {
+    [GossipType.light_client_optimistic_update]: async ({serializedData}, topic) => {
+      const lightClientOptimisticUpdate = sszDeserialize(topic, serializedData);
       validateLightClientOptimisticUpdate(config, chain, lightClientOptimisticUpdate);
     },
 
     // blsToExecutionChange is to be generated and validated against GENESIS_FORK_VERSION
-    [GossipType.bls_to_execution_change]: async (blsToExecutionChange, _topic) => {
+    [GossipType.bls_to_execution_change]: async ({serializedData}, topic) => {
+      const blsToExecutionChange = sszDeserialize(topic, serializedData);
       await validateBlsToExecutionChange(chain, blsToExecutionChange);
 
       // Handler
