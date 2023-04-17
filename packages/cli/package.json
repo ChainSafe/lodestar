@@ -91,14 +91,14 @@
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.5",
     "winston-transport": "^4.3.0",
-    "yargs": "^17.6.2"
+    "yargs": "^17.7.1"
   },
   "devDependencies": {
     "@types/expand-tilde": "^2.0.0",
     "@types/got": "^9.6.12",
     "@types/js-yaml": "^3.12.5",
     "@types/rimraf": "^3.0.2",
-    "@types/yargs": "^17.0.22",
+    "@types/yargs": "^17.0.24",
     "@types/inquirer": "^9.0.3",
     "@types/lodash": "^4.14.192",
     "lodash": "^4.17.21",
@@ -110,6 +110,6 @@
     "winston": "^3.8.2",
     "winston-daily-rotate-file": "^4.7.1",
     "winston-transport": "^4.5.0",
-    "yargs": "^17.6.2"
+    "yargs": "^17.7.1"
   }
 }
