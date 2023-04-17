@@ -82,8 +82,5 @@
     "typescript": "^5.0.3",
     "typescript-docs-verifier": "^2.4.0",
     "webpack": "^5.77.0"
-  },
-  "optionalDependencies": {
-    "@nrwl/nx-linux-x64-gnu": "^15.9.2"
   }
 }
