@@ -6,7 +6,7 @@ export type DecryptKeystoreWorkerAPI = {
 };
 
 export type KeystoreDecryptOptions = {
-  force?: boolean;
+  ignoreLockFile?: boolean;
   onDecrypt?: (index: number) => void;
   // Try to use the cache file if it exists
   cacheFilePath?: string;

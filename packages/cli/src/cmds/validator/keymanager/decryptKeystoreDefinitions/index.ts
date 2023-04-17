@@ -45,7 +45,7 @@ export async function decryptKeystoreDefinitions(
     try {
       lockFilepath(definition.keystorePath);
     } catch (e) {
-      if (opts.force) {
+      if (opts.ignoreLockFile) {
         opts.logger.warn("Keystore forcefully loaded even though lockfile could not be acquired", {
           path: definition.keystorePath,
         });
@@ -54,7 +54,7 @@ export async function decryptKeystoreDefinitions(
       }
     }
 
-    const task = pool.queue((thread) => thread.decryptKeystoreDefinition(definition, Boolean(opts.force)));
+    const task = pool.queue((thread) => thread.decryptKeystoreDefinition(definition, Boolean(opts.ignoreLockFile)));
     tasks.push(task);
     task
       .then((secretKeyBytes: Uint8Array) => {

@@ -63,6 +63,6 @@ describe("decryptKeystoreDefinitions", function () {
     await decryptKeystoreDefinitions(definitions, {logger: console});
     // lockfiles should exist after the first run
 
-    await decryptKeystoreDefinitions(definitions, {logger: console, force: true});
+    await decryptKeystoreDefinitions(definitions, {logger: console, ignoreLockFile: true});
   });
 });
