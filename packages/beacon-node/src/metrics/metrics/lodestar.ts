@@ -58,6 +58,12 @@ export function createLodestarMetrics(
       help: "Count of total gossip validation queue length",
       labelNames: ["topic"],
     }),
+
+    gossipValidationQueueDropRatio: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_queue_current_drop_ratio",
+      help: "Current drop ratio of gossip validation queue",
+      labelNames: ["topic"],
+    }),
     gossipValidationQueueDroppedJobs: register.gauge<"topic">({
       name: "lodestar_gossip_validation_queue_dropped_jobs_total",
       help: "Count of total gossip validation queue dropped jobs",

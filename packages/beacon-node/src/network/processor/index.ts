@@ -130,6 +130,7 @@ export class NetworkProcessor {
       metrics.gossipValidationQueueLength.addCollect(() => {
         for (const topic of executeGossipWorkOrder) {
           metrics.gossipValidationQueueLength.set({topic}, this.gossipQueues[topic].length);
+          metrics.gossipValidationQueueDropRatio.set({topic}, this.gossipQueues[topic].dropRatio);
           metrics.gossipValidationQueueConcurrency.set({topic}, this.gossipTopicConcurrency[topic]);
         }
         metrics.reprocessGossipAttestations.countPerSlot.set(this.unknownBlockGossipsubMessagesCount);
@@ -169,18 +170,24 @@ export class NetworkProcessor {
       const slotRoot = extractBlockSlotRootFn(message.msg.data);
       // if slotRoot is null, it means the msg.data is invalid
       // in that case message will be rejected when deserializing data in later phase (gossipValidatorFn)
-      if (slotRoot && !this.chain.forkChoice.hasBlockHex(slotRoot.root)) {
-        if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
-          // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
-          this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.reached_limit});
+      if (slotRoot) {
+        // msgSlot is only available for beacon_attestation and aggregate_and_proof
+        const {slot, root} = slotRoot;
+        message.msgSlot = slot;
+        if (!this.chain.forkChoice.hasBlockHex(root)) {
+          if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
+            // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
+            this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.reached_limit});
+            return;
+          }
+
+          this.metrics?.reprocessGossipAttestations.total.inc();
+          const awaitingGossipsubMessagesByRoot = this.awaitingGossipsubMessagesByRootBySlot.getOrDefault(slot);
+          const awaitingGossipsubMessages = awaitingGossipsubMessagesByRoot.getOrDefault(root);
+          awaitingGossipsubMessages.add(message);
+          this.unknownBlockGossipsubMessagesCount++;
           return;
         }
-
-        this.metrics?.reprocessGossipAttestations.total.inc();
-        const awaitingGossipsubMessagesByRoot = this.awaitingGossipsubMessagesByRootBySlot.getOrDefault(slotRoot.slot);
-        const awaitingGossipsubMessages = awaitingGossipsubMessagesByRoot.getOrDefault(slotRoot.root);
-        awaitingGossipsubMessages.add(message);
-        this.unknownBlockGossipsubMessagesCount++;
       }
     }
 
@@ -190,10 +197,10 @@ export class NetworkProcessor {
 
   private pushPendingGossipsubMessageToQueue(message: PendingGossipsubMessage): void {
     const topicType = message.topic.type;
-    const droppedJob = this.gossipQueues[topicType].add(message);
-    if (droppedJob) {
+    const droppedCount = this.gossipQueues[topicType].add(message);
+    if (droppedCount) {
       // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
-      this.metrics?.gossipValidationQueueDroppedJobs.inc({topic: message.topic.type});
+      this.metrics?.gossipValidationQueueDroppedJobs.inc({topic: message.topic.type}, droppedCount);
     }
 
     // Tentatively perform work
@@ -292,6 +299,8 @@ export class NetworkProcessor {
       break;
     }
 
-    this.metrics?.networkProcessor.jobsSubmitted.observe(jobsSubmitted);
+    if (jobsSubmitted > 0) {
+      this.metrics?.networkProcessor.jobsSubmitted.observe(jobsSubmitted);
+    }
   }
 }

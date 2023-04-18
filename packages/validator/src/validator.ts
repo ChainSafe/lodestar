@@ -129,6 +129,7 @@ export class Validator {
       {
         afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
         disableAttestationGrouping: opts.disableAttestationGrouping || opts.distributed,
+        distributedAggregationSelection: opts.distributed,
       }
     );
 
@@ -141,7 +142,10 @@ export class Validator {
       emitter,
       chainHeaderTracker,
       metrics,
-      {scAfterBlockDelaySlotFraction: opts.scAfterBlockDelaySlotFraction}
+      {
+        scAfterBlockDelaySlotFraction: opts.scAfterBlockDelaySlotFraction,
+        distributedAggregationSelection: opts.distributed,
+      }
     );
 
     this.config = config;

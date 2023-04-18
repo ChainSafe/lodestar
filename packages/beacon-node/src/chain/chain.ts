@@ -493,6 +493,12 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
+  persistInvalidSszBytes(typeName: string, sszBytes: Uint8Array, suffix?: string): void {
+    if (this.opts.persistInvalidSszObjects) {
+      void this.persistInvalidSszObject(typeName, sszBytes, sszBytes, suffix);
+    }
+  }
+
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
       void this.persistInvalidSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);

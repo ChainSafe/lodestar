@@ -142,13 +142,6 @@ We're currently experimenting with hosting the majority of lodestar packages and
   - Use `/** **/` commenting format for documenting a function/variable.
 - Code whitespace can be helpful for reading complex code, please add some.
 - For unit tests, we forbid import stubbing when other approaches are feasible.
-- Logging framework: When determining which log level to use for providing information to users, consider the level of importance and whether the alert is actionable (Warning, Error, Fatal).
-  - Trace: Describes events showing step by step execution which can be ignored during standard operation.
-  - Debug: Useful information for debugging purposes.
-  - Info: Purely informative logs which can be ignored during normal operation.
-  - Warning: Unexpected behaviour, but the application continues to function and key operations are unaffected.
-  - Error: One or more main functionalities are not working, preventing some functions from working properly.
-  - Fatal: One or more main functionalities are not working and preventing the application from fulfilling its duties.
 
 ## Logging policy
 

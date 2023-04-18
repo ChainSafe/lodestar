@@ -1,4 +1,4 @@
-import {ssz} from "@lodestar/types";
+import {phase0, ssz} from "@lodestar/types";
 import {ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -8,7 +8,12 @@ import {
   isForkLightClient,
 } from "@lodestar/params";
 
-import {GossipEncoding, GossipTopic, GossipType, GossipTopicTypeMap} from "./interface.js";
+import {
+  GossipAction,
+  GossipActionError,
+  INVALID_SERIALIZED_BYTES_ERROR_CODE,
+} from "../../chain/errors/gossipValidation.js";
+import {GossipEncoding, GossipTopic, GossipType, GossipTopicTypeMap, SSZTypeOfGossipTopic} from "./interface.js";
 import {DEFAULT_ENCODING} from "./constants.js";
 
 export interface IGossipTopicCache {
@@ -107,6 +112,29 @@ export function getGossipSSZType(topic: GossipTopic) {
         : ssz.altair.LightClientFinalityUpdate;
     case GossipType.bls_to_execution_change:
       return ssz.capella.SignedBLSToExecutionChange;
+  }
+}
+
+/**
+ * Deserialize a gossip serialized data into an ssz object.
+ */
+export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: Uint8Array): SSZTypeOfGossipTopic<T> {
+  const sszType = getGossipSSZType(topic);
+  try {
+    return sszType.deserialize(serializedData) as SSZTypeOfGossipTopic<T>;
+  } catch (e) {
+    throw new GossipActionError(GossipAction.REJECT, {code: INVALID_SERIALIZED_BYTES_ERROR_CODE});
+  }
+}
+
+/**
+ * Deserialize a gossip serialized data into an Attestation object.
+ */
+export function sszDeserializeAttestation(serializedData: Uint8Array): phase0.Attestation {
+  try {
+    return ssz.phase0.Attestation.deserialize(serializedData);
+  } catch (e) {
+    throw new GossipActionError(GossipAction.REJECT, {code: INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }
 }
 

@@ -48,6 +48,7 @@ import {IChainOptions} from "../../../../src/chain/options.js";
 import {BlockAttributes} from "../../../../src/chain/produceBlock/produceBlockBody.js";
 import {ReqRespBlockResponse} from "../../../../src/network/index.js";
 import {SeenAttestationDatas} from "../../../../src/chain/seenCache/seenAttestationData.js";
+import {IExecutionBuilder} from "../../../../src/execution/index.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -164,6 +165,7 @@ export class MockBeaconChain implements IBeaconChain {
     this.pubkey2index = new PubkeyIndexMap();
     this.index2pubkey = [];
   }
+  executionBuilder?: IExecutionBuilder | undefined;
 
   validatorSeenAtEpoch(): boolean {
     return false;
@@ -229,6 +231,10 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   persistInvalidSszObject(): void {
+    return;
+  }
+
+  persistInvalidSszBytes(): void {
     return;
   }
 

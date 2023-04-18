@@ -4,7 +4,7 @@ import {Message, PublishResult, TopicValidatorResult} from "@libp2p/interface-pu
 import StrictEventEmitter from "strict-event-emitter-types";
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
-import {allForks, altair, capella, deneb, phase0} from "@lodestar/types";
+import {allForks, altair, capella, deneb, phase0, Slot} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
@@ -65,6 +65,10 @@ export type GossipTopicMap = {
  * Gossip topic split into a struct
  */
 export type GossipTopic = GossipTopicMap[keyof GossipTopicMap];
+
+export type SSZTypeOfGossipTopic<T extends GossipTopic> = T extends {type: infer K extends GossipType}
+  ? GossipTypeMap[K]
+  : never;
 
 export type GossipTypeMap = {
   [GossipType.beacon_block]: allForks.SignedBeaconBlock;
@@ -158,7 +162,8 @@ export type GossipValidatorFn = (
   topic: GossipTopic,
   msg: Message,
   propagationSource: PeerIdStr,
-  seenTimestampSec: number
+  seenTimestampSec: number,
+  msgSlot?: Slot
 ) => Promise<TopicValidatorResult>;
 
 export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
@@ -167,20 +172,24 @@ export type GossipJobQueues = {
   [K in GossipType]: JobItemQueue<Parameters<GossipValidatorFn>, ResolvedType<GossipValidatorFn>>;
 };
 
+export type GossipData = {
+  serializedData: Uint8Array;
+  msgSlot?: Slot;
+};
+
 export type GossipHandlerFn = (
-  object: GossipTypeMap[GossipType],
+  gossipData: GossipData,
   topic: GossipTopicMap[GossipType],
   peerIdStr: string,
-  seenTimestampSec: number,
-  gossipSerializedData: Uint8Array
+  seenTimestampSec: number
 ) => Promise<void>;
+
 export type GossipHandlers = {
   [K in GossipType]: (
-    object: GossipTypeMap[K],
+    gossipData: GossipData,
     topic: GossipTopicMap[K],
     peerIdStr: string,
-    seenTimestampSec: number,
-    gossipSerializedData: Uint8Array
+    seenTimestampSec: number
   ) => Promise<void>;
 };
 

@@ -1,4 +1,5 @@
-import {RootHex, Slot} from "@lodestar/types";
+import {BitArray} from "@chainsafe/ssz";
+import {BLSSignature, RootHex, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 
 export type BlockRootHex = RootHex;
@@ -6,8 +7,8 @@ export type AttDataBase64 = string;
 
 // class Attestation(Container):
 //   aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE] - offset 4
-//   data: AttestationData - target data
-//   signature: BLSSignature
+//   data: AttestationData - target data - 128
+//   signature: BLSSignature - 96
 //
 // class AttestationData(Container): 128 bytes fixed size
 //   slot: Slot                - data 8
@@ -25,22 +26,23 @@ export type AttDataBase64 = string;
 //    aggregate: Attestation          - offset 4
 //    selectionProof: BLSSignature    - data 96
 
-const ATTESTATION_SLOT_OFFSET = 4;
-const ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = ATTESTATION_SLOT_OFFSET + 8 + 8;
+const VARIABLE_FIELD_OFFSET = 4;
+const ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = VARIABLE_FIELD_OFFSET + 8 + 8;
 const ROOT_SIZE = 32;
 const SLOT_SIZE = 8;
 const ATTESTATION_DATA_SIZE = 128;
+const SIGNATURE_SIZE = 96;
 
 /**
  * Extract slot from attestation serialized bytes.
  * Return null if data is not long enough to extract slot.
  */
 export function getSlotFromAttestationSerialized(data: Uint8Array): Slot | null {
-  if (data.length < ATTESTATION_SLOT_OFFSET + SLOT_SIZE) {
+  if (data.length < VARIABLE_FIELD_OFFSET + SLOT_SIZE) {
     return null;
   }
 
-  return getSlotFromOffset(data, ATTESTATION_SLOT_OFFSET);
+  return getSlotFromOffset(data, VARIABLE_FIELD_OFFSET);
 }
 
 /**
@@ -60,19 +62,51 @@ export function getBlockRootFromAttestationSerialized(data: Uint8Array): BlockRo
  * Return null if data is not long enough to extract attestation data.
  */
 export function getAttDataBase64FromAttestationSerialized(data: Uint8Array): AttDataBase64 | null {
-  if (data.length < ATTESTATION_SLOT_OFFSET + ATTESTATION_DATA_SIZE) {
+  if (data.length < VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE) {
     return null;
   }
 
   // base64 is a bit efficient than hex
-  return Buffer.from(data.slice(ATTESTATION_SLOT_OFFSET, ATTESTATION_SLOT_OFFSET + ATTESTATION_DATA_SIZE)).toString(
+  return Buffer.from(data.slice(VARIABLE_FIELD_OFFSET, VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE)).toString(
     "base64"
+  );
+}
+
+/**
+ * Extract aggregation bits from attestation serialized bytes.
+ * Return null if data is not long enough to extract aggregation bits.
+ */
+export function getAggregationBitsFromAttestationSerialized(data: Uint8Array): BitArray | null {
+  if (data.length < VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE) {
+    return null;
+  }
+
+  const {uint8Array, bitLen} = deserializeUint8ArrayBitListFromBytes(
+    data,
+    VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE,
+    data.length
+  );
+  return new BitArray(uint8Array, bitLen);
+}
+
+/**
+ * Extract signature from attestation serialized bytes.
+ * Return null if data is not long enough to extract signature.
+ */
+export function getSignatureFromAttestationSerialized(data: Uint8Array): BLSSignature | null {
+  if (data.length < VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE) {
+    return null;
+  }
+
+  return data.subarray(
+    VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE,
+    VARIABLE_FIELD_OFFSET + ATTESTATION_DATA_SIZE + SIGNATURE_SIZE
   );
 }
 
 const AGGREGATE_AND_PROOF_OFFSET = 4 + 96;
 const AGGREGATE_OFFSET = AGGREGATE_AND_PROOF_OFFSET + 8 + 4 + 96;
-const SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET = AGGREGATE_OFFSET + ATTESTATION_SLOT_OFFSET;
+const SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET = AGGREGATE_OFFSET + VARIABLE_FIELD_OFFSET;
 const SIGNED_AGGREGATE_AND_PROOF_BLOCK_ROOT_OFFSET = SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + 8 + 8;
 
 /**
@@ -124,4 +158,40 @@ function getSlotFromOffset(data: Uint8Array, offset: number): Slot {
   const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
   // Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
   return dv.getUint32(offset, true);
+}
+
+type BitArrayDeserialized = {uint8Array: Uint8Array; bitLen: number};
+
+/**
+ * This is copied from ssz bitList.ts
+ * TODO: export this util from there
+ */
+function deserializeUint8ArrayBitListFromBytes(data: Uint8Array, start: number, end: number): BitArrayDeserialized {
+  if (end > data.length) {
+    throw Error(`BitList attempting to read byte ${end} of data length ${data.length}`);
+  }
+
+  const lastByte = data[end - 1];
+  const size = end - start;
+
+  if (lastByte === 0) {
+    throw new Error("Invalid deserialized bitlist, padding bit required");
+  }
+
+  if (lastByte === 1) {
+    // Buffer.prototype.slice does not copy memory, Enforce Uint8Array usage https://github.com/nodejs/node/issues/28087
+    const uint8Array = Uint8Array.prototype.slice.call(data, start, end - 1);
+    const bitLen = (size - 1) * 8;
+    return {uint8Array, bitLen};
+  }
+
+  // the last byte is > 1, so a padding bit will exist in the last byte and need to be removed
+  // Buffer.prototype.slice does not copy memory, Enforce Uint8Array usage https://github.com/nodejs/node/issues/28087
+  const uint8Array = Uint8Array.prototype.slice.call(data, start, end);
+  // mask lastChunkByte
+  const lastByteBitLength = lastByte.toString(2).length - 1;
+  const bitLen = (size - 1) * 8 + lastByteBitLength;
+  const mask = 0xff >> (8 - lastByteBitLength);
+  uint8Array[size - 1] &= mask;
+  return {uint8Array, bitLen};
 }
