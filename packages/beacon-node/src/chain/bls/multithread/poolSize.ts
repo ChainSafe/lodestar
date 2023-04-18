@@ -10,6 +10,11 @@ try {
   defaultPoolSize = 8;
 }
 
+// TODO: get this from environment variable
+const libuvThreadpoolSize = 4;
+// 1 cpu is reserved for the main thread
+defaultPoolSize = Math.max(4, defaultPoolSize - libuvThreadpoolSize - 1);
+
 /**
  * Cross-platform aprox number of logical cores
  */
