@@ -247,7 +247,7 @@ export class BlockProposingService {
     const debugLogCtx = {
       source: source,
       // winston logger doesn't like bigint
-      "blockValue(approx ETH)": formatBigDecimal(fullOrBlindedBlock.blockValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR),
+      blockValue: `${formatBigDecimal(fullOrBlindedBlock.blockValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
     };
     const blockFeeRecipient = (fullOrBlindedBlock.data as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
     const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
