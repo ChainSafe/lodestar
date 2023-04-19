@@ -17,10 +17,14 @@ import {Api, ApiError, ServerApi} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
+import {formatBigDecimal} from "../util/format.js";
 import {ValidatorStore, BuilderSelection} from "./validatorStore.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 
 const ETH_TO_WEI = BigInt("1000000000000000000");
+// display upto 5 decimal places
+const MAX_DECIMAL_FACTOR = BigInt("100000");
+
 /**
  * Cutoff time to wait for execution and builder block production apis to resolve
  * Post this time, race execution and builder to pick whatever resolves first
@@ -243,7 +247,7 @@ export class BlockProposingService {
     const debugLogCtx = {
       source: source,
       // winston logger doesn't like bigint
-      "blockValue(eth)": `${fullOrBlindedBlock.blockValue / ETH_TO_WEI}`,
+      "blockValue(approx ETH)": formatBigDecimal(fullOrBlindedBlock.blockValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR),
     };
     const blockFeeRecipient = (fullOrBlindedBlock.data as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
     const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
