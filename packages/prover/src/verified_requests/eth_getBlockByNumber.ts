@@ -7,8 +7,8 @@ import {generateUnverifiedResponseForPayload} from "../utils/json_rpc.js";
 export const eth_getBlockByNumber: ELVerifiedRequestHandler<
   [block: string | number, hydrated: boolean],
   ELBlock
-> = async ({handler, payload, logger, proofProvider}) => {
-  const result = await fetchAndVerifyBlock({payload, proofProvider, logger, handler});
+> = async ({handler, payload, logger, proofProvider, network}) => {
+  const result = await fetchAndVerifyBlock({payload, proofProvider, logger, handler, network});
 
   if (result.valid) {
     return result.data;

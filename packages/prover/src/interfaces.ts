@@ -54,6 +54,7 @@ export type ELVerifiedRequestHandlerOpts<Params = unknown[], Response = unknown>
   handler: ELRequestHandler<Params, Response>;
   proofProvider: ProofProvider;
   logger: Logger;
+  network: NetworkName;
 };
 
 export type ELVerifiedRequestHandler<Params = unknown[], Response = unknown> = (

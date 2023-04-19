@@ -43,6 +43,7 @@ export function headerDataFromELBlock(blockInfo: ELBlock): HeaderData {
     mixHash: blockInfo.mixHash, // some reason the types are not up to date :(
     nonce: blockInfo.nonce,
     baseFeePerGas: blockInfo.baseFeePerGas ? BigInt(blockInfo.baseFeePerGas) : undefined,
+    withdrawalsRoot: blockInfo.withdrawalsRoot ?? undefined,
   };
 }
 

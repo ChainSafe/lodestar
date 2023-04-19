@@ -9,8 +9,9 @@ export const eth_getBlockByHash: ELVerifiedRequestHandler<[block: string, hydrat
   payload,
   logger,
   proofProvider,
+  network,
 }) => {
-  const result = await fetchAndVerifyBlock({payload, proofProvider, logger, handler});
+  const result = await fetchAndVerifyBlock({payload, proofProvider, logger, handler, network});
 
   if (result.valid) {
     return result.data;
