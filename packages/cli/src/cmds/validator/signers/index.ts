@@ -96,7 +96,7 @@ export async function getSignersFromArgs(
       },
     });
     return decryptKeystoreDefinitions(keystoreDefinitions, {
-      ...args,
+      ignoreLockFile: args.force,
       onDecrypt: needle,
       cacheFilePath: path.join(accountPaths.cacheDir, "imported_keystores.cache"),
       logger,
@@ -129,7 +129,7 @@ export async function getSignersFromArgs(
     });
 
     const keystoreSigners = await decryptKeystoreDefinitions(keystoreDefinitions, {
-      ...args,
+      ignoreLockFile: args.force,
       onDecrypt: needle,
       cacheFilePath: path.join(accountPaths.cacheDir, "local_keystores.cache"),
       logger,
