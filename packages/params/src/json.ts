@@ -1,4 +1,4 @@
-import {BeaconPreset} from "./interface.js";
+import {BeaconPreset, beaconPresetTypes} from "./interface.js";
 
 /**
  * Render BeaconPreset to JSON strings
@@ -25,14 +25,15 @@ function serializePresetValue(value: number): string {
 /**
  * Parse JSON strings of BeaconPreset
  * - Numbers: Convert quoted decimal string to number
- *
- * Note: extraneous keys are not filtered out and will be validated
  */
 export function presetFromJson(json: Record<string, unknown>): Partial<BeaconPreset> {
   const beaconPreset = {} as BeaconPreset;
 
-  for (const key of Object.keys(json) as (keyof BeaconPreset)[]) {
-    beaconPreset[key] = deserializePresetValue(json[key], key);
+  for (const key of Object.keys(beaconPresetTypes) as (keyof BeaconPreset)[]) {
+    const value = json[key];
+    if (value !== undefined) {
+      beaconPreset[key] = deserializePresetValue(value, key);
+    }
   }
 
   return beaconPreset;
