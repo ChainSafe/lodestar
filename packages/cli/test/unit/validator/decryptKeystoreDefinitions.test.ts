@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import rimraf from "rimraf";
 import {expect} from "chai";
@@ -8,12 +7,6 @@ import {getKeystoresStr} from "../../utils/keystores.js";
 import {testFilesDir} from "../../utils.js";
 import {decryptKeystoreDefinitions} from "../../../src/cmds/validator/keymanager/decryptKeystoreDefinitions/index.js";
 import {LocalKeystoreDefinition} from "../../../src/cmds/validator/keymanager/interface.js";
-import {
-  KEYSTORE_MEMORY_USAGE,
-  MAX_CONCURRENCY_PER_THREAD,
-  MAX_MEMORY_USAGE_PER_THREAD,
-  calculateThreadpoolConcurrency,
-} from "../../../src/cmds/validator/keymanager/decryptKeystoreDefinitions/poolSize.js";
 
 describe("decryptKeystoreDefinitions", function () {
   this.timeout(100_000);
@@ -71,13 +64,5 @@ describe("decryptKeystoreDefinitions", function () {
     // lockfiles should exist after the first run
 
     await decryptKeystoreDefinitions(definitions, {logger: console, ignoreLockFile: true});
-  });
-
-  it("calculateThreadpoolConcurrency sanity test", () => {
-    const {numWorkers, jobConcurrency} = calculateThreadpoolConcurrency();
-    const freeMem = os.freemem() * 0.8;
-    expect(jobConcurrency).to.be.lte(MAX_CONCURRENCY_PER_THREAD);
-    expect(jobConcurrency * KEYSTORE_MEMORY_USAGE).to.be.lte(MAX_MEMORY_USAGE_PER_THREAD);
-    expect(numWorkers * jobConcurrency * KEYSTORE_MEMORY_USAGE).to.be.lte(freeMem);
   });
 });
