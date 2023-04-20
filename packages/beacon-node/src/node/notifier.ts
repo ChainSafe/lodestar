@@ -1,8 +1,8 @@
 import {BeaconConfig} from "@lodestar/config";
 import {Epoch} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {ProtoBlock} from "@lodestar/fork-choice";
-import {ErrorAborted, Logger, sleep, prettyBytes} from "@lodestar/utils";
+import {ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
+import {ErrorAborted, Logger, sleep, prettyBytes, prettyBytesShort} from "@lodestar/utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, isExecutionCachedStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
 import {IBeaconChain} from "../chain/index.js";
@@ -59,12 +59,17 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       headSlotTimeSeries.addPoint(headSlot, Math.floor(Date.now() / 1000));
 
       const peersRow = `peers: ${connectedPeerCount}`;
-      const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
-      const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
+      const clockSlotRow = `slot: ${clockSlot}`;
 
       // Give info about empty slots if head < clock
       const skippedSlots = clockSlot - headInfo.slot;
-      const clockSlotRow = `slot: ${clockSlot}` + (skippedSlots > 0 ? ` (skipped ${skippedSlots})` : "");
+      // headDiffInfo to have space suffix if its a non empty string
+      const headDiffInfo =
+        skippedSlots > 1 ? (skippedSlots > 1000 ? `${headInfo.slot} ` : `(slot -${skippedSlots}) `) : "";
+      const headRow = `head: ${headDiffInfo}${prettyBytes(headInfo.blockRoot)}`;
+
+      const executionInfo = getHeadExecutionInfo(config, clockEpoch, headState, headInfo);
+      const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
 
       // Log in TD progress in separate line to not clutter regular status update.
       // This line will only exist between BELLATRIX_FORK_EPOCH and TTD, a window of some days / weeks max.
@@ -80,8 +85,6 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
 
         logger.info(`TTD in ${timeLeft} current TD ${tdProgress.td} / ${tdProgress.ttd}`);
       }
-
-      const executionInfo = getExecutionInfo(config, clockEpoch, headState, headInfo);
 
       let nodeState: string[];
       switch (sync.state) {
@@ -146,7 +149,7 @@ function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain): number {
   return msToNextSlot > msPerSlot / 2 ? msToNextSlot - msPerSlot / 2 : msToNextSlot + msPerSlot / 2;
 }
 
-function getExecutionInfo(
+function getHeadExecutionInfo(
   config: BeaconConfig,
   clockEpoch: Epoch,
   headState: CachedBeaconStateAllForks,
@@ -160,9 +163,17 @@ function getExecutionInfo(
     // Add execution status to notifier only if head is on/post bellatrix
     if (isExecutionCachedStateType(headState)) {
       if (isMergeTransitionComplete(headState)) {
-        return [`execution: ${executionStatusStr}(${prettyBytes(headInfo.executionPayloadBlockHash ?? "empty")})`];
+        const executionPayloadHashInfo =
+          headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
+        const executionPayloadNumberInfo =
+          headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
+        return [
+          `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
+            executionPayloadHashInfo
+          )})`,
+        ];
       } else {
-        return [`execution: ${executionStatusStr}`];
+        return [`exec-block: ${executionStatusStr}`];
       }
     } else {
       return [];

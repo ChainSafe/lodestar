@@ -29,6 +29,8 @@ export function getDebugApi({
 
     async getProtoArrayNodes() {
       const nodes = chain.forkChoice.getAllNodes().map((node) => ({
+        // if node has executionPayloadNumber, it will overwrite the below default
+        executionPayloadNumber: 0,
         ...node,
         executionPayloadBlockHash: node.executionPayloadBlockHash ?? "",
         parent: String(node.parent),

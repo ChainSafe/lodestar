@@ -29,6 +29,7 @@ const stringType = new StringType();
 const protoNodeSszType = new ContainerType(
   {
     executionPayloadBlockHash: stringType,
+    executionPayloadNumber: ssz.UintNum64,
     executionStatus: stringType,
     slot: ssz.Slot,
     blockRoot: stringType,

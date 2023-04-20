@@ -450,6 +450,7 @@ export class ForkChoice implements IForkChoice {
       ...(isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
         ? {
             executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
+            executionPayloadNumber: block.body.executionPayload.blockNumber,
             executionStatus: this.getPostMergeExecStatus(executionStatus),
           }
         : {executionPayloadBlockHash: null, executionStatus: this.getPreMergeExecStatus(executionStatus)}),
