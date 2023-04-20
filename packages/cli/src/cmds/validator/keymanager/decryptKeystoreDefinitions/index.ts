@@ -35,8 +35,7 @@ export async function decryptKeystoreDefinitions(
   const pool = Pool(
     () =>
       spawn<DecryptKeystoreWorkerAPI>(new Worker("./worker.js"), {
-        // A Lodestar Node may do very expensive task at start blocking the event loop and causing
-        // the initialization to timeout. The number below is big enough to almost disable the timeout
+        // The number below is big enough to almost disable the timeout which helps during tests run on unpredictablely slow hosts
         timeout: 5 * 60 * 1000,
       }),
     defaultPoolSize

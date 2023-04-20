@@ -8,7 +8,7 @@ import {DecryptKeystoreWorkerAPI} from "./types.js";
 /**
  * Decrypt a single keystore definition, returning the secret key as a Uint8Array
  *
- * NOTE: This is memory-intensive process, since decrypting the keystore involves running a key derivation function (either pbkdf2 or scrypt)
+ * NOTE: This is a memory (and cpu) -intensive process, since decrypting the keystore involves running a key derivation function (either pbkdf2 or scrypt)
  */
 export async function decryptKeystoreDefinition({
   keystorePath,
