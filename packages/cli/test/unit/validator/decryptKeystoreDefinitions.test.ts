@@ -59,7 +59,7 @@ describe("decryptKeystoreDefinitions", function () {
     }
   });
 
-  it("decrypt keystores if lockfiles already exist if force=true", async () => {
+  it("decrypt keystores if lockfiles already exist if ignoreLockFile=true", async () => {
     await decryptKeystoreDefinitions(definitions, {logger: console});
     // lockfiles should exist after the first run
 

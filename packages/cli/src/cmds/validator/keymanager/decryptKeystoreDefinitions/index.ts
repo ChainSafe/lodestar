@@ -46,7 +46,7 @@ export async function decryptKeystoreDefinitions(
       lockFilepath(definition.keystorePath);
     } catch (e) {
       if (opts.ignoreLockFile) {
-        opts.logger.warn("Keystore forcefully loaded even though lockfile could not be acquired", {
+        opts.logger.warn("Keystore forcefully loaded even though lockfile exists", {
           path: definition.keystorePath,
         });
       } else {
