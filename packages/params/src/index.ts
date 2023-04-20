@@ -5,7 +5,7 @@ import {gnosisPreset} from "./presets/gnosis.js";
 import {presetStatus} from "./presetStatus.js";
 import {userSelectedPreset, userOverrides} from "./setPreset.js";
 
-export {BeaconPreset} from "./interface.js";
+export {BeaconPreset} from "./types.js";
 export {
   ForkName,
   ForkSeq,

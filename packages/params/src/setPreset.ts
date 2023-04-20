@@ -1,6 +1,6 @@
 import {PresetName} from "./presetName.js";
 import {presetStatus} from "./presetStatus.js";
-import {BeaconPreset} from "./interface.js";
+import {BeaconPreset} from "./types.js";
 import {presetFromJson} from "./json.js";
 
 export {PresetName, presetFromJson};

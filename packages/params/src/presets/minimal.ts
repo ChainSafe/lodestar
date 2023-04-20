@@ -1,4 +1,4 @@
-import {BeaconPreset} from "../interface.js";
+import {BeaconPreset} from "../types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export const minimalPreset: BeaconPreset = {

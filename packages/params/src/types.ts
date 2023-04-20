@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-export interface BeaconPreset {
+export type BeaconPreset = {
   // Misc
   MAX_COMMITTEES_PER_SLOT: number;
   TARGET_COMMITTEE_SIZE: number;
@@ -76,7 +76,7 @@ export interface BeaconPreset {
   ///////////
   FIELD_ELEMENTS_PER_BLOB: number;
   MAX_BLOBS_PER_BLOCK: number;
-}
+};
 
 /**
  * Presets only contain numbers, this is just used to filter out extraneous keys

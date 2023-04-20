@@ -1,4 +1,4 @@
-import {BeaconPreset, beaconPresetTypes} from "./interface.js";
+import {BeaconPreset, beaconPresetTypes} from "./types.js";
 
 /**
  * Render BeaconPreset to JSON strings
