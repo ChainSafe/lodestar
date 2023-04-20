@@ -82,11 +82,11 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
     const peerCount: number[] = [];
 
     for (const node of nodes) {
-      finalizedSlots.push(stores["finalized"][node.cl.id][slot]);
-      inclusionDelay.push(stores["inclusionDelay"][node.cl.id][slot]);
-      attestationCount.push(stores["attestationsCount"][node.cl.id][slot]);
-      heads.push(stores["head"][node.cl.id][slot]);
-      peerCount.push(stores["connectedPeerCount"][node.cl.id][slot]);
+      finalizedSlots.push(stores["finalized"][node.cl.id][slot] ?? "-");
+      inclusionDelay.push(stores["inclusionDelay"][node.cl.id][slot] ?? "-");
+      attestationCount.push(stores["attestationsCount"][node.cl.id][slot] ?? "-");
+      heads.push(stores["head"][node.cl.id][slot] ?? "-");
+      peerCount.push(stores["connectedPeerCount"][node.cl.id][slot] ?? "-");
     }
 
     const head0 = heads.length > 0 ? heads[0] : null;
