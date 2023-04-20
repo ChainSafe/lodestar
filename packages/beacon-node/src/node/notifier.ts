@@ -59,15 +59,16 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       headSlotTimeSeries.addPoint(headSlot, Math.floor(Date.now() / 1000));
 
       const peersRow = `peers: ${connectedPeerCount}`;
-      const headExecutionInfo = getHeadExecutionInfo(config, clockEpoch, headState, headInfo);
+      const clockSlotRow = `slot: ${clockSlot}`;
+
       // Give info about empty slots if head < clock
       const skippedSlots = clockSlot - headInfo.slot;
-      const clockInfo =
-        skippedSlots > 1000 ? ` (clock: ${clockSlot})` : skippedSlots > 0 ? ` (clock-${skippedSlots})` : "";
+      // headDiffInfo to have space suffix if its a non empty string
+      const headDiffInfo =
+        skippedSlots > 1 ? (skippedSlots > 1000 ? `${headInfo.slot} ` : `(slot -${skippedSlots}) `) : "";
+      const headRow = `head: ${headDiffInfo}${prettyBytes(headInfo.blockRoot)}`;
 
-      // headExecutionInfo & clockInfo and  has space prefix if its a non empty string
-      const headRow = `head: ${headInfo.slot}${clockInfo} ${prettyBytes(headInfo.blockRoot)}${headExecutionInfo}`;
-      // headFinalizedInfo has space prefix if its a non empty string
+      const executionInfo = getHeadExecutionInfo(config, clockEpoch, headState, headInfo);
       const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
 
       // Log in TD progress in separate line to not clutter regular status update.
@@ -98,7 +99,9 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
             "Syncing",
             `${timeLeft} left`,
             `${slotsPerSecond.toPrecision(3)} slots/s`,
+            clockSlotRow,
             headRow,
+            ...executionInfo,
             finalizedCheckpointRow,
             peersRow,
           ];
@@ -107,13 +110,13 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
 
         case SyncState.Synced: {
           // Synced - clock - head - finalized - peers
-          nodeState = ["Synced", headRow, finalizedCheckpointRow, peersRow];
+          nodeState = ["Synced", clockSlotRow, headRow, ...executionInfo, finalizedCheckpointRow, peersRow];
           break;
         }
 
         case SyncState.Stalled: {
           // Searching peers - peers - head - finalized - clock
-          nodeState = ["Searching peers", peersRow, headRow, finalizedCheckpointRow];
+          nodeState = ["Searching peers", peersRow, clockSlotRow, headRow, ...executionInfo, finalizedCheckpointRow];
         }
       }
       logger.info(nodeState.join(" - "));
@@ -151,9 +154,9 @@ function getHeadExecutionInfo(
   clockEpoch: Epoch,
   headState: CachedBeaconStateAllForks,
   headInfo: ProtoBlock
-): string {
+): string[] {
   if (clockEpoch < config.BELLATRIX_FORK_EPOCH) {
-    return "";
+    return [];
   } else {
     const executionStatusStr = headInfo.executionStatus.toLowerCase();
 
@@ -164,14 +167,16 @@ function getHeadExecutionInfo(
           headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadBlockHash : "empty";
         const executionPayloadNumberInfo =
           headInfo.executionStatus !== ExecutionStatus.PreMerge ? headInfo.executionPayloadNumber : NaN;
-        return ` exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
-          executionPayloadHashInfo
-        )})`;
+        return [
+          `exec-block: ${executionStatusStr}(${executionPayloadNumberInfo} ${prettyBytesShort(
+            executionPayloadHashInfo
+          )})`,
+        ];
       } else {
-        return ` exec-block: ${executionStatusStr}`;
+        return [`exec-block: ${executionStatusStr}`];
       }
     } else {
-      return "";
+      return [];
     }
   }
 }
