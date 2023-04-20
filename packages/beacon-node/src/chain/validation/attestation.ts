@@ -144,7 +144,9 @@ export async function validateGossipAttestation(
       chain,
       attestationOrCache.attestation.data.beaconBlockRoot,
       attestationOrCache.attestation.data.target.root,
-      attEpoch
+      attSlot,
+      attEpoch,
+      chain.opts.maxSkipSlots
     );
 
     // [REJECT] The block being voted for (attestation.data.beacon_block_root) passes validation.
@@ -334,9 +336,22 @@ export function verifyHeadBlockAndTargetRoot(
   chain: IBeaconChain,
   beaconBlockRoot: Root,
   targetRoot: Root,
-  attestationEpoch: Epoch
+  attestationSlot: Slot,
+  attestationEpoch: Epoch,
+  maxSkipSlots?: number
 ): ProtoBlock {
   const headBlock = verifyHeadBlockIsKnown(chain, beaconBlockRoot);
+  // Lighthouse rejects the attestation, however Lodestar only ignores considering it's not against the spec
+  // it's more about a DOS protection to us
+  // With verifyPropagationSlotRange() and maxSkipSlots = 32, it's unlikely we have to regenerate states in queue
+  // to validate beacon_attestation and aggregate_and_proof
+  if (maxSkipSlots !== undefined && attestationSlot - headBlock.slot > maxSkipSlots) {
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.TOO_MANY_SKIPPED_SLOTS,
+      attestationSlot,
+      headBlockSlot: headBlock.slot,
+    });
+  }
   verifyAttestationTargetRoot(headBlock, targetRoot, attestationEpoch);
   return headBlock;
 }
