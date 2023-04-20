@@ -1,4 +1,8 @@
 /* eslint-disable @typescript-eslint/naming-convention */
+
+/**
+ * Compile-time chain configuration
+ */
 export type BeaconPreset = {
   // Misc
   MAX_COMMITTEES_PER_SLOT: number;
@@ -79,7 +83,8 @@ export type BeaconPreset = {
 };
 
 /**
- * Presets only contain numbers, this is just used to filter out extraneous keys
+ * Presets only contain numbers, just used to filter out extraneous keys
+ * when overriding the active preset with custom values from file
  */
 export const beaconPresetTypes: BeaconPresetTypes = {
   // Misc
