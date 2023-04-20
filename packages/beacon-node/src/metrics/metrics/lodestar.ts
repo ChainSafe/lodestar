@@ -276,6 +276,11 @@ export function createLodestarMetrics(
       help: "Current count of jobs being run on network processor for topic",
       labelNames: ["topic"],
     }),
+    gossipValidationErrorTooManySkippedSlots: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_error_too_many_skipped_slots_total",
+      help: "Count of total gossip validation errors due to too many skipped slots",
+      labelNames: ["topic"],
+    }),
 
     networkProcessor: {
       executeWorkCalls: register.gauge({

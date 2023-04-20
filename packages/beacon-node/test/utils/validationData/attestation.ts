@@ -18,6 +18,7 @@ import {signCached} from "../cache.js";
 import {ClockStatic} from "../clock.js";
 import {SeenAggregatedAttestations} from "../../../src/chain/seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "../../../src/chain/seenCache/seenAttestationData.js";
+import {defaultChainOptions} from "../../../src/chain/options.js";
 
 export type AttestationValidDataOpts = {
   currentSlot?: Slot;
@@ -125,6 +126,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     bls: new BlsSingleThreadVerifier({metrics: null}),
     waitForBlock: () => Promise.resolve(false),
     index2pubkey: state.epochCtx.index2pubkey,
+    opts: defaultChainOptions,
   } as Partial<IBeaconChain> as IBeaconChain;
 
   return {chain, attestation, subnet, validatorIndex};

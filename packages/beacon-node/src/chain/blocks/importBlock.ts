@@ -89,7 +89,12 @@ export async function importBlock(
     this.clock.currentSlot,
     executionStatus
   );
-  this.logger.verbose("Added block to forkchoice", {slot: block.message.slot, root: blockRootHex});
+
+  // This adds the state necessary to process the next block
+  // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
+  this.stateCache.add(postState);
+
+  this.logger.verbose("Added block to forkchoice and state cache", {slot: block.message.slot, root: blockRootHex});
   this.emitter.emit(routes.events.EventType.block, {
     block: toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),
     slot: block.message.slot,
@@ -324,11 +329,6 @@ export async function importBlock(
         });
     }
   }
-
-  // 7. Add post state to stateCache
-  //
-  // This adds the state necessary to process the next block
-  this.stateCache.add(postState);
 
   if (!isStateValidatorsNodesPopulated(postState)) {
     this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});

@@ -88,7 +88,16 @@ export async function validateGossipAggregateAndProof(
 
   // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip
   // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
-  const attHeadBlock = verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
+  // Lighthouse doesn't check maxSkipSlots option here but Lodestar wants to be more strict
+  // to be more DOS protection
+  const attHeadBlock = verifyHeadBlockAndTargetRoot(
+    chain,
+    attData.beaconBlockRoot,
+    attTarget.root,
+    attSlot,
+    attEpoch,
+    chain.opts.maxSkipSlots
+  );
 
   // [IGNORE] The current finalized_checkpoint is an ancestor of the block defined by aggregate.data.beacon_block_root
   // -- i.e. get_ancestor(store, aggregate.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
