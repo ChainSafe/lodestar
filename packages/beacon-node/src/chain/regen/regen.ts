@@ -10,7 +10,7 @@ import {
 } from "@lodestar/state-transition";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {sleep} from "@lodestar/utils";
+import {Logger, sleep} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {Metrics} from "../../metrics/index.js";
@@ -29,6 +29,7 @@ export type RegenModules = {
   config: ChainForkConfig;
   emitter: ChainEventEmitter;
   metrics: Metrics | null;
+  logger: Logger;
 };
 
 /**
@@ -92,6 +93,7 @@ export class StateRegenerator implements IStateRegenerator {
     opts: StateCloneOpts,
     rCaller: RegenCaller
   ): Promise<CachedBeaconStateAllForks> {
+    const start = Date.now();
     const block = this.modules.forkChoice.getBlockHex(blockRoot);
     if (!block) {
       throw new RegenError({
@@ -113,14 +115,23 @@ export class StateRegenerator implements IStateRegenerator {
     // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
     // or needs to have empty slots processed until the requested epoch
     if (latestCheckpointStateCtx) {
-      return processSlotsByCheckpoint(this.modules, latestCheckpointStateCtx, slot, opts);
+      const state = processSlotsByCheckpoint(this.modules, latestCheckpointStateCtx, slot, opts, rCaller);
+      this.modules.logger.verbose("Get block slot state from latestCheckpointStateCtx", {
+        blockRoot,
+        slot,
+        rCaller,
+        ms: Date.now() - start,
+      });
+      return state;
     }
 
     // Otherwise, use the fork choice to get the stateRoot from block at the checkpoint root
     // regenerate that state,
     // then process empty slots until the requested epoch
     const blockStateCtx = await this.getState(block.stateRoot, rCaller);
-    return processSlotsByCheckpoint(this.modules, blockStateCtx, slot, opts);
+    const state = processSlotsByCheckpoint(this.modules, blockStateCtx, slot, opts, rCaller);
+    this.modules.logger.verbose("Get block slot state", {blockRoot, slot, rCaller, ms: Date.now() - start});
+    return state;
   }
 
   /**
@@ -234,15 +245,35 @@ export class StateRegenerator implements IStateRegenerator {
  * emitting "checkpoint" events after every epoch processed.
  */
 async function processSlotsByCheckpoint(
-  modules: {checkpointStateCache: CheckpointStateCache; metrics: Metrics | null; emitter: ChainEventEmitter},
+  modules: {
+    checkpointStateCache: CheckpointStateCache;
+    metrics: Metrics | null;
+    emitter: ChainEventEmitter;
+    logger: Logger;
+  },
   preState: CachedBeaconStateAllForks,
   slot: Slot,
-  opts: StateCloneOpts
+  opts: StateCloneOpts,
+  rCaller: RegenCaller,
 ): Promise<CachedBeaconStateAllForks> {
+  const start = Date.now();
   let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, opts);
+  modules.logger.verbose("processSlotsByCheckpoint processSlotsToNearestCheckpoint", {
+    preStateSlot: preState.slot,
+    slot,
+    rCaller,
+    ms: Date.now() - start,
+  });
+
   if (postState.slot < slot) {
     postState = processSlots(postState, slot, opts, modules.metrics);
   }
+  modules.logger.verbose("processSlotsByCheckpoint processSlots", {
+    preStateSlot: preState.slot,
+    slot,
+    rCaller,
+    ms: Date.now() - start,
+  });
   return postState;
 }
 

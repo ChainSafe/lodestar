@@ -244,6 +244,7 @@ export class BeaconChain implements IBeaconChain {
       db,
       metrics,
       emitter,
+      logger,
       signal,
     });
 
