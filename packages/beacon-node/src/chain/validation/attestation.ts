@@ -166,7 +166,7 @@ export async function validateGossipAttestation(
     const attHeadState = await chain.regen
       .getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAttestation)
       .catch((e: Error) => {
-        throw new AttestationError(GossipAction.REJECT, {
+        throw new AttestationError(GossipAction.IGNORE, {
           code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
           error: e as Error,
         });
