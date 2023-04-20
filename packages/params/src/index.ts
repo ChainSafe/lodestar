@@ -5,7 +5,7 @@ import {gnosisPreset} from "./presets/gnosis.js";
 import {presetStatus} from "./presetStatus.js";
 import {userSelectedPreset, userOverrides} from "./setPreset.js";
 
-export {BeaconPreset} from "./interface.js";
+export {BeaconPreset} from "./types.js";
 export {
   ForkName,
   ForkSeq,
@@ -39,7 +39,7 @@ presetStatus.frozen = true;
  */
 export const ACTIVE_PRESET =
   userSelectedPreset ?? PresetName[process?.env?.LODESTAR_PRESET as PresetName] ?? PresetName.mainnet;
-export const activePreset = presets[ACTIVE_PRESET];
+export const activePreset = {...presets[ACTIVE_PRESET], ...userOverrides};
 
 // These variables must be exported individually and explicitly
 // in order to be accessible as top-level exports
@@ -99,7 +99,7 @@ export const {
 
   FIELD_ELEMENTS_PER_BLOB,
   MAX_BLOBS_PER_BLOCK,
-} = {...presets[ACTIVE_PRESET], ...userOverrides};
+} = activePreset;
 
 ////////////
 // Constants
