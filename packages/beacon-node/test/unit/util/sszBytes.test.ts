@@ -10,6 +10,7 @@ import {
   getSlotFromAttestationSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
   getSignatureFromAttestationSerialized,
+  getSlotFromSignedBeaconBlockSerialized,
 } from "../../../src/util/sszBytes.js";
 
 describe("attestation SSZ serialized picking", () => {
@@ -128,6 +129,24 @@ describe("aggregateAndProof SSZ serialized peaking", () => {
   });
 });
 
+describe("signedBeaconBlock SSZ serialized peaking", () => {
+  const testCases = [ssz.phase0.SignedBeaconBlock.defaultValue(), signedBeaconBlockFromValues(1_000_000)];
+
+  for (const [i, signedBeaconBlock] of testCases.entries()) {
+    const bytes = ssz.phase0.SignedBeaconBlock.serialize(signedBeaconBlock);
+    it(`signedBeaconBlock ${i}`, () => {
+      expect(getSlotFromSignedBeaconBlockSerialized(bytes)).equals(signedBeaconBlock.message.slot);
+    });
+  }
+
+  it("getSlotFromSignedBeaconBlockSerialized - invalid data", () => {
+    const invalidSlotDataSizes = [0, 50, 104];
+    for (const size of invalidSlotDataSizes) {
+      expect(getSlotFromSignedBeaconBlockSerialized(Buffer.alloc(size))).to.be.null;
+    }
+  });
+});
+
 function attestationFromValues(
   slot: Slot,
   blockRoot: RootHex,
@@ -154,4 +173,10 @@ function signedAggregateAndProofFromValues(
   signedAggregateAndProof.message.aggregate.data.target.epoch = targetEpoch;
   signedAggregateAndProof.message.aggregate.data.target.root = fromHex(targetRoot);
   return signedAggregateAndProof;
+}
+
+function signedBeaconBlockFromValues(slot: Slot): phase0.SignedBeaconBlock {
+  const signedBeaconBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+  signedBeaconBlock.message.slot = slot;
+  return signedBeaconBlock;
 }

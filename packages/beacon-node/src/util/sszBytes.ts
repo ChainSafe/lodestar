@@ -16,15 +16,6 @@ export type AttDataBase64 = string;
 //   beacon_block_root: Root   - data 32
 //   source: Checkpoint        - data 40
 //   target: Checkpoint        - data 40
-//
-// class SignedAggregateAndProof(Container):
-//    message: AggregateAndProof - offset 4
-//    signature: BLSSignature    - data 96
-
-// class AggregateAndProof(Container)
-//    aggregatorIndex: ValidatorIndex - data 8
-//    aggregate: Attestation          - offset 4
-//    selectionProof: BLSSignature    - data 96
 
 const VARIABLE_FIELD_OFFSET = 4;
 const ATTESTATION_BEACON_BLOCK_ROOT_OFFSET = VARIABLE_FIELD_OFFSET + 8 + 8;
@@ -104,6 +95,16 @@ export function getSignatureFromAttestationSerialized(data: Uint8Array): BLSSign
   );
 }
 
+//
+// class SignedAggregateAndProof(Container):
+//    message: AggregateAndProof - offset 4
+//    signature: BLSSignature    - data 96
+
+// class AggregateAndProof(Container)
+//    aggregatorIndex: ValidatorIndex - data 8
+//    aggregate: Attestation          - offset 4
+//    selectionProof: BLSSignature    - data 96
+
 const AGGREGATE_AND_PROOF_OFFSET = 4 + 96;
 const AGGREGATE_OFFSET = AGGREGATE_AND_PROOF_OFFSET + 8 + 4 + 96;
 const SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET = AGGREGATE_OFFSET + VARIABLE_FIELD_OFFSET;
@@ -151,6 +152,31 @@ export function getAttDataBase64FromSignedAggregateAndProofSerialized(data: Uint
   return Buffer.from(
     data.slice(SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET, SIGNED_AGGREGATE_AND_PROOF_SLOT_OFFSET + ATTESTATION_DATA_SIZE)
   ).toString("base64");
+}
+
+/**
+ * 4 + 96 = 100
+ * ```
+ * class SignedBeaconBlock(Container):
+ *   message: BeaconBlock [offset - 4 bytes]
+ *   signature: BLSSignature [fixed - 96 bytes]
+ *
+ * class BeaconBlock(Container):
+ *   slot: Slot [fixed - 8 bytes]
+ *   proposer_index: ValidatorIndex
+ *   parent_root: Root
+ *   state_root: Root
+ *   body: BeaconBlockBody
+ * ```
+ */
+const SLOT_BYTES_POSITION_IN_BLOCK = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE;
+
+export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot | null {
+  if (data.length < SLOT_BYTES_POSITION_IN_BLOCK + SLOT_SIZE) {
+    return null;
+  }
+
+  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_BLOCK);
 }
 
 function getSlotFromOffset(data: Uint8Array, offset: number): Slot {

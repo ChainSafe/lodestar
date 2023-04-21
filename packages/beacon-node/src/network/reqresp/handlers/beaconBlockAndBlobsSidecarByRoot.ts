@@ -3,7 +3,7 @@ import {deneb} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {getSlotFromBytes} from "../../../util/multifork.js";
+import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
 
 export async function* onBeaconBlockAndBlobsSidecarByRoot(
   requestBody: deneb.BeaconBlockAndBlobsSidecarByRootRequest,
@@ -35,12 +35,17 @@ export async function* onBeaconBlockAndBlobsSidecarByRoot(
       throw Error(`Inconsistent state, blobsSidecar known to fork-choice not in db ${blockRootHex}`);
     }
 
+    const forkSlot = getSlotFromSignedBeaconBlockSerialized(blockBytes);
+    if (forkSlot === null) {
+      throw Error(`Invalid block bytes for block ${blockRootHex}`);
+    }
+
     yield {
       type: EncodedPayloadType.bytes,
       bytes: signedBeaconBlockAndBlobsSidecarFromBytes(blockBytes, blobsSidecarBytes),
       contextBytes: {
         type: ContextBytesType.ForkDigest,
-        forkSlot: getSlotFromBytes(blockBytes),
+        forkSlot,
       },
     };
   }
