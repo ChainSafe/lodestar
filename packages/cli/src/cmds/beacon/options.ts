@@ -106,6 +106,7 @@ type ENRArgs = {
   "enr.udp"?: number;
   "enr.tcp6"?: number;
   "enr.udp6"?: number;
+  nat?: boolean;
 };
 
 const enrOptions: Record<string, Options> = {
@@ -137,6 +138,11 @@ const enrOptions: Record<string, Options> = {
   "enr.udp6": {
     description: "Override ENR (IPv6-specific) UDP entry",
     type: "number",
+    group: "enr",
+  },
+  nat: {
+    type: "boolean",
+    description: "Allow configuration of non-local addresses",
     group: "enr",
   },
 };
