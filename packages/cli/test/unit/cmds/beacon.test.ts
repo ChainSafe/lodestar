@@ -40,6 +40,7 @@ describe("cmds / beacon / args handler", () => {
       listenAddress: "0.0.0.0",
       "enr.ip": enrIp,
       "enr.tcp": enrTcp,
+      nat: true,
     });
 
     const enr = options.network.discv5?.enr as SignableENR;
