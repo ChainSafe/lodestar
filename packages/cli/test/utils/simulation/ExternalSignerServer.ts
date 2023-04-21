@@ -66,7 +66,7 @@ export class ExternalSignerServer {
 
   async start(): Promise<void> {
     console.log(`Starting external signer server at ${this.url}.`);
-    await this.server.listen(this.port, this.address);
+    await this.server.listen({port: this.port, host: this.address});
     console.log(`Started external signer server at ${this.url}.`);
   }
 

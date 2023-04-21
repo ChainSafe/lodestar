@@ -32,7 +32,7 @@ describe("httpClient json client", () => {
       await server.close();
     });
 
-    return {baseUrl: await server.listen(0)};
+    return {baseUrl: await server.listen({port: 0})};
   }
 
   async function getServerWithClient(opts: RouteOptions): Promise<HttpClient> {
