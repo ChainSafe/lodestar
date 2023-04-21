@@ -1,5 +1,5 @@
 import qs from "qs";
-import fastify, {FastifyError, FastifyInstance} from "fastify";
+import fastify, {FastifyInstance} from "fastify";
 import fastifyCors from "@fastify/cors";
 import bearerAuthPlugin from "@fastify/bearer-auth";
 import {RouteConfig} from "@lodestar/api/beacon/server";
@@ -59,8 +59,8 @@ export class RestApiServer {
 
     // To parse our ApiError -> statusCode
     server.setErrorHandler((err, req, res) => {
-      if ((err as FastifyError).validation) {
-        void res.status(400).send((err as FastifyError).validation);
+      if (err.validation) {
+        void res.status(400).send(err.validation);
       } else {
         // Convert our custom ApiError into status code
         const statusCode = err instanceof ApiError ? err.statusCode : 500;
