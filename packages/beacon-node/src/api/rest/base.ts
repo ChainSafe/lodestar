@@ -78,25 +78,25 @@ export class RestApiServer {
 
     // Log all incoming request to debug (before parsing). TODO: Should we hook latter in the lifecycle? https://www.fastify.io/docs/latest/Lifecycle/
     // Note: Must be an async method so fastify can continue the release lifecycle. Otherwise we must call done() or the request stalls
-    server.addHook("onRequest", async (req, res) => {
-      const {operationId} = res.context.config as RouteConfig;
+    server.addHook("onRequest", async (req, _res) => {
+      const {operationId} = req.routeConfig as RouteConfig;
       this.logger.debug(`Req ${req.id} ${req.ip} ${operationId}`);
       metrics?.requests.inc({operationId});
     });
 
     // Log after response
     server.addHook("onResponse", async (req, res) => {
-      const {operationId} = res.context.config as RouteConfig;
+      const {operationId} = req.routeConfig as RouteConfig;
       this.logger.debug(`Res ${req.id} ${operationId} - ${res.raw.statusCode}`);
       metrics?.responseTime.observe({operationId}, res.getResponseTime() / 1000);
     });
 
-    server.addHook("onError", async (req, res, err) => {
+    server.addHook("onError", async (req, _res, err) => {
       // Don't log ErrorAborted errors, they happen on node shutdown and are not useful
       // Don't log NodeISSyncing errors, they happen very frequently while syncing and the validator polls duties
       if (err instanceof ErrorAborted || err instanceof NodeIsSyncing) return;
 
-      const {operationId} = res.context.config as RouteConfig;
+      const {operationId} = req.routeConfig as RouteConfig;
 
       if (err instanceof ApiError) {
         this.logger.warn(`Req ${req.id} ${operationId} failed`, {reason: err.message});
