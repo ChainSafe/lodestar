@@ -180,7 +180,7 @@ export class NetworkProcessor {
       // if slotRoot is null, it means the msg.data is invalid
       // in that case message will be rejected when deserializing data in later phase (gossipValidatorFn)
       if (slotRoot) {
-        // msgSlot is only available for beacon_attestation and aggregate_and_proof
+        // DOS protection: avoid processing messages that are too old
         const {slot, root} = slotRoot;
         if (slot < this.chain.clock.currentSlot - EARLIEST_PERMISSABLE_SLOT_DISTANCE) {
           // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
@@ -188,7 +188,7 @@ export class NetworkProcessor {
           return;
         }
         message.msgSlot = slot;
-        if (!this.chain.forkChoice.hasBlockHex(root)) {
+        if (root && !this.chain.forkChoice.hasBlockHex(root)) {
           if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
             // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
             this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.reached_limit});
