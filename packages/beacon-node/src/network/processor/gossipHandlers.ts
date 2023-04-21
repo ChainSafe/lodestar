@@ -203,13 +203,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       try {
         validationResult = await validateGossipAggregateAndProof(chain, signedAggregateAndProof, false, serializedData);
       } catch (e) {
-        if (e instanceof AttestationError) {
-          if (e.action === GossipAction.REJECT) {
-            chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "gossip_reject");
-          }
-          if (e.type.code === AttestationErrorCode.TOO_MANY_SKIPPED_SLOTS) {
-            metrics?.gossipValidationErrorTooManySkippedSlots.inc({topic: topic.type});
-          }
+        if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
+          chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "gossip_reject");
         }
         throw e;
       }
@@ -239,7 +234,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
 
-    [GossipType.beacon_attestation]: async ({serializedData, msgSlot}, {type, subnet}, _peer, seenTimestampSec) => {
+    [GossipType.beacon_attestation]: async ({serializedData, msgSlot}, {subnet}, _peer, seenTimestampSec) => {
       if (msgSlot === undefined) {
         throw Error("msgSlot is undefined for beacon_attestation topic");
       }
@@ -252,13 +247,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
           subnet
         );
       } catch (e) {
-        if (e instanceof AttestationError) {
-          if (e.action === GossipAction.REJECT) {
-            chain.persistInvalidSszBytes(ssz.phase0.Attestation.typeName, serializedData, "gossip_reject");
-          }
-          if (e.type.code === AttestationErrorCode.TOO_MANY_SKIPPED_SLOTS) {
-            metrics?.gossipValidationErrorTooManySkippedSlots.inc({topic: type});
-          }
+        if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
+          chain.persistInvalidSszBytes(ssz.phase0.Attestation.typeName, serializedData, "gossip_reject");
         }
         throw e;
       }

@@ -3,7 +3,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {processSlots} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {IBeaconChain} from "../../../../src/chain/index.js";
-import {AttestationErrorCode, INVALID_SERIALIZED_BYTES_ERROR_CODE} from "../../../../src/chain/errors/index.js";
+import {AttestationErrorCode, GossipErrorCode} from "../../../../src/chain/errors/index.js";
 import {AttestationOrBytes, validateGossipAttestation} from "../../../../src/chain/validation/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
@@ -47,7 +47,7 @@ describe("chain / validation / attestation", () => {
       chain,
       {attestation: null, serializedData: Buffer.alloc(0), attSlot: 0},
       subnet,
-      INVALID_SERIALIZED_BYTES_ERROR_CODE
+      GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE
     );
   });
 

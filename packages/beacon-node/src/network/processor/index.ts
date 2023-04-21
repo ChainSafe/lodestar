@@ -6,6 +6,7 @@ import {Metrics} from "../../metrics/metrics.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {GossipType} from "../gossip/interface.js";
 import {ChainEvent} from "../../chain/emitter.js";
+import {GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {createGossipQueues} from "./gossipQueues.js";
 import {NetworkWorker, NetworkWorkerModules} from "./worker.js";
 import {PendingGossipsubMessage} from "./types.js";
@@ -23,6 +24,14 @@ export type NetworkProcessorModules = NetworkWorkerModules &
 export type NetworkProcessorOpts = GossipHandlerOpts & {
   maxGossipTopicConcurrency?: number;
 };
+
+/**
+ * This is respective to gossipsub seenTTL (which is 550 * 0.7 = 385s), also it's respective
+ * to beacon_attestation ATTESTATION_PROPAGATION_SLOT_RANGE (32 slots).
+ * If message slots are withint this window, it'll likely to be filtered by gossipsub seenCache.
+ * This is mainly for DOS protection, see https://github.com/ChainSafe/lodestar/issues/5393
+ */
+const EARLIEST_PERMISSABLE_SLOT_DISTANCE = 32;
 
 type WorkOpts = {
   bypassQueue?: boolean;
@@ -173,6 +182,11 @@ export class NetworkProcessor {
       if (slotRoot) {
         // msgSlot is only available for beacon_attestation and aggregate_and_proof
         const {slot, root} = slotRoot;
+        if (slot < this.chain.clock.currentSlot - EARLIEST_PERMISSABLE_SLOT_DISTANCE) {
+          // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
+          this.metrics?.gossipValidationError.inc({topic: message.topic.type, error: GossipErrorCode.PAST_SLOT});
+          return;
+        }
         message.msgSlot = slot;
         if (!this.chain.forkChoice.hasBlockHex(root)) {
           if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
