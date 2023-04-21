@@ -19,3 +19,4 @@ export enum BlockSource {
 }
 
 export type SlotRootHex = {slot: Slot; root: RootHex};
+export type SlotOptionalRoot = {slot: Slot; root?: RootHex};

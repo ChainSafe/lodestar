@@ -8,11 +8,7 @@ import {
   isForkLightClient,
 } from "@lodestar/params";
 
-import {
-  GossipAction,
-  GossipActionError,
-  INVALID_SERIALIZED_BYTES_ERROR_CODE,
-} from "../../chain/errors/gossipValidation.js";
+import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {GossipEncoding, GossipTopic, GossipType, GossipTopicTypeMap, SSZTypeOfGossipTopic} from "./interface.js";
 import {DEFAULT_ENCODING} from "./constants.js";
 
@@ -123,7 +119,7 @@ export function sszDeserialize<T extends GossipTopic>(topic: T, serializedData: 
   try {
     return sszType.deserialize(serializedData) as SSZTypeOfGossipTopic<T>;
   } catch (e) {
-    throw new GossipActionError(GossipAction.REJECT, {code: INVALID_SERIALIZED_BYTES_ERROR_CODE});
+    throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }
 }
 
@@ -134,7 +130,7 @@ export function sszDeserializeAttestation(serializedData: Uint8Array): phase0.At
   try {
     return ssz.phase0.Attestation.deserialize(serializedData);
   } catch (e) {
-    throw new GossipActionError(GossipAction.REJECT, {code: INVALID_SERIALIZED_BYTES_ERROR_CODE});
+    throw new GossipActionError(GossipAction.REJECT, {code: GossipErrorCode.INVALID_SERIALIZED_BYTES_ERROR_CODE});
   }
 }
 

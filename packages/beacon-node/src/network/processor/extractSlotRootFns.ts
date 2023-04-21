@@ -1,9 +1,11 @@
-import {SlotRootHex} from "@lodestar/types";
+import {SlotOptionalRoot, SlotRootHex} from "@lodestar/types";
 import {
   getBlockRootFromAttestationSerialized,
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromAttestationSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
+  getSlotFromSignedBeaconBlockAndBlobsSidecarSerialized,
+  getSlotFromSignedBeaconBlockSerialized,
 } from "../../util/sszBytes.js";
 import {GossipType} from "../gossip/index.js";
 import {ExtractSlotRootFns} from "./types.js";
@@ -31,6 +33,22 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
         return null;
       }
       return {slot, root};
+    },
+    [GossipType.beacon_block]: (data: Uint8Array): SlotOptionalRoot | null => {
+      const slot = getSlotFromSignedBeaconBlockSerialized(data);
+
+      if (slot === null) {
+        return null;
+      }
+      return {slot};
+    },
+    [GossipType.beacon_block_and_blobs_sidecar]: (data: Uint8Array): SlotOptionalRoot | null => {
+      const slot = getSlotFromSignedBeaconBlockAndBlobsSidecarSerialized(data);
+
+      if (slot === null) {
+        return null;
+      }
+      return {slot};
     },
   };
 }

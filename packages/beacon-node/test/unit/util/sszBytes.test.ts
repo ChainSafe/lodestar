@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {Epoch, phase0, RootHex, Slot, ssz} from "@lodestar/types";
+import {deneb, Epoch, phase0, RootHex, Slot, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {
   getAttDataBase64FromAttestationSerialized,
@@ -10,6 +10,8 @@ import {
   getSlotFromAttestationSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
   getSignatureFromAttestationSerialized,
+  getSlotFromSignedBeaconBlockSerialized,
+  getSlotFromSignedBeaconBlockAndBlobsSidecarSerialized,
 } from "../../../src/util/sszBytes.js";
 
 describe("attestation SSZ serialized picking", () => {
@@ -77,7 +79,7 @@ describe("attestation SSZ serialized picking", () => {
   });
 });
 
-describe("aggregateAndProof SSZ serialized peaking", () => {
+describe("aggregateAndProof SSZ serialized picking", () => {
   const testCases: phase0.SignedAggregateAndProof[] = [
     ssz.phase0.SignedAggregateAndProof.defaultValue(),
     signedAggregateAndProofFromValues(
@@ -128,6 +130,47 @@ describe("aggregateAndProof SSZ serialized peaking", () => {
   });
 });
 
+describe("signedBeaconBlock SSZ serialized picking", () => {
+  const testCases = [ssz.phase0.SignedBeaconBlock.defaultValue(), signedBeaconBlockFromValues(1_000_000)];
+
+  for (const [i, signedBeaconBlock] of testCases.entries()) {
+    const bytes = ssz.phase0.SignedBeaconBlock.serialize(signedBeaconBlock);
+    it(`signedBeaconBlock ${i}`, () => {
+      expect(getSlotFromSignedBeaconBlockSerialized(bytes)).equals(signedBeaconBlock.message.slot);
+    });
+  }
+
+  it("getSlotFromSignedBeaconBlockSerialized - invalid data", () => {
+    const invalidSlotDataSizes = [0, 50, 104];
+    for (const size of invalidSlotDataSizes) {
+      expect(getSlotFromSignedBeaconBlockSerialized(Buffer.alloc(size))).to.be.null;
+    }
+  });
+});
+
+describe("signedBeaconBlockAndBlobsSidecar SSZ serialized picking", () => {
+  const testCases = [
+    ssz.deneb.SignedBeaconBlockAndBlobsSidecar.defaultValue(),
+    signedBeaconBlockAndBlobsSidecarFromValues(1_000_000),
+  ];
+
+  for (const [i, signedBeaconBlockAndBlobsSidecar] of testCases.entries()) {
+    const bytes = ssz.deneb.SignedBeaconBlockAndBlobsSidecar.serialize(signedBeaconBlockAndBlobsSidecar);
+    it(`signedBeaconBlockAndBlobsSidecar ${i}`, () => {
+      expect(getSlotFromSignedBeaconBlockAndBlobsSidecarSerialized(bytes)).equals(
+        signedBeaconBlockAndBlobsSidecar.beaconBlock.message.slot
+      );
+    });
+  }
+
+  it("getSlotFromSignedBeaconBlockAndBlobsSidecarSerialized - invalid data", () => {
+    const invalidSlotDataSizes = [0, 50, 112];
+    for (const size of invalidSlotDataSizes) {
+      expect(getSlotFromSignedBeaconBlockAndBlobsSidecarSerialized(Buffer.alloc(size))).to.be.null;
+    }
+  });
+});
+
 function attestationFromValues(
   slot: Slot,
   blockRoot: RootHex,
@@ -154,4 +197,16 @@ function signedAggregateAndProofFromValues(
   signedAggregateAndProof.message.aggregate.data.target.epoch = targetEpoch;
   signedAggregateAndProof.message.aggregate.data.target.root = fromHex(targetRoot);
   return signedAggregateAndProof;
+}
+
+function signedBeaconBlockFromValues(slot: Slot): phase0.SignedBeaconBlock {
+  const signedBeaconBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+  signedBeaconBlock.message.slot = slot;
+  return signedBeaconBlock;
+}
+
+function signedBeaconBlockAndBlobsSidecarFromValues(slot: Slot): deneb.SignedBeaconBlockAndBlobsSidecar {
+  const signedBeaconBlockAndBlobsSidecar = ssz.deneb.SignedBeaconBlockAndBlobsSidecar.defaultValue();
+  signedBeaconBlockAndBlobsSidecar.beaconBlock.message.slot = slot;
+  return signedBeaconBlockAndBlobsSidecar;
 }
