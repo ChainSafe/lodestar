@@ -38,7 +38,7 @@ describe("ExecutionEngine / http", () => {
       await server.close();
     });
 
-    const baseUrl = await server.listen(0);
+    const baseUrl = await server.listen({port: 0});
 
     executionEngine = initializeExecutionEngine(
       {

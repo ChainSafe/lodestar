@@ -25,6 +25,6 @@ export async function startServer(
 
   void server.register(fastifyCors, {origin: "*"});
 
-  await server.listen(opts.port, opts.host);
+  await server.listen({port: opts.port, host: opts.host});
   return server;
 }
