@@ -10,7 +10,7 @@ import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {BeaconClock} from "./clock/interface.js";
 import {ChainEventEmitter} from "./emitter.js";
-import {IStateRegenerator} from "./regen/index.js";
+import {IStateRegenerator, RegenCaller} from "./regen/index.js";
 import {StateContextCache, CheckpointStateCache} from "./stateCache/index.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {
@@ -105,7 +105,8 @@ export interface IBeaconChain {
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean;
 
   getHeadState(): CachedBeaconStateAllForks;
-  getHeadStateAtCurrentEpoch(): Promise<CachedBeaconStateAllForks>;
+  getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
+  getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
 
   /**
    * Since we can have multiple parallel chains,

@@ -11,6 +11,7 @@ export enum RegenCaller {
   processBlocksInEpoch = "processBlocksInEpoch",
   validateGossipAggregateAndProof = "validateGossipAggregateAndProof",
   validateGossipAttestation = "validateGossipAttestation",
+  validateGossipVoluntaryExit = "validateGossipVoluntaryExit",
   onForkChoiceFinalized = "onForkChoiceFinalized",
 }
 

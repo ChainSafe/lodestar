@@ -333,11 +333,22 @@ export class BeaconChain implements IBeaconChain {
     return headState;
   }
 
-  async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconStateAllForks> {
-    const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
+  async getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
+    return this.getHeadStateAtEpoch(this.clock.currentEpoch, regenCaller);
+  }
+
+  async getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
+    // using getHeadState() means we'll use checkpointStateCache if it's available
+    const headState = this.getHeadState();
+    // head state is in the same epoch, or we pulled up head state already from past epoch
+    if (epoch <= computeEpochAtSlot(headState.slot)) {
+      // should go to this most of the time
+      return headState;
+    }
+    // only use regen queue if necessary, it'll cache in checkpointStateCache if regen gets through epoch transition
     const head = this.forkChoice.getHead();
-    const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
-    return this.regen.getBlockSlotState(head.blockRoot, bestSlot, {dontTransferCache: true}, RegenCaller.getDuties);
+    const startSlot = computeStartSlotAtEpoch(epoch);
+    return this.regen.getBlockSlotState(head.blockRoot, startSlot, {dontTransferCache: true}, regenCaller);
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
