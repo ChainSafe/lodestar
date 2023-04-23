@@ -124,6 +124,12 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.jobQueue.push({key: "getCheckpointState", args: [cp, opts, rCaller]});
   }
 
+  /**
+   * Get state of provided `blockRoot` and dial forward to `slot`
+   * Use this api with care because we don't want the queue to be busy
+   * For the context, gossip block validation uses this api so we want it to be as fast as possible
+   * @returns
+   */
   async getBlockSlotState(
     blockRoot: RootHex,
     slot: Slot,

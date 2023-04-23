@@ -279,7 +279,6 @@ export function getValidatorApi({
       const headState = chain.getHeadState();
       const headSlot = headState.slot;
       const attEpoch = computeEpochAtSlot(slot);
-      const headEpoch = computeEpochAtSlot(headSlot);
       const headBlockRootHex = chain.forkChoice.getHead().blockRoot;
       const headBlockRoot = fromHexString(headBlockRootHex);
 
@@ -304,16 +303,7 @@ export function getValidatorApi({
 
       // To get the correct source we must get a state in the same epoch as the attestation's epoch.
       // An epoch transition may change state.currentJustifiedCheckpoint
-      const attEpochState =
-        attEpoch <= headEpoch
-          ? headState
-          : // Will advance the state to the correct next epoch if necessary
-            await chain.regen.getBlockSlotState(
-              headBlockRootHex,
-              slot,
-              {dontTransferCache: true},
-              RegenCaller.produceAttestationData
-            );
+      const attEpochState = await chain.getHeadStateAtEpoch(attEpoch, RegenCaller.produceAttestationData);
 
       return {
         data: {
@@ -367,7 +357,7 @@ export function getValidatorApi({
       await waitForNextClosestEpoch();
 
       const head = chain.forkChoice.getHead();
-      const state = await chain.getHeadStateAtCurrentEpoch();
+      const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
 
       const stateEpoch = state.epochCtx.epoch;
       let indexes: ValidatorIndex[] = [];
@@ -423,7 +413,7 @@ export function getValidatorApi({
       }
 
       const head = chain.forkChoice.getHead();
-      const state = await chain.getHeadStateAtCurrentEpoch();
+      const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
 
       // TODO: Determine what the current epoch would be if we fast-forward our system clock by
       // `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.

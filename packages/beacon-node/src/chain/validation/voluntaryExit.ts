@@ -2,6 +2,7 @@ import {phase0} from "@lodestar/types";
 import {isValidVoluntaryExit, getVoluntaryExitSignatureSet} from "@lodestar/state-transition";
 import {IBeaconChain} from "..";
 import {VoluntaryExitError, VoluntaryExitErrorCode, GossipAction} from "../errors/index.js";
+import {RegenCaller} from "../regen/index.js";
 
 export async function validateGossipVoluntaryExit(
   chain: IBeaconChain,
@@ -22,7 +23,7 @@ export async function validateGossipVoluntaryExit(
   // The voluntaryExit.epoch must be in the past but the validator's status may change in recent epochs.
   // We dial the head state to the current epoch to get the current status of the validator. This is
   // relevant on periods of many skipped slots.
-  const state = await chain.getHeadStateAtCurrentEpoch();
+  const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipVoluntaryExit);
 
   // [REJECT] All of the conditions within process_voluntary_exit pass validation.
   // verifySignature = false, verified in batch below

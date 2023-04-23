@@ -165,6 +165,7 @@ export class MockBeaconChain implements IBeaconChain {
     this.pubkey2index = new PubkeyIndexMap();
     this.index2pubkey = [];
   }
+
   executionBuilder?: IExecutionBuilder | undefined;
 
   validatorSeenAtEpoch(): boolean {
@@ -178,6 +179,10 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconStateAllForks> {
+    return this.state;
+  }
+
+  async getHeadStateAtEpoch(): Promise<CachedBeaconStateAllForks> {
     return this.state;
   }
 
