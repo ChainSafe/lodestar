@@ -45,15 +45,15 @@ const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
   [GossipType.beacon_block]: {bypassQueue: true},
   [GossipType.beacon_block_and_blobs_sidecar]: {bypassQueue: true},
   [GossipType.beacon_aggregate_and_proof]: {},
-  [GossipType.beacon_attestation]: {},
   [GossipType.voluntary_exit]: {},
+  [GossipType.bls_to_execution_change]: {},
+  [GossipType.beacon_attestation]: {},
   [GossipType.proposer_slashing]: {},
   [GossipType.attester_slashing]: {},
   [GossipType.sync_committee_contribution_and_proof]: {},
   [GossipType.sync_committee]: {},
   [GossipType.light_client_finality_update]: {},
   [GossipType.light_client_optimistic_update]: {},
-  [GossipType.bls_to_execution_change]: {},
 };
 const executeGossipWorkOrder = Object.keys(executeGossipWorkOrderObj) as (keyof typeof executeGossipWorkOrderObj)[];
 
