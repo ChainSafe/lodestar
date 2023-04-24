@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/validator",
-  "version": "1.7.2",
+  "version": "1.8.0",
   "description": "A Typescript implementation of the validator client",
   "author": "ChainSafe Systems",
   "license": "LGPL-3.0",
@@ -51,13 +51,13 @@
   "dependencies": {
     "@chainsafe/bls": "7.1.1",
     "@chainsafe/ssz": "^0.10.2",
-    "@lodestar/api": "^1.7.2",
-    "@lodestar/config": "^1.7.2",
-    "@lodestar/db": "^1.7.2",
-    "@lodestar/params": "^1.7.2",
-    "@lodestar/state-transition": "^1.7.2",
-    "@lodestar/types": "^1.7.2",
-    "@lodestar/utils": "^1.7.2",
+    "@lodestar/api": "^1.8.0",
+    "@lodestar/config": "^1.8.0",
+    "@lodestar/db": "^1.8.0",
+    "@lodestar/params": "^1.8.0",
+    "@lodestar/state-transition": "^1.8.0",
+    "@lodestar/types": "^1.8.0",
+    "@lodestar/utils": "^1.8.0",
     "bigint-buffer": "^1.1.5",
     "cross-fetch": "^3.1.4",
     "strict-event-emitter-types": "^2.0.0"
