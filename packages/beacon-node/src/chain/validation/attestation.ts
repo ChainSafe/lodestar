@@ -7,7 +7,7 @@ import {
   CachedBeaconStateAllForks,
   ISignatureSet,
   getAttestationDataSigningRoot,
-  createAggregateSignatureSetFromComponents,
+  createSingleSignatureSetFromComponents,
 } from "@lodestar/state-transition";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
@@ -232,15 +232,15 @@ export async function validateGossipAttestation(
 
   if (attestationOrCache.cache) {
     // there could be up to 6% of cpu time to compute signing root if we don't clone the signature set
-    signatureSet = createAggregateSignatureSetFromComponents(
-      attestingIndices.map((i) => chain.index2pubkey[i]),
+    signatureSet = createSingleSignatureSetFromComponents(
+      chain.index2pubkey[validatorIndex],
       attestationOrCache.cache.signingRoot,
       signature
     );
     attDataRootHex = attestationOrCache.cache.attDataRootHex;
   } else {
-    signatureSet = createAggregateSignatureSetFromComponents(
-      attestingIndices.map((i) => chain.index2pubkey[i]),
+    signatureSet = createSingleSignatureSetFromComponents(
+      chain.index2pubkey[validatorIndex],
       getSigningRoot(),
       signature
     );
