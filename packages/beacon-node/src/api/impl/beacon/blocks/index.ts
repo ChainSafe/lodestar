@@ -4,7 +4,7 @@ import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {deneb, allForks} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {getBlockInput} from "../../../../chain/blocks/types.js";
+import {getBlockInput, ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
@@ -197,10 +197,12 @@ export function getBeaconBlockApi({
       } else {
         signedBlock = await executionBuilder.submitBlindedBlock(signedBlindedBlock);
       }
-      return this.publishBlock(signedBlock);
+      // the full block is published by relay and it's possible that the block is already known to us by gossip
+      // see https://github.com/ChainSafe/lodestar/issues/5404
+      return this.publishBlock(signedBlock, {ignoreIfKnown: true});
     },
 
-    async publishBlock(signedBlock) {
+    async publishBlock(signedBlock, opts?: ImportBlockOpts) {
       const seenTimestampSec = Date.now() / 1000;
 
       // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the
@@ -231,7 +233,7 @@ export function getBeaconBlockApi({
         () => network.publishBeaconBlockMaybeBlobs(blockForImport),
 
         () =>
-          chain.processBlock(blockForImport).catch((e) => {
+          chain.processBlock(blockForImport, opts).catch((e) => {
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
               network.events.emit(NetworkEvent.unknownBlockParent, blockForImport, network.peerId.toString());
             }
