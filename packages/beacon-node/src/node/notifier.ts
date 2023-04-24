@@ -65,7 +65,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       const skippedSlots = clockSlot - headInfo.slot;
       // headDiffInfo to have space suffix if its a non empty string
       const headDiffInfo =
-        skippedSlots > 1 ? (skippedSlots > 1000 ? `${headInfo.slot} ` : `(slot -${skippedSlots}) `) : "";
+        skippedSlots > 0 ? (skippedSlots > 1000 ? `${headInfo.slot} ` : `(slot -${skippedSlots}) `) : "";
       const headRow = `head: ${headDiffInfo}${prettyBytes(headInfo.blockRoot)}`;
 
       const executionInfo = getHeadExecutionInfo(config, clockEpoch, headState, headInfo);
