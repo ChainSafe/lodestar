@@ -124,7 +124,8 @@ export type ProtocolDefinitionGenerator<Req, Res> = (
   handler: ReqRespHandler<Req>
 ) => ProtocolDefinition<Req, Res>;
 
-export type HandlerTypeFromMessage<T> = T extends ProtocolDefinitionGenerator<infer Req, unknown>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type HandlerTypeFromMessage<T> = T extends ProtocolDefinitionGenerator<infer Req, any>
   ? ReqRespHandler<Req>
   : never;
 

@@ -5,18 +5,25 @@ import {
   ResponseError,
   LightClientServerError,
   LightClientServerErrorCode,
+  EncodedPayloadBytes,
+  ContextBytesType,
 } from "@lodestar/reqresp";
-import {Root, allForks} from "@lodestar/types";
+import {Root, ssz} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 import {IBeaconChain} from "../../../chain/index.js";
 
 export async function* onLightClientBootstrap(
   requestBody: Root,
   chain: IBeaconChain
-): AsyncIterable<EncodedPayload<allForks.LightClientBootstrap>> {
+): AsyncIterable<EncodedPayloadBytes> {
   try {
     yield {
-      type: EncodedPayloadType.ssz,
-      data: await chain.lightClientServer.getBootstrap(requestBody),
+      type: EncodedPayloadType.bytes,
+      bytes: ssz.altair.LightClientBootstrap.serialize(await chain.lightClientServer.getBootstrap(requestBody)),
+      contextBytes: {
+        type: ContextBytesType.ForkDigest,
+        fork: ForkName.altair,
+      },
     };
   } catch (e) {
     if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {

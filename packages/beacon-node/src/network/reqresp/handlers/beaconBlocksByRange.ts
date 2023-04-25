@@ -47,7 +47,7 @@ export async function* onBlocksOrBlobsSidecarsByRange(
         bytes: value,
         contextBytes: {
           type: ContextBytesType.ForkDigest,
-          forkSlot: db.finalized.decodeKey(key),
+          fork: chain.config.getForkName(db.finalized.decodeKey(key)),
         },
       };
     }
@@ -82,7 +82,7 @@ export async function* onBlocksOrBlobsSidecarsByRange(
           bytes: blockBytes,
           contextBytes: {
             type: ContextBytesType.ForkDigest,
-            forkSlot: block.slot,
+            fork: chain.config.getForkName(block.slot),
           },
         };
       }

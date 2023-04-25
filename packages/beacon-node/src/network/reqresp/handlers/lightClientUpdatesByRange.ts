@@ -1,7 +1,8 @@
-import {altair, allForks} from "@lodestar/types";
-import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
+import {altair, ssz} from "@lodestar/types";
+import {ForkName, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {
-  EncodedPayload,
+  ContextBytesType,
+  EncodedPayloadBytes,
   EncodedPayloadType,
   LightClientServerError,
   LightClientServerErrorCode,
@@ -13,13 +14,17 @@ import {IBeaconChain} from "../../../chain/index.js";
 export async function* onLightClientUpdatesByRange(
   requestBody: altair.LightClientUpdatesByRange,
   chain: IBeaconChain
-): AsyncIterable<EncodedPayload<allForks.LightClientUpdate>> {
+): AsyncIterable<EncodedPayloadBytes> {
   const count = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, requestBody.count);
   for (let period = requestBody.startPeriod; period < requestBody.startPeriod + count; period++) {
     try {
       yield {
-        type: EncodedPayloadType.ssz,
-        data: await chain.lightClientServer.getUpdate(period),
+        type: EncodedPayloadType.bytes,
+        bytes: ssz.altair.LightClientUpdate.serialize(await chain.lightClientServer.getUpdate(period)),
+        contextBytes: {
+          type: ContextBytesType.ForkDigest,
+          fork: ForkName.altair,
+        },
       };
     } catch (e) {
       if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {
