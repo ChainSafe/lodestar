@@ -1,15 +1,15 @@
-import {expect} from "chai";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {LodestarError, fromHex, Logger} from "@lodestar/utils";
-import {ContextBytesType, EncodedPayloadType, ProtocolDefinition, RespStatus} from "../../../src/index.js";
-import {sszSnappyPing} from "../../fixtures/messages.js";
+import {expect} from "chai";
+import {LodestarError, Logger, fromHex} from "@lodestar/utils";
+import {ProtocolDefinition, RespStatus} from "../../../src/index.js";
 import {Ping} from "../../../src/protocols/index.js";
-import {expectEqualByteChunks, MockLibP2pStream} from "../../utils/index.js";
-import {handleRequest} from "../../../src/response/index.js";
-import {createStubbedLogger} from "../../mocks/logger.js";
-import {getValidPeerId} from "../../utils/peer.js";
-import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {ReqRespRateLimiter} from "../../../src/rate_limiter/ReqRespRateLimiter.js";
+import {handleRequest} from "../../../src/response/index.js";
+import {sszSnappyPing} from "../../fixtures/messages.js";
+import {createStubbedLogger} from "../../mocks/logger.js";
+import {expectRejectedWithLodestarError} from "../../utils/errors.js";
+import {MockLibP2pStream, expectEqualByteChunks} from "../../utils/index.js";
+import {getValidPeerId} from "../../utils/peer.js";
 
 const testCases: {
   id: string;
