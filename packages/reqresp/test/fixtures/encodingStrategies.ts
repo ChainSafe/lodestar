@@ -4,6 +4,7 @@ import {fileURLToPath} from "node:url";
 import varint from "varint";
 import {LodestarError} from "@lodestar/utils";
 import {bellatrix, ssz} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 import {SszSnappyError, SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/errors.js";
 import {ContextBytesType, EncodedPayload, EncodedPayloadType, TypeSerializer} from "../../src/types.js";
 import {
@@ -36,7 +37,7 @@ export const goerliShadowForkBlock13249: SszSnappyTestBlockData<bellatrix.Signed
   payload: {
     type: EncodedPayloadType.bytes,
     bytes: fs.readFileSync(path.join(__dirname, "/goerliShadowForkBlock.13249/serialized.ssz")),
-    contextBytes: {type: ContextBytesType.ForkDigest, forkSlot: 13249},
+    contextBytes: {type: ContextBytesType.ForkDigest, fork: ForkName.altair},
   },
   streamedBody: fs.readFileSync(path.join(__dirname, "/goerliShadowForkBlock.13249/streamed.snappy")),
 };

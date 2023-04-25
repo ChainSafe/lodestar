@@ -2,13 +2,13 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import all from "it-all";
 import {pipe} from "it-pipe";
-import {Uint8ArrayList} from "uint8arraylist";
 import {LodestarError} from "@lodestar/utils";
+import {ForkName} from "@lodestar/params";
 import {responseDecode} from "../../../src/encoders/responseDecode.js";
 import {responseEncodersErrorTestCases, responseEncodersTestCases} from "../../fixtures/encoders.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {arrToSource, onlySuccessResp} from "../../utils/index.js";
-import {EncodedPayloadType} from "../../../src/types.js";
+import {ContextBytesType} from "../../../src/types.js";
 
 chai.use(chaiAsPromised);
 
@@ -23,15 +23,15 @@ describe("encoders / responseDecode", () => {
           all
         );
 
-        expect(
-          responseChunks.filter(onlySuccessResp).map((r) => {
-            if (r.payload.type === EncodedPayloadType.ssz) {
-              return r.payload.data;
-            } else {
-              return r.payload.bytes;
-            }
-          })
-        ).to.deep.equal(responses);
+        const successResponses: unknown[] = responseChunks.filter(onlySuccessResp).map((r) => {
+          const bytes = r.payload.bytes;
+          const fork =
+            r.payload.contextBytes.type === ContextBytesType.Empty ? ForkName.phase0 : r.payload.contextBytes.fork;
+
+          return protocol.responseType(fork).deserialize(bytes) as unknown;
+        });
+
+        expect(successResponses).to.deep.equal(responses);
       });
     }
   });
@@ -43,7 +43,7 @@ describe("encoders / responseDecode", () => {
       it(`${id}`, async () => {
         await expectRejectedWithLodestarError(
           pipe(
-            arrToSource(chunks as Uint8ArrayList[]),
+            arrToSource(chunks as Uint8Array[]),
             // eslint-disable-next-line @typescript-eslint/no-empty-function
             responseDecode(protocol, {onFirstHeader: () => {}, onFirstResponseChunk: () => {}}),
             all

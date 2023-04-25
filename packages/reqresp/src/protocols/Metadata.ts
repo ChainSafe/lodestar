@@ -1,5 +1,5 @@
 import {allForks, ssz} from "@lodestar/types";
-import {ContextBytesType, DuplexProtocolDefinitionGenerator, Encoding, MixedProtocolDefinition} from "../types.js";
+import {ContextBytesType, ProtocolDefinitionGenerator, Encoding, MixedProtocolDefinition} from "../types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 const MetadataCommon: Pick<
@@ -15,7 +15,7 @@ const MetadataCommon: Pick<
   },
 };
 
-export const Metadata: DuplexProtocolDefinitionGenerator<null, allForks.Metadata> = (modules, handler) => {
+export const Metadata: ProtocolDefinitionGenerator<null, allForks.Metadata> = (modules, handler) => {
   return {
     ...MetadataCommon,
     version: 1,
@@ -25,7 +25,7 @@ export const Metadata: DuplexProtocolDefinitionGenerator<null, allForks.Metadata
   };
 };
 
-export const MetadataV2: DuplexProtocolDefinitionGenerator<null, allForks.Metadata> = (modules, handler) => {
+export const MetadataV2: ProtocolDefinitionGenerator<null, allForks.Metadata> = (modules, handler) => {
   return {
     ...MetadataCommon,
     version: 2,

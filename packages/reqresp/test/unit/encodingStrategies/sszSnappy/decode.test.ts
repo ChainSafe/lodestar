@@ -15,7 +15,7 @@ import {arrToSource} from "../../../utils/index.js";
 chai.use(chaiAsPromised);
 
 describe("encodingStrategies / sszSnappy / decode", () => {
-  for (const {id, type, payload, chunks} of encodingStrategiesTestCases) {
+  for (const {id, type, sszPayload: payload, chunks} of encodingStrategiesTestCases) {
     it(id, async () => {
       const bufferedSource = new BufferedSource(arrToSource(chunks));
       const serializer = type as TypeSerializer<typeof payload.data>;

@@ -1,7 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {BeaconConfig, ForkConfig, ForkDigestContext} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
-import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {RateLimiterQuota} from "./rate_limiter/rateLimiterGRCA.js";
 
@@ -13,32 +12,36 @@ export enum EncodedPayloadType {
   bytes,
 }
 
-/**
- * Wrapper for the request/response payload for SSZ type data
- */
-export interface EncodedPayloadSsz<T> {
-  type: EncodedPayloadType.ssz;
-  data: T;
+export interface EncodedPayloadData<T = unknown> extends Record<EncodedPayloadType, unknown> {
+  [EncodedPayloadType.ssz]: {
+    type: EncodedPayloadType.ssz;
+    data: T;
+  };
+  [EncodedPayloadType.bytes]: {
+    type: EncodedPayloadType.bytes;
+    bytes: Uint8Array;
+    contextBytes: ContextBytes;
+  };
 }
 
 /**
  * Wrapper for the request/response payload for binary type data
  */
-export interface EncodedPayloadBytes {
-  type: EncodedPayloadType.bytes;
-  bytes: Uint8Array;
-  contextBytes: ContextBytes;
-}
+export type EncodedPayloadBytes = EncodedPayloadData[EncodedPayloadType.bytes];
+/**
+ * Wrapper for the request/response payload for ssz type data
+ */
+export type EncodedPayloadSsz<T = unknown> = EncodedPayloadData<T>[EncodedPayloadType.ssz];
 
 /**
  * Wrapper for the request/response payload
  */
-export type EncodedPayload<T> = EncodedPayloadSsz<T> | EncodedPayloadBytes;
+export type EncodedPayload<T> = EncodedPayloadData<T>[EncodedPayloadType];
 
 /**
  * Request handler
  */
-export type ReqRespHandler<Req, Resp> = (req: Req, peerId: PeerId) => AsyncIterable<EncodedPayload<Resp>>;
+export type ReqRespHandler<Req> = (req: Req, peerId: PeerId) => AsyncIterable<EncodedPayloadBytes>;
 
 /**
  * ReqResp Protocol Deceleration
@@ -76,7 +79,7 @@ export interface InboundRateLimitQuota<Req = unknown> {
  * ReqResp Protocol definition for full duplex protocols
  */
 export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<Protocol, "protocolPrefix"> {
-  handler: ReqRespHandler<Req, Resp>;
+  handler: ReqRespHandler<Req>;
   requestType: (fork: ForkName) => TypeSerializer<Req> | null;
   responseType: (fork: ForkName) => TypeSerializer<Resp>;
   ignoreResponse?: boolean;
@@ -107,7 +110,7 @@ export type MixedProtocolDefinition<Req = unknown, Resp = unknown> =
  * If handler is not provided, the protocol will be dial only
  * If handler is provided, the protocol will be full duplex
  */
-export type MixedProtocolDefinitionGenerator<Req, Res> = <H extends ReqRespHandler<Req, Res> | undefined = undefined>(
+export type MixedProtocolDefinitionGenerator<Req, Res> = <H extends ReqRespHandler<Req> | undefined = undefined>(
   // "inboundRateLimiter" is available only on handler context not on generator
   modules: {config: BeaconConfig},
   handler?: H
@@ -116,13 +119,13 @@ export type MixedProtocolDefinitionGenerator<Req, Res> = <H extends ReqRespHandl
 /**
  * ReqResp protocol definition descriptor for full duplex protocols
  */
-export type DuplexProtocolDefinitionGenerator<Req, Res> = (
+export type ProtocolDefinitionGenerator<Req, Res> = (
   modules: {config: BeaconConfig},
-  handler: ReqRespHandler<Req, Res>
+  handler: ReqRespHandler<Req>
 ) => ProtocolDefinition<Req, Res>;
 
-export type HandlerTypeFromMessage<T> = T extends DuplexProtocolDefinitionGenerator<infer Req, infer Res>
-  ? ReqRespHandler<Req, Res>
+export type HandlerTypeFromMessage<T> = T extends ProtocolDefinitionGenerator<infer Req, unknown>
+  ? ReqRespHandler<Req>
   : never;
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
@@ -145,7 +148,7 @@ export type ContextBytesFactory<Resp> =
       forkFromResponse: (response: Resp) => ForkName;
     };
 
-export type ContextBytes = {type: ContextBytesType.Empty} | {type: ContextBytesType.ForkDigest; forkSlot: Slot};
+export type ContextBytes = {type: ContextBytesType.Empty} | {type: ContextBytesType.ForkDigest; fork: ForkName};
 
 export enum ContextBytesType {
   /** 0 bytes chunk, can be ignored */

@@ -1,31 +1,44 @@
-import {Uint8ArrayList} from "uint8arraylist";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {allForks, altair, phase0, ssz} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as messagesDef from "../../src/protocols/index.js";
-import {EncodedPayloadType, MixedProtocolDefinition, ReqRespHandler, TypeSerializer} from "../../src/types.js";
+import {
+  ContextBytesType,
+  EncodedPayloadBytes,
+  EncodedPayloadSsz,
+  EncodedPayloadType,
+  MixedProtocolDefinition,
+  ReqRespHandler,
+  TypeSerializer,
+} from "../../src/types.js";
 import {ZERO_HASH} from "../utils/index.js";
 
 type MessageFixture<T> = {
   type: TypeSerializer<T>;
-  payload: {
-    type: EncodedPayloadType.ssz;
-    data: T;
-  };
-  chunks: Uint8ArrayList[];
+  sszPayload: EncodedPayloadSsz<T>;
+  binaryPayload: EncodedPayloadBytes;
+  chunks: Uint8Array[];
   asyncChunks: Buffer[];
 };
 
+const pingData = BigInt(1);
 export const sszSnappyPing: MessageFixture<phase0.Ping> = {
   type: ssz.phase0.Ping,
-  payload: {
+  sszPayload: {
     type: EncodedPayloadType.ssz,
-    data: BigInt(1),
+    data: pingData,
+  },
+  binaryPayload: {
+    type: EncodedPayloadType.bytes,
+    bytes: ssz.phase0.Ping.serialize(pingData),
+    contextBytes: {
+      type: ContextBytesType.Empty,
+    },
   },
   chunks: ["0x08", "0xff060000734e61507059010c00000175de410100000000000000"].map(
-    (s) => new Uint8ArrayList(fromHexString(s))
+    (s) => new Uint8Array(fromHexString(s))
   ),
   asyncChunks: [
     "0x08", // length prefix
@@ -34,16 +47,25 @@ export const sszSnappyPing: MessageFixture<phase0.Ping> = {
   ].map((d) => Buffer.from(fromHexString(d))),
 };
 
+const statusData = {
+  forkDigest: Buffer.alloc(4, 0xda),
+  finalizedRoot: Buffer.alloc(32, 0xda),
+  finalizedEpoch: 9,
+  headRoot: Buffer.alloc(32, 0xda),
+  headSlot: 9,
+};
 export const sszSnappyStatus: MessageFixture<phase0.Status> = {
   type: ssz.phase0.Status,
-  payload: {
+  sszPayload: {
     type: EncodedPayloadType.ssz,
-    data: {
-      forkDigest: Buffer.alloc(4, 0xda),
-      finalizedRoot: Buffer.alloc(32, 0xda),
-      finalizedEpoch: 9,
-      headRoot: Buffer.alloc(32, 0xda),
-      headSlot: 9,
+    data: statusData,
+  },
+  binaryPayload: {
+    type: EncodedPayloadType.bytes,
+    bytes: ssz.phase0.Status.serialize(statusData),
+    contextBytes: {
+      type: ContextBytesType.ForkDigest,
+      fork: ForkName.altair,
     },
   },
   asyncChunks: [
@@ -52,36 +74,46 @@ export const sszSnappyStatus: MessageFixture<phase0.Status> = {
     "0x001b0000097802c15400da8a010004090009017e2b001c0900000000000000",
   ].map((d) => Buffer.from(fromHexString(d))),
   chunks: ["0x54", "0xff060000734e61507059001b0000097802c15400da8a010004090009017e2b001c0900000000000000"].map(
-    (s) => new Uint8ArrayList(fromHexString(s))
+    (s) => new Uint8Array(fromHexString(s))
   ),
+};
+
+const signedBeaconBlockPhase0Data = {
+  message: {
+    slot: 9,
+    proposerIndex: 9,
+    parentRoot: Buffer.alloc(32, 0xda),
+    stateRoot: Buffer.alloc(32, 0xda),
+    body: {
+      randaoReveal: Buffer.alloc(96, 0xda),
+      eth1Data: {
+        depositRoot: Buffer.alloc(32, 0xda),
+        blockHash: Buffer.alloc(32, 0xda),
+        depositCount: 9,
+      },
+      graffiti: Buffer.alloc(32, 0xda),
+      proposerSlashings: [],
+      attesterSlashings: [],
+      attestations: [],
+      deposits: [],
+      voluntaryExits: [],
+    },
+  },
+  signature: Buffer.alloc(96, 0xda),
 };
 
 export const sszSnappySignedBeaconBlockPhase0: MessageFixture<phase0.SignedBeaconBlock> = {
   type: ssz.phase0.SignedBeaconBlock,
-  payload: {
+  sszPayload: {
     type: EncodedPayloadType.ssz,
-    data: {
-      message: {
-        slot: 9,
-        proposerIndex: 9,
-        parentRoot: Buffer.alloc(32, 0xda),
-        stateRoot: Buffer.alloc(32, 0xda),
-        body: {
-          randaoReveal: Buffer.alloc(96, 0xda),
-          eth1Data: {
-            depositRoot: Buffer.alloc(32, 0xda),
-            blockHash: Buffer.alloc(32, 0xda),
-            depositCount: 9,
-          },
-          graffiti: Buffer.alloc(32, 0xda),
-          proposerSlashings: [],
-          attesterSlashings: [],
-          attestations: [],
-          deposits: [],
-          voluntaryExits: [],
-        },
-      },
-      signature: Buffer.alloc(96, 0xda),
+    data: signedBeaconBlockPhase0Data,
+  },
+  binaryPayload: {
+    type: EncodedPayloadType.bytes,
+    bytes: ssz.phase0.SignedBeaconBlock.serialize(signedBeaconBlockPhase0Data),
+    contextBytes: {
+      type: ContextBytesType.ForkDigest,
+      fork: ForkName.phase0,
     },
   },
   asyncChunks: [
@@ -92,23 +124,32 @@ export const sszSnappySignedBeaconBlockPhase0: MessageFixture<phase0.SignedBeaco
   chunks: [
     "0x9403",
     "0xff060000734e6150705900340000fff3b3f594031064000000dafe01007a010004090009011108fe6f000054feb4008ab4007e0100fecc0011cc0cdc0000003e0400",
-  ].map((s) => new Uint8ArrayList(fromHexString(s))),
+  ].map((s) => new Uint8Array(fromHexString(s))),
 };
 
+const signedBeaconBlockAltairData = {
+  ...signedBeaconBlockPhase0Data,
+  message: {
+    ...signedBeaconBlockPhase0Data.message,
+    slot: 90009,
+    body: {
+      ...signedBeaconBlockPhase0Data.message.body,
+      syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
+    },
+  },
+};
 export const sszSnappySignedBeaconBlockAltair: MessageFixture<altair.SignedBeaconBlock> = {
   type: ssz.altair.SignedBeaconBlock,
-  payload: {
+  sszPayload: {
     type: EncodedPayloadType.ssz,
-    data: {
-      ...sszSnappySignedBeaconBlockPhase0.payload.data,
-      message: {
-        ...sszSnappySignedBeaconBlockPhase0.payload.data.message,
-        slot: 90009,
-        body: {
-          ...sszSnappySignedBeaconBlockPhase0.payload.data.message.body,
-          syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
-        },
-      },
+    data: signedBeaconBlockAltairData,
+  },
+  binaryPayload: {
+    type: EncodedPayloadType.bytes,
+    bytes: ssz.altair.SignedBeaconBlock.serialize(signedBeaconBlockAltairData),
+    contextBytes: {
+      type: ContextBytesType.ForkDigest,
+      fork: ForkName.altair,
     },
   },
   asyncChunks: [
@@ -119,7 +160,7 @@ export const sszSnappySignedBeaconBlockAltair: MessageFixture<altair.SignedBeaco
   chunks: [
     "0xb404",
     "0xff060000734e6150705900420000bab7f8feb4041064000000dafe01007a01000c995f0100010100090105ee70000d700054ee44000d44fe0100fecc0011cc0c7c0100003e0400fe0100fe01007e0100",
-  ].map((s) => new Uint8ArrayList(fromHexString(s))),
+  ].map((s) => new Uint8Array(fromHexString(s))),
 };
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -137,10 +178,10 @@ export const getAllMessages = (
   blocksByRoot: MixedProtocolDefinition<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
   blocksByRootV2: MixedProtocolDefinition<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
 } => ({
-  ping: messagesDef.Ping(getEmptyHandler()),
+  ping: messagesDef.Ping(modules, getEmptyHandler()),
   goodbye: messagesDef.Goodbye(modules, getEmptyHandler()),
   metadata: messagesDef.Metadata(modules, getEmptyHandler()),
-  status: messagesDef.Status(modules, getEmptyHandler() as ReqRespHandler<phase0.Status, phase0.Status>),
+  status: messagesDef.Status(modules, getEmptyHandler() as ReqRespHandler<phase0.Status>),
   blocksByRange: messagesDef.BeaconBlocksByRange(modules, getEmptyHandler()),
   blocksByRangeV2: messagesDef.BeaconBlocksByRangeV2(modules, getEmptyHandler()),
   blocksByRoot: messagesDef.BeaconBlocksByRoot(modules, getEmptyHandler()),
@@ -148,8 +189,8 @@ export const getAllMessages = (
 });
 
 // Set the altair fork to happen between the two precomputed SSZ snappy blocks
-const slotBlockPhase0 = sszSnappySignedBeaconBlockPhase0.payload.data.message.slot;
-const slotBlockAltair = sszSnappySignedBeaconBlockAltair.payload.data.message.slot;
+const slotBlockPhase0 = sszSnappySignedBeaconBlockPhase0.sszPayload.data.message.slot;
+const slotBlockAltair = sszSnappySignedBeaconBlockAltair.sszPayload.data.message.slot;
 if (slotBlockAltair - slotBlockPhase0 < SLOTS_PER_EPOCH) {
   throw Error("phase0 block slot must be an epoch apart from altair block slot");
 }

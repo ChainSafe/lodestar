@@ -5,7 +5,6 @@ import {Logger} from "@lodestar/utils";
 import {RespStatus} from "../../src/interface.js";
 import {Ping} from "../../src/protocols/Ping.js";
 import {ReqResp} from "../../src/ReqResp.js";
-import {EncodedPayloadType} from "../../src/types.js";
 import {sszSnappyPing} from "../fixtures/messages.js";
 import {numberToStringProtocol, numberToStringProtocolHandler} from "../fixtures/protocols.js";
 import {createStubbedLogger} from "../mocks/logger.js";
@@ -19,17 +18,20 @@ describe("ResResp", () => {
 
   beforeEach(() => {
     libp2p = {
-      dialProtocol: sinon
-        .stub()
-        .resolves(
-          new MockLibP2pStream(
-            responseEncode(
-              [{status: RespStatus.SUCCESS, payload: {type: EncodedPayloadType.ssz, data: sszSnappyPing.payload.data}}],
-              Ping(sinon.stub())
-            ),
-            Ping(sinon.stub()).method
-          )
-        ),
+      dialProtocol: sinon.stub().resolves(
+        new MockLibP2pStream(
+          responseEncode(
+            [
+              {
+                status: RespStatus.SUCCESS,
+                payload: sszSnappyPing.binaryPayload,
+              },
+            ],
+            Ping({} as never, sinon.stub())
+          ),
+          Ping({} as never, sinon.stub()).method
+        )
+      ),
       handle: sinon.spy(),
     } as unknown as Libp2p;
 

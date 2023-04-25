@@ -4,10 +4,16 @@ import {pipe} from "it-pipe";
 import {expect} from "chai";
 import {Libp2p} from "libp2p";
 import sinon from "sinon";
-import {Uint8ArrayList} from "uint8arraylist";
 import {Logger, LodestarError, sleep} from "@lodestar/utils";
+import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "../../../src/request/index.js";
-import {ProtocolDefinition, EncodedPayloadType, Encoding, MixedProtocolDefinition} from "../../../src/types.js";
+import {
+  ProtocolDefinition,
+  Encoding,
+  MixedProtocolDefinition,
+  EncodedPayloadType,
+  ContextBytesType,
+} from "../../../src/types.js";
 import {messages, sszSnappyPing, sszSnappySignedBeaconBlockPhase0} from "../../fixtures/messages.js";
 import {createStubbedLogger} from "../../mocks/logger.js";
 import {getValidPeerId} from "../../utils/peer.js";
@@ -34,14 +40,14 @@ describe("request / sendRequest", () => {
     {
       id: "Return first chunk only for a single-chunk method",
       protocols: [messages.ping],
-      requestBody: sszSnappyPing.payload.data,
-      expectedReturn: [sszSnappyPing.payload.data],
+      requestBody: sszSnappyPing.sszPayload.data,
+      expectedReturn: [sszSnappyPing.sszPayload.data],
     },
     {
       id: "Return up to maxResponses for a multi-chunk method",
       protocols: [messages.blocksByRange],
-      requestBody: sszSnappySignedBeaconBlockPhase0.payload.data,
-      expectedReturn: [sszSnappySignedBeaconBlockPhase0.payload.data],
+      requestBody: sszSnappySignedBeaconBlockPhase0.sszPayload.data,
+      expectedReturn: [sszSnappySignedBeaconBlockPhase0.sszPayload.data],
     },
   ];
 
@@ -59,17 +65,24 @@ describe("request / sendRequest", () => {
   for (const {id, protocols, expectedReturn, requestBody} of testCases) {
     it(id, async () => {
       libp2p = {
-        dialProtocol: sinon
-          .stub()
-          .resolves(
-            new MockLibP2pStream(
-              responseEncode(
-                [{status: RespStatus.SUCCESS, payload: {type: EncodedPayloadType.ssz, data: requestBody}}],
-                protocols[0] as ProtocolDefinition<any, any>
-              ),
-              protocols[0].method
-            )
-          ),
+        dialProtocol: sinon.stub().resolves(
+          new MockLibP2pStream(
+            responseEncode(
+              [
+                {
+                  status: RespStatus.SUCCESS,
+                  payload: {
+                    type: EncodedPayloadType.bytes,
+                    bytes: protocols[0].responseType(ForkName.altair).serialize(requestBody),
+                    contextBytes: {type: ContextBytesType.Empty},
+                  },
+                },
+              ],
+              protocols[0] as ProtocolDefinition<any, any>
+            ),
+            protocols[0].method
+          )
+        ),
       } as unknown as Libp2p;
 
       const responses = await pipe(
@@ -98,7 +111,7 @@ describe("request / sendRequest", () => {
     const timeoutTestCases: {
       id: string;
       opts?: SendRequestOpts;
-      source: () => AsyncGenerator<Uint8ArrayList>;
+      source: () => AsyncGenerator<Uint8Array>;
       error?: LodestarError<any>;
     }[] = [
       {
@@ -154,7 +167,7 @@ describe("request / sendRequest", () => {
               peerId,
               [messages.ping as MixedProtocolDefinition],
               [messages.ping.method],
-              sszSnappyPing.payload.data,
+              sszSnappyPing.sszPayload.data,
               controller.signal,
               opts
             ),

@@ -13,7 +13,7 @@ import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {expectEqualByteChunks} from "../../../utils/index.js";
 
 describe("encodingStrategies / sszSnappy / encode", () => {
-  for (const {id, type, payload, chunks} of encodingStrategiesTestCases) {
+  for (const {id, type, sszPayload: payload, chunks} of encodingStrategiesTestCases) {
     it(id, async () => {
       const encodedChunks = await pipe(writeSszSnappyPayload(payload as EncodedPayload<unknown>, type), all);
       expectEqualByteChunks(

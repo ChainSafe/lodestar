@@ -91,9 +91,7 @@ function getContextBytes<Resp>(
           if (chunk.contextBytes.type !== ContextBytesType.ForkDigest) {
             throw Error(`Expected context bytes ForkDigest but got ${chunk.contextBytes.type}`);
           }
-          return contextBytes.forkDigestContext.forkName2ForkDigest(
-            contextBytes.forkDigestContext.getForkName(chunk.contextBytes.forkSlot)
-          ) as Buffer;
+          return contextBytes.forkDigestContext.forkName2ForkDigest(chunk.contextBytes.fork) as Buffer;
       }
   }
 }
@@ -116,7 +114,7 @@ function getForkNameFromContextBytes<Resp>(
           if (chunk.contextBytes.type !== ContextBytesType.ForkDigest) {
             throw Error(`Expected context bytes ForkDigest but got ${chunk.contextBytes.type}`);
           }
-          return contextBytes.forkDigestContext.getForkName(chunk.contextBytes.forkSlot);
+          return chunk.contextBytes.fork;
       }
   }
 }
