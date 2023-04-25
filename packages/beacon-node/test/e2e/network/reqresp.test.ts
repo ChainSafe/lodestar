@@ -446,7 +446,7 @@ function wrapBlockAsEncodedPayload(
     bytes: config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
     contextBytes: {
       type: ContextBytesType.ForkDigest,
-      forkSlot: block.message.slot,
+      fork: config.getForkName(block.message.slot),
     },
   };
 }

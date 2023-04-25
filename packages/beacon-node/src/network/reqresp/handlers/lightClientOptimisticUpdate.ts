@@ -1,6 +1,4 @@
 import {ContextBytesType, EncodedPayloadBytes, EncodedPayloadType, ResponseError, RespStatus} from "@lodestar/reqresp";
-import {allForks, ssz} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
 import {IBeaconChain} from "../../../chain/index.js";
 
 export async function* onLightClientOptimisticUpdate(chain: IBeaconChain): AsyncIterable<EncodedPayloadBytes> {
@@ -10,10 +8,12 @@ export async function* onLightClientOptimisticUpdate(chain: IBeaconChain): Async
   } else {
     yield {
       type: EncodedPayloadType.bytes,
-      bytes: ssz.altair.LightClientOptimisticUpdate.serialize(optimisticUpdate),
+      bytes: chain.config
+        .getLightClientForkTypes(chain.clock.currentSlot)
+        .LightClientOptimisticUpdate.serialize(optimisticUpdate),
       contextBytes: {
         type: ContextBytesType.ForkDigest,
-        fork: ForkName.altair,
+        fork: chain.config.getForkName(chain.clock.currentSlot),
       },
     };
   }

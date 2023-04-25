@@ -68,6 +68,10 @@ export class MetadataController {
     return this._metadata.seqNumber;
   }
 
+  get currentSlot(): number {
+    return this.chain.clock.currentSlot;
+  }
+
   get syncnets(): BitArray {
     return this._metadata.syncnets;
   }

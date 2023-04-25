@@ -1,5 +1,4 @@
 import {
-  EncodedPayload,
   EncodedPayloadType,
   RespStatus,
   ResponseError,
@@ -8,8 +7,7 @@ import {
   EncodedPayloadBytes,
   ContextBytesType,
 } from "@lodestar/reqresp";
-import {Root, ssz} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
+import {Root} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 
 export async function* onLightClientBootstrap(
@@ -19,10 +17,12 @@ export async function* onLightClientBootstrap(
   try {
     yield {
       type: EncodedPayloadType.bytes,
-      bytes: ssz.altair.LightClientBootstrap.serialize(await chain.lightClientServer.getBootstrap(requestBody)),
+      bytes: chain.config
+        .getLightClientForkTypes(chain.clock.currentSlot)
+        .LightClientBootstrap.serialize(await chain.lightClientServer.getBootstrap(requestBody)),
       contextBytes: {
         type: ContextBytesType.ForkDigest,
-        fork: ForkName.altair,
+        fork: chain.config.getForkName(chain.clock.currentSlot),
       },
     };
   } catch (e) {

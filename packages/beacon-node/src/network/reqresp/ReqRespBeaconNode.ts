@@ -394,7 +394,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     // It's safe to return altair.Metadata here for all versions
     yield {
       type: EncodedPayloadType.bytes,
-      bytes: ssz.altair.Metadata.serialize(this.metadataController.json),
+      bytes: this.config
+        .getForkTypes(this.metadataController.currentSlot)
+        .Metadata.serialize(this.metadataController.json),
       contextBytes: {type: ContextBytesType.Empty},
     };
   }

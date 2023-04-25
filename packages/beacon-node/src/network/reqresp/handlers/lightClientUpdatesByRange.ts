@@ -1,5 +1,5 @@
-import {altair, ssz} from "@lodestar/types";
-import {ForkName, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
+import {altair} from "@lodestar/types";
+import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {
   ContextBytesType,
   EncodedPayloadBytes,
@@ -20,10 +20,12 @@ export async function* onLightClientUpdatesByRange(
     try {
       yield {
         type: EncodedPayloadType.bytes,
-        bytes: ssz.altair.LightClientUpdate.serialize(await chain.lightClientServer.getUpdate(period)),
+        bytes: chain.config
+          .getLightClientForkTypes(chain.clock.currentSlot)
+          .LightClientUpdate.serialize(await chain.lightClientServer.getUpdate(period)),
         contextBytes: {
           type: ContextBytesType.ForkDigest,
-          fork: ForkName.altair,
+          fork: chain.config.getForkName(chain.clock.currentSlot),
         },
       };
     } catch (e) {
