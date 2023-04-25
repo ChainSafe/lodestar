@@ -265,7 +265,7 @@ export type StoreType<AssertionId extends string, Value = unknown> = Record<
   Record<NodeId, Record<Slot, Value>>
 >;
 export type StoreTypes<T extends SimulationAssertion[], IDs extends string = ExtractAssertionId<T[number]>> = {
-  [Id in IDs]: Record<NodeId, Record<Slot, ExtractAssertionType<T[number], Id>>>;
+  [Id in IDs]: Record<NodeId, Record<Slot, ExtractAssertionType<T[number], Id> | undefined>>;
 };
 export interface SimulationAssertion<
   IdType extends string = string,
