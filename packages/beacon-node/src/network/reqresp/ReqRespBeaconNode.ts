@@ -297,7 +297,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
       reqRespProtocols.Goodbye(modules, this.onGoodbye.bind(this)),
       // Support V2 methods as soon as implemented (for altair)
       // Ref https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/altair/p2p-interface.md#transitioning-from-v1-to-v2
-      reqRespProtocols.MetadataV2(modules, this.onMetadata.bind(this, true)),
+      reqRespProtocols.MetadataV2(modules, this.onMetadata.bind(this)),
       reqRespProtocols.BeaconBlocksByRangeV2(modules, this.onBeaconBlocksByRangeV2.bind(this)),
       reqRespProtocols.BeaconBlocksByRootV2(modules, this.onBeaconBlocksByRootV2.bind(this)),
     ];
@@ -305,7 +305,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     if (ForkSeq[fork] < ForkSeq.altair) {
       // Unregister V1 topics at the fork boundary, so only declare for pre-altair
       protocols.push(
-        reqRespProtocols.Metadata(modules, this.onMetadata.bind(this, false)),
+        reqRespProtocols.Metadata(modules, this.onMetadata.bind(this)),
         reqRespProtocols.BeaconBlocksByRange(modules, this.onBeaconBlocksByRange.bind(this)),
         reqRespProtocols.BeaconBlocksByRoot(modules, this.onBeaconBlocksByRoot.bind(this))
       );
@@ -387,7 +387,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     };
   }
 
-  private async *onMetadata(contextBytes: boolean, req: null, peerId: PeerId): AsyncIterable<EncodedPayloadBytes> {
+  private async *onMetadata(req: null, peerId: PeerId): AsyncIterable<EncodedPayloadBytes> {
     this.onIncomingRequestBody({method: ReqRespMethod.Metadata, body: req}, peerId);
 
     // V1 -> phase0, V2 -> altair. But the type serialization of phase0.Metadata will just ignore the extra .syncnets property
@@ -397,12 +397,8 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
       bytes: this.config
         .getForkTypes(this.metadataController.currentSlot)
         .Metadata.serialize(this.metadataController.json),
-      contextBytes: contextBytes
-        ? {
-            type: ContextBytesType.ForkDigest,
-            fork: this.config.getForkName(this.metadataController.currentSlot),
-          }
-        : {type: ContextBytesType.Empty},
+      // Other conditions for the GetMetaData protocol are unchanged from the phase 0 p2p networking document.
+      contextBytes: {type: ContextBytesType.Empty},
     };
   }
 
