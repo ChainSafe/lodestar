@@ -73,8 +73,8 @@ export async function* sendRequest<Req, Resp>(
 
   const peerIdStr = peerId.toString();
   const peerIdStrShort = prettyPrintPeerId(peerId);
-  const {method, encoding} = protocols[0];
-  const logCtx = {method, encoding, client: peerClient, peer: peerIdStrShort, requestId};
+  const {method, encoding, version} = protocols[0];
+  const logCtx = {method, version, encoding, client: peerClient, peer: peerIdStrShort, requestId};
 
   if (signal?.aborted) {
     throw new ErrorAborted("sendRequest");
