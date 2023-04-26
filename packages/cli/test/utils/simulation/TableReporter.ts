@@ -5,7 +5,7 @@ import {HeadSummary} from "./assertions/defaults/headAssertion.js";
 import {defaultAssertions} from "./assertions/defaults/index.js";
 import {SimulationReporter} from "./interfaces.js";
 import {TableRenderer} from "./TableRenderer.js";
-import {arrayGroupBy, avg, arrayIsUnique} from "./utils/index.js";
+import {arrayGroupBy, avg, isSingletonArray} from "./utils/index.js";
 
 export class TableReporter extends SimulationReporter<typeof defaultAssertions> {
   private lastPrintedSlot = -1;
@@ -104,8 +104,6 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       (head) => head0 && isTruthy(head0.blockRoot) && head?.blockRoot === head0.blockRoot
     );
 
-    console.log({finalizedSlots, arrayIsUnique: arrayIsUnique(finalizedSlots)});
-
     this.table.addRow({
       fork: forkName,
       eph: epochStr,
@@ -114,12 +112,12 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       finzed:
         finalizedSlots.length === 0
           ? "---"
-          : arrayIsUnique(finalizedSlots)
+          : isSingletonArray(finalizedSlots)
           ? finalizedSlots[0]
           : finalizedSlots.join(","),
-      peers: peersCount.length === 0 ? "---" : arrayIsUnique(peersCount) ? peersCount[0] : peersCount.join(","),
-      attCount: attestationCounts.length > 0 && arrayIsUnique(attestationCounts) ? attestationCounts[0] : "---",
-      incDelay: inclusionDelays.length > 0 && arrayIsUnique(inclusionDelays) ? inclusionDelays[0].toFixed(2) : "---",
+      peers: peersCount.length === 0 ? "---" : isSingletonArray(peersCount) ? peersCount[0] : peersCount.join(","),
+      attCount: attestationCounts.length > 0 && isSingletonArray(attestationCounts) ? attestationCounts[0] : "---",
+      incDelay: inclusionDelays.length > 0 && isSingletonArray(inclusionDelays) ? inclusionDelays[0].toFixed(2) : "---",
       errors: errors.filter((e) => e.slot === slot).length,
     });
   }
