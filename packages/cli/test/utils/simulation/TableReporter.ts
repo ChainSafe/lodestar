@@ -104,14 +104,16 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       (head) => head0 && isTruthy(head0.blockRoot) && head?.blockRoot === head0.blockRoot
     );
 
+    console.log({finalizedSlots, arrayIsUnique: arrayIsUnique(finalizedSlots)});
+
     this.table.addRow({
       fork: forkName,
       eph: epochStr,
-      slot: head0 ? head0.slot : "-",
-      head: heads.length === 0 ? "-" : nodesHaveSameHead ? `${head0?.blockRoot.slice(0, 6)}..` : "different",
+      slot: head0 ? head0.slot : "---",
+      head: heads.length === 0 ? "---" : nodesHaveSameHead ? `${head0?.blockRoot.slice(0, 6)}..` : "different",
       finzed:
         finalizedSlots.length === 0
-          ? "-"
+          ? "---"
           : arrayIsUnique(finalizedSlots)
           ? finalizedSlots[0]
           : finalizedSlots.join(","),
