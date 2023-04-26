@@ -103,7 +103,8 @@ Pull request titles must be:
 
 For example:
 
-> feat: Add Edit on Github button to all the pages
+> feat: add lodestar prover for execution api
+> refactor(reqresp)!: support byte based handlers
 
 **Pull Request Etiquette**
 
