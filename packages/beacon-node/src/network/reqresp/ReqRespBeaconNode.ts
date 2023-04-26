@@ -397,7 +397,10 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
       bytes: this.config
         .getForkTypes(this.metadataController.currentSlot)
         .Metadata.serialize(this.metadataController.json),
-      contextBytes: {type: ContextBytesType.Empty},
+      contextBytes: {
+        type: ContextBytesType.ForkDigest,
+        fork: this.config.getForkName(this.metadataController.currentSlot),
+      },
     };
   }
 
