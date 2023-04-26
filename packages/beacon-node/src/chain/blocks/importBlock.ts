@@ -51,7 +51,7 @@ export async function importBlock(
   opts: ImportBlockOpts
 ): Promise<void> {
   const {blockInput, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
-  const {block} = blockInput;
+  const {block, serializedData} = blockInput;
   const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toHexString(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
@@ -60,8 +60,12 @@ export async function importBlock(
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
 
   // 1. Persist block to hot DB (pre-emptively)
-
-  await this.db.block.add(block);
+  if (serializedData) {
+    // skip serializing data if we already have it
+    await this.db.block.putBinary(this.db.block.getId(block), serializedData);
+  } else {
+    await this.db.block.add(block);
+  }
   this.logger.debug("Persisted block to hot DB", {
     slot: block.message.slot,
     root: blockRootHex,
