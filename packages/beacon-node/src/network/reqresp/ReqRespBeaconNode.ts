@@ -297,15 +297,15 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
       reqRespProtocols.Goodbye(modules, this.onGoodbye.bind(this)),
       // Support V2 methods as soon as implemented (for altair)
       // Ref https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/altair/p2p-interface.md#transitioning-from-v1-to-v2
-      reqRespProtocols.MetadataV2(modules, this.onMetadata.bind(this)),
-      reqRespProtocols.BeaconBlocksByRangeV2(modules, this.onBeaconBlocksByRange.bind(this)),
-      reqRespProtocols.BeaconBlocksByRootV2(modules, this.onBeaconBlocksByRoot.bind(this)),
+      reqRespProtocols.MetadataV2(modules, this.onMetadata.bind(this, true)),
+      reqRespProtocols.BeaconBlocksByRangeV2(modules, this.onBeaconBlocksByRangeV2.bind(this)),
+      reqRespProtocols.BeaconBlocksByRootV2(modules, this.onBeaconBlocksByRootV2.bind(this)),
     ];
 
     if (ForkSeq[fork] < ForkSeq.altair) {
       // Unregister V1 topics at the fork boundary, so only declare for pre-altair
       protocols.push(
-        reqRespProtocols.Metadata(modules, this.onMetadata.bind(this)),
+        reqRespProtocols.Metadata(modules, this.onMetadata.bind(this, false)),
         reqRespProtocols.BeaconBlocksByRange(modules, this.onBeaconBlocksByRange.bind(this)),
         reqRespProtocols.BeaconBlocksByRoot(modules, this.onBeaconBlocksByRoot.bind(this))
       );
@@ -387,7 +387,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     };
   }
 
-  private async *onMetadata(req: null, peerId: PeerId): AsyncIterable<EncodedPayloadBytes> {
+  private async *onMetadata(contextBytes: boolean, req: null, peerId: PeerId): AsyncIterable<EncodedPayloadBytes> {
     this.onIncomingRequestBody({method: ReqRespMethod.Metadata, body: req}, peerId);
 
     // V1 -> phase0, V2 -> altair. But the type serialization of phase0.Metadata will just ignore the extra .syncnets property
@@ -397,10 +397,12 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
       bytes: this.config
         .getForkTypes(this.metadataController.currentSlot)
         .Metadata.serialize(this.metadataController.json),
-      contextBytes: {
-        type: ContextBytesType.ForkDigest,
-        fork: this.config.getForkName(this.metadataController.currentSlot),
-      },
+      contextBytes: contextBytes
+        ? {
+            type: ContextBytesType.ForkDigest,
+            fork: this.config.getForkName(this.metadataController.currentSlot),
+          }
+        : {type: ContextBytesType.Empty},
     };
   }
 
@@ -411,10 +413,24 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     yield* this.reqRespHandlers.onBeaconBlocksByRange(req, peerId);
   }
 
+  private async *onBeaconBlocksByRangeV2(
+    req: phase0.BeaconBlocksByRangeRequest,
+    peerId: PeerId
+  ): AsyncIterable<EncodedPayloadBytes> {
+    yield* this.reqRespHandlers.onBeaconBlocksByRangeV2(req, peerId);
+  }
+
   private async *onBeaconBlocksByRoot(
     req: phase0.BeaconBlocksByRootRequest,
     peerId: PeerId
   ): AsyncIterable<EncodedPayloadBytes> {
     yield* this.reqRespHandlers.onBeaconBlocksByRoot(req, peerId);
+  }
+
+  private async *onBeaconBlocksByRootV2(
+    req: phase0.BeaconBlocksByRootRequest,
+    peerId: PeerId
+  ): AsyncIterable<EncodedPayloadBytes> {
+    yield* this.reqRespHandlers.onBeaconBlocksByRootV2(req, peerId);
   }
 }

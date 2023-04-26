@@ -15,7 +15,9 @@ import {onStatus} from "./status.js";
 export interface ReqRespHandlers {
   onStatus: HandlerTypeFromMessage<typeof protocols.Status>;
   onBeaconBlocksByRange: HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>;
+  onBeaconBlocksByRangeV2: HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRangeV2>;
   onBeaconBlocksByRoot: HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRoot>;
+  onBeaconBlocksByRootV2: HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRootV2>;
   onBeaconBlockAndBlobsSidecarByRoot: HandlerTypeFromMessage<typeof protocols.BeaconBlockAndBlobsSidecarByRoot>;
   onBlobsSidecarsByRange: HandlerTypeFromMessage<typeof protocols.BlobsSidecarsByRange>;
   onLightClientBootstrap: HandlerTypeFromMessage<typeof protocols.LightClientBootstrap>;
@@ -33,10 +35,16 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       yield* onStatus(chain);
     },
     async *onBeaconBlocksByRange(req) {
-      yield* onBeaconBlocksByRange(req, chain, db);
+      yield* onBeaconBlocksByRange(req, chain, db, false);
+    },
+    async *onBeaconBlocksByRangeV2(req) {
+      yield* onBeaconBlocksByRange(req, chain, db, true);
     },
     async *onBeaconBlocksByRoot(req) {
-      yield* onBeaconBlocksByRoot(req, chain, db);
+      yield* onBeaconBlocksByRoot(req, chain, db, false);
+    },
+    async *onBeaconBlocksByRootV2(req) {
+      yield* onBeaconBlocksByRoot(req, chain, db, true);
     },
     async *onBeaconBlockAndBlobsSidecarByRoot(req) {
       yield* onBeaconBlockAndBlobsSidecarByRoot(req, chain, db);

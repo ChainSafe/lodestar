@@ -10,12 +10,18 @@ import {IBeaconDb} from "../../../db/index.js";
 export function onBeaconBlocksByRange(
   request: phase0.BeaconBlocksByRangeRequest,
   chain: IBeaconChain,
-  db: IBeaconDb
+  db: IBeaconDb,
+  contextBytes: boolean
 ): AsyncIterable<EncodedPayloadBytes> {
-  return onBlocksOrBlobsSidecarsByRange(request, chain, {
-    finalized: db.blockArchive,
-    unfinalized: db.block,
-  });
+  return onBlocksOrBlobsSidecarsByRange(
+    request,
+    chain,
+    {
+      finalized: db.blockArchive,
+      unfinalized: db.block,
+    },
+    {contextBytes}
+  );
 }
 
 export async function* onBlocksOrBlobsSidecarsByRange(
@@ -24,6 +30,9 @@ export async function* onBlocksOrBlobsSidecarsByRange(
   db: {
     finalized: Pick<IBeaconDb["blockArchive"], "binaryEntriesStream" | "decodeKey">;
     unfinalized: Pick<IBeaconDb["block"], "getBinary">;
+  },
+  opts: {
+    contextBytes: boolean;
   }
 ): AsyncIterable<EncodedPayloadBytes> {
   const {startSlot, count} = validateBeaconBlocksByRangeRequest(request);
@@ -45,10 +54,12 @@ export async function* onBlocksOrBlobsSidecarsByRange(
       yield {
         type: EncodedPayloadType.bytes,
         bytes: value,
-        contextBytes: {
-          type: ContextBytesType.ForkDigest,
-          fork: chain.config.getForkName(db.finalized.decodeKey(key)),
-        },
+        contextBytes: opts.contextBytes
+          ? {
+              type: ContextBytesType.ForkDigest,
+              fork: chain.config.getForkName(db.finalized.decodeKey(key)),
+            }
+          : {type: ContextBytesType.Empty},
       };
     }
   }
@@ -80,10 +91,12 @@ export async function* onBlocksOrBlobsSidecarsByRange(
         yield {
           type: EncodedPayloadType.bytes,
           bytes: blockBytes,
-          contextBytes: {
-            type: ContextBytesType.ForkDigest,
-            fork: chain.config.getForkName(block.slot),
-          },
+          contextBytes: opts.contextBytes
+            ? {
+                type: ContextBytesType.ForkDigest,
+                fork: chain.config.getForkName(block.slot),
+              }
+            : {type: ContextBytesType.Empty},
         };
       }
 

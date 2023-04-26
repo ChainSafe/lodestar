@@ -11,8 +11,13 @@ export function onBlobsSidecarsByRange(
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<EncodedPayloadBytes> {
-  return onBlocksOrBlobsSidecarsByRange(request, chain, {
-    finalized: db.blobsSidecarArchive,
-    unfinalized: db.blobsSidecar,
-  });
+  return onBlocksOrBlobsSidecarsByRange(
+    request,
+    chain,
+    {
+      finalized: db.blobsSidecarArchive,
+      unfinalized: db.blobsSidecar,
+    },
+    {contextBytes: true}
+  );
 }

@@ -8,7 +8,8 @@ import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js"
 export async function* onBeaconBlocksByRoot(
   requestBody: phase0.BeaconBlocksByRootRequest,
   chain: IBeaconChain,
-  db: IBeaconDb
+  db: IBeaconDb,
+  contextBytes: boolean
 ): AsyncIterable<EncodedPayloadBytes> {
   for (const blockRoot of requestBody) {
     const root = blockRoot;
@@ -41,10 +42,12 @@ export async function* onBeaconBlocksByRoot(
       yield {
         type: EncodedPayloadType.bytes,
         bytes: blockBytes,
-        contextBytes: {
-          type: ContextBytesType.ForkDigest,
-          fork: chain.config.getForkName(slot),
-        },
+        contextBytes: contextBytes
+          ? {
+              type: ContextBytesType.ForkDigest,
+              fork: chain.config.getForkName(slot),
+            }
+          : {type: ContextBytesType.Empty},
       };
     }
   }
