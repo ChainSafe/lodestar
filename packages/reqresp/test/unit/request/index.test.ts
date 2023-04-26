@@ -14,7 +14,7 @@ import {
   EncodedPayloadType,
   ContextBytesType,
 } from "../../../src/types.js";
-import {messages, sszSnappyPing, sszSnappySignedBeaconBlockPhase0} from "../../fixtures/messages.js";
+import {protocols, sszSnappyPing, sszSnappySignedBeaconBlockPhase0} from "../../fixtures/messages.js";
 import {createStubbedLogger} from "../../mocks/logger.js";
 import {getValidPeerId} from "../../utils/peer.js";
 import {MockLibP2pStream} from "../../utils/index.js";
@@ -39,13 +39,13 @@ describe("request / sendRequest", () => {
   }[] = [
     {
       id: "Return first chunk only for a single-chunk method",
-      protocols: [messages.ping],
+      protocols: [protocols.ping],
       requestBody: sszSnappyPing.sszPayload.data,
       expectedReturn: [sszSnappyPing.sszPayload.data],
     },
     {
       id: "Return up to maxResponses for a multi-chunk method",
-      protocols: [messages.blocksByRange],
+      protocols: [protocols.blocksByRange],
       requestBody: sszSnappySignedBeaconBlockPhase0.sszPayload.data,
       expectedReturn: [sszSnappySignedBeaconBlockPhase0.sszPayload.data],
     },
@@ -103,7 +103,7 @@ describe("request / sendRequest", () => {
   describe("timeout cases", () => {
     const peerId = getValidPeerId();
     const metadata: RequestErrorMetadata = {
-      method: messages.ping.method,
+      method: protocols.ping.method,
       encoding: Encoding.SSZ_SNAPPY,
       peer: peerId.toString(),
     };
@@ -157,7 +157,7 @@ describe("request / sendRequest", () => {
     for (const {id, source, opts, error} of timeoutTestCases) {
       it(id, async () => {
         libp2p = {
-          dialProtocol: sinon.stub().resolves(new MockLibP2pStream(source(), messages.ping.method)),
+          dialProtocol: sinon.stub().resolves(new MockLibP2pStream(source(), protocols.ping.method)),
         } as unknown as Libp2p;
 
         await expectRejectedWithLodestarError(
@@ -165,8 +165,8 @@ describe("request / sendRequest", () => {
             sendRequest(
               {logger, libp2p},
               peerId,
-              [messages.ping as MixedProtocolDefinition],
-              [messages.ping.method],
+              [protocols.ping as MixedProtocolDefinition],
+              [protocols.ping.method],
               sszSnappyPing.sszPayload.data,
               controller.signal,
               opts

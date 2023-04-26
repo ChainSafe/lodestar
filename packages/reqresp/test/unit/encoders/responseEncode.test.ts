@@ -4,8 +4,8 @@ import all from "it-all";
 import {pipe} from "it-pipe";
 import {ProtocolDefinition} from "../../../src/types.js";
 import {responseEncodersTestCases} from "../../fixtures/encoders.js";
-import {expectEqualByteChunks} from "../../utils/index.js";
 import {responseEncode} from "../../utils/response.js";
+import {expectEqualByteChunks} from "../../utils/index.js";
 
 chai.use(chaiAsPromised);
 

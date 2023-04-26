@@ -23,6 +23,65 @@ type MessageFixture<T> = {
   asyncChunks: Buffer[];
 };
 
+const phase0Metadata = ssz.phase0.Metadata.fromJson({
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  seq_number: "9",
+  attnets: "0x0000000000000000",
+});
+
+export const sszSnappyPhase0Metadata: MessageFixture<phase0.Metadata> = {
+  type: ssz.phase0.Metadata,
+  sszPayload: {
+    type: EncodedPayloadType.ssz,
+    data: phase0Metadata,
+  },
+  binaryPayload: {
+    type: EncodedPayloadType.bytes,
+    bytes: ssz.phase0.Metadata.serialize(phase0Metadata),
+    contextBytes: {
+      type: ContextBytesType.Empty,
+    },
+  },
+  chunks: ["0x10", "0xff060000734e61507059011400000b5ee91209000000000000000000000000000000"].map(
+    (s) => new Uint8Array(fromHexString(s))
+  ),
+  asyncChunks: [
+    "0x10", // length prefix
+    "0xff060000734e61507059", // snappy frames header
+    "0x011400000b5ee91209000000000000000000000000000000", // snappy frames content
+  ].map((d) => Buffer.from(fromHexString(d))),
+};
+
+const altairMetadata = ssz.altair.Metadata.fromJson({
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  seq_number: "8",
+  attnets: "0x0000000000000000",
+  syncnets: "0x00",
+});
+
+export const sszSnappyAltairMetadata: MessageFixture<altair.Metadata> = {
+  type: ssz.altair.Metadata,
+  sszPayload: {
+    type: EncodedPayloadType.ssz,
+    data: altairMetadata,
+  },
+  binaryPayload: {
+    type: EncodedPayloadType.bytes,
+    bytes: ssz.altair.Metadata.serialize(altairMetadata),
+    contextBytes: {
+      type: ContextBytesType.Empty,
+    },
+  },
+  chunks: ["0x11", "0xff060000734e6150705901150000ff4669fc0800000000000000000000000000000000"].map(
+    (s) => new Uint8Array(fromHexString(s))
+  ),
+  asyncChunks: [
+    "0x11", // length prefix
+    "0xff060000734e61507059", // snappy frames header
+    "0x01150000ff4669fc0800000000000000000000000000000000", // snappy frames content
+  ].map((d) => Buffer.from(fromHexString(d))),
+};
+
 const pingData = BigInt(1);
 export const sszSnappyPing: MessageFixture<phase0.Ping> = {
   type: ssz.phase0.Ping,
@@ -166,12 +225,13 @@ export const sszSnappySignedBeaconBlockAltair: MessageFixture<altair.SignedBeaco
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const getEmptyHandler = <T = unknown>() => async function* emptyHandler(): AsyncGenerator<T> {};
 
-export const getAllMessages = (
+export const getAllProtocols = (
   modules: {config: BeaconConfig} = {config: createBeaconConfig(chainConfig, ZERO_HASH)}
 ): {
   ping: MixedProtocolDefinition<phase0.Ping, phase0.Ping>;
   goodbye: MixedProtocolDefinition<phase0.Goodbye, phase0.Goodbye>;
   metadata: MixedProtocolDefinition<null, allForks.Metadata>;
+  metadataV2: MixedProtocolDefinition<null, allForks.Metadata>;
   status: MixedProtocolDefinition<phase0.Status, phase0.Status>;
   blocksByRange: MixedProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
   blocksByRangeV2: MixedProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
@@ -181,6 +241,7 @@ export const getAllMessages = (
   ping: messagesDef.Ping(modules, getEmptyHandler()),
   goodbye: messagesDef.Goodbye(modules, getEmptyHandler()),
   metadata: messagesDef.Metadata(modules, getEmptyHandler()),
+  metadataV2: messagesDef.MetadataV2(modules, getEmptyHandler()),
   status: messagesDef.Status(modules, getEmptyHandler() as ReqRespHandler<phase0.Status>),
   blocksByRange: messagesDef.BeaconBlocksByRange(modules, getEmptyHandler()),
   blocksByRangeV2: messagesDef.BeaconBlocksByRangeV2(modules, getEmptyHandler()),
@@ -198,4 +259,4 @@ const ALTAIR_FORK_EPOCH = Math.floor(slotBlockAltair / SLOTS_PER_EPOCH);
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const beaconConfig = createBeaconConfig({...chainConfig, ALTAIR_FORK_EPOCH}, ZERO_HASH);
 
-export const messages = getAllMessages({config: beaconConfig});
+export const protocols = getAllProtocols({config: beaconConfig});
