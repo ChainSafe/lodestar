@@ -95,7 +95,9 @@ describe("network / ReqResp", function () {
         };
       } as HandlerTypeFromMessage<typeof protocols.Status>,
       onBeaconBlocksByRange: notImplemented,
+      onBeaconBlocksByRangeV2: notImplemented,
       onBeaconBlocksByRoot: notImplemented,
+      onBeaconBlocksByRootV2: notImplemented,
       onBlobsSidecarsByRange: notImplemented,
       onBeaconBlockAndBlobsSidecarByRoot: notImplemented,
       onLightClientBootstrap: notImplemented,
