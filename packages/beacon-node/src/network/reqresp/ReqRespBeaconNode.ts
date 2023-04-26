@@ -297,7 +297,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
       reqRespProtocols.Goodbye(modules, this.onGoodbye.bind(this)),
       // Support V2 methods as soon as implemented (for altair)
       // Ref https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/altair/p2p-interface.md#transitioning-from-v1-to-v2
-      reqRespProtocols.MetadataV2(modules, this.onMetadata.bind(this)),
+      reqRespProtocols.MetadataV2(modules, this.onMetadataV2.bind(this)),
       reqRespProtocols.BeaconBlocksByRangeV2(modules, this.onBeaconBlocksByRangeV2.bind(this)),
       reqRespProtocols.BeaconBlocksByRootV2(modules, this.onBeaconBlocksByRootV2.bind(this)),
     ];
@@ -394,10 +394,19 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     // It's safe to return altair.Metadata here for all versions
     yield {
       type: EncodedPayloadType.bytes,
-      bytes: this.config
-        .getForkTypes(this.metadataController.currentSlot)
-        .Metadata.serialize(this.metadataController.json),
-      // Other conditions for the GetMetaData protocol are unchanged from the phase 0 p2p networking document.
+      bytes: ssz.phase0.Metadata.serialize(this.metadataController.json),
+      contextBytes: {type: ContextBytesType.Empty},
+    };
+  }
+
+  private async *onMetadataV2(req: null, peerId: PeerId): AsyncIterable<EncodedPayloadBytes> {
+    this.onIncomingRequestBody({method: ReqRespMethod.Metadata, body: req}, peerId);
+
+    // V1 -> phase0, V2 -> altair. But the type serialization of phase0.Metadata will just ignore the extra .syncnets property
+    // It's safe to return altair.Metadata here for all versions
+    yield {
+      type: EncodedPayloadType.bytes,
+      bytes: ssz.altair.Metadata.serialize(this.metadataController.json),
       contextBytes: {type: ContextBytesType.Empty},
     };
   }
