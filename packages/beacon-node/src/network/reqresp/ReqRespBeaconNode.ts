@@ -390,8 +390,6 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   private async *onMetadata(req: null, peerId: PeerId): AsyncIterable<EncodedPayloadBytes> {
     this.onIncomingRequestBody({method: ReqRespMethod.Metadata, body: req}, peerId);
 
-    // V1 -> phase0, V2 -> altair. But the type serialization of phase0.Metadata will just ignore the extra .syncnets property
-    // It's safe to return altair.Metadata here for all versions
     yield {
       type: EncodedPayloadType.bytes,
       bytes: ssz.phase0.Metadata.serialize(this.metadataController.json),
@@ -402,8 +400,6 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   private async *onMetadataV2(req: null, peerId: PeerId): AsyncIterable<EncodedPayloadBytes> {
     this.onIncomingRequestBody({method: ReqRespMethod.Metadata, body: req}, peerId);
 
-    // V1 -> phase0, V2 -> altair. But the type serialization of phase0.Metadata will just ignore the extra .syncnets property
-    // It's safe to return altair.Metadata here for all versions
     yield {
       type: EncodedPayloadType.bytes,
       bytes: ssz.altair.Metadata.serialize(this.metadataController.json),
