@@ -47,7 +47,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
         "h": 1,
@@ -61,7 +61,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A"
         }
@@ -171,7 +171,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -245,7 +245,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_gossip_mesh_peers_by_type_count{type!~\"beacon_attestation\"}",
@@ -531,7 +531,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -580,7 +580,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count",
@@ -595,7 +595,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -643,7 +643,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "lodestar_gossip_mesh_peers_by_type_count{type!~\"beacon_attestation\"}",
           "format": "time_series",
@@ -658,7 +658,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -732,7 +732,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
           "expr": "count(lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count > 0)",
@@ -838,7 +838,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
         "h": 1,
@@ -851,7 +851,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -932,7 +932,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "delta(lodestar_peer_goodbye_received_total[$rate_interval])>0",
               "format": "time_series",
@@ -1046,7 +1046,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1129,7 +1129,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "delta(lodestar_peer_goodbye_sent_total[$rate_interval])>0",
               "format": "time_series",
@@ -1800,7 +1800,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -1880,7 +1880,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "lodestar_peer_connected_total - lodestar_peer_disconnected_total - lodestar_peers_by_direction_count",
               "format": "time_series",
@@ -1898,7 +1898,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A"
         }
@@ -1910,7 +1910,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
         "h": 1,
@@ -2033,7 +2033,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2079,7 +2079,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "increase(lodestar_peers_requested_total_subnets_to_query[$rate_interval])",
@@ -2127,7 +2127,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2173,7 +2173,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "increase(lodestar_peers_requested_total_subnets_peers_count[$rate_interval])",
@@ -2219,7 +2219,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A"
         }
@@ -2231,7 +2231,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
         "h": 1,
@@ -2248,7 +2248,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2294,7 +2294,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "rate(lodestar_gossip_validation_queue_job_time_seconds_sum[$rate_interval])",
               "interval": "",
@@ -2339,7 +2339,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2385,7 +2385,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "12*rate(lodestar_gossip_validation_queue_job_time_seconds_count[$rate_interval])",
               "interval": "",
@@ -2430,7 +2430,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2476,7 +2476,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "delta(lodestar_gossip_validation_queue_job_time_seconds_sum[$rate_interval])/delta(lodestar_gossip_validation_queue_job_time_seconds_count[$rate_interval])",
               "format": "time_series",
@@ -2518,7 +2518,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2598,7 +2598,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "delta(lodestar_gossip_validation_queue_dropped_jobs_total[$rate_interval])/(delta(lodestar_gossip_validation_queue_job_time_seconds_count[$rate_interval])+delta(lodestar_gossip_validation_queue_dropped_jobs_total[$rate_interval]))",
               "interval": "",
@@ -2616,7 +2616,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2662,7 +2662,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "delta(lodestar_gossip_validation_queue_job_wait_time_seconds_sum[$rate_interval])/delta(lodestar_gossip_validation_queue_job_wait_time_seconds_count[$rate_interval])",
               "format": "time_series",
@@ -2708,7 +2708,7 @@
           "dashes": false,
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -2754,7 +2754,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "expr": "lodestar_gossip_validation_queue_length",
               "interval": "",
@@ -3022,7 +3022,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A"
         }
@@ -3043,7 +3043,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3144,7 +3144,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "rate(lodestar_network_processor_execute_work_calls_total[$rate_interval])",
@@ -3155,7 +3155,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "rate(lodestar_network_processor_can_not_accept_work_total[$rate_interval])",
@@ -3167,7 +3167,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "rate(lodestar_network_processor_execute_jobs_submitted_total_count[$rate_interval])",
@@ -3183,7 +3183,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3260,7 +3260,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "lodestar_regen_queue_length / 16",
@@ -3275,7 +3275,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3353,7 +3353,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "lodestar_bls_thread_pool_queue_length / 512",
@@ -3369,7 +3369,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3431,7 +3431,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "rate(lodestar_network_processor_execute_jobs_submitted_total_bucket[$rate_interval])",
@@ -3447,7 +3447,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3525,7 +3525,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "lodestar_bls_thread_pool_workers_busy\n/ on(instance)\ncount(lodestar_bls_thread_pool_time_seconds_sum) by (instance)",
@@ -3541,7 +3541,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3618,7 +3618,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "lodestar_gossip_validation_queue_current_drop_ratio",
@@ -3633,7 +3633,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3709,7 +3709,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "lodestar_gossip_validation_queue_concurrency",
@@ -3738,7 +3738,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3839,7 +3839,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "rate(lodestar_gossip_validation_error_total{topic=\"beacon_attestation\"}[$rate_interval]) * 12",
@@ -3854,7 +3854,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -3948,7 +3948,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "lodestar_seen_cache_attestation_data_per_slot_total",
@@ -3959,7 +3959,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "rate(lodestar_seen_cache_attestation_data_hit_total[$rate_interval])\n/ (\n    rate(lodestar_seen_cache_attestation_data_hit_total[$rate_interval]) +\n    rate(lodestar_seen_cache_attestation_data_miss_total[$rate_interval])\n)",
@@ -3975,7 +3975,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4064,7 +4064,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "lodestar_reprocess_gossip_attestations_per_slot_total",
@@ -4075,7 +4075,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "rate(lodestar_reprocess_gossip_attestations_total[$rate_interval]) * 12",
@@ -4091,7 +4091,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4167,7 +4167,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "rate(lodestar_seen_cache_attestation_data_reject_total[$rate_interval]) * 12",
@@ -4182,7 +4182,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4275,7 +4275,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "rate(lodestar_reprocess_gossip_attestations_resolve_total[$rate_interval]) * 12",
@@ -4286,7 +4286,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "lodestar_reprocess_gossip_attestations_wait_time_resolve_seconds",
@@ -4302,7 +4302,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4395,7 +4395,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "rate(lodestar_reprocess_gossip_attestations_reject_total[$rate_interval]) * 12",
@@ -4406,7 +4406,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
               "expr": "lodestar_reprocess_gossip_attestations_wait_time_reject_seconds",
@@ -4427,7 +4427,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus_local"
+        "uid": "${DS_PROMETHEUS}"
       },
       "gridPos": {
         "h": 1,
@@ -4440,7 +4440,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4517,7 +4517,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(beacon_reqresp_incoming_requests_total[$rate_interval])",
@@ -4532,7 +4532,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4610,7 +4610,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(beacon_reqresp_outgoing_requests_total[$rate_interval])",
@@ -4625,7 +4625,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4703,7 +4703,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "delta(beacon_reqresp_incoming_requests_error_total[$rate_interval])/(delta(beacon_reqresp_incoming_requests_total[$rate_interval])>0)",
@@ -4718,7 +4718,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -4796,7 +4796,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "delta(beacon_reqresp_outgoing_requests_error_total[$rate_interval])/(delta(beacon_reqresp_outgoing_requests_total[$rate_interval]) > 0)",
@@ -4997,7 +4997,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "fieldConfig": {
             "defaults": {
@@ -5075,7 +5075,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "prometheus_local"
+                "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
               "expr": "rate(beacon_reqresp_dial_errors_total[$rate_interval])",
@@ -5185,7 +5185,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus_local"
+            "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A"
         }
