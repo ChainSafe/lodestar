@@ -36,6 +36,7 @@ describe("mdns", function () {
 
   let controller: AbortController;
   beforeEach(() => (controller = new AbortController()));
+  afterEach(() => controller.abort());
 
   async function getOpts(peerId: PeerId): Promise<NetworkOptions> {
     const bindAddrUdp = `/ip4/0.0.0.0/udp/${port++}`;
@@ -49,7 +50,12 @@ describe("mdns", function () {
       bootMultiaddrs: [],
       localMultiaddrs: [],
       discv5FirstQueryDelayMs: 0,
-      discv5: null,
+      discv5: {
+        enr,
+        bindAddr: bindAddrUdp,
+        bootEnrs: [],
+        enabled: true,
+      },
     };
   }
 
