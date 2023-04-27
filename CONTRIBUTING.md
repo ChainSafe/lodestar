@@ -96,13 +96,15 @@ If you are contributing from this repo prefix the branch name with your Github u
 
 Pull request titles must be:
 
+- Adhering to the [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/#summary) spec
 - Short and descriptive summary
-- Should be capitalized and written in imperative present tense
+- Written in imperative present tense
 - Not end with a period
 
 For example:
 
-> Add Edit on Github button to all the pages
+> feat: add lodestar prover for execution api
+> refactor(reqresp)!: support byte based handlers
 
 **Pull Request Etiquette**
 
