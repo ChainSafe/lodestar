@@ -86,9 +86,7 @@ export async function* sendRequest<Req, Resp>(
     // From Altair block query methods have V1 and V2. Both protocols should be requested.
     // On stream negotiation `libp2p.dialProtocol` will pick the available protocol and return
     // the picked protocol in `connection.protocol`
-    const protocolsMap = new Map<string, MixedProtocol>(
-      protocols.map((protocol, i) => [protocolIDs[i], protocol])
-    );
+    const protocolsMap = new Map<string, MixedProtocol>(protocols.map((protocol, i) => [protocolIDs[i], protocol]));
 
     // As of October 2020 we can't rely on libp2p.dialProtocol timeout to work so
     // this function wraps the dialProtocol promise with an extra timeout

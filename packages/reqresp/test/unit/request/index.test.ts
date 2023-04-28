@@ -7,13 +7,7 @@ import sinon from "sinon";
 import {Logger, LodestarError, sleep} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "../../../src/request/index.js";
-import {
-  Protocol,
-  Encoding,
-  MixedProtocol,
-  EncodedPayloadType,
-  ContextBytesType,
-} from "../../../src/types.js";
+import {Protocol, Encoding, MixedProtocol, EncodedPayloadType, ContextBytesType} from "../../../src/types.js";
 import {protocols, sszSnappyPing, sszSnappySignedBeaconBlockPhase0} from "../../fixtures/messages.js";
 import {createStubbedLogger} from "../../mocks/logger.js";
 import {getValidPeerId} from "../../utils/peer.js";

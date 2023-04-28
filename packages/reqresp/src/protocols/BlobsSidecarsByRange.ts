@@ -3,10 +3,10 @@ import {deneb, ssz} from "@lodestar/types";
 import {ContextBytesType, ProtocolGenerator, Encoding} from "../types.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const BlobsSidecarsByRange: ProtocolGenerator<
-  deneb.BlobsSidecarsByRangeRequest,
-  deneb.BlobsSidecar
-> = (modules, handler) => {
+export const BlobsSidecarsByRange: ProtocolGenerator<deneb.BlobsSidecarsByRangeRequest, deneb.BlobsSidecar> = (
+  modules,
+  handler
+) => {
   return {
     method: "blobs_sidecars_by_range",
     version: 1,

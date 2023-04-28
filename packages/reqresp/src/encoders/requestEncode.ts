@@ -10,10 +10,7 @@ import {writeEncodedPayload} from "../encodingStrategies/index.js";
  * Requests may contain no payload (e.g. /eth2/beacon_chain/req/metadata/1/)
  * if so, it would yield no byte chunks
  */
-export async function* requestEncode<Req>(
-  protocol: MixedProtocol<Req>,
-  requestBody: Req
-): AsyncGenerator<Buffer> {
+export async function* requestEncode<Req>(protocol: MixedProtocol<Req>, requestBody: Req): AsyncGenerator<Buffer> {
   const type = protocol.requestType(ForkName.phase0);
 
   if (type && requestBody !== null) {

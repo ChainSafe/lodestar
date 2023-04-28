@@ -18,10 +18,10 @@ const BeaconBlocksByRootCommon: Pick<
   },
 };
 
-export const BeaconBlocksByRoot: ProtocolGenerator<
-  phase0.BeaconBlocksByRootRequest,
-  allForks.SignedBeaconBlock
-> = (_modules, handler) => {
+export const BeaconBlocksByRoot: ProtocolGenerator<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock> = (
+  _modules,
+  handler
+) => {
   return {
     ...BeaconBlocksByRootCommon,
     version: 1,
@@ -31,10 +31,10 @@ export const BeaconBlocksByRoot: ProtocolGenerator<
   };
 };
 
-export const BeaconBlocksByRootV2: ProtocolGenerator<
-  phase0.BeaconBlocksByRootRequest,
-  allForks.SignedBeaconBlock
-> = (modules, handler) => {
+export const BeaconBlocksByRootV2: ProtocolGenerator<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock> = (
+  modules,
+  handler
+) => {
   return {
     ...BeaconBlocksByRootCommon,
     version: 2,
