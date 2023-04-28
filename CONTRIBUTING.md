@@ -103,8 +103,9 @@ Pull request titles must be:
 
 For example:
 
-> feat: add lodestar prover for execution api
-> refactor(reqresp)!: support byte based handlers
+- feat: add lodestar prover for execution api
+- fix: ignore known block in publish blinded block flow
+- refactor(reqresp)!: support byte based handlers
 
 **Pull Request Etiquette**
 
