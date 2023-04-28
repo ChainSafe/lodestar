@@ -1,12 +1,12 @@
 import {ssz, allForks} from "@lodestar/types";
 import {isForkLightClient} from "@lodestar/params";
-import {DialOnlyProtocolDefinition, Encoding, MixedProtocolDefinitionGenerator} from "../types.js";
+import {DialOnlyProtocol, Encoding, MixedProtocolGenerator} from "../types.js";
 import {getContextBytesLightclient} from "./utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const LightClientOptimisticUpdate: MixedProtocolDefinitionGenerator<null, allForks.LightClientOptimisticUpdate> =
+export const LightClientOptimisticUpdate: MixedProtocolGenerator<null, allForks.LightClientOptimisticUpdate> =
   ((modules, handler) => {
-    const dialProtocol: DialOnlyProtocolDefinition<null, allForks.LightClientOptimisticUpdate> = {
+    const dialProtocol: DialOnlyProtocol<null, allForks.LightClientOptimisticUpdate> = {
       method: "light_client_optimistic_update",
       version: 1,
       encoding: Encoding.SSZ_SNAPPY,
@@ -29,4 +29,4 @@ export const LightClientOptimisticUpdate: MixedProtocolDefinitionGenerator<null,
         byPeer: {quota: 2, quotaTimeMs: 12_000},
       },
     };
-  }) as MixedProtocolDefinitionGenerator<null, allForks.LightClientOptimisticUpdate>;
+  }) as MixedProtocolGenerator<null, allForks.LightClientOptimisticUpdate>;

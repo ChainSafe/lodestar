@@ -9,8 +9,8 @@ import {
   EncodedPayloadBytes,
   EncodedPayloadSsz,
   EncodedPayloadType,
-  MixedProtocolDefinition,
-  ReqRespHandler,
+  MixedProtocol,
+  ProtocolHandler,
   TypeSerializer,
 } from "../../src/types.js";
 import {ZERO_HASH} from "../utils/index.js";
@@ -228,21 +228,21 @@ const getEmptyHandler = <T = unknown>() => async function* emptyHandler(): Async
 export const getAllProtocols = (
   modules: {config: BeaconConfig} = {config: createBeaconConfig(chainConfig, ZERO_HASH)}
 ): {
-  ping: MixedProtocolDefinition<phase0.Ping, phase0.Ping>;
-  goodbye: MixedProtocolDefinition<phase0.Goodbye, phase0.Goodbye>;
-  metadata: MixedProtocolDefinition<null, allForks.Metadata>;
-  metadataV2: MixedProtocolDefinition<null, allForks.Metadata>;
-  status: MixedProtocolDefinition<phase0.Status, phase0.Status>;
-  blocksByRange: MixedProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
-  blocksByRangeV2: MixedProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
-  blocksByRoot: MixedProtocolDefinition<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
-  blocksByRootV2: MixedProtocolDefinition<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
+  ping: MixedProtocol<phase0.Ping, phase0.Ping>;
+  goodbye: MixedProtocol<phase0.Goodbye, phase0.Goodbye>;
+  metadata: MixedProtocol<null, allForks.Metadata>;
+  metadataV2: MixedProtocol<null, allForks.Metadata>;
+  status: MixedProtocol<phase0.Status, phase0.Status>;
+  blocksByRange: MixedProtocol<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
+  blocksByRangeV2: MixedProtocol<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
+  blocksByRoot: MixedProtocol<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
+  blocksByRootV2: MixedProtocol<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
 } => ({
   ping: messagesDef.Ping(modules, getEmptyHandler()),
   goodbye: messagesDef.Goodbye(modules, getEmptyHandler()),
   metadata: messagesDef.Metadata(modules, getEmptyHandler()),
   metadataV2: messagesDef.MetadataV2(modules, getEmptyHandler()),
-  status: messagesDef.Status(modules, getEmptyHandler() as ReqRespHandler<phase0.Status>),
+  status: messagesDef.Status(modules, getEmptyHandler() as ProtocolHandler<phase0.Status, phase0.Status>),
   blocksByRange: messagesDef.BeaconBlocksByRange(modules, getEmptyHandler()),
   blocksByRangeV2: messagesDef.BeaconBlocksByRangeV2(modules, getEmptyHandler()),
   blocksByRoot: messagesDef.BeaconBlocksByRoot(modules, getEmptyHandler()),

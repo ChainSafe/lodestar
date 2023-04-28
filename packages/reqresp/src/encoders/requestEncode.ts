@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {EncodedPayloadType, MixedProtocolDefinition} from "../types.js";
+import {EncodedPayloadType, MixedProtocol} from "../types.js";
 import {writeEncodedPayload} from "../encodingStrategies/index.js";
 
 /**
@@ -11,7 +11,7 @@ import {writeEncodedPayload} from "../encodingStrategies/index.js";
  * if so, it would yield no byte chunks
  */
 export async function* requestEncode<Req>(
-  protocol: MixedProtocolDefinition<Req>,
+  protocol: MixedProtocol<Req>,
   requestBody: Req
 ): AsyncGenerator<Buffer> {
   const type = protocol.requestType(ForkName.phase0);

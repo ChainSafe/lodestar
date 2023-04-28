@@ -8,9 +8,9 @@ import {Logger, LodestarError, sleep} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "../../../src/request/index.js";
 import {
-  ProtocolDefinition,
+  Protocol,
   Encoding,
-  MixedProtocolDefinition,
+  MixedProtocol,
   EncodedPayloadType,
   ContextBytesType,
 } from "../../../src/types.js";
@@ -32,7 +32,7 @@ describe("request / sendRequest", () => {
 
   const testCases: {
     id: string;
-    protocols: MixedProtocolDefinition<any, any>[];
+    protocols: MixedProtocol<any, any>[];
     requestBody: unknown;
     maxResponses?: number;
     expectedReturn: unknown[];
@@ -78,7 +78,7 @@ describe("request / sendRequest", () => {
                   },
                 },
               ],
-              protocols[0] as ProtocolDefinition<any, any>
+              protocols[0] as Protocol<any, any>
             ),
             protocols[0].method
           )
@@ -165,7 +165,7 @@ describe("request / sendRequest", () => {
             sendRequest(
               {logger, libp2p},
               peerId,
-              [protocols.ping as MixedProtocolDefinition],
+              [protocols.ping as MixedProtocol],
               [protocols.ping.method],
               sszSnappyPing.sszPayload.data,
               controller.signal,

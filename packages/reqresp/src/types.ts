@@ -4,6 +4,18 @@ import {ForkName} from "@lodestar/params";
 import {LodestarError} from "@lodestar/utils";
 import {RateLimiterQuota} from "./rate_limiter/rateLimiterGRCA.js";
 
+export const protocolPrefix = "/eth2/beacon_chain/req";
+
+/**
+ * Available request/response encoding strategies:
+ * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#encoding-strategies
+ */
+export enum Encoding {
+  SSZ_SNAPPY = "ssz_snappy",
+}
+
+export const CONTEXT_BYTES_FORK_DIGEST_LENGTH = 4;
+
 /**
  * The encoding of the request/response payload
  */
@@ -39,20 +51,11 @@ export type EncodedPayloadSsz<T = unknown> = EncodedPayloadData<T>[EncodedPayloa
 export type EncodedPayload<T> = EncodedPayloadData<T>[EncodedPayloadType];
 
 /**
- * Request handler
+ * Rate limiter options for the requests
  */
-export type ReqRespHandler<Req> = (req: Req, peerId: PeerId) => AsyncIterable<EncodedPayloadBytes>;
-
-/**
- * ReqResp Protocol Deceleration
- */
-export interface Protocol {
-  readonly protocolPrefix: string;
-  /** Protocol name identifier `beacon_blocks_by_range` or `status` */
-  readonly method: string;
-  /** Version counter: `1`, `2` etc */
-  readonly version: number;
-  readonly encoding: Encoding;
+export interface ReqRespRateLimiterOpts {
+  rateLimitMultiplier?: number;
+  onRateLimit?: (peer: PeerId, method: string) => void;
 }
 
 /**
@@ -74,25 +77,49 @@ export interface InboundRateLimitQuota<Req = unknown> {
   getRequestCount?: (req: Req) => number;
 }
 
+/**
+ * Request handler
+ */
+export type ProtocolHandler<Req, Resp> = (
+  protocol: ProtocolDescriptor<Req, Resp>,
+  req: Req,
+  peerId: PeerId
+) => AsyncIterable<EncodedPayloadBytes>;
+
+/**
+ * ReqResp Protocol Deceleration
+ */
+export interface ProtocolAttributes {
+  readonly protocolPrefix: string;
+  /** Protocol name identifier `beacon_blocks_by_range` or `status` */
+  readonly method: string;
+  /** Version counter: `1`, `2` etc */
+  readonly version: number;
+  readonly encoding: Encoding;
+}
+
+export interface ProtocolDescriptor<Req = unknown, Resp = unknown> extends Omit<ProtocolAttributes, "protocolPrefix"> {
+  requestType: (fork: ForkName) => TypeSerializer<Req> | null;
+  responseType: (fork: ForkName) => TypeSerializer<Resp>;
+  contextBytes: ContextBytesFactory<Resp>;
+  ignoreResponse?: boolean;
+}
+
 // `protocolPrefix` is added runtime so not part of definition
 /**
  * ReqResp Protocol definition for full duplex protocols
  */
-export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<Protocol, "protocolPrefix"> {
-  handler: ReqRespHandler<Req>;
-  requestType: (fork: ForkName) => TypeSerializer<Req> | null;
-  responseType: (fork: ForkName) => TypeSerializer<Resp>;
-  ignoreResponse?: boolean;
+export interface Protocol<Req = unknown, Resp = unknown> extends ProtocolDescriptor<Req, Resp> {
+  handler: ProtocolHandler<Req, Resp>;
   renderRequestBody?: (request: Req) => string;
-  contextBytes: ContextBytesFactory<Resp>;
   inboundRateLimits?: InboundRateLimitQuota<Req>;
 }
 
 /**
  * ReqResp Protocol definition for dial only protocols
  */
-export interface DialOnlyProtocolDefinition<Req = unknown, Resp = unknown>
-  extends Omit<ProtocolDefinition<Req, Resp>, "handler" | "inboundRateLimits" | "renderRequestBody"> {
+export interface DialOnlyProtocol<Req = unknown, Resp = unknown>
+  extends Omit<Protocol<Req, Resp>, "handler" | "inboundRateLimits" | "renderRequestBody"> {
   handler?: never;
   inboundRateLimits?: never;
   renderRequestBody?: never;
@@ -101,45 +128,30 @@ export interface DialOnlyProtocolDefinition<Req = unknown, Resp = unknown>
 /**
  * ReqResp Protocol definition for full duplex and dial only protocols
  */
-export type MixedProtocolDefinition<Req = unknown, Resp = unknown> =
-  | DialOnlyProtocolDefinition<Req, Resp>
-  | ProtocolDefinition<Req, Resp>;
+export type MixedProtocol<Req = unknown, Resp = unknown> = DialOnlyProtocol<Req, Resp> | Protocol<Req, Resp>;
 
 /**
  * ReqResp protocol definition descriptor for full duplex and dial only protocols
  * If handler is not provided, the protocol will be dial only
  * If handler is provided, the protocol will be full duplex
  */
-export type MixedProtocolDefinitionGenerator<Req, Res> = <H extends ReqRespHandler<Req> | undefined = undefined>(
+export type MixedProtocolGenerator<Req, Resp> = <H extends ProtocolHandler<Req, Resp> | undefined = undefined>(
   // "inboundRateLimiter" is available only on handler context not on generator
   modules: {config: BeaconConfig},
   handler?: H
-) => H extends undefined ? DialOnlyProtocolDefinition<Req, Res> : ProtocolDefinition<Req, Res>;
+) => H extends undefined ? DialOnlyProtocol<Req, Resp> : Protocol<Req, Resp>;
 
 /**
  * ReqResp protocol definition descriptor for full duplex protocols
  */
-export type ProtocolDefinitionGenerator<Req, Res> = (
+export type ProtocolGenerator<Req, Resp> = (
   modules: {config: BeaconConfig},
-  handler: ReqRespHandler<Req>
-) => ProtocolDefinition<Req, Res>;
+  handler: ProtocolHandler<Req, Resp>
+) => Protocol<Req, Resp>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type HandlerTypeFromMessage<T> = T extends ProtocolDefinitionGenerator<infer Req, any>
-  ? ReqRespHandler<Req>
+export type HandlerTypeFromMessage<T> = T extends ProtocolGenerator<infer Req, infer Resp>
+  ? ProtocolHandler<Req, Resp>
   : never;
-
-export const protocolPrefix = "/eth2/beacon_chain/req";
-
-/**
- * Available request/response encoding strategies:
- * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#encoding-strategies
- */
-export enum Encoding {
-  SSZ_SNAPPY = "ssz_snappy",
-}
-
-export const CONTEXT_BYTES_FORK_DIGEST_LENGTH = 4;
 
 export type ContextBytesFactory<Resp> =
   | {type: ContextBytesType.Empty}
@@ -175,12 +187,4 @@ export interface TypeSerializer<T> {
   maxSize: number;
   minSize: number;
   equals(a: T, b: T): boolean;
-}
-
-/**
- * Rate limiter options for the requests
- */
-export interface ReqRespRateLimiterOpts {
-  rateLimitMultiplier?: number;
-  onRateLimit?: (peer: PeerId, method: string) => void;
 }

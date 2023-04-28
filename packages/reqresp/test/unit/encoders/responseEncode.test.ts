@@ -2,7 +2,7 @@ import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import all from "it-all";
 import {pipe} from "it-pipe";
-import {ProtocolDefinition} from "../../../src/types.js";
+import {Protocol} from "../../../src/types.js";
 import {responseEncodersTestCases} from "../../fixtures/encoders.js";
 import {responseEncode} from "../../utils/response.js";
 import {expectEqualByteChunks} from "../../utils/index.js";
@@ -13,7 +13,7 @@ describe("encoders / responseEncode", () => {
   describe("valid cases", () => {
     for (const {id, protocol, responseChunks, chunks} of responseEncodersTestCases.filter((f) => !f.skipEncoding)) {
       it(`${id}`, async () => {
-        const encodedChunks = await pipe(responseEncode(responseChunks, protocol as ProtocolDefinition<any, any>), all);
+        const encodedChunks = await pipe(responseEncode(responseChunks, protocol as Protocol<any, any>), all);
 
         expectEqualByteChunks(
           encodedChunks as Uint8Array[],

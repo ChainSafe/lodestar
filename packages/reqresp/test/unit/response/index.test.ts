@@ -1,7 +1,7 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {expect} from "chai";
 import {LodestarError, Logger, fromHex} from "@lodestar/utils";
-import {ProtocolDefinition, RespStatus} from "../../../src/index.js";
+import {Protocol, RespStatus} from "../../../src/index.js";
 import {Ping} from "../../../src/protocols/index.js";
 import {ReqRespRateLimiter} from "../../../src/rate_limiter/ReqRespRateLimiter.js";
 import {handleRequest} from "../../../src/response/index.js";
@@ -13,7 +13,7 @@ import {getValidPeerId} from "../../utils/peer.js";
 
 const testCases: {
   id: string;
-  protocol: ProtocolDefinition<any, any>;
+  protocol: Protocol<any, any>;
   requestChunks: Uint8Array[];
   expectedResponseChunks: Uint8Array[];
   expectedError?: LodestarError<any>;

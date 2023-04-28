@@ -1,14 +1,14 @@
 import {MAX_REQUEST_LIGHT_CLIENT_UPDATES, isForkLightClient} from "@lodestar/params";
 import {altair, ssz, allForks} from "@lodestar/types";
-import {DialOnlyProtocolDefinition, Encoding, MixedProtocolDefinitionGenerator} from "../types.js";
+import {DialOnlyProtocol, Encoding, MixedProtocolGenerator} from "../types.js";
 import {getContextBytesLightclient} from "./utils.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const LightClientUpdatesByRange: MixedProtocolDefinitionGenerator<
+export const LightClientUpdatesByRange: MixedProtocolGenerator<
   altair.LightClientUpdatesByRange,
   allForks.LightClientUpdate
 > = ((modules, handler) => {
-  const dialProtocol: DialOnlyProtocolDefinition<altair.LightClientUpdatesByRange, allForks.LightClientUpdate> = {
+  const dialProtocol: DialOnlyProtocol<altair.LightClientUpdatesByRange, allForks.LightClientUpdate> = {
     method: "light_client_updates_by_range",
     version: 1,
     encoding: Encoding.SSZ_SNAPPY,
@@ -30,4 +30,4 @@ export const LightClientUpdatesByRange: MixedProtocolDefinitionGenerator<
       getRequestCount: (req) => req.count,
     },
   };
-}) as MixedProtocolDefinitionGenerator<altair.LightClientUpdatesByRange, allForks.LightClientUpdate>;
+}) as MixedProtocolGenerator<altair.LightClientUpdatesByRange, allForks.LightClientUpdate>;

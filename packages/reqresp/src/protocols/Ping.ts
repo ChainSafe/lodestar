@@ -1,8 +1,8 @@
 import {phase0, ssz} from "@lodestar/types";
-import {ContextBytesType, Encoding, ProtocolDefinitionGenerator} from "../types.js";
+import {ContextBytesType, Encoding, ProtocolGenerator} from "../types.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const Ping: ProtocolDefinitionGenerator<phase0.Ping, phase0.Ping> = (_modules, handler) => {
+export const Ping: ProtocolGenerator<phase0.Ping, phase0.Ping> = (_modules, handler) => {
   return {
     method: "ping",
     version: 1,

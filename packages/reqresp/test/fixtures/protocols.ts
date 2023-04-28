@@ -1,12 +1,12 @@
 import {ContainerType, UintNumberType, ListBasicType, ValueOf} from "@chainsafe/ssz";
 import {
   ContextBytesType,
-  DialOnlyProtocolDefinition,
+  DialOnlyProtocol,
   EncodedPayloadBytes,
   EncodedPayloadType,
   Encoding,
-  MixedProtocolDefinitionGenerator,
-  ReqRespHandler,
+  MixedProtocolGenerator,
+  ProtocolHandler,
 } from "../../src/types.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -28,11 +28,11 @@ const NumToStrResp = new ContainerType(
 );
 export type NumToStrRespType = ValueOf<typeof NumToStrResp>;
 
-export const numberToStringProtocol: MixedProtocolDefinitionGenerator<NumToStrReqType, NumToStrRespType> = ((
+export const numberToStringProtocol: MixedProtocolGenerator<NumToStrReqType, NumToStrRespType> = ((
   _modules,
   handler
 ) => {
-  const dialProtocol: DialOnlyProtocolDefinition<NumToStrReqType, NumToStrRespType> = {
+  const dialProtocol: DialOnlyProtocol<NumToStrReqType, NumToStrRespType> = {
     method: "number_to_string",
     version: 1,
     encoding: Encoding.SSZ_SNAPPY,
@@ -51,10 +51,10 @@ export const numberToStringProtocol: MixedProtocolDefinitionGenerator<NumToStrRe
       byPeer: {quota: 5, quotaTimeMs: 15_000},
     },
   };
-}) as MixedProtocolDefinitionGenerator<NumToStrReqType, NumToStrRespType>;
+}) as MixedProtocolGenerator<NumToStrReqType, NumToStrRespType>;
 
-export const numberToStringProtocolHandler: ReqRespHandler<NumToStrReqType> =
-  async function* numberToStringProtocolHandler(req: NumToStrReqType): AsyncIterable<EncodedPayloadBytes> {
+export const numberToStringProtocolHandler: ProtocolHandler<NumToStrReqType, NumToStrRespType> =
+  async function* numberToStringProtocolHandler(_protocol, req): AsyncIterable<EncodedPayloadBytes> {
     yield {
       type: EncodedPayloadType.bytes,
       bytes: Buffer.from(req.value.toString(), "utf-8"),

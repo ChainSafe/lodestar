@@ -1,10 +1,10 @@
 import {MAX_REQUEST_BLOCKS} from "@lodestar/params";
 import {allForks, phase0, ssz} from "@lodestar/types";
-import {ContextBytesType, Encoding, MixedProtocolDefinition, ProtocolDefinitionGenerator} from "../types.js";
+import {ContextBytesType, Encoding, MixedProtocol, ProtocolGenerator} from "../types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 const BeaconBlocksByRangeCommon: Pick<
-  MixedProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>,
+  MixedProtocol<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>,
   "method" | "encoding" | "requestType" | "renderRequestBody" | "inboundRateLimits"
 > = {
   method: "beacon_blocks_by_range",
@@ -18,10 +18,10 @@ const BeaconBlocksByRangeCommon: Pick<
   },
 };
 
-export const BeaconBlocksByRange: ProtocolDefinitionGenerator<
-  phase0.BeaconBlocksByRangeRequest,
-  allForks.SignedBeaconBlock
-> = (_modules, handler) => {
+export const BeaconBlocksByRange: ProtocolGenerator<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock> = (
+  _modules,
+  handler
+) => {
   return {
     ...BeaconBlocksByRangeCommon,
     version: 1,
@@ -31,10 +31,10 @@ export const BeaconBlocksByRange: ProtocolDefinitionGenerator<
   };
 };
 
-export const BeaconBlocksByRangeV2: ProtocolDefinitionGenerator<
-  phase0.BeaconBlocksByRangeRequest,
-  allForks.SignedBeaconBlock
-> = (modules, handler) => {
+export const BeaconBlocksByRangeV2: ProtocolGenerator<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock> = (
+  modules,
+  handler
+) => {
   return {
     ...BeaconBlocksByRangeCommon,
     version: 2,

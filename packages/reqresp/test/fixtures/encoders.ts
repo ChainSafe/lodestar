@@ -3,7 +3,7 @@ import {LodestarError} from "@lodestar/utils";
 import {SszSnappyError, SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/index.js";
 import {ResponseError} from "../../src/index.js";
 import {RespStatus} from "../../src/interface.js";
-import {EncodedPayloadBytes, MixedProtocolDefinition} from "../../src/types.js";
+import {EncodedPayloadBytes, MixedProtocol} from "../../src/types.js";
 import {fromHexBuf} from "../utils/index.js";
 import {
   beaconConfig,
@@ -17,7 +17,7 @@ import {
 
 export const requestEncodersCases: {
   id: string;
-  protocol: MixedProtocolDefinition<any, any>;
+  protocol: MixedProtocol<any, any>;
   chunks: Uint8Array[];
   requestBody: unknown;
 }[] = [
@@ -37,7 +37,7 @@ export const requestEncodersCases: {
 
 export const requestEncodersErrorCases: {
   id: string;
-  protocol: MixedProtocolDefinition<any, any>;
+  protocol: MixedProtocol<any, any>;
   chunks: Uint8Array[];
   requestBody: unknown;
   errorEncode?: LodestarError<any>;
@@ -66,7 +66,7 @@ export type ResponseChunk = SuccessResponseChunk | ErrorResponseChunk;
 
 export const responseEncodersTestCases: {
   id: string;
-  protocol: MixedProtocolDefinition<any, any>;
+  protocol: MixedProtocol<any, any>;
   chunks: Uint8Array[];
   responseChunks: ResponseChunk[];
   skipEncoding?: boolean;
@@ -222,7 +222,7 @@ export const responseEncodersTestCases: {
 
 export const responseEncodersErrorTestCases: {
   id: string;
-  protocol: MixedProtocolDefinition<any, any>;
+  protocol: MixedProtocol<any, any>;
   chunks?: Uint8Array[];
   responseChunks?: ResponseChunk[];
   // decode only
