@@ -26,8 +26,11 @@ async function getReqResp(libp2p: Libp2p, logger: Logger): Promise<void> {
 
   // Register a PONG handler to respond with caller's Ping request
   reqResp.registerProtocol(
-    Ping({config}, async function* (req: bigint) {
-      yield {type: EncodedPayloadType.bytes, bytes: ssz.phase0.Ping.serialize(req), contextBytes: {type: ContextBytesType.Empty}};
+    Ping({config}, async function* (protocol, req) {
+      yield {
+        type: EncodedPayloadType.bytes, 
+        bytes: ssz.phase0.Ping.serialize(req), 
+        contextBytes: {type: ContextBytesType.Empty}};
     })
   );
 }
