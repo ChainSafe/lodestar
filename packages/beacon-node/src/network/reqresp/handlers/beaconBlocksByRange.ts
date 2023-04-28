@@ -1,6 +1,13 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS} from "@lodestar/params";
-import {ContextBytesType, EncodedPayloadBytes, EncodedPayloadType, ResponseError, RespStatus} from "@lodestar/reqresp";
-import {deneb, phase0} from "@lodestar/types";
+import {
+  ContextBytesType,
+  EncodedPayloadBytes,
+  EncodedPayloadType,
+  ProtocolDescriptor,
+  ResponseError,
+  RespStatus,
+} from "@lodestar/reqresp";
+import {allForks, deneb, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -8,31 +15,29 @@ import {IBeaconDb} from "../../../db/index.js";
 // TODO: Unit test
 
 export function onBeaconBlocksByRange(
+  protocol:
+    | ProtocolDescriptor<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>
+    | ProtocolDescriptor<deneb.BlobsSidecarsByRangeRequest, allForks.SignedBeaconBlock>,
   request: phase0.BeaconBlocksByRangeRequest,
   chain: IBeaconChain,
-  db: IBeaconDb,
-  contextBytes: boolean
+  db: IBeaconDb
 ): AsyncIterable<EncodedPayloadBytes> {
-  return onBlocksOrBlobsSidecarsByRange(
-    request,
-    chain,
-    {
-      finalized: db.blockArchive,
-      unfinalized: db.block,
-    },
-    {contextBytes}
-  );
+  return onBlocksOrBlobsSidecarsByRange(protocol, request, chain, {
+    finalized: db.blockArchive,
+    unfinalized: db.block,
+  });
 }
 
 export async function* onBlocksOrBlobsSidecarsByRange(
+  protocol:
+    | ProtocolDescriptor<deneb.BlobsSidecarsByRangeRequest, allForks.SignedBeaconBlock>
+    | ProtocolDescriptor<deneb.BlobsSidecarsByRangeRequest, deneb.SignedBeaconBlockAndBlobsSidecar>
+    | ProtocolDescriptor<deneb.BlobsSidecarsByRangeRequest, deneb.BlobsSidecar>,
   request: deneb.BlobsSidecarsByRangeRequest,
   chain: IBeaconChain,
   db: {
     finalized: Pick<IBeaconDb["blockArchive"], "binaryEntriesStream" | "decodeKey">;
     unfinalized: Pick<IBeaconDb["block"], "getBinary">;
-  },
-  opts: {
-    contextBytes: boolean;
   }
 ): AsyncIterable<EncodedPayloadBytes> {
   const {startSlot, count} = validateBeaconBlocksByRangeRequest(request);
@@ -54,12 +59,13 @@ export async function* onBlocksOrBlobsSidecarsByRange(
       yield {
         type: EncodedPayloadType.bytes,
         bytes: value,
-        contextBytes: opts.contextBytes
-          ? {
-              type: ContextBytesType.ForkDigest,
-              fork: chain.config.getForkName(db.finalized.decodeKey(key)),
-            }
-          : {type: ContextBytesType.Empty},
+        contextBytes:
+          protocol.contextBytes.type === ContextBytesType.Empty
+            ? {type: ContextBytesType.Empty}
+            : {
+                type: ContextBytesType.ForkDigest,
+                fork: chain.config.getForkName(db.finalized.decodeKey(key)),
+              },
       };
     }
   }
@@ -91,12 +97,13 @@ export async function* onBlocksOrBlobsSidecarsByRange(
         yield {
           type: EncodedPayloadType.bytes,
           bytes: blockBytes,
-          contextBytes: opts.contextBytes
-            ? {
-                type: ContextBytesType.ForkDigest,
-                fork: chain.config.getForkName(block.slot),
-              }
-            : {type: ContextBytesType.Empty},
+          contextBytes:
+            protocol.contextBytes.type === ContextBytesType.Empty
+              ? {type: ContextBytesType.Empty}
+              : {
+                  type: ContextBytesType.ForkDigest,
+                  fork: chain.config.getForkName(block.slot),
+                },
         };
       }
 

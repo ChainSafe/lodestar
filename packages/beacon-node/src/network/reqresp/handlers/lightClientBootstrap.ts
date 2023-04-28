@@ -6,20 +6,22 @@ import {
   LightClientServerErrorCode,
   EncodedPayloadBytes,
   ContextBytesType,
+  ProtocolDescriptor,
 } from "@lodestar/reqresp";
-import {Root} from "@lodestar/types";
+import {Root, allForks} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 
 export async function* onLightClientBootstrap(
+  protocol: ProtocolDescriptor<Root, allForks.LightClientBootstrap>,
   requestBody: Root,
   chain: IBeaconChain
 ): AsyncIterable<EncodedPayloadBytes> {
   try {
     yield {
       type: EncodedPayloadType.bytes,
-      bytes: chain.config
-        .getLightClientForkTypes(chain.clock.currentSlot)
-        .LightClientBootstrap.serialize(await chain.lightClientServer.getBootstrap(requestBody)),
+      bytes: protocol
+        .responseType(chain.config.getForkName(chain.clock.currentSlot))
+        .serialize(await chain.lightClientServer.getBootstrap(requestBody)),
       contextBytes: {
         type: ContextBytesType.ForkDigest,
         fork: chain.config.getForkName(chain.clock.currentSlot),

@@ -10,13 +10,14 @@ import {
   EncodedPayloadBytes,
   EncodedPayloadType,
   Encoding,
-  ProtocolDefinition,
+  Protocol,
+  ProtocolDescriptor,
   ReqResp,
   RequestError,
 } from "@lodestar/reqresp";
 import {ReqRespOpts} from "@lodestar/reqresp/lib/ReqResp.js";
 import * as reqRespProtocols from "@lodestar/reqresp/protocols";
-import {allForks, altair, deneb, phase0, Root, ssz} from "@lodestar/types";
+import {allForks, altair, deneb, phase0, Root} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
@@ -37,7 +38,7 @@ export {IReqRespBeaconNode};
 export type ReqRespBlockResponse = EncodedPayload<allForks.SignedBeaconBlock>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ProtocolDefinitionAny = ProtocolDefinition<any, any>;
+type ProtocolDefinitionAny = Protocol<any, any>;
 
 export interface ReqRespBeaconNodeModules {
   libp2p: Libp2p;
@@ -291,15 +292,15 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   private getProtocolsAtFork(fork: ForkName): ProtocolDefinitionAny[] {
     const modules = {config: this.config};
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const protocols: ProtocolDefinition<any, any>[] = [
+    const protocols: Protocol<any, any>[] = [
       reqRespProtocols.Ping(modules, this.onPing.bind(this)),
       reqRespProtocols.Status(modules, this.onStatus.bind(this)),
       reqRespProtocols.Goodbye(modules, this.onGoodbye.bind(this)),
       // Support V2 methods as soon as implemented (for altair)
       // Ref https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/altair/p2p-interface.md#transitioning-from-v1-to-v2
-      reqRespProtocols.MetadataV2(modules, this.onMetadataV2.bind(this)),
-      reqRespProtocols.BeaconBlocksByRangeV2(modules, this.onBeaconBlocksByRangeV2.bind(this)),
-      reqRespProtocols.BeaconBlocksByRootV2(modules, this.onBeaconBlocksByRootV2.bind(this)),
+      reqRespProtocols.MetadataV2(modules, this.onMetadata.bind(this)),
+      reqRespProtocols.BeaconBlocksByRangeV2(modules, this.onBeaconBlocksByRange.bind(this)),
+      reqRespProtocols.BeaconBlocksByRootV2(modules, this.onBeaconBlocksByRoot.bind(this)),
     ];
 
     if (ForkSeq[fork] < ForkSeq.altair) {
@@ -348,7 +349,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     setTimeout(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, req, peerId), 0);
   }
 
-  protected onIncomingRequest(peerId: PeerId, protocol: ProtocolDefinition): void {
+  protected onIncomingRequest(peerId: PeerId, protocol: ProtocolDescriptor): void {
     // Remember prefered encoding
     if (protocol.method === ReqRespMethod.Status) {
       this.peersData.setEncodingPreference(peerId.toString(), protocol.encoding);
@@ -362,76 +363,74 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     }
   }
 
-  private async *onStatus(req: phase0.Status, peerId: PeerId): AsyncIterable<EncodedPayloadBytes> {
+  private async *onStatus(
+    protocol: ProtocolDescriptor<phase0.Status, phase0.Status>,
+    req: phase0.Status,
+    peerId: PeerId
+  ): AsyncIterable<EncodedPayloadBytes> {
     this.onIncomingRequestBody({method: ReqRespMethod.Status, body: req}, peerId);
 
-    yield* this.reqRespHandlers.onStatus(req, peerId);
+    yield* this.reqRespHandlers.onStatus(protocol, req, peerId);
   }
 
-  private async *onGoodbye(req: phase0.Goodbye, peerId: PeerId): AsyncIterable<EncodedPayloadBytes> {
+  private async *onGoodbye(
+    protocol: ProtocolDescriptor<phase0.Goodbye, phase0.Goodbye>,
+    req: phase0.Goodbye,
+    peerId: PeerId
+  ): AsyncIterable<EncodedPayloadBytes> {
     this.onIncomingRequestBody({method: ReqRespMethod.Goodbye, body: req}, peerId);
 
     yield {
       type: EncodedPayloadType.bytes,
-      bytes: ssz.phase0.Goodbye.serialize(BigInt(0)),
+      bytes: protocol.responseType(this.config.getForkName(this.metadataController.currentSlot)).serialize(BigInt(0)),
       contextBytes: {type: ContextBytesType.Empty},
     };
   }
 
-  private async *onPing(req: phase0.Ping, peerId: PeerId): AsyncIterable<EncodedPayloadBytes> {
+  private async *onPing(
+    protocol: ProtocolDescriptor<phase0.Ping, phase0.Ping>,
+    req: phase0.Ping,
+    peerId: PeerId
+  ): AsyncIterable<EncodedPayloadBytes> {
     this.onIncomingRequestBody({method: ReqRespMethod.Ping, body: req}, peerId);
     yield {
       type: EncodedPayloadType.bytes,
-      bytes: ssz.phase0.Ping.serialize(this.metadataController.seqNumber),
+      bytes: protocol
+        .responseType(this.config.getForkName(this.metadataController.currentSlot))
+        .serialize(this.metadataController.seqNumber),
       contextBytes: {type: ContextBytesType.Empty},
     };
   }
 
-  private async *onMetadata(req: null, peerId: PeerId): AsyncIterable<EncodedPayloadBytes> {
+  private async *onMetadata(
+    protocol: ProtocolDescriptor<null, allForks.Metadata>,
+    req: null,
+    peerId: PeerId
+  ): AsyncIterable<EncodedPayloadBytes> {
     this.onIncomingRequestBody({method: ReqRespMethod.Metadata, body: req}, peerId);
 
     yield {
       type: EncodedPayloadType.bytes,
-      bytes: ssz.phase0.Metadata.serialize(this.metadataController.json),
-      contextBytes: {type: ContextBytesType.Empty},
-    };
-  }
-
-  private async *onMetadataV2(req: null, peerId: PeerId): AsyncIterable<EncodedPayloadBytes> {
-    this.onIncomingRequestBody({method: ReqRespMethod.Metadata, body: req}, peerId);
-
-    yield {
-      type: EncodedPayloadType.bytes,
-      bytes: ssz.altair.Metadata.serialize(this.metadataController.json),
+      bytes: protocol
+        .responseType(this.config.getForkName(this.metadataController.currentSlot))
+        .serialize(this.metadataController.json),
       contextBytes: {type: ContextBytesType.Empty},
     };
   }
 
   private async *onBeaconBlocksByRange(
+    protocol: ProtocolDescriptor<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>,
     req: phase0.BeaconBlocksByRangeRequest,
     peerId: PeerId
   ): AsyncIterable<EncodedPayloadBytes> {
-    yield* this.reqRespHandlers.onBeaconBlocksByRange(req, peerId);
-  }
-
-  private async *onBeaconBlocksByRangeV2(
-    req: phase0.BeaconBlocksByRangeRequest,
-    peerId: PeerId
-  ): AsyncIterable<EncodedPayloadBytes> {
-    yield* this.reqRespHandlers.onBeaconBlocksByRangeV2(req, peerId);
+    yield* this.reqRespHandlers.onBeaconBlocksByRange(protocol, req, peerId);
   }
 
   private async *onBeaconBlocksByRoot(
+    protocol: ProtocolDescriptor<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>,
     req: phase0.BeaconBlocksByRootRequest,
     peerId: PeerId
   ): AsyncIterable<EncodedPayloadBytes> {
-    yield* this.reqRespHandlers.onBeaconBlocksByRoot(req, peerId);
-  }
-
-  private async *onBeaconBlocksByRootV2(
-    req: phase0.BeaconBlocksByRootRequest,
-    peerId: PeerId
-  ): AsyncIterable<EncodedPayloadBytes> {
-    yield* this.reqRespHandlers.onBeaconBlocksByRootV2(req, peerId);
+    yield* this.reqRespHandlers.onBeaconBlocksByRoot(protocol, req, peerId);
   }
 }

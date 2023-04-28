@@ -15,9 +15,7 @@ import {onStatus} from "./status.js";
 export interface ReqRespHandlers {
   onStatus: HandlerTypeFromMessage<typeof protocols.Status>;
   onBeaconBlocksByRange: HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>;
-  onBeaconBlocksByRangeV2: HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRangeV2>;
   onBeaconBlocksByRoot: HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRoot>;
-  onBeaconBlocksByRootV2: HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRootV2>;
   onBeaconBlockAndBlobsSidecarByRoot: HandlerTypeFromMessage<typeof protocols.BeaconBlockAndBlobsSidecarByRoot>;
   onBlobsSidecarsByRange: HandlerTypeFromMessage<typeof protocols.BlobsSidecarsByRange>;
   onLightClientBootstrap: HandlerTypeFromMessage<typeof protocols.LightClientBootstrap>;
@@ -31,38 +29,32 @@ export interface ReqRespHandlers {
  */
 export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconChain}): ReqRespHandlers {
   return {
-    async *onStatus() {
-      yield* onStatus(chain);
+    async *onStatus(protocol) {
+      yield* onStatus(protocol, chain);
     },
-    async *onBeaconBlocksByRange(req) {
-      yield* onBeaconBlocksByRange(req, chain, db, false);
+    async *onBeaconBlocksByRange(protocol, req) {
+      yield* onBeaconBlocksByRange(protocol, req, chain, db);
     },
-    async *onBeaconBlocksByRangeV2(req) {
-      yield* onBeaconBlocksByRange(req, chain, db, true);
+    async *onBeaconBlocksByRoot(protocol, req) {
+      yield* onBeaconBlocksByRoot(protocol, req, chain, db);
     },
-    async *onBeaconBlocksByRoot(req) {
-      yield* onBeaconBlocksByRoot(req, chain, db, false);
+    async *onBeaconBlockAndBlobsSidecarByRoot(protocol, req) {
+      yield* onBeaconBlockAndBlobsSidecarByRoot(protocol, req, chain, db);
     },
-    async *onBeaconBlocksByRootV2(req) {
-      yield* onBeaconBlocksByRoot(req, chain, db, true);
+    async *onBlobsSidecarsByRange(protocol, req) {
+      yield* onBlobsSidecarsByRange(protocol, req, chain, db);
     },
-    async *onBeaconBlockAndBlobsSidecarByRoot(req) {
-      yield* onBeaconBlockAndBlobsSidecarByRoot(req, chain, db);
+    async *onLightClientBootstrap(protocol, req) {
+      yield* onLightClientBootstrap(protocol, req, chain);
     },
-    async *onBlobsSidecarsByRange(req) {
-      yield* onBlobsSidecarsByRange(req, chain, db);
+    async *onLightClientUpdatesByRange(protocol, req) {
+      yield* onLightClientUpdatesByRange(protocol, req, chain);
     },
-    async *onLightClientBootstrap(req) {
-      yield* onLightClientBootstrap(req, chain);
+    async *onLightClientFinalityUpdate(protocol) {
+      yield* onLightClientFinalityUpdate(protocol, chain);
     },
-    async *onLightClientUpdatesByRange(req) {
-      yield* onLightClientUpdatesByRange(req, chain);
-    },
-    async *onLightClientFinalityUpdate() {
-      yield* onLightClientFinalityUpdate(chain);
-    },
-    async *onLightClientOptimisticUpdate() {
-      yield* onLightClientOptimisticUpdate(chain);
+    async *onLightClientOptimisticUpdate(protocol) {
+      yield* onLightClientOptimisticUpdate(protocol, chain);
     },
   };
 }

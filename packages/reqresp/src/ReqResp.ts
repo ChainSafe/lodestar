@@ -12,6 +12,7 @@ import {
   MixedProtocol,
   ReqRespRateLimiterOpts,
   Protocol,
+  ProtocolDescriptor,
 } from "./types.js";
 import {formatProtocolID} from "./utils/protocolId.js";
 import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
@@ -76,10 +77,7 @@ export class ReqResp {
    *
    * Made it explicit method to avoid any developer mistake
    */
-  registerDialOnlyProtocol<Req, Resp>(
-    protocol: DialOnlyProtocol<Req, Resp>,
-    opts?: ReqRespRegisterOpts
-  ): void {
+  registerDialOnlyProtocol<Req, Resp>(protocol: DialOnlyProtocol<Req, Resp>, opts?: ReqRespRegisterOpts): void {
     const protocolID = this.formatProtocolID(protocol);
 
     // libp2p will throw on error on duplicates, allow to overwrite behavior
@@ -97,10 +95,7 @@ export class ReqResp {
    * Throws if the same protocol is registered twice.
    * Can be called at any time, no concept of started / stopped
    */
-  async registerProtocol<Req, Resp>(
-    protocol: Protocol<Req, Resp>,
-    opts?: ReqRespRegisterOpts
-  ): Promise<void> {
+  async registerProtocol<Req, Resp>(protocol: Protocol<Req, Resp>, opts?: ReqRespRegisterOpts): Promise<void> {
     const protocolID = this.formatProtocolID(protocol);
     const {handler: _handler, renderRequestBody: _renderRequestBody, inboundRateLimits, ...rest} = protocol;
     this.registerDialOnlyProtocol(rest, opts);
@@ -236,7 +231,7 @@ export class ReqResp {
         this.metrics?.incomingErrors.inc({method});
 
         if (err instanceof RequestError) {
-          this.onIncomingRequestError(protocol, err);
+          this.onIncomingRequestError(protocol as ProtocolDescriptor, err);
         }
 
         // TODO: Do error peer scoring here
@@ -247,12 +242,12 @@ export class ReqResp {
     };
   }
 
-  protected onIncomingRequest(_peerId: PeerId, _protocol: MixedProtocol): void {
+  protected onIncomingRequest(_peerId: PeerId, _protocol: ProtocolDescriptor): void {
     // Override
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected onIncomingRequestError(_protocol: MixedProtocol<any, any>, _error: RequestError): void {
+  protected onIncomingRequestError(_protocol: ProtocolDescriptor, _error: RequestError): void {
     // Override
   }
 

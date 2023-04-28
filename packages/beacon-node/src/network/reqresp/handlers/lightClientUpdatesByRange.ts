@@ -1,4 +1,4 @@
-import {altair} from "@lodestar/types";
+import {allForks, altair} from "@lodestar/types";
 import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {
   ContextBytesType,
@@ -6,12 +6,14 @@ import {
   EncodedPayloadType,
   LightClientServerError,
   LightClientServerErrorCode,
+  ProtocolDescriptor,
   ResponseError,
   RespStatus,
 } from "@lodestar/reqresp";
 import {IBeaconChain} from "../../../chain/index.js";
 
 export async function* onLightClientUpdatesByRange(
+  protocol: ProtocolDescriptor<altair.LightClientUpdatesByRange, allForks.LightClientUpdate>,
   requestBody: altair.LightClientUpdatesByRange,
   chain: IBeaconChain
 ): AsyncIterable<EncodedPayloadBytes> {
@@ -20,9 +22,9 @@ export async function* onLightClientUpdatesByRange(
     try {
       yield {
         type: EncodedPayloadType.bytes,
-        bytes: chain.config
-          .getLightClientForkTypes(chain.clock.currentSlot)
-          .LightClientUpdate.serialize(await chain.lightClientServer.getUpdate(period)),
+        bytes: protocol
+          .responseType(chain.config.getForkName(chain.clock.currentSlot))
+          .serialize(await chain.lightClientServer.getUpdate(period)),
         contextBytes: {
           type: ContextBytesType.ForkDigest,
           fork: chain.config.getForkName(chain.clock.currentSlot),
