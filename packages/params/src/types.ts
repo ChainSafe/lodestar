@@ -76,7 +76,7 @@ export type BeaconPreset = {
   MAX_WITHDRAWALS_PER_PAYLOAD: number;
   MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP: number;
 
-  // EIP-4844
+  // DENEB
   ///////////
   FIELD_ELEMENTS_PER_BLOB: number;
   MAX_BLOBS_PER_BLOCK: number;
@@ -159,7 +159,7 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   MAX_WITHDRAWALS_PER_PAYLOAD: "number",
   MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP: "number",
 
-  // EIP-4844
+  // DENEB
   ///////////
   FIELD_ELEMENTS_PER_BLOB: "number",
   MAX_BLOBS_PER_BLOCK: "number",
