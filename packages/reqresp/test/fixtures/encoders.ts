@@ -1,6 +1,5 @@
 import {ForkName} from "@lodestar/params";
 import {LodestarError} from "@lodestar/utils";
-import {ssz} from "@lodestar/types";
 import {SszSnappyError, SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/index.js";
 import {ResponseError} from "../../src/index.js";
 import {RespStatus} from "../../src/interface.js";
