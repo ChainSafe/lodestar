@@ -95,9 +95,7 @@ describe("network / ReqResp", function () {
         };
       } as HandlerTypeFromMessage<typeof protocols.Status>,
       onBeaconBlocksByRange: notImplemented,
-      onBeaconBlocksByRangeV2: notImplemented,
       onBeaconBlocksByRoot: notImplemented,
-      onBeaconBlocksByRootV2: notImplemented,
       onBlobsSidecarsByRange: notImplemented,
       onBeaconBlockAndBlobsSidecarByRoot: notImplemented,
       onLightClientBootstrap: notImplemented,
@@ -204,11 +202,6 @@ describe("network / ReqResp", function () {
           yield wrapBlockAsEncodedPayload(config, block);
         }
       } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>,
-      onBeaconBlocksByRangeV2: async function* () {
-        for (const block of blocks) {
-          yield wrapBlockAsEncodedPayload(config, block);
-        }
-      } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRangeV2>,
     });
 
     const returnedBlocks = await netA.reqResp.beaconBlocksByRange(netB.peerId, req);
@@ -314,9 +307,6 @@ describe("network / ReqResp", function () {
       onBeaconBlocksByRange: async function* onRequest() {
         throw Error(testErrorMessage);
       },
-      onBeaconBlocksByRangeV2: async function* onRequest() {
-        throw Error(testErrorMessage);
-      },
     });
 
     await expectRejectedWithLodestarError(
@@ -340,14 +330,6 @@ describe("network / ReqResp", function () {
         }
         throw Error(testErrorMessage);
       } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>,
-      onBeaconBlocksByRangeV2: async function* onRequest() {
-        for (let slot = 0; slot < 2; slot++) {
-          const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue();
-          block.message.slot = slot;
-          yield wrapBlockAsEncodedPayload(config, block);
-        }
-        throw Error(testErrorMessage);
-      } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRangeV2>,
     });
 
     await expectRejectedWithLodestarError(
@@ -369,11 +351,6 @@ describe("network / ReqResp", function () {
           await sleep(ttfbTimeoutMs * 10);
           yield config.getForkTypes(0).SignedBeaconBlock.defaultValue();
         } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>,
-        onBeaconBlocksByRangeV2: async function* onRequest() {
-          // Wait for too long before sending first response chunk
-          await sleep(ttfbTimeoutMs * 10);
-          yield config.getForkTypes(0).SignedBeaconBlock.defaultValue();
-        } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRangeV2>,
       },
       {ttfbTimeoutMs}
     );
@@ -398,12 +375,6 @@ describe("network / ReqResp", function () {
           await sleep(respTimeoutMs * 5);
           yield getEmptyEncodedPayloadSignedBeaconBlock(config);
         } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>,
-        onBeaconBlocksByRangeV2: async function* onRequest() {
-          yield getEmptyEncodedPayloadSignedBeaconBlock(config);
-          // Wait for too long before sending second response chunk
-          await sleep(respTimeoutMs * 5);
-          yield getEmptyEncodedPayloadSignedBeaconBlock(config);
-        } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRangeV2>,
       },
       {respTimeoutMs}
     );
@@ -421,9 +392,6 @@ describe("network / ReqResp", function () {
     const [netA, netB] = await createAndConnectPeers(
       {
         onBeaconBlocksByRange: async function* onRequest() {
-          await sleep(100000000);
-        },
-        onBeaconBlocksByRangeV2: async function* onRequest() {
           await sleep(100000000);
         },
       },
@@ -446,10 +414,6 @@ describe("network / ReqResp", function () {
           yield getEmptyEncodedPayloadSignedBeaconBlock(config);
           await sleep(100000000);
         } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>,
-        onBeaconBlocksByRangeV2: async function* onRequest() {
-          yield getEmptyEncodedPayloadSignedBeaconBlock(config);
-          await sleep(100000000);
-        } as HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRangeV2>,
       },
       {respTimeoutMs: 250, ttfbTimeoutMs: 250}
     );
