@@ -149,7 +149,7 @@ export async function produceBlockBody<T extends BlockType>(
       // This path will not be used in the production, but is here just for merge mock
       // tests because merge-mock requires an fcU to be issued prior to fetch payload
       // header.
-      if (this.executionBuilder.issueLocalFcUForBlockProduction) {
+      if (this.executionBuilder.issueLocalFcUWithFeeRecipient !== undefined) {
         await prepareExecutionPayload(
           this,
           this.logger,
@@ -157,7 +157,7 @@ export async function produceBlockBody<T extends BlockType>(
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
           currentState as CachedBeaconStateBellatrix,
-          feeRecipient
+          this.executionBuilder.issueLocalFcUWithFeeRecipient
         );
       }
 
