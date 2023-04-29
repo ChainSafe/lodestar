@@ -44,10 +44,10 @@ export class BlockBySlotRepository {
 
   async getAll(pubkey: BLSPubkey, limit?: number): Promise<SlashingProtectionBlock[]> {
     const blocks = await this.db.values({
-      ...this.dbReqOpts,
       limit,
       gte: this.encodeKey(pubkey, 0),
       lt: this.encodeKey(pubkey, Number.MAX_SAFE_INTEGER),
+      bucketId: this.bucketId,
     });
     return blocks.map((block) => this.type.deserialize(block));
   }
@@ -73,7 +73,7 @@ export class BlockBySlotRepository {
   }
 
   async listPubkeys(): Promise<BLSPubkey[]> {
-    const keys = await this.db.keys({...this.dbReqOpts, gte: this.minKey, lt: this.maxKey});
+    const keys = await this.db.keys({gte: this.minKey, lt: this.maxKey, bucketId: this.bucketId});
     return uniqueVectorArr(keys.map((key) => this.decodeKey(key).pubkey));
   }
 
