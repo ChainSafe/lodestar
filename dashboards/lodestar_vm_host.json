@@ -4369,7 +4369,7 @@
                 "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
-              "expr": "validator_db_size_bytes_total",
+              "expr": "vc_db_size_bytes_total",
               "interval": "",
               "legendFormat": "db size",
               "refId": "A"
@@ -4478,7 +4478,7 @@
                 "uid": "${DS_PROMETHEUS}"
               },
               "editorMode": "code",
-              "expr": "rate(validator_db_approximate_size_time_seconds_sum[$rate_interval])\r\n/\r\nrate(validator_db_approximate_size_time_seconds_count[$rate_interval])",
+              "expr": "rate(vc_db_approximate_size_time_seconds_sum[$rate_interval])\r\n/\r\nrate(vc_db_approximate_size_time_seconds_count[$rate_interval])",
               "hide": false,
               "legendFormat": "{{job}}",
               "range": true,
