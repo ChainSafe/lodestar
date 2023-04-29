@@ -3,7 +3,7 @@ import all from "it-all";
 import {pipe} from "it-pipe";
 import varint from "varint";
 import {writeSszSnappyPayload} from "../../../../src/encodingStrategies/sszSnappy/encode.js";
-import {EncodedPayload, PayloadType} from "../../../../src/types.js";
+import {OutgoingPayload, PayloadType} from "../../../../src/types.js";
 import {
   encodingStrategiesEncodingErrorCases,
   encodingStrategiesMainnetTestCases,
@@ -15,7 +15,7 @@ import {expectEqualByteChunks} from "../../../utils/index.js";
 describe("encodingStrategies / sszSnappy / encode", () => {
   for (const {id, type, payload, chunks} of encodingStrategiesTestCases) {
     it(id, async () => {
-      const encodedChunks = await pipe(writeSszSnappyPayload(payload as EncodedPayload<unknown>, type), all);
+      const encodedChunks = await pipe(writeSszSnappyPayload(payload as OutgoingPayload<unknown>, type), all);
       expectEqualByteChunks(
         encodedChunks as Uint8Array[],
         chunks.map((c) => c.subarray())

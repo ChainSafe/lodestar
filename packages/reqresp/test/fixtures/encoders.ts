@@ -4,7 +4,7 @@ import {LodestarError} from "@lodestar/utils";
 import {SszSnappyError, SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/index.js";
 import {ResponseError} from "../../src/index.js";
 import {RespStatus} from "../../src/interface.js";
-import {EncodedPayload, PayloadType, MixedProtocol} from "../../src/types.js";
+import {OutgoingPayload, PayloadType, MixedProtocol} from "../../src/types.js";
 import {fromHexBuf} from "../utils/index.js";
 import {
   beaconConfig,
@@ -58,7 +58,7 @@ export const requestEncodersErrorCases: {
   },
 ];
 
-export type SuccessResponseChunk = {status: RespStatus.SUCCESS; payload: EncodedPayload<unknown>};
+export type SuccessResponseChunk = {status: RespStatus.SUCCESS; payload: OutgoingPayload<unknown>};
 export type ErrorResponseChunk = {status: Exclude<RespStatus, RespStatus.SUCCESS>; errorMessage: string};
 
 export type ResponseChunk = SuccessResponseChunk | ErrorResponseChunk;

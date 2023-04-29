@@ -1,4 +1,4 @@
-import {Encoding, EncodedPayload, TypeEncoder} from "../types.js";
+import {Encoding, OutgoingPayload, TypeEncoder} from "../types.js";
 import {BufferedSource} from "../utils/index.js";
 import {readSszSnappyPayload} from "./sszSnappy/decode.js";
 import {writeSszSnappyPayload} from "./sszSnappy/encode.js";
@@ -35,7 +35,7 @@ export async function readEncodedPayload<T>(
  * ```
  */
 export async function* writeEncodedPayload<T>(
-  chunk: EncodedPayload<T>,
+  chunk: OutgoingPayload<T>,
   encoding: Encoding,
   serializer: TypeEncoder<T>
 ): AsyncGenerator<Buffer> {

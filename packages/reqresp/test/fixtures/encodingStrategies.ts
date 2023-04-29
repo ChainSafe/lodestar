@@ -5,7 +5,7 @@ import varint from "varint";
 import {LodestarError} from "@lodestar/utils";
 import {bellatrix, ssz} from "@lodestar/types";
 import {SszSnappyError, SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/errors.js";
-import {ContextBytesType, EncodedPayload, PayloadType, TypeEncoder} from "../../src/types.js";
+import {ContextBytesType, OutgoingPayload, PayloadType, TypeEncoder} from "../../src/types.js";
 import {
   sszSnappyPing,
   sszSnappySignedBeaconBlockAltair,
@@ -21,7 +21,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 type SszSnappyTestBlockData<T> = {
   id: string;
   type: TypeEncoder<T>;
-  payload: EncodedPayload<T>;
+  payload: OutgoingPayload<T>;
   streamedBody: Uint8Array;
 };
 
@@ -53,7 +53,7 @@ export const encodingStrategiesTestCases = [
 export const encodingStrategiesEncodingErrorCases: {
   id: string;
   type: TypeEncoder<unknown>;
-  payload: EncodedPayload<unknown>;
+  payload: OutgoingPayload<unknown>;
   error: LodestarError<any>;
 }[] = [
   {

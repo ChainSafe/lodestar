@@ -1,25 +1,43 @@
 import {altair, allForks} from "@lodestar/types";
 import {MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
 import {
-  EncodedPayload,
-  EncodedPayloadType,
+  PayloadType,
   LightClientServerError,
   LightClientServerErrorCode,
   ResponseError,
   RespStatus,
+  ProtocolDescriptor,
+  IncomingPayload,
+  OutgoingPayloadBytes,
+  ContextBytesType,
 } from "@lodestar/reqresp";
 import {IBeaconChain} from "../../../chain/index.js";
 
 export async function* onLightClientUpdatesByRange(
-  requestBody: altair.LightClientUpdatesByRange,
+  protocol: ProtocolDescriptor<altair.LightClientUpdatesByRange, allForks.LightClientUpdate>,
+  request: IncomingPayload<altair.LightClientUpdatesByRange>,
   chain: IBeaconChain
-): AsyncIterable<EncodedPayload<allForks.LightClientUpdate>> {
+): AsyncIterable<OutgoingPayloadBytes> {
+  const requestBody =
+    request.type === PayloadType.ssz
+      ? request.data
+      : protocol.requestEncoder(chain.config.getForkName(chain.clock.currentSlot))?.deserialize(request.bytes);
+
+  if (!requestBody) {
+    throw new Error(`Invalid request for method=${protocol.method}, version=${protocol.version}`);
+  }
+
   const count = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, requestBody.count);
   for (let period = requestBody.startPeriod; period < requestBody.startPeriod + count; period++) {
     try {
+      const fork = chain.config.getForkName(chain.clock.currentSlot);
       yield {
-        type: EncodedPayloadType.ssz,
-        data: await chain.lightClientServer.getUpdate(period),
+        type: PayloadType.bytes,
+        bytes: protocol.responseEncoder(fork).serialize(await chain.lightClientServer.getUpdate(period)),
+        contextBytes: {
+          type: ContextBytesType.ForkDigest,
+          fork,
+        },
       };
     } catch (e) {
       if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {

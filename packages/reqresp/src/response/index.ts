@@ -8,7 +8,7 @@ import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEn
 import {RespStatus} from "../interface.js";
 import {ReqRespRateLimiter} from "../rate_limiter/ReqRespRateLimiter.js";
 import {RequestError, RequestErrorCode} from "../request/errors.js";
-import {EncodedPayloadIncomingData, PayloadType, Protocol} from "../types.js";
+import {IncomingPayloadData, PayloadType, Protocol} from "../types.js";
 import {prettyPrintPeerId} from "../utils/index.js";
 import {ResponseError} from "./errors.js";
 
@@ -89,8 +89,8 @@ export async function handleRequest<Req, Resp>({
         }
 
         let reqPayload:
-          | EncodedPayloadIncomingData<Req>[PayloadType.ssz]
-          | EncodedPayloadIncomingData<Req>[PayloadType.bytes];
+          | IncomingPayloadData<Req>[PayloadType.ssz]
+          | IncomingPayloadData<Req>[PayloadType.bytes];
         switch (protocol.payloadType) {
           case PayloadType.ssz:
             reqPayload = {type: PayloadType.ssz, data: requestBody};

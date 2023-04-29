@@ -1,7 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {BeaconConfig, ForkConfig, ForkDigestContext} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
-import {Slot} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {RateLimiterQuota} from "./rate_limiter/rateLimiterGRCA.js";
 
@@ -40,7 +39,7 @@ export enum PayloadType {
   bytes = 2,
 }
 
-export interface EncodedPayloadOutgoingData<T = unknown> extends Record<PayloadType, unknown> {
+export interface OutgoingPayloadData<T = unknown> extends Record<PayloadType, unknown> {
   [PayloadType.ssz]: {
     type: PayloadType.ssz;
     data: T;
@@ -52,7 +51,7 @@ export interface EncodedPayloadOutgoingData<T = unknown> extends Record<PayloadT
   };
 }
 
-export interface EncodedPayloadIncomingData<T = unknown> extends Record<PayloadType, unknown> {
+export interface IncomingPayloadData<T = unknown> extends Record<PayloadType, unknown> {
   [PayloadType.ssz]: {
     type: PayloadType.ssz;
     data: T;
@@ -64,18 +63,14 @@ export interface EncodedPayloadIncomingData<T = unknown> extends Record<PayloadT
 }
 
 /**
- * Wrapper for the request/response payload for binary type data
- */
-export type EncodedPayloadBytes = EncodedPayloadOutgoingData[PayloadType.bytes];
-/**
- * Wrapper for the request/response payload for ssz type data
- */
-export type EncodedPayloadSsz<T = unknown> = EncodedPayloadOutgoingData<T>[PayloadType.ssz];
-
-/**
  * Wrapper for the request/response payload
  */
-export type EncodedPayload<T> = EncodedPayloadOutgoingData<T>[PayloadType];
+export type OutgoingPayload<T> = OutgoingPayloadData<T>[PayloadType];
+export type OutgoingPayloadSsz<T> = OutgoingPayloadData<T>[PayloadType.ssz];
+export type OutgoingPayloadBytes = OutgoingPayloadData[PayloadType.bytes];
+export type IncomingPayload<T> = IncomingPayloadData<T>[PayloadType];
+export type IncomingPayloadSsz<T> = IncomingPayloadData<T>[PayloadType.ssz];
+export type IncomingPayloadBytes = IncomingPayloadData[PayloadType.bytes];
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
 
@@ -104,9 +99,9 @@ export interface ProtocolDescriptor<Req = unknown, Resp = unknown> extends Omit<
  */
 export type ProtocolHandler<Req, Resp, PType extends PayloadType = PayloadType.bytes> = (
   protocol: ProtocolDescriptor<Req, Resp>,
-  req: EncodedPayloadIncomingData<Req>[PType],
+  req: IncomingPayloadData<Req>[PType],
   peerId: PeerId
-) => AsyncIterable<EncodedPayloadOutgoingData<Resp>[PType]>;
+) => AsyncIterable<OutgoingPayloadData<Resp>[PType]>;
 
 // `protocolPrefix` is added runtime so not part of definition
 /**
@@ -181,7 +176,7 @@ export type ContextBytesFactory<Resp> =
       forkFromResponse: (response: Resp) => ForkName;
     };
 
-export type ContextBytes = {type: ContextBytesType.Empty} | {type: ContextBytesType.ForkDigest; forkSlot: Slot};
+export type ContextBytes = {type: ContextBytesType.Empty} | {type: ContextBytesType.ForkDigest; fork: ForkName};
 
 export enum ContextBytesType {
   /** 0 bytes chunk, can be ignored */

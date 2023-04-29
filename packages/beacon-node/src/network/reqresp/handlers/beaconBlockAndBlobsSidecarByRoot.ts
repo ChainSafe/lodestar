@@ -1,4 +1,10 @@
-import {ContextBytesType, EncodedPayload, EncodedPayloadType} from "@lodestar/reqresp";
+import {
+  ContextBytesType,
+  IncomingPayload,
+  OutgoingPayloadBytes,
+  PayloadType,
+  ProtocolDescriptor,
+} from "@lodestar/reqresp";
 import {deneb} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -6,10 +12,20 @@ import {IBeaconDb} from "../../../db/index.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
 
 export async function* onBeaconBlockAndBlobsSidecarByRoot(
-  requestBody: deneb.BeaconBlockAndBlobsSidecarByRootRequest,
+  protocol: ProtocolDescriptor<deneb.BeaconBlockAndBlobsSidecarByRootRequest, deneb.SignedBeaconBlockAndBlobsSidecar>,
+  request: IncomingPayload<deneb.BeaconBlockAndBlobsSidecarByRootRequest>,
   chain: IBeaconChain,
   db: IBeaconDb
-): AsyncIterable<EncodedPayload<deneb.SignedBeaconBlockAndBlobsSidecar>> {
+): AsyncIterable<OutgoingPayloadBytes> {
+  const requestBody =
+    request.type === PayloadType.ssz
+      ? request.data
+      : protocol.requestEncoder(chain.config.getForkName(chain.clock.currentSlot))?.deserialize(request.bytes);
+
+  if (!requestBody) {
+    throw new Error(`Invalid request for method=${protocol.method}, version=${protocol.version}`);
+  }
+
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
 
   for (const blockRoot of requestBody) {
@@ -41,11 +57,11 @@ export async function* onBeaconBlockAndBlobsSidecarByRoot(
     }
 
     yield {
-      type: EncodedPayloadType.bytes,
+      type: PayloadType.bytes,
       bytes: signedBeaconBlockAndBlobsSidecarFromBytes(blockBytes, blobsSidecarBytes),
       contextBytes: {
         type: ContextBytesType.ForkDigest,
-        forkSlot,
+        fork: chain.config.getForkName(forkSlot),
       },
     };
   }

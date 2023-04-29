@@ -254,10 +254,10 @@ export abstract class ReqResp {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  abstract onIncomingRequestError(_protocol: MixedProtocol<any, any>, _error: RequestError): void;
-  abstract onOutgoingRequestError(_peerId: PeerId, _method: string, _error: RequestError): void;
-  abstract onIncomingRequest(_peerId: PeerId, _protocol: MixedProtocol): void;
-  abstract onRegisterProtocol(protocolId: ProtocolID, handler: ReqRespHandler): void;
-  abstract onUnregisterProtocol(protocolId: ProtocolID): void;
-  abstract createStream(opts: {peerId: PeerId; protocolIds: string[]; signal?: AbortSignal}): Promise<Stream>;
+  protected abstract onIncomingRequestError(_protocol: MixedProtocol<any, any>, _error: RequestError): void;
+  protected abstract onOutgoingRequestError(_peerId: PeerId, _method: string, _error: RequestError): void;
+  protected abstract onIncomingRequest(_peerId: PeerId, _protocol: MixedProtocol): void;
+  protected abstract onRegisterProtocol(protocolId: ProtocolID, handler: ReqRespHandler): Promise<void>;
+  protected abstract onUnregisterProtocol(protocolId: ProtocolID): Promise<void>;
+  protected abstract createStream(opts: {peerId: PeerId; protocolIds: string[]; signal?: AbortSignal}): Promise<Stream>;
 }

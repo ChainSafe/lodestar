@@ -2,7 +2,7 @@ import {ContainerType, UintNumberType, ListBasicType, ValueOf} from "@chainsafe/
 import {
   ContextBytesType,
   DialOnlyProtocol,
-  EncodedPayload,
+  OutgoingPayload,
   PayloadType,
   Encoding,
   MixedProtocolGenerator,
@@ -54,7 +54,7 @@ export const numberToStringProtocol: MixedProtocolGenerator<NumToStrReqType, Num
 }) as MixedProtocolGenerator<NumToStrReqType, NumToStrRespType>;
 
 export const numberToStringProtocolHandler: ProtocolHandler<NumToStrReqType, NumToStrRespType> =
-  async function* numberToStringProtocolHandler(req: NumToStrReqType): AsyncIterable<EncodedPayload<NumToStrRespType>> {
+  async function* numberToStringProtocolHandler(req: NumToStrReqType): AsyncIterable<OutgoingPayload<NumToStrRespType>> {
     yield {
       type: PayloadType.ssz,
       data: {value: [...Buffer.from(req.value.toString(), "utf-8")]},

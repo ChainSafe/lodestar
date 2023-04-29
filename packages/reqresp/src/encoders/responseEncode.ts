@@ -1,7 +1,7 @@
 import {ForkName} from "@lodestar/params";
 import {writeEncodedPayload} from "../encodingStrategies/index.js";
 import {encodeErrorMessage} from "../utils/index.js";
-import {ContextBytesType, ContextBytesFactory, MixedProtocol, EncodedPayload, PayloadType, Protocol} from "../types.js";
+import {ContextBytesType, ContextBytesFactory, MixedProtocol, OutgoingPayload, PayloadType, Protocol} from "../types.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 
 /**
@@ -15,7 +15,7 @@ import {RespStatus, RpcResponseStatusError} from "../interface.js";
  */
 export function responseEncodeSuccess<Req, Resp>(
   protocol: Protocol<Req, Resp>
-): (source: AsyncIterable<EncodedPayload<Resp>>) => AsyncIterable<Buffer> {
+): (source: AsyncIterable<OutgoingPayload<Resp>>) => AsyncIterable<Buffer> {
   return async function* responseEncodeSuccessTransform(source) {
     for await (const chunk of source) {
       // <result>
@@ -65,7 +65,7 @@ export async function* responseEncodeError(
  */
 function getContextBytes<Resp>(
   contextBytes: ContextBytesFactory<Resp>,
-  chunk: EncodedPayload<Resp>
+  chunk: OutgoingPayload<Resp>
 ): Uint8Array | null {
   switch (contextBytes.type) {
     // Yield nothing
@@ -84,16 +84,14 @@ function getContextBytes<Resp>(
           if (chunk.contextBytes.type !== ContextBytesType.ForkDigest) {
             throw Error(`Expected context bytes ForkDigest but got ${chunk.contextBytes.type}`);
           }
-          return contextBytes.forkDigestContext.forkName2ForkDigest(
-            contextBytes.forkDigestContext.getForkName(chunk.contextBytes.forkSlot)
-          ) as Buffer;
+          return contextBytes.forkDigestContext.forkName2ForkDigest(chunk.contextBytes.fork) as Buffer;
       }
   }
 }
 
 function getForkNameFromContextBytes<Resp>(
   contextBytes: ContextBytesFactory<Resp>,
-  chunk: EncodedPayload<Resp>
+  chunk: OutgoingPayload<Resp>
 ): ForkName {
   switch (contextBytes.type) {
     case ContextBytesType.Empty:
@@ -109,7 +107,7 @@ function getForkNameFromContextBytes<Resp>(
           if (chunk.contextBytes.type !== ContextBytesType.ForkDigest) {
             throw Error(`Expected context bytes ForkDigest but got ${chunk.contextBytes.type}`);
           }
-          return contextBytes.forkDigestContext.getForkName(chunk.contextBytes.forkSlot);
+          return chunk.contextBytes.fork;
       }
   }
 }

@@ -1,22 +1,41 @@
 import {
-  EncodedPayload,
-  EncodedPayloadType,
+  PayloadType,
   RespStatus,
   ResponseError,
   LightClientServerError,
   LightClientServerErrorCode,
+  IncomingPayload,
+  OutgoingPayloadBytes,
+  ProtocolDescriptor,
+  ContextBytesType,
 } from "@lodestar/reqresp";
 import {Root, allForks} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 
 export async function* onLightClientBootstrap(
-  requestBody: Root,
+  protocol: ProtocolDescriptor<Root, allForks.LightClientBootstrap>,
+  request: IncomingPayload<Root>,
   chain: IBeaconChain
-): AsyncIterable<EncodedPayload<allForks.LightClientBootstrap>> {
+): AsyncIterable<OutgoingPayloadBytes> {
+  const requestBody =
+    request.type === PayloadType.ssz
+      ? request.data
+      : protocol.requestEncoder(chain.config.getForkName(chain.clock.currentSlot))?.deserialize(request.bytes);
+
+  if (!requestBody) {
+    throw new Error(`Invalid request for method=${protocol.method}, version=${protocol.version}`);
+  }
+
   try {
+    const fork = chain.config.getForkName(chain.clock.currentSlot);
+
     yield {
-      type: EncodedPayloadType.ssz,
-      data: await chain.lightClientServer.getBootstrap(requestBody),
+      type: PayloadType.bytes,
+      bytes: protocol.responseEncoder(fork).serialize(await chain.lightClientServer.getBootstrap(requestBody)),
+      contextBytes: {
+        type: ContextBytesType.ForkDigest,
+        fork,
+      },
     };
   } catch (e) {
     if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {

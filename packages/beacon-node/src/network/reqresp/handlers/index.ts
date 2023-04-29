@@ -29,32 +29,32 @@ export interface ReqRespHandlers {
  */
 export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconChain}): ReqRespHandlers {
   return {
-    async *onStatus() {
-      yield* onStatus(chain);
+    async *onStatus(protocol) {
+      yield* onStatus(protocol, chain);
     },
-    async *onBeaconBlocksByRange(req) {
-      yield* onBeaconBlocksByRange(req, chain, db);
+    async *onBeaconBlocksByRange(protocol, req) {
+      yield* onBeaconBlocksByRange(protocol, req, chain, db);
     },
-    async *onBeaconBlocksByRoot(req) {
-      yield* onBeaconBlocksByRoot(req, chain, db);
+    async *onBeaconBlocksByRoot(protocol, req) {
+      yield* onBeaconBlocksByRoot(protocol, req, chain, db);
     },
-    async *onBeaconBlockAndBlobsSidecarByRoot(req) {
-      yield* onBeaconBlockAndBlobsSidecarByRoot(req, chain, db);
+    async *onBeaconBlockAndBlobsSidecarByRoot(protocol, req) {
+      yield* onBeaconBlockAndBlobsSidecarByRoot(protocol, req, chain, db);
     },
-    async *onBlobsSidecarsByRange(req) {
-      yield* onBlobsSidecarsByRange(req, chain, db);
+    async *onBlobsSidecarsByRange(protocol, req) {
+      yield* onBlobsSidecarsByRange(protocol, req, chain, db);
     },
-    async *onLightClientBootstrap(req) {
-      yield* onLightClientBootstrap(req, chain);
+    async *onLightClientBootstrap(protocol, req) {
+      yield* onLightClientBootstrap(protocol, req, chain);
     },
-    async *onLightClientUpdatesByRange(req) {
-      yield* onLightClientUpdatesByRange(req, chain);
+    async *onLightClientUpdatesByRange(protocol, req) {
+      yield* onLightClientUpdatesByRange(protocol, req, chain);
     },
-    async *onLightClientFinalityUpdate() {
-      yield* onLightClientFinalityUpdate(chain);
+    async *onLightClientFinalityUpdate(protocol) {
+      yield* onLightClientFinalityUpdate(protocol, chain);
     },
-    async *onLightClientOptimisticUpdate() {
-      yield* onLightClientOptimisticUpdate(chain);
+    async *onLightClientOptimisticUpdate(protocol) {
+      yield* onLightClientOptimisticUpdate(protocol, chain);
     },
   };
 }

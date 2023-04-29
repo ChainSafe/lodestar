@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {Uint8ArrayList} from "uint8arraylist";
 import {toHexString} from "@chainsafe/ssz";
 import {fromHex} from "@lodestar/utils";
-import {EncodedPayload, RespStatus} from "../../src/index.js";
+import {OutgoingPayload, RespStatus} from "../../src/index.js";
 import {ResponseChunk} from "../fixtures/index.js";
 
 /**
@@ -72,4 +72,4 @@ export const ZERO_HASH = Buffer.alloc(32, 0);
 
 export const onlySuccessResp = (
   resp: ResponseChunk
-): resp is {status: RespStatus.SUCCESS; payload: EncodedPayload<unknown>} => resp.status === RespStatus.SUCCESS;
+): resp is {status: RespStatus.SUCCESS; payload: OutgoingPayload<unknown>} => resp.status === RespStatus.SUCCESS;
