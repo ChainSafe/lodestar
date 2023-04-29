@@ -78,10 +78,4 @@ export const chainConfig: ChainConfig = {
   DEPOSIT_CHAIN_ID: 1,
   DEPOSIT_NETWORK_ID: 1,
   DEPOSIT_CONTRACT_ADDRESS: b("0x00000000219ab540356cBB839Cbe05303d7705Fa"),
-
-  // Blobs
-  // ---------------------------------------------------------------
-  // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/p2p-interface.md#configuration
-  MAX_REQUEST_BLOBS_SIDECARS: 128,
-  MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS: 4096,
 };

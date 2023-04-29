@@ -1,7 +1,7 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {BeaconConfig} from "@lodestar/config";
 import {deneb, Epoch, phase0} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
 import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
@@ -38,7 +38,7 @@ export async function beaconBlocksMaybeBlobsByRange(
   }
 
   // Only request blobs if they are recent enough
-  else if (computeEpochAtSlot(startSlot) >= currentEpoch - config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS) {
+  else if (computeEpochAtSlot(startSlot) >= currentEpoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) {
     const [blocks, blobsSidecars] = await Promise.all([
       reqResp.beaconBlocksByRange(peerId, request),
       reqResp.blobsSidecarsByRange(peerId, request),
