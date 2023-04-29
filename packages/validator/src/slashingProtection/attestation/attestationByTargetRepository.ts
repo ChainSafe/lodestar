@@ -1,6 +1,14 @@
 import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
 import {intToBytes, bytesToInt} from "@lodestar/utils";
-import {Bucket, DB_PREFIX_LENGTH, encodeKey, DatabaseApiOptions, uintLen} from "@lodestar/db";
+import {
+  Bucket,
+  DatabaseApiOptions,
+  DB_PREFIX_LENGTH,
+  DbReqOpts,
+  encodeKey,
+  uintLen,
+  getBucketNameByValue,
+} from "@lodestar/db";
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {LodestarValidatorDatabaseController} from "../../types.js";
 import {SlashingProtectionAttestation} from "../types.js";
@@ -16,6 +24,9 @@ export class AttestationByTargetRepository {
   protected db: LodestarValidatorDatabaseController;
   protected bucket = Bucket.phase0_slashingProtectionAttestationByTarget;
 
+  private readonly bucketId: string;
+  private readonly dbReqOpts: DbReqOpts;
+
   constructor(opts: DatabaseApiOptions) {
     this.db = opts.controller;
     this.type = new ContainerType({
@@ -23,10 +34,13 @@ export class AttestationByTargetRepository {
       targetEpoch: ssz.Epoch,
       signingRoot: ssz.Root,
     }); // casing doesn't matter
+    this.bucketId = getBucketNameByValue(this.bucket);
+    this.dbReqOpts = {bucketId: this.bucketId};
   }
 
   async getAll(pubkey: BLSPubkey, limit?: number): Promise<SlashingProtectionAttestation[]> {
     const attestations = await this.db.values({
+      ...this.dbReqOpts,
       limit,
       gte: this.encodeKey(pubkey, 0),
       lt: this.encodeKey(pubkey, Number.MAX_SAFE_INTEGER),
@@ -35,7 +49,7 @@ export class AttestationByTargetRepository {
   }
 
   async get(pubkey: BLSPubkey, targetEpoch: Epoch): Promise<SlashingProtectionAttestation | null> {
-    const att = await this.db.get(this.encodeKey(pubkey, targetEpoch));
+    const att = await this.db.get(this.encodeKey(pubkey, targetEpoch), this.dbReqOpts);
     return att && this.type.deserialize(att);
   }
 
@@ -44,20 +58,18 @@ export class AttestationByTargetRepository {
       atts.map((att) => ({
         key: this.encodeKey(pubkey, att.targetEpoch),
         value: Buffer.from(this.type.serialize(att)),
-      }))
+      })),
+      this.dbReqOpts
     );
   }
 
   async listPubkeys(): Promise<BLSPubkey[]> {
-    const keys = await this.db.keys();
+    const keys = await this.db.keys(this.dbReqOpts);
     return uniqueVectorArr(keys.map((key) => this.decodeKey(key).pubkey));
   }
 
   private encodeKey(pubkey: BLSPubkey, targetEpoch: Epoch): Uint8Array {
-    return encodeKey(
-      this.bucket,
-      Buffer.concat([Buffer.from(pubkey as Uint8Array), intToBytes(BigInt(targetEpoch), uintLen, "be")])
-    );
+    return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(targetEpoch), uintLen, "be")]));
   }
 
   private decodeKey(key: Uint8Array): {pubkey: BLSPubkey; targetEpoch: Epoch} {
