@@ -69,9 +69,6 @@
     "uint8arraylist": "^2.4.3",
     "varint": "^6.0.0"
   },
-  "peerDependencies": {
-    "libp2p": "0.41.0"
-  },
   "keywords": [
     "ethereum",
     "eth-consensus",

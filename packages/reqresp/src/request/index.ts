@@ -1,6 +1,6 @@
 import {pipe} from "it-pipe";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Libp2p} from "libp2p";
+import {Stream} from "@libp2p/interface-connection";
 import {Uint8ArrayList} from "uint8arraylist";
 import {ErrorAborted, Logger, withTimeout, TimeoutError} from "@lodestar/utils";
 import {MixedProtocol} from "../types.js";
@@ -37,7 +37,7 @@ export interface SendRequestOpts {
 
 type SendRequestModules = {
   logger: Logger;
-  libp2p: Libp2p;
+  streamGenerator: (opts: {peerId: PeerId; protocolIds: string[]; signal?: AbortSignal}) => Promise<Stream>;
   peerClient?: string;
 };
 
@@ -53,7 +53,7 @@ type SendRequestModules = {
  *    - The maximum number of requested chunks are read. Does not throw, returns read chunks only.
  */
 export async function* sendRequest<Req, Resp>(
-  {logger, libp2p, peerClient}: SendRequestModules,
+  {logger, streamGenerator, peerClient}: SendRequestModules,
   peerId: PeerId,
   protocols: MixedProtocol[],
   protocolIDs: string[],
@@ -86,9 +86,7 @@ export async function* sendRequest<Req, Resp>(
     // From Altair block query methods have V1 and V2. Both protocols should be requested.
     // On stream negotiation `libp2p.dialProtocol` will pick the available protocol and return
     // the picked protocol in `connection.protocol`
-    const protocolsMap = new Map<string, MixedProtocol>(
-      protocols.map((protocol, i) => [protocolIDs[i], protocol])
-    );
+    const protocolsMap = new Map<string, MixedProtocol>(protocols.map((protocol, i) => [protocolIDs[i], protocol]));
 
     // As of October 2020 we can't rely on libp2p.dialProtocol timeout to work so
     // this function wraps the dialProtocol promise with an extra timeout
@@ -104,7 +102,7 @@ export async function* sendRequest<Req, Resp>(
     const stream = await withTimeout(
       async (timeoutAndParentSignal) => {
         const protocolIds = Array.from(protocolsMap.keys());
-        const conn = await libp2p.dialProtocol(peerId, protocolIds, {signal: timeoutAndParentSignal});
+        const conn = await streamGenerator({peerId, protocolIds, signal: timeoutAndParentSignal});
         // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
         if (!conn) throw Error("dialProtocol timeout");
         return conn;

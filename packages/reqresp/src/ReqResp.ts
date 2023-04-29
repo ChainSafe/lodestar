@@ -1,27 +1,27 @@
 import {setMaxListeners} from "node:events";
-import {Connection, Stream} from "@libp2p/interface-connection";
+import {Stream} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Libp2p} from "libp2p";
 import {Logger} from "@lodestar/utils";
-import {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
-import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "./request/index.js";
-import {handleRequest} from "./response/index.js";
-import {
-  DialOnlyProtocol,
-  Encoding,
-  MixedProtocol,
-  ReqRespRateLimiterOpts,
-  Protocol,
-} from "./types.js";
-import {formatProtocolID} from "./utils/protocolId.js";
+import {Metrics, MetricsRegister, getMetrics} from "./metrics.js";
 import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
+import {RequestError, RequestErrorCode, SendRequestOpts, sendRequest} from "./request/index.js";
+import {handleRequest} from "./response/index.js";
+import {DialOnlyProtocol, Encoding, MixedProtocol, Protocol, ReqRespRateLimiterOpts} from "./types.js";
+import {formatProtocolID} from "./utils/protocolId.js";
 
 type ProtocolID = string;
 
 export const DEFAULT_PROTOCOL_PREFIX = "/eth2/beacon_chain/req";
 
+export type ReqRespHandler = ({
+  connection,
+  stream,
+}: {
+  connection: {remotePeer: PeerId};
+  stream: Stream;
+}) => Promise<void>;
+
 export interface ReqRespProtocolModules {
-  libp2p: Libp2p;
   logger: Logger;
   metricsRegister: MetricsRegister | null;
 }
@@ -42,9 +42,7 @@ export interface ReqRespRegisterOpts {
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
-export class ReqResp {
-  // protected to be usable by extending class
-  protected readonly libp2p: Libp2p;
+export abstract class ReqResp {
   protected readonly logger: Logger;
   protected readonly metrics: Metrics | null;
 
@@ -63,7 +61,6 @@ export class ReqResp {
   private readonly dialOnlyProtocols = new Map<ProtocolID, boolean>();
 
   constructor(modules: ReqRespProtocolModules, private readonly opts: ReqRespOpts = {}) {
-    this.libp2p = modules.libp2p;
     this.logger = modules.logger;
     this.metrics = modules.metricsRegister ? getMetrics(modules.metricsRegister) : null;
     this.protocolPrefix = opts.protocolPrefix ?? DEFAULT_PROTOCOL_PREFIX;
@@ -76,10 +73,7 @@ export class ReqResp {
    *
    * Made it explicit method to avoid any developer mistake
    */
-  registerDialOnlyProtocol<Req, Resp>(
-    protocol: DialOnlyProtocol<Req, Resp>,
-    opts?: ReqRespRegisterOpts
-  ): void {
+  registerDialOnlyProtocol<Req, Resp>(protocol: DialOnlyProtocol<Req, Resp>, opts?: ReqRespRegisterOpts): void {
     const protocolID = this.formatProtocolID(protocol);
 
     // libp2p will throw on error on duplicates, allow to overwrite behavior
@@ -97,12 +91,15 @@ export class ReqResp {
    * Throws if the same protocol is registered twice.
    * Can be called at any time, no concept of started / stopped
    */
-  async registerProtocol<Req, Resp>(
-    protocol: Protocol<Req, Resp>,
-    opts?: ReqRespRegisterOpts
-  ): Promise<void> {
+  async registerProtocol<Req, Resp>(protocol: Protocol<Req, Resp>, opts?: ReqRespRegisterOpts): Promise<void> {
     const protocolID = this.formatProtocolID(protocol);
-    const {handler: _handler, renderRequestBody: _renderRequestBody, inboundRateLimits, ...rest} = protocol;
+    const {
+      handler: _handler,
+      renderRequestBody: _renderRequestBody,
+      inboundRateLimits,
+      payloadType: _payloadType,
+      ...rest
+    } = protocol;
     this.registerDialOnlyProtocol(rest, opts);
     this.dialOnlyProtocols.set(protocolID, false);
 
@@ -110,7 +107,7 @@ export class ReqResp {
       this.rateLimiter.initRateLimits(protocolID, inboundRateLimits);
     }
 
-    return this.libp2p.handle(protocolID, this.getRequestHandler(protocol, protocolID));
+    this.onRegisterProtocol(protocolID, this.getRequestHandler(protocol, protocolID));
   }
 
   /**
@@ -121,8 +118,7 @@ export class ReqResp {
    */
   async unregisterProtocol(protocolID: ProtocolID): Promise<void> {
     this.registeredProtocols.delete(protocolID);
-
-    return this.libp2p.unhandle(protocolID);
+    this.onUnregisterProtocol(protocolID);
   }
 
   /**
@@ -177,7 +173,7 @@ export class ReqResp {
 
     try {
       yield* sendRequest<Req, Resp>(
-        {logger: this.logger, libp2p: this.libp2p, peerClient},
+        {logger: this.logger, streamGenerator: this.createStream, peerClient},
         peerId,
         protocols,
         protocolIDs,
@@ -204,7 +200,7 @@ export class ReqResp {
   }
 
   private getRequestHandler<Req, Resp>(protocol: MixedProtocol<Req, Resp>, protocolID: string) {
-    return async ({connection, stream}: {connection: Connection; stream: Stream}) => {
+    return async ({connection, stream}: {connection: {remotePeer: PeerId}; stream: Stream}) => {
       if (this.dialOnlyProtocols.get(protocolID)) {
         throw new Error(`Received request on dial only protocol '${protocolID}'`);
       }
@@ -247,19 +243,6 @@ export class ReqResp {
     };
   }
 
-  protected onIncomingRequest(_peerId: PeerId, _protocol: MixedProtocol): void {
-    // Override
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected onIncomingRequestError(_protocol: MixedProtocol<any, any>, _error: RequestError): void {
-    // Override
-  }
-
-  protected onOutgoingRequestError(_peerId: PeerId, _method: string, _error: RequestError): void {
-    // Override
-  }
-
   /**
    * ```
    * /ProtocolPrefix/MessageName/SchemaVersion/Encoding
@@ -269,4 +252,12 @@ export class ReqResp {
   protected formatProtocolID(protocol: Pick<MixedProtocol, "method" | "version" | "encoding">): string {
     return formatProtocolID(this.protocolPrefix, protocol.method, protocol.version, protocol.encoding);
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  abstract onIncomingRequestError(_protocol: MixedProtocol<any, any>, _error: RequestError): void;
+  abstract onOutgoingRequestError(_peerId: PeerId, _method: string, _error: RequestError): void;
+  abstract onIncomingRequest(_peerId: PeerId, _protocol: MixedProtocol): void;
+  abstract onRegisterProtocol(protocolId: ProtocolID, handler: ReqRespHandler): void;
+  abstract onUnregisterProtocol(protocolId: ProtocolID): void;
+  abstract createStream(opts: {peerId: PeerId; protocolIds: string[]; signal?: AbortSignal}): Promise<Stream>;
 }
