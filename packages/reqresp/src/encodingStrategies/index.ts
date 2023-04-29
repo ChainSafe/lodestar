@@ -1,4 +1,4 @@
-import {Encoding, EncodedPayload, TypeSerializer} from "../types.js";
+import {Encoding, EncodedPayload, TypeEncoder} from "../types.js";
 import {BufferedSource} from "../utils/index.js";
 import {readSszSnappyPayload} from "./sszSnappy/decode.js";
 import {writeSszSnappyPayload} from "./sszSnappy/encode.js";
@@ -17,7 +17,7 @@ import {writeSszSnappyPayload} from "./sszSnappy/encode.js";
 export async function readEncodedPayload<T>(
   bufferedSource: BufferedSource,
   encoding: Encoding,
-  type: TypeSerializer<T>
+  type: TypeEncoder<T>
 ): Promise<T> {
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:
@@ -37,7 +37,7 @@ export async function readEncodedPayload<T>(
 export async function* writeEncodedPayload<T>(
   chunk: EncodedPayload<T>,
   encoding: Encoding,
-  serializer: TypeSerializer<T>
+  serializer: TypeEncoder<T>
 ): AsyncGenerator<Buffer> {
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:

@@ -5,13 +5,13 @@ import {allForks, altair, phase0, ssz} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import * as messagesDef from "../../src/protocols/index.js";
-import {EncodedPayloadType, MixedProtocolDefinition, ReqRespHandler, TypeSerializer} from "../../src/types.js";
+import {PayloadType, MixedProtocol, ProtocolHandler, TypeEncoder} from "../../src/types.js";
 import {ZERO_HASH} from "../utils/index.js";
 
 type MessageFixture<T> = {
-  type: TypeSerializer<T>;
+  type: TypeEncoder<T>;
   payload: {
-    type: EncodedPayloadType.ssz;
+    type: PayloadType.ssz;
     data: T;
   };
   chunks: Uint8ArrayList[];
@@ -21,7 +21,7 @@ type MessageFixture<T> = {
 export const sszSnappyPing: MessageFixture<phase0.Ping> = {
   type: ssz.phase0.Ping,
   payload: {
-    type: EncodedPayloadType.ssz,
+    type: PayloadType.ssz,
     data: BigInt(1),
   },
   chunks: ["0x08", "0xff060000734e61507059010c00000175de410100000000000000"].map(
@@ -37,7 +37,7 @@ export const sszSnappyPing: MessageFixture<phase0.Ping> = {
 export const sszSnappyStatus: MessageFixture<phase0.Status> = {
   type: ssz.phase0.Status,
   payload: {
-    type: EncodedPayloadType.ssz,
+    type: PayloadType.ssz,
     data: {
       forkDigest: Buffer.alloc(4, 0xda),
       finalizedRoot: Buffer.alloc(32, 0xda),
@@ -59,7 +59,7 @@ export const sszSnappyStatus: MessageFixture<phase0.Status> = {
 export const sszSnappySignedBeaconBlockPhase0: MessageFixture<phase0.SignedBeaconBlock> = {
   type: ssz.phase0.SignedBeaconBlock,
   payload: {
-    type: EncodedPayloadType.ssz,
+    type: PayloadType.ssz,
     data: {
       message: {
         slot: 9,
@@ -98,7 +98,7 @@ export const sszSnappySignedBeaconBlockPhase0: MessageFixture<phase0.SignedBeaco
 export const sszSnappySignedBeaconBlockAltair: MessageFixture<altair.SignedBeaconBlock> = {
   type: ssz.altair.SignedBeaconBlock,
   payload: {
-    type: EncodedPayloadType.ssz,
+    type: PayloadType.ssz,
     data: {
       ...sszSnappySignedBeaconBlockPhase0.payload.data,
       message: {
@@ -128,19 +128,19 @@ const getEmptyHandler = <T = unknown>() => async function* emptyHandler(): Async
 export const getAllMessages = (
   modules: {config: BeaconConfig} = {config: createBeaconConfig(chainConfig, ZERO_HASH)}
 ): {
-  ping: MixedProtocolDefinition<phase0.Ping, phase0.Ping>;
-  goodbye: MixedProtocolDefinition<phase0.Goodbye, phase0.Goodbye>;
-  metadata: MixedProtocolDefinition<null, allForks.Metadata>;
-  status: MixedProtocolDefinition<phase0.Status, phase0.Status>;
-  blocksByRange: MixedProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
-  blocksByRangeV2: MixedProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
-  blocksByRoot: MixedProtocolDefinition<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
-  blocksByRootV2: MixedProtocolDefinition<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
+  ping: MixedProtocol<phase0.Ping, phase0.Ping>;
+  goodbye: MixedProtocol<phase0.Goodbye, phase0.Goodbye>;
+  metadata: MixedProtocol<null, allForks.Metadata>;
+  status: MixedProtocol<phase0.Status, phase0.Status>;
+  blocksByRange: MixedProtocol<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
+  blocksByRangeV2: MixedProtocol<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
+  blocksByRoot: MixedProtocol<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
+  blocksByRootV2: MixedProtocol<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
 } => ({
   ping: messagesDef.Ping(getEmptyHandler()),
   goodbye: messagesDef.Goodbye(modules, getEmptyHandler()),
   metadata: messagesDef.Metadata(modules, getEmptyHandler()),
-  status: messagesDef.Status(modules, getEmptyHandler() as ReqRespHandler<phase0.Status, phase0.Status>),
+  status: messagesDef.Status(modules, getEmptyHandler() as ProtocolHandler<phase0.Status, phase0.Status>),
   blocksByRange: messagesDef.BeaconBlocksByRange(modules, getEmptyHandler()),
   blocksByRangeV2: messagesDef.BeaconBlocksByRangeV2(modules, getEmptyHandler()),
   blocksByRoot: messagesDef.BeaconBlocksByRoot(modules, getEmptyHandler()),

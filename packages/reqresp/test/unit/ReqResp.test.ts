@@ -5,7 +5,7 @@ import {Logger} from "@lodestar/utils";
 import {RespStatus} from "../../src/interface.js";
 import {Ping} from "../../src/protocols/Ping.js";
 import {ReqResp} from "../../src/ReqResp.js";
-import {EncodedPayloadType} from "../../src/types.js";
+import {PayloadType} from "../../src/types.js";
 import {sszSnappyPing} from "../fixtures/messages.js";
 import {numberToStringProtocol, numberToStringProtocolHandler} from "../fixtures/protocols.js";
 import {createStubbedLogger} from "../mocks/logger.js";
@@ -24,7 +24,7 @@ describe("ResResp", () => {
         .resolves(
           new MockLibP2pStream(
             responseEncode(
-              [{status: RespStatus.SUCCESS, payload: {type: EncodedPayloadType.ssz, data: sszSnappyPing.payload.data}}],
+              [{status: RespStatus.SUCCESS, payload: {type: PayloadType.ssz, data: sszSnappyPing.payload.data}}],
               Ping(sinon.stub())
             ),
             Ping(sinon.stub()).method

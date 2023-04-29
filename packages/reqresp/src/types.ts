@@ -6,50 +6,11 @@ import {LodestarError} from "@lodestar/utils";
 import {RateLimiterQuota} from "./rate_limiter/rateLimiterGRCA.js";
 
 /**
- * The encoding of the request/response payload
+ * Rate limiter options for the requests
  */
-export enum EncodedPayloadType {
-  ssz,
-  bytes,
-}
-
-/**
- * Wrapper for the request/response payload for SSZ type data
- */
-export interface EncodedPayloadSsz<T> {
-  type: EncodedPayloadType.ssz;
-  data: T;
-}
-
-/**
- * Wrapper for the request/response payload for binary type data
- */
-export interface EncodedPayloadBytes {
-  type: EncodedPayloadType.bytes;
-  bytes: Uint8Array;
-  contextBytes: ContextBytes;
-}
-
-/**
- * Wrapper for the request/response payload
- */
-export type EncodedPayload<T> = EncodedPayloadSsz<T> | EncodedPayloadBytes;
-
-/**
- * Request handler
- */
-export type ReqRespHandler<Req, Resp> = (req: Req, peerId: PeerId) => AsyncIterable<EncodedPayload<Resp>>;
-
-/**
- * ReqResp Protocol Deceleration
- */
-export interface Protocol {
-  readonly protocolPrefix: string;
-  /** Protocol name identifier `beacon_blocks_by_range` or `status` */
-  readonly method: string;
-  /** Version counter: `1`, `2` etc */
-  readonly version: number;
-  readonly encoding: Encoding;
+export interface ReqRespRateLimiterOpts {
+  rateLimitMultiplier?: number;
+  onRateLimit?: (peer: PeerId, method: string) => void;
 }
 
 /**
@@ -71,61 +32,136 @@ export interface InboundRateLimitQuota<Req = unknown> {
   getRequestCount?: (req: Req) => number;
 }
 
+/**
+ * The encoding of the request/response payload
+ */
+export enum PayloadType {
+  ssz = 1,
+  bytes = 2,
+}
+
+export interface EncodedPayloadOutgoingData<T = unknown> extends Record<PayloadType, unknown> {
+  [PayloadType.ssz]: {
+    type: PayloadType.ssz;
+    data: T;
+  };
+  [PayloadType.bytes]: {
+    type: PayloadType.bytes;
+    bytes: Uint8Array;
+    contextBytes: ContextBytes;
+  };
+}
+
+export interface EncodedPayloadIncomingData<T = unknown> extends Record<PayloadType, unknown> {
+  [PayloadType.ssz]: {
+    type: PayloadType.ssz;
+    data: T;
+  };
+  [PayloadType.bytes]: {
+    type: PayloadType.bytes;
+    bytes: Uint8Array;
+  };
+}
+
+/**
+ * Wrapper for the request/response payload for binary type data
+ */
+export type EncodedPayloadBytes = EncodedPayloadOutgoingData[PayloadType.bytes];
+/**
+ * Wrapper for the request/response payload for ssz type data
+ */
+export type EncodedPayloadSsz<T = unknown> = EncodedPayloadOutgoingData<T>[PayloadType.ssz];
+
+/**
+ * Wrapper for the request/response payload
+ */
+export type EncodedPayload<T> = EncodedPayloadOutgoingData<T>[PayloadType];
+
+export const protocolPrefix = "/eth2/beacon_chain/req";
+
+/**
+ * ReqResp Protocol Deceleration
+ */
+export interface ProtocolStaticAttrs {
+  readonly protocolPrefix: string;
+  /** Protocol name identifier `beacon_blocks_by_range` or `status` */
+  readonly method: string;
+  /** Version counter: `1`, `2` etc */
+  readonly version: number;
+  readonly encoding: Encoding;
+}
+
+export interface ProtocolDescriptor<Req = unknown, Resp = unknown> extends Omit<ProtocolStaticAttrs, "protocolPrefix"> {
+  requestEncoder: (fork: ForkName) => TypeEncoder<Req> | null;
+  responseEncoder: (fork: ForkName) => TypeEncoder<Resp>;
+  contextBytes: ContextBytesFactory<Resp>;
+  ignoreResponse?: boolean;
+}
+
+/**
+ * Protocol handler
+ * Make the default payload type to bytes
+ */
+export type ProtocolHandler<Req, Resp, PType extends PayloadType = PayloadType.bytes> = (
+  protocol: ProtocolDescriptor<Req, Resp>,
+  req: EncodedPayloadIncomingData<Req>[PType],
+  peerId: PeerId
+) => AsyncIterable<EncodedPayloadOutgoingData<Resp>[PType]>;
+
 // `protocolPrefix` is added runtime so not part of definition
 /**
  * ReqResp Protocol definition for full duplex protocols
  */
-export interface ProtocolDefinition<Req = unknown, Resp = unknown> extends Omit<Protocol, "protocolPrefix"> {
-  handler: ReqRespHandler<Req, Resp>;
-  requestType: (fork: ForkName) => TypeSerializer<Req> | null;
-  responseType: (fork: ForkName) => TypeSerializer<Resp>;
-  ignoreResponse?: boolean;
+export interface Protocol<Req = unknown, Resp = unknown, PType extends PayloadType = PayloadType>
+  extends ProtocolDescriptor<Req, Resp> {
+  handler: ProtocolHandler<Req, Resp, PayloadType>;
+  payloadType: PType;
   renderRequestBody?: (request: Req) => string;
-  contextBytes: ContextBytesFactory<Resp>;
   inboundRateLimits?: InboundRateLimitQuota<Req>;
 }
 
 /**
  * ReqResp Protocol definition for dial only protocols
  */
-export interface DialOnlyProtocolDefinition<Req = unknown, Resp = unknown>
-  extends Omit<ProtocolDefinition<Req, Resp>, "handler" | "inboundRateLimits" | "renderRequestBody"> {
+export interface DialOnlyProtocol<Req = unknown, Resp = unknown>
+  extends Omit<Protocol<Req, Resp>, "handler" | "inboundRateLimits" | "renderRequestBody" | "payloadType"> {
   handler?: never;
   inboundRateLimits?: never;
   renderRequestBody?: never;
+  payloadType?: never;
 }
 
 /**
  * ReqResp Protocol definition for full duplex and dial only protocols
  */
-export type MixedProtocolDefinition<Req = unknown, Resp = unknown> =
-  | DialOnlyProtocolDefinition<Req, Resp>
-  | ProtocolDefinition<Req, Resp>;
+export type MixedProtocol<Req = unknown, Resp = unknown> = DialOnlyProtocol<Req, Resp> | Protocol<Req, Resp>;
 
 /**
  * ReqResp protocol definition descriptor for full duplex and dial only protocols
  * If handler is not provided, the protocol will be dial only
  * If handler is provided, the protocol will be full duplex
  */
-export type MixedProtocolDefinitionGenerator<Req, Res> = <H extends ReqRespHandler<Req, Res> | undefined = undefined>(
+export type MixedProtocolGenerator<Req, Resp, PType extends PayloadType = PayloadType> = <
+  H extends ProtocolHandler<Req, Resp, PType> | undefined = undefined
+>(
   // "inboundRateLimiter" is available only on handler context not on generator
   modules: {config: BeaconConfig},
-  handler?: H
-) => H extends undefined ? DialOnlyProtocolDefinition<Req, Res> : ProtocolDefinition<Req, Res>;
+  handler?: H,
+  payloadType?: PType
+) => H extends undefined ? DialOnlyProtocol<Req, Resp> : Protocol<Req, Resp, PType>;
 
 /**
  * ReqResp protocol definition descriptor for full duplex protocols
  */
-export type DuplexProtocolDefinitionGenerator<Req, Res> = (
+export type ProtocolGenerator<Req, Resp, PType extends PayloadType = PayloadType> = (
   modules: {config: BeaconConfig},
-  handler: ReqRespHandler<Req, Res>
-) => ProtocolDefinition<Req, Res>;
+  handler: ProtocolHandler<Req, Resp, PType>,
+  payloadType: PType
+) => Protocol<Req, Resp>;
 
-export type HandlerTypeFromMessage<T> = T extends DuplexProtocolDefinitionGenerator<infer Req, infer Res>
-  ? ReqRespHandler<Req, Res>
+export type HandlerTypeFromMessage<T> = T extends ProtocolGenerator<infer Req, infer Resp, infer PType>
+  ? ProtocolHandler<Req, Resp, PType>
   : never;
-
-export const protocolPrefix = "/eth2/beacon_chain/req";
 
 /**
  * Available request/response encoding strategies:
@@ -165,18 +201,10 @@ export class LightClientServerError extends LodestarError<LightClientServerError
 /**
  * Lightweight interface of ssz Type<T>
  */
-export interface TypeSerializer<T> {
+export interface TypeEncoder<T> {
   serialize(data: T): Uint8Array;
   deserialize(bytes: Uint8Array): T;
   maxSize: number;
   minSize: number;
   equals(a: T, b: T): boolean;
-}
-
-/**
- * Rate limiter options for the requests
- */
-export interface ReqRespRateLimiterOpts {
-  rateLimitMultiplier?: number;
-  onRateLimit?: (peer: PeerId, method: string) => void;
 }

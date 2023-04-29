@@ -1,20 +1,22 @@
 import {MAX_REQUEST_BLOCKS} from "@lodestar/params";
 import {deneb, ssz} from "@lodestar/types";
-import {ContextBytesType, DuplexProtocolDefinitionGenerator, Encoding} from "../types.js";
+import {ContextBytesType, ProtocolGenerator, Encoding} from "../types.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const BlobsSidecarsByRange: DuplexProtocolDefinitionGenerator<
-  deneb.BlobsSidecarsByRangeRequest,
-  deneb.BlobsSidecar
-> = (modules, handler) => {
+export const BlobsSidecarsByRange: ProtocolGenerator<deneb.BlobsSidecarsByRangeRequest, deneb.BlobsSidecar> = (
+  modules,
+  handler,
+  payloadType
+) => {
   return {
     method: "blobs_sidecars_by_range",
     version: 1,
     encoding: Encoding.SSZ_SNAPPY,
     handler,
-    requestType: () => ssz.deneb.BlobsSidecarsByRangeRequest,
+    payloadType,
+    requestEncoder: () => ssz.deneb.BlobsSidecarsByRangeRequest,
     // TODO: Make it fork compliant
-    responseType: () => ssz.deneb.BlobsSidecar,
+    responseEncoder: () => ssz.deneb.BlobsSidecar,
     renderRequestBody: (req) => `${req.startSlot},${req.count}`,
     contextBytes: {
       type: ContextBytesType.ForkDigest,

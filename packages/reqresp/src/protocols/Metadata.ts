@@ -1,36 +1,38 @@
 import {allForks, ssz} from "@lodestar/types";
-import {ContextBytesType, DuplexProtocolDefinitionGenerator, Encoding, MixedProtocolDefinition} from "../types.js";
+import {ContextBytesType, ProtocolGenerator, Encoding, MixedProtocol} from "../types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 const MetadataCommon: Pick<
-  MixedProtocolDefinition<null, allForks.Metadata>,
-  "method" | "encoding" | "requestType" | "renderRequestBody" | "inboundRateLimits"
+  MixedProtocol<null, allForks.Metadata>,
+  "method" | "encoding" | "requestEncoder" | "renderRequestBody" | "inboundRateLimits" | "payloadType"
 > = {
   method: "metadata",
   encoding: Encoding.SSZ_SNAPPY,
-  requestType: () => null,
+  requestEncoder: () => null,
   inboundRateLimits: {
     // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
     byPeer: {quota: 2, quotaTimeMs: 5_000},
   },
 };
 
-export const Metadata: DuplexProtocolDefinitionGenerator<null, allForks.Metadata> = (modules, handler) => {
+export const Metadata: ProtocolGenerator<null, allForks.Metadata> = (modules, handler, payloadType) => {
   return {
     ...MetadataCommon,
     version: 1,
     handler,
-    responseType: () => ssz.phase0.Metadata,
+    payloadType,
+    responseEncoder: () => ssz.phase0.Metadata,
     contextBytes: {type: ContextBytesType.Empty},
   };
 };
 
-export const MetadataV2: DuplexProtocolDefinitionGenerator<null, allForks.Metadata> = (modules, handler) => {
+export const MetadataV2: ProtocolGenerator<null, allForks.Metadata> = (modules, handler, payloadType) => {
   return {
     ...MetadataCommon,
     version: 2,
     handler,
-    responseType: () => ssz.altair.Metadata,
+    payloadType,
+    responseEncoder: () => ssz.altair.Metadata,
     contextBytes: {type: ContextBytesType.Empty},
   };
 };

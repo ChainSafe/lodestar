@@ -8,7 +8,7 @@ import {responseDecode} from "../../../src/encoders/responseDecode.js";
 import {responseEncodersErrorTestCases, responseEncodersTestCases} from "../../fixtures/encoders.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {arrToSource, onlySuccessResp} from "../../utils/index.js";
-import {EncodedPayloadType} from "../../../src/types.js";
+import {PayloadType} from "../../../src/types.js";
 
 chai.use(chaiAsPromised);
 
@@ -25,7 +25,7 @@ describe("encoders / responseDecode", () => {
 
         expect(
           responseChunks.filter(onlySuccessResp).map((r) => {
-            if (r.payload.type === EncodedPayloadType.ssz) {
+            if (r.payload.type === PayloadType.ssz) {
               return r.payload.data;
             } else {
               return r.payload.bytes;

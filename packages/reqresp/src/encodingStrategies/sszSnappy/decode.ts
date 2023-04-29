@@ -1,7 +1,7 @@
 import varint from "varint";
 import {Uint8ArrayList} from "uint8arraylist";
 import {BufferedSource} from "../../utils/index.js";
-import {TypeSerializer} from "../../types.js";
+import {TypeEncoder} from "../../types.js";
 import {SnappyFramesUncompress} from "./snappyFrames/uncompress.js";
 import {maxEncodedLen} from "./utils.js";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
@@ -15,7 +15,7 @@ export const MAX_VARINT_BYTES = 10;
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export async function readSszSnappyPayload<T>(bufferedSource: BufferedSource, type: TypeSerializer<T>): Promise<T> {
+export async function readSszSnappyPayload<T>(bufferedSource: BufferedSource, type: TypeEncoder<T>): Promise<T> {
   const sszDataLength = await readSszSnappyHeader(bufferedSource, type);
 
   const bytes = await readSszSnappyBody(bufferedSource, sszDataLength);
@@ -28,7 +28,7 @@ export async function readSszSnappyPayload<T>(bufferedSource: BufferedSource, ty
  */
 export async function readSszSnappyHeader(
   bufferedSource: BufferedSource,
-  type: Pick<TypeSerializer<unknown>, "minSize" | "maxSize">
+  type: Pick<TypeEncoder<unknown>, "minSize" | "maxSize">
 ): Promise<number> {
   for await (const buffer of bufferedSource) {
     // Get next bytes if empty
@@ -125,7 +125,7 @@ export async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataL
  * Deseralizes SSZ body.
  * `isSszTree` option allows the SignedBeaconBlock type to be deserialized as a tree
  */
-function deserializeSszBody<T>(bytes: Uint8Array, type: TypeSerializer<T>): T {
+function deserializeSszBody<T>(bytes: Uint8Array, type: TypeEncoder<T>): T {
   try {
     return type.deserialize(bytes);
   } catch (e) {

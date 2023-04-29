@@ -1,7 +1,7 @@
 import varint from "varint";
 import {source} from "stream-to-it";
 import snappy from "@chainsafe/snappy-stream";
-import {EncodedPayload, EncodedPayloadType, TypeSerializer} from "../../types.js";
+import {EncodedPayload, PayloadType, TypeEncoder} from "../../types.js";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
 
 /**
@@ -13,7 +13,7 @@ import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
  */
 export async function* writeSszSnappyPayload<T>(
   body: EncodedPayload<T>,
-  type: TypeSerializer<T>
+  type: TypeEncoder<T>
 ): AsyncGenerator<Buffer> {
   const serializedBody = serializeSszBody(body, type);
 
@@ -47,12 +47,12 @@ export async function* encodeSszSnappy(bytes: Buffer): AsyncGenerator<Buffer> {
 /**
  * Returns SSZ serialized body. Wrapps errors with SszSnappyError.SERIALIZE_ERROR
  */
-function serializeSszBody<T>(chunk: EncodedPayload<T>, type: TypeSerializer<T>): Buffer {
+function serializeSszBody<T>(chunk: EncodedPayload<T>, type: TypeEncoder<T>): Buffer {
   switch (chunk.type) {
-    case EncodedPayloadType.bytes:
+    case PayloadType.bytes:
       return chunk.bytes as Buffer;
 
-    case EncodedPayloadType.ssz: {
+    case PayloadType.ssz: {
       try {
         const bytes = type.serialize(chunk.data);
         return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.length);

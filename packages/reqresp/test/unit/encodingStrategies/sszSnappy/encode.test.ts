@@ -3,7 +3,7 @@ import all from "it-all";
 import {pipe} from "it-pipe";
 import varint from "varint";
 import {writeSszSnappyPayload} from "../../../../src/encodingStrategies/sszSnappy/encode.js";
-import {EncodedPayload, EncodedPayloadType} from "../../../../src/types.js";
+import {EncodedPayload, PayloadType} from "../../../../src/types.js";
 import {
   encodingStrategiesEncodingErrorCases,
   encodingStrategiesMainnetTestCases,
@@ -27,7 +27,7 @@ describe("encodingStrategies / sszSnappy / encode", () => {
     for (const {id, payload, type: serializer, streamedBody} of encodingStrategiesMainnetTestCases) {
       it(id, async () => {
         const bodySize =
-          payload.type === EncodedPayloadType.ssz ? serializer.serialize(payload.data).length : payload.bytes.length;
+          payload.type === PayloadType.ssz ? serializer.serialize(payload.data).length : payload.bytes.length;
 
         const encodedChunks = await pipe(writeSszSnappyPayload(payload, serializer), all);
         const encodedStream = Buffer.concat(encodedChunks as Uint8Array[]);

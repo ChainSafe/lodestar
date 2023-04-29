@@ -3,7 +3,7 @@ import chaiAsPromised from "chai-as-promised";
 import {Uint8ArrayList} from "uint8arraylist";
 import varint from "varint";
 import {readSszSnappyPayload} from "../../../../src/encodingStrategies/sszSnappy/index.js";
-import {EncodedPayloadType, TypeSerializer} from "../../../../src/types.js";
+import {PayloadType, TypeEncoder} from "../../../../src/types.js";
 import {BufferedSource} from "../../../../src/utils/index.js";
 import {
   encodingStrategiesDecodingErrorCases,
@@ -18,7 +18,7 @@ describe("encodingStrategies / sszSnappy / decode", () => {
   for (const {id, type, payload, chunks} of encodingStrategiesTestCases) {
     it(id, async () => {
       const bufferedSource = new BufferedSource(arrToSource(chunks));
-      const serializer = type as TypeSerializer<typeof payload.data>;
+      const serializer = type as TypeEncoder<typeof payload.data>;
       const bodyResult = await readSszSnappyPayload(bufferedSource, serializer);
       // To convert from Buffer values to Uint8Array values
       const payloadInUint8ArrayValues = serializer.deserialize(serializer.serialize(payload.data));
@@ -30,9 +30,9 @@ describe("encodingStrategies / sszSnappy / decode", () => {
   describe("mainnet cases", () => {
     for (const {id, payload, type: serializer, streamedBody} of encodingStrategiesMainnetTestCases) {
       const bodySize =
-        payload.type === EncodedPayloadType.ssz ? serializer.serialize(payload.data).length : payload.bytes.length;
+        payload.type === PayloadType.ssz ? serializer.serialize(payload.data).length : payload.bytes.length;
       const deserializedBody =
-        payload.type === EncodedPayloadType.ssz ? payload : serializer.deserialize(Buffer.from(payload.bytes));
+        payload.type === PayloadType.ssz ? payload : serializer.deserialize(Buffer.from(payload.bytes));
 
       const streamedBytes = new Uint8ArrayList(Buffer.concat([Buffer.from(varint.encode(bodySize)), streamedBody]));
 

@@ -1,15 +1,16 @@
 import {phase0, ssz} from "@lodestar/types";
-import {ContextBytesType, DuplexProtocolDefinitionGenerator, Encoding} from "../types.js";
+import {ContextBytesType, ProtocolGenerator, Encoding} from "../types.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const Goodbye: DuplexProtocolDefinitionGenerator<phase0.Goodbye, phase0.Goodbye> = (_modules, handler) => {
+export const Goodbye: ProtocolGenerator<phase0.Goodbye, phase0.Goodbye> = (_modules, handler, payloadType) => {
   return {
     method: "goodbye",
     version: 1,
     encoding: Encoding.SSZ_SNAPPY,
     handler,
-    requestType: () => ssz.phase0.Goodbye,
-    responseType: () => ssz.phase0.Goodbye,
+    payloadType,
+    requestEncoder: () => ssz.phase0.Goodbye,
+    responseEncoder: () => ssz.phase0.Goodbye,
     ignoreResponse: true,
     renderRequestBody: (req) => req.toString(10),
     contextBytes: {type: ContextBytesType.Empty},

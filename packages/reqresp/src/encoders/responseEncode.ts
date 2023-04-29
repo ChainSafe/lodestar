@@ -1,14 +1,7 @@
 import {ForkName} from "@lodestar/params";
 import {writeEncodedPayload} from "../encodingStrategies/index.js";
 import {encodeErrorMessage} from "../utils/index.js";
-import {
-  ContextBytesType,
-  ContextBytesFactory,
-  MixedProtocolDefinition,
-  EncodedPayload,
-  EncodedPayloadType,
-  ProtocolDefinition,
-} from "../types.js";
+import {ContextBytesType, ContextBytesFactory, MixedProtocol, EncodedPayload, PayloadType, Protocol} from "../types.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 
 /**
@@ -21,7 +14,7 @@ import {RespStatus, RpcResponseStatusError} from "../interface.js";
  * Note: `response` has zero or more chunks (denoted by `<>*`)
  */
 export function responseEncodeSuccess<Req, Resp>(
-  protocol: ProtocolDefinition<Req, Resp>
+  protocol: Protocol<Req, Resp>
 ): (source: AsyncIterable<EncodedPayload<Resp>>) => AsyncIterable<Buffer> {
   return async function* responseEncodeSuccessTransform(source) {
     for await (const chunk of source) {
@@ -36,7 +29,7 @@ export function responseEncodeSuccess<Req, Resp>(
 
       // <encoding-dependent-header> | <encoded-payload>
       const forkName = getForkNameFromContextBytes(protocol.contextBytes, chunk);
-      const respType = protocol.responseType(forkName);
+      const respType = protocol.responseEncoder(forkName);
       yield* writeEncodedPayload(chunk, protocol.encoding, respType);
     }
   };
@@ -53,7 +46,7 @@ export function responseEncodeSuccess<Req, Resp>(
  * fn yields exactly one `<error_response>` and afterwards the stream must be terminated
  */
 export async function* responseEncodeError(
-  protocol: Pick<MixedProtocolDefinition, "encoding">,
+  protocol: Pick<MixedProtocol, "encoding">,
   status: RpcResponseStatusError,
   errorMessage: string
 ): AsyncGenerator<Buffer> {
@@ -82,12 +75,12 @@ function getContextBytes<Resp>(
     // Yield a fixed-width 4 byte chunk, set to the `ForkDigest`
     case ContextBytesType.ForkDigest:
       switch (chunk.type) {
-        case EncodedPayloadType.ssz:
+        case PayloadType.ssz:
           return contextBytes.forkDigestContext.forkName2ForkDigest(
             contextBytes.forkFromResponse(chunk.data)
           ) as Buffer;
 
-        case EncodedPayloadType.bytes:
+        case PayloadType.bytes:
           if (chunk.contextBytes.type !== ContextBytesType.ForkDigest) {
             throw Error(`Expected context bytes ForkDigest but got ${chunk.contextBytes.type}`);
           }
@@ -109,10 +102,10 @@ function getForkNameFromContextBytes<Resp>(
     // Yield a fixed-width 4 byte chunk, set to the `ForkDigest`
     case ContextBytesType.ForkDigest:
       switch (chunk.type) {
-        case EncodedPayloadType.ssz:
+        case PayloadType.ssz:
           return contextBytes.forkFromResponse(chunk.data);
 
-        case EncodedPayloadType.bytes:
+        case PayloadType.bytes:
           if (chunk.contextBytes.type !== ContextBytesType.ForkDigest) {
             throw Error(`Expected context bytes ForkDigest but got ${chunk.contextBytes.type}`);
           }

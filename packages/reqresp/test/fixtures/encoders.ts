@@ -4,7 +4,7 @@ import {LodestarError} from "@lodestar/utils";
 import {SszSnappyError, SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/index.js";
 import {ResponseError} from "../../src/index.js";
 import {RespStatus} from "../../src/interface.js";
-import {EncodedPayload, EncodedPayloadType, MixedProtocolDefinition} from "../../src/types.js";
+import {EncodedPayload, PayloadType, MixedProtocol} from "../../src/types.js";
 import {fromHexBuf} from "../utils/index.js";
 import {
   beaconConfig,
@@ -16,7 +16,7 @@ import {
 
 export const requestEncodersCases: {
   id: string;
-  protocol: MixedProtocolDefinition<any, any>;
+  protocol: MixedProtocol<any, any>;
   chunks: Uint8ArrayList[];
   requestBody: unknown;
 }[] = [
@@ -36,7 +36,7 @@ export const requestEncodersCases: {
 
 export const requestEncodersErrorCases: {
   id: string;
-  protocol: MixedProtocolDefinition<any, any>;
+  protocol: MixedProtocol<any, any>;
   chunks: Uint8ArrayList[];
   requestBody: unknown;
   errorEncode?: LodestarError<any>;
@@ -65,7 +65,7 @@ export type ResponseChunk = SuccessResponseChunk | ErrorResponseChunk;
 
 export const responseEncodersTestCases: {
   id: string;
-  protocol: MixedProtocolDefinition<any, any>;
+  protocol: MixedProtocol<any, any>;
   chunks: Uint8ArrayList[];
   responseChunks: ResponseChunk[];
   skipEncoding?: boolean;
@@ -133,8 +133,8 @@ export const responseEncodersTestCases: {
     id: "Decode successfully response_chunk as a single Uint8ArrayList",
     protocol: messages.ping,
     responseChunks: [
-      {status: RespStatus.SUCCESS, payload: {type: EncodedPayloadType.ssz, data: BigInt(1)}},
-      {status: RespStatus.SUCCESS, payload: {type: EncodedPayloadType.ssz, data: BigInt(1)}},
+      {status: RespStatus.SUCCESS, payload: {type: PayloadType.ssz, data: BigInt(1)}},
+      {status: RespStatus.SUCCESS, payload: {type: PayloadType.ssz, data: BigInt(1)}},
     ],
     chunks: [
       // success, Ping payload = BigInt(1)
@@ -148,8 +148,8 @@ export const responseEncodersTestCases: {
     id: "Decode successfully response_chunk as a single concated chunk",
     protocol: messages.ping,
     responseChunks: [
-      {status: RespStatus.SUCCESS, payload: {type: EncodedPayloadType.ssz, data: BigInt(1)}},
-      {status: RespStatus.SUCCESS, payload: {type: EncodedPayloadType.ssz, data: BigInt(1)}},
+      {status: RespStatus.SUCCESS, payload: {type: PayloadType.ssz, data: BigInt(1)}},
+      {status: RespStatus.SUCCESS, payload: {type: PayloadType.ssz, data: BigInt(1)}},
     ],
     chunks: [
       // success, Ping payload = BigInt(1)
@@ -185,7 +185,7 @@ export const responseEncodersTestCases: {
 
 export const responseEncodersErrorTestCases: {
   id: string;
-  protocol: MixedProtocolDefinition<any, any>;
+  protocol: MixedProtocol<any, any>;
   chunks?: Uint8ArrayList[];
   responseChunks?: ResponseChunk[];
   // decode only
@@ -203,7 +203,7 @@ export const responseEncodersErrorTestCases: {
   {
     id: "Single chunk - wrong body SSZ type",
     protocol: messages.status,
-    responseChunks: [{status: RespStatus.SUCCESS, payload: {type: EncodedPayloadType.ssz, data: BigInt(1)}}],
+    responseChunks: [{status: RespStatus.SUCCESS, payload: {type: PayloadType.ssz, data: BigInt(1)}}],
     chunks: [new Uint8ArrayList(Buffer.from([RespStatus.SUCCESS])), ...sszSnappyPing.chunks],
     // decode will throw since Ping's Uint64 is smaller than Status min size
     decodeError: new SszSnappyError({code: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE, minSize: 84, sszDataLength: 8}),

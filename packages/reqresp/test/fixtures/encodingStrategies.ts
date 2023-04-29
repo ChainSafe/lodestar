@@ -5,7 +5,7 @@ import varint from "varint";
 import {LodestarError} from "@lodestar/utils";
 import {bellatrix, ssz} from "@lodestar/types";
 import {SszSnappyError, SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/errors.js";
-import {ContextBytesType, EncodedPayload, EncodedPayloadType, TypeSerializer} from "../../src/types.js";
+import {ContextBytesType, EncodedPayload, PayloadType, TypeEncoder} from "../../src/types.js";
 import {
   sszSnappyPing,
   sszSnappySignedBeaconBlockAltair,
@@ -20,7 +20,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type SszSnappyTestBlockData<T> = {
   id: string;
-  type: TypeSerializer<T>;
+  type: TypeEncoder<T>;
   payload: EncodedPayload<T>;
   streamedBody: Uint8Array;
 };
@@ -34,7 +34,7 @@ export const goerliShadowForkBlock13249: SszSnappyTestBlockData<bellatrix.Signed
   id: "goerli-shadow-fork-block-13249",
   type: ssz.bellatrix.SignedBeaconBlock,
   payload: {
-    type: EncodedPayloadType.bytes,
+    type: PayloadType.bytes,
     bytes: fs.readFileSync(path.join(__dirname, "/goerliShadowForkBlock.13249/serialized.ssz")),
     contextBytes: {type: ContextBytesType.ForkDigest, forkSlot: 13249},
   },
@@ -52,7 +52,7 @@ export const encodingStrategiesTestCases = [
 
 export const encodingStrategiesEncodingErrorCases: {
   id: string;
-  type: TypeSerializer<unknown>;
+  type: TypeEncoder<unknown>;
   payload: EncodedPayload<unknown>;
   error: LodestarError<any>;
 }[] = [
@@ -60,7 +60,7 @@ export const encodingStrategiesEncodingErrorCases: {
     id: "Bad body",
     type: ssz.phase0.Status,
     payload: {
-      type: EncodedPayloadType.ssz,
+      type: PayloadType.ssz,
       data: BigInt(1),
     },
     error: new SszSnappyError({
@@ -72,7 +72,7 @@ export const encodingStrategiesEncodingErrorCases: {
 
 export const encodingStrategiesDecodingErrorCases: {
   id: string;
-  type: TypeSerializer<unknown>;
+  type: TypeEncoder<unknown>;
   error: SszSnappyErrorCode;
   chunks: Buffer[];
 }[] = [

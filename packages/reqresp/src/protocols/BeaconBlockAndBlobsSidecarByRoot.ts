@@ -1,20 +1,21 @@
 import {deneb, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {ContextBytesType, DuplexProtocolDefinitionGenerator, Encoding} from "../types.js";
+import {ContextBytesType, ProtocolGenerator, Encoding} from "../types.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const BeaconBlockAndBlobsSidecarByRoot: DuplexProtocolDefinitionGenerator<
+export const BeaconBlockAndBlobsSidecarByRoot: ProtocolGenerator<
   deneb.BeaconBlockAndBlobsSidecarByRootRequest,
   deneb.SignedBeaconBlockAndBlobsSidecar
-> = (modules, handler) => {
+> = (modules, handler, payloadType) => {
   return {
     method: "beacon_block_and_blobs_sidecar_by_root",
     version: 1,
     encoding: Encoding.SSZ_SNAPPY,
     handler,
-    requestType: () => ssz.deneb.BeaconBlockAndBlobsSidecarByRootRequest,
+    payloadType,
+    requestEncoder: () => ssz.deneb.BeaconBlockAndBlobsSidecarByRootRequest,
     // TODO: Make it fork compliant
-    responseType: () => ssz.deneb.SignedBeaconBlockAndBlobsSidecar,
+    responseEncoder: () => ssz.deneb.SignedBeaconBlockAndBlobsSidecar,
     renderRequestBody: (req) => req.map((root) => toHex(root)).join(","),
     contextBytes: {
       type: ContextBytesType.ForkDigest,

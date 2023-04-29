@@ -1,15 +1,15 @@
-import {pipe} from "it-pipe";
-import {PeerId} from "@libp2p/interface-peer-id";
 import {Stream} from "@libp2p/interface-connection";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {pipe} from "it-pipe";
 import {Uint8ArrayList} from "uint8arraylist";
 import {Logger, TimeoutError, withTimeout} from "@lodestar/utils";
-import {prettyPrintPeerId} from "../utils/index.js";
-import {ProtocolDefinition} from "../types.js";
 import {requestDecode} from "../encoders/requestDecode.js";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
 import {RespStatus} from "../interface.js";
-import {RequestError, RequestErrorCode} from "../request/errors.js";
 import {ReqRespRateLimiter} from "../rate_limiter/ReqRespRateLimiter.js";
+import {RequestError, RequestErrorCode} from "../request/errors.js";
+import {EncodedPayloadIncomingData, PayloadType, Protocol} from "../types.js";
+import {prettyPrintPeerId} from "../utils/index.js";
 import {ResponseError} from "./errors.js";
 
 export {ResponseError};
@@ -21,7 +21,7 @@ export interface HandleRequestOpts<Req, Resp> {
   logger: Logger;
   stream: Stream;
   peerId: PeerId;
-  protocol: ProtocolDefinition<Req, Resp>;
+  protocol: Protocol<Req, Resp>;
   protocolID: string;
   rateLimiter: ReqRespRateLimiter;
   signal?: AbortSignal;
@@ -88,9 +88,28 @@ export async function handleRequest<Req, Resp>({
           );
         }
 
+        let reqPayload:
+          | EncodedPayloadIncomingData<Req>[PayloadType.ssz]
+          | EncodedPayloadIncomingData<Req>[PayloadType.bytes];
+        switch (protocol.payloadType) {
+          case PayloadType.ssz:
+            reqPayload = {type: PayloadType.ssz, data: requestBody};
+            break;
+          case PayloadType.bytes:
+            reqPayload = {
+              type: PayloadType.bytes,
+              // TODO: Find a way to convert the request to bytes
+              bytes: new Uint8Array(),
+            };
+            break;
+          default: {
+            throw new Error(`Unknown payload type ${protocol.payloadType}`);
+          }
+        }
+
         yield* pipe(
-          // TODO: Debug the reason for type conversion here
-          protocol.handler(requestBody, peerId),
+          protocol.handler(protocol, reqPayload, peerId),
+
           // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
           // Note: Not logging on each chunk since after 1 year it hasn't add any value when debugging
           // onChunk(() => logger.debug("Resp sending chunk", logCtx)),

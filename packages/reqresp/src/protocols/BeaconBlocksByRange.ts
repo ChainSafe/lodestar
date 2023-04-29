@@ -1,15 +1,15 @@
 import {MAX_REQUEST_BLOCKS} from "@lodestar/params";
 import {allForks, phase0, ssz} from "@lodestar/types";
-import {ContextBytesType, Encoding, MixedProtocolDefinition, DuplexProtocolDefinitionGenerator} from "../types.js";
+import {ContextBytesType, Encoding, MixedProtocol, ProtocolGenerator} from "../types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 const BeaconBlocksByRangeCommon: Pick<
-  MixedProtocolDefinition<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>,
-  "method" | "encoding" | "requestType" | "renderRequestBody" | "inboundRateLimits"
+  MixedProtocol<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>,
+  "method" | "encoding" | "requestEncoder" | "renderRequestBody" | "inboundRateLimits"
 > = {
   method: "beacon_blocks_by_range",
   encoding: Encoding.SSZ_SNAPPY,
-  requestType: () => ssz.phase0.BeaconBlocksByRangeRequest,
+  requestEncoder: () => ssz.phase0.BeaconBlocksByRangeRequest,
   renderRequestBody: (req) => `${req.startSlot},${req.step},${req.count}`,
   inboundRateLimits: {
     // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
@@ -18,28 +18,32 @@ const BeaconBlocksByRangeCommon: Pick<
   },
 };
 
-export const BeaconBlocksByRange: DuplexProtocolDefinitionGenerator<
-  phase0.BeaconBlocksByRangeRequest,
-  allForks.SignedBeaconBlock
-> = (_modules, handler) => {
+export const BeaconBlocksByRange: ProtocolGenerator<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock> = (
+  _modules,
+  handler,
+  payloadType
+) => {
   return {
     ...BeaconBlocksByRangeCommon,
     version: 1,
     handler,
-    responseType: () => ssz.phase0.SignedBeaconBlock,
+    payloadType,
+    responseEncoder: () => ssz.phase0.SignedBeaconBlock,
     contextBytes: {type: ContextBytesType.Empty},
   };
 };
 
-export const BeaconBlocksByRangeV2: DuplexProtocolDefinitionGenerator<
-  phase0.BeaconBlocksByRangeRequest,
-  allForks.SignedBeaconBlock
-> = (modules, handler) => {
+export const BeaconBlocksByRangeV2: ProtocolGenerator<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock> = (
+  modules,
+  handler,
+  payloadType
+) => {
   return {
     ...BeaconBlocksByRangeCommon,
     version: 2,
     handler,
-    responseType: (forkName) => ssz[forkName].SignedBeaconBlock,
+    payloadType,
+    responseEncoder: (forkName) => ssz[forkName].SignedBeaconBlock,
     contextBytes: {
       type: ContextBytesType.ForkDigest,
       forkDigestContext: modules.config,

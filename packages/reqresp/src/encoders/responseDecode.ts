@@ -7,8 +7,8 @@ import {
   ContextBytesType,
   CONTEXT_BYTES_FORK_DIGEST_LENGTH,
   ContextBytesFactory,
-  TypeSerializer,
-  MixedProtocolDefinition,
+  TypeEncoder,
+  MixedProtocol,
 } from "../types.js";
 import {RespStatus} from "../interface.js";
 
@@ -28,7 +28,7 @@ enum StreamStatus {
  * ```
  */
 export function responseDecode<Resp>(
-  protocol: MixedProtocolDefinition,
+  protocol: MixedProtocol,
   cbs: {
     onFirstHeader: () => void;
     onFirstResponseChunk: () => void;
@@ -63,7 +63,7 @@ export function responseDecode<Resp>(
       }
 
       const forkName = await readContextBytes(protocol.contextBytes, bufferedSource);
-      const type = protocol.responseType(forkName) as TypeSerializer<Resp>;
+      const type = protocol.responseEncoder(forkName) as TypeEncoder<Resp>;
 
       yield await readEncodedPayload<Resp>(bufferedSource, protocol.encoding, type);
 
