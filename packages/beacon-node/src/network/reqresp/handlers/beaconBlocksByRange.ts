@@ -1,13 +1,6 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS} from "@lodestar/params";
-import {
-  ContextBytesType,
-  EncodedPayloadBytes,
-  EncodedPayloadType,
-  ProtocolDescriptor,
-  ResponseError,
-  RespStatus,
-} from "@lodestar/reqresp";
-import {allForks, deneb, phase0} from "@lodestar/types";
+import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
+import {deneb, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -15,31 +8,24 @@ import {IBeaconDb} from "../../../db/index.js";
 // TODO: Unit test
 
 export function onBeaconBlocksByRange(
-  protocol:
-    | ProtocolDescriptor<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>
-    | ProtocolDescriptor<deneb.BlobsSidecarsByRangeRequest, allForks.SignedBeaconBlock>,
   request: phase0.BeaconBlocksByRangeRequest,
   chain: IBeaconChain,
   db: IBeaconDb
-): AsyncIterable<EncodedPayloadBytes> {
-  return onBlocksOrBlobsSidecarsByRange(protocol, request, chain, {
+): AsyncIterable<ResponseOutgoing> {
+  return onBlocksOrBlobsSidecarsByRange(request, chain, {
     finalized: db.blockArchive,
     unfinalized: db.block,
   });
 }
 
 export async function* onBlocksOrBlobsSidecarsByRange(
-  protocol:
-    | ProtocolDescriptor<deneb.BlobsSidecarsByRangeRequest, allForks.SignedBeaconBlock>
-    | ProtocolDescriptor<deneb.BlobsSidecarsByRangeRequest, deneb.SignedBeaconBlockAndBlobsSidecar>
-    | ProtocolDescriptor<deneb.BlobsSidecarsByRangeRequest, deneb.BlobsSidecar>,
   request: deneb.BlobsSidecarsByRangeRequest,
   chain: IBeaconChain,
   db: {
     finalized: Pick<IBeaconDb["blockArchive"], "binaryEntriesStream" | "decodeKey">;
     unfinalized: Pick<IBeaconDb["block"], "getBinary">;
   }
-): AsyncIterable<EncodedPayloadBytes> {
+): AsyncIterable<ResponseOutgoing> {
   const {startSlot, count} = validateBeaconBlocksByRangeRequest(request);
   const endSlot = startSlot + count;
 
@@ -57,15 +43,8 @@ export async function* onBlocksOrBlobsSidecarsByRange(
     // Chain of blobs won't change
     for await (const {key, value} of db.finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
       yield {
-        type: EncodedPayloadType.bytes,
-        bytes: value,
-        contextBytes:
-          protocol.contextBytes.type === ContextBytesType.Empty
-            ? {type: ContextBytesType.Empty}
-            : {
-                type: ContextBytesType.ForkDigest,
-                fork: chain.config.getForkName(db.finalized.decodeKey(key)),
-              },
+        data: value,
+        fork: chain.config.getForkName(db.finalized.decodeKey(key)),
       };
     }
   }
@@ -95,15 +74,8 @@ export async function* onBlocksOrBlobsSidecarsByRange(
         }
 
         yield {
-          type: EncodedPayloadType.bytes,
-          bytes: blockBytes,
-          contextBytes:
-            protocol.contextBytes.type === ContextBytesType.Empty
-              ? {type: ContextBytesType.Empty}
-              : {
-                  type: ContextBytesType.ForkDigest,
-                  fork: chain.config.getForkName(block.slot),
-                },
+          data: blockBytes,
+          fork: chain.config.getForkName(block.slot),
         };
       }
 

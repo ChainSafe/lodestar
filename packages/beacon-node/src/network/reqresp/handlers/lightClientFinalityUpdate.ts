@@ -1,29 +1,17 @@
-import {
-  ContextBytesType,
-  EncodedPayloadBytes,
-  EncodedPayloadType,
-  ProtocolDescriptor,
-  RespStatus,
-  ResponseError,
-} from "@lodestar/reqresp";
-import {allForks} from "@lodestar/types";
+import {ResponseOutgoing, RespStatus, ResponseError} from "@lodestar/reqresp";
 import {IBeaconChain} from "../../../chain/index.js";
+import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 
-export async function* onLightClientFinalityUpdate(
-  protocol: ProtocolDescriptor<null, allForks.LightClientFinalityUpdate>,
-  chain: IBeaconChain
-): AsyncIterable<EncodedPayloadBytes> {
-  const finalityUpdate = chain.lightClientServer.getFinalityUpdate();
-  if (finalityUpdate === null) {
+export async function* onLightClientFinalityUpdate(chain: IBeaconChain): AsyncIterable<ResponseOutgoing> {
+  const update = chain.lightClientServer.getFinalityUpdate();
+  if (update === null) {
     throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "No latest finality update available");
   } else {
+    const fork = chain.config.getForkName(update.signatureSlot);
+    const type = responseSszTypeByMethod[ReqRespMethod.LightClientFinalityUpdate](fork, 0);
     yield {
-      type: EncodedPayloadType.bytes,
-      bytes: protocol.responseType(chain.config.getForkName(chain.clock.currentSlot)).serialize(finalityUpdate),
-      contextBytes: {
-        type: ContextBytesType.ForkDigest,
-        fork: chain.config.getForkName(chain.clock.currentSlot),
-      },
+      data: type.serialize(update),
+      fork,
     };
   }
 }

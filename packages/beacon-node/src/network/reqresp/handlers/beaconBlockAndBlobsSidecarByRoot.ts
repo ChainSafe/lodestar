@@ -1,4 +1,4 @@
-import {ContextBytesType, EncodedPayloadBytes, EncodedPayloadType, ProtocolDescriptor} from "@lodestar/reqresp";
+import {ResponseOutgoing} from "@lodestar/reqresp";
 import {deneb} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -6,11 +6,10 @@ import {IBeaconDb} from "../../../db/index.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
 
 export async function* onBeaconBlockAndBlobsSidecarByRoot(
-  _protocol: ProtocolDescriptor<deneb.BeaconBlockAndBlobsSidecarByRootRequest, deneb.SignedBeaconBlockAndBlobsSidecar>,
   requestBody: deneb.BeaconBlockAndBlobsSidecarByRootRequest,
   chain: IBeaconChain,
   db: IBeaconDb
-): AsyncIterable<EncodedPayloadBytes> {
+): AsyncIterable<ResponseOutgoing> {
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
 
   for (const blockRoot of requestBody) {
@@ -40,15 +39,10 @@ export async function* onBeaconBlockAndBlobsSidecarByRoot(
     if (forkSlot === null) {
       throw Error(`Invalid block bytes for block ${blockRootHex}`);
     }
-    const fork = chain.config.getForkName(forkSlot);
 
     yield {
-      type: EncodedPayloadType.bytes,
-      bytes: signedBeaconBlockAndBlobsSidecarFromBytes(blockBytes, blobsSidecarBytes),
-      contextBytes: {
-        type: ContextBytesType.ForkDigest,
-        fork,
-      },
+      data: signedBeaconBlockAndBlobsSidecarFromBytes(blockBytes, blobsSidecarBytes),
+      fork: chain.config.getForkName(forkSlot),
     };
   }
 }

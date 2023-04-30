@@ -46,7 +46,6 @@ import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache.js"
 import {CheckpointBalancesCache} from "../../../../src/chain/balancesCache.js";
 import {IChainOptions} from "../../../../src/chain/options.js";
 import {BlockAttributes} from "../../../../src/chain/produceBlock/produceBlockBody.js";
-import {ReqRespBlockResponse} from "../../../../src/network/index.js";
 import {SeenAttestationDatas} from "../../../../src/chain/seenCache/seenAttestationData.js";
 import {IExecutionBuilder} from "../../../../src/execution/index.js";
 
@@ -187,10 +186,6 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   async getCanonicalBlockAtSlot(): Promise<allForks.SignedBeaconBlock> {
-    throw Error("Not implemented");
-  }
-
-  async getUnfinalizedBlocksAtSlots(): Promise<ReqRespBlockResponse[]> {
     throw Error("Not implemented");
   }
 

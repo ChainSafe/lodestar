@@ -1,17 +1,23 @@
+import {ResponseIncoming} from "@lodestar/reqresp";
 import {allForks, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
+import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 
 /**
  * Asserts a response from BeaconBlocksByRange respects the request and is sequential
  * Note: MUST allow missing block for skipped slots.
  */
 export async function collectSequentialBlocksInRange(
-  blockStream: AsyncIterable<allForks.SignedBeaconBlock>,
+  blockStream: AsyncIterable<ResponseIncoming>,
   {count, startSlot}: Pick<phase0.BeaconBlocksByRangeRequest, "count" | "startSlot">
 ): Promise<allForks.SignedBeaconBlock[]> {
   const blocks: allForks.SignedBeaconBlock[] = [];
 
-  for await (const block of blockStream) {
+  for await (const chunk of blockStream) {
+    const blockType = responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRange](chunk.fork, chunk.protocolVersion);
+    // TODO: Wrap
+    const block = blockType.deserialize(chunk.data);
+
     const blockSlot = block.message.slot;
 
     // Note: step is deprecated and assumed to be 1

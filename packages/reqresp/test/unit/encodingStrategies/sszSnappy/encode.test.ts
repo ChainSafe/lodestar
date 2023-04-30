@@ -3,19 +3,13 @@ import all from "it-all";
 import {pipe} from "it-pipe";
 import varint from "varint";
 import {writeSszSnappyPayload} from "../../../../src/encodingStrategies/sszSnappy/encode.js";
-import {EncodedPayload, EncodedPayloadType} from "../../../../src/types.js";
-import {
-  encodingStrategiesEncodingErrorCases,
-  encodingStrategiesMainnetTestCases,
-  encodingStrategiesTestCases,
-} from "../../../fixtures/index.js";
-import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {encodingStrategiesMainnetTestCases, encodingStrategiesTestCases} from "../../../fixtures/index.js";
 import {expectEqualByteChunks} from "../../../utils/index.js";
 
 describe("encodingStrategies / sszSnappy / encode", () => {
-  for (const {id, type, sszPayload: payload, chunks} of encodingStrategiesTestCases) {
+  for (const {id, binaryPayload, chunks} of encodingStrategiesTestCases) {
     it(id, async () => {
-      const encodedChunks = await pipe(writeSszSnappyPayload(payload as EncodedPayload<unknown>, type), all);
+      const encodedChunks = await pipe(writeSszSnappyPayload(binaryPayload.data), all);
       expectEqualByteChunks(
         encodedChunks as Uint8Array[],
         chunks.map((c) => c.subarray())
@@ -24,23 +18,14 @@ describe("encodingStrategies / sszSnappy / encode", () => {
   }
 
   describe("mainnet cases", () => {
-    for (const {id, payload, type: serializer, streamedBody} of encodingStrategiesMainnetTestCases) {
+    for (const {id, payload, streamedBody} of encodingStrategiesMainnetTestCases) {
       it(id, async () => {
-        const bodySize =
-          payload.type === EncodedPayloadType.ssz ? serializer.serialize(payload.data).length : payload.bytes.length;
+        const bodySize = payload.data.length;
 
-        const encodedChunks = await pipe(writeSszSnappyPayload(payload, serializer), all);
+        const encodedChunks = await pipe(writeSszSnappyPayload(payload.data), all);
         const encodedStream = Buffer.concat(encodedChunks as Uint8Array[]);
         const expectedStreamed = Buffer.concat([Buffer.from(varint.encode(bodySize)), streamedBody]);
         expect(encodedStream).to.be.deep.equal(expectedStreamed);
-      });
-    }
-  });
-
-  describe("error cases", () => {
-    for (const {id, type, payload, error} of encodingStrategiesEncodingErrorCases) {
-      it(id, async () => {
-        await expectRejectedWithLodestarError(pipe(writeSszSnappyPayload(payload, type), all), error);
       });
     }
   });

@@ -3,10 +3,9 @@ import {Libp2p} from "libp2p";
 import sinon from "sinon";
 import {Logger} from "@lodestar/utils";
 import {RespStatus} from "../../src/interface.js";
-import {Ping} from "../../src/protocols/Ping.js";
 import {ReqResp} from "../../src/ReqResp.js";
-import {sszSnappyPing} from "../fixtures/messages.js";
-import {numberToStringProtocol, numberToStringProtocolHandler} from "../fixtures/protocols.js";
+import {getEmptyHandler, sszSnappyPing} from "../fixtures/messages.js";
+import {numberToStringProtocol, numberToStringProtocolDialOnly, pingProtocol} from "../fixtures/protocols.js";
 import {createStubbedLogger} from "../mocks/logger.js";
 import {MockLibP2pStream} from "../utils/index.js";
 import {responseEncode} from "../utils/response.js";
@@ -15,6 +14,7 @@ describe("ResResp", () => {
   let reqresp: ReqResp;
   let libp2p: Libp2p;
   let logger: Logger;
+  const ping = pingProtocol(getEmptyHandler());
 
   beforeEach(() => {
     libp2p = {
@@ -27,9 +27,9 @@ describe("ResResp", () => {
                 payload: sszSnappyPing.binaryPayload,
               },
             ],
-            Ping({} as never, sinon.stub())
+            ping
           ),
-          Ping({} as never, sinon.stub()).method
+          ping.method
         )
       ),
       handle: sinon.spy(),
@@ -46,8 +46,7 @@ describe("ResResp", () => {
 
   describe("dial only protocol", () => {
     it("should register protocol and dial", async () => {
-      const protocol = numberToStringProtocol({config: {} as never});
-      reqresp.registerDialOnlyProtocol(protocol);
+      reqresp.registerDialOnlyProtocol(numberToStringProtocolDialOnly);
 
       expect(reqresp.getRegisteredProtocols()).to.eql(["/eth2/beacon_chain/req/number_to_string/1/ssz_snappy"]);
       expect((libp2p.handle as sinon.SinonSpy).calledOnce).to.be.false;
@@ -56,8 +55,7 @@ describe("ResResp", () => {
 
   describe("duplex protocol", () => {
     it("should register protocol and dial", async () => {
-      const protocol = numberToStringProtocol({config: {} as never}, numberToStringProtocolHandler);
-      await reqresp.registerProtocol(protocol);
+      await reqresp.registerProtocol(numberToStringProtocol);
 
       expect(reqresp.getRegisteredProtocols()).to.eql(["/eth2/beacon_chain/req/number_to_string/1/ssz_snappy"]);
       expect((libp2p.handle as sinon.SinonSpy).calledOnce).to.be.true;

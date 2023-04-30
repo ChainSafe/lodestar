@@ -3,83 +3,85 @@ import {LodestarError} from "@lodestar/utils";
 import {SszSnappyError, SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/index.js";
 import {ResponseError} from "../../src/index.js";
 import {RespStatus} from "../../src/interface.js";
-import {EncodedPayloadBytes, MixedProtocol} from "../../src/types.js";
+import {ContextBytesType, MixedProtocol, ResponseIncoming} from "../../src/types.js";
 import {fromHexBuf} from "../utils/index.js";
 import {
   beaconConfig,
-  protocols,
+  getEmptyHandler,
   sszSnappyAltairMetadata,
   sszSnappyPhase0Metadata,
   sszSnappyPing,
   sszSnappySignedBeaconBlockAltair,
   sszSnappySignedBeaconBlockPhase0,
 } from "./messages.js";
+import {customProtocol, pingProtocol} from "./protocols.js";
+
+const pingNoHandler = pingProtocol(getEmptyHandler());
 
 export const requestEncodersCases: {
   id: string;
-  protocol: MixedProtocol<any, any>;
+  protocol: MixedProtocol;
   chunks: Uint8Array[];
-  requestBody: unknown;
+  requestBody: Uint8Array;
 }[] = [
   {
     id: "No body on Metadata",
-    protocol: protocols.metadata,
+    protocol: customProtocol({noRequest: true}),
     chunks: [],
-    requestBody: null,
+    requestBody: new Uint8Array(),
   },
   {
     id: "Regular request",
-    protocol: protocols.ping,
+    protocol: pingNoHandler,
     chunks: sszSnappyPing.chunks,
-    requestBody: sszSnappyPing.sszPayload.data,
+    requestBody: sszSnappyPing.binaryPayload.data,
   },
 ];
 
 export const requestEncodersErrorCases: {
   id: string;
-  protocol: MixedProtocol<any, any>;
+  protocol: MixedProtocol;
   chunks: Uint8Array[];
   requestBody: unknown;
-  errorEncode?: LodestarError<any>;
-  errorDecode?: LodestarError<any>;
+  errorDecode: LodestarError<any>;
 }[] = [
   {
     id: "Bad body",
-    protocol: protocols.status,
+    protocol: customProtocol({requestMinSize: 84}),
     chunks: [Buffer.from("4")],
     requestBody: null,
     errorDecode: new SszSnappyError({code: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE, minSize: 84, sszDataLength: 52}),
   },
   {
     id: "No body on Status",
-    protocol: protocols.status,
+    protocol: customProtocol({}),
     chunks: [],
     requestBody: null,
     errorDecode: new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED}),
   },
 ];
 
-export type SuccessResponseChunk = {status: RespStatus.SUCCESS; payload: EncodedPayloadBytes};
+export type SuccessResponseChunk = {status: RespStatus.SUCCESS; payload: ResponseIncoming};
 export type ErrorResponseChunk = {status: Exclude<RespStatus, RespStatus.SUCCESS>; errorMessage: string};
 
 export type ResponseChunk = SuccessResponseChunk | ErrorResponseChunk;
 
 export const responseEncodersTestCases: {
   id: string;
-  protocol: MixedProtocol<any, any>;
+  protocol: MixedProtocol;
   chunks: Uint8Array[];
   responseChunks: ResponseChunk[];
   skipEncoding?: boolean;
 }[] = [
   {
     id: "No chunks should be ok",
-    protocol: protocols.ping,
+    protocol: pingNoHandler,
     responseChunks: [],
     chunks: [],
   },
   {
     id: "phase0 metadata",
-    protocol: protocols.metadata,
+    protocol: customProtocol({}),
     responseChunks: [
       {
         status: RespStatus.SUCCESS,
@@ -95,7 +97,7 @@ export const responseEncodersTestCases: {
   },
   {
     id: "altair metadata",
-    protocol: protocols.metadataV2,
+    protocol: customProtocol({version: 2}),
     responseChunks: [
       {
         status: RespStatus.SUCCESS,
@@ -111,11 +113,11 @@ export const responseEncodersTestCases: {
   },
   {
     id: "block v1 without <context-bytes>",
-    protocol: protocols.blocksByRange,
+    protocol: customProtocol({contextBytesType: ContextBytesType.Empty, version: 1}),
     responseChunks: [
       {
         status: RespStatus.SUCCESS,
-        payload: sszSnappySignedBeaconBlockPhase0.binaryPayload,
+        payload: {...sszSnappySignedBeaconBlockPhase0.binaryPayload, protocolVersion: 1},
       },
     ],
     chunks: [
@@ -127,7 +129,7 @@ export const responseEncodersTestCases: {
   },
   {
     id: "block v2 with <context-bytes> phase0",
-    protocol: protocols.blocksByRangeV2,
+    protocol: customProtocol({contextBytesType: ContextBytesType.ForkDigest, version: 2}),
     responseChunks: [{status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockPhase0.binaryPayload}],
     chunks: [
       // <result>
@@ -140,7 +142,7 @@ export const responseEncodersTestCases: {
   },
   {
     id: "block v2 with <context-bytes> altair",
-    protocol: protocols.blocksByRangeV2,
+    protocol: customProtocol({contextBytesType: ContextBytesType.ForkDigest, version: 2}),
     responseChunks: [{status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockAltair.binaryPayload}],
     chunks: [
       // <result>
@@ -153,7 +155,7 @@ export const responseEncodersTestCases: {
   },
   {
     id: "Multiple chunks with success",
-    protocol: protocols.ping,
+    protocol: pingNoHandler,
     responseChunks: [
       {status: RespStatus.SUCCESS, payload: sszSnappyPing.binaryPayload},
       {status: RespStatus.SUCCESS, payload: sszSnappyPing.binaryPayload},
@@ -169,7 +171,7 @@ export const responseEncodersTestCases: {
   },
   {
     id: "Decode successfully response_chunk as a single Uint8ArrayList",
-    protocol: protocols.ping,
+    protocol: pingNoHandler,
     responseChunks: [
       {status: RespStatus.SUCCESS, payload: sszSnappyPing.binaryPayload},
       {status: RespStatus.SUCCESS, payload: sszSnappyPing.binaryPayload},
@@ -186,7 +188,7 @@ export const responseEncodersTestCases: {
   },
   {
     id: "Decode successfully response_chunk as a single concated chunk",
-    protocol: protocols.ping,
+    protocol: pingNoHandler,
     responseChunks: [
       {status: RespStatus.SUCCESS, payload: sszSnappyPing.binaryPayload},
       {status: RespStatus.SUCCESS, payload: sszSnappyPing.binaryPayload},
@@ -202,7 +204,7 @@ export const responseEncodersTestCases: {
   },
   {
     id: "Decode blocks v2 through a fork with multiple types",
-    protocol: protocols.blocksByRangeV2,
+    protocol: customProtocol({contextBytesType: ContextBytesType.ForkDigest, version: 2}),
     responseChunks: [
       {status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockPhase0.binaryPayload},
       {status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockAltair.binaryPayload},
@@ -222,7 +224,7 @@ export const responseEncodersTestCases: {
 
 export const responseEncodersErrorTestCases: {
   id: string;
-  protocol: MixedProtocol<any, any>;
+  protocol: MixedProtocol;
   chunks?: Uint8Array[];
   responseChunks?: ResponseChunk[];
   // decode only
@@ -232,14 +234,14 @@ export const responseEncodersErrorTestCases: {
 }[] = [
   {
     id: "Empty response chunk - Error",
-    protocol: protocols.ping,
+    protocol: pingNoHandler,
     decodeError: new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED}),
     chunks: [Buffer.from([RespStatus.SUCCESS])],
     // Not possible to encode this invalid case
   },
   {
     id: "block v2 with <context-bytes> altair",
-    protocol: protocols.blocksByRange,
+    protocol: customProtocol({contextBytesType: ContextBytesType.ForkDigest, version: 2}),
     responseChunks: [{status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockAltair.binaryPayload}],
     chunks: [
       // <result>
@@ -252,7 +254,7 @@ export const responseEncodersErrorTestCases: {
   },
   {
     id: "Multiple chunks with final error, should error",
-    protocol: protocols.ping,
+    protocol: pingNoHandler,
     decodeError: new ResponseError(RespStatus.SERVER_ERROR, ""),
     responseChunks: [
       {status: RespStatus.SUCCESS, payload: sszSnappyPing.binaryPayload},
@@ -272,21 +274,21 @@ export const responseEncodersErrorTestCases: {
   },
   {
     id: "INVALID_REQUEST - no error message",
-    protocol: protocols.ping,
+    protocol: pingNoHandler,
     decodeError: new ResponseError(RespStatus.INVALID_REQUEST, ""),
     chunks: [Buffer.from([RespStatus.INVALID_REQUEST])],
     responseChunks: [{status: RespStatus.INVALID_REQUEST, errorMessage: ""}],
   },
   {
     id: "SERVER_ERROR -  no error message",
-    protocol: protocols.ping,
+    protocol: pingNoHandler,
     decodeError: new ResponseError(RespStatus.SERVER_ERROR, ""),
     chunks: [Buffer.from([RespStatus.SERVER_ERROR])],
     responseChunks: [{status: RespStatus.SERVER_ERROR, errorMessage: ""}],
   },
   {
     id: "SERVER_ERROR - with error message",
-    protocol: protocols.ping,
+    protocol: pingNoHandler,
     decodeError: new ResponseError(RespStatus.SERVER_ERROR, "sNaPpYIzTEST_ERROR"),
     chunks: [
       Buffer.from([RespStatus.SERVER_ERROR]),
@@ -298,13 +300,13 @@ export const responseEncodersErrorTestCases: {
   // This last two error cases are not possible to encode since are invalid. Test decoding only
   {
     id: "SERVER_ERROR - Slice long error message",
-    protocol: protocols.ping,
+    protocol: pingNoHandler,
     decodeError: new ResponseError(RespStatus.SERVER_ERROR, "TEST_ERROR".padEnd(512, "0").slice(0, 256)),
     chunks: [Buffer.from([RespStatus.SERVER_ERROR]), Buffer.from("TEST_ERROR".padEnd(512, "0"))],
   },
   {
     id: "SERVER_ERROR - Remove non-ascii characters from error message",
-    protocol: protocols.ping,
+    protocol: pingNoHandler,
     decodeError: new ResponseError(RespStatus.SERVER_ERROR, "TEST_ERROR"),
     chunks: [Buffer.from([RespStatus.SERVER_ERROR]), Buffer.from("TEST_ERROR\u03A9")],
   },

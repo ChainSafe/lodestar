@@ -5,17 +5,16 @@ import {expect} from "chai";
 import {Libp2p} from "libp2p";
 import sinon from "sinon";
 import {Logger, LodestarError, sleep} from "@lodestar/utils";
-import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "../../../src/request/index.js";
-import {Protocol, Encoding, MixedProtocol, EncodedPayloadType, ContextBytesType} from "../../../src/types.js";
-import {protocols, sszSnappyPing, sszSnappySignedBeaconBlockPhase0} from "../../fixtures/messages.js";
+import {Protocol, MixedProtocol, ResponseIncoming} from "../../../src/types.js";
+import {getEmptyHandler, sszSnappyPing} from "../../fixtures/messages.js";
 import {createStubbedLogger} from "../../mocks/logger.js";
 import {getValidPeerId} from "../../utils/peer.js";
 import {MockLibP2pStream} from "../../utils/index.js";
 import {responseEncode} from "../../utils/response.js";
 import {RespStatus} from "../../../src/interface.js";
-import {RequestErrorMetadata} from "../../../src/index.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
+import {pingProtocol} from "../../fixtures/protocols.js";
 
 describe("request / sendRequest", () => {
   let controller: AbortController;
@@ -23,26 +22,29 @@ describe("request / sendRequest", () => {
   let peerId: PeerId;
   let libp2p: Libp2p;
   const sandbox = sinon.createSandbox();
+  const emptyProtocol = pingProtocol(getEmptyHandler());
+  const EMPTY_REQUEST = new Uint8Array();
 
   const testCases: {
     id: string;
-    protocols: MixedProtocol<any, any>[];
-    requestBody: unknown;
+    protocols: MixedProtocol[];
+    requestBody: ResponseIncoming;
     maxResponses?: number;
     expectedReturn: unknown[];
   }[] = [
     {
       id: "Return first chunk only for a single-chunk method",
-      protocols: [protocols.ping],
-      requestBody: sszSnappyPing.sszPayload.data,
-      expectedReturn: [sszSnappyPing.sszPayload.data],
+      protocols: [emptyProtocol],
+      requestBody: sszSnappyPing.binaryPayload,
+      expectedReturn: [sszSnappyPing.binaryPayload],
     },
-    {
-      id: "Return up to maxResponses for a multi-chunk method",
-      protocols: [protocols.blocksByRange],
-      requestBody: sszSnappySignedBeaconBlockPhase0.sszPayload.data,
-      expectedReturn: [sszSnappySignedBeaconBlockPhase0.sszPayload.data],
-    },
+    // limit to max responses is no longer the responsability of this package
+    // {
+    //   id: "Return up to maxResponses for a multi-chunk method",
+    //   protocols: [customProtocol({})],
+    //   requestBody: sszSnappySignedBeaconBlockPhase0.binaryPayload,
+    //   expectedReturn: [sszSnappySignedBeaconBlockPhase0.binaryPayload],
+    // },
   ];
 
   beforeEach(() => {
@@ -59,24 +61,14 @@ describe("request / sendRequest", () => {
   for (const {id, protocols, expectedReturn, requestBody} of testCases) {
     it(id, async () => {
       libp2p = {
-        dialProtocol: sinon.stub().resolves(
-          new MockLibP2pStream(
-            responseEncode(
-              [
-                {
-                  status: RespStatus.SUCCESS,
-                  payload: {
-                    type: EncodedPayloadType.bytes,
-                    bytes: protocols[0].responseType(ForkName.altair).serialize(requestBody),
-                    contextBytes: {type: ContextBytesType.Empty},
-                  },
-                },
-              ],
-              protocols[0] as Protocol<any, any>
-            ),
-            protocols[0].method
-          )
-        ),
+        dialProtocol: sinon
+          .stub()
+          .resolves(
+            new MockLibP2pStream(
+              responseEncode([{status: RespStatus.SUCCESS, payload: requestBody}], protocols[0] as Protocol),
+              protocols[0].method
+            )
+          ),
       } as unknown as Libp2p;
 
       const responses = await pipe(
@@ -85,7 +77,7 @@ describe("request / sendRequest", () => {
           peerId,
           protocols,
           protocols.map((p) => p.method),
-          requestBody,
+          EMPTY_REQUEST,
           controller.signal
         ),
         all
@@ -96,11 +88,7 @@ describe("request / sendRequest", () => {
 
   describe("timeout cases", () => {
     const peerId = getValidPeerId();
-    const metadata: RequestErrorMetadata = {
-      method: protocols.ping.method,
-      encoding: Encoding.SSZ_SNAPPY,
-      peer: peerId.toString(),
-    };
+    const testMethod = "req/test";
 
     const timeoutTestCases: {
       id: string;
@@ -115,7 +103,7 @@ describe("request / sendRequest", () => {
           await sleep(30); // Pause for too long before first byte
           yield sszSnappyPing.chunks[0];
         },
-        error: new RequestError({code: RequestErrorCode.TTFB_TIMEOUT}, metadata),
+        error: new RequestError({code: RequestErrorCode.TTFB_TIMEOUT}),
       },
       {
         id: "trigger a RESP_TIMEOUT",
@@ -125,7 +113,7 @@ describe("request / sendRequest", () => {
           await sleep(30); // Pause for too long after first byte
           yield sszSnappyPing.chunks[1];
         },
-        error: new RequestError({code: RequestErrorCode.RESP_TIMEOUT}, metadata),
+        error: new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
       },
       {
         // Upstream "abortable-iterator" never throws with an infinite sleep.
@@ -135,7 +123,7 @@ describe("request / sendRequest", () => {
           await sleep(100000, controller.signal);
           yield sszSnappyPing.chunks[0];
         },
-        error: new RequestError({code: RequestErrorCode.TTFB_TIMEOUT}, metadata),
+        error: new RequestError({code: RequestErrorCode.TTFB_TIMEOUT}),
       },
       {
         id: "Infinite sleep on second chunk",
@@ -144,14 +132,14 @@ describe("request / sendRequest", () => {
           yield sszSnappyPing.chunks[0];
           await sleep(100000, controller.signal);
         },
-        error: new RequestError({code: RequestErrorCode.RESP_TIMEOUT}, metadata),
+        error: new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
       },
     ];
 
     for (const {id, source, opts, error} of timeoutTestCases) {
       it(id, async () => {
         libp2p = {
-          dialProtocol: sinon.stub().resolves(new MockLibP2pStream(source(), protocols.ping.method)),
+          dialProtocol: sinon.stub().resolves(new MockLibP2pStream(source(), testMethod)),
         } as unknown as Libp2p;
 
         await expectRejectedWithLodestarError(
@@ -159,9 +147,9 @@ describe("request / sendRequest", () => {
             sendRequest(
               {logger, libp2p},
               peerId,
-              [protocols.ping as MixedProtocol],
-              [protocols.ping.method],
-              sszSnappyPing.sszPayload.data,
+              [emptyProtocol],
+              [testMethod],
+              EMPTY_REQUEST,
               controller.signal,
               opts
             ),

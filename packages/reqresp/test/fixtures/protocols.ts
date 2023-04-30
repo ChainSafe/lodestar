@@ -1,13 +1,9 @@
+import {ssz} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 import {ContainerType, UintNumberType, ListBasicType, ValueOf} from "@chainsafe/ssz";
-import {
-  ContextBytesType,
-  DialOnlyProtocol,
-  EncodedPayloadBytes,
-  EncodedPayloadType,
-  Encoding,
-  MixedProtocolGenerator,
-  ProtocolHandler,
-} from "../../src/types.js";
+import {ContextBytesType, DialOnlyProtocol, Encoding, ProtocolHandler, Protocol} from "../../src/types.js";
+import {getEmptyHandler} from "./messages.js";
+import {beaconConfig} from "./messages.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const NumToStrReq = new ContainerType(
@@ -28,36 +24,59 @@ const NumToStrResp = new ContainerType(
 );
 export type NumToStrRespType = ValueOf<typeof NumToStrResp>;
 
-export const numberToStringProtocol: MixedProtocolGenerator<NumToStrReqType, NumToStrRespType> = ((
-  _modules,
-  handler
-) => {
-  const dialProtocol: DialOnlyProtocol<NumToStrReqType, NumToStrRespType> = {
-    method: "number_to_string",
+export const numberToStringProtocolDialOnly: DialOnlyProtocol = {
+  method: "number_to_string",
+  version: 1,
+  encoding: Encoding.SSZ_SNAPPY,
+  contextBytes: {type: ContextBytesType.Empty},
+  requestSizes: {minSize: 0, maxSize: Infinity},
+  responseSizes: () => ({minSize: 0, maxSize: Infinity}),
+};
+
+export const numberToStringProtocol: Protocol = {
+  ...numberToStringProtocolDialOnly,
+  inboundRateLimits: {
+    // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
+    byPeer: {quota: 5, quotaTimeMs: 15_000},
+  },
+  handler: async function* handler(req) {
+    yield {
+      data: Buffer.from(req.data.toString(), "utf8"),
+      fork: ForkName.phase0,
+    };
+  },
+};
+
+export function pingProtocol(handler: ProtocolHandler): Protocol {
+  return {
+    handler,
+    requestSizes: ssz.phase0.Ping,
+    responseSizes: () => ssz.phase0.Ping,
+    contextBytes: {type: ContextBytesType.Empty},
+    method: "ping",
     version: 1,
     encoding: Encoding.SSZ_SNAPPY,
-    requestType: () => NumToStrReq,
-    responseType: () => NumToStrResp,
-    contextBytes: {type: ContextBytesType.Empty},
   };
+}
 
-  if (!handler) return dialProtocol;
+type ProtocolOptions = {
+  requestMinSize?: number;
+  contextBytesType?: ContextBytesType;
+  noRequest?: boolean;
+  version?: number;
+};
 
+export function customProtocol(opts: ProtocolOptions): Protocol {
   return {
-    ...dialProtocol,
-    handler,
-    inboundRateLimits: {
-      // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
-      byPeer: {quota: 5, quotaTimeMs: 15_000},
-    },
+    handler: getEmptyHandler(),
+    requestSizes: opts.noRequest ? null : {minSize: opts.requestMinSize ?? 0, maxSize: Infinity},
+    responseSizes: () => ({minSize: 0, maxSize: Infinity}),
+    contextBytes:
+      opts.contextBytesType === ContextBytesType.ForkDigest
+        ? {type: ContextBytesType.ForkDigest, forkDigestContext: beaconConfig}
+        : {type: ContextBytesType.Empty},
+    method: "req/test",
+    version: opts.version ?? 1,
+    encoding: Encoding.SSZ_SNAPPY,
   };
-}) as MixedProtocolGenerator<NumToStrReqType, NumToStrRespType>;
-
-export const numberToStringProtocolHandler: ProtocolHandler<NumToStrReqType, NumToStrRespType> =
-  async function* numberToStringProtocolHandler(_protocol, req): AsyncIterable<EncodedPayloadBytes> {
-    yield {
-      type: EncodedPayloadType.bytes,
-      bytes: Buffer.from(req.value.toString(), "utf-8"),
-      contextBytes: {type: ContextBytesType.Empty},
-    };
-  };
+}

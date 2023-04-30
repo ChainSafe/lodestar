@@ -1,5 +1,6 @@
-import {HandlerTypeFromMessage} from "@lodestar/reqresp";
-import * as protocols from "@lodestar/reqresp/protocols";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {phase0, ssz} from "@lodestar/types";
+import {ProtocolHandler, ResponseOutgoing} from "@lodestar/reqresp";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
@@ -13,15 +14,15 @@ import {onLightClientUpdatesByRange} from "./lightClientUpdatesByRange.js";
 import {onStatus} from "./status.js";
 
 export interface ReqRespHandlers {
-  onStatus: HandlerTypeFromMessage<typeof protocols.Status>;
-  onBeaconBlocksByRange: HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>;
-  onBeaconBlocksByRoot: HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRoot>;
-  onBeaconBlockAndBlobsSidecarByRoot: HandlerTypeFromMessage<typeof protocols.BeaconBlockAndBlobsSidecarByRoot>;
-  onBlobsSidecarsByRange: HandlerTypeFromMessage<typeof protocols.BlobsSidecarsByRange>;
-  onLightClientBootstrap: HandlerTypeFromMessage<typeof protocols.LightClientBootstrap>;
-  onLightClientUpdatesByRange: HandlerTypeFromMessage<typeof protocols.LightClientUpdatesByRange>;
-  onLightClientFinalityUpdate: HandlerTypeFromMessage<typeof protocols.LightClientFinalityUpdate>;
-  onLightClientOptimisticUpdate: HandlerTypeFromMessage<typeof protocols.LightClientOptimisticUpdate>;
+  onStatus: (req: phase0.Status, peerId: PeerId) => AsyncIterable<ResponseOutgoing>;
+  onBeaconBlocksByRange: ProtocolHandler;
+  onBeaconBlocksByRoot: ProtocolHandler;
+  onBeaconBlockAndBlobsSidecarByRoot: ProtocolHandler;
+  onBlobsSidecarsByRange: ProtocolHandler;
+  onLightClientBootstrap: ProtocolHandler;
+  onLightClientUpdatesByRange: ProtocolHandler;
+  onLightClientFinalityUpdate: ProtocolHandler;
+  onLightClientOptimisticUpdate: ProtocolHandler;
 }
 /**
  * The ReqRespHandler module handles app-level requests / responses from other peers,
@@ -29,32 +30,38 @@ export interface ReqRespHandlers {
  */
 export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconChain}): ReqRespHandlers {
   return {
-    async *onStatus(protocol) {
-      yield* onStatus(protocol, chain);
+    async *onStatus() {
+      yield* onStatus(chain);
     },
-    async *onBeaconBlocksByRange(protocol, req) {
-      yield* onBeaconBlocksByRange(protocol, req, chain, db);
+    async *onBeaconBlocksByRange(req) {
+      const body = ssz.phase0.BeaconBlocksByRangeRequest.deserialize(req.data);
+      yield* onBeaconBlocksByRange(body, chain, db);
     },
-    async *onBeaconBlocksByRoot(protocol, req) {
-      yield* onBeaconBlocksByRoot(protocol, req, chain, db);
+    async *onBeaconBlocksByRoot(req) {
+      const body = ssz.phase0.BeaconBlocksByRootRequest.deserialize(req.data);
+      yield* onBeaconBlocksByRoot(body, chain, db);
     },
-    async *onBeaconBlockAndBlobsSidecarByRoot(protocol, req) {
-      yield* onBeaconBlockAndBlobsSidecarByRoot(protocol, req, chain, db);
+    async *onBeaconBlockAndBlobsSidecarByRoot(req) {
+      const body = ssz.deneb.BeaconBlockAndBlobsSidecarByRootRequest.deserialize(req.data);
+      yield* onBeaconBlockAndBlobsSidecarByRoot(body, chain, db);
     },
-    async *onBlobsSidecarsByRange(protocol, req) {
-      yield* onBlobsSidecarsByRange(protocol, req, chain, db);
+    async *onBlobsSidecarsByRange(req) {
+      const body = ssz.deneb.BlobsSidecarsByRangeRequest.deserialize(req.data);
+      yield* onBlobsSidecarsByRange(body, chain, db);
     },
-    async *onLightClientBootstrap(protocol, req) {
-      yield* onLightClientBootstrap(protocol, req, chain);
+    async *onLightClientBootstrap(req) {
+      const body = ssz.Root.deserialize(req.data);
+      yield* onLightClientBootstrap(body, chain);
     },
-    async *onLightClientUpdatesByRange(protocol, req) {
-      yield* onLightClientUpdatesByRange(protocol, req, chain);
+    async *onLightClientUpdatesByRange(req) {
+      const body = ssz.altair.LightClientUpdatesByRange.deserialize(req.data);
+      yield* onLightClientUpdatesByRange(body, chain);
     },
-    async *onLightClientFinalityUpdate(protocol) {
-      yield* onLightClientFinalityUpdate(protocol, chain);
+    async *onLightClientFinalityUpdate() {
+      yield* onLightClientFinalityUpdate(chain);
     },
-    async *onLightClientOptimisticUpdate(protocol) {
-      yield* onLightClientOptimisticUpdate(protocol, chain);
+    async *onLightClientOptimisticUpdate() {
+      yield* onLightClientOptimisticUpdate(chain);
     },
   };
 }

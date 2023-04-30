@@ -13,6 +13,7 @@ import {
   ReqRespRateLimiterOpts,
   Protocol,
   ProtocolDescriptor,
+  ResponseIncoming,
 } from "./types.js";
 import {formatProtocolID} from "./utils/protocolId.js";
 import {ReqRespRateLimiter} from "./rate_limiter/ReqRespRateLimiter.js";
@@ -60,7 +61,7 @@ export class ReqResp {
   // Use any to avoid TS error on registering protocol
   // Type 'unknown' is not assignable to type 'Resp'
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private readonly registeredProtocols = new Map<ProtocolID, MixedProtocol<any, any>>();
+  private readonly registeredProtocols = new Map<ProtocolID, MixedProtocol>();
   private readonly dialOnlyProtocols = new Map<ProtocolID, boolean>();
 
   constructor(modules: ReqRespProtocolModules, private readonly opts: ReqRespOpts = {}) {
@@ -77,7 +78,7 @@ export class ReqResp {
    *
    * Made it explicit method to avoid any developer mistake
    */
-  registerDialOnlyProtocol<Req, Resp>(protocol: DialOnlyProtocol<Req, Resp>, opts?: ReqRespRegisterOpts): void {
+  registerDialOnlyProtocol(protocol: DialOnlyProtocol, opts?: ReqRespRegisterOpts): void {
     const protocolID = this.formatProtocolID(protocol);
 
     // libp2p will throw on error on duplicates, allow to overwrite behavior
@@ -95,9 +96,9 @@ export class ReqResp {
    * Throws if the same protocol is registered twice.
    * Can be called at any time, no concept of started / stopped
    */
-  async registerProtocol<Req, Resp>(protocol: Protocol<Req, Resp>, opts?: ReqRespRegisterOpts): Promise<void> {
+  async registerProtocol(protocol: Protocol, opts?: ReqRespRegisterOpts): Promise<void> {
     const protocolID = this.formatProtocolID(protocol);
-    const {handler: _handler, renderRequestBody: _renderRequestBody, inboundRateLimits, ...rest} = protocol;
+    const {handler: _handler, inboundRateLimits, ...rest} = protocol;
     this.registerDialOnlyProtocol(rest, opts);
     this.dialOnlyProtocols.set(protocolID, false);
 
@@ -146,13 +147,13 @@ export class ReqResp {
   }
 
   // Helper to reduce code duplication
-  protected async *sendRequest<Req, Resp>(
+  protected async *sendRequest(
     peerId: PeerId,
     method: string,
     versions: number[],
     encoding: Encoding,
-    body: Req
-  ): AsyncIterable<Resp> {
+    body: Uint8Array
+  ): AsyncIterable<ResponseIncoming> {
     const peerClient = this.opts.getPeerLogMetadata?.(peerId.toString());
     this.metrics?.outgoingRequests.inc({method});
     const timer = this.metrics?.outgoingRequestRoundtripTime.startTimer({method});
@@ -171,7 +172,7 @@ export class ReqResp {
     }
 
     try {
-      yield* sendRequest<Req, Resp>(
+      yield* sendRequest(
         {logger: this.logger, libp2p: this.libp2p, peerClient},
         peerId,
         protocols,
@@ -198,7 +199,7 @@ export class ReqResp {
     }
   }
 
-  private getRequestHandler<Req, Resp>(protocol: MixedProtocol<Req, Resp>, protocolID: string) {
+  private getRequestHandler(protocol: MixedProtocol, protocolID: string) {
     return async ({connection, stream}: {connection: Connection; stream: Stream}) => {
       if (this.dialOnlyProtocols.get(protocolID)) {
         throw new Error(`Received request on dial only protocol '${protocolID}'`);
@@ -214,11 +215,11 @@ export class ReqResp {
       this.onIncomingRequest?.(peerId, protocol as MixedProtocol);
 
       try {
-        await handleRequest<Req, Resp>({
+        await handleRequest({
           logger: this.logger,
           stream,
           peerId,
-          protocol: protocol as Protocol<Req, Resp>,
+          protocol: protocol as Protocol,
           protocolID,
           rateLimiter: this.rateLimiter,
           signal: this.controller.signal,

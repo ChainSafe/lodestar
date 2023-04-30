@@ -2,7 +2,7 @@ import {Stream, StreamStat} from "@libp2p/interface-connection";
 import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {fromHex} from "@lodestar/utils";
-import {EncodedPayloadBytes, RespStatus} from "../../src/index.js";
+import {ResponseIncoming, RespStatus} from "../../src/index.js";
 import {ResponseChunk} from "../fixtures/index.js";
 
 /**
@@ -69,6 +69,5 @@ export function fromHexBuf(hex: string): Buffer {
 
 export const ZERO_HASH = Buffer.alloc(32, 0);
 
-export const onlySuccessResp = (
-  resp: ResponseChunk
-): resp is {status: RespStatus.SUCCESS; payload: EncodedPayloadBytes} => resp.status === RespStatus.SUCCESS;
+export const onlySuccessResp = (resp: ResponseChunk): resp is {status: RespStatus.SUCCESS; payload: ResponseIncoming} =>
+  resp.status === RespStatus.SUCCESS;

@@ -5,10 +5,7 @@ import {Protocol} from "../../src/types.js";
 import {ResponseChunk, SuccessResponseChunk} from "../fixtures/encoders.js";
 import {arrToSource} from "../utils/index.js";
 
-export async function* responseEncode(
-  responseChunks: ResponseChunk[],
-  protocol: Protocol<any, any>
-): AsyncIterable<Buffer> {
+export async function* responseEncode(responseChunks: ResponseChunk[], protocol: Protocol): AsyncIterable<Buffer> {
   for (const chunk of responseChunks) {
     if (chunk.status === RespStatus.SUCCESS) {
       yield* pipe(arrToSource([(chunk as SuccessResponseChunk).payload]), responseEncodeSuccess(protocol));

@@ -13,7 +13,7 @@ describe("encoders / responseEncode", () => {
   describe("valid cases", () => {
     for (const {id, protocol, responseChunks, chunks} of responseEncodersTestCases.filter((f) => !f.skipEncoding)) {
       it(`${id}`, async () => {
-        const encodedChunks = await pipe(responseEncode(responseChunks, protocol as Protocol<any, any>), all);
+        const encodedChunks = await pipe(responseEncode(responseChunks, protocol as Protocol), all);
 
         expectEqualByteChunks(
           encodedChunks as Uint8Array[],

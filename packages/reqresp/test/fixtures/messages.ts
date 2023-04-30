@@ -1,24 +1,14 @@
-import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
-import {allForks, altair, phase0, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import * as messagesDef from "../../src/protocols/index.js";
-import {
-  ContextBytesType,
-  EncodedPayloadBytes,
-  EncodedPayloadSsz,
-  EncodedPayloadType,
-  MixedProtocol,
-  ProtocolHandler,
-  TypeSerializer,
-} from "../../src/types.js";
+import {ResponseIncoming, TypeSizes} from "../../src/types.js";
 import {ZERO_HASH} from "../utils/index.js";
 
-type MessageFixture<T> = {
-  type: TypeSerializer<T>;
-  sszPayload: EncodedPayloadSsz<T>;
-  binaryPayload: EncodedPayloadBytes;
+type MessageFixture = {
+  type: TypeSizes;
+  binaryPayload: ResponseIncoming;
   chunks: Uint8Array[];
   asyncChunks: Buffer[];
 };
@@ -29,18 +19,12 @@ const phase0Metadata = ssz.phase0.Metadata.fromJson({
   attnets: "0x0000000000000000",
 });
 
-export const sszSnappyPhase0Metadata: MessageFixture<phase0.Metadata> = {
+export const sszSnappyPhase0Metadata: MessageFixture = {
   type: ssz.phase0.Metadata,
-  sszPayload: {
-    type: EncodedPayloadType.ssz,
-    data: phase0Metadata,
-  },
   binaryPayload: {
-    type: EncodedPayloadType.bytes,
-    bytes: ssz.phase0.Metadata.serialize(phase0Metadata),
-    contextBytes: {
-      type: ContextBytesType.Empty,
-    },
+    data: ssz.phase0.Metadata.serialize(phase0Metadata),
+    fork: ForkName.phase0,
+    protocolVersion: 1,
   },
   chunks: ["0x10", "0xff060000734e61507059011400000b5ee91209000000000000000000000000000000"].map(
     (s) => new Uint8Array(fromHexString(s))
@@ -59,18 +43,12 @@ const altairMetadata = ssz.altair.Metadata.fromJson({
   syncnets: "0x00",
 });
 
-export const sszSnappyAltairMetadata: MessageFixture<altair.Metadata> = {
+export const sszSnappyAltairMetadata: MessageFixture = {
   type: ssz.altair.Metadata,
-  sszPayload: {
-    type: EncodedPayloadType.ssz,
-    data: altairMetadata,
-  },
   binaryPayload: {
-    type: EncodedPayloadType.bytes,
-    bytes: ssz.altair.Metadata.serialize(altairMetadata),
-    contextBytes: {
-      type: ContextBytesType.Empty,
-    },
+    data: ssz.altair.Metadata.serialize(altairMetadata),
+    fork: ForkName.phase0,
+    protocolVersion: 2,
   },
   chunks: ["0x11", "0xff060000734e6150705901150000ff4669fc0800000000000000000000000000000000"].map(
     (s) => new Uint8Array(fromHexString(s))
@@ -83,18 +61,12 @@ export const sszSnappyAltairMetadata: MessageFixture<altair.Metadata> = {
 };
 
 const pingData = BigInt(1);
-export const sszSnappyPing: MessageFixture<phase0.Ping> = {
+export const sszSnappyPing: MessageFixture = {
   type: ssz.phase0.Ping,
-  sszPayload: {
-    type: EncodedPayloadType.ssz,
-    data: pingData,
-  },
   binaryPayload: {
-    type: EncodedPayloadType.bytes,
-    bytes: ssz.phase0.Ping.serialize(pingData),
-    contextBytes: {
-      type: ContextBytesType.Empty,
-    },
+    data: ssz.phase0.Ping.serialize(pingData),
+    fork: ForkName.phase0,
+    protocolVersion: 1,
   },
   chunks: ["0x08", "0xff060000734e61507059010c00000175de410100000000000000"].map(
     (s) => new Uint8Array(fromHexString(s))
@@ -113,19 +85,12 @@ const statusData = {
   headRoot: Buffer.alloc(32, 0xda),
   headSlot: 9,
 };
-export const sszSnappyStatus: MessageFixture<phase0.Status> = {
+export const sszSnappyStatus: MessageFixture = {
   type: ssz.phase0.Status,
-  sszPayload: {
-    type: EncodedPayloadType.ssz,
-    data: statusData,
-  },
   binaryPayload: {
-    type: EncodedPayloadType.bytes,
-    bytes: ssz.phase0.Status.serialize(statusData),
-    contextBytes: {
-      type: ContextBytesType.ForkDigest,
-      fork: ForkName.altair,
-    },
+    data: ssz.phase0.Status.serialize(statusData),
+    fork: ForkName.phase0,
+    protocolVersion: 1,
   },
   asyncChunks: [
     "0x54", // length prefix
@@ -161,19 +126,12 @@ const signedBeaconBlockPhase0Data = {
   signature: Buffer.alloc(96, 0xda),
 };
 
-export const sszSnappySignedBeaconBlockPhase0: MessageFixture<phase0.SignedBeaconBlock> = {
+export const sszSnappySignedBeaconBlockPhase0: MessageFixture = {
   type: ssz.phase0.SignedBeaconBlock,
-  sszPayload: {
-    type: EncodedPayloadType.ssz,
-    data: signedBeaconBlockPhase0Data,
-  },
   binaryPayload: {
-    type: EncodedPayloadType.bytes,
-    bytes: ssz.phase0.SignedBeaconBlock.serialize(signedBeaconBlockPhase0Data),
-    contextBytes: {
-      type: ContextBytesType.ForkDigest,
-      fork: ForkName.phase0,
-    },
+    data: ssz.phase0.SignedBeaconBlock.serialize(signedBeaconBlockPhase0Data),
+    fork: ForkName.phase0,
+    protocolVersion: 2,
   },
   asyncChunks: [
     "0x9403",
@@ -197,19 +155,12 @@ const signedBeaconBlockAltairData = {
     },
   },
 };
-export const sszSnappySignedBeaconBlockAltair: MessageFixture<altair.SignedBeaconBlock> = {
+export const sszSnappySignedBeaconBlockAltair: MessageFixture = {
   type: ssz.altair.SignedBeaconBlock,
-  sszPayload: {
-    type: EncodedPayloadType.ssz,
-    data: signedBeaconBlockAltairData,
-  },
   binaryPayload: {
-    type: EncodedPayloadType.bytes,
-    bytes: ssz.altair.SignedBeaconBlock.serialize(signedBeaconBlockAltairData),
-    contextBytes: {
-      type: ContextBytesType.ForkDigest,
-      fork: ForkName.altair,
-    },
+    data: ssz.altair.SignedBeaconBlock.serialize(signedBeaconBlockAltairData),
+    fork: ForkName.altair,
+    protocolVersion: 2,
   },
   asyncChunks: [
     "0xf803", // length prefix
@@ -222,36 +173,9 @@ export const sszSnappySignedBeaconBlockAltair: MessageFixture<altair.SignedBeaco
   ].map((s) => new Uint8Array(fromHexString(s))),
 };
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-const getEmptyHandler = <T = unknown>() => async function* emptyHandler(): AsyncGenerator<T> {};
-
-export const getAllProtocols = (
-  modules: {config: BeaconConfig} = {config: createBeaconConfig(chainConfig, ZERO_HASH)}
-): {
-  ping: MixedProtocol<phase0.Ping, phase0.Ping>;
-  goodbye: MixedProtocol<phase0.Goodbye, phase0.Goodbye>;
-  metadata: MixedProtocol<null, allForks.Metadata>;
-  metadataV2: MixedProtocol<null, allForks.Metadata>;
-  status: MixedProtocol<phase0.Status, phase0.Status>;
-  blocksByRange: MixedProtocol<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
-  blocksByRangeV2: MixedProtocol<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>;
-  blocksByRoot: MixedProtocol<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
-  blocksByRootV2: MixedProtocol<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>;
-} => ({
-  ping: messagesDef.Ping(modules, getEmptyHandler()),
-  goodbye: messagesDef.Goodbye(modules, getEmptyHandler()),
-  metadata: messagesDef.Metadata(modules, getEmptyHandler()),
-  metadataV2: messagesDef.MetadataV2(modules, getEmptyHandler()),
-  status: messagesDef.Status(modules, getEmptyHandler() as ProtocolHandler<phase0.Status, phase0.Status>),
-  blocksByRange: messagesDef.BeaconBlocksByRange(modules, getEmptyHandler()),
-  blocksByRangeV2: messagesDef.BeaconBlocksByRangeV2(modules, getEmptyHandler()),
-  blocksByRoot: messagesDef.BeaconBlocksByRoot(modules, getEmptyHandler()),
-  blocksByRootV2: messagesDef.BeaconBlocksByRootV2(modules, getEmptyHandler()),
-});
-
 // Set the altair fork to happen between the two precomputed SSZ snappy blocks
-const slotBlockPhase0 = sszSnappySignedBeaconBlockPhase0.sszPayload.data.message.slot;
-const slotBlockAltair = sszSnappySignedBeaconBlockAltair.sszPayload.data.message.slot;
+const slotBlockPhase0 = signedBeaconBlockPhase0Data.message.slot;
+const slotBlockAltair = signedBeaconBlockAltairData.message.slot;
 if (slotBlockAltair - slotBlockPhase0 < SLOTS_PER_EPOCH) {
   throw Error("phase0 block slot must be an epoch apart from altair block slot");
 }
@@ -259,4 +183,5 @@ const ALTAIR_FORK_EPOCH = Math.floor(slotBlockAltair / SLOTS_PER_EPOCH);
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const beaconConfig = createBeaconConfig({...chainConfig, ALTAIR_FORK_EPOCH}, ZERO_HASH);
 
-export const protocols = getAllProtocols({config: beaconConfig});
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+export const getEmptyHandler = <T = unknown>() => async function* emptyHandler(): AsyncGenerator<T> {};

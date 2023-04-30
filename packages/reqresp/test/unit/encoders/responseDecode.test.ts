@@ -3,12 +3,10 @@ import chaiAsPromised from "chai-as-promised";
 import all from "it-all";
 import {pipe} from "it-pipe";
 import {LodestarError} from "@lodestar/utils";
-import {ForkName} from "@lodestar/params";
 import {responseDecode} from "../../../src/encoders/responseDecode.js";
 import {responseEncodersErrorTestCases, responseEncodersTestCases} from "../../fixtures/encoders.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {arrToSource, onlySuccessResp} from "../../utils/index.js";
-import {ContextBytesType} from "../../../src/types.js";
 
 chai.use(chaiAsPromised);
 
@@ -23,15 +21,8 @@ describe("encoders / responseDecode", () => {
           all
         );
 
-        const successResponses: unknown[] = responseChunks.filter(onlySuccessResp).map((r) => {
-          const bytes = r.payload.bytes;
-          const fork =
-            r.payload.contextBytes.type === ContextBytesType.Empty ? ForkName.phase0 : r.payload.contextBytes.fork;
-
-          return protocol.responseType(fork).deserialize(bytes) as unknown;
-        });
-
-        expect(successResponses).to.deep.equal(responses);
+        const expectedResponses = responseChunks.filter(onlySuccessResp).map((r) => r.payload);
+        expect(responses).to.deep.equal(expectedResponses);
       });
     }
   });

@@ -1,5 +1,4 @@
 import {LodestarError} from "@lodestar/utils";
-import {Encoding} from "../types.js";
 import {ResponseError} from "../response/index.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 
@@ -48,26 +47,9 @@ type RequestErrorType =
   | {code: RequestErrorCode.RESP_TIMEOUT}
   | {code: RequestErrorCode.REQUEST_RATE_LIMITED};
 
-export type RequestErrorMetadata = {
-  method: string;
-  encoding: Encoding;
-  peer: string;
-  // Do not include requestId in error metadata to make the errors deterministic for tests
-};
-
-/**
- * Same error types as RequestError but without metadata.
- * Top level function sendRequest() must rethrow RequestInternalError with metadata
- */
-export class RequestInternalError extends LodestarError<RequestErrorType> {
+export class RequestError extends LodestarError<RequestErrorType> {
   constructor(type: RequestErrorType) {
-    super(type);
-  }
-}
-
-export class RequestError extends LodestarError<RequestErrorType & RequestErrorMetadata> {
-  constructor(type: RequestErrorType, metadata: RequestErrorMetadata) {
-    super({...metadata, ...type}, renderErrorMessage(type));
+    super(type, renderErrorMessage(type));
   }
 }
 

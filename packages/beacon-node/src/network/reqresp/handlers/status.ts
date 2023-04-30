@@ -1,14 +1,13 @@
-import {ContextBytesType, EncodedPayloadBytes, EncodedPayloadType, ProtocolDescriptor} from "@lodestar/reqresp";
-import {phase0} from "@lodestar/types";
+import {ResponseOutgoing} from "@lodestar/reqresp";
+import {ssz} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 import {IBeaconChain} from "../../../chain/index.js";
 
-export async function* onStatus(
-  protocol: ProtocolDescriptor<phase0.Status, phase0.Status>,
-  chain: IBeaconChain
-): AsyncIterable<EncodedPayloadBytes> {
+export async function* onStatus(chain: IBeaconChain): AsyncIterable<ResponseOutgoing> {
+  const status = chain.getStatus();
   yield {
-    type: EncodedPayloadType.bytes,
-    bytes: protocol.responseType(chain.config.getForkName(chain.clock.currentSlot)).serialize(chain.getStatus()),
-    contextBytes: {type: ContextBytesType.Empty},
+    data: ssz.phase0.Status.serialize(status),
+    // Status topic is fork-agnostic
+    fork: ForkName.phase0,
   };
 }

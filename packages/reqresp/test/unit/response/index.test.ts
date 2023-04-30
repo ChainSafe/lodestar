@@ -2,7 +2,6 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {expect} from "chai";
 import {LodestarError, Logger, fromHex} from "@lodestar/utils";
 import {Protocol, RespStatus} from "../../../src/index.js";
-import {Ping} from "../../../src/protocols/index.js";
 import {ReqRespRateLimiter} from "../../../src/rate_limiter/ReqRespRateLimiter.js";
 import {handleRequest} from "../../../src/response/index.js";
 import {sszSnappyPing} from "../../fixtures/messages.js";
@@ -10,17 +9,18 @@ import {createStubbedLogger} from "../../mocks/logger.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {MockLibP2pStream, expectEqualByteChunks} from "../../utils/index.js";
 import {getValidPeerId} from "../../utils/peer.js";
+import {pingProtocol} from "../../fixtures/protocols.js";
 
 const testCases: {
   id: string;
-  protocol: Protocol<any, any>;
+  protocol: Protocol;
   requestChunks: Uint8Array[];
   expectedResponseChunks: Uint8Array[];
   expectedError?: LodestarError<any>;
 }[] = [
   {
     id: "Yield two chunks, then throw",
-    protocol: Ping({} as never, async function* () {
+    protocol: pingProtocol(async function* () {
       yield sszSnappyPing.binaryPayload;
       yield sszSnappyPing.binaryPayload;
       throw new LodestarError({code: "TEST_ERROR"});
