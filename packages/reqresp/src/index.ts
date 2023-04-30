@@ -1,4 +1,4 @@
-export {ReqResp} from "./ReqResp.js";
+export {ReqResp, ReqRespOpts} from "./ReqResp.js";
 export {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
 export {Encoding as ReqRespEncoding} from "./types.js"; // Expose enums renamed
 export * from "./types.js";

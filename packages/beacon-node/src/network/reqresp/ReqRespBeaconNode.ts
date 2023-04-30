@@ -7,12 +7,12 @@ import {
   ProtocolDescriptor,
   ProtocolHandler,
   ReqResp,
+  ReqRespOpts,
   ReqRespRequest,
   RequestError,
   ResponseIncoming,
   ResponseOutgoing,
 } from "@lodestar/reqresp";
-import {ReqRespOpts} from "@lodestar/reqresp/lib/ReqResp.js";
 import {allForks, altair, deneb, phase0, Root, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
