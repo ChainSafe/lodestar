@@ -202,8 +202,8 @@ export function getParentRootFromSignedBlock(bytes: Uint8Array): Uint8Array {
 
 /**
  *
- * @param blocks sequence of linear blocks, from ancestor to child.
- * In ProtoArray.getAllAncestorNodes child nodes are pushed to the returned array.
+ * @param blocks sequence of linear blocks, from child to ancestor.
+ * In ProtoArray.getAllAncestorNodes child nodes are pushed first to the returned array.
  */
 export function getNonCheckpointBlocks<T extends {slot: Slot}>(blocks: T[]): T[] {
   // Iterate from lowest child to highest ancestor
@@ -223,9 +223,8 @@ export function getNonCheckpointBlocks<T extends {slot: Slot}>(blocks: T[]): T[]
   // This function must return only blocks that are guaranteed to never become checkpoints.
   let epochPtrHasFirstSlot = false;
 
-  // blocks order: from ancestor to child, increasing slot
-  // Iterate in reverse: from child to ancestor, decreasing slot
-  for (let i = blocks.length - 1; i >= 0; i--) {
+  // blocks order: from child to ancestor, increasing slot
+  for (let i = 0; i < blocks.length; i++) {
     let isCheckpoint = false;
     const block = blocks[i];
     const blockEpoch = computeEpochAtSlot(block.slot);
