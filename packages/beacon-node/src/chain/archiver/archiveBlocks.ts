@@ -223,7 +223,7 @@ export function getNonCheckpointBlocks<T extends {slot: Slot}>(blocks: T[]): T[]
   // This function must return only blocks that are guaranteed to never become checkpoints.
   let epochPtrHasFirstSlot = false;
 
-  // blocks order: from child to ancestor, increasing slot
+  // blocks order: from child to ancestor, decreasing slot
   for (let i = 0; i < blocks.length; i++) {
     let isCheckpoint = false;
     const block = blocks[i];
