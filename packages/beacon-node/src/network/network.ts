@@ -38,6 +38,7 @@ import {Discv5Worker} from "./discv5/index.js";
 import {createNodeJsLibp2p} from "./nodejs/util.js";
 import {NetworkProcessor} from "./processor/index.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
+import {createNetworkCoreMetrics} from "./core/metrics.js";
 
 // How many changes to batch cleanup
 const CACHED_BLS_BATCH_CLEANUP_LIMIT = 10;
@@ -154,10 +155,11 @@ export class Network implements INetwork {
     gossipHandlers,
   }: NetworkInitModules): Promise<Network> {
     const clock = chain.clock;
+    const metricsCore = metrics && createNetworkCoreMetrics(metrics.register);
     const peersData = new PeersData();
     const networkEventBus = new NetworkEventBus();
     const metadata = new MetadataController(config);
-    const peerRpcScores = new PeerRpcScoreStore(metrics);
+    const peerRpcScores = new PeerRpcScoreStore(metricsCore);
 
     const libp2p = await createNodeJsLibp2p(peerId, opts, {
       peerStoreDir: peerStoreDir,
@@ -174,7 +176,7 @@ export class Network implements INetwork {
         peerRpcScores,
         logger,
         networkEventBus,
-        metrics,
+        metrics: metricsCore,
         peersData,
       },
       opts
@@ -193,13 +195,13 @@ export class Network implements INetwork {
       },
     };
 
-    const attnetsService = new AttnetsService(config, chain, _gossip, metadata, logger, metrics, opts);
+    const attnetsService = new AttnetsService(config, chain, _gossip, metadata, logger, metricsCore, opts);
 
     gossip = new Eth2Gossipsub(opts, {
       config,
       libp2p,
       logger,
-      metrics,
+      metrics: metricsCore,
       eth2Context: {
         activeValidatorCount: chain.getHeadState().epochCtx.currentShuffling.activeIndices.length,
         currentSlot: clock.currentSlot,
@@ -209,7 +211,7 @@ export class Network implements INetwork {
       events: networkEventBus,
     });
 
-    const syncnetsService = new SyncnetsService(config, chain, gossip, metadata, logger, metrics, opts);
+    const syncnetsService = new SyncnetsService(config, chain, gossip, metadata, logger, metricsCore, opts);
 
     const peerManager = new PeerManager(
       {
@@ -219,7 +221,7 @@ export class Network implements INetwork {
         attnetsService,
         syncnetsService,
         logger,
-        metrics,
+        metrics: metricsCore,
         chain,
         config,
         peerRpcScores,
