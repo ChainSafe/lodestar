@@ -14,9 +14,8 @@ import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {Logger} from "@lodestar/utils";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
-import {BeaconClock} from "../../../../src/chain/clock/interface.js";
+import {IClock, Clock} from "../../../../src/util/clock.js";
 import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
-import {LocalClock} from "../../../../src/chain/clock/index.js";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen/index.js";
 import {StubbedBeaconDb} from "../../stub/index.js";
 import {IBlsVerifier, BlsSingleThreadVerifier} from "../../../../src/chain/bls/index.js";
@@ -83,7 +82,7 @@ export class MockBeaconChain implements IBeaconChain {
   checkpointStateCache: CheckpointStateCache;
   chainId: Uint16;
   networkId: UintBn64;
-  clock: BeaconClock;
+  clock: IClock;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
   lightClientServer: LightClientServer;
@@ -130,10 +129,9 @@ export class MockBeaconChain implements IBeaconChain {
     this.config = config;
     this.emitter = new ChainEventEmitter();
     this.abortController = new AbortController();
-    this.clock = new LocalClock({
+    this.clock = new Clock({
       config: config,
       genesisTime: genesisTime === undefined || genesisTime === 0 ? state.genesisTime : genesisTime,
-      emitter: this.emitter,
       signal: this.abortController.signal,
     });
     this.attestationPool = new AttestationPool(this.clock, (2 / 3) * this.config.SECONDS_PER_SLOT);

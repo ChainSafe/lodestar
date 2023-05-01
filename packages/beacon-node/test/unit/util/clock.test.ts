@@ -3,23 +3,19 @@ import {expect} from "chai";
 import {config} from "@lodestar/config/default";
 
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {LocalClock} from "../../../../src/chain/clock/LocalClock.js";
-import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter.js";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../../src/constants/index.js";
+import {Clock, ClockEvent} from "../../../src/util/clock.js";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../src/constants/index.js";
 
-describe("LocalClock", function () {
+describe("Clock", function () {
   const sandbox = sinon.createSandbox();
   let abortController: AbortController;
-  let emitter: ChainEventEmitter;
-  let clock: LocalClock;
+  let clock: Clock;
 
   beforeEach(() => {
     sandbox.useFakeTimers();
     abortController = new AbortController();
-    emitter = new ChainEventEmitter();
-    clock = new LocalClock({
+    clock = new Clock({
       config,
-      emitter,
       genesisTime: Math.round(new Date().getTime() / 1000),
       signal: abortController.signal,
     });
@@ -32,7 +28,7 @@ describe("LocalClock", function () {
 
   it("Should notify on new slot", function () {
     const spy = sinon.spy();
-    emitter.on(ChainEvent.clockSlot, spy);
+    clock.on(ClockEvent.slot, spy);
     sandbox.clock.tick(config.SECONDS_PER_SLOT * 1000);
     expect(spy).to.be.calledOnce;
     expect(spy.calledWith(clock.currentSlot)).to.equal(true);
@@ -40,7 +36,7 @@ describe("LocalClock", function () {
 
   it("Should notify on new epoch", function () {
     const spy = sinon.spy();
-    emitter.on(ChainEvent.clockEpoch, spy);
+    clock.on(ClockEvent.epoch, spy);
     sandbox.clock.tick(SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000);
     expect(spy).to.be.calledOnce;
     expect(spy.calledWith(clock.currentEpoch)).to.equal(true);

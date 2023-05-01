@@ -72,7 +72,7 @@ describe("AttnetsService", function () {
     // load getCurrentSlot first, vscode not able to debug without this
     getCurrentSlot(config, Math.floor(Date.now() / 1000));
     metadata = new MetadataController({}, {config, chain, logger});
-    service = new AttnetsService(config, chain, gossipStub, metadata, logger, null, {
+    service = new AttnetsService(config, chain.clock, gossipStub, metadata, logger, null, {
       randBetweenFn,
       shuffleFn: shuffleFn as ShuffleFn,
     });

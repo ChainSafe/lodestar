@@ -6,7 +6,7 @@ import {ProtoBlock} from "@lodestar/fork-choice";
 import {IBeaconSync, SyncState} from "../../../../../src/sync/interface.js";
 import {ApiModules} from "../../../../../src/api/impl/types.js";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
-import {LocalClock} from "../../../../../src/chain/clock/index.js";
+import {IClock} from "../../../../../src/util/clock.js";
 import {testLogger} from "../../../../utils/logger.js";
 import {ApiImplTestModules, setupApiImplTestServer} from "../index.test.js";
 
@@ -36,7 +36,7 @@ describe("api - validator - produceAttestationData", function () {
     // Set the node's state to way back from current slot
     const currentSlot = 100000;
     const headSlot = 0;
-    server.chainStub.clock = {currentSlot} as LocalClock;
+    server.chainStub.clock = {currentSlot} as IClock;
     sinon.replaceGetter(syncStub, "state", () => SyncState.SyncingFinalized);
     server.forkChoiceStub.getHead.returns({slot: headSlot} as ProtoBlock);
 
@@ -47,7 +47,7 @@ describe("api - validator - produceAttestationData", function () {
 
   it("Should throw error when node is stopped", async function () {
     const currentSlot = 100000;
-    server.chainStub.clock = {currentSlot} as LocalClock;
+    server.chainStub.clock = {currentSlot} as IClock;
     sinon.replaceGetter(syncStub, "state", () => SyncState.Stalled);
 
     // Should not allow any call to validator API
