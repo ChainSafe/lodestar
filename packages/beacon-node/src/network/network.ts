@@ -2,7 +2,7 @@ import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {BeaconConfig} from "@lodestar/config";
-import {Logger, sleep} from "@lodestar/utils";
+import {Logger, sleep, toHex} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SignableENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
@@ -156,7 +156,7 @@ export class Network implements INetwork {
     const clock = chain.clock;
     const peersData = new PeersData();
     const networkEventBus = new NetworkEventBus();
-    const metadata = new MetadataController({}, {config, chain, logger});
+    const metadata = new MetadataController(config);
     const peerRpcScores = new PeerRpcScoreStore(metrics);
 
     const libp2p = await createNodeJsLibp2p(peerId, opts, {
@@ -247,7 +247,7 @@ export class Network implements INetwork {
     const discv5 = peerManager["discovery"]?.discv5;
     const setEnrValue = discv5?.setEnrValue.bind(discv5);
     // Initialize ENR with clock's fork
-    metadata.start(setEnrValue, config.getForkName(clock.currentSlot));
+    metadata.start(setEnrValue, clock.currentEpoch);
     await gossip.start();
     attnetsService.start();
     syncnetsService.start();
@@ -496,7 +496,8 @@ export class Network implements INetwork {
           // On fork transition
           if (epoch === forkEpoch) {
             // updateEth2Field() MUST be called with clock epoch, onEpoch event is emitted in response to clock events
-            this.metadata.updateEth2Field(epoch);
+            const enrForkId = this.metadata.updateEth2Field(epoch);
+            if (enrForkId) this.logger.verbose(`Updated ENR.eth2: ${toHex(enrForkId)}`);
             this.reqResp.registerProtocolsAtFork(nextFork);
           }
 
