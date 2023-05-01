@@ -162,6 +162,7 @@ export class Network implements INetwork {
     const networkEventBus = new NetworkEventBus();
     const metadata = new MetadataController(config);
     const peerRpcScores = new PeerRpcScoreStore(metricsCore);
+    const statusCache = new LocalStatusCache(chain.getStatus());
 
     const libp2p = await createNodeJsLibp2p(peerId, opts, {
       peerStoreDir: peerStoreDir,
@@ -180,6 +181,7 @@ export class Network implements INetwork {
         networkEventBus,
         metrics: metricsCore,
         peersData,
+        statusCache,
       },
       opts
     );
@@ -215,7 +217,6 @@ export class Network implements INetwork {
 
     const syncnetsService = new SyncnetsService(config, chain.clock, gossip, metadata, logger, metricsCore, opts);
 
-    const statusCache = new LocalStatusCache(chain.getStatus());
     const peerManager = new PeerManager(
       {
         libp2p,
@@ -532,6 +533,8 @@ export class Network implements INetwork {
     }
   };
 
+  // Push latest chain status to reqResp state
+  // TODO: Should also be done for finalized and justified updates?
   private onHead = (): void => {
     this.statusCache.update(this.chain.getStatus());
   };

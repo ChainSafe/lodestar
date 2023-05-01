@@ -15,6 +15,7 @@ import {
   ReqRespBeaconNode,
   ReqRespBeaconNodeModules,
   ReqRespHandlers,
+  ReqRespMethod,
 } from "../../../src/network/index.js";
 import {PeersData} from "../../../src/network/peers/peersData.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
@@ -58,15 +59,15 @@ describe("reqresp encoder", () => {
     };
 
     const reqRespHandlers: ReqRespHandlers = {
-      onStatus: notImplemented,
-      onBeaconBlocksByRange: notImplemented,
-      onBeaconBlocksByRoot: notImplemented,
-      onBlobsSidecarsByRange: notImplemented,
-      onBeaconBlockAndBlobsSidecarByRoot: notImplemented,
-      onLightClientBootstrap: notImplemented,
-      onLightClientUpdatesByRange: notImplemented,
-      onLightClientOptimisticUpdate: notImplemented,
-      onLightClientFinalityUpdate: notImplemented,
+      [ReqRespMethod.Status]: notImplemented,
+      [ReqRespMethod.BeaconBlocksByRange]: notImplemented,
+      [ReqRespMethod.BeaconBlocksByRoot]: notImplemented,
+      [ReqRespMethod.BlobsSidecarsByRange]: notImplemented,
+      [ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]: notImplemented,
+      [ReqRespMethod.LightClientBootstrap]: notImplemented,
+      [ReqRespMethod.LightClientUpdatesByRange]: notImplemented,
+      [ReqRespMethod.LightClientOptimisticUpdate]: notImplemented,
+      [ReqRespMethod.LightClientFinalityUpdate]: notImplemented,
       ...reqRespHandlersPartial,
     };
 
@@ -81,6 +82,7 @@ describe("reqresp encoder", () => {
       metadata: new MetadataController(config),
       peerRpcScores: new PeerRpcScoreStore(),
       networkEventBus: new NetworkEventBus(),
+      initialChainStatus: ssz.phase0.Status.defaultValue(),
     };
 
     return {libp2p, multiaddr, reqresp: new ReqRespBeaconNode(modules)};
@@ -137,7 +139,7 @@ describe("reqresp encoder", () => {
 
   it("assert correct encoding of protocol with context bytes", async () => {
     const {multiaddr: serverMultiaddr, reqresp} = await getReqResp({
-      onLightClientOptimisticUpdate: async function* () {
+      [ReqRespMethod.LightClientOptimisticUpdate]: async function* () {
         yield {
           data: ssz.altair.LightClientOptimisticUpdate.serialize(ssz.altair.LightClientOptimisticUpdate.defaultValue()),
           fork: ForkName.phase0, // Aware that phase0 does not makes sense here, but it's just to pick a fork digest

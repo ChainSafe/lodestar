@@ -8,7 +8,7 @@ import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqres
 import {allForks, altair, phase0, Root, ssz} from "@lodestar/types";
 import {sleep as _sleep} from "@lodestar/utils";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
-import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
+import {Network, ReqRespBeaconNodeOpts, ReqRespMethod} from "../../../src/network/index.js";
 import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 import {ReqRespHandlers} from "../../../src/network/reqresp/handlers/index.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
@@ -77,20 +77,20 @@ describe("network / ReqResp", function () {
     };
 
     const reqRespHandlers: ReqRespHandlers = {
-      onStatus: async function* onRequest() {
+      [ReqRespMethod.Status]: async function* onRequest() {
         yield {
           data: ssz.phase0.Status.serialize(chain.getStatus()),
           fork: ForkName.phase0,
         };
       },
-      onBeaconBlocksByRange: notImplemented,
-      onBeaconBlocksByRoot: notImplemented,
-      onBlobsSidecarsByRange: notImplemented,
-      onBeaconBlockAndBlobsSidecarByRoot: notImplemented,
-      onLightClientBootstrap: notImplemented,
-      onLightClientUpdatesByRange: notImplemented,
-      onLightClientOptimisticUpdate: notImplemented,
-      onLightClientFinalityUpdate: notImplemented,
+      [ReqRespMethod.BeaconBlocksByRange]: notImplemented,
+      [ReqRespMethod.BeaconBlocksByRoot]: notImplemented,
+      [ReqRespMethod.BlobsSidecarsByRange]: notImplemented,
+      [ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]: notImplemented,
+      [ReqRespMethod.LightClientBootstrap]: notImplemented,
+      [ReqRespMethod.LightClientUpdatesByRange]: notImplemented,
+      [ReqRespMethod.LightClientOptimisticUpdate]: notImplemented,
+      [ReqRespMethod.LightClientFinalityUpdate]: notImplemented,
       ...reqRespHandlersPartial,
     };
 
@@ -167,7 +167,7 @@ describe("network / ReqResp", function () {
     const statusNetB: phase0.Status = {...status, finalizedEpoch: 2};
 
     const [netA, netB] = await createAndConnectPeers({
-      onStatus: async function* onRequest() {
+      [ReqRespMethod.Status]: async function* onRequest() {
         yield {data: ssz.phase0.Status.serialize(statusNetB), fork: ForkName.phase0};
       },
     });
@@ -186,7 +186,7 @@ describe("network / ReqResp", function () {
     }
 
     const [netA, netB] = await createAndConnectPeers({
-      onBeaconBlocksByRange: async function* () {
+      [ReqRespMethod.BeaconBlocksByRange]: async function* () {
         for (const block of blocks) {
           yield wrapBlockAsEncodedPayload(config, block);
         }
@@ -208,7 +208,7 @@ describe("network / ReqResp", function () {
     const expectedValue = ssz.altair.LightClientBootstrap.defaultValue();
 
     const [netA, netB] = await createAndConnectPeers({
-      onLightClientBootstrap: async function* onRequest() {
+      [ReqRespMethod.LightClientBootstrap]: async function* onRequest() {
         yield {
           data: ssz.altair.LightClientBootstrap.serialize(expectedValue),
           fork: ForkName.altair,
@@ -224,7 +224,7 @@ describe("network / ReqResp", function () {
     const expectedValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
 
     const [netA, netB] = await createAndConnectPeers({
-      onLightClientOptimisticUpdate: async function* onRequest() {
+      [ReqRespMethod.LightClientOptimisticUpdate]: async function* onRequest() {
         yield {
           data: ssz.altair.LightClientOptimisticUpdate.serialize(expectedValue),
           fork: ForkName.altair,
@@ -240,7 +240,7 @@ describe("network / ReqResp", function () {
     const expectedValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
 
     const [netA, netB] = await createAndConnectPeers({
-      onLightClientFinalityUpdate: async function* onRequest() {
+      [ReqRespMethod.LightClientFinalityUpdate]: async function* onRequest() {
         yield {
           data: ssz.altair.LightClientFinalityUpdate.serialize(expectedValue),
           fork: ForkName.altair,
@@ -265,7 +265,7 @@ describe("network / ReqResp", function () {
     }
 
     const [netA, netB] = await createAndConnectPeers({
-      onLightClientUpdatesByRange: async function* () {
+      [ReqRespMethod.LightClientUpdatesByRange]: async function* () {
         yield* arrToSource(lightClientUpdates);
       },
     });
@@ -286,7 +286,7 @@ describe("network / ReqResp", function () {
   it("should handle a server error", async function () {
     const testErrorMessage = "TEST_EXAMPLE_ERROR_1234";
     const [netA, netB] = await createAndConnectPeers({
-      onBeaconBlocksByRange: async function* onRequest() {
+      [ReqRespMethod.BeaconBlocksByRange]: async function* onRequest() {
         throw Error(testErrorMessage);
       },
     });
@@ -301,7 +301,7 @@ describe("network / ReqResp", function () {
     const testErrorMessage = "TEST_EXAMPLE_ERROR_1234";
 
     const [netA, netB] = await createAndConnectPeers({
-      onBeaconBlocksByRange: async function* onRequest() {
+      [ReqRespMethod.BeaconBlocksByRange]: async function* onRequest() {
         for (let slot = 0; slot < 2; slot++) {
           const block = config.getForkTypes(slot).SignedBeaconBlock.defaultValue();
           block.message.slot = slot;
@@ -322,7 +322,7 @@ describe("network / ReqResp", function () {
 
     const [netA, netB] = await createAndConnectPeers(
       {
-        onBeaconBlocksByRange: async function* onRequest() {
+        [ReqRespMethod.BeaconBlocksByRange]: async function* onRequest() {
           // Wait for too long before sending first response chunk
           await sleep(ttfbTimeoutMs * 10);
           yield wrapBlockAsEncodedPayload(config, config.getForkTypes(0).SignedBeaconBlock.defaultValue());
@@ -342,7 +342,7 @@ describe("network / ReqResp", function () {
 
     const [netA, netB] = await createAndConnectPeers(
       {
-        onBeaconBlocksByRange: async function* onRequest() {
+        [ReqRespMethod.BeaconBlocksByRange]: async function* onRequest() {
           yield getEmptyEncodedPayloadSignedBeaconBlock(config);
           // Wait for too long before sending second response chunk
           await sleep(respTimeoutMs * 5);
@@ -361,7 +361,7 @@ describe("network / ReqResp", function () {
   it("Sleep infinite on first byte", async function () {
     const [netA, netB] = await createAndConnectPeers(
       {
-        onBeaconBlocksByRange: async function* onRequest() {
+        [ReqRespMethod.BeaconBlocksByRange]: async function* onRequest() {
           await sleep(100000000);
         },
       },
@@ -377,7 +377,7 @@ describe("network / ReqResp", function () {
   it("Sleep infinite on second response chunk", async function () {
     const [netA, netB] = await createAndConnectPeers(
       {
-        onBeaconBlocksByRange: async function* onRequest() {
+        [ReqRespMethod.BeaconBlocksByRange]: async function* onRequest() {
           yield getEmptyEncodedPayloadSignedBeaconBlock(config);
           await sleep(100000000);
         },
