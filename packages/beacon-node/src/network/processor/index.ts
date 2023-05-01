@@ -136,11 +136,11 @@ export class NetworkProcessor {
     );
 
     if (metrics) {
-      metrics.gossipValidationQueueLength.addCollect(() => {
+      metrics.gossipValidationQueue.length.addCollect(() => {
         for (const topic of executeGossipWorkOrder) {
-          metrics.gossipValidationQueueLength.set({topic}, this.gossipQueues[topic].length);
-          metrics.gossipValidationQueueDropRatio.set({topic}, this.gossipQueues[topic].dropRatio);
-          metrics.gossipValidationQueueConcurrency.set({topic}, this.gossipTopicConcurrency[topic]);
+          metrics.gossipValidationQueue.length.set({topic}, this.gossipQueues[topic].length);
+          metrics.gossipValidationQueue.dropRatio.set({topic}, this.gossipQueues[topic].dropRatio);
+          metrics.gossipValidationQueue.concurrency.set({topic}, this.gossipTopicConcurrency[topic]);
         }
         metrics.reprocessGossipAttestations.countPerSlot.set(this.unknownBlockGossipsubMessagesCount);
       });
@@ -184,7 +184,10 @@ export class NetworkProcessor {
         const {slot, root} = slotRoot;
         if (slot < this.chain.clock.currentSlot - EARLIEST_PERMISSABLE_SLOT_DISTANCE) {
           // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
-          this.metrics?.gossipValidationError.inc({topic: message.topic.type, error: GossipErrorCode.PAST_SLOT});
+          this.metrics?.networkProcessor.gossipValidationError.inc({
+            topic: message.topic.type,
+            error: GossipErrorCode.PAST_SLOT,
+          });
           return;
         }
         message.msgSlot = slot;
@@ -214,7 +217,7 @@ export class NetworkProcessor {
     const droppedCount = this.gossipQueues[topicType].add(message);
     if (droppedCount) {
       // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
-      this.metrics?.gossipValidationQueueDroppedJobs.inc({topic: message.topic.type}, droppedCount);
+      this.metrics?.gossipValidationQueue.droppedJobs.inc({topic: message.topic.type}, droppedCount);
     }
 
     // Tentatively perform work

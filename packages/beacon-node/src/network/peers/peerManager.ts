@@ -8,7 +8,7 @@ import {allForks, altair, phase0} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
-import {Metrics} from "../../metrics/index.js";
+import {NetworkCoreMetrics} from "../core/metrics.js";
 import {NetworkEvent, INetworkEventBus} from "../events.js";
 import {Libp2p} from "../interface.js";
 import {IReqRespBeaconNode, ReqRespMethod, RequestTypedContainer} from "../reqresp/ReqRespBeaconNode.js";
@@ -83,7 +83,7 @@ export type PeerManagerOpts = {
 export type PeerManagerModules = {
   libp2p: Libp2p;
   logger: Logger;
-  metrics: Metrics | null;
+  metrics: NetworkCoreMetrics | null;
   reqResp: IReqRespBeaconNode;
   gossip: Eth2Gossipsub;
   attnetsService: SubnetsService;
@@ -114,7 +114,7 @@ enum RelevantPeerStatus {
 export class PeerManager {
   private libp2p: Libp2p;
   private logger: Logger;
-  private metrics: Metrics | null;
+  private metrics: NetworkCoreMetrics | null;
   private reqResp: IReqRespBeaconNode;
   private gossipsub: Eth2Gossipsub;
   private attnetsService: SubnetsService;
@@ -629,7 +629,7 @@ export class PeerManager {
   }
 
   /** Register peer count metrics */
-  private async runPeerCountMetrics(metrics: Metrics): Promise<void> {
+  private async runPeerCountMetrics(metrics: NetworkCoreMetrics): Promise<void> {
     let total = 0;
 
     const peersByDirection = new Map<string, number>();

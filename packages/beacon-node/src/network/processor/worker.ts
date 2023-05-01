@@ -38,11 +38,11 @@ export class NetworkWorker {
     );
 
     if (message.startProcessUnixSec !== null) {
-      this.metrics?.gossipValidationQueueJobWaitTime.observe(
+      this.metrics?.gossipValidationQueue.jobWaitTime.observe(
         {topic: message.topic.type},
         message.startProcessUnixSec - message.seenTimestampSec
       );
-      this.metrics?.gossipValidationQueueJobTime.observe(
+      this.metrics?.gossipValidationQueue.jobTime.observe(
         {topic: message.topic.type},
         Date.now() / 1000 - message.startProcessUnixSec
       );
