@@ -13,10 +13,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     // From https://github.com/ethereum/beacon-metrics/blob/master/metrics.md
     // Interop-metrics
 
-    peers: register.gauge({
-      name: "libp2p_peers",
-      help: "number of connected peers",
-    }),
     headSlot: register.gauge({
       name: "beacon_head_slot",
       help: "slot of the head block of the beacon chain",
@@ -94,14 +90,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "Histogram of distance to parent block of valid imported blocks",
       buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
     }),
-
-    reqResp: {
-      rateLimitErrors: register.gauge<"method">({
-        name: "beacon_reqresp_rate_limiter_errors_total",
-        help: "Count rate limiter errors",
-        labelNames: ["method"],
-      }),
-    },
 
     blockProductionTime: register.histogram<"source">({
       name: "beacon_block_production_seconds",

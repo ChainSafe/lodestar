@@ -13,7 +13,7 @@ import {
 import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {chainConfigFromJson, chainConfigToJson, BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
-import {Metrics} from "../../metrics/metrics.js";
+import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 
 export type Discv5Opts = {
@@ -21,7 +21,7 @@ export type Discv5Opts = {
   discv5: Omit<IDiscv5DiscoveryInputOptions, "metrics" | "searchInterval" | "enabled">;
   logger: Logger;
   config: BeaconConfig;
-  metrics?: Metrics;
+  metrics?: NetworkCoreMetrics;
 };
 
 export type Discv5Events = {

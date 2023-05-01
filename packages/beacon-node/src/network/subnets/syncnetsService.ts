@@ -8,7 +8,7 @@ import {getActiveForks} from "../forks.js";
 import {Eth2Gossipsub, GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {RequestedSubnet, SubnetMap} from "../peers/utils/index.js";
-import {Metrics} from "../../metrics/metrics.js";
+import {NetworkCoreMetrics} from "../core/metrics.js";
 import {CommitteeSubscription, SubnetsService, SubnetsServiceOpts} from "./interface.js";
 
 const gossipType = GossipType.sync_committee;
@@ -33,7 +33,7 @@ export class SyncnetsService implements SubnetsService {
     private readonly gossip: Eth2Gossipsub,
     private readonly metadata: MetadataController,
     private readonly logger: Logger,
-    private readonly metrics: Metrics | null,
+    private readonly metrics: NetworkCoreMetrics | null,
     private readonly opts?: SubnetsServiceOpts
   ) {
     if (metrics) {
@@ -145,7 +145,7 @@ export class SyncnetsService implements SubnetsService {
     }
   }
 
-  private onScrapeLodestarMetrics(metrics: Metrics): void {
+  private onScrapeLodestarMetrics(metrics: NetworkCoreMetrics): void {
     metrics.syncnetsService.subscriptionsCommittee.set(this.subscriptionsCommittee.size);
   }
 }
