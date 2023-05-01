@@ -4,7 +4,7 @@ import {altair, Epoch, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {BeaconChain} from "../../../../src/chain/index.js";
-import {LocalClock} from "../../../../src/chain/clock/index.js";
+import {Clock} from "../../../../src/util/clock.js";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError.js";
 import {validateGossipSyncCommittee} from "../../../../src/chain/validation/syncCommittee.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
@@ -20,7 +20,7 @@ type StubbedChain = StubbedChainMutable<"clock" | "bls">;
 describe("Sync Committee Signature validation", function () {
   const sandbox = sinon.createSandbox();
   let chain: StubbedChain;
-  let clockStub: SinonStubbedInstance<LocalClock>;
+  let clockStub: SinonStubbedInstance<Clock>;
   // let computeSubnetsForSyncCommitteeStub: SinonStubFn<typeof syncCommitteeUtils["computeSubnetsForSyncCommittee"]>;
   let altairForkEpochBk: Epoch;
   const altairForkEpoch = 2020;
@@ -46,7 +46,7 @@ describe("Sync Committee Signature validation", function () {
         seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
       }
     ).seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
-    clockStub = sandbox.createStubInstance(LocalClock);
+    clockStub = sandbox.createStubInstance(Clock);
     chain.clock = clockStub;
     clockStub.isCurrentSlotGivenGossipDisparity.returns(true);
   });

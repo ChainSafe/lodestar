@@ -1,40 +1,82 @@
-import {Epoch, Slot} from "@lodestar/types";
+import EventEmitter from "node:events";
+import type StrictEventEmitter from "strict-event-emitter-types";
+import type {Epoch, Slot} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ErrorAborted} from "@lodestar/utils";
 import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@lodestar/state-transition";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../constants/constants.js";
 
-import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+export const enum ClockEvent {
+  /**
+   * This event signals the start of a new slot, and that subsequent calls to `clock.currentSlot` will equal `slot`.
+   * This event is guaranteed to be emitted every `SECONDS_PER_SLOT` seconds.
+   */
+  slot = "clock:slot",
+  /**
+   * This event signals the start of a new epoch, and that subsequent calls to `clock.currentEpoch` will return `epoch`.
+   * This event is guaranteed to be emitted every `SECONDS_PER_SLOT * SLOTS_PER_EPOCH` seconds.
+   */
+  epoch = "clock:epoch",
+}
 
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
-import {BeaconClock} from "./interface.js";
+export type ClockEvents = {
+  [ClockEvent.slot]: (slot: Slot) => void;
+  [ClockEvent.epoch]: (epoch: Epoch) => void;
+};
+
+/**
+ * Tracks the current chain time, measured in `Slot`s and `Epoch`s
+ *
+ * The time is dependant on:
+ * - `state.genesisTime` - the genesis time
+ * - `SECONDS_PER_SLOT` - # of seconds per slot
+ * - `SLOTS_PER_EPOCH` - # of slots per epoch
+ */
+export type IClock = StrictEventEmitter<EventEmitter, ClockEvents> & {
+  readonly genesisTime: Slot;
+  readonly currentSlot: Slot;
+  /**
+   * If it's too close to next slot, maxCurrentSlot = currentSlot + 1
+   */
+  readonly currentSlotWithGossipDisparity: Slot;
+  readonly currentEpoch: Epoch;
+  /** Returns the slot if the internal clock were advanced by `toleranceSec`. */
+  slotWithFutureTolerance(toleranceSec: number): Slot;
+  /** Returns the slot if the internal clock were reversed by `toleranceSec`. */
+  slotWithPastTolerance(toleranceSec: number): Slot;
+  /**
+   * Check if a slot is current slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY.
+   */
+  isCurrentSlotGivenGossipDisparity(slot: Slot): boolean;
+  /**
+   * Returns a promise that waits until at least `slot` is reached
+   * Resolves when the current slot >= `slot`
+   * Rejects if the clock is aborted
+   */
+  waitForSlot(slot: Slot): Promise<void>;
+  /**
+   * Return second from a slot to either toSec or now.
+   */
+  secFromSlot(slot: Slot, toSec?: number): number;
+};
 
 /**
  * A local clock, the clock time is assumed to be trusted
  */
-export class LocalClock implements BeaconClock {
+export class Clock extends EventEmitter implements IClock {
+  readonly genesisTime: number;
   private readonly config: ChainForkConfig;
-  private readonly genesisTime: number;
   private timeoutId: number | NodeJS.Timeout;
-  private readonly emitter: ChainEventEmitter;
   private readonly signal: AbortSignal;
   private _currentSlot: number;
 
-  constructor({
-    config,
-    genesisTime,
-    emitter,
-    signal,
-  }: {
-    config: ChainForkConfig;
-    genesisTime: number;
-    emitter: ChainEventEmitter;
-    signal: AbortSignal;
-  }) {
+  constructor({config, genesisTime, signal}: {config: ChainForkConfig; genesisTime: number; signal: AbortSignal}) {
+    super();
+
     this.config = config;
     this.genesisTime = genesisTime;
     this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
     this.signal = signal;
-    this.emitter = emitter;
     this._currentSlot = getCurrentSlot(this.config, this.genesisTime);
     this.signal.addEventListener("abort", () => clearTimeout(this.timeoutId), {once: true});
   }
@@ -112,17 +154,17 @@ export class LocalClock implements BeaconClock {
       };
 
       const onDone = (): void => {
-        this.emitter.off(ChainEvent.clockSlot, onSlot);
+        this.off(ClockEvent.slot, onSlot);
         this.signal.removeEventListener("abort", onAbort);
         resolve();
       };
 
       const onAbort = (): void => {
-        this.emitter.off(ChainEvent.clockSlot, onSlot);
+        this.off(ClockEvent.slot, onSlot);
         reject(new ErrorAborted());
       };
 
-      this.emitter.on(ChainEvent.clockSlot, onSlot);
+      this.on(ClockEvent.slot, onSlot);
       this.signal.addEventListener("abort", onAbort, {once: true});
     });
   }
@@ -138,13 +180,13 @@ export class LocalClock implements BeaconClock {
       const previousSlot = this._currentSlot;
       this._currentSlot++;
 
-      this.emitter.emit(ChainEvent.clockSlot, this._currentSlot);
+      this.emit(ClockEvent.slot, this._currentSlot);
 
       const previousEpoch = computeEpochAtSlot(previousSlot);
       const currentEpoch = computeEpochAtSlot(this._currentSlot);
 
       if (previousEpoch < currentEpoch) {
-        this.emitter.emit(ChainEvent.clockEpoch, currentEpoch);
+        this.emit(ClockEvent.epoch, currentEpoch);
       }
     }
     //recursively invoke onNextSlot

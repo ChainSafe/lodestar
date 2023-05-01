@@ -10,7 +10,8 @@ import {deneb, Epoch, phase0, allForks, altair} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {Metrics} from "../metrics/index.js";
-import {ChainEvent, IBeaconChain, BeaconClock} from "../chain/index.js";
+import {ClockEvent, IClock} from "../util/clock.js";
+import {IBeaconChain} from "../chain/index.js";
 import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "../chain/opPools/utils.js";
 import {formatNodePeer} from "../api/impl/node/utils.js";
@@ -92,7 +93,7 @@ export class Network implements INetwork {
   private readonly libp2p: Libp2p;
   private readonly logger: Logger;
   private readonly config: BeaconConfig;
-  private readonly clock: BeaconClock;
+  private readonly clock: IClock;
   private readonly chain: IBeaconChain;
   private readonly signal: AbortSignal;
 
@@ -136,7 +137,7 @@ export class Network implements INetwork {
     this.syncnetsService = syncnetsService;
     this.peerManager = peerManager;
 
-    this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
+    this.chain.clock.on(ClockEvent.epoch, this.onEpoch);
     this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
@@ -195,7 +196,7 @@ export class Network implements INetwork {
       },
     };
 
-    const attnetsService = new AttnetsService(config, chain, _gossip, metadata, logger, metricsCore, opts);
+    const attnetsService = new AttnetsService(config, chain.clock, _gossip, metadata, logger, metricsCore, opts);
 
     gossip = new Eth2Gossipsub(opts, {
       config,
@@ -211,7 +212,7 @@ export class Network implements INetwork {
       events: networkEventBus,
     });
 
-    const syncnetsService = new SyncnetsService(config, chain, gossip, metadata, logger, metricsCore, opts);
+    const syncnetsService = new SyncnetsService(config, chain.clock, gossip, metadata, logger, metricsCore, opts);
 
     const peerManager = new PeerManager(
       {
@@ -283,7 +284,7 @@ export class Network implements INetwork {
   async close(): Promise<void> {
     if (this.closed) return;
 
-    this.chain.emitter.off(ChainEvent.clockEpoch, this.onEpoch);
+    this.chain.emitter.off(ClockEvent.epoch, this.onEpoch);
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
 

@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {phase0} from "@lodestar/types";
 import {MockBeaconChain} from "../../../../utils/mocks/chain/chain.js";
 import {assertPeerRelevance, IrrelevantPeerCode} from "../../../../../src/network/peers/utils/assertPeerRelevance.js";
-import {BeaconClock} from "../../../../../src/chain/clock/index.js";
+import {IClock} from "../../../../../src/util/clock.js";
 
 describe("network / peers / utils / assertPeerRelevance", () => {
   const correctForkDigest = Buffer.alloc(4, 0);
@@ -92,7 +92,7 @@ describe("network / peers / utils / assertPeerRelevance", () => {
         }),
         clock: {
           currentSlot: currentSlot ?? 0,
-        } as Partial<BeaconClock>,
+        } as Partial<IClock>,
       } as Partial<MockBeaconChain> as MockBeaconChain;
 
       expect(assertPeerRelevance(remote, chain)).to.deep.equal(irrelevantType);

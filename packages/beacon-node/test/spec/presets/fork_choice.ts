@@ -7,7 +7,8 @@ import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types"
 import {bnToNum} from "@lodestar/utils";
 import {createBeaconConfig} from "@lodestar/config";
 import {ForkSeq, isForkBlobs} from "@lodestar/params";
-import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
+import {BeaconChain} from "../../../src/chain/index.js";
+import {ClockEvent} from "../../../src/util/clock.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../../utils/config.js";
@@ -108,7 +109,7 @@ export const forkChoiceTest =
               tickTime = bnToNum(step.tick);
               const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
               logger.debug(`Step ${i}/${stepsLen} tick`, {currentSlot, valid: Boolean(step.valid), time: tickTime});
-              chain.emitter.emit(ChainEvent.clockSlot, currentSlot);
+              clock.emit(ClockEvent.slot, currentSlot);
               clock.setSlot(currentSlot);
             }
 

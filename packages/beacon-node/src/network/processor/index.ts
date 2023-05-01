@@ -5,7 +5,7 @@ import {IBeaconChain} from "../../chain/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {GossipType} from "../gossip/interface.js";
-import {ChainEvent} from "../../chain/emitter.js";
+import {ClockEvent} from "../../util/clock.js";
 import {GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {createGossipQueues} from "./gossipQueues.js";
 import {NetworkWorker, NetworkWorkerModules} from "./worker.js";
@@ -129,7 +129,7 @@ export class NetworkProcessor {
 
     events.on(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage.bind(this));
     this.chain.emitter.on(routes.events.EventType.block, this.onBlockProcessed.bind(this));
-    this.chain.emitter.on(ChainEvent.clockSlot, this.onClockSlot.bind(this));
+    this.chain.clock.on(ClockEvent.slot, this.onClockSlot.bind(this));
 
     this.awaitingGossipsubMessagesByRootBySlot = new MapDef(
       () => new MapDef<RootHex, Set<PendingGossipsubMessage>>(() => new Set())
@@ -154,7 +154,7 @@ export class NetworkProcessor {
   async stop(): Promise<void> {
     this.events.off(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage);
     this.chain.emitter.off(routes.events.EventType.block, this.onBlockProcessed);
-    this.chain.emitter.off(ChainEvent.clockSlot, this.onClockSlot);
+    this.chain.emitter.off(ClockEvent.slot, this.onClockSlot);
   }
 
   dropAllJobs(): void {
