@@ -43,7 +43,7 @@ import {
   AsyncIterableEventBus,
   IteratorEvent,
   RequestEvent,
-} from "./asyncIterableToEvents.js";
+} from "./utils/asyncIterableToEvents.js";
 
 export {getReqRespHandlers, ReqRespHandlers} from "./handlers/index.js";
 export {ReqRespMethod, RequestTypedContainer} from "./types.js";
@@ -170,9 +170,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     };
 
     this.reqBridgeCaller = new AsyncIterableBridgeCaller(reqBridgeEvents);
-    this.reqBridgeHandler = new AsyncIterableBridgeHandler(this.reqBridgeHandlerFn.bind(this), reqBridgeEvents);
+    this.reqBridgeHandler = new AsyncIterableBridgeHandler(reqBridgeEvents, this.reqBridgeHandlerFn.bind(this));
     this.respBridgeCaller = new AsyncIterableBridgeCaller(respBridgeEvents);
-    this.respBridgeHandler = new AsyncIterableBridgeHandler(this.respBridgeHandlerFn.bind(this), respBridgeEvents);
+    this.respBridgeHandler = new AsyncIterableBridgeHandler(respBridgeEvents, this.respBridgeHandlerFn.bind(this));
   }
 
   async start(): Promise<void> {

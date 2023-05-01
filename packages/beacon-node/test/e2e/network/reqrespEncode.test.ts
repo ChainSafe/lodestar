@@ -20,6 +20,7 @@ import {
 import {PeersData} from "../../../src/network/peers/peersData.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
 import {MetadataController} from "../../../src/network/metadata.js";
+import {LocalStatusCache} from "../../../src/network/statusCache.js";
 import {testLogger} from "../../utils/logger.js";
 
 /* eslint-disable require-yield, @typescript-eslint/naming-convention */
@@ -82,7 +83,7 @@ describe("reqresp encoder", () => {
       metadata: new MetadataController(config),
       peerRpcScores: new PeerRpcScoreStore(),
       networkEventBus: new NetworkEventBus(),
-      initialChainStatus: ssz.phase0.Status.defaultValue(),
+      statusCache: new LocalStatusCache(ssz.phase0.Status.defaultValue()),
     };
 
     return {libp2p, multiaddr, reqresp: new ReqRespBeaconNode(modules)};
