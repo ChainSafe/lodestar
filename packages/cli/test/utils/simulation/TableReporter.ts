@@ -108,7 +108,9 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
       peers: !arrayIsUnique(peerCount) && peerCount[0] !== undefined ? peerCount[0] : peerCount.join(","),
       attCount: !arrayIsUnique(attestationCount) && attestationCount[0] !== undefined ? attestationCount[0] : "---",
       incDelay:
-        !arrayIsUnique(inclusionDelay) && inclusionDelay[0] !== undefined ? inclusionDelay[0].toFixed(2) : "---",
+        !arrayIsUnique(inclusionDelay) && inclusionDelay[0] !== undefined
+          ? Number(inclusionDelay[0] as number).toFixed(2)
+          : "---",
       errors: errorCount,
     });
   }
