@@ -2,6 +2,7 @@ import {ResponseIncoming} from "@lodestar/reqresp";
 import {allForks, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
+import {sszDeserializeResponse} from "./collect.js";
 
 /**
  * Asserts a response from BeaconBlocksByRange respects the request and is sequential
@@ -15,8 +16,7 @@ export async function collectSequentialBlocksInRange(
 
   for await (const chunk of blockStream) {
     const blockType = responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRange](chunk.fork, chunk.protocolVersion);
-    // TODO: Wrap
-    const block = blockType.deserialize(chunk.data);
+    const block = sszDeserializeResponse(blockType, chunk.data);
 
     const blockSlot = block.message.slot;
 

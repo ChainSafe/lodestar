@@ -6,6 +6,7 @@ export enum RequestErrorCode {
   // Declaring specific values of RpcResponseStatusError for error clarity downstream
   /** `<response_chunk>` had `<result>` === INVALID_REQUEST */
   INVALID_REQUEST = "REQUEST_ERROR_INVALID_REQUEST",
+  INVALID_RESPONSE_SSZ = "REQUEST_ERROR_INVALID_RESPONSE_SSZ",
   /** `<response_chunk>` had `<result>` === SERVER_ERROR */
   SERVER_ERROR = "REQUEST_ERROR_SERVER_ERROR",
   /** `<response_chunk>` had `<result>` === RESOURCE_UNAVAILABLE */
@@ -34,6 +35,7 @@ export enum RequestErrorCode {
 
 type RequestErrorType =
   | {code: RequestErrorCode.INVALID_REQUEST; errorMessage: string}
+  | {code: RequestErrorCode.INVALID_RESPONSE_SSZ; errorMessage: string}
   | {code: RequestErrorCode.SERVER_ERROR; errorMessage: string}
   | {code: RequestErrorCode.RESOURCE_UNAVAILABLE; errorMessage: string}
   | {code: RequestErrorCode.UNKNOWN_ERROR_STATUS; status: RpcResponseStatusError; errorMessage: string}

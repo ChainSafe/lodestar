@@ -1,4 +1,5 @@
 import {ResponseIncoming, RequestErrorCode, RequestError} from "@lodestar/reqresp";
+import {Type} from "@chainsafe/ssz";
 import {ResponseTypeGetter} from "../types.js";
 
 /**
@@ -14,8 +15,7 @@ export async function collectExactOneTyped<T>(
 ): Promise<T> {
   for await (const chunk of source) {
     const type = typeFn(chunk.fork, chunk.protocolVersion);
-    // TODO: Wrap with typed error
-    const response = type.deserialize(chunk.data);
+    const response = sszDeserializeResponse(type, chunk.data);
     return response;
   }
   throw new RequestError({code: RequestErrorCode.EMPTY_RESPONSE});
@@ -37,8 +37,7 @@ export async function collectMaxResponseTyped<T>(
   const responses: T[] = [];
   for await (const chunk of source) {
     const type = typeFn(chunk.fork, chunk.protocolVersion);
-    // TODO: Wrap with typed error
-    const response = type.deserialize(chunk.data);
+    const response = sszDeserializeResponse(type, chunk.data);
     responses.push(response);
 
     if (maxResponses !== undefined && responses.length >= maxResponses) {
@@ -46,4 +45,13 @@ export async function collectMaxResponseTyped<T>(
     }
   }
   return responses;
+}
+
+/** Light wrapper on type to wrap deserialize errors */
+export function sszDeserializeResponse<T>(type: Type<T>, bytes: Uint8Array): T {
+  try {
+    return type.deserialize(bytes);
+  } catch (e) {
+    throw new RequestError({code: RequestErrorCode.INVALID_RESPONSE_SSZ, errorMessage: (e as Error).message});
+  }
 }
