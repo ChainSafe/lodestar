@@ -14,25 +14,30 @@ Typescript REST client for the [Ethereum Consensus API spec](https://github.com/
 ```typescript
 import {Libp2p} from "libp2p";
 import {ssz} from "@lodestar/types";
-import {EncodedPayloadType, ReqResp, ContextBytesType} from "@lodestar/reqresp";
-import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
-import {Ping} from "@lodestar/reqresp/protocols";
+import {ReqResp, ContextBytesType, Protocol, Encoding} from "@lodestar/reqresp";
+import {ForkName} from "@lodestar/params";
 import {Logger} from "@lodestar/utils";
 
 async function getReqResp(libp2p: Libp2p, logger: Logger): Promise<void> {
   const reqResp = new ReqResp({libp2p, logger, metricsRegister: null});
-  const genesisValidatorsRoot = Buffer.from("0x123", "hex");
-  const config = createBeaconConfig({...defaultChainConfig}, genesisValidatorsRoot);
 
   // Register a PONG handler to respond with caller's Ping request
-  reqResp.registerProtocol(
-    Ping({config}, async function* (protocol, req) {
+  const pingProtocol: Protocol = {
+    method: "ping",
+    version: 1,
+    encoding: Encoding.SSZ_SNAPPY,
+    contextBytes: {type: ContextBytesType.Empty},
+    requestSizes: ssz.phase0.Ping,
+    responseSizes: () => ssz.phase0.Ping,
+    handler: async function* (req) {
       yield {
-        type: EncodedPayloadType.bytes, 
-        bytes: ssz.phase0.Ping.serialize(req), 
-        contextBytes: {type: ContextBytesType.Empty}};
-    })
-  );
+        data: req.data,
+        fork: ForkName.phase0,
+      };
+    },
+  };
+
+  reqResp.registerProtocol(pingProtocol);
 }
 ```
 
