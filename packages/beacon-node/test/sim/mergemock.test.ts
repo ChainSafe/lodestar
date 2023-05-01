@@ -104,6 +104,12 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const expectedBuilderBlocks = 12;
     const expectedEngineBlocks = 12;
 
+    // All assertions are tracked w.r.t. fee recipient by attaching different fee recipient to
+    // execution and builder
+    const feeRecipientLocal = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const feeRecipientEngine = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const feeRecipientMevBoost = "0xcccccccccccccccccccccccccccccccccccccccc";
+
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     const genesisSlotsDelay = 8;
 
@@ -145,11 +151,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         executionBuilder: {
           urls: [ethRpcUrl],
           enabled: true,
-          issueLocalFcUWithFeeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
+          issueLocalFcUWithFeeRecipient: feeRecipientMevBoost,
           allowedFaults: 16,
           faultInspectionWindow: 32,
         },
-        chain: {suggestedFeeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+        chain: {suggestedFeeRecipient: feeRecipientLocal},
       },
       validatorCount: validatorClientCount * validatorsPerClient,
       logger: loggerNodeA,
@@ -172,7 +178,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       defaultConfig: {
         graffiti: "default graffiti",
         strictFeeRecipientCheck: true,
-        feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        feeRecipient: feeRecipientEngine,
         builder: {
           enabled: true,
           gasLimit: 30000000,
@@ -205,7 +211,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
           const blockFeeRecipient = toHexString(
             (fullOrBlindedBlock as bellatrix.SignedBeaconBlock).message.body.executionPayload.feeRecipient
           );
-          if (blockFeeRecipient === "0xcccccccccccccccccccccccccccccccccccccccc") {
+          if (blockFeeRecipient === feeRecipientMevBoost) {
             builderBlocks++;
           } else {
             engineBlocks++;
@@ -227,7 +233,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     await bn.close();
     await sleep(500);
 
-    if (bn.chain.beaconProposerCache.get(1) !== "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") {
+    if (bn.chain.beaconProposerCache.get(1) !== feeRecipientEngine) {
       throw Error("Invalid feeRecipient set at BN");
     }
 
