@@ -6,13 +6,13 @@ import {Logger, sleep, toHex} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SignableENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
-import {deneb, Epoch, phase0, allForks, altair} from "@lodestar/types";
+import {Epoch, phase0, allForks, altair} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent, IClock} from "../util/clock.js";
 import {IBeaconChain} from "../chain/index.js";
-import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
+import {BlockInput} from "../chain/blocks/types.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "../chain/opPools/utils.js";
 import {formatNodePeer} from "../api/impl/node/utils.js";
 import {NetworkOptions} from "./options.js";
@@ -40,6 +40,7 @@ import {createNodeJsLibp2p} from "./nodejs/util.js";
 import {NetworkProcessor} from "./processor/index.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {createNetworkCoreMetrics} from "./core/metrics.js";
+import {GossipPublisher} from "./gossip/publisher.js";
 
 // How many changes to batch cleanup
 const CACHED_BLS_BATCH_CLEANUP_LIMIT = 10;
@@ -82,7 +83,7 @@ export class Network implements INetwork {
   reqResp: ReqRespBeaconNode;
   attnetsService: AttnetsService;
   syncnetsService: SyncnetsService;
-  gossip: Eth2Gossipsub;
+  gossip: GossipPublisher;
   metadata: MetadataController;
   readonly peerRpcScores: IPeerRpcScoreStore;
   private readonly opts: NetworkOptions;
@@ -91,6 +92,7 @@ export class Network implements INetwork {
   private readonly networkProcessor: NetworkProcessor;
   private readonly peerManager: PeerManager;
   private readonly libp2p: Libp2p;
+  private readonly gossipsub: Eth2Gossipsub;
   private readonly logger: Logger;
   private readonly config: BeaconConfig;
   private readonly clock: IClock;
@@ -132,7 +134,8 @@ export class Network implements INetwork {
     (this.networkProcessor = networkProcessor), (this.metadata = metadata);
     this.peerRpcScores = peerRpcScores;
     this.reqResp = reqResp;
-    this.gossip = gossip;
+    this.gossipsub = gossip;
+    this.gossip = new GossipPublisher({config, logger, publishGossip: gossip.publish.bind(gossip)});
     this.attnetsService = attnetsService;
     this.syncnetsService = syncnetsService;
     this.peerManager = peerManager;
@@ -291,7 +294,7 @@ export class Network implements INetwork {
     // Must goodbye and disconnect before stopping libp2p
     await this.peerManager.goodbyeAndDisconnectAllPeers();
     await this.peerManager.stop();
-    await this.gossip.stop();
+    await this.gossipsub.stop();
 
     await this.reqResp.stop();
     await this.reqResp.unregisterAllProtocols();
@@ -341,19 +344,6 @@ export class Network implements INetwork {
 
   getConnectedPeerCount(): number {
     return this.peerManager.getConnectedPeerIds().length;
-  }
-
-  publishBeaconBlockMaybeBlobs(blockInput: BlockInput): Promise<void> {
-    switch (blockInput.type) {
-      case BlockInputType.preDeneb:
-        return this.gossip.publishBeaconBlock(blockInput.block);
-
-      case BlockInputType.postDeneb:
-        return this.gossip.publishSignedBeaconBlockAndBlobsSidecar({
-          beaconBlock: blockInput.block as deneb.SignedBeaconBlock,
-          blobsSidecar: blockInput.blobs,
-        });
-    }
   }
 
   async beaconBlocksMaybeBlobsByRange(
@@ -458,7 +448,7 @@ export class Network implements INetwork {
   }
 
   async dumpGossipPeerScoreStats(): Promise<PeerScoreStatsDump> {
-    return this.gossip.dumpPeerScoreStats();
+    return this.gossipsub.dumpPeerScoreStats();
   }
 
   async dumpDiscv5KadValues(): Promise<string[]> {
@@ -538,7 +528,7 @@ export class Network implements INetwork {
     const {subscribeAllSubnets} = this.opts;
 
     for (const topic of getCoreTopicsAtFork(fork, {subscribeAllSubnets})) {
-      this.gossip.subscribeTopic({...topic, fork});
+      this.gossipsub.subscribeTopic({...topic, fork});
     }
   };
 
@@ -548,7 +538,7 @@ export class Network implements INetwork {
     const {subscribeAllSubnets} = this.opts;
 
     for (const topic of getCoreTopicsAtFork(fork, {subscribeAllSubnets})) {
-      this.gossip.unsubscribeTopic({...topic, fork});
+      this.gossipsub.unsubscribeTopic({...topic, fork});
     }
   };
 
@@ -660,7 +650,7 @@ export class Network implements INetwork {
         // messages SHOULD be broadcast after one-third of slot has transpired
         // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
         await this.waitOneThirdOfSlot(finalityUpdate.signatureSlot);
-        return await this.gossip.publishLightClientFinalityUpdate(finalityUpdate);
+        await this.gossip.publishLightClientFinalityUpdate(finalityUpdate);
       } catch (e) {
         // Non-mandatory route on most of network as of Oct 2022. May not have found any peers on topic yet
         // Remove once https://github.com/ChainSafe/js-libp2p-gossipsub/issues/367
@@ -679,7 +669,7 @@ export class Network implements INetwork {
         // messages SHOULD be broadcast after one-third of slot has transpired
         // https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#sync-committee
         await this.waitOneThirdOfSlot(optimisticUpdate.signatureSlot);
-        return await this.gossip.publishLightClientOptimisticUpdate(optimisticUpdate);
+        await this.gossip.publishLightClientOptimisticUpdate(optimisticUpdate);
       } catch (e) {
         // Non-mandatory route on most of network as of Oct 2022. May not have found any peers on topic yet
         // Remove once https://github.com/ChainSafe/js-libp2p-gossipsub/issues/367

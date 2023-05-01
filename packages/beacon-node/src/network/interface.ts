@@ -10,7 +10,7 @@ import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {routes} from "@lodestar/api";
 import {BlockInput} from "../chain/blocks/types.js";
 import {INetworkEventBus} from "./events.js";
-import {GossipBeaconNode, GossipType} from "./gossip/index.js";
+import {PublisherBeaconNode, GossipType} from "./gossip/index.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
 import {IReqRespBeaconNode} from "./reqresp/ReqRespBeaconNode.js";
 import {AttnetsService, CommitteeSubscription} from "./subnets/index.js";
@@ -29,14 +29,13 @@ export interface INetwork {
   events: INetworkEventBus;
   reqResp: IReqRespBeaconNode;
   attnetsService: AttnetsService;
-  gossip: GossipBeaconNode;
+  gossip: PublisherBeaconNode;
 
   getEnr(): Promise<SignableENR | undefined>;
   getMetadata(): Promise<altair.Metadata>;
   getConnectedPeers(): PeerId[];
   getConnectedPeerCount(): number;
 
-  publishBeaconBlockMaybeBlobs(signedBlock: BlockInput): Promise<void>;
   beaconBlocksMaybeBlobsByRange(peerId: PeerId, request: phase0.BeaconBlocksByRangeRequest): Promise<BlockInput[]>;
   beaconBlocksMaybeBlobsByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<BlockInput[]>;
 

@@ -544,8 +544,8 @@ export function getValidatorApi({
               indexedAttestation.attestingIndices.length,
               committeeIndices
             );
-            const sentPeers = await network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof);
-            metrics?.submitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
+            const result = await network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof);
+            metrics?.submitAggregatedAttestation(seenTimestampSec, indexedAttestation, result.recipients.length);
           } catch (e) {
             if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
               logger.debug("Ignoring known signedAggregateAndProof");
