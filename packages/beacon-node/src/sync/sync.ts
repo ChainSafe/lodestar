@@ -5,7 +5,8 @@ import {Slot, phase0} from "@lodestar/types";
 import {INetwork, NetworkEvent} from "../network/index.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {Metrics} from "../metrics/index.js";
-import {ChainEvent, IBeaconChain} from "../chain/index.js";
+import {IBeaconChain} from "../chain/index.js";
+import {ClockEvent} from "../util/clock.js";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {IBeaconSync, SyncModules, SyncingStatus} from "./interface.js";
 import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range.js";
@@ -60,7 +61,7 @@ export class BeaconSync implements IBeaconSync {
     }
 
     // TODO: It's okay to start this on initial sync?
-    this.chain.emitter.on(ChainEvent.clockEpoch, this.onClockEpoch);
+    this.chain.clock.on(ClockEvent.epoch, this.onClockEpoch);
 
     if (metrics) {
       metrics.syncStatus.addCollect(() => this.scrapeMetrics(metrics));
@@ -70,7 +71,7 @@ export class BeaconSync implements IBeaconSync {
   close(): void {
     this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
-    this.chain.emitter.off(ChainEvent.clockEpoch, this.onClockEpoch);
+    this.chain.clock.off(ClockEvent.epoch, this.onClockEpoch);
     this.rangeSync.close();
     this.unknownBlockSync.close();
   }

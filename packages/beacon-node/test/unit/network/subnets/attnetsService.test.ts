@@ -14,7 +14,8 @@ import {testLogger} from "../../../utils/logger.js";
 import {MetadataController} from "../../../../src/network/metadata.js";
 import {Eth2Gossipsub, GossipType} from "../../../../src/network/gossip/index.js";
 import {AttnetsService, CommitteeSubscription, ShuffleFn} from "../../../../src/network/subnets/index.js";
-import {ChainEvent, IBeaconChain} from "../../../../src/chain/index.js";
+import {ClockEvent} from "../../../../src/util/clock.js";
+import {IBeaconChain} from "../../../../src/chain/index.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 
 describe("AttnetsService", function () {
@@ -86,7 +87,7 @@ describe("AttnetsService", function () {
   });
 
   it("should not subscribe when there is no active validator", () => {
-    chain.emitter.emit(ChainEvent.clockSlot, 1);
+    chain.clock.emit(ClockEvent.slot, 1);
     expect(gossipStub.subscribeTopic).to.be.not.called;
   });
 

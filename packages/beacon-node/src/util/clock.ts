@@ -7,7 +7,15 @@ import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@lodestar/s
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../constants/constants.js";
 
 export const enum ClockEvent {
+  /**
+   * This event signals the start of a new slot, and that subsequent calls to `clock.currentSlot` will equal `slot`.
+   * This event is guaranteed to be emitted every `SECONDS_PER_SLOT` seconds.
+   */
   slot = "clock:slot",
+  /**
+   * This event signals the start of a new epoch, and that subsequent calls to `clock.currentEpoch` will return `epoch`.
+   * This event is guaranteed to be emitted every `SECONDS_PER_SLOT * SLOTS_PER_EPOCH` seconds.
+   */
   epoch = "clock:epoch",
 }
 

@@ -11,7 +11,7 @@ import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ExecutePayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
 import {initializeExecutionEngine} from "../../src/execution/index.js";
-import {ChainEvent} from "../../src/chain/index.js";
+import {ClockEvent} from "../../src/util/clock.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
@@ -362,7 +362,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     await new Promise<void>((resolve, reject) => {
       // Play TX_SCENARIOS
-      bn.chain.emitter.on(ChainEvent.clockSlot, async (slot) => {
+      bn.chain.clock.on(ClockEvent.slot, async (slot) => {
         if (slot < 2) return;
         switch (slot) {
           // If bellatrixEpoch > 0, this is the case of pre-merge transaction confirmation on EL pow

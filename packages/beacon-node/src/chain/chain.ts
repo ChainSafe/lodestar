@@ -27,7 +27,7 @@ import {wrapError} from "../util/wrapError.js";
 import {ckzg} from "../util/kzg.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder, TransitionConfigurationV1} from "../execution/index.js";
-import {Clock, IClock} from "../util/clock.js";
+import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
@@ -271,8 +271,8 @@ export class BeaconChain implements IBeaconChain {
     metrics?.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics());
 
     // Event handlers. emitter is created internally and dropped on close(). Not need to .removeListener()
-    emitter.addListener(ChainEvent.clockSlot, this.onClockSlot.bind(this));
-    emitter.addListener(ChainEvent.clockEpoch, this.onClockEpoch.bind(this));
+    clock.addListener(ClockEvent.slot, this.onClockSlot.bind(this));
+    clock.addListener(ClockEvent.epoch, this.onClockEpoch.bind(this));
     emitter.addListener(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
     emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
   }

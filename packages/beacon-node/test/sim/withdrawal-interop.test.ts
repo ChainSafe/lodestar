@@ -10,7 +10,7 @@ import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ExecutePayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
 import {initializeExecutionEngine} from "../../src/execution/index.js";
-import {ChainEvent} from "../../src/chain/index.js";
+import {ClockEvent} from "../../src/util/clock.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
@@ -296,10 +296,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     });
 
     await new Promise<void>((resolve, _reject) => {
-      bn.chain.emitter.on(ChainEvent.clockEpoch, (epoch) => {
+      bn.chain.clock.on(ClockEvent.epoch, (epoch) => {
         // Resolve only if the finalized checkpoint includes execution payload
         if (epoch >= expectedEpochsToFinish) {
-          console.log(`\nGot event ${ChainEvent.clockEpoch}, stopping validators and nodes\n`);
+          console.log("\nGot event epoch, stopping validators and nodes\n");
           resolve();
         }
       });
