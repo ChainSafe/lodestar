@@ -1,12 +1,15 @@
 import {Logger} from "@lodestar/utils";
+import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
+import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
-import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconDb} from "../../db/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {IBeaconChain} from "../interface.js";
 import {ChainEvent} from "../emitter.js";
+import {CheckpointStateCache} from "../stateCache/index.js";
 import {StatesArchiver, StatesArchiverOpts} from "./archiveStates.js";
-import {archiveBlocks} from "./archiveBlocks.js";
+import {archiveBlocks, FinalizedData} from "./archiveBlocks.js";
 
 const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 
@@ -73,7 +76,7 @@ export class Archiver {
     try {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
-      await archiveBlocks(
+      const finalizedData = await archiveBlocks(
         this.chain.config,
         this.db,
         this.chain.forkChoice,
@@ -85,6 +88,13 @@ export class Archiver {
 
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiver.maybeArchiveState(finalized);
+      this.collectMissedOrphaedStats(
+        this.chain.checkpointStateCache,
+        this.chain.forkChoice,
+        this.chain.beaconProposerCache,
+        finalizedData,
+        finalized
+      );
 
       this.chain.checkpointStateCache.pruneFinalized(finalizedEpoch);
       this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch);
@@ -143,4 +153,78 @@ export class Archiver {
       this.logger.error("Error updating backfilledRanges on finalization", {epoch: finalized.epoch}, e as Error);
     }
   };
+
+  private collectMissedOrphaedStats(
+    checkpointStateCache: CheckpointStateCache,
+    forkChoice: IForkChoice,
+    beaconProposerCache: IBeaconChain["beaconProposerCache"],
+    finalizedData: FinalizedData,
+    finalized: CheckpointWithHex
+  ): void {
+    const {finalizedCanonicalCheckpoints, finalizedCanonicalBlocks, finalizedNonCanonicalBlocks} = finalizedData;
+    const proposers = beaconProposerCache
+      .getProposersSinceEpoch(finalized.epoch)
+      .map((indexString) => Number(indexString));
+    let expectedProposals = 0;
+    let totalProposals = 0;
+    let checkpoints = 0;
+
+    let foundCheckpoints = 0;
+    let foundProposals = 0;
+    let orphanedProposals = 0;
+    // if any validator proposed twice for an epoch
+    let doubleProposals = 0;
+    const doneEpochProposals = new Map<Epoch, ValidatorIndex[]>();
+
+    // Get all the ancestors of the finalized till previous finalized
+    for (const checkpointHex of finalizedCanonicalCheckpoints) {
+      checkpoints++;
+      const checkpointState = checkpointStateCache.get(checkpointHex);
+      if (checkpointState !== null) {
+        foundCheckpoints++;
+        totalProposals += checkpointState.epochCtx.proposers.length;
+        for (const validatorIndex of proposers) {
+          if (checkpointState.epochCtx.proposers.includes(validatorIndex)) {
+            expectedProposals++;
+          }
+        }
+      }
+    }
+
+    for (const block of finalizedCanonicalBlocks) {
+      const {slot, proposerIndex} = block;
+      if (proposers.includes(proposerIndex)) {
+        foundProposals++;
+        const epoch = Number(slot / SLOTS_PER_EPOCH);
+        const epochProposals = doneEpochProposals.get(epoch) ?? [];
+        epochProposals.push(proposerIndex);
+        doneEpochProposals.set(epoch, epochProposals);
+      }
+    }
+
+    for (const block of finalizedNonCanonicalBlocks) {
+      const {slot, proposerIndex} = block;
+      if (proposers.includes(proposerIndex)) {
+        const epoch = Number(slot / SLOTS_PER_EPOCH);
+        orphanedProposals++;
+        const epochProposals = doneEpochProposals.get(epoch) ?? [];
+        if (epochProposals.includes(proposerIndex)) {
+          doubleProposals++;
+        } else {
+          epochProposals.push(proposerIndex);
+          doneEpochProposals.set(epoch, epochProposals);
+        }
+      }
+    }
+
+    this.logger.warn("Expected proposals by this node", {
+      checkpoints,
+      foundCheckpoints,
+      foundProposals,
+      doubleProposals,
+      totalProposals,
+      expectedProposals,
+      orphanedProposals,
+    });
+  }
 }
