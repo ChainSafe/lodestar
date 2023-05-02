@@ -4,8 +4,7 @@ import {Registrar} from "@libp2p/interface-registrar";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {ConnectionManager} from "@libp2p/interface-connection-manager";
-import {SignableENR} from "@chainsafe/discv5";
-import {altair, phase0} from "@lodestar/types";
+import {phase0} from "@lodestar/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {routes} from "@lodestar/api";
 import {BlockInput} from "../chain/blocks/types.js";
@@ -31,10 +30,9 @@ export interface INetwork {
   attnetsService: AttnetsService;
   gossip: GossipBeaconNode;
 
-  getEnr(): Promise<SignableENR | undefined>;
-  getMetadata(): Promise<altair.Metadata>;
   getConnectedPeers(): PeerId[];
   getConnectedPeerCount(): number;
+  getNetworkIdentity(): Promise<routes.node.NetworkIdentity>;
 
   publishBeaconBlockMaybeBlobs(signedBlock: BlockInput): Promise<void>;
   beaconBlocksMaybeBlobsByRange(peerId: PeerId, request: phase0.BeaconBlocksByRangeRequest): Promise<BlockInput[]>;

@@ -4,9 +4,8 @@ import {Multiaddr} from "@multiformats/multiaddr";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger, sleep, toHex} from "@lodestar/utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {SignableENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
-import {deneb, Epoch, phase0, allForks, altair} from "@lodestar/types";
+import {deneb, Epoch, phase0, allForks} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {Metrics} from "../metrics/index.js";
@@ -329,15 +328,23 @@ export class Network implements INetwork {
     return this.libp2p.peerId;
   }
 
-  async getEnr(): Promise<SignableENR | undefined> {
-    return this.peerManager["discovery"]?.discv5.enr();
-  }
+  async getNetworkIdentity(): Promise<routes.node.NetworkIdentity> {
+    const enr = await this.peerManager["discovery"]?.discv5.enr();
+    const discoveryAddresses = [
+      enr?.getLocationMultiaddr("tcp")?.toString() ?? null,
+      enr?.getLocationMultiaddr("udp")?.toString() ?? null,
+    ].filter((addr): addr is string => Boolean(addr));
 
-  async getMetadata(): Promise<altair.Metadata> {
     return {
-      seqNumber: this.metadata.seqNumber,
-      attnets: this.metadata.attnets,
-      syncnets: this.metadata.syncnets,
+      peerId: this.peerId.toString(),
+      enr: enr?.encodeTxt() || "",
+      discoveryAddresses,
+      p2pAddresses: this.localMultiaddrs.map((m) => m.toString()),
+      metadata: {
+        seqNumber: this.metadata.seqNumber,
+        attnets: this.metadata.attnets,
+        syncnets: this.metadata.syncnets,
+      },
     };
   }
 
