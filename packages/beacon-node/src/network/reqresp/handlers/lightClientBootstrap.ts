@@ -4,6 +4,7 @@ import {
   LightClientServerError,
   LightClientServerErrorCode,
   ResponseOutgoing,
+  ProtocolDescriptor,
 } from "@lodestar/reqresp";
 import {Root} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";

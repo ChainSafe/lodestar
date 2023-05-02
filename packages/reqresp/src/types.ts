@@ -22,12 +22,15 @@ export const CONTEXT_BYTES_FORK_DIGEST_LENGTH = 4;
 export type ResponseIncoming = {
   data: Uint8Array;
   fork: ForkName;
-  protocolVersion: number;
 };
 
 export type ResponseOutgoing = {
   data: Uint8Array;
   fork: ForkName;
+};
+
+export type RequestIncoming = {
+  data: Uint8Array;
 };
 
 /**
@@ -57,15 +60,14 @@ export interface InboundRateLimitQuota {
   getRequestCount?: (req: Uint8Array) => number;
 }
 
-export type ReqRespRequest = {
-  data: Uint8Array;
-  version: number;
-};
-
 /**
  * Request handler
  */
-export type ProtocolHandler = (req: ReqRespRequest, peerId: PeerId) => AsyncIterable<ResponseOutgoing>;
+export type ProtocolHandler = (
+  protocol: ProtocolDescriptor,
+  req: RequestIncoming,
+  peerId: PeerId
+) => AsyncIterable<ResponseOutgoing>;
 
 /**
  * ReqResp Protocol Deceleration

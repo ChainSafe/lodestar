@@ -1,11 +1,12 @@
 import {toHexString} from "@chainsafe/ssz";
-import {ResponseOutgoing} from "@lodestar/reqresp";
+import {ProtocolDescriptor, ResponseOutgoing} from "@lodestar/reqresp";
 import {Slot, phase0} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
 
 export async function* onBeaconBlocksByRoot(
+  protocol: ProtocolDescriptor,
   requestBody: phase0.BeaconBlocksByRootRequest,
   chain: IBeaconChain,
   db: IBeaconDb

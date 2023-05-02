@@ -4,7 +4,7 @@ import {Stream} from "@libp2p/interface-connection";
 import {Uint8ArrayList} from "uint8arraylist";
 import {Logger, TimeoutError, withTimeout} from "@lodestar/utils";
 import {prettyPrintPeerId} from "../utils/index.js";
-import {Protocol, ReqRespRequest} from "../types.js";
+import {Protocol, RequestIncoming} from "../types.js";
 import {requestDecode} from "../encoders/requestDecode.js";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
 import {RespStatus} from "../interface.js";
@@ -86,14 +86,13 @@ export async function handleRequest({
           throw new RequestError({code: RequestErrorCode.REQUEST_RATE_LIMITED});
         }
 
-        const requestChunk: ReqRespRequest = {
+        const requestChunk: RequestIncoming = {
           data: requestBody,
-          version: protocol.version,
         };
 
         yield* pipe(
           // TODO: Debug the reason for type conversion here
-          protocol.handler(requestChunk, peerId),
+          protocol.handler(protocol, requestChunk, peerId),
           // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
           // Note: Not logging on each chunk since after 1 year it hasn't add any value when debugging
           // onChunk(() => logger.debug("Resp sending chunk", logCtx)),

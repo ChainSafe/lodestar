@@ -33,27 +33,27 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     async *onStatus() {
       yield* onStatus(chain);
     },
-    async *onBeaconBlocksByRange(req) {
+    async *onBeaconBlocksByRange(protocol, req) {
       const body = ssz.phase0.BeaconBlocksByRangeRequest.deserialize(req.data);
-      yield* onBeaconBlocksByRange(body, chain, db);
+      yield* onBeaconBlocksByRange(protocol, body, chain, db);
     },
-    async *onBeaconBlocksByRoot(req) {
+    async *onBeaconBlocksByRoot(protocol, req) {
       const body = ssz.phase0.BeaconBlocksByRootRequest.deserialize(req.data);
-      yield* onBeaconBlocksByRoot(body, chain, db);
+      yield* onBeaconBlocksByRoot(protocol, body, chain, db);
     },
-    async *onBeaconBlockAndBlobsSidecarByRoot(req) {
+    async *onBeaconBlockAndBlobsSidecarByRoot(protocol, req) {
       const body = ssz.deneb.BeaconBlockAndBlobsSidecarByRootRequest.deserialize(req.data);
-      yield* onBeaconBlockAndBlobsSidecarByRoot(body, chain, db);
+      yield* onBeaconBlockAndBlobsSidecarByRoot(protocol, body, chain, db);
     },
-    async *onBlobsSidecarsByRange(req) {
+    async *onBlobsSidecarsByRange(protocol, req) {
       const body = ssz.deneb.BlobsSidecarsByRangeRequest.deserialize(req.data);
-      yield* onBlobsSidecarsByRange(body, chain, db);
+      yield* onBlobsSidecarsByRange(protocol, body, chain, db);
     },
-    async *onLightClientBootstrap(req) {
+    async *onLightClientBootstrap(_protocol, req) {
       const body = ssz.Root.deserialize(req.data);
       yield* onLightClientBootstrap(body, chain);
     },
-    async *onLightClientUpdatesByRange(req) {
+    async *onLightClientUpdatesByRange(_protocol, req) {
       const body = ssz.altair.LightClientUpdatesByRange.deserialize(req.data);
       yield* onLightClientUpdatesByRange(body, chain);
     },

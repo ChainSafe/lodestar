@@ -1,4 +1,4 @@
-import {ResponseIncoming} from "@lodestar/reqresp";
+import {ProtocolDescriptor, ResponseIncoming} from "@lodestar/reqresp";
 import {allForks, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
@@ -9,13 +9,14 @@ import {sszDeserializeResponse} from "./collect.js";
  * Note: MUST allow missing block for skipped slots.
  */
 export async function collectSequentialBlocksInRange(
+  protocol: ProtocolDescriptor,
   blockStream: AsyncIterable<ResponseIncoming>,
   {count, startSlot}: Pick<phase0.BeaconBlocksByRangeRequest, "count" | "startSlot">
 ): Promise<allForks.SignedBeaconBlock[]> {
   const blocks: allForks.SignedBeaconBlock[] = [];
 
   for await (const chunk of blockStream) {
-    const blockType = responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRange](chunk.fork, chunk.protocolVersion);
+    const blockType = responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRange](chunk.fork, protocol.version);
     const block = sszDeserializeResponse(blockType, chunk.data);
 
     const blockSlot = block.message.slot;

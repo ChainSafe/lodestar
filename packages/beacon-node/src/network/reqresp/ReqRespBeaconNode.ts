@@ -8,8 +8,8 @@ import {
   ProtocolHandler,
   ReqResp,
   ReqRespOpts,
-  ReqRespRequest,
   RequestError,
+  RequestIncoming,
   ResponseIncoming,
   ResponseOutgoing,
 } from "@lodestar/reqresp";
@@ -144,6 +144,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
 
   async status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status> {
     return collectExactOneTyped(
+      this.getRegisteredProtocol(ReqRespMethod.Status, Version.V1),
       this.sendRequestTyped(peerId, ReqRespMethod.Status, [Version.V1], request),
       responseSszTypeByMethod[ReqRespMethod.Status]
     );
@@ -152,6 +153,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   async goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void> {
     // TODO: Replace with "ignore response after request"
     await collectExactOneTyped(
+      this.getRegisteredProtocol(ReqRespMethod.Goodbye, Version.V1),
       this.sendRequestTyped(peerId, ReqRespMethod.Goodbye, [Version.V1], request),
       responseSszTypeByMethod[ReqRespMethod.Goodbye]
     );
@@ -159,6 +161,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
 
   async ping(peerId: PeerId): Promise<phase0.Ping> {
     return collectExactOneTyped(
+      this.getRegisteredProtocol(ReqRespMethod.Ping, Version.V1),
       this.sendRequestTyped(peerId, ReqRespMethod.Ping, [Version.V1], this.metadataController.seqNumber),
       responseSszTypeByMethod[ReqRespMethod.Ping]
     );
@@ -166,6 +169,10 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
 
   async metadata(peerId: PeerId): Promise<allForks.Metadata> {
     return collectExactOneTyped(
+      this.getRegisteredProtocol(
+        ReqRespMethod.Metadata,
+        this.currentRegisteredFork >= ForkSeq.altair ? Version.V2 : Version.V1
+      ),
       this.sendRequestTyped(
         peerId,
         ReqRespMethod.Metadata,
@@ -182,6 +189,10 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<allForks.SignedBeaconBlock[]> {
     return collectSequentialBlocksInRange(
+      this.getRegisteredProtocol(
+        ReqRespMethod.BeaconBlocksByRange,
+        this.currentRegisteredFork >= ForkSeq.altair ? Version.V2 : Version.V1
+      ),
       this.sendRequestTyped(
         peerId,
         ReqRespMethod.BeaconBlocksByRange,
@@ -198,6 +209,10 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     request: phase0.BeaconBlocksByRootRequest
   ): Promise<allForks.SignedBeaconBlock[]> {
     return collectMaxResponseTyped(
+      this.getRegisteredProtocol(
+        ReqRespMethod.BeaconBlocksByRoot,
+        this.currentRegisteredFork >= ForkSeq.altair ? Version.V2 : Version.V1
+      ),
       this.sendRequestTyped(
         peerId,
         ReqRespMethod.BeaconBlocksByRoot,
@@ -212,6 +227,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
 
   async lightClientBootstrap(peerId: PeerId, request: Root): Promise<allForks.LightClientBootstrap> {
     return collectExactOneTyped(
+      this.getRegisteredProtocol(ReqRespMethod.LightClientBootstrap, Version.V1),
       this.sendRequestTyped(peerId, ReqRespMethod.LightClientBootstrap, [Version.V1], request),
       responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap]
     );
@@ -219,6 +235,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
 
   async lightClientOptimisticUpdate(peerId: PeerId): Promise<allForks.LightClientOptimisticUpdate> {
     return collectExactOneTyped(
+      this.getRegisteredProtocol(ReqRespMethod.LightClientOptimisticUpdate, Version.V1),
       this.sendRequestTyped(peerId, ReqRespMethod.LightClientOptimisticUpdate, [Version.V1], null),
       responseSszTypeByMethod[ReqRespMethod.LightClientOptimisticUpdate]
     );
@@ -226,6 +243,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
 
   async lightClientFinalityUpdate(peerId: PeerId): Promise<allForks.LightClientFinalityUpdate> {
     return collectExactOneTyped(
+      this.getRegisteredProtocol(ReqRespMethod.LightClientFinalityUpdate, Version.V1),
       this.sendRequestTyped(peerId, ReqRespMethod.LightClientFinalityUpdate, [Version.V1], null),
       responseSszTypeByMethod[ReqRespMethod.LightClientFinalityUpdate]
     );
@@ -236,6 +254,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     request: altair.LightClientUpdatesByRange
   ): Promise<allForks.LightClientUpdate[]> {
     return collectMaxResponseTyped(
+      this.getRegisteredProtocol(ReqRespMethod.LightClientUpdatesByRange, Version.V1),
       this.sendRequestTyped(peerId, ReqRespMethod.LightClientUpdatesByRange, [Version.V1], request),
       request.count,
       responseSszTypeByMethod[ReqRespMethod.LightClientUpdatesByRange]
@@ -247,6 +266,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     request: deneb.BlobsSidecarsByRangeRequest
   ): Promise<deneb.BlobsSidecar[]> {
     return collectMaxResponseTyped(
+      this.getRegisteredProtocol(ReqRespMethod.BlobsSidecarsByRange, Version.V1),
       this.sendRequestTyped(peerId, ReqRespMethod.BlobsSidecarsByRange, [Version.V1], request),
       request.count,
       responseSszTypeByMethod[ReqRespMethod.BlobsSidecarsByRange]
@@ -258,6 +278,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     request: deneb.BeaconBlockAndBlobsSidecarByRootRequest
   ): Promise<deneb.SignedBeaconBlockAndBlobsSidecar[]> {
     return collectMaxResponseTyped(
+      this.getRegisteredProtocol(ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot, Version.V1),
       this.sendRequestTyped(peerId, ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot, [Version.V1], request),
       request.length,
       responseSszTypeByMethod[ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]
@@ -347,13 +368,21 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     }
   }
 
-  private async *onStatus(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
+  private async *onStatus(
+    _protocol: ProtocolDescriptor,
+    req: RequestIncoming,
+    peerId: PeerId
+  ): AsyncIterable<ResponseOutgoing> {
     const body = ssz.phase0.Status.deserialize(req.data);
     this.onIncomingRequestBody({method: ReqRespMethod.Status, body}, peerId);
     yield* this.reqRespHandlers.onStatus(body, peerId);
   }
 
-  private async *onGoodbye(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
+  private async *onGoodbye(
+    _protocol: ProtocolDescriptor,
+    req: RequestIncoming,
+    peerId: PeerId
+  ): AsyncIterable<ResponseOutgoing> {
     const body = ssz.phase0.Goodbye.deserialize(req.data);
     this.onIncomingRequestBody({method: ReqRespMethod.Goodbye, body}, peerId);
 
@@ -364,7 +393,11 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     };
   }
 
-  private async *onPing(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
+  private async *onPing(
+    _protocol: ProtocolDescriptor,
+    req: RequestIncoming,
+    peerId: PeerId
+  ): AsyncIterable<ResponseOutgoing> {
     const body = ssz.phase0.Ping.deserialize(req.data);
     this.onIncomingRequestBody({method: ReqRespMethod.Ping, body}, peerId);
     yield {
@@ -374,13 +407,17 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     };
   }
 
-  private async *onMetadata(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
+  private async *onMetadata(
+    protocol: ProtocolDescriptor,
+    _req: RequestIncoming,
+    peerId: PeerId
+  ): AsyncIterable<ResponseOutgoing> {
     this.onIncomingRequestBody({method: ReqRespMethod.Metadata, body: null}, peerId);
 
     const metadata = this.metadataController.json;
     // Metadata topic is fork-agnostic
     const fork = ForkName.phase0;
-    const type = responseSszTypeByMethod[ReqRespMethod.Metadata](fork, req.version);
+    const type = responseSszTypeByMethod[ReqRespMethod.Metadata](fork, protocol.version);
 
     yield {
       data: type.serialize(metadata),

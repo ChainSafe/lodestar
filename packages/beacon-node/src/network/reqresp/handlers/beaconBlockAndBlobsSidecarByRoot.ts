@@ -1,4 +1,4 @@
-import {ResponseOutgoing} from "@lodestar/reqresp";
+import {ProtocolDescriptor, ResponseOutgoing} from "@lodestar/reqresp";
 import {deneb} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -6,6 +6,7 @@ import {IBeaconDb} from "../../../db/index.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
 
 export async function* onBeaconBlockAndBlobsSidecarByRoot(
+  _protocol: ProtocolDescriptor,
   requestBody: deneb.BeaconBlockAndBlobsSidecarByRootRequest,
   chain: IBeaconChain,
   db: IBeaconDb

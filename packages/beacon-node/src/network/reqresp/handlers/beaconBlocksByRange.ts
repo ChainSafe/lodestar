@@ -1,5 +1,5 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS} from "@lodestar/params";
-import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
+import {ProtocolDescriptor, ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
 import {deneb, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -8,17 +8,19 @@ import {IBeaconDb} from "../../../db/index.js";
 // TODO: Unit test
 
 export function onBeaconBlocksByRange(
+  protocol: ProtocolDescriptor,
   request: phase0.BeaconBlocksByRangeRequest,
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
-  return onBlocksOrBlobsSidecarsByRange(request, chain, {
+  return onBlocksOrBlobsSidecarsByRange(protocol, request, chain, {
     finalized: db.blockArchive,
     unfinalized: db.block,
   });
 }
 
 export async function* onBlocksOrBlobsSidecarsByRange(
+  protocol: ProtocolDescriptor,
   request: deneb.BlobsSidecarsByRangeRequest,
   chain: IBeaconChain,
   db: {

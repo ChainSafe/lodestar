@@ -130,6 +130,17 @@ export class ReqResp {
     }
   }
 
+  getRegisteredProtocol(method: string, version: number): MixedProtocol {
+    const protocolId = this.formatProtocolID({method, version, encoding: Encoding.SSZ_SNAPPY});
+    const protocol = this.registeredProtocols.get(protocolId);
+
+    if (!protocol) {
+      throw new Error(`Protocol not found for method: ${method}, version: ${version}`);
+    }
+
+    return protocol;
+  }
+
   getRegisteredProtocols(): ProtocolID[] {
     return Array.from(this.registeredProtocols.values()).map((protocol) => this.formatProtocolID(protocol));
   }
