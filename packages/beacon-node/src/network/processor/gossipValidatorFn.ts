@@ -39,7 +39,7 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
         seenTimestampSec
       );
 
-      metrics?.gossipValidationAccept.inc({topic: type});
+      metrics?.networkProcessor.gossipValidationAccept.inc({topic: type});
 
       return TopicValidatorResult.Accept;
     } catch (e) {
@@ -51,15 +51,18 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
 
       // Metrics on specific error reason
       // Note: LodestarError.code are bounded pre-declared error messages, not from arbitrary error.message
-      metrics?.gossipValidationError.inc({topic: type, error: (e as GossipActionError<{code: string}>).type.code});
+      metrics?.networkProcessor.gossipValidationError.inc({
+        topic: type,
+        error: (e as GossipActionError<{code: string}>).type.code,
+      });
 
       switch (e.action) {
         case GossipAction.IGNORE:
-          metrics?.gossipValidationIgnore.inc({topic: type});
+          metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
           return TopicValidatorResult.Ignore;
 
         case GossipAction.REJECT:
-          metrics?.gossipValidationReject.inc({topic: type});
+          metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
           logger.debug(`Gossip validation ${type} rejected`, {}, e);
           return TopicValidatorResult.Reject;
       }

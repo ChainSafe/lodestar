@@ -10,7 +10,8 @@ import {deneb, Epoch, phase0, allForks, altair} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {Metrics} from "../metrics/index.js";
-import {ChainEvent, IBeaconChain, BeaconClock} from "../chain/index.js";
+import {ClockEvent, IClock} from "../util/clock.js";
+import {IBeaconChain} from "../chain/index.js";
 import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "../chain/opPools/utils.js";
 import {formatNodePeer} from "../api/impl/node/utils.js";
@@ -38,6 +39,8 @@ import {Discv5Worker} from "./discv5/index.js";
 import {createNodeJsLibp2p} from "./nodejs/util.js";
 import {NetworkProcessor} from "./processor/index.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
+import {createNetworkCoreMetrics} from "./core/metrics.js";
+import {LocalStatusCache} from "./statusCache.js";
 
 // How many changes to batch cleanup
 const CACHED_BLS_BATCH_CLEANUP_LIMIT = 10;
@@ -59,6 +62,7 @@ type NetworkModules = {
   attnetsService: AttnetsService;
   syncnetsService: SyncnetsService;
   peerManager: PeerManager;
+  statusCache: LocalStatusCache;
 };
 
 export type NetworkInitModules = {
@@ -88,10 +92,11 @@ export class Network implements INetwork {
 
   private readonly networkProcessor: NetworkProcessor;
   private readonly peerManager: PeerManager;
+  private readonly statusCache: LocalStatusCache;
   private readonly libp2p: Libp2p;
   private readonly logger: Logger;
   private readonly config: BeaconConfig;
-  private readonly clock: BeaconClock;
+  private readonly clock: IClock;
   private readonly chain: IBeaconChain;
   private readonly signal: AbortSignal;
 
@@ -117,6 +122,7 @@ export class Network implements INetwork {
       attnetsService,
       syncnetsService,
       peerManager,
+      statusCache,
     } = modules;
     this.opts = opts;
     this.config = config;
@@ -134,8 +140,10 @@ export class Network implements INetwork {
     this.attnetsService = attnetsService;
     this.syncnetsService = syncnetsService;
     this.peerManager = peerManager;
+    this.statusCache = statusCache;
 
-    this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
+    this.chain.clock.on(ClockEvent.epoch, this.onEpoch);
+    this.chain.emitter.on(routes.events.EventType.head, this.onHead);
     this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
@@ -154,10 +162,11 @@ export class Network implements INetwork {
     gossipHandlers,
   }: NetworkInitModules): Promise<Network> {
     const clock = chain.clock;
+    const metricsCore = metrics && createNetworkCoreMetrics(metrics.register);
     const peersData = new PeersData();
     const networkEventBus = new NetworkEventBus();
     const metadata = new MetadataController(config);
-    const peerRpcScores = new PeerRpcScoreStore(metrics);
+    const peerRpcScores = new PeerRpcScoreStore(metricsCore);
 
     const libp2p = await createNodeJsLibp2p(peerId, opts, {
       peerStoreDir: peerStoreDir,
@@ -174,7 +183,7 @@ export class Network implements INetwork {
         peerRpcScores,
         logger,
         networkEventBus,
-        metrics,
+        metrics: metricsCore,
         peersData,
       },
       opts
@@ -193,13 +202,13 @@ export class Network implements INetwork {
       },
     };
 
-    const attnetsService = new AttnetsService(config, chain, _gossip, metadata, logger, metrics, opts);
+    const attnetsService = new AttnetsService(config, chain.clock, _gossip, metadata, logger, metricsCore, opts);
 
     gossip = new Eth2Gossipsub(opts, {
       config,
       libp2p,
       logger,
-      metrics,
+      metrics: metricsCore,
       eth2Context: {
         activeValidatorCount: chain.getHeadState().epochCtx.currentShuffling.activeIndices.length,
         currentSlot: clock.currentSlot,
@@ -209,8 +218,9 @@ export class Network implements INetwork {
       events: networkEventBus,
     });
 
-    const syncnetsService = new SyncnetsService(config, chain, gossip, metadata, logger, metrics, opts);
+    const syncnetsService = new SyncnetsService(config, chain.clock, gossip, metadata, logger, metricsCore, opts);
 
+    const statusCache = new LocalStatusCache(chain.getStatus());
     const peerManager = new PeerManager(
       {
         libp2p,
@@ -219,8 +229,9 @@ export class Network implements INetwork {
         attnetsService,
         syncnetsService,
         logger,
-        metrics,
-        chain,
+        metrics: metricsCore,
+        clock,
+        statusCache,
         config,
         peerRpcScores,
         networkEventBus,
@@ -274,6 +285,7 @@ export class Network implements INetwork {
       attnetsService,
       syncnetsService,
       peerManager,
+      statusCache,
     });
   }
 
@@ -281,7 +293,8 @@ export class Network implements INetwork {
   async close(): Promise<void> {
     if (this.closed) return;
 
-    this.chain.emitter.off(ChainEvent.clockEpoch, this.onEpoch);
+    this.chain.emitter.off(ClockEvent.epoch, this.onEpoch);
+    this.chain.emitter.off(routes.events.EventType.head, this.onHead);
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
 
@@ -527,6 +540,10 @@ export class Network implements INetwork {
     } catch (e) {
       this.logger.error("Error on BeaconGossipHandler.onEpoch", {epoch}, e as Error);
     }
+  };
+
+  private onHead = (): void => {
+    this.statusCache.update(this.chain.getStatus());
   };
 
   private subscribeCoreTopicsAtFork = (fork: ForkName): void => {

@@ -20,7 +20,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {IExecutionEngine} from "../../execution/engine/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {BeaconClock} from "../clock/index.js";
+import {IClock} from "../../util/clock.js";
 import {BlockProcessOpts} from "../options.js";
 import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
@@ -30,7 +30,7 @@ import {ImportBlockOpts} from "./types.js";
 export type VerifyBlockExecutionPayloadModules = {
   eth1: IEth1ForBlockProduction;
   executionEngine: IExecutionEngine;
-  clock: BeaconClock;
+  clock: IClock;
   logger: Logger;
   metrics: Metrics | null;
   forkChoice: IForkChoice;

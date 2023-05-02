@@ -9,7 +9,7 @@ import {routes} from "@lodestar/api";
 import {BeaconChain, ChainEventEmitter} from "../../../src/chain/index.js";
 import {IBeaconChain} from "../../../src/chain/interface.js";
 import {IChainOptions} from "../../../src/chain/options.js";
-import {LocalClock} from "../../../src/chain/clock/index.js";
+import {Clock} from "../../../src/util/clock.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
 import {StateRegenerator} from "../../../src/chain/regen/index.js";
 import {SinonStubFn} from "../../utils/types.js";
@@ -42,7 +42,7 @@ describe("PrepareNextSlot scheduler", () => {
     sandbox.useFakeTimers();
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     updateBuilderStatus = chainStub.updateBuilderStatus;
-    const clockStub = sandbox.createStubInstance(LocalClock) as SinonStubbedInstance<LocalClock> & LocalClock;
+    const clockStub = sandbox.createStubInstance(Clock) as SinonStubbedInstance<Clock> & Clock;
     chainStub.clock = clockStub;
     forkChoiceStub = sandbox.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
     chainStub.forkChoice = forkChoiceStub;

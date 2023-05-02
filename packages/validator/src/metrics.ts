@@ -396,31 +396,31 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
 
     db: {
       dbReadReq: register.gauge<{bucket: string}>({
-        name: "validator_db_read_req_total",
+        name: "vc_db_read_req_total",
         help: "Total count of db read requests, may read 0 or more items",
         labelNames: ["bucket"],
       }),
       dbReadItems: register.gauge<{bucket: string}>({
-        name: "validator_db_read_items_total",
+        name: "vc_db_read_items_total",
         help: "Total count of db read items, item = key | value | entry",
         labelNames: ["bucket"],
       }),
       dbWriteReq: register.gauge<{bucket: string}>({
-        name: "validator_db_write_req_total",
+        name: "vc_db_write_req_total",
         help: "Total count of db write requests, may write 0 or more items",
         labelNames: ["bucket"],
       }),
       dbWriteItems: register.gauge<{bucket: string}>({
-        name: "validator_db_write_items_total",
+        name: "vc_db_write_items_total",
         help: "Total count of db write items",
         labelNames: ["bucket"],
       }),
       dbSizeTotal: register.gauge({
-        name: "validator_db_size_bytes_total",
+        name: "vc_db_size_bytes_total",
         help: "Approximate number of bytes of file system space used by db",
       }),
       dbApproximateSizeTime: register.histogram({
-        name: "validator_db_approximate_size_time_seconds",
+        name: "vc_db_approximate_size_time_seconds",
         help: "Time to approximate db size in seconds",
         buckets: [0.0001, 0.001, 0.01, 0.1, 1],
       }),

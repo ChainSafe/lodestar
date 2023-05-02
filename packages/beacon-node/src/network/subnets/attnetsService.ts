@@ -10,12 +10,12 @@ import {
 import {Epoch, Slot, ssz} from "@lodestar/types";
 import {Logger, MapDef, randBetween} from "@lodestar/utils";
 import {shuffle} from "../../util/shuffle.js";
-import {ChainEvent, IBeaconChain} from "../../chain/index.js";
+import {ClockEvent, IClock} from "../../util/clock.js";
 import {GossipTopic, GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {SubnetMap, RequestedSubnet} from "../peers/utils/index.js";
 import {getActiveForks} from "../forks.js";
-import {Metrics} from "../../metrics/metrics.js";
+import {NetworkCoreMetrics} from "../core/metrics.js";
 import {IAttnetsService, CommitteeSubscription, SubnetsServiceOpts, RandBetweenFn, ShuffleFn} from "./interface.js";
 
 /**
@@ -63,14 +63,14 @@ export class AttnetsService implements IAttnetsService {
 
   constructor(
     private readonly config: ChainForkConfig,
-    private readonly chain: IBeaconChain,
+    private readonly clock: IClock,
     private readonly gossip: {
       subscribeTopic: (topic: GossipTopic) => void;
       unsubscribeTopic: (topic: GossipTopic) => void;
     },
     private readonly metadata: MetadataController,
     private readonly logger: Logger,
-    private readonly metrics: Metrics | null,
+    private readonly metrics: NetworkCoreMetrics | null,
     private readonly opts?: SubnetsServiceOpts
   ) {
     // if subscribeAllSubnets, we act like we have >= ATTESTATION_SUBNET_COUNT validators connecting to this node
@@ -89,13 +89,13 @@ export class AttnetsService implements IAttnetsService {
   }
 
   start(): void {
-    this.chain.emitter.on(ChainEvent.clockSlot, this.onSlot);
-    this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
+    this.clock.on(ClockEvent.slot, this.onSlot);
+    this.clock.on(ClockEvent.epoch, this.onEpoch);
   }
 
   stop(): void {
-    this.chain.emitter.off(ChainEvent.clockSlot, this.onSlot);
-    this.chain.emitter.off(ChainEvent.clockEpoch, this.onEpoch);
+    this.clock.off(ClockEvent.slot, this.onSlot);
+    this.clock.off(ClockEvent.epoch, this.onEpoch);
   }
 
   /**
@@ -103,14 +103,14 @@ export class AttnetsService implements IAttnetsService {
    */
   getActiveSubnets(): RequestedSubnet[] {
     // Omit subscriptionsRandom, not necessary to force the network component to keep peers on that subnets
-    return this.committeeSubnets.getActiveTtl(this.chain.clock.currentSlot);
+    return this.committeeSubnets.getActiveTtl(this.clock.currentSlot);
   }
 
   /**
    * Called from the API when validator is a part of a committee.
    */
   addCommitteeSubscriptions(subscriptions: CommitteeSubscription[]): void {
-    const currentSlot = this.chain.clock.currentSlot;
+    const currentSlot = this.clock.currentSlot;
     let addedknownValidators = false;
     const subnetsToSubscribe: RequestedSubnet[] = [];
 
@@ -217,7 +217,7 @@ export class AttnetsService implements IAttnetsService {
    */
   private unsubscribeExpiredRandomSubnets(slot: Slot): void {
     const expired = this.subscriptionsRandom.getExpired(slot);
-    const currentSlot = this.chain.clock.currentSlot;
+    const currentSlot = this.clock.currentSlot;
 
     if (expired.length === 0) {
       return;
@@ -273,7 +273,7 @@ export class AttnetsService implements IAttnetsService {
    * knownValidators should be updated before this function.
    */
   private rebalanceRandomSubnets(): void {
-    const slot = this.chain.clock.currentSlot;
+    const slot = this.clock.currentSlot;
     // By limiting to ATTESTATION_SUBNET_COUNT, if target is still over subnetDiff equals 0
     const targetRandomSubnetCount = Math.min(
       this.knownValidators.size * RANDOM_SUBNETS_PER_VALIDATOR,
@@ -331,7 +331,7 @@ export class AttnetsService implements IAttnetsService {
 
   /** Tigger a gossip subcription only if not already subscribed */
   private subscribeToSubnets(subnets: number[], src: SubnetSource): void {
-    const forks = getActiveForks(this.config, this.chain.clock.currentEpoch);
+    const forks = getActiveForks(this.config, this.clock.currentEpoch);
     for (const subnet of subnets) {
       if (!this.subscriptionsCommittee.has(subnet) && !this.subscriptionsRandom.has(subnet)) {
         for (const fork of forks) {
@@ -347,7 +347,7 @@ export class AttnetsService implements IAttnetsService {
     // No need to unsubscribeTopic(). Return early to prevent repetitive extra work
     if (this.opts?.subscribeAllSubnets) return;
 
-    const forks = getActiveForks(this.config, this.chain.clock.currentEpoch);
+    const forks = getActiveForks(this.config, this.clock.currentEpoch);
     for (const subnet of subnets) {
       if (
         !this.subscriptionsCommittee.isActiveAtSlot(subnet, slot) &&
@@ -368,7 +368,7 @@ export class AttnetsService implements IAttnetsService {
     );
   }
 
-  private onScrapeLodestarMetrics(metrics: Metrics): void {
+  private onScrapeLodestarMetrics(metrics: NetworkCoreMetrics): void {
     metrics.attnetsService.committeeSubnets.set(this.committeeSubnets.size);
     metrics.attnetsService.subscriptionsCommittee.set(this.subscriptionsCommittee.size);
     metrics.attnetsService.subscriptionsRandom.set(this.subscriptionsRandom.size);

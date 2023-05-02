@@ -37,5 +37,11 @@ export const defaultNetworkOptions: NetworkOptions = {
   mdns: false,
   discv5: defaultDiscv5Options,
   rateLimitMultiplier: 1,
+  // TODO: this value is 12 per spec, however lodestar has performance issue if there are too many mesh peers
+  // see https://github.com/ChainSafe/lodestar/issues/5420
+  gossipsubDHigh: 9,
+  // TODO: with this value, lodestar drops about 35% of attestation messages on a test mainnet node subscribed to all subnets
+  // see https://github.com/ChainSafe/lodestar/issues/5441
+  maxGossipTopicConcurrency: 512,
   ...defaultGossipHandlerOpts,
 };

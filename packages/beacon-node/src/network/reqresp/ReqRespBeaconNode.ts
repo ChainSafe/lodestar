@@ -15,7 +15,7 @@ import {
 } from "@lodestar/reqresp";
 import {allForks, altair, deneb, phase0, Root, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {Metrics} from "../../metrics/metrics.js";
+import {NetworkCoreMetrics} from "../core/metrics.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
 import {PeersData} from "../peers/peersData.js";
@@ -44,7 +44,7 @@ export interface ReqRespBeaconNodeModules {
   peersData: PeersData;
   logger: Logger;
   config: BeaconConfig;
-  metrics: Metrics | null;
+  metrics: NetworkCoreMetrics | null;
   reqRespHandlers: ReqRespHandlers;
   metadata: MetadataController;
   peerRpcScores: IPeerRpcScoreStore;

@@ -11,7 +11,7 @@ import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {upgradeLightClientFinalityUpdate, upgradeLightClientOptimisticUpdate} from "@lodestar/light-client";
 
-import {Metrics} from "../../metrics/index.js";
+import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Eth2Context} from "../../chain/index.js";
 import {PeersData} from "../peers/peersData.js";
 import {ClientKind} from "../peers/client.js";
@@ -40,7 +40,7 @@ export type Eth2GossipsubModules = {
   config: BeaconConfig;
   libp2p: Libp2p;
   logger: Logger;
-  metrics: Metrics | null;
+  metrics: NetworkCoreMetrics | null;
   eth2Context: Eth2Context;
   peersData: PeersData;
   events: NetworkEventBus;
@@ -296,7 +296,7 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
     return stringifyGossipTopic(this.config, topic);
   }
 
-  private onScrapeLodestarMetrics(metrics: Metrics): void {
+  private onScrapeLodestarMetrics(metrics: NetworkCoreMetrics): void {
     const mesh = this["mesh"] as Map<string, Set<string>>;
     const topics = this["topics"] as Map<string, Set<string>>;
     const peers = this["peers"] as Set<string>;
