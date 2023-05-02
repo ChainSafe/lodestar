@@ -10,6 +10,7 @@ import {INetwork} from "../../network/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {RangeSyncType, rangeSyncTypes, getRangeSyncTarget} from "../utils/remoteSyncType.js";
 import {ImportBlockOpts, AttestationImportOpt} from "../../chain/blocks/index.js";
+import {beaconBlocksMaybeBlobsByRange} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
 import {updateChains} from "./utils/index.js";
 import {ChainTarget, SyncChainFns, SyncChain, SyncChainDebugState} from "./chain.js";
 
@@ -198,12 +199,12 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   /** Convenience method for `SyncChain` */
   private downloadBeaconBlocksByRange: SyncChainFns["downloadBeaconBlocksByRange"] = async (peerId, request) => {
-    return this.network.beaconBlocksMaybeBlobsByRange(peerId, request);
+    return beaconBlocksMaybeBlobsByRange(this.config, this.network, peerId, request, this.chain.clock.currentEpoch);
   };
 
   /** Convenience method for `SyncChain` */
   private reportPeer: SyncChainFns["reportPeer"] = (peer, action, actionName) => {
-    this.network.reportPeer(peer, action, actionName).catch((e) => this.logger.error("Error reporting peer", {}, e));
+    this.network.reportPeer(peer, action, actionName);
   };
 
   /** Convenience method for `SyncChain` */

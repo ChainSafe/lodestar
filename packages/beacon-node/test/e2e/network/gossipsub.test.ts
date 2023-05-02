@@ -136,14 +136,13 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = netA["gossipsub"].getTopics()[0];
-      if (topicStr && netA["gossipsub"].getMeshPeers(topicStr).length > 0) {
+      if (await hasSomeMeshPeer(netA)) {
         break;
       }
     }
 
     const voluntaryExit = ssz.phase0.SignedVoluntaryExit.defaultValue();
-    await netA.gossip.publishVoluntaryExit(voluntaryExit);
+    await netA.publishVoluntaryExit(voluntaryExit);
 
     const receivedVoluntaryExit = await onVoluntaryExitPromise;
     expect(receivedVoluntaryExit).to.deep.equal(ssz.phase0.SignedVoluntaryExit.serialize(voluntaryExit));
@@ -168,8 +167,7 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = netA["gossipsub"].getTopics()[0];
-      if (topicStr && netA["gossipsub"].getMeshPeers(topicStr).length > 0) {
+      if (await hasSomeMeshPeer(netA)) {
         break;
       }
     }
@@ -179,7 +177,7 @@ describe("gossipsub", function () {
     for (let i = 0; i < msgCount; i++) {
       const voluntaryExit = ssz.phase0.SignedVoluntaryExit.defaultValue();
       voluntaryExit.message.epoch = i;
-      netA.gossip.publishVoluntaryExit(voluntaryExit).catch((e: Error) => {
+      netA.publishVoluntaryExit(voluntaryExit).catch((e: Error) => {
         logger.error("Error on publishVoluntaryExit", {}, e);
       });
     }
@@ -213,14 +211,13 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = netA["gossipsub"].getTopics()[0];
-      if (topicStr && netA["gossipsub"].getMeshPeers(topicStr).length > 0) {
+      if (await hasSomeMeshPeer(netA)) {
         break;
       }
     }
 
     const blsToExec = ssz.capella.SignedBLSToExecutionChange.defaultValue();
-    await netA.gossip.publishBlsToExecutionChange(blsToExec);
+    await netA.publishBlsToExecutionChange(blsToExec);
 
     const receivedblsToExec = await onBlsToExecutionChangePromise;
     expect(receivedblsToExec).to.deep.equal(ssz.capella.SignedBLSToExecutionChange.serialize(blsToExec));
@@ -248,15 +245,14 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = netA["gossipsub"].getTopics()[0];
-      if (topicStr && netA["gossipsub"].getMeshPeers(topicStr).length > 0) {
+      if (await hasSomeMeshPeer(netA)) {
         break;
       }
     }
 
     const lightClientOptimisticUpdate = ssz.capella.LightClientOptimisticUpdate.defaultValue();
     lightClientOptimisticUpdate.signatureSlot = START_SLOT;
-    await netA.gossip.publishLightClientOptimisticUpdate(lightClientOptimisticUpdate);
+    await netA.publishLightClientOptimisticUpdate(lightClientOptimisticUpdate);
 
     const optimisticUpdate = await onLightClientOptimisticUpdatePromise;
     expect(optimisticUpdate).to.deep.equal(
@@ -286,17 +282,20 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = netA["gossipsub"].getTopics()[0];
-      if (topicStr && netA["gossipsub"].getMeshPeers(topicStr).length > 0) {
+      if (await hasSomeMeshPeer(netA)) {
         break;
       }
     }
 
     const lightClientFinalityUpdate = ssz.capella.LightClientFinalityUpdate.defaultValue();
     lightClientFinalityUpdate.signatureSlot = START_SLOT;
-    await netA.gossip.publishLightClientFinalityUpdate(lightClientFinalityUpdate);
+    await netA.publishLightClientFinalityUpdate(lightClientFinalityUpdate);
 
     const optimisticUpdate = await onLightClientFinalityUpdatePromise;
     expect(optimisticUpdate).to.deep.equal(ssz.capella.LightClientFinalityUpdate.serialize(lightClientFinalityUpdate));
   });
 });
+
+async function hasSomeMeshPeer(net: Network): Promise<boolean> {
+  return Object.values(await net.dumpMeshPeers()).some((peers) => peers.length > 0);
+}

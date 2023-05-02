@@ -18,6 +18,7 @@ export interface NetworkOptions
   mdns: boolean;
   connectToDiscv5Bootnodes?: boolean;
   version?: string;
+  useWorker?: boolean;
 }
 
 export const defaultDiscv5Options: IDiscv5DiscoveryInputOptions = {

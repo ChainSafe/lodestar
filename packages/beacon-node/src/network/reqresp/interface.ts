@@ -1,29 +1,4 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {allForks, altair, deneb, phase0} from "@lodestar/types";
-
-export interface IReqRespBeaconNode {
-  status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;
-  goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void>;
-  ping(peerId: PeerId): Promise<phase0.Ping>;
-  metadata(peerId: PeerId): Promise<allForks.Metadata>;
-  beaconBlocksByRange(
-    peerId: PeerId,
-    request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<allForks.SignedBeaconBlock[]>;
-  beaconBlocksByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<allForks.SignedBeaconBlock[]>;
-  blobsSidecarsByRange(peerId: PeerId, request: deneb.BlobsSidecarsByRangeRequest): Promise<deneb.BlobsSidecar[]>;
-  beaconBlockAndBlobsSidecarByRoot(
-    peerId: PeerId,
-    request: deneb.BeaconBlockAndBlobsSidecarByRootRequest
-  ): Promise<deneb.SignedBeaconBlockAndBlobsSidecar[]>;
-  lightClientBootstrap(peerId: PeerId, request: Uint8Array): Promise<allForks.LightClientBootstrap>;
-  lightClientOptimisticUpdate(peerId: PeerId): Promise<allForks.LightClientOptimisticUpdate>;
-  lightClientFinalityUpdate(peerId: PeerId): Promise<allForks.LightClientFinalityUpdate>;
-  lightClientUpdatesByRange(
-    peerId: PeerId,
-    request: altair.LightClientUpdatesByRange
-  ): Promise<allForks.LightClientUpdate[]>;
-}
 
 /**
  * Rate limiter interface for inbound and outbound requests.

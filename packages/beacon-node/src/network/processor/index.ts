@@ -2,23 +2,29 @@ import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
 import {RootHex, Slot} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {IBeaconChain} from "../../chain/interface.js";
-import {Metrics} from "../../metrics/metrics.js";
-import {NetworkEvent, NetworkEventBus} from "../events.js";
-import {GossipType} from "../gossip/interface.js";
-import {ClockEvent} from "../../util/clock.js";
 import {GossipErrorCode} from "../../chain/errors/gossipValidation.js";
+import {Metrics} from "../../metrics/metrics.js";
+import {IBeaconDb} from "../../db/interface.js";
+import {ClockEvent} from "../../util/clock.js";
+import {NetworkEvent, NetworkEventBus} from "../events.js";
+import {GossipHandlers, GossipType, GossipValidatorFn} from "../gossip/interface.js";
 import {createGossipQueues} from "./gossipQueues.js";
-import {NetworkWorker, NetworkWorkerModules} from "./worker.js";
 import {PendingGossipsubMessage} from "./types.js";
-import {ValidatorFnsModules, GossipHandlerOpts} from "./gossipHandlers.js";
+import {ValidatorFnsModules, GossipHandlerOpts, getGossipHandlers} from "./gossipHandlers.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
+import {ValidatorFnModules, getGossipValidatorFn} from "./gossipValidatorFn.js";
 
-export type NetworkProcessorModules = NetworkWorkerModules &
-  ValidatorFnsModules & {
+export * from "./types.js";
+
+export type NetworkProcessorModules = ValidatorFnsModules &
+  ValidatorFnModules & {
     chain: IBeaconChain;
+    db: IBeaconDb;
     events: NetworkEventBus;
     logger: Logger;
     metrics: Metrics | null;
+    // Optionally pass custom GossipHandlers, for testing
+    gossipHandlers?: GossipHandlers;
   };
 
 export type NetworkProcessorOpts = GossipHandlerOpts & {
@@ -106,11 +112,11 @@ enum ReprocessRejectReason {
  * Such that enough work is processed to fill either one of the queue.
  */
 export class NetworkProcessor {
-  private readonly worker: NetworkWorker;
   private readonly chain: IBeaconChain;
   private readonly events: NetworkEventBus;
   private readonly logger: Logger;
   private readonly metrics: Metrics | null;
+  private readonly gossipValidatorFn: GossipValidatorFn;
   private readonly gossipQueues = createGossipQueues<PendingGossipsubMessage>();
   private readonly gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
   private readonly extractBlockSlotRootFns = createExtractBlockSlotRootFns();
@@ -125,7 +131,8 @@ export class NetworkProcessor {
     this.events = events;
     this.metrics = metrics;
     this.logger = logger;
-    this.worker = new NetworkWorker(modules, opts);
+    this.events = events;
+    this.gossipValidatorFn = getGossipValidatorFn(modules.gossipHandlers ?? getGossipHandlers(modules, opts), modules);
 
     events.on(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage.bind(this));
     this.chain.emitter.on(routes.events.EventType.block, this.onBlockProcessed.bind(this));
@@ -134,6 +141,9 @@ export class NetworkProcessor {
     this.awaitingGossipsubMessagesByRootBySlot = new MapDef(
       () => new MapDef<RootHex, Set<PendingGossipsubMessage>>(() => new Set())
     );
+
+    // TODO: Implement queues and priorization for ReqResp incoming requests
+    // Listens to NetworkEvent.reqRespIncomingRequest event
 
     if (metrics) {
       metrics.gossipValidationQueue.length.addCollect(() => {
@@ -301,8 +311,7 @@ export class NetworkProcessor {
         const item = this.gossipQueues[topic].next();
         if (item) {
           this.gossipTopicConcurrency[topic]++;
-          this.worker
-            .processPendingGossipsubMessage(item)
+          this.processPendingGossipsubMessage(item)
             .finally(() => this.gossipTopicConcurrency[topic]--)
             .catch((e) => this.logger.error("processGossipAttestations must not throw", {}, e));
 
@@ -319,5 +328,42 @@ export class NetworkProcessor {
     if (jobsSubmitted > 0) {
       this.metrics?.networkProcessor.jobsSubmitted.observe(jobsSubmitted);
     }
+  }
+
+  private async processPendingGossipsubMessage(message: PendingGossipsubMessage): Promise<void> {
+    message.startProcessUnixSec = Date.now() / 1000;
+
+    const acceptance = await this.gossipValidatorFn(
+      message.topic,
+      message.msg,
+      message.propagationSource.toString(),
+      message.seenTimestampSec,
+      message.importUpToSlot
+    );
+
+    if (message.startProcessUnixSec !== null) {
+      this.metrics?.gossipValidationQueue.jobWaitTime.observe(
+        {topic: message.topic.type},
+        message.startProcessUnixSec - message.seenTimestampSec
+      );
+      this.metrics?.gossipValidationQueue.jobTime.observe(
+        {topic: message.topic.type},
+        Date.now() / 1000 - message.startProcessUnixSec
+      );
+    }
+
+    // Use setTimeout to yield to the macro queue
+    // This is mostly due to too many attestation messages, and a gossipsub RPC may
+    // contain multiple of them. This helps avoid the I/O lag issue.
+    setTimeout(
+      () =>
+        this.events.emit(
+          NetworkEvent.gossipMessageValidationResult,
+          message.msgId,
+          message.propagationSource,
+          acceptance
+        ),
+      0
+    );
   }
 }

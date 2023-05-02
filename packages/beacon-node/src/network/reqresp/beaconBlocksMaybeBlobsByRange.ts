@@ -6,11 +6,11 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 
 import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
 import {getEmptyBlobsSidecar} from "../../util/blobs.js";
-import {IReqRespBeaconNode} from "./interface.js";
+import {INetwork} from "../interface.js";
 
 export async function beaconBlocksMaybeBlobsByRange(
   config: BeaconConfig,
-  reqResp: IReqRespBeaconNode,
+  network: INetwork,
   peerId: PeerId,
   request: phase0.BeaconBlocksByRangeRequest,
   currentEpoch: Epoch
@@ -33,15 +33,15 @@ export async function beaconBlocksMaybeBlobsByRange(
 
   // Note: Assumes all blocks in the same epoch
   if (config.getForkSeq(startSlot) < ForkSeq.deneb) {
-    const blocks = await reqResp.beaconBlocksByRange(peerId, request);
+    const blocks = await network.sendBeaconBlocksByRange(peerId, request);
     return blocks.map((block) => getBlockInput.preDeneb(config, block));
   }
 
   // Only request blobs if they are recent enough
   else if (computeEpochAtSlot(startSlot) >= currentEpoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS) {
     const [blocks, blobsSidecars] = await Promise.all([
-      reqResp.beaconBlocksByRange(peerId, request),
-      reqResp.blobsSidecarsByRange(peerId, request),
+      network.sendBeaconBlocksByRange(peerId, request),
+      network.sendBlobsSidecarsByRange(peerId, request),
     ]);
 
     const blockInputs: BlockInput[] = [];

@@ -80,7 +80,7 @@ describe("network / peers / PeerManager", function () {
         statusCache,
         config: beaconConfig,
         peerRpcScores,
-        networkEventBus,
+        events: networkEventBus,
         attnetsService: mockSubnetsService,
         syncnetsService: mockSubnetsService,
         gossip: {getScore: () => 0, scoreParams: {decayInterval: 1000}} as unknown as Eth2Gossipsub,
