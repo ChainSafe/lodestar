@@ -210,6 +210,7 @@ export class Network implements INetwork {
       },
       peersData,
       events: networkEventBus,
+      signal,
     });
 
     const syncnetsService = new SyncnetsService(config, chain.clock, gossip, metadata, logger, metricsCore, opts);

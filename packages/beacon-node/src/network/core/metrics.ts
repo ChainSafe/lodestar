@@ -201,6 +201,42 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
       }),
     },
 
+    handleReceivedMessageQueue: {
+      length: register.gauge({
+        name: "lodestar_handle_received_message_queue_length",
+        help: "Count of total handleReceivedMessage queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_handle_received_message_queue_dropped_jobs_total",
+        help: "Count of total handleReceivedMessage queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_handle_received_message_queue_job_time_seconds",
+        help: "Time to process handleReceivedMessage queue job in seconds",
+        buckets: [0.01, 0.1, 1, 10, 100],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_handle_received_message_queue_job_wait_time_seconds",
+        help: "Time from job added to the handleReceivedMessage queue to starting in seconds",
+        buckets: [0.01, 0.1, 1, 10, 100],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_handle_received_message_queue_concurrency",
+        help: "Current concurrency of handleReceivedMessage queue",
+      }),
+    },
+
+    gossipSub: {
+      queuedHandleReceivedMessage: register.gauge({
+        name: "lodestar_gossipsub_queued_handle_received_message_total",
+        help: "Count of total queued handleReceivedMessage",
+      }),
+      baseHandledReceivedMessage: register.gauge({
+        name: "lodestar_gossipsub_base_handled_received_message_total",
+        help: "Count of total base handledReceivedMessage",
+      }),
+    },
+
     discv5: {
       decodeEnrAttemptCount: register.counter({
         name: "lodestar_discv5_decode_enr_attempt_count",

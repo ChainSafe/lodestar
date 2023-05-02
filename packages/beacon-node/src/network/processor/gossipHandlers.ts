@@ -106,6 +106,10 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       recvToVal,
     });
 
+    if (slot === chain.clock.currentSlot) {
+      events.emit(NetworkEvent.processGossipBlock, true);
+    }
+
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
     } catch (e) {
@@ -165,6 +169,9 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
           }
         }
         logger.error("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
+      })
+      .finally(() => {
+        events.emit(NetworkEvent.processGossipBlock, false);
       });
   }
 

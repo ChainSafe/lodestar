@@ -16,6 +16,7 @@ export enum NetworkEvent {
   gossipHeartbeat = "gossipsub.heartbeat",
   reqRespRequest = "req-resp.request",
   unknownBlockParent = "unknownBlockParent",
+  processGossipBlock = "processGossipBlock",
 
   // Network processor events
   pendingGossipsubMessage = "gossip.pendingGossipsubMessage",
@@ -27,6 +28,7 @@ export type NetworkEvents = {
   [NetworkEvent.peerDisconnected]: (peer: PeerId) => void;
   [NetworkEvent.reqRespRequest]: (request: RequestTypedContainer, peer: PeerId) => void;
   [NetworkEvent.unknownBlockParent]: (blockInput: BlockInput, peerIdStr: string) => void;
+  [NetworkEvent.processGossipBlock]: (isProcessing: boolean) => void;
   [NetworkEvent.pendingGossipsubMessage]: (data: PendingGossipsubMessage) => void;
   [NetworkEvent.gossipMessageValidationResult]: (
     msgId: string,

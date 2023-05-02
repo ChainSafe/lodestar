@@ -11,6 +11,7 @@ import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {upgradeLightClientFinalityUpdate, upgradeLightClientOptimisticUpdate} from "@lodestar/light-client";
 
+import {RPC} from "@chainsafe/libp2p-gossipsub/message";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Eth2Context} from "../../chain/index.js";
 import {PeersData} from "../peers/peersData.js";
@@ -18,6 +19,7 @@ import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
 import {Libp2p} from "../interface.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
+import {JobItemQueue} from "../../util/queue/itemQueue.js";
 import {GossipBeaconNode, GossipTopic, GossipTopicMap, GossipType, GossipTypeMap} from "./interface.js";
 import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic, getCoreTopicsAtFork} from "./topic.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
@@ -44,6 +46,7 @@ export type Eth2GossipsubModules = {
   eth2Context: Eth2Context;
   peersData: PeersData;
   events: NetworkEventBus;
+  signal: AbortSignal;
 };
 
 export type Eth2GossipsubOpts = {
@@ -74,9 +77,12 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
   private readonly logger: Logger;
   private readonly peersData: PeersData;
   private readonly events: NetworkEventBus;
+  private readonly handleReceivedMessageQueue: JobItemQueue<Parameters<typeof this.handleReceivedMessage>, void>;
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
+  private readonly lodestarMetrics: NetworkCoreMetrics | null;
+  private isProcessingGossipBlock = false;
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
     const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
@@ -131,6 +137,7 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
     this.peersData = peersData;
     this.events = events;
     this.gossipTopicCache = gossipTopicCache;
+    this.lodestarMetrics = metrics;
 
     if (metrics) {
       metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics));
@@ -138,12 +145,45 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
 
     this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
     this.events.on(NetworkEvent.gossipMessageValidationResult, this.onValidationResult.bind(this));
+    this.events.on(NetworkEvent.processGossipBlock, this.onProcessGossipBlock.bind(this));
 
     // Having access to this data is CRUCIAL for debugging. While this is a massive log, it must not be deleted.
     // Scoring issues require this dump + current peer score stats to re-calculate scores.
     if (!opts.skipParamsLog) {
       this.logger.debug("Gossipsub score params", {params: JSON.stringify(scoreParams)});
     }
+    this.handleReceivedMessageQueue = new JobItemQueue(
+      super.handleReceivedMessage.bind(this),
+      {
+        // TODO: make sure we don't have dropped jobs ever from this
+        maxLength: 8192,
+        // low concurrency to allow more network I/O
+        maxConcurrency: 4,
+        signal: modules.signal,
+      },
+      metrics?.handleReceivedMessageQueue
+    );
+  }
+
+  async handleReceivedMessage(from: PeerId, rpcMsg: RPC.IMessage): Promise<void> {
+    const topic = this.gossipTopicCache.getTopic(rpcMsg.topic);
+    if (
+      topic.type === GossipType.beacon_block ||
+      topic.type === GossipType.beacon_block_and_blobs_sidecar ||
+      !this.isProcessingGossipBlock
+    ) {
+      // bypass the queue for beacon_block topic
+      this.lodestarMetrics?.gossipSub.baseHandledReceivedMessage.inc();
+      return super.handleReceivedMessage(from, rpcMsg);
+    }
+
+    // a gossip block at current clock slot is being processed, queue the message
+    this.lodestarMetrics?.gossipSub.queuedHandleReceivedMessage.inc();
+    return this.handleReceivedMessageQueue.push(from, rpcMsg);
+  }
+
+  onProcessGossipBlock(isProcessing: boolean): void {
+    this.isProcessingGossipBlock = isProcessing;
   }
 
   /**
