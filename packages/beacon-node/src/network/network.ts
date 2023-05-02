@@ -40,6 +40,7 @@ import {createNodeJsLibp2p} from "./nodejs/util.js";
 import {NetworkProcessor} from "./processor/index.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {createNetworkCoreMetrics} from "./core/metrics.js";
+import {LocalStatusCache} from "./statusCache.js";
 
 // How many changes to batch cleanup
 const CACHED_BLS_BATCH_CLEANUP_LIMIT = 10;
@@ -61,6 +62,7 @@ type NetworkModules = {
   attnetsService: AttnetsService;
   syncnetsService: SyncnetsService;
   peerManager: PeerManager;
+  statusCache: LocalStatusCache;
 };
 
 export type NetworkInitModules = {
@@ -90,6 +92,7 @@ export class Network implements INetwork {
 
   private readonly networkProcessor: NetworkProcessor;
   private readonly peerManager: PeerManager;
+  private readonly statusCache: LocalStatusCache;
   private readonly libp2p: Libp2p;
   private readonly logger: Logger;
   private readonly config: BeaconConfig;
@@ -119,6 +122,7 @@ export class Network implements INetwork {
       attnetsService,
       syncnetsService,
       peerManager,
+      statusCache,
     } = modules;
     this.opts = opts;
     this.config = config;
@@ -136,8 +140,10 @@ export class Network implements INetwork {
     this.attnetsService = attnetsService;
     this.syncnetsService = syncnetsService;
     this.peerManager = peerManager;
+    this.statusCache = statusCache;
 
     this.chain.clock.on(ClockEvent.epoch, this.onEpoch);
+    this.chain.emitter.on(routes.events.EventType.head, this.onHead);
     this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
@@ -214,6 +220,7 @@ export class Network implements INetwork {
 
     const syncnetsService = new SyncnetsService(config, chain.clock, gossip, metadata, logger, metricsCore, opts);
 
+    const statusCache = new LocalStatusCache(chain.getStatus());
     const peerManager = new PeerManager(
       {
         libp2p,
@@ -223,7 +230,8 @@ export class Network implements INetwork {
         syncnetsService,
         logger,
         metrics: metricsCore,
-        chain,
+        clock,
+        statusCache,
         config,
         peerRpcScores,
         networkEventBus,
@@ -277,6 +285,7 @@ export class Network implements INetwork {
       attnetsService,
       syncnetsService,
       peerManager,
+      statusCache,
     });
   }
 
@@ -285,6 +294,7 @@ export class Network implements INetwork {
     if (this.closed) return;
 
     this.chain.emitter.off(ClockEvent.epoch, this.onEpoch);
+    this.chain.emitter.off(routes.events.EventType.head, this.onHead);
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
 
@@ -530,6 +540,10 @@ export class Network implements INetwork {
     } catch (e) {
       this.logger.error("Error on BeaconGossipHandler.onEpoch", {epoch}, e as Error);
     }
+  };
+
+  private onHead = (): void => {
+    this.statusCache.update(this.chain.getStatus());
   };
 
   private subscribeCoreTopicsAtFork = (fork: ForkName): void => {
