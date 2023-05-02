@@ -30,6 +30,7 @@ describe("block api utils", function () {
       expectedRootHex = toHexString(expectedBuffer);
       expectedSummary = {
         slot: 0,
+        proposerIndex: 0,
         blockRoot: expectedRootHex,
         parentRoot: expectedRootHex,
         targetRoot: expectedRootHex,
