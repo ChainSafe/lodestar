@@ -5,11 +5,11 @@ import {BeaconConfig} from "@lodestar/config";
 import {Logger, pruneSetToMax, sleep} from "@lodestar/utils";
 import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Libp2p} from "../interface.js";
 import {ENRKey, SubnetType} from "../metadata.js";
 import {getConnectionsMap, getDefaultDialer, prettyPrintPeerId} from "../util.js";
 import {Discv5Worker} from "../discv5/index.js";
+import {NetworkCoreMetrics} from "../core/metrics.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 

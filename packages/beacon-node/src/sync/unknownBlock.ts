@@ -11,6 +11,7 @@ import {Metrics} from "../metrics/index.js";
 import {shuffle} from "../util/shuffle.js";
 import {byteArrayEquals} from "../util/bytes.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
+import {beaconBlocksMaybeBlobsByRoot} from "../network/reqresp/beaconBlocksMaybeBlobsByRoot.js";
 import {wrapError} from "../util/wrapError.js";
 import {PendingBlock, PendingBlockStatus} from "./interface.js";
 import {
@@ -265,7 +266,14 @@ export class UnknownBlockSync {
       const peer = shuffledPeers[i % shuffledPeers.length];
       try {
         // TODO DENEB: Use
-        const [blockInput] = await this.network.beaconBlocksMaybeBlobsByRoot(peer, [blockRoot]);
+        const [blockInput] = await beaconBlocksMaybeBlobsByRoot(
+          this.config,
+          this.network,
+          peer,
+          [blockRoot],
+          this.chain.clock.currentSlot,
+          this.chain.forkChoice.getFinalizedBlock().slot
+        );
 
         // Peer does not have the block, try with next peer
         if (blockInput === undefined) {
@@ -318,9 +326,7 @@ export class UnknownBlockSync {
       for (const peerIdStr of block.peerIdStrs) {
         // TODO: Refactor peerRpcScores to work with peerIdStr only
         const peer = peerIdFromString(peerIdStr);
-        this.network.reportPeer(peer, PeerAction.LowToleranceError, "BadBlockByRoot").catch((e) => {
-          this.logger.error("Error reporting peer", {}, e);
-        });
+        this.network.reportPeer(peer, PeerAction.LowToleranceError, "BadBlockByRoot");
       }
     }
 

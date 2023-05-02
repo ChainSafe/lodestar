@@ -474,7 +474,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
             // falls through
             case BackfillSyncErrorCode.INVALID_SIGNATURE:
-              await this.network.reportPeer(peer, PeerAction.LowToleranceError, "BadSyncBlocks");
+              this.network.reportPeer(peer, PeerAction.LowToleranceError, "BadSyncBlocks");
           }
         }
       } finally {
@@ -743,7 +743,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   }
 
   private async syncBlockByRoot(peer: PeerId, anchorBlockRoot: Root): Promise<void> {
-    const [anchorBlock] = await this.network.reqResp.beaconBlocksByRoot(peer, [anchorBlockRoot]);
+    const [anchorBlock] = await this.network.sendBeaconBlocksByRoot(peer, [anchorBlockRoot]);
     if (anchorBlock == null) throw new Error("InvalidBlockSyncedFromPeer");
 
     // GENESIS_SLOT doesn't has valid signature
@@ -784,7 +784,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       this.prevFinalizedCheckpointBlock.slot,
       GENESIS_SLOT
     );
-    const blocks = await this.network.reqResp.beaconBlocksByRange(peer, {
+    const blocks = await this.network.sendBeaconBlocksByRange(peer, {
       startSlot: fromSlot,
       count: toSlot - fromSlot,
       step: 1,

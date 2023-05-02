@@ -11,10 +11,11 @@ import {Epoch, Slot, ssz} from "@lodestar/types";
 import {Logger, MapDef, randBetween} from "@lodestar/utils";
 import {shuffle} from "../../util/shuffle.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
-import {GossipTopic, GossipType} from "../gossip/index.js";
+import {GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {SubnetMap, RequestedSubnet} from "../peers/utils/index.js";
 import {getActiveForks} from "../forks.js";
+import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {IAttnetsService, CommitteeSubscription, SubnetsServiceOpts, RandBetweenFn, ShuffleFn} from "./interface.js";
 
@@ -33,6 +34,9 @@ enum SubnetSource {
 
 /**
  * Manage random (long lived) subnets and committee (short lived) subnets.
+ * - PeerManager uses attnetsService to know which peers are requried for duties
+ * - Network call addCommitteeSubscriptions() from API calls
+ * - Gossip handler checks shouldProcess to know if validator is aggregator
  */
 export class AttnetsService implements IAttnetsService {
   /** Committee subnets - PeerManager must find peers for those */
@@ -64,10 +68,7 @@ export class AttnetsService implements IAttnetsService {
   constructor(
     private readonly config: ChainForkConfig,
     private readonly clock: IClock,
-    private readonly gossip: {
-      subscribeTopic: (topic: GossipTopic) => void;
-      unsubscribeTopic: (topic: GossipTopic) => void;
-    },
+    private readonly events: NetworkEventBus,
     private readonly metadata: MetadataController,
     private readonly logger: Logger,
     private readonly metrics: NetworkCoreMetrics | null,
@@ -153,11 +154,16 @@ export class AttnetsService implements IAttnetsService {
     return this.aggregatorSlotSubnet.getOrDefault(slot).has(subnet);
   }
 
+  /** Returns the latest Slot subscription is active, null if no subscription */
+  activeUpToSlot(subnet: number): Slot | null {
+    return this.subscriptionsCommittee.activeUpToSlot(subnet);
+  }
+
   /** Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork  */
   subscribeSubnetsToNextFork(nextFork: ForkName): void {
     this.logger.info("Suscribing to random attnets to next fork", {nextFork});
     for (const subnet of this.subscriptionsRandom.getAll()) {
-      this.gossip.subscribeTopic({type: gossipType, fork: nextFork, subnet});
+      this.events.emit(NetworkEvent.subscribeTopic, {type: gossipType, fork: nextFork, subnet});
     }
   }
 
@@ -166,7 +172,7 @@ export class AttnetsService implements IAttnetsService {
     this.logger.info("Unsuscribing to random attnets from prev fork", {prevFork});
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       if (!this.opts?.subscribeAllSubnets) {
-        this.gossip.unsubscribeTopic({type: gossipType, fork: prevFork, subnet});
+        this.events.emit(NetworkEvent.unsubscribeTopic, {type: gossipType, fork: prevFork, subnet});
       }
     }
   }
@@ -335,7 +341,7 @@ export class AttnetsService implements IAttnetsService {
     for (const subnet of subnets) {
       if (!this.subscriptionsCommittee.has(subnet) && !this.subscriptionsRandom.has(subnet)) {
         for (const fork of forks) {
-          this.gossip.subscribeTopic({type: gossipType, fork, subnet});
+          this.events.emit(NetworkEvent.subscribeTopic, {type: gossipType, fork, subnet});
         }
         this.metrics?.attnetsService.subscribeSubnets.inc({subnet, src});
       }
@@ -354,7 +360,7 @@ export class AttnetsService implements IAttnetsService {
         !this.subscriptionsRandom.isActiveAtSlot(subnet, slot)
       ) {
         for (const fork of forks) {
-          this.gossip.unsubscribeTopic({type: gossipType, fork, subnet});
+          this.events.emit(NetworkEvent.unsubscribeTopic, {type: gossipType, fork, subnet});
         }
         this.metrics?.attnetsService.unsubscribeSubnets.inc({subnet, src});
       }

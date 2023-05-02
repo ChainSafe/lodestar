@@ -1,6 +1,7 @@
+import {PeerId} from "@libp2p/interface-peer-id";
 import {Type} from "@chainsafe/ssz";
 import {ForkLightClient, ForkName, isForkLightClient} from "@lodestar/params";
-import {Protocol} from "@lodestar/reqresp";
+import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
 import {Root, allForks, altair, deneb, phase0, ssz} from "@lodestar/types";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
@@ -117,3 +118,18 @@ export enum Version {
   V1 = 1,
   V2 = 2,
 }
+
+export type OutgoingRequestArgs = {
+  peerId: PeerId;
+  method: ReqRespMethod;
+  versions: number[];
+  requestData: Uint8Array;
+};
+
+export type IncomingRequestArgs = {
+  method: ReqRespMethod;
+  req: ReqRespRequest;
+  peerId: PeerId;
+};
+
+export type GetReqRespHandlerFn = (method: ReqRespMethod) => ProtocolHandler;

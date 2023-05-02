@@ -36,7 +36,9 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
         {serializedData: msg.data, msgSlot},
         topic,
         propagationSource,
-        seenTimestampSec
+        seenTimestampSec,
+        // TODO put the right value here
+        null
       );
 
       metrics?.networkProcessor.gossipValidationAccept.inc({topic: type});

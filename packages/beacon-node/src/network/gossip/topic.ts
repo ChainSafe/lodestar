@@ -1,5 +1,6 @@
-import {phase0, ssz} from "@lodestar/types";
-import {ForkDigestContext} from "@lodestar/config";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {allForks, altair, deneb, phase0, ssz} from "@lodestar/types";
+import {ChainForkConfig, ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,
@@ -249,3 +250,97 @@ function parseEncodingStr(encodingStr: string): GossipEncoding {
       throw Error(`Unknown encoding ${encodingStr}`);
   }
 }
+
+export const toGossipTopic = {
+  beaconBlock(config: ChainForkConfig, signedBlock: allForks.SignedBeaconBlock): GossipTopic {
+    return {type: GossipType.beacon_block, fork: config.getForkName(signedBlock.message.slot)};
+  },
+
+  signedBeaconBlockAndBlobsSidecar(config: ChainForkConfig, item: deneb.SignedBeaconBlockAndBlobsSidecar): GossipTopic {
+    return {type: GossipType.beacon_block_and_blobs_sidecar, fork: config.getForkName(item.beaconBlock.message.slot)};
+  },
+
+  beaconAggregateAndProof(config: ChainForkConfig, aggregateAndProof: phase0.SignedAggregateAndProof): GossipTopic {
+    return {
+      type: GossipType.beacon_aggregate_and_proof,
+      fork: config.getForkName(aggregateAndProof.message.aggregate.data.slot),
+    };
+  },
+
+  beaconAttestation(config: ChainForkConfig, attestation: phase0.Attestation, subnet: number): GossipTopic {
+    return {type: GossipType.beacon_attestation, fork: config.getForkName(attestation.data.slot), subnet};
+  },
+
+  voluntaryExit(config: ChainForkConfig, voluntaryExit: phase0.SignedVoluntaryExit): GossipTopic {
+    return {
+      type: GossipType.voluntary_exit,
+      fork: config.getForkName(computeStartSlotAtEpoch(voluntaryExit.message.epoch)),
+    };
+  },
+
+  blsToExecutionChange(): GossipTopic {
+    // TODO Capella: Is the fork constant here?
+    return {type: GossipType.bls_to_execution_change, fork: ForkName.capella};
+  },
+
+  proposerSlashing(config: ChainForkConfig, proposerSlashing: phase0.ProposerSlashing): GossipTopic {
+    return {
+      type: GossipType.proposer_slashing,
+      fork: config.getForkName(Number(proposerSlashing.signedHeader1.message.slot as bigint)),
+    };
+  },
+
+  attesterSlashing(config: ChainForkConfig, attesterSlashing: phase0.AttesterSlashing): GossipTopic {
+    return {
+      type: GossipType.attester_slashing,
+      fork: config.getForkName(Number(attesterSlashing.attestation1.data.slot as bigint)),
+    };
+  },
+
+  syncCommitteeSignature(config: ChainForkConfig, signature: altair.SyncCommitteeMessage, subnet: number): GossipTopic {
+    return {type: GossipType.sync_committee, fork: config.getForkName(signature.slot), subnet};
+  },
+
+  contributionAndProof(config: ChainForkConfig, contributionAndProof: altair.SignedContributionAndProof): GossipTopic {
+    return {
+      type: GossipType.sync_committee_contribution_and_proof,
+      fork: config.getForkName(contributionAndProof.message.contribution.slot),
+    };
+  },
+
+  lightClientFinalityUpdate(
+    config: ChainForkConfig,
+    lightClientFinalityUpdate: allForks.LightClientFinalityUpdate
+  ): GossipTopic {
+    return {
+      type: GossipType.light_client_finality_update,
+      fork: config.getForkName(lightClientFinalityUpdate.signatureSlot),
+    };
+  },
+
+  lightClientOptimisticUpdate(
+    config: ChainForkConfig,
+    lightClientOptimisitcUpdate: allForks.LightClientOptimisticUpdate
+  ): GossipTopic {
+    return {
+      type: GossipType.light_client_optimistic_update,
+      fork: config.getForkName(lightClientOptimisitcUpdate.signatureSlot),
+    };
+  },
+};
+
+// TODO: Review which yes, and which not
+export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean> = {
+  [GossipType.beacon_block]: true,
+  [GossipType.beacon_block_and_blobs_sidecar]: true,
+  [GossipType.beacon_aggregate_and_proof]: true,
+  [GossipType.beacon_attestation]: true,
+  [GossipType.voluntary_exit]: true,
+  [GossipType.proposer_slashing]: false, // Why not this ones?
+  [GossipType.attester_slashing]: false,
+  [GossipType.sync_committee_contribution_and_proof]: true,
+  [GossipType.sync_committee]: true,
+  [GossipType.light_client_finality_update]: false,
+  [GossipType.light_client_optimistic_update]: false,
+  [GossipType.bls_to_execution_change]: true,
+};

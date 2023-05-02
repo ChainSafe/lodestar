@@ -1,70 +1,66 @@
 import {Libp2p as ILibp2p} from "libp2p";
 import {Connection} from "@libp2p/interface-connection";
 import {Registrar} from "@libp2p/interface-registrar";
-import {Multiaddr} from "@multiformats/multiaddr";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {ConnectionManager} from "@libp2p/interface-connection-manager";
-import {SignableENR} from "@chainsafe/discv5";
-import {altair, phase0} from "@lodestar/types";
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
-import {routes} from "@lodestar/api";
+import {Slot, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
 import {BlockInput} from "../chain/blocks/types.js";
 import {INetworkEventBus} from "./events.js";
-import {GossipBeaconNode, GossipType} from "./gossip/index.js";
-import {PeerAction, PeerScoreStats} from "./peers/index.js";
-import {IReqRespBeaconNode} from "./reqresp/ReqRespBeaconNode.js";
-import {AttnetsService, CommitteeSubscription} from "./subnets/index.js";
+import {INetworkCorePublic} from "./core/types.js";
+import {GossipType} from "./gossip/interface.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
+import {PeerAction} from "./peers/index.js";
 
-export type PeerSearchOptions = {
-  supportsProtocols?: string[];
-  count?: number;
-};
+/**
+ * The architecture of the network looks like so:
+ * - core:
+ *   - INetworkCore - This interface encapsulates all functionality from BaseNetwork, its meant to act as an wrapper that makes multiple implementations more simple
+ *   - NetworkCore - This _implementation_ contains all libp2p and dependent modules
+ *   - WorkerNetworkCore - This _implementation_ wraps a NetworkCore in a Worker thread
+ * - INetwork - This interface extends INetworkCore and crucially allows for a connection to the BeaconChain module.
+ */
 
-export interface INetwork {
-  /** Our network identity */
-  peerId: PeerId;
-  localMultiaddrs: Multiaddr[];
-
+export interface INetwork extends INetworkCorePublic {
   events: INetworkEventBus;
-  reqResp: IReqRespBeaconNode;
-  attnetsService: AttnetsService;
-  gossip: GossipBeaconNode;
 
-  getEnr(): Promise<SignableENR | undefined>;
-  getMetadata(): Promise<altair.Metadata>;
   getConnectedPeers(): PeerId[];
   getConnectedPeerCount(): number;
-
-  publishBeaconBlockMaybeBlobs(signedBlock: BlockInput): Promise<void>;
-  beaconBlocksMaybeBlobsByRange(peerId: PeerId, request: phase0.BeaconBlocksByRangeRequest): Promise<BlockInput[]>;
-  beaconBlocksMaybeBlobsByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<BlockInput[]>;
-
-  /** Subscribe, search peers, join long-lived attnets */
-  prepareBeaconCommitteeSubnet(subscriptions: CommitteeSubscription[]): Promise<void>;
-  /** Subscribe, search peers, join long-lived syncnets */
-  prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void>;
-  reStatusPeers(peers: PeerId[]): Promise<void>;
-  reportPeer(peer: PeerId, action: PeerAction, actionName: string): Promise<void>;
-
-  // Gossip handler
-  subscribeGossipCoreTopics(): Promise<void>;
-  unsubscribeGossipCoreTopics(): Promise<void>;
   isSubscribedToGossipCoreTopics(): boolean;
+  reportPeer(peer: PeerId, action: PeerAction, actionName: string): void;
+  shouldProcessAttestation(subnet: number, slot: Slot): boolean;
 
-  // Service
-  metrics(): Promise<string>;
-  close(): Promise<void>;
+  // ReqResp
+  sendBeaconBlocksByRange(
+    peerId: PeerId,
+    request: phase0.BeaconBlocksByRangeRequest
+  ): Promise<allForks.SignedBeaconBlock[]>;
+  sendBeaconBlocksByRoot(
+    peerId: PeerId,
+    request: phase0.BeaconBlocksByRootRequest
+  ): Promise<allForks.SignedBeaconBlock[]>;
+  sendBlobsSidecarsByRange(peerId: PeerId, request: deneb.BlobsSidecarsByRangeRequest): Promise<deneb.BlobsSidecar[]>;
+  sendBeaconBlockAndBlobsSidecarByRoot(
+    peerId: PeerId,
+    request: deneb.BeaconBlockAndBlobsSidecarByRootRequest
+  ): Promise<deneb.SignedBeaconBlockAndBlobsSidecar[]>;
+
+  // Gossip
+  publishBeaconBlockMaybeBlobs(blockInput: BlockInput): Promise<number>;
+  publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<number>;
+  publishSignedBeaconBlockAndBlobsSidecar(item: deneb.SignedBeaconBlockAndBlobsSidecar): Promise<number>;
+  publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number>;
+  publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number>;
+  publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;
+  publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number>;
+  publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number>;
+  publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<number>;
+  publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: number): Promise<number>;
+  publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<number>;
+  publishLightClientFinalityUpdate(update: allForks.LightClientFinalityUpdate): Promise<number>;
+  publishLightClientOptimisticUpdate(update: allForks.LightClientOptimisticUpdate): Promise<number>;
 
   // Debug
-  connectToPeer(peer: PeerId, multiaddr: Multiaddr[]): Promise<void>;
-  disconnectPeer(peer: PeerId): Promise<void>;
-  dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]>;
-  dumpPeer(peerIdStr: string): Promise<routes.lodestar.LodestarNodePeer | undefined>;
-  dumpPeerScoreStats(): Promise<PeerScoreStats>;
-  dumpGossipPeerScoreStats(): Promise<PeerScoreStatsDump>;
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;
-  dumpDiscv5KadValues(): Promise<string[]>;
 }
 
 export type PeerDirection = Connection["stat"]["direction"];

@@ -185,7 +185,7 @@ describe("network", function () {
     //   return [enrB];
     // };
 
-    await netA.prepareBeaconCommitteeSubnet([subscription]);
+    await netA.prepareBeaconCommitteeSubnets([subscription]);
     await connected;
 
     expect(netA.getConnectionsByPeer().has(netB.peerId.toString())).to.be.equal(
@@ -221,11 +221,15 @@ describe("network", function () {
   it("Should subscribe to gossip core topics on demand", async () => {
     const {network: netA} = await createTestNode("A");
 
-    expect(netA.gossip.getTopics().length).to.equal(0);
+    expect((await getTopics(netA)).length).to.equal(0);
     await netA.subscribeGossipCoreTopics();
-    expect(netA.gossip.getTopics().length).to.equal(13);
+    expect((await getTopics(netA)).length).to.equal(13);
     await netA.unsubscribeGossipCoreTopics();
-    expect(netA.gossip.getTopics().length).to.equal(0);
+    expect((await getTopics(netA)).length).to.equal(0);
     await netA.close();
   });
 });
+
+async function getTopics(net: Network): Promise<string[]> {
+  return Object.keys(await net.dumpMeshPeers());
+}
