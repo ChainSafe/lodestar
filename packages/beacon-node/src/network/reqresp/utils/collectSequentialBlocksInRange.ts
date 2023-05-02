@@ -1,7 +1,6 @@
 import {ProtocolDescriptor, ResponseIncoming} from "@lodestar/reqresp";
 import {allForks, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 import {sszDeserializeResponse} from "./collect.js";
 
 /**
@@ -16,8 +15,8 @@ export async function collectSequentialBlocksInRange(
   const blocks: allForks.SignedBeaconBlock[] = [];
 
   for await (const chunk of blockStream) {
-    const blockType = responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRange](chunk.fork, protocol.version);
-    const block = sszDeserializeResponse(blockType, chunk.data);
+    const blockType = protocol.responseEncoder(chunk.fork);
+    const block = sszDeserializeResponse(blockType, chunk.data) as allForks.SignedBeaconBlock;
 
     const blockSlot = block.message.slot;
 

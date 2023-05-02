@@ -1,6 +1,5 @@
 import {ResponseIncoming, RequestErrorCode, RequestError, ProtocolDescriptor} from "@lodestar/reqresp";
 import {Type} from "@chainsafe/ssz";
-import {ResponseTypeGetter} from "../types.js";
 
 /**
  * Sink for `<response_chunk>*`, from
@@ -11,12 +10,11 @@ import {ResponseTypeGetter} from "../types.js";
  */
 export async function collectExactOneTyped<T>(
   protocol: ProtocolDescriptor,
-  source: AsyncIterable<ResponseIncoming>,
-  typeFn: ResponseTypeGetter<T>
+  source: AsyncIterable<ResponseIncoming>
 ): Promise<T> {
   for await (const chunk of source) {
-    const type = typeFn(chunk.fork, protocol.version);
-    const response = sszDeserializeResponse(type, chunk.data);
+    const type = protocol.responseEncoder(chunk.fork);
+    const response = sszDeserializeResponse(type, chunk.data) as T;
     return response;
   }
   throw new RequestError({code: RequestErrorCode.EMPTY_RESPONSE});
@@ -32,14 +30,13 @@ export async function collectExactOneTyped<T>(
 export async function collectMaxResponseTyped<T>(
   protocol: ProtocolDescriptor,
   source: AsyncIterable<ResponseIncoming>,
-  maxResponses: number,
-  typeFn: ResponseTypeGetter<T>
+  maxResponses: number
 ): Promise<T[]> {
   // else: zero or more responses
   const responses: T[] = [];
   for await (const chunk of source) {
-    const type = typeFn(chunk.fork, protocol.version);
-    const response = sszDeserializeResponse(type, chunk.data);
+    const type = protocol.responseEncoder(chunk.fork);
+    const response = sszDeserializeResponse(type, chunk.data) as T;
     responses.push(response);
 
     if (maxResponses !== undefined && responses.length >= maxResponses) {

@@ -1,4 +1,4 @@
-import {Encoding, TypeSizes} from "../types.js";
+import {Encoding, ReqRespEncoder} from "../types.js";
 import {BufferedSource} from "../utils/index.js";
 import {readSszSnappyPayload} from "./sszSnappy/decode.js";
 import {writeSszSnappyPayload} from "./sszSnappy/encode.js";
@@ -17,7 +17,7 @@ import {writeSszSnappyPayload} from "./sszSnappy/encode.js";
 export async function readEncodedPayload(
   bufferedSource: BufferedSource,
   encoding: Encoding,
-  type: TypeSizes
+  type: ReqRespEncoder
 ): Promise<Uint8Array> {
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:

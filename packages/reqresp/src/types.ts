@@ -2,9 +2,15 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {BeaconConfig, ForkDigestContext} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {LodestarError} from "@lodestar/utils";
+import {Type} from "@chainsafe/ssz";
 import {RateLimiterQuota} from "./rate_limiter/rateLimiterGRCA.js";
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
+
+export enum Version {
+  V1 = 1,
+  V2 = 2,
+}
 
 /**
  * Available request/response encoding strategies:
@@ -84,6 +90,8 @@ export interface ProtocolAttributes {
 export interface ProtocolDescriptor extends Omit<ProtocolAttributes, "protocolPrefix"> {
   contextBytes: ContextBytesFactory;
   ignoreResponse?: boolean;
+  requestEncoder: ReqRespEncoder | null;
+  responseEncoder: (fork: ForkName) => ReqRespEncoder;
 }
 
 // `protocolPrefix` is added runtime so not part of definition
@@ -93,9 +101,9 @@ export interface ProtocolDescriptor extends Omit<ProtocolAttributes, "protocolPr
 export interface Protocol extends ProtocolDescriptor {
   handler: ProtocolHandler;
   inboundRateLimits?: InboundRateLimitQuota;
-  requestSizes: TypeSizes | null;
-  responseSizes: (fork: ForkName) => TypeSizes;
 }
+
+export type ProtocolNoHandler = Omit<Protocol, "handler">;
 
 /**
  * ReqResp Protocol definition for dial only protocols
@@ -150,7 +158,23 @@ export type LightClientServerErrorType = {code: LightClientServerErrorCode.RESOU
 
 export class LightClientServerError extends LodestarError<LightClientServerErrorType> {}
 
-export type TypeSizes = {
+export type ReqRespEncoder<T = unknown> = Type<T> & {
   maxSize: number;
   minSize: number;
 };
+
+export enum ReqRespMethod {
+  // Phase 0
+  Status = "status",
+  Goodbye = "goodbye",
+  Ping = "ping",
+  Metadata = "metadata",
+  BeaconBlocksByRange = "beacon_blocks_by_range",
+  BeaconBlocksByRoot = "beacon_blocks_by_root",
+  BlobsSidecarsByRange = "blobs_sidecars_by_range",
+  BeaconBlockAndBlobsSidecarByRoot = "beacon_block_and_blobs_sidecar_by_root",
+  LightClientBootstrap = "light_client_bootstrap",
+  LightClientUpdatesByRange = "light_client_updates_by_range",
+  LightClientFinalityUpdate = "light_client_finality_update",
+  LightClientOptimisticUpdate = "light_client_optimistic_update",
+}

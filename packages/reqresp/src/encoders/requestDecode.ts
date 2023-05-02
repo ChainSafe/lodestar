@@ -14,7 +14,7 @@ const EMPTY_DATA = new Uint8Array();
  */
 export function requestDecode(protocol: MixedProtocol): Sink<Uint8Array | Uint8ArrayList, Promise<Uint8Array>> {
   return async function requestDecodeSink(source) {
-    const type = protocol.requestSizes;
+    const type = protocol.requestEncoder;
     if (type === null) {
       // method has no body
       return EMPTY_DATA;

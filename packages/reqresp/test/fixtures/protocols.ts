@@ -29,8 +29,8 @@ export const numberToStringProtocolDialOnly: DialOnlyProtocol = {
   version: 1,
   encoding: Encoding.SSZ_SNAPPY,
   contextBytes: {type: ContextBytesType.Empty},
-  requestSizes: {minSize: 0, maxSize: Infinity},
-  responseSizes: () => ({minSize: 0, maxSize: Infinity}),
+  requestEncoder: {minSize: 0, maxSize: Infinity},
+  responseEncoder: () => ({minSize: 0, maxSize: Infinity}),
 };
 
 export const numberToStringProtocol: Protocol = {
@@ -50,8 +50,8 @@ export const numberToStringProtocol: Protocol = {
 export function pingProtocol(handler: ProtocolHandler): Protocol {
   return {
     handler,
-    requestSizes: ssz.phase0.Ping,
-    responseSizes: () => ssz.phase0.Ping,
+    requestEncoder: ssz.phase0.Ping,
+    responseEncoder: () => ssz.phase0.Ping,
     contextBytes: {type: ContextBytesType.Empty},
     method: "ping",
     version: 1,
@@ -69,8 +69,8 @@ type ProtocolOptions = {
 export function customProtocol(opts: ProtocolOptions): Protocol {
   return {
     handler: getEmptyHandler(),
-    requestSizes: opts.noRequest ? null : {minSize: opts.requestMinSize ?? 0, maxSize: Infinity},
-    responseSizes: () => ({minSize: 0, maxSize: Infinity}),
+    requestEncoder: opts.noRequest ? null : {minSize: opts.requestMinSize ?? 0, maxSize: Infinity},
+    responseEncoder: () => ({minSize: 0, maxSize: Infinity}),
     contextBytes:
       opts.contextBytesType === ContextBytesType.ForkDigest
         ? {type: ContextBytesType.ForkDigest, forkDigestContext: beaconConfig}

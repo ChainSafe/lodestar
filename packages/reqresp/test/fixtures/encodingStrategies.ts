@@ -5,7 +5,7 @@ import varint from "varint";
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/errors.js";
-import {ResponseOutgoing, TypeSizes} from "../../src/types.js";
+import {ResponseOutgoing, ReqRespEncoder} from "../../src/types.js";
 import {
   sszSnappyPing,
   sszSnappySignedBeaconBlockAltair,
@@ -20,7 +20,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type SszSnappyTestBlockData = {
   id: string;
-  type: TypeSizes;
+  type: ReqRespEncoder;
   payload: ResponseOutgoing;
   streamedBody: Uint8Array;
 };
@@ -51,7 +51,7 @@ export const encodingStrategiesTestCases = [
 
 export const encodingStrategiesDecodingErrorCases: {
   id: string;
-  type: TypeSizes;
+  type: ReqRespEncoder;
   error: SszSnappyErrorCode;
   chunks: Buffer[];
 }[] = [

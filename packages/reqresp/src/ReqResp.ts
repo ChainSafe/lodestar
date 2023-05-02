@@ -130,7 +130,7 @@ export class ReqResp {
     }
   }
 
-  getRegisteredProtocol(method: string, version: number): MixedProtocol {
+  getProtocol(method: string, version: number): MixedProtocol {
     const protocolId = this.formatProtocolID({method, version, encoding: Encoding.SSZ_SNAPPY});
     const protocol = this.registeredProtocols.get(protocolId);
 
@@ -139,6 +139,20 @@ export class ReqResp {
     }
 
     return protocol;
+  }
+
+  getProtocols(method: string, versions: number[]): MixedProtocol[] {
+    const protocols: MixedProtocol[] = [];
+    for (const v of versions) {
+      const protocolId = this.formatProtocolID({method, version: v, encoding: Encoding.SSZ_SNAPPY});
+      const protocol = this.registeredProtocols.get(protocolId);
+      if (!protocol) {
+        throw new Error(`Protocol not found for method: ${method}, version: ${v}`);
+      }
+      protocols.push(protocol);
+    }
+
+    return protocols;
   }
 
   getRegisteredProtocols(): ProtocolID[] {

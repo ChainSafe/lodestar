@@ -10,7 +10,7 @@ import {writeEncodedPayload} from "../encodingStrategies/index.js";
  * if so, it would yield no byte chunks
  */
 export async function* requestEncode(protocol: MixedProtocol, requestBody: Uint8Array): AsyncGenerator<Buffer> {
-  const type = protocol.requestSizes;
+  const type = protocol.requestEncoder;
 
   if (type && requestBody !== null) {
     yield* writeEncodedPayload(requestBody, protocol.encoding);

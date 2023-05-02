@@ -3,11 +3,11 @@ import {chainConfig} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {ResponseIncoming, TypeSizes} from "../../src/types.js";
+import {ResponseIncoming, ReqRespEncoder} from "../../src/types.js";
 import {ZERO_HASH} from "../utils/index.js";
 
 type MessageFixture = {
-  type: TypeSizes;
+  type: ReqRespEncoder;
   binaryPayload: ResponseIncoming;
   chunks: Uint8Array[];
   asyncChunks: Buffer[];

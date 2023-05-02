@@ -4,8 +4,8 @@ import StrictEventEmitter from "strict-event-emitter-types";
 import {TopicValidatorResult} from "@libp2p/interface-pubsub";
 import {phase0} from "@lodestar/types";
 import {BlockInput} from "../chain/blocks/types.js";
-import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
+import {RequestTypedContainer} from "./reqresp/types.js";
 
 export enum NetworkEvent {
   /** A relevant peer has connected or has been re-STATUS'd */

@@ -8,15 +8,17 @@ import {
 } from "@lodestar/reqresp";
 import {Root} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
-import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 
-export async function* onLightClientBootstrap(requestBody: Root, chain: IBeaconChain): AsyncIterable<ResponseOutgoing> {
+export async function* onLightClientBootstrap(
+  protocol: ProtocolDescriptor,
+  requestBody: Root,
+  chain: IBeaconChain
+): AsyncIterable<ResponseOutgoing> {
   try {
     const bootstrap = await chain.lightClientServer.getBootstrap(requestBody);
     const fork = chain.config.getForkName(bootstrap.header.beacon.slot);
-    const type = responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap](fork, 0);
     yield {
-      data: type.serialize(bootstrap),
+      data: protocol.responseEncoder(fork).serialize(bootstrap),
       fork,
     };
   } catch (e) {

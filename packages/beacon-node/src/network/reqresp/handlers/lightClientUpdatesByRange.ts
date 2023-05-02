@@ -6,11 +6,12 @@ import {
   LightClientServerErrorCode,
   ResponseError,
   RespStatus,
+  ProtocolDescriptor,
 } from "@lodestar/reqresp";
 import {IBeaconChain} from "../../../chain/index.js";
-import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 
 export async function* onLightClientUpdatesByRange(
+  protocol: ProtocolDescriptor,
   requestBody: altair.LightClientUpdatesByRange,
   chain: IBeaconChain
 ): AsyncIterable<ResponseOutgoing> {
@@ -19,10 +20,9 @@ export async function* onLightClientUpdatesByRange(
     try {
       const update = await chain.lightClientServer.getUpdate(period);
       const fork = chain.config.getForkName(update.signatureSlot);
-      const type = responseSszTypeByMethod[ReqRespMethod.LightClientUpdatesByRange](fork, 0);
 
       yield {
-        data: type.serialize(update),
+        data: protocol.responseEncoder(fork).serialize(update),
         fork,
       };
     } catch (e) {

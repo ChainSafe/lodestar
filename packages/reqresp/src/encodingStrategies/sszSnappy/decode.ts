@@ -1,7 +1,7 @@
 import varint from "varint";
 import {Uint8ArrayList} from "uint8arraylist";
 import {BufferedSource} from "../../utils/index.js";
-import {TypeSizes} from "../../types.js";
+import {ReqRespEncoder} from "../../types.js";
 import {SnappyFramesUncompress} from "./snappyFrames/uncompress.js";
 import {maxEncodedLen} from "./utils.js";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors.js";
@@ -15,7 +15,7 @@ export const MAX_VARINT_BYTES = 10;
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export async function readSszSnappyPayload(bufferedSource: BufferedSource, type: TypeSizes): Promise<Uint8Array> {
+export async function readSszSnappyPayload(bufferedSource: BufferedSource, type: ReqRespEncoder): Promise<Uint8Array> {
   const sszDataLength = await readSszSnappyHeader(bufferedSource, type);
 
   return readSszSnappyBody(bufferedSource, sszDataLength);
@@ -25,7 +25,7 @@ export async function readSszSnappyPayload(bufferedSource: BufferedSource, type:
  * Reads `<encoding-dependent-header>` for ssz-snappy.
  * encoding-header ::= the length of the raw SSZ bytes, encoded as an unsigned protobuf varint
  */
-export async function readSszSnappyHeader(bufferedSource: BufferedSource, type: TypeSizes): Promise<number> {
+export async function readSszSnappyHeader(bufferedSource: BufferedSource, type: ReqRespEncoder): Promise<number> {
   for await (const buffer of bufferedSource) {
     // Get next bytes if empty
     if (buffer.length === 0) {

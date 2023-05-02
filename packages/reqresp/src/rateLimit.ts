@@ -1,7 +1,6 @@
 import {MAX_REQUEST_BLOCKS, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
-import {InboundRateLimitQuota} from "@lodestar/reqresp";
-import {ReqRespMethod, RequestBodyByMethod} from "./types.js";
-import {requestSszTypeByMethod} from "./types.js";
+import {ssz} from "@lodestar/types";
+import {InboundRateLimitQuota, ReqRespMethod} from "./types.js";
 
 export const rateLimitQuotas: Record<ReqRespMethod, InboundRateLimitQuota> = {
   [ReqRespMethod.Status]: {
@@ -24,22 +23,22 @@ export const rateLimitQuotas: Record<ReqRespMethod, InboundRateLimitQuota> = {
   [ReqRespMethod.BeaconBlocksByRange]: {
     // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
     byPeer: {quota: MAX_REQUEST_BLOCKS, quotaTimeMs: 10_000},
-    getRequestCount: getRequestCountFn(ReqRespMethod.BeaconBlocksByRange, (req) => req.count),
+    getRequestCount: (req) => ssz.phase0.BeaconBlocksByRangeRequest.deserialize(req).count,
   },
   [ReqRespMethod.BeaconBlocksByRoot]: {
     // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
     byPeer: {quota: 128, quotaTimeMs: 10_000},
-    getRequestCount: getRequestCountFn(ReqRespMethod.BeaconBlocksByRoot, (req) => req.length),
+    getRequestCount: (req) => ssz.phase0.BeaconBlocksByRootRequest.deserialize(req).length,
   },
   [ReqRespMethod.BlobsSidecarsByRange]: {
     // TODO DENEB: For now same value as BeaconBlocksByRange https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
     byPeer: {quota: MAX_REQUEST_BLOCKS, quotaTimeMs: 10_000},
-    getRequestCount: getRequestCountFn(ReqRespMethod.BlobsSidecarsByRange, (req) => req.count),
+    getRequestCount: (req) => ssz.deneb.BlobsSidecarsByRangeRequest.deserialize(req).count,
   },
   [ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]: {
     // TODO DENEB: For now same value as BeaconBlocksByRoot https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
     byPeer: {quota: 128, quotaTimeMs: 10_000},
-    getRequestCount: getRequestCountFn(ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot, (req) => req.length),
+    getRequestCount: (req) => ssz.deneb.BeaconBlockAndBlobsSidecarByRootRequest.deserialize(req).length,
   },
   [ReqRespMethod.LightClientBootstrap]: {
     // As similar in the nature of `Status` protocol so we use the same rate limits.
@@ -48,7 +47,7 @@ export const rateLimitQuotas: Record<ReqRespMethod, InboundRateLimitQuota> = {
   [ReqRespMethod.LightClientUpdatesByRange]: {
     // Same rationale as for BeaconBlocksByRange
     byPeer: {quota: MAX_REQUEST_LIGHT_CLIENT_UPDATES, quotaTimeMs: 10_000},
-    getRequestCount: getRequestCountFn(ReqRespMethod.LightClientUpdatesByRange, (req) => req.count),
+    getRequestCount: (req) => ssz.altair.LightClientUpdatesByRange.deserialize(req).count,
   },
   [ReqRespMethod.LightClientFinalityUpdate]: {
     // Finality updates should not be requested more than once per epoch.
@@ -61,18 +60,3 @@ export const rateLimitQuotas: Record<ReqRespMethod, InboundRateLimitQuota> = {
     byPeer: {quota: 2, quotaTimeMs: 12_000},
   },
 };
-
-// Helper to produce a getRequestCount function
-function getRequestCountFn<T extends ReqRespMethod>(
-  method: T,
-  fn: (req: RequestBodyByMethod[T]) => number
-): (reqData: Uint8Array) => number {
-  const type = requestSszTypeByMethod[method];
-  return (reqData: Uint8Array) => {
-    try {
-      return (type && fn(type.deserialize(reqData))) ?? 1;
-    } catch (e) {
-      return 1;
-    }
-  };
-}

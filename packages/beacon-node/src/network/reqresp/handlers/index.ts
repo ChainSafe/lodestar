@@ -1,5 +1,5 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {phase0, ssz} from "@lodestar/types";
+import {Root, altair, deneb, phase0, ssz} from "@lodestar/types";
 import {ProtocolHandler, ResponseOutgoing} from "@lodestar/reqresp";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -34,34 +34,34 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       yield* onStatus(chain);
     },
     async *onBeaconBlocksByRange(protocol, req) {
-      const body = ssz.phase0.BeaconBlocksByRangeRequest.deserialize(req.data);
+      const body = protocol.requestEncoder?.deserialize(req.data) as phase0.BeaconBlocksByRangeRequest;
       yield* onBeaconBlocksByRange(protocol, body, chain, db);
     },
     async *onBeaconBlocksByRoot(protocol, req) {
-      const body = ssz.phase0.BeaconBlocksByRootRequest.deserialize(req.data);
+      const body = protocol.requestEncoder?.deserialize(req.data) as phase0.BeaconBlocksByRootRequest;
       yield* onBeaconBlocksByRoot(protocol, body, chain, db);
     },
     async *onBeaconBlockAndBlobsSidecarByRoot(protocol, req) {
-      const body = ssz.deneb.BeaconBlockAndBlobsSidecarByRootRequest.deserialize(req.data);
+      const body = protocol.requestEncoder?.deserialize(req.data) as phase0.BeaconBlocksByRootRequest;
       yield* onBeaconBlockAndBlobsSidecarByRoot(protocol, body, chain, db);
     },
     async *onBlobsSidecarsByRange(protocol, req) {
-      const body = ssz.deneb.BlobsSidecarsByRangeRequest.deserialize(req.data);
+      const body = protocol.requestEncoder?.deserialize(req.data) as deneb.BlobsSidecarsByRangeRequest;
       yield* onBlobsSidecarsByRange(protocol, body, chain, db);
     },
-    async *onLightClientBootstrap(_protocol, req) {
-      const body = ssz.Root.deserialize(req.data);
-      yield* onLightClientBootstrap(body, chain);
+    async *onLightClientBootstrap(protocol, req) {
+      const body = protocol.requestEncoder?.deserialize(req.data) as Root;
+      yield* onLightClientBootstrap(protocol, body, chain);
     },
-    async *onLightClientUpdatesByRange(_protocol, req) {
-      const body = ssz.altair.LightClientUpdatesByRange.deserialize(req.data);
-      yield* onLightClientUpdatesByRange(body, chain);
+    async *onLightClientUpdatesByRange(protocol, req) {
+      const body = protocol.requestEncoder?.deserialize(req.data) as altair.LightClientUpdatesByRange;
+      yield* onLightClientUpdatesByRange(protocol, body, chain);
     },
-    async *onLightClientFinalityUpdate() {
-      yield* onLightClientFinalityUpdate(chain);
+    async *onLightClientFinalityUpdate(protocol) {
+      yield* onLightClientFinalityUpdate(protocol, chain);
     },
-    async *onLightClientOptimisticUpdate() {
-      yield* onLightClientOptimisticUpdate(chain);
+    async *onLightClientOptimisticUpdate(protocol) {
+      yield* onLightClientOptimisticUpdate(protocol, chain);
     },
   };
 }

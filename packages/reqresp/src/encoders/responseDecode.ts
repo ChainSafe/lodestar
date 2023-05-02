@@ -63,7 +63,7 @@ export function responseDecode(
       }
 
       const forkName = await readContextBytes(protocol.contextBytes, bufferedSource);
-      const typeSizes = protocol.responseSizes(forkName);
+      const typeSizes = protocol.responseEncoder(forkName);
       const chunkData = await readEncodedPayload(bufferedSource, protocol.encoding, typeSizes);
 
       yield {

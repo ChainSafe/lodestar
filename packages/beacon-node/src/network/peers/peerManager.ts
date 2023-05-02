@@ -6,17 +6,19 @@ import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 import {allForks, altair, phase0} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+import {ReqRespMethod} from "@lodestar/reqresp";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {NetworkEvent, INetworkEventBus} from "../events.js";
 import {Libp2p} from "../interface.js";
-import {IReqRespBeaconNode, ReqRespMethod, RequestTypedContainer} from "../reqresp/ReqRespBeaconNode.js";
+import {IReqRespBeaconNode} from "../reqresp/ReqRespBeaconNode.js";
 import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {SubnetsService} from "../subnets/index.js";
 import {SubnetType} from "../metadata.js";
 import {Eth2Gossipsub} from "../gossip/gossipsub.js";
 import {StatusCache} from "../statusCache.js";
 import {IClock} from "../../util/clock.js";
+import {RequestTypedContainer} from "../reqresp/types.js";
 import {PeersData, PeerData} from "./peersData.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
 import {IPeerRpcScoreStore, ScoreState, updateGossipsubScores} from "./score.js";
@@ -251,11 +253,11 @@ export class PeerManager {
 
       switch (request.method) {
         case ReqRespMethod.Ping:
-          return this.onPing(peer, request.body);
+          return this.onPing(peer, request.body as phase0.Ping);
         case ReqRespMethod.Goodbye:
-          return this.onGoodbye(peer, request.body);
+          return this.onGoodbye(peer, request.body as phase0.Goodbye);
         case ReqRespMethod.Status:
-          return this.onStatus(peer, request.body);
+          return this.onStatus(peer, request.body as phase0.Status);
       }
     } catch (e) {
       this.logger.error("Error onRequest handler", {}, e as Error);
