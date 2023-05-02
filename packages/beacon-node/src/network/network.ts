@@ -3,7 +3,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger, sleep, toHex} from "@lodestar/utils";
-import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {SignableENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {deneb, Epoch, phase0, allForks, altair} from "@lodestar/types";
@@ -19,14 +19,7 @@ import {NetworkOptions} from "./options.js";
 import {INetwork, Libp2p} from "./interface.js";
 import {ReqRespBeaconNode, ReqRespHandlers, beaconBlocksMaybeBlobsByRange} from "./reqresp/index.js";
 import {beaconBlocksMaybeBlobsByRoot} from "./reqresp/beaconBlocksMaybeBlobsByRoot.js";
-import {
-  Eth2Gossipsub,
-  GossipHandlers,
-  GossipTopicTypeMap,
-  GossipType,
-  getCoreTopicsAtFork,
-  GossipTopic,
-} from "./gossip/index.js";
+import {Eth2Gossipsub, GossipHandlers, GossipType, getCoreTopicsAtFork, GossipTopic} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "./forks.js";
 import {PeerManager} from "./peers/peerManager.js";
@@ -565,52 +558,6 @@ export class Network implements INetwork {
       this.gossip.unsubscribeTopic({...topic, fork});
     }
   };
-
-  /**
-   * De-duplicate logic to pick fork topics between subscribeCoreTopicsAtFork and unsubscribeCoreTopicsAtFork
-   */
-  private coreTopicsAtFork(fork: ForkName): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
-    // Common topics for all forks
-    const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [
-      // {type: GossipType.beacon_block}, // Handled below
-      {type: GossipType.beacon_aggregate_and_proof},
-      {type: GossipType.voluntary_exit},
-      {type: GossipType.proposer_slashing},
-      {type: GossipType.attester_slashing},
-    ];
-
-    // After Deneb only track beacon_block_and_blobs_sidecar topic
-    if (ForkSeq[fork] < ForkSeq.deneb) {
-      topics.push({type: GossipType.beacon_block});
-    } else {
-      topics.push({type: GossipType.beacon_block_and_blobs_sidecar});
-    }
-
-    // capella
-    if (ForkSeq[fork] >= ForkSeq.capella) {
-      topics.push({type: GossipType.bls_to_execution_change});
-    }
-
-    // Any fork after altair included
-    if (ForkSeq[fork] >= ForkSeq.altair) {
-      topics.push({type: GossipType.sync_committee_contribution_and_proof});
-      topics.push({type: GossipType.light_client_optimistic_update});
-      topics.push({type: GossipType.light_client_finality_update});
-    }
-
-    if (this.opts.subscribeAllSubnets) {
-      for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-        topics.push({type: GossipType.beacon_attestation, subnet});
-      }
-      if (ForkSeq[fork] >= ForkSeq.altair) {
-        for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
-          topics.push({type: GossipType.sync_committee, subnet});
-        }
-      }
-    }
-
-    return topics;
-  }
 
   private async regossipCachedBlsChanges(): Promise<void> {
     let gossipedIndexes = [];
