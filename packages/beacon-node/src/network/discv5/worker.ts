@@ -79,7 +79,7 @@ const config = createBeaconConfig(workerData.chainConfig, workerData.genesisVali
 const discv5 = Discv5.create({
   enr: new SignableENR(workerData.enr.kvs, workerData.enr.seq, keypair),
   peerId,
-  multiaddr: multiaddr(workerData.bindAddr),
+  multiaddr: multiaddr(workerData.multiaddr),
   config: workerData.config,
   metricsRegistry,
 });

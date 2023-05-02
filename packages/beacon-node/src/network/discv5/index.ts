@@ -2,23 +2,17 @@ import EventEmitter from "events";
 import {PeerId} from "@libp2p/interface-peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
-import {
-  createKeypairFromPeerId,
-  ENR,
-  ENRData,
-  IDiscv5DiscoveryInputOptions,
-  IKeypair,
-  SignableENR,
-} from "@chainsafe/discv5";
+import {createKeypairFromPeerId, ENR, ENRData, IKeypair, SignableENR} from "@chainsafe/discv5";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {chainConfigFromJson, chainConfigToJson, BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {NetworkCoreMetrics} from "../core/metrics.js";
+import {LodestarDiscv5Opts} from "../peers/peerManager.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 
 export type Discv5Opts = {
   peerId: PeerId;
-  discv5: Omit<IDiscv5DiscoveryInputOptions, "metrics" | "searchInterval" | "enabled">;
+  discv5: LodestarDiscv5Opts;
   logger: Logger;
   config: BeaconConfig;
   metrics?: NetworkCoreMetrics;
@@ -52,10 +46,10 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
     if (this.status.status === "started") return;
 
     const workerData: Discv5WorkerData = {
-      enr: (this.opts.discv5.enr as SignableENR).toObject(),
+      enr: this.opts.discv5.enr,
       peerIdProto: exportToProtobuf(this.opts.peerId),
-      bindAddr: this.opts.discv5.bindAddr,
-      config: this.opts.discv5,
+      multiaddr: this.opts.discv5.multiaddr,
+      config: this.opts.discv5.config,
       bootEnrs: this.opts.discv5.bootEnrs as string[],
       metrics: Boolean(this.opts.metrics),
       chainConfig: chainConfigFromJson(chainConfigToJson(this.opts.config)),

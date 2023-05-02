@@ -1,6 +1,6 @@
 import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
+import {IDiscv5CreateOptions, SignableENRData} from "@chainsafe/discv5";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
@@ -61,6 +61,12 @@ const ALLOWED_NEGATIVE_GOSSIPSUB_FACTOR = 0.1;
 // The Node should compute a recomended value every interval and log a warning
 // to terminal if it deviates significantly from the user's settings
 
+export type LodestarDiscv5Opts = Omit<IDiscv5CreateOptions, "enr" | "multiaddr"> & {
+  multiaddr: string;
+  enr: SignableENRData;
+  bootEnrs: string[];
+};
+
 export type PeerManagerOpts = {
   /** The target number of peers we would like to connect to. */
   targetPeers: number;
@@ -74,7 +80,7 @@ export type PeerManagerOpts = {
   /**
    * If null, Don't run discv5 queries, nor connect to cached peers in the peerStore
    */
-  discv5: IDiscv5DiscoveryInputOptions | null;
+  discv5: LodestarDiscv5Opts | null;
   /**
    * If set to true, connect to Discv5 bootnodes. If not set or false, do not connect
    */

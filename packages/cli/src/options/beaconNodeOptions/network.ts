@@ -47,12 +47,13 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   }
   return {
     discv5: {
-      enabled: args["discv5"] ?? true,
-      bindAddr: `/ip4/${listenAddress}/udp/${udpPort}`,
+      multiaddr: `/ip4/${listenAddress}/udp/${udpPort}`,
       // TODO: Okay to set to empty array?
       bootEnrs: args["bootnodes"] ?? [],
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
       enr: undefined as any,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+      peerId: undefined as any,
     },
     maxPeers,
     targetPeers,

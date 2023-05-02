@@ -9,7 +9,7 @@ type Discv5Config = Parameters<(typeof Discv5)["create"]>[0]["config"];
 export interface Discv5WorkerData {
   enr: SignableENRData;
   peerIdProto: Uint8Array;
-  bindAddr: string;
+  multiaddr: string;
   config: Discv5Config;
   bootEnrs: string[];
   metrics: boolean;

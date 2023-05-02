@@ -3,7 +3,7 @@ import {Registry} from "prom-client";
 import {ENR, SignableENR} from "@chainsafe/discv5";
 import {Libp2p} from "../interface.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
-import {defaultDiscv5Options, defaultNetworkOptions, NetworkOptions} from "../options.js";
+import {defaultNetworkOptions, NetworkOptions} from "../options.js";
 import {createNodejsLibp2p as _createNodejsLibp2p} from "./bundle.js";
 
 export type NodeJsLibp2pOpts = {
@@ -45,10 +45,7 @@ export async function createNodeJsLibp2p(
     if (!networkOpts.bootMultiaddrs) {
       networkOpts.bootMultiaddrs = [];
     }
-    if (!networkOpts.discv5) {
-      networkOpts.discv5 = defaultDiscv5Options;
-    }
-    for (const enrOrStr of networkOpts.discv5.bootEnrs) {
+    for (const enrOrStr of networkOpts.discv5?.bootEnrs ?? []) {
       const enr = typeof enrOrStr === "string" ? ENR.decodeTxt(enrOrStr) : enrOrStr;
       const fullMultiAddr = await enr.getFullMultiaddr("tcp");
       const multiaddrWithPeerId = fullMultiAddr?.toString();

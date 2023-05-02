@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {generateKeypair, KeypairType, SignableENR} from "@chainsafe/discv5";
+import {createPeerIdFromKeypair, generateKeypair, KeypairType, SignableENR} from "@chainsafe/discv5";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
 import {createNodeJsLibp2p} from "../../../src/network/index.js";
 import {getCurrentAndNextFork} from "../../../src/network/forks.js";
@@ -44,14 +44,15 @@ describe("createNodeJsLibp2p", () => {
       "enr:-LK4QDiPGwNomqUqNDaM3iHYvtdX7M5qngson6Qb2xGIg1LwC8-Nic0aQwO0rVbJt5xp32sRE3S1YqvVrWO7OgVNv0kBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpA7CIeVAAAgCf__________gmlkgnY0gmlwhBKNA4qJc2VjcDI1NmsxoQKbBS4ROQ_sldJm5tMgi36qm5I5exKJFb4C8dDVS_otAoN0Y3CCIyiDdWRwgiMo",
     ];
     const bootMultiaddrs: string[] = [];
+    const keypair = generateKeypair(KeypairType.Secp256k1);
     await createNodeJsLibp2p(
       peerId,
       {
         connectToDiscv5Bootnodes: true,
         discv5: {
-          enabled: false,
-          enr: SignableENR.createV4(generateKeypair(KeypairType.Secp256k1)),
-          bindAddr: "/ip4/127.0.0.1/udp/0",
+          peerId: await createPeerIdFromKeypair(keypair),
+          enr: SignableENR.createV4(keypair).toObject(),
+          multiaddr: "/ip4/127.0.0.1/udp/0",
           bootEnrs: enrWithTcp,
         },
         bootMultiaddrs,
@@ -74,14 +75,15 @@ describe("createNodeJsLibp2p", () => {
       "enr:-Ku4QCFQW96tEDYPjtaueW3WIh1CB0cJnvw_ibx5qIFZGqfLLj-QajMX6XwVs2d4offuspwgH3NkIMpWtCjCytVdlywGh2F0dG5ldHOIEAIAAgABAUyEZXRoMpCi7FS9AQAAAAAiAQAAAAAAgmlkgnY0gmlwhFA4VK6Jc2VjcDI1NmsxoQNGH1sJJS86-0x9T7qQewz9Wn9zlp6bYxqqrR38JQ49yIN1ZHCCIyg",
     ];
     const bootMultiaddrs: string[] = [];
+    const keypair = generateKeypair(KeypairType.Secp256k1);
     await createNodeJsLibp2p(
       peerId,
       {
         connectToDiscv5Bootnodes: true,
         discv5: {
-          enabled: false,
-          enr: SignableENR.createV4(generateKeypair(KeypairType.Secp256k1)),
-          bindAddr: "/ip4/127.0.0.1/udp/0",
+          peerId: await createPeerIdFromKeypair(keypair),
+          enr: SignableENR.createV4(keypair).toObject(),
+          multiaddr: "/ip4/127.0.0.1/udp/0",
           bootEnrs: enrWithoutTcp,
         },
         bootMultiaddrs,
