@@ -45,4 +45,6 @@ export const defaultNetworkOptions: NetworkOptions = {
   // see https://github.com/ChainSafe/lodestar/issues/5441
   maxGossipTopicConcurrency: 512,
   ...defaultGossipHandlerOpts,
+  // TEMP default to try
+  useWorker: true,
 };
