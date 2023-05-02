@@ -7,7 +7,7 @@ import {getContextBytesLightclient} from "./utils.js";
 export const LightClientUpdatesByRange: MixedProtocolGenerator<
   altair.LightClientUpdatesByRange,
   allForks.LightClientUpdate
-> = ((modules, handler, payloadType) => {
+> = ((modules, handler) => {
   const dialProtocol: DialOnlyProtocol<altair.LightClientUpdatesByRange, allForks.LightClientUpdate> = {
     method: "light_client_updates_by_range",
     version: 1,
@@ -23,7 +23,6 @@ export const LightClientUpdatesByRange: MixedProtocolGenerator<
   return {
     ...dialProtocol,
     handler,
-    payloadType,
     renderRequestBody: (req) => `${req.startPeriod},${req.count}`,
     inboundRateLimits: {
       // Same rationale as for BeaconBlocksByRange

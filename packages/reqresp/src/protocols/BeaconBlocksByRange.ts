@@ -20,14 +20,12 @@ const BeaconBlocksByRangeCommon: Pick<
 
 export const BeaconBlocksByRange: ProtocolGenerator<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock> = (
   _modules,
-  handler,
-  payloadType
+  handler
 ) => {
   return {
     ...BeaconBlocksByRangeCommon,
     version: 1,
     handler,
-    payloadType,
     responseEncoder: () => ssz.phase0.SignedBeaconBlock,
     contextBytes: {type: ContextBytesType.Empty},
   };

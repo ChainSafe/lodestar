@@ -4,7 +4,7 @@ import {ContextBytesType, ProtocolGenerator, Encoding, MixedProtocol} from "../t
 /* eslint-disable @typescript-eslint/naming-convention */
 const MetadataCommon: Pick<
   MixedProtocol<null, allForks.Metadata>,
-  "method" | "encoding" | "requestEncoder" | "renderRequestBody" | "inboundRateLimits" | "payloadType"
+  "method" | "encoding" | "requestEncoder" | "renderRequestBody" | "inboundRateLimits"
 > = {
   method: "metadata",
   encoding: Encoding.SSZ_SNAPPY,
@@ -15,12 +15,11 @@ const MetadataCommon: Pick<
   },
 };
 
-export const Metadata: ProtocolGenerator<null, allForks.Metadata> = (modules, handler, payloadType) => {
+export const Metadata: ProtocolGenerator<null, allForks.Metadata> = (modules, handler) => {
   return {
     ...MetadataCommon,
     version: 1,
     handler,
-    payloadType,
     responseEncoder: () => ssz.phase0.Metadata,
     contextBytes: {type: ContextBytesType.Empty},
   };

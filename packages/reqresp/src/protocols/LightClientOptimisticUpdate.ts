@@ -6,8 +6,7 @@ import {getContextBytesLightclient} from "./utils.js";
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LightClientOptimisticUpdate: MixedProtocolGenerator<null, allForks.LightClientOptimisticUpdate> = ((
   modules,
-  handler,
-  payloadType
+  handler
 ) => {
   const dialProtocol: DialOnlyProtocol<null, allForks.LightClientOptimisticUpdate> = {
     method: "light_client_optimistic_update",
@@ -26,7 +25,6 @@ export const LightClientOptimisticUpdate: MixedProtocolGenerator<null, allForks.
   return {
     ...dialProtocol,
     handler,
-    payloadType,
     inboundRateLimits: {
       // Optimistic updates should not be requested more than once per slot.
       // Allow 2 per slot and a very safe bound until there's more testing of real usage.

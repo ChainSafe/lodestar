@@ -47,6 +47,10 @@ export class MetadataController {
     this._metadata = opts.metadata || ssz.altair.Metadata.defaultValue();
   }
 
+  get currentSlot(): number {
+    return this.chain.clock.currentSlot;
+  }
+
   start(setEnrValue: ((key: string, value: Uint8Array) => Promise<void>) | undefined, currentFork: ForkName): void {
     this.setEnrValue = setEnrValue;
     if (this.setEnrValue) {

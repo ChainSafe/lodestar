@@ -6,13 +6,12 @@ import {ContextBytesType, ProtocolGenerator, Encoding} from "../types.js";
 export const BeaconBlockAndBlobsSidecarByRoot: ProtocolGenerator<
   deneb.BeaconBlockAndBlobsSidecarByRootRequest,
   deneb.SignedBeaconBlockAndBlobsSidecar
-> = (modules, handler, payloadType) => {
+> = (modules, handler) => {
   return {
     method: "beacon_block_and_blobs_sidecar_by_root",
     version: 1,
     encoding: Encoding.SSZ_SNAPPY,
     handler,
-    payloadType,
     requestEncoder: () => ssz.deneb.BeaconBlockAndBlobsSidecarByRootRequest,
     // TODO: Make it fork compliant
     responseEncoder: () => ssz.deneb.SignedBeaconBlockAndBlobsSidecar,

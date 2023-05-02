@@ -101,16 +101,14 @@ export type ProtocolHandler<Req, Resp, PType extends PayloadType = PayloadType.b
   protocol: ProtocolDescriptor<Req, Resp>,
   req: IncomingPayloadData<Req>[PType],
   peerId: PeerId
-) => AsyncIterable<OutgoingPayloadData<Resp>[PType]>;
+) => AsyncIterable<OutgoingPayloadBytes>;
 
 // `protocolPrefix` is added runtime so not part of definition
 /**
  * ReqResp Protocol definition for full duplex protocols
  */
-export interface Protocol<Req = unknown, Resp = unknown, PType extends PayloadType = PayloadType>
-  extends ProtocolDescriptor<Req, Resp> {
+export interface Protocol<Req = unknown, Resp = unknown> extends ProtocolDescriptor<Req, Resp> {
   handler: ProtocolHandler<Req, Resp, PayloadType>;
-  payloadType: PType;
   renderRequestBody?: (request: Req) => string;
   inboundRateLimits?: InboundRateLimitQuota<Req>;
 }
@@ -119,11 +117,10 @@ export interface Protocol<Req = unknown, Resp = unknown, PType extends PayloadTy
  * ReqResp Protocol definition for dial only protocols
  */
 export interface DialOnlyProtocol<Req = unknown, Resp = unknown>
-  extends Omit<Protocol<Req, Resp>, "handler" | "inboundRateLimits" | "renderRequestBody" | "payloadType"> {
+  extends Omit<Protocol<Req, Resp>, "handler" | "inboundRateLimits" | "renderRequestBody"> {
   handler?: never;
   inboundRateLimits?: never;
   renderRequestBody?: never;
-  payloadType?: never;
 }
 
 /**
@@ -143,7 +140,7 @@ export type MixedProtocolGenerator<Req, Resp, PType extends PayloadType = Payloa
   modules: {config: BeaconConfig},
   handler?: H,
   payloadType?: PType
-) => H extends undefined ? DialOnlyProtocol<Req, Resp> : Protocol<Req, Resp, PType>;
+) => H extends undefined ? DialOnlyProtocol<Req, Resp> : Protocol<Req, Resp>;
 
 /**
  * ReqResp protocol definition descriptor for full duplex protocols

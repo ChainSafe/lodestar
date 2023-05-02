@@ -93,13 +93,7 @@ export abstract class ReqResp {
    */
   async registerProtocol<Req, Resp>(protocol: Protocol<Req, Resp>, opts?: ReqRespRegisterOpts): Promise<void> {
     const protocolID = this.formatProtocolID(protocol);
-    const {
-      handler: _handler,
-      renderRequestBody: _renderRequestBody,
-      inboundRateLimits,
-      payloadType: _payloadType,
-      ...rest
-    } = protocol;
+    const {handler: _handler, renderRequestBody: _renderRequestBody, inboundRateLimits, ...rest} = protocol;
     this.registerDialOnlyProtocol(rest, opts);
     this.dialOnlyProtocols.set(protocolID, false);
 

@@ -7,8 +7,7 @@ import {getContextBytesLightclient} from "./utils.js";
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LightClientBootstrap: MixedProtocolGenerator<Root, allForks.LightClientBootstrap> = ((
   modules,
-  handler,
-  payloadType
+  handler
 ) => {
   const dialProtocol: DialOnlyProtocol<Root, allForks.LightClientBootstrap> = {
     method: "light_client_bootstrap",
@@ -30,7 +29,6 @@ export const LightClientBootstrap: MixedProtocolGenerator<Root, allForks.LightCl
   return {
     ...dialProtocol,
     handler,
-    payloadType,
     renderRequestBody: (req) => toHex(req),
     inboundRateLimits: {
       // As similar in the nature of `Status` protocol so we use the same rate limits.

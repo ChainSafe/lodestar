@@ -13,6 +13,10 @@ import {
   ReqResp,
   RequestError,
   MixedProtocol,
+  ProtocolDescriptor,
+  OutgoingPayloadBytes,
+  IncomingPayload,
+  ContextBytesType,
 } from "@lodestar/reqresp";
 import {ReqRespHandler, ReqRespOpts} from "@lodestar/reqresp/lib/ReqResp.js";
 import * as reqRespProtocols from "@lodestar/reqresp/protocols";
@@ -406,25 +410,35 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     yield {type: PayloadType.ssz, data: this.metadataController.seqNumber};
   }
 
-  private async *onMetadata(req: null, peerId: PeerId): AsyncIterable<Payload<allForks.Metadata>> {
-    this.onIncomingRequestBody({method: ReqRespMethod.Metadata, body: req}, peerId);
+  private async *onMetadata(
+    protocol: ProtocolDescriptor<null, allForks.Metadata>,
+    req: IncomingPayload<null>,
+    peerId: PeerId
+  ): AsyncIterable<Payload<allForks.Metadata>> {
+    this.onIncomingRequestBody({method: ReqRespMethod.Metadata, body: null}, peerId);
 
-    // V1 -> phase0, V2 -> altair. But the type serialization of phase0.Metadata will just ignore the extra .syncnets property
-    // It's safe to return altair.Metadata here for all versions
-    yield {type: PayloadType.ssz, data: this.metadataController.json};
+    yield {
+      type: PayloadType.bytes,
+      bytes: protocol
+        .responseEncoder(this.config.getForkName(this.metadataController.currentSlot))
+        .serialize(this.metadataController.json),
+      contextBytes: {type: ContextBytesType.Empty},
+    };
   }
 
   private async *onBeaconBlocksByRange(
-    req: phase0.BeaconBlocksByRangeRequest,
+    protocol: ProtocolDescriptor<phase0.BeaconBlocksByRangeRequest, allForks.SignedBeaconBlock>,
+    req: IncomingPayload<phase0.BeaconBlocksByRangeRequest>,
     peerId: PeerId
-  ): AsyncIterable<Payload<allForks.SignedBeaconBlock>> {
-    yield* this.reqRespHandlers.onBeaconBlocksByRange(req, peerId);
+  ): AsyncIterable<OutgoingPayloadBytes> {
+    yield* this.reqRespHandlers.onBeaconBlocksByRange(protocol, req, peerId);
   }
 
   private async *onBeaconBlocksByRoot(
-    req: phase0.BeaconBlocksByRootRequest,
+    protocol: ProtocolDescriptor<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock>,
+    req: IncomingPayload<phase0.BeaconBlocksByRootRequest>,
     peerId: PeerId
-  ): AsyncIterable<Payload<allForks.SignedBeaconBlock>> {
-    yield* this.reqRespHandlers.onBeaconBlocksByRoot(req, peerId);
+  ): AsyncIterable<OutgoingPayloadBytes> {
+    yield* this.reqRespHandlers.onBeaconBlocksByRoot(protocol, req, peerId);
   }
 }

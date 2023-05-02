@@ -8,7 +8,7 @@ import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEn
 import {RespStatus} from "../interface.js";
 import {ReqRespRateLimiter} from "../rate_limiter/ReqRespRateLimiter.js";
 import {RequestError, RequestErrorCode} from "../request/errors.js";
-import {IncomingPayloadData, PayloadType, Protocol} from "../types.js";
+import {PayloadType, Protocol} from "../types.js";
 import {prettyPrintPeerId} from "../utils/index.js";
 import {ResponseError} from "./errors.js";
 
@@ -88,27 +88,8 @@ export async function handleRequest<Req, Resp>({
           );
         }
 
-        let reqPayload:
-          | IncomingPayloadData<Req>[PayloadType.ssz]
-          | IncomingPayloadData<Req>[PayloadType.bytes];
-        switch (protocol.payloadType) {
-          case PayloadType.ssz:
-            reqPayload = {type: PayloadType.ssz, data: requestBody};
-            break;
-          case PayloadType.bytes:
-            reqPayload = {
-              type: PayloadType.bytes,
-              // TODO: Find a way to convert the request to bytes
-              bytes: new Uint8Array(),
-            };
-            break;
-          default: {
-            throw new Error(`Unknown payload type ${protocol.payloadType}`);
-          }
-        }
-
         yield* pipe(
-          protocol.handler(protocol, reqPayload, peerId),
+          protocol.handler(protocol, {type: PayloadType.ssz, data: requestBody}, peerId),
 
           // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
           // Note: Not logging on each chunk since after 1 year it hasn't add any value when debugging

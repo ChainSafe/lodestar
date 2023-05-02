@@ -20,14 +20,12 @@ const BeaconBlocksByRootCommon: Pick<
 
 export const BeaconBlocksByRoot: ProtocolGenerator<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock> = (
   _modules,
-  handler,
-  payloadType
+  handler
 ) => {
   return {
     ...BeaconBlocksByRootCommon,
     version: 1,
     handler,
-    payloadType,
     responseEncoder: () => ssz.phase0.SignedBeaconBlock,
     contextBytes: {type: ContextBytesType.Empty},
   };
@@ -35,14 +33,12 @@ export const BeaconBlocksByRoot: ProtocolGenerator<phase0.BeaconBlocksByRootRequ
 
 export const BeaconBlocksByRootV2: ProtocolGenerator<phase0.BeaconBlocksByRootRequest, allForks.SignedBeaconBlock> = (
   modules,
-  handler,
-  payloadType
+  handler
 ) => {
   return {
     ...BeaconBlocksByRootCommon,
     version: 2,
     handler,
-    payloadType,
     responseEncoder: (forkName) => ssz[forkName].SignedBeaconBlock,
     contextBytes: {
       type: ContextBytesType.ForkDigest,

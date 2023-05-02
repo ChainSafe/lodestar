@@ -2,13 +2,12 @@ import {phase0, ssz} from "@lodestar/types";
 import {ContextBytesType, Encoding, ProtocolGenerator} from "../types.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const Ping: ProtocolGenerator<phase0.Ping, phase0.Ping> = (_modules, handler, payloadType) => {
+export const Ping: ProtocolGenerator<phase0.Ping, phase0.Ping> = (_modules, handler) => {
   return {
     method: "ping",
     version: 1,
     encoding: Encoding.SSZ_SNAPPY,
     handler,
-    payloadType,
     requestEncoder: () => ssz.phase0.Ping,
     responseEncoder: () => ssz.phase0.Ping,
     renderRequestBody: (req) => req.toString(10),

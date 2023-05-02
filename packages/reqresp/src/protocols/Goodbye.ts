@@ -2,13 +2,12 @@ import {phase0, ssz} from "@lodestar/types";
 import {ContextBytesType, ProtocolGenerator, Encoding} from "../types.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const Goodbye: ProtocolGenerator<phase0.Goodbye, phase0.Goodbye> = (_modules, handler, payloadType) => {
+export const Goodbye: ProtocolGenerator<phase0.Goodbye, phase0.Goodbye> = (_modules, handler) => {
   return {
     method: "goodbye",
     version: 1,
     encoding: Encoding.SSZ_SNAPPY,
     handler,
-    payloadType,
     requestEncoder: () => ssz.phase0.Goodbye,
     responseEncoder: () => ssz.phase0.Goodbye,
     ignoreResponse: true,
