@@ -3,10 +3,9 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger, sleep, toHex} from "@lodestar/utils";
-import {ATTESTATION_SUBNET_COUNT, ForkName, ForkSeq, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {SignableENR} from "@chainsafe/discv5";
+import {ForkName} from "@lodestar/params";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
-import {Epoch, phase0, allForks, altair} from "@lodestar/types";
+import {Epoch, phase0, allForks} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {Metrics} from "../metrics/index.js";
@@ -19,14 +18,7 @@ import {NetworkOptions} from "./options.js";
 import {INetwork, Libp2p} from "./interface.js";
 import {ReqRespBeaconNode, ReqRespHandlers, beaconBlocksMaybeBlobsByRange} from "./reqresp/index.js";
 import {beaconBlocksMaybeBlobsByRoot} from "./reqresp/beaconBlocksMaybeBlobsByRoot.js";
-import {
-  Eth2Gossipsub,
-  GossipHandlers,
-  GossipTopicTypeMap,
-  GossipType,
-  getCoreTopicsAtFork,
-  GossipTopic,
-} from "./gossip/index.js";
+import {Eth2Gossipsub, GossipHandlers, GossipType, getCoreTopicsAtFork, GossipTopic} from "./gossip/index.js";
 import {MetadataController} from "./metadata.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "./forks.js";
 import {PeerManager} from "./peers/peerManager.js";
@@ -41,6 +33,7 @@ import {NetworkProcessor} from "./processor/index.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {createNetworkCoreMetrics} from "./core/metrics.js";
 import {GossipPublisher} from "./gossip/publisher.js";
+import {LocalStatusCache} from "./statusCache.js";
 
 // How many changes to batch cleanup
 const CACHED_BLS_BATCH_CLEANUP_LIMIT = 10;
@@ -62,6 +55,7 @@ type NetworkModules = {
   attnetsService: AttnetsService;
   syncnetsService: SyncnetsService;
   peerManager: PeerManager;
+  statusCache: LocalStatusCache;
 };
 
 export type NetworkInitModules = {
@@ -91,6 +85,7 @@ export class Network implements INetwork {
 
   private readonly networkProcessor: NetworkProcessor;
   private readonly peerManager: PeerManager;
+  private readonly statusCache: LocalStatusCache;
   private readonly libp2p: Libp2p;
   private readonly gossipsub: Eth2Gossipsub;
   private readonly logger: Logger;
@@ -121,6 +116,7 @@ export class Network implements INetwork {
       attnetsService,
       syncnetsService,
       peerManager,
+      statusCache,
     } = modules;
     this.opts = opts;
     this.config = config;
@@ -139,8 +135,10 @@ export class Network implements INetwork {
     this.attnetsService = attnetsService;
     this.syncnetsService = syncnetsService;
     this.peerManager = peerManager;
+    this.statusCache = statusCache;
 
     this.chain.clock.on(ClockEvent.epoch, this.onEpoch);
+    this.chain.emitter.on(routes.events.EventType.head, this.onHead);
     this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
@@ -217,6 +215,7 @@ export class Network implements INetwork {
 
     const syncnetsService = new SyncnetsService(config, chain.clock, gossip, metadata, logger, metricsCore, opts);
 
+    const statusCache = new LocalStatusCache(chain.getStatus());
     const peerManager = new PeerManager(
       {
         libp2p,
@@ -226,7 +225,8 @@ export class Network implements INetwork {
         syncnetsService,
         logger,
         metrics: metricsCore,
-        chain,
+        clock,
+        statusCache,
         config,
         peerRpcScores,
         networkEventBus,
@@ -280,6 +280,7 @@ export class Network implements INetwork {
       attnetsService,
       syncnetsService,
       peerManager,
+      statusCache,
     });
   }
 
@@ -288,6 +289,7 @@ export class Network implements INetwork {
     if (this.closed) return;
 
     this.chain.emitter.off(ClockEvent.epoch, this.onEpoch);
+    this.chain.emitter.off(routes.events.EventType.head, this.onHead);
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
 
@@ -322,15 +324,23 @@ export class Network implements INetwork {
     return this.libp2p.peerId;
   }
 
-  async getEnr(): Promise<SignableENR | undefined> {
-    return this.peerManager["discovery"]?.discv5.enr();
-  }
+  async getNetworkIdentity(): Promise<routes.node.NetworkIdentity> {
+    const enr = await this.peerManager["discovery"]?.discv5.enr();
+    const discoveryAddresses = [
+      enr?.getLocationMultiaddr("tcp")?.toString() ?? null,
+      enr?.getLocationMultiaddr("udp")?.toString() ?? null,
+    ].filter((addr): addr is string => Boolean(addr));
 
-  async getMetadata(): Promise<altair.Metadata> {
     return {
-      seqNumber: this.metadata.seqNumber,
-      attnets: this.metadata.attnets,
-      syncnets: this.metadata.syncnets,
+      peerId: this.peerId.toString(),
+      enr: enr?.encodeTxt() || "",
+      discoveryAddresses,
+      p2pAddresses: this.localMultiaddrs.map((m) => m.toString()),
+      metadata: {
+        seqNumber: this.metadata.seqNumber,
+        attnets: this.metadata.attnets,
+        syncnets: this.metadata.syncnets,
+      },
     };
   }
 
@@ -522,6 +532,10 @@ export class Network implements INetwork {
     }
   };
 
+  private onHead = (): void => {
+    this.statusCache.update(this.chain.getStatus());
+  };
+
   private subscribeCoreTopicsAtFork = (fork: ForkName): void => {
     if (this.subscribedForks.has(fork)) return;
     this.subscribedForks.add(fork);
@@ -541,52 +555,6 @@ export class Network implements INetwork {
       this.gossipsub.unsubscribeTopic({...topic, fork});
     }
   };
-
-  /**
-   * De-duplicate logic to pick fork topics between subscribeCoreTopicsAtFork and unsubscribeCoreTopicsAtFork
-   */
-  private coreTopicsAtFork(fork: ForkName): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
-    // Common topics for all forks
-    const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [
-      // {type: GossipType.beacon_block}, // Handled below
-      {type: GossipType.beacon_aggregate_and_proof},
-      {type: GossipType.voluntary_exit},
-      {type: GossipType.proposer_slashing},
-      {type: GossipType.attester_slashing},
-    ];
-
-    // After Deneb only track beacon_block_and_blobs_sidecar topic
-    if (ForkSeq[fork] < ForkSeq.deneb) {
-      topics.push({type: GossipType.beacon_block});
-    } else {
-      topics.push({type: GossipType.beacon_block_and_blobs_sidecar});
-    }
-
-    // capella
-    if (ForkSeq[fork] >= ForkSeq.capella) {
-      topics.push({type: GossipType.bls_to_execution_change});
-    }
-
-    // Any fork after altair included
-    if (ForkSeq[fork] >= ForkSeq.altair) {
-      topics.push({type: GossipType.sync_committee_contribution_and_proof});
-      topics.push({type: GossipType.light_client_optimistic_update});
-      topics.push({type: GossipType.light_client_finality_update});
-    }
-
-    if (this.opts.subscribeAllSubnets) {
-      for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-        topics.push({type: GossipType.beacon_attestation, subnet});
-      }
-      if (ForkSeq[fork] >= ForkSeq.altair) {
-        for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
-          topics.push({type: GossipType.sync_committee, subnet});
-        }
-      }
-    }
-
-    return topics;
-  }
 
   private async regossipCachedBlsChanges(): Promise<void> {
     let gossipedIndexes = [];

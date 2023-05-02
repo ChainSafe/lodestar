@@ -2,13 +2,11 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import all from "it-all";
 import {pipe} from "it-pipe";
-import {Uint8ArrayList} from "uint8arraylist";
 import {LodestarError} from "@lodestar/utils";
 import {responseDecode} from "../../../src/encoders/responseDecode.js";
 import {responseEncodersErrorTestCases, responseEncodersTestCases} from "../../fixtures/encoders.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {arrToSource, onlySuccessResp} from "../../utils/index.js";
-import {EncodedPayloadType} from "../../../src/types.js";
 
 chai.use(chaiAsPromised);
 
@@ -23,15 +21,8 @@ describe("encoders / responseDecode", () => {
           all
         );
 
-        expect(
-          responseChunks.filter(onlySuccessResp).map((r) => {
-            if (r.payload.type === EncodedPayloadType.ssz) {
-              return r.payload.data;
-            } else {
-              return r.payload.bytes;
-            }
-          })
-        ).to.deep.equal(responses);
+        const expectedResponses = responseChunks.filter(onlySuccessResp).map((r) => r.payload);
+        expect(responses).to.deep.equal(expectedResponses);
       });
     }
   });
@@ -43,7 +34,7 @@ describe("encoders / responseDecode", () => {
       it(`${id}`, async () => {
         await expectRejectedWithLodestarError(
           pipe(
-            arrToSource(chunks as Uint8ArrayList[]),
+            arrToSource(chunks as Uint8Array[]),
             // eslint-disable-next-line @typescript-eslint/no-empty-function
             responseDecode(protocol, {onFirstHeader: () => {}, onFirstResponseChunk: () => {}}),
             all

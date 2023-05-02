@@ -1,14 +1,6 @@
-import {ForkName} from "@lodestar/params";
 import {writeEncodedPayload} from "../encodingStrategies/index.js";
 import {encodeErrorMessage} from "../utils/index.js";
-import {
-  ContextBytesType,
-  ContextBytesFactory,
-  MixedProtocolDefinition,
-  EncodedPayload,
-  EncodedPayloadType,
-  ProtocolDefinition,
-} from "../types.js";
+import {ContextBytesType, ContextBytesFactory, MixedProtocol, Protocol, ResponseOutgoing} from "../types.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 
 /**
@@ -20,24 +12,22 @@ import {RespStatus, RpcResponseStatusError} from "../interface.js";
  * ```
  * Note: `response` has zero or more chunks (denoted by `<>*`)
  */
-export function responseEncodeSuccess<Req, Resp>(
-  protocol: ProtocolDefinition<Req, Resp>
-): (source: AsyncIterable<EncodedPayload<Resp>>) => AsyncIterable<Buffer> {
+export function responseEncodeSuccess(
+  protocol: Protocol
+): (source: AsyncIterable<ResponseOutgoing>) => AsyncIterable<Buffer> {
   return async function* responseEncodeSuccessTransform(source) {
     for await (const chunk of source) {
       // <result>
       yield Buffer.from([RespStatus.SUCCESS]);
 
       // <context-bytes> - from altair
-      const contextBytes = getContextBytes<Resp>(protocol.contextBytes, chunk);
+      const contextBytes = getContextBytes(protocol.contextBytes, chunk);
       if (contextBytes) {
         yield contextBytes as Buffer;
       }
 
       // <encoding-dependent-header> | <encoded-payload>
-      const forkName = getForkNameFromContextBytes(protocol.contextBytes, chunk);
-      const respType = protocol.responseType(forkName);
-      yield* writeEncodedPayload(chunk, protocol.encoding, respType);
+      yield* writeEncodedPayload(chunk.data, protocol.encoding);
     }
   };
 }
@@ -53,7 +43,7 @@ export function responseEncodeSuccess<Req, Resp>(
  * fn yields exactly one `<error_response>` and afterwards the stream must be terminated
  */
 export async function* responseEncodeError(
-  protocol: Pick<MixedProtocolDefinition, "encoding">,
+  protocol: Pick<MixedProtocol, "encoding">,
   status: RpcResponseStatusError,
   errorMessage: string
 ): AsyncGenerator<Buffer> {
@@ -70,10 +60,7 @@ export async function* responseEncodeError(
  * Yields byte chunks for a `<context-bytes>`. See `ContextBytesType` for possible types.
  * This item is mandatory but may be empty.
  */
-function getContextBytes<Resp>(
-  contextBytes: ContextBytesFactory<Resp>,
-  chunk: EncodedPayload<Resp>
-): Uint8Array | null {
+function getContextBytes(contextBytes: ContextBytesFactory, chunk: ResponseOutgoing): Uint8Array | null {
   switch (contextBytes.type) {
     // Yield nothing
     case ContextBytesType.Empty:
@@ -81,42 +68,6 @@ function getContextBytes<Resp>(
 
     // Yield a fixed-width 4 byte chunk, set to the `ForkDigest`
     case ContextBytesType.ForkDigest:
-      switch (chunk.type) {
-        case EncodedPayloadType.ssz:
-          return contextBytes.forkDigestContext.forkName2ForkDigest(
-            contextBytes.forkFromResponse(chunk.data)
-          ) as Buffer;
-
-        case EncodedPayloadType.bytes:
-          if (chunk.contextBytes.type !== ContextBytesType.ForkDigest) {
-            throw Error(`Expected context bytes ForkDigest but got ${chunk.contextBytes.type}`);
-          }
-          return contextBytes.forkDigestContext.forkName2ForkDigest(
-            contextBytes.forkDigestContext.getForkName(chunk.contextBytes.forkSlot)
-          ) as Buffer;
-      }
-  }
-}
-
-function getForkNameFromContextBytes<Resp>(
-  contextBytes: ContextBytesFactory<Resp>,
-  chunk: EncodedPayload<Resp>
-): ForkName {
-  switch (contextBytes.type) {
-    case ContextBytesType.Empty:
-      return ForkName.phase0;
-
-    // Yield a fixed-width 4 byte chunk, set to the `ForkDigest`
-    case ContextBytesType.ForkDigest:
-      switch (chunk.type) {
-        case EncodedPayloadType.ssz:
-          return contextBytes.forkFromResponse(chunk.data);
-
-        case EncodedPayloadType.bytes:
-          if (chunk.contextBytes.type !== ContextBytesType.ForkDigest) {
-            throw Error(`Expected context bytes ForkDigest but got ${chunk.contextBytes.type}`);
-          }
-          return contextBytes.forkDigestContext.getForkName(chunk.contextBytes.forkSlot);
-      }
+      return contextBytes.forkDigestContext.forkName2ForkDigest(chunk.fork) as Buffer;
   }
 }

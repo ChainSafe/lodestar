@@ -1,5 +1,5 @@
 import {deneb} from "@lodestar/types";
-import {EncodedPayloadBytes} from "@lodestar/reqresp";
+import {ResponseOutgoing} from "@lodestar/reqresp";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {onBlocksOrBlobsSidecarsByRange} from "./beaconBlocksByRange.js";
@@ -10,7 +10,7 @@ export function onBlobsSidecarsByRange(
   request: deneb.BlobsSidecarsByRangeRequest,
   chain: IBeaconChain,
   db: IBeaconDb
-): AsyncIterable<EncodedPayloadBytes> {
+): AsyncIterable<ResponseOutgoing> {
   return onBlocksOrBlobsSidecarsByRange(request, chain, {
     finalized: db.blobsSidecarArchive,
     unfinalized: db.blobsSidecar,
