@@ -79,9 +79,8 @@ export async function handleRequest({
 
         logger.debug("Req  received", logCtx);
 
-        // TODO: Consider counting max count by request for byRange and byRoot
-        // const requestCount = protocol?.inboundRateLimits?.getRequestCount?.(requestBody) ?? 1;
-        const requestCount = 1;
+        // Max count by request for byRange and byRoot
+        const requestCount = protocol?.inboundRateLimits?.getRequestCount?.(requestBody) ?? 1;
 
         if (!rateLimiter.allows(peerId, protocolID, requestCount)) {
           throw new RequestError({code: RequestErrorCode.REQUEST_RATE_LIMITED});

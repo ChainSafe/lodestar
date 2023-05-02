@@ -28,7 +28,7 @@ import {
   ReqRespMethod,
   RequestTypedContainer,
   Version,
-  getRequestSzzTypeByMethod,
+  requestSszTypeByMethod,
   responseSszTypeByMethod,
 } from "./types.js";
 import {collectSequentialBlocksInRange} from "./utils/collectSequentialBlocksInRange.js";
@@ -321,7 +321,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   ): AsyncIterable<ResponseIncoming> {
     // Remember prefered encoding
     const encoding = this.peersData.getEncodingPreference(peerId.toString()) ?? Encoding.SSZ_SNAPPY;
-    const requestType = getRequestSzzTypeByMethod(method);
+    const requestType = requestSszTypeByMethod[method];
     const requestEncoded = requestType ? requestType.serialize(request as never) : EMPTY_REQUEST;
     return super.sendRequest(peerId, method, versions, encoding, requestEncoded);
   }

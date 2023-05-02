@@ -1,7 +1,7 @@
 import {Type} from "@chainsafe/ssz";
 import {ForkLightClient, ForkName, isForkLightClient} from "@lodestar/params";
 import {Protocol} from "@lodestar/reqresp";
-import {allForks, altair, deneb, phase0, ssz} from "@lodestar/types";
+import {Root, allForks, altair, deneb, phase0, ssz} from "@lodestar/types";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
 
@@ -23,20 +23,19 @@ export enum ReqRespMethod {
 }
 
 // To typesafe events to network
-type RequestBodyByMethod = {
+export type RequestBodyByMethod = {
   [ReqRespMethod.Status]: phase0.Status;
   [ReqRespMethod.Goodbye]: phase0.Goodbye;
   [ReqRespMethod.Ping]: phase0.Ping;
   [ReqRespMethod.Metadata]: null;
-  // Do not matter
-  [ReqRespMethod.BeaconBlocksByRange]: unknown;
-  [ReqRespMethod.BeaconBlocksByRoot]: unknown;
-  [ReqRespMethod.BlobsSidecarsByRange]: unknown;
-  [ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]: unknown;
-  [ReqRespMethod.LightClientBootstrap]: unknown;
-  [ReqRespMethod.LightClientUpdatesByRange]: unknown;
-  [ReqRespMethod.LightClientFinalityUpdate]: unknown;
-  [ReqRespMethod.LightClientOptimisticUpdate]: unknown;
+  [ReqRespMethod.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
+  [ReqRespMethod.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
+  [ReqRespMethod.BlobsSidecarsByRange]: deneb.BlobsSidecarsByRangeRequest;
+  [ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]: deneb.BeaconBlockAndBlobsSidecarByRootRequest;
+  [ReqRespMethod.LightClientBootstrap]: Root;
+  [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
+  [ReqRespMethod.LightClientFinalityUpdate]: null;
+  [ReqRespMethod.LightClientOptimisticUpdate]: null;
 };
 
 type ResponseBodyByMethod = {
@@ -56,33 +55,22 @@ type ResponseBodyByMethod = {
 };
 
 /** Request SSZ type for each method and ForkName */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getRequestSzzTypeByMethod(method: ReqRespMethod) {
-  switch (method) {
-    case ReqRespMethod.Status:
-      return ssz.phase0.Status;
-    case ReqRespMethod.Goodbye:
-      return ssz.phase0.Goodbye;
-    case ReqRespMethod.Ping:
-      return ssz.phase0.Ping;
-    case ReqRespMethod.Metadata:
-    case ReqRespMethod.LightClientFinalityUpdate:
-    case ReqRespMethod.LightClientOptimisticUpdate:
-      return null;
-    case ReqRespMethod.BeaconBlocksByRange:
-      return ssz.phase0.BeaconBlocksByRangeRequest;
-    case ReqRespMethod.BeaconBlocksByRoot:
-      return ssz.phase0.BeaconBlocksByRootRequest;
-    case ReqRespMethod.BlobsSidecarsByRange:
-      return ssz.deneb.BlobsSidecarsByRangeRequest;
-    case ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot:
-      return ssz.deneb.BeaconBlockAndBlobsSidecarByRootRequest;
-    case ReqRespMethod.LightClientBootstrap:
-      return ssz.Root;
-    case ReqRespMethod.LightClientUpdatesByRange:
-      return ssz.altair.LightClientUpdatesByRange;
-  }
-}
+export const requestSszTypeByMethod: {
+  [K in ReqRespMethod]: RequestBodyByMethod[K] extends null ? null : Type<RequestBodyByMethod[K]>;
+} = {
+  [ReqRespMethod.Status]: ssz.phase0.Status,
+  [ReqRespMethod.Goodbye]: ssz.phase0.Goodbye,
+  [ReqRespMethod.Ping]: ssz.phase0.Ping,
+  [ReqRespMethod.Metadata]: null,
+  [ReqRespMethod.BeaconBlocksByRange]: ssz.phase0.BeaconBlocksByRangeRequest,
+  [ReqRespMethod.BeaconBlocksByRoot]: ssz.phase0.BeaconBlocksByRootRequest,
+  [ReqRespMethod.BlobsSidecarsByRange]: ssz.deneb.BlobsSidecarsByRangeRequest,
+  [ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]: ssz.deneb.BeaconBlockAndBlobsSidecarByRootRequest,
+  [ReqRespMethod.LightClientBootstrap]: ssz.Root,
+  [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
+  [ReqRespMethod.LightClientFinalityUpdate]: null,
+  [ReqRespMethod.LightClientOptimisticUpdate]: null,
+};
 
 export type ResponseTypeGetter<T> = (fork: ForkName, version: number) => Type<T>;
 

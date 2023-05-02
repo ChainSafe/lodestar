@@ -1,12 +1,6 @@
 import {ContextBytesFactory, ContextBytesType, Encoding} from "@lodestar/reqresp";
 import {ForkDigestContext} from "@lodestar/config";
-import {
-  ProtocolNoHandler,
-  ReqRespMethod,
-  Version,
-  getRequestSzzTypeByMethod,
-  responseSszTypeByMethod,
-} from "./types.js";
+import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
 import {rateLimitQuotas} from "./rateLimit.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -114,7 +108,7 @@ function toProtocol(protocol: ProtocolSummary) {
     encoding: Encoding.SSZ_SNAPPY,
     contextBytes: toContextBytes(protocol.contextBytesType, config),
     inboundRateLimits: rateLimitQuotas[protocol.method],
-    requestSizes: getRequestSzzTypeByMethod(protocol.method),
+    requestSizes: requestSszTypeByMethod[protocol.method],
     responseSizes: (fork) => responseSszTypeByMethod[protocol.method](fork, protocol.version),
   });
 }
