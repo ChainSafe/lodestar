@@ -75,7 +75,7 @@ export class WorkerNetworkCore implements INetworkCore {
       activeValidatorCount,
     };
 
-    const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
+    const worker = new Worker("./networkCoreWorker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const workerApi = (await spawn<any>(worker, {
