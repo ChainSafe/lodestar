@@ -206,7 +206,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     let builderBlocks = 0;
     await new Promise<void>((resolve, _reject) => {
       bn.chain.emitter.on(routes.events.EventType.block, async (blockData) => {
-        const {data: fullOrBlindedBlock} = (await bn.api.beacon.getBlockV2(blockData.block).catch((_e) => null)) ?? {};
+        const {data: fullOrBlindedBlock} = await bn.api.beacon.getBlockV2(blockData.block);
         if (fullOrBlindedBlock !== undefined) {
           const blockFeeRecipient = toHexString(
             (fullOrBlindedBlock as bellatrix.SignedBeaconBlock).message.body.executionPayload.feeRecipient
@@ -255,13 +255,15 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       );
     }
 
-    // 2. builder and engine blocks are as expected
-    if (builderBlocks < expectedBuilderBlocks || engineBlocks < expectedEngineBlocks) {
-      throw Error(
-        `Incorrect builderBlocks=${builderBlocks} (expected=${expectedBuilderBlocks}) or engineBlocks=${engineBlocks} (expected=${expectedEngineBlocks})`
-      );
+    // 2. builder blocks are as expected
+    if (builderBlocks < expectedBuilderBlocks) {
+      throw Error(`Incorrect builderBlocks=${builderBlocks} (expected=${expectedBuilderBlocks})`);
     }
-    console.log({engineBlocks, builderBlocks});
+
+    // 3. engine blocks are as expected
+    if (engineBlocks < expectedEngineBlocks) {
+      throw Error(`Incorrect engineBlocks=${engineBlocks} (expected=${expectedEngineBlocks})`);
+    }
 
     // wait for 1 slot to print current epoch stats
     await sleep(1 * bn.config.SECONDS_PER_SLOT * 1000);
