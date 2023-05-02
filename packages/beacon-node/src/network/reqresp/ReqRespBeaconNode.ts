@@ -18,7 +18,7 @@ import {
 } from "@lodestar/reqresp";
 import {allForks, altair, deneb, phase0, Root, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import * as reqRespProtocols from "@lodestar/reqresp/src/protocols.js";
+import {protocols as reqRespProtocols} from "@lodestar/reqresp";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
