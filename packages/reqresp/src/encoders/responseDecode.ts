@@ -69,7 +69,6 @@ export function responseDecode(
       yield {
         data: chunkData,
         fork: forkName,
-        protocolVersion: protocol.version,
       };
 
       if (!readFirstResponseChunk) {

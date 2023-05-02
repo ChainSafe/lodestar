@@ -13,6 +13,7 @@ import {
   sszSnappyPing,
   sszSnappySignedBeaconBlockAltair,
   sszSnappySignedBeaconBlockPhase0,
+  sszSnappyStatus,
 } from "./messages.js";
 import {customProtocol, pingProtocol} from "./protocols.js";
 
@@ -26,7 +27,9 @@ export const requestEncodersCases: {
 }[] = [
   {
     id: "No body on Metadata",
-    protocol: customProtocol({noRequest: true}),
+    protocol: customProtocol({
+      responseEncoder: () => sszSnappyPhase0Metadata.type,
+    }),
     chunks: [],
     requestBody: new Uint8Array(),
   },
@@ -47,14 +50,17 @@ export const requestEncodersErrorCases: {
 }[] = [
   {
     id: "Bad body",
-    protocol: customProtocol({requestMinSize: 84}),
+    protocol: customProtocol({
+      requestEncoder: sszSnappyPhase0Metadata.type,
+      responseEncoder: () => sszSnappyPhase0Metadata.type,
+    }),
     chunks: [Buffer.from("4")],
     requestBody: null,
-    errorDecode: new SszSnappyError({code: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE, minSize: 84, sszDataLength: 52}),
+    errorDecode: new SszSnappyError({code: SszSnappyErrorCode.OVER_SSZ_MAX_SIZE, maxSize: 16, sszDataLength: 52}),
   },
   {
     id: "No body on Status",
-    protocol: customProtocol({}),
+    protocol: customProtocol({requestEncoder: sszSnappyStatus.type, responseEncoder: () => sszSnappyStatus.type}),
     chunks: [],
     requestBody: null,
     errorDecode: new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED}),
@@ -81,7 +87,7 @@ export const responseEncodersTestCases: {
   },
   {
     id: "phase0 metadata",
-    protocol: customProtocol({}),
+    protocol: customProtocol({responseEncoder: () => sszSnappyPhase0Metadata.type}),
     responseChunks: [
       {
         status: RespStatus.SUCCESS,
@@ -97,7 +103,7 @@ export const responseEncodersTestCases: {
   },
   {
     id: "altair metadata",
-    protocol: customProtocol({version: 2}),
+    protocol: customProtocol({version: 2, responseEncoder: () => sszSnappyAltairMetadata.type}),
     responseChunks: [
       {
         status: RespStatus.SUCCESS,
@@ -113,11 +119,15 @@ export const responseEncodersTestCases: {
   },
   {
     id: "block v1 without <context-bytes>",
-    protocol: customProtocol({contextBytesType: ContextBytesType.Empty, version: 1}),
+    protocol: customProtocol({
+      contextBytesType: ContextBytesType.Empty,
+      version: 1,
+      responseEncoder: () => sszSnappySignedBeaconBlockPhase0.type,
+    }),
     responseChunks: [
       {
         status: RespStatus.SUCCESS,
-        payload: {...sszSnappySignedBeaconBlockPhase0.binaryPayload, protocolVersion: 1},
+        payload: {...sszSnappySignedBeaconBlockPhase0.binaryPayload},
       },
     ],
     chunks: [
@@ -129,7 +139,11 @@ export const responseEncodersTestCases: {
   },
   {
     id: "block v2 with <context-bytes> phase0",
-    protocol: customProtocol({contextBytesType: ContextBytesType.ForkDigest, version: 2}),
+    protocol: customProtocol({
+      contextBytesType: ContextBytesType.ForkDigest,
+      version: 2,
+      responseEncoder: () => sszSnappySignedBeaconBlockPhase0.type,
+    }),
     responseChunks: [{status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockPhase0.binaryPayload}],
     chunks: [
       // <result>
@@ -142,7 +156,11 @@ export const responseEncodersTestCases: {
   },
   {
     id: "block v2 with <context-bytes> altair",
-    protocol: customProtocol({contextBytesType: ContextBytesType.ForkDigest, version: 2}),
+    protocol: customProtocol({
+      contextBytesType: ContextBytesType.ForkDigest,
+      version: 2,
+      responseEncoder: () => sszSnappySignedBeaconBlockAltair.type,
+    }),
     responseChunks: [{status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockAltair.binaryPayload}],
     chunks: [
       // <result>
@@ -204,7 +222,11 @@ export const responseEncodersTestCases: {
   },
   {
     id: "Decode blocks v2 through a fork with multiple types",
-    protocol: customProtocol({contextBytesType: ContextBytesType.ForkDigest, version: 2}),
+    protocol: customProtocol({
+      contextBytesType: ContextBytesType.ForkDigest,
+      version: 2,
+      responseEncoder: () => sszSnappySignedBeaconBlockPhase0.type,
+    }),
     responseChunks: [
       {status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockPhase0.binaryPayload},
       {status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockAltair.binaryPayload},
@@ -241,7 +263,11 @@ export const responseEncodersErrorTestCases: {
   },
   {
     id: "block v2 with <context-bytes> altair",
-    protocol: customProtocol({contextBytesType: ContextBytesType.ForkDigest, version: 2}),
+    protocol: customProtocol({
+      contextBytesType: ContextBytesType.ForkDigest,
+      version: 2,
+      responseEncoder: () => sszSnappySignedBeaconBlockAltair.type,
+    }),
     responseChunks: [{status: RespStatus.SUCCESS, payload: sszSnappySignedBeaconBlockAltair.binaryPayload}],
     chunks: [
       // <result>

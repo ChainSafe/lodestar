@@ -1,7 +1,14 @@
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {ContainerType, UintNumberType, ListBasicType, ValueOf} from "@chainsafe/ssz";
-import {ContextBytesType, DialOnlyProtocol, Encoding, ProtocolHandler, Protocol} from "../../src/types.js";
+import {
+  ContextBytesType,
+  DialOnlyProtocol,
+  Encoding,
+  ProtocolHandler,
+  Protocol,
+  ReqRespEncoder,
+} from "../../src/types.js";
 import {getEmptyHandler} from "./messages.js";
 import {beaconConfig} from "./messages.js";
 
@@ -29,8 +36,8 @@ export const numberToStringProtocolDialOnly: DialOnlyProtocol = {
   version: 1,
   encoding: Encoding.SSZ_SNAPPY,
   contextBytes: {type: ContextBytesType.Empty},
-  requestEncoder: {minSize: 0, maxSize: Infinity},
-  responseEncoder: () => ({minSize: 0, maxSize: Infinity}),
+  requestEncoder: NumToStrReq,
+  responseEncoder: () => NumToStrReq,
 };
 
 export const numberToStringProtocol: Protocol = {
@@ -39,7 +46,7 @@ export const numberToStringProtocol: Protocol = {
     // Rationale: https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
     byPeer: {quota: 5, quotaTimeMs: 15_000},
   },
-  handler: async function* handler(req) {
+  handler: async function* handler(_protocol, req) {
     yield {
       data: Buffer.from(req.data.toString(), "utf8"),
       fork: ForkName.phase0,
@@ -60,17 +67,17 @@ export function pingProtocol(handler: ProtocolHandler): Protocol {
 }
 
 type ProtocolOptions = {
-  requestMinSize?: number;
+  requestEncoder?: ReqRespEncoder<unknown>;
+  responseEncoder: (forkName: ForkName) => ReqRespEncoder<unknown>;
   contextBytesType?: ContextBytesType;
-  noRequest?: boolean;
   version?: number;
 };
 
 export function customProtocol(opts: ProtocolOptions): Protocol {
   return {
     handler: getEmptyHandler(),
-    requestEncoder: opts.noRequest ? null : {minSize: opts.requestMinSize ?? 0, maxSize: Infinity},
-    responseEncoder: () => ({minSize: 0, maxSize: Infinity}),
+    requestEncoder: opts.requestEncoder ? opts.requestEncoder : null,
+    responseEncoder: opts.responseEncoder,
     contextBytes:
       opts.contextBytesType === ContextBytesType.ForkDigest
         ? {type: ContextBytesType.ForkDigest, forkDigestContext: beaconConfig}

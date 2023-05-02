@@ -24,7 +24,6 @@ export const sszSnappyPhase0Metadata: MessageFixture = {
   binaryPayload: {
     data: ssz.phase0.Metadata.serialize(phase0Metadata),
     fork: ForkName.phase0,
-    protocolVersion: 1,
   },
   chunks: ["0x10", "0xff060000734e61507059011400000b5ee91209000000000000000000000000000000"].map(
     (s) => new Uint8Array(fromHexString(s))
@@ -48,7 +47,6 @@ export const sszSnappyAltairMetadata: MessageFixture = {
   binaryPayload: {
     data: ssz.altair.Metadata.serialize(altairMetadata),
     fork: ForkName.phase0,
-    protocolVersion: 2,
   },
   chunks: ["0x11", "0xff060000734e6150705901150000ff4669fc0800000000000000000000000000000000"].map(
     (s) => new Uint8Array(fromHexString(s))
@@ -66,7 +64,6 @@ export const sszSnappyPing: MessageFixture = {
   binaryPayload: {
     data: ssz.phase0.Ping.serialize(pingData),
     fork: ForkName.phase0,
-    protocolVersion: 1,
   },
   chunks: ["0x08", "0xff060000734e61507059010c00000175de410100000000000000"].map(
     (s) => new Uint8Array(fromHexString(s))
@@ -90,7 +87,6 @@ export const sszSnappyStatus: MessageFixture = {
   binaryPayload: {
     data: ssz.phase0.Status.serialize(statusData),
     fork: ForkName.phase0,
-    protocolVersion: 1,
   },
   asyncChunks: [
     "0x54", // length prefix
@@ -131,7 +127,6 @@ export const sszSnappySignedBeaconBlockPhase0: MessageFixture = {
   binaryPayload: {
     data: ssz.phase0.SignedBeaconBlock.serialize(signedBeaconBlockPhase0Data),
     fork: ForkName.phase0,
-    protocolVersion: 2,
   },
   asyncChunks: [
     "0x9403",
@@ -160,7 +155,6 @@ export const sszSnappySignedBeaconBlockAltair: MessageFixture = {
   binaryPayload: {
     data: ssz.altair.SignedBeaconBlock.serialize(signedBeaconBlockAltairData),
     fork: ForkName.altair,
-    protocolVersion: 2,
   },
   asyncChunks: [
     "0xf803", // length prefix
