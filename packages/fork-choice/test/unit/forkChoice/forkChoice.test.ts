@@ -85,7 +85,7 @@ describe("Forkchoice", function () {
   const getBlock = (slot: number, skippedSlots: number[] = []): ProtoBlock => {
     return {
       slot,
-      proposerIndex :proposerIndex,
+      proposerIndex: proposerIndex,
       blockRoot: getBlockRoot(slot),
       parentRoot: getParentBlockRoot(slot, skippedSlots),
       stateRoot: getStateRoot(slot),

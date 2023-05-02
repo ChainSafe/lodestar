@@ -13,7 +13,7 @@ describe("ForkChoice", () => {
   const genesisSlot = 0;
   const genesisEpoch = 0;
   const genesisRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
-  
+
   const proposerIndex = 0;
   const parentRoot = "0x853d08094d83f1db67159144db54ec0c882eb9715184c4bde8f4191c926a1671";
   const blockRootPrefix = "0x37487efdbfbeeb82d7d35c6eb96438c4576f645b0f4c0386184592abab4b17";
@@ -65,7 +65,7 @@ describe("ForkChoice", () => {
       const blockRoot = i < 10 ? blockRootPrefix + "0" + i : blockRootPrefix + i;
       const block: ProtoBlock = {
         slot: genesisSlot + i,
-        proposerIndex :proposerIndex,
+        proposerIndex: proposerIndex,
         blockRoot,
         parentRoot: parentBlockRoot,
         stateRoot: i < 10 ? stateRootPrefix + "0" + i : stateRootPrefix + i,
