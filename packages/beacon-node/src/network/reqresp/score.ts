@@ -23,6 +23,7 @@ const multiStreamSelectErrorCodes = {
 export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): PeerAction | null {
   switch (e.type.code) {
     case RequestErrorCode.INVALID_REQUEST:
+    case RequestErrorCode.INVALID_RESPONSE_SSZ:
       return PeerAction.LowToleranceError;
 
     case RequestErrorCode.SERVER_ERROR:

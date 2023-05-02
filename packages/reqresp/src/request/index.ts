@@ -3,18 +3,12 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {Libp2p} from "libp2p";
 import {Uint8ArrayList} from "uint8arraylist";
 import {ErrorAborted, Logger, withTimeout, TimeoutError} from "@lodestar/utils";
-import {MixedProtocolDefinition} from "../types.js";
+import {MixedProtocol, ResponseIncoming} from "../types.js";
 import {prettyPrintPeerId, abortableSource} from "../utils/index.js";
 import {ResponseError} from "../response/index.js";
 import {requestEncode} from "../encoders/requestEncode.js";
 import {responseDecode} from "../encoders/responseDecode.js";
-import {
-  RequestError,
-  RequestErrorCode,
-  RequestInternalError,
-  RequestErrorMetadata,
-  responseStatusErrorToRequestError,
-} from "./errors.js";
+import {RequestError, RequestErrorCode, responseStatusErrorToRequestError} from "./errors.js";
 
 export {RequestError, RequestErrorCode};
 
@@ -52,16 +46,16 @@ type SendRequestModules = {
  *    - Any part of the response_chunk fails validation. Throws a typed error (see `SszSnappyError`)
  *    - The maximum number of requested chunks are read. Does not throw, returns read chunks only.
  */
-export async function* sendRequest<Req, Resp>(
+export async function* sendRequest(
   {logger, libp2p, peerClient}: SendRequestModules,
   peerId: PeerId,
-  protocols: MixedProtocolDefinition[],
+  protocols: MixedProtocol[],
   protocolIDs: string[],
-  requestBody: Req,
+  requestBody: Uint8Array,
   signal?: AbortSignal,
   opts?: SendRequestOpts,
   requestId = 0
-): AsyncIterable<Resp> {
+): AsyncIterable<ResponseIncoming> {
   if (protocols.length === 0) {
     throw Error("sendRequest must set > 0 protocols");
   }
@@ -71,10 +65,9 @@ export async function* sendRequest<Req, Resp>(
   const TTFB_TIMEOUT = opts?.ttfbTimeoutMs ?? DEFAULT_TTFB_TIMEOUT;
   const RESP_TIMEOUT = opts?.respTimeoutMs ?? DEFAULT_RESP_TIMEOUT;
 
-  const peerIdStr = peerId.toString();
   const peerIdStrShort = prettyPrintPeerId(peerId);
-  const {method, encoding} = protocols[0];
-  const logCtx = {method, encoding, client: peerClient, peer: peerIdStrShort, requestId};
+  const {method, encoding, version} = protocols[0];
+  const logCtx = {method, version, encoding, client: peerClient, peer: peerIdStrShort, requestId};
 
   if (signal?.aborted) {
     throw new ErrorAborted("sendRequest");
@@ -86,9 +79,7 @@ export async function* sendRequest<Req, Resp>(
     // From Altair block query methods have V1 and V2. Both protocols should be requested.
     // On stream negotiation `libp2p.dialProtocol` will pick the available protocol and return
     // the picked protocol in `connection.protocol`
-    const protocolsMap = new Map<string, MixedProtocolDefinition>(
-      protocols.map((protocol, i) => [protocolIDs[i], protocol])
-    );
+    const protocolsMap = new Map<string, MixedProtocol>(protocols.map((protocol, i) => [protocolIDs[i], protocol]));
 
     // As of October 2020 we can't rely on libp2p.dialProtocol timeout to work so
     // this function wraps the dialProtocol promise with an extra timeout
@@ -113,9 +104,9 @@ export async function* sendRequest<Req, Resp>(
       signal
     ).catch((e: Error) => {
       if (e instanceof TimeoutError) {
-        throw new RequestInternalError({code: RequestErrorCode.DIAL_TIMEOUT});
+        throw new RequestError({code: RequestErrorCode.DIAL_TIMEOUT});
       } else {
-        throw new RequestInternalError({code: RequestErrorCode.DIAL_ERROR, error: e as Error});
+        throw new RequestError({code: RequestErrorCode.DIAL_ERROR, error: e as Error});
       }
     });
 
@@ -124,7 +115,7 @@ export async function* sendRequest<Req, Resp>(
     const protocol = protocolsMap.get(protocolId);
     if (!protocol) throw Error(`dialProtocol selected unknown protocolId ${protocolId}`);
 
-    logger.debug("Req  sending request", {...logCtx, body: protocol.renderRequestBody?.(requestBody)});
+    logger.debug("Req  sending request", logCtx);
 
     // Spec: The requester MUST close the write side of the stream once it finishes writing the request message
     // Impl: stream.sink is closed automatically by js-libp2p-mplex when piped source is exhausted
@@ -137,9 +128,9 @@ export async function* sendRequest<Req, Resp>(
         stream.abort(e);
 
         if (e instanceof TimeoutError) {
-          throw new RequestInternalError({code: RequestErrorCode.REQUEST_TIMEOUT});
+          throw new RequestError({code: RequestErrorCode.REQUEST_TIMEOUT});
         } else {
-          throw new RequestInternalError({code: RequestErrorCode.REQUEST_ERROR, error: e as Error});
+          throw new RequestError({code: RequestErrorCode.REQUEST_ERROR, error: e as Error});
         }
       }
     );
@@ -173,11 +164,11 @@ export async function* sendRequest<Req, Resp>(
         abortableSource(stream.source as AsyncIterable<Uint8ArrayList>, [
           {
             signal: ttfbTimeoutController.signal,
-            getError: () => new RequestInternalError({code: RequestErrorCode.TTFB_TIMEOUT}),
+            getError: () => new RequestError({code: RequestErrorCode.TTFB_TIMEOUT}),
           },
           {
             signal: respTimeoutController.signal,
-            getError: () => new RequestInternalError({code: RequestErrorCode.RESP_TIMEOUT}),
+            getError: () => new RequestError({code: RequestErrorCode.RESP_TIMEOUT}),
           },
         ]),
 
@@ -211,12 +202,8 @@ export async function* sendRequest<Req, Resp>(
   } catch (e) {
     logger.verbose("Req  error", logCtx, e as Error);
 
-    const metadata: RequestErrorMetadata = {method, encoding, peer: peerIdStr};
-
     if (e instanceof ResponseError) {
-      throw new RequestError(responseStatusErrorToRequestError(e), metadata);
-    } else if (e instanceof RequestInternalError) {
-      throw new RequestError(e.type, metadata);
+      throw new RequestError(responseStatusErrorToRequestError(e));
     } else {
       throw e;
     }

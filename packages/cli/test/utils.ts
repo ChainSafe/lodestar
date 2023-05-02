@@ -15,3 +15,7 @@ export function getTestdirPath(filepath: string): string {
   fs.mkdirSync(path.dirname(fullpath), {recursive: true});
   return fullpath;
 }
+
+export function isTruthy<T = unknown>(value: T | undefined | null): value is T {
+  return value !== undefined && value !== null;
+}

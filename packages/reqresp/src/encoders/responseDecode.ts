@@ -7,8 +7,8 @@ import {
   ContextBytesType,
   CONTEXT_BYTES_FORK_DIGEST_LENGTH,
   ContextBytesFactory,
-  TypeSerializer,
-  MixedProtocolDefinition,
+  MixedProtocol,
+  ResponseIncoming,
 } from "../types.js";
 import {RespStatus} from "../interface.js";
 
@@ -27,13 +27,13 @@ enum StreamStatus {
  * result          ::= "0" | "1" | "2" | ["128" ... "255"]
  * ```
  */
-export function responseDecode<Resp>(
-  protocol: MixedProtocolDefinition,
+export function responseDecode(
+  protocol: MixedProtocol,
   cbs: {
     onFirstHeader: () => void;
     onFirstResponseChunk: () => void;
   }
-): (source: AsyncIterable<Uint8Array | Uint8ArrayList>) => AsyncIterable<Resp> {
+): (source: AsyncIterable<Uint8Array | Uint8ArrayList>) => AsyncIterable<ResponseIncoming> {
   return async function* responseDecodeSink(source) {
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Uint8ArrayList>);
 
@@ -63,9 +63,14 @@ export function responseDecode<Resp>(
       }
 
       const forkName = await readContextBytes(protocol.contextBytes, bufferedSource);
-      const type = protocol.responseType(forkName) as TypeSerializer<Resp>;
+      const typeSizes = protocol.responseSizes(forkName);
+      const chunkData = await readEncodedPayload(bufferedSource, protocol.encoding, typeSizes);
 
-      yield await readEncodedPayload<Resp>(bufferedSource, protocol.encoding, type);
+      yield {
+        data: chunkData,
+        fork: forkName,
+        protocolVersion: protocol.version,
+      };
 
       if (!readFirstResponseChunk) {
         cbs.onFirstResponseChunk();
@@ -133,7 +138,7 @@ export async function readErrorMessage(bufferedSource: BufferedSource): Promise<
  * of the `ForkDigest` or defaults to `phase0`
  */
 export async function readContextBytes(
-  contextBytes: ContextBytesFactory<unknown>,
+  contextBytes: ContextBytesFactory,
   bufferedSource: BufferedSource
 ): Promise<ForkName> {
   switch (contextBytes.type) {

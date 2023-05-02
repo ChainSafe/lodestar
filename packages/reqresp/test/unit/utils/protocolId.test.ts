@@ -1,10 +1,10 @@
 import {expect} from "chai";
-import {Encoding, Protocol} from "../../../src/index.js";
+import {Encoding, ProtocolAttributes} from "../../../src/index.js";
 import {formatProtocolID, parseProtocolID as reqrespParseProtocolID} from "../../../src/utils/index.js";
 
 const protocolPrefix = "/eth2/beacon_chain/req";
 
-function parseProtocolId(protocolId: string): Protocol {
+function parseProtocolId(protocolId: string): ProtocolAttributes {
   const result = reqrespParseProtocolID(protocolId);
   if (result.protocolPrefix !== protocolPrefix) {
     throw Error(`Unknown protocolId prefix: ${result.protocolPrefix}`);

@@ -1,22 +1,22 @@
 import {
-  EncodedPayload,
-  EncodedPayloadType,
   RespStatus,
   ResponseError,
   LightClientServerError,
   LightClientServerErrorCode,
+  ResponseOutgoing,
 } from "@lodestar/reqresp";
-import {Root, allForks} from "@lodestar/types";
+import {Root} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
+import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
 
-export async function* onLightClientBootstrap(
-  requestBody: Root,
-  chain: IBeaconChain
-): AsyncIterable<EncodedPayload<allForks.LightClientBootstrap>> {
+export async function* onLightClientBootstrap(requestBody: Root, chain: IBeaconChain): AsyncIterable<ResponseOutgoing> {
   try {
+    const bootstrap = await chain.lightClientServer.getBootstrap(requestBody);
+    const fork = chain.config.getForkName(bootstrap.header.beacon.slot);
+    const type = responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap](fork, 0);
     yield {
-      type: EncodedPayloadType.ssz,
-      data: await chain.lightClientServer.getBootstrap(requestBody),
+      data: type.serialize(bootstrap),
+      fork,
     };
   } catch (e) {
     if ((e as LightClientServerError).type?.code === LightClientServerErrorCode.RESOURCE_UNAVAILABLE) {
