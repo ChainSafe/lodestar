@@ -187,9 +187,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
 
   async metadata(peerId: PeerId): Promise<allForks.Metadata> {
     return collectExactOneTyped(
-      this.protocols.Metadata,
+      this.protocols.MetadataV2,
       this.sendRequestTyped(
-        this.protocols.Metadata,
+        this.protocols.MetadataV2,
         peerId,
         this.currentRegisteredFork >= ForkSeq.altair ? [Version.V2] : [(Version.V2, Version.V1)],
         null
