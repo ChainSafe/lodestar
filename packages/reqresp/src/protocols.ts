@@ -141,16 +141,16 @@ export const LightClientUpdatesByRange = toProtocol({
   responseEncoder: (fork) => ssz.allForksLightClient[onlyLightclientFork(fork)].LightClientUpdate,
 });
 
-type ProtocolSummary = {
+type ProtocolSummary<Req, Resp> = {
   method: ReqRespMethod;
   version: Version;
   contextBytesType: ContextBytesType;
-  requestEncoder: ReqRespEncoder<unknown> | null;
-  responseEncoder: (fork: ForkName) => ReqRespEncoder<unknown>;
+  requestEncoder: ReqRespEncoder<Req> | null;
+  responseEncoder: (fork: ForkName) => ReqRespEncoder<Resp>;
 };
 
-function toProtocol(protocol: ProtocolSummary) {
-  return (config: ForkDigestContext): ProtocolNoHandler => ({
+function toProtocol<Req, Resp>(protocol: ProtocolSummary<Req, Resp>) {
+  return (config: ForkDigestContext): ProtocolNoHandler<Req, Resp> => ({
     method: protocol.method,
     version: protocol.version,
     encoding: Encoding.SSZ_SNAPPY,

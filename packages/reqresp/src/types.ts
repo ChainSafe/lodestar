@@ -87,28 +87,29 @@ export interface ProtocolAttributes {
   readonly encoding: Encoding;
 }
 
-export interface ProtocolDescriptor extends Omit<ProtocolAttributes, "protocolPrefix"> {
+export interface ProtocolDescriptor<Req = unknown, Resp = unknown> extends Omit<ProtocolAttributes, "protocolPrefix"> {
   contextBytes: ContextBytesFactory;
   ignoreResponse?: boolean;
-  requestEncoder: ReqRespEncoder | null;
-  responseEncoder: (fork: ForkName) => ReqRespEncoder;
+  requestEncoder: ReqRespEncoder<Req> | null;
+  responseEncoder: (fork: ForkName) => ReqRespEncoder<Resp>;
 }
 
 // `protocolPrefix` is added runtime so not part of definition
 /**
  * ReqResp Protocol definition for full duplex protocols
  */
-export interface Protocol extends ProtocolDescriptor {
+export interface Protocol<Req = unknown, Resp = unknown> extends ProtocolDescriptor<Req, Resp> {
   handler: ProtocolHandler;
   inboundRateLimits?: InboundRateLimitQuota;
 }
 
-export type ProtocolNoHandler = Omit<Protocol, "handler">;
+export type ProtocolNoHandler<Req = unknown, Resp = unknown> = Omit<Protocol<Req, Resp>, "handler">;
 
 /**
  * ReqResp Protocol definition for dial only protocols
  */
-export interface DialOnlyProtocol extends Omit<Protocol, "handler" | "inboundRateLimits" | "renderRequestBody"> {
+export interface DialOnlyProtocol<Req = unknown, Resp = unknown>
+  extends Omit<Protocol<Req, Resp>, "handler" | "inboundRateLimits" | "renderRequestBody"> {
   handler?: never;
   inboundRateLimits?: never;
   renderRequestBody?: never;
@@ -117,7 +118,7 @@ export interface DialOnlyProtocol extends Omit<Protocol, "handler" | "inboundRat
 /**
  * ReqResp Protocol definition for full duplex and dial only protocols
  */
-export type MixedProtocol = DialOnlyProtocol | Protocol;
+export type MixedProtocol<Req = unknown, Resp = unknown> = DialOnlyProtocol<Req, Resp> | Protocol<Req, Resp>;
 
 /**
  * ReqResp protocol definition descriptor for full duplex and dial only protocols
