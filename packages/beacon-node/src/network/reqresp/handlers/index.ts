@@ -1,5 +1,5 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Root, altair, deneb, phase0, ssz} from "@lodestar/types";
+import {Root, altair, deneb, phase0} from "@lodestar/types";
 import {ProtocolHandler, ResponseOutgoing} from "@lodestar/reqresp";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
