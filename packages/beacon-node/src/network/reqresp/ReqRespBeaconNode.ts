@@ -17,7 +17,7 @@ import {
   ResponseOutgoing,
   Version,
 } from "@lodestar/reqresp";
-import {allForks, altair, deneb, phase0, Root, ssz} from "@lodestar/types";
+import {allForks, altair, deneb, phase0, Root} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {protocols as reqRespProtocols} from "@lodestar/reqresp";
 import {NetworkCoreMetrics} from "../core/metrics.js";
