@@ -202,9 +202,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<allForks.SignedBeaconBlock[]> {
     return collectSequentialBlocksInRange(
-      this.protocols.BeaconBlocksByRange,
+      this.protocols.BeaconBlocksByRangeV2,
       this.sendRequestTyped(
-        this.protocols.BeaconBlocksByRange,
+        this.protocols.BeaconBlocksByRangeV2,
         peerId,
         this.currentRegisteredFork >= ForkSeq.altair ? [Version.V2] : [(Version.V2, Version.V1)],
         request
@@ -218,9 +218,9 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     request: phase0.BeaconBlocksByRootRequest
   ): Promise<allForks.SignedBeaconBlock[]> {
     return collectMaxResponseTyped(
-      this.protocols.BeaconBlocksByRoot,
+      this.protocols.BeaconBlocksByRootV2,
       this.sendRequestTyped(
-        this.protocols.BeaconBlocksByRoot,
+        this.protocols.BeaconBlocksByRootV2,
         peerId,
         this.currentRegisteredFork >= ForkSeq.altair ? [Version.V2] : [(Version.V2, Version.V1)],
         request
