@@ -28,7 +28,7 @@ export type NetworkEventData = {
   [NetworkEvent.peerConnected]: {peer: PeerId; status: phase0.Status};
   [NetworkEvent.peerDisconnected]: {peer: PeerId};
   [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId};
-  [NetworkEvent.unknownBlockParent]: {blockInput: BlockInput; peerIdStr: string};
+  [NetworkEvent.unknownBlockParent]: {blockInput: BlockInput; peer: string};
   [NetworkEvent.pendingGossipsubMessage]: PendingGossipsubMessage;
   [NetworkEvent.gossipMessageValidationResult]: {
     msgId: string;

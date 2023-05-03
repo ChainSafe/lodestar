@@ -1,4 +1,3 @@
-import {PeerId} from "@libp2p/interface-peer-id";
 import {PublishResult} from "@libp2p/interface-pubsub";
 import {routes} from "@lodestar/api";
 import {ResponseIncoming} from "@lodestar/reqresp";

@@ -10,7 +10,7 @@ import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Network, getReqRespHandlers} from "../../../src/network/index.js";
+import {Network, NetworkInitModules, getReqRespHandlers} from "../../../src/network/index.js";
 import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 
 import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
@@ -52,10 +52,9 @@ describe.skip("mdns", function () {
       localMultiaddrs: [],
       discv5FirstQueryDelayMs: 0,
       discv5: {
-        enr,
+        enr: enr.encodeTxt(),
         bindAddr: bindAddrUdp,
         bootEnrs: [],
-        enabled: true,
       },
     };
   }
@@ -85,7 +84,6 @@ describe.skip("mdns", function () {
     };
 
     const db = new StubbedBeaconDb(config);
-    const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = {} as GossipHandlers;
 
     const peerId = await createSecp256k1PeerId();
@@ -93,11 +91,11 @@ describe.skip("mdns", function () {
 
     const opts = await getOpts(peerId);
 
-    const modules = {
+    const modules: Omit<NetworkInitModules, "opts" | "peerId" | "logger"> = {
       config,
       chain,
       db,
-      reqRespHandlers,
+      getReqRespHandler: getReqRespHandlers({db, chain}),
       gossipHandlers,
       signal: controller.signal,
       metrics: null,
@@ -127,7 +125,7 @@ describe.skip("mdns", function () {
   it("should connect two peers on a LAN", async function () {
     const [{network: netA}, {network: netB}] = await createTestNodesAB();
     await Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
   });
 });

@@ -30,12 +30,13 @@ export async function createNetworkModules(
 /**
  * TEMP: Only request required props from INetwork do to this type isse
  */
-type INetworkDebug = Pick<INetwork, "connectToPeer" | "disconnectPeer">;
+type INetworkDebug = Pick<INetwork, "connectToPeer" | "disconnectPeer" | "getNetworkIdentity">;
 
 // Helpers to manipulate network's libp2p instance for testing only
 
-export async function connect(network: INetworkDebug, peer: string, multiaddr: string[]): Promise<void> {
-  await network.connectToPeer(peer, multiaddr);
+export async function connect(netDial: INetworkDebug, netServer: INetworkDebug): Promise<void> {
+  const netServerId = await netServer.getNetworkIdentity();
+  await netDial.connectToPeer(netServerId.peerId, netServerId.p2pAddresses);
 }
 
 export async function disconnect(network: INetworkDebug, peer: string): Promise<void> {

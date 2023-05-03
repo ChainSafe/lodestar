@@ -49,8 +49,7 @@ describe("createNodeJsLibp2p", () => {
       {
         connectToDiscv5Bootnodes: true,
         discv5: {
-          enabled: false,
-          enr: SignableENR.createV4(generateKeypair(KeypairType.Secp256k1)),
+          enr: SignableENR.createV4(generateKeypair(KeypairType.Secp256k1)).encodeTxt(),
           bindAddr: "/ip4/127.0.0.1/udp/0",
           bootEnrs: enrWithTcp,
         },
@@ -79,8 +78,7 @@ describe("createNodeJsLibp2p", () => {
       {
         connectToDiscv5Bootnodes: true,
         discv5: {
-          enabled: false,
-          enr: SignableENR.createV4(generateKeypair(KeypairType.Secp256k1)),
+          enr: SignableENR.createV4(generateKeypair(KeypairType.Secp256k1)).encodeTxt(),
           bindAddr: "/ip4/127.0.0.1/udp/0",
           bootEnrs: enrWithoutTcp,
         },

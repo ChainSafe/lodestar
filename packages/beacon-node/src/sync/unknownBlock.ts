@@ -67,7 +67,7 @@ export class UnknownBlockSync {
    */
   private onUnknownBlock = (data: NetworkEventData[NetworkEvent.unknownBlockParent]): void => {
     try {
-      this.addToPendingBlocks(data.blockInput, data.peerIdStr);
+      this.addToPendingBlocks(data.blockInput, data.peer);
       this.triggerUnknownBlockSearch();
       this.metrics?.syncUnknownBlock.requests.inc();
     } catch (e) {
@@ -162,7 +162,7 @@ export class UnknownBlockSync {
         });
         this.removeAndDownscoreAllDescendants(block);
       } else {
-        this.onUnknownBlock({blockInput, peerIdStr});
+        this.onUnknownBlock({blockInput, peer: peerIdStr});
       }
     } else {
       // parentSlot > finalizedSlot, continue downloading parent of parent

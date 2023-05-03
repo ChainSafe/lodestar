@@ -160,7 +160,6 @@ describe("options / beaconNodeOptions", () => {
       },
       network: {
         discv5: {
-          enabled: true,
           bindAddr: "/ip4/127.0.0.1/udp/9002",
           bootEnrs: ["enr:-somedata"],
         },

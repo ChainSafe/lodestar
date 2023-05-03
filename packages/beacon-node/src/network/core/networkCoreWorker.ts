@@ -1,4 +1,6 @@
 import worker from "node:worker_threads";
+// TODO TEMP: figure out having a proper logger in workers
+// eslint-disable-next-line import/no-extraneous-dependencies
 import winston from "winston";
 import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {expose} from "@chainsafe/threads/worker";

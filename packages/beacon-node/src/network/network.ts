@@ -1,5 +1,4 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Multiaddr} from "@multiformats/multiaddr";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger, sleep} from "@lodestar/utils";

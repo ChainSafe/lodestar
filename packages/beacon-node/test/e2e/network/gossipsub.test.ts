@@ -81,7 +81,6 @@ describe("gossipsub", function () {
     };
 
     const db = new StubbedBeaconDb(config);
-    const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = gossipHandlersPartial as GossipHandlers;
 
     const loggerA = testLogger("A");
@@ -90,7 +89,8 @@ describe("gossipsub", function () {
     const modules: Omit<NetworkInitModules, "opts" | "peerId" | "logger"> = {
       config: beaconConfig,
       chain,
-      reqRespHandlers,
+      db,
+      getReqRespHandler: getReqRespHandlers({db, chain}),
       gossipHandlers,
       signal: controller.signal,
       metrics: null,
@@ -126,9 +126,9 @@ describe("gossipsub", function () {
       },
     });
 
-    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
 
     await netA.subscribeGossipCoreTopics();
     await netB.subscribeGossipCoreTopics();
@@ -157,9 +157,9 @@ describe("gossipsub", function () {
       },
     });
 
-    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
 
     await netA.subscribeGossipCoreTopics();
     await netB.subscribeGossipCoreTopics();
@@ -201,9 +201,9 @@ describe("gossipsub", function () {
       },
     });
 
-    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
 
     await netA.subscribeGossipCoreTopics();
     await netB.subscribeGossipCoreTopics();
@@ -235,9 +235,9 @@ describe("gossipsub", function () {
       },
     });
 
-    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
 
     await netA.subscribeGossipCoreTopics();
     await netB.subscribeGossipCoreTopics();
@@ -272,9 +272,9 @@ describe("gossipsub", function () {
       },
     });
 
-    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
 
     await netA.subscribeGossipCoreTopics();
     await netB.subscribeGossipCoreTopics();

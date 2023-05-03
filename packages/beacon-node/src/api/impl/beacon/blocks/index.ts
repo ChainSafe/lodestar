@@ -242,7 +242,7 @@ export function getBeaconBlockApi({
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
               network.events.emit(NetworkEvent.unknownBlockParent, {
                 blockInput: blockForImport,
-                peerIdStr: IDENTITY_PEER_ID,
+                peer: IDENTITY_PEER_ID,
               });
             }
             throw e;

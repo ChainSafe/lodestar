@@ -1,12 +1,12 @@
-import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import {ssz, deneb} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
-import {beaconBlocksMaybeBlobsByRange, ReqRespBeaconNode} from "../../../src/network/reqresp/index.js";
+import {beaconBlocksMaybeBlobsByRange} from "../../../src/network/reqresp/index.js";
 import {BlockInputType} from "../../../src/chain/blocks/types.js";
 import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 import {peerIdFromString} from "../../../src/network/peerId.js";
+import {INetwork} from "../../../src/network/interface.js";
 
 describe("beaconBlocksMaybeBlobsByRange", () => {
   before(async function () {
@@ -15,9 +15,6 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
     loadEthereumTrustedSetup();
   });
 
-  const sandbox = sinon.createSandbox();
-  const reqResp = sandbox.createStubInstance(ReqRespBeaconNode) as SinonStubbedInstance<ReqRespBeaconNode> &
-    ReqRespBeaconNode;
   const peerId = peerIdFromString("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
 
   /* eslint-disable @typescript-eslint/naming-convention */
@@ -78,10 +75,13 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
           blobs,
         };
       });
-      reqResp.beaconBlocksByRange.resolves(blocks);
-      reqResp.blobsSidecarsByRange.resolves(blobsSidecars);
 
-      const response = await beaconBlocksMaybeBlobsByRange(config, reqResp, peerId, rangeRequest, 0);
+      const network = {
+        sendBeaconBlocksByRange: async () => blocks,
+        sendBlobsSidecarsByRange: async () => blobsSidecars,
+      } as Partial<INetwork> as INetwork;
+
+      const response = await beaconBlocksMaybeBlobsByRange(config, network, peerId, rangeRequest, 0);
       expect(response).to.be.deep.equal(expectedResponse);
     });
   });

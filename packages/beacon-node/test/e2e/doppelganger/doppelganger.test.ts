@@ -126,7 +126,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       genesisTime: bn.chain.getHeadState().genesisTime,
     });
 
-    await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
+    await connect(bn2.network as Network, bn.network);
 
     expect(validators[0].isRunning).to.be.equal(true, "validator without doppelganger protection should be running");
     expect(validatorsWithDoppelganger[0].isRunning).to.be.equal(
@@ -206,7 +206,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       doppelgangerProtectionEnabled: false,
     });
 
-    await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
+    await connect(bn2.network as Network, bn.network);
 
     expect(validators[0].isRunning).to.be.equal(true, "validator without doppelganger protection should be running");
     expect(validatorsWithDoppelganger[0].isRunning).to.be.equal(

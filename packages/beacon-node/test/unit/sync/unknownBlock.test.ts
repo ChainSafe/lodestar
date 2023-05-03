@@ -51,11 +51,10 @@ describe("sync / UnknownBlockSync", () => {
       const network: Partial<INetwork> = {
         events: new NetworkEventBus(),
         getConnectedPeers: () => [peer],
-        beaconBlocksMaybeBlobsByRoot: async (_peerId, roots) =>
+        sendBeaconBlocksByRoot: async (_peerId, roots) =>
           Array.from(roots)
             .map((root) => blocksByRoot.get(toHexString(root)))
-            .filter(notNullish)
-            .map((block) => getBlockInput.preDeneb(config, block)),
+            .filter(notNullish),
 
         reportPeer: async (peerId, action, actionName) => reportPeerResolveFn([peerId, action, actionName]),
       };
@@ -77,7 +76,10 @@ describe("sync / UnknownBlockSync", () => {
       };
 
       new UnknownBlockSync(config, network as INetwork, chain as IBeaconChain, logger, null);
-      network.events?.emit(NetworkEvent.unknownBlockParent, getBlockInput.preDeneb(config, blockC), peerIdStr);
+      network.events?.emit(NetworkEvent.unknownBlockParent, {
+        blockInput: getBlockInput.preDeneb(config, blockC),
+        peer: peerIdStr,
+      });
 
       if (reportPeer) {
         const err = await reportPeerPromise;

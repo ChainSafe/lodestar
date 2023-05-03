@@ -5,7 +5,7 @@ import {createFromJSON, createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {multiaddr} from "@multiformats/multiaddr";
 import {chainConfig} from "@lodestar/config/default";
 import {chainConfigToJson} from "@lodestar/config";
-import {createKeypairFromPeerId, SignableENR} from "@chainsafe/discv5";
+import {createKeypairFromPeerId, ENR, SignableENR} from "@chainsafe/discv5";
 import {exportToJSON} from "../../../src/config/peerId.js";
 import {beaconHandlerInit} from "../../../src/cmds/beacon/handler.js";
 import {initPeerIdAndEnr, isLocalMultiAddr} from "../../../src/cmds/beacon/initPeerIdAndEnr.js";
@@ -43,7 +43,10 @@ describe("cmds / beacon / args handler", () => {
       nat: true,
     });
 
-    const enr = options.network.discv5?.enr as SignableENR;
+    if (!options.network.discv5?.enr) {
+      throw Error("must set ENR");
+    }
+    const enr = ENR.decodeTxt(options.network.discv5?.enr);
 
     expect(enr.ip).to.equal(enrIp, "wrong enr.ip");
     expect(enr.tcp).to.equal(enrTcp, "wrong enr.tcp");
