@@ -128,6 +128,7 @@ describe("httpClient json client", () => {
       return Promise.reject(Error("did not throw"));
     } catch (e) {
       if (!(e instanceof HttpError)) throw Error(`Not an HttpError: ${(e as Error).message}`);
+      // Discuss error handling: https://github.com/ChainSafe/lodestar/issues/5359#issuecomment-1529027981
       expect(e.message).to.equal("Service Unavailable: Node is syncing");
       expect(e.status).to.equal(503, "Wrong error status code");
     }
