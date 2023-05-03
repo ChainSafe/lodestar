@@ -33,7 +33,7 @@ export const Metadata = toProtocol({
   method: ReqRespMethod.Metadata,
   version: Version.V1,
   contextBytesType: ContextBytesType.Empty,
-  requestEncoder: ssz.phase0.Metadata,
+  requestEncoder: null,
   responseEncoder: () => ssz.phase0.Metadata,
 });
 
@@ -41,7 +41,7 @@ export const MetadataV2 = toProtocol({
   method: ReqRespMethod.Metadata,
   version: Version.V2,
   contextBytesType: ContextBytesType.Empty,
-  requestEncoder: ssz.altair.Metadata,
+  requestEncoder: null,
   responseEncoder: () => ssz.altair.Metadata,
 });
 
