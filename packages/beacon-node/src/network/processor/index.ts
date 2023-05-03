@@ -281,13 +281,14 @@ export class NetworkProcessor {
     let jobsSubmitted = 0;
 
     job_loop: while (jobsSubmitted < MAX_JOBS_SUBMITTED_PER_TICK) {
-      // Check canAcceptWork before calling queue.next() since it consumes the items
-      const canAcceptWork = this.chain.blsThreadPoolCanAcceptWork() && this.chain.regenCanAcceptWork();
+      // Check if chain can accept work before calling queue.next() since it consumes the items
+      const reason = checkAcceptWork(this.chain);
 
       for (const topic of executeGossipWorkOrder) {
         // beacon block is guaranteed to be processed immedately
-        if (!canAcceptWork && !executeGossipWorkOrderObj[topic]?.bypassQueue) {
-          this.metrics?.networkProcessor.canNotAcceptWork.inc();
+        // reason !== null means cannot accept work
+        if (reason !== null && !executeGossipWorkOrderObj[topic]?.bypassQueue) {
+          this.metrics?.networkProcessor.canNotAcceptWork.inc({reason});
           break job_loop;
         }
         if (
@@ -320,4 +321,29 @@ export class NetworkProcessor {
       this.metrics?.networkProcessor.jobsSubmitted.observe(jobsSubmitted);
     }
   }
+}
+
+enum CannotAcceptWorkReason {
+  processingCurrentSlotBlock = "processing_current_slot_block",
+  bls = "bls_busy",
+  regen = "regen_busy",
+}
+
+/**
+ * Return null if chain can accept work, otherwise return the reason why it cannot accept work
+ */
+function checkAcceptWork(chain: IBeaconChain): null | CannotAcceptWorkReason {
+  if (chain.isProcessingCurrentSlotBlock()) {
+    return CannotAcceptWorkReason.processingCurrentSlotBlock;
+  }
+
+  if (!chain.blsThreadPoolCanAcceptWork()) {
+    return CannotAcceptWorkReason.bls;
+  }
+
+  if (!chain.regenCanAcceptWork()) {
+    return CannotAcceptWorkReason.regen;
+  }
+
+  return null;
 }
