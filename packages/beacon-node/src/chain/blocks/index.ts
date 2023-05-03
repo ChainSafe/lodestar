@@ -110,7 +110,7 @@ export async function processBlocks(
     if (!(err instanceof BlockError)) {
       this.logger.error("Non BlockError received", {}, err);
     } else if (!opts.disableOnBlockError) {
-      this.logger.error("Block error", {slot: err.signedBlock.message.slot}, err);
+      this.logger.warn("Block error", {slot: err.signedBlock.message.slot}, err);
 
       if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
         const {signedBlock} = err;
