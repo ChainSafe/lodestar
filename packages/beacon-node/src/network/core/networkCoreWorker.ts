@@ -12,7 +12,7 @@ import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {PendingGossipsubMessage} from "../processor/types.js";
 import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 import {NetworkCore} from "./networkCore.js";
-import {getReqRespBridgeReqEvents, getReqRespBridgeRespEvents} from "./events.js";
+import {ReqRespBridgeEventBus, getReqRespBridgeReqEvents, getReqRespBridgeRespEvents} from "./events.js";
 
 // Cloned data from instatiation
 const workerData = worker.workerData as NetworkWorkerData;
@@ -35,6 +35,7 @@ if (metricsRegister) {
 
 // Main event bus shared across the stack
 const events = new NetworkEventBus();
+const reqRespBridgeEventBus = new ReqRespBridgeEventBus();
 const clock = new Clock({config, genesisTime: workerData.genesisTime, signal: abortController.signal});
 
 // ReqResp event bridge
@@ -58,8 +59,10 @@ const clock = new Clock({config, genesisTime: workerData.genesisTime, signal: ab
 // - handler has yielded all blocks, returns
 // (case c)
 // - handler encounters error, throws
-new AsyncIterableBridgeHandler(getReqRespBridgeReqEvents(events), (data) => core.sendReqRespRequest(data));
-const respBridgeCaller = new AsyncIterableBridgeCaller(getReqRespBridgeRespEvents(events));
+new AsyncIterableBridgeHandler(getReqRespBridgeReqEvents(reqRespBridgeEventBus), (data) =>
+  core.sendReqRespRequest(data)
+);
+const respBridgeCaller = new AsyncIterableBridgeCaller(getReqRespBridgeRespEvents(reqRespBridgeEventBus));
 
 const core = await NetworkCore.init({
   opts: workerData.opts,

@@ -3,13 +3,10 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {TopicValidatorResult} from "@libp2p/interface-pubsub";
 import {phase0} from "@lodestar/types";
-import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
 import {BlockInput} from "../chain/blocks/types.js";
-import {IteratorEvent, RequestEvent} from "../util/asyncIterableToEvents.js";
 import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {GossipTopic} from "./gossip/interface.js";
-import {IncomingRequestArgs, OutgoingRequestArgs} from "./reqresp/types.js";
 
 export enum NetworkEvent {
   /** A relevant peer has connected or has been re-STATUS'd */
@@ -31,15 +28,6 @@ export enum NetworkEvent {
   pendingGossipsubMessage = "gossip.pendingGossipsubMessage",
   /** (App -> Network) A gossip message has been validated */
   gossipMessageValidationResult = "gossip.messageValidationResult",
-
-  /** Main thread to worker once request */
-  reqRespOutgoingRequest = "reqresp.outgoingRequest",
-  /** Main thread to worker async iterator event */
-  reqRespOutgoingResponse = "reqresp.outgoingResponse",
-  /** Worker to main thread once request */
-  reqRespIncomingRequest = "reqresp.incomingRequest",
-  /** Worker to main thread async iterator event */
-  reqRespIncomingResponse = "reqresp.incomingResponse",
 }
 
 export type NetworkEvents = {
@@ -55,10 +43,6 @@ export type NetworkEvents = {
   ) => void;
   [NetworkEvent.subscribeTopic]: (topic: GossipTopic) => void;
   [NetworkEvent.unsubscribeTopic]: (topic: GossipTopic) => void;
-  [NetworkEvent.reqRespOutgoingRequest]: (data: RequestEvent<OutgoingRequestArgs>) => void;
-  [NetworkEvent.reqRespOutgoingResponse]: (data: IteratorEvent<ResponseOutgoing>) => void;
-  [NetworkEvent.reqRespIncomingRequest]: (data: RequestEvent<IncomingRequestArgs>) => void;
-  [NetworkEvent.reqRespIncomingResponse]: (data: IteratorEvent<ResponseIncoming>) => void;
 };
 
 export type INetworkEventBus = StrictEventEmitter<EventEmitter, NetworkEvents>;

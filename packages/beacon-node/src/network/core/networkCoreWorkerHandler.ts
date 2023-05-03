@@ -17,7 +17,7 @@ import {CommitteeSubscription} from "../subnets/interface.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
 import {NetworkOptions} from "../options.js";
 import {NetworkWorkerApi, NetworkWorkerData, INetworkCore} from "./types.js";
-import {getReqRespBridgeReqEvents, getReqRespBridgeRespEvents} from "./events.js";
+import {ReqRespBridgeEventBus, getReqRespBridgeReqEvents, getReqRespBridgeRespEvents} from "./events.js";
 
 export type WorkerNetworkCoreOpts = NetworkOptions & {
   metrics: boolean;
@@ -46,15 +46,15 @@ type WorkerNetworkCoreModules = WorkerNetworkCoreInitModules & {
 export class WorkerNetworkCore implements INetworkCore {
   private readonly reqRespBridgeReqCaller: AsyncIterableBridgeCaller<OutgoingRequestArgs, ResponseIncoming>;
   private readonly reqRespBridgeRespHandler: AsyncIterableBridgeHandler<IncomingRequestArgs, ResponseOutgoing>;
+  private readonly reqRespBridgeEventBus = new ReqRespBridgeEventBus();
 
   constructor(private readonly modules: WorkerNetworkCoreModules) {
-    const {events} = modules;
-
     // Get called from main thread to issue a ReqResp request, and emits event to worker
-    this.reqRespBridgeReqCaller = new AsyncIterableBridgeCaller(getReqRespBridgeReqEvents(events));
+    this.reqRespBridgeReqCaller = new AsyncIterableBridgeCaller(getReqRespBridgeReqEvents(this.reqRespBridgeEventBus));
     // Handles ReqResp response from worker and calls async generator in main thread
-    this.reqRespBridgeRespHandler = new AsyncIterableBridgeHandler(getReqRespBridgeRespEvents(events), (data) =>
-      modules.getReqRespHandler(data.method)(data.req, data.peerId)
+    this.reqRespBridgeRespHandler = new AsyncIterableBridgeHandler(
+      getReqRespBridgeRespEvents(this.reqRespBridgeEventBus),
+      (data) => modules.getReqRespHandler(data.method)(data.req, data.peerId)
     );
   }
 
