@@ -168,7 +168,7 @@ export class AttestationDutiesService {
     for (const epoch of [currentEpoch, nextEpoch]) {
       // Download the duties and update the duties for the current and next epoch.
       await this.pollBeaconAttestersForEpoch(epoch, indexArr).catch((e: Error) => {
-        this.logger.error("Failed to download attester duties", {epoch}, e);
+        this.logger.warn("Failed to download attester duties", {epoch}, e);
       });
     }
 
