@@ -71,6 +71,13 @@ describe("block api utils", function () {
       expect(dbStub.blockArchive.get).to.be.calledOnceWithExactly(expected);
     });
 
+    it("should resolve justified", async function () {
+      const expected = 0;
+      forkChoiceStub.getJustifiedBlock.returns(expectedSummary);
+      await resolveBlockId(forkChoiceStub, dbStub, "justified").catch(() => {});
+      expect(dbStub.blockArchive.get).to.be.calledOnceWithExactly(expected);
+    });
+
     it("should resolve finalized block root", async function () {
       forkChoiceStub.getBlock.returns(expectedSummary);
       forkChoiceStub.getFinalizedBlock.returns(expectedSummary);

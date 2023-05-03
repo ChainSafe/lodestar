@@ -65,6 +65,13 @@ async function resolveBlockIdOrNull(
     };
   }
 
+  if (blockId === "justified") {
+    return {
+      block: await db.blockArchive.get(forkChoice.getJustifiedBlock().slot),
+      executionOptimistic: false,
+    };
+  }
+
   let blockSummary;
   let getBlockByBlockArchive;
 
