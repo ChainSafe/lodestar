@@ -3,13 +3,14 @@ import {Multiaddr} from "@multiformats/multiaddr";
 import {PeerInfo} from "@libp2p/interface-peer-info";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger, pruneSetToMax, sleep} from "@lodestar/utils";
-import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
+import {ENR} from "@chainsafe/discv5";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Libp2p} from "../interface.js";
 import {ENRKey, SubnetType} from "../metadata.js";
 import {getConnectionsMap, getDefaultDialer, prettyPrintPeerId} from "../util.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
+import {Discv5Opts} from "../discv5/types.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 
@@ -21,7 +22,7 @@ const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
 export type PeerDiscoveryOpts = {
   maxPeers: number;
   discv5FirstQueryDelayMs: number;
-  discv5: Omit<IDiscv5DiscoveryInputOptions, "metrics" | "searchInterval" | "enabled">;
+  discv5: Discv5Opts;
   connectToDiscv5Bootnodes?: boolean;
 };
 
@@ -104,10 +105,9 @@ export class PeerDiscovery {
     this.discv5FirstQueryDelayMs = opts.discv5FirstQueryDelayMs;
     this.connectToDiscv5BootnodesOnStart = opts.connectToDiscv5Bootnodes;
 
-    this.discv5 = new Discv5Worker({
-      discv5: opts.discv5,
+    this.discv5 = new Discv5Worker(opts.discv5, {
       peerId: modules.libp2p.peerId,
-      metrics: modules.metrics ?? undefined,
+      metrics: modules.metrics,
       logger: this.logger,
       config: this.config,
     });

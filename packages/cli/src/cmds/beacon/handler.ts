@@ -139,7 +139,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const logger = initLogger(args, beaconPaths.dataDir, config);
   const {peerId, enr} = await initPeerIdAndEnr(args, beaconPaths.beaconDir, logger);
   // Inject ENR to beacon options
-  beaconNodeOptions.set({network: {discv5: {enr, enrUpdate: !enr.ip && !enr.ip6}}});
+  beaconNodeOptions.set({network: {discv5: {enr: enr.toENR().encodeTxt()}}});
   // Add simple version string for libp2p agent version
   beaconNodeOptions.set({network: {version: version.split("/")[0]}});
 

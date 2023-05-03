@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Registry} from "prom-client";
-import {ENR, SignableENR} from "@chainsafe/discv5";
+import {ENR} from "@chainsafe/discv5";
 import {Libp2p} from "../interface.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
 import {defaultDiscv5Options, defaultNetworkOptions, NetworkOptions} from "../options.js";
@@ -27,11 +27,11 @@ export async function createNodeJsLibp2p(
   const peerId = await Promise.resolve(peerIdOrPromise);
   const localMultiaddrs = networkOpts.localMultiaddrs || defaultNetworkOptions.localMultiaddrs;
   const bootMultiaddrs = networkOpts.bootMultiaddrs || defaultNetworkOptions.bootMultiaddrs;
-  const enr = networkOpts.discv5?.enr;
   const {peerStoreDir, disablePeerDiscovery} = nodeJsLibp2pOpts;
 
-  if (enr !== undefined && typeof enr !== "string" && !(enr instanceof SignableENR)) {
-    throw Error("network.discv5.enr must be an instance of SignableENR");
+  // Attempt to decode ENR if provided for sanity checks
+  if (networkOpts.discv5?.enr) {
+    ENR.decodeTxt(networkOpts.discv5?.enr);
   }
 
   let datastore: undefined | Eth2PeerDataStore = undefined;

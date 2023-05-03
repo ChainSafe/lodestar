@@ -2,26 +2,18 @@ import EventEmitter from "events";
 import {PeerId} from "@libp2p/interface-peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
-import {
-  createKeypairFromPeerId,
-  ENR,
-  ENRData,
-  IDiscv5DiscoveryInputOptions,
-  IKeypair,
-  SignableENR,
-} from "@chainsafe/discv5";
+import {createKeypairFromPeerId, ENR, ENRData, IKeypair, SignableENR} from "@chainsafe/discv5";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {chainConfigFromJson, chainConfigToJson, BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {NetworkCoreMetrics} from "../core/metrics.js";
-import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
+import {Discv5Opts, Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 
-export type Discv5Opts = {
+export type Discv5Modules = {
   peerId: PeerId;
-  discv5: Omit<IDiscv5DiscoveryInputOptions, "metrics" | "searchInterval" | "enabled">;
   logger: Logger;
   config: BeaconConfig;
-  metrics?: NetworkCoreMetrics;
+  metrics: NetworkCoreMetrics | null;
 };
 
 export type Discv5Events = {
@@ -36,30 +28,33 @@ type Discv5WorkerStatus =
  * Wrapper class abstracting the details of discv5 worker instantiation and message-passing
  */
 export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, Discv5Events>}) {
-  private logger: Logger;
   private status: Discv5WorkerStatus;
   private keypair: IKeypair;
+  private readonly metrics: NetworkCoreMetrics | null;
+  private readonly config: BeaconConfig;
+  private readonly peerId: PeerId;
 
-  constructor(private opts: Discv5Opts) {
+  constructor(private readonly opts: Discv5Opts, modules: Discv5Modules) {
     super();
 
-    this.logger = opts.logger;
     this.status = {status: "stopped"};
-    this.keypair = createKeypairFromPeerId(this.opts.peerId);
+    this.keypair = createKeypairFromPeerId(modules.peerId);
+    this.metrics = modules.metrics;
+    this.config = modules.config;
+    this.peerId = modules.peerId;
   }
 
   async start(): Promise<void> {
     if (this.status.status === "started") return;
 
     const workerData: Discv5WorkerData = {
-      enr: (this.opts.discv5.enr as SignableENR).toObject(),
-      peerIdProto: exportToProtobuf(this.opts.peerId),
-      bindAddr: this.opts.discv5.bindAddr,
-      config: this.opts.discv5,
-      bootEnrs: this.opts.discv5.bootEnrs as string[],
-      metrics: Boolean(this.opts.metrics),
-      chainConfig: chainConfigFromJson(chainConfigToJson(this.opts.config)),
-      genesisValidatorsRoot: this.opts.config.genesisValidatorsRoot,
+      enr: this.opts.enr,
+      peerIdProto: exportToProtobuf(this.peerId),
+      bindAddr: this.opts.bindAddr,
+      bootEnrs: this.opts.bootEnrs,
+      metrics: Boolean(this.metrics),
+      chainConfig: chainConfigFromJson(chainConfigToJson(this.config)),
+      genesisValidatorsRoot: this.config.genesisValidatorsRoot,
     };
     const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
 
@@ -130,9 +125,9 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
     }
   }
 
-  async metrics(): Promise<string> {
+  async scrapeMetrics(): Promise<string> {
     if (this.status.status === "started") {
-      return this.status.workerApi.metrics();
+      return this.status.workerApi.scrapeMetrics();
     } else {
       return "";
     }
@@ -150,7 +145,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
   }
 
   private decodeEnr(obj: ENRData): ENR | null {
-    this.opts.metrics?.discv5.decodeEnrAttemptCount.inc(1);
+    this.metrics?.discv5.decodeEnrAttemptCount.inc(1);
     return new ENR(obj.kvs, obj.seq, obj.signature);
   }
 }

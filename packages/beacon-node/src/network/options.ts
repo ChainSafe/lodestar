@@ -1,9 +1,10 @@
-import {generateKeypair, IDiscv5DiscoveryInputOptions, KeypairType, SignableENR} from "@chainsafe/discv5";
+import {generateKeypair, KeypairType, SignableENR} from "@chainsafe/discv5";
 import {Eth2GossipsubOpts} from "./gossip/gossipsub.js";
 import {defaultGossipHandlerOpts} from "./processor/gossipHandlers.js";
 import {PeerManagerOpts} from "./peers/index.js";
 import {ReqRespBeaconNodeOpts} from "./reqresp/ReqRespBeaconNode.js";
 import {NetworkProcessorOpts} from "./processor/index.js";
+import {Discv5Opts} from "./discv5/types.js";
 
 // Since Network is eventually intended to be run in a separate thread, ensure that all options are cloneable using structuredClone
 export interface NetworkOptions
@@ -21,12 +22,10 @@ export interface NetworkOptions
   useWorker?: boolean;
 }
 
-export const defaultDiscv5Options: IDiscv5DiscoveryInputOptions = {
+export const defaultDiscv5Options: Discv5Opts = {
   bindAddr: "/ip4/0.0.0.0/udp/9000",
-  enr: SignableENR.createV4(generateKeypair(KeypairType.Secp256k1)),
+  enr: SignableENR.createV4(generateKeypair(KeypairType.Secp256k1)).toENR().encodeTxt(),
   bootEnrs: [],
-  enrUpdate: true,
-  enabled: true,
 };
 
 export const defaultNetworkOptions: NetworkOptions = {

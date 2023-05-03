@@ -1,21 +1,23 @@
-import {Discv5, ENRData, SignableENRData} from "@chainsafe/discv5";
+import {ENRData, SignableENRData} from "@chainsafe/discv5";
 import {Observable} from "@chainsafe/threads/observable";
 import {ChainConfig} from "@lodestar/config";
 
-// TODO export IDiscv5Config so we don't need this convoluted type
-type Discv5Config = Parameters<(typeof Discv5)["create"]>[0]["config"];
-
 /** discv5 worker constructor data */
 export interface Discv5WorkerData {
-  enr: SignableENRData;
+  enr: string;
   peerIdProto: Uint8Array;
   bindAddr: string;
-  config: Discv5Config;
   bootEnrs: string[];
   metrics: boolean;
   chainConfig: ChainConfig;
   genesisValidatorsRoot: Uint8Array;
 }
+
+export type Discv5Opts = {
+  enr: string;
+  bindAddr: string;
+  bootEnrs: string[];
+};
 
 /**
  * API exposed by the discv5 worker
@@ -38,7 +40,7 @@ export type Discv5WorkerApi = {
   discovered(): Observable<ENRData>;
 
   /** Prometheus metrics string */
-  metrics(): Promise<string>;
+  scrapeMetrics(): Promise<string>;
   /** tear down discv5 resources */
   close(): Promise<void>;
 };

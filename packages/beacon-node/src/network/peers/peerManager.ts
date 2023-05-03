@@ -1,6 +1,5 @@
 import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
@@ -17,6 +16,7 @@ import {SubnetType} from "../metadata.js";
 import {Eth2Gossipsub} from "../gossip/gossipsub.js";
 import {StatusCache} from "../statusCache.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
+import {Discv5Opts} from "../discv5/types.js";
 import {PeersData, PeerData} from "./peersData.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
 import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score.js";
@@ -74,7 +74,7 @@ export type PeerManagerOpts = {
   /**
    * If null, Don't run discv5 queries, nor connect to cached peers in the peerStore
    */
-  discv5: IDiscv5DiscoveryInputOptions | null;
+  discv5: Discv5Opts | null;
   /**
    * If set to true, connect to Discv5 bootnodes. If not set or false, do not connect
    */
