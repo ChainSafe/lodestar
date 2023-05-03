@@ -171,9 +171,6 @@ export class NetworkCore implements INetworkCore {
       opts
     );
 
-    const attnetsService = new AttnetsService(config, clock, events, metadata, logger, metrics, opts);
-    const syncnetsService = new SyncnetsService(config, clock, events, metadata, logger, metrics, opts);
-
     const gossip = new Eth2Gossipsub(opts, {
       config,
       libp2p,
@@ -185,9 +182,11 @@ export class NetworkCore implements INetworkCore {
         currentEpoch: clock.currentEpoch,
       },
       peersData,
-      attnetsService,
       events,
     });
+
+    const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, opts);
+    const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
     const peerManager = new PeerManager(
       {

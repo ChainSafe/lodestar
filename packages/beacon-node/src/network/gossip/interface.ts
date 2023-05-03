@@ -7,7 +7,6 @@ import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
-import {BlockInput} from "../../chain/blocks/types.js";
 
 export enum GossipType {
   beacon_block = "beacon_block",
@@ -132,7 +131,7 @@ export type GossipValidatorFn = (
   msg: Message,
   propagationSource: PeerIdStr,
   seenTimestampSec: number,
-  importUpToSlot: Slot | null
+  msgSlot: Slot | null
 ) => Promise<TopicValidatorResult>;
 
 export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
@@ -150,8 +149,7 @@ export type GossipHandlerFn = (
   gossipData: GossipData,
   topic: GossipTopicMap[GossipType],
   peerIdStr: string,
-  seenTimestampSec: number,
-  importUpToSlot: Slot | null
+  seenTimestampSec: number
 ) => Promise<void>;
 
 export type GossipHandlers = {
@@ -159,8 +157,7 @@ export type GossipHandlers = {
     gossipData: GossipData,
     topic: GossipTopicMap[K],
     peerIdStr: string,
-    seenTimestampSec: number,
-    importUpToSlot: Slot | null
+    seenTimestampSec: number
   ) => Promise<void>;
 };
 

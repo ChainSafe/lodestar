@@ -15,9 +15,15 @@ import {GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {SubnetMap, RequestedSubnet} from "../peers/utils/index.js";
 import {getActiveForks} from "../forks.js";
-import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
-import {IAttnetsService, CommitteeSubscription, SubnetsServiceOpts, RandBetweenFn, ShuffleFn} from "./interface.js";
+import {
+  IAttnetsService,
+  CommitteeSubscription,
+  SubnetsServiceOpts,
+  RandBetweenFn,
+  ShuffleFn,
+  GossipSubscriber,
+} from "./interface.js";
 
 /**
  * The time (in slots) before a last seen validator is considered absent and we unsubscribe from the random
@@ -68,7 +74,7 @@ export class AttnetsService implements IAttnetsService {
   constructor(
     private readonly config: ChainForkConfig,
     private readonly clock: IClock,
-    private readonly events: NetworkEventBus,
+    private readonly gossip: GossipSubscriber,
     private readonly metadata: MetadataController,
     private readonly logger: Logger,
     private readonly metrics: NetworkCoreMetrics | null,
@@ -163,7 +169,7 @@ export class AttnetsService implements IAttnetsService {
   subscribeSubnetsToNextFork(nextFork: ForkName): void {
     this.logger.info("Suscribing to random attnets to next fork", {nextFork});
     for (const subnet of this.subscriptionsRandom.getAll()) {
-      this.events.emit(NetworkEvent.subscribeTopic, {type: gossipType, fork: nextFork, subnet});
+      this.gossip.subscribeTopic({type: gossipType, fork: nextFork, subnet});
     }
   }
 
@@ -172,7 +178,7 @@ export class AttnetsService implements IAttnetsService {
     this.logger.info("Unsuscribing to random attnets from prev fork", {prevFork});
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       if (!this.opts?.subscribeAllSubnets) {
-        this.events.emit(NetworkEvent.unsubscribeTopic, {type: gossipType, fork: prevFork, subnet});
+        this.gossip.unsubscribeTopic({type: gossipType, fork: prevFork, subnet});
       }
     }
   }
@@ -341,7 +347,7 @@ export class AttnetsService implements IAttnetsService {
     for (const subnet of subnets) {
       if (!this.subscriptionsCommittee.has(subnet) && !this.subscriptionsRandom.has(subnet)) {
         for (const fork of forks) {
-          this.events.emit(NetworkEvent.subscribeTopic, {type: gossipType, fork, subnet});
+          this.gossip.subscribeTopic({type: gossipType, fork, subnet});
         }
         this.metrics?.attnetsService.subscribeSubnets.inc({subnet, src});
       }
@@ -360,7 +366,7 @@ export class AttnetsService implements IAttnetsService {
         !this.subscriptionsRandom.isActiveAtSlot(subnet, slot)
       ) {
         for (const fork of forks) {
-          this.events.emit(NetworkEvent.unsubscribeTopic, {type: gossipType, fork, subnet});
+          this.gossip.unsubscribeTopic({type: gossipType, fork, subnet});
         }
         this.metrics?.attnetsService.unsubscribeSubnets.inc({subnet, src});
       }

@@ -14,7 +14,6 @@ import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
 import {Libp2p} from "../interface.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
-import {AttnetsService} from "../subnets/attnetsService.js";
 import {GossipTopic, GossipType} from "./interface.js";
 import {GossipTopicCache, stringifyGossipTopic, getCoreTopicsAtFork} from "./topic.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
@@ -46,7 +45,6 @@ export type Eth2GossipsubModules = {
   logger: Logger;
   metricsRegister: RegistryMetricCreator | null;
   eth2Context: Eth2Context;
-  attnetsService: AttnetsService;
   peersData: PeersData;
   events: NetworkEventBus;
 };
@@ -79,7 +77,6 @@ export class Eth2Gossipsub extends GossipSub {
   private readonly logger: Logger;
   private readonly peersData: PeersData;
   private readonly events: NetworkEventBus;
-  private readonly attnetsService: AttnetsService;
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
@@ -89,7 +86,7 @@ export class Eth2Gossipsub extends GossipSub {
     const gossipTopicCache = new GossipTopicCache(modules.config);
 
     const scoreParams = computeGossipPeerScoreParams(modules);
-    const {config, logger, metricsRegister, attnetsService, peersData, events} = modules;
+    const {config, logger, metricsRegister, peersData, events} = modules;
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
@@ -135,7 +132,6 @@ export class Eth2Gossipsub extends GossipSub {
     this.config = config;
     this.logger = logger;
     this.peersData = peersData;
-    this.attnetsService = attnetsService;
     this.events = events;
     this.gossipTopicCache = gossipTopicCache;
 
@@ -289,18 +285,12 @@ export class Eth2Gossipsub extends GossipSub {
     // Get seenTimestamp before adding the message to the queue or add async delays
     const seenTimestampSec = Date.now() / 1000;
 
-    // Only beacon_attestation has conditional subscriptions
-    // TODO: Also syncnets?
-    const importUpToSlot =
-      topic.type === GossipType.beacon_attestation ? this.attnetsService.activeUpToSlot(topic.subnet) : null;
-
     // Emit message to network processor
     this.events.emit(NetworkEvent.pendingGossipsubMessage, {
       topic,
       msg,
       msgId,
       propagationSource,
-      importUpToSlot,
       seenTimestampSec,
       startProcessUnixSec: null,
     });

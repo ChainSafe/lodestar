@@ -338,7 +338,7 @@ export class NetworkProcessor {
       message.msg,
       message.propagationSource.toString(),
       message.seenTimestampSec,
-      message.importUpToSlot
+      message.msgSlot ?? null
     );
 
     if (message.startProcessUnixSec !== null) {

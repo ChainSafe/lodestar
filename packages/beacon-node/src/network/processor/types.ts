@@ -15,8 +15,6 @@ export type PendingGossipsubMessage = {
   msgId: string;
   // TODO: Refactor into accepting string (requires gossipsub changes) for easier multi-threading
   propagationSource: PeerId;
-  /** From AttnetsService and SyncnetsService signaling if message only needs to be validated */
-  importUpToSlot: Slot | null;
   seenTimestampSec: number;
   startProcessUnixSec: number | null;
 };

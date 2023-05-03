@@ -6,7 +6,6 @@ import {phase0} from "@lodestar/types";
 import {BlockInput} from "../chain/blocks/types.js";
 import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
-import {GossipTopic} from "./gossip/interface.js";
 
 export enum NetworkEvent {
   /** A relevant peer has connected or has been re-STATUS'd */
@@ -16,12 +15,6 @@ export enum NetworkEvent {
   reqRespRequest = "req-resp.request",
   // TODO remove this event, this is not a network-level concern, rather a chain / sync concern
   unknownBlockParent = "unknownBlockParent",
-
-  // Gossip control events
-  /** (Network -> Network) A subscription should be attempted */
-  subscribeTopic = "gossip.subscribeTopic",
-  /** (Network -> Network) An unsubscription should be attempted */
-  unsubscribeTopic = "gossip.unsubscribeTopic",
 
   // Network processor events
   /** (Network -> App) A gossip message is ready for validation */
@@ -41,8 +34,6 @@ export type NetworkEvents = {
     propagationSource: PeerId,
     acceptance: TopicValidatorResult
   ) => void;
-  [NetworkEvent.subscribeTopic]: (topic: GossipTopic) => void;
-  [NetworkEvent.unsubscribeTopic]: (topic: GossipTopic) => void;
 };
 
 export type INetworkEventBus = StrictEventEmitter<EventEmitter, NetworkEvents>;
