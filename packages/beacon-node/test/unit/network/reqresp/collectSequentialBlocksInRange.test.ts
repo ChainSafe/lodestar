@@ -2,7 +2,8 @@ import {expect} from "chai";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {allForks, phase0, ssz} from "@lodestar/types";
-import {ResponseIncoming} from "@lodestar/reqresp";
+import {ProtocolDescriptor, ResponseIncoming} from "@lodestar/reqresp";
+import {BeaconBlocksByRange} from "@lodestar/reqresp/protocols";
 import {ForkName} from "@lodestar/params";
 import {
   BlocksByRangeError,
@@ -14,7 +15,9 @@ import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 chai.use(chaiAsPromised);
 
 describe("beacon-node / network / reqresp / utils / collectSequentialBlocksInRange", () => {
+  const protocol = BeaconBlocksByRange({} as never);
   const testCases: {
+    protocol: ProtocolDescriptor;
     id: string;
     slots: number[];
     request: Pick<phase0.BeaconBlocksByRangeRequest, "count" | "startSlot">;
@@ -22,45 +25,53 @@ describe("beacon-node / network / reqresp / utils / collectSequentialBlocksInRan
   }[] = [
     {
       id: "Full range",
+      protocol,
       slots: [1, 2, 3],
       request: {startSlot: 1, count: 3},
     },
     {
       id: "Range with skipped slots",
+      protocol,
       slots: [1, 3],
       request: {startSlot: 1, count: 3},
     },
     {
       id: "Empty range",
+      protocol,
       slots: [],
       request: {startSlot: 1, count: 3},
     },
     {
       id: "Slot under start slot",
+      protocol,
       slots: [0, 1],
       request: {startSlot: 1, count: 3},
       error: new BlocksByRangeError({code: BlocksByRangeErrorCode.UNDER_START_SLOT}),
     },
     {
       id: "Slot over max",
+      protocol,
       slots: [3, 4],
       request: {startSlot: 1, count: 3},
       error: new BlocksByRangeError({code: BlocksByRangeErrorCode.OVER_MAX_SLOT}),
     },
     {
       id: "Bad sequence - duplicate slots",
+      protocol,
       slots: [1, 1, 3],
       request: {startSlot: 1, count: 3},
       error: new BlocksByRangeError({code: BlocksByRangeErrorCode.BAD_SEQUENCE}),
     },
     {
       id: "Bad sequence - partial reverse",
+      protocol,
       slots: [2, 1, 4],
       request: {startSlot: 1, count: 3},
       error: new BlocksByRangeError({code: BlocksByRangeErrorCode.BAD_SEQUENCE}),
     },
     {
       id: "Reverse order",
+      protocol,
       slots: [3, 2, 1],
       request: {startSlot: 1, count: 3},
       error: new BlocksByRangeError({code: BlocksByRangeErrorCode.BAD_SEQUENCE}),
@@ -76,16 +87,19 @@ describe("beacon-node / network / reqresp / utils / collectSequentialBlocksInRan
       });
 
       if (error) {
-        await expectRejectedWithLodestarError(collectSequentialBlocksInRange(arrToSource(blocks), request), error);
+        await expectRejectedWithLodestarError(
+          collectSequentialBlocksInRange(protocol, arrToSource(blocks), request),
+          error
+        );
       } else {
-        await expect(collectSequentialBlocksInRange(arrToSource(blocks), request)).to.eventually.fulfilled;
+        await expect(collectSequentialBlocksInRange(protocol, arrToSource(blocks), request)).to.eventually.fulfilled;
       }
     });
   }
 
   async function* arrToSource(arr: allForks.SignedBeaconBlock[]): AsyncGenerator<ResponseIncoming> {
     for (const item of arr) {
-      yield {data: ssz.phase0.SignedBeaconBlock.serialize(item), fork: ForkName.phase0, protocolVersion: 1};
+      yield {data: ssz.phase0.SignedBeaconBlock.serialize(item), fork: ForkName.phase0};
     }
   }
 });

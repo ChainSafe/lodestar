@@ -17,6 +17,9 @@
     ".": {
       "import": "./lib/index.js"
     },
+    "./protocols": {
+      "import": "./lib/protocols.js"
+    },
     "./utils": {
       "import": "./lib/utils/index.js"
     }

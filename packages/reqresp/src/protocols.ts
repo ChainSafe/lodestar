@@ -74,7 +74,7 @@ export const BeaconBlocksByRange = toProtocol({
   version: Version.V1,
   contextBytesType: ContextBytesType.Empty,
   requestEncoder: ssz.phase0.BeaconBlocksByRangeRequest,
-  responseEncoder: (fork) => ssz.allForksLightClient[onlyLightclientFork(fork)].LightClientBootstrap,
+  responseEncoder: (fork) => ssz[fork].SignedBeaconBlock,
 });
 
 export const BeaconBlocksByRangeV2 = toProtocol({

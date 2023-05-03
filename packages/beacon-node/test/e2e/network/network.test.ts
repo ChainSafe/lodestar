@@ -11,7 +11,8 @@ import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Network, NetworkEvent, ReqRespMethod, getReqRespHandlers} from "../../../src/network/index.js";
+import {ReqRespMethod} from "@lodestar/reqresp";
+import {Network, NetworkEvent, getReqRespHandlers} from "../../../src/network/index.js";
 import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 import {GoodByeReasonCode} from "../../../src/constants/index.js";
 
@@ -206,7 +207,7 @@ describe("network", function () {
 
     const onGoodbyeNetB = sinon.stub<[phase0.Goodbye, PeerId]>();
     netB.events.on(NetworkEvent.reqRespRequest, (request, peer) => {
-      if (request.method === ReqRespMethod.Goodbye) onGoodbyeNetB(request.body, peer);
+      if (request.method === ReqRespMethod.Goodbye) onGoodbyeNetB(request.body as bigint, peer);
     });
 
     await netA.close();
