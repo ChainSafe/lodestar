@@ -367,39 +367,39 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   }
 
   private async *onStatus(
-    _protocol: ProtocolDescriptor,
+    protocol: ProtocolDescriptor,
     req: RequestIncoming,
     peerId: PeerId
   ): AsyncIterable<ResponseOutgoing> {
-    const body = ssz.phase0.Status.deserialize(req.data);
+    const body = protocol.requestEncoder?.deserialize(req.data) as phase0.Status;
     this.onIncomingRequestBody({method: ReqRespMethod.Status, body}, peerId);
     yield* this.reqRespHandlers.onStatus(body, peerId);
   }
 
   private async *onGoodbye(
-    _protocol: ProtocolDescriptor,
+    protocol: ProtocolDescriptor,
     req: RequestIncoming,
     peerId: PeerId
   ): AsyncIterable<ResponseOutgoing> {
-    const body = ssz.phase0.Goodbye.deserialize(req.data);
+    const body = protocol.requestEncoder?.deserialize(req.data) as phase0.Goodbye;
     this.onIncomingRequestBody({method: ReqRespMethod.Goodbye, body}, peerId);
 
     yield {
-      data: ssz.phase0.Goodbye.serialize(BigInt(0)),
+      data: protocol.responseEncoder(ForkName.phase0).serialize(BigInt(0)),
       // Goodbye topic is fork-agnostic
       fork: ForkName.phase0,
     };
   }
 
   private async *onPing(
-    _protocol: ProtocolDescriptor,
+    protocol: ProtocolDescriptor,
     req: RequestIncoming,
     peerId: PeerId
   ): AsyncIterable<ResponseOutgoing> {
-    const body = ssz.phase0.Ping.deserialize(req.data);
+    const body = protocol.requestEncoder?.deserialize(req.data) as phase0.Ping;
     this.onIncomingRequestBody({method: ReqRespMethod.Ping, body}, peerId);
     yield {
-      data: ssz.phase0.Ping.serialize(this.metadataController.seqNumber),
+      data: protocol.responseEncoder(ForkName.phase0).serialize(this.metadataController.seqNumber),
       // Ping topic is fork-agnostic
       fork: ForkName.phase0,
     };
