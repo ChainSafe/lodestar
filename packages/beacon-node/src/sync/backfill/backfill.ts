@@ -11,7 +11,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IBeaconChain} from "../../chain/index.js";
 import {GENESIS_SLOT, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
-import {INetwork, NetworkEvent, PeerAction} from "../../network/index.js";
+import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerSet} from "../../util/peerMap.js";
 import {shuffleOne} from "../../util/shuffle.js";
@@ -485,17 +485,17 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     throw new ErrorAborted("BackfillSync");
   }
 
-  private addPeer = (peerId: PeerId, peerStatus: phase0.Status): void => {
+  private addPeer = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
     const requiredSlot = this.syncAnchor.lastBackSyncedBlock?.slot ?? this.backfillStartFromSlot;
-    this.logger.debug("Add peer", {peerhead: peerStatus.headSlot, requiredSlot});
-    if (peerStatus.headSlot >= requiredSlot) {
-      this.peers.add(peerId);
+    this.logger.debug("Add peer", {peerhead: data.status.headSlot, requiredSlot});
+    if (data.status.headSlot >= requiredSlot) {
+      this.peers.add(data.peer);
       this.processor.trigger();
     }
   };
 
-  private removePeer = (peerId: PeerId): void => {
-    this.peers.delete(peerId);
+  private removePeer = (data: NetworkEventData[NetworkEvent.peerDisconnected]): void => {
+    this.peers.delete(data.peer);
   };
 
   /**

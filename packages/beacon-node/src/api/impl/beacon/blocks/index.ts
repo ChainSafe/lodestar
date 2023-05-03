@@ -240,7 +240,10 @@ export function getBeaconBlockApi({
         () =>
           chain.processBlock(blockForImport, opts).catch((e) => {
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-              network.events.emit(NetworkEvent.unknownBlockParent, blockForImport, IDENTITY_PEER_ID);
+              network.events.emit(NetworkEvent.unknownBlockParent, {
+                blockInput: blockForImport,
+                peerIdStr: IDENTITY_PEER_ID,
+              });
             }
             throw e;
           }),

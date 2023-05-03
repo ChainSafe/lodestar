@@ -1,5 +1,3 @@
-import {PeerId} from "@libp2p/interface-peer-id";
-import {TopicValidatorResult} from "@libp2p/interface-pubsub";
 import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
@@ -13,7 +11,7 @@ import {PeersData} from "../peers/peersData.js";
 import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
 import {Libp2p} from "../interface.js";
-import {NetworkEvent, NetworkEventBus} from "../events.js";
+import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
 import {GossipTopic, GossipType} from "./interface.js";
 import {GossipTopicCache, stringifyGossipTopic, getCoreTopicsAtFork} from "./topic.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
@@ -296,8 +294,8 @@ export class Eth2Gossipsub extends GossipSub {
     });
   }
 
-  private onValidationResult(msgId: string, propagationSource: PeerId, acceptance: TopicValidatorResult): void {
-    this.reportMessageValidationResult(msgId, propagationSource, acceptance);
+  private onValidationResult(data: NetworkEventData[NetworkEvent.gossipMessageValidationResult]): void {
+    this.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
   }
 }
 

@@ -357,12 +357,11 @@ export class NetworkProcessor {
     // contain multiple of them. This helps avoid the I/O lag issue.
     setTimeout(
       () =>
-        this.events.emit(
-          NetworkEvent.gossipMessageValidationResult,
-          message.msgId,
-          message.propagationSource,
-          acceptance
-        ),
+        this.events.emit(NetworkEvent.gossipMessageValidationResult, {
+          msgId: message.msgId,
+          propagationSource: message.propagationSource,
+          acceptance,
+        }),
       0
     );
   }

@@ -7,9 +7,9 @@ import {allForks, altair, phase0} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
-import {NetworkEvent, INetworkEventBus} from "../events.js";
+import {NetworkEvent, INetworkEventBus, NetworkEventData} from "../events.js";
 import {Libp2p} from "../interface.js";
-import {ReqRespMethod, RequestTypedContainer} from "../reqresp/ReqRespBeaconNode.js";
+import {ReqRespMethod} from "../reqresp/ReqRespBeaconNode.js";
 import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {SubnetsService} from "../subnets/index.js";
 import {SubnetType} from "../metadata.js";
@@ -260,7 +260,7 @@ export class PeerManager {
   /**
    * Must be called when network ReqResp receives incoming requests
    */
-  private onRequest = (request: RequestTypedContainer, peer: PeerId): void => {
+  private onRequest = ({peer, request}: NetworkEventData[NetworkEvent.reqRespRequest]): void => {
     try {
       const peerData = this.connectedPeers.get(peer.toString());
       if (peerData) {
@@ -367,7 +367,7 @@ export class PeerManager {
       peerData.relevantStatus = RelevantPeerStatus.relevant;
     }
     if (getConnection(this.libp2p.connectionManager, peer.toString())) {
-      this.networkEventBus.emit(NetworkEvent.peerConnected, peer, status);
+      this.networkEventBus.emit(NetworkEvent.peerConnected, {peer, status});
     }
   }
 
@@ -617,7 +617,7 @@ export class PeerManager {
     this.connectedPeers.delete(peer.toString());
 
     this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(peer), direction, status});
-    this.networkEventBus.emit(NetworkEvent.peerDisconnected, peer);
+    this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer});
     this.metrics?.peerDisconnectedEvent.inc({direction});
     this.libp2p.peerStore
       .unTagPeer(peer, PEER_RELEVANT_TAG)

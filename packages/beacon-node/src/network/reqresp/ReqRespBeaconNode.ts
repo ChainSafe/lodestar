@@ -258,11 +258,11 @@ export class ReqRespBeaconNode extends ReqResp {
     return protocolsAtFork;
   }
 
-  protected onIncomingRequestBody(req: RequestTypedContainer, peerId: PeerId): void {
+  protected onIncomingRequestBody(request: RequestTypedContainer, peer: PeerId): void {
     // Allow onRequest to return and close the stream
     // For Goodbye there may be a race condition where the listener of `receivedGoodbye`
     // disconnects in the same syncronous call, preventing the stream from ending cleanly
-    setTimeout(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, req, peerId), 0);
+    setTimeout(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, {request, peer}), 0);
   }
 
   protected onIncomingRequest(peerId: PeerId, protocol: ProtocolDescriptor): void {

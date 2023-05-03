@@ -4,7 +4,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Logger, pruneSetToMax} from "@lodestar/utils";
 import {Root, RootHex} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {INetwork, NetworkEvent, PeerAction} from "../network/index.js";
+import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {BlockInput} from "../chain/blocks/types.js";
 import {Metrics} from "../metrics/index.js";
@@ -66,9 +66,9 @@ export class UnknownBlockSync {
   /**
    * Process an unknownBlockParent event and register the block in `pendingBlocks` Map.
    */
-  private onUnknownBlock = (blockInput: BlockInput, peerIdStr: string): void => {
+  private onUnknownBlock = (data: NetworkEventData[NetworkEvent.unknownBlockParent]): void => {
     try {
-      this.addToPendingBlocks(blockInput, peerIdStr);
+      this.addToPendingBlocks(data.blockInput, data.peerIdStr);
       this.triggerUnknownBlockSearch();
       this.metrics?.syncUnknownBlock.requests.inc();
     } catch (e) {
@@ -163,7 +163,7 @@ export class UnknownBlockSync {
         });
         this.removeAndDownscoreAllDescendants(block);
       } else {
-        this.onUnknownBlock(blockInput, peerIdStr);
+        this.onUnknownBlock({blockInput, peerIdStr});
       }
     } else {
       // parentSlot > finalizedSlot, continue downloading parent of parent

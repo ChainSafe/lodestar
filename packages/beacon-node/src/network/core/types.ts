@@ -85,11 +85,6 @@ export type NetworkWorkerData = {
  * API exposed by the libp2p worker
  */
 export type NetworkWorkerApi = INetworkCorePublic & {
-  // TODO: Gossip events
-  // Main -> Worker: NetworkEvent.gossipMessageValidationResult
-  // Worker -> Main: NetworkEvent.pendingGossipsubMessage
-  pendingGossipsubMessage(): Observable<PendingGossipsubMessage>;
-
   // Async method through worker boundary
   reportPeer(peer: PeerId, action: PeerAction, actionName: string): Promise<void>;
 

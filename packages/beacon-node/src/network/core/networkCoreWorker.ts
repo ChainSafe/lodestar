@@ -1,23 +1,32 @@
 import worker from "node:worker_threads";
 import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {expose} from "@chainsafe/threads/worker";
-import {Observable, Subject} from "@chainsafe/threads/observable";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {createWinstonLogger} from "@lodestar/utils";
 import type {WorkerModule} from "@chainsafe/threads/dist/types/worker.js";
 import {collectNodeJSMetrics, RegistryMetricCreator} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {Clock} from "../../util/clock.js";
-import {NetworkEvent, NetworkEventBus} from "../events.js";
-import {PendingGossipsubMessage} from "../processor/types.js";
+import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
+import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 import {NetworkCore} from "./networkCore.js";
-import {ReqRespBridgeEventBus, getReqRespBridgeReqEvents, getReqRespBridgeRespEvents} from "./events.js";
+import {
+  NetworkWorkerThreadEventType,
+  ReqRespBridgeEventBus,
+  ReqRespBridgeEventData,
+  getReqRespBridgeReqEvents,
+  getReqRespBridgeRespEvents,
+  reqRespBridgeEventDirection,
+} from "./events.js";
 
 // Cloned data from instatiation
 const workerData = worker.workerData as NetworkWorkerData;
+const parentPort = worker.parentPort;
 // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 if (!workerData) throw Error("workerData must be defined");
+// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+if (!parentPort) throw Error("parentPort must be defined");
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
 // TODO: Pass options from main thread for logging
@@ -78,11 +87,18 @@ const core = await NetworkCore.init({
   initialStatus: workerData.initialStatus,
 });
 
-const pendingGossipsubMessageSubject = new Subject<PendingGossipsubMessage>();
-
-events.on(NetworkEvent.pendingGossipsubMessage, (data) => {
-  pendingGossipsubMessageSubject.next(data);
-});
+wireEventsOnWorkerThread<NetworkEventData>(
+  NetworkWorkerThreadEventType.networkEvent,
+  events,
+  parentPort,
+  networkEventDirection
+);
+wireEventsOnWorkerThread<ReqRespBridgeEventData>(
+  NetworkWorkerThreadEventType.reqRespBridgeEvents,
+  reqRespBridgeEventBus,
+  parentPort,
+  reqRespBridgeEventDirection
+);
 
 const libp2pWorkerApi: NetworkWorkerApi = {
   close: () => {
@@ -92,8 +108,6 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   scrapeMetrics: () => core.scrapeMetrics(),
 
   updateStatus: (status) => core.updateStatus(status),
-
-  pendingGossipsubMessage: () => Observable.from(pendingGossipsubMessageSubject),
 
   prepareBeaconCommitteeSubnets: (subscriptions) => core.prepareBeaconCommitteeSubnets(subscriptions),
   prepareSyncCommitteeSubnets: (subscriptions) => core.prepareSyncCommitteeSubnets(subscriptions),

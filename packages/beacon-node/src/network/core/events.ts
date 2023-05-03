@@ -1,7 +1,8 @@
 import EventEmitter from "node:events";
-import StrictEventEmitter from "strict-event-emitter-types";
 import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
 import {AsyncIterableEventBus, IteratorEvent, RequestEvent} from "../../util/asyncIterableToEvents.js";
+import {StrictEventEmitterSingleArg} from "../../util/strictEvents.js";
+import {EventDirection} from "../../util/workerEvents.js";
 import {IncomingRequestArgs, OutgoingRequestArgs} from "../reqresp/types.js";
 
 export enum ReqRespBridgeEvent {
@@ -11,16 +12,24 @@ export enum ReqRespBridgeEvent {
   incomingResponse = "reqresp.incomingResponse",
 }
 
-type ReqRespBridgeEvents = {
-  [ReqRespBridgeEvent.outgoingRequest]: (data: RequestEvent<OutgoingRequestArgs>) => void;
-  [ReqRespBridgeEvent.outgoingResponse]: (data: IteratorEvent<ResponseOutgoing>) => void;
-  [ReqRespBridgeEvent.incomingRequest]: (data: RequestEvent<IncomingRequestArgs>) => void;
-  [ReqRespBridgeEvent.incomingResponse]: (data: IteratorEvent<ResponseIncoming>) => void;
+export type ReqRespBridgeEventData = {
+  [ReqRespBridgeEvent.outgoingRequest]: RequestEvent<OutgoingRequestArgs>;
+  [ReqRespBridgeEvent.outgoingResponse]: IteratorEvent<ResponseOutgoing>;
+  [ReqRespBridgeEvent.incomingRequest]: RequestEvent<IncomingRequestArgs>;
+  [ReqRespBridgeEvent.incomingResponse]: IteratorEvent<ResponseIncoming>;
 };
 
-type IReqRespBridgeEventBus = StrictEventEmitter<EventEmitter, ReqRespBridgeEvents>;
+type IReqRespBridgeEventBus = StrictEventEmitterSingleArg<ReqRespBridgeEventData>;
 
 export class ReqRespBridgeEventBus extends (EventEmitter as {new (): IReqRespBridgeEventBus}) {}
+
+// NOTE: If the same event is on this two arrays it can create an infinite cycle
+export const reqRespBridgeEventDirection: Record<ReqRespBridgeEvent, EventDirection> = {
+  [ReqRespBridgeEvent.outgoingRequest]: EventDirection.mainToWorker,
+  [ReqRespBridgeEvent.outgoingResponse]: EventDirection.mainToWorker,
+  [ReqRespBridgeEvent.incomingRequest]: EventDirection.workerToMain,
+  [ReqRespBridgeEvent.incomingResponse]: EventDirection.workerToMain,
+};
 
 export function getReqRespBridgeReqEvents(
   events: IReqRespBridgeEventBus
@@ -42,4 +51,9 @@ export function getReqRespBridgeRespEvents(
     onRequest: (cb) => events.on(ReqRespBridgeEvent.incomingRequest, cb),
     onResponse: (cb) => events.on(ReqRespBridgeEvent.outgoingResponse, cb),
   };
+}
+
+export enum NetworkWorkerThreadEventType {
+  networkEvent = "networkEvent",
+  reqRespBridgeEvents = "reqRespBridgeEvents",
 }

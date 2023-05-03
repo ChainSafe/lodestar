@@ -20,7 +20,7 @@ import {INetwork} from "./interface.js";
 import {ReqRespMethod} from "./reqresp/index.js";
 import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
-import {INetworkEventBus, NetworkEvent, NetworkEventBus} from "./events.js";
+import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
 import {CommitteeSubscription} from "./subnets/index.js";
 import {isPublishToZeroPeersError} from "./util.js";
 import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
@@ -586,11 +586,11 @@ export class Network implements INetwork {
     await this.core.updateStatus(this.chain.getStatus());
   };
 
-  private onPeerConnected = (peerId: PeerId): void => {
-    this.connectedPeers.add(peerId);
+  private onPeerConnected = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
+    this.connectedPeers.add(data.peer);
   };
 
-  private onPeerDisconnected = (peerId: PeerId): void => {
-    this.connectedPeers.delete(peerId);
+  private onPeerDisconnected = (data: NetworkEventData[NetworkEvent.peerDisconnected]): void => {
+    this.connectedPeers.delete(data.peer);
   };
 }

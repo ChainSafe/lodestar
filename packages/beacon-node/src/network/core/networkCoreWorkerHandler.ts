@@ -1,3 +1,4 @@
+import worker_threads from "node:worker_threads";
 import {PublishResult} from "@libp2p/interface-pubsub";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
 import {PeerId} from "@libp2p/interface-peer-id";
@@ -11,13 +12,21 @@ import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
+import {wireEventsOnMainThread} from "../../util/workerEvents.js";
 import {IncomingRequestArgs, OutgoingRequestArgs, GetReqRespHandlerFn} from "../reqresp/types.js";
-import {NetworkEvent, NetworkEventBus} from "../events.js";
+import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
 import {NetworkOptions} from "../options.js";
 import {NetworkWorkerApi, NetworkWorkerData, INetworkCore} from "./types.js";
-import {ReqRespBridgeEventBus, getReqRespBridgeReqEvents, getReqRespBridgeRespEvents} from "./events.js";
+import {
+  NetworkWorkerThreadEventType,
+  ReqRespBridgeEventBus,
+  ReqRespBridgeEventData,
+  getReqRespBridgeReqEvents,
+  getReqRespBridgeRespEvents,
+  reqRespBridgeEventDirection,
+} from "./events.js";
 
 export type WorkerNetworkCoreOpts = NetworkOptions & {
   metrics: boolean;
@@ -38,6 +47,7 @@ export type WorkerNetworkCoreInitModules = {
 
 type WorkerNetworkCoreModules = WorkerNetworkCoreInitModules & {
   workerApi: NetworkWorkerApi;
+  worker: Worker;
 };
 
 /**
@@ -56,10 +66,23 @@ export class WorkerNetworkCore implements INetworkCore {
       getReqRespBridgeRespEvents(this.reqRespBridgeEventBus),
       (data) => modules.getReqRespHandler(data.method)(data.req, data.peerId)
     );
+
+    wireEventsOnMainThread<NetworkEventData>(
+      NetworkWorkerThreadEventType.networkEvent,
+      modules.events,
+      modules.worker as unknown as worker_threads.Worker,
+      networkEventDirection
+    );
+    wireEventsOnMainThread<ReqRespBridgeEventData>(
+      NetworkWorkerThreadEventType.reqRespBridgeEvents,
+      this.reqRespBridgeEventBus,
+      modules.worker as unknown as worker_threads.Worker,
+      reqRespBridgeEventDirection
+    );
   }
 
   static async init(modules: WorkerNetworkCoreInitModules): Promise<WorkerNetworkCore> {
-    const {opts, config, peerId, events} = modules;
+    const {opts, config, peerId} = modules;
     const {genesisTime, peerStoreDir, activeValidatorCount, localMultiaddrs, metrics, initialStatus} = opts;
 
     const workerData: NetworkWorkerData = {
@@ -85,11 +108,10 @@ export class WorkerNetworkCore implements INetworkCore {
       // TODO: types are broken on spawn, which claims that `NetworkWorkerApi` does not satifies its contrains
     })) as unknown as NetworkWorkerApi;
 
-    workerApi.pendingGossipsubMessage().subscribe((data) => events.emit(NetworkEvent.pendingGossipsubMessage, data));
-
     return new WorkerNetworkCore({
       ...modules,
       workerApi,
+      worker,
     });
   }
 
