@@ -183,7 +183,7 @@ export class SyncCommitteeDutiesService {
     for (const epoch of [currentEpoch, nextPeriodEpoch]) {
       // Download the duties and update the duties for the current and next period.
       await this.pollSyncCommitteesForEpoch(epoch, indexArr).catch((e: Error) => {
-        this.logger.error("Failed to download SyncDuties", {epoch}, e);
+        this.logger.warn("Failed to download SyncDuties", {epoch}, e);
       });
     }
 
