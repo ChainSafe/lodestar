@@ -1,5 +1,5 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Multiaddr} from "@multiformats/multiaddr";
+import {multiaddr} from "@multiformats/multiaddr";
 import {Connection} from "@libp2p/interface-connection";
 import {PublishResult} from "@libp2p/interface-pubsub";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
@@ -31,8 +31,9 @@ import {NetworkEventBus} from "../events.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {LocalStatusCache} from "../statusCache.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
+import {peerIdFromString, peerIdToString} from "../peerId.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
-import {INetworkCore} from "./types.js";
+import {INetworkCore, MultiaddrStr, PeerIdStr} from "./types.js";
 
 type Mods = {
   libp2p: Libp2p;
@@ -275,11 +276,11 @@ export class NetworkCore implements INetworkCore {
   async updateStatus(status: phase0.Status): Promise<void> {
     this.statusCache.update(status);
   }
-  async reportPeer(peer: PeerId, action: PeerAction, actionName: string): Promise<void> {
-    this.peerManager.reportPeer(peer, action, actionName);
+  async reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
+    this.peerManager.reportPeer(peerIdFromString(peer), action, actionName);
   }
-  async reStatusPeers(peers: PeerId[]): Promise<void> {
-    this.peerManager.reStatusPeers(peers);
+  async reStatusPeers(peers: PeerIdStr[]): Promise<void> {
+    this.peerManager.reStatusPeers(peers.map((peer) => peerIdFromString(peer)));
   }
 
   /**
@@ -322,7 +323,8 @@ export class NetworkCore implements INetworkCore {
   }
 
   sendReqRespRequest(data: OutgoingRequestArgs): AsyncIterable<ResponseIncoming> {
-    return this.reqResp.sendRequestWithoutEncoding(data.peerId, data.method, data.versions, data.requestData);
+    const peerId = peerIdFromString(data.peerId);
+    return this.reqResp.sendRequestWithoutEncoding(peerId, data.method, data.versions, data.requestData);
   }
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts | undefined): Promise<PublishResult> {
     return this.gossip.publish(topic, data, opts);
@@ -342,7 +344,7 @@ export class NetworkCore implements INetworkCore {
       enr: enr?.encodeTxt() || "",
       discoveryAddresses,
       p2pAddresses: this.libp2p.getMultiaddrs().map((m) => m.toString()),
-      metadata: this.metadata,
+      metadata: this.metadata.json,
     };
   }
 
@@ -350,8 +352,8 @@ export class NetworkCore implements INetworkCore {
     return getConnectionsMap(this.libp2p.connectionManager);
   }
 
-  async getConnectedPeers(): Promise<PeerId[]> {
-    return this.peerManager.getConnectedPeerIds();
+  async getConnectedPeers(): Promise<PeerIdStr[]> {
+    return this.peerManager.getConnectedPeerIds().map(peerIdToString);
   }
 
   async getConnectedPeerCount(): Promise<number> {
@@ -360,13 +362,14 @@ export class NetworkCore implements INetworkCore {
 
   // Debug
 
-  async connectToPeer(peer: PeerId, multiaddr: Multiaddr[]): Promise<void> {
-    await this.libp2p.peerStore.addressBook.add(peer, multiaddr);
+  async connectToPeer(peerIdStr: PeerIdStr, multiaddrStrArr: MultiaddrStr[]): Promise<void> {
+    const peer = peerIdFromString(peerIdStr);
+    await this.libp2p.peerStore.addressBook.add(peer, multiaddrStrArr.map(multiaddr));
     await this.libp2p.dial(peer);
   }
 
-  async disconnectPeer(peer: PeerId): Promise<void> {
-    await this.libp2p.hangUp(peer);
+  async disconnectPeer(peerIdStr: PeerIdStr): Promise<void> {
+    await this.libp2p.hangUp(peerIdFromString(peerIdStr));
   }
 
   async dumpPeer(peerIdStr: string): Promise<routes.lodestar.LodestarNodePeer | undefined> {

@@ -28,6 +28,7 @@ export interface INetwork extends INetworkCorePublic {
   isSubscribedToGossipCoreTopics(): boolean;
   reportPeer(peer: PeerId, action: PeerAction, actionName: string): void;
   shouldAggregate(subnet: number, slot: Slot): boolean;
+  reStatusPeers(peers: PeerId[]): Promise<void>;
 
   // ReqResp
   sendBeaconBlocksByRange(

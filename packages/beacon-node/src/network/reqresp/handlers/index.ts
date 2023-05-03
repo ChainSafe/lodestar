@@ -12,17 +12,6 @@ import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
 import {onLightClientUpdatesByRange} from "./lightClientUpdatesByRange.js";
 
-export interface ReqRespHandlers {
-  onBeaconBlocksByRange: ProtocolHandler;
-  onBeaconBlocksByRoot: ProtocolHandler;
-  onBeaconBlockAndBlobsSidecarByRoot: ProtocolHandler;
-  onBlobsSidecarsByRange: ProtocolHandler;
-  onLightClientBootstrap: ProtocolHandler;
-  onLightClientUpdatesByRange: ProtocolHandler;
-  onLightClientFinalityUpdate: ProtocolHandler;
-  onLightClientOptimisticUpdate: ProtocolHandler;
-}
-
 function notImplemented(method: ReqRespMethod): ProtocolHandler {
   return () => {
     throw Error(`Handler not implemented for ${method}`);

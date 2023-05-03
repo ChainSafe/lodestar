@@ -45,5 +45,5 @@ export const defaultNetworkOptions: NetworkOptions = {
   maxGossipTopicConcurrency: 512,
   ...defaultGossipHandlerOpts,
   // TEMP default to try
-  useWorker: false,
+  useWorker: true,
 };

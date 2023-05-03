@@ -127,6 +127,10 @@ export class Network implements INetwork {
     const activeValidatorCount = chain.getHeadState().epochCtx.currentShuffling.activeIndices.length;
     const initialStatus = chain.getStatus();
 
+    if (opts.useWorker) {
+      logger.info("running libp2p instance in worker thread");
+    }
+
     const core = opts.useWorker
       ? await WorkerNetworkCore.init({
           opts: {
@@ -216,11 +220,11 @@ export class Network implements INetwork {
    * The app layer needs to refresh the status of some peers. The sync have reached a target
    */
   async reStatusPeers(peers: PeerId[]): Promise<void> {
-    return this.core.reStatusPeers(peers);
+    return this.core.reStatusPeers(peers.map((peer) => peer.toString()));
   }
 
   async reportPeer(peer: PeerId, action: PeerAction, actionName: string): Promise<void> {
-    return this.core.reportPeer(peer, action, actionName);
+    return this.core.reportPeer(peer.toString(), action, actionName);
   }
 
   // REST API queries
@@ -495,7 +499,7 @@ export class Network implements INetwork {
 
     // ReqResp outgoing request, emit from main thread to worker
     return this.core.sendReqRespRequest({
-      peerId,
+      peerId: peerId.toString(),
       method,
       versions,
       requestData,
@@ -504,11 +508,11 @@ export class Network implements INetwork {
 
   // Debug
 
-  connectToPeer(peer: PeerId, multiaddr: Multiaddr[]): Promise<void> {
+  connectToPeer(peer: string, multiaddr: string[]): Promise<void> {
     return this.core.connectToPeer(peer, multiaddr);
   }
 
-  disconnectPeer(peer: PeerId): Promise<void> {
+  disconnectPeer(peer: string): Promise<void> {
     return this.core.disconnectPeer(peer);
   }
 

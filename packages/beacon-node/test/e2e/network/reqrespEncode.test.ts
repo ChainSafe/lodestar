@@ -14,7 +14,6 @@ import {
   PeerRpcScoreStore,
   ReqRespBeaconNode,
   ReqRespBeaconNodeModules,
-  ReqRespHandlers,
 } from "../../../src/network/index.js";
 import {PeersData} from "../../../src/network/peers/peersData.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";

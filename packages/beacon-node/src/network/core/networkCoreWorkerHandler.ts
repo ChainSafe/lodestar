@@ -2,7 +2,6 @@ import worker_threads from "node:worker_threads";
 import {PublishResult} from "@libp2p/interface-pubsub";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Multiaddr} from "@multiformats/multiaddr";
 import {routes} from "@lodestar/api";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
 import {phase0} from "@lodestar/types";
@@ -18,7 +17,8 @@ import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../event
 import {CommitteeSubscription} from "../subnets/interface.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
 import {NetworkOptions} from "../options.js";
-import {NetworkWorkerApi, NetworkWorkerData, INetworkCore} from "./types.js";
+import {peerIdFromString} from "../peerId.js";
+import {NetworkWorkerApi, NetworkWorkerData, INetworkCore, MultiaddrStr, PeerIdStr} from "./types.js";
 import {
   NetworkWorkerThreadEventType,
   ReqRespBridgeEventBus,
@@ -64,7 +64,7 @@ export class WorkerNetworkCore implements INetworkCore {
     // Handles ReqResp response from worker and calls async generator in main thread
     this.reqRespBridgeRespHandler = new AsyncIterableBridgeHandler(
       getReqRespBridgeRespEvents(this.reqRespBridgeEventBus),
-      (data) => modules.getReqRespHandler(data.method)(data.req, data.peerId)
+      (data) => modules.getReqRespHandler(data.method)(data.req, peerIdFromString(data.peerId))
     );
 
     wireEventsOnMainThread<NetworkEventData>(
@@ -131,10 +131,10 @@ export class WorkerNetworkCore implements INetworkCore {
   updateStatus(status: phase0.Status): Promise<void> {
     return this.getApi().updateStatus(status);
   }
-  reStatusPeers(peers: PeerId[]): Promise<void> {
+  reStatusPeers(peers: PeerIdStr[]): Promise<void> {
     return this.getApi().reStatusPeers(peers);
   }
-  reportPeer(peer: PeerId, action: PeerAction, actionName: string): Promise<void> {
+  reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
     return this.getApi().reportPeer(peer, action, actionName);
   }
 
@@ -157,7 +157,7 @@ export class WorkerNetworkCore implements INetworkCore {
   getConnectedPeerCount(): Promise<number> {
     return this.getApi().getConnectedPeerCount();
   }
-  getConnectedPeers(): Promise<PeerId[]> {
+  getConnectedPeers(): Promise<PeerIdStr[]> {
     return this.getApi().getConnectedPeers();
   }
   getNetworkIdentity(): Promise<routes.node.NetworkIdentity> {
@@ -175,10 +175,10 @@ export class WorkerNetworkCore implements INetworkCore {
 
   // Debug
 
-  connectToPeer(peer: PeerId, multiaddr: Multiaddr[]): Promise<void> {
+  connectToPeer(peer: PeerIdStr, multiaddr: MultiaddrStr[]): Promise<void> {
     return this.getApi().connectToPeer(peer, multiaddr);
   }
-  disconnectPeer(peer: PeerId): Promise<void> {
+  disconnectPeer(peer: PeerIdStr): Promise<void> {
     return this.getApi().disconnectPeer(peer);
   }
   dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]> {

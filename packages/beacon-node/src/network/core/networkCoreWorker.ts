@@ -1,4 +1,5 @@
 import worker from "node:worker_threads";
+import winston from "winston";
 import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
@@ -9,6 +10,7 @@ import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/
 import {Clock} from "../../util/clock.js";
 import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
+import {peerIdToString} from "../peerId.js";
 import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 import {NetworkCore} from "./networkCore.js";
 import {
@@ -29,10 +31,16 @@ if (!workerData) throw Error("workerData must be defined");
 if (!parentPort) throw Error("parentPort must be defined");
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
+const peerId = await createFromProtobuf(workerData.peerIdProto);
+
 // TODO: Pass options from main thread for logging
 // TODO: Logging won't be visible in file loggers
-const logger = createWinstonLogger();
-const peerId = await createFromProtobuf(workerData.peerIdProto);
+const logger = createWinstonLogger({module: "libp2p-w", format: "human"}, [
+  new winston.transports.Console({debugStdout: true, level: "debug"}),
+]);
+
+// Alive and consistency check
+logger.info("libp2p worker started", {peer: peerId.toString()});
 
 const abortController = new AbortController();
 
@@ -82,7 +90,8 @@ const core = await NetworkCore.init({
   metricsRegistry: metricsRegister,
   events,
   clock,
-  getReqRespHandler: (method) => (req, peerId) => respBridgeCaller.getAsyncIterable({method, req, peerId}),
+  getReqRespHandler: (method) => (req, peerId) =>
+    respBridgeCaller.getAsyncIterable({method, req, peerId: peerIdToString(peerId)}),
   activeValidatorCount: workerData.activeValidatorCount,
   initialStatus: workerData.initialStatus,
 });

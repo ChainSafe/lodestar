@@ -1,10 +1,9 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {peerIdFromString} from "@libp2p/peer-id";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger, pruneSetToMax} from "@lodestar/utils";
 import {Root, RootHex} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
+import {INetwork, NetworkEvent, NetworkEventData, PeerAction, peerIdFromString} from "../network/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {BlockInput} from "../chain/blocks/types.js";
 import {Metrics} from "../metrics/index.js";

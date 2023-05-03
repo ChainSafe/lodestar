@@ -1,12 +1,10 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Multiaddr} from "@multiformats/multiaddr";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
-import {INetwork, Network} from "../../src/network/index.js";
+import {INetwork, Network, NetworkEvent} from "../../src/network/index.js";
 import {createNodejsLibp2p, Libp2pOptions} from "../../src/network/nodejs/index.js";
 import {Libp2p} from "../../src/network/interface.js";
-import {Libp2pEvent} from "../../src/constants/index.js";
 import {defaultNetworkOptions, NetworkOptions} from "../../src/network/options.js";
 
 export async function createNode(multiaddr: string, inPeerId?: PeerId, opts?: Partial<Libp2pOptions>): Promise<Libp2p> {
@@ -36,24 +34,20 @@ type INetworkDebug = Pick<INetwork, "connectToPeer" | "disconnectPeer">;
 
 // Helpers to manipulate network's libp2p instance for testing only
 
-export async function connect(network: INetworkDebug, peer: PeerId, multiaddr: Multiaddr[]): Promise<void> {
+export async function connect(network: INetworkDebug, peer: string, multiaddr: string[]): Promise<void> {
   await network.connectToPeer(peer, multiaddr);
 }
 
-export async function disconnect(network: INetworkDebug, peer: PeerId): Promise<void> {
+export async function disconnect(network: INetworkDebug, peer: string): Promise<void> {
   await network.disconnectPeer(peer);
 }
 
 export function onPeerConnect(network: Network): Promise<void> {
-  return new Promise<void>((resolve) =>
-    network["libp2p"].connectionManager.addEventListener(Libp2pEvent.peerConnect, () => resolve())
-  );
+  return new Promise<void>((resolve) => network.events.on(NetworkEvent.peerConnected, () => resolve()));
 }
 
 export function onPeerDisconnect(network: Network): Promise<void> {
-  return new Promise<void>((resolve) =>
-    network["libp2p"].connectionManager.addEventListener(Libp2pEvent.peerDisconnect, () => resolve())
-  );
+  return new Promise<void>((resolve) => network.events.on(NetworkEvent.peerDisconnected, () => resolve()));
 }
 
 /**

@@ -34,7 +34,7 @@ import {
 import * as protocols from "./protocols.js";
 import {collectExactOneTyped} from "./utils/collect.js";
 
-export {getReqRespHandlers, ReqRespHandlers} from "./handlers/index.js";
+export {getReqRespHandlers} from "./handlers/index.js";
 export {ReqRespMethod, RequestTypedContainer} from "./types.js";
 
 export interface ReqRespBeaconNodeModules {

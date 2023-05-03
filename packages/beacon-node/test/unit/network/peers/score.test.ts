@@ -1,7 +1,7 @@
 import {expect} from "chai";
-import {peerIdFromString} from "@libp2p/peer-id";
 import sinon from "sinon";
 import {PeerAction, ScoreState, PeerRpcScoreStore, updateGossipsubScores} from "../../../../src/network/peers/score.js";
+import {peerIdFromString} from "../../../../src/network/peerId.js";
 
 describe("simple block provider score tracking", function () {
   const peer = peerIdFromString("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");

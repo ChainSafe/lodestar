@@ -6,3 +6,4 @@ export * from "./gossip/index.js";
 export * from "./reqresp/ReqRespBeaconNode.js";
 export * from "./util.js";
 export * from "./peers/index.js";
+export * from "./peerId.js";

@@ -1,4 +1,3 @@
-import {PeerId} from "@libp2p/interface-peer-id";
 import {Type} from "@chainsafe/ssz";
 import {ForkLightClient, ForkName, isForkLightClient} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
@@ -120,7 +119,7 @@ export enum Version {
 }
 
 export type OutgoingRequestArgs = {
-  peerId: PeerId;
+  peerId: string;
   method: ReqRespMethod;
   versions: number[];
   requestData: Uint8Array;
@@ -129,7 +128,7 @@ export type OutgoingRequestArgs = {
 export type IncomingRequestArgs = {
   method: ReqRespMethod;
   req: ReqRespRequest;
-  peerId: PeerId;
+  peerId: string;
 };
 
 export type GetReqRespHandlerFn = (method: ReqRespMethod) => ProtocolHandler;

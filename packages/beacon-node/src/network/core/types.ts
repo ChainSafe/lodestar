@@ -1,24 +1,23 @@
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Multiaddr} from "@multiformats/multiaddr";
 import {PublishResult} from "@libp2p/interface-pubsub";
-import {Observable} from "@chainsafe/threads/observable";
 import {routes} from "@lodestar/api";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {phase0} from "@lodestar/types";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
-import {PendingGossipsubMessage} from "../processor/types.js";
 import {NetworkOptions} from "../options.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
 import {OutgoingRequestArgs} from "../reqresp/types.js";
+
+export type MultiaddrStr = string;
+export type PeerIdStr = string;
 
 // Interface shared by main Network class, and all backends
 export interface INetworkCorePublic {
   // Peer manager control
   prepareBeaconCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void>;
   prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): Promise<void>;
-  reStatusPeers(peers: PeerId[]): Promise<void>;
   // reportPeer - Different interface depending on the backend
 
   // REST API getters
@@ -29,10 +28,10 @@ export interface INetworkCorePublic {
   unsubscribeGossipCoreTopics(): Promise<void>;
 
   // Debug
-  connectToPeer(peer: PeerId, multiaddr: Multiaddr[]): Promise<void>;
-  disconnectPeer(peer: PeerId): Promise<void>;
+  connectToPeer(peer: PeerIdStr, multiaddr: MultiaddrStr[]): Promise<void>;
+  disconnectPeer(peer: PeerIdStr): Promise<void>;
   dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]>;
-  dumpPeer(peerIdStr: string): Promise<routes.lodestar.LodestarNodePeer | undefined>;
+  dumpPeer(peerIdStr: PeerIdStr): Promise<routes.lodestar.LodestarNodePeer | undefined>;
   dumpPeerScoreStats(): Promise<PeerScoreStats>;
   dumpGossipPeerScoreStats(): Promise<PeerScoreStatsDump>;
   dumpDiscv5KadValues(): Promise<string[]>;
@@ -46,10 +45,11 @@ export interface INetworkCorePublic {
  */
 export interface INetworkCore extends INetworkCorePublic {
   // Sync method
-  reportPeer(peer: PeerId, action: PeerAction, actionName: string): void;
+  reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;
+  reStatusPeers(peers: PeerIdStr[]): Promise<void>;
 
   // TODO: Duplicated methods with INetwork interface
-  getConnectedPeers(): Promise<PeerId[]>;
+  getConnectedPeers(): Promise<PeerIdStr[]>;
   getConnectedPeerCount(): Promise<number>;
 
   /** Chain must push status updates to the network core */
@@ -86,10 +86,11 @@ export type NetworkWorkerData = {
  */
 export type NetworkWorkerApi = INetworkCorePublic & {
   // Async method through worker boundary
-  reportPeer(peer: PeerId, action: PeerAction, actionName: string): Promise<void>;
+  reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void>;
+  reStatusPeers(peers: PeerIdStr[]): Promise<void>;
 
   // TODO: Duplicated methods with INetwork interface
-  getConnectedPeers(): Promise<PeerId[]>;
+  getConnectedPeers(): Promise<PeerIdStr[]>;
   getConnectedPeerCount(): Promise<number>;
   updateStatus(status: phase0.Status): Promise<void>;
 

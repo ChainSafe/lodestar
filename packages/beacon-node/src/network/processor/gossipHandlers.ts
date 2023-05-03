@@ -1,4 +1,3 @@
-import {peerIdFromString} from "@libp2p/peer-id";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger, prettyBytes} from "@lodestar/utils";
@@ -163,7 +162,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
               break;
             default:
               // TODO: Should it use PeerId or string?
-              core.reportPeer(peerIdFromString(peerIdStr), PeerAction.LowToleranceError, "BadGossipBlock");
+              core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipBlock");
           }
         }
         logger.error("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);

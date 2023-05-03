@@ -1,12 +1,12 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
-import {peerIdFromString} from "@libp2p/peer-id";
 import {ssz, deneb} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
 import {beaconBlocksMaybeBlobsByRange, ReqRespBeaconNode} from "../../../src/network/reqresp/index.js";
 import {BlockInputType} from "../../../src/chain/blocks/types.js";
 import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
+import {peerIdFromString} from "../../../src/network/peerId.js";
 
 describe("beaconBlocksMaybeBlobsByRange", () => {
   before(async function () {

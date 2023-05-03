@@ -8,9 +8,8 @@ import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqres
 import {allForks, altair, phase0, Root, ssz} from "@lodestar/types";
 import {sleep as _sleep} from "@lodestar/utils";
 import {GossipHandlers} from "../../../src/network/gossip/index.js";
-import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
+import {Network, NetworkInitModules, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
 import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
-import {ReqRespHandlers} from "../../../src/network/reqresp/handlers/index.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {testLogger} from "../../utils/logger.js";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
@@ -18,6 +17,7 @@ import {connect, createNetworkModules, onPeerConnect} from "../../utils/network.
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
 import {arrToSource} from "../../unit/network/reqresp/utils.js";
+import {GetReqRespHandlerFn} from "../../../src/network/reqresp/types.js";
 
 /* eslint-disable require-yield, @typescript-eslint/naming-convention */
 
@@ -65,45 +65,28 @@ describe("network / ReqResp", function () {
   }
 
   async function createAndConnectPeers(
-    reqRespHandlersPartial?: Partial<ReqRespHandlers>,
+    getReqRespHandler?: GetReqRespHandlerFn,
     reqRespOpts?: ReqRespBeaconNodeOpts
   ): Promise<[Network, Network]> {
     const controller = new AbortController();
     const peerIdA = await createSecp256k1PeerId();
     const peerIdB = await createSecp256k1PeerId();
 
-    const notImplemented = async function* <T>(): AsyncIterable<T> {
-      throw Error("not implemented");
-    };
-
-    const reqRespHandlers: ReqRespHandlers = {
-      onStatus: async function* onRequest() {
-        yield {
-          data: ssz.phase0.Status.serialize(chain.getStatus()),
-          fork: ForkName.phase0,
-        };
-      },
-      onBeaconBlocksByRange: notImplemented,
-      onBeaconBlocksByRoot: notImplemented,
-      onBlobsSidecarsByRange: notImplemented,
-      onBeaconBlockAndBlobsSidecarByRoot: notImplemented,
-      onLightClientBootstrap: notImplemented,
-      onLightClientUpdatesByRange: notImplemented,
-      onLightClientOptimisticUpdate: notImplemented,
-      onLightClientFinalityUpdate: notImplemented,
-      ...reqRespHandlersPartial,
-    };
+    const notImplemented: GetReqRespHandlerFn = () =>
+      async function* (): AsyncIterable<ResponseOutgoing> {
+        throw Error("not implemented");
+      };
 
     const gossipHandlers = {} as GossipHandlers;
     const opts = {...networkOptsDefault, ...reqRespOpts};
-    const modules = {
+    const modules: Omit<NetworkInitModules, "logger" | "opts" | "peerId"> = {
       config: beaconConfig,
       db,
       chain,
-      reqRespHandlers,
       gossipHandlers,
       signal: controller.signal,
       metrics: null,
+      getReqRespHandler: getReqRespHandler ?? notImplemented,
     };
     const netA = await Network.init({
       ...modules,
