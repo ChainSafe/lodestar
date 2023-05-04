@@ -66,8 +66,9 @@ async function resolveBlockIdOrNull(
   }
 
   if (blockId === "justified") {
+    const justified = forkChoice.getJustifiedBlock();
     return {
-      block: await db.blockArchive.get(forkChoice.getJustifiedBlock().slot),
+      block: await db.block.get(fromHexString(justified.blockRoot)),
       executionOptimistic: false,
     };
   }
