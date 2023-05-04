@@ -3,7 +3,7 @@ import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import deepmerge from "deepmerge";
 import {ELProof, ELStorageProof} from "../../../src/types.js";
-import {isValidAccount, isValidStorageKeys} from "../../../src/utils/verification.js";
+import {isValidAccount, isValidStorageKeys} from "../../../src/utils/validation.js";
 import {invalidStorageProof, validStorageProof} from "../../fixtures/index.js";
 import {createMockLogger} from "../../mocks/logger_mock.js";
 import eoaProof from "../../fixtures/sepolia/eth_getBalance_eoa_proof.json" assert {type: "json"};

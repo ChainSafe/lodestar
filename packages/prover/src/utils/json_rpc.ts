@@ -1,5 +1,6 @@
 import {UNVERIFIED_RESPONSE_CODE} from "../constants.js";
-import {ELRequestPayload, ELResponse} from "../types.js";
+import {ELResponseWithError} from "../types.js";
+import {ELRequestPayload, ELResponse, ELResponseWithResult} from "../types.js";
 
 export function generateRPCResponseForPayload<P, R, E = unknown>(
   payload: ELRequestPayload<P>,
@@ -9,25 +10,42 @@ export function generateRPCResponseForPayload<P, R, E = unknown>(
     readonly data?: E;
     readonly message: string;
   }
-): ELResponse<R> {
-  return error
-    ? {
-        jsonrpc: payload.jsonrpc,
-        id: payload.id,
-        error,
-      }
-    : {
-        jsonrpc: payload.jsonrpc,
-        id: payload.id,
-        result: res,
-      };
+): ELResponse<R, E> {
+  if (res !== undefined && error === undefined) {
+    return {
+      jsonrpc: payload.jsonrpc,
+      id: payload.id,
+      result: res,
+    };
+  }
+
+  if (error !== undefined) {
+    return {
+      jsonrpc: payload.jsonrpc,
+      id: payload.id,
+      error,
+    };
+  }
+
+  throw new Error("Either result or error must be defined.");
+}
+
+export function generateVerifiedResponseForPayload<D, P>(
+  payload: ELRequestPayload<P>,
+  res: D
+): ELResponseWithResult<D> {
+  return {
+    jsonrpc: payload.jsonrpc,
+    id: payload.id,
+    result: res,
+  };
 }
 
 export function generateUnverifiedResponseForPayload<P, D = unknown>(
   payload: ELRequestPayload<P>,
   message: string,
   data?: D
-): ELResponse<never, D> {
+): ELResponseWithError<D> {
   return data !== undefined || data !== null
     ? {
         jsonrpc: payload.jsonrpc,
@@ -48,6 +66,6 @@ export function generateUnverifiedResponseForPayload<P, D = unknown>(
       };
 }
 
-export function isValidResponse<R, E>(response: ELResponse<R, E>): response is ELResponse<R, never> {
-  return response.error === undefined;
+export function isValidResponse<R, E>(response: ELResponse<R, E> | undefined): response is ELResponseWithResult<R> {
+  return response !== undefined && response.error === undefined;
 }

@@ -1,140 +1,77 @@
-import {Logger} from "@lodestar/utils";
-import {NetworkName} from "@lodestar/config/networks";
 import {ELRequestHandler} from "../interfaces.js";
-import {ProofProvider} from "../proof_provider/proof_provider.js";
-import {ELBlock, ELProof, ELRequestPayload, ELResponse, HexString} from "../types.js";
-import {bufferToHex} from "./conversion.js";
+import {ELBlock, ELProof} from "../types.js";
 import {isValidResponse} from "./json_rpc.js";
-import {isValidAccount, isValidBlock, isValidCodeHash, isValidStorageKeys} from "./verification.js";
+import {isBlockNumber} from "./validation.js";
+
+export function getRequestId(): string {
+  // TODO: Find better way to generate random id
+  return (Math.random() * 10000).toFixed(0);
+}
+
+/* eslint-disable @typescript-eslint/naming-convention */
+type ELApi = {
+  eth_getCode: (params: [address: string, block: number | string]) => string;
+  eth_getProof: (params: [address: string, storageKeys: string[], block: number | string]) => ELProof;
+  eth_getBlockByNumber: (params: [block: string | number, hydrated: boolean]) => ELBlock | undefined;
+  eth_getBlockByHash: (params: [block: string, hydrated: boolean]) => ELBlock | undefined;
+};
+type ELApiParams = {
+  [K in keyof ELApi]: Parameters<ELApi[K]>[0];
+};
+type ELApiReturn = {
+  [K in keyof ELApi]: ReturnType<ELApi[K]>;
+};
+/* eslint-enable @typescript-eslint/naming-convention */
 
 export async function getELCode(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handler: ELRequestHandler<[address: string, block: number | string], string>,
-  args: [address: string, block: number | string]
-): Promise<string> {
-  // TODO: Find better way to generate random id
+  handler: ELRequestHandler<ELApiParams["eth_getCode"], ELApiReturn["eth_getCode"]>,
+  args: ELApiParams["eth_getCode"]
+): Promise<ELApiReturn["eth_getCode"]> {
   const codeResult = await handler({
     jsonrpc: "2.0",
     method: "eth_getCode",
     params: args,
-    id: (Math.random() * 10000).toFixed(0),
+    id: getRequestId(),
   });
 
-  if (!codeResult || !codeResult.result) {
-    throw new Error("Can not find code for given address.");
+  if (!isValidResponse(codeResult)) {
+    throw new Error(`Can not find code. address=${args[0]}`);
   }
 
   return codeResult.result;
 }
 
 export async function getELProof(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handler: ELRequestHandler<any, any>,
-  args: [address: string, storageKeys: string[], block: number | string]
-): Promise<ELProof> {
-  // TODO: Find better way to generate random id
+  handler: ELRequestHandler<ELApiParams["eth_getProof"], ELApiReturn["eth_getProof"]>,
+  args: ELApiParams["eth_getProof"]
+): Promise<ELApiReturn["eth_getProof"]> {
   const proof = await handler({
     jsonrpc: "2.0",
     method: "eth_getProof",
     params: args,
-    id: (Math.random() * 10000).toFixed(0),
+    id: getRequestId(),
   });
-  if (!proof) {
-    throw new Error("Can not find proof for given address.");
+
+  if (!isValidResponse(proof)) {
+    throw new Error(`Can not find proof. address=${args[0]}`);
   }
-  return proof.result as ELProof;
+  return proof.result;
 }
 
-export async function fetchAndVerifyAccount({
-  address,
-  proofProvider,
-  logger,
-  handler,
-  block,
-}: {
-  address: HexString;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handler: ELRequestHandler<any, any>;
-  proofProvider: ProofProvider;
-  logger: Logger;
-  block?: number | string;
-}): Promise<{data: ELProof; valid: true} | {valid: false; data?: undefined}> {
-  const executionPayload = await proofProvider.getExecutionPayload(block ?? "latest");
-  const proof = await getELProof(handler, [address, [], bufferToHex(executionPayload.blockHash)]);
+export async function getELBlock(
+  handler: ELRequestHandler<ELApiParams["eth_getBlockByNumber"], ELApiReturn["eth_getBlockByNumber"]>,
+  args: ELApiParams["eth_getBlockByNumber"]
+): Promise<ELApiReturn["eth_getBlockByNumber"]> {
+  const block = await handler({
+    jsonrpc: "2.0",
+    method: isBlockNumber(args[0]) ? "eth_getBlockByNumber" : "eth_getBlockByHash",
+    params: args,
+    id: getRequestId(),
+  });
 
-  if (
-    (await isValidAccount({
-      address: address,
-      stateRoot: executionPayload.stateRoot,
-      proof,
-      logger,
-    })) &&
-    (await isValidStorageKeys({storageKeys: [], proof, logger}))
-  ) {
-    return {data: proof, valid: true};
+  if (!isValidResponse(block)) {
+    throw new Error(`Can not find block. id=${args[0]}`);
   }
 
-  return {valid: false};
-}
-
-export async function fetchAndVerifyCode({
-  address,
-  proofProvider,
-  logger,
-  handler,
-  codeHash,
-  block,
-}: {
-  address: HexString;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handler: ELRequestHandler<any, any>;
-  proofProvider: ProofProvider;
-  logger: Logger;
-  codeHash: HexString;
-  block?: number | string;
-}): Promise<{data: string; valid: true} | {valid: false; data?: undefined}> {
-  const executionPayload = await proofProvider.getExecutionPayload(block ?? "latest");
-  const code = await getELCode(handler, [address, bufferToHex(executionPayload.blockHash)]);
-
-  if (await isValidCodeHash({codeHash, codeResponse: code, logger})) {
-    return {data: code, valid: true};
-  }
-
-  return {valid: false};
-}
-
-export async function fetchAndVerifyBlock({
-  payload,
-  proofProvider,
-  logger,
-  handler,
-  network,
-}: {
-  payload: ELRequestPayload<[block: string | number, hydrated: boolean]>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handler: ELRequestHandler<any, any>;
-  proofProvider: ProofProvider;
-  logger: Logger;
-  network: NetworkName;
-}): Promise<{data: ELResponse<ELBlock>; valid: true} | {valid: false; data?: undefined}> {
-  const executionPayload = await proofProvider.getExecutionPayload(payload.params[0]);
-  const elResponse = await (handler as ELRequestHandler<[block: string | number, hydrated: boolean], ELBlock>)(payload);
-
-  // If response is not valid from the EL we don't need to verify it
-  if (elResponse && !isValidResponse(elResponse)) return {data: elResponse, valid: true};
-
-  if (
-    elResponse &&
-    elResponse.result &&
-    (await isValidBlock({
-      logger,
-      block: elResponse.result,
-      executionPayload,
-      network,
-    }))
-  ) {
-    return {data: elResponse, valid: true};
-  }
-
-  return {valid: false};
+  return block.result;
 }

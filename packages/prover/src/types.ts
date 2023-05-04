@@ -6,18 +6,28 @@ export interface ELRequestPayload<T = unknown[]> {
   readonly requestOptions?: unknown;
 }
 
-// Make the very flexible el response type to match different libraries easily
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ELResponse<T = any, E = any> = {
+export type ELResponseWithResult<T> = {
   readonly id: number | string;
   jsonrpc: string;
-  result?: T;
-  error?: {
+  result: T;
+  error?: never;
+};
+
+export type ELResponseWithError<T> = {
+  readonly id: number | string;
+  jsonrpc: string;
+  result?: never;
+  error: {
     readonly code?: number;
-    readonly data?: E;
+    readonly data?: T;
     readonly message: string;
   };
 };
+
+// Make the very flexible el response type to match different libraries easily
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ELResponse<T = any, E = any> = ELResponseWithResult<T> | ELResponseWithError<E>;
+
 export interface ELProof {
   readonly address: string;
   readonly balance: string;
