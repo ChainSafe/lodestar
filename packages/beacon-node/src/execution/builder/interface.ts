@@ -6,7 +6,7 @@ export interface IExecutionBuilder {
    * an advance fcU to be issued to the engine port before payload header
    * fetch
    */
-  readonly issueLocalFcUForBlockProduction?: boolean;
+  readonly issueLocalFcUWithFeeRecipient?: string;
   status: boolean;
   /** Window to inspect missed slots for enabling/disabling builder circuit breaker */
   faultInspectionWindow: number;
