@@ -140,7 +140,6 @@ export interface IBeaconChain {
   persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void;
   updateBuilderStatus(clockSlot: Slot): void;
 
-  isProcessingCurrentSlotBlock(): boolean;
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
 }

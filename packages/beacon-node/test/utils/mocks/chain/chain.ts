@@ -243,10 +243,6 @@ export class MockBeaconChain implements IBeaconChain {
   async updateBeaconProposerData(): Promise<void> {}
   updateBuilderStatus(): void {}
 
-  isProcessingCurrentSlotBlock(): boolean {
-    return false;
-  }
-
   regenCanAcceptWork(): boolean {
     return true;
   }

@@ -133,7 +133,6 @@ export class BeaconChain implements IBeaconChain {
   private readonly exchangeTransitionConfigurationEverySlots: number;
 
   private processShutdownCallback: ProcessShutdownCallback;
-  private _isProcessingCurrentSlotBlock = false;
 
   constructor(
     opts: IChainOptions,
@@ -283,10 +282,6 @@ export class BeaconChain implements IBeaconChain {
     this.stateCache.clear();
     this.checkpointStateCache.clear();
     await this.bls.close();
-  }
-
-  isProcessingCurrentSlotBlock(): boolean {
-    return this._isProcessingCurrentSlotBlock;
   }
 
   regenCanAcceptWork(): boolean {
@@ -456,14 +451,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void> {
-    try {
-      if (block.block.message.slot === this.clock.currentSlot) {
-        this._isProcessingCurrentSlotBlock = true;
-      }
-      await this.blockProcessor.processBlocksJob([block], opts);
-    } finally {
-      this._isProcessingCurrentSlotBlock = false;
-    }
+    return this.blockProcessor.processBlocksJob([block], opts);
   }
 
   async processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void> {
@@ -659,7 +647,6 @@ export class BeaconChain implements IBeaconChain {
 
   private onClockSlot(slot: Slot): void {
     this.logger.verbose("Clock slot", {slot});
-    this._isProcessingCurrentSlotBlock = false;
 
     // CRITICAL UPDATE
     if (this.forkChoice.irrecoverableError) {
