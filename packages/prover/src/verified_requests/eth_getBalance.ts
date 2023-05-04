@@ -18,6 +18,6 @@ export const eth_getBalance: ELVerifiedRequestHandler<[address: string, block?: 
     return generateRPCResponseForPayload(payload, result.data.balance);
   }
 
-  logger.error("Request could not be verified.");
+  logger.error("Request could not be verified.", {method: payload.method, params: JSON.stringify(payload.params)});
   return generateUnverifiedResponseForPayload(payload, "eth_getBalance request can not be verified.");
 };

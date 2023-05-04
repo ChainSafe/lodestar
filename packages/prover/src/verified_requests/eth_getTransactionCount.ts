@@ -16,6 +16,6 @@ export const eth_getTransactionCount: ELVerifiedRequestHandler<
     return generateRPCResponseForPayload(payload, result.data.nonce);
   }
 
-  logger.error("Request could not be verified.");
+  logger.error("Request could not be verified.", {method: payload.method, params: JSON.stringify(payload.params)});
   return generateUnverifiedResponseForPayload(payload, "eth_getTransactionCount request can not be verified.");
 };

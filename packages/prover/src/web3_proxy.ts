@@ -73,7 +73,7 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
   logger.info("Creating http server");
   const proxyServer = http.createServer(function proxyRequestHandler(req, res) {
     if (req.url === "/proxy") {
-      logger.verbose("Forwarding request to execution layer");
+      logger.debug("Forwarding request to execution layer");
       proxy.web(req, res);
       return;
     }

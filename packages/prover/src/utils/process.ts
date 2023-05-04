@@ -8,6 +8,7 @@ import {eth_getTransactionCount} from "../verified_requests/eth_getTransactionCo
 import {eth_getBlockByHash} from "../verified_requests/eth_getBlockByHash.js";
 import {eth_getBlockByNumber} from "../verified_requests/eth_getBlockByNumber.js";
 import {eth_getCode} from "../verified_requests/eth_getCode.js";
+import {eth_call} from "../verified_requests/eth_call.js";
 
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
 export const supportedELRequests: Record<string, ELVerifiedRequestHandler<any, any>> = {
@@ -16,6 +17,7 @@ export const supportedELRequests: Record<string, ELVerifiedRequestHandler<any, a
   eth_getBlockByHash: eth_getBlockByHash,
   eth_getBlockByNumber: eth_getBlockByNumber,
   eth_getCode: eth_getCode,
+  eth_call: eth_call,
 };
 /* eslint-enable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any*/
 
@@ -37,7 +39,7 @@ export async function processAndVerifyRequest({
   const verifiedHandler = supportedELRequests[payload.method];
 
   if (verifiedHandler !== undefined) {
-    logger.verbose("Verified request handler found", {method: payload.method});
+    logger.debug("Verified request handler found", {method: payload.method});
     return verifiedHandler({payload, handler, proofProvider, logger, network});
   }
 

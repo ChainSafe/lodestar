@@ -36,7 +36,11 @@ export const eth_call: ELVerifiedRequestHandler<ELApiParams["call"], ELApiReturn
 
     return generateRPCResponseForPayload(payload, result);
   } catch (err) {
-    logger.error("Request could not be verified.");
+    logger.error(
+      "Request could not be verified.",
+      {method: payload.method, params: JSON.stringify(payload.params)},
+      err as Error
+    );
     return generateUnverifiedResponseForPayload(payload, (err as Error).message);
   }
 };

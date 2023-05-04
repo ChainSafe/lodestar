@@ -1,29 +1,29 @@
-import { BlockData, HeaderData } from "@ethereumjs/block";
-import { ELBlock, ELTransaction } from "../types.js";
-import { isTruthy } from "./assertion.js";
+import {BlockData, HeaderData} from "@ethereumjs/block";
+import {ELBlock, ELTransaction} from "../types.js";
+import {isTruthy} from "./assertion.js";
 
-export function numberToHex(n: number | bigint): string {
-  return "0x" + n.toString(16);
+export function numberToHex(num: number | bigint): string {
+  return "0x" + num.toString(16);
 }
 
-export function hexToNumber(n: string): number {
-  return n.startsWith("0x") ? parseInt(n.slice(2), 16) : parseInt(n, 16);
+export function hexToNumber(num: string): number {
+  return num.startsWith("0x") ? parseInt(num.slice(2), 16) : parseInt(num, 16);
 }
 
-export function hexToBigInt(n: string): bigint {
-  return n.startsWith("0x") ? BigInt(n) : BigInt(`0x${n}`);
+export function hexToBigInt(num: string): bigint {
+  return num.startsWith("0x") ? BigInt(num) : BigInt(`0x${num}`);
 }
 
-export function bigIntToHex(n: bigint): string {
-  return `0x${n.toString(16)}`;
+export function bigIntToHex(num: bigint): string {
+  return `0x${num.toString(16)}`;
 }
 
 export function bufferToHex(buffer: Buffer | Uint8Array): string {
   return "0x" + Buffer.from(buffer).toString("hex");
 }
 
-export function hexToBuffer(v: string): Buffer {
-  return Buffer.from(v.replace("0x", ""), "hex");
+export function hexToBuffer(val: string): Buffer {
+  return Buffer.from(val.replace("0x", ""), "hex");
 }
 
 export function padLeft<T extends Buffer | Uint8Array>(v: T, length: number): T {

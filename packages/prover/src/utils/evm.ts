@@ -1,24 +1,24 @@
-import { Blockchain } from "@ethereumjs/blockchain";
-import { Account, Address } from "@ethereumjs/util";
-import { VM } from "@ethereumjs/vm";
-import { NetworkName } from "@lodestar/config/networks";
-import { allForks } from "@lodestar/types";
-import { Logger } from "@lodestar/utils";
-import { ZERO_ADDRESS } from "../constants.js";
-import { ProofProvider } from "../proof_provider/proof_provider.js";
-import { ELApiHandlers, ELBlock, ELProof, ELTransaction, HexString } from "../types.js";
-import {
-  bufferToHex,
-  hexToBigInt,
-  hexToBuffer,
-  numberToHex,
-  padLeft
-} from "./conversion.js";
-import { elRpc, getChainCommon } from "./execution.js";
-import { isValidResponse } from "./json_rpc.js";
-import { isValidAccount, isValidCodeHash, isValidStorageKeys } from "./validation.js";
+import {Blockchain} from "@ethereumjs/blockchain";
+import {Account, Address} from "@ethereumjs/util";
+import {VM} from "@ethereumjs/vm";
+import {NetworkName} from "@lodestar/config/networks";
+import {allForks} from "@lodestar/types";
+import {Logger} from "@lodestar/utils";
+import {ZERO_ADDRESS} from "../constants.js";
+import {ProofProvider} from "../proof_provider/proof_provider.js";
+import {ELApiHandlers, ELBlock, ELProof, ELTransaction, HexString} from "../types.js";
+import {bufferToHex, hexToBigInt, hexToBuffer, numberToHex, padLeft} from "./conversion.js";
+import {elRpc, getChainCommon} from "./execution.js";
+import {isValidResponse} from "./json_rpc.js";
+import {isValidAccount, isValidCodeHash, isValidStorageKeys} from "./validation.js";
 
-export async function createEVM({proofProvider, network}:{proofProvider: ProofProvider, network: NetworkName}): Promise<VM> {
+export async function createEVM({
+  proofProvider,
+  network,
+}: {
+  proofProvider: ProofProvider;
+  network: NetworkName;
+}): Promise<VM> {
   const common = getChainCommon(network);
   const blockchain = await Blockchain.create({common});
 
@@ -59,6 +59,7 @@ export async function getEVMWithState({
       data: tx.data,
       value: tx.value,
       gas: tx.gas ? tx.gas : numberToHex(gasLimit),
+      gasPrice: "0x0",
     } as ELTransaction,
     blockHashHex,
   ]);
@@ -72,11 +73,11 @@ export async function getEVMWithState({
     storageKeysMap[address] = storageKeys;
   }
 
-  if (!storageKeysMap[tx.from ?? ZERO_ADDRESS]) {
+  if (storageKeysMap[tx.from ?? ZERO_ADDRESS] === undefined) {
     storageKeysMap[tx.from ?? ZERO_ADDRESS] = [];
   }
 
-  if (tx.to && !storageKeysMap[tx.to]) {
+  if (tx.to && storageKeysMap[tx.to] === undefined) {
     storageKeysMap[tx.to] = [];
   }
 
@@ -102,7 +103,7 @@ export async function getEVMWithState({
       true
     );
 
-    if (!isValidCodeHash({codeResponse, logger, codeHash: proof.codeHash})) {
+    if (!(await isValidCodeHash({codeResponse, logger, codeHash: proof.codeHash}))) {
       throw new Error(`Invalid code hash: ${address}`);
     }
 
@@ -112,6 +113,7 @@ export async function getEVMWithState({
   await evm.stateManager.checkpoint();
   for (const [addressHex, {proof, code}] of Object.entries(proofsAndCodes)) {
     const address = Address.fromString(addressHex);
+    const codeBuffer = hexToBuffer(code);
 
     const account = Account.fromAccountData({
       nonce: BigInt(proof.nonce),
@@ -121,15 +123,15 @@ export async function getEVMWithState({
 
     await evm.stateManager.putAccount(address, account);
 
-    for (const storageAccess of proof.storageProof) {
+    for (const {key, value} of proof.storageProof) {
       await evm.stateManager.putContractStorage(
         address,
-        padLeft(hexToBuffer(storageAccess.key), 32),
-        padLeft(hexToBuffer(storageAccess.value), 32)
+        padLeft(hexToBuffer(key), 32),
+        padLeft(hexToBuffer(value), 32)
       );
     }
 
-    if (code !== "0x") await evm.stateManager.putContractCode(address, hexToBuffer(code));
+    if (codeBuffer.byteLength !== 0) await evm.stateManager.putContractCode(address, codeBuffer);
   }
 
   await evm.stateManager.commit();
@@ -148,23 +150,32 @@ export async function executeEVM({
   executionPayload: allForks.ExecutionPayload;
 }): Promise<HexString> {
   const {from, to, gas, gasPrice, maxPriorityFeePerGas, value, data} = tx;
-  const block = await elRpc(handler, "eth_getBlockByHash", [bufferToHex(executionPayload.blockHash), false], true);
+  const {result: block} = await elRpc(
+    handler,
+    "eth_getBlockByHash",
+    [bufferToHex(executionPayload.blockHash), false],
+    true
+  );
 
-  if (!block.result) {
+  if (!block) {
     throw new Error(`Block not found: ${bufferToHex(executionPayload.blockHash)}`);
   }
 
   const {execResult} = await evm.evm.runCall({
     caller: from ? Address.fromString(from) : undefined,
     to: to ? Address.fromString(to) : undefined,
-    gasLimit: hexToBigInt(gas),
+    gasLimit: hexToBigInt(gas ?? block.gasLimit),
     gasPrice: hexToBigInt(gasPrice ?? maxPriorityFeePerGas ?? "0x0"),
-    value: hexToBigInt(value),
+    value: hexToBigInt(value ?? "0x0"),
     data: data ? hexToBuffer(data) : undefined,
     block: {
-      header: evmBlockHeaderFromELBlock(block.result),
+      header: evmBlockHeaderFromELBlock(block),
     },
   });
+
+  if (execResult.exceptionError) {
+    throw new Error(execResult.exceptionError.error);
+  }
 
   return bufferToHex(execResult.returnValue);
 }

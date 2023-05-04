@@ -22,7 +22,7 @@ export const eth_getCode: ELVerifiedRequestHandler<[address: string, block?: num
   });
 
   if (!accountProof.valid) {
-    logger.error("Request could not be verified.");
+    logger.error("Request could not be verified.", {method: payload.method, params: JSON.stringify(payload.params)});
     return generateUnverifiedResponseForPayload(payload, "account for eth_getCode request can not be verified.");
   }
 
@@ -39,6 +39,6 @@ export const eth_getCode: ELVerifiedRequestHandler<[address: string, block?: num
     return generateRPCResponseForPayload(payload, codeProof.data);
   }
 
-  logger.error("Request could not be verified.");
+  logger.error("Request could not be verified.", {method: payload.method, params: JSON.stringify(payload.params)});
   return generateUnverifiedResponseForPayload(payload, "eth_getCode request can not be verified.");
 };

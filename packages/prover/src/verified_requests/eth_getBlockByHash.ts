@@ -17,6 +17,6 @@ export const eth_getBlockByHash: ELVerifiedRequestHandler<[block: string, hydrat
     return generateVerifiedResponseForPayload(payload, result.data);
   }
 
-  logger.error("Request could not be verified.");
+  logger.error("Request could not be verified.", {method: payload.method, params: JSON.stringify(payload.params)});
   return generateUnverifiedResponseForPayload(payload, "eth_getBlockByHash request can not be verified.");
 };
