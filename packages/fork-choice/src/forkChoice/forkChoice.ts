@@ -96,6 +96,8 @@ export class ForkChoice implements IForkChoice {
   private justifiedProposerBoostScore: number | null = null;
   /** The current effective balances */
   private balances: EffectiveBalanceIncrements;
+  /** The deltas returned from computeDeltas() function */
+  private deltas: number[] | null;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -110,6 +112,7 @@ export class ForkChoice implements IForkChoice {
   ) {
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
+    this.deltas = null;
   }
 
   /**
@@ -150,10 +153,42 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
+   * Called while we are waiting for execution engine to return execution payload's status.
+   * This caches the deltas so that we can use it in the next updateHead(true) call in importBlock().
+   * // TODO: can use this block as an optimistic head if validator wants to.
+   */
+  prepareUpdateHead(block: allForks.BeaconBlock): void {
+    if (block.slot !== this.fcStore.currentSlot) {
+      return;
+    }
+    // balances is not changed but votes are changed
+
+    // TODO: In current Lodestar metrics, 100% of forkChoiceRequests result in a changed head.
+    // No need to cache the head anymore
+
+    // Check if scores need to be calculated/updated
+    const oldBalances = this.balances;
+    const newBalances = this.fcStore.justified.balances;
+    this.deltas = computeDeltas(
+      this.protoArray.indices,
+      this.votes,
+      oldBalances,
+      newBalances,
+      this.fcStore.equivocatingIndices
+    );
+
+    // do not update this.balances here since we're not sure if this deltas will be reflected in protoArray
+  }
+
+  /**
    * Run the fork choice rule to determine the head.
    * Update the head cache.
+   * updateHead(false) is equivalent to:
+   *   - prepareUpdateHead() to cache the deltas
+   *   - then updateHead(true) to update the head
+   * Only call updateHead(true) when importBlock() is called.
    *
-   * Very expensive function (400ms / run as of Aug 2021). Call when the head really needs to be re-calculated.
+   * Expensive function (100ms / run as of Apr 2023). Call when the head really needs to be re-calculated.
    *
    * ## Specification
    *
@@ -161,7 +196,7 @@ export class ForkChoice implements IForkChoice {
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_head
    */
-  updateHead(): ProtoBlock {
+  updateHead(skipComputeDeltas = false): ProtoBlock {
     // balances is not changed but votes are changed
 
     // NOTE: In current Lodestar metrics, 100% of forkChoiceRequests this.synced = false.
@@ -173,13 +208,19 @@ export class ForkChoice implements IForkChoice {
     // Check if scores need to be calculated/updated
     const oldBalances = this.balances;
     const newBalances = this.fcStore.justified.balances;
-    const deltas = computeDeltas(
-      this.protoArray.indices,
-      this.votes,
-      oldBalances,
-      newBalances,
-      this.fcStore.equivocatingIndices
-    );
+    const deltas =
+      skipComputeDeltas && this.deltas !== null
+        ? this.deltas
+        : computeDeltas(
+            this.protoArray.indices,
+            this.votes,
+            oldBalances,
+            newBalances,
+            this.fcStore.equivocatingIndices
+          );
+    this.deltas = null;
+
+    // always update this.balances here since we're sure that this deltas will be reflected in protoArray
     this.balances = newBalances;
     /**
      * The structure in line with deltas to propagate boost up the branch
@@ -1094,6 +1135,7 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#on_tick
    */
   private onTick(time: Slot): void {
+    this.deltas = null;
     const previousSlot = this.fcStore.currentSlot;
 
     if (time > previousSlot + 1) {

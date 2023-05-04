@@ -61,7 +61,8 @@ export interface IForkChoice {
    */
   getHeadRoot(): RootHex;
   getHead(): ProtoBlock;
-  updateHead(): ProtoBlock;
+  prepareUpdateHead(block: allForks.BeaconBlock): void;
+  updateHead(skipComputeDeltas?: boolean): ProtoBlock;
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
