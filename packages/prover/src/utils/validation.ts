@@ -1,5 +1,4 @@
 import {Block} from "@ethereumjs/block";
-import {Common, CustomChain, Hardfork} from "@ethereumjs/common";
 import {RLP} from "@ethereumjs/rlp";
 import {Trie} from "@ethereumjs/trie";
 import {Account, KECCAK256_NULL_S} from "@ethereumjs/util";
@@ -9,6 +8,7 @@ import {Bytes32, allForks} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {ELBlock, ELProof, ELStorageProof, HexString} from "../types.js";
 import {blockDataFromELBlock, bufferToHex, hexToBuffer, padLeft} from "./conversion.js";
+import {getChainCommon} from "./execution.js";
 
 const emptyAccountSerialize = new Account().serialize();
 const storageKeyLength = 32;
@@ -91,21 +91,6 @@ export async function isValidStorageKeys({
   return true;
 }
 
-function networkToChainCommon(network: NetworkName): Common {
-  switch (network) {
-    case "mainnet":
-    case "goerli":
-    case "ropsten":
-    case "sepolia":
-      // TODO: Not sure how to detect the fork during runtime
-      return new Common({chain: network, hardfork: Hardfork.Shanghai});
-    case "gnosis":
-      return new Common({chain: CustomChain.xDaiChain});
-    default:
-      throw new Error(`Non supported network "${network}"`);
-  }
-}
-
 export async function isValidBlock({
   executionPayload,
   block,
@@ -117,7 +102,7 @@ export async function isValidBlock({
   logger: Logger;
   network: NetworkName;
 }): Promise<boolean> {
-  const common = networkToChainCommon(network);
+  const common = getChainCommon(network);
   common.setHardforkByBlockNumber(executionPayload.blockNumber, undefined, executionPayload.timestamp);
 
   const blockObject = Block.fromBlockData(blockDataFromELBlock(block), {common});

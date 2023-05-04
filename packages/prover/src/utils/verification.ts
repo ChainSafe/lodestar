@@ -30,6 +30,7 @@ export async function verifyAccount({
     proof,
     logger,
   });
+
   // If account is invalid don't check the storage
   const validStorage = validAccount && (await isValidStorageKeys({storageKeys: [], proof, logger}));
 

@@ -1,5 +1,7 @@
+import {Common, CustomChain, Hardfork} from "@ethereumjs/common";
+import {NetworkName} from "@lodestar/config/networks";
 import {ELRequestHandler} from "../interfaces.js";
-import {ELBlock, ELProof} from "../types.js";
+import {ELApiHandlers, ELApiParams, ELApiReturn, ELResponse, ELResponseWithResult} from "../types.js";
 import {isValidResponse} from "./json_rpc.js";
 import {isBlockNumber} from "./validation.js";
 
@@ -8,31 +10,31 @@ export function getRequestId(): string {
   return (Math.random() * 10000).toFixed(0);
 }
 
-/* eslint-disable @typescript-eslint/naming-convention */
-type ELApi = {
-  eth_getCode: (params: [address: string, block: number | string]) => string;
-  eth_getProof: (params: [address: string, storageKeys: string[], block: number | string]) => ELProof;
-  eth_getBlockByNumber: (params: [block: string | number, hydrated: boolean]) => ELBlock | undefined;
-  eth_getBlockByHash: (params: [block: string, hydrated: boolean]) => ELBlock | undefined;
-};
-type ELApiParams = {
-  [K in keyof ELApi]: Parameters<ELApi[K]>[0];
-};
-type ELApiReturn = {
-  [K in keyof ELApi]: ReturnType<ELApi[K]>;
-};
-/* eslint-enable @typescript-eslint/naming-convention */
-
-export async function getELCode(
-  handler: ELRequestHandler<ELApiParams["eth_getCode"], ELApiReturn["eth_getCode"]>,
-  args: ELApiParams["eth_getCode"]
-): Promise<ELApiReturn["eth_getCode"]> {
-  const codeResult = await handler({
+export async function elRpc<
+  P,
+  R,
+  E extends boolean = false,
+  Return = E extends true ? ELResponseWithResult<R> : ELResponse<R> | undefined
+>(handler: ELRequestHandler<P, R>, method: string, args: P, raiseError?: E): Promise<Return> {
+  const response = await handler({
     jsonrpc: "2.0",
-    method: "eth_getCode",
+    method,
     params: args,
     id: getRequestId(),
   });
+
+  if (raiseError && !isValidResponse(response)) {
+    throw new Error(`Invalid response from RPC. method=${method} args=${JSON.stringify(args)}`);
+  }
+
+  return response as Return;
+}
+
+export async function getELCode(
+  handler: ELApiHandlers["eth_getCode"],
+  args: ELApiParams["eth_getCode"]
+): Promise<ELApiReturn["eth_getCode"]> {
+  const codeResult = await elRpc(handler, "eth_getCode", args);
 
   if (!isValidResponse(codeResult)) {
     throw new Error(`Can not find code. address=${args[0]}`);
@@ -42,15 +44,10 @@ export async function getELCode(
 }
 
 export async function getELProof(
-  handler: ELRequestHandler<ELApiParams["eth_getProof"], ELApiReturn["eth_getProof"]>,
+  handler: ELApiHandlers["eth_getProof"],
   args: ELApiParams["eth_getProof"]
 ): Promise<ELApiReturn["eth_getProof"]> {
-  const proof = await handler({
-    jsonrpc: "2.0",
-    method: "eth_getProof",
-    params: args,
-    id: getRequestId(),
-  });
+  const proof = await elRpc(handler, "eth_getProof", args);
 
   if (!isValidResponse(proof)) {
     throw new Error(`Can not find proof. address=${args[0]}`);
@@ -59,19 +56,29 @@ export async function getELProof(
 }
 
 export async function getELBlock(
-  handler: ELRequestHandler<ELApiParams["eth_getBlockByNumber"], ELApiReturn["eth_getBlockByNumber"]>,
+  handler: ELApiHandlers["eth_getBlockByNumber"],
   args: ELApiParams["eth_getBlockByNumber"]
 ): Promise<ELApiReturn["eth_getBlockByNumber"]> {
-  const block = await handler({
-    jsonrpc: "2.0",
-    method: isBlockNumber(args[0]) ? "eth_getBlockByNumber" : "eth_getBlockByHash",
-    params: args,
-    id: getRequestId(),
-  });
+  const block = await elRpc(handler, isBlockNumber(args[0]) ? "eth_getBlockByNumber" : "eth_getBlockByHash", args);
 
   if (!isValidResponse(block)) {
     throw new Error(`Can not find block. id=${args[0]}`);
   }
 
   return block.result;
+}
+
+export function getChainCommon(network: NetworkName): Common {
+  switch (network) {
+    case "mainnet":
+    case "goerli":
+    case "ropsten":
+    case "sepolia":
+      // TODO: Not sure how to detect the fork during runtime
+      return new Common({chain: network, hardfork: Hardfork.Shanghai});
+    case "gnosis":
+      return new Common({chain: CustomChain.xDaiChain});
+    default:
+      throw new Error(`Non supported network "${network}"`);
+  }
 }

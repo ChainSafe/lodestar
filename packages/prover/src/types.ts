@@ -1,3 +1,5 @@
+import {ELRequestHandler} from "./interfaces.js";
+
 export interface ELRequestPayload<T = unknown[]> {
   readonly jsonrpc: string & ("2.0" | "1.0");
   readonly id: number | string;
@@ -27,6 +29,10 @@ export type ELResponseWithError<T> = {
 // Make the very flexible el response type to match different libraries easily
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ELResponse<T = any, E = any> = ELResponseWithResult<T> | ELResponseWithError<E>;
+
+export type HexString = string;
+
+export type ELBlockNumberOrTag = number | string | "latest" | "earliest" | "pending";
 
 export interface ELProof {
   readonly address: string;
@@ -62,6 +68,7 @@ export interface ELTransaction {
   readonly v: string;
   readonly transactionIndex: string;
   readonly accessList?: {address: string; storageKeys: string[]}[];
+  readonly data?: string;
 }
 
 export interface ELBlock {
@@ -88,5 +95,36 @@ export interface ELBlock {
   readonly uncles: ELBlock[];
   readonly transactions: ELTransaction[];
 }
+
+export interface ELAccessList {
+  readonly address: HexString;
+  readonly storageKeys: HexString[];
+}
+
+export interface ELAccessListResponse {
+  readonly error: string;
+  readonly gasUsed: HexString;
+  readonly accessList: ELAccessList[];
+}
+
 export type ELStorageProof = Pick<ELProof, "storageHash" | "storageProof">;
-export type HexString = string;
+
+/* eslint-disable @typescript-eslint/naming-convention */
+export type ELApi = {
+  eth_createAccessList: (transaction: ELTransaction, block?: ELBlockNumberOrTag) => ELAccessListResponse;
+  call: (transaction: ELTransaction, block?: ELBlockNumberOrTag) => HexString;
+  eth_getCode: (address: string, block?: ELBlockNumberOrTag) => HexString;
+  eth_getProof: (address: string, storageKeys: string[], block?: ELBlockNumberOrTag) => ELProof;
+  eth_getBlockByNumber: (block: ELBlockNumberOrTag, hydrated?: boolean) => ELBlock | undefined;
+  eth_getBlockByHash: (block: string, hydrated?: boolean) => ELBlock | undefined;
+};
+export type ELApiParams = {
+  [K in keyof ELApi]: Parameters<ELApi[K]>;
+};
+export type ELApiReturn = {
+  [K in keyof ELApi]: ReturnType<ELApi[K]>;
+};
+export type ELApiHandlers = {
+  [K in keyof ELApi]: ELRequestHandler<ELApiParams[K], ELApiReturn[K]>;
+};
+/* eslint-enable @typescript-eslint/naming-convention */
