@@ -4,6 +4,7 @@ import {TopicValidatorResult} from "@libp2p/interface-pubsub";
 import {phase0} from "@lodestar/types";
 import {BlockInput} from "../chain/blocks/types.js";
 import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
+import {PeerIdStr} from "../util/peerId.js";
 import {EventDirection} from "../util/workerEvents.js";
 import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
@@ -25,14 +26,14 @@ export enum NetworkEvent {
 }
 
 export type NetworkEventData = {
-  [NetworkEvent.peerConnected]: {peer: PeerId; status: phase0.Status};
-  [NetworkEvent.peerDisconnected]: {peer: PeerId};
+  [NetworkEvent.peerConnected]: {peer: PeerIdStr; status: phase0.Status};
+  [NetworkEvent.peerDisconnected]: {peer: PeerIdStr};
   [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId};
   [NetworkEvent.unknownBlockParent]: {blockInput: BlockInput; peer: string};
   [NetworkEvent.pendingGossipsubMessage]: PendingGossipsubMessage;
   [NetworkEvent.gossipMessageValidationResult]: {
     msgId: string;
-    propagationSource: PeerId;
+    propagationSource: PeerIdStr;
     acceptance: TopicValidatorResult;
   };
 };

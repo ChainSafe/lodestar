@@ -31,7 +31,7 @@ import {NetworkEventBus} from "../events.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {LocalStatusCache} from "../statusCache.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
-import {peerIdFromString, peerIdToString} from "../peerId.js";
+import {peerIdFromString, peerIdToString} from "../../util/peerId.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
 import {INetworkCore, MultiaddrStr, PeerIdStr} from "./types.js";
 
@@ -280,7 +280,7 @@ export class NetworkCore implements INetworkCore {
     this.peerManager.reportPeer(peerIdFromString(peer), action, actionName);
   }
   async reStatusPeers(peers: PeerIdStr[]): Promise<void> {
-    this.peerManager.reStatusPeers(peers.map((peer) => peerIdFromString(peer)));
+    this.peerManager.reStatusPeers(peers);
   }
 
   /**
@@ -340,7 +340,7 @@ export class NetworkCore implements INetworkCore {
     ].filter((addr): addr is string => Boolean(addr));
 
     return {
-      peerId: this.libp2p.peerId.toString(),
+      peerId: peerIdToString(this.libp2p.peerId),
       enr: enr?.encodeTxt() || "",
       discoveryAddresses,
       p2pAddresses: this.libp2p.getMultiaddrs().map((m) => m.toString()),

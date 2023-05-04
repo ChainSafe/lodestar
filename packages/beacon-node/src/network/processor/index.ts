@@ -336,7 +336,7 @@ export class NetworkProcessor {
     const acceptance = await this.gossipValidatorFn(
       message.topic,
       message.msg,
-      message.propagationSource.toString(),
+      message.propagationSource,
       message.seenTimestampSec,
       message.msgSlot ?? null
     );

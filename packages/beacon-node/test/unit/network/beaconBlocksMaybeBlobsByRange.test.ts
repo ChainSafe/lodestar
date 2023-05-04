@@ -5,7 +5,6 @@ import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lo
 import {beaconBlocksMaybeBlobsByRange} from "../../../src/network/reqresp/index.js";
 import {BlockInputType} from "../../../src/chain/blocks/types.js";
 import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
-import {peerIdFromString} from "../../../src/network/peerId.js";
 import {INetwork} from "../../../src/network/interface.js";
 
 describe("beaconBlocksMaybeBlobsByRange", () => {
@@ -15,7 +14,7 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
     loadEthereumTrustedSetup();
   });
 
-  const peerId = peerIdFromString("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
+  const peerId = "Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi";
 
   /* eslint-disable @typescript-eslint/naming-convention */
   const chainConfig = createChainForkConfig({

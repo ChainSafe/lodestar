@@ -12,7 +12,7 @@ import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/
 import {Clock} from "../../util/clock.js";
 import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
-import {peerIdToString} from "../peerId.js";
+import {peerIdToString} from "../../util/peerId.js";
 import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 import {NetworkCore} from "./networkCore.js";
 import {
@@ -42,7 +42,7 @@ const logger = createWinstonLogger({module: "libp2p-w", format: "human"}, [
 ]);
 
 // Alive and consistency check
-logger.info("libp2p worker started", {peer: peerId.toString()});
+logger.info("libp2p worker started", {peer: peerIdToString(peerId)});
 
 const abortController = new AbortController();
 

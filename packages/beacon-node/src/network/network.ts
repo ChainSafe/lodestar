@@ -11,7 +11,7 @@ import {ForkName, ForkSeq} from "@lodestar/params";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
-import {PeerSet} from "../util/peerMap.js";
+import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {IClock} from "../util/clock.js";
 import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
 import {NetworkOptions} from "./options.js";
@@ -83,7 +83,7 @@ export class Network implements INetwork {
   private readonly aggregatorTracker: AggregatorTracker;
 
   private subscribedToCoreTopics = false;
-  private connectedPeers = new PeerSet();
+  private connectedPeers = new Set<PeerIdStr>();
   private regossipBlsChangesPromise: Promise<void> | null = null;
   private closed = false;
 
@@ -166,7 +166,7 @@ export class Network implements INetwork {
     );
 
     const multiaddresses = opts.localMultiaddrs?.join(",");
-    logger.info(`PeerId ${peerId.toString()}, Multiaddrs ${multiaddresses}`);
+    logger.info(`PeerId ${peerIdToString(peerId)}, Multiaddrs ${multiaddresses}`);
 
     return new Network({
       opts,
@@ -218,16 +218,16 @@ export class Network implements INetwork {
   /**
    * The app layer needs to refresh the status of some peers. The sync have reached a target
    */
-  async reStatusPeers(peers: PeerId[]): Promise<void> {
-    return this.core.reStatusPeers(peers.map((peer) => peer.toString()));
+  async reStatusPeers(peers: PeerIdStr[]): Promise<void> {
+    return this.core.reStatusPeers(peers);
   }
 
-  async reportPeer(peer: PeerId, action: PeerAction, actionName: string): Promise<void> {
-    return this.core.reportPeer(peer.toString(), action, actionName);
+  async reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
+    return this.core.reportPeer(peer, action, actionName);
   }
 
   // REST API queries
-  getConnectedPeers(): PeerId[] {
+  getConnectedPeers(): PeerIdStr[] {
     return Array.from(this.connectedPeers.values());
   }
   getConnectedPeerCount(): number {
@@ -401,7 +401,7 @@ export class Network implements INetwork {
   // ReqResp
 
   async sendBeaconBlocksByRange(
-    peerId: PeerId,
+    peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<allForks.SignedBeaconBlock[]> {
     return collectSequentialBlocksInRange(
@@ -417,7 +417,7 @@ export class Network implements INetwork {
   }
 
   async sendBeaconBlocksByRoot(
-    peerId: PeerId,
+    peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRootRequest
   ): Promise<allForks.SignedBeaconBlock[]> {
     return collectMaxResponseTyped(
@@ -433,21 +433,21 @@ export class Network implements INetwork {
     );
   }
 
-  async sendLightClientBootstrap(peerId: PeerId, request: Root): Promise<allForks.LightClientBootstrap> {
+  async sendLightClientBootstrap(peerId: PeerIdStr, request: Root): Promise<allForks.LightClientBootstrap> {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientBootstrap, [Version.V1], request),
       responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap]
     );
   }
 
-  async sendLightClientOptimisticUpdate(peerId: PeerId): Promise<allForks.LightClientOptimisticUpdate> {
+  async sendLightClientOptimisticUpdate(peerId: PeerIdStr): Promise<allForks.LightClientOptimisticUpdate> {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientOptimisticUpdate, [Version.V1], null),
       responseSszTypeByMethod[ReqRespMethod.LightClientOptimisticUpdate]
     );
   }
 
-  async sendLightClientFinalityUpdate(peerId: PeerId): Promise<allForks.LightClientFinalityUpdate> {
+  async sendLightClientFinalityUpdate(peerId: PeerIdStr): Promise<allForks.LightClientFinalityUpdate> {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientFinalityUpdate, [Version.V1], null),
       responseSszTypeByMethod[ReqRespMethod.LightClientFinalityUpdate]
@@ -455,7 +455,7 @@ export class Network implements INetwork {
   }
 
   async sendLightClientUpdatesByRange(
-    peerId: PeerId,
+    peerId: PeerIdStr,
     request: altair.LightClientUpdatesByRange
   ): Promise<allForks.LightClientUpdate[]> {
     return collectMaxResponseTyped(
@@ -466,7 +466,7 @@ export class Network implements INetwork {
   }
 
   async sendBlobsSidecarsByRange(
-    peerId: PeerId,
+    peerId: PeerIdStr,
     request: deneb.BlobsSidecarsByRangeRequest
   ): Promise<deneb.BlobsSidecar[]> {
     return collectMaxResponseTyped(
@@ -477,7 +477,7 @@ export class Network implements INetwork {
   }
 
   async sendBeaconBlockAndBlobsSidecarByRoot(
-    peerId: PeerId,
+    peerId: PeerIdStr,
     request: deneb.BeaconBlockAndBlobsSidecarByRootRequest
   ): Promise<deneb.SignedBeaconBlockAndBlobsSidecar[]> {
     return collectMaxResponseTyped(
@@ -488,7 +488,7 @@ export class Network implements INetwork {
   }
 
   private sendReqRespRequest<Req>(
-    peerId: PeerId,
+    peerId: PeerIdStr,
     method: ReqRespMethod,
     versions: number[],
     request: Req
@@ -497,12 +497,7 @@ export class Network implements INetwork {
     const requestData = requestType ? requestType.serialize(request as never) : new Uint8Array();
 
     // ReqResp outgoing request, emit from main thread to worker
-    return this.core.sendReqRespRequest({
-      peerId: peerId.toString(),
-      method,
-      versions,
-      requestData,
-    });
+    return this.core.sendReqRespRequest({peerId, method, versions, requestData});
   }
 
   // Debug

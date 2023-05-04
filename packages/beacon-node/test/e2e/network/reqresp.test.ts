@@ -17,6 +17,7 @@ import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
 import {arrToSource} from "../../unit/network/reqresp/utils.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/types.js";
+import {PeerIdStr, peerIdToString} from "../../../src/util/peerId.js";
 
 /* eslint-disable
     mocha/no-top-level-hooks,
@@ -115,9 +116,9 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
   async function createAndConnectPeers(
     getReqRespHandler?: GetReqRespHandlerFn,
     reqRespOpts?: ReqRespBeaconNodeOpts
-  ): Promise<[Network, Network]> {
-    const {network: netA} = await createPeer(getReqRespHandler, reqRespOpts);
-    const {network: netB} = await createPeer(getReqRespHandler, reqRespOpts);
+  ): Promise<[Network, Network, PeerIdStr, PeerIdStr]> {
+    const {network: netA, peerId: peerIdA} = await createPeer(getReqRespHandler, reqRespOpts);
+    const {network: netB, peerId: peerIdB} = await createPeer(getReqRespHandler, reqRespOpts);
 
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
     await connect(netA, netB);
@@ -129,7 +130,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
       await Promise.all([netA.close(), netB.close()]);
     });
 
-    return [netA, netB];
+    return [netA, netB, peerIdToString(peerIdA), peerIdToString(peerIdB)];
   }
 
   // it("should send/receive a ping message", async function () {
@@ -141,7 +142,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
   //   const expectedPong = netB.metadata.seqNumber;
   //   expect(expectedPong.toString()).to.deep.equal("2", "seqNumber");
 
-  //   const pong = await netA.reqResp.ping(netB.peerId);
+  //   const pong = await netA.reqResp.ping(peerIdB);
   //   expect(pong.toString()).to.deep.equal(expectedPong.toString(), "Wrong response body");
   // });
 
@@ -154,7 +155,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
   //     syncnets: netB.metadata.syncnets,
   //   };
 
-  //   const receivedMetadata = await netA.reqResp.metadata(netB.peerId);
+  //   const receivedMetadata = await netA.reqResp.metadata(peerIdB);
   //   expect(receivedMetadata).to.deep.equal(metadata, "Wrong response body");
   // });
 
@@ -175,7 +176,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
   //     },
   //   });
 
-  //   const receivedStatus = await netA.reqResp.status(netB.peerId, statusNetA);
+  //   const receivedStatus = await netA.reqResp.status(peerIdB, statusNetA);
   //   expect(receivedStatus).to.deep.equal(statusNetB, "Wrong response body");
   // });
 
@@ -188,7 +189,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
       blocks.push(block);
     }
 
-    const [netA, netB] = await createAndConnectPeers(
+    const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         async function* () {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
@@ -199,7 +200,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
         }
     );
 
-    const returnedBlocks = await netA.sendBeaconBlocksByRange(netB.peerId, req);
+    const returnedBlocks = await netA.sendBeaconBlocksByRange(peerIdB, req);
 
     if (returnedBlocks === null) throw Error("Returned null");
     expect(returnedBlocks).to.have.length(req.count, "Wrong returnedBlocks length");
@@ -213,7 +214,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
     const root: Root = ssz.phase0.BeaconBlockHeader.defaultValue().bodyRoot;
     const expectedValue = ssz.altair.LightClientBootstrap.defaultValue();
 
-    const [netA, netB] = await createAndConnectPeers(
+    const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         async function* onRequest() {
           if (method === ReqRespMethod.LightClientBootstrap) {
@@ -225,14 +226,14 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
         }
     );
 
-    const returnedValue = await netA.sendLightClientBootstrap(netB.peerId, root);
+    const returnedValue = await netA.sendLightClientBootstrap(peerIdB, root);
     expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
   });
 
   it("should send/receive a light client optimistic update message", async function () {
     const expectedValue = ssz.altair.LightClientOptimisticUpdate.defaultValue();
 
-    const [netA, netB] = await createAndConnectPeers(
+    const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         async function* onRequest() {
           if (method === ReqRespMethod.LightClientOptimisticUpdate) {
@@ -244,14 +245,14 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
         }
     );
 
-    const returnedValue = await netA.sendLightClientOptimisticUpdate(netB.peerId);
+    const returnedValue = await netA.sendLightClientOptimisticUpdate(peerIdB);
     expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
   });
 
   it("should send/receive a light client finality update message", async function () {
     const expectedValue = ssz.altair.LightClientFinalityUpdate.defaultValue();
 
-    const [netA, netB] = await createAndConnectPeers(
+    const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         async function* onRequest() {
           if (method === ReqRespMethod.LightClientFinalityUpdate) {
@@ -263,7 +264,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
         }
     );
 
-    const returnedValue = await netA.sendLightClientFinalityUpdate(netB.peerId);
+    const returnedValue = await netA.sendLightClientFinalityUpdate(peerIdB);
     expect(returnedValue).to.deep.equal(expectedValue, "Wrong response body");
   });
 
@@ -279,7 +280,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
       });
     }
 
-    const [netA, netB] = await createAndConnectPeers(
+    const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         async function* onRequest() {
           if (method === ReqRespMethod.LightClientUpdatesByRange) {
@@ -288,7 +289,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
         }
     );
 
-    const returnedUpdates = await netA.sendLightClientUpdatesByRange(netB.peerId, req);
+    const returnedUpdates = await netA.sendLightClientUpdatesByRange(peerIdB, req);
 
     if (returnedUpdates === null) throw Error("Returned null");
     expect(returnedUpdates).to.have.length(2, "Wrong returnedUpdates length");
@@ -303,7 +304,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
 
   it("should handle a server error", async function () {
     const testErrorMessage = "TEST_EXAMPLE_ERROR_1234";
-    const [netA, netB] = await createAndConnectPeers(
+    const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
@@ -313,7 +314,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
     );
 
     await expectRejectedWithLodestarError(
-      netA.sendBeaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 3}),
+      netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 3}),
       new RequestError({code: RequestErrorCode.SERVER_ERROR, errorMessage: "sNaPpYa" + testErrorMessage})
     );
   });
@@ -321,7 +322,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
   it("should handle a server error after emitting two blocks", async function () {
     const testErrorMessage = "TEST_EXAMPLE_ERROR_1234";
 
-    const [netA, netB] = await createAndConnectPeers(
+    const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
@@ -336,7 +337,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
     );
 
     await expectRejectedWithLodestarError(
-      netA.sendBeaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 3}),
+      netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 3}),
       new RequestError({code: RequestErrorCode.SERVER_ERROR, errorMessage: "sNaPpYa" + testErrorMessage})
     );
   });
@@ -344,7 +345,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
   it("trigger a TTFB_TIMEOUT error", async function () {
     const ttfbTimeoutMs = 250;
 
-    const [netA, netB] = await createAndConnectPeers(
+    const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
@@ -357,7 +358,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
     );
 
     await expectRejectedWithLodestarError(
-      netA.sendBeaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 1}),
+      netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 1}),
       new RequestError({code: RequestErrorCode.TTFB_TIMEOUT})
     );
   });
@@ -365,7 +366,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
   it("trigger a RESP_TIMEOUT error", async function () {
     const respTimeoutMs = 250;
 
-    const [netA, netB] = await createAndConnectPeers(
+    const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
@@ -379,13 +380,13 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
     );
 
     await expectRejectedWithLodestarError(
-      netA.sendBeaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 2}),
+      netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 2}),
       new RequestError({code: RequestErrorCode.RESP_TIMEOUT})
     );
   });
 
   it("Sleep infinite on first byte", async function () {
-    const [netA, netB] = await createAndConnectPeers(
+    const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
@@ -396,13 +397,13 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
     );
 
     await expectRejectedWithLodestarError(
-      netA.sendBeaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 2}),
+      netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 2}),
       new RequestError({code: RequestErrorCode.TTFB_TIMEOUT})
     );
   });
 
   it("Sleep infinite on second response chunk", async function () {
-    const [netA, netB] = await createAndConnectPeers(
+    const [netA, _, _0, peerIdB] = await createAndConnectPeers(
       (method) =>
         async function* onRequest() {
           if (method === ReqRespMethod.BeaconBlocksByRange) {
@@ -414,7 +415,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
     );
 
     await expectRejectedWithLodestarError(
-      netA.sendBeaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 2}),
+      netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 2}),
       new RequestError({code: RequestErrorCode.RESP_TIMEOUT})
     );
   });

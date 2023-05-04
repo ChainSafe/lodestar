@@ -1,3 +1,4 @@
+import {PeerId} from "@libp2p/interface-peer-id";
 import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
@@ -7,6 +8,7 @@ import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 
 import {RegistryMetricCreator} from "../../metrics/index.js";
+import {peerIdFromString} from "../../util/peerId.js";
 import {PeersData} from "../peers/peersData.js";
 import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
@@ -212,8 +214,7 @@ export class Eth2Gossipsub extends GossipSub {
           for (const peer of peers) {
             if (!meshPeerIdStrs.has(peer)) {
               meshPeerIdStrs.add(peer);
-              const client =
-                this.peersData.connectedPeers.get(peer)?.agentClient?.toString() ?? ClientKind.Unknown.toString();
+              const client = this.peersData.connectedPeers.get(peer)?.agentClient?.toString() ?? ClientKind.Unknown;
               meshPeersByClient.set(client, (meshPeersByClient.get(client) ?? 0) + 1);
             }
           }
@@ -288,14 +289,16 @@ export class Eth2Gossipsub extends GossipSub {
       topic,
       msg,
       msgId,
-      propagationSource,
+      // Hot path, use cached .toString() version
+      propagationSource: (propagationSource as PeerId).toString(),
       seenTimestampSec,
       startProcessUnixSec: null,
     });
   }
 
   private onValidationResult(data: NetworkEventData[NetworkEvent.gossipMessageValidationResult]): void {
-    this.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
+    // TODO: reportMessageValidationResult should take PeerIdStr since it only uses string version
+    this.reportMessageValidationResult(data.msgId, peerIdFromString(data.propagationSource), data.acceptance);
   }
 }
 

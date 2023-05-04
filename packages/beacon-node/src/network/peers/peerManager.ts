@@ -242,9 +242,9 @@ export class PeerManager {
   /**
    * The app layer needs to refresh the status of some peers. The sync have reached a target
    */
-  reStatusPeers(peers: PeerId[]): void {
+  reStatusPeers(peers: PeerIdStr[]): void {
     for (const peer of peers) {
-      const peerData = this.connectedPeers.get(peer.toString());
+      const peerData = this.connectedPeers.get(peer);
       if (peerData) {
         // Set to 0 to trigger a status request after calling pingAndStatusTimeouts()
         peerData.lastStatusUnixTsMs = 0;
@@ -367,7 +367,7 @@ export class PeerManager {
       peerData.relevantStatus = RelevantPeerStatus.relevant;
     }
     if (getConnection(this.libp2p.connectionManager, peer.toString())) {
-      this.networkEventBus.emit(NetworkEvent.peerConnected, {peer, status});
+      this.networkEventBus.emit(NetworkEvent.peerConnected, {peer: peer.toString(), status});
     }
   }
 
@@ -617,7 +617,7 @@ export class PeerManager {
     this.connectedPeers.delete(peer.toString());
 
     this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(peer), direction, status});
-    this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer});
+    this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: peer.toString()});
     this.metrics?.peerDisconnectedEvent.inc({direction});
     this.libp2p.peerStore
       .unTagPeer(peer, PEER_RELEVANT_TAG)

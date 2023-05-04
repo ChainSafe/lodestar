@@ -8,7 +8,7 @@ import {IBeaconChain} from "../../../src/chain/index.js";
 import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
 import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
 import {testLogger} from "../../utils/logger.js";
-import {getValidPeerId} from "../../utils/peer.js";
+import {getRandPeerIdStr} from "../../utils/peer.js";
 import {getBlockInput} from "../../../src/chain/blocks/types.js";
 
 describe("sync / UnknownBlockSync", () => {
@@ -21,8 +21,7 @@ describe("sync / UnknownBlockSync", () => {
 
   for (const {id, finalizedSlot, reportPeer} of testCases) {
     it(id, async () => {
-      const peer = getValidPeerId();
-      const peerIdStr = peer.toString();
+      const peer = await getRandPeerIdStr();
       const blockA = ssz.phase0.SignedBeaconBlock.defaultValue();
       const blockB = ssz.phase0.SignedBeaconBlock.defaultValue();
       const blockC = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -78,12 +77,12 @@ describe("sync / UnknownBlockSync", () => {
       new UnknownBlockSync(config, network as INetwork, chain as IBeaconChain, logger, null);
       network.events?.emit(NetworkEvent.unknownBlockParent, {
         blockInput: getBlockInput.preDeneb(config, blockC),
-        peer: peerIdStr,
+        peer,
       });
 
       if (reportPeer) {
         const err = await reportPeerPromise;
-        expect(err[0].toString()).equal(peerIdStr);
+        expect(err[0]).equal(peer);
         expect([err[1], err[2]]).to.be.deep.equal([PeerAction.LowToleranceError, "BadBlockByRoot"]);
       } else {
         // happy path

@@ -1,4 +1,3 @@
-import {PeerId} from "@libp2p/interface-peer-id";
 import {ChainForkConfig} from "@lodestar/config";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {Epoch, phase0, Root, Slot} from "@lodestar/types";
@@ -6,12 +5,13 @@ import {toHex} from "@lodestar/utils";
 import {ForkSeq} from "@lodestar/params";
 import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
 import {wrapError} from "../../util/wrapError.js";
+import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
 
 export async function beaconBlocksMaybeBlobsByRoot(
   config: ChainForkConfig,
   network: INetwork,
-  peerId: PeerId,
+  peerId: PeerIdStr,
   request: phase0.BeaconBlocksByRootRequest,
   currentSlot: Epoch,
   finalizedSlot: Slot
@@ -44,7 +44,7 @@ export async function beaconBlocksMaybeBlobsByRoot(
 async function beaconBlockAndBlobsSidecarByRootFallback(
   config: ChainForkConfig,
   network: INetwork,
-  peerId: PeerId,
+  peerId: PeerIdStr,
   beaconBlockRoot: Root
 ): Promise<BlockInput> {
   const resBlockBlobs = await wrapError(network.sendBeaconBlockAndBlobsSidecarByRoot(peerId, [beaconBlockRoot]));

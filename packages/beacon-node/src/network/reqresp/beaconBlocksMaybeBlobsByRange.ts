@@ -1,4 +1,3 @@
-import {PeerId} from "@libp2p/interface-peer-id";
 import {BeaconConfig} from "@lodestar/config";
 import {deneb, Epoch, phase0} from "@lodestar/types";
 import {ForkSeq, MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} from "@lodestar/params";
@@ -6,12 +5,13 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 
 import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
 import {getEmptyBlobsSidecar} from "../../util/blobs.js";
+import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork} from "../interface.js";
 
 export async function beaconBlocksMaybeBlobsByRange(
   config: BeaconConfig,
   network: INetwork,
-  peerId: PeerId,
+  peerId: PeerIdStr,
   request: phase0.BeaconBlocksByRangeRequest,
   currentEpoch: Epoch
 ): Promise<BlockInput[]> {

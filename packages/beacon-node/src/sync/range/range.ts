@@ -1,6 +1,5 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {PeerId} from "@libp2p/interface-peer-id";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {Epoch, phase0} from "@lodestar/types";
@@ -9,6 +8,7 @@ import {IBeaconChain} from "../../chain/index.js";
 import {INetwork} from "../../network/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {RangeSyncType, rangeSyncTypes, getRangeSyncTarget} from "../utils/remoteSyncType.js";
+import {PeerIdStr} from "../../util/peerId.js";
 import {ImportBlockOpts, AttestationImportOpt} from "../../chain/blocks/index.js";
 import {beaconBlocksMaybeBlobsByRange} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
 import {updateChains} from "./utils/index.js";
@@ -111,11 +111,11 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
    * A peer with a relevant STATUS message has been found, which also is advanced from us.
    * Add this peer to an existing chain or create a new one. The update the chains status.
    */
-  addPeer(peerId: PeerId, localStatus: phase0.Status, peerStatus: phase0.Status): void {
+  addPeer(peerId: PeerIdStr, localStatus: phase0.Status, peerStatus: phase0.Status): void {
     // Compute if we should do a Finalized or Head sync with this peer
     const {syncType, startEpoch, target} = getRangeSyncTarget(localStatus, peerStatus, this.chain.forkChoice);
     this.logger.debug("Sync peer joined", {
-      peer: peerId.toString(),
+      peer: peerId,
       syncType,
       startEpoch,
       targetSlot: target.slot,
@@ -135,7 +135,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   /**
    * Remove this peer from all head and finalized chains. A chain may become peer-empty and be dropped
    */
-  removePeer(peerId: PeerId): void {
+  removePeer(peerId: PeerIdStr): void {
     for (const syncChain of this.chains.values()) {
       syncChain.removePeer(peerId);
     }
@@ -217,7 +217,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     }
   };
 
-  private addPeerOrCreateChain(startEpoch: Epoch, target: ChainTarget, peer: PeerId, syncType: RangeSyncType): void {
+  private addPeerOrCreateChain(startEpoch: Epoch, target: ChainTarget, peer: PeerIdStr, syncType: RangeSyncType): void {
     let syncChain = this.chains.get(syncType);
     if (!syncChain) {
       syncChain = new SyncChain(

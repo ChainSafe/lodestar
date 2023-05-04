@@ -1,10 +1,10 @@
 import {Libp2p as ILibp2p} from "libp2p";
 import {Connection} from "@libp2p/interface-connection";
 import {Registrar} from "@libp2p/interface-registrar";
-import {PeerId} from "@libp2p/interface-peer-id";
 import {ConnectionManager} from "@libp2p/interface-connection-manager";
 import {Slot, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
 import {BlockInput} from "../chain/blocks/types.js";
+import {PeerIdStr} from "../util/peerId.js";
 import {INetworkEventBus} from "./events.js";
 import {INetworkCorePublic} from "./core/types.js";
 import {GossipType} from "./gossip/interface.js";
@@ -23,25 +23,28 @@ import {PeerAction} from "./peers/index.js";
 export interface INetwork extends INetworkCorePublic {
   events: INetworkEventBus;
 
-  getConnectedPeers(): PeerId[];
+  getConnectedPeers(): PeerIdStr[];
   getConnectedPeerCount(): number;
   isSubscribedToGossipCoreTopics(): boolean;
-  reportPeer(peer: PeerId, action: PeerAction, actionName: string): void;
+  reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;
   shouldAggregate(subnet: number, slot: Slot): boolean;
-  reStatusPeers(peers: PeerId[]): Promise<void>;
+  reStatusPeers(peers: PeerIdStr[]): Promise<void>;
 
   // ReqResp
   sendBeaconBlocksByRange(
-    peerId: PeerId,
+    peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<allForks.SignedBeaconBlock[]>;
   sendBeaconBlocksByRoot(
-    peerId: PeerId,
+    peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRootRequest
   ): Promise<allForks.SignedBeaconBlock[]>;
-  sendBlobsSidecarsByRange(peerId: PeerId, request: deneb.BlobsSidecarsByRangeRequest): Promise<deneb.BlobsSidecar[]>;
+  sendBlobsSidecarsByRange(
+    peerId: PeerIdStr,
+    request: deneb.BlobsSidecarsByRangeRequest
+  ): Promise<deneb.BlobsSidecar[]>;
   sendBeaconBlockAndBlobsSidecarByRoot(
-    peerId: PeerId,
+    peerId: PeerIdStr,
     request: deneb.BeaconBlockAndBlobsSidecarByRootRequest
   ): Promise<deneb.SignedBeaconBlockAndBlobsSidecar[]>;
 
