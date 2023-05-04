@@ -1,6 +1,6 @@
 import qs from "qs";
 import fastify, {FastifyInstance} from "fastify";
-import fastifyCors from "fastify-cors";
+import fastifyCors from "@fastify/cors";
 import {Api, ServerApi} from "@lodestar/api";
 import {registerRoutes} from "@lodestar/api/beacon/server";
 import {ChainForkConfig} from "@lodestar/config";
@@ -25,6 +25,6 @@ export async function startServer(
 
   void server.register(fastifyCors, {origin: "*"});
 
-  await server.listen(opts.port, opts.host);
+  await server.listen({port: opts.port, host: opts.host});
   return server;
 }

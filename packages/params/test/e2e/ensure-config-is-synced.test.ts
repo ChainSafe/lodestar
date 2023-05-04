@@ -8,7 +8,7 @@ import {loadConfigYaml} from "../yaml.js";
 // Not e2e, but slow. Run with e2e tests
 
 /** https://github.com/ethereum/consensus-specs/releases */
-const specConfigCommit = "v1.3.0-rc.4";
+const specConfigCommit = "v1.3.0";
 
 describe("Ensure config is synced", function () {
   this.timeout(60 * 1000);
@@ -46,7 +46,7 @@ async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: strin
   // Merge all the fetched yamls for the different forks
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const beaconPresetRaw: Record<string, unknown> = Object.assign(
-    ...((downloadedParams as unknown) as [input: Record<string, unknown>])
+    ...(downloadedParams as unknown as [input: Record<string, unknown>])
   );
 
   // As of December 2021 the presets don't include any hex strings

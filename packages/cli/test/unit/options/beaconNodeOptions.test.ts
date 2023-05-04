@@ -23,6 +23,8 @@ describe("options / beaconNodeOptions", () => {
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
       "chain.disableImportExecutionFcU": false,
+      "chain.preaggregateSlotDistance": 1,
+      "chain.attDataCacheSlotDistance": 2,
       "chain.computeUnrealized": true,
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "chain.assertCorrectProgressiveBalances": true,
@@ -50,6 +52,7 @@ describe("options / beaconNodeOptions", () => {
       "builder.timeout": 12000,
       "builder.faultInspectionWindow": 32,
       "builder.allowedFaults": 16,
+      "builder.userAgent": "lodestar/-",
 
       metrics: true,
       "metrics.port": 8765,
@@ -83,6 +86,7 @@ describe("options / beaconNodeOptions", () => {
       "network.gossipsubDHigh": 6,
       "network.gossipsubAwaitHandler": true,
       "network.rateLimitMultiplier": 1,
+      "network.maxGossipTopicConcurrency": 64,
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
@@ -109,6 +113,8 @@ describe("options / beaconNodeOptions", () => {
         persistInvalidSszObjects: true,
         proposerBoostEnabled: false,
         disableImportExecutionFcU: false,
+        preaggregateSlotDistance: 1,
+        attDataCacheSlotDistance: 2,
         computeUnrealized: true,
         safeSlotsToImportOptimistically: 256,
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -138,6 +144,7 @@ describe("options / beaconNodeOptions", () => {
         timeout: 12000,
         faultInspectionWindow: 32,
         allowedFaults: 16,
+        userAgent: "lodestar/-",
       },
       metrics: {
         enabled: true,
@@ -171,6 +178,7 @@ describe("options / beaconNodeOptions", () => {
         gossipsubAwaitHandler: true,
         mdns: false,
         rateLimitMultiplier: 1,
+        maxGossipTopicConcurrency: 64,
       },
       sync: {
         isSingleNode: true,

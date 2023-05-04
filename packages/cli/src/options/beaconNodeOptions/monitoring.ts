@@ -23,7 +23,7 @@ export const options: CliCommandOptions<MonitoringArgs> = {
   "monitoring.endpoint": {
     type: "string",
     description:
-      "Enables monitoring service for sending clients stats to the specified endpoint of a remote service (e.g. beaconcha.in). It is required that metrics are also enabled by supplying the --metrics flag.",
+      "Enables monitoring service for sending clients stats to the specified endpoint of a remote service (e.g. beaconcha.in)",
     group: "monitoring",
   },
 

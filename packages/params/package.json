@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/params",
-  "version": "1.7.2",
+  "version": "1.8.0",
   "description": "Chain parameters required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -70,8 +70,8 @@
     "blockchain"
   ],
   "devDependencies": {
-    "@types/js-yaml": "^4.0.3",
-    "axios": "^0.21.0",
+    "@types/js-yaml": "^4.0.5",
+    "axios": "^1.3.4",
     "js-yaml": "^4.1.0"
   }
 }

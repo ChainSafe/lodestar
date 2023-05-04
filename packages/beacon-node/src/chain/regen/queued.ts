@@ -10,6 +10,8 @@ import {StateRegenerator, RegenModules} from "./regen.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 
 const REGEN_QUEUE_MAX_LEN = 256;
+// TODO: Should this constant be lower than above? 256 feels high
+const REGEN_CAN_ACCEPT_WORK_THRESHOLD = 16;
 
 type QueuedStateRegeneratorModules = RegenModules & {
   signal: AbortSignal;
@@ -44,6 +46,10 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.stateCache = modules.stateCache;
     this.checkpointStateCache = modules.checkpointStateCache;
     this.metrics = modules.metrics;
+  }
+
+  canAcceptWork(): boolean {
+    return this.jobQueue.jobLen < REGEN_CAN_ACCEPT_WORK_THRESHOLD;
   }
 
   /**
@@ -118,6 +124,12 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.jobQueue.push({key: "getCheckpointState", args: [cp, opts, rCaller]});
   }
 
+  /**
+   * Get state of provided `blockRoot` and dial forward to `slot`
+   * Use this api with care because we don't want the queue to be busy
+   * For the context, gossip block validation uses this api so we want it to be as fast as possible
+   * @returns
+   */
   async getBlockSlotState(
     blockRoot: RootHex,
     slot: Slot,

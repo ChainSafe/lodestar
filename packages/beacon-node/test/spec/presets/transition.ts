@@ -15,75 +15,75 @@ import {TestRunnerFn} from "../utils/types.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {getPreviousFork} from "./fork.js";
 
-export const transition = (skipTestNames?: string[]): TestRunnerFn<TransitionTestCase, BeaconStateAllForks> => (
-  forkNext
-) => {
-  if (forkNext === ForkName.phase0) {
-    throw Error("fork phase0 not supported");
-  }
-
-  const forkPrev = getPreviousFork(config, forkNext);
-
-  /**
-   * https://github.com/ethereum/eth2.0-specs/tree/v1.1.0-alpha.5/tests/formats/transition
-   */
-  function generateBlocksSZZTypeMapping(meta: TransitionTestCase["meta"]): BlocksSZZTypeMapping {
-    if (meta === undefined) {
-      throw new Error("No meta data found");
+export const transition =
+  (skipTestNames?: string[]): TestRunnerFn<TransitionTestCase, BeaconStateAllForks> =>
+  (forkNext) => {
+    if (forkNext === ForkName.phase0) {
+      throw Error("fork phase0 not supported");
     }
-    const blocksMapping: BlocksSZZTypeMapping = {};
-    // The fork_block is the index in the test data of the last block of the initial fork.
-    for (let i = 0; i < meta.blocks_count; i++) {
-      blocksMapping[`blocks_${i}`] =
-        i <= meta.fork_block ? ssz[forkPrev].SignedBeaconBlock : ssz[forkNext].SignedBeaconBlock;
-    }
-    return blocksMapping;
-  }
 
-  return {
-    testFunction: (testcase) => {
-      const meta = testcase.meta;
+    const forkPrev = getPreviousFork(config, forkNext);
 
-      // testConfig is used here to load forkEpoch from meta.yaml
-      const forkEpoch = bnToNum(meta.fork_epoch);
-      const testConfig = createChainForkConfig(getTransitionConfig(forkNext, forkEpoch));
-
-      let state = createCachedBeaconStateTest(testcase.pre, testConfig);
-      for (let i = 0; i < meta.blocks_count; i++) {
-        const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
-        state = stateTransition(state, signedBlock, {
-          // TODO DENEB: Should assume valid and available for this test?
-          executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailableStatus: DataAvailableStatus.available,
-          verifyStateRoot: true,
-          verifyProposer: false,
-          verifySignatures: false,
-          assertCorrectProgressiveBalances,
-        });
+    /**
+     * https://github.com/ethereum/eth2.0-specs/tree/v1.1.0-alpha.5/tests/formats/transition
+     */
+    function generateBlocksSZZTypeMapping(meta: TransitionTestCase["meta"]): BlocksSZZTypeMapping {
+      if (meta === undefined) {
+        throw new Error("No meta data found");
       }
-      return state;
-    },
-    options: {
-      inputTypes: inputTypeSszTreeViewDU,
-      getSszTypes: (meta: TransitionTestCase["meta"]) => {
-        return {
-          pre: ssz[forkPrev].BeaconState,
-          post: ssz[forkNext].BeaconState,
-          ...generateBlocksSZZTypeMapping(meta),
-        };
+      const blocksMapping: BlocksSZZTypeMapping = {};
+      // The fork_block is the index in the test data of the last block of the initial fork.
+      for (let i = 0; i < meta.blocks_count; i++) {
+        blocksMapping[`blocks_${i}`] =
+          i <= meta.fork_block ? ssz[forkPrev].SignedBeaconBlock : ssz[forkNext].SignedBeaconBlock;
+      }
+      return blocksMapping;
+    }
+
+    return {
+      testFunction: (testcase) => {
+        const meta = testcase.meta;
+
+        // testConfig is used here to load forkEpoch from meta.yaml
+        const forkEpoch = bnToNum(meta.fork_epoch);
+        const testConfig = createChainForkConfig(getTransitionConfig(forkNext, forkEpoch));
+
+        let state = createCachedBeaconStateTest(testcase.pre, testConfig);
+        for (let i = 0; i < meta.blocks_count; i++) {
+          const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
+          state = stateTransition(state, signedBlock, {
+            // TODO DENEB: Should assume valid and available for this test?
+            executionPayloadStatus: ExecutionPayloadStatus.valid,
+            dataAvailableStatus: DataAvailableStatus.available,
+            verifyStateRoot: true,
+            verifyProposer: false,
+            verifySignatures: false,
+            assertCorrectProgressiveBalances,
+          });
+        }
+        return state;
       },
-      shouldError: (testCase) => testCase.post === undefined,
-      timeout: 10000,
-      getExpected: (testCase) => testCase.post,
-      expectFunc: (testCase, expected, actual) => {
-        expectEqualBeaconState(forkNext, expected, actual);
+      options: {
+        inputTypes: inputTypeSszTreeViewDU,
+        getSszTypes: (meta: TransitionTestCase["meta"]) => {
+          return {
+            pre: ssz[forkPrev].BeaconState,
+            post: ssz[forkNext].BeaconState,
+            ...generateBlocksSZZTypeMapping(meta),
+          };
+        },
+        shouldError: (testCase) => testCase.post === undefined,
+        timeout: 10000,
+        getExpected: (testCase) => testCase.post,
+        expectFunc: (testCase, expected, actual) => {
+          expectEqualBeaconState(forkNext, expected, actual);
+        },
+        // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+        shouldSkip: (_testcase, name, _index) =>
+          skipTestNames !== undefined && skipTestNames.some((skipTestName) => name.includes(skipTestName)),
       },
-      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-      shouldSkip: (_testcase, name, _index) =>
-        skipTestNames !== undefined && skipTestNames.some((skipTestName) => name.includes(skipTestName)),
-    },
+    };
   };
-};
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -102,7 +102,7 @@ function getTransitionConfig(fork: ForkName, forkEpoch: number): Partial<ChainCo
   }
 }
 
-type BlocksSZZTypeMapping = Record<string, typeof ssz[ForkName]["SignedBeaconBlock"]>;
+type BlocksSZZTypeMapping = Record<string, (typeof ssz)[ForkName]["SignedBeaconBlock"]>;
 
 type TransitionTestCase = {
   [k: string]: allForks.SignedBeaconBlock | unknown | null | undefined;

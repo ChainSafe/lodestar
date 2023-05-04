@@ -10,8 +10,7 @@ describe("shuffle list", () => {
   const seed = new Uint8Array([42, 32]);
 
   for (const listSize of [
-    16384,
-    250000,
+    16384, 250000,
     // Don't run 4_000_000 since it's very slow and not testnet has gotten there yet
     // 4e6,
   ]) {

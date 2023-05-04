@@ -4,9 +4,10 @@ import {encodeErrorMessage} from "../utils/index.js";
 import {
   ContextBytesType,
   ContextBytesFactory,
-  ProtocolDefinition,
+  MixedProtocolDefinition,
   EncodedPayload,
   EncodedPayloadType,
+  ProtocolDefinition,
 } from "../types.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 
@@ -52,7 +53,7 @@ export function responseEncodeSuccess<Req, Resp>(
  * fn yields exactly one `<error_response>` and afterwards the stream must be terminated
  */
 export async function* responseEncodeError(
-  protocol: Pick<ProtocolDefinition, "encoding">,
+  protocol: Pick<MixedProtocolDefinition, "encoding">,
   status: RpcResponseStatusError,
   errorMessage: string
 ): AsyncGenerator<Buffer> {

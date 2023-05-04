@@ -16,8 +16,8 @@ export const nodeAssertion: SimulationAssertion<"node", string> = {
       const {status: health} = await node.cl.api.node.getHealth();
 
       if (
-        ((health as unknown) as routes.node.NodeHealth) !== routes.node.NodeHealth.SYNCING &&
-        ((health as unknown) as routes.node.NodeHealth) !== routes.node.NodeHealth.READY
+        (health as unknown as routes.node.NodeHealth) !== routes.node.NodeHealth.SYNCING &&
+        (health as unknown as routes.node.NodeHealth) !== routes.node.NodeHealth.READY
       ) {
         errors.push(`node health is neither READY or SYNCING. ${JSON.stringify({id: node.cl.id})}`);
       }

@@ -9,7 +9,7 @@ import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 // TODO remove stub
 describe.skip("beacon api impl - state - get fork", function () {
   let api: ReturnType<typeof getBeaconStateApi>;
-  let resolveStateIdStub: SinonStubbedMember<typeof stateApiUtils["resolveStateId"]>;
+  let resolveStateIdStub: SinonStubbedMember<(typeof stateApiUtils)["resolveStateId"]>;
   let server: ApiImplTestModules;
 
   before(function () {

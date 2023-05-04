@@ -3,7 +3,12 @@ import sinon from "sinon";
 import {CompositeTypeAny, toHexString, TreeView} from "@chainsafe/ssz";
 import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64, RootHex, deneb, Wei} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
-import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  Index2PubkeyCache,
+  PubkeyIndexMap,
+} from "@lodestar/state-transition";
 import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus, AncestorStatus} from "@lodestar/fork-choice";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {Logger} from "@lodestar/utils";
@@ -42,6 +47,8 @@ import {CheckpointBalancesCache} from "../../../../src/chain/balancesCache.js";
 import {IChainOptions} from "../../../../src/chain/options.js";
 import {BlockAttributes} from "../../../../src/chain/produceBlock/produceBlockBody.js";
 import {ReqRespBlockResponse} from "../../../../src/network/index.js";
+import {SeenAttestationDatas} from "../../../../src/chain/seenCache/seenAttestationData.js";
+import {IExecutionBuilder} from "../../../../src/execution/index.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -81,11 +88,13 @@ export class MockBeaconChain implements IBeaconChain {
   emitter: ChainEventEmitter;
   lightClientServer: LightClientServer;
   reprocessController: ReprocessController;
+  readonly pubkey2index: PubkeyIndexMap;
+  readonly index2pubkey: Index2PubkeyCache;
 
   // Ops pool
-  readonly attestationPool = new AttestationPool();
+  readonly attestationPool: AttestationPool;
   readonly aggregatedAttestationPool = new AggregatedAttestationPool();
-  readonly syncCommitteeMessagePool = new SyncCommitteeMessagePool();
+  readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
   readonly opPool = new OpPool();
 
@@ -96,6 +105,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof(null);
+  readonly seenAttestationDatas = new SeenAttestationDatas(null);
   readonly seenBlockAttesters = new SeenBlockAttesters();
 
   readonly beaconProposerCache = new BeaconProposerCache({
@@ -126,6 +136,8 @@ export class MockBeaconChain implements IBeaconChain {
       emitter: this.emitter,
       signal: this.abortController.signal,
     });
+    this.attestationPool = new AttestationPool(this.clock, (2 / 3) * this.config.SECONDS_PER_SLOT);
+    this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(this.clock, (2 / 3) * this.config.SECONDS_PER_SLOT);
     this.forkChoice = mockForkChoice();
     this.stateCache = new StateContextCache({});
     this.checkpointStateCache = new CheckpointStateCache({});
@@ -150,7 +162,11 @@ export class MockBeaconChain implements IBeaconChain {
       }
     );
     this.reprocessController = new ReprocessController(null);
+    this.pubkey2index = new PubkeyIndexMap();
+    this.index2pubkey = [];
   }
+
+  executionBuilder?: IExecutionBuilder | undefined;
 
   validatorSeenAtEpoch(): boolean {
     return false;
@@ -163,6 +179,10 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconStateAllForks> {
+    return this.state;
+  }
+
+  async getHeadStateAtEpoch(): Promise<CachedBeaconStateAllForks> {
     return this.state;
   }
 
@@ -219,12 +239,24 @@ export class MockBeaconChain implements IBeaconChain {
     return;
   }
 
+  persistInvalidSszBytes(): void {
+    return;
+  }
+
   persistInvalidSszValue(): void {
     return;
   }
 
   async updateBeaconProposerData(): Promise<void> {}
   updateBuilderStatus(): void {}
+
+  regenCanAcceptWork(): boolean {
+    return true;
+  }
+
+  blsThreadPoolCanAcceptWork(): boolean {
+    return true;
+  }
 }
 
 const root = ssz.Root.defaultValue() as Uint8Array;

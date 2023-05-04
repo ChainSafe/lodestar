@@ -1,3 +1,5 @@
+import {Slot} from "./primitive/types.js";
+
 export * from "./primitive/types.js";
 export {ts as phase0} from "./phase0/index.js";
 export {ts as altair} from "./altair/index.js";
@@ -15,3 +17,6 @@ export enum BlockSource {
   builder = "builder",
   engine = "engine",
 }
+
+export type SlotRootHex = {slot: Slot; root: RootHex};
+export type SlotOptionalRoot = {slot: Slot; root?: RootHex};

@@ -22,7 +22,7 @@ describe("winston logger format and options", () => {
       context: {meta: "data"},
       output: {
         human: "[]                 \u001b[33mwarn\u001b[39m: foo bar meta=data",
-        json: `{"message":"foo bar","context":{"meta":"data"},"level":"warn","module":""}`,
+        json: `{"context":{"meta":"data"},"level":"warn","message":"foo bar","module":""}`,
       },
     },
 
@@ -32,7 +32,7 @@ describe("winston logger format and options", () => {
       context: {data: BigInt(1)},
       output: {
         human: "[]                 \u001b[33mwarn\u001b[39m: big int data=1",
-        json: `{"message":"big int","context":{"data":"1"},"level":"warn","module":""}`,
+        json: `{"context":{"data":"1"},"level":"warn","message":"big int","module":""}`,
       },
     },
 
@@ -46,7 +46,7 @@ describe("winston logger format and options", () => {
         error: error,
         output: {
           human: `[]                 \u001b[33mwarn\u001b[39m: foo bar code=SAMPLE_ERROR, data=foo=bar\n${error.stack}`,
-          json: `{"message":"foo bar","error":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","module":""}`,
+          json: `{"error":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","message":"foo bar","module":""}`,
         },
       };
     },
@@ -65,7 +65,7 @@ describe("winston logger format and options", () => {
 
         logger.warn(message, context, error);
 
-        expect(stdoutHook.chunks.join("").trim()).to.equal(output[format]);
+        expect(stdoutHook.chunks.join("").trim()).to.deep.equal(output[format]);
 
         stdoutHook.restore();
       });

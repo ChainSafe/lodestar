@@ -164,9 +164,7 @@ export type Api = {
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
    */
-  deleteKeys(
-    pubkeysHex: string[]
-  ): Promise<
+  deleteKeys(pubkeysHex: string[]): Promise<
     ApiClientResponse<{
       [HttpStatusCode.OK]: {data: ResponseStatus<DeletionStatus>[]; slashingProtection: SlashingProtectionData};
     }>

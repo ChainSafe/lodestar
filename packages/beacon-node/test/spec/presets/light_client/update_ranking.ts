@@ -25,7 +25,7 @@ export const updateRanking: TestRunnerFn<UpdateRankingTestCase, void> = (fork) =
       const updates: allForks.LightClientUpdate[] = [];
 
       for (let i = 0; i < updatesCount; i++) {
-        const update = ((testcase as unknown) as Record<string, altair.LightClientUpdate>)[`updates_${i}`];
+        const update = (testcase as unknown as Record<string, altair.LightClientUpdate>)[`updates_${i}`];
         if (update === undefined) {
           throw Error(`no update for index ${i}`);
         }

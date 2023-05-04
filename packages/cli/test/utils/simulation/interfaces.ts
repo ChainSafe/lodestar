@@ -331,7 +331,6 @@ export interface ELPaths {
   logFilePath: string;
 }
 
-export type MountedPaths<T> = T &
-  {
-    [P in keyof T as `${string & P}Mounted`]: T[P];
-  };
+export type MountedPaths<T> = T & {
+  [P in keyof T as `${string & P}Mounted`]: T[P];
+};

@@ -1,8 +1,9 @@
+import {toHexString} from "@chainsafe/ssz";
 import {EncodedPayload, EncodedPayloadType, ContextBytesType} from "@lodestar/reqresp";
 import {allForks, phase0, Slot} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {getSlotFromBytes} from "../../../util/multifork.js";
+import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
 
 export async function* onBeaconBlocksByRoot(
   requestBody: phase0.BeaconBlocksByRootRequest,
@@ -27,13 +28,22 @@ export async function* onBeaconBlocksByRoot(
         blockBytes = blockEntry.value;
       }
     }
+
     if (blockBytes) {
+      if (slot === undefined) {
+        const slotFromBytes = getSlotFromSignedBeaconBlockSerialized(blockBytes);
+        if (slotFromBytes === null) {
+          throw Error(`Invalid block bytes for block root ${toHexString(root)}`);
+        }
+        slot = slotFromBytes;
+      }
+
       yield {
         type: EncodedPayloadType.bytes,
         bytes: blockBytes,
         contextBytes: {
           type: ContextBytesType.ForkDigest,
-          forkSlot: slot ?? getSlotFromBytes(blockBytes),
+          forkSlot: slot,
         },
       };
     }

@@ -12,9 +12,10 @@ import {
  *   - For phase0, we need to create the cache through beforeProcessEpoch
  *   - For other forks, use the progressive balances inside EpochContext
  */
-export function computeUnrealizedCheckpoints(
-  state: CachedBeaconStateAllForks
-): {justifiedCheckpoint: phase0.Checkpoint; finalizedCheckpoint: phase0.Checkpoint} {
+export function computeUnrealizedCheckpoints(state: CachedBeaconStateAllForks): {
+  justifiedCheckpoint: phase0.Checkpoint;
+  finalizedCheckpoint: phase0.Checkpoint;
+} {
   let stateRealizedCheckpoints: CachedBeaconStateAllForks;
 
   // For phase0, we need to create the cache through beforeProcessEpoch

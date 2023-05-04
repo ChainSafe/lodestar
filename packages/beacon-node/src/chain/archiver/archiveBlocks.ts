@@ -2,7 +2,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {Epoch, Slot} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {Logger, toHex} from "@lodestar/utils";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH, MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {KeyValue} from "@lodestar/db";
 import {ChainForkConfig} from "@lodestar/config";
@@ -79,9 +79,9 @@ export async function archiveBlocks(
   }
 
   // Delete expired blobs
-  // Keep only `[max(GENESIS_EPOCH, current_epoch - MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS), current_epoch]`
+  // Keep only `[max(GENESIS_EPOCH, current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS), current_epoch]`
   if (finalizedPostDeneb) {
-    const blobsSidecarMinEpoch = currentEpoch - config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS;
+    const blobsSidecarMinEpoch = currentEpoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS;
     if (blobsSidecarMinEpoch >= config.DENEB_FORK_EPOCH) {
       const slotsToDelete = await db.blobsSidecarArchive.keys({lt: computeStartSlotAtEpoch(blobsSidecarMinEpoch)});
       if (slotsToDelete.length > 0) {
@@ -202,8 +202,8 @@ export function getParentRootFromSignedBlock(bytes: Uint8Array): Uint8Array {
 
 /**
  *
- * @param blocks sequence of linear blocks, from ancestor to child.
- * In ProtoArray.getAllAncestorNodes child nodes are pushed to the returned array.
+ * @param blocks sequence of linear blocks, from child to ancestor.
+ * In ProtoArray.getAllAncestorNodes child nodes are pushed first to the returned array.
  */
 export function getNonCheckpointBlocks<T extends {slot: Slot}>(blocks: T[]): T[] {
   // Iterate from lowest child to highest ancestor
@@ -223,9 +223,8 @@ export function getNonCheckpointBlocks<T extends {slot: Slot}>(blocks: T[]): T[]
   // This function must return only blocks that are guaranteed to never become checkpoints.
   let epochPtrHasFirstSlot = false;
 
-  // blocks order: from ancestor to child, increasing slot
-  // Iterate in reverse: from child to ancestor, decreasing slot
-  for (let i = blocks.length - 1; i >= 0; i--) {
+  // blocks order: from child to ancestor, decreasing slot
+  for (let i = 0; i < blocks.length; i++) {
     let isCheckpoint = false;
     const block = blocks[i];
     const blockEpoch = computeEpochAtSlot(block.slot);

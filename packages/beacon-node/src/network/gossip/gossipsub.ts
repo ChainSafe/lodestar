@@ -1,3 +1,5 @@
+import {PeerId} from "@libp2p/interface-peer-id";
+import {TopicValidatorResult} from "@libp2p/interface-pubsub";
 import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {PublishOpts, SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
@@ -15,19 +17,10 @@ import {PeersData} from "../peers/peersData.js";
 import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
 import {Libp2p} from "../interface.js";
-import {
-  GossipJobQueues,
-  GossipTopic,
-  GossipTopicMap,
-  GossipType,
-  GossipTypeMap,
-  ValidatorFnsByType,
-  GossipHandlers,
-  GossipBeaconNode,
-} from "./interface.js";
+import {NetworkEvent, NetworkEventBus} from "../events.js";
+import {GossipBeaconNode, GossipTopic, GossipTopicMap, GossipType, GossipTypeMap} from "./interface.js";
 import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic, getCoreTopicsAtFork} from "./topic.js";
 import {DataTransformSnappy, fastMsgIdFn, msgIdFn, msgIdToStrFn} from "./encoding.js";
-import {createValidatorFnsByType} from "./validation/index.js";
 
 import {
   computeGossipPeerScoreParams,
@@ -48,10 +41,9 @@ export type Eth2GossipsubModules = {
   libp2p: Libp2p;
   logger: Logger;
   metrics: Metrics | null;
-  signal: AbortSignal;
   eth2Context: Eth2Context;
-  gossipHandlers: GossipHandlers;
   peersData: PeersData;
+  events: NetworkEventBus;
 };
 
 export type Eth2GossipsubOpts = {
@@ -60,6 +52,7 @@ export type Eth2GossipsubOpts = {
   gossipsubDLow?: number;
   gossipsubDHigh?: number;
   gossipsubAwaitHandler?: boolean;
+  skipParamsLog?: boolean;
 };
 
 /**
@@ -76,23 +69,21 @@ export type Eth2GossipsubOpts = {
  * See https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
  */
 export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
-  readonly jobQueues: GossipJobQueues;
   readonly scoreParams: Partial<PeerScoreParams>;
   private readonly config: BeaconConfig;
   private readonly logger: Logger;
   private readonly peersData: PeersData;
+  private readonly events: NetworkEventBus;
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
-
-  private readonly validatorFnsByType: ValidatorFnsByType;
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
     const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
     const gossipTopicCache = new GossipTopicCache(modules.config);
 
     const scoreParams = computeGossipPeerScoreParams(modules);
-    const {config, logger, metrics, signal, gossipHandlers, peersData} = modules;
+    const {config, logger, metrics, peersData, events} = modules;
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
@@ -125,9 +116,10 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
       //
       // TODO: figure out a way to dynamically transition to the size
       dataTransform: new DataTransformSnappy(
+        gossipTopicCache,
         isFinite(config.BELLATRIX_FORK_EPOCH) ? GOSSIP_MAX_SIZE_BELLATRIX : GOSSIP_MAX_SIZE
       ),
-      metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
+      metricsRegister: modules.metrics ? (modules.metrics.register as unknown as MetricsRegister) : null,
       metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
       asyncValidation: true,
 
@@ -137,29 +129,21 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
     this.config = config;
     this.logger = logger;
     this.peersData = peersData;
+    this.events = events;
     this.gossipTopicCache = gossipTopicCache;
-
-    // Note: We use the validator functions as handlers. No handler will be registered to gossipsub.
-    // libp2p-js layer will emit the message to an EventEmitter that won't be listened by anyone.
-    // TODO: Force to ensure there's a validatorFunction attached to every received topic.
-    const {validatorFnsByType, jobQueues} = createValidatorFnsByType(gossipHandlers, {
-      config,
-      logger,
-      metrics,
-      signal,
-    });
-    this.validatorFnsByType = validatorFnsByType;
-    this.jobQueues = jobQueues;
 
     if (metrics) {
       metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics));
     }
 
     this.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
+    this.events.on(NetworkEvent.gossipMessageValidationResult, this.onValidationResult.bind(this));
 
     // Having access to this data is CRUCIAL for debugging. While this is a massive log, it must not be deleted.
     // Scoring issues require this dump + current peer score stats to re-calculate scores.
-    this.logger.debug("Gossipsub score params", {params: JSON.stringify(scoreParams)});
+    if (!opts.skipParamsLog) {
+      this.logger.debug("Gossipsub score params", {params: JSON.stringify(scoreParams)});
+    }
   }
 
   /**
@@ -422,14 +406,23 @@ export class Eth2Gossipsub extends GossipSub implements GossipBeaconNode {
     // Get seenTimestamp before adding the message to the queue or add async delays
     const seenTimestampSec = Date.now() / 1000;
 
-    // Puts object in queue, validates, then processes
-    this.validatorFnsByType[topic.type](topic, msg, propagationSource.toString(), seenTimestampSec)
-      .then((acceptance) => {
-        this.reportMessageValidationResult(msgId, propagationSource, acceptance);
-      })
-      .catch((e) => {
-        this.logger.error("Error onGossipsubMessage", {}, e);
+    // Emit message to network processor, use setTimeout to yield to the macro queue
+    // This is mostly due to too many attestation messages, and a gossipsub RPC may
+    // contain multiple of them. This helps avoid the I/O lag issue.
+    setTimeout(() => {
+      this.events.emit(NetworkEvent.pendingGossipsubMessage, {
+        topic,
+        msg,
+        msgId,
+        propagationSource,
+        seenTimestampSec,
+        startProcessUnixSec: null,
       });
+    }, 0);
+  }
+
+  private onValidationResult(msgId: string, propagationSource: PeerId, acceptance: TopicValidatorResult): void {
+    this.reportMessageValidationResult(msgId, propagationSource, acceptance);
   }
 }
 

@@ -126,6 +126,12 @@ export enum AttestationErrorCode {
    * Invalid attestation indexes: not sorted or unique
    */
   INVALID_INDEXED_ATTESTATION = "ATTESTATION_ERROR_INVALID_INDEXED_ATTESTATION",
+  /**
+   * Invalid ssz bytes.
+   */
+  INVALID_SERIALIZED_BYTES = "ATTESTATION_ERROR_INVALID_SERIALIZED_BYTES",
+  /** Too many skipped slots. */
+  TOO_MANY_SKIPPED_SLOTS = "ATTESTATION_ERROR_TOO_MANY_SKIPPED_SLOTS",
 }
 
 export type AttestationErrorType =
@@ -158,7 +164,9 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE; index: number}
   | {code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE; error: Error}
   | {code: AttestationErrorCode.INVALID_AGGREGATOR}
-  | {code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION};
+  | {code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION}
+  | {code: AttestationErrorCode.INVALID_SERIALIZED_BYTES}
+  | {code: AttestationErrorCode.TOO_MANY_SKIPPED_SLOTS; headBlockSlot: Slot; attestationSlot: Slot};
 
 export class AttestationError extends GossipActionError<AttestationErrorType> {
   getMetadata(): Record<string, string | number | null> {

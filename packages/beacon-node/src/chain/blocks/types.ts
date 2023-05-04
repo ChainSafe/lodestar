@@ -1,7 +1,7 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
 import {allForks, deneb, Slot} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
 export enum BlockInputType {
@@ -17,7 +17,7 @@ export function blockRequiresBlobs(config: ChainForkConfig, blockSlot: Slot, clo
   return (
     config.getForkSeq(blockSlot) >= ForkSeq.deneb &&
     // Only request blobs if they are recent enough
-    computeEpochAtSlot(blockSlot) >= computeEpochAtSlot(clockSlot) - config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS
+    computeEpochAtSlot(blockSlot) >= computeEpochAtSlot(clockSlot) - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
   );
 }
 

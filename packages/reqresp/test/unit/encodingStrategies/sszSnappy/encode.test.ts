@@ -17,7 +17,7 @@ describe("encodingStrategies / sszSnappy / encode", () => {
     it(id, async () => {
       const encodedChunks = await pipe(writeSszSnappyPayload(payload as EncodedPayload<unknown>, type), all);
       expectEqualByteChunks(
-        encodedChunks,
+        encodedChunks as Uint8Array[],
         chunks.map((c) => c.subarray())
       );
     });
@@ -30,7 +30,7 @@ describe("encodingStrategies / sszSnappy / encode", () => {
           payload.type === EncodedPayloadType.ssz ? serializer.serialize(payload.data).length : payload.bytes.length;
 
         const encodedChunks = await pipe(writeSszSnappyPayload(payload, serializer), all);
-        const encodedStream = Buffer.concat(encodedChunks);
+        const encodedStream = Buffer.concat(encodedChunks as Uint8Array[]);
         const expectedStreamed = Buffer.concat([Buffer.from(varint.encode(bodySize)), streamedBody]);
         expect(encodedStream).to.be.deep.equal(expectedStreamed);
       });

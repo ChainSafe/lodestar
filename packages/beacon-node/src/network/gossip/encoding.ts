@@ -6,7 +6,7 @@ import {intToBytes, toHex} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
 import {RPC} from "@chainsafe/libp2p-gossipsub/message";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
-import {GossipTopicCache} from "./topic.js";
+import {getGossipSSZType, GossipTopicCache} from "./topic.js";
 
 // Load WASM
 const xxhash = await xxhashFactory();
@@ -62,7 +62,7 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
 }
 
 export class DataTransformSnappy {
-  constructor(private readonly maxSizePerMessage: number) {}
+  constructor(private readonly gossipTopicCache: GossipTopicCache, private readonly maxSizePerMessage: number) {}
 
   /**
    * Takes the data published by peers on a topic and transforms the data.
@@ -71,9 +71,24 @@ export class DataTransformSnappy {
    * - `outboundTransform()`: compress snappy payload
    */
   inboundTransform(topicStr: string, data: Uint8Array): Uint8Array {
-    // No need to parse topic, everything is snappy compressed
-    return uncompress(data, this.maxSizePerMessage);
+    const uncompressedData = uncompress(data, this.maxSizePerMessage);
+
+    // check uncompressed data length before we extract beacon block root, slot or
+    // attestation data at later steps
+    const uncompressedDataLength = uncompressedData.length;
+    const topic = this.gossipTopicCache.getTopic(topicStr);
+    const sszType = getGossipSSZType(topic);
+
+    if (uncompressedDataLength < sszType.minSize) {
+      throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} < ${sszType.minSize}`);
+    }
+    if (uncompressedDataLength > sszType.maxSize) {
+      throw Error(`ssz_snappy decoded data length ${uncompressedDataLength} > ${sszType.maxSize}`);
+    }
+
+    return uncompressedData;
   }
+
   /**
    * Takes the data to be published (a topic and associated data) transforms the data. The
    * transformed data will then be used to create a `RawGossipsubMessage` to be sent to peers.

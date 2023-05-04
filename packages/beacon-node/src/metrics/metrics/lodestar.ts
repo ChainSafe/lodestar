@@ -248,6 +248,12 @@ export function createLodestarMetrics(
       help: "Count of total gossip validation queue length",
       labelNames: ["topic"],
     }),
+
+    gossipValidationQueueDropRatio: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_queue_current_drop_ratio",
+      help: "Current drop ratio of gossip validation queue",
+      labelNames: ["topic"],
+    }),
     gossipValidationQueueDroppedJobs: register.gauge<"topic">({
       name: "lodestar_gossip_validation_queue_dropped_jobs_total",
       help: "Count of total gossip validation queue dropped jobs",
@@ -267,9 +273,25 @@ export function createLodestarMetrics(
     }),
     gossipValidationQueueConcurrency: register.gauge<"topic">({
       name: "lodestar_gossip_validation_queue_concurrency",
-      help: "Current concurrency of gossip validation queue",
+      help: "Current count of jobs being run on network processor for topic",
       labelNames: ["topic"],
     }),
+
+    networkProcessor: {
+      executeWorkCalls: register.gauge({
+        name: "lodestar_network_processor_execute_work_calls_total",
+        help: "Total calls to network processor execute work fn",
+      }),
+      jobsSubmitted: register.histogram({
+        name: "lodestar_network_processor_execute_jobs_submitted_total",
+        help: "Total calls to network processor execute work fn",
+        buckets: [0, 1, 5, 128],
+      }),
+      canNotAcceptWork: register.gauge({
+        name: "lodestar_network_processor_can_not_accept_work_total",
+        help: "Total times network processor can not accept work on executeWork",
+      }),
+    },
 
     discv5: {
       decodeEnrAttemptCount: register.counter({
@@ -304,6 +326,10 @@ export function createLodestarMetrics(
         name: "lodestar_attnets_service_unsubscribe_subnets_total",
         help: "Count of unsubscribe_subnets calls",
         labelNames: ["subnet", "src"],
+      }),
+      aggregatorSlotSubnetCount: register.gauge({
+        name: "lodestar_attnets_service_aggregator_slot_subnet_total",
+        help: "Count of aggregator per slot and subnet",
       }),
     },
 
@@ -537,6 +563,10 @@ export function createLodestarMetrics(
       queueLength: register.gauge({
         name: "lodestar_bls_thread_pool_queue_length",
         help: "Count of total block processor queue length",
+      }),
+      workersBusy: register.gauge({
+        name: "lodestar_bls_thread_pool_workers_busy",
+        help: "Count of current busy workers",
       }),
       totalJobsGroupsStarted: register.gauge({
         name: "lodestar_bls_thread_pool_job_groups_started_total",
@@ -788,6 +818,11 @@ export function createLodestarMetrics(
         name: "lodestar_oppool_sync_committee_message_pool_size",
         help: "Current size of the SyncCommitteeMessagePool unique by slot subnet and block root",
       }),
+      syncCommitteeMessagePoolInsertOutcome: register.counter<"insertOutcome">({
+        name: "lodestar_oppool_sync_committee_message_insert_outcome_total",
+        help: "Total number of InsertOutcome as a result of adding a SyncCommitteeMessage to pool",
+        labelNames: ["insertOutcome"],
+      }),
       syncContributionAndProofPoolSize: register.gauge({
         name: "lodestar_oppool_sync_contribution_and_proof_pool_pool_size",
         help: "Current size of the SyncContributionAndProofPool unique by slot subnet and block root",
@@ -828,8 +863,7 @@ export function createLodestarMetrics(
       }),
       prevEpochOnChainSourceAttesterMiss: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
-        help:
-          "Incremented if the validator is not flagged as a previous epoch source attester during per epoch processing",
+        help: "Incremented if the validator is not flagged as a previous epoch source attester during per epoch processing",
       }),
       prevEpochOnChainHeadAttesterHit: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_head_attester_hit_total",
@@ -837,8 +871,7 @@ export function createLodestarMetrics(
       }),
       prevEpochOnChainHeadAttesterMiss: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_head_attester_miss_total",
-        help:
-          "Incremented if the validator is not flagged as a previous epoch head attester during per epoch processing",
+        help: "Incremented if the validator is not flagged as a previous epoch head attester during per epoch processing",
       }),
       prevOnChainAttesterCorrectHead: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_attester_correct_head_total",
@@ -854,8 +887,7 @@ export function createLodestarMetrics(
       }),
       prevEpochOnChainTargetAttesterMiss: register.gauge({
         name: "validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
-        help:
-          "Incremented if the validator is not flagged as a previous epoch target attester during per epoch processing",
+        help: "Incremented if the validator is not flagged as a previous epoch target attester during per epoch processing",
       }),
       prevEpochOnChainInclusionDistance: register.histogram({
         name: "validator_monitor_prev_epoch_on_chain_inclusion_distance",
@@ -1123,6 +1155,29 @@ export function createLodestarMetrics(
           help: "Total times SeenContributionAndProof.isKnown returning true",
         }),
       },
+      attestationData: {
+        totalSlot: register.gauge({
+          name: "lodestar_seen_cache_attestation_data_slot_total",
+          help: "Total number of slots of attestation data in SeenAttestationData",
+        }),
+        countPerSlot: register.gauge({
+          name: "lodestar_seen_cache_attestation_data_per_slot_total",
+          help: "Total number of attestation data per slot in SeenAttestationData",
+        }),
+        hit: register.gauge({
+          name: "lodestar_seen_cache_attestation_data_hit_total",
+          help: "Total number of attestation data hit in SeenAttestationData",
+        }),
+        miss: register.gauge({
+          name: "lodestar_seen_cache_attestation_data_miss_total",
+          help: "Total number of attestation data miss in SeenAttestationData",
+        }),
+        reject: register.gauge<"reason">({
+          name: "lodestar_seen_cache_attestation_data_reject_total",
+          help: "Total number of attestation data rejected in SeenAttestationData",
+          labelNames: ["reason"],
+        }),
+      },
     },
 
     regenFnCallTotal: register.gauge<"entrypoint" | "caller">({
@@ -1169,7 +1224,7 @@ export function createLodestarMetrics(
     },
 
     // reprocess attestations
-    reprocessAttestations: {
+    reprocessApiAttestations: {
       total: register.gauge({
         name: "lodestar_reprocess_attestations_total",
         help: "Total number of attestations waiting to reprocess",
@@ -1178,7 +1233,7 @@ export function createLodestarMetrics(
         name: "lodestar_reprocess_attestations_resolve_total",
         help: "Total number of attestations are reprocessed",
       }),
-      waitTimeBeforeResolve: register.gauge({
+      waitSecBeforeResolve: register.gauge({
         name: "lodestar_reprocess_attestations_wait_time_resolve_seconds",
         help: "Time to wait for unknown block in seconds",
       }),
@@ -1187,8 +1242,37 @@ export function createLodestarMetrics(
         help: "Total number of attestations are rejected to reprocess",
         labelNames: ["reason"],
       }),
-      waitTimeBeforeReject: register.gauge<"reason">({
+      waitSecBeforeReject: register.gauge<"reason">({
         name: "lodestar_reprocess_attestations_wait_time_reject_seconds",
+        help: "Time to wait for unknown block before being rejected",
+      }),
+    },
+
+    // reprocess gossip attestations
+    reprocessGossipAttestations: {
+      total: register.gauge({
+        name: "lodestar_reprocess_gossip_attestations_total",
+        help: "Total number of gossip attestations waiting to reprocess",
+      }),
+      countPerSlot: register.gauge({
+        name: "lodestar_reprocess_gossip_attestations_per_slot_total",
+        help: "Total number of gossip attestations waiting to reprocess pet slot",
+      }),
+      resolve: register.gauge({
+        name: "lodestar_reprocess_gossip_attestations_resolve_total",
+        help: "Total number of gossip attestations are reprocessed",
+      }),
+      waitSecBeforeResolve: register.gauge({
+        name: "lodestar_reprocess_gossip_attestations_wait_time_resolve_seconds",
+        help: "Time to wait for unknown block in seconds",
+      }),
+      reject: register.gauge<"reason">({
+        name: "lodestar_reprocess_gossip_attestations_reject_total",
+        help: "Total number of attestations are rejected to reprocess",
+        labelNames: ["reason"],
+      }),
+      waitSecBeforeReject: register.gauge<"reason">({
+        name: "lodestar_reprocess_gossip_attestations_wait_time_reject_seconds",
         help: "Time to wait for unknown block before being rejected",
       }),
     },

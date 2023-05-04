@@ -32,7 +32,9 @@ describe("chain / archive / getNonCheckpointBlocks", () => {
       const checkpointBlocksSet = new Set(checkpointBlocks);
       const nonAncestorSlots = blocks.filter((slot) => !checkpointBlocksSet.has(slot));
 
-      const nonAncestorBlocks = getNonCheckpointBlocks(blocks.map(toProtoBlock));
+      // blocks are to be passed in reverse order as thats how they would be recieved in
+      // ProtoArray.getAllAncestorNodes
+      const nonAncestorBlocks = getNonCheckpointBlocks(blocks.reverse().map(toProtoBlock));
 
       expect(sort(nonAncestorBlocks.map((block) => block.slot))).to.deep.equal(sort(nonAncestorSlots));
     });
