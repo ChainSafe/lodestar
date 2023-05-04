@@ -1,7 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
 import {Connection} from "@libp2p/interface-connection";
-import {PublishResult} from "@libp2p/interface-pubsub";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
@@ -326,8 +325,9 @@ export class NetworkCore implements INetworkCore {
     const peerId = peerIdFromString(data.peerId);
     return this.reqResp.sendRequestWithoutEncoding(peerId, data.method, data.versions, data.requestData);
   }
-  publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts | undefined): Promise<PublishResult> {
-    return this.gossip.publish(topic, data, opts);
+  async publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts | undefined): Promise<number> {
+    const {recipients} = await this.gossip.publish(topic, data, opts);
+    return recipients.length;
   }
 
   // REST API queries

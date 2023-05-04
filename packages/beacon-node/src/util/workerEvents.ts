@@ -10,6 +10,8 @@ export type WorkerBridgeEvent<EventData> = {
 export enum EventDirection {
   workerToMain,
   mainToWorker,
+  /** Event not emitted through worker boundary */
+  none,
 }
 
 /**

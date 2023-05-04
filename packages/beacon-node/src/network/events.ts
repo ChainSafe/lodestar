@@ -41,7 +41,7 @@ export type NetworkEventData = {
 export const networkEventDirection: Record<NetworkEvent, EventDirection> = {
   [NetworkEvent.peerConnected]: EventDirection.workerToMain,
   [NetworkEvent.peerDisconnected]: EventDirection.workerToMain,
-  [NetworkEvent.reqRespRequest]: EventDirection.workerToMain,
+  [NetworkEvent.reqRespRequest]: EventDirection.none, // Only used internally in NetworkCore
   [NetworkEvent.unknownBlockParent]: EventDirection.workerToMain,
   [NetworkEvent.pendingGossipsubMessage]: EventDirection.workerToMain,
   [NetworkEvent.gossipMessageValidationResult]: EventDirection.workerToMain,

@@ -392,9 +392,8 @@ export class Network implements INetwork {
       ...opts,
       ignoreDuplicatePublishError: gossipTopicIgnoreDuplicatePublishError[topic.type],
     };
-    const result = await this.core.publishGossip(topicStr, messageData, opts);
+    const sentPeers = await this.core.publishGossip(topicStr, messageData, opts);
 
-    const sentPeers = result.recipients.length;
     this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers});
     return sentPeers;
   }

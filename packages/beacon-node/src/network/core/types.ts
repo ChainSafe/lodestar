@@ -1,4 +1,3 @@
-import {PublishResult} from "@libp2p/interface-pubsub";
 import {routes} from "@lodestar/api";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
@@ -57,7 +56,7 @@ export interface INetworkCore extends INetworkCorePublic {
   /** Opens stream to handle ReqResp outgoing request */
   sendReqRespRequest(data: OutgoingRequestArgs): AsyncIterable<ResponseIncoming>;
   /** Publish gossip message to peers */
-  publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<PublishResult>;
+  publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number>;
 
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;
@@ -94,7 +93,7 @@ export type NetworkWorkerApi = INetworkCorePublic & {
   updateStatus(status: phase0.Status): Promise<void>;
 
   // sendReqRespRequest - implemented via events
-  publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<PublishResult>;
+  publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number>;
 
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;

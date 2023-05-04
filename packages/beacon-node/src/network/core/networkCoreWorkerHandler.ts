@@ -1,5 +1,4 @@
 import worker_threads from "node:worker_threads";
-import {PublishResult} from "@libp2p/interface-pubsub";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {routes} from "@lodestar/api";
@@ -169,7 +168,7 @@ export class WorkerNetworkCore implements INetworkCore {
   sendReqRespRequest(data: OutgoingRequestArgs): AsyncIterable<ResponseIncoming> {
     return this.reqRespBridgeReqCaller.getAsyncIterable(data);
   }
-  publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<PublishResult> {
+  publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number> {
     return this.getApi().publishGossip(topic, data, opts);
   }
 
