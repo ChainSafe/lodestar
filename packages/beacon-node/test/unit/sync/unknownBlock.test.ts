@@ -10,6 +10,7 @@ import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
 import {testLogger} from "../../utils/logger.js";
 import {getRandPeerIdStr} from "../../utils/peer.js";
 import {getBlockInput} from "../../../src/chain/blocks/types.js";
+import {ClockStopped} from "../../utils/mocks/clock.js";
 
 describe("sync / UnknownBlockSync", () => {
   const logger = testLogger();
@@ -65,6 +66,7 @@ describe("sync / UnknownBlockSync", () => {
       };
 
       const chain: Partial<IBeaconChain> = {
+        clock: new ClockStopped(0),
         forkChoice: forkChoice as IForkChoice,
         processBlock: async ({block}) => {
           if (!forkChoice.hasBlock(block.message.parentRoot)) throw Error("Unknown parent");
