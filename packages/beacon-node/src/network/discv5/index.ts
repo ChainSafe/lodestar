@@ -47,7 +47,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
     const workerData: Discv5WorkerData = {
       enr: this.opts.discv5.enr,
       peerIdProto: exportToProtobuf(this.opts.peerId),
-      multiaddr: this.opts.discv5.bindAddr,
+      bindAddr: this.opts.discv5.bindAddr,
       config: this.opts.discv5.config,
       bootEnrs: this.opts.discv5.bootEnrs as string[],
       metrics: Boolean(this.opts.metrics),

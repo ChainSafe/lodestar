@@ -16,7 +16,7 @@ export type LodestarDiscv5Opts = {
 export interface Discv5WorkerData {
   enr: string;
   peerIdProto: Uint8Array;
-  multiaddr: string;
+  bindAddr: string;
   config: Discv5Config;
   bootEnrs: string[];
   metrics: boolean;
