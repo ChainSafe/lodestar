@@ -69,7 +69,7 @@ async function resolveBlockIdOrNull(
     const justified = forkChoice.getJustifiedBlock();
     return {
       block: await db.block.get(fromHexString(justified.blockRoot)),
-      executionOptimistic: false,
+      executionOptimistic: isOptimisticBlock(justified),
     };
   }
 
