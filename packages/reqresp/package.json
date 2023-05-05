@@ -58,7 +58,6 @@
     "@libp2p/interface-peer-id": "^2.0.1",
     "@lodestar/config": "^1.8.0",
     "@lodestar/params": "^1.8.0",
-    "@lodestar/types": "^1.8.0",
     "@lodestar/utils": "^1.8.0",
     "it-all": "^3.0.1",
     "snappyjs": "^0.7.0",
@@ -67,7 +66,7 @@
     "varint": "^6.0.0"
   },
   "devDependencies": {
-    "@lodestar/types": "^1.7.2"
+    "@lodestar/types": "^1.8.0"
   },
   "peerDependencies": {
     "libp2p": "0.41.0"
