@@ -97,9 +97,10 @@ export function createLodestarMetrics(
         help: "Total calls to network processor execute work fn",
         buckets: [0, 1, 5, 128],
       }),
-      canNotAcceptWork: register.gauge({
+      canNotAcceptWork: register.gauge<"reason">({
         name: "lodestar_network_processor_can_not_accept_work_total",
         help: "Total times network processor can not accept work on executeWork",
+        labelNames: ["reason"],
       }),
     },
 
