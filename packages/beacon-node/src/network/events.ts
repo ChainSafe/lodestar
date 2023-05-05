@@ -44,7 +44,7 @@ export const networkEventDirection: Record<NetworkEvent, EventDirection> = {
   [NetworkEvent.reqRespRequest]: EventDirection.none, // Only used internally in NetworkCore
   [NetworkEvent.unknownBlockParent]: EventDirection.workerToMain,
   [NetworkEvent.pendingGossipsubMessage]: EventDirection.workerToMain,
-  [NetworkEvent.gossipMessageValidationResult]: EventDirection.workerToMain,
+  [NetworkEvent.gossipMessageValidationResult]: EventDirection.mainToWorker,
 };
 
 export type INetworkEventBus = StrictEventEmitterSingleArg<NetworkEventData>;
