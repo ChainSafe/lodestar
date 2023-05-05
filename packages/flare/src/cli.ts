@@ -10,7 +10,7 @@ Flare is a sudden brief burst of bright flame or light.
 In the wrong hands, can lead people astray.
 Use with care.
 
-  * by ChainSafe Systems, 2018-2022`;
+  * by ChainSafe Systems, 2018-2023`;
 const bottomBanner = `
 ✍️ Give feedback and report issues on GitHub:
   * https://github.com/ChainSafe/lodestar`;

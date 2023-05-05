@@ -9,7 +9,7 @@ import {getVersionData} from "./util/version.js";
 const {version} = getVersionData();
 const topBanner = `🌟 Lodestar: TypeScript Implementation of the Ethereum Consensus Beacon Chain.
   * Version: ${version}
-  * by ChainSafe Systems, 2018-2022`;
+  * by ChainSafe Systems, 2018-2023`;
 const bottomBanner = `📖 For more information, check the CLI reference:
   * https://chainsafe.github.io/lodestar/reference/cli
 
