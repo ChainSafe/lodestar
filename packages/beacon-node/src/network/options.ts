@@ -26,6 +26,7 @@ export const defaultNetworkOptions: NetworkOptions = {
   localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
   bootMultiaddrs: [],
   mdns: false,
+  /** disabled by default */
   discv5: null,
   rateLimitMultiplier: 1,
   // TODO: this value is 12 per spec, however lodestar has performance issue if there are too many mesh peers

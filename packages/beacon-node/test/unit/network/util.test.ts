@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {createPeerIdFromKeypair, generateKeypair, KeypairType, SignableENR} from "@chainsafe/discv5";
+import {generateKeypair, KeypairType, SignableENR} from "@chainsafe/discv5";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
 import {createNodeJsLibp2p} from "../../../src/network/index.js";
 import {getCurrentAndNextFork} from "../../../src/network/forks.js";
@@ -50,9 +50,8 @@ describe("createNodeJsLibp2p", () => {
       {
         connectToDiscv5Bootnodes: true,
         discv5: {
-          peerId: await createPeerIdFromKeypair(keypair),
-          enr: SignableENR.createV4(keypair).toObject(),
-          multiaddr: "/ip4/127.0.0.1/udp/0",
+          enr: SignableENR.createV4(keypair).encodeTxt(),
+          bindAddr: "/ip4/127.0.0.1/udp/0",
           bootEnrs: enrWithTcp,
         },
         bootMultiaddrs,
@@ -81,9 +80,8 @@ describe("createNodeJsLibp2p", () => {
       {
         connectToDiscv5Bootnodes: true,
         discv5: {
-          peerId: await createPeerIdFromKeypair(keypair),
-          enr: SignableENR.createV4(keypair).toObject(),
-          multiaddr: "/ip4/127.0.0.1/udp/0",
+          enr: SignableENR.createV4(keypair).encodeTxt(),
+          bindAddr: "/ip4/127.0.0.1/udp/0",
           bootEnrs: enrWithoutTcp,
         },
         bootMultiaddrs,

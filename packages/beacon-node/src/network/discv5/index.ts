@@ -7,8 +7,7 @@ import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {chainConfigFromJson, chainConfigToJson, BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {NetworkCoreMetrics} from "../core/metrics.js";
-import {LodestarDiscv5Opts} from "../peers/peerManager.js";
-import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
+import {Discv5WorkerApi, Discv5WorkerData, LodestarDiscv5Opts} from "./types.js";
 
 export type Discv5Opts = {
   peerId: PeerId;
@@ -48,7 +47,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
     const workerData: Discv5WorkerData = {
       enr: this.opts.discv5.enr,
       peerIdProto: exportToProtobuf(this.opts.peerId),
-      multiaddr: this.opts.discv5.multiaddr,
+      multiaddr: this.opts.discv5.bindAddr,
       config: this.opts.discv5.config,
       bootEnrs: this.opts.discv5.bootEnrs as string[],
       metrics: Boolean(this.opts.metrics),

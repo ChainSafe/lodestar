@@ -5,9 +5,16 @@ import {ChainConfig} from "@lodestar/config";
 // TODO export IDiscv5Config so we don't need this convoluted type
 type Discv5Config = Parameters<(typeof Discv5)["create"]>[0]["config"];
 
+export type LodestarDiscv5Opts = {
+  config?: Discv5Config;
+  enr: string;
+  bindAddr: string;
+  bootEnrs: string[];
+};
+
 /** discv5 worker constructor data */
 export interface Discv5WorkerData {
-  enr: SignableENRData;
+  enr: string;
   peerIdProto: Uint8Array;
   multiaddr: string;
   config: Discv5Config;

@@ -1,6 +1,5 @@
 import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {IDiscv5CreateOptions, SignableENRData} from "@chainsafe/discv5";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
@@ -17,6 +16,7 @@ import {SubnetType} from "../metadata.js";
 import {Eth2Gossipsub} from "../gossip/gossipsub.js";
 import {StatusCache} from "../statusCache.js";
 import {IClock} from "../../util/clock.js";
+import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {PeersData, PeerData} from "./peersData.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
 import {IPeerRpcScoreStore, ScoreState, updateGossipsubScores} from "./score.js";
@@ -60,12 +60,6 @@ const ALLOWED_NEGATIVE_GOSSIPSUB_FACTOR = 0.1;
 // maxPeers and targetPeers should be dynamic on the num of validators connected
 // The Node should compute a recomended value every interval and log a warning
 // to terminal if it deviates significantly from the user's settings
-
-export type LodestarDiscv5Opts = Omit<IDiscv5CreateOptions, "enr" | "multiaddr"> & {
-  multiaddr: string;
-  enr: SignableENRData;
-  bootEnrs: string[];
-};
 
 export type PeerManagerOpts = {
   /** The target number of peers we would like to connect to. */

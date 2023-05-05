@@ -160,7 +160,7 @@ describe("options / beaconNodeOptions", () => {
       },
       network: {
         discv5: {
-          multiaddr: "/ip4/127.0.0.1/udp/9002",
+          bindAddr: "/ip4/127.0.0.1/udp/9002",
           bootEnrs: ["enr:-somedata"],
         },
         maxPeers: 30,
