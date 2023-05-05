@@ -44,7 +44,7 @@ export function getLoggerVc(logger: Logger, clock: IClock): LoggerVc {
       if (!hasLogged) {
         hasLogged = true;
         // Log the full error message, in case the server returns 503 for some unknown reason
-        logger.info(`Node is syncing - ${e.message}`);
+        logger.warn(`Node is syncing - ${e.message}`);
       }
     },
   };
