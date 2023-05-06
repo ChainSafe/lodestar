@@ -58,6 +58,61 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
 
     // Non-spec'ed
 
+    finalizedOrphanedCount: register.gauge({
+      name: "finalized_orphaned_count",
+      help: "Number of blocks orphaned in the finalized epoch",
+    }),
+
+    finalizedDoubleCount: register.gauge({
+      name: "finalized_double_count",
+      help: "Number of double proposals in the finalized epoch",
+    }),
+
+    finalizedMissedCount: register.gauge({
+      name: "finalized_missed_count",
+      help: "Number of blocks missed in the finalized epoch",
+    }),
+
+    finalizedSlotsRangeCount: register.gauge({
+      name: "finalized_slots_range_count",
+      help: "Number of Epochs finalized",
+    }),
+
+    finalizedAttachedValidatorsProposersCount: register.gauge({
+      name: "finalized_attached_validators_proposers_count",
+      help: "Number of proposers attached to the Beacon Node in the finalized epoch",
+    }),
+
+    finalizedAttachedValidatorsProposalsCount: register.gauge({
+      name: "finalized_attached_validators_proposals_count",
+      help: "Number of proposals recieved for the finalized epoch",
+    }),
+
+    finalizedAttachedValidatorsMissedCount: register.gauge({
+      name: "finalized_attached_validators_missed_count",
+      help: "Number of blocks missed in the finalized epoch for the attached proposers",
+    }),
+
+    finalizedAttachedValidatorsDoubleProposalsCount: register.gauge({
+      name: "finalized_attached_validators_double_proposals_count",
+      help: "Number of double proposals in the finalized epoch for the attached proposers",
+    }),
+
+    finalizedAttachedValidatorsOrphanedCount: register.gauge({
+      name: "finalized_attached_validators_orphaned_count",
+      help: "Number of orphaned blocks in the finalized epoch for the attached proposers",
+    }),
+
+    finalizedCanonicalBlocksCount: register.gauge({
+      name: "finalized_canonical_blocks_count",
+      help: "Number of finalized canonical blocks",
+    }),
+
+    finalizedNonCanonicalBlocksCount: register.gauge({
+      name: "finalized_non_canonical_blocks_count",
+      help: "Number of non finalized Canonical blocks",
+    }),
+
     forkChoice: {
       findHead: register.histogram({
         name: "beacon_fork_choice_find_head_seconds",

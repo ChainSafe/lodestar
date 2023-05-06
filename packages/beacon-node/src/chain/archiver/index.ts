@@ -1,5 +1,5 @@
 import {Logger} from "@lodestar/utils";
-import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
@@ -8,6 +8,7 @@ import {JobItemQueue} from "../../util/queue/index.js";
 import {IBeaconChain} from "../interface.js";
 import {ChainEvent} from "../emitter.js";
 import {CheckpointStateCache} from "../stateCache/index.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {StatesArchiver, StatesArchiverOpts} from "./archiveStates.js";
 import {archiveBlocks, FinalizedData} from "./archiveBlocks.js";
 
@@ -31,7 +32,8 @@ export class Archiver {
     private readonly chain: IBeaconChain,
     private readonly logger: Logger,
     signal: AbortSignal,
-    opts: ArchiverOpts
+    opts: ArchiverOpts,
+    private readonly metrics: Metrics | null
   ) {
     this.statesArchiver = new StatesArchiver(chain.checkpointStateCache, db, logger, opts);
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
@@ -88,13 +90,38 @@ export class Archiver {
 
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiver.maybeArchiveState(finalized);
-      this.collectMissedOrphaedStats(
+
+      const {
+        checkpoints,
+        attachedValidatorsOrphanedCount,
+        attachedValidatorsMissedProposals,
+        attachedValidatorsDoubleProposals,
+        attachedProposers,
+        missedProposals,
+        doubleProposals,
+        expectedProposals,
+        orphanedProposals,
+        finalizedCanonicalBlocksCount,
+        finalizedNonCanonicalBlocksCount,
+      } = this.collectMissedOrphaedStats(
         this.chain.checkpointStateCache,
         this.chain.forkChoice,
         this.chain.beaconProposerCache,
         finalizedData,
         finalized
       );
+
+      this.metrics?.finalizedOrphanedCount.set(orphanedProposals);
+      this.metrics?.finalizedMissedCount.set(missedProposals);
+      this.metrics?.finalizedDoubleCount.set(doubleProposals);
+      this.metrics?.finalizedSlotsRangeCount.set(checkpoints * SLOTS_PER_EPOCH);
+      this.metrics?.finalizedAttachedValidatorsProposersCount.set(attachedProposers);
+      this.metrics?.finalizedAttachedValidatorsProposalsCount.set(expectedProposals);
+      this.metrics?.finalizedAttachedValidatorsMissedCount.set(attachedValidatorsMissedProposals);
+      this.metrics?.finalizedAttachedValidatorsDoubleProposalsCount.set(attachedValidatorsDoubleProposals);
+      this.metrics?.finalizedAttachedValidatorsOrphanedCount.set(attachedValidatorsOrphanedCount);
+      this.metrics?.finalizedCanonicalBlocksCount.set(finalizedCanonicalBlocksCount);
+      this.metrics?.finalizedNonCanonicalBlocksCount.set(finalizedNonCanonicalBlocksCount);
 
       this.chain.checkpointStateCache.pruneFinalized(finalizedEpoch);
       this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch);
@@ -160,71 +187,121 @@ export class Archiver {
     beaconProposerCache: IBeaconChain["beaconProposerCache"],
     finalizedData: FinalizedData,
     finalized: CheckpointWithHex
-  ): void {
+  ): {
+    checkpoints: number;
+    foundCheckpoints: number;
+    attachedProposers: number;
+    attachedValidatorFoundProposals: number;
+    doubleProposals: number;
+    totalProposals: number;
+    expectedProposals: number;
+    orphanedProposals: number;
+    missedProposals: number;
+    finalizedCanonicalBlocksCount: number;
+    finalizedNonCanonicalBlocksCount: number;
+    attachedValidatorsMissedProposals: number;
+    attachedValidatorsDoubleProposals: number;
+    attachedValidatorsOrphanedCount: number;
+  } {
     const {finalizedCanonicalCheckpoints, finalizedCanonicalBlocks, finalizedNonCanonicalBlocks} = finalizedData;
+
     const proposers = beaconProposerCache
       .getProposersSinceEpoch(finalized.epoch)
       .map((indexString) => Number(indexString));
+
     let expectedProposals = 0;
     let totalProposals = 0;
     let checkpoints = 0;
 
     let foundCheckpoints = 0;
-    let foundProposals = 0;
+    let attachedValidatorFoundProposals = 0;
     let orphanedProposals = 0;
+    let missedProposals = 0;
+    let finalizedEpoch = 0;
+    const attachedValidatorsOrphanedCount = 0;
+    let attachedValidatorsDoubleProposals = 0;
+    let attachedValidatorsOrphanedBlocks = 0;
     // if any validator proposed twice for an epoch
     let doubleProposals = 0;
-    const doneEpochProposals = new Map<Epoch, ValidatorIndex[]>();
+    let foundProposals = 0;
+    const epochOrphanedProposals: ProtoBlock[] = [];
+    const epochProposals: ProtoBlock[] = [];
+    const doneEpochProposalsLocal = new Map<Epoch, ValidatorIndex[]>();
 
     // Get all the ancestors of the finalized till previous finalized
     for (const checkpointHex of finalizedCanonicalCheckpoints) {
       checkpoints++;
       const checkpointState = checkpointStateCache.get(checkpointHex);
       if (checkpointState !== null) {
+        finalizedEpoch = checkpointState.epochCtx.epoch;
         foundCheckpoints++;
         totalProposals += checkpointState.epochCtx.proposers.length;
-        for (const validatorIndex of proposers) {
-          if (checkpointState.epochCtx.proposers.includes(validatorIndex)) {
-            expectedProposals++;
-          }
-        }
+        epochProposals.push(
+          ...finalizedCanonicalBlocks.filter((x) => Math.ceil(x.slot / SLOTS_PER_EPOCH) === finalizedEpoch)
+        );
+        epochOrphanedProposals.push(
+          ...finalizedNonCanonicalBlocks.filter((x) => Math.ceil(x.slot / SLOTS_PER_EPOCH) === finalizedEpoch)
+        );
+        expectedProposals += checkpointState.epochCtx.proposers.filter((x) => proposers.includes(x)).length;
       }
     }
 
     for (const block of finalizedCanonicalBlocks) {
       const {slot, proposerIndex} = block;
+      const epoch = Math.ceil(slot / SLOTS_PER_EPOCH);
       if (proposers.includes(proposerIndex)) {
-        foundProposals++;
-        const epoch = Number(slot / SLOTS_PER_EPOCH);
-        const epochProposals = doneEpochProposals.get(epoch) ?? [];
-        epochProposals.push(proposerIndex);
-        doneEpochProposals.set(epoch, epochProposals);
+        attachedValidatorFoundProposals++;
+        const epochProposalsLocal = doneEpochProposalsLocal.get(epoch) ?? [];
+        epochProposalsLocal.push(proposerIndex);
+        doneEpochProposalsLocal.set(epoch, epochProposalsLocal);
       }
     }
 
     for (const block of finalizedNonCanonicalBlocks) {
       const {slot, proposerIndex} = block;
+      const epoch = Math.ceil(slot / SLOTS_PER_EPOCH);
       if (proposers.includes(proposerIndex)) {
-        const epoch = Number(slot / SLOTS_PER_EPOCH);
-        orphanedProposals++;
-        const epochProposals = doneEpochProposals.get(epoch) ?? [];
-        if (epochProposals.includes(proposerIndex)) {
-          doubleProposals++;
+        attachedValidatorsOrphanedBlocks++;
+        const epochProposalsLocal = doneEpochProposalsLocal.get(epoch) ?? [];
+        if (epochProposalsLocal.includes(proposerIndex)) {
+          attachedValidatorsDoubleProposals++;
         } else {
-          epochProposals.push(proposerIndex);
-          doneEpochProposals.set(epoch, epochProposals);
+          epochProposalsLocal.push(proposerIndex);
+          doneEpochProposalsLocal.set(epoch, epochProposalsLocal);
         }
       }
     }
 
-    this.logger.warn("Expected proposals by this node", {
+    orphanedProposals = epochOrphanedProposals.length;
+    foundProposals = epochProposals.length;
+    doubleProposals = epochOrphanedProposals.filter((x) => epochProposals.includes(x)).length;
+    missedProposals = totalProposals - foundProposals - orphanedProposals + doubleProposals;
+
+    const attachedValidatorsMissedProposals =
+      expectedProposals -
+      attachedValidatorFoundProposals -
+      attachedValidatorsOrphanedBlocks +
+      attachedValidatorsDoubleProposals;
+
+    const attachedProposers = proposers.length;
+    const finalizedCanonicalBlocksCount = finalizedCanonicalBlocks.length;
+    const finalizedNonCanonicalBlocksCount = finalizedNonCanonicalBlocks.length;
+
+    return {
       checkpoints,
       foundCheckpoints,
-      foundProposals,
       doubleProposals,
+      attachedProposers,
       totalProposals,
       expectedProposals,
+      missedProposals,
       orphanedProposals,
-    });
+      attachedValidatorFoundProposals,
+      attachedValidatorsDoubleProposals,
+      attachedValidatorsMissedProposals,
+      attachedValidatorsOrphanedCount,
+      finalizedCanonicalBlocksCount,
+      finalizedNonCanonicalBlocksCount,
+    };
   }
 }

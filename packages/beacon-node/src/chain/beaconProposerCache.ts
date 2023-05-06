@@ -48,7 +48,7 @@ export class BeaconProposerCache {
   getProposersSinceEpoch(epoch: Epoch): ProposerPreparationData["validatorIndex"][] {
     const proposers = [];
     for (const [validatorIndex, feeRecipientEntry] of this.feeRecipientByValidatorIndex.entries()) {
-      if (feeRecipientEntry.sinceEpoch >= epoch) {
+      if (feeRecipientEntry.sinceEpoch <= epoch) {
         proposers.push(validatorIndex);
       }
     }
