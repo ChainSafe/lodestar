@@ -1,6 +1,6 @@
 import {Logger} from "@lodestar/utils";
-import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {Epoch, ValidatorIndex, Slot} from "@lodestar/types";
+import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
+import {ValidatorIndex, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {IBeaconDb} from "../../db/index.js";
@@ -194,7 +194,7 @@ export class Archiver {
     finalizedProposersCheckpoints.push(lastFinalized);
     finalizedProposersCheckpoints.push(finalized);
 
-    // Sort the data to in following structure to make further inferences
+    // Sort the data to in following structure to make inferences
     const slotProposers = new Map<Slot, {canonicalVals: ValidatorIndex[]; nonCanonicalVals: ValidatorIndex[]}>();
 
     //  1. Process canonical blocks
