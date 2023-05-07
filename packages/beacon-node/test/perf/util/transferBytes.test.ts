@@ -1,4 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
+import {expect} from "chai";
 
 describe("transfer bytes", function () {
   const sizes = [
@@ -12,6 +13,7 @@ describe("transfer bytes", function () {
     {size: 524380, name: "BlobsSidecar"},
     {size: 1_000_000, name: "Big SignedBeaconBlock"},
   ];
+
   for (const {size, name} of sizes) {
     const array = new Uint8Array(size);
     for (let i = 0; i < array.length; i++) array[i] = Math.random() * 255;
@@ -29,4 +31,14 @@ describe("transfer bytes", function () {
       },
     });
   }
+
+  it("ArrayBuffer use after structuredClone transfer", () => {
+    const data = new Uint8Array(32);
+    data[0] = 1;
+    expect(data[0]).equals(1);
+    structuredClone(data, {transfer: [data.buffer]});
+    // After structuredClone() data is mutated in place to hold an empty ArrayBuffer
+    expect(data[0]).equals(undefined);
+    expect(data).deep.equals(new Uint8Array());
+  });
 });
