@@ -1,6 +1,7 @@
 import path from "node:path";
+import {toHexString} from "@chainsafe/ssz";
 import {InterchangeFormatVersion} from "@lodestar/validator";
-import {CliCommand, writeFile600Perm} from "../../../util/index.js";
+import {CliCommand, YargsError, ensure0xPrefix, isValidatePubkeyHex, writeFile600Perm} from "../../../util/index.js";
 import {GlobalArgs} from "../../../options/index.js";
 import {AccountValidatorArgs} from "../options.js";
 import {getCliLogger, LogArgs} from "../../../util/index.js";
@@ -11,6 +12,7 @@ import {ISlashingProtectionArgs} from "./options.js";
 
 type ExportArgs = {
   file: string;
+  pubkeys?: string[];
 };
 
 export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & AccountValidatorArgs & GlobalArgs & LogArgs> =
@@ -32,6 +34,17 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
         demandOption: true,
         type: "string",
       },
+      pubkeys: {
+        description: "Export slashing protection data for only a given subset of pubkeys",
+        type: "array",
+        string: true, // Ensures the pubkey string is not automatically converted to numbers
+        coerce: (pubkeys: string[]): string[] =>
+          // Parse ["0x11,0x22"] to ["0x11", "0x22"]
+          pubkeys
+            .map((item) => item.split(","))
+            .flat(1)
+            .map(ensure0xPrefix),
+      },
     },
 
     handler: async (args) => {
@@ -47,7 +60,7 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
       const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 
       const formatVersion: InterchangeFormatVersion = {version: "5"};
-      logger.info("Exporting the slashing protection logs", {...formatVersion, dbPath});
+      logger.info("Exporting slashing protection data", {...formatVersion, dbPath});
 
       const {slashingProtection, metadata} = getSlashingProtection(args, network, logger);
 
@@ -58,18 +71,38 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
       const genesisValidatorsRoot =
         (await metadata.getGenesisValidatorsRoot()) ?? (await getGenesisValidatorsRoot(args));
 
-      logger.verbose("Fetching the pubkeys from the slashingProtection db");
-      const pubkeys = await slashingProtection.listPubkeys();
+      logger.verbose("Fetching pubkeys from slashing protection DB");
+      const allPubkeys = await slashingProtection.listPubkeys();
+      let pubkeysToExport = allPubkeys;
 
-      logger.info("Starting export for pubkeys found", {pubkeys: pubkeys.length});
+      if (args.pubkeys) {
+        logger.verbose("Filtering by given subset of pubkeys", {count: args.pubkeys.length});
+        const filteredPubkeys = [];
+
+        for (const pubkeyHex of args.pubkeys) {
+          if (!isValidatePubkeyHex(pubkeyHex)) {
+            throw new YargsError(`Invalid pubkey ${pubkeyHex}`);
+          }
+          const existingPubkey = allPubkeys.find((pubkey) => toHexString(pubkey) === pubkeyHex);
+          if (!existingPubkey) {
+            logger.warn("Pubkey not found in slashing protection DB", {pubkey: pubkeyHex});
+          } else {
+            filteredPubkeys.push(existingPubkey);
+          }
+        }
+
+        pubkeysToExport = filteredPubkeys;
+      }
+
+      logger.info("Starting export for pubkeys found", {count: pubkeysToExport.length});
       const interchange = await slashingProtection.exportInterchange(
         genesisValidatorsRoot,
-        pubkeys,
+        pubkeysToExport,
         formatVersion,
         logger
       );
 
-      logger.info("Writing the slashing protection logs", {file: args.file});
+      logger.info("Writing slashing protection data", {file: args.file});
       writeFile600Perm(args.file, interchange);
       logger.verbose("Export completed successfully");
     },
