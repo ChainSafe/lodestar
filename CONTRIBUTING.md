@@ -30,7 +30,7 @@ Contributing to tests:
 - Test must not depend on external live resources, such that running tests for a commit must be deterministic:
   - Do not pull data from external APIs like execution JSON RPC (instead run a local node).
   - Do not pull unpinned versions from dockerhub (use deterministic tag) or Github (checkout commit not branch).
-  - Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful that your development environment.
+  - Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.
 
 ### Debugging Spec Tests
 
