@@ -169,13 +169,17 @@ export class ForkChoice implements IForkChoice {
     // Check if scores need to be calculated/updated
     const oldBalances = this.balances;
     const newBalances = this.fcStore.justified.balances;
-    this.deltas = computeDeltas(
+    const deltas = computeDeltas(
       this.protoArray.indices,
       this.votes,
       oldBalances,
       newBalances,
       this.fcStore.equivocatingIndices
     );
+    // last delta is for the new block, it's 0 due to no vote for this new block yet
+    // if we don't set it we'll get INVALID_DELTA_LEN error in ProtoArray.applyScoreChanges()
+    deltas[deltas.length] = 0;
+    this.deltas = deltas;
 
     // do not update this.balances here since we're not sure if this deltas will be reflected in protoArray
   }
