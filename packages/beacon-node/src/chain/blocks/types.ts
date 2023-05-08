@@ -1,4 +1,4 @@
-import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
+import {CachedBeaconStateAllForks, computeEpochAtSlot, DataAvailableStatus} from "@lodestar/state-transition";
 import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
 import {allForks, deneb, Slot, WithOptionalBytes} from "@lodestar/types";
 import {ForkSeq, MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} from "@lodestar/params";
@@ -101,6 +101,7 @@ export type FullyVerifiedBlock = {
    * used in optimistic sync or for merge block
    */
   executionStatus: MaybeValidExecutionStatus;
+  dataAvailableStatus: DataAvailableStatus;
   /** Seen timestamp seconds */
   seenTimestampSec: number;
 };

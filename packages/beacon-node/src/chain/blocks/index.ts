@@ -57,7 +57,11 @@ export async function processBlocks(
   }
 
   try {
-    const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksSanityChecks(this, blocks, opts);
+    const {relevantBlocks, dataAvailabilityStatuses, parentSlots, parentBlock} = verifyBlocksSanityChecks(
+      this,
+      blocks,
+      opts
+    );
 
     // No relevant blocks, skip verifyBlocksInEpoch()
     if (relevantBlocks.length === 0 || parentBlock === null) {
@@ -71,6 +75,7 @@ export async function processBlocks(
       this,
       parentBlock,
       relevantBlocks,
+      dataAvailabilityStatuses,
       opts
     );
 
@@ -90,6 +95,9 @@ export async function processBlocks(
         postState: postStates[i],
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
+        // Currently dataAvailableStatus is not used upstream but that can change if we
+        // start supporting optimistic syncing/processing
+        dataAvailableStatus: dataAvailabilityStatuses[i],
         proposerBalanceDelta: proposerBalanceDeltas[i],
         // TODO: Make this param mandatory and capture in gossip
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
