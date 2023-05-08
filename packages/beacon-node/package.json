@@ -157,9 +157,6 @@
     "varint": "^6.0.0",
     "xxhash-wasm": "1.0.2"
   },
-  "peerDependencies": {
-    "c-kzg": "^1.0.7"
-  },
   "devDependencies": {
     "@types/eventsource": "^1.1.11",
     "@types/leveldown": "^4.0.3",
