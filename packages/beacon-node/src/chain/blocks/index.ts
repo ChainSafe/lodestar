@@ -1,4 +1,4 @@
-import {allForks} from "@lodestar/types";
+import {WithOptionalBytes, allForks} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -18,10 +18,10 @@ const QUEUE_MAX_LENGTH = 256;
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<[BlockInput[], ImportBlockOpts], void>;
+  readonly jobQueue: JobItemQueue<[WithOptionalBytes<BlockInput>[], ImportBlockOpts], void>;
 
   constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
-    this.jobQueue = new JobItemQueue<[BlockInput[], ImportBlockOpts], void>(
+    this.jobQueue = new JobItemQueue<[WithOptionalBytes<BlockInput>[], ImportBlockOpts], void>(
       (job, importOpts) => {
         return processBlocks.call(chain, job, {...opts, ...importOpts});
       },
@@ -30,7 +30,7 @@ export class BlockProcessor {
     );
   }
 
-  async processBlocksJob(job: BlockInput[], opts: ImportBlockOpts = {}): Promise<void> {
+  async processBlocksJob(job: WithOptionalBytes<BlockInput>[], opts: ImportBlockOpts = {}): Promise<void> {
     await this.jobQueue.push(job, opts);
   }
 }
@@ -47,7 +47,7 @@ export class BlockProcessor {
  */
 export async function processBlocks(
   this: BeaconChain,
-  blocks: BlockInput[],
+  blocks: WithOptionalBytes<BlockInput>[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
   if (blocks.length === 0) {

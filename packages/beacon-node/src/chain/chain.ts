@@ -12,7 +12,19 @@ import {
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
+import {
+  allForks,
+  UintNum64,
+  Root,
+  phase0,
+  Slot,
+  RootHex,
+  Epoch,
+  ValidatorIndex,
+  deneb,
+  Wei,
+  WithOptionalBytes,
+} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, pruneSetToMax, toHex} from "@lodestar/utils";
@@ -450,11 +462,11 @@ export class BeaconChain implements IBeaconChain {
     return blobsSidecar;
   }
 
-  async processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void> {
+  async processBlock(block: WithOptionalBytes<BlockInput>, opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob([block], opts);
   }
 
-  async processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void> {
+  async processChainSegment(blocks: WithOptionalBytes<BlockInput>[], opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob(blocks, opts);
   }
 

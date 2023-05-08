@@ -20,3 +20,5 @@ export enum BlockSource {
 
 export type SlotRootHex = {slot: Slot; root: RootHex};
 export type SlotOptionalRoot = {slot: Slot; root?: RootHex};
+export type WithBytes<T extends Record<string, unknown>> = T & {serializedData: Uint8Array};
+export type WithOptionalBytes<T extends Record<string, unknown>> = T & {serializedData?: Uint8Array};

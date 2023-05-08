@@ -497,11 +497,21 @@ export function createLodestarMetrics(
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
     },
-    elapsedTimeTillBecomeHead: register.histogram({
-      name: "lodestar_gossip_block_elapsed_time_till_become_head",
-      help: "Time elapsed between block slot time and the time block becomes head",
-      buckets: [0.5, 1, 2, 4, 6, 12],
-    }),
+    importBlock: {
+      persistBlockNoSerializedDataCount: register.gauge({
+        name: "lodestar_import_block_persist_block_no_serialized_data_count",
+        help: "Count persisting block with no serialized data",
+      }),
+      persistBlockWithSerializedDataCount: register.gauge({
+        name: "lodestar_import_block_persist_block_with_serialized_data_count",
+        help: "Count persisting block with serialized data",
+      }),
+      elapsedTimeTillBecomeHead: register.histogram({
+        name: "lodestar_gossip_block_elapsed_time_till_become_head",
+        help: "Time elapsed between block slot time and the time block becomes head",
+        buckets: [0.5, 1, 2, 4, 6, 12],
+      }),
+    },
     engineNotifyNewPayloadResult: register.gauge<"result">({
       name: "lodestar_execution_engine_notify_new_payload_result_total",
       help: "The total result of calling notifyNewPayload execution engine api",

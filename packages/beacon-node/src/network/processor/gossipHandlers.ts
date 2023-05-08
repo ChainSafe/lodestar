@@ -2,7 +2,7 @@ import {peerIdFromString} from "@libp2p/peer-id";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger, prettyBytes} from "@lodestar/utils";
-import {Root, Slot, ssz} from "@lodestar/types";
+import {Root, Slot, ssz, WithBytes} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {Metrics} from "../../metrics/index.js";
 import {OpSource} from "../../metrics/validatorMonitor.js";
@@ -124,7 +124,11 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     }
   }
 
-  function handleValidBeaconBlock(blockInput: BlockInput, peerIdStr: string, seenTimestampSec: number): void {
+  function handleValidBeaconBlock(
+    blockInput: WithBytes<BlockInput>,
+    peerIdStr: string,
+    seenTimestampSec: number
+  ): void {
     const signedBlock = blockInput.block;
 
     // Handler - MUST NOT `await`, to allow validation result to be propagated
@@ -178,7 +182,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       const blockInput = getBlockInput.preDeneb(config, signedBlock);
       await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
-      handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+      handleValidBeaconBlock({...blockInput, serializedData}, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_block_and_blobs_sidecar]: async ({serializedData}, topic, peerIdStr, seenTimestampSec) => {
@@ -193,7 +197,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       const blockInput = getBlockInput.postDeneb(config, beaconBlock, blobsSidecar);
       await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
       validateGossipBlobsSidecar(beaconBlock, blobsSidecar);
-      handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+      handleValidBeaconBlock({...blockInput, serializedData}, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_aggregate_and_proof]: async ({serializedData}, topic, _peer, seenTimestampSec) => {
