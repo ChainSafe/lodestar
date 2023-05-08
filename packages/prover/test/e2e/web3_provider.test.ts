@@ -12,11 +12,11 @@ describe("web3_provider", () => {
     describe("web3", () => {
       it("should connect to the network and call non-verified method", async () => {
         const {provider} = createVerifiedExecutionProvider(
-          new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io"),
+          new Web3.providers.HttpProvider("https://lodestar-mainnetrpc.chainsafe.io"),
           {
             transport: LCTransport.Rest,
-            urls: ["https://lodestar-sepolia.chainsafe.io"],
-            network: "sepolia",
+            urls: ["https://lodestar-mainnet.chainsafe.io"],
+            network: "mainnet",
           }
         );
 
@@ -30,10 +30,10 @@ describe("web3_provider", () => {
     describe("ethers", () => {
       it("should connect to the network and call non-verified method", async () => {
         const {provider} = createVerifiedExecutionProvider(
-          new ethers.JsonRpcProvider("https://lodestar-sepoliarpc.chainsafe.io"),
+          new ethers.JsonRpcProvider("https://lodestar-mainnetrpc.chainsafe.io"),
           {
             transport: LCTransport.Rest,
-            urls: ["https://lodestar-sepolia.chainsafe.io"],
+            urls: ["https://lodestar-mainnet.chainsafe.io"],
             network: "sepolia",
           }
         );
