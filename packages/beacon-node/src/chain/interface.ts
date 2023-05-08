@@ -128,7 +128,7 @@ export interface IBeaconChain {
 
   getStatus(): phase0.Status;
 
-  recomputeForkChoiceHead(): ProtoBlock;
+  recomputeForkChoiceHead(skipComputeDeltas?: boolean): ProtoBlock;
 
   waitForBlock(slot: Slot, root: RootHex): Promise<boolean>;
 

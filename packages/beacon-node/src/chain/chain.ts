@@ -475,12 +475,12 @@ export class BeaconChain implements IBeaconChain {
     };
   }
 
-  recomputeForkChoiceHead(): ProtoBlock {
+  recomputeForkChoiceHead(skipComputeDeltas = false): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer();
 
     try {
-      return this.forkChoice.updateHead();
+      return this.forkChoice.updateHead(skipComputeDeltas);
     } catch (e) {
       this.metrics?.forkChoice.errors.inc();
       throw e;

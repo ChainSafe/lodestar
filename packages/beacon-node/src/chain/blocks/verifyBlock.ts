@@ -82,9 +82,18 @@ export async function verifyBlocksInEpoch(
   const abortController = new AbortController();
 
   try {
-    const [segmentExecStatus, {postStates, proposerBalanceDeltas}] = await Promise.all([
-      // Execution payloads
-      verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts),
+    // Execution payloads
+    const executionPromise = verifyBlocksExecutionPayload(
+      this,
+      parentBlock,
+      blocks,
+      preState0,
+      abortController.signal,
+      opts
+    );
+    // const [segmentExecStatus, {postStates, proposerBalanceDeltas}] = await Promise.all([
+    const [{postStates, proposerBalanceDeltas}] = await Promise.all([
+      // verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts),
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
       verifyBlocksStateTransitionOnly(preState0, blocksInput, this.logger, this.metrics, abortController.signal, opts),
@@ -93,6 +102,12 @@ export async function verifyBlocksInEpoch(
       verifyBlocksSignatures(this.bls, this.logger, this.metrics, preState0, blocks, opts),
     ]);
 
+    // verifyBlocksStateTransitionOnly + verifyBlocksSignatures usually take 200ms - 250ms less than verifyBlocksExecutionPayload
+    // we leverage this time to precompute forkchoice's deltas and do some early import
+    // it does not make sense to call prepareUpdateHead() for all blocks
+    // forkchoice will only prepare update head if block slot is same to clock slot
+    this.forkChoice.prepareUpdateHead(blocks[blocks.length - 1].message);
+    const segmentExecStatus = await executionPromise;
     if (segmentExecStatus.execAborted === null && segmentExecStatus.mergeBlockFound !== null) {
       // merge block found and is fully valid = state transition + signatures + execution payload.
       // TODO: Will this banner be logged during syncing?

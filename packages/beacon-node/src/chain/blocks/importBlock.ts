@@ -202,7 +202,8 @@ export async function importBlock(
   // 5. Compute head. If new head, immediately stateCache.setHeadState()
 
   const oldHead = this.forkChoice.getHead();
-  const newHead = this.recomputeForkChoiceHead();
+  // skip computeDeltas() if possible as we called prepareUpdateHead() in verifyBlock()
+  const newHead = this.recomputeForkChoiceHead(true);
   const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
