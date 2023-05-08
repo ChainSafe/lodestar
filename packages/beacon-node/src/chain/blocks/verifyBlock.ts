@@ -1,24 +1,31 @@
 import {
   CachedBeaconStateAllForks,
+  RootCache,
   computeEpochAtSlot,
   isStateValidatorsNodesPopulated,
 } from "@lodestar/state-transition";
-import {bellatrix} from "@lodestar/types";
-import {ForkName} from "@lodestar/params";
+import {Slot, bellatrix, ssz} from "@lodestar/types";
+import {ForkName, MAX_SEED_LOOKAHEAD} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
-import {ProtoBlock} from "@lodestar/fork-choice";
+import {ForkChoiceError, ForkChoiceErrorCode, ProtoBlock} from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
+import {routes} from "@lodestar/api";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
 import type {BeaconChain} from "../chain.js";
-import {BlockInput, ImportBlockOpts} from "./types.js";
+import {AttestationImportOpt, BlockInput, ImportBlockOpts} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
 import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExecutionPayloads.js";
+
+/**
+ * Fork-choice allows to import attestations from current (0) or past (1) epoch.
+ */
+const FORK_CHOICE_ATT_EPOCH_LIMIT = 1;
 
 /**
  * Verifies 1 or more blocks are fully valid; from a linear sequence of blocks.
@@ -34,6 +41,7 @@ import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExe
 export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
+  parentSlots: Slot[],
   blocksInput: BlockInput[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
@@ -91,7 +99,6 @@ export async function verifyBlocksInEpoch(
       abortController.signal,
       opts
     );
-    // const [segmentExecStatus, {postStates, proposerBalanceDeltas}] = await Promise.all([
     const [{postStates, proposerBalanceDeltas}] = await Promise.all([
       // verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts),
       // Run state transition only
@@ -103,7 +110,113 @@ export async function verifyBlocksInEpoch(
     ]);
 
     // verifyBlocksStateTransitionOnly + verifyBlocksSignatures usually take 200ms - 250ms less than verifyBlocksExecutionPayload
-    // we leverage this time to precompute forkchoice's deltas and do some early import
+    // we leverage this time to precompute forkchoice's deltas and do some early import after we verify blocks' signatures
+    const currentEpoch = this.clock.currentEpoch;
+    for (const [i, {block}] of blocksInput.entries()) {
+      const blockEpoch = computeEpochAtSlot(block.message.slot);
+      const parentBlockSlot = parentSlots[i];
+      const postState = postStates[i];
+
+      // Import attestations to fork choice
+      //
+      // - For each attestation
+      //   - Get indexed attestation
+      //   - Register attestation with fork-choice
+      //   - Register attestation with validator monitor (only after sync)
+      // Only process attestations of blocks with relevant attestations for the fork-choice:
+      // If current epoch is N, and block is epoch X, block may include attestations for epoch X or X - 1.
+      // The latest block that is useful is at epoch N - 1 which may include attestations for epoch N - 1 or N - 2.
+      if (
+        opts.importAttestations === AttestationImportOpt.Force ||
+        (opts.importAttestations !== AttestationImportOpt.Skip &&
+          blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
+      ) {
+        const attestations = block.message.body.attestations;
+        const rootCache = new RootCache(postState);
+        const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
+
+        for (const attestation of attestations) {
+          try {
+            const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
+            const {target, slot, beaconBlockRoot} = attestation.data;
+
+            const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
+            this.seenAggregatedAttestations.add(
+              target.epoch,
+              attDataRoot,
+              {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
+              true
+            );
+            // Duplicated logic from fork-choice onAttestation validation logic.
+            // Attestations outside of this range will be dropped as Errors, so no need to import
+            if (
+              opts.importAttestations === AttestationImportOpt.Force ||
+              (target.epoch <= currentEpoch && target.epoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
+            ) {
+              this.forkChoice.onAttestation(
+                indexedAttestation,
+                attDataRoot,
+                opts.importAttestations === AttestationImportOpt.Force
+              );
+            }
+
+            // Note: To avoid slowing down sync, only register attestations within FORK_CHOICE_ATT_EPOCH_LIMIT
+            this.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
+
+            const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(slot), beaconBlockRoot);
+            this.metrics?.registerAttestationInBlock(indexedAttestation, parentBlockSlot, correctHead);
+
+            // don't want to log the processed attestations here as there are so many attestations and it takes too much disc space,
+            // users may want to keep more log files instead of unnecessary processed attestations log
+            // see https://github.com/ChainSafe/lodestar/pull/4032
+            this.emitter.emit(routes.events.EventType.attestation, attestation);
+          } catch (e) {
+            // a block has a lot of attestations and it may has same error, we don't want to log all of them
+            if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
+              let errWithCount = invalidAttestationErrorsByCode.get(e.type.err.code);
+              if (errWithCount === undefined) {
+                errWithCount = {error: e as Error, count: 1};
+                invalidAttestationErrorsByCode.set(e.type.err.code, errWithCount);
+              } else {
+                errWithCount.count++;
+              }
+            } else {
+              // always log other errors
+              this.logger.verbose("Error processing attestation from block", {slot: block.message.slot}, e as Error);
+            }
+          }
+        }
+
+        for (const {error, count} of invalidAttestationErrorsByCode.values()) {
+          this.logger.verbose(
+            "Error processing attestations from block",
+            {slot: block.message.slot, erroredAttestations: count},
+            error
+          );
+        }
+      }
+
+      // Import attester slashings to fork choice
+      //
+      // FORK_CHOICE_ATT_EPOCH_LIMIT is for attestation to become valid
+      // but AttesterSlashing could be found before that time and still able to submit valid attestations
+      // until slashed validator become inactive, see computeActivationExitEpoch() function
+      if (
+        opts.importAttestations === AttestationImportOpt.Force ||
+        (opts.importAttestations !== AttestationImportOpt.Skip &&
+          blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT - 1 - MAX_SEED_LOOKAHEAD)
+      ) {
+        for (const slashing of block.message.body.attesterSlashings) {
+          try {
+            // all AttesterSlashings are valid before reaching this
+            this.forkChoice.onAttesterSlashing(slashing);
+          } catch (e) {
+            this.logger.warn("Error processing AttesterSlashing from block", {slot: block.message.slot}, e as Error);
+          }
+        }
+      }
+    }
+
     // it does not make sense to call prepareUpdateHead() for all blocks
     // forkchoice will only prepare update head if block slot is same to clock slot
     this.forkChoice.prepareUpdateHead(blocks[blocks.length - 1].message);

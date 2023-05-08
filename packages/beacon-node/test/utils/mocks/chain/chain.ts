@@ -284,6 +284,7 @@ function mockForkChoice(): IForkChoice {
     getAncestor: () => rootHex,
     getHeadRoot: () => rootHex,
     getHead: () => block,
+    prepareUpdateHead: () => {},
     updateHead: () => block,
     getHeads: () => [block],
     getAllNodes: () => [{...block, weight: 1}],

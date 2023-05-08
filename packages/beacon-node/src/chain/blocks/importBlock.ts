@@ -1,15 +1,14 @@
-import {capella, ssz, allForks, altair} from "@lodestar/types";
-import {ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {capella, allForks, altair} from "@lodestar/types";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAltair,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   isStateValidatorsNodesPopulated,
-  RootCache,
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
-import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
+import {EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
@@ -17,13 +16,8 @@ import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {RegenCaller} from "../regen/interface.js";
 import type {BeaconChain} from "../chain.js";
-import {BlockInputType, FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt} from "./types.js";
+import {BlockInputType, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
-
-/**
- * Fork-choice allows to import attestations from current (0) or past (1) epoch.
- */
-const FORK_CHOICE_ATT_EPOCH_LIMIT = 1;
 
 /**
  * Imports a fully verified block into the chain state. Produces multiple permanent side-effects.
@@ -54,7 +48,6 @@ export async function importBlock(
   const {block} = blockInput;
   const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toHexString(blockRoot);
-  const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
   const blockEpoch = computeEpochAtSlot(block.message.slot);
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
@@ -101,105 +94,9 @@ export async function importBlock(
     executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
   });
 
-  // 3. Import attestations to fork choice
-  //
-  // - For each attestation
-  //   - Get indexed attestation
-  //   - Register attestation with fork-choice
-  //   - Register attestation with validator monitor (only after sync)
-  // Only process attestations of blocks with relevant attestations for the fork-choice:
-  // If current epoch is N, and block is epoch X, block may include attestations for epoch X or X - 1.
-  // The latest block that is useful is at epoch N - 1 which may include attestations for epoch N - 1 or N - 2.
-  if (
-    opts.importAttestations === AttestationImportOpt.Force ||
-    (opts.importAttestations !== AttestationImportOpt.Skip && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
-  ) {
-    const attestations = block.message.body.attestations;
-    const rootCache = new RootCache(postState);
-    const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
+  // Attestations and AttesterSlashings are imported in verifyBlock()
 
-    for (const attestation of attestations) {
-      try {
-        const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
-        const {target, slot, beaconBlockRoot} = attestation.data;
-
-        const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
-        this.seenAggregatedAttestations.add(
-          target.epoch,
-          attDataRoot,
-          {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
-          true
-        );
-        // Duplicated logic from fork-choice onAttestation validation logic.
-        // Attestations outside of this range will be dropped as Errors, so no need to import
-        if (
-          opts.importAttestations === AttestationImportOpt.Force ||
-          (target.epoch <= currentEpoch && target.epoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
-        ) {
-          this.forkChoice.onAttestation(
-            indexedAttestation,
-            attDataRoot,
-            opts.importAttestations === AttestationImportOpt.Force
-          );
-        }
-
-        // Note: To avoid slowing down sync, only register attestations within FORK_CHOICE_ATT_EPOCH_LIMIT
-        this.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
-
-        const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(slot), beaconBlockRoot);
-        this.metrics?.registerAttestationInBlock(indexedAttestation, parentBlockSlot, correctHead);
-
-        // don't want to log the processed attestations here as there are so many attestations and it takes too much disc space,
-        // users may want to keep more log files instead of unnecessary processed attestations log
-        // see https://github.com/ChainSafe/lodestar/pull/4032
-        this.emitter.emit(routes.events.EventType.attestation, attestation);
-      } catch (e) {
-        // a block has a lot of attestations and it may has same error, we don't want to log all of them
-        if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
-          let errWithCount = invalidAttestationErrorsByCode.get(e.type.err.code);
-          if (errWithCount === undefined) {
-            errWithCount = {error: e as Error, count: 1};
-            invalidAttestationErrorsByCode.set(e.type.err.code, errWithCount);
-          } else {
-            errWithCount.count++;
-          }
-        } else {
-          // always log other errors
-          this.logger.warn("Error processing attestation from block", {slot: block.message.slot}, e as Error);
-        }
-      }
-    }
-
-    for (const {error, count} of invalidAttestationErrorsByCode.values()) {
-      this.logger.warn(
-        "Error processing attestations from block",
-        {slot: block.message.slot, erroredAttestations: count},
-        error
-      );
-    }
-  }
-
-  // 4. Import attester slashings to fork choice
-  //
-  // FORK_CHOICE_ATT_EPOCH_LIMIT is for attestation to become valid
-  // but AttesterSlashing could be found before that time and still able to submit valid attestations
-  // until slashed validator become inactive, see computeActivationExitEpoch() function
-  if (
-    opts.importAttestations === AttestationImportOpt.Force ||
-    (opts.importAttestations !== AttestationImportOpt.Skip &&
-      blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT - 1 - MAX_SEED_LOOKAHEAD)
-  ) {
-    for (const slashing of block.message.body.attesterSlashings) {
-      try {
-        // all AttesterSlashings are valid before reaching this
-        this.forkChoice.onAttesterSlashing(slashing);
-      } catch (e) {
-        this.logger.warn("Error processing AttesterSlashing from block", {slot: block.message.slot}, e as Error);
-      }
-    }
-  }
-
-  // 5. Compute head. If new head, immediately stateCache.setHeadState()
+  // 3. Compute head. If new head, immediately stateCache.setHeadState()
 
   const oldHead = this.forkChoice.getHead();
   // skip computeDeltas() if possible as we called prepareUpdateHead() in verifyBlock()
@@ -292,7 +189,7 @@ export async function importBlock(
     }
   }
 
-  // 6. Queue notifyForkchoiceUpdate to engine api
+  // 4. Queue notifyForkchoiceUpdate to engine api
   //
   // NOTE: forkChoice.fsStore.finalizedCheckpoint MUST only change in response to an onBlock event
   // Notifying EL of head and finalized updates as below is usually done within the 1st 4s of the slot.

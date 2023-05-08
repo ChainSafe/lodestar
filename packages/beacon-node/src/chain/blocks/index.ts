@@ -70,6 +70,7 @@ export async function processBlocks(
     const {postStates, proposerBalanceDeltas, segmentExecStatus} = await verifyBlocksInEpoch.call(
       this,
       parentBlock,
+      parentSlots,
       relevantBlocks,
       opts
     );
