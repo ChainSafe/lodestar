@@ -264,15 +264,18 @@ export async function importBlock(
     // - Persist state witness
     // - Use block's syncAggregate
     if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
-      try {
-        this.lightClientServer.onImportBlockHead(
-          block.message as allForks.AllForksLightClient["BeaconBlock"],
-          postState as CachedBeaconStateAltair,
-          parentBlockSlot
-        );
-      } catch (e) {
-        this.logger.error("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
-      }
+      // we want to import block asap so do this in the next event loop
+      setTimeout(() => {
+        try {
+          this.lightClientServer.onImportBlockHead(
+            block.message as allForks.AllForksLightClient["BeaconBlock"],
+            postState as CachedBeaconStateAltair,
+            parentBlockSlot
+          );
+        } catch (e) {
+          this.logger.verbose("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
+        }
+      }, 0);
     }
   }
 
