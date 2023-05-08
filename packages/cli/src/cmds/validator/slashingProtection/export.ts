@@ -46,8 +46,7 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
 
       const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 
-      // TODO: Allow format version and pubkeys to be customized with CLI args
-      const formatVersion: InterchangeFormatVersion = {version: "4", format: "complete"};
+      const formatVersion: InterchangeFormatVersion = {version: "5"};
       logger.info("Exporting the slashing protection logs", {...formatVersion, dbPath});
 
       const {slashingProtection, metadata} = getSlashingProtection(args, network, logger);
