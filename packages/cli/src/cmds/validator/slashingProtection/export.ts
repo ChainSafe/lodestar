@@ -104,6 +104,6 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
 
       logger.info("Writing slashing protection data", {file: args.file});
       writeFile600Perm(args.file, interchange);
-      logger.verbose("Export completed successfully");
+      logger.info("Export completed successfully");
     },
   };
