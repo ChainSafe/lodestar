@@ -41,6 +41,6 @@ export const eth_call: ELVerifiedRequestHandler<ELApiParams["call"], ELApiReturn
       {method: payload.method, params: JSON.stringify(payload.params)},
       err as Error
     );
-    return generateUnverifiedResponseForPayload(payload, (err as Error).message);
+    return generateUnverifiedResponseForPayload(payload, "eth_call request can not be verified.");
   }
 };

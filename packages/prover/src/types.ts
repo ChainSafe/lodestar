@@ -1,7 +1,7 @@
 import {ELRequestHandler} from "./interfaces.js";
 
 export interface ELRequestPayload<T = unknown[]> {
-  readonly jsonrpc: string & ("2.0" | "1.0");
+  readonly jsonrpc: string | ("2.0" | "1.0");
   readonly id: number | string;
   readonly method: string;
   readonly params: T;
@@ -71,12 +71,17 @@ export interface ELTransaction {
   readonly data?: string;
 }
 
+export interface ELWithdrawal {
+  readonly index: string;
+  readonly validatorIndex: string;
+  readonly address: string;
+  readonly amount: string;
+}
+
 export interface ELBlock {
   readonly parentHash: string;
-  readonly transactionsRoot: string;
   readonly stateRoot: string;
   readonly receiptsRoot: string;
-  readonly withdrawalsRoot: string;
   readonly logsBloom: string;
   readonly nonce: string;
   readonly difficulty: string;
@@ -94,6 +99,9 @@ export interface ELBlock {
   readonly size: string;
   readonly uncles: ELBlock[];
   readonly transactions: ELTransaction[];
+  readonly transactionsRoot: string;
+  readonly withdrawals?: ELWithdrawal[];
+  readonly withdrawalsRoot?: string;
 }
 
 export interface ELAccessList {

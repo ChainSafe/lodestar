@@ -1,4 +1,4 @@
-import {Logger} from "@lodestar/utils";
+import {LogData, Logger} from "@lodestar/utils";
 import {NetworkName} from "@lodestar/config/networks";
 import {ELRequestHandler, ELVerifiedRequestHandler} from "../interfaces.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
@@ -35,7 +35,7 @@ export async function processAndVerifyRequest({
   network: NetworkName;
 }): Promise<ELResponse | undefined> {
   await proofProvider.waitToBeReady();
-  logger.debug("Processing request", {method: payload.method, params: JSON.stringify(payload.params)});
+  logger.debug("Processing request", {method: payload.method, params: payload.params} as unknown as LogData);
   const verifiedHandler = supportedELRequests[payload.method];
 
   if (verifiedHandler !== undefined) {

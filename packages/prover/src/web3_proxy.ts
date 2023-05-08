@@ -6,7 +6,7 @@ import {NetworkName} from "@lodestar/config/networks";
 import {ConsensusNodeOptions, LogOptions} from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "./types.js";
-import {generateRPCResponseForPayload} from "./utils/json_rpc.js";
+import {generateRPCResponseForPayload, logRequest, logResponse} from "./utils/json_rpc.js";
 import {getLogger} from "./utils/logger.js";
 import {fetchRequestPayload, fetchResponseBody} from "./utils/req_resp.js";
 import {processAndVerifyRequest} from "./utils/process.js";
@@ -61,10 +61,15 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
           },
         },
         (res) => {
-          fetchResponseBody(res).then(resolve).catch(reject);
+          fetchResponseBody(res)
+            .then((response) => {
+              logResponse(response, logger);
+              resolve(response);
+            })
+            .catch(reject);
         }
       );
-      logger.debug("Sending request to proxy endpoint", {method: payload.method});
+      logRequest(payload, logger);
       req.write(JSON.stringify(payload));
       req.end();
     });

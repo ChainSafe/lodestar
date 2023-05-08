@@ -65,7 +65,7 @@ export function txDataFromELBlock(txInfo: ELTransaction) {
     gasPrice: isTruthy(txInfo.gasPrice) ? BigInt(txInfo.gasPrice) : null,
     gasLimit: txInfo.gas,
     to: isTruthy(txInfo.to) ? padLeft(hexToBuffer(txInfo.to), 20) : undefined,
-    value: BigInt(txInfo.value),
+    value: txInfo.value ? BigInt(txInfo.value) : undefined,
     maxFeePerGas: isTruthy(txInfo.maxFeePerGas) ? BigInt(txInfo.maxFeePerGas) : undefined,
     maxPriorityFeePerGas: isTruthy(txInfo.maxPriorityFeePerGas) ? BigInt(txInfo.maxPriorityFeePerGas) : undefined,
   };
@@ -76,4 +76,22 @@ export function blockDataFromELBlock(blockInfo: ELBlock): BlockData {
     header: headerDataFromELBlock(blockInfo),
     transactions: blockInfo.transactions.map(txDataFromELBlock) as BlockData["transactions"],
   };
+}
+
+export function cleanObject<T extends Record<string, unknown> | unknown[]>(obj: T): T {
+  const isNullify = (v: unknown): boolean => v === undefined || v === null;
+
+  if (Array.isArray(obj)) return obj.filter((v) => isNullify(v)) as T;
+
+  if (typeof obj === "object") {
+    for (const key of Object.keys(obj)) {
+      if (isNullify(obj[key])) {
+        delete obj[key];
+      } else if (typeof obj[key] === "object") {
+        cleanObject(obj[key] as Record<string, unknown>);
+      }
+    }
+  }
+
+  return obj;
 }

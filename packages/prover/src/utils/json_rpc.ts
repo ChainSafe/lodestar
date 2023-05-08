@@ -1,3 +1,4 @@
+import {LogData, Logger} from "@lodestar/utils";
 import {UNVERIFIED_RESPONSE_CODE} from "../constants.js";
 import {ELResponseWithError} from "../types.js";
 import {ELRequestPayload, ELResponse, ELResponseWithResult} from "../types.js";
@@ -68,4 +69,31 @@ export function generateUnverifiedResponseForPayload<P, D = unknown>(
 
 export function isValidResponse<R, E>(response: ELResponse<R, E> | undefined): response is ELResponseWithResult<R> {
   return response !== undefined && response.error === undefined;
+}
+
+export function logRequest(payload: ELRequestPayload, logger: Logger): void {
+  logger.debug("PR -> EL", {
+    id: payload.id,
+    method: payload.method,
+    params: payload.params,
+  } as unknown as LogData);
+}
+
+export function logResponse(response: ELResponse | null | undefined, logger: Logger): void {
+  if (response === undefined || response === null) {
+    logger.debug("PR <- EL (empty response)");
+    return;
+  }
+
+  if (isValidResponse(response)) {
+    logger.debug("PR <- EL", {
+      id: response.id,
+      result: response.result as Record<string, string> | string,
+    } as unknown as LogData);
+  } else {
+    logger.debug("PR <- E:", {
+      id: response.id,
+      error: response.error,
+    } as unknown as LogData);
+  }
 }

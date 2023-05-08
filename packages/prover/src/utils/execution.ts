@@ -50,7 +50,7 @@ export async function getELProof(
   const proof = await elRpc(handler, "eth_getProof", args);
 
   if (!isValidResponse(proof)) {
-    throw new Error(`Can not find proof. address=${args[0]}`);
+    throw new Error(`Can not find proof for address=${args[0]}`);
   }
   return proof.result;
 }

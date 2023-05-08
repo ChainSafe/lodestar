@@ -7,7 +7,7 @@ import {Logger} from "@lodestar/utils";
 import {ZERO_ADDRESS} from "../constants.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {ELApiHandlers, ELBlock, ELProof, ELTransaction, HexString} from "../types.js";
-import {bufferToHex, hexToBigInt, hexToBuffer, numberToHex, padLeft} from "./conversion.js";
+import {bufferToHex, cleanObject, hexToBigInt, hexToBuffer, numberToHex, padLeft} from "./conversion.js";
 import {elRpc, getChainCommon} from "./execution.js";
 import {isValidResponse} from "./json_rpc.js";
 import {isValidAccount, isValidCodeHash, isValidStorageKeys} from "./validation.js";
@@ -52,15 +52,16 @@ export async function getEVMWithState({
   const blockHashHex = bufferToHex(blockHash);
 
   // Create Access List for the contract call
+  const accessListTx = cleanObject({
+    to: tx.to,
+    from: tx.from ?? ZERO_ADDRESS,
+    data: tx.data,
+    value: tx.value,
+    gas: tx.gas ? tx.gas : numberToHex(gasLimit),
+    gasPrice: "0x0",
+  }) as ELTransaction;
   const response = await elRpc(handler as ELApiHandlers["eth_createAccessList"], "eth_createAccessList", [
-    {
-      to: tx.to,
-      from: tx.from ?? ZERO_ADDRESS,
-      data: tx.data,
-      value: tx.value,
-      gas: tx.gas ? tx.gas : numberToHex(gasLimit),
-      gasPrice: "0x0",
-    } as ELTransaction,
+    accessListTx,
     blockHashHex,
   ]);
 
@@ -153,7 +154,7 @@ export async function executeEVM({
   const {result: block} = await elRpc(
     handler,
     "eth_getBlockByHash",
-    [bufferToHex(executionPayload.blockHash), false],
+    [bufferToHex(executionPayload.blockHash), true],
     true
   );
 
@@ -169,7 +170,7 @@ export async function executeEVM({
     value: hexToBigInt(value ?? "0x0"),
     data: data ? hexToBuffer(data) : undefined,
     block: {
-      header: evmBlockHeaderFromELBlock(block),
+      header: evmBlockHeaderFromELBlock(block, executionPayload),
     },
   });
 
@@ -180,7 +181,10 @@ export async function executeEVM({
   return bufferToHex(execResult.returnValue);
 }
 
-export function evmBlockHeaderFromELBlock(block: ELBlock): {
+export function evmBlockHeaderFromELBlock(
+  block: ELBlock,
+  executionPayload: allForks.ExecutionPayload
+): {
   number: bigint;
   cliqueSigner(): Address;
   coinbase: Address;
@@ -197,9 +201,8 @@ export function evmBlockHeaderFromELBlock(block: ELBlock): {
     difficulty: hexToBigInt(block.difficulty),
     gasLimit: hexToBigInt(block.gasLimit),
     baseFeePerGas: block.baseFeePerGas ? hexToBigInt(block.baseFeePerGas) : undefined,
+    prevRandao: Buffer.from(executionPayload.prevRandao),
     // TODO: Fix the coinbase address
     coinbase: Address.fromString(block.miner),
-    // TODO: Fix the prevRandao value
-    prevRandao: hexToBuffer(block.parentHash),
   };
 }
