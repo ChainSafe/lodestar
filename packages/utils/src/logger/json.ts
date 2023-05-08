@@ -6,7 +6,13 @@ const MAX_DEPTH = 0;
 
 type LogDataBasic = string | number | bigint | boolean | null | undefined;
 
-export type LogData = LogDataBasic | Record<string, LogDataBasic> | LogDataBasic[] | Record<string, LogDataBasic>[];
+export type LogData =
+  | LogDataBasic
+  | LogDataBasic[]
+  | Record<string, LogDataBasic>
+  | Record<string, LogDataBasic>[]
+  | Record<string, LogDataBasic[]>
+  | Record<string, LogDataBasic[]>[];
 
 /**
  * Renders any log Context to JSON up to one level of depth.
