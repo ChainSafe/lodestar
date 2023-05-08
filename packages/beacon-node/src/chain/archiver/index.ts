@@ -178,8 +178,8 @@ export class Archiver {
     allValidators: ProposalStats;
     attachedValidators: ProposalStats;
     finalizedCanonicalCheckpointsCount: number;
-    foundFinalizedCheckpointStateCache: number;
-    attachedValidatorsCount: number;
+    finalizedFoundCheckpointsInStateCache: number;
+    finalizedAttachedValidatorsCount: number;
   } {
     const {finalizedCanonicalCheckpoints, finalizedCanonicalBlocks, finalizedNonCanonicalBlocks} = finalizedData;
 
@@ -228,10 +228,10 @@ export class Archiver {
     const attachedProposers = beaconProposerCache
       .getProposersSinceEpoch(finalized.epoch)
       .map((indexString) => Number(indexString));
-    const attachedValidatorsCount = attachedProposers.length;
+    const finalizedAttachedValidatorsCount = attachedProposers.length;
 
     // Calculate stats for attached validators, based on states in checkpointState cache
-    let foundFinalizedCheckpointStateCache = 0;
+    let finalizedFoundCheckpointsInStateCache = 0;
 
     let expectedAttachedValidatorsProposalsCount = 0;
     let finalizedAttachedValidatorsProposalsCount = 0;
@@ -243,7 +243,7 @@ export class Archiver {
 
       // Generate stats for attached validators if we have state info
       if (checkpointState !== null) {
-        foundFinalizedCheckpointStateCache++;
+        finalizedFoundCheckpointsInStateCache++;
 
         const epochProposers = checkpointState.epochCtx.proposers;
         const startSlot = checkpointState.epochCtx.epoch * SLOTS_PER_EPOCH;
@@ -297,32 +297,34 @@ export class Archiver {
     this.logger.info("All validators finalized stats", {
       ...allValidators,
       finalizedCanonicalCheckpointsCount,
-      foundFinalizedCheckpointStateCache,
+      finalizedFoundCheckpointsInStateCache,
     });
     this.logger.info("Attached validators finalized stats", {
       ...attachedValidators,
-      attachedValidatorsCount,
+      finalizedAttachedValidatorsCount,
     });
 
-    // this.metrics?.finalizedOrphanedCount.set(orphanedProposals);
-    // this.metrics?.finalizedMissedCount.set(missedProposals);
-    // this.metrics?.finalizedDoubleCount.set(doubleProposals);
-    // this.metrics?.finalizedSlotsRangeCount.set(checkpoints * SLOTS_PER_EPOCH);
-    // this.metrics?.finalizedAttachedValidatorsProposersCount.set(attachedProposers);
-    // this.metrics?.finalizedAttachedValidatorsProposalsCount.set(expectedProposals);
-    // this.metrics?.finalizedAttachedValidatorsMissedCount.set(attachedValidatorsMissedProposals);
-    // this.metrics?.finalizedAttachedValidatorsDoubleProposalsCount.set(attachedValidatorsDoubleProposals);
-    // this.metrics?.finalizedAttachedValidatorsOrphanedCount.set(attachedValidatorsOrphanedCount);
-    // this.metrics?.finalizedCanonicalBlocksCount.set(finalizedCanonicalBlocksCount);
-    // this.metrics?.finalizedNonCanonicalBlocksCount.set(finalizedNonCanonicalBlocksCount);
+    this.metrics?.allValidators.expected.set(allValidators.expected);
+    this.metrics?.allValidators.finalized.set(allValidators.finalized);
+    this.metrics?.allValidators.orphaned.set(allValidators.orphaned);
+    this.metrics?.allValidators.missed.set(allValidators.missed);
+
+    this.metrics?.attachedValidators.expected.set(attachedValidators.expected);
+    this.metrics?.attachedValidators.finalized.set(attachedValidators.finalized);
+    this.metrics?.attachedValidators.orphaned.set(attachedValidators.orphaned);
+    this.metrics?.attachedValidators.missed.set(attachedValidators.missed);
+
+    this.metrics?.finalizedCanonicalCheckpointsCount.set(finalizedCanonicalCheckpointsCount);
+    this.metrics?.finalizedFoundCheckpointsInStateCache.set(finalizedFoundCheckpointsInStateCache);
+    this.metrics?.finalizedAttachedValidatorsCount.set(finalizedAttachedValidatorsCount);
 
     // Return stats data for the ease of unit testing
     return {
       allValidators,
       attachedValidators,
       finalizedCanonicalCheckpointsCount,
-      foundFinalizedCheckpointStateCache,
-      attachedValidatorsCount,
+      finalizedFoundCheckpointsInStateCache,
+      finalizedAttachedValidatorsCount,
     };
   }
 }
