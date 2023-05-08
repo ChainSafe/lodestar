@@ -16,12 +16,21 @@ Thanks for your interest in contributing to Lodestar. It's people like you that 
 
 ## Tests
 
+To run tests:
+
 - :test_tube: Run `lerna run test:unit` for unit tests.
 - :test_tube: Run `lerna run test:e2e` for end-to-end tests.
 - :test_tube: Run `lerna run test:spec` for spec tests.
 - :test_tube: Run `lerna run test` to run all tests.
 - :test_tube: Run `yarn check-types` to check TypeScript types.
 - :test_tube: Run `yarn lint` to run the linter (ESLint).
+
+Contributing to tests:
+
+- Test must not depend on external live resources, such that running tests for a commit must be deterministic:
+  - Do not pull data from external APIs like execution JSON RPC (instead run a local node).
+  - Do not pull unpinned versions from dockerhub (use deterministic tag) or Github (checkout commit not branch).
+  - Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful that your development environment.
 
 ### Debugging Spec Tests
 
