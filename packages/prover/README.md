@@ -68,7 +68,7 @@ lodestar-prover start \
 |                   | eth_coinbase                            | ⌛     | v2      |
 |                   | eth_accounts                            | ➡️     |
 |                   | eth_blockNumber                         | ➡️     |
-| Call and Estimate | eth_call                                | ⌛     | v0      |
+| Call and Estimate | eth_call                                | ✅     | v0      |
 |                   | eth_estimateGas                         | ⌛     | v0      |
 |                   | eth_createAccessList                    | ⌛     | v2      |
 |                   | eth_gasPrice                            | ⌛     | v1      |
