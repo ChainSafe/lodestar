@@ -62,8 +62,10 @@ export async function importBlock(
   // 1. Persist block to hot DB (pre-emptively)
   if (serializedData) {
     // skip serializing data if we already have it
+    this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
     await this.db.block.putBinary(this.db.block.getId(block), serializedData);
   } else {
+    this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
     await this.db.block.add(block);
   }
   this.logger.debug("Persisted block to hot DB", {
@@ -249,7 +251,7 @@ export async function importBlock(
       // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
       // We want to track recent blocks coming from gossip, unknown block sync, and API.
       if (delaySec < 64 * this.config.SECONDS_PER_SLOT) {
-        this.metrics.elapsedTimeTillBecomeHead.observe(delaySec);
+        this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
       }
     }
 
