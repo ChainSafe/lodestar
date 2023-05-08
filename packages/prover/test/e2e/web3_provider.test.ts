@@ -34,7 +34,7 @@ describe("web3_provider", () => {
           {
             transport: LCTransport.Rest,
             urls: ["https://lodestar-mainnet.chainsafe.io"],
-            network: "sepolia",
+            network: "mainnet",
           }
         );
         await expect(provider.send("eth_getProof", ["0xf97e180c050e5Ab072211Ad2C213Eb5AEE4DF134", [], "latest"]))
