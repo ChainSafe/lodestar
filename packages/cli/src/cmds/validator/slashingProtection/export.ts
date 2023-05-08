@@ -35,7 +35,7 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
         type: "string",
       },
       pubkeys: {
-        description: "Export slashing protection data for only a given subset of pubkeys",
+        description: "Export slashing protection data only for a given subset of pubkeys",
         type: "array",
         string: true, // Ensures the pubkey string is not automatically converted to numbers
         coerce: (pubkeys: string[]): string[] =>
@@ -71,12 +71,12 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
       const genesisValidatorsRoot =
         (await metadata.getGenesisValidatorsRoot()) ?? (await getGenesisValidatorsRoot(args));
 
-      logger.verbose("Fetching pubkeys from slashing protection DB");
+      logger.verbose("Fetching pubkeys from slashing protection db");
       const allPubkeys = await slashingProtection.listPubkeys();
       let pubkeysToExport = allPubkeys;
 
       if (args.pubkeys) {
-        logger.verbose("Filtering by given subset of pubkeys", {count: args.pubkeys.length});
+        logger.verbose("Filtering by pubkeys from args", {count: args.pubkeys.length});
         const filteredPubkeys = [];
 
         for (const pubkeyHex of args.pubkeys) {
@@ -85,7 +85,7 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
           }
           const existingPubkey = allPubkeys.find((pubkey) => toHexString(pubkey) === pubkeyHex);
           if (!existingPubkey) {
-            logger.warn("Pubkey not found in slashing protection DB", {pubkey: pubkeyHex});
+            logger.warn("Pubkey not found in slashing protection db", {pubkey: pubkeyHex});
           } else {
             filteredPubkeys.push(existingPubkey);
           }
