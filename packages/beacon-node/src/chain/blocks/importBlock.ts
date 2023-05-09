@@ -59,6 +59,7 @@ export async function importBlock(
   const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
 
+  const beforePersistTimer = this.metrics?.importBlock.persistBlockSec.startTimer();
   // 1. Persist block to hot DB (pre-emptively)
   if (serializedData) {
     // skip serializing data if we already have it
@@ -82,6 +83,9 @@ export async function importBlock(
       slot: blobs.beaconBlockSlot,
       root: toHexString(blobs.beaconBlockRoot),
     });
+  }
+  if (beforePersistTimer) {
+    beforePersistTimer();
   }
 
   // 2. Import block to fork choice

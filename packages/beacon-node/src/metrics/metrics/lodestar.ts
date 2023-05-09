@@ -511,6 +511,11 @@ export function createLodestarMetrics(
         help: "Time elapsed between block slot time and the time block becomes head",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
+      persistBlockSec: register.histogram({
+        name: "lodestar_import_block_persist_block_sec",
+        help: "Time elapsed before and after persisting block",
+        buckets: [0.01, 0.05, 0.1, 0.5, 1, 2, 4],
+      }),
     },
     engineNotifyNewPayloadResult: register.gauge<"result">({
       name: "lodestar_execution_engine_notify_new_payload_result_total",
