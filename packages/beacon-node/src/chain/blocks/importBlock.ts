@@ -17,7 +17,7 @@ import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {RegenCaller} from "../regen/interface.js";
 import type {BeaconChain} from "../chain.js";
-import {BlockInputType, FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt} from "./types.js";
+import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 
 /**
@@ -51,7 +51,7 @@ export async function importBlock(
   opts: ImportBlockOpts
 ): Promise<void> {
   const {blockInput, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
-  const {block, serializedData, source} = blockInput;
+  const {block, source} = blockInput;
   const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toHexString(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
@@ -60,29 +60,7 @@ export async function importBlock(
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
 
   // 1. Persist block to hot DB (pre-emptively)
-  if (serializedData) {
-    // skip serializing data if we already have it
-    this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
-    await this.db.block.putBinary(this.db.block.getId(block), serializedData);
-  } else {
-    this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
-    await this.db.block.add(block);
-  }
-  this.logger.debug("Persisted block to hot DB", {
-    slot: block.message.slot,
-    root: blockRootHex,
-  });
-
-  if (blockInput.type === BlockInputType.postDeneb) {
-    const {blobs} = blockInput;
-    // NOTE: Old blobs are pruned on archive
-    await this.db.blobsSidecar.add(blobs);
-    this.logger.debug("Persisted blobsSidecar to hot DB", {
-      blobsLen: blobs.blobs.length,
-      slot: blobs.beaconBlockSlot,
-      root: toHexString(blobs.beaconBlockRoot),
-    });
-  }
+  // We do that in verifyBlocksInEpoch to batch all I/O operations to save block time to head
 
   // 2. Import block to fork choice
 

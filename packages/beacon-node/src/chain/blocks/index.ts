@@ -8,7 +8,7 @@ import type {BeaconChain} from "../chain.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {importBlock} from "./importBlock.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
-import {BlockInput, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {BlockInput, BlockInputType, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
 export {ImportBlockOpts, AttestationImportOpt} from "./types.js";
 
@@ -140,6 +140,23 @@ export async function processBlocks(
         this.persistInvalidSszView(postState, `${suffix}_postState`);
       }
     }
+
+    // clean db if we don't have blocks in forkchoice but already persisted them to db
+    const removeBlockPromises: Promise<void>[] = [];
+    for (const blockInput of blocks) {
+      const {block, type} = blockInput;
+      const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+      if (!this.forkChoice.hasBlock(blockRoot)) {
+        removeBlockPromises.push(this.db.block.remove(block));
+        if (type === BlockInputType.postDeneb) {
+          const {blobs} = blockInput;
+          removeBlockPromises.push(this.db.blobsSidecar.remove(blobs));
+        }
+      }
+    }
+    Promise.all(removeBlockPromises).catch((e) => {
+      this.logger.verbose("Failed to remove blocks", {slots: blocks.map((b) => b.block.message.slot).join(",")}, e);
+    });
 
     throw err;
   }
