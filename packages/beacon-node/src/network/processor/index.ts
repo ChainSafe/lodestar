@@ -149,7 +149,7 @@ export class NetworkProcessor {
   private readonly awaitingGossipsubMessagesByRootBySlot: MapDef<Slot, MapDef<RootHex, Set<PendingGossipsubMessage>>>;
   private unknownBlockGossipsubMessagesCount = 0;
   private isProcessingCurrentSlotBlock = false;
-  private unknownRootsBySlot = new MapDef<Slot, Set<RootHex>>();
+  private unknownRootsBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
 
   constructor(modules: NetworkProcessorModules, private readonly opts: NetworkProcessorOpts) {
     const {chain, events, logger, metrics} = modules;

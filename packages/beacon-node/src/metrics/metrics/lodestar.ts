@@ -518,6 +518,11 @@ export function createLodestarMetrics(
         name: "lodestar_sync_unknown_block_removed_blocks_total",
         help: "Total number of removed bad blocks in UnknownBlockSync",
       }),
+      elapsedTimeTillReceived: register.histogram({
+        name: "lodestar_sync_unknown_block_elapsed_time_till_received",
+        help: "Time elapsed between block slot time and the time block received via unknown block sync",
+        buckets: [0.5, 1, 2, 4, 6, 12],
+      }),
     },
 
     // Gossip block

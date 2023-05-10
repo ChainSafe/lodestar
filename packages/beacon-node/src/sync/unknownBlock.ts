@@ -69,7 +69,7 @@ export class UnknownBlockSync {
       this.triggerUnknownBlockSearch();
       this.metrics?.syncUnknownBlock.requests.inc({type: PendingBlockType.UNKNOWN_BLOCK});
     } catch (e) {
-      this.logger.error("Error handling unknownBlock event", {}, e as Error);
+      this.logger.debug("Error handling unknownBlock event", {}, e as Error);
     }
   };
 
@@ -82,7 +82,7 @@ export class UnknownBlockSync {
       this.triggerUnknownBlockSearch();
       this.metrics?.syncUnknownBlock.requests.inc({type: PendingBlockType.UNKNOWN_PARENT});
     } catch (e) {
-      this.logger.error("Error handling unknownBlockParent event", {}, e as Error);
+      this.logger.debug("Error handling unknownBlockParent event", {}, e as Error);
     }
   };
 
@@ -161,7 +161,7 @@ export class UnknownBlockSync {
 
     for (const block of getUnknownBlocks(this.pendingBlocks)) {
       this.downloadBlock(block, connectedPeers).catch((e) => {
-        this.logger.error("Unexpected error - downloadBlock", {root: block.blockRootHex}, e);
+        this.logger.debug("Unexpected error - downloadBlock", {root: block.blockRootHex}, e);
       });
     }
   };
@@ -188,10 +188,13 @@ export class UnknownBlockSync {
       this.pendingBlocks.set(block.blockRootHex, block);
       const blockSlot = blockInput.block.message.slot;
       const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
+      const delaySec = Date.now() / 1000 - (this.chain.genesisTime + blockSlot * this.config.SECONDS_PER_SLOT);
+      this.metrics?.syncUnknownBlock.elapsedTimeTillReceived.observe(delaySec);
+
       if (this.chain.forkChoice.hasBlock(blockInput.block.message.parentRoot)) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
         this.processBlock(block).catch((e) => {
-          this.logger.error("Unexpected error - processBlock", {}, e);
+          this.logger.debug("Unexpected error - processBlock", {}, e);
         });
       } else if (blockSlot <= finalizedSlot) {
         // the common ancestor of the downloading chain and canonical chain should be at least the finalized slot and
@@ -200,7 +203,7 @@ export class UnknownBlockSync {
         //                \
         //                parent 1 - parent 2 - ... - unknownParent block
         const blockRoot = this.config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(blockInput.block.message);
-        this.logger.error("Downloaded block is before finalized slot", {
+        this.logger.debug("Downloaded block is before finalized slot", {
           finalizedSlot,
           blockSlot,
           parentRoot: toHexString(blockRoot),
@@ -261,7 +264,7 @@ export class UnknownBlockSync {
       // Send child blocks to the processor
       for (const descendantBlock of getDescendantBlocks(pendingBlock.blockRootHex, this.pendingBlocks)) {
         this.processBlock(descendantBlock).catch((e) => {
-          this.logger.error("Unexpected error - processBlock", {}, e);
+          this.logger.debug("Unexpected error - processBlock", {}, e);
         });
       }
     } else {
@@ -275,7 +278,7 @@ export class UnknownBlockSync {
           case BlockErrorCode.PARENT_UNKNOWN:
           case BlockErrorCode.PRESTATE_MISSING:
             // Should not happen, mark as downloaded to try again latter
-            this.logger.error("Attempted to process block but its parent was still unknown", errorData, res.err);
+            this.logger.debug("Attempted to process block but its parent was still unknown", errorData, res.err);
             pendingBlock.status = PendingBlockStatus.downloaded;
             break;
 
@@ -287,14 +290,14 @@ export class UnknownBlockSync {
 
           default:
             // Block is not correct with respect to our chain. Log error loudly
-            this.logger.error("Error processing block from unknown parent sync", errorData, res.err);
+            this.logger.debug("Error processing block from unknown parent sync", errorData, res.err);
             this.removeAndDownscoreAllDescendants(pendingBlock);
         }
       }
 
       // Probably a queue error or something unwanted happened, mark as pending to try again latter
       else {
-        this.logger.error("Unknown error processing block from unknown block sync", errorData, res.err);
+        this.logger.debug("Unknown error processing block from unknown block sync", errorData, res.err);
         pendingBlock.status = PendingBlockStatus.downloaded;
       }
     }
@@ -367,7 +370,9 @@ export class UnknownBlockSync {
       this.knownBadBlocks.add(block.blockRootHex);
       for (const peerIdStr of block.peerIdStrs) {
         // TODO: Refactor peerRpcScores to work with peerIdStr only
-        this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
+        this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot").catch((e) => {
+          this.logger.debug("Error reporting peer", {}, e);
+        });
       }
       this.logger.debug("Banning unknown block", {
         root: block.blockRootHex,
@@ -387,7 +392,7 @@ export class UnknownBlockSync {
 
     for (const block of badPendingBlocks) {
       this.pendingBlocks.delete(block.blockRootHex);
-      this.logger.error("Removing unknown parent block", {
+      this.logger.debug("Removing unknown parent block", {
         root: block.blockRootHex,
       });
     }
