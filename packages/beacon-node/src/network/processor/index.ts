@@ -229,6 +229,8 @@ export class NetworkProcessor {
         }
         message.msgSlot = slot;
         if (root && !this.chain.forkChoice.hasBlockHex(root)) {
+          // Search for the unknown block
+          this.events.emit(NetworkEvent.unknownBlock, {rootHex: root, peer: message.propagationSource.toString()});
           if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
             // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
             this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.reached_limit});

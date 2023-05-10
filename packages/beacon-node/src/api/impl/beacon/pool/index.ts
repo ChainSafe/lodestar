@@ -60,6 +60,7 @@ export function getBeaconPoolApi({
             // see https://github.com/ChainSafe/lodestar/issues/5098
             const {indexedAttestation, subnet, attDataRootHex} = await validateGossipFnRetryUnknownRoot(
               validateFn,
+              network.events,
               chain,
               slot,
               beaconBlockRoot

@@ -533,6 +533,7 @@ export function getValidatorApi({
             // see https://github.com/ChainSafe/lodestar/issues/5098
             const {indexedAttestation, committeeIndices, attDataRootHex} = await validateGossipFnRetryUnknownRoot(
               validateFn,
+              network.events,
               chain,
               slot,
               beaconBlockRoot

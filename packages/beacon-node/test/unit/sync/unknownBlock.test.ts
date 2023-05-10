@@ -15,12 +15,33 @@ import {ClockStopped} from "../../utils/mocks/clock.js";
 describe("sync / UnknownBlockSync", () => {
   const logger = testLogger();
 
-  const testCases: {id: string; finalizedSlot: number; reportPeer: boolean}[] = [
-    {id: "fetch and process multiple unknown block parents", finalizedSlot: 0, reportPeer: false},
-    {id: "downloaded parent is before finalized slot", finalizedSlot: 2, reportPeer: true},
+  const testCases: {
+    id: string;
+    event: NetworkEvent.unknownBlockParent | NetworkEvent.unknownBlock;
+    finalizedSlot: number;
+    reportPeer: boolean;
+  }[] = [
+    {
+      id: "fetch and process multiple unknown blocks",
+      event: NetworkEvent.unknownBlock,
+      finalizedSlot: 0,
+      reportPeer: false,
+    },
+    {
+      id: "fetch and process multiple unknown block parents",
+      event: NetworkEvent.unknownBlockParent,
+      finalizedSlot: 0,
+      reportPeer: false,
+    },
+    {
+      id: "downloaded parent is before finalized slot",
+      event: NetworkEvent.unknownBlockParent,
+      finalizedSlot: 2,
+      reportPeer: true,
+    },
   ];
 
-  for (const {id, finalizedSlot, reportPeer} of testCases) {
+  for (const {id, event, finalizedSlot, reportPeer} of testCases) {
     it(id, async () => {
       const peer = await getRandPeerIdStr();
       const blockA = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -43,6 +64,7 @@ describe("sync / UnknownBlockSync", () => {
       const blocksByRoot = new Map([
         [blockRootHexA, blockA],
         [blockRootHexB, blockB],
+        [blockRootHexC, blockC],
       ]);
 
       let reportPeerResolveFn: (value: Parameters<INetwork["reportPeer"]>) => void;
@@ -77,10 +99,14 @@ describe("sync / UnknownBlockSync", () => {
       };
 
       new UnknownBlockSync(config, network as INetwork, chain as IBeaconChain, logger, null);
-      network.events?.emit(NetworkEvent.unknownBlockParent, {
-        blockInput: getBlockInput.preDeneb(config, blockC, BlockSource.gossip),
-        peer,
-      });
+      if (event === NetworkEvent.unknownBlockParent) {
+        network.events?.emit(NetworkEvent.unknownBlockParent, {
+          blockInput: getBlockInput.preDeneb(config, blockC, BlockSource.gossip),
+          peer,
+        });
+      } else {
+        network.events?.emit(NetworkEvent.unknownBlock, {rootHex: blockRootHexC, peer});
+      }
 
       if (reportPeer) {
         const err = await reportPeerPromise;
