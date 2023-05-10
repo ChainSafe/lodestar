@@ -77,7 +77,11 @@ describe("sync / UnknownBlockSync", () => {
       };
 
       new UnknownBlockSync(config, network as INetwork, chain as IBeaconChain, logger, null);
-      network.events?.emit(NetworkEvent.unknownBlockParent, getBlockInput.preDeneb(config, blockC), peerIdStr);
+      network.events?.emit(
+        NetworkEvent.unknownBlockParent,
+        getBlockInput.preDeneb(config, blockC, BlockSource.gossip),
+        peerIdStr
+      );
 
       if (reportPeer) {
         const err = await reportPeerPromise;
