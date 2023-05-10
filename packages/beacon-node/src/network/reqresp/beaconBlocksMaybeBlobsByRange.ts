@@ -4,7 +4,7 @@ import {deneb, Epoch, phase0} from "@lodestar/types";
 import {ForkSeq, MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
-import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
+import {BlockInput, BlockSource, getBlockInput} from "../../chain/blocks/types.js";
 import {getEmptyBlobsSidecar} from "../../util/blobs.js";
 import {IReqRespBeaconNode} from "./interface.js";
 
@@ -34,7 +34,7 @@ export async function beaconBlocksMaybeBlobsByRange(
   // Note: Assumes all blocks in the same epoch
   if (config.getForkSeq(startSlot) < ForkSeq.deneb) {
     const blocks = await reqResp.beaconBlocksByRange(peerId, request);
-    return blocks.map((block) => getBlockInput.preDeneb(config, block));
+    return blocks.map((block) => getBlockInput.preDeneb(config, block, BlockSource.byRange));
   }
 
   // Only request blobs if they are recent enough
@@ -72,7 +72,7 @@ export async function beaconBlocksMaybeBlobsByRange(
         }
         blobsSidecar = getEmptyBlobsSidecar(config, block as deneb.SignedBeaconBlock);
       }
-      blockInputs.push(getBlockInput.postDeneb(config, block, blobsSidecar));
+      blockInputs.push(getBlockInput.postDeneb(config, block, BlockSource.byRange, blobsSidecar));
     }
 
     // If there are still unconsumed blobs this means that the response was inconsistent

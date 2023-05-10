@@ -4,7 +4,7 @@ import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {Epoch, phase0, Root, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {ForkSeq} from "@lodestar/params";
-import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
+import {BlockInput, BlockSource, getBlockInput} from "../../chain/blocks/types.js";
 import {wrapError} from "../../util/wrapError.js";
 import {IReqRespBeaconNode} from "./interface.js";
 
@@ -20,14 +20,14 @@ export async function beaconBlocksMaybeBlobsByRoot(
   if (config.getForkSeq(finalizedSlot) >= ForkSeq.deneb) {
     const blocksAndBlobs = await reqResp.beaconBlockAndBlobsSidecarByRoot(peerId, request);
     return blocksAndBlobs.map(({beaconBlock, blobsSidecar}) =>
-      getBlockInput.postDeneb(config, beaconBlock, blobsSidecar)
+      getBlockInput.postDeneb(config, beaconBlock, BlockSource.byRoot, blobsSidecar)
     );
   }
 
   // Assume all request are pre EIP-4844
   else if (config.getForkSeq(currentSlot) < ForkSeq.deneb) {
     const blocks = await reqResp.beaconBlocksByRoot(peerId, request);
-    return blocks.map((block) => getBlockInput.preDeneb(config, block));
+    return blocks.map((block) => getBlockInput.preDeneb(config, block, BlockSource.byRoot));
   }
 
   // We don't know if a requested root is after the deneb fork or not.
@@ -71,7 +71,7 @@ async function beaconBlockAndBlobsSidecarByRootFallback(
     }
 
     const {beaconBlock, blobsSidecar} = resBlockBlobs.result[0];
-    return getBlockInput.postDeneb(config, beaconBlock, blobsSidecar);
+    return getBlockInput.postDeneb(config, beaconBlock, BlockSource.byRoot, blobsSidecar);
   }
 
   const resBlocks = await reqResp.beaconBlocksByRoot(peerId, [beaconBlockRoot]);
@@ -79,5 +79,5 @@ async function beaconBlockAndBlobsSidecarByRootFallback(
     throw Error(`beaconBlocksByRoot return empty for block root ${toHex(beaconBlockRoot)}`);
   }
 
-  return getBlockInput.preDeneb(config, resBlocks[0]);
+  return getBlockInput.preDeneb(config, resBlocks[0], BlockSource.byRoot);
 }

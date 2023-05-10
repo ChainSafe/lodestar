@@ -511,6 +511,11 @@ export function createLodestarMetrics(
         help: "Time elapsed between block slot time and the time block becomes head",
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
+      bySource: register.gauge<"source">({
+        name: "lodestar_import_block_by_source_total",
+        help: "Total number of imported blocks by source",
+        labelNames: ["source"],
+      }),
     },
     engineNotifyNewPayloadResult: register.gauge<"result">({
       name: "lodestar_execution_engine_notify_new_payload_result_total",
