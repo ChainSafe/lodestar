@@ -23,8 +23,8 @@ const fs = require("node:fs");
  */
 const knownAuthors = {
   "caymannava@gmail.com": "wemeetagain",
-  "76567250+g11tech@users.noreply.github.com": "g11tech",
-  "vutuyen2636@gmail.com": "tuyennhv",
+  "develop@g11tech.io": "g11tech",
+  "tuyen@chainsafe.io": "tuyennhv",
   "35266934+dapplion@users.noreply.github.com": "dapplion",
   "41898282+github-actions[bot]@users.noreply.github.com": "github-actions[bot]",
   "49699333+dependabot[bot]@users.noreply.github.com": "dependabot[bot]",
@@ -39,6 +39,9 @@ const knownAuthors = {
   "ammar1lakho@gmail.com": "ammarlakho",
   "dadepo@gmail.com": "dadepo",
   "hi@enriqueortiz.dev": "Evalir",
+  "nflaig@protonmail.com": "nflaig",
+  "nazarhussain@gmail.com": "nazarhussain",
+  "me@matthewkeil.com": "matthewkeil",
 };
 
 const fromTag = process.argv[2];
