@@ -5,11 +5,11 @@ import {BeaconConfig} from "@lodestar/config";
 import {Logger, pruneSetToMax, sleep} from "@lodestar/utils";
 import {ENR} from "@chainsafe/discv5";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Libp2p} from "../interface.js";
 import {ENRKey, SubnetType} from "../metadata.js";
 import {getConnectionsMap, getDefaultDialer, prettyPrintPeerId} from "../util.js";
 import {Discv5Worker} from "../discv5/index.js";
-import {NetworkCoreMetrics} from "../core/metrics.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
@@ -105,9 +105,10 @@ export class PeerDiscovery {
     this.discv5FirstQueryDelayMs = opts.discv5FirstQueryDelayMs;
     this.connectToDiscv5BootnodesOnStart = opts.connectToDiscv5Bootnodes;
 
-    this.discv5 = new Discv5Worker(opts.discv5, {
+    this.discv5 = new Discv5Worker({
+      discv5: opts.discv5,
       peerId: modules.libp2p.peerId,
-      metrics: modules.metrics,
+      metrics: modules.metrics ?? undefined,
       logger: this.logger,
       config: this.config,
     });
