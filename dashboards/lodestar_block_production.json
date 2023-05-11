@@ -994,7 +994,7 @@
       "pluginVersion": "8.0.6",
       "targets": [
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "all_validators_expected_count",
           "hide": false,
           "interval": "",
@@ -1002,7 +1002,7 @@
           "refId": "A"
         },
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "all_validators_finalized_count",
           "hide": false,
           "interval": "",
@@ -1010,7 +1010,7 @@
           "refId": "B"
         },
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "all_validators_orphaned_count",
           "hide": false,
           "interval": "",
@@ -1018,7 +1018,7 @@
           "refId": "C"
         },
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "all_validators_missed_count",
           "hide": false,
           "interval": "",
@@ -1113,7 +1113,7 @@
           "refId": "A"
         },
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "attached_validators_finalized_count",
           "hide": false,
           "instant": false,
@@ -1122,7 +1122,7 @@
           "refId": "B"
         },
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "attached_validators_missed_count",
           "hide": false,
           "interval": "",
@@ -1130,7 +1130,7 @@
           "refId": "C"
         },
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "attached_validators_orphaned_count",
           "hide": false,
           "interval": "",
@@ -1212,14 +1212,14 @@
       "pluginVersion": "8.0.6",
       "targets": [
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "finalized_canonical_checkpoints_count",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         },
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "finalized_found_checkpoints_in_state_cache",
           "hide": false,
           "interval": "",
@@ -1275,7 +1275,7 @@
       "pluginVersion": "8.0.6",
       "targets": [
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "finalized_attached_validators_count",
           "interval": "",
           "legendFormat": "",
