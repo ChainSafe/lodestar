@@ -25,6 +25,14 @@ type ProposalStats = {
   missed: number;
 };
 
+export type FinalizedStats = {
+  allValidators: ProposalStats;
+  attachedValidators: ProposalStats;
+  finalizedCanonicalCheckpointsCount: number;
+  finalizedFoundCheckpointsInStateCache: number;
+  finalizedAttachedValidatorsCount: number;
+};
+
 /**
  * Used for running tasks that depends on some events or are executed
  * periodically.
@@ -174,13 +182,7 @@ export class Archiver {
     finalizedData: FinalizedData,
     finalized: CheckpointWithHex,
     lastFinalized: CheckpointWithHex
-  ): {
-    allValidators: ProposalStats;
-    attachedValidators: ProposalStats;
-    finalizedCanonicalCheckpointsCount: number;
-    finalizedFoundCheckpointsInStateCache: number;
-    finalizedAttachedValidatorsCount: number;
-  } {
+  ): FinalizedStats {
     const {finalizedCanonicalCheckpoints, finalizedCanonicalBlocks, finalizedNonCanonicalBlocks} = finalizedData;
 
     // Range to consider is:
