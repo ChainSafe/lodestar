@@ -47,7 +47,7 @@ describe("collectFinalizedProposalStats", function () {
   //     [prev finalized, latest finalized], attached validators[], exected stats
   const testCases1: [string, Slot[], Slot[], Epoch[], [Epoch, Epoch], ValidatorIndex[], FinalizedStats][] = [
     [
-      "all - 1 orphaned, 0 missed, attached - 1 orphan 0 missed",
+      "allVals - E:16, F:15, O:1, M:0 attachVals(8) - E:16, F:15, O:1, M:0",
       [16, 15, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
       [14],
       [2, 1],
@@ -62,7 +62,7 @@ describe("collectFinalizedProposalStats", function () {
       },
     ],
     [
-      "all - 0 orphaned, 1 missed, attached - 0 orphan 1 missed ",
+      "allVals - E:16, F:15, O:0, M:1 attachVals(8) - E:16, F:15, O:0, M:1",
       [16, 15, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
       [],
       [2, 1],
@@ -77,7 +77,7 @@ describe("collectFinalizedProposalStats", function () {
       },
     ],
     [
-      "all - 1 orphaned, 1 missed, attached - 1 orphan 1 missed ",
+      "allVals - E:8, F:6, O:1, M:1 attachVals(8) - E:8, F:6, O:1, M:1",
       [16, 14, 12, 11, 10, 9],
       [15],
       [2],
@@ -92,7 +92,7 @@ describe("collectFinalizedProposalStats", function () {
       },
     ],
     [
-      "all - 0 orphaned, 0 missed, attached - 0 orphan 0 missed ",
+      "allVals - E:16, F:16, O:0, M:0 attachVals(8) - E:16, F:16, O:0, M:0",
       [24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9],
       [],
       [3, 2],
@@ -107,7 +107,7 @@ describe("collectFinalizedProposalStats", function () {
       },
     ],
     [
-      "all - 1 orphaned, 0 missed, attached - 0 orphan, 0 missed ",
+      "allVals - E:8, F:7, O:1, M:0 attachVals(6) - E:6, F:6, O:0, M:0",
       [7, 6, 5, 4, 3, 2, 1],
       [8],
       [1],
@@ -122,7 +122,7 @@ describe("collectFinalizedProposalStats", function () {
       },
     ],
     [
-      "all - 0 orphaned, 1 missed, attached - 0 orphan, 0 missed ",
+      "allVals - E:8, F:7, O:0, M:1 attachVals(6) - E:6, F:6, O:0, M:0",
       [7, 6, 5, 4, 3, 2, 1],
       [],
       [1],
@@ -156,7 +156,6 @@ describe("collectFinalizedProposalStats", function () {
       const finalized = makeCheckpoint(finalizedEpoch);
 
       addtoBeaconCache(chainStub["beaconProposerCache"], finalized.epoch, attachedValidators);
-
       addDummyStateCache(chainStub["checkpointStateCache"], prevFinalized, allValidators);
       finalizedCanonicalCheckpoints.forEach((eachCheckpoint) => {
         addDummyStateCache(chainStub["checkpointStateCache"], eachCheckpoint, allValidators);

@@ -995,7 +995,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "beacon_all_validators_expected_count",
+          "expr": "lodestar_all_validators_expected_count",
           "hide": false,
           "interval": "",
           "legendFormat": "",
@@ -1003,7 +1003,7 @@
         },
         {
           "exemplar": false,
-          "expr": "beacon_all_validators_finalized_count",
+          "expr": "lodestar_all_validators_finalized_count",
           "hide": false,
           "interval": "",
           "legendFormat": "",
@@ -1011,7 +1011,7 @@
         },
         {
           "exemplar": false,
-          "expr": "beacon_all_validators_orphaned_count",
+          "expr": "lodestar_all_validators_orphaned_count",
           "hide": false,
           "interval": "",
           "legendFormat": "",
@@ -1019,7 +1019,7 @@
         },
         {
           "exemplar": false,
-          "expr": "beacon_all_validators_missed_count",
+          "expr": "lodestar_all_validators_missed_count",
           "hide": false,
           "interval": "",
           "legendFormat": "",
@@ -1105,7 +1105,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "beacon_attached_validators_expected_count",
+          "expr": "lodestar_attached_validators_expected_count",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1114,7 +1114,7 @@
         },
         {
           "exemplar": false,
-          "expr": "beacon_attached_validators_finalized_count",
+          "expr": "lodestar_attached_validators_finalized_count",
           "hide": false,
           "instant": false,
           "interval": "",
@@ -1123,7 +1123,7 @@
         },
         {
           "exemplar": false,
-          "expr": "beacon_attached_validators_missed_count",
+          "expr": "lodestar_attached_validators_missed_count",
           "hide": false,
           "interval": "",
           "legendFormat": "",
@@ -1131,7 +1131,7 @@
         },
         {
           "exemplar": false,
-          "expr": "beacon_attached_validators_orphaned_count",
+          "expr": "lodestar_attached_validators_orphaned_count",
           "hide": false,
           "interval": "",
           "legendFormat": "",
@@ -1213,14 +1213,14 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "beacon_finalized_canonical_checkpoints_count",
+          "expr": "lodestar_finalized_canonical_checkpoints_count",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         },
         {
           "exemplar": false,
-          "expr": "beacon_finalized_found_checkpoints_in_state_cache",
+          "expr": "lodestar_finalized_found_checkpoints_in_state_cache",
           "hide": false,
           "interval": "",
           "legendFormat": "",
@@ -1276,7 +1276,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "beacon_finalized_attached_validators_count",
+          "expr": "lodestar_finalized_attached_validators_count",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
