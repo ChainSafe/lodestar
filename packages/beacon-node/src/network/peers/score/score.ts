@@ -128,3 +128,34 @@ export class RealScore implements IPeerScore {
     }
   }
 }
+
+/** An implementation of IPeerScore for testing */
+export class MaxScore implements IPeerScore {
+  getScore(): number {
+    return DEFAULT_SCORE;
+  }
+
+  getGossipScore(): number {
+    return DEFAULT_SCORE;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  add(): void {}
+
+  update(): number {
+    return DEFAULT_SCORE;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  updateGossipsubScore(): void {}
+
+  getStat(): PeerScoreStat {
+    return {
+      lodestarScore: DEFAULT_SCORE,
+      gossipScore: DEFAULT_SCORE,
+      ignoreNegativeGossipScore: false,
+      score: DEFAULT_SCORE,
+      lastUpdate: Date.now(),
+    };
+  }
+}
