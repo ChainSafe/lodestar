@@ -171,10 +171,6 @@ export class Eth2Gossipsub extends GossipSub {
     this.unsubscribe(topicStr);
   }
 
-  private getGossipTopicString(topic: GossipTopic): string {
-    return stringifyGossipTopic(this.config, topic);
-  }
-
   private onScrapeLodestarMetrics(metrics: Eth2GossipsubMetrics): void {
     const mesh = this["mesh"] as Map<string, Set<string>>;
     const topics = this["topics"] as Map<string, Set<string>>;

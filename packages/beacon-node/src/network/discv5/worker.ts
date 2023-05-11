@@ -45,9 +45,7 @@ const discv5 = Discv5.create({
   enr: SignableENR.decodeTxt(workerData.enr, keypair),
   peerId,
   multiaddr: multiaddr(workerData.bindAddr),
-  config: {
-    enrUpdate: true,
-  },
+  config: workerData.config,
   metricsRegistry,
 });
 

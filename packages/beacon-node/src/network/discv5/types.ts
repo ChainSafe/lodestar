@@ -17,11 +17,11 @@ export interface Discv5WorkerData {
   enr: string;
   peerIdProto: Uint8Array;
   bindAddr: string;
+  config: Discv5Config;
   bootEnrs: string[];
   metrics: boolean;
   chainConfig: ChainConfig;
   genesisValidatorsRoot: Uint8Array;
-  config: Discv5Config;
 }
 
 /**

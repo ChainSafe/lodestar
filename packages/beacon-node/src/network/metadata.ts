@@ -96,7 +96,7 @@ export class MetadataController {
    */
   updateEth2Field(epoch: Epoch): Uint8Array {
     const enrForkId = ssz.phase0.ENRForkID.serialize(getENRForkID(this.config, epoch));
-    void this.onSetValue(ENRKey.eth2, enrForkId);
+    this.onSetValue(ENRKey.eth2, enrForkId);
     return enrForkId;
   }
 }

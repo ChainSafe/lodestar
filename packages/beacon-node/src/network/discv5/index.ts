@@ -9,11 +9,12 @@ import {Logger} from "@lodestar/utils";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5WorkerApi, Discv5WorkerData, LodestarDiscv5Opts} from "./types.js";
 
-export type Discv5Modules = {
+export type Discv5Opts = {
   peerId: PeerId;
+  discv5: LodestarDiscv5Opts;
   logger: Logger;
   config: BeaconConfig;
-  metrics: NetworkCoreMetrics | null;
+  metrics?: NetworkCoreMetrics;
 };
 
 export type Discv5Events = {
@@ -30,32 +31,26 @@ type Discv5WorkerStatus =
 export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, Discv5Events>}) {
   private status: Discv5WorkerStatus;
   private keypair: IKeypair;
-  private readonly metrics: NetworkCoreMetrics | null;
-  private readonly config: BeaconConfig;
-  private readonly peerId: PeerId;
 
-  constructor(private readonly opts: LodestarDiscv5Opts, modules: Discv5Modules) {
+  constructor(private readonly opts: Discv5Opts) {
     super();
 
     this.status = {status: "stopped"};
-    this.keypair = createKeypairFromPeerId(modules.peerId);
-    this.metrics = modules.metrics;
-    this.config = modules.config;
-    this.peerId = modules.peerId;
+    this.keypair = createKeypairFromPeerId(this.opts.peerId);
   }
 
   async start(): Promise<void> {
     if (this.status.status === "started") return;
 
     const workerData: Discv5WorkerData = {
-      enr: this.opts.enr,
-      peerIdProto: exportToProtobuf(this.peerId),
-      bindAddr: this.opts.bindAddr,
-      bootEnrs: this.opts.bootEnrs as string[],
-      metrics: Boolean(this.metrics),
-      chainConfig: chainConfigFromJson(chainConfigToJson(this.config)),
-      genesisValidatorsRoot: this.config.genesisValidatorsRoot,
-      config: this.opts.config ?? {},
+      enr: this.opts.discv5.enr,
+      peerIdProto: exportToProtobuf(this.opts.peerId),
+      bindAddr: this.opts.discv5.bindAddr,
+      config: this.opts.discv5.config ?? {},
+      bootEnrs: this.opts.discv5.bootEnrs as string[],
+      metrics: Boolean(this.opts.metrics),
+      chainConfig: chainConfigFromJson(chainConfigToJson(this.opts.config)),
+      genesisValidatorsRoot: this.opts.config.genesisValidatorsRoot,
     };
     const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
 
@@ -146,7 +141,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
   }
 
   private decodeEnr(obj: ENRData): ENR | null {
-    this.metrics?.discv5.decodeEnrAttemptCount.inc(1);
+    this.opts.metrics?.discv5.decodeEnrAttemptCount.inc(1);
     return new ENR(obj.kvs, obj.seq, obj.signature);
   }
 }
