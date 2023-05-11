@@ -1,11 +1,13 @@
 import {expect} from "chai";
 import {peerIdFromString} from "@libp2p/peer-id";
 import sinon from "sinon";
+import {MapDef} from "@lodestar/utils";
 import {
   PeerAction,
   ScoreState,
   PeerRpcScoreStore,
   updateGossipsubScores,
+  RealScore,
 } from "../../../../src/network/peers/score/index.js";
 
 describe("simple block provider score tracking", function () {
@@ -16,7 +18,7 @@ describe("simple block provider score tracking", function () {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   function mockStore() {
     const scoreStore = new PeerRpcScoreStore();
-    const peerScores = scoreStore["scores"];
+    const peerScores = scoreStore["scores"] as MapDef<string, RealScore>;
     return {scoreStore, peerScores};
   }
 

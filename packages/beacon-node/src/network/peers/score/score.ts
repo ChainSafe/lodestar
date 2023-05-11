@@ -8,13 +8,13 @@ import {
   MIN_LODESTAR_SCORE_BEFORE_BAN,
   MIN_SCORE,
 } from "./constants.js";
-import {PeerScoreStat, ScoreState} from "./interface.js";
+import {IPeerScore, PeerScoreStat, ScoreState} from "./interface.js";
 import {scoreToState} from "./utils.js";
 
 /**
  * Manage score of a peer.
  */
-export class PeerScore {
+export class RealScore implements IPeerScore {
   private lodestarScore: number;
   private gossipScore: number;
   private ignoreNegativeGossipScore: boolean;

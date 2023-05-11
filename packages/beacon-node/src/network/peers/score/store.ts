@@ -1,9 +1,9 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {MapDef, pruneSetToMax} from "@lodestar/utils";
 import {NetworkCoreMetrics} from "../../core/metrics.js";
-import {IPeerRpcScoreStore, PeerAction, PeerIdStr, PeerScoreStats, ScoreState} from "./interface.js";
+import {IPeerRpcScoreStore, IPeerScore, PeerAction, PeerIdStr, PeerScoreStats, ScoreState} from "./interface.js";
 import {DEFAULT_SCORE, MAX_ENTRIES, MAX_SCORE, MIN_SCORE, SCORE_THRESHOLD} from "./constants.js";
-import {PeerScore} from "./score.js";
+import {RealScore} from "./score.js";
 import {scoreToState} from "./utils.js";
 
 const peerActionScore: Record<PeerAction, number> = {
@@ -19,7 +19,7 @@ const peerActionScore: Record<PeerAction, number> = {
  * The decay rate applies equally to positive and negative scores.
  */
 export class PeerRpcScoreStore implements IPeerRpcScoreStore {
-  private readonly scores = new MapDef<PeerIdStr, PeerScore>(() => new PeerScore());
+  private readonly scores = new MapDef<PeerIdStr, IPeerScore>(() => new RealScore());
   private readonly metrics: NetworkCoreMetrics | null;
 
   // TODO: Persist scores, at least BANNED status to disk

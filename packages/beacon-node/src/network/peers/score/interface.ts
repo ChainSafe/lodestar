@@ -13,6 +13,15 @@ export interface IPeerRpcScoreStore {
   updateGossipsubScore(peerId: PeerIdStr, newScore: number, ignore: boolean): void;
 }
 
+export interface IPeerScore {
+  getScore(): number;
+  getGossipScore(): number;
+  add(scoreDelta: number): void;
+  update(): number;
+  updateGossipsubScore(newScore: number, ignore: boolean): void;
+  getStat(): PeerScoreStat;
+}
+
 export enum ScoreState {
   /** We are content with the peers performance. We permit connections and messages. */
   Healthy = "Healthy",
