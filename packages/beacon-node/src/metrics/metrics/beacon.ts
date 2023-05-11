@@ -61,60 +61,60 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     // Finalized block and proposal stats
     allValidators: {
       expected: register.gauge({
-        name: "all_validators_expected_count",
+        name: "beacon_all_validators_expected_count",
         help: "Number of all blocks expected to be finalized",
       }),
 
       orphaned: register.gauge({
-        name: "all_validators_orphaned_count",
+        name: "beacon_all_validators_orphaned_count",
         help: "Number of blocks orphaned in the finalization",
       }),
 
       missed: register.gauge({
-        name: "all_validators_missed_count",
+        name: "beacon_all_validators_missed_count",
         help: "Number of blocks missed in the finalization",
       }),
 
       finalized: register.gauge({
-        name: "all_validators_finalized_count",
+        name: "beacon_all_validators_finalized_count",
         help: "Number of blocks finalized",
       }),
     },
 
     attachedValidators: {
       expected: register.gauge({
-        name: "attached_validators_expected_count",
+        name: "beacon_attached_validators_expected_count",
         help: "Number of blocks expected to be finalized from the attached validators",
       }),
 
       orphaned: register.gauge({
-        name: "attached_validators_orphaned_count",
+        name: "beacon_attached_validators_orphaned_count",
         help: "Number of blocks orphaned and not finalized from the attached validators",
       }),
 
       missed: register.gauge({
-        name: "attached_validators_missed_count",
+        name: "beacon_attached_validators_missed_count",
         help: "Number of blocks missed in the finalization from the attached validators",
       }),
 
       finalized: register.gauge({
-        name: "attached_validators_finalized_count",
+        name: "beacon_attached_validators_finalized_count",
         help: "Number of blocks finalized from the attached validators",
       }),
     },
 
     finalizedCanonicalCheckpointsCount: register.gauge({
-      name: "finalized_canonical_checkpoints_count",
+      name: "beacon_finalized_canonical_checkpoints_count",
       help: "Number of checkpoints finalized",
     }),
 
     finalizedFoundCheckpointsInStateCache: register.gauge({
-      name: "finalized_found_checkpoints_in_state_cache",
+      name: "beacon_finalized_found_checkpoints_in_state_cache",
       help: "Number of finalized checkpoints found in state cache including previous finalized",
     }),
 
     finalizedAttachedValidatorsCount: register.gauge({
-      name: "finalized_attached_validators_count",
+      name: "beacon_finalized_attached_validators_count",
       help: "Number of proposers attached to the beacon node in the finalization",
     }),
 
