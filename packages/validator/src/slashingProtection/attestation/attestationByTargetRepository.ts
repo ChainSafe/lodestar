@@ -27,6 +27,9 @@ export class AttestationByTargetRepository {
   private readonly bucketId: string;
   private readonly dbReqOpts: DbReqOpts;
 
+  private readonly minKey: Uint8Array;
+  private readonly maxKey: Uint8Array;
+
   constructor(opts: DatabaseApiOptions) {
     this.db = opts.controller;
     this.type = new ContainerType({
@@ -36,14 +39,16 @@ export class AttestationByTargetRepository {
     }); // casing doesn't matter
     this.bucketId = getBucketNameByValue(this.bucket);
     this.dbReqOpts = {bucketId: this.bucketId};
+    this.minKey = encodeKey(this.bucket, Buffer.alloc(0));
+    this.maxKey = encodeKey(this.bucket + 1, Buffer.alloc(0));
   }
 
   async getAll(pubkey: BLSPubkey, limit?: number): Promise<SlashingProtectionAttestation[]> {
     const attestations = await this.db.values({
-      ...this.dbReqOpts,
       limit,
       gte: this.encodeKey(pubkey, 0),
       lt: this.encodeKey(pubkey, Number.MAX_SAFE_INTEGER),
+      bucketId: this.bucketId,
     });
     return attestations.map((attestation) => this.type.deserialize(attestation));
   }
@@ -64,7 +69,7 @@ export class AttestationByTargetRepository {
   }
 
   async listPubkeys(): Promise<BLSPubkey[]> {
-    const keys = await this.db.keys(this.dbReqOpts);
+    const keys = await this.db.keys({gte: this.minKey, lt: this.maxKey, bucketId: this.bucketId});
     return uniqueVectorArr(keys.map((key) => this.decodeKey(key).pubkey));
   }
 

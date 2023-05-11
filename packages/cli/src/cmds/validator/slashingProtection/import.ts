@@ -47,7 +47,7 @@ export const importCmd: CliCommand<ImportArgs, ISlashingProtectionArgs & Account
 
       const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);
 
-      logger.info("Importing the slashing protection logs", {dbPath});
+      logger.info("Importing slashing protection data", {dbPath});
 
       const {slashingProtection, metadata} = getSlashingProtection(args, network, logger);
 
@@ -58,7 +58,7 @@ export const importCmd: CliCommand<ImportArgs, ISlashingProtectionArgs & Account
       const genesisValidatorsRoot =
         (await metadata.getGenesisValidatorsRoot()) ?? (await getGenesisValidatorsRoot(args));
 
-      logger.verbose("Reading the slashing protection logs", {file: args.file});
+      logger.verbose("Reading slashing protection data", {file: args.file});
       const interchangeStr = await fs.promises.readFile(args.file, "utf8");
       const interchangeJson = JSON.parse(interchangeStr) as Interchange;
 

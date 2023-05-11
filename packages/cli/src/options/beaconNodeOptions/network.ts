@@ -50,6 +50,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   return {
     discv5: enableDiscv5
       ? {
+          config: {},
           bindAddr: `/ip4/${listenAddress}/udp/${udpPort}`,
           // TODO: Okay to set to empty array?
           bootEnrs: args["bootnodes"] ?? [],

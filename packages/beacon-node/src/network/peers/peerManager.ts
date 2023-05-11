@@ -16,10 +16,9 @@ import {SubnetType} from "../metadata.js";
 import {Eth2Gossipsub} from "../gossip/gossipsub.js";
 import {StatusCache} from "../statusCache.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
-import {Discv5Opts} from "../discv5/types.js";
-import {PeersData, PeerData} from "./peersData.js";
+import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
-import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score.js";
+import {PeersData, PeerData} from "./peersData.js";
 import {clientFromAgentVersion, ClientKind} from "./client.js";
 import {
   getConnectedPeerIds,
@@ -28,6 +27,7 @@ import {
   prioritizePeers,
   renderIrrelevantPeerType,
 } from "./utils/index.js";
+import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score/index.js";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -74,7 +74,7 @@ export type PeerManagerOpts = {
   /**
    * If null, Don't run discv5 queries, nor connect to cached peers in the peerStore
    */
-  discv5: Discv5Opts | null;
+  discv5: LodestarDiscv5Opts | null;
   /**
    * If set to true, connect to Discv5 bootnodes. If not set or false, do not connect
    */

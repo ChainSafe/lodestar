@@ -10,9 +10,9 @@ import {ENRKey, SubnetType} from "../metadata.js";
 import {getConnectionsMap, getDefaultDialer, prettyPrintPeerId} from "../util.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
-import {Discv5Opts} from "../discv5/types.js";
-import {IPeerRpcScoreStore, ScoreState} from "./score.js";
+import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
+import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
@@ -22,7 +22,7 @@ const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
 export type PeerDiscoveryOpts = {
   maxPeers: number;
   discv5FirstQueryDelayMs: number;
-  discv5: Discv5Opts;
+  discv5: LodestarDiscv5Opts;
   connectToDiscv5Bootnodes?: boolean;
 };
 

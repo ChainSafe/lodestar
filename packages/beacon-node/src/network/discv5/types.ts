@@ -1,6 +1,16 @@
-import {ENRData, SignableENRData} from "@chainsafe/discv5";
+import {Discv5, ENRData, SignableENRData} from "@chainsafe/discv5";
 import {Observable} from "@chainsafe/threads/observable";
 import {ChainConfig} from "@lodestar/config";
+
+// TODO export IDiscv5Config so we don't need this convoluted type
+type Discv5Config = Parameters<(typeof Discv5)["create"]>[0]["config"];
+
+export type LodestarDiscv5Opts = {
+  config?: Discv5Config;
+  enr: string;
+  bindAddr: string;
+  bootEnrs: string[];
+};
 
 /** discv5 worker constructor data */
 export interface Discv5WorkerData {
@@ -11,13 +21,8 @@ export interface Discv5WorkerData {
   metrics: boolean;
   chainConfig: ChainConfig;
   genesisValidatorsRoot: Uint8Array;
+  config: Discv5Config;
 }
-
-export type Discv5Opts = {
-  enr: string;
-  bindAddr: string;
-  bootEnrs: string[];
-};
 
 /**
  * API exposed by the discv5 worker

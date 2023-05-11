@@ -59,7 +59,7 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
   async importInterchange(interchange: Interchange, genesisValidatorsRoot: Root, logger?: Logger): Promise<void> {
     const {data} = parseInterchange(interchange, genesisValidatorsRoot);
     for (const validator of data) {
-      logger?.info(`Importing logs for Validator ${toHexString(validator.pubkey)}`);
+      logger?.info("Importing slashing protection", {pubkey: toHexString(validator.pubkey)});
       await this.blockService.importBlocks(validator.pubkey, validator.signedBlocks);
       await this.attestationService.importAttestations(validator.pubkey, validator.signedAttestations);
     }
@@ -73,7 +73,7 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
   ): Promise<Interchange> {
     const validatorData: InterchangeLodestar["data"] = [];
     for (const pubkey of pubkeys) {
-      logger?.info(`Exporting logs for Validator ${toHexString(pubkey)}`);
+      logger?.info("Exporting slashing protection", {pubkey: toHexString(pubkey)});
       validatorData.push({
         pubkey,
         signedBlocks: await this.blockService.exportBlocks(pubkey),

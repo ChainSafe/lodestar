@@ -92,6 +92,24 @@ enum ReprocessRejectReason {
 }
 
 /**
+ * Cannot accept work reason for metrics
+ */
+enum CannotAcceptWorkReason {
+  /**
+   * Validating or procesing gossip block at current slot.
+   */
+  processingCurrentSlotBlock = "processing_current_slot_block",
+  /**
+   * bls is busy.
+   */
+  bls = "bls_busy",
+  /**
+   * regen is busy.
+   */
+  regen = "regen_busy",
+}
+
+/**
  * Network processor handles the gossip queues and throtles processing to not overload the main thread
  * - Decides when to process work and what to process
  *
@@ -124,6 +142,7 @@ export class NetworkProcessor {
   // to be stored in this Map and reprocessed once the block comes
   private readonly awaitingGossipsubMessagesByRootBySlot: MapDef<Slot, MapDef<RootHex, Set<PendingGossipsubMessage>>>;
   private unknownBlockGossipsubMessagesCount = 0;
+  private isProcessingCurrentSlotBlock = false;
 
   constructor(modules: NetworkProcessorModules, private readonly opts: NetworkProcessorOpts) {
     const {chain, events, logger, metrics} = modules;
@@ -183,7 +202,8 @@ export class NetworkProcessor {
   }
 
   private onPendingGossipsubMessage(message: PendingGossipsubMessage): void {
-    const extractBlockSlotRootFn = this.extractBlockSlotRootFns[message.topic.type];
+    const topicType = message.topic.type;
+    const extractBlockSlotRootFn = this.extractBlockSlotRootFns[topicType];
     // check block root of Attestation and SignedAggregateAndProof messages
     if (extractBlockSlotRootFn) {
       const slotRoot = extractBlockSlotRootFn(message.msg.data);
@@ -195,10 +215,17 @@ export class NetworkProcessor {
         if (slot < this.chain.clock.currentSlot - EARLIEST_PERMISSABLE_SLOT_DISTANCE) {
           // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
           this.metrics?.networkProcessor.gossipValidationError.inc({
-            topic: message.topic.type,
+            topic: topicType,
             error: GossipErrorCode.PAST_SLOT,
           });
           return;
+        }
+        if (
+          slot === this.chain.clock.currentSlot &&
+          (topicType === GossipType.beacon_block || topicType === GossipType.beacon_block_and_blobs_sidecar)
+        ) {
+          // in the worse case if the current slot block is not valid, this will be reset in the next slot
+          this.isProcessingCurrentSlotBlock = true;
         }
         message.msgSlot = slot;
         if (root && !this.chain.forkChoice.hasBlockHex(root)) {
@@ -242,6 +269,7 @@ export class NetworkProcessor {
     block: string;
     executionOptimistic: boolean;
   }): Promise<void> {
+    this.isProcessingCurrentSlotBlock = false;
     const byRootGossipsubMessages = this.awaitingGossipsubMessagesByRootBySlot.getOrDefault(slot);
     const waitingGossipsubMessages = byRootGossipsubMessages.getOrDefault(rootHex);
     if (waitingGossipsubMessages.size === 0) {
@@ -268,6 +296,7 @@ export class NetworkProcessor {
   }
 
   private onClockSlot(clockSlot: Slot): void {
+    this.isProcessingCurrentSlotBlock = false;
     const nowSec = Date.now() / 1000;
     for (const [slot, gossipMessagesByRoot] of this.awaitingGossipsubMessagesByRootBySlot.entries()) {
       if (slot < clockSlot) {
@@ -291,13 +320,14 @@ export class NetworkProcessor {
     let jobsSubmitted = 0;
 
     job_loop: while (jobsSubmitted < MAX_JOBS_SUBMITTED_PER_TICK) {
-      // Check canAcceptWork before calling queue.next() since it consumes the items
-      const canAcceptWork = this.chain.blsThreadPoolCanAcceptWork() && this.chain.regenCanAcceptWork();
+      // Check if chain can accept work before calling queue.next() since it consumes the items
+      const reason = this.checkAcceptWork();
 
       for (const topic of executeGossipWorkOrder) {
         // beacon block is guaranteed to be processed immedately
-        if (!canAcceptWork && !executeGossipWorkOrderObj[topic]?.bypassQueue) {
-          this.metrics?.networkProcessor.canNotAcceptWork.inc();
+        // reason !== null means cannot accept work
+        if (reason !== null && !executeGossipWorkOrderObj[topic]?.bypassQueue) {
+          this.metrics?.networkProcessor.canNotAcceptWork.inc({reason});
           break job_loop;
         }
         if (
@@ -364,5 +394,24 @@ export class NetworkProcessor {
         }),
       0
     );
+  }
+
+  /**
+   * Return null if chain can accept work, otherwise return the reason why it cannot accept work
+   */
+  private checkAcceptWork(): null | CannotAcceptWorkReason {
+    if (this.isProcessingCurrentSlotBlock) {
+      return CannotAcceptWorkReason.processingCurrentSlotBlock;
+    }
+
+    if (!this.chain.blsThreadPoolCanAcceptWork()) {
+      return CannotAcceptWorkReason.bls;
+    }
+
+    if (!this.chain.regenCanAcceptWork()) {
+      return CannotAcceptWorkReason.regen;
+    }
+
+    return null;
   }
 }

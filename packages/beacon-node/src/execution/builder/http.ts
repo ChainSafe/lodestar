@@ -17,7 +17,7 @@ export type ExecutionBuilderHttpOpts = {
   allowedFaults?: number;
 
   // Only required for merge-mock runs, no need to expose it to cli
-  issueLocalFcUForBlockProduction?: boolean;
+  issueLocalFcUWithFeeRecipient?: string;
   // Add User-Agent header to all requests
   userAgent?: string;
 };
@@ -31,7 +31,7 @@ export const defaultExecutionBuilderHttpOpts: ExecutionBuilderHttpOpts = {
 export class ExecutionBuilderHttp implements IExecutionBuilder {
   readonly api: BuilderApi;
   readonly config: ChainForkConfig;
-  readonly issueLocalFcUForBlockProduction?: boolean;
+  readonly issueLocalFcUWithFeeRecipient?: string;
   // Builder needs to be explicity enabled using updateStatus
   status = false;
   faultInspectionWindow: number;
@@ -49,7 +49,7 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
       {config, metrics: metrics?.builderHttpClient}
     );
     this.config = config;
-    this.issueLocalFcUForBlockProduction = opts.issueLocalFcUForBlockProduction;
+    this.issueLocalFcUWithFeeRecipient = opts.issueLocalFcUWithFeeRecipient;
 
     /**
      * Beacon clients select randomized values from the following ranges when initializing

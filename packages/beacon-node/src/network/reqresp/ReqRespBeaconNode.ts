@@ -18,7 +18,7 @@ import {Logger} from "@lodestar/utils";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
 import {PeersData} from "../peers/peersData.js";
-import {IPeerRpcScoreStore, PeerAction} from "../peers/score.js";
+import {IPeerRpcScoreStore, PeerAction} from "../peers/score/index.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {StatusCache} from "../statusCache.js";
 import {onOutgoingReqRespError} from "./score.js";

@@ -43,10 +43,7 @@ describe("cmds / beacon / args handler", () => {
       nat: true,
     });
 
-    if (!options.network.discv5?.enr) {
-      throw Error("must set ENR");
-    }
-    const enr = ENR.decodeTxt(options.network.discv5?.enr);
+    const enr = ENR.decodeTxt(options.network.discv5?.enr as string);
 
     expect(enr.ip).to.equal(enrIp, "wrong enr.ip");
     expect(enr.tcp).to.equal(enrTcp, "wrong enr.tcp");

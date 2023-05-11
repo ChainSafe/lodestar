@@ -3,7 +3,7 @@ import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/discv5";
 import {Libp2p} from "../interface.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
-import {defaultDiscv5Options, defaultNetworkOptions, NetworkOptions} from "../options.js";
+import {defaultNetworkOptions, NetworkOptions} from "../options.js";
 import {createNodejsLibp2p as _createNodejsLibp2p} from "./bundle.js";
 
 export type NodeJsLibp2pOpts = {
@@ -29,11 +29,6 @@ export async function createNodeJsLibp2p(
   const bootMultiaddrs = networkOpts.bootMultiaddrs || defaultNetworkOptions.bootMultiaddrs;
   const {peerStoreDir, disablePeerDiscovery} = nodeJsLibp2pOpts;
 
-  // Attempt to decode ENR if provided for sanity checks
-  if (networkOpts.discv5?.enr) {
-    ENR.decodeTxt(networkOpts.discv5?.enr);
-  }
-
   let datastore: undefined | Eth2PeerDataStore = undefined;
   if (peerStoreDir) {
     datastore = new Eth2PeerDataStore(peerStoreDir);
@@ -45,10 +40,7 @@ export async function createNodeJsLibp2p(
     if (!networkOpts.bootMultiaddrs) {
       networkOpts.bootMultiaddrs = [];
     }
-    if (!networkOpts.discv5) {
-      networkOpts.discv5 = defaultDiscv5Options;
-    }
-    for (const enrOrStr of networkOpts.discv5.bootEnrs) {
+    for (const enrOrStr of networkOpts.discv5?.bootEnrs ?? []) {
       const enr = typeof enrOrStr === "string" ? ENR.decodeTxt(enrOrStr) : enrOrStr;
       const fullMultiAddr = await enr.getFullMultiaddr("tcp");
       const multiaddrWithPeerId = fullMultiAddr?.toString();

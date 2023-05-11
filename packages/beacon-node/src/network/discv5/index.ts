@@ -7,7 +7,7 @@ import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {chainConfigFromJson, chainConfigToJson, BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {NetworkCoreMetrics} from "../core/metrics.js";
-import {Discv5Opts, Discv5WorkerApi, Discv5WorkerData} from "./types.js";
+import {Discv5WorkerApi, Discv5WorkerData, LodestarDiscv5Opts} from "./types.js";
 
 export type Discv5Modules = {
   peerId: PeerId;
@@ -34,7 +34,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
   private readonly config: BeaconConfig;
   private readonly peerId: PeerId;
 
-  constructor(private readonly opts: Discv5Opts, modules: Discv5Modules) {
+  constructor(private readonly opts: LodestarDiscv5Opts, modules: Discv5Modules) {
     super();
 
     this.status = {status: "stopped"};
@@ -51,10 +51,11 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       enr: this.opts.enr,
       peerIdProto: exportToProtobuf(this.peerId),
       bindAddr: this.opts.bindAddr,
-      bootEnrs: this.opts.bootEnrs,
+      bootEnrs: this.opts.bootEnrs as string[],
       metrics: Boolean(this.metrics),
       chainConfig: chainConfigFromJson(chainConfigToJson(this.config)),
       genesisValidatorsRoot: this.config.genesisValidatorsRoot,
+      config: this.opts.config ?? {},
     };
     const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
 
