@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
+import process from "node:process";
 import path from "node:path";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
@@ -31,6 +32,13 @@ const env = await SimulationEnvironment.initWithDefaults(
     {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
   ]
 );
+
+["SIGINT", "SIGKILL", "SIGTERM"].forEach((signal) => {
+  process.on(signal, async () => {
+    await env.stop();
+    process.exit(0);
+  });
+});
 
 await env.start({runTimeoutMs: 0});
 await connectAllNodes(env.nodes);
