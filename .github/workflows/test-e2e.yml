@@ -55,7 +55,7 @@ jobs:
       - name: Run the e2e test environment
         run: nohup npx ts-node --esm packages/cli/test/scripts/e2e_test_env.ts &
       - name: Wait for the node to be ready
-        run: npx wait-port 0.0.0.0:5001
+        run: npx wait-port -t 60000 0.0.0.0:5001
 
       - name: E2E tests
         run: yarn test:e2e
