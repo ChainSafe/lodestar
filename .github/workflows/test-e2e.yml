@@ -51,9 +51,9 @@ jobs:
         # Run only on forks
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
 
-      - name: Run a e2e test enviornment
-        run: nohup npx ts-node --esm packages/cli/test/scripts/e2e_test_env.ts &
-      - name: Wait for the ndoe to be ready
+      - name: Run e2e test enviornment
+        run: npx ts-node --esm packages/cli/test/scripts/e2e_test_env.ts &
+      - name: Wait for the node to be ready
         run: npx wait-port 0.0.0.0:5001
 
       - name: E2E tests
