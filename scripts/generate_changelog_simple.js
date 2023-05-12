@@ -12,9 +12,9 @@ const fs = require("node:fs");
 // Docs
 // [script] <fromTag> <toTag>
 //
-// Exmaple
+// Example
 // ```
-// node scripts/changelog_simple.js v0.32.0 v0.33.0
+// node scripts/generate_changelog.js v0.32.0 v0.33.0
 // ```
 
 /**
@@ -52,36 +52,96 @@ if (!fromTag) throw Error("No process.argv[2]");
 if (!toTag) throw Error("No process.argv[3]");
 if (!outpath) throw Error("No process.argv[4]");
 
+/**
+ * @type {Record<string, {heading: string; commitsByScope: Record<string, string[]>}>}
+ */
+const sections = {
+  feat: {heading: "Features", commitsByScope: {"": []}},
+  fix: {heading: "Bug Fixes", commitsByScope: {"": []}},
+  perf: {heading: "Performance", commitsByScope: {"": []}},
+  refactor: {heading: "Refactoring", commitsByScope: {"": []}},
+  deps: {heading: "Dependencies", commitsByScope: {"": []}},
+  revert: {heading: "Reverts", commitsByScope: {"": []}},
+  build: {heading: "Build System", commitsByScope: {"": []}},
+  ci: {heading: "Continuous Integration", commitsByScope: {"": []}},
+  test: {heading: "Tests", commitsByScope: {"": []}},
+  style: {heading: "Styles", commitsByScope: {"": []}},
+  chore: {heading: "Maintenance", commitsByScope: {"": []}},
+  docs: {heading: "Documentation", commitsByScope: {"": []}},
+  _: {heading: "Miscellaneous", commitsByScope: {"": []}},
+};
+
 const isPrCommitRg = /\(#\d+\)/;
+const conventionalCommitRg = /^([a-z]+)(?:\((.*)\))?(?:(!))?: (.*)$/;
 
 const commitHashes = shell(`git log --pretty=format:"%H" ${fromTag}...${toTag}`);
 
-let commitListStr = "";
-
 for (const commitHash of commitHashes.trim().split("\n")) {
-  const subject = shell(`git log --format='%s' ${commitHash}^!`);
-  if (!isPrCommitRg.test(subject)) {
+  const rawCommit = shell(`git log --format='%s' ${commitHash}^!`);
+
+  if (!isPrCommitRg.test(rawCommit)) {
+    // Drop commits without a PR reference
     continue;
   }
+
+  const conventionalCommit = rawCommit.match(conventionalCommitRg);
+  if (!conventionalCommit) {
+    // Drop commits that do not follow conventional commit pattern
+    continue;
+  }
+
+  const [, type, scope, _breaking, subject] = conventionalCommit;
 
   const authorEmail = shell(`git log --format='%ae' ${commitHash}^!`);
   const authorName = shell(`git log --format='%an' ${commitHash}^!`);
   const login = getCommitAuthorLogin(commitHash, authorEmail, authorName);
 
-  commitListStr += `- ${subject} (@${login})\n`;
+  const formattedCommit = `- ${scope ? `**${scope}:** ` : ""}${subject} (@${login})\n`;
+
+  // Sort commits by type and scope
+  // - assign each commit to section based on type
+  // - group commits by scope within each section
+  if (sections[type] != null) {
+    if (scope) {
+      if (sections[type].commitsByScope[scope] == null) {
+        sections[type].commitsByScope[scope] = [];
+      }
+      sections[type].commitsByScope[scope].push(formattedCommit);
+    } else {
+      sections[type].commitsByScope[""].push(formattedCommit);
+    }
+  } else {
+    // Commits with a type that is not defined in sections
+    sections._.commitsByScope[""].push(formattedCommit);
+  }
 }
 
 // Print knownAuthors to update if necessary
 console.log("knownAuthors", knownAuthors);
 
-const changelog = `# Changelog
+let changelog = `## Changelog
 
 [Full Changelog](https://github.com/ChainSafe/lodestar/compare/${fromTag}...${toTag})
-
-**Merged pull requests:**
-
-${commitListStr}
 `;
+
+// Write sections to changelog
+for (const type in sections) {
+  const section = sections[type];
+  let hasCommits = false;
+  let sectionChangelog = `\n### ${section.heading}\n\n`;
+
+  for (const commits of Object.values(section.commitsByScope)) {
+    if (commits.length > 0) {
+      hasCommits = true;
+      sectionChangelog += commits.join("");
+    }
+  }
+
+  if (hasCommits) {
+    // Only add section if it has at least one commit
+    changelog += sectionChangelog;
+  }
+}
 
 // Print to console
 console.log(changelog);
