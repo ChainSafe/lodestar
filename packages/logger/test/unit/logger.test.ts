@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {shouldDeleteLogFile} from "../../../src/util/logger.js";
+import {shouldDeleteLogFile} from "../../../cli/src/util/logger.js";
 
 describe("shouldDeleteLogFile", function () {
   const prefix = "beacon";

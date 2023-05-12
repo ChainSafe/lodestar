@@ -4,18 +4,8 @@ import DailyRotateFile from "winston-daily-rotate-file";
 import TransportStream from "winston-transport";
 import winston from "winston";
 import {ChainForkConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {
-  Logger,
-  LogLevel,
-  createWinstonLogger,
-  TimestampFormat,
-  TimestampFormatCode,
-  LogFormat,
-  logFormats,
-} from "@lodestar/utils";
-import {GlobalArgs} from "../options/globalOptions.js";
-import {ConsoleDynamicLevel} from "./loggerConsoleTransport.js";
+import {Logger, LogLevel, createWinstonLogger, TimestampFormat, LogFormat, logFormats} from "@lodestar/utils";
+import {ConsoleDynamicLevel} from "./consoleTransport.js";
 
 export const LOG_FILE_DISABLE_KEYWORD = "none";
 export const LOG_LEVEL_DEFAULT = LogLevel.info;
@@ -32,13 +22,25 @@ export type LogArgs = {
   logPrefix?: string;
   logFormat?: string;
   logLevelModule?: string[];
+  /**
+   * Enables relative to genesis timestamp format
+   * ```
+   * {
+   *   format: TimestampFormatCode.EpochSlot,
+   *   genesisTime: args.logFormatGenesisTime,
+   *   secondsPerSlot: config.SECONDS_PER_SLOT,
+   *   slotsPerEpoch: SLOTS_PER_EPOCH,
+   * }
+   * ```
+   */
+  timestampFormat?: TimestampFormat;
 };
 
 /**
  * Setup a CLI logger, common for beacon, validator and dev commands
  */
 export function getCliLogger(
-  args: LogArgs & Pick<GlobalArgs, "dataDir">,
+  args: LogArgs,
   paths: {defaultLogFilepath: string},
   config: ChainForkConfig,
   opts?: {hideTimestamp?: boolean}
@@ -96,23 +98,11 @@ export function getCliLogger(
     );
   }
 
-  const timestampFormat: TimestampFormat =
-    args.logFormatGenesisTime !== undefined
-      ? {
-          format: TimestampFormatCode.EpochSlot,
-          genesisTime: args.logFormatGenesisTime,
-          secondsPerSlot: config.SECONDS_PER_SLOT,
-          slotsPerEpoch: SLOTS_PER_EPOCH,
-        }
-      : {
-          format: TimestampFormatCode.DateRegular,
-        };
-
   const logger = createWinstonLogger(
     {
       module: args.logPrefix,
       format: args.logFormat ? parseLogFormat(args.logFormat) : "human",
-      timestampFormat,
+      timestampFormat: args.timestampFormat,
       hideTimestamp: opts?.hideTimestamp,
     },
     transports
