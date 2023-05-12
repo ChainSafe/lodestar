@@ -98,7 +98,6 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getPayloadV2: this.getPayload.bind(this),
       engine_getPayloadV3: this.getPayload.bind(this),
       engine_exchangeTransitionConfigurationV1: this.exchangeTransitionConfigurationV1.bind(this),
-      engine_getBlobsBundleV1: this.getBlobsBundle.bind(this),
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
     };
@@ -308,27 +307,32 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
         executionPayload.transactions.push(tx);
       }
 
-      const kzgs: deneb.KZGCommitment[] = [];
+      const commitments: deneb.KZGCommitment[] = [];
       const blobs: deneb.Blob[] = [];
+      const proofs: deneb.KZGProof[] = [];
 
       // if post deneb, add between 0 and 2 blob transactions
       if (ForkSeq[fork] >= ForkSeq.deneb) {
         const denebTxCount = Math.round(2 * Math.random());
         for (let i = 0; i < denebTxCount; i++) {
           const blob = generateRandomBlob();
-          const kzg = ckzg.blobToKzgCommitment(blob);
-          executionPayload.transactions.push(transactionForKzgCommitment(kzg));
-          kzgs.push(kzg);
+          const commitment = ckzg.blobToKzgCommitment(blob);
+          // TODO DENEB: this is a dummy proof, to be replaced by ckzg.computeBlobKzgProof
+          // on followup PRs
+          const proof = ckzg.computeAggregateKzgProof([]);
+          executionPayload.transactions.push(transactionForKzgCommitment(commitment));
+          commitments.push(commitment);
           blobs.push(blob);
+          proofs.push(proof);
         }
       }
 
       this.preparingPayloads.set(payloadId, {
         executionPayload: serializeExecutionPayload(fork, executionPayload),
         blobsBundle: serializeBlobsBundle({
-          blockHash: toHex(executionPayload.blockHash),
-          kzgs,
+          commitments,
           blobs,
+          proofs,
         }),
       });
 
@@ -384,19 +388,6 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     this.payloadsForDeletion.set(payloadIdNbr, now);
 
     return payload.executionPayload;
-  }
-
-  private getBlobsBundle(
-    payloadId: EngineApiRpcParamTypes["engine_getBlobsBundleV1"][0]
-  ): EngineApiRpcReturnTypes["engine_getBlobsBundleV1"] {
-    const payloadIdNbr = Number(payloadId);
-    const payload = this.preparingPayloads.get(payloadIdNbr);
-
-    if (!payload) {
-      throw Error(`Unknown payloadId ${payloadId}`);
-    }
-
-    return payload.blobsBundle;
   }
 
   private exchangeTransitionConfigurationV1(
