@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {KZGCommitment, Blob} from "@lodestar/types/deneb";
+import {KZGCommitment, Blob, KZGProof} from "@lodestar/types/deneb";
 import {RootHex, allForks, capella, Wei} from "@lodestar/types";
 
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
@@ -65,9 +65,9 @@ export type BlobsBundle = {
    * Execution payload `blockHash` for the caller to sanity-check the consistency with the `engine_getPayload` call
    * https://github.com/protolambda/execution-apis/blob/bf44a8d08ab34b861ef97fa9ef5c5e7806194547/src/engine/blob-extension.md?plain=1#L49
    */
-  blockHash: RootHex;
-  kzgs: KZGCommitment[];
+  commitments: KZGCommitment[];
   blobs: Blob[];
+  proofs: KZGProof[];
 };
 
 /**
@@ -119,20 +119,7 @@ export interface IExecutionEngine {
   getPayload(
     fork: ForkName,
     payloadId: PayloadId
-  ): Promise<{executionPayload: allForks.ExecutionPayload; blockValue: Wei}>;
-
-  /**
-   * "After retrieving the execution payload from the execution engine as specified in Bellatrix,
-   * use the payload_id to retrieve blobs and blob_kzg_commitments
-   * via get_blobs_and_kzg_commitments(payload_id)."
-   * https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#blob-kzg-commitments
-   *
-   * This function calls the Engine API method engine_getBlobsBundleV1, what the consensus-spec
-   * describes as `get_blobs_and_kzg_commitments(payload_id)`.
-   *
-   * The Engine API spec is in PR: https://github.com/ethereum/execution-apis/pull/197
-   */
-  getBlobsBundle(payloadId: PayloadId): Promise<BlobsBundle>;
+  ): Promise<{executionPayload: allForks.ExecutionPayload; blockValue: Wei; blobsBundle?: BlobsBundle}>;
 
   exchangeTransitionConfigurationV1(
     transitionConfiguration: TransitionConfigurationV1
