@@ -4,6 +4,8 @@ import {Root, RootHex} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
 import {PeerIdStr} from "../util/peerId.js";
+import {INTERVALS_PER_SLOT} from "@lodestar/params";
+import {sleep} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
 import {BlockInput} from "../chain/blocks/types.js";
 import {Metrics} from "../metrics/index.js";
@@ -26,6 +28,7 @@ export class UnknownBlockSync {
    */
   private readonly pendingBlocks = new Map<RootHex, PendingBlock>();
   private readonly knownBadBlocks = new Set<RootHex>();
+  private readonly proposerBoostSecWindow: number;
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -43,6 +46,8 @@ export class UnknownBlockSync {
     } else {
       this.logger.debug("UnknownBlockSync disabled.");
     }
+
+    this.proposerBoostSecWindow = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
 
     if (metrics) {
       metrics.syncUnknownBlock.pendingBlocks.addCollect(() =>
@@ -239,6 +244,25 @@ export class UnknownBlockSync {
     }
 
     pendingBlock.status = PendingBlockStatus.processing;
+    // this prevents unbundling attack
+    // see https://lighthouse-blog.sigmaprime.io/mev-unbundling-rpc.html
+    const {slot: blockSlot, proposerIndex} = pendingBlock.blockInput.block.message;
+    if (
+      this.chain.clock.secFromSlot(blockSlot) < this.proposerBoostSecWindow &&
+      this.chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)
+    ) {
+      // proposer is known by a gossip block already, wait a bit to make sure this block is not
+      // eligible for proposer boost to prevent unbundling attack
+      const blockRoot = this.config
+        .getForkTypes(blockSlot)
+        .BeaconBlock.hashTreeRoot(pendingBlock.blockInput.block.message);
+      this.logger.verbose("Avoid proposer boost for this block of known proposer", {
+        blockSlot,
+        blockRoot: toHexString(blockRoot),
+        proposerIndex,
+      });
+      await sleep(this.proposerBoostSecWindow * 1000);
+    }
     // At gossip time, it's critical to keep a good number of mesh peers.
     // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
     // Gossip Job Wait Time depends on the BLS Job Wait Time

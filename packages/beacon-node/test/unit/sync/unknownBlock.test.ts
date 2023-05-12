@@ -1,8 +1,10 @@
 import {expect} from "chai";
-import {config} from "@lodestar/config/default";
+import sinon from "sinon";
+import {config as minimalConfig} from "@lodestar/config/default";
+import {createChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ssz} from "@lodestar/types";
-import {notNullish, sleep} from "@lodestar/utils";
+import {notNullish} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
@@ -11,37 +13,62 @@ import {testLogger} from "../../utils/logger.js";
 import {getRandPeerIdStr} from "../../utils/peer.js";
 import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 import {ClockStopped} from "../../utils/mocks/clock.js";
+import {IClock} from "../../../src/util/clock.js";
+import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
 
 describe("sync / UnknownBlockSync", () => {
   const logger = testLogger();
+  const sandbox = sinon.createSandbox();
+  const slotSec = 0.3;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  const config = createChainForkConfig({...minimalConfig, SECONDS_PER_SLOT: slotSec});
+
+  beforeEach(() => {
+    sandbox.useFakeTimers({shouldAdvanceTime: true});
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
 
   const testCases: {
     id: string;
     event: NetworkEvent.unknownBlockParent | NetworkEvent.unknownBlock;
     finalizedSlot: number;
     reportPeer: boolean;
+    seenBlock: boolean;
   }[] = [
     {
       id: "fetch and process multiple unknown blocks",
       event: NetworkEvent.unknownBlock,
       finalizedSlot: 0,
       reportPeer: false,
+      seenBlock: false,
     },
     {
       id: "fetch and process multiple unknown block parents",
       event: NetworkEvent.unknownBlockParent,
       finalizedSlot: 0,
       reportPeer: false,
+      seenBlock: false,
     },
     {
       id: "downloaded parent is before finalized slot",
       event: NetworkEvent.unknownBlockParent,
       finalizedSlot: 2,
       reportPeer: true,
+      seenBlock: false,
+    },
+    {
+      id: "unbundling attack",
+      event: NetworkEvent.unknownBlockParent,
+      finalizedSlot: 0,
+      reportPeer: false,
+      seenBlock: true,
     },
   ];
 
-  for (const {id, event, finalizedSlot, reportPeer} of testCases) {
+  for (const {id, event, finalizedSlot, reportPeer, seenBlock} of testCases) {
     it(id, async () => {
       const peer = await getRandPeerIdStr();
       const blockA = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -86,6 +113,15 @@ describe("sync / UnknownBlockSync", () => {
         hasBlock: (root) => forkChoiceKnownRoots.has(toHexString(root)),
         getFinalizedBlock: () => ({slot: finalizedSlot} as ProtoBlock),
       };
+      const clock: Pick<IClock, "secFromSlot"> = {
+        secFromSlot: () => 0,
+      };
+      const seenBlockProposers: Pick<SeenBlockProposers, "isKnown"> = {
+        // only return seenBlock for blockC
+        isKnown: (blockSlot) => (blockSlot === blockC.message.slot ? seenBlock : false),
+      };
+      let blockCResolver: () => void;
+      const blockCProcessed = new Promise<void>((resolve) => (blockCResolver = resolve));
 
       const chain: Partial<IBeaconChain> = {
         clock: new ClockStopped(0),
@@ -95,9 +131,13 @@ describe("sync / UnknownBlockSync", () => {
           // Simluate adding the block to the forkchoice
           const blockRootHex = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
           forkChoiceKnownRoots.add(blockRootHex);
+          if (blockRootHex === blockRootHexC) blockCResolver();
         },
+        clock: clock as IClock,
+        seenBlockProposers: seenBlockProposers as SeenBlockProposers,
       };
 
+      const setTimeoutSpy = sandbox.spy(global, "setTimeout");
       new UnknownBlockSync(config, network as INetwork, chain as IBeaconChain, logger, null);
       if (event === NetworkEvent.unknownBlockParent) {
         network.events?.emit(NetworkEvent.unknownBlockParent, {
@@ -113,10 +153,12 @@ describe("sync / UnknownBlockSync", () => {
         expect(err[0]).equal(peer);
         expect([err[1], err[2]]).to.be.deep.equal([PeerAction.LowToleranceError, "BadBlockByRoot"]);
       } else {
-        // happy path
         // Wait for all blocks to be in ForkChoice store
-        while (forkChoiceKnownRoots.size < 3) {
-          await sleep(10);
+        await blockCProcessed;
+        if (seenBlock) {
+          expect(setTimeoutSpy).to.have.been.calledWithMatch({}, (slotSec / 3) * 1000);
+        } else {
+          expect(setTimeoutSpy).to.be.not.called;
         }
 
         // After completing the sync, all blocks should be in the ForkChoice
