@@ -132,7 +132,7 @@ export class RealScore implements IPeerScore {
 /** An implementation of IPeerScore for testing */
 export class MaxScore implements IPeerScore {
   getScore(): number {
-    return DEFAULT_SCORE;
+    return MAX_SCORE;
   }
 
   getGossipScore(): number {
@@ -143,7 +143,7 @@ export class MaxScore implements IPeerScore {
   add(): void {}
 
   update(): number {
-    return DEFAULT_SCORE;
+    return MAX_SCORE;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -151,10 +151,10 @@ export class MaxScore implements IPeerScore {
 
   getStat(): PeerScoreStat {
     return {
-      lodestarScore: DEFAULT_SCORE,
+      lodestarScore: MAX_SCORE,
       gossipScore: DEFAULT_SCORE,
       ignoreNegativeGossipScore: false,
-      score: DEFAULT_SCORE,
+      score: MAX_SCORE,
       lastUpdate: Date.now(),
     };
   }
