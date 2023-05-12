@@ -296,7 +296,7 @@ export class Archiver {
       missed: finalizedAttachedValidatorsMissedCount,
     };
 
-    this.logger.info("All validators finalized proposal stats", {
+    this.logger.debug("All validators finalized proposal stats", {
       ...allValidators,
       finalizedCanonicalCheckpointsCount,
       finalizedFoundCheckpointsInStateCache,
