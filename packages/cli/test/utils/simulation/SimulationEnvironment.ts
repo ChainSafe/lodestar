@@ -367,8 +367,8 @@ export class SimulationEnvironment {
     const genesisOptions: ELGeneratorGenesisOptions<E> = {
       ttd: options?.ttd ?? this.forkConfig.TERMINAL_TOTAL_DIFFICULTY,
       cliqueSealingPeriod: options?.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
-      shanghaiTimestamp:
-        options?.shanghaiTimestamp ??
+      shanghaiTime:
+        options?.shanghaiTime ??
         getEstimatedShanghaiTimestamp({
           capellaForkEpoch: this.forkConfig.CAPELLA_FORK_EPOCH,
           genesisTime: this.options.genesisTime,

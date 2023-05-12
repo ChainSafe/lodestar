@@ -2,7 +2,7 @@ import {SIM_ENV_CHAIN_ID, SIM_ENV_NETWORK_ID} from "../constants.js";
 import {ELGeneratorGenesisOptions, ELStartMode, Eth1GenesisBlock} from "../interfaces.js";
 
 export const getGethGenesisBlock = (mode: ELStartMode, options: ELGeneratorGenesisOptions): Record<string, unknown> => {
-  const {ttd, cliqueSealingPeriod, shanghaiTimestamp} = options;
+  const {ttd, cliqueSealingPeriod, shanghaiTime} = options;
 
   const genesis = {
     config: {
@@ -20,7 +20,7 @@ export const getGethGenesisBlock = (mode: ELStartMode, options: ELGeneratorGenes
       muirGlacierBlock: 0,
       berlinBlock: 0,
       londonBlock: 0,
-      shanghaiTimestamp: shanghaiTimestamp,
+      shanghaiTime,
       terminalTotalDifficulty: Number(ttd as bigint),
       clique: {period: cliqueSealingPeriod, epoch: 30000},
     },
@@ -61,7 +61,7 @@ export const getNethermindChainSpec = (
   mode: ELStartMode,
   options: ELGeneratorGenesisOptions
 ): Record<string, unknown> => {
-  const {ttd, shanghaiTimestamp} = options;
+  const {ttd, shanghaiTime} = options;
   const genesis = getGethGenesisBlock(mode, options) as Eth1GenesisBlock;
 
   return {
@@ -100,7 +100,7 @@ export const getNethermindChainSpec = (
       eip3529Transition: "0x0",
       eip3541Transition: "0x0",
       terminalTotalDifficulty: Number(ttd as bigint),
-      shanghaiTimestamp: shanghaiTimestamp,
+      shanghaiTime,
       gasLimitBoundDivisor: "0x400",
       maxCodeSize: "0x6000",
       maxCodeSizeTransition: "0x0",

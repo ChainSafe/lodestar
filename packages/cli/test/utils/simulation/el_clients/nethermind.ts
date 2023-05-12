@@ -15,7 +15,7 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (o
     throw Error(`EL ENV must be provided, NETHERMIND_DOCKER_IMAGE: ${process.env.NETHERMIND_DOCKER_IMAGE}`);
   }
 
-  const {id, mode, ttd, address, mining, clientOptions, nodeIndex, cliqueSealingPeriod, shanghaiTimestamp} = opts;
+  const {id, mode, ttd, address, mining, clientOptions, nodeIndex, cliqueSealingPeriod, shanghaiTime} = opts;
   const {
     el: {httpPort, enginePort, port},
   } = getNodePorts(nodeIndex);
@@ -46,7 +46,7 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (o
     bootstrap: async () => {
       await writeFile(
         chainSpecPath,
-        JSON.stringify(getNethermindChainSpec(mode, {ttd, cliqueSealingPeriod, shanghaiTimestamp, clientOptions: []}))
+        JSON.stringify(getNethermindChainSpec(mode, {ttd, cliqueSealingPeriod, shanghaiTime, clientOptions: []}))
       );
     },
     cli: {
