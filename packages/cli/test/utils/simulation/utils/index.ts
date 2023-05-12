@@ -47,6 +47,20 @@ export const getEstimatedTTD = ({
   return BigInt(Math.ceil(secondsTillBellatrix / cliqueSealingPeriod) * ETH_TTD_INCREMENT);
 };
 
+export const getEstimatedShanghaiTimestamp = ({
+  genesisTime,
+  secondsPerSlot,
+  capellaForkEpoch,
+}: {
+  genesisTime: number;
+  secondsPerSlot: number;
+  capellaForkEpoch: number;
+}): number => {
+  const secondsTillBellatrix = (capellaForkEpoch - 1) * activePreset.SLOTS_PER_EPOCH * secondsPerSlot;
+
+  return genesisTime + secondsTillBellatrix;
+};
+
 export const squeezeString = (val: string, length: number, sep = "..."): string => {
   const anchor = Math.floor((length - sep.length) / 2);
 

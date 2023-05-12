@@ -84,6 +84,7 @@ export interface CLClientGeneratorOptions<C extends CLClient = CLClient> {
 export interface ELGeneratorGenesisOptions<E extends ELClient = ELClient> {
   ttd: bigint;
   cliqueSealingPeriod: number;
+  shanghaiTimestamp: number;
   clientOptions: ELClientsOptions[E];
 }
 

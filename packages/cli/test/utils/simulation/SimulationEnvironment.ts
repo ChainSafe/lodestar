@@ -33,6 +33,7 @@ import {
   CLNode,
   ELClient,
   ELGeneratorClientOptions,
+  ELGeneratorGenesisOptions,
   ELNode,
   ELStartMode,
   IRunner,
@@ -42,7 +43,13 @@ import {
   SimulationOptions,
 } from "./interfaces.js";
 import {SimulationTracker} from "./SimulationTracker.js";
-import {getEstimatedTTD, makeUniqueArray, regsiterProcessHandler, replaceIpFromUrl} from "./utils/index.js";
+import {
+  getEstimatedShanghaiTimestamp,
+  getEstimatedTTD,
+  makeUniqueArray,
+  regsiterProcessHandler,
+  replaceIpFromUrl,
+} from "./utils/index.js";
 import {generateLighthouseBeaconNode} from "./cl_clients/lighthouse.js";
 import {Runner} from "./runner/index.js";
 import {createKeystores} from "./utils/keys.js";
@@ -357,29 +364,30 @@ export class SimulationEnvironment {
 
     const mode =
       options?.mode ?? (this.forkConfig.BELLATRIX_FORK_EPOCH > 0 ? ELStartMode.PreMerge : ELStartMode.PostMerge);
-
-    await writeFile(
-      elPaths.genesisFilePath,
-      JSON.stringify(
-        getGethGenesisBlock(mode, {
-          ttd: options?.ttd ?? this.forkConfig.TERMINAL_TOTAL_DIFFICULTY,
-          cliqueSealingPeriod: options?.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
-          clientOptions: [],
-        })
-      )
-    );
-
-    const opts: ELGeneratorClientOptions<E> = {
-      id: elId,
-      paths: elPaths,
-      nodeIndex: options.nodeIndex,
-      mode: options?.mode ?? (this.forkConfig.BELLATRIX_FORK_EPOCH > 0 ? ELStartMode.PreMerge : ELStartMode.PostMerge),
+    const genesisOptions: ELGeneratorGenesisOptions<E> = {
       ttd: options?.ttd ?? this.forkConfig.TERMINAL_TOTAL_DIFFICULTY,
       cliqueSealingPeriod: options?.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
-      address: this.runner.getNextIp(),
-      mining: options?.mining ?? false,
+      shanghaiTimestamp:
+        options?.shanghaiTimestamp ??
+        getEstimatedShanghaiTimestamp({
+          capellaForkEpoch: this.forkConfig.CAPELLA_FORK_EPOCH,
+          genesisTime: this.options.genesisTime,
+          secondsPerSlot: this.forkConfig.SECONDS_PER_SLOT,
+        }),
       clientOptions: options.clientOptions ?? [],
     };
+
+    const opts: ELGeneratorClientOptions<E> = {
+      ...genesisOptions,
+      id: elId,
+      paths: elPaths,
+      mode,
+      nodeIndex: options.nodeIndex,
+      address: this.runner.getNextIp(),
+      mining: options?.mining ?? false,
+    };
+
+    await writeFile(elPaths.genesisFilePath, JSON.stringify(getGethGenesisBlock(mode, genesisOptions)));
 
     switch (client) {
       case ELClient.Mock: {
