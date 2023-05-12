@@ -6,15 +6,15 @@
 no-console
 */
 
-const {execSync} = require("node:child_process");
-const fs = require("node:fs");
+import {execSync} from "node:child_process";
+import fs from "node:fs";
 
 // Docs
 // [script] <fromTag> <toTag>
 //
 // Example
 // ```
-// node scripts/generate_changelog.js v0.32.0 v0.33.0
+// node scripts/generate_changelog.mjs v0.32.0 v0.33.0
 // ```
 
 /**
