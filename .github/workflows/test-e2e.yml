@@ -52,7 +52,7 @@ jobs:
         # Run only on forks
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
 
-      - name: Run e2e test enviornment
+      - name: Run the e2e test environment
         run: nohup npx ts-node --esm packages/cli/test/scripts/e2e_test_env.ts &
       - name: Wait for the node to be ready
         run: npx wait-port 0.0.0.0:5001
@@ -61,6 +61,9 @@ jobs:
         run: yarn test:e2e
         env:
           GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL!=0 && secrets.GOERLI_RPC_URL || env.GOERLI_RPC_DEFAULT_URL }}
+
+      - name: Stop the e2e test environment
+        run: kill -9 $(lsof -t -i:5001)
 
       - name: Upload debug log test for test env
         if: ${{ always() }}
