@@ -60,10 +60,8 @@ export class ProofProvider {
     });
 
     provider.readyPromise = provider.sync(opts.wsCheckpoint).catch((e) => {
-      // TODO: will be replaced by logger in the next PR.
-      // eslint-disable-next-line no-console
-      console.error("Error while syncing", e);
-      return Promise.reject("Error while syncing");
+      opts.logger.error("Error while syncing", e);
+      return Promise.reject(e);
     });
 
     return provider;

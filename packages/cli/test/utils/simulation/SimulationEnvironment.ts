@@ -134,15 +134,17 @@ export class SimulationEnvironment {
 
   async start(opts: StartOpts): Promise<void> {
     const currentTime = Date.now();
-    setTimeout(() => {
-      const slots = this.clock.getSlotFor((currentTime + opts.runTimeoutMs) / MS_IN_SEC);
-      const epoch = this.clock.getEpochForSlot(slots);
-      const slot = this.clock.getSlotIndexInEpoch(slots);
+    if (opts.runTimeoutMs > 0) {
+      setTimeout(() => {
+        const slots = this.clock.getSlotFor((currentTime + opts.runTimeoutMs) / MS_IN_SEC);
+        const epoch = this.clock.getEpochForSlot(slots);
+        const slot = this.clock.getSlotIndexInEpoch(slots);
 
-      this.stop(1, `Sim run timedout in ${opts.runTimeoutMs}ms (approx. ${epoch}/${slot}).`).catch((e) =>
-        console.error("Error on stop", e)
-      );
-    }, opts.runTimeoutMs);
+        this.stop(1, `Sim run timeout in ${opts.runTimeoutMs}ms (approx. ${epoch}/${slot}).`).catch((e) =>
+          console.error("Error on stop", e)
+        );
+      }, opts.runTimeoutMs);
+    }
 
     const msToGenesis = this.clock.msToGenesis();
     const startTimeout = setTimeout(() => {
