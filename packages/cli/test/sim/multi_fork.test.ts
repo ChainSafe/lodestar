@@ -20,9 +20,10 @@ import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 const genesisSlotsDelay = 20;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
+const capellaForkEpoch = 6;
 // Make sure bellatrix started before TTD reach
 const additionalSlotsForTTD = activePreset.SLOTS_PER_EPOCH - 2;
-const runTillEpoch = 6;
+const runTillEpoch = 8;
 const syncWaitEpoch = 2;
 
 const runTimeoutMs =
@@ -49,6 +50,7 @@ const env = await SimulationEnvironment.initWithDefaults(
     chainConfig: {
       ALTAIR_FORK_EPOCH: altairForkEpoch,
       BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
+      CAPELLA_FORK_EPOCH: capellaForkEpoch,
       GENESIS_DELAY: genesisSlotsDelay,
       TERMINAL_TOTAL_DIFFICULTY: ttd,
     },
@@ -79,9 +81,7 @@ env.tracker.register({
 await env.start({runTimeoutMs});
 await connectAllNodes(env.nodes);
 
-// The `TTD` will be reach around `start of bellatrixForkEpoch + additionalSlotsForMerge` slot
-// We wait for the end of that epoch with half more epoch to make sure merge transition is complete
-await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2, env.nodes, {
+await waitForSlot(env.clock.getLastSlotOfEpoch(capellaForkEpoch), env.nodes, {
   silent: true,
   env,
 });
