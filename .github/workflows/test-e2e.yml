@@ -9,6 +9,7 @@ on:
 
 env:
   GOERLI_RPC_DEFAULT_URL: https://goerli.infura.io/v3/84842078b09946638c03157f83405213
+  GETH_DOCKER_IMAGE: ethereum/client-go:v1.10.25
 
 jobs:
   tests-main:
@@ -52,7 +53,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
 
       - name: Run e2e test enviornment
-        run: npx ts-node --esm packages/cli/test/scripts/e2e_test_env.ts &
+        run: nohup npx ts-node --esm packages/cli/test/scripts/e2e_test_env.ts &
       - name: Wait for the node to be ready
         run: npx wait-port 0.0.0.0:5001
 
