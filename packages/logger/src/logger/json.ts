@@ -3,7 +3,6 @@ import {LodestarError, mapValues, toHexString} from "@lodestar/utils";
 const MAX_DEPTH = 0;
 
 type LogDataBasic = string | number | bigint | boolean | null | undefined;
-
 export type LogData = LogDataBasic | Record<string, LogDataBasic> | LogDataBasic[] | Record<string, LogDataBasic>[];
 
 /**

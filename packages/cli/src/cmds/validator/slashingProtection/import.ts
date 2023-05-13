@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import {Interchange} from "@lodestar/validator";
+import {getNodeLogger} from "@lodestar/logger";
 import {CliCommand} from "../../../util/index.js";
+import {parseLoggerArgs} from "../../../util/logger.js";
 import {GlobalArgs} from "../../../options/index.js";
+import {LogArgs} from "../../../options/logOptions.js";
 import {AccountValidatorArgs} from "../options.js";
-import {getCliLogger, LogArgs} from "../../../util/index.js";
 import {getBeaconConfigFromArgs} from "../../../config/index.js";
 import {getValidatorPaths} from "../paths.js";
 import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
@@ -39,10 +41,8 @@ export const importCmd: CliCommand<ImportArgs, ISlashingProtectionArgs & Account
       const {config, network} = getBeaconConfigFromArgs(args);
       const validatorPaths = getValidatorPaths(args, network);
       // slashingProtection commands are fast so do not require logFile feature
-      const {logger} = getCliLogger(
-        args,
-        {defaultLogFilepath: path.join(validatorPaths.dataDir, "validator.log")},
-        config
+      const logger = getNodeLogger(
+        parseLoggerArgs(args, {defaultLogFilepath: path.join(validatorPaths.dataDir, "validator.log")}, config)
       );
 
       const {validatorsDbDir: dbPath} = getValidatorPaths(args, network);

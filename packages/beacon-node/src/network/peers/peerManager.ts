@@ -4,7 +4,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 import {allForks, altair, phase0} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {LoggerNode} from "@lodestar/logger";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {NetworkEvent, INetworkEventBus} from "../events.js";
@@ -83,7 +83,7 @@ export type PeerManagerOpts = {
 
 export type PeerManagerModules = {
   libp2p: Libp2p;
-  logger: Logger;
+  logger: LoggerNode;
   metrics: NetworkCoreMetrics | null;
   reqResp: IReqRespBeaconNode;
   gossip: Eth2Gossipsub;
@@ -115,7 +115,7 @@ enum RelevantPeerStatus {
  */
 export class PeerManager {
   private libp2p: Libp2p;
-  private logger: Logger;
+  private logger: LoggerNode;
   private metrics: NetworkCoreMetrics | null;
   private reqResp: IReqRespBeaconNode;
   private gossipsub: Eth2Gossipsub;

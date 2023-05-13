@@ -2,7 +2,7 @@ import {ApiError} from "@lodestar/api";
 import {LogData, Logger, isErrorAborted} from "@lodestar/utils";
 import {IClock} from "./clock.js";
 
-export type LoggerVc = Pick<Logger, "error" | "warn" | "info" | "verbose" | "debug"> & {
+export type LoggerVc = Logger & {
   isSyncing(e: Error): void;
 };
 
@@ -35,6 +35,7 @@ export function getLoggerVc(logger: Logger, clock: IClock): LoggerVc {
     info: logger.info.bind(logger),
     verbose: logger.verbose.bind(logger),
     debug: logger.debug.bind(logger),
+    trace: logger.trace.bind(logger),
 
     /**
      * Throttle "node is syncing" errors to not pollute the console too much.

@@ -1,16 +1,17 @@
 import path from "node:path";
 import {Registry} from "prom-client";
-import {ErrorAborted, Logger} from "@lodestar/utils";
+import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {BeaconNode, BeaconDb} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
+import {LoggerNode, getNodeLogger} from "@lodestar/logger";
 
 import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
-import {onGracefulShutdown, getCliLogger, mkdir, writeFile600Perm, cleanOldLogFiles} from "../../util/index.js";
+import {onGracefulShutdown, mkdir, writeFile600Perm, cleanOldLogFiles, parseLoggerArgs} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {BeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
@@ -149,12 +150,13 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   return {config, options, beaconPaths, network, version, commit, peerId, logger};
 }
 
-export function initLogger(args: BeaconArgs, dataDir: string, config: ChainForkConfig): Logger {
-  const {logger, logParams} = getCliLogger(args, {defaultLogFilepath: path.join(dataDir, "beacon.log")}, config);
+export function initLogger(args: BeaconArgs, dataDir: string, config: ChainForkConfig): LoggerNode {
+  const defaultLogFilepath = path.join(dataDir, "beacon.log");
+  const logger = getNodeLogger(parseLoggerArgs(args, {defaultLogFilepath}, config));
   try {
-    cleanOldLogFiles(logParams.filename, logParams.rotateMaxFiles);
+    cleanOldLogFiles(args, {defaultLogFilepath});
   } catch (e) {
-    logger.debug("Not able to delete log files", logParams, e as Error);
+    logger.debug("Not able to delete log files", {}, e as Error);
   }
 
   return logger;

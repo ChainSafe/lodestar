@@ -4,7 +4,7 @@ import {Registry} from "prom-client";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {BeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {LoggerNode} from "@lodestar/logger";
 import {Api, ServerApi} from "@lodestar/api";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -45,7 +45,7 @@ export type BeaconNodeInitModules = {
   opts: IBeaconNodeOptions;
   config: BeaconConfig;
   db: IBeaconDb;
-  logger: Logger;
+  logger: LoggerNode;
   processShutdownCallback: ProcessShutdownCallback;
   peerId: PeerId;
   peerStoreDir?: string;

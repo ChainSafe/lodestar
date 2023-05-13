@@ -1,7 +1,7 @@
 import winston from "winston";
+import {LoggerOptions, TimestampFormatCode} from "../interface.js";
 import {logCtxToJson, logCtxToString, LogData} from "./json.js";
-import {LoggerOptions, TimestampFormatCode} from "./interface.js";
-import {formatEpochSlotTime} from "./util.js";
+import {formatEpochSlotTime} from "./timeFormat.js";
 
 const {format} = winston;
 
@@ -31,7 +31,7 @@ export function getFormat(opts: LoggerOptions): Format {
 
 function humanReadableLogFormat(opts: LoggerOptions): Format {
   return format.combine(
-    ...(opts.hideTimestamp ? [] : [formatTimestamp(opts)]),
+    ...(opts.timestampFormat?.format === TimestampFormatCode.Hidden ? [] : [formatTimestamp(opts)]),
     format.colorize(),
     format.printf(humanReadableTemplateFn)
   );
@@ -57,7 +57,7 @@ function formatTimestamp(opts: LoggerOptions): Format {
 
 function jsonLogFormat(opts: LoggerOptions): Format {
   return format.combine(
-    ...(opts.hideTimestamp ? [] : [format.timestamp()]),
+    ...(opts.timestampFormat?.format === TimestampFormatCode.Hidden ? [] : [format.timestamp()]),
     format((_info) => {
       const info = _info as WinstonInfoArg;
       info.context = logCtxToJson(info.context);

@@ -1,7 +1,7 @@
 import winston, {Logger} from "winston";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {LEVEL} from "triple-beam";
-import {LogLevel} from "@lodestar/utils";
+import {LogLevel} from "../interface.js";
 
 interface DefaultMeta {
   module: string;
