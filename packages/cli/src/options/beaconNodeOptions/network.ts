@@ -12,6 +12,7 @@ export type NetworkArgs = {
   bootnodes?: string[];
   targetPeers: number;
   subscribeAllSubnets: boolean;
+  disablePeerScoring: boolean;
   mdns: boolean;
   "network.maxPeers": number;
   "network.connectToDiscv5Bootnodes": boolean;
@@ -58,6 +59,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     targetPeers,
     localMultiaddrs: [`/ip4/${listenAddress}/tcp/${tcpPort}`],
     subscribeAllSubnets: args["subscribeAllSubnets"],
+    disablePeerScoring: args["disablePeerScoring"],
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
     dontSendGossipAttestationsToForkchoice: args["network.dontSendGossipAttestationsToForkchoice"],
@@ -125,6 +127,13 @@ export const options: CliCommandOptions<NetworkArgs> = {
     type: "boolean",
     description: "Subscribe to all subnets regardless of validator count",
     defaultDescription: String(defaultOptions.network.subscribeAllSubnets === true),
+    group: "network",
+  },
+
+  disablePeerScoring: {
+    type: "boolean",
+    description: "Disable peer scoring, used for testing on devnets",
+    defaultDescription: String(defaultOptions.network.disablePeerScoring === true),
     group: "network",
   },
 
