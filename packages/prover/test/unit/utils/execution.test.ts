@@ -2,10 +2,10 @@ import {expect} from "chai";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import deepmerge from "deepmerge";
+import {getEnvLogger} from "@lodestar/logger";
 import {ELProof, ELStorageProof} from "../../../src/types.js";
 import {isValidAccount, isValidStorageKeys} from "../../../src/utils/verification.js";
 import {invalidStorageProof, validStorageProof} from "../../fixtures/index.js";
-import {createMockLogger} from "../../mocks/logger_mock.js";
 import eoaProof from "../../fixtures/sepolia/eth_getBalance_eoa_proof.json" assert {type: "json"};
 import {hexToBuffer} from "../../../src/utils/conversion.js";
 
@@ -19,6 +19,8 @@ delete invalidAccountProof.accountProof[0];
 chai.use(chaiAsPromised);
 
 describe("uitls/execution", () => {
+  const logger = getEnvLogger();
+
   describe("isValidAccount", () => {
     it("should return true if account is valid", async () => {
       await expect(
@@ -26,7 +28,7 @@ describe("uitls/execution", () => {
           proof: validAccountProof,
           address,
           stateRoot: validStateRoot,
-          logger: createMockLogger(),
+          logger,
         })
       ).eventually.to.be.true;
     });
@@ -44,7 +46,7 @@ describe("uitls/execution", () => {
           proof,
           address,
           stateRoot,
-          logger: createMockLogger(),
+          logger,
         })
       ).eventually.to.be.false;
     });
@@ -58,7 +60,7 @@ describe("uitls/execution", () => {
           proof: invalidAccountProof,
           address,
           stateRoot,
-          logger: createMockLogger(),
+          logger,
         })
       ).eventually.to.be.false;
     });
@@ -72,7 +74,7 @@ describe("uitls/execution", () => {
         isValidStorageKeys({
           proof: validStorageProof,
           storageKeys,
-          logger: createMockLogger(),
+          logger,
         })
       ).eventually.to.be.true;
     });
@@ -82,7 +84,7 @@ describe("uitls/execution", () => {
 
       await expect(
         isValidStorageKeys({
-          logger: createMockLogger(),
+          logger,
           proof: invalidStorageProof,
           storageKeys,
         })
@@ -106,7 +108,7 @@ describe("uitls/execution", () => {
         isValidStorageKeys({
           proof,
           storageKeys,
-          logger: createMockLogger(),
+          logger,
         })
       ).eventually.to.be.false;
     });
@@ -122,7 +124,7 @@ describe("uitls/execution", () => {
         isValidStorageKeys({
           proof,
           storageKeys,
-          logger: createMockLogger(),
+          logger,
         })
       ).eventually.to.be.true;
     });

@@ -2,7 +2,8 @@ import "../../setup.js";
 import {expect} from "chai";
 import {MESSAGE} from "triple-beam";
 import Transport from "winston-transport";
-import {LogData, LodestarError, LogFormat, logFormats, createWinstonLogger} from "../../../src/index.js";
+import {LodestarError, LogLevel} from "@lodestar/utils";
+import {LogData, LogFormat, logFormats, TimestampFormatCode, WinstonLoggerNode} from "../../../src/index.js";
 
 type WinstonLog = {[MESSAGE]: string};
 
@@ -77,7 +78,10 @@ describe("winston logger", () => {
       for (const format of logFormats) {
         it(`${id} ${format} output`, async () => {
           const memoryTransport = new MemoryTransport();
-          const logger = createWinstonLogger({format, hideTimestamp: true}, [memoryTransport]);
+          const logger = new WinstonLoggerNode(
+            {level: LogLevel.info, format, timestampFormat: {format: TimestampFormatCode.Hidden}},
+            [memoryTransport]
+          );
           logger.warn(message, context, error);
 
           expect(memoryTransport.getLogs()).deep.equals([output[format]]);
@@ -89,7 +93,10 @@ describe("winston logger", () => {
   describe("child logger", () => {
     it("Should parse child module", async () => {
       const memoryTransport = new MemoryTransport();
-      const loggerA = createWinstonLogger({hideTimestamp: true, module: "a"}, [memoryTransport]);
+      const loggerA = new WinstonLoggerNode(
+        {level: LogLevel.info, timestampFormat: {format: TimestampFormatCode.Hidden}, module: "a"},
+        [memoryTransport]
+      );
       const loggerAB = loggerA.child({module: "b"});
       const loggerABC = loggerAB.child({module: "c"});
 

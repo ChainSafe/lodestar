@@ -4,22 +4,23 @@ import deepmerge from "deepmerge";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {Logger} from "@lodestar/utils";
+import {getEnvLogger} from "@lodestar/logger";
 import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
 import {ELVerifiedRequestHandlerOpts} from "../../../src/interfaces.js";
 import {eth_getCode} from "../../../src/verified_requests/eth_getCode.js";
 import eth_getCodeCase1 from "../../fixtures/sepolia/eth_getCode.json" assert {type: "json"};
 import ethContractProof from "../../fixtures/sepolia/eth_getBalance_contract_proof.json" assert {type: "json"};
-import {createMockLogger} from "../../mocks/logger_mock.js";
 
 const testCases = [eth_getCodeCase1];
 
 describe("verified_requests / eth_getCode", () => {
+  const logger = getEnvLogger();
   let options: {handler: sinon.SinonStub; logger: Logger; proofProvider: {getExecutionPayload: sinon.SinonStub}};
 
   beforeEach(() => {
     options = {
       handler: sinon.stub(),
-      logger: createMockLogger(),
+      logger,
       proofProvider: {getExecutionPayload: sinon.stub()},
     };
   });

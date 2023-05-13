@@ -66,6 +66,7 @@
     "varint": "^6.0.0"
   },
   "devDependencies": {
+    "@lodestar/logger": "^1.8.0",
     "@lodestar/types": "^1.8.0"
   },
   "peerDependencies": {

@@ -28,7 +28,6 @@ import {
   BeaconStatePhase0,
   BeaconStateAltair,
 } from "../../src/types.js";
-import {profilerLogger} from "../utils/logger.js";
 import {interopPubkeysCached} from "../utils/interop.js";
 import {getNextSyncCommittee} from "../../src/util/syncCommittee.js";
 import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements.js";
@@ -41,7 +40,6 @@ let phase0SignedBlock: phase0.SignedBeaconBlock | null = null;
 let altairState: BeaconStateAltair | null = null;
 let altairCachedState23637: CachedBeaconStateAltair | null = null;
 let altairCachedState23638: CachedBeaconStateAltair | null = null;
-const logger = profilerLogger();
 
 /**
  * Number of validators in prater is 210000 as of May 2021
@@ -119,10 +117,6 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
 
     // no justificationBits
     phase0State = ssz.phase0.BeaconState.toViewDU(state);
-    logger.verbose("Loaded phase0 state", {
-      slot: state.slot,
-      numValidators: state.validators.length,
-    });
 
     // cache roots
     phase0State.hashTreeRoot();
@@ -277,10 +271,6 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): Beaco
     state.nextSyncCommittee = syncCommittee;
 
     altairState = ssz.altair.BeaconState.toViewDU(state);
-    logger.verbose("Loaded phase0 state", {
-      slot: altairState.slot,
-      numValidators: altairState.validators.length,
-    });
     // cache roots
     altairState.hashTreeRoot();
   }
@@ -303,7 +293,6 @@ export function generatePerformanceBlockPhase0(): phase0.SignedBeaconBlock {
     );
     // eth1Data, graffiti, attestations
     phase0SignedBlock = block;
-    logger.verbose("Loaded block", {slot: phase0SignedBlock.message.slot});
   }
 
   return phase0SignedBlock;

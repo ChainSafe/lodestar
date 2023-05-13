@@ -4,11 +4,11 @@ import {pipe} from "it-pipe";
 import {expect} from "chai";
 import {Libp2p} from "libp2p";
 import sinon from "sinon";
-import {Logger, LodestarError, sleep} from "@lodestar/utils";
+import {getEmptyLogger} from "@lodestar/logger";
+import {LodestarError, sleep} from "@lodestar/utils";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "../../../src/request/index.js";
 import {Protocol, MixedProtocol, ResponseIncoming} from "../../../src/types.js";
 import {getEmptyHandler, sszSnappyPing} from "../../fixtures/messages.js";
-import {createStubbedLogger} from "../../mocks/logger.js";
 import {getValidPeerId} from "../../utils/peer.js";
 import {MockLibP2pStream} from "../../utils/index.js";
 import {responseEncode} from "../../utils/response.js";
@@ -17,8 +17,8 @@ import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {pingProtocol} from "../../fixtures/protocols.js";
 
 describe("request / sendRequest", () => {
+  const logger = getEmptyLogger();
   let controller: AbortController;
-  let logger: Logger;
   let peerId: PeerId;
   let libp2p: Libp2p;
   const sandbox = sinon.createSandbox();
@@ -50,7 +50,6 @@ describe("request / sendRequest", () => {
   beforeEach(() => {
     controller = new AbortController();
     peerId = getValidPeerId();
-    logger = createStubbedLogger();
   });
 
   afterEach(() => {

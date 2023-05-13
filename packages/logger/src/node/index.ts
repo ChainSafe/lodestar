@@ -8,7 +8,7 @@ import {ConsoleDynamicLevel} from "./consoleTransport.js";
 
 const DATE_PATTERN = "YYYY-MM-DD";
 
-export type LogOpts = {
+export type LoggerNodeOpts = {
   level: LogLevel;
   /**
    * Enable file output transport if set
@@ -27,7 +27,7 @@ export type LogOpts = {
   /**
    * Module prefix for all logs
    */
-  prefix?: string;
+  module?: string;
   /**
    * Rendering format for logs, defaults to "human"
    */
@@ -55,18 +55,18 @@ export type LoggerNodeChildOpts = {
 };
 
 export type LoggerNode = Logger & {
-  toOpts(): LogOpts;
+  toOpts(): LoggerNodeOpts;
   child(opts: LoggerNodeChildOpts): LoggerNode;
 };
 
 /**
  * Setup a CLI logger, common for beacon, validator and dev commands
  */
-export function getNodeLogger(opts: LogOpts): LoggerNode {
+export function getNodeLogger(opts: LoggerNodeOpts): LoggerNode {
   return WinstonLoggerNode.fromNewTransports(opts);
 }
 
-function getNodeLoggerTransports(opts: LogOpts): winston.transport[] {
+function getNodeLoggerTransports(opts: LoggerNodeOpts): winston.transport[] {
   const consoleTransport = new ConsoleDynamicLevel({
     // Set defaultLevel, not level for dynamic level setting of ConsoleDynamicLvevel
     defaultLevel: opts.level,
@@ -120,8 +120,8 @@ interface DefaultMeta {
 }
 
 export class WinstonLoggerNode extends WinstonLogger implements LoggerNode {
-  constructor(private readonly opts: LogOpts, private readonly transports: winston.transport[]) {
-    const defaultMeta: DefaultMeta = {module: opts?.prefix || ""};
+  constructor(private readonly opts: LoggerNodeOpts, private readonly transports: winston.transport[]) {
+    const defaultMeta: DefaultMeta = {module: opts?.module || ""};
     super(
       winston.createLogger({
         // Do not set level at the logger level. Always control by Transport, unless for testLogger
@@ -135,7 +135,7 @@ export class WinstonLoggerNode extends WinstonLogger implements LoggerNode {
     );
   }
 
-  static fromNewTransports(opts: LogOpts): WinstonLoggerNode {
+  static fromNewTransports(opts: LoggerNodeOpts): WinstonLoggerNode {
     return new WinstonLoggerNode(opts, getNodeLoggerTransports(opts));
   }
 
@@ -143,17 +143,16 @@ export class WinstonLoggerNode extends WinstonLogger implements LoggerNode {
   // but a reference to the same transports, such that there's only one
   // transport instance per tree of child loggers
   child(opts: LoggerNodeChildOpts): LoggerNode {
-    const childModule = [this.opts?.prefix, opts.module].filter(Boolean).join("/");
-
-    const childOpts: LogOpts = {
-      ...this.opts,
-      prefix: childModule,
-    };
-
-    return new WinstonLoggerNode(childOpts, this.transports);
+    return new WinstonLoggerNode(
+      {
+        ...this.opts,
+        module: [this.opts?.module, opts.module].filter(Boolean).join("/"),
+      },
+      this.transports
+    );
   }
 
-  toOpts(): LogOpts {
+  toOpts(): LoggerNodeOpts {
     return this.opts;
   }
 }

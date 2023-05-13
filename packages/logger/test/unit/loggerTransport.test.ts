@@ -1,10 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
-import rimraf from "rimraf";
 import {expect} from "chai";
-import {config} from "@lodestar/config/default";
-import {Logger, LodestarError, LogData, LogFormat, logFormats, LogLevel} from "@lodestar/utils";
-import {getCliLogger, LogArgs, LOG_FILE_DISABLE_KEYWORD} from "../../../src/util/logger.js";
+import {LodestarError, LogData, LogLevel} from "@lodestar/utils";
+import {
+  LogFormat,
+  LoggerNodeOpts,
+  LoggerNode,
+  TimestampFormatCode,
+  getNodeLogger,
+  logFormats,
+} from "../../src/index.js";
 
 describe("winston logger format and options", () => {
   type TestCase = {
@@ -61,7 +66,7 @@ describe("winston logger format and options", () => {
       it(`${id} ${format} output`, async () => {
         stdoutHook = hookProcessStdout();
 
-        const logger = getCliLoggerTest({logFormat: format});
+        const logger = getNodeLogger({level: LogLevel.info, format});
 
         logger.warn(message, context, error);
 
@@ -80,7 +85,12 @@ describe("winston dynamic level by module", () => {
   afterEach(() => stdoutHook?.restore());
 
   it("Should log to child at a lower logLevel", async () => {
-    const loggerA = getCliLoggerTest({logPrefix: "a", logLevelModule: [`a/b=${LogLevel.debug}`]});
+    const loggerA = getNodeLoggerTest({
+      module: "a",
+      levelModule: {
+        "a/b": LogLevel.debug,
+      },
+    });
 
     stdoutHook = hookProcessStdout();
 
@@ -119,7 +129,7 @@ describe("winston transport log to file", () => {
     const filenameRx = /^child-logger-test/;
     const filepath = path.join(tmpDir, filename);
 
-    const logger = getCliLoggerTest({logPrefix: "a", logFile: filepath});
+    const logger = getNodeLoggerTest({module: "a", file: {filepath, level: LogLevel.info}});
 
     stdoutHook = hookProcessStdout();
 
@@ -134,17 +144,16 @@ describe("winston transport log to file", () => {
   });
 
   after(() => {
-    rimraf.sync(tmpDir);
+    fs.rmSync(tmpDir, {recursive: true});
   });
 });
 
-function getCliLoggerTest(logArgs: Partial<LogArgs>): Logger {
-  return getCliLogger(
-    {logFile: LOG_FILE_DISABLE_KEYWORD, ...logArgs},
-    {defaultLogFilepath: "logger_transport_test.log"},
-    config,
-    {hideTimestamp: true}
-  ).logger;
+function getNodeLoggerTest(opts: Partial<LoggerNodeOpts>): LoggerNode {
+  return getNodeLogger({
+    level: LogLevel.info,
+    timestampFormat: {format: TimestampFormatCode.Hidden},
+    ...opts,
+  });
 }
 
 /** Wait for file to exist have some content, then return its contents */

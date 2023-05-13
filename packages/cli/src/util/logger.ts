@@ -2,7 +2,7 @@ import path from "node:path";
 import fs from "node:fs";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {LogFormat, LogOpts, TimestampFormatCode, logFormats} from "@lodestar/logger";
+import {LogFormat, LoggerNodeOpts, TimestampFormatCode, logFormats} from "@lodestar/logger";
 import {LogLevel} from "@lodestar/utils";
 import {LogArgs} from "../options/logOptions.js";
 import {GlobalArgs} from "../options/globalOptions.js";
@@ -17,7 +17,7 @@ export function parseLoggerArgs(
   paths: {defaultLogFilepath: string},
   config: ChainForkConfig,
   opts?: {hideTimestamp?: boolean}
-): LogOpts {
+): LoggerNodeOpts {
   return {
     level: parseLogLevel(args.logLevel),
     file:
@@ -28,7 +28,7 @@ export function parseLoggerArgs(
             level: parseLogLevel(args.logFileLevel),
             dailyRotate: args.logFileDailyRotate,
           },
-    prefix: args.logPrefix,
+    module: args.logPrefix,
     format: args.logFormat ? parseLogFormat(args.logFormat) : undefined,
     levelModule: args.logLevelModule && parseLogLevelModule(args.logLevelModule),
     timestampFormat: opts?.hideTimestamp

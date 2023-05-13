@@ -4,23 +4,24 @@ import deepmerge from "deepmerge";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {Logger} from "@lodestar/utils";
+import {getEnvLogger} from "@lodestar/logger";
 import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
 import {ELVerifiedRequestHandlerOpts} from "../../../src/interfaces.js";
 import {ELBlock} from "../../../src/types.js";
 import {eth_getBlockByHash} from "../../../src/verified_requests/eth_getBlockByHash.js";
 import eth_getBlock_with_contractCreation from "../../fixtures/sepolia/eth_getBlock_with_contractCreation.json" assert {type: "json"};
 import eth_getBlock_with_no_accessList from "../../fixtures/sepolia/eth_getBlock_with_no_accessList.json" assert {type: "json"};
-import {createMockLogger} from "../../mocks/logger_mock.js";
 
 const testCases = [eth_getBlock_with_no_accessList, eth_getBlock_with_contractCreation];
 
 describe("verified_requests / eth_getBlockByHash", () => {
+  const logger = getEnvLogger();
   let options: {handler: sinon.SinonStub; logger: Logger; proofProvider: {getExecutionPayload: sinon.SinonStub}};
 
   beforeEach(() => {
     options = {
       handler: sinon.stub(),
-      logger: createMockLogger(),
+      logger,
       proofProvider: {getExecutionPayload: sinon.stub()},
     };
   });
