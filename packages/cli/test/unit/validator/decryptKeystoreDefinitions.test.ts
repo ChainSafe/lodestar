@@ -38,31 +38,52 @@ describe("decryptKeystoreDefinitions", function () {
     }
   });
 
-  it("decrypt keystores", async () => {
-    const signers = await decryptKeystoreDefinitions(definitions, {logger: console});
-    expect(signers.length).to.equal(secretKeys.length);
-    for (const signer of signers) {
-      const hexSecret = signer.secretKey.toHex();
-      expect(secretKeys.includes(hexSecret), `secretKeys doesn't include ${hexSecret}`).to.be.true;
-    }
+  context("with keystore cache", () => {
+    const cacheFilePath = path.join(dataDir, "cache", "keystores.cache");
+
+    beforeEach(async () => {
+      // create cache file to ensure keystores are loaded from cache during tests
+      await decryptKeystoreDefinitions(definitions, {logger: console, cacheFilePath});
+      expect(fs.existsSync(cacheFilePath)).to.be.true;
+
+      // remove lockfiles created during cache file preparation
+      rimraf.sync(path.join(importFromDir, "*.lock"), {glob: true});
+    });
+
+    testDecryptKeystoreDefinitions(cacheFilePath);
   });
 
-  it("fail to decrypt keystores if lockfiles already exist", async () => {
-    await decryptKeystoreDefinitions(definitions, {logger: console});
-    // lockfiles should exist after the first run
-
-    try {
-      await decryptKeystoreDefinitions(definitions, {logger: console});
-      expect.fail("Second decrypt should fail due to failure to get lockfile");
-    } catch (e) {
-      expect((e as Error).message.startsWith("EEXIST: file already exists"), "Wrong error is thrown").to.be.true;
-    }
+  context("without keystore cache", () => {
+    testDecryptKeystoreDefinitions();
   });
 
-  it("decrypt keystores if lockfiles already exist if ignoreLockFile=true", async () => {
-    await decryptKeystoreDefinitions(definitions, {logger: console});
-    // lockfiles should exist after the first run
+  function testDecryptKeystoreDefinitions(cacheFilePath?: string): void {
+    it("decrypt keystores", async () => {
+      const signers = await decryptKeystoreDefinitions(definitions, {logger: console, cacheFilePath});
+      expect(signers.length).to.equal(secretKeys.length);
+      for (const signer of signers) {
+        const hexSecret = signer.secretKey.toHex();
+        expect(secretKeys.includes(hexSecret), `secretKeys doesn't include ${hexSecret}`).to.be.true;
+      }
+    });
 
-    await decryptKeystoreDefinitions(definitions, {logger: console, ignoreLockFile: true});
-  });
+    it("fail to decrypt keystores if lockfiles already exist", async () => {
+      await decryptKeystoreDefinitions(definitions, {logger: console, cacheFilePath});
+      // lockfiles should exist after the first run
+
+      try {
+        await decryptKeystoreDefinitions(definitions, {logger: console, cacheFilePath});
+        expect.fail("Second decrypt should fail due to failure to get lockfile");
+      } catch (e) {
+        expect((e as Error).message.startsWith("EEXIST: file already exists"), "Wrong error is thrown").to.be.true;
+      }
+    });
+
+    it("decrypt keystores if lockfiles already exist if ignoreLockFile=true", async () => {
+      await decryptKeystoreDefinitions(definitions, {logger: console, cacheFilePath});
+      // lockfiles should exist after the first run
+
+      await decryptKeystoreDefinitions(definitions, {logger: console, cacheFilePath, ignoreLockFile: true});
+    });
+  }
 });
