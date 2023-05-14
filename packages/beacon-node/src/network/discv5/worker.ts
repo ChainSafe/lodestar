@@ -6,7 +6,7 @@ import {expose} from "@chainsafe/threads/worker";
 import {Observable, Subject} from "@chainsafe/threads/observable";
 import {createKeypairFromPeerId, Discv5, ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/discv5";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
-import {getNodeLogger} from "@lodestar/logger";
+import {getNodeLogger} from "@lodestar/logger/node";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
 import {ENRKey} from "../metadata.js";

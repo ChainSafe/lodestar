@@ -1,5 +1,7 @@
 import {Logger} from "@lodestar/utils";
-import {getNodeLogger, getBrowserLogger, getEmptyLogger} from "@lodestar/logger";
+import {getNodeLogger} from "@lodestar/logger/node";
+import {getBrowserLogger} from "@lodestar/logger/browser";
+import {getEmptyLogger} from "@lodestar/logger/empty";
 import {LogOptions} from "../interfaces.js";
 
 export function getLogger(opts: LogOptions): Logger {

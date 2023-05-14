@@ -1,7 +1,7 @@
 import {Discv5, ENRData, SignableENRData} from "@chainsafe/discv5";
 import {Observable} from "@chainsafe/threads/observable";
 import {ChainConfig} from "@lodestar/config";
-import {LoggerNodeOpts} from "@lodestar/logger";
+import {LoggerNodeOpts} from "@lodestar/logger/node";
 
 // TODO export IDiscv5Config so we don't need this convoluted type
 type Discv5Config = Parameters<(typeof Discv5)["create"]>[0]["config"];

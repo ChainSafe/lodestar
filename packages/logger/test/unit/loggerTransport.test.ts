@@ -2,14 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import {expect} from "chai";
 import {LodestarError, LogData, LogLevel} from "@lodestar/utils";
-import {
-  LogFormat,
-  LoggerNodeOpts,
-  LoggerNode,
-  TimestampFormatCode,
-  getNodeLogger,
-  logFormats,
-} from "../../src/index.js";
+import {LogFormat, TimestampFormatCode, logFormats} from "../../src/index.js";
+import {LoggerNode, LoggerNodeOpts, getNodeLogger} from "../../src/loggers/node.js";
 
 describe("winston logger format and options", () => {
   type TestCase = {

@@ -5,7 +5,7 @@ import {exportToProtobuf} from "@libp2p/peer-id-factory";
 import {createKeypairFromPeerId, ENR, ENRData, IKeypair, SignableENR} from "@chainsafe/discv5";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {chainConfigFromJson, chainConfigToJson, BeaconConfig} from "@lodestar/config";
-import {LoggerNode} from "@lodestar/logger";
+import {LoggerNode} from "@lodestar/logger/node";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5WorkerApi, Discv5WorkerData, LodestarDiscv5Opts} from "./types.js";
 
@@ -20,6 +20,7 @@ export type Discv5Opts = {
 export type Discv5Events = {
   discovered: (enr: ENR) => void;
 };
+src / utils / logger.ts;
 
 type Discv5WorkerStatus =
   | {status: "stopped"}

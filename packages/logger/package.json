@@ -17,11 +17,14 @@
     ".": {
       "import": "./lib/index.js"
     },
-    "./logger": {
-      "import": "./lib/logger/index.js"
+    "./browser": {
+      "import": "./lib/loggers/browser.js"
     },
     "./node": {
-      "import": "./lib/node/index.js"
+      "import": "./lib/loggers/node.js"
+    },
+    "./empty": {
+      "import": "./lib/loggers/empty.js"
     }
   },
   "files": [

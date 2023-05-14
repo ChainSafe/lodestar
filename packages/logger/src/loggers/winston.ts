@@ -1,8 +1,8 @@
 import winston from "winston";
 import type {Logger as Winston} from "winston";
 import {Logger, LoggerOptions, LogLevel, logLevelNum} from "../interface.js";
-import {getFormat} from "./format.js";
-import {LogData} from "./json.js";
+import {getFormat} from "../utils/format.js";
+import {LogData} from "../utils/json.js";
 
 // # How to configure Winston log level?
 //

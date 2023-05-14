@@ -4,7 +4,7 @@ import {Multiaddr} from "@multiformats/multiaddr";
 import {BeaconConfig} from "@lodestar/config";
 import {sleep, toHex} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
-import {LoggerNode} from "@lodestar/logger";
+import {LoggerNode} from "@lodestar/logger/node";
 import {computeEpochAtSlot, computeTimeAtSlot} from "@lodestar/state-transition";
 import {Epoch, phase0, allForks} from "@lodestar/types";
 import {routes} from "@lodestar/api";

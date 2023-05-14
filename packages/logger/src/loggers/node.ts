@@ -3,8 +3,9 @@ import DailyRotateFile from "winston-daily-rotate-file";
 import TransportStream from "winston-transport";
 import winston from "winston";
 import {Logger, LogLevel, logLevelNum, TimestampFormat} from "../interface.js";
-import {getFormat, WinstonLogger} from "../logger/index.js";
-import {ConsoleDynamicLevel} from "./consoleTransport.js";
+import {ConsoleDynamicLevel} from "../utils/consoleTransport.js";
+import {getFormat} from "../utils/format.js";
+import {WinstonLogger} from "./winston.js";
 
 const DATE_PATTERN = "YYYY-MM-DD";
 
