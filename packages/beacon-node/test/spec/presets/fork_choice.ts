@@ -20,7 +20,7 @@ import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js"
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
 import {ClockStopped} from "../../utils/mocks/clock.js";
-import {getBlockInput, AttestationImportOpt} from "../../../src/chain/blocks/types.js";
+import {getBlockInput, AttestationImportOpt, BlockSource} from "../../../src/chain/blocks/types.js";
 import {getEmptyBlobsSidecar} from "../../../src/util/blobs.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
@@ -157,10 +157,11 @@ export const forkChoiceTest =
 
               const blockImport =
                 config.getForkSeq(slot) < ForkSeq.deneb
-                  ? getBlockInput.preDeneb(config, signedBlock)
+                  ? getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip)
                   : getBlockInput.postDeneb(
                       config,
                       signedBlock,
+                      BlockSource.gossip,
                       getEmptyBlobsSidecar(config, signedBlock as deneb.SignedBeaconBlock)
                     );
 

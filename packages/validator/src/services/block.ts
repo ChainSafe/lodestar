@@ -7,7 +7,7 @@ import {
   capella,
   isBlindedBeaconBlock,
   Wei,
-  BlockSource,
+  ProducedBlockSource,
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
@@ -156,7 +156,7 @@ export class BlockProposingService {
     let blindedBlock, fullBlock;
     if (blindedBlockPromise !== null) {
       // reference index of promises in the race
-      const promisesOrder = [BlockSource.builder, BlockSource.engine];
+      const promisesOrder = [ProducedBlockSource.builder, ProducedBlockSource.engine];
       [blindedBlock, fullBlock] = await racePromisesWithCutoff(
         [blindedBlockPromise, fullBlockPromise],
         BLOCK_PRODUCTION_RACE_CUTOFF_MS,
@@ -193,17 +193,17 @@ export class BlockProposingService {
     const feeRecipientCheck = {expectedFeeRecipient, strictFeeRecipientCheck};
 
     if (fullBlock && blindedBlock) {
-      let selectedSource: BlockSource;
+      let selectedSource: ProducedBlockSource;
       let selectedBlock;
       switch (builderSelection) {
         case BuilderSelection.MaxProfit: {
           // If blockValues are zero, than choose builder as most likely beacon didn't provide blockValues
           // and builder blocks are most likely thresholded by a min bid
           if (engineBlockValue >= builderBlockValue && engineBlockValue !== BigInt(0)) {
-            selectedSource = BlockSource.engine;
+            selectedSource = ProducedBlockSource.engine;
             selectedBlock = fullBlock;
           } else {
-            selectedSource = BlockSource.builder;
+            selectedSource = ProducedBlockSource.builder;
             selectedBlock = blindedBlock;
           }
           break;
@@ -211,7 +211,7 @@ export class BlockProposingService {
 
         case BuilderSelection.BuilderAlways:
         default: {
-          selectedSource = BlockSource.builder;
+          selectedSource = ProducedBlockSource.builder;
           selectedBlock = blindedBlock;
         }
       }
@@ -227,13 +227,13 @@ export class BlockProposingService {
         // winston logger doesn't like bigint
         engineBlockValue: `${engineBlockValue}`,
       });
-      return this.getBlockWithDebugLog(fullBlock, BlockSource.engine, feeRecipientCheck);
+      return this.getBlockWithDebugLog(fullBlock, ProducedBlockSource.engine, feeRecipientCheck);
     } else if (blindedBlock && !fullBlock) {
       this.logger.debug("Selected builder block: no engine block produced", {
         // winston logger doesn't like bigint
         builderBlockValue: `${builderBlockValue}`,
       });
-      return this.getBlockWithDebugLog(blindedBlock, BlockSource.builder, feeRecipientCheck);
+      return this.getBlockWithDebugLog(blindedBlock, ProducedBlockSource.builder, feeRecipientCheck);
     } else {
       throw Error("Failed to produce engine or builder block");
     }
@@ -241,7 +241,7 @@ export class BlockProposingService {
 
   private getBlockWithDebugLog(
     fullOrBlindedBlock: {data: allForks.FullOrBlindedBeaconBlock; blockValue: Wei},
-    source: BlockSource,
+    source: ProducedBlockSource,
     {expectedFeeRecipient, strictFeeRecipientCheck}: {expectedFeeRecipient: string; strictFeeRecipientCheck: boolean}
   ): {data: allForks.FullOrBlindedBeaconBlock} & {debugLogCtx: Record<string, string>} {
     const debugLogCtx = {
@@ -252,7 +252,7 @@ export class BlockProposingService {
     const blockFeeRecipient = (fullOrBlindedBlock.data as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
     const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
 
-    if (source === BlockSource.engine) {
+    if (source === ProducedBlockSource.engine) {
       if (feeRecipient !== undefined) {
         if (feeRecipient !== expectedFeeRecipient && strictFeeRecipientCheck) {
           throw Error(`Invalid feeRecipient=${feeRecipient}, expected=${expectedFeeRecipient}`);

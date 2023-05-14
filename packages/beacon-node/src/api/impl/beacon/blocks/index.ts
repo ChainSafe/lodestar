@@ -4,7 +4,7 @@ import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {deneb, allForks} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {getBlockInput, ImportBlockOpts} from "../../../../chain/blocks/types.js";
+import {BlockSource, getBlockInput, ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
@@ -214,9 +214,10 @@ export function getBeaconBlockApi({
           ? getBlockInput.postDeneb(
               config,
               signedBlock,
+              BlockSource.api,
               chain.getBlobsSidecar(signedBlock.message as deneb.BeaconBlock)
             )
-          : getBlockInput.preDeneb(config, signedBlock);
+          : getBlockInput.preDeneb(config, signedBlock, BlockSource.api);
 
       await promiseAllMaybeAsync([
         // Send the block, regardless of whether or not it is valid. The API

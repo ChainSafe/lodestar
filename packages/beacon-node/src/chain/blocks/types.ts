@@ -9,9 +9,17 @@ export enum BlockInputType {
   postDeneb = "postDeneb",
 }
 
+/** Enum to represent where blocks come from */
+export enum BlockSource {
+  gossip = "gossip",
+  api = "api",
+  byRange = "req_resp_by_range",
+  byRoot = "req_resp_by_root",
+}
+
 export type BlockInput =
-  | {type: BlockInputType.preDeneb; block: allForks.SignedBeaconBlock}
-  | {type: BlockInputType.postDeneb; block: allForks.SignedBeaconBlock; blobs: deneb.BlobsSidecar};
+  | {type: BlockInputType.preDeneb; block: allForks.SignedBeaconBlock; source: BlockSource}
+  | {type: BlockInputType.postDeneb; block: allForks.SignedBeaconBlock; source: BlockSource; blobs: deneb.BlobsSidecar};
 
 export function blockRequiresBlobs(config: ChainForkConfig, blockSlot: Slot, clockSlot: Slot): boolean {
   return (
@@ -22,23 +30,30 @@ export function blockRequiresBlobs(config: ChainForkConfig, blockSlot: Slot, clo
 }
 
 export const getBlockInput = {
-  preDeneb(config: ChainForkConfig, block: allForks.SignedBeaconBlock): BlockInput {
+  preDeneb(config: ChainForkConfig, block: allForks.SignedBeaconBlock, source: BlockSource): BlockInput {
     if (config.getForkSeq(block.message.slot) >= ForkSeq.deneb) {
       throw Error(`Post Deneb block slot ${block.message.slot}`);
     }
     return {
       type: BlockInputType.preDeneb,
       block,
+      source,
     };
   },
 
-  postDeneb(config: ChainForkConfig, block: allForks.SignedBeaconBlock, blobs: deneb.BlobsSidecar): BlockInput {
+  postDeneb(
+    config: ChainForkConfig,
+    block: allForks.SignedBeaconBlock,
+    source: BlockSource,
+    blobs: deneb.BlobsSidecar
+  ): BlockInput {
     if (config.getForkSeq(block.message.slot) < ForkSeq.deneb) {
       throw Error(`Pre Deneb block slot ${block.message.slot}`);
     }
     return {
       type: BlockInputType.postDeneb,
       block,
+      source,
       blobs,
     };
   },
