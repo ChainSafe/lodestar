@@ -11,6 +11,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   Network,
   NetworkEvent,
@@ -71,6 +72,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
       discv5FirstQueryDelayMs: 0,
       discv5: null,
       useWorker: opts.useWorker,
+      skipParamsLog: true,
     };
   }
 
@@ -83,13 +85,23 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
       },
     });
     const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
+    // set genesis time so that we are at ALTAIR_FORK_EPOCH
+    // sinon mock timer does not work on worker thread
+    state.genesisTime =
+      Math.floor(Date.now() / 1000) - beaconConfig.ALTAIR_FORK_EPOCH * beaconConfig.SECONDS_PER_SLOT * SLOTS_PER_EPOCH;
     return {block, state, config: beaconConfig};
   });
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function createTestNode(nodeName: string) {
     const {state, config} = getStaticData();
-    const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});
+    const chain = new MockBeaconChain({
+      genesisTime: state.genesisTime,
+      chainId: 0,
+      networkId: BigInt(0),
+      state,
+      config,
+    });
 
     chain.forkChoice.getHead = () => {
       return {
@@ -182,18 +194,29 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
     // Wait some time and stop netA expecting to goodbye netB
     await sleep(500, controller.signal);
 
-    const onGoodbyeNetB = sinon.stub<[phase0.Goodbye, PeerId]>();
-    netB.events.on(NetworkEvent.reqRespRequest, ({request}) => {
-      if (request.method === ReqRespMethod.Goodbye) onGoodbyeNetB(request.body, peer);
+    // NetworkEvent.reqRespRequest does not work on worker thread
+    // so we only test the peerDisconnected event
+    const onGoodbyeNetB = opts.useWorker ? null : sinon.stub<[phase0.Goodbye, PeerId]>();
+    netB.events.on(NetworkEvent.reqRespRequest, ({request, peer}) => {
+      if (request.method === ReqRespMethod.Goodbye && onGoodbyeNetB) onGoodbyeNetB(request.body, peer);
+    });
+    const onDisconnectNetB = sinon.stub<[string]>();
+    netB.events.on(NetworkEvent.peerDisconnected, ({peer}) => {
+      onDisconnectNetB(peer);
     });
 
     await netA.close();
     await sleep(500, controller.signal);
 
-    expect(onGoodbyeNetB.callCount).to.equal(1, "netB must receive 1 goodbye");
-    const [goodbye, peer] = onGoodbyeNetB.getCall(0).args;
-    expect(peer.toString()).to.equal(netA.peerId.toString(), "netA must be the goodbye requester");
-    expect(goodbye).to.equal(BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN), "goodbye reason must be CLIENT_SHUTDOWN");
+    if (onGoodbyeNetB) {
+      // this only works on main thread mode
+      expect(onGoodbyeNetB.callCount).to.equal(1, "netB must receive 1 goodbye");
+      const [goodbye, peer] = onGoodbyeNetB.getCall(0).args;
+      expect(peer.toString()).to.equal(netA.peerId.toString(), "netA must be the goodbye requester");
+      expect(goodbye).to.equal(BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN), "goodbye reason must be CLIENT_SHUTDOWN");
+    }
+    const [peer] = onDisconnectNetB.getCall(0).args;
+    expect(peer).to.equal(netA.peerId.toString(), "netA must be the goodbye requester");
   });
 
   it("Should subscribe to gossip core topics on demand", async () => {
