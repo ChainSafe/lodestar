@@ -8,8 +8,9 @@ import type {BeaconChain} from "../chain.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {importBlock} from "./importBlock.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
-import {BlockInput, BlockInputType, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {BlockInput, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
+import {removeEagerlyPeristedBlockInputs} from "./writeBlockInputToDb.js";
 export {ImportBlockOpts, AttestationImportOpt} from "./types.js";
 
 const QUEUE_MAX_LENGTH = 256;
@@ -141,21 +142,20 @@ export async function processBlocks(
       }
     }
 
-    // clean db if we don't have blocks in forkchoice but already persisted them to db
-    const removeBlockPromises: Promise<void>[] = [];
-    for (const blockInput of blocks) {
-      const {block, type} = blockInput;
-      const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
-      if (!this.forkChoice.hasBlock(blockRoot)) {
-        removeBlockPromises.push(this.db.block.remove(block));
-        if (type === BlockInputType.postDeneb) {
-          const {blobs} = blockInput;
-          removeBlockPromises.push(this.db.blobsSidecar.remove(blobs));
-        }
-      }
-    }
-    Promise.all(removeBlockPromises).catch((e) => {
-      this.logger.verbose("Failed to remove blocks", {slots: blocks.map((b) => b.block.message.slot).join(",")}, e);
+    // Clean db if we don't have blocks in forkchoice but already persisted them to db
+    //
+    // NOTE: this function is awaited to ensure that DB size remains constant, otherwise an attacker may bloat the
+    // disk with big malicious payloads. Our sequential block importer will wait for this promise before importing
+    // another block. The removal call error is not propagated since that would halt the chain.
+    //
+    // LOG: Because the error is not propagated and there's a risk of db bloat, the error is logged at warn level
+    // to alert the user of potential db bloat. This error _should_ never happen user must act and report to us
+    await removeEagerlyPeristedBlockInputs.call(this, blocks).catch((e) => {
+      this.logger.warn(
+        "Error pruning eagerly imported block inputs, DB may grow in size if this error happens frequently",
+        {slot: blocks.map((block) => block.block.message.slot).join(",")},
+        e
+      );
     });
 
     throw err;

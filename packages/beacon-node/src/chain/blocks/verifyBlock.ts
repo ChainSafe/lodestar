@@ -14,12 +14,13 @@ import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
 import type {BeaconChain} from "../chain.js";
-import {BlockInput, BlockInputType, ImportBlockOpts} from "./types.js";
+import {BlockInput, ImportBlockOpts} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
 import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExecutionPayloads.js";
+import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
 /**
  * Verifies 1 or more blocks are fully valid; from a linear sequence of blocks.
@@ -83,40 +84,6 @@ export async function verifyBlocksInEpoch(
 
   const abortController = new AbortController();
 
-  // ideally we want to only persist blocks after verifying them
-  // however the reality is there are rarely invalid blocks
-  // we'll batch all I/O operation here to reduce the overhead
-  // if there's an error, we'll remove blocks not in forkchoice
-  const persistBlockPromises: Promise<void>[] = [];
-  for (const blockInput of blocksInput) {
-    const {block, serializedData, type} = blockInput;
-    const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
-    const blockRootHex = toHexString(blockRoot);
-    if (serializedData) {
-      // skip serializing data if we already have it
-      this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
-      persistBlockPromises.push(this.db.block.putBinary(this.db.block.getId(block), serializedData));
-    } else {
-      this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
-      persistBlockPromises.push(this.db.block.add(block));
-    }
-    this.logger.debug("Persist block to hot DB", {
-      slot: block.message.slot,
-      root: blockRootHex,
-    });
-
-    if (type === BlockInputType.postDeneb) {
-      const {blobs} = blockInput;
-      // NOTE: Old blobs are pruned on archive
-      persistBlockPromises.push(this.db.blobsSidecar.add(blobs));
-      this.logger.debug("Persist blobsSidecar to hot DB", {
-        blobsLen: blobs.blobs.length,
-        slot: blobs.beaconBlockSlot,
-        root: toHexString(blobs.beaconBlockRoot),
-      });
-    }
-  }
-
   try {
     // batch all I/O operations to reduce overhead
     const [segmentExecStatus, {postStates, proposerBalanceDeltas}] = await Promise.all([
@@ -136,7 +103,11 @@ export async function verifyBlocksInEpoch(
 
       // All signatures at once
       verifyBlocksSignatures(this.bls, this.logger, this.metrics, preState0, blocks, opts),
-      ...persistBlockPromises,
+
+      // ideally we want to only persist blocks after verifying them however the reality is there are
+      // rarely invalid blocks we'll batch all I/O operation here to reduce the overhead if there's
+      // an error, we'll remove blocks not in forkchoice
+      writeBlockInputToDb.call(this, blocksInput),
     ]);
 
     if (segmentExecStatus.execAborted === null && segmentExecStatus.mergeBlockFound !== null) {
