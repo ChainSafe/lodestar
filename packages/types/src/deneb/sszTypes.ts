@@ -46,6 +46,8 @@ export const KZGProof = Bytes48;
 
 export const Blob = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB);
 export const Blobs = new ListCompositeType(Blob, MAX_BLOBS_PER_BLOCK);
+export const BlindedBlob = Bytes32;
+export const BlindedBlobs = new ListCompositeType(BlindedBlob, MAX_BLOBS_PER_BLOCK);
 export const VersionedHash = Bytes32;
 export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOBS_PER_BLOCK);
 
@@ -154,6 +156,57 @@ export const BlobSidecar = new ContainerType(
 
 export const BlobSidecars = new ListCompositeType(BlobSidecar, MAX_BLOBS_PER_BLOCK);
 
+export const SignedBlobSidecar = new ContainerType(
+  {
+    message: BlobSidecar,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBlobSidecar", jsonCase: "eth2"}
+);
+export const SignedBlobSidecars = new ListCompositeType(SignedBlobSidecar, MAX_BLOBS_PER_BLOCK);
+
+export const BlockContents = new ContainerType(
+  {
+    block: BeaconBlock,
+    blobSidecars: BlobSidecars,
+  },
+  {typeName: "BlockContents", jsonCase: "eth2"}
+);
+
+export const SignedBlockContents = new ContainerType(
+  {
+    signedBlock: SignedBeaconBlock,
+    signedBlobSidecars: SignedBlobSidecars,
+  },
+  {typeName: "SignedBlockContents", jsonCase: "eth2"}
+);
+
+export const BlindedBlobSidecar = new ContainerType(
+  {
+    blockRoot: Root,
+    index: BlobIndex,
+    slot: Slot,
+    blockParentRoot: Root,
+    proposerIndex: ValidatorIndex,
+    blobRoot: BlindedBlob,
+    kzgCommitment: KZGCommitment,
+    kzgProof: KZGProof,
+  },
+  {typeName: "BlindedBlobSidecar", jsonCase: "eth2"}
+);
+
+export const BlindedBlobSidecars = new ListCompositeType(BlindedBlobSidecar, MAX_BLOBS_PER_BLOCK);
+
+export const SignedBlindedBlobSidecar = new ContainerType(
+  {
+    message: BlindedBlobSidecar,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBlindedBlobSidecar", jsonCase: "eth2"}
+);
+
+export const SignedBlindedBlobSidecars = new ListCompositeType(SignedBlindedBlobSidecar, MAX_BLOBS_PER_BLOCK);
+
 // TODO: replace and cleanup previous types when other parts integrated seamlessly
 export const BlobsSidecar = new ContainerType(
   {
@@ -196,6 +249,22 @@ export const SignedBlindedBeaconBlock = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
+);
+
+export const BlindedBlockContents = new ContainerType(
+  {
+    blindedBlock: BlindedBeaconBlock,
+    blindedBlobSidecars: BlindedBlobSidecars,
+  },
+  {typeName: "BlindedBlockContents", jsonCase: "eth2"}
+);
+
+export const SignedBlindedBlockContents = new ContainerType(
+  {
+    signedBlindedBlock: SignedBlindedBeaconBlock,
+    signedBlindedBlobSidecars: SignedBlindedBlobSidecars,
+  },
+  {typeName: "SignedBlindedBlockContents", jsonCase: "eth2"}
 );
 
 export const BuilderBid = new ContainerType(

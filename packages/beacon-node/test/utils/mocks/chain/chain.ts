@@ -1,7 +1,7 @@
 import sinon from "sinon";
 
 import {CompositeTypeAny, toHexString, TreeView} from "@chainsafe/ssz";
-import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64, RootHex, deneb, Wei} from "@lodestar/types";
+import {phase0, allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64, deneb, Wei} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {
   BeaconStateAllForks,
@@ -13,7 +13,7 @@ import {CheckpointWithHex, IForkChoice, ProtoBlock, ExecutionStatus, AncestorSta
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {Logger} from "@lodestar/utils";
 
-import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
+import {ChainEventEmitter, IBeaconChain, BlockHash} from "../../../../src/chain/index.js";
 import {IClock, Clock} from "../../../../src/util/clock.js";
 import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen/index.js";
@@ -114,7 +114,11 @@ export class MockBeaconChain implements IBeaconChain {
   private readonly state: CachedBeaconStateAllForks;
   private abortController: AbortController;
 
-  readonly producedBlobsSidecarCache = new Map<RootHex, deneb.BlobsSidecar>();
+  readonly producedBlobSidecarsCache = new Map<BlockHash, {blobSidecars: deneb.BlobSidecars; slot: Slot}>();
+  readonly producedBlindedBlobSidecarsCache = new Map<
+    BlockHash,
+    {blobSidecars: deneb.BlindedBlobSidecars; slot: Slot}
+  >();
 
   constructor({genesisTime, chainId, networkId, state, config}: MockChainParams) {
     this.logger = testLogger();
@@ -196,7 +200,7 @@ export class MockBeaconChain implements IBeaconChain {
     throw Error("Not implemented");
   }
 
-  getBlobsSidecar(): never {
+  getBlobSidecars(): never {
     throw Error("Not implemented");
   }
 

@@ -1,5 +1,5 @@
 import {ContainerType, fromHexString, toHexString, Type} from "@chainsafe/ssz";
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkBlobs, isForkExecution} from "@lodestar/params";
 import {
   allForks,
   altair,
@@ -220,7 +220,7 @@ export type Api = {
     graffiti: string
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock; version: ForkName; blockValue: Wei}},
+      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock | allForks.BlockContents; version: ForkName; blockValue: Wei}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
@@ -231,7 +231,13 @@ export type Api = {
     graffiti: string
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.BlindedBeaconBlock; version: ForkName; blockValue: Wei}},
+      {
+        [HttpStatusCode.OK]: {
+          data: allForks.BlindedBeaconBlock | allForks.BlindedBlockContents;
+          version: ForkName;
+          blockValue: Wei;
+        };
+      },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
@@ -624,14 +630,19 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getProposerDuties: WithDependentRootExecutionOptimistic(ArrayOf(ProposerDuty)),
     getSyncCommitteeDuties: ContainerDataExecutionOptimistic(ArrayOf(SyncDuty)),
     produceBlock: WithBlockValue(ContainerData(ssz.phase0.BeaconBlock)),
-    produceBlockV2: WithBlockValue(WithVersion((fork: ForkName) => ssz[fork].BeaconBlock)),
+    produceBlockV2: WithBlockValue(
+      WithVersion<allForks.BeaconBlock | allForks.BlockContents>((fork: ForkName) =>
+        isForkBlobs(fork) ? ssz.allForksBlobs[fork].BlockContents : ssz[fork].BeaconBlock
+      )
+    ),
     produceBlindedBlock: WithBlockValue(
-      WithVersion((fork: ForkName) => {
-        if (fork === ForkName.phase0 || fork === ForkName.altair) {
-          throw Error(`No BlindedBlock for fork ${fork} previous to bellatrix`);
-        }
-        return ssz[fork].BlindedBeaconBlock;
-      })
+      WithVersion<allForks.BlindedBeaconBlock | allForks.BlindedBlockContents>((fork: ForkName) =>
+        isForkBlobs(fork)
+          ? ssz.allForksBlobs[fork].BlindedBlockContents
+          : isForkExecution(fork)
+          ? ssz.allForksBlinded[fork].BeaconBlock
+          : ssz.bellatrix.BlindedBeaconBlock
+      )
     ),
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),

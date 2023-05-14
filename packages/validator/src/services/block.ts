@@ -6,14 +6,17 @@ import {
   bellatrix,
   capella,
   isBlindedBeaconBlock,
+  isBlockContents,
+  isBlindedBlockContents,
   Wei,
   ProducedBlockSource,
+  deneb,
 } from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {extendError, prettyBytes, racePromisesWithCutoff, RaceEvent} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {Api, ApiError, ServerApi} from "@lodestar/api";
+import {Api, ApiError} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -107,7 +110,7 @@ export class BlockProposingService {
       const builderSelection = this.validatorStore.getBuilderSelection(pubkeyHex);
       const expectedFeeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
 
-      const block = await this.produceBlockWrapper(slot, randaoReveal, graffiti, {
+      const blockContents = await this.produceBlockWrapper(slot, randaoReveal, graffiti, {
         expectedFeeRecipient,
         strictFeeRecipientCheck,
         isBuilderEnabled,
@@ -117,30 +120,55 @@ export class BlockProposingService {
         throw extendError(e, "Failed to produce block");
       });
 
-      this.logger.debug("Produced block", {...debugLogCtx, ...block.debugLogCtx});
+      this.logger.debug("Produced block", {...debugLogCtx, ...blockContents.debugLogCtx});
       this.metrics?.blocksProduced.inc();
 
-      const signedBlock = await this.validatorStore.signBlock(pubkey, block.data, slot);
+      const signedBlockPromise = this.validatorStore.signBlock(pubkey, blockContents.block, slot);
+      const signedBlobPromises =
+        blockContents.blobs !== undefined
+          ? blockContents.blobs.map((blob) => this.validatorStore.signBlob(pubkey, blob, slot))
+          : undefined;
+      let signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
+        signedBlobs: allForks.FullOrBlindedSignedBlobSidecar[] | undefined;
+      if (signedBlobPromises !== undefined) {
+        [signedBlock, ...signedBlobs] = await Promise.all([signedBlockPromise, ...signedBlobPromises]);
+      } else {
+        signedBlock = await signedBlockPromise;
+        signedBlobs = undefined;
+      }
 
-      this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
-
-      await this.publishBlockWrapper(signedBlock).catch((e: Error) => {
+      await this.publishBlockWrapper(signedBlock, signedBlobs).catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
       });
-      this.logger.info("Published block", {...logCtx, graffiti, ...block.debugLogCtx});
+      this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
       this.metrics?.blocksPublished.inc();
+      this.logger.info("Published block", {...logCtx, graffiti, ...blockContents.debugLogCtx});
     } catch (e) {
       this.logger.error("Error proposing block", logCtx, e as Error);
     }
   }
 
-  private publishBlockWrapper = async (signedBlock: allForks.FullOrBlindedSignedBeaconBlock): Promise<void> => {
-    ApiError.assert(
-      isBlindedBeaconBlock(signedBlock.message)
-        ? await this.api.beacon.publishBlindedBlock(signedBlock as bellatrix.SignedBlindedBeaconBlock)
-        : await this.api.beacon.publishBlock(signedBlock as allForks.SignedBeaconBlock)
-    );
+  private publishBlockWrapper = async (
+    signedBlock: allForks.FullOrBlindedSignedBeaconBlock,
+    signedBlobSidecars?: allForks.FullOrBlindedSignedBlobSidecar[]
+  ): Promise<void> => {
+    if (signedBlobSidecars === undefined) {
+      ApiError.assert(
+        isBlindedBeaconBlock(signedBlock.message)
+          ? await this.api.beacon.publishBlindedBlock(signedBlock as allForks.SignedBlindedBeaconBlock)
+          : await this.api.beacon.publishBlock(signedBlock as allForks.SignedBeaconBlock)
+      );
+    } else {
+      ApiError.assert(
+        isBlindedBeaconBlock(signedBlock.message)
+          ? await this.api.beacon.publishBlindedBlock({
+              signedBlindedBlock: signedBlock,
+              signedBlindedBlobSidecars: signedBlobSidecars,
+            } as allForks.SignedBlindedBlockContents)
+          : await this.api.beacon.publishBlock({signedBlock, signedBlobSidecars} as allForks.SignedBlockContents)
+      );
+    }
   };
 
   private produceBlockWrapper = async (
@@ -148,7 +176,11 @@ export class BlockProposingService {
     randaoReveal: BLSSignature,
     graffiti: string,
     {expectedFeeRecipient, strictFeeRecipientCheck, isBuilderEnabled, builderSelection}: ProduceBlockOpts
-  ): Promise<{data: allForks.FullOrBlindedBeaconBlock} & {debugLogCtx: Record<string, string>}> => {
+  ): Promise<
+    {block: allForks.FullOrBlindedBeaconBlock; blobs?: allForks.FullOrBlindedBlobSidecars} & {
+      debugLogCtx: Record<string, string>;
+    }
+  > => {
     // Start calls for building execution and builder blocks
     const blindedBlockPromise = isBuilderEnabled ? this.produceBlindedBlock(slot, randaoReveal, graffiti) : null;
     const fullBlockPromise = this.produceBlock(slot, randaoReveal, graffiti);
@@ -157,7 +189,11 @@ export class BlockProposingService {
     if (blindedBlockPromise !== null) {
       // reference index of promises in the race
       const promisesOrder = [ProducedBlockSource.builder, ProducedBlockSource.engine];
-      [blindedBlock, fullBlock] = await racePromisesWithCutoff(
+      [blindedBlock, fullBlock] = await racePromisesWithCutoff<{
+        block: allForks.FullOrBlindedBeaconBlock;
+        blobs?: allForks.FullOrBlindedBlobSidecars;
+        blockValue: Wei;
+      }>(
         [blindedBlockPromise, fullBlockPromise],
         BLOCK_PRODUCTION_RACE_CUTOFF_MS,
         BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
@@ -240,16 +276,22 @@ export class BlockProposingService {
   };
 
   private getBlockWithDebugLog(
-    fullOrBlindedBlock: {data: allForks.FullOrBlindedBeaconBlock; blockValue: Wei},
+    fullOrBlindedBlock: {
+      block: allForks.FullOrBlindedBeaconBlock;
+      blockValue: Wei;
+      blobs?: allForks.FullOrBlindedBlobSidecars;
+    },
     source: ProducedBlockSource,
     {expectedFeeRecipient, strictFeeRecipientCheck}: {expectedFeeRecipient: string; strictFeeRecipientCheck: boolean}
-  ): {data: allForks.FullOrBlindedBeaconBlock} & {debugLogCtx: Record<string, string>} {
+  ): {block: allForks.FullOrBlindedBeaconBlock; blobs?: allForks.FullOrBlindedBlobSidecars} & {
+    debugLogCtx: Record<string, string>;
+  } {
     const debugLogCtx = {
       source: source,
       // winston logger doesn't like bigint
       blockValue: `${formatBigDecimal(fullOrBlindedBlock.blockValue, ETH_TO_WEI, MAX_DECIMAL_FACTOR)} ETH`,
     };
-    const blockFeeRecipient = (fullOrBlindedBlock.data as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
+    const blockFeeRecipient = (fullOrBlindedBlock.block as bellatrix.BeaconBlock).body.executionPayload?.feeRecipient;
     const feeRecipient = blockFeeRecipient !== undefined ? toHexString(blockFeeRecipient) : undefined;
 
     if (source === ProducedBlockSource.engine) {
@@ -260,8 +302,9 @@ export class BlockProposingService {
       }
     }
 
-    const transactions = (fullOrBlindedBlock.data as bellatrix.BeaconBlock).body.executionPayload?.transactions?.length;
-    const withdrawals = (fullOrBlindedBlock.data as capella.BeaconBlock).body.executionPayload?.withdrawals?.length;
+    const transactions = (fullOrBlindedBlock.block as bellatrix.BeaconBlock).body.executionPayload?.transactions
+      ?.length;
+    const withdrawals = (fullOrBlindedBlock.block as capella.BeaconBlock).body.executionPayload?.withdrawals?.length;
 
     // feeRecipient, transactions or withdrawals can end up undefined
     Object.assign(
@@ -270,35 +313,93 @@ export class BlockProposingService {
       transactions !== undefined ? {transactions} : {},
       withdrawals !== undefined ? {withdrawals} : {}
     );
+    Object.assign(debugLogCtx, fullOrBlindedBlock.blobs !== undefined ? {blobs: fullOrBlindedBlock.blobs.length} : {});
 
-    return {...fullOrBlindedBlock, debugLogCtx};
+    return {...fullOrBlindedBlock, blobs: fullOrBlindedBlock.blobs, debugLogCtx};
   }
 
   /** Wrapper around the API's different methods for producing blocks across forks */
-  private produceBlock: ServerApi<Api["validator"]>["produceBlock"] = async (slot, randaoReveal, graffiti) => {
-    switch (this.config.getForkName(slot)) {
+  private produceBlock = async (
+    slot: Slot,
+    randaoReveal: BLSSignature,
+    graffiti: string
+  ): Promise<{block: allForks.BeaconBlock; blobs?: deneb.BlobSidecars; blockValue: Wei}> => {
+    const fork = this.config.getForkName(slot);
+    switch (fork) {
       case ForkName.phase0: {
         const res = await this.api.validator.produceBlock(slot, randaoReveal, graffiti);
         ApiError.assert(res, "Failed to produce block: validator.produceBlock");
-        return res.response;
+        const {data: block, blockValue} = res.response;
+        return {block, blockValue};
       }
       // All subsequent forks are expected to use v2 too
       case ForkName.altair:
+      case ForkName.bellatrix:
+      case ForkName.capella: {
+        const res = await this.api.validator.produceBlockV2(slot, randaoReveal, graffiti);
+        ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
+
+        const {response} = res;
+        if (isBlockContents(response.data)) {
+          throw Error(`Invalid BlockContents response at fork=${fork}`);
+        }
+        const {data: block, blockValue} = response as {data: allForks.BeaconBlock; blockValue: Wei};
+        return {block, blockValue};
+      }
+
+      case ForkName.deneb:
       default: {
         const res = await this.api.validator.produceBlockV2(slot, randaoReveal, graffiti);
         ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
-        return res.response;
+
+        const {response} = res;
+        if (!isBlockContents(response.data)) {
+          throw Error(`Expected BlockContents response at fork=${fork}`);
+        }
+        const {
+          data: {block, blobSidecars: blobs},
+          blockValue,
+        } = response as {data: allForks.BlockContents; blockValue: Wei};
+        return {block, blobs, blockValue};
       }
     }
   };
 
-  private produceBlindedBlock: ServerApi<Api["validator"]>["produceBlindedBlock"] = async (
-    slot,
-    randaoReveal,
-    graffiti
-  ) => {
+  private produceBlindedBlock = async (
+    slot: Slot,
+    randaoReveal: BLSSignature,
+    graffiti: string
+  ): Promise<{block: allForks.BlindedBeaconBlock; blockValue: Wei; blobs?: deneb.BlindedBlobSidecars}> => {
     const res = await this.api.validator.produceBlindedBlock(slot, randaoReveal, graffiti);
     ApiError.assert(res, "Failed to produce block: validator.produceBlindedBlock");
-    return res.response;
+    const {response} = res;
+
+    const fork = this.config.getForkName(slot);
+    switch (fork) {
+      case ForkName.phase0:
+      case ForkName.altair:
+        throw Error(`BlindedBlock functionality not applicable at fork=${fork}`);
+
+      case ForkName.bellatrix:
+      case ForkName.capella: {
+        if (isBlindedBlockContents(response.data)) {
+          throw Error(`Invalid BlockContents response at fork=${fork}`);
+        }
+        const {data: block, blockValue} = response as {data: allForks.BlindedBeaconBlock; blockValue: Wei};
+        return {block, blockValue};
+      }
+
+      case ForkName.deneb:
+      default: {
+        if (!isBlindedBlockContents(response.data)) {
+          throw Error(`Expected BlockContents response at fork=${fork}`);
+        }
+        const {
+          data: {blindedBlock: block, blindedBlobSidecars: blobs},
+          blockValue,
+        } = response as {data: allForks.BlindedBlockContents; blockValue: Wei};
+        return {block, blobs, blockValue};
+      }
+    }
   };
 }

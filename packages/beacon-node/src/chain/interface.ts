@@ -47,6 +47,7 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 
 export {BlockType, AssembledBlockType};
 export {ProposerPreparationData};
+export type BlockHash = RootHex;
 
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
@@ -98,7 +99,8 @@ export interface IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
-  readonly producedBlobsSidecarCache: Map<RootHex, deneb.BlobsSidecar>;
+  readonly producedBlobSidecarsCache: Map<BlockHash, {blobSidecars: deneb.BlobSidecars; slot: Slot}>;
+  readonly producedBlindedBlobSidecarsCache: Map<BlockHash, {blobSidecars: deneb.BlindedBlobSidecars; slot: Slot}>;
   readonly opts: IChainOptions;
 
   /** Stop beacon chain processing */
@@ -122,7 +124,7 @@ export interface IBeaconChain {
    */
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
 
-  getBlobsSidecar(beaconBlock: deneb.BeaconBlock): deneb.BlobsSidecar;
+  getBlobSidecars(beaconBlock: deneb.BeaconBlock): deneb.BlobSidecars;
 
   produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; blockValue: Wei}>;
   produceBlindedBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BlindedBeaconBlock; blockValue: Wei}>;

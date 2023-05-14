@@ -24,6 +24,7 @@ import {
   deneb,
   Wei,
   WithOptionalBytes,
+  bellatrix,
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -36,7 +37,6 @@ import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
 import {bytesToData, numToQuantity} from "../eth1/provider/utils.js";
 import {wrapError} from "../util/wrapError.js";
-import {ckzg} from "../util/kzg.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder, TransitionConfigurationV1} from "../execution/index.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
@@ -44,7 +44,7 @@ import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
-import {IBeaconChain, ProposerPreparationData} from "./interface.js";
+import {IBeaconChain, ProposerPreparationData, BlockHash} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
@@ -82,7 +82,7 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
  * Arbitrary constants, blobs should be consumed immediately in the same slot they are produced.
  * A value of 1 would probably be sufficient. However it's sensible to allow some margin if the node overloads.
  */
-const DEFAULT_MAX_CACHED_BLOBS_SIDECAR = 8;
+const DEFAULT_MAX_CACHED_BLOB_SIDECARS = 8;
 const MAX_RETAINED_SLOTS_CACHED_BLOBS_SIDECAR = 8;
 
 export class BeaconChain implements IBeaconChain {
@@ -134,7 +134,11 @@ export class BeaconChain implements IBeaconChain {
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   // TODO DENEB: Prune data structure every time period, for both old entries
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
-  readonly producedBlobsSidecarCache = new Map<RootHex, deneb.BlobsSidecar>();
+  readonly producedBlobSidecarsCache = new Map<BlockHash, {blobSidecars: deneb.BlobSidecars; slot: Slot}>();
+  readonly producedBlindedBlobSidecarsCache = new Map<
+    BlockHash,
+    {blobSidecars: deneb.BlindedBlobSidecars; slot: Slot}
+  >();
   readonly opts: IChainOptions;
 
   protected readonly blockProcessor: BlockProcessor;
@@ -425,18 +429,21 @@ export class BeaconChain implements IBeaconChain {
     // blinded blobs will be fetched and added to this cache later before finally
     // publishing the blinded block's full version
     if (blobs.type === BlobsResultType.produced) {
-      const blockBlobs = blobs.blobSidecars.map((blobSidecar) => blobSidecar.blob);
-      // TODO DENEB: Prune data structure for max entries
-      this.producedBlobsSidecarCache.set(blobs.blockHash, {
-        // TODO DENEB: Optimize, hashing the full block is not free.
-        beaconBlockRoot: this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block),
-        beaconBlockSlot: block.slot,
-        blobs: blockBlobs,
-        kzgAggregatedProof: ckzg.computeAggregateKzgProof(blockBlobs),
-      });
+      const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
+      // body is of full type here
+      const blockHash = toHex((block as bellatrix.BeaconBlock).body.executionPayload.blockHash);
+      const blobSidecars = blobs.blobSidecars.map((blobSidecar) => ({
+        ...blobSidecar,
+        blockRoot,
+        slot,
+        blockParentRoot: parentBlockRoot,
+        proposerIndex,
+      }));
+
+      this.producedBlobSidecarsCache.set(blockHash, {blobSidecars, slot});
       pruneSetToMax(
-        this.producedBlobsSidecarCache,
-        this.opts.maxCachedBlobsSidecar ?? DEFAULT_MAX_CACHED_BLOBS_SIDECAR
+        this.producedBlobSidecarsCache,
+        this.opts.maxCachedBlobSidecars ?? DEFAULT_MAX_CACHED_BLOB_SIDECARS
       );
     }
 
@@ -445,22 +452,22 @@ export class BeaconChain implements IBeaconChain {
 
   /**
    * https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#sidecar
-   * def get_blobs_sidecar(block: BeaconBlock, blobs: Sequence[Blob]) -> BlobsSidecar:
-   *   return BlobsSidecar(
+   * def get_blobs_sidecar(block: BeaconBlock, blobs: Sequence[Blob]) -> BlobSidecars:
+   *   return BlobSidecars(
    *       beacon_block_root=hash_tree_root(block),
    *       beacon_block_slot=block.slot,
    *       blobs=blobs,
    *       kzg_aggregated_proof=compute_proof_from_blobs(blobs),
    *   )
    */
-  getBlobsSidecar(beaconBlock: deneb.BeaconBlock): deneb.BlobsSidecar {
+  getBlobSidecars(beaconBlock: deneb.BeaconBlock): deneb.BlobSidecars {
     const blockHash = toHex(beaconBlock.body.executionPayload.blockHash);
-    const blobsSidecar = this.producedBlobsSidecarCache.get(blockHash);
-    if (!blobsSidecar) {
-      throw Error(`No blobsSidecar for executionPayload.blockHash ${blockHash}`);
+    const {blobSidecars} = this.producedBlobSidecarsCache.get(blockHash) ?? {};
+    if (!blobSidecars) {
+      throw Error(`No blobSidecars for executionPayload.blockHash ${blockHash}`);
     }
 
-    return blobsSidecar;
+    return blobSidecars;
   }
 
   async processBlock(block: WithOptionalBytes<BlockInput>, opts?: ImportBlockOpts): Promise<void> {
@@ -683,11 +690,21 @@ export class BeaconChain implements IBeaconChain {
       });
     }
 
-    // Prune old blobsSidecar for block production, those are only useful on their slot
-    if (this.config.getForkSeq(slot) >= ForkSeq.deneb && this.producedBlobsSidecarCache.size > 0) {
-      for (const [key, blobsSidecar] of this.producedBlobsSidecarCache) {
-        if (slot > blobsSidecar.beaconBlockSlot + MAX_RETAINED_SLOTS_CACHED_BLOBS_SIDECAR) {
-          this.producedBlobsSidecarCache.delete(key);
+    // Prune old blobSidecars for block production, those are only useful on their slot
+    if (this.config.getForkSeq(slot) >= ForkSeq.deneb) {
+      if (this.producedBlobSidecarsCache.size > 0) {
+        for (const [key, {slot: blobSlot}] of this.producedBlobSidecarsCache) {
+          if (slot > blobSlot + MAX_RETAINED_SLOTS_CACHED_BLOBS_SIDECAR) {
+            this.producedBlobSidecarsCache.delete(key);
+          }
+        }
+      }
+
+      if (this.producedBlindedBlobSidecarsCache.size > 0) {
+        for (const [key, {slot: blobSlot}] of this.producedBlindedBlobSidecarsCache) {
+          if (slot > blobSlot + MAX_RETAINED_SLOTS_CACHED_BLOBS_SIDECAR) {
+            this.producedBlindedBlobSidecarsCache.delete(key);
+          }
         }
       }
     }

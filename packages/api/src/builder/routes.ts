@@ -35,7 +35,7 @@ export type Api = {
     >
   >;
   submitBlindedBlock(
-    signedBlock: allForks.SignedBlindedBeaconBlock
+    signedBlock: allForks.SignedBlindedBeaconBlock | allForks.SignedBlindedBlockContents
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.ExecutionPayload; version: ForkName}},
