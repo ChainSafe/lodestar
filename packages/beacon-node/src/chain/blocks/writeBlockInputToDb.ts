@@ -51,7 +51,7 @@ export async function writeBlockInputToDb(
 /**
  * Prunes eagerly persisted block inputs only if not known to the fork-choice
  */
-export async function removeEagerlyPeristedBlockInputs(
+export async function removeEagerlyPersistedBlockInputs(
   this: BeaconChain,
   blockInputs: WithOptionalBytes<BlockInput>[]
 ): Promise<void> {
