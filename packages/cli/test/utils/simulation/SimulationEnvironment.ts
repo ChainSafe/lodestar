@@ -210,12 +210,12 @@ export class SimulationEnvironment {
     process.removeAllListeners("SIGTERM");
     process.removeAllListeners("SIGINT");
     console.log(`Simulation environment "${this.options.id}" is stopping: ${message}`);
-    this.options.controller.abort();
     await this.tracker.stop();
     await Promise.all(this.nodes.map((node) => node.el.job.stop()));
     await Promise.all(this.nodes.map((node) => node.cl.job.stop()));
     await this.externalSigner.stop();
     await this.runner.stop();
+    this.options.controller.abort();
 
     if (this.tracker.getErrorCount() > 0) {
       this.tracker.reporter.summary();
