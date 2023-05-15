@@ -17,7 +17,7 @@ export type LoggerEnvOpts = BrowserLoggerOpts;
 
 export function getEnvLogger(opts?: Partial<LoggerEnvOpts>): Logger {
   const level = opts?.level ?? getEnvLogLevel();
-  if (level !== null) {
+  if (level != null) {
     return getBrowserLogger({...opts, level});
   }
   return getEmptyLogger();
