@@ -256,6 +256,7 @@ const root = ssz.Root.defaultValue() as Uint8Array;
 const rootHex = toHexString(root);
 export const zeroProtoBlock: ProtoBlock = {
   slot: 0,
+  proposerIndex: 0,
   blockRoot: rootHex,
   parentRoot: rootHex,
   stateRoot: rootHex,
