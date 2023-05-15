@@ -44,7 +44,7 @@ import {
 } from "./interfaces.js";
 import {SimulationTracker} from "./SimulationTracker.js";
 import {
-  getEstimatedShanghaiTimestamp,
+  getEstimatedShanghaiTime,
   getEstimatedTTD,
   makeUniqueArray,
   regsiterProcessHandler,
@@ -369,7 +369,7 @@ export class SimulationEnvironment {
       cliqueSealingPeriod: options?.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
       shanghaiTime:
         options?.shanghaiTime ??
-        getEstimatedShanghaiTimestamp({
+        getEstimatedShanghaiTime({
           capellaForkEpoch: this.forkConfig.CAPELLA_FORK_EPOCH,
           genesisTime: this.options.genesisTime,
           secondsPerSlot: this.forkConfig.SECONDS_PER_SLOT,
