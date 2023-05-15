@@ -100,6 +100,8 @@ export class PayloadStore {
       if (latestPayload && latestPayload.blockNumber < payload.blockNumber) {
         this.latestBlockRoot = blockRoot;
       }
+    } else {
+      this.latestBlockRoot = blockRoot;
     }
 
     if (finalized) {

@@ -1,10 +1,10 @@
 {
-  "label": "eth_getBalance_eoa",
+  "label": "eth_getTransactionCount",
   "network": "sepolia",
   "request": {
-    "id": 809170,
+    "id": 809185,
     "jsonrpc": "2.0",
-    "method": "eth_getBalance",
+    "method": "eth_getTransactionCount",
     "params": [
       "0xC4bFccB1668d6E464F33a76baDD8C8D7D341e04A",
       "0x454ee3a86d2b712b3e6729f6d75e7ba21e7c5cae977429e07cd09d00b09feeb6"
@@ -12,8 +12,8 @@
   },
   "response": {
     "jsonrpc": "2.0",
-    "id": 809170,
-    "result": "0x198fa8f6019f0dfc20"
+    "id": 809185,
+    "result": "0x1"
   },
   "beacon": {
     "executionPayload": {
@@ -2671,7 +2671,7 @@
   "dependentRequests": [
     {
       "payload": {
-        "id": 809172,
+        "id": 809187,
         "jsonrpc": "2.0",
         "method": "eth_getProof",
         "params": [
@@ -2682,7 +2682,7 @@
       },
       "response": {
         "jsonrpc": "2.0",
-        "id": 809172,
+        "id": 809187,
         "result": {
           "address": "0xc4bfccb1668d6e464f33a76badd8c8d7d341e04a",
           "accountProof": [

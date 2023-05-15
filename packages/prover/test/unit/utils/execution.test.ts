@@ -3,15 +3,15 @@ import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import deepmerge from "deepmerge";
 import {ELProof, ELStorageProof} from "../../../src/types.js";
-import {isValidAccount, isValidStorageKeys} from "../../../src/utils/verification.js";
+import {isValidAccount, isValidStorageKeys} from "../../../src/utils/validation.js";
 import {invalidStorageProof, validStorageProof} from "../../fixtures/index.js";
 import {createMockLogger} from "../../mocks/logger_mock.js";
-import eoaProof from "../../fixtures/sepolia/eth_getBalance_eoa_proof.json" assert {type: "json"};
+import eoaProof from "../../fixtures/sepolia/eth_getBalance_eoa.json" assert {type: "json"};
 import {hexToBuffer} from "../../../src/utils/conversion.js";
 
 const address = eoaProof.request.params[0] as string;
-const validAccountProof = eoaProof.response.result as unknown as ELProof;
-const validStateRoot = hexToBuffer(eoaProof.executionPayload.state_root);
+const validAccountProof = eoaProof.dependentRequests[0].response.result as unknown as ELProof;
+const validStateRoot = hexToBuffer(eoaProof.beacon.executionPayload.state_root);
 
 const invalidAccountProof = deepmerge(validAccountProof, {});
 delete invalidAccountProof.accountProof[0];
