@@ -23,7 +23,7 @@ describe("lightclient api", function () {
   const chainConfig: ChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
-  const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+  const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
   const loggerNodeA = testLogger("Node-A", testLoggerOpts);
   const validatorCount = 2;
 

@@ -4,7 +4,7 @@ import {pipe} from "it-pipe";
 import {expect} from "chai";
 import {Libp2p} from "libp2p";
 import sinon from "sinon";
-import {getEmptyLogger} from "@lodestar/logger";
+import {getEmptyLogger} from "@lodestar/logger/empty";
 import {LodestarError, sleep} from "@lodestar/utils";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "../../../src/request/index.js";
 import {Protocol, MixedProtocol, ResponseIncoming} from "../../../src/types.js";

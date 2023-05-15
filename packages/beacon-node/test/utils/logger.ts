@@ -1,8 +1,9 @@
 import {LogLevel} from "@lodestar/utils";
-import {getEnvLogger, LoggerEnvOpts} from "@lodestar/logger";
+import {getNodeLogger, LoggerNode, LoggerNodeOpts} from "@lodestar/logger/node";
+import {getEnvLogLevel} from "@lodestar/logger";
 export {LogLevel};
 
-export type TestLoggerOpts = LoggerEnvOpts;
+export type TestLoggerOpts = LoggerNodeOpts;
 
 /**
  * Run the test with ENVs to control log level:
@@ -12,4 +13,16 @@ export type TestLoggerOpts = LoggerEnvOpts;
  * VERBOSE=1 mocha .ts
  * ```
  */
-export const testLogger = getEnvLogger;
+export const testLogger = (module?: string, opts?: TestLoggerOpts): LoggerNode => {
+  if (opts == null) {
+    opts = {} as LoggerNodeOpts;
+  }
+  if (module) {
+    opts.module = module;
+  }
+  const level = getEnvLogLevel();
+  if (level != null) {
+    opts.level = level;
+  }
+  return getNodeLogger(opts);
+};

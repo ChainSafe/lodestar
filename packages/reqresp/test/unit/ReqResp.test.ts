@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {Libp2p} from "libp2p";
 import sinon from "sinon";
 import {Logger} from "@lodestar/utils";
-import {getEmptyLogger} from "@lodestar/logger";
+import {getEmptyLogger} from "@lodestar/logger/empty";
 import {RespStatus} from "../../src/interface.js";
 import {ReqResp} from "../../src/ReqResp.js";
 import {getEmptyHandler, sszSnappyPing} from "../fixtures/messages.js";

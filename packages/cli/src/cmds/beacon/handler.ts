@@ -6,7 +6,7 @@ import {BeaconNode, BeaconDb} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {LoggerNode, getNodeLogger} from "@lodestar/logger";
+import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 
 import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";

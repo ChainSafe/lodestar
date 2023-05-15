@@ -2,10 +2,10 @@ import {expect} from "chai";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import deepmerge from "deepmerge";
+import {getEnvLogger} from "@lodestar/logger";
 import {ELProof, ELStorageProof} from "../../../src/types.js";
 import {isValidAccount, isValidStorageKeys} from "../../../src/utils/validation.js";
 import {invalidStorageProof, validStorageProof} from "../../fixtures/index.js";
-import {createMockLogger} from "../../mocks/logger_mock.js";
 import eoaProof from "../../fixtures/sepolia/eth_getBalance_eoa.json" assert {type: "json"};
 import {hexToBuffer} from "../../../src/utils/conversion.js";
 
@@ -19,7 +19,7 @@ delete invalidAccountProof.accountProof[0];
 chai.use(chaiAsPromised);
 
 describe("uitls/execution", () => {
-  const logger = createMockLogger();
+  const logger = getEnvLogger();
 
   describe("isValidAccount", () => {
     it("should return true if account is valid", async () => {

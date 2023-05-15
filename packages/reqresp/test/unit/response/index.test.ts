@@ -1,7 +1,7 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {expect} from "chai";
 import {LodestarError, fromHex} from "@lodestar/utils";
-import {getEmptyLogger} from "@lodestar/logger";
+import {getEmptyLogger} from "@lodestar/logger/empty";
 import {Protocol, RespStatus} from "../../../src/index.js";
 import {ReqRespRateLimiter} from "../../../src/rate_limiter/ReqRespRateLimiter.js";
 import {handleRequest} from "../../../src/response/index.js";
