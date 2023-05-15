@@ -27,6 +27,15 @@
       "import": "./lib/loggers/empty.js"
     }
   },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "*",
+        "lib/*",
+        "lib/*/index"
+      ]
+    }
+  },
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",

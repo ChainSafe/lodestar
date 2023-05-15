@@ -20,7 +20,6 @@ export type Discv5Opts = {
 export type Discv5Events = {
   discovered: (enr: ENR) => void;
 };
-src / utils / logger.ts;
 
 type Discv5WorkerStatus =
   | {status: "stopped"}
