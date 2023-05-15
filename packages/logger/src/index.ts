@@ -1,4 +1,7 @@
+import {Logger} from "@lodestar/utils";
 import {LogLevel} from "@lodestar/utils";
+import {BrowserLoggerOpts, getBrowserLogger} from "./browser.js";
+import {getEmptyLogger} from "./empty.js";
 
 export * from "./interface.js";
 
@@ -8,4 +11,14 @@ export function getEnvLogLevel(): LogLevel | null {
   if (process.env["DEBUG"]) return LogLevel.debug;
   if (process.env["VERBOSE"]) return LogLevel.verbose;
   return null;
+}
+
+export type LoggerEnvOpts = BrowserLoggerOpts;
+
+export function getEnvLogger(opts?: Partial<LoggerEnvOpts>): Logger {
+  const level = opts?.level ?? getEnvLogLevel();
+  if (level !== null) {
+    return getBrowserLogger({...opts, level});
+  }
+  return getEmptyLogger();
 }

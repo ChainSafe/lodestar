@@ -4,7 +4,7 @@ import {MESSAGE} from "triple-beam";
 import Transport from "winston-transport";
 import {LodestarError, LogLevel} from "@lodestar/utils";
 import {LogData, LogFormat, logFormats, TimestampFormatCode} from "../../../src/index.js";
-import {WinstonLoggerNode} from "../../../src/loggers/node.js";
+import {WinstonLoggerNode} from "../../../src/node.js";
 
 type WinstonLog = {[MESSAGE]: string};
 

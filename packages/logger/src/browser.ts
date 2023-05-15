@@ -4,11 +4,12 @@ import {LogLevel, Logger} from "@lodestar/utils";
 import {createWinstonLogger} from "./winston.js";
 
 export type BrowserLoggerOpts = {
+  module?: string;
   level: LogLevel;
 };
 
 export function getBrowserLogger(opts: BrowserLoggerOpts): Logger {
-  return createWinstonLogger({level: opts.level, module: "prover"}, [new BrowserConsole({level: opts.level})]);
+  return createWinstonLogger({level: opts.level, module: opts.module ?? ""}, [new BrowserConsole({level: opts.level})]);
 }
 
 class BrowserConsole extends Transport {
