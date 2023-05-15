@@ -1,4 +1,4 @@
-import {createWinstonLogger, LogLevel, Logger} from "@lodestar/utils";
+import {getEnvLogger} from "@lodestar/logger/env";
 import {getLoggerVc} from "../../src/util/index.js";
 import {ClockMock} from "./clock.js";
 
@@ -10,15 +10,6 @@ import {ClockMock} from "./clock.js";
  * VERBOSE=1 mocha .ts
  * ```
  */
-export function testLogger(module?: string): Logger {
-  return createWinstonLogger({level: getLogLevel(), module});
-}
+export const testLogger = getEnvLogger;
 
-function getLogLevel(): LogLevel {
-  if (process.env["LOG_LEVEL"]) return process.env["LOG_LEVEL"] as LogLevel;
-  if (process.env["DEBUG"]) return LogLevel.debug;
-  if (process.env["VERBOSE"]) return LogLevel.verbose;
-  return LogLevel.error;
-}
-
-export const loggerVc = getLoggerVc(testLogger(), new ClockMock());
+export const loggerVc = getLoggerVc(getEnvLogger(), new ClockMock());

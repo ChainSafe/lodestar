@@ -1,8 +1,8 @@
 import winston from "winston";
 import type {Logger as Winston} from "winston";
-import {Logger, LoggerOptions, LoggerChildOpts, LogLevel, logLevelNum} from "./interface.js";
-import {getFormat} from "./format.js";
-import {LogData} from "./json.js";
+import {Logger, LoggerOptions, LogLevel, logLevelNum} from "./interface.js";
+import {getFormat} from "./utils/format.js";
+import {LogData} from "./utils/json.js";
 
 // # How to configure Winston log level?
 //
@@ -37,7 +37,7 @@ export function createWinstonLogger(options: Partial<LoggerOptions> = {}, transp
 }
 
 export class WinstonLogger implements Logger {
-  constructor(private readonly winston: Winston) {}
+  constructor(protected readonly winston: Winston) {}
 
   static fromOpts(options: Partial<LoggerOptions> = {}, transports?: winston.transport[]): WinstonLogger {
     const defaultMeta: DefaultMeta = {module: options?.module || ""};
@@ -77,23 +77,6 @@ export class WinstonLogger implements Logger {
 
   trace(message: string, context?: LogData, error?: Error): void {
     this.createLogEntry(LogLevel.trace, message, context, error);
-  }
-
-  child(options: LoggerChildOpts): WinstonLogger {
-    const parentMeta = this.winston.defaultMeta as DefaultMeta | undefined;
-    const childModule = [parentMeta?.module, options.module].filter(Boolean).join("/");
-    const defaultMeta: DefaultMeta = {module: childModule};
-
-    // Same strategy as Winston's source .child.
-    // However, their implementation of child is to merge info objects where parent takes precedence, so it's
-    // impossible for child to overwrite 'module' field. Instead the winston class is cloned as defaultMeta
-    // overwritten completely.
-    // https://github.com/winstonjs/winston/blob/3f1dcc13cda384eb30fe3b941764e47a5a5efc26/lib/winston/logger.js#L47
-    const childWinston = Object.create(this.winston) as typeof this.winston;
-
-    childWinston.defaultMeta = defaultMeta;
-
-    return new WinstonLogger(childWinston);
   }
 
   private createLogEntry(level: LogLevel, message: string, context?: LogData, error?: Error): void {

@@ -1,6 +1,4 @@
-import {toHexString} from "../bytes.js";
-import {LodestarError} from "../errors.js";
-import {mapValues} from "../objects.js";
+import {LodestarError, mapValues, toHexString} from "@lodestar/utils";
 
 const MAX_DEPTH = 0;
 

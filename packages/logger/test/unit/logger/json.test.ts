@@ -2,8 +2,8 @@
 import "../../setup.js";
 import {expect} from "chai";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {LodestarError} from "../../../src/index.js";
-import {logCtxToJson, logCtxToString} from "../../../src/logger/json.js";
+import {LodestarError} from "@lodestar/utils";
+import {logCtxToJson, logCtxToString} from "../../../src/utils/json.js";
 
 describe("Json helper", () => {
   const circularReference = {};

@@ -1,8 +1,8 @@
 import sinon from "sinon";
 import {NetworkName} from "@lodestar/config/networks";
 import {ForkConfig} from "@lodestar/config";
+import {getEnvLogger} from "@lodestar/logger/env";
 import {ELVerifiedRequestHandlerOpts} from "../../src/interfaces.js";
-import {createMockLogger} from "../mocks/logger_mock.js";
 import {ProofProvider} from "../../src/proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "../../src/types.js";
 import {ELBlock} from "../../src/types.js";
@@ -36,7 +36,7 @@ export function generateReqHandlerOptionsMock(
 
   const options = {
     handler: sinon.stub(),
-    logger: createMockLogger(),
+    logger: getEnvLogger(),
     proofProvider: {
       getExecutionPayload: sinon.stub().resolves(executionPayload),
     } as unknown as ProofProvider,

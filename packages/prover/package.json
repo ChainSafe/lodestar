@@ -79,6 +79,7 @@
     "yargs": "^17.7.1"
   },
   "devDependencies": {
+    "@lodestar/logger": "^1.8.0",
     "@types/http-proxy": "^1.17.10",
     "@types/yargs": "^17.0.24",
     "axios": "^1.3.4",

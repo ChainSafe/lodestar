@@ -1,13 +1,5 @@
-import {LogData} from "./json.js";
-
-export enum LogLevel {
-  error = "error",
-  warn = "warn",
-  info = "info",
-  verbose = "verbose",
-  debug = "debug",
-  trace = "trace",
-}
+import {LogLevel, Logger, LogHandler, LogData} from "@lodestar/utils";
+export {LogLevel, Logger, LogHandler, LogData};
 
 export const logLevelNum: {[K in LogLevel]: number} = {
   [LogLevel.error]: 0,
@@ -22,8 +14,6 @@ export const logLevelNum: {[K in LogLevel]: number} = {
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LogLevels = Object.values(LogLevel);
 
-export const defaultLogLevel = LogLevel.info;
-
 export type LogFormat = "human" | "json";
 export const logFormats: LogFormat[] = ["human", "json"];
 
@@ -34,32 +24,17 @@ export type EpochSlotOpts = {
 };
 export enum TimestampFormatCode {
   DateRegular,
+  Hidden,
   EpochSlot,
 }
 export type TimestampFormat =
   | {format: TimestampFormatCode.DateRegular}
+  | {format: TimestampFormatCode.Hidden}
   | ({format: TimestampFormatCode.EpochSlot} & EpochSlotOpts);
 
 export interface LoggerOptions {
   level?: LogLevel;
   module?: string;
   format?: LogFormat;
-  hideTimestamp?: boolean;
   timestampFormat?: TimestampFormat;
 }
-
-export type LoggerChildOpts = {
-  module: string;
-};
-
-export type LogHandler = (message: string, context?: LogData, error?: Error) => void;
-
-export type Logger = {
-  error: LogHandler;
-  warn: LogHandler;
-  info: LogHandler;
-  verbose: LogHandler;
-  debug: LogHandler;
-  // custom
-  child(options: LoggerChildOpts): Logger;
-};
