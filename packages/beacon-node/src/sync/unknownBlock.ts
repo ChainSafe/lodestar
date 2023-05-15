@@ -116,6 +116,10 @@ export class UnknownBlockSync {
         downloadAttempts: 0,
       };
       this.pendingBlocks.set(blockRootHex, pendingBlock);
+      this.logger.verbose("Added unknown block parent to pendingBlocks", {
+        block: blockRootHex,
+        parent: parentBlockRootHex,
+      });
     }
     pendingBlock.peerIdStrs.add(peerIdStr);
 
@@ -135,6 +139,7 @@ export class UnknownBlockSync {
         downloadAttempts: 0,
       };
       this.pendingBlocks.set(blockRootHex, pendingBlock);
+      this.logger.verbose("Added unknown block to pendingBlocks", {blockRootHex});
     }
 
     if (peerIdStr) {
