@@ -6,6 +6,7 @@ import {multiaddr} from "@multiformats/multiaddr";
 import {chainConfig} from "@lodestar/config/default";
 import {chainConfigToJson} from "@lodestar/config";
 import {createKeypairFromPeerId, ENR, SignableENR} from "@chainsafe/discv5";
+import {LogLevel} from "@lodestar/utils";
 import {exportToJSON} from "../../../src/config/peerId.js";
 import {beaconHandlerInit} from "../../../src/cmds/beacon/handler.js";
 import {initPeerIdAndEnr, isLocalMultiAddr} from "../../../src/cmds/beacon/initPeerIdAndEnr.js";
@@ -184,6 +185,7 @@ describe("initPeerIdAndEnr", () => {
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 async function runBeaconHandlerInit(args: Partial<BeaconArgs & GlobalArgs>) {
   return beaconHandlerInit({
+    logLevel: LogLevel.info,
     dataDir: testFilesDir,
     ...args,
   } as BeaconArgs & GlobalArgs);
