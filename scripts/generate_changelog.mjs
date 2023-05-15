@@ -119,7 +119,7 @@ for (const commitHash of commitHashes.trim().split("\n")) {
 // Print knownAuthors to update if necessary
 console.log("knownAuthors", knownAuthors);
 
-let changelog = `## Changelog
+let changelog = `# Changelog
 
 [Full Changelog](https://github.com/ChainSafe/lodestar/compare/${fromTag}...${toTag})
 `;
