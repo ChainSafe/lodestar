@@ -20,6 +20,9 @@
     "./browser": {
       "import": "./lib/browser.js"
     },
+    "./env": {
+      "import": "./lib/env.js"
+    },
     "./node": {
       "import": "./lib/node.js"
     },

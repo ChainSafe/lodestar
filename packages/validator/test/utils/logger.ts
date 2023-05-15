@@ -1,4 +1,4 @@
-import {getEnvLogger} from "@lodestar/logger";
+import {getEnvLogger} from "@lodestar/logger/env";
 import {getLoggerVc} from "../../src/util/index.js";
 import {ClockMock} from "./clock.js";
 

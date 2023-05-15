@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import tmp from "tmp";
-import {LogLevel, getEnvLogLevel} from "@lodestar/logger";
+import {getEnvLogLevel} from "@lodestar/logger/env";
 import {LoggerNode, LoggerNodeOpts, getNodeLogger} from "@lodestar/logger/node";
+import {LogLevel} from "@lodestar/utils";
 
 export const networkDev = "dev";
 

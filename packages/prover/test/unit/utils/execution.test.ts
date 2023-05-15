@@ -2,7 +2,7 @@ import {expect} from "chai";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import deepmerge from "deepmerge";
-import {getEnvLogger} from "@lodestar/logger";
+import {getEnvLogger} from "@lodestar/logger/env";
 import {ELProof, ELStorageProof} from "../../../src/types.js";
 import {isValidAccount, isValidStorageKeys} from "../../../src/utils/validation.js";
 import {invalidStorageProof, validStorageProof} from "../../fixtures/index.js";

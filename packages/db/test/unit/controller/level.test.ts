@@ -2,7 +2,7 @@ import {execSync} from "node:child_process";
 import {expect} from "chai";
 import leveldown from "leveldown";
 import all from "it-all";
-import {getEnvLogger} from "@lodestar/logger";
+import {getEnvLogger} from "@lodestar/logger/env";
 import {LevelDbController} from "../../../src/controller/index.js";
 
 describe("LevelDB controller", () => {

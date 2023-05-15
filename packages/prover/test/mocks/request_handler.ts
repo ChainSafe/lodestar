@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import {NetworkName} from "@lodestar/config/networks";
 import {ForkConfig} from "@lodestar/config";
-import {getEnvLogger} from "@lodestar/logger";
+import {getEnvLogger} from "@lodestar/logger/env";
 import {ELVerifiedRequestHandlerOpts} from "../../src/interfaces.js";
 import {ProofProvider} from "../../src/proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "../../src/types.js";
