@@ -186,6 +186,7 @@ describe("initPeerIdAndEnr", () => {
 async function runBeaconHandlerInit(args: Partial<BeaconArgs & GlobalArgs>) {
   return beaconHandlerInit({
     logLevel: LogLevel.info,
+    logFileLevel: LogLevel.debug,
     dataDir: testFilesDir,
     ...args,
   } as BeaconArgs & GlobalArgs);
