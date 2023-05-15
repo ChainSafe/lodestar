@@ -107,7 +107,7 @@ export async function verifyBlocksInEpoch(
       // ideally we want to only persist blocks after verifying them however the reality is there are
       // rarely invalid blocks we'll batch all I/O operation here to reduce the overhead if there's
       // an error, we'll remove blocks not in forkchoice
-      writeBlockInputToDb.call(this, blocksInput),
+      opts.eagerPersistBlock ? writeBlockInputToDb.call(this, blocksInput) : Promise.resolve(),
     ]);
 
     if (segmentExecStatus.execAborted === null && segmentExecStatus.mergeBlockFound !== null) {

@@ -150,13 +150,15 @@ export async function processBlocks(
     //
     // LOG: Because the error is not propagated and there's a risk of db bloat, the error is logged at warn level
     // to alert the user of potential db bloat. This error _should_ never happen user must act and report to us
-    await removeEagerlyPersistedBlockInputs.call(this, blocks).catch((e) => {
-      this.logger.warn(
-        "Error pruning eagerly imported block inputs, DB may grow in size if this error happens frequently",
-        {slot: blocks.map((block) => block.block.message.slot).join(",")},
-        e
-      );
-    });
+    if (opts.eagerPersistBlock) {
+      await removeEagerlyPersistedBlockInputs.call(this, blocks).catch((e) => {
+        this.logger.warn(
+          "Error pruning eagerly imported block inputs, DB may grow in size if this error happens frequently",
+          {slot: blocks.map((block) => block.block.message.slot).join(",")},
+          e
+        );
+      });
+    }
 
     throw err;
   }

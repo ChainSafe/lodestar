@@ -19,6 +19,7 @@ import {RegenCaller} from "../regen/interface.js";
 import type {BeaconChain} from "../chain.js";
 import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
+import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.
@@ -60,7 +61,10 @@ export async function importBlock(
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
 
   // 1. Persist block to hot DB (pre-emptively)
-  // We do that in verifyBlocksInEpoch to batch all I/O operations to save block time to head
+  // If eagerPersistBlock = true we do that in verifyBlocksInEpoch to batch all I/O operations to save block time to head
+  if (!opts.eagerPersistBlock) {
+    await writeBlockInputToDb.call(this, [blockInput]);
+  }
 
   // 2. Import block to fork choice
 
