@@ -171,6 +171,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
               core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipBlock");
           }
         }
+        metrics?.gossipBlock.processBlockErrors.inc({
+          peerIdStr,
+          slot: signedBlock.message.slot,
+          seenTimestampSec,
+          blockErrorCode: `${e.type.code}`,
+        });
         logger.error("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
       });
   }
