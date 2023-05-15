@@ -18,13 +18,13 @@
       "import": "./lib/index.js"
     },
     "./browser": {
-      "import": "./lib/loggers/browser.js"
+      "import": "./lib/browser.js"
     },
     "./node": {
-      "import": "./lib/loggers/node.js"
+      "import": "./lib/node.js"
     },
     "./empty": {
-      "import": "./lib/loggers/empty.js"
+      "import": "./lib/empty.js"
     }
   },
   "typesVersions": {
