@@ -8,16 +8,23 @@ const PROPOSER_PRESERVE_EPOCHS = 2;
 export type ProposerPreparationData = routes.validator.ProposerPreparationData;
 
 export class BeaconProposerCache {
-  private readonly feeRecipientByValidatorIndex: MapDef<string, {epoch: Epoch; feeRecipient: string}>;
+  private readonly feeRecipientByValidatorIndex: MapDef<
+    string,
+    {epoch: Epoch; feeRecipient: string; sinceEpoch: Epoch}
+  >;
   constructor(opts: {suggestedFeeRecipient: string}, private readonly metrics?: Metrics | null) {
-    this.feeRecipientByValidatorIndex = new MapDef<string, {epoch: Epoch; feeRecipient: string}>(() => ({
-      epoch: 0,
-      feeRecipient: opts.suggestedFeeRecipient,
-    }));
+    this.feeRecipientByValidatorIndex = new MapDef<string, {epoch: Epoch; feeRecipient: string; sinceEpoch: Epoch}>(
+      () => ({
+        epoch: 0,
+        feeRecipient: opts.suggestedFeeRecipient,
+        sinceEpoch: 0,
+      })
+    );
   }
 
   add(epoch: Epoch, {validatorIndex, feeRecipient}: ProposerPreparationData): void {
-    this.feeRecipientByValidatorIndex.set(validatorIndex, {epoch, feeRecipient});
+    const sinceEpoch = this.feeRecipientByValidatorIndex.get(validatorIndex)?.sinceEpoch ?? epoch;
+    this.feeRecipientByValidatorIndex.set(validatorIndex, {epoch, feeRecipient, sinceEpoch});
   }
 
   prune(epoch: Epoch): void {
@@ -36,5 +43,15 @@ export class BeaconProposerCache {
 
   get(proposerIndex: number | string): string | undefined {
     return this.feeRecipientByValidatorIndex.get(`${proposerIndex}`)?.feeRecipient;
+  }
+
+  getProposersSinceEpoch(epoch: Epoch): ProposerPreparationData["validatorIndex"][] {
+    const proposers = [];
+    for (const [validatorIndex, feeRecipientEntry] of this.feeRecipientByValidatorIndex.entries()) {
+      if (feeRecipientEntry.sinceEpoch <= epoch) {
+        proposers.push(validatorIndex);
+      }
+    }
+    return proposers;
   }
 }

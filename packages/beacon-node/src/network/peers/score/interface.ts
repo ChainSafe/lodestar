@@ -3,6 +3,10 @@ import {NetworkCoreMetrics} from "../../core/metrics.js";
 
 export type PeerIdStr = string;
 
+export type PeerRpcScoreOpts = {
+  disablePeerScoring?: boolean;
+};
+
 export interface IPeerRpcScoreStore {
   getScore(peer: PeerId): number;
   getGossipScore(peer: PeerId): number;

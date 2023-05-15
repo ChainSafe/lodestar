@@ -9,7 +9,7 @@ import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {testLogger} from "../../../utils/logger.js";
 import {getValidPeerId} from "../../../utils/peer.js";
-import {BlockInput, getBlockInput} from "../../../../src/chain/blocks/types.js";
+import {BlockInput, BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
 
 describe("sync / range / chain", () => {
   const testCases: {
@@ -83,10 +83,14 @@ describe("sync / range / chain", () => {
           const shouldReject = badBlocks?.has(i);
           if (shouldReject) badBlocks?.delete(i);
           blocks.push(
-            getBlockInput.preDeneb(config, {
-              message: generateEmptyBlock(i),
-              signature: shouldReject ? REJECT_BLOCK : ACCEPT_BLOCK,
-            })
+            getBlockInput.preDeneb(
+              config,
+              {
+                message: generateEmptyBlock(i),
+                signature: shouldReject ? REJECT_BLOCK : ACCEPT_BLOCK,
+              },
+              BlockSource.byRange
+            )
           );
         }
         return blocks;
@@ -124,10 +128,14 @@ describe("sync / range / chain", () => {
       const blocks: BlockInput[] = [];
       for (let i = request.startSlot; i < request.startSlot + request.count; i += request.step) {
         blocks.push(
-          getBlockInput.preDeneb(config, {
-            message: generateEmptyBlock(i),
-            signature: ACCEPT_BLOCK,
-          })
+          getBlockInput.preDeneb(
+            config,
+            {
+              message: generateEmptyBlock(i),
+              signature: ACCEPT_BLOCK,
+            },
+            BlockSource.byRange
+          )
         );
       }
       return blocks;

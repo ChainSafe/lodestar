@@ -162,7 +162,7 @@ export class Network implements INetwork {
     const peersData = new PeersData();
     const networkEventBus = new NetworkEventBus();
     const metadata = new MetadataController(config);
-    const peerRpcScores = new PeerRpcScoreStore(metricsCore);
+    const peerRpcScores = new PeerRpcScoreStore(opts, metricsCore);
 
     const libp2p = await createNodeJsLibp2p(peerId, opts, {
       peerStoreDir: peerStoreDir,
