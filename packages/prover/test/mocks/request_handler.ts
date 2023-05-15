@@ -1,8 +1,8 @@
 import sinon from "sinon";
 import {NetworkName} from "@lodestar/config/networks";
 import {ForkConfig} from "@lodestar/config";
-import {ELVerifiedRequestHandlerOpts} from "../../src/interfaces.js";
 import {getEnvLogger} from "@lodestar/logger";
+import {ELVerifiedRequestHandlerOpts} from "../../src/interfaces.js";
 import {ProofProvider} from "../../src/proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "../../src/types.js";
 import {ELBlock} from "../../src/types.js";
