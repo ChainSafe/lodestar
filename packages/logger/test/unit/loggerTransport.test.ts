@@ -60,7 +60,11 @@ describe("winston logger format and options", () => {
       it(`${id} ${format} output`, async () => {
         stdoutHook = hookProcessStdout();
 
-        const logger = getNodeLogger({level: LogLevel.info, format});
+        const logger = getNodeLogger({
+          level: LogLevel.info,
+          format,
+          timestampFormat: {format: TimestampFormatCode.Hidden},
+        });
 
         logger.warn(message, context, error);
 
