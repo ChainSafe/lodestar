@@ -80,13 +80,13 @@ for (const commitHash of commitHashes.trim().split("\n")) {
   const rawCommit = shell(`git log --format='%s' ${commitHash}^!`);
 
   if (!isPrCommitRg.test(rawCommit)) {
-    // Drop commits without a PR reference
+    console.log(`Ignored commit "${rawCommit}" (missing PR reference)`);
     continue;
   }
 
   const conventionalCommit = rawCommit.match(conventionalCommitRg);
   if (!conventionalCommit) {
-    // Drop commits that do not follow conventional commit pattern
+    console.log(`Ignored commit "${rawCommit}" (not conventional commit)`);
     continue;
   }
 
