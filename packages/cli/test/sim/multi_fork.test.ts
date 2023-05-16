@@ -113,7 +113,6 @@ for (const fork of env.forkConfig.forksAscendingEpochOrder) {
 }
 
 await waitForSlot(env.clock.getLastSlotOfEpoch(env.forkConfig.forksDescendingEpochOrder[0].epoch + 1), env.nodes, {
-  silent: true,
   env,
 });
 
