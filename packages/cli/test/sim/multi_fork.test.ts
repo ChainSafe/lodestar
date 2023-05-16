@@ -5,12 +5,7 @@ import {ApiError} from "@lodestar/api";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
-import {
-  arrayEquals,
-  getEstimatedTimeInSecForRun,
-  getEstimatedTTD,
-  logFilesDir,
-} from "../utils/simulation/utils/index.js";
+import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
 import {
   connectAllNodes,
   connectNewNode,
@@ -93,14 +88,17 @@ for (const fork of env.forkConfig.forksAscendingEpochOrder) {
       for (const node of nodes) {
         const res = await node.cl.api.debug.getStateV2("head");
         ApiError.assert(res);
-        if (!arrayEquals(res.response.data.fork.currentVersion, env.forkConfig.getForkInfo(slot).version)) {
+        const expectedForkVersion = toHexString(env.forkConfig.getForkInfo(slot).version);
+        const currentForkVersion = toHexString(res.response.data.fork.currentVersion);
+
+        if (expectedForkVersion !== currentForkVersion) {
           errors.push(
             `Node is not on correct fork. ${JSON.stringify({
               id: node.cl.id,
               slot,
               fork: fork.name,
-              expectedForkVersion: toHexString(env.forkConfig.getForkInfo(slot).version),
-              currentForkVersion: toHexString(res.response.data.fork.currentVersion),
+              expectedForkVersion,
+              currentForkVersion,
             })}`
           );
         }
