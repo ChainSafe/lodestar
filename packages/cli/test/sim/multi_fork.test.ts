@@ -80,11 +80,11 @@ env.tracker.register({
 await env.start({runTimeoutMs});
 await connectAllNodes(env.nodes);
 
-const lastForkEpoch = 0;
+let lastForkEpoch = 0;
 for (const fork of env.forkConfig.forksAscendingEpochOrder) {
   if (!Number.isInteger(fork.epoch)) continue;
 
-  const lastForkEpoch = fork.epoch;
+  lastForkEpoch = fork.epoch;
   env.tracker.register({
     id: `fork-${fork.name}`,
     assert: async ({nodes, slot}) => {
