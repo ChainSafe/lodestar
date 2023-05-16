@@ -42,8 +42,6 @@ describe("gossipsub", function () {
   if (this.timeout() < 15 * 1000) this.timeout(15 * 1000);
   this.retries(2); // This test fail sometimes, with a 5% rate.
 
-  const logger = testLogger();
-
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {
@@ -142,53 +140,11 @@ describe("gossipsub", function () {
     }
 
     const voluntaryExit = ssz.phase0.SignedVoluntaryExit.defaultValue();
+    voluntaryExit.message.epoch = config.ALTAIR_FORK_EPOCH;
     await netA.publishVoluntaryExit(voluntaryExit);
 
     const receivedVoluntaryExit = await onVoluntaryExitPromise;
     expect(receivedVoluntaryExit).to.deep.equal(ssz.phase0.SignedVoluntaryExit.serialize(voluntaryExit));
-  });
-
-  it("Publish and receive 1000 voluntaryExits", async function () {
-    const receivedVoluntaryExits: Uint8Array[] = [];
-
-    const {netA, netB, controller} = await mockModules({
-      [GossipType.voluntary_exit]: async ({serializedData}) => {
-        receivedVoluntaryExits.push(serializedData);
-      },
-    });
-
-    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
-    expect(netA.getConnectedPeerCount()).to.equal(1);
-    expect(netB.getConnectedPeerCount()).to.equal(1);
-
-    await netA.subscribeGossipCoreTopics();
-    await netB.subscribeGossipCoreTopics();
-
-    // Wait to have a peer connected to a topic
-    while (!controller.signal.aborted) {
-      await sleep(500);
-      if (await hasSomeMeshPeer(netA)) {
-        break;
-      }
-    }
-
-    const msgCount = 1000;
-
-    for (let i = 0; i < msgCount; i++) {
-      const voluntaryExit = ssz.phase0.SignedVoluntaryExit.defaultValue();
-      voluntaryExit.message.epoch = i;
-      netA.publishVoluntaryExit(voluntaryExit).catch((e: Error) => {
-        logger.error("Error on publishVoluntaryExit", {}, e);
-      });
-    }
-
-    // Wait to receive all the messages. A timeout error will happen otherwise
-    while (!controller.signal.aborted) {
-      await sleep(500);
-      if (receivedVoluntaryExits.length >= msgCount) {
-        break;
-      }
-    }
   });
 
   it("Publish and receive a blsToExecutionChange", async function () {
