@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
-import {activePreset} from "@lodestar/params";
 import {sleep, toHexString} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
@@ -81,7 +80,35 @@ env.tracker.register({
 await env.start({runTimeoutMs});
 await connectAllNodes(env.nodes);
 
-await waitForSlot(env.clock.getLastSlotOfEpoch(capellaForkEpoch), env.nodes, {
+for (const fork of env.forkConfig.forksAscendingEpochOrder) {
+  env.tracker.register({
+    id: `fork-${fork.name}`,
+    assert: async ({nodes, slot}) => {
+      const errors: string[] = [];
+      for (const node of nodes) {
+        const res = await node.cl.api.debug.getStateV2("head");
+        ApiError.assert(res);
+        if (res.response.data.fork.currentVersion !== env.forkConfig.getForkInfo(slot).version) {
+          errors.push(
+            `Node is not on correct fork. ${JSON.stringify({
+              id: node.cl.id,
+              slot,
+              expectedFork: env.forkConfig.getForkInfo(slot).version,
+              currentFork: res.response.data.fork.currentVersion,
+            })}`
+          );
+        }
+      }
+
+      return errors;
+    },
+    match: ({slot}) => {
+      return slot === env.clock.getFirstSlotOfEpoch(fork.epoch) ? {match: true, remove: true} : false;
+    },
+  });
+}
+
+await waitForSlot(env.clock.getLastSlotOfEpoch(env.forkConfig.forksDescendingEpochOrder[0].epoch + 1), env.nodes, {
   silent: true,
   env,
 });
