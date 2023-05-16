@@ -13,7 +13,7 @@ import {
 } from "../utils/simulation/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js";
 
-const genesisSlotsDelay = 20;
+const genesisDelaySeconds = 20 * SIM_TESTS_SECONDS_PER_SLOT;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
 // Make sure bellatrix started before TTD reach
@@ -23,7 +23,7 @@ const syncWaitEpoch = 2;
 
 const runTimeoutMs =
   getEstimatedTimeInSecForRun({
-    genesisSlotDelay: genesisSlotsDelay,
+    genesisDelaySeconds,
     secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
     runTill: runTillEpoch + syncWaitEpoch,
     // After adding Nethermind its took longer to complete
@@ -31,7 +31,7 @@ const runTimeoutMs =
   }) * 1000;
 
 const ttd = getEstimatedTTD({
-  genesisDelaySeconds: genesisSlotsDelay,
+  genesisDelaySeconds,
   bellatrixForkEpoch: bellatrixForkEpoch,
   secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
   cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
@@ -45,7 +45,7 @@ const env = await SimulationEnvironment.initWithDefaults(
     chainConfig: {
       ALTAIR_FORK_EPOCH: altairForkEpoch,
       BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
-      GENESIS_DELAY: genesisSlotsDelay,
+      GENESIS_DELAY: genesisDelaySeconds,
       TERMINAL_TOTAL_DIFFICULTY: ttd,
     },
   },
