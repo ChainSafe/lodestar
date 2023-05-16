@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import {activePreset} from "@lodestar/params";
-import {Epoch, Slot} from "@lodestar/types";
+import {Epoch} from "@lodestar/types";
 import {ETH_TTD_INCREMENT} from "../constants.js";
 import {SimulationEnvironment} from "../SimulationEnvironment.js";
 
@@ -11,36 +11,37 @@ export const avg = (arr: number[]): number => {
 };
 
 export const getEstimatedTimeInSecForRun = ({
-  genesisSlotDelay,
+  genesisDelaySeconds,
   runTill,
   secondsPerSlot,
   graceExtraTimeFraction,
 }: {
-  genesisSlotDelay: Slot;
+  genesisDelaySeconds: number;
   runTill: Epoch;
   secondsPerSlot: number;
   graceExtraTimeFraction: number;
 }): number => {
-  const durationSec = secondsPerSlot * activePreset.SLOTS_PER_EPOCH * runTill + secondsPerSlot * genesisSlotDelay;
+  const durationSec = secondsPerSlot * activePreset.SLOTS_PER_EPOCH * runTill + genesisDelaySeconds;
 
   return Math.round(durationSec + durationSec * graceExtraTimeFraction);
 };
 
 export const getEstimatedTTD = ({
-  genesisDelay,
+  genesisDelaySeconds,
   cliqueSealingPeriod,
   secondsPerSlot,
   additionalSlots,
   bellatrixForkEpoch,
 }: {
-  genesisDelay: number;
+  genesisDelaySeconds: number;
   cliqueSealingPeriod: number;
   additionalSlots: number;
   secondsPerSlot: number;
   bellatrixForkEpoch: number;
 }): bigint => {
+  // Need to investigate why TTD always remain 1 epoch ahead, for now just subtract 1 epoch
   const secondsTillBellatrix =
-    genesisDelay * secondsPerSlot +
+    genesisDelaySeconds +
     (bellatrixForkEpoch - 1) * activePreset.SLOTS_PER_EPOCH * secondsPerSlot +
     additionalSlots * secondsPerSlot;
 
@@ -48,16 +49,21 @@ export const getEstimatedTTD = ({
 };
 
 export const getEstimatedShanghaiTime = ({
+  genesisDelaySeconds,
+  eth1GenesisTime,
   secondsPerSlot,
   capellaForkEpoch,
+  additionalSlots,
 }: {
-  genesisTime: number;
+  genesisDelaySeconds: number;
+  eth1GenesisTime: number;
   secondsPerSlot: number;
   capellaForkEpoch: number;
+  additionalSlots: number;
 }): number => {
-  const secondsTillCapella = (capellaForkEpoch - 1) * activePreset.SLOTS_PER_EPOCH * secondsPerSlot;
+  const secondsTillCapella = capellaForkEpoch * activePreset.SLOTS_PER_EPOCH * secondsPerSlot;
 
-  return secondsTillCapella;
+  return eth1GenesisTime + genesisDelaySeconds + secondsTillCapella + additionalSlots * secondsPerSlot;
 };
 
 export const squeezeString = (val: string, length: number, sep = "..."): string => {

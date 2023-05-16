@@ -2,7 +2,7 @@ import {SIM_ENV_CHAIN_ID, SIM_ENV_NETWORK_ID} from "../constants.js";
 import {ELGeneratorGenesisOptions, ELStartMode, Eth1GenesisBlock} from "../interfaces.js";
 
 export const getGethGenesisBlock = (mode: ELStartMode, options: ELGeneratorGenesisOptions): Record<string, unknown> => {
-  const {ttd, cliqueSealingPeriod, shanghaiTime} = options;
+  const {ttd, cliqueSealingPeriod, shanghaiTime, genesisTime} = options;
 
   const genesis = {
     config: {
@@ -25,7 +25,7 @@ export const getGethGenesisBlock = (mode: ELStartMode, options: ELGeneratorGenes
       clique: {period: cliqueSealingPeriod, epoch: 30000},
     },
     nonce: "0x0",
-    timestamp: "0x6159af19",
+    timestamp: `0x${genesisTime.toString(16)}`,
     extraData:
       "0x0000000000000000000000000000000000000000000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
     gasLimit: "0x1c9c380",
@@ -100,12 +100,15 @@ export const getNethermindChainSpec = (
       eip3529Transition: "0x0",
       eip3541Transition: "0x0",
       terminalTotalDifficulty: Number(ttd as bigint),
-      shanghaiTime,
       gasLimitBoundDivisor: "0x400",
       maxCodeSize: "0x6000",
       maxCodeSizeTransition: "0x0",
       maximumExtraDataSize: "0xfff",
       minGasLimit: "0x0",
+      eip4895TransitionTimestamp: `0x${shanghaiTime.toString(16)}`,
+      eip3855TransitionTimestamp: `0x${shanghaiTime.toString(16)}`,
+      eip3651TransitionTimestamp: `0x${shanghaiTime.toString(16)}`,
+      eip3860TransitionTimestamp: `0x${shanghaiTime.toString(16)}`,
     },
     accounts: genesis.alloc,
     genesis: genesis,

@@ -17,18 +17,18 @@ import {
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
 
-const genesisSlotsDelay = 20;
+const genesisDelaySeconds = 20 * SIM_TESTS_SECONDS_PER_SLOT;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
 const capellaForkEpoch = 6;
 // Make sure bellatrix started before TTD reach
-const additionalSlotsForTTD = activePreset.SLOTS_PER_EPOCH - 2;
+const additionalSlotsForTTD = 2;
 const runTillEpoch = 8;
 const syncWaitEpoch = 2;
 
 const runTimeoutMs =
   getEstimatedTimeInSecForRun({
-    genesisSlotDelay: genesisSlotsDelay,
+    genesisDelaySeconds,
     secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
     runTill: runTillEpoch + syncWaitEpoch,
     // After adding Nethermind its took longer to complete
@@ -36,8 +36,8 @@ const runTimeoutMs =
   }) * 1000;
 
 const ttd = getEstimatedTTD({
-  genesisDelay: genesisSlotsDelay,
-  bellatrixForkEpoch: bellatrixForkEpoch,
+  genesisDelaySeconds,
+  bellatrixForkEpoch,
   secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
   cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
   additionalSlots: additionalSlotsForTTD,
@@ -51,7 +51,7 @@ const env = await SimulationEnvironment.initWithDefaults(
       ALTAIR_FORK_EPOCH: altairForkEpoch,
       BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
       CAPELLA_FORK_EPOCH: capellaForkEpoch,
-      GENESIS_DELAY: genesisSlotsDelay,
+      GENESIS_DELAY: genesisDelaySeconds,
       TERMINAL_TOTAL_DIFFICULTY: ttd,
     },
   },

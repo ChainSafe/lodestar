@@ -82,7 +82,7 @@ export class SimulationEnvironment {
     this.options = options;
 
     this.clock = new EpochClock({
-      genesisTime: this.options.genesisTime,
+      genesisTime: this.options.eth1GenesisTime + this.forkConfig.GENESIS_DELAY,
       secondsPerSlot: this.forkConfig.SECONDS_PER_SLOT,
       slotsPerEpoch: activePreset.SLOTS_PER_EPOCH,
       signal: this.options.controller.signal,
@@ -104,11 +104,11 @@ export class SimulationEnvironment {
     clients: NodePairOptions[]
   ): Promise<SimulationEnvironment> {
     const secondsPerSlot = chainConfig.SECONDS_PER_SLOT ?? SIM_TESTS_SECONDS_PER_SLOT;
-    const genesisTime = Math.floor(Date.now() / 1000) + chainConfig.GENESIS_DELAY * secondsPerSlot;
+    const genesisTime = Math.floor(Date.now() / 1000);
     const ttd =
       chainConfig.TERMINAL_TOTAL_DIFFICULTY ??
       getEstimatedTTD({
-        genesisDelay: chainConfig.GENESIS_DELAY,
+        genesisDelaySeconds: chainConfig.GENESIS_DELAY,
         bellatrixForkEpoch: chainConfig.BELLATRIX_FORK_EPOCH,
         secondsPerSlot: secondsPerSlot,
         cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
@@ -122,12 +122,14 @@ export class SimulationEnvironment {
       TERMINAL_TOTAL_DIFFICULTY: ttd,
       DEPOSIT_CHAIN_ID: SIM_ENV_CHAIN_ID,
       DEPOSIT_NETWORK_ID: SIM_ENV_NETWORK_ID,
+      SECONDS_PER_ETH1_BLOCK: CLIQUE_SEALING_PERIOD,
+      ETH1_FOLLOW_DISTANCE: 1,
     });
 
     const env = new SimulationEnvironment(forkConfig, {
       logsDir,
       id,
-      genesisTime,
+      eth1GenesisTime: genesisTime,
       controller: new AbortController(),
       rootDir: path.join(tmp.dirSync({unsafeCleanup: true, tmpdir: "/tmp", template: "sim-XXXXXX"}).name, id),
     });
@@ -306,7 +308,7 @@ export class SimulationEnvironment {
       paths: clPaths,
       nodeIndex: options.nodeIndex,
       keys: options?.keys ?? {type: "no-keys"},
-      genesisTime: this.options.genesisTime,
+      genesisTime: this.options.eth1GenesisTime + this.forkConfig.GENESIS_DELAY,
       engineMock: options?.engineMock ?? false,
       clientOptions: options?.clientOptions ?? {},
       address: "127.0.0.1",
@@ -367,12 +369,15 @@ export class SimulationEnvironment {
     const genesisOptions: ELGeneratorGenesisOptions<E> = {
       ttd: options?.ttd ?? this.forkConfig.TERMINAL_TOTAL_DIFFICULTY,
       cliqueSealingPeriod: options?.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
+      genesisTime: options?.genesisTime ?? this.options.eth1GenesisTime,
       shanghaiTime:
         options?.shanghaiTime ??
         getEstimatedShanghaiTime({
+          genesisDelaySeconds: this.forkConfig.GENESIS_DELAY,
           capellaForkEpoch: this.forkConfig.CAPELLA_FORK_EPOCH,
-          genesisTime: this.options.genesisTime,
+          eth1GenesisTime: this.options.eth1GenesisTime,
           secondsPerSlot: this.forkConfig.SECONDS_PER_SLOT,
+          additionalSlots: 0,
         }),
       clientOptions: options.clientOptions ?? [],
     };
@@ -417,7 +422,7 @@ export class SimulationEnvironment {
       }
 
       const genesisState = nodeUtils.initDevState(this.forkConfig, this.keysCount, {
-        genesisTime: this.options.genesisTime,
+        genesisTime: this.options.eth1GenesisTime + this.forkConfig.GENESIS_DELAY,
         eth1BlockHash: fromHexString(eth1Genesis.hash),
       }).state;
 

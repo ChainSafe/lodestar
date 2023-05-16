@@ -28,7 +28,7 @@ const runTimeoutMs =
   }) * 1000;
 
 const ttd = getEstimatedTTD({
-  genesisDelay: genesisSlotsDelay,
+  genesisDelaySeconds: genesisSlotsDelay,
   bellatrixForkEpoch: bellatrixForkEpoch,
   secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
   cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
