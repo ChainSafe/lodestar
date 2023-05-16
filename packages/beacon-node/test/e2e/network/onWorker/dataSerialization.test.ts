@@ -15,7 +15,7 @@ import {
   ReqRespMethod,
   networkEventDirection,
 } from "../../../../src/network/index.js";
-import {BlockInputType} from "../../../../src/chain/blocks/types.js";
+import {BlockInputType, BlockSource} from "../../../../src/chain/blocks/types.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 import {IteratorEventType} from "../../../../src/util/asyncIterableToEvents.js";
 import {NetworkWorkerApi} from "../../../../src/network/core/index.js";
@@ -83,6 +83,7 @@ describe("data serialization through worker boundary", function () {
       blockInput: {
         type: BlockInputType.preDeneb,
         block: ssz.capella.SignedBeaconBlock.defaultValue(),
+        source: BlockSource.gossip,
       },
       peer,
     },

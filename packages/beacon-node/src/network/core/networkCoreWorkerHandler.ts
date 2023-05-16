@@ -8,7 +8,7 @@ import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
-import {Logger} from "@lodestar/utils";
+import {LoggerNode} from "@lodestar/logger/node";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {wireEventsOnMainThread} from "../../util/workerEvents.js";
 import {IncomingRequestArgs, OutgoingRequestArgs, GetReqRespHandlerFn} from "../reqresp/types.js";
@@ -38,7 +38,7 @@ export type WorkerNetworkCoreOpts = NetworkOptions & {
 export type WorkerNetworkCoreInitModules = {
   opts: WorkerNetworkCoreOpts;
   config: BeaconConfig;
-  logger: Logger;
+  logger: LoggerNode;
   peerId: PeerId;
   events: NetworkEventBus;
   getReqRespHandler: GetReqRespHandlerFn;
@@ -95,6 +95,7 @@ export class WorkerNetworkCore implements INetworkCore {
       genesisTime,
       initialStatus,
       activeValidatorCount,
+      loggerOpts: modules.logger.toOpts(),
     };
 
     const worker = new Worker("./networkCoreWorker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);

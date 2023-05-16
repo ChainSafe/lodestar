@@ -5,14 +5,14 @@ import {exportToProtobuf} from "@libp2p/peer-id-factory";
 import {createKeypairFromPeerId, ENR, ENRData, IKeypair, SignableENR} from "@chainsafe/discv5";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {chainConfigFromJson, chainConfigToJson, BeaconConfig} from "@lodestar/config";
-import {Logger} from "@lodestar/utils";
+import {LoggerNode} from "@lodestar/logger/node";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5WorkerApi, Discv5WorkerData, LodestarDiscv5Opts} from "./types.js";
 
 export type Discv5Opts = {
   peerId: PeerId;
   discv5: LodestarDiscv5Opts;
-  logger: Logger;
+  logger: LoggerNode;
   config: BeaconConfig;
   metrics?: NetworkCoreMetrics;
 };
@@ -51,6 +51,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       metrics: Boolean(this.opts.metrics),
       chainConfig: chainConfigFromJson(chainConfigToJson(this.opts.config)),
       genesisValidatorsRoot: this.opts.config.genesisValidatorsRoot,
+      loggerOpts: this.opts.logger.toOpts(),
     };
     const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
 

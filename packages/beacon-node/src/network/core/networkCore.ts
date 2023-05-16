@@ -5,7 +5,7 @@ import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {routes} from "@lodestar/api";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
 import {BeaconConfig} from "@lodestar/config";
-import {Logger} from "@lodestar/utils";
+import {LoggerNode} from "@lodestar/logger/node";
 import {Epoch, phase0} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
@@ -43,7 +43,7 @@ type Mods = {
   peerManager: PeerManager;
   peersData: PeersData;
   metadata: MetadataController;
-  logger: Logger;
+  logger: LoggerNode;
   config: BeaconConfig;
   clock: IClock;
   statusCache: LocalStatusCache;
@@ -56,7 +56,7 @@ export type BaseNetworkInit = {
   config: BeaconConfig;
   peerId: PeerId;
   peerStoreDir: string | undefined;
-  logger: Logger;
+  logger: LoggerNode;
   metricsRegistry: RegistryMetricCreator | null;
   clock: IClock;
   events: NetworkEventBus;
@@ -92,7 +92,7 @@ export class NetworkCore implements INetworkCore {
   private readonly gossip: Eth2Gossipsub;
   // TODO: Review if here is best place, and best architecture
   private readonly metadata: MetadataController;
-  private readonly logger: Logger;
+  private readonly logger: LoggerNode;
   private readonly config: BeaconConfig;
   private readonly clock: IClock;
   private readonly statusCache: LocalStatusCache;
@@ -143,7 +143,7 @@ export class NetworkCore implements INetworkCore {
 
     const metrics = metricsRegistry ? createNetworkCoreMetrics(metricsRegistry) : null;
     const peersData = new PeersData();
-    const peerRpcScores = new PeerRpcScoreStore(metrics);
+    const peerRpcScores = new PeerRpcScoreStore(opts, metrics);
     const statusCache = new LocalStatusCache(initialStatus);
 
     // Bind discv5's ENR to local metadata

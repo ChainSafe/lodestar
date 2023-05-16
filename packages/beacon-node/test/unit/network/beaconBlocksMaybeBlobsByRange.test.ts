@@ -3,7 +3,7 @@ import {ssz, deneb} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
 import {beaconBlocksMaybeBlobsByRange} from "../../../src/network/reqresp/index.js";
-import {BlockInputType} from "../../../src/chain/blocks/types.js";
+import {BlockInputType, BlockSource} from "../../../src/chain/blocks/types.js";
 import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 import {INetwork} from "../../../src/network/interface.js";
 
@@ -71,6 +71,7 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
         return {
           type: BlockInputType.postDeneb,
           block,
+          source: BlockSource.byRange,
           blobs,
         };
       });

@@ -22,6 +22,9 @@ export type ELRequestHandler<Params = unknown[], Response = unknown> = (
   payload: ELRequestPayload<Params>
 ) => Promise<ELResponse<Response> | undefined>;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ELRequestHandlerAny = ELRequestHandler<any, any>;
+
 // Modern providers uses this structure e.g. Web3 4.x
 export interface EIP1193Provider {
   request: (payload: ELRequestPayload) => Promise<ELResponse>;

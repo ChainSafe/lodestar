@@ -9,7 +9,7 @@ import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/
 import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
 import {testLogger} from "../../utils/logger.js";
 import {getRandPeerIdStr} from "../../utils/peer.js";
-import {getBlockInput} from "../../../src/chain/blocks/types.js";
+import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 import {ClockStopped} from "../../utils/mocks/clock.js";
 
 describe("sync / UnknownBlockSync", () => {
@@ -78,7 +78,7 @@ describe("sync / UnknownBlockSync", () => {
 
       new UnknownBlockSync(config, network as INetwork, chain as IBeaconChain, logger, null);
       network.events?.emit(NetworkEvent.unknownBlockParent, {
-        blockInput: getBlockInput.preDeneb(config, blockC),
+        blockInput: getBlockInput.preDeneb(config, blockC, BlockSource.gossip),
         peer,
       });
 

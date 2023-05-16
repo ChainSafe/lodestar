@@ -26,8 +26,4 @@ export const testData: GenericServerTestCases<Api> = {
     args: [ssz.deneb.SignedBlindedBeaconBlock.defaultValue()],
     res: {version: ForkName.bellatrix, data: ssz.bellatrix.ExecutionPayload.defaultValue()},
   },
-  submitBlindedBlockV2: {
-    args: [ssz.deneb.SignedBlindedBeaconBlock.defaultValue()],
-    res: {version: ForkName.deneb, data: ssz.deneb.SignedBeaconBlockAndBlobsSidecar.defaultValue()},
-  },
 };

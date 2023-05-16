@@ -29,6 +29,7 @@ export type CommitteeIndex = UintNum64;
 export type SubcommitteeIndex = UintNum64;
 export type ValidatorIndex = UintNum64;
 export type WithdrawalIndex = UintNum64;
+export type BlobIndex = UintNum64;
 export type Gwei = UintBn64;
 export type Wei = UintBn256;
 export type Root = Bytes32;

@@ -35,7 +35,7 @@ import {PeerAction} from "../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipBlobsSidecar} from "../../chain/validation/blobsSidecar.js";
-import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
+import {BlockInput, BlockSource, getBlockInput} from "../../chain/blocks/types.js";
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetworkCore} from "../core/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
@@ -181,7 +181,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         throw new GossipActionError(GossipAction.REJECT, {code: "POST_DENEB_BLOCK"});
       }
 
-      const blockInput = getBlockInput.preDeneb(config, signedBlock);
+      const blockInput = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip);
       await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
       handleValidBeaconBlock({...blockInput, serializedData}, peerIdStr, seenTimestampSec);
     },
@@ -195,7 +195,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
 
       // Validate block + blob. Then forward, then handle both
-      const blockInput = getBlockInput.postDeneb(config, beaconBlock, blobsSidecar);
+      const blockInput = getBlockInput.postDeneb(config, beaconBlock, BlockSource.gossip, blobsSidecar);
       await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
       validateGossipBlobsSidecar(beaconBlock, blobsSidecar);
       handleValidBeaconBlock({...blockInput, serializedData}, peerIdStr, seenTimestampSec);

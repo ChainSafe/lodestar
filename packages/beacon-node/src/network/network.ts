@@ -1,7 +1,8 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {BeaconConfig} from "@lodestar/config";
-import {Logger, sleep} from "@lodestar/utils";
+import {sleep} from "@lodestar/utils";
+import {LoggerNode} from "@lodestar/logger/node";
 import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
 import {phase0, allForks, deneb, altair, Root, capella} from "@lodestar/types";
 import {routes} from "@lodestar/api";
@@ -34,7 +35,7 @@ type NetworkModules = {
   opts: NetworkOptions;
   peerId: PeerId;
   config: BeaconConfig;
-  logger: Logger;
+  logger: LoggerNode;
   chain: IBeaconChain;
   signal: AbortSignal;
   networkEventBus: NetworkEventBus;
@@ -48,7 +49,7 @@ export type NetworkInitModules = {
   config: BeaconConfig;
   peerId: PeerId;
   peerStoreDir?: string;
-  logger: Logger;
+  logger: LoggerNode;
   metrics: Metrics | null;
   chain: IBeaconChain;
   db: IBeaconDb;
@@ -71,7 +72,7 @@ export class Network implements INetwork {
   // TODO: Make private
   readonly events: INetworkEventBus;
 
-  private readonly logger: Logger;
+  private readonly logger: LoggerNode;
   private readonly config: BeaconConfig;
   private readonly clock: IClock;
   private readonly chain: IBeaconChain;

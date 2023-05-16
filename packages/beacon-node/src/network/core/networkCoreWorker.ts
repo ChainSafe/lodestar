@@ -1,11 +1,8 @@
 import worker from "node:worker_threads";
-// TODO TEMP: figure out having a proper logger in workers
-// eslint-disable-next-line import/no-extraneous-dependencies
-import winston from "winston";
 import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
-import {createWinstonLogger} from "@lodestar/utils";
+import {getNodeLogger} from "@lodestar/logger/node";
 import type {WorkerModule} from "@chainsafe/threads/dist/types/worker.js";
 import {collectNodeJSMetrics, RegistryMetricCreator} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
@@ -37,9 +34,7 @@ const peerId = await createFromProtobuf(workerData.peerIdProto);
 
 // TODO: Pass options from main thread for logging
 // TODO: Logging won't be visible in file loggers
-const logger = createWinstonLogger({module: "libp2p-w", format: "human"}, [
-  new winston.transports.Console({debugStdout: true, level: "debug"}),
-]);
+const logger = getNodeLogger(workerData.loggerOpts);
 
 // Alive and consistency check
 logger.info("libp2p worker started", {peer: peerIdToString(peerId)});

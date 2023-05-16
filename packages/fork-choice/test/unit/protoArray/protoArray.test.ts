@@ -8,6 +8,7 @@ describe("ProtoArray", () => {
     const genesisSlot = 0;
     const genesisEpoch = 0;
 
+    const proposerIndex = 0;
     const stateRoot = "0";
     const finalizedRoot = "1";
     const parentRoot = "1";
@@ -17,6 +18,7 @@ describe("ProtoArray", () => {
     const fc = ProtoArray.initialize(
       {
         slot: genesisSlot,
+        proposerIndex: proposerIndex,
         stateRoot,
         parentRoot,
         blockRoot: finalizedRoot,
@@ -39,6 +41,7 @@ describe("ProtoArray", () => {
     fc.onBlock(
       {
         slot: genesisSlot + 1,
+        proposerIndex: proposerIndex,
         blockRoot: finalizedDesc,
         parentRoot: finalizedRoot,
         stateRoot,
@@ -62,6 +65,7 @@ describe("ProtoArray", () => {
     fc.onBlock(
       {
         slot: genesisSlot + 1,
+        proposerIndex: proposerIndex,
         blockRoot: notFinalizedDesc,
         parentRoot: unknown,
         stateRoot,

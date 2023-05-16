@@ -1,6 +1,6 @@
 import {ssz, allForks, bellatrix, Slot, Root, BLSPubkey} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {ForkName, isForkExecution, isForkBlobs} from "@lodestar/params";
+import {ForkName, isForkExecution} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
 import {
@@ -42,14 +42,6 @@ export type Api = {
       HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
-  submitBlindedBlockV2(
-    signedBlock: allForks.SignedBlindedBeaconBlock
-  ): Promise<
-    ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlockAndBlobsSidecar; version: ForkName}},
-      HttpStatusCode.SERVICE_UNAVAILABLE
-    >
-  >;
 };
 
 /**
@@ -60,7 +52,6 @@ export const routesData: RoutesData<Api> = {
   registerValidator: {url: "/eth/v1/builder/validators", method: "POST"},
   getHeader: {url: "/eth/v1/builder/header/{slot}/{parent_hash}/{pubkey}", method: "GET"},
   submitBlindedBlock: {url: "/eth/v1/builder/blinded_blocks", method: "POST"},
-  submitBlindedBlockV2: {url: "/eth/v2/builder/blinded_blocks", method: "POST"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -69,7 +60,6 @@ export type ReqTypes = {
   registerValidator: {body: unknown};
   getHeader: {params: {slot: Slot; parent_hash: string; pubkey: string}};
   submitBlindedBlock: {body: unknown};
-  submitBlindedBlockV2: {body: unknown};
 };
 
 export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, ReqTypes> {
@@ -86,7 +76,6 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
       },
     },
     submitBlindedBlock: getBeaconReqSerializers(config)["publishBlindedBlock"],
-    submitBlindedBlockV2: getBeaconReqSerializers(config)["publishBlindedBlock"],
   };
 }
 
@@ -97,11 +86,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     ),
     submitBlindedBlock: WithVersion((fork: ForkName) =>
       isForkExecution(fork) ? ssz.allForksExecution[fork].ExecutionPayload : ssz.bellatrix.ExecutionPayload
-    ),
-    submitBlindedBlockV2: WithVersion((fork: ForkName) =>
-      isForkBlobs(fork)
-        ? ssz.allForksBlobs[fork].SignedBeaconBlockAndBlobsSidecar
-        : ssz.deneb.SignedBeaconBlockAndBlobsSidecar
     ),
   };
 }

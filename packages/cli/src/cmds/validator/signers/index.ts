@@ -4,7 +4,7 @@ import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-key
 import {interopSecretKey} from "@lodestar/state-transition";
 import {externalSignerGetKeys, Signer, SignerType} from "@lodestar/validator";
 import {toHexString} from "@chainsafe/ssz";
-import {Logger} from "@lodestar/utils";
+import {LogLevel, Logger} from "@lodestar/utils";
 import {defaultNetwork, GlobalArgs} from "../../../options/index.js";
 import {assertValidPubkeysHex, isValidHttpUrl, parseRange, YargsError} from "../../../util/index.js";
 import {getAccountPaths} from "../paths.js";
@@ -44,7 +44,7 @@ const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 export async function getSignersFromArgs(
   args: IValidatorCliArgs & GlobalArgs,
   network: string,
-  {logger, signal}: {logger: Pick<Logger, "info" | "warn" | "debug">; signal: AbortSignal}
+  {logger, signal}: {logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>; signal: AbortSignal}
 ): Promise<Signer[]> {
   const accountPaths = getAccountPaths(args, network);
 

@@ -1,4 +1,4 @@
-import {Logger} from "@lodestar/utils";
+import {LogLevel, Logger} from "@lodestar/utils";
 import {LocalKeystoreDefinition} from "../interface.js";
 
 export type DecryptKeystoreWorkerAPI = {
@@ -10,5 +10,5 @@ export type KeystoreDecryptOptions = {
   onDecrypt?: (index: number) => void;
   // Try to use the cache file if it exists
   cacheFilePath?: string;
-  logger: Pick<Logger, "info" | "warn" | "debug">;
+  logger: Pick<Logger, LogLevel.info | LogLevel.warn | LogLevel.debug>;
 };

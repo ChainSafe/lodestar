@@ -2,6 +2,7 @@ import {routes} from "@lodestar/api";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {phase0} from "@lodestar/types";
+import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {NetworkOptions} from "../options.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
@@ -77,6 +78,7 @@ export type NetworkWorkerData = {
   localMultiaddrs: string[];
   metrics: boolean;
   peerStoreDir?: string;
+  loggerOpts: LoggerNodeOpts;
 };
 
 /**

@@ -13,7 +13,7 @@ export {ts as allForks} from "./allForks/index.js";
 export type RootHex = string;
 
 /** Handy enum to represent the block production source */
-export enum BlockSource {
+export enum ProducedBlockSource {
   builder = "builder",
   engine = "engine",
 }

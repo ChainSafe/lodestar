@@ -51,7 +51,7 @@ export async function importBlock(
   opts: ImportBlockOpts
 ): Promise<void> {
   const {blockInput, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
-  const {block, serializedData} = blockInput;
+  const {block, serializedData, source} = blockInput;
   const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toHexString(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
@@ -100,6 +100,7 @@ export async function importBlock(
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.stateCache.add(postState);
 
+  this.metrics?.importBlock.bySource.inc({source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: block.message.slot, root: blockRootHex});
   this.emitter.emit(routes.events.EventType.block, {
     block: toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),

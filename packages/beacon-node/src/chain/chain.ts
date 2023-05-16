@@ -274,7 +274,7 @@ export class BeaconChain implements IBeaconChain {
     this.emitter = emitter;
     this.lightClientServer = lightClientServer;
 
-    this.archiver = new Archiver(db, this, logger, signal, opts);
+    this.archiver = new Archiver(db, this, logger, signal, opts, metrics);
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
@@ -425,13 +425,14 @@ export class BeaconChain implements IBeaconChain {
     // blinded blobs will be fetched and added to this cache later before finally
     // publishing the blinded block's full version
     if (blobs.type === BlobsResultType.produced) {
+      const blockBlobs = blobs.blobSidecars.map((blobSidecar) => blobSidecar.blob);
       // TODO DENEB: Prune data structure for max entries
       this.producedBlobsSidecarCache.set(blobs.blockHash, {
         // TODO DENEB: Optimize, hashing the full block is not free.
         beaconBlockRoot: this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block),
         beaconBlockSlot: block.slot,
-        blobs: blobs.blobs,
-        kzgAggregatedProof: ckzg.computeAggregateKzgProof(blobs.blobs),
+        blobs: blockBlobs,
+        kzgAggregatedProof: ckzg.computeAggregateKzgProof(blockBlobs),
       });
       pruneSetToMax(
         this.producedBlobsSidecarCache,
