@@ -597,7 +597,7 @@ export function createLodestarMetrics(
       processBlockErrors: register.gauge({
         name: "lodestar_gossip_block_process_block_errors",
         help: "Count of errors, by error type, while processing blocks",
-        labelNames: ["blockErrorCode", "peerIdStr", "seenTimestampSec", "slot"],
+        labelNames: ["blockErrorCode"],
       }),
     },
     importBlock: {

@@ -159,7 +159,9 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
       })
       .catch((e) => {
+        let blockErrorCode = "NOT_BLOCK_ERROR";
         if (e instanceof BlockError) {
+          blockErrorCode = e.type.code;
           switch (e.type.code) {
             case BlockErrorCode.ALREADY_KNOWN:
             case BlockErrorCode.PARENT_UNKNOWN:
@@ -171,13 +173,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
               core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipBlock");
           }
         }
-        metrics?.gossipBlock.processBlockErrors.inc({
-          peerIdStr,
-          slot: signedBlock.message.slot,
-          seenTimestampSec,
-          blockErrorCode: `${e.type.code}`,
-        });
-        logger.error("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
+        metrics?.gossipBlock.processBlockErrors.inc({blockErrorCode});
+        logger.error(
+          "Error receiving block",
+          {slot: signedBlock.message.slot, peer: peerIdStr, blockErrorCode, seenTimestampSec},
+          e as Error
+        );
       });
   }
 
