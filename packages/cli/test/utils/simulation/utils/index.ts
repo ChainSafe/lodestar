@@ -72,7 +72,7 @@ export const squeezeString = (val: string, length: number, sep = "..."): string 
   return `${val.slice(0, anchor)}${sep}${val.slice(-anchor)}`;
 };
 
-export function arrayEquals(a: unknown[], b: unknown[]): boolean {
+export function arrayEquals(a: unknown[] | Uint8Array, b: unknown[] | Uint8Array): boolean {
   return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((val, index) => val === b[index]);
 }
 
