@@ -3,12 +3,12 @@ import {routes} from "@lodestar/api/beacon";
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot} from "@lodestar/types";
 import {ApiError} from "@lodestar/api";
-import {sleep} from "@lodestar/utils";
 import {isNullish} from "../../utils.js";
 import {EpochClock} from "./EpochClock.js";
 import {
   AssertionMatch,
   AtLeast,
+  CLClient,
   NodeId,
   NodePair,
   SimulationAssertion,
@@ -365,6 +365,9 @@ export class SimulationTracker {
     void node.cl.api.events.eventstream(events, signal ?? this.signal, async (event) => {
       switch (event.type) {
         case routes.events.EventType.block:
+          if (node.cl.client === CLClient.Lighthouse) {
+            console.log({node: node.cl.id, block: event.message.slot});
+          }
           await this.processOnBlock(event.message, node);
           return;
         case routes.events.EventType.head:
