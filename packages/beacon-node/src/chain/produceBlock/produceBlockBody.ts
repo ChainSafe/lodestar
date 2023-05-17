@@ -130,7 +130,7 @@ export async function produceBlockBody<T extends BlockType>(
   const blockEpoch = computeEpochAtSlot(blockSlot);
 
   if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
-    (blockBody as altair.BeaconBlockBody).syncAggregate = this.syncContributionAndProofPool.getAggregate(
+    (blockBody as altair.BeaconBlockBody).syncAggregate = await this.syncContributionAndProofPool.getAggregate(
       parentSlot,
       parentBlockRoot
     );

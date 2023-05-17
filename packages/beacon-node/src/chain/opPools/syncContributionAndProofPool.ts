@@ -99,7 +99,7 @@ export class SyncContributionAndProofPool {
   /**
    * This is for the block factory, the same to process_sync_committee_contributions in the spec.
    */
-  getAggregate(slot: Slot, prevBlockRoot: Root): altair.SyncAggregate {
+  async getAggregate(slot: Slot, prevBlockRoot: Root): Promise<altair.SyncAggregate> {
     const bestContributionBySubnet = this.bestContributionBySubnetRootBySlot.get(slot)?.get(toHexString(prevBlockRoot));
     if (!bestContributionBySubnet || bestContributionBySubnet.size === 0) {
       // TODO: Add metric for missing SyncAggregate

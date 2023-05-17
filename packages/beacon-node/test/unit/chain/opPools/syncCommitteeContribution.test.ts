@@ -31,14 +31,14 @@ describe("chain / opPools / SyncContributionAndProofPool", function () {
     cache.add(contributionAndProof, syncCommitteeParticipants);
   });
 
-  it("should return SyncCommitteeContribution list based on same slot and block root", () => {
+  it("should return SyncCommitteeContribution list based on same slot and block root", async () => {
     const newContributionAndProof = ssz.altair.ContributionAndProof.defaultValue();
     newContributionAndProof.aggregatorIndex = contributionAndProof.aggregatorIndex + 1;
     newContributionAndProof.contribution.slot = slot;
     newContributionAndProof.contribution.beaconBlockRoot = beaconBlockRoot;
 
     cache.add(newContributionAndProof, syncCommitteeParticipants);
-    const aggregate = cache.getAggregate(slot, beaconBlockRoot);
+    const aggregate = await cache.getAggregate(slot, beaconBlockRoot);
     expect(ssz.altair.SyncAggregate.equals(aggregate, ssz.altair.SyncAggregate.defaultValue())).to.equal(false);
     // TODO Test it's correct. Modify the contributions above so they have 1 bit set to true
     expect(aggregate.syncCommitteeBits.bitLen).to.be.equal(32);
@@ -102,7 +102,7 @@ describe("aggregate", function () {
 
   const numSubnets = [1, 2, 3, 4];
   for (const numSubnet of numSubnets) {
-    it(`should aggregate best contributions from ${numSubnet} subnets`, () => {
+    it(`should aggregate best contributions from ${numSubnet} subnets`, async () => {
       const blockRoot = Buffer.alloc(32, 10);
       const testSks: SecretKey[] = [];
       for (let subnet = 0; subnet < numSubnet; subnet++) {
@@ -114,7 +114,7 @@ describe("aggregate", function () {
         });
         testSks.push(sks[subnet]);
       }
-      const syncAggregate = aggregate(bestContributionBySubnet);
+      const syncAggregate = await aggregate(bestContributionBySubnet);
       const expectSyncCommittees = newFilledArray(SYNC_COMMITTEE_SIZE, false);
       for (let subnet = 0; subnet < numSubnet; subnet++) {
         // first participation of each subnet is true
