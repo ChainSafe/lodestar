@@ -365,6 +365,7 @@ export class SimulationTracker {
     void node.cl.api.events.eventstream(events, signal ?? this.signal, async (event) => {
       switch (event.type) {
         case routes.events.EventType.block:
+          console.log("initEventStreamForNode", node.cl.id, event.message.slot);
           await this.processOnBlock(event.message, node);
           return;
         case routes.events.EventType.head:
