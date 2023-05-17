@@ -594,10 +594,10 @@ export function createLodestarMetrics(
         help: "Time elapsed between block received and block import",
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
-      processBlockErrors: register.gauge({
+      processBlockErrors: register.gauge<"error">({
         name: "lodestar_gossip_block_process_block_errors",
         help: "Count of errors, by error type, while processing blocks",
-        labelNames: ["blockErrorCode"],
+        labelNames: ["error"],
       }),
     },
     importBlock: {
