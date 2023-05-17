@@ -66,7 +66,7 @@ export function getBeaconPoolApi({
             );
 
             if (network.attnetsService.shouldProcess(subnet, slot)) {
-              const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
+              const insertOutcome = await chain.attestationPool.add(attestation, attDataRootHex);
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }
             const sentPeers = await network.gossip.publishBeaconAttestation(attestation, subnet);
@@ -184,7 +184,7 @@ export function getBeaconPoolApi({
               // Sync committee subnet members are just sequential in the order they appear in SyncCommitteeIndexes array
               const subnet = Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE);
               const indexInSubcommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
-              chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubcommittee);
+              await chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubcommittee);
 
               // Cheap de-duplication code to avoid using a Set. indexesInCommittee is always sorted
               if (subnets.length === 0 || subnets[subnets.length - 1] !== subnet) {

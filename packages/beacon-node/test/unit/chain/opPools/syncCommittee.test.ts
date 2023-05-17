@@ -30,14 +30,14 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
   beforeEach(() => {
     clockStub = sandbox.createStubInstance(LocalClock);
     cache = new SyncCommitteeMessagePool(clockStub, cutOffTime);
-    cache.add(subcommitteeIndex, syncCommittee, indexInSubcommittee);
+    return cache.add(subcommitteeIndex, syncCommittee, indexInSubcommittee);
   });
 
   afterEach(function () {
     sandbox.restore();
   });
 
-  it("should preaggregate SyncCommitteeContribution", () => {
+  it("should preaggregate SyncCommitteeContribution", async () => {
     clockStub.secFromSlot.returns(0);
     let contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
     expect(contribution).to.be.not.null;
@@ -50,7 +50,7 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
       signature: newSecretKey.sign(beaconBlockRoot).toBytes(),
     };
     const newIndicesInSubSyncCommittee = [1];
-    cache.add(subcommitteeIndex, newSyncCommittee, newIndicesInSubSyncCommittee[0]);
+    await cache.add(subcommitteeIndex, newSyncCommittee, newIndicesInSubSyncCommittee[0]);
     contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
     expect(contribution).to.be.not.null;
     if (contribution) {
