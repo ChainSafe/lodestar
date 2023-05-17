@@ -1,4 +1,4 @@
-import bls from "@chainsafe/blst";
+import bls from "@chainsafe/blst-ts";
 import {BLS_WITHDRAWAL_PREFIX} from "@lodestar/params";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Slot, capella} from "@lodestar/types";

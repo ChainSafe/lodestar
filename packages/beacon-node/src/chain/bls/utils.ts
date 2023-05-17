@@ -1,6 +1,6 @@
 import type {PublicKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
-import blstTs from "@chainsafe/blst";
+import blstTs from "@chainsafe/blst-ts";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 
 export function getAggregatedPubkeySync(signatureSet: ISignatureSet): PublicKey {

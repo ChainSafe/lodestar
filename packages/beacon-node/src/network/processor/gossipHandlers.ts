@@ -197,7 +197,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       const blockInput = getBlockInput.postDeneb(config, beaconBlock, BlockSource.gossip, blobsSidecar);
       await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
       await validateGossipBlobsSidecar(beaconBlock, blobsSidecar);
-      handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+      handleValidBeaconBlock({...blockInput, serializedData}, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_aggregate_and_proof]: async ({serializedData}, topic, _peer, seenTimestampSec) => {

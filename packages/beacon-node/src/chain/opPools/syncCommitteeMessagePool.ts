@@ -1,4 +1,4 @@
-import blst from "@chainsafe/blst";
+import blst from "@chainsafe/blst-ts";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair, Root, Slot, SubcommitteeIndex} from "@lodestar/types";
 import {BitArray, toHexString} from "@chainsafe/ssz";

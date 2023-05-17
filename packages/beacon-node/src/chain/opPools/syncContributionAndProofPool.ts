@@ -1,4 +1,4 @@
-import bls from "@chainsafe/blst";
+import bls from "@chainsafe/blst-ts";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {altair, Slot, Root, ssz} from "@lodestar/types";
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
