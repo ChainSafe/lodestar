@@ -14,8 +14,9 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
   async verifySignatureSets(sets: ISignatureSet[]): Promise<boolean> {
     this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
 
-    const setsAggregated = sets.map((set) => ({
-      publicKey: getAggregatedPubkey(set),
+    const keys = await Promise.all(sets.map((set) => getAggregatedPubkey(set)));
+    const setsAggregated = sets.map((set, i) => ({
+      publicKey: keys[i],
       message: set.signingRoot,
       signature: set.signature,
     }));
@@ -23,7 +24,7 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     // Count time after aggregating
     const startNs = process.hrtime.bigint();
 
-    const isValid = verifySignatureSetsMaybeBatch(setsAggregated);
+    const isValid = await verifySignatureSetsMaybeBatch(setsAggregated);
 
     // Don't use a try/catch, only count run without exceptions
     const endNs = process.hrtime.bigint();

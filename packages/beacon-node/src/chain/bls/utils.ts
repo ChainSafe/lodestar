@@ -1,14 +1,28 @@
 import type {PublicKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
+import blstTs from "@chainsafe/blst";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 
-export function getAggregatedPubkey(signatureSet: ISignatureSet): PublicKey {
+export function getAggregatedPubkeySync(signatureSet: ISignatureSet): PublicKey {
   switch (signatureSet.type) {
     case SignatureSetType.single:
       return signatureSet.pubkey;
 
     case SignatureSetType.aggregate:
       return bls.PublicKey.aggregate(signatureSet.pubkeys);
+
+    default:
+      throw Error("Unknown signature set type");
+  }
+}
+
+export async function getAggregatedPubkey(signatureSet: ISignatureSet): Promise<blstTs.PublicKey> {
+  switch (signatureSet.type) {
+    case SignatureSetType.single:
+      return blstTs.PublicKey.deserialize(signatureSet.pubkey.toBytes());
+
+    case SignatureSetType.aggregate:
+      return blstTs.aggregatePublicKeys(signatureSet.pubkeys.map((pubkey) => pubkey.toBytes()));
 
     default:
       throw Error("Unknown signature set type");

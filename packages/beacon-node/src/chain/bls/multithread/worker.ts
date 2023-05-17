@@ -3,7 +3,7 @@ import worker from "worker_threads";
 import {expose} from "@chainsafe/threads/worker";
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
-import {verifySignatureSetsMaybeBatch, SignatureSetDeserialized} from "../maybeBatch.js";
+import {verifySignatureSetsMaybeBatchSync, SignatureSetDeserialized} from "../maybeBatch.js";
 import {WorkerData, BlsWorkReq, WorkResult, WorkResultCode, SerializedSet, BlsWorkResult} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 
@@ -63,7 +63,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
       try {
         // Attempt to verify multiple sets at once
-        const isValid = verifySignatureSetsMaybeBatch(allSets);
+        const isValid = verifySignatureSetsMaybeBatchSync(allSets);
 
         if (isValid) {
           // The entire batch is valid, return success to all
@@ -88,7 +88,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
   for (const {idx, sets} of nonBatchableSets) {
     try {
-      const isValid = verifySignatureSetsMaybeBatch(sets);
+      const isValid = verifySignatureSetsMaybeBatchSync(sets);
       results[idx] = {code: WorkResultCode.success, result: isValid};
     } catch (e) {
       results[idx] = {code: WorkResultCode.error, error: e as Error};

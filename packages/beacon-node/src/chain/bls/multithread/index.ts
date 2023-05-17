@@ -13,8 +13,8 @@ import {ISignatureSet} from "@lodestar/state-transition";
 import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
 import {Metrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
-import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
-import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
+import {getAggregatedPubkeySync, getAggregatedPubkeysCount} from "../utils.js";
+import {verifySignatureSetsMaybeBatchSync} from "../maybeBatch.js";
 import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 import {defaultPoolSize} from "./poolSize.js";
@@ -155,9 +155,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     if (opts.verifyOnMainThread && !this.blsVerifyAllMultiThread) {
       const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
       try {
-        return verifySignatureSetsMaybeBatch(
+        return verifySignatureSetsMaybeBatchSync(
           sets.map((set) => ({
-            publicKey: getAggregatedPubkey(set),
+            publicKey: getAggregatedPubkeySync(set),
             message: set.signingRoot.valueOf() as Uint8Array,
             signature: set.signature,
           }))
@@ -174,7 +174,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         this.queueBlsWork({
           opts,
           sets: setsWorker.map((s) => ({
-            publicKey: getAggregatedPubkey(s).toBytes(this.format),
+            publicKey: getAggregatedPubkeySync(s).toBytes(this.format),
             message: s.signingRoot,
             signature: s.signature,
           })),
