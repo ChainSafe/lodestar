@@ -3,6 +3,7 @@ import {routes} from "@lodestar/api/beacon";
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot} from "@lodestar/types";
 import {ApiError} from "@lodestar/api";
+import {sleep} from "@lodestar/utils";
 import {isNullish} from "../../utils.js";
 import {EpochClock} from "./EpochClock.js";
 import {
@@ -226,8 +227,8 @@ export class SimulationTracker {
     }
 
     try {
-      await this.captureAssertionsData({slot, epoch}, node);
-      await this.applyAssertions({slot, epoch});
+      await this.processCapture({slot, epoch}, node);
+      await this.processAssert({slot, epoch});
     } catch {
       // Incase of reorg the block may not be available
       return;
@@ -250,7 +251,7 @@ export class SimulationTracker {
     // TODO: Add checkpoint tracking
   }
 
-  private async captureAssertionsData({slot, epoch}: {slot: Slot; epoch: Epoch}, node: NodePair): Promise<void> {
+  private async processCapture({slot, epoch}: {slot: Slot; epoch: Epoch}, node: NodePair): Promise<void> {
     const block = await node.cl.api.beacon.getBlockV2(slot);
     ApiError.assert(block);
 
@@ -268,6 +269,11 @@ export class SimulationTracker {
       if (!assertion.capture) {
         throw new Error(`Assertion "${assertion.id}" has no capture function`);
       }
+
+      // It is observed that if capture is called for assertions in the loop
+      // the value for `dependantStores` are not updated in the real time
+      // Adding a fraction of delay to make sure the stores are updated
+      await sleep(5, this.signal);
 
       const value = await assertion.capture({
         fork: this.forkConfig.getForkName(slot),
@@ -292,7 +298,7 @@ export class SimulationTracker {
     this.slotCapture.set(slot, capturedSlot);
   }
 
-  private async applyAssertions({slot, epoch}: {slot: Slot; epoch: Epoch}): Promise<void> {
+  private async processAssert({slot, epoch}: {slot: Slot; epoch: Epoch}): Promise<void> {
     const capturedForNodes = this.slotCapture.get(slot);
     if (!capturedForNodes || capturedForNodes.length < this.nodes.length) {
       // We need to wait for all nodes to capture data for that slot
