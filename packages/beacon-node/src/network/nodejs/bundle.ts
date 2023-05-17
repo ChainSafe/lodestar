@@ -90,7 +90,24 @@ export async function createNodejsLibp2p(options: Libp2pOptions): Promise<Libp2p
       identify: identifyService({
         agentVersion: options.lodestarVersion ? `lodestar/${options.lodestarVersion}` : "lodestar",
       }),
-      components: (components: Components) => components,
+      // individual components are specified because the components object is a Proxy
+      // and passing it here directly causes problems downstream, not to mention is slowwww
+      components: (components: Components) => ({
+        peerId: components.peerId,
+        events: components.events,
+        addressManager: components.addressManager,
+        peerStore: components.peerStore,
+        upgrader: components.upgrader,
+        registrar: components.registrar,
+        connectionManager: components.connectionManager,
+        transportManager: components.transportManager,
+        connectionGater: components.connectionGater,
+        contentRouting: components.contentRouting,
+        peerRouting: components.peerRouting,
+        datastore: components.datastore,
+        connectionProtector: components.connectionProtector,
+        metrics: components.metrics,
+      }),
     },
   });
 }

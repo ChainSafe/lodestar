@@ -69,4 +69,21 @@ export interface INetwork extends INetworkCorePublic {
 export type PeerDirection = Connection["stat"]["direction"];
 export type PeerStatus = Connection["stat"]["status"];
 
-export type Libp2p = ILibp2p<{components: Components}>;
+export type LodestarComponents = Pick<
+  Components,
+  | "peerId"
+  | "events"
+  | "addressManager"
+  | "peerStore"
+  | "upgrader"
+  | "registrar"
+  | "connectionManager"
+  | "transportManager"
+  | "connectionGater"
+  | "contentRouting"
+  | "peerRouting"
+  | "datastore"
+  | "connectionProtector"
+  | "metrics"
+>;
+export type Libp2p = ILibp2p<{components: LodestarComponents}>;
