@@ -47,7 +47,7 @@ export type Discv5WorkerApi = {
   discovered(): Observable<ENRData>;
 
   /** Prometheus metrics string */
-  metrics(): Promise<string>;
+  scrapeMetrics(): Promise<string>;
   /** tear down discv5 resources */
   close(): Promise<void>;
 };

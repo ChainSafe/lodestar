@@ -1,16 +1,16 @@
-import {PeerId} from "@libp2p/interface-peer-id";
-import {peerIdFromString} from "@libp2p/peer-id";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger, pruneSetToMax} from "@lodestar/utils";
 import {Root, RootHex} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {INetwork, NetworkEvent, PeerAction} from "../network/index.js";
+import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
+import {PeerIdStr} from "../util/peerId.js";
 import {IBeaconChain} from "../chain/index.js";
 import {BlockInput} from "../chain/blocks/types.js";
 import {Metrics} from "../metrics/index.js";
 import {shuffle} from "../util/shuffle.js";
 import {byteArrayEquals} from "../util/bytes.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
+import {beaconBlocksMaybeBlobsByRoot} from "../network/reqresp/beaconBlocksMaybeBlobsByRoot.js";
 import {wrapError} from "../util/wrapError.js";
 import {PendingBlock, PendingBlockStatus} from "./interface.js";
 import {
@@ -65,9 +65,9 @@ export class UnknownBlockSync {
   /**
    * Process an unknownBlockParent event and register the block in `pendingBlocks` Map.
    */
-  private onUnknownBlock = (blockInput: BlockInput, peerIdStr: string): void => {
+  private onUnknownBlock = (data: NetworkEventData[NetworkEvent.unknownBlockParent]): void => {
     try {
-      this.addToPendingBlocks(blockInput, peerIdStr);
+      this.addToPendingBlocks(data.blockInput, data.peer);
       this.triggerUnknownBlockSearch();
       this.metrics?.syncUnknownBlock.requests.inc();
     } catch (e) {
@@ -127,7 +127,7 @@ export class UnknownBlockSync {
     }
   };
 
-  private async downloadParentBlock(block: PendingBlock, connectedPeers: PeerId[]): Promise<void> {
+  private async downloadParentBlock(block: PendingBlock, connectedPeers: PeerIdStr[]): Promise<void> {
     if (block.status !== PendingBlockStatus.pending) {
       return;
     }
@@ -162,7 +162,7 @@ export class UnknownBlockSync {
         });
         this.removeAndDownscoreAllDescendants(block);
       } else {
-        this.onUnknownBlock(blockInput, peerIdStr);
+        this.onUnknownBlock({blockInput, peer: peerIdStr});
       }
     } else {
       // parentSlot > finalizedSlot, continue downloading parent of parent
@@ -255,7 +255,7 @@ export class UnknownBlockSync {
    */
   private async fetchUnknownBlockRoot(
     blockRoot: Root,
-    connectedPeers: PeerId[]
+    connectedPeers: PeerIdStr[]
   ): Promise<{blockInput: BlockInput; peerIdStr: string}> {
     const shuffledPeers = shuffle(connectedPeers);
     const blockRootHex = toHexString(blockRoot);
@@ -265,7 +265,14 @@ export class UnknownBlockSync {
       const peer = shuffledPeers[i % shuffledPeers.length];
       try {
         // TODO DENEB: Use
-        const [blockInput] = await this.network.beaconBlocksMaybeBlobsByRoot(peer, [blockRoot]);
+        const [blockInput] = await beaconBlocksMaybeBlobsByRoot(
+          this.config,
+          this.network,
+          peer,
+          [blockRoot],
+          this.chain.clock.currentSlot,
+          this.chain.forkChoice.getFinalizedBlock().slot
+        );
 
         // Peer does not have the block, try with next peer
         if (blockInput === undefined) {
@@ -279,13 +286,9 @@ export class UnknownBlockSync {
           throw Error(`Wrong block received by peer, expected ${toHexString(receivedBlockRoot)} got ${blockRootHex}`);
         }
 
-        return {blockInput, peerIdStr: peer.toString()};
+        return {blockInput, peerIdStr: peer};
       } catch (e) {
-        this.logger.debug(
-          "Error fetching UnknownBlockRoot",
-          {attempt: i, blockRootHex, peer: peer.toString()},
-          e as Error
-        );
+        this.logger.debug("Error fetching UnknownBlockRoot", {attempt: i, blockRootHex, peer}, e as Error);
         lastError = e as Error;
       }
     }
@@ -317,10 +320,7 @@ export class UnknownBlockSync {
 
       for (const peerIdStr of block.peerIdStrs) {
         // TODO: Refactor peerRpcScores to work with peerIdStr only
-        const peer = peerIdFromString(peerIdStr);
-        this.network.reportPeer(peer, PeerAction.LowToleranceError, "BadBlockByRoot").catch((e) => {
-          this.logger.error("Error reporting peer", {}, e);
-        });
+        this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
       }
     }
 

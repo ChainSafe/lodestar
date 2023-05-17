@@ -1,8 +1,11 @@
-import {EventEmitter} from "events";
 import {TimeoutError} from "@lodestar/utils";
 
+type EventEmitterSimple = {
+  on(eventName: string | symbol, listener: (...args: any[]) => void): void;
+};
+
 export function waitForEvent<T>(
-  emitter: EventEmitter,
+  emitter: EventEmitterSimple,
   event: string,
   timeout = 3000,
   condition: (e: T) => boolean = () => true

@@ -5,11 +5,11 @@ import {Epoch, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {getActiveForks} from "../forks.js";
-import {Eth2Gossipsub, GossipType} from "../gossip/index.js";
+import {GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {RequestedSubnet, SubnetMap} from "../peers/utils/index.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
-import {CommitteeSubscription, SubnetsService, SubnetsServiceOpts} from "./interface.js";
+import {CommitteeSubscription, GossipSubscriber, SubnetsService, SubnetsServiceOpts} from "./interface.js";
 
 const gossipType = GossipType.sync_committee;
 
@@ -30,7 +30,7 @@ export class SyncnetsService implements SubnetsService {
   constructor(
     private readonly config: BeaconConfig,
     private readonly clock: IClock,
-    private readonly gossip: Eth2Gossipsub,
+    private readonly gossip: GossipSubscriber,
     private readonly metadata: MetadataController,
     private readonly logger: Logger,
     private readonly metrics: NetworkCoreMetrics | null,

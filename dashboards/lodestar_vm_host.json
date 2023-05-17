@@ -1199,7 +1199,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "expr": "(time() - lodestar_genesis_time) / 12 - lodestar_clock_slot",
+              "expr": "(time() - lodestar_genesis_time) / 12 - beacon_clock_slot",
               "hide": false,
               "interval": "",
               "legendFormat": "clock drift",
@@ -1414,7 +1414,7 @@
                 "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
-              "expr": "lodestar_clock_slot - beacon_head_slot",
+              "expr": "beacon_clock_slot - beacon_head_slot",
               "hide": false,
               "interval": "",
               "legendFormat": "clock drift",

@@ -44,6 +44,10 @@ export class SubnetMap {
     return toSlot !== undefined && toSlot >= slot; // ACTIVE: >=
   }
 
+  activeUpToSlot(subnet: number): Slot | null {
+    return this.subnets.get(subnet) ?? null;
+  }
+
   /** Return subnetIds with a `toSlot` equal greater than `currentSlot` */
   getActive(currentSlot: Slot): number[] {
     const subnetIds: number[] = [];

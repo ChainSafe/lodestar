@@ -18,6 +18,7 @@ export interface NetworkOptions
   mdns: boolean;
   connectToDiscv5Bootnodes?: boolean;
   version?: string;
+  useWorker?: boolean;
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
@@ -34,4 +35,6 @@ export const defaultNetworkOptions: NetworkOptions = {
   // see https://github.com/ChainSafe/lodestar/issues/5420
   gossipsubDHigh: 9,
   ...defaultGossipHandlerOpts,
+  // TEMP default to try
+  useWorker: true,
 };

@@ -8,8 +8,9 @@ import {IBeaconChain} from "../../../src/chain/index.js";
 import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
 import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
 import {testLogger} from "../../utils/logger.js";
-import {getValidPeerId} from "../../utils/peer.js";
+import {getRandPeerIdStr} from "../../utils/peer.js";
 import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
+import {ClockStopped} from "../../utils/mocks/clock.js";
 
 describe("sync / UnknownBlockSync", () => {
   const logger = testLogger();
@@ -21,8 +22,7 @@ describe("sync / UnknownBlockSync", () => {
 
   for (const {id, finalizedSlot, reportPeer} of testCases) {
     it(id, async () => {
-      const peer = getValidPeerId();
-      const peerIdStr = peer.toString();
+      const peer = await getRandPeerIdStr();
       const blockA = ssz.phase0.SignedBeaconBlock.defaultValue();
       const blockB = ssz.phase0.SignedBeaconBlock.defaultValue();
       const blockC = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -51,11 +51,10 @@ describe("sync / UnknownBlockSync", () => {
       const network: Partial<INetwork> = {
         events: new NetworkEventBus(),
         getConnectedPeers: () => [peer],
-        beaconBlocksMaybeBlobsByRoot: async (_peerId, roots) =>
+        sendBeaconBlocksByRoot: async (_peerId, roots) =>
           Array.from(roots)
             .map((root) => blocksByRoot.get(toHexString(root)))
-            .filter(notNullish)
-            .map((block) => getBlockInput.preDeneb(config, block, BlockSource.byRoot)),
+            .filter(notNullish),
 
         reportPeer: async (peerId, action, actionName) => reportPeerResolveFn([peerId, action, actionName]),
       };
@@ -67,6 +66,7 @@ describe("sync / UnknownBlockSync", () => {
       };
 
       const chain: Partial<IBeaconChain> = {
+        clock: new ClockStopped(0),
         forkChoice: forkChoice as IForkChoice,
         processBlock: async ({block}) => {
           if (!forkChoice.hasBlock(block.message.parentRoot)) throw Error("Unknown parent");
@@ -77,15 +77,14 @@ describe("sync / UnknownBlockSync", () => {
       };
 
       new UnknownBlockSync(config, network as INetwork, chain as IBeaconChain, logger, null);
-      network.events?.emit(
-        NetworkEvent.unknownBlockParent,
-        getBlockInput.preDeneb(config, blockC, BlockSource.gossip),
-        peerIdStr
-      );
+      network.events?.emit(NetworkEvent.unknownBlockParent, {
+        blockInput: getBlockInput.preDeneb(config, blockC, BlockSource.gossip),
+        peer,
+      });
 
       if (reportPeer) {
         const err = await reportPeerPromise;
-        expect(err[0].toString()).equal(peerIdStr);
+        expect(err[0]).equal(peer);
         expect([err[1], err[2]]).to.be.deep.equal([PeerAction.LowToleranceError, "BadBlockByRoot"]);
       } else {
         // happy path

@@ -8,7 +8,7 @@ import {SyncChain, SyncChainFns, ChainTarget} from "../../../../src/sync/range/c
 import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {testLogger} from "../../../utils/logger.js";
-import {getValidPeerId} from "../../../utils/peer.js";
+import {validPeerIdStr} from "../../../utils/peer.js";
 import {BlockInput, BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
 
 describe("sync / range / chain", () => {
@@ -49,7 +49,7 @@ describe("sync / range / chain", () => {
   ];
 
   // Helper variables to trigger errors
-  const peer = getValidPeerId();
+  const peer = validPeerIdStr;
   const logger = testLogger();
   const ACCEPT_BLOCK = Buffer.alloc(96, 0);
   const REJECT_BLOCK = Buffer.alloc(96, 1);

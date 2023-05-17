@@ -1,5 +1,4 @@
 import {EventEmitter} from "events";
-import {PeerId} from "@libp2p/interface-peer-id";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconStateAllForks, blockToHeader} from "@lodestar/state-transition";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
@@ -11,9 +10,9 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IBeaconChain} from "../../chain/index.js";
 import {GENESIS_SLOT, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
-import {INetwork, NetworkEvent, PeerAction} from "../../network/index.js";
+import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
-import {PeerSet} from "../../util/peerMap.js";
+import {PeerIdStr} from "../../util/peerId.js";
 import {shuffleOne} from "../../util/shuffle.js";
 import {Metrics} from "../../metrics/metrics";
 import {byteArrayEquals} from "../../util/bytes.js";
@@ -151,7 +150,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private backfillRangeWrittenSlot: Slot | null;
 
   private processor = new ItTrigger();
-  private peers = new PeerSet();
+  private peers = new Set<PeerIdStr>();
   private status: BackfillSyncStatus = BackfillSyncStatus.pending;
   private signal: AbortSignal;
 
@@ -430,7 +429,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       }
 
       // Try the network if nothing found in DB
-      const peer = shuffleOne(this.peers.values());
+      const peer = shuffleOne(Array.from(this.peers.values()));
       if (!peer) {
         this.status = BackfillSyncStatus.pending;
         this.logger.debug("No peers yet");
@@ -474,7 +473,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
             // falls through
             case BackfillSyncErrorCode.INVALID_SIGNATURE:
-              await this.network.reportPeer(peer, PeerAction.LowToleranceError, "BadSyncBlocks");
+              this.network.reportPeer(peer, PeerAction.LowToleranceError, "BadSyncBlocks");
           }
         }
       } finally {
@@ -485,17 +484,17 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     throw new ErrorAborted("BackfillSync");
   }
 
-  private addPeer = (peerId: PeerId, peerStatus: phase0.Status): void => {
+  private addPeer = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
     const requiredSlot = this.syncAnchor.lastBackSyncedBlock?.slot ?? this.backfillStartFromSlot;
-    this.logger.debug("Add peer", {peerhead: peerStatus.headSlot, requiredSlot});
-    if (peerStatus.headSlot >= requiredSlot) {
-      this.peers.add(peerId);
+    this.logger.debug("Add peer", {peerhead: data.status.headSlot, requiredSlot});
+    if (data.status.headSlot >= requiredSlot) {
+      this.peers.add(data.peer);
       this.processor.trigger();
     }
   };
 
-  private removePeer = (peerId: PeerId): void => {
-    this.peers.delete(peerId);
+  private removePeer = (data: NetworkEventData[NetworkEvent.peerDisconnected]): void => {
+    this.peers.delete(data.peer);
   };
 
   /**
@@ -742,8 +741,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     return true;
   }
 
-  private async syncBlockByRoot(peer: PeerId, anchorBlockRoot: Root): Promise<void> {
-    const [anchorBlock] = await this.network.reqResp.beaconBlocksByRoot(peer, [anchorBlockRoot]);
+  private async syncBlockByRoot(peer: PeerIdStr, anchorBlockRoot: Root): Promise<void> {
+    const [anchorBlock] = await this.network.sendBeaconBlocksByRoot(peer, [anchorBlockRoot]);
     if (anchorBlock == null) throw new Error("InvalidBlockSyncedFromPeer");
 
     // GENESIS_SLOT doesn't has valid signature
@@ -773,7 +772,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     return;
   }
 
-  private async syncRange(peer: PeerId): Promise<void> {
+  private async syncRange(peer: PeerIdStr): Promise<void> {
     if (!this.syncAnchor.anchorBlock) {
       throw Error("Invalid anchorBlock null for syncRange");
     }
@@ -784,7 +783,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       this.prevFinalizedCheckpointBlock.slot,
       GENESIS_SLOT
     );
-    const blocks = await this.network.reqResp.beaconBlocksByRange(peer, {
+    const blocks = await this.network.sendBeaconBlocksByRange(peer, {
       startSlot: fromSlot,
       count: toSlot - fromSlot,
       step: 1,

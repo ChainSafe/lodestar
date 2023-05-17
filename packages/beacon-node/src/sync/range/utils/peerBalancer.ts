@@ -1,5 +1,4 @@
-import {PeerId} from "@libp2p/interface-peer-id";
-import {PeerMap} from "../../../util/peerMap.js";
+import {PeerIdStr} from "../../../util/peerId.js";
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sortBy.js";
 import {Batch, BatchStatus} from "../batch.js";
@@ -9,10 +8,10 @@ import {Batch, BatchStatus} from "../batch.js";
  * Shuffles peers only once on instantiation
  */
 export class ChainPeersBalancer {
-  private peers: PeerId[];
-  private activeRequestsByPeer = new PeerMap<number>();
+  private peers: PeerIdStr[];
+  private activeRequestsByPeer = new Map<PeerIdStr, number>();
 
-  constructor(peers: PeerId[], batches: Batch[]) {
+  constructor(peers: PeerIdStr[], batches: Batch[]) {
     this.peers = shuffle(peers);
 
     // Compute activeRequestsByPeer from all batches internal states
@@ -27,8 +26,8 @@ export class ChainPeersBalancer {
    * Return the most suitable peer to retry
    * Sort peers by (1) no failed request (2) less active requests, then pick first
    */
-  bestPeerToRetryBatch(batch: Batch): PeerId | undefined {
-    const failedPeers = PeerMap.from(batch.getFailedPeers());
+  bestPeerToRetryBatch(batch: Batch): PeerIdStr | undefined {
+    const failedPeers = new Set(batch.getFailedPeers());
     const sortedBestPeers = sortBy(
       this.peers,
       (peer) => (failedPeers.has(peer) ? 1 : 0), // Sort by no failed first = 0
@@ -40,7 +39,7 @@ export class ChainPeersBalancer {
   /**
    * Return peers with 0 or no active requests
    */
-  idlePeers(): PeerId[] {
+  idlePeers(): PeerIdStr[] {
     return this.peers.filter((peer) => {
       const activeRequests = this.activeRequestsByPeer.get(peer);
       return activeRequests === undefined || activeRequests === 0;

@@ -1,8 +1,7 @@
-import {PeerId} from "@libp2p/interface-peer-id";
 import {Logger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Slot, phase0} from "@lodestar/types";
-import {INetwork, NetworkEvent} from "../network/index.js";
+import {Slot} from "@lodestar/types";
+import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {Metrics} from "../metrics/index.js";
 import {IBeaconChain} from "../chain/index.js";
@@ -167,15 +166,15 @@ export class BeaconSync implements IBeaconSync {
    * If the peer is within the `SLOT_IMPORT_TOLERANCE`, then it's head is sufficiently close to
    * ours that we consider it fully sync'd with respect to our current chain.
    */
-  private addPeer = (peerId: PeerId, peerStatus: phase0.Status): void => {
+  private addPeer = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
     const localStatus = this.chain.getStatus();
-    const syncType = getPeerSyncType(localStatus, peerStatus, this.chain.forkChoice, this.slotImportTolerance);
+    const syncType = getPeerSyncType(localStatus, data.status, this.chain.forkChoice, this.slotImportTolerance);
 
     // For metrics only
-    this.peerSyncType.set(peerId.toString(), syncType);
+    this.peerSyncType.set(data.peer.toString(), syncType);
 
     if (syncType === PeerSyncType.Advanced) {
-      this.rangeSync.addPeer(peerId, localStatus, peerStatus);
+      this.rangeSync.addPeer(data.peer, localStatus, data.status);
     }
 
     this.updateSyncState();
@@ -184,10 +183,10 @@ export class BeaconSync implements IBeaconSync {
   /**
    * Must be called by libp2p when a peer is removed from the peer manager
    */
-  private removePeer = (peerId: PeerId): void => {
-    this.rangeSync.removePeer(peerId);
+  private removePeer = (data: NetworkEventData[NetworkEvent.peerDisconnected]): void => {
+    this.rangeSync.removePeer(data.peer);
 
-    this.peerSyncType.delete(peerId.toString());
+    this.peerSyncType.delete(data.peer.toString());
   };
 
   /**

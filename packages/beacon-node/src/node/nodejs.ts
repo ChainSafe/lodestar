@@ -10,7 +10,7 @@ import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IBeaconDb} from "../db/index.js";
-import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
+import {Network, getReqRespHandlers} from "../network/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
@@ -30,7 +30,7 @@ export type BeaconNodeModules = {
   config: BeaconConfig;
   db: IBeaconDb;
   metrics: Metrics | null;
-  network: INetwork;
+  network: Network;
   chain: IBeaconChain;
   api: {[K in keyof Api]: ServerApi<Api[K]>};
   sync: IBeaconSync;
@@ -85,7 +85,7 @@ export class BeaconNode {
   metrics: Metrics | null;
   metricsServer?: HttpMetricsServer;
   monitoring: MonitoringService | null;
-  network: INetwork;
+  network: Network;
   chain: IBeaconChain;
   api: {[K in keyof Api]: ServerApi<Api[K]>};
   restApi?: BeaconRestApiServer;
@@ -221,9 +221,10 @@ export class BeaconNode {
       logger: logger.child({module: LoggerModule.network}),
       metrics,
       chain,
+      db,
       peerId,
       peerStoreDir,
-      reqRespHandlers: getReqRespHandlers({db, chain}),
+      getReqRespHandler: getReqRespHandlers({db, chain}),
       signal,
     });
 
@@ -266,9 +267,7 @@ export class BeaconNode {
     const metricsServer = opts.metrics.enabled
       ? new HttpMetricsServer(opts.metrics, {
           register: (metrics as Metrics).register,
-          getOtherMetrics: async (): Promise<string> => {
-            return network.metrics();
-          },
+          getOtherMetrics: () => network.scrapeMetrics(),
           logger: logger.child({module: LoggerModule.metrics}),
         })
       : undefined;

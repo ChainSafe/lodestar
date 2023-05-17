@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
-import worker from "worker_threads";
+import worker from "node:worker_threads";
 import {expose} from "@chainsafe/threads/worker";
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";

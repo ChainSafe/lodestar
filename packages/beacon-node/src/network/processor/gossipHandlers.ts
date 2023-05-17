@@ -1,4 +1,3 @@
-import {peerIdFromString} from "@libp2p/peer-id";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger, prettyBytes} from "@lodestar/utils";
@@ -32,13 +31,14 @@ import {
   AggregateAndProofValidationResult,
 } from "../../chain/validation/index.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
-import {PeerAction, PeerRpcScoreStore} from "../peers/index.js";
+import {PeerAction} from "../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipBlobsSidecar} from "../../chain/validation/blobsSidecar.js";
 import {BlockInput, BlockSource, getBlockInput} from "../../chain/blocks/types.js";
-import {AttnetsService} from "../subnets/attnetsService.js";
 import {sszDeserialize} from "../gossip/topic.js";
+import {INetworkCore} from "../core/index.js";
+import {AggregatorTracker} from "./aggregatorTracker.js";
 
 /**
  * Gossip handler options as part of network options
@@ -56,13 +56,13 @@ export const defaultGossipHandlerOpts = {
 };
 
 export type ValidatorFnsModules = {
-  attnetsService: AttnetsService;
   chain: IBeaconChain;
   config: BeaconConfig;
   logger: Logger;
   metrics: Metrics | null;
   events: NetworkEventBus;
-  peerRpcScores: PeerRpcScoreStore;
+  aggregatorTracker: AggregatorTracker;
+  core: INetworkCore;
 };
 
 const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
@@ -82,7 +82,7 @@ const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
  * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
-  const {attnetsService, chain, config, metrics, events, peerRpcScores, logger} = modules;
+  const {chain, config, metrics, events, logger, core, aggregatorTracker} = modules;
 
   async function validateBeaconBlock(
     blockInput: BlockInput,
@@ -112,7 +112,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       if (e instanceof BlockGossipError) {
         if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
           logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
-          events.emit(NetworkEvent.unknownBlockParent, blockInput, peerIdStr);
+          events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
         }
       }
 
@@ -165,7 +165,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
             case BlockErrorCode.EXECUTION_ENGINE_ERROR:
               break;
             default:
-              peerRpcScores.applyAction(peerIdFromString(peerIdStr), PeerAction.LowToleranceError, "BadGossipBlock");
+              // TODO: Should it use PeerId or string?
+              core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipBlock");
           }
         }
         logger.error("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
@@ -239,7 +240,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     },
 
     [GossipType.beacon_attestation]: async ({serializedData, msgSlot}, {subnet}, _peer, seenTimestampSec) => {
-      if (msgSlot === undefined) {
+      if (msgSlot == undefined) {
         throw Error("msgSlot is undefined for beacon_attestation topic");
       }
       // do not deserialize gossipSerializedData here, it's done in validateGossipAttestation only if needed
@@ -264,7 +265,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       try {
         // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
         // but don't add to attestation pool, to save CPU and RAM
-        if (attnetsService.shouldProcess(subnet, indexedAttestation.data.slot)) {
+        if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
           const insertOutcome = await chain.attestationPool.add(attestation, attDataRootHex);
           metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
         }
