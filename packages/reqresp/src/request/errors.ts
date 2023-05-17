@@ -1,4 +1,4 @@
-import {ClonableLodestarError, LodestarErrorObject, lodestarErrorObjectToMetaData} from "@lodestar/utils";
+import {LodestarError, LodestarErrorObject} from "@lodestar/utils";
 import {ResponseError} from "../response/index.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 
@@ -51,9 +51,9 @@ type RequestErrorType =
 
 export const REQUEST_ERROR_CLASS_NAME = "RequestError";
 
-export class RequestError extends ClonableLodestarError<RequestErrorType> {
-  constructor(type: RequestErrorType) {
-    super(type, renderErrorMessage(type));
+export class RequestError extends LodestarError<RequestErrorType> {
+  constructor(type: RequestErrorType, message?: string, stack?: string) {
+    super(type, message ?? renderErrorMessage(type), stack);
   }
 
   static fromObject(obj: LodestarErrorObject): RequestError {
@@ -61,7 +61,7 @@ export class RequestError extends ClonableLodestarError<RequestErrorType> {
       throw new Error(`Expected className to be RequestError, but got ${obj.className}`);
     }
 
-    return new RequestError(lodestarErrorObjectToMetaData(obj) as RequestErrorType);
+    return new RequestError(obj.type as RequestErrorType, obj.message, obj.stack);
   }
 }
 

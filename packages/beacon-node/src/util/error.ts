@@ -1,6 +1,5 @@
 import {REQUEST_ERROR_CLASS_NAME, RESPONSE_ERROR_CLASS_NAME, RequestError, ResponseError} from "@lodestar/reqresp";
 import {FromObjectFn, LodestarError, LodestarErrorObject} from "@lodestar/utils";
-import {ClonableLodestarError} from "@lodestar/utils";
 
 /**
  * Error that can be passed across thread boundaries
@@ -9,10 +8,10 @@ export type ThreadBoundaryError = {error: null; object: LodestarErrorObject} | {
 
 /**
  * Structured clone does not work with Error objects.
- * For ClonableLodestarError, we want to specify the LodestarErrorObject with className so that we can deserialize later.
+ * For LodestarError, we want to specify the LodestarErrorObject with className so that we can deserialize later.
  */
 export function toThreadBoundaryError(error: Error): ThreadBoundaryError {
-  if (error instanceof ClonableLodestarError) {
+  if (error instanceof LodestarError) {
     return {error: null, object: error.toObject()};
   }
 
@@ -30,7 +29,7 @@ const fromObjectFnRegistry = new Map<string, FromObjectFn>([
 ]);
 
 /**
- * If error is ClonableLodestarError, deserialize it from the LodestarErrorObject.
+ * If error is LodestarError, deserialize it from the LodestarErrorObject.
  * Else use the generic Error object.
  */
 export function fromThreadBoundaryError(error: ThreadBoundaryError): Error {
@@ -44,11 +43,14 @@ export function fromThreadBoundaryError(error: ThreadBoundaryError): Error {
   if (fromObjectFn) {
     clonedError = fromObjectFn(error.object);
   } else {
-    // should not happen as a ClonableLodestarError class should implement "fromObject" method and register it
+    // should not happen as a LodestarError class should implement "fromObject" method and register it
     // try our best to clone the error with the same stack trace
-    clonedError = new LodestarError({code: "UNKNOWN_ERROR_CLASS"}, `Unknown error class ${error.object.className}`);
+    clonedError = new LodestarError(
+      {code: "UNKNOWN_ERROR_CLASS"},
+      `Unknown error class ${error.object.className}`,
+      error.object.stack
+    );
   }
 
-  clonedError.stack = error.object.stack;
   return clonedError;
 }

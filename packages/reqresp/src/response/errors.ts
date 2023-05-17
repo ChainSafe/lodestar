@@ -1,4 +1,4 @@
-import {ClonableLodestarError, LodestarErrorMetaData, LodestarErrorObject} from "@lodestar/utils";
+import {LodestarError, LodestarErrorMetaData, LodestarErrorObject} from "@lodestar/utils";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 
 type RpcResponseStatusNotSuccess = Exclude<RespStatus, RespStatus.SUCCESS>;
@@ -19,12 +19,12 @@ export const RESPONSE_ERROR_CLASS_NAME = "ResponseError";
  * Used internally only to signal a response status error. Since the error should never bubble up to the user,
  * the error code and error message does not matter much.
  */
-export class ResponseError extends ClonableLodestarError<RequestErrorType> {
+export class ResponseError extends LodestarError<RequestErrorType> {
   status: RpcResponseStatusNotSuccess;
   errorMessage: string;
-  constructor(status: RpcResponseStatusNotSuccess, errorMessage: string) {
+  constructor(status: RpcResponseStatusNotSuccess, errorMessage: string, stack?: string) {
     const type = {code: ResponseErrorCode.RESPONSE_STATUS_ERROR, status, errorMessage};
-    super(type, `RESPONSE_ERROR_${RespStatus[status]}: ${errorMessage}`);
+    super(type, `RESPONSE_ERROR_${RespStatus[status]}: ${errorMessage}`, stack);
     this.status = status;
     this.errorMessage = errorMessage;
   }
@@ -41,6 +41,10 @@ export class ResponseError extends ClonableLodestarError<RequestErrorType> {
       throw new Error(`Expected className to be ResponseError, but got ${obj.className}`);
     }
 
-    return new ResponseError(obj.status as RpcResponseStatusNotSuccess, obj.errorMessage as string);
+    return new ResponseError(
+      obj.type.status as RpcResponseStatusNotSuccess,
+      obj.type.errorMessage as string,
+      obj.stack
+    );
   }
 }
