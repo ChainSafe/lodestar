@@ -277,10 +277,10 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
     attestation2.signature = sk2.sign(attestationDataRoot).toBytes();
   });
 
-  it("should aggregate 2 attestations", () => {
+  it("should aggregate 2 attestations", async () => {
     const attWithIndex1 = {attestation: attestation1, trueBitsCount: 1};
     const attWithIndex2 = {attestation: attestation2, trueBitsCount: 1};
-    aggregateInto(attWithIndex1, attWithIndex2);
+    await aggregateInto(attWithIndex1, attWithIndex2);
 
     expect(renderBitArray(attWithIndex1.attestation.aggregationBits)).to.be.deep.equal(
       renderBitArray(mergedBitArray),
