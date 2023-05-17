@@ -2,7 +2,7 @@ import {ApiError} from "@lodestar/api";
 import {TIMELY_HEAD_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@lodestar/params";
 import {isActiveValidator} from "@lodestar/state-transition";
 import {altair} from "@lodestar/types";
-import {SimulationAssertion} from "../../interfaces.js";
+import {AssertionMatch, SimulationAssertion} from "../../interfaces.js";
 
 const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
 const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
@@ -16,19 +16,23 @@ export const attestationParticipationAssertion: SimulationAssertion<
 > = {
   id: "attestationParticipation",
   match: ({epoch, slot, clock, forkConfig}) => {
-    if (epoch < forkConfig.ALTAIR_FORK_EPOCH) return false;
-    // Only assert after first slot of an epoch
-    if (!clock.isFirstSlotOfEpoch(slot)) return false;
+    let capture = AssertionMatch.None;
+    let assert = AssertionMatch.None;
 
-    return true;
-  },
-
-  async capture({node, clock, slot, epoch, forkConfig}) {
     // Capture data only when epoch and one extra slot passed
-    if (epoch < forkConfig.ALTAIR_FORK_EPOCH || !clock.isFirstSlotOfEpoch(slot)) {
-      return null;
+    if (epoch >= forkConfig.ALTAIR_FORK_EPOCH && clock.isFirstSlotOfEpoch(slot)) {
+      capture = AssertionMatch.Capture;
     }
 
+    // Only assert after first slot of an epoch
+    if (epoch >= forkConfig.ALTAIR_FORK_EPOCH && !clock.isFirstSlotOfEpoch(slot)) {
+      assert = AssertionMatch.Assert;
+    }
+
+    return capture | assert;
+  },
+
+  async capture({node, epoch}) {
     const res = await node.cl.api.debug.getStateV2("head");
     ApiError.assert(res);
     const state = res.response.data as altair.BeaconState;

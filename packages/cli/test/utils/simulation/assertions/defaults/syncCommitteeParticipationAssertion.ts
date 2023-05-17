@@ -6,7 +6,7 @@ import {everyEpochMatcher} from "../matchers.js";
 
 export const expectedMinSyncParticipationRate = 0.9;
 
-export const syncCommitteeParticipation: SimulationAssertion<"syncCommitteeParticipation", number> = {
+export const syncCommitteeParticipationAssertion: SimulationAssertion<"syncCommitteeParticipation", number> = {
   id: "syncCommitteeParticipation",
   match: everyEpochMatcher,
   async capture({fork, block}) {

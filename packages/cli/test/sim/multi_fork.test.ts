@@ -3,7 +3,7 @@ import path from "node:path";
 import {sleep, toHexString} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
-import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
+import {AssertionMatch, CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
 import {
@@ -66,7 +66,7 @@ const env = await SimulationEnvironment.initWithDefaults(
 env.tracker.register({
   ...nodeAssertion,
   match: ({slot}) => {
-    return slot === 1 ? {match: true, remove: true} : false;
+    return slot === 1 ? AssertionMatch.Assert | AssertionMatch.Capture | AssertionMatch.Remove : AssertionMatch.None;
   },
 });
 
@@ -74,7 +74,9 @@ env.tracker.register({
   ...mergeAssertion,
   match: ({slot}) => {
     // Check at the end of bellatrix fork, merge should happen by then
-    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) - 1 ? {match: true, remove: true} : false;
+    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) - 1
+      ? AssertionMatch.Assert | AssertionMatch.Remove
+      : AssertionMatch.None;
   },
 });
 

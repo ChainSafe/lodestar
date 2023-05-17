@@ -5,6 +5,7 @@ import {Epoch, Slot} from "@lodestar/types";
 import {ApiError} from "@lodestar/api";
 import {EpochClock} from "./EpochClock.js";
 import {
+  AssertionMatch,
   AtLeast,
   NodeId,
   NodePair,
@@ -49,7 +50,6 @@ export class SimulationTracker {
 
   private lastSeenSlot: Map<NodeId, Slot> = new Map();
   private slotCapture: Map<Slot, NodeId[]> = new Map();
-  private removeAssertionQueue: string[] = [];
   private signal: AbortSignal;
   private nodes: NodePair[];
   private clock: EpochClock;
@@ -225,42 +225,12 @@ export class SimulationTracker {
     }
 
     try {
-      const block = await node.cl.api.beacon.getBlockV2(slot);
-      ApiError.assert(block);
-
-      for (const assertion of this.assertions) {
-        if (assertion.capture) {
-          const value = await assertion.capture({
-            fork: this.forkConfig.getForkName(slot),
-            slot,
-            block: block.response.data,
-            clock: this.clock,
-            node,
-            forkConfig: this.forkConfig,
-            epoch,
-            store: this.stores[assertion.id][node.cl.id],
-            // TODO: Make the store safe, to filter just the dependant stores not all
-            dependantStores: this.stores,
-          });
-          if (value !== undefined || value !== null) {
-            this.stores[assertion.id][node.cl.id][slot] = value;
-          }
-        }
-      }
+      await this.captureAssertionsData({slot, epoch}, node);
+      await this.applyAssertions({slot, epoch});
     } catch {
       // Incase of reorg the block may not be available
       return;
     }
-
-    const capturedSlot = this.slotCapture.get(slot);
-    if (capturedSlot) {
-      capturedSlot.push(node.cl.id);
-      this.slotCapture.set(slot, capturedSlot);
-    } else {
-      this.slotCapture.set(slot, [node.cl.id]);
-    }
-
-    await this.applyAssertions({slot, epoch});
 
     this.emit(node, SimulationTrackerEvent.Slot, {slot});
   }
@@ -279,16 +249,68 @@ export class SimulationTracker {
     // TODO: Add checkpoint tracking
   }
 
+  private async captureAssertionsData({slot, epoch}: {slot: Slot; epoch: Epoch}, node: NodePair): Promise<void> {
+    const block = await node.cl.api.beacon.getBlockV2(slot);
+    ApiError.assert(block);
+
+    for (const assertion of this.assertions) {
+      const match = assertion.match({
+        slot,
+        epoch,
+        clock: this.clock,
+        forkConfig: this.forkConfig,
+        fork: this.forkConfig.getForkName(slot),
+      });
+
+      if (match & AssertionMatch.None || !(match & AssertionMatch.Capture)) continue;
+
+      if (!assertion.capture) {
+        throw new Error(`Assertion "${assertion.id}" has no capture function`);
+      }
+
+      const value = await assertion.capture({
+        fork: this.forkConfig.getForkName(slot),
+        slot,
+        block: block.response.data,
+        clock: this.clock,
+        node,
+        forkConfig: this.forkConfig,
+        epoch,
+        store: this.stores[assertion.id][node.cl.id],
+        // TODO: Make the store safe, to filter just the dependant stores not all
+        dependantStores: this.stores,
+      });
+
+      if (value !== undefined || value !== null) {
+        this.stores[assertion.id][node.cl.id][slot] = value;
+      }
+    }
+
+    const capturedSlot = this.slotCapture.get(slot) ?? [];
+    capturedSlot.push(node.cl.id);
+    this.slotCapture.set(slot, capturedSlot);
+  }
+
   private async applyAssertions({slot, epoch}: {slot: Slot; epoch: Epoch}): Promise<void> {
     const capturedForNodes = this.slotCapture.get(slot);
     if (!capturedForNodes || capturedForNodes.length < this.nodes.length) {
       // We need to wait for all nodes to capture data for that slot
       return;
     }
+    const removeAssertions: string[] = [];
 
     for (const assertion of this.assertions) {
-      const match = assertion.match({slot, epoch, clock: this.clock, forkConfig: this.forkConfig});
-      if ((typeof match === "boolean" && match) || (typeof match === "object" && match.match)) {
+      const match = assertion.match({
+        slot,
+        epoch,
+        clock: this.clock,
+        forkConfig: this.forkConfig,
+        fork: this.forkConfig.getForkName(slot),
+      });
+
+      if (match & AssertionMatch.None) continue;
+
+      if (match & AssertionMatch.Assert) {
         try {
           const errors = await assertion.assert({
             slot,
@@ -310,21 +332,17 @@ export class SimulationTracker {
         }
       }
 
-      if (typeof match === "object" && match.remove) {
-        this.removeAssertionQueue.push(assertion.id);
+      if (match & AssertionMatch.Remove) {
+        removeAssertions.push(assertion.id);
       }
     }
 
     this.reporter.progress(slot);
-    this.processRemoveAssertionQueue();
-  }
 
-  private processRemoveAssertionQueue(): void {
-    for (const id of this.removeAssertionQueue) {
+    for (const id of removeAssertions) {
       delete this.assertionIdsMap[id];
       this.assertions = this.assertions.filter((a) => a.id !== id);
     }
-    this.removeAssertionQueue = [];
   }
 
   private initEventStreamForNode(

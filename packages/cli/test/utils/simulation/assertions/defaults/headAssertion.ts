@@ -11,6 +11,7 @@ export interface HeadSummary {
 
 export const headAssertion: SimulationAssertion<"head", HeadSummary> = {
   id: "head",
+  match: everySlotMatcher,
   async capture({node}) {
     const head = await node.cl.api.beacon.getBlockHeader("head");
     ApiError.assert(head);
@@ -20,8 +21,6 @@ export const headAssertion: SimulationAssertion<"head", HeadSummary> = {
       slot: head.response.data.header.message.slot,
     };
   },
-
-  match: everySlotMatcher,
   async assert({nodes, store, slot}) {
     const errors: string[] = [];
 

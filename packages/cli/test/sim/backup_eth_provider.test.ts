@@ -3,7 +3,7 @@ import path from "node:path";
 import {activePreset} from "@lodestar/params";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
-import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
+import {AssertionMatch, CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {
   getEstimatedTimeInSecForRun,
@@ -55,7 +55,7 @@ const env = await SimulationEnvironment.initWithDefaults(
 env.tracker.register({
   ...nodeAssertion,
   match: ({slot}) => {
-    return slot === 1 ? {match: true, remove: true} : false;
+    return slot === 1 ? AssertionMatch.Assert | AssertionMatch.Capture | AssertionMatch.Remove : AssertionMatch.None;
   },
 });
 

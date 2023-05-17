@@ -2,13 +2,15 @@ import {ApiError} from "@lodestar/api";
 import {ForkName} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
-import {SimulationAssertion} from "../interfaces.js";
+import {AssertionMatch, SimulationAssertion} from "../interfaces.js";
 
 export function createForkAssertion(fork: ForkName, epoch: Epoch): SimulationAssertion<string, string> {
   return {
     id: `fork-${fork}`,
     match: ({slot, clock}) => {
-      return slot === clock.getFirstSlotOfEpoch(epoch) ? {match: true, remove: true} : false;
+      return slot === clock.getFirstSlotOfEpoch(epoch)
+        ? AssertionMatch.Capture | AssertionMatch.Assert | AssertionMatch.Remove
+        : AssertionMatch.None;
     },
     assert: async ({nodes, slot, forkConfig}) => {
       const errors: string[] = [];

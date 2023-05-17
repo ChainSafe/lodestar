@@ -251,11 +251,27 @@ export type SimulationAssertionInput<T, D extends Record<string, unknown> = Reco
 export type SimulationMatcherInput = {
   slot: Slot;
   epoch: Epoch;
+  fork: ForkName;
   clock: EpochClock;
   forkConfig: ChainForkConfig;
 };
 
-export type AssertionMatcher = (input: SimulationMatcherInput) => boolean | {match: boolean; remove: boolean};
+/**
+ * Bitwise flag to indicate what to do with the assertion
+ * 1. Capture the assertion
+ * 2. Assert the assertion
+ * 3. Remove the assertion
+ *
+ * @example
+ * Capture and assert: `AssertionMatch.Capture | AssertionMatch.Assert`
+ */
+export enum AssertionMatch {
+  None = 0,
+  Capture = 1 << 0,
+  Assert = 1 << 1,
+  Remove = 1 << 2,
+}
+export type AssertionMatcher = (input: SimulationMatcherInput) => AssertionMatch;
 export type ExtractAssertionType<T, I> = T extends SimulationAssertion<infer A, infer B>
   ? A extends I
     ? B

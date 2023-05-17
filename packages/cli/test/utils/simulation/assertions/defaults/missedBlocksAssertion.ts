@@ -1,16 +1,15 @@
 import {isTruthy} from "../../../../utils.js";
-import {SimulationAssertion} from "../../interfaces.js";
-import {everyEpochMatcher} from "../matchers.js";
+import {AssertionMatch, SimulationAssertion} from "../../interfaces.js";
 import {headAssertion} from "./headAssertion.js";
 
 export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[], [typeof headAssertion]> = {
   id: "missedBlocks",
-  match: everyEpochMatcher,
+  match: ({clock, slot}) => {
+    return clock.isLastSlotOfEpoch(slot) ? AssertionMatch.Capture | AssertionMatch.Assert : AssertionMatch.None;
+  },
   dependencies: [headAssertion],
 
   async capture({node, slot, epoch, clock, dependantStores}) {
-    if (!clock.isLastSlotOfEpoch(slot)) return null;
-
     // We need to start from the first slot as we don't store data for genesis
     const startSlot = epoch === 0 ? 1 : clock.getFirstSlotOfEpoch(epoch);
     const endSlot = slot;
