@@ -13,16 +13,16 @@ export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[]
     // We need to start from the first slot as we don't store data for genesis
     const startSlot = epoch === 0 ? 1 : clock.getFirstSlotOfEpoch(epoch);
     const endSlot = slot;
-    const missedSlots: number[] = [];
+    const missedBlocks: number[] = [];
 
     for (let slot = startSlot; slot < endSlot; slot++) {
       // If some value of head is present for that slot then it was not missed
       if (!isTruthy(dependantStores[headAssertion.id][node.cl.id][slot])) {
-        missedSlots.push(slot);
+        missedBlocks.push(slot);
       }
     }
-
-    return missedSlots;
+    console.log({node: node.cl.id, missedBlocks, heads: dependantStores[headAssertion.id][node.cl.id]});
+    return missedBlocks;
   },
 
   async assert({nodes, slot, store}) {
@@ -32,7 +32,6 @@ export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[]
 
     for (let i = 1; i < nodes.length; i++) {
       const missedBlocks = store[nodes[i].cl.id][slot];
-      console.log({missedBlocksOnFirstNode, missedBlocks});
 
       if (!arrayEquals(missedBlocks, missedBlocksOnFirstNode)) {
         errors.push([
