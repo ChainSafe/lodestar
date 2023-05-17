@@ -163,14 +163,13 @@ export async function validateGossipAttestation(
     // Using the target checkpoint state here caused unstable memory issue
     // See https://github.com/ChainSafe/lodestar/issues/4896
     // TODO: https://github.com/ChainSafe/lodestar/issues/4900
-    const attHeadState = await chain.regen
-      .getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAttestation)
-      .catch((e: Error) => {
-        throw new AttestationError(GossipAction.IGNORE, {
-          code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
-          error: e as Error,
-        });
-      });
+    const attHeadState = await getStateForAttestationVerification(
+      chain,
+      attSlot,
+      attEpoch,
+      attHeadBlock,
+      RegenCaller.validateGossipAttestation
+    );
 
     // [REJECT] The committee index is within the expected range
     // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
@@ -354,6 +353,43 @@ export function verifyHeadBlockAndTargetRoot(
   }
   verifyAttestationTargetRoot(headBlock, targetRoot, attestationEpoch);
   return headBlock;
+}
+
+/**
+ * Get a state for attestation verification.
+ * Use head state if:
+ *   - attestation slot is in the same fork as head block
+ *   - head state includes committees of target epoch
+ *
+ * Otherwise, regenerate state from head state dialing to target epoch
+ */
+export async function getStateForAttestationVerification(
+  chain: IBeaconChain,
+  attSlot: Slot,
+  attEpoch: Epoch,
+  attHeadBlock: ProtoBlock,
+  regenCaller: RegenCaller
+): Promise<CachedBeaconStateAllForks> {
+  const isSameFork = chain.config.getForkSeq(attSlot) === chain.config.getForkSeq(attHeadBlock.slot);
+  // thanks for 1 epoch look ahead of shuffling, a state at epoch n can get committee for epoch n+1
+  const headStateHasTargetEpochCommmittee = attEpoch - computeEpochAtSlot(attHeadBlock.slot) <= 1;
+  try {
+    if (isSameFork && headStateHasTargetEpochCommmittee) {
+      // most of the time it should just use head state
+      chain.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
+      return await chain.regen.getState(attHeadBlock.stateRoot, regenCaller);
+    }
+
+    // at fork boundary we should dial head state to target epoch
+    // see https://github.com/ChainSafe/lodestar/pull/4849
+    chain.metrics?.gossipAttestation.useHeadBlockStateDialedToTargetEpoch.inc({caller: regenCaller});
+    return await chain.regen.getBlockSlotState(attHeadBlock.blockRoot, attSlot, {dontTransferCache: true}, regenCaller);
+  } catch (e) {
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.MISSING_STATE_TO_VERIFY_ATTESTATION,
+      error: e as Error,
+    });
+  }
 }
 
 /**
