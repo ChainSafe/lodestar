@@ -12,9 +12,11 @@ export interface HeadSummary {
 export const headAssertion: SimulationAssertion<"head", HeadSummary> = {
   id: "head",
   match: everySlotMatcher,
-  async capture({node}) {
+  async capture({node, slot}) {
     const head = await node.cl.api.beacon.getBlockHeader("head");
     ApiError.assert(head);
+
+    console.log("head", node.cl.id, head.response.data.header.message.slot);
 
     return {
       blockRoot: toHexString(head.response.data.root),

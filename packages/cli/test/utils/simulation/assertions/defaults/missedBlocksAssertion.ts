@@ -21,6 +21,8 @@ export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[]
         missedBlocks.push(slot);
       }
     }
+
+    console.log("missedBlocks", node.cl.id, missedBlocks);
     return missedBlocks;
   },
 

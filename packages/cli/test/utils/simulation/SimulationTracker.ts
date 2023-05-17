@@ -365,9 +365,6 @@ export class SimulationTracker {
     void node.cl.api.events.eventstream(events, signal ?? this.signal, async (event) => {
       switch (event.type) {
         case routes.events.EventType.block:
-          if (node.cl.client === CLClient.Lighthouse) {
-            console.log({node: node.cl.id, block: event.message.slot});
-          }
           await this.processOnBlock(event.message, node);
           return;
         case routes.events.EventType.head:
