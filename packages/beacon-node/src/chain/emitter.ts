@@ -2,7 +2,7 @@ import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 
 import {routes} from "@lodestar/api";
-import {phase0, Epoch, Slot} from "@lodestar/types";
+import {phase0} from "@lodestar/types";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 
@@ -22,18 +22,6 @@ export const enum ChainEvent {
    * This event is guaranteed to be called after _any_ checkpoint is processed, including skip-slot checkpoints, checkpoints that are formed as a result of processing blocks, etc.
    */
   checkpoint = "checkpoint",
-  /**
-   * This event signals the start of a new slot, and that subsequent calls to `clock.currentSlot` will equal `slot`.
-   *
-   * This event is guaranteed to be emitted every `SECONDS_PER_SLOT` seconds.
-   */
-  clockSlot = "clock:slot",
-  /**
-   * This event signals the start of a new epoch, and that subsequent calls to `clock.currentEpoch` will return `epoch`.
-   *
-   * This event is guaranteed to be emitted every `SECONDS_PER_SLOT * SLOTS_PER_EPOCH` seconds.
-   */
-  clockEpoch = "clock:epoch",
   /**
    * This event signals that the fork choice store has been updated.
    *
@@ -56,9 +44,6 @@ type ApiEvents = {[K in routes.events.EventType]: (data: routes.events.EventData
 
 export type IChainEvents = ApiEvents & {
   [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks) => void;
-
-  [ChainEvent.clockSlot]: (slot: Slot) => void;
-  [ChainEvent.clockEpoch]: (epoch: Epoch) => void;
 
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;

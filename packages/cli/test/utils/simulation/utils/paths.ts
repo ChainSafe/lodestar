@@ -90,7 +90,7 @@ export const getELNodePaths = ({
 }): ELPaths => {
   const elRootDir = path.join(root, id, `el_${client}`);
   const dataDir = path.join(elRootDir, "data");
-  const logFilePath = path.join(logsDir, `${id}-el=${client}.log`);
+  const logFilePath = path.join(logsDir, `${id}-el-${client}.log`);
 
   return {
     rootDir: elRootDir,

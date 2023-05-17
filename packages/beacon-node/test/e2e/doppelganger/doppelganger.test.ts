@@ -7,7 +7,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {Validator} from "@lodestar/validator";
 import {PubkeyHex} from "@lodestar/validator/src/types";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
-import {ChainEvent} from "../../../src/chain/index.js";
+import {ClockEvent} from "../../../src/util/clock.js";
 import {Network} from "../../../src/network/index.js";
 import {connect} from "../../utils/network.js";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
@@ -46,7 +46,7 @@ describe.skip("doppelganger / doppelganger test", function () {
   };
 
   async function createBNAndVC(config?: TestConfig): Promise<{beaconNode: BeaconNode; validators: Validator[]}> {
-    const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+    const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
     const bn = await getDevBeaconNode({
@@ -133,7 +133,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       true,
       "validator with doppelganger protection should be running before first epoch"
     );
-    await waitForEvent<phase0.Checkpoint>(bn2.chain.emitter, ChainEvent.clockEpoch, timeout);
+    await waitForEvent<phase0.Checkpoint>(bn2.chain.clock, ClockEvent.epoch, timeout);
     // After first epoch doppelganger protection should have stopped the validatorsWithDoppelganger
     expect(validators[0].isRunning).to.be.equal(
       true,
@@ -150,7 +150,7 @@ describe.skip("doppelganger / doppelganger test", function () {
     this.timeout("10 min");
 
     const doppelgangerProtectionEnabled = true;
-    const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+    const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
 
     // set genesis time to allow at least an epoch
     const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * beaconParams.SECONDS_PER_SLOT;
@@ -179,7 +179,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       true,
       "validator without doppelganger protection should be running before first epoch"
     );
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout);
+    await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout);
     //After first epoch doppelganger protection should have stopped the validator0WithDoppelganger
     expect(validator0WithoutDoppelganger[0].isRunning).to.be.equal(
       true,
@@ -213,7 +213,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       true,
       "validator with doppelganger protection should be running before first epoch"
     );
-    await waitForEvent<phase0.Checkpoint>(bn2.chain.emitter, ChainEvent.clockEpoch, timeout);
+    await waitForEvent<phase0.Checkpoint>(bn2.chain.clock, ClockEvent.epoch, timeout);
     expect(validators[0].isRunning).to.be.equal(
       true,
       "validator without doppelganger protection should still be running after first epoch"
@@ -249,7 +249,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
     ).to.eventually.be.rejectedWith(`Doppelganger state for key ${pubKey} is not safe`);
 
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout);
+    await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout);
 
     await expect(
       validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot),
@@ -296,7 +296,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       )
     ).to.eventually.be.rejectedWith(`Doppelganger state for key ${pubKey} is not safe`);
 
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout);
+    await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout);
 
     await expect(
       validatorUnderTest.validatorStore.signAttestation(

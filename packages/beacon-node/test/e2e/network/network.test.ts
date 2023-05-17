@@ -221,11 +221,11 @@ describe("network", function () {
   it("Should subscribe to gossip core topics on demand", async () => {
     const {network: netA} = await createTestNode("A");
 
-    expect(netA.gossip.getTopics().length).to.equal(0);
+    expect(netA["gossipsub"].getTopics().length).to.equal(0);
     await netA.subscribeGossipCoreTopics();
-    expect(netA.gossip.getTopics().length).to.equal(13);
+    expect(netA["gossipsub"].getTopics().length).to.equal(13);
     await netA.unsubscribeGossipCoreTopics();
-    expect(netA.gossip.getTopics().length).to.equal(0);
+    expect(netA["gossipsub"].getTopics().length).to.equal(0);
     await netA.close();
   });
 });

@@ -12,7 +12,19 @@ import {
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
+import {
+  allForks,
+  UintNum64,
+  Root,
+  phase0,
+  Slot,
+  RootHex,
+  Epoch,
+  ValidatorIndex,
+  deneb,
+  Wei,
+  WithOptionalBytes,
+} from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, pruneSetToMax, toHex} from "@lodestar/utils";
@@ -27,10 +39,10 @@ import {wrapError} from "../util/wrapError.js";
 import {ckzg} from "../util/kzg.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder, TransitionConfigurationV1} from "../execution/index.js";
+import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
-import {BeaconClock, LocalClock} from "./clock/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData} from "./interface.js";
 import {IChainOptions} from "./options.js";
@@ -88,7 +100,7 @@ export class BeaconChain implements IBeaconChain {
 
   readonly bls: IBlsVerifier;
   readonly forkChoice: IForkChoice;
-  readonly clock: BeaconClock;
+  readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
   readonly stateCache: StateContextCache;
   readonly checkpointStateCache: CheckpointStateCache;
@@ -153,7 +165,7 @@ export class BeaconChain implements IBeaconChain {
       logger: Logger;
       processShutdownCallback: ProcessShutdownCallback;
       /** Used for testing to supply fake clock */
-      clock?: BeaconClock;
+      clock?: IClock;
       metrics: Metrics | null;
       anchorState: BeaconStateAllForks;
       eth1: IEth1ForBlockProduction;
@@ -185,7 +197,7 @@ export class BeaconChain implements IBeaconChain {
       ? new BlsSingleThreadVerifier({metrics})
       : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
-    if (!clock) clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
+    if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
     const preAggregateCutOffTime = (2 / 3) * this.config.SECONDS_PER_SLOT;
     this.attestationPool = new AttestationPool(clock, preAggregateCutOffTime, this.opts?.preaggregateSlotDistance);
@@ -262,7 +274,7 @@ export class BeaconChain implements IBeaconChain {
     this.emitter = emitter;
     this.lightClientServer = lightClientServer;
 
-    this.archiver = new Archiver(db, this, logger, signal, opts);
+    this.archiver = new Archiver(db, this, logger, signal, opts, metrics);
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
@@ -271,8 +283,8 @@ export class BeaconChain implements IBeaconChain {
     metrics?.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics());
 
     // Event handlers. emitter is created internally and dropped on close(). Not need to .removeListener()
-    emitter.addListener(ChainEvent.clockSlot, this.onClockSlot.bind(this));
-    emitter.addListener(ChainEvent.clockEpoch, this.onClockEpoch.bind(this));
+    clock.addListener(ClockEvent.slot, this.onClockSlot.bind(this));
+    clock.addListener(ClockEvent.epoch, this.onClockEpoch.bind(this));
     emitter.addListener(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
     emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
   }
@@ -413,13 +425,14 @@ export class BeaconChain implements IBeaconChain {
     // blinded blobs will be fetched and added to this cache later before finally
     // publishing the blinded block's full version
     if (blobs.type === BlobsResultType.produced) {
+      const blockBlobs = blobs.blobSidecars.map((blobSidecar) => blobSidecar.blob);
       // TODO DENEB: Prune data structure for max entries
       this.producedBlobsSidecarCache.set(blobs.blockHash, {
         // TODO DENEB: Optimize, hashing the full block is not free.
         beaconBlockRoot: this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block),
         beaconBlockSlot: block.slot,
-        blobs: blobs.blobs,
-        kzgAggregatedProof: ckzg.computeAggregateKzgProof(blobs.blobs),
+        blobs: blockBlobs,
+        kzgAggregatedProof: ckzg.computeAggregateKzgProof(blockBlobs),
       });
       pruneSetToMax(
         this.producedBlobsSidecarCache,
@@ -450,11 +463,11 @@ export class BeaconChain implements IBeaconChain {
     return blobsSidecar;
   }
 
-  async processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void> {
+  async processBlock(block: WithOptionalBytes<BlockInput>, opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob([block], opts);
   }
 
-  async processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void> {
+  async processChainSegment(blocks: WithOptionalBytes<BlockInput>[], opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob(blocks, opts);
   }
 

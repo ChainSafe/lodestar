@@ -3,8 +3,6 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {expect} from "chai";
 import {multiaddr} from "@multiformats/multiaddr";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
-import {createKeypairFromPeerId, SignableENR} from "@chainsafe/discv5";
-import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconSync, IBeaconSync} from "../../../../../src/sync/index.js";
 import {INetwork, Network} from "../../../../../src/network/index.js";
@@ -41,36 +39,6 @@ describe("node api implementation", function () {
     peerId = await createSecp256k1PeerId();
     sinon.stub(networkStub, "peerId").get(() => peerId);
     sinon.stub(networkStub, "localMultiaddrs").get(() => [multiaddr("/ip4/127.0.0.1/tcp/36000")]);
-  });
-
-  describe("getNetworkIdentity", function () {
-    it("should get node identity", async function () {
-      const keypair = createKeypairFromPeerId(peerId);
-      const enr = SignableENR.createV4(keypair);
-      enr.setLocationMultiaddr(multiaddr("/ip4/127.0.0.1/tcp/36001"));
-      networkStub.getEnr.returns(Promise.resolve(enr));
-      networkStub.getMetadata.returns(
-        Promise.resolve({
-          attnets: BitArray.fromBoolArray([true]),
-          syncnets: BitArray.fromBitLen(0),
-          seqNumber: BigInt(1),
-        })
-      );
-      const {data: identity} = await api.getNetworkIdentity();
-      expect(identity.peerId.startsWith("16")).to.equal(true);
-      expect(identity.enr.startsWith("enr:-")).to.equal(true);
-      expect(identity.discoveryAddresses.length).to.equal(1);
-      expect(identity.discoveryAddresses[0]).to.equal("/ip4/127.0.0.1/tcp/36001");
-      expect(identity.p2pAddresses.length).to.equal(1);
-      expect(identity.p2pAddresses[0]).to.equal("/ip4/127.0.0.1/tcp/36000");
-      expect(identity.metadata).to.not.null;
-    });
-
-    it("should get node identity - no enr", async function () {
-      networkStub.getEnr.returns(Promise.resolve(undefined));
-      const {data: identity} = await api.getNetworkIdentity();
-      expect(identity.enr).equal("");
-    });
   });
 
   describe("getPeerCount", function () {

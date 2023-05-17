@@ -70,8 +70,8 @@ export function strFixedSize(str: string, width: number): string {
   return str.padEnd(width).slice(0, width);
 }
 
-export const arrayIsUnique = <T>(arr: T[], predicate?: (val: T) => unknown): boolean =>
-  arr.length === new Set(predicate ? arr.map(predicate) : arr).size;
+export const isSingletonArray = <T>(arr: T[], predicate?: (val: T) => unknown): boolean =>
+  new Set(predicate ? arr.map(predicate) : arr).size === 1;
 
 export const replaceIpFromUrl = (url: string, ip: string): string => url.replace(/(http:\/\/)(.*)(:)/, `$1${ip}$3`);
 

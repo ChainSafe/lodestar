@@ -14,9 +14,8 @@ import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {Logger} from "@lodestar/utils";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
-import {BeaconClock} from "../../../../src/chain/clock/interface.js";
+import {IClock, Clock} from "../../../../src/util/clock.js";
 import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
-import {LocalClock} from "../../../../src/chain/clock/index.js";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen/index.js";
 import {StubbedBeaconDb} from "../../stub/index.js";
 import {IBlsVerifier, BlsSingleThreadVerifier} from "../../../../src/chain/bls/index.js";
@@ -46,7 +45,6 @@ import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache.js"
 import {CheckpointBalancesCache} from "../../../../src/chain/balancesCache.js";
 import {IChainOptions} from "../../../../src/chain/options.js";
 import {BlockAttributes} from "../../../../src/chain/produceBlock/produceBlockBody.js";
-import {ReqRespBlockResponse} from "../../../../src/network/index.js";
 import {SeenAttestationDatas} from "../../../../src/chain/seenCache/seenAttestationData.js";
 import {IExecutionBuilder} from "../../../../src/execution/index.js";
 
@@ -83,7 +81,7 @@ export class MockBeaconChain implements IBeaconChain {
   checkpointStateCache: CheckpointStateCache;
   chainId: Uint16;
   networkId: UintBn64;
-  clock: BeaconClock;
+  clock: IClock;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
   lightClientServer: LightClientServer;
@@ -130,10 +128,9 @@ export class MockBeaconChain implements IBeaconChain {
     this.config = config;
     this.emitter = new ChainEventEmitter();
     this.abortController = new AbortController();
-    this.clock = new LocalClock({
+    this.clock = new Clock({
       config: config,
       genesisTime: genesisTime === undefined || genesisTime === 0 ? state.genesisTime : genesisTime,
-      emitter: this.emitter,
       signal: this.abortController.signal,
     });
     this.attestationPool = new AttestationPool(this.clock, (2 / 3) * this.config.SECONDS_PER_SLOT);
@@ -187,10 +184,6 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   async getCanonicalBlockAtSlot(): Promise<allForks.SignedBeaconBlock> {
-    throw Error("Not implemented");
-  }
-
-  async getUnfinalizedBlocksAtSlots(): Promise<ReqRespBlockResponse[]> {
     throw Error("Not implemented");
   }
 
@@ -263,6 +256,7 @@ const root = ssz.Root.defaultValue() as Uint8Array;
 const rootHex = toHexString(root);
 export const zeroProtoBlock: ProtoBlock = {
   slot: 0,
+  proposerIndex: 0,
   blockRoot: rootHex,
   parentRoot: rootHex,
   stateRoot: rootHex,

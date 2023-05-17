@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import {Context} from "mocha";
-import {fromHexString} from "@chainsafe/ssz";
-import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {LogLevel, sleep} from "@lodestar/utils";
+import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainConfig} from "@lodestar/config";
-import {Epoch} from "@lodestar/types";
+import {Epoch, bellatrix} from "@lodestar/types";
 import {ValidatorProposerConfig, BuilderSelection} from "@lodestar/validator";
+import {routes} from "@lodestar/api";
 
-import {ChainEvent} from "../../src/chain/index.js";
+import {ClockEvent} from "../../src/util/clock.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
@@ -82,7 +84,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     this: Context,
     {elClient, bellatrixEpoch, testName}: {elClient: ELClient; bellatrixEpoch: Epoch; testName: string}
   ): Promise<void> {
-    const {genesisBlockHash, ttd, engineRpcUrl} = elClient;
+    const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
 
@@ -97,6 +99,18 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const epochsOfMargin = 1;
     const timeoutSetupMargin = 30 * 1000; // Give extra 30 seconds of margin
 
+    // The builder gets activated post middle of epoch because of circuit breaker
+    // In a perfect run expected builder = 16, expected engine = 16
+    //   keeping 4 missed slots margin for both
+    const expectedBuilderBlocks = 12;
+    const expectedEngineBlocks = 12;
+
+    // All assertions are tracked w.r.t. fee recipient by attaching different fee recipient to
+    // execution and builder
+    const feeRecipientLocal = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const feeRecipientEngine = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const feeRecipientMevBoost = "0xcccccccccccccccccccccccccccccccccccccccc";
+
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     const genesisSlotsDelay = 8;
 
@@ -110,8 +124,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
     const testLoggerOpts: TestLoggerOpts = {
-      logLevel: LogLevel.info,
-      logFile: `${logFilesDir}/mergemock-${testName}.log`,
+      level: LogLevel.info,
+      file: {
+        filepath: `${logFilesDir}/mergemock-${testName}.log`,
+        level: LogLevel.debug,
+      },
       timestampFormat: {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,
@@ -135,8 +152,14 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         // Now eth deposit/merge tracker methods directly available on engine endpoints
         eth1: {enabled: false, providerUrls: [engineRpcUrl], jwtSecretHex},
         executionEngine: {urls: [engineRpcUrl], jwtSecretHex},
-        executionBuilder: {enabled: true, issueLocalFcUForBlockProduction: true},
-        chain: {suggestedFeeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+        executionBuilder: {
+          urls: [ethRpcUrl],
+          enabled: true,
+          issueLocalFcUWithFeeRecipient: feeRecipientMevBoost,
+          allowedFaults: 16,
+          faultInspectionWindow: 32,
+        },
+        chain: {suggestedFeeRecipient: feeRecipientLocal},
       },
       validatorCount: validatorClientCount * validatorsPerClient,
       logger: loggerNodeA,
@@ -159,7 +182,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       defaultConfig: {
         graffiti: "default graffiti",
         strictFeeRecipientCheck: true,
-        feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
+        feeRecipient: feeRecipientEngine,
         builder: {
           enabled: true,
           gasLimit: 30000000,
@@ -183,11 +206,26 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       await Promise.all(validators.map((v) => v.close()));
     });
 
+    let engineBlocks = 0;
+    let builderBlocks = 0;
     await new Promise<void>((resolve, _reject) => {
-      bn.chain.emitter.on(ChainEvent.clockEpoch, (epoch) => {
+      bn.chain.emitter.on(routes.events.EventType.block, async (blockData) => {
+        const {data: fullOrBlindedBlock} = await bn.api.beacon.getBlockV2(blockData.block);
+        if (fullOrBlindedBlock !== undefined) {
+          const blockFeeRecipient = toHexString(
+            (fullOrBlindedBlock as bellatrix.SignedBeaconBlock).message.body.executionPayload.feeRecipient
+          );
+          if (blockFeeRecipient === feeRecipientMevBoost) {
+            builderBlocks++;
+          } else {
+            engineBlocks++;
+          }
+        }
+      });
+      bn.chain.clock.on(ClockEvent.epoch, (epoch) => {
         // Resolve only if the finalized checkpoint includes execution payload
         if (epoch >= expectedEpochsToFinish) {
-          console.log(`\nGot event ${ChainEvent.clockEpoch}, stopping validators and nodes\n`);
+          console.log("\nGot event epoch, stopping validators and nodes\n");
           resolve();
         }
       });
@@ -199,7 +237,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     await bn.close();
     await sleep(500);
 
-    if (bn.chain.beaconProposerCache.get(1) !== "0xcccccccccccccccccccccccccccccccccccccccc") {
+    if (bn.chain.beaconProposerCache.get(1) !== feeRecipientEngine) {
       throw Error("Invalid feeRecipient set at BN");
     }
 
@@ -219,6 +257,16 @@ describe("executionEngine / ExecutionEngineHttp", function () {
             consensusHeadSlot: consensusHead.slot,
           })
       );
+    }
+
+    // 2. builder blocks are as expected
+    if (builderBlocks < expectedBuilderBlocks) {
+      throw Error(`Incorrect builderBlocks=${builderBlocks} (expected=${expectedBuilderBlocks})`);
+    }
+
+    // 3. engine blocks are as expected
+    if (engineBlocks < expectedEngineBlocks) {
+      throw Error(`Incorrect engineBlocks=${engineBlocks} (expected=${expectedEngineBlocks})`);
     }
 
     // wait for 1 slot to print current epoch stats

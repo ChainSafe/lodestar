@@ -21,6 +21,7 @@ import {
 } from "./utils/assertion.js";
 import {getLogger} from "./utils/logger.js";
 import {processAndVerifyRequest} from "./utils/process.js";
+import {logRequest, logResponse} from "./utils/json_rpc.js";
 
 type ProvableProviderInitOpts = {network?: NetworkName; wsCheckpoint?: string; signal?: AbortSignal} & LogOptions &
   ConsensusNodeOptions;
@@ -79,7 +80,9 @@ function handleSendProvider(
   const send = provider.send.bind(provider);
   const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> =>
     new Promise((resolve, reject) => {
+      logRequest(payload, logger);
       send(payload, (err, response) => {
+        logResponse(response, logger);
         if (err) {
           reject(err);
         } else {
@@ -106,7 +109,9 @@ function handleRequestProvider(
   const request = provider.request.bind(provider);
   const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> =>
     new Promise((resolve, reject) => {
+      logRequest(payload, logger);
       request(payload, (err, response) => {
+        logResponse(response, logger);
         if (err) {
           reject(err);
         } else {
@@ -131,7 +136,12 @@ function handleSendAsyncProvider(
   network: NetworkName
 ): SendAsyncProvider {
   const sendAsync = provider.sendAsync.bind(provider);
-  const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> => sendAsync(payload);
+  const handler = async (payload: ELRequestPayload): Promise<ELResponse | undefined> => {
+    logRequest(payload, logger);
+    const response = await sendAsync(payload);
+    logResponse(response, logger);
+    return response;
+  };
 
   async function newSendAsync(payload: ELRequestPayload): Promise<ELResponse | undefined> {
     return processAndVerifyRequest({payload, handler, proofProvider, logger, network});
@@ -147,7 +157,12 @@ function handleEIP1193Provider(
   network: NetworkName
 ): EIP1193Provider {
   const request = provider.request.bind(provider);
-  const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> => request(payload);
+  const handler = async (payload: ELRequestPayload): Promise<ELResponse | undefined> => {
+    logRequest(payload, logger);
+    const response = await request(payload);
+    logResponse(response, logger);
+    return response;
+  };
 
   async function newRequest(payload: ELRequestPayload): Promise<ELResponse | undefined> {
     return processAndVerifyRequest({payload, handler, proofProvider, logger, network});
@@ -163,7 +178,12 @@ function handleEthersProvider(
   network: NetworkName
 ): EthersProvider {
   const send = provider.send.bind(provider);
-  const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> => send(payload.method, payload.params);
+  const handler = async (payload: ELRequestPayload): Promise<ELResponse | undefined> => {
+    logRequest(payload, logger);
+    const response = await send(payload.method, payload.params);
+    logResponse(response, logger);
+    return response;
+  };
 
   async function newSend(method: string, params: Array<unknown>): Promise<ELResponse | undefined> {
     return processAndVerifyRequest({

@@ -7,7 +7,7 @@ import {getClient, HttpStatusCode} from "@lodestar/api";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../utils/node/beacon.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
-import {ChainEvent} from "../../../../src/chain/index.js";
+import {ClockEvent} from "../../../../src/util/clock.js";
 
 describe("api / impl / validator", function () {
   describe("getLiveness endpoint", function () {
@@ -38,7 +38,7 @@ describe("api / impl / validator", function () {
       const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
       const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
-      const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+      const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
       const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
       const bn = await getDevBeaconNode({
@@ -90,7 +90,7 @@ describe("api / impl / validator", function () {
       const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
       const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
-      const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+      const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
       const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
       const bn = await getDevBeaconNode({
@@ -105,8 +105,8 @@ describe("api / impl / validator", function () {
       });
       afterEachCallbacks.push(() => bn.close());
 
-      await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout); // wait for epoch 1
-      await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout); // wait for epoch 2
+      await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 1
+      await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 2
 
       bn.chain.seenBlockProposers.add(bn.chain.clock.currentEpoch, 1);
 

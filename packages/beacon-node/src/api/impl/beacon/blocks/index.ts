@@ -4,7 +4,7 @@ import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {deneb, allForks} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {getBlockInput, ImportBlockOpts} from "../../../../chain/blocks/types.js";
+import {BlockSource, getBlockInput, ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
@@ -184,16 +184,7 @@ export function getBeaconBlockApi({
       if (!executionBuilder) throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
       let signedBlock: allForks.SignedBeaconBlock;
       if (config.getForkSeq(signedBlindedBlock.message.slot) >= ForkSeq.deneb) {
-        const {beaconBlock, blobsSidecar} = await executionBuilder.submitBlindedBlockV2(signedBlindedBlock);
-        signedBlock = beaconBlock;
-        // add this blobs to the map for access & broadcasting in publishBlock
-        const {blockHash} = signedBlindedBlock.message.body.executionPayloadHeader;
-        chain.producedBlobsSidecarCache.set(toHexString(blockHash), blobsSidecar);
-        // TODO: Do we need to prune here ? prune will anyway be called in local execution flow
-        // pruneSetToMax(
-        //   chain.producedBlobsSidecarCache,
-        //   chain.opts.maxCachedBlobsSidecar ?? DEFAULT_MAX_CACHED_BLOBS_SIDECAR
-        // );
+        throw Error("exeutionBuilder not yet implemented for deneb+ forks");
       } else {
         signedBlock = await executionBuilder.submitBlindedBlock(signedBlindedBlock);
       }
@@ -223,14 +214,15 @@ export function getBeaconBlockApi({
           ? getBlockInput.postDeneb(
               config,
               signedBlock,
+              BlockSource.api,
               chain.getBlobsSidecar(signedBlock.message as deneb.BeaconBlock)
             )
-          : getBlockInput.preDeneb(config, signedBlock);
+          : getBlockInput.preDeneb(config, signedBlock, BlockSource.api);
 
       await promiseAllMaybeAsync([
         // Send the block, regardless of whether or not it is valid. The API
         // specification is very clear that this is the desired behaviour.
-        () => network.publishBeaconBlockMaybeBlobs(blockForImport),
+        () => network.gossip.publishBeaconBlockMaybeBlobs(blockForImport) as Promise<unknown>,
 
         () =>
           chain.processBlock(blockForImport, opts).catch((e) => {

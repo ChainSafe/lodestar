@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
-import {EncodedPayload, EncodedPayloadType, ContextBytesType} from "@lodestar/reqresp";
-import {allForks, phase0, Slot} from "@lodestar/types";
+import {ResponseOutgoing} from "@lodestar/reqresp";
+import {Slot, phase0} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
@@ -9,7 +9,7 @@ export async function* onBeaconBlocksByRoot(
   requestBody: phase0.BeaconBlocksByRootRequest,
   chain: IBeaconChain,
   db: IBeaconDb
-): AsyncIterable<EncodedPayload<allForks.SignedBeaconBlock>> {
+): AsyncIterable<ResponseOutgoing> {
   for (const blockRoot of requestBody) {
     const root = blockRoot;
     const summary = chain.forkChoice.getBlock(root);
@@ -39,12 +39,8 @@ export async function* onBeaconBlocksByRoot(
       }
 
       yield {
-        type: EncodedPayloadType.bytes,
-        bytes: blockBytes,
-        contextBytes: {
-          type: ContextBytesType.ForkDigest,
-          forkSlot: slot,
-        },
+        data: blockBytes,
+        fork: chain.config.getForkName(slot),
       };
     }
   }

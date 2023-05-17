@@ -20,6 +20,7 @@ const rootBlockBytePrefix = 0xbb;
 describe("Forkchoice", function () {
   const genesisSlot = 0;
   const genesisEpoch = 0;
+  const proposerIndex = 0;
   const genesisRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
   const finalizedRoot = getBlockRoot(genesisSlot);
@@ -84,6 +85,7 @@ describe("Forkchoice", function () {
   const getBlock = (slot: number, skippedSlots: number[] = []): ProtoBlock => {
     return {
       slot,
+      proposerIndex: proposerIndex,
       blockRoot: getBlockRoot(slot),
       parentRoot: getParentBlockRoot(slot, skippedSlots),
       stateRoot: getStateRoot(slot),

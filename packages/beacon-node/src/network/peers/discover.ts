@@ -2,16 +2,18 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
 import {PeerInfo} from "@libp2p/interface-peer-info";
 import {BeaconConfig} from "@lodestar/config";
-import {Logger, pruneSetToMax, sleep} from "@lodestar/utils";
-import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
+import {pruneSetToMax, sleep} from "@lodestar/utils";
+import {ENR} from "@chainsafe/discv5";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {Metrics} from "../../metrics/index.js";
+import {LoggerNode} from "@lodestar/logger/node";
+import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Libp2p} from "../interface.js";
 import {ENRKey, SubnetType} from "../metadata.js";
 import {getConnectionsMap, getDefaultDialer, prettyPrintPeerId} from "../util.js";
 import {Discv5Worker} from "../discv5/index.js";
-import {IPeerRpcScoreStore, ScoreState} from "./score.js";
+import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
+import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
@@ -21,15 +23,15 @@ const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
 export type PeerDiscoveryOpts = {
   maxPeers: number;
   discv5FirstQueryDelayMs: number;
-  discv5: Omit<IDiscv5DiscoveryInputOptions, "metrics" | "searchInterval" | "enabled">;
+  discv5: LodestarDiscv5Opts;
   connectToDiscv5Bootnodes?: boolean;
 };
 
 export type PeerDiscoveryModules = {
   libp2p: Libp2p;
   peerRpcScores: IPeerRpcScoreStore;
-  metrics: Metrics | null;
-  logger: Logger;
+  metrics: NetworkCoreMetrics | null;
+  logger: LoggerNode;
   config: BeaconConfig;
 };
 
@@ -74,8 +76,8 @@ export class PeerDiscovery {
   readonly discv5: Discv5Worker;
   private libp2p: Libp2p;
   private peerRpcScores: IPeerRpcScoreStore;
-  private metrics: Metrics | null;
-  private logger: Logger;
+  private metrics: NetworkCoreMetrics | null;
+  private logger: LoggerNode;
   private config: BeaconConfig;
   private cachedENRs = new Map<PeerIdStr, CachedENR>();
   private randomNodeQuery: QueryStatus = {code: QueryStatusCode.NotActive};

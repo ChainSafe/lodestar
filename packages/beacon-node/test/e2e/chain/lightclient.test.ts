@@ -3,7 +3,7 @@ import {ChainConfig} from "@lodestar/config";
 import {ssz, altair} from "@lodestar/types";
 import {JsonPath, toHexString, fromHexString} from "@chainsafe/ssz";
 import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
-import {TimestampFormatCode} from "@lodestar/utils";
+import {TimestampFormatCode} from "@lodestar/logger";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Lightclient} from "@lodestar/light-client";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -57,7 +57,7 @@ describe("chain / lightclient", function () {
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
     const testLoggerOpts: TestLoggerOpts = {
-      logLevel: LogLevel.info,
+      level: LogLevel.info,
       timestampFormat: {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,
@@ -67,7 +67,7 @@ describe("chain / lightclient", function () {
     };
 
     const loggerNodeA = testLogger("Node", testLoggerOpts);
-    const loggerLC = testLogger("LC", {...testLoggerOpts, logLevel: LogLevel.debug});
+    const loggerLC = testLogger("LC", {...testLoggerOpts, level: LogLevel.debug});
 
     const bn = await getDevBeaconNode({
       params: testParams,
@@ -92,7 +92,7 @@ describe("chain / lightclient", function () {
       validatorClientCount,
       startIndex: 0,
       useRestApi: false,
-      testLoggerOpts: {...testLoggerOpts, logLevel: LogLevel.error},
+      testLoggerOpts: {...testLoggerOpts, level: LogLevel.error},
     });
 
     afterEachCallbacks.push(async () => {

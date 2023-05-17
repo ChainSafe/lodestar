@@ -10,9 +10,9 @@ import {Uint8ArrayList} from "uint8arraylist";
 export class BufferedSource {
   isDone = false;
   private buffer: Uint8ArrayList;
-  private source: AsyncGenerator<Uint8ArrayList>;
+  private source: AsyncGenerator<Uint8ArrayList | Uint8Array>;
 
-  constructor(source: AsyncGenerator<Uint8ArrayList>) {
+  constructor(source: AsyncGenerator<Uint8ArrayList | Uint8Array>) {
     this.buffer = new Uint8ArrayList();
     this.source = source;
   }

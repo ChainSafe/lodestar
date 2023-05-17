@@ -7,7 +7,7 @@ import {routes} from "@lodestar/api";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";
 import {TransitionConfigurationV1} from "../execution/engine/interface.js";
-import {ChainEvent} from "./emitter.js";
+import {ClockEvent} from "../util/clock.js";
 import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBlock/produceBlockBody.js";
 import {IBeaconChain} from "./interface.js";
 import {RegenCaller} from "./regen/index.js";
@@ -38,11 +38,11 @@ export class PrepareNextSlotScheduler {
     private readonly logger: Logger,
     private readonly signal: AbortSignal
   ) {
-    this.chain.emitter.on(ChainEvent.clockSlot, this.prepareForNextSlot);
+    this.chain.clock.on(ClockEvent.slot, this.prepareForNextSlot);
     this.signal.addEventListener(
       "abort",
       () => {
-        this.chain.emitter.off(ChainEvent.clockSlot, this.prepareForNextSlot);
+        this.chain.clock.off(ClockEvent.slot, this.prepareForNextSlot);
       },
       {once: true}
     );

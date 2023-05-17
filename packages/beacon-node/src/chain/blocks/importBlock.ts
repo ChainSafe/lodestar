@@ -51,7 +51,7 @@ export async function importBlock(
   opts: ImportBlockOpts
 ): Promise<void> {
   const {blockInput, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
-  const {block} = blockInput;
+  const {block, serializedData, source} = blockInput;
   const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toHexString(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
@@ -60,8 +60,14 @@ export async function importBlock(
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
 
   // 1. Persist block to hot DB (pre-emptively)
-
-  await this.db.block.add(block);
+  if (serializedData) {
+    // skip serializing data if we already have it
+    this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
+    await this.db.block.putBinary(this.db.block.getId(block), serializedData);
+  } else {
+    this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
+    await this.db.block.add(block);
+  }
   this.logger.debug("Persisted block to hot DB", {
     slot: block.message.slot,
     root: blockRootHex,
@@ -94,6 +100,7 @@ export async function importBlock(
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.stateCache.add(postState);
 
+  this.metrics?.importBlock.bySource.inc({source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: block.message.slot, root: blockRootHex});
   this.emitter.emit(routes.events.EventType.block, {
     block: toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),
@@ -245,7 +252,7 @@ export async function importBlock(
       // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
       // We want to track recent blocks coming from gossip, unknown block sync, and API.
       if (delaySec < 64 * this.config.SECONDS_PER_SLOT) {
-        this.metrics.elapsedTimeTillBecomeHead.observe(delaySec);
+        this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
       }
     }
 

@@ -1,79 +1,51 @@
 import {expect} from "chai";
-import sinon from "sinon";
 import deepmerge from "deepmerge";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
-import {Logger} from "@lodestar/utils";
 import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
-import {ELVerifiedRequestHandlerOpts} from "../../../src/interfaces.js";
 import {eth_getBalance} from "../../../src/verified_requests/eth_getBalance.js";
-import eth_getBalance_eoa from "../../fixtures/sepolia/eth_getBalance_eoa_proof.json" assert {type: "json"};
-import eth_getBalance_contract from "../../fixtures/sepolia/eth_getBalance_contract_proof.json" assert {type: "json"};
-import {createMockLogger} from "../../mocks/logger_mock.js";
+import eth_getBalance_eoa from "../../fixtures/sepolia/eth_getBalance_eoa.json" assert {type: "json"};
+import eth_getBalance_contract from "../../fixtures/sepolia/eth_getBalance_contract.json" assert {type: "json"};
+import {generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 
 const testCases = [eth_getBalance_eoa, eth_getBalance_contract];
 
 describe("verified_requests / eth_getBalance", () => {
-  let options: {handler: sinon.SinonStub; logger: Logger; proofProvider: {getExecutionPayload: sinon.SinonStub}};
-
-  beforeEach(() => {
-    options = {
-      handler: sinon.stub(),
-      logger: createMockLogger(),
-      proofProvider: {getExecutionPayload: sinon.stub()},
-    };
-  });
-
   for (const testCase of testCases) {
     describe(testCase.label, () => {
       it("should return the valid json-rpc response for a valid account", async () => {
-        const config = createForkConfig(networksChainConfig[testCase.network as NetworkName]);
-        const executionPayload = config
-          .getExecutionForkTypes(parseInt(testCase.headers.header.message.slot))
-          .ExecutionPayload.fromJson(testCase.executionPayload);
+        const data = deepmerge({}, testCase);
+        const config = createForkConfig(networksChainConfig[data.network as NetworkName]);
+        const options = generateReqHandlerOptionsMock(data, config);
 
-        options.handler.resolves(testCase.response);
-        options.proofProvider.getExecutionPayload.resolves(executionPayload);
-
-        const result = await eth_getBalance({
+        const response = await eth_getBalance({
           ...options,
           payload: {
-            ...testCase.request,
-            method: "eth_getBalance",
-            params: [testCase.request.params[0], "latest"],
+            ...data.request,
+            params: [data.request.params[0], data.request.params[1]],
           },
-          network: testCase.network,
-        } as unknown as ELVerifiedRequestHandlerOpts<[address: string, block?: string | number | undefined], string>);
-
-        expect(result).to.eql({...result, result: testCase.response.result.balance});
+        });
+        expect(response).to.eql(data.response);
       });
 
       it("should return the json-rpc response with error for an invalid account", async () => {
-        const config = createForkConfig(networksChainConfig[testCase.network as NetworkName]);
-        const executionPayload = config
-          .getExecutionForkTypes(parseInt(testCase.headers.header.message.slot))
-          .ExecutionPayload.fromJson(testCase.executionPayload);
+        const data = deepmerge({}, testCase);
+        // Temporarily remove the accountProof to make the request invalid
+        delete data.dependentRequests[0].response.result.accountProof[0];
+        const config = createForkConfig(networksChainConfig[data.network as NetworkName]);
+        const options = generateReqHandlerOptionsMock(data, config);
 
-        const response = deepmerge({}, testCase.response);
-        // Change the proof to be invalidated with state
-        delete response.result.accountProof[0];
-
-        options.handler.resolves(response);
-        options.proofProvider.getExecutionPayload.resolves(executionPayload);
-
-        const result = await eth_getBalance({
+        const response = await eth_getBalance({
           ...options,
           payload: {
-            ...testCase.request,
-            method: "eth_getBalance",
-            params: [testCase.request.params[0], "latest"],
+            ...data.request,
+            params: [data.request.params[0], data.request.params[1]],
           },
-          network: testCase.network,
-        } as unknown as ELVerifiedRequestHandlerOpts<[address: string, block?: string | number | undefined], string>);
+        });
 
-        expect(result).to.eql({
+        expect(response).to.eql({
           jsonrpc: "2.0",
-          id: testCase.request.id,
+          id: data.request.id,
           error: {code: UNVERIFIED_RESPONSE_CODE, message: "eth_getBalance request can not be verified."},
         });
       });

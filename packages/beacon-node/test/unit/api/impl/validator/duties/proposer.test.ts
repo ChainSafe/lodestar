@@ -6,7 +6,7 @@ import {ForkChoice} from "@lodestar/fork-choice";
 
 import {ssz} from "@lodestar/types";
 import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {LocalClock} from "../../../../../../src/chain/clock/index.js";
+import {Clock} from "../../../../../../src/util/clock.js";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants/index.js";
 import {getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
 import {ApiModules} from "../../../../../../src/api/impl/types.js";
@@ -36,7 +36,7 @@ describe.skip("get proposers api impl", function () {
     server = setupApiImplTestServer();
     chainStub = server.chainStub;
     syncStub = server.syncStub;
-    chainStub.clock = server.sandbox.createStubInstance(LocalClock);
+    chainStub.clock = server.sandbox.createStubInstance(Clock);
     const forkChoice = server.sandbox.createStubInstance(ForkChoice);
     chainStub.forkChoice = forkChoice;
     chainStub.getCanonicalBlockAtSlot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue());

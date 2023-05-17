@@ -2,7 +2,7 @@ import {phase0, Slot, Root, RootHex} from "@lodestar/types";
 import bls from "@chainsafe/blst";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "@lodestar/utils";
-import {BeaconClock} from "../clock/interface.js";
+import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
@@ -61,7 +61,7 @@ export class AttestationPool {
   private lowestPermissibleSlot = 0;
 
   constructor(
-    private readonly clock: BeaconClock,
+    private readonly clock: IClock,
     private readonly cutOffSecFromSlot: number,
     private readonly preaggregateSlotDistance = 0
   ) {}

@@ -9,7 +9,7 @@ import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/
 import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
 import {testLogger} from "../../utils/logger.js";
 import {getValidPeerId} from "../../utils/peer.js";
-import {getBlockInput} from "../../../src/chain/blocks/types.js";
+import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 
 describe("sync / UnknownBlockSync", () => {
   const logger = testLogger();
@@ -55,7 +55,7 @@ describe("sync / UnknownBlockSync", () => {
           Array.from(roots)
             .map((root) => blocksByRoot.get(toHexString(root)))
             .filter(notNullish)
-            .map((block) => getBlockInput.preDeneb(config, block)),
+            .map((block) => getBlockInput.preDeneb(config, block, BlockSource.byRoot)),
 
         reportPeer: async (peerId, action, actionName) => reportPeerResolveFn([peerId, action, actionName]),
       };
@@ -77,7 +77,11 @@ describe("sync / UnknownBlockSync", () => {
       };
 
       new UnknownBlockSync(config, network as INetwork, chain as IBeaconChain, logger, null);
-      network.events?.emit(NetworkEvent.unknownBlockParent, getBlockInput.preDeneb(config, blockC), peerIdStr);
+      network.events?.emit(
+        NetworkEvent.unknownBlockParent,
+        getBlockInput.preDeneb(config, blockC, BlockSource.gossip),
+        peerIdStr
+      );
 
       if (reportPeer) {
         const err = await reportPeerPromise;

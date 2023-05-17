@@ -2,26 +2,19 @@ import EventEmitter from "events";
 import {PeerId} from "@libp2p/interface-peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
-import {
-  createKeypairFromPeerId,
-  ENR,
-  ENRData,
-  IDiscv5DiscoveryInputOptions,
-  IKeypair,
-  SignableENR,
-} from "@chainsafe/discv5";
+import {createKeypairFromPeerId, ENR, ENRData, IKeypair, SignableENR} from "@chainsafe/discv5";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {chainConfigFromJson, chainConfigToJson, BeaconConfig} from "@lodestar/config";
-import {Logger} from "@lodestar/utils";
-import {Metrics} from "../../metrics/metrics.js";
-import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
+import {LoggerNode} from "@lodestar/logger/node";
+import {NetworkCoreMetrics} from "../core/metrics.js";
+import {Discv5WorkerApi, Discv5WorkerData, LodestarDiscv5Opts} from "./types.js";
 
 export type Discv5Opts = {
   peerId: PeerId;
-  discv5: Omit<IDiscv5DiscoveryInputOptions, "metrics" | "searchInterval" | "enabled">;
-  logger: Logger;
+  discv5: LodestarDiscv5Opts;
+  logger: LoggerNode;
   config: BeaconConfig;
-  metrics?: Metrics;
+  metrics?: NetworkCoreMetrics;
 };
 
 export type Discv5Events = {
@@ -36,7 +29,7 @@ type Discv5WorkerStatus =
  * Wrapper class abstracting the details of discv5 worker instantiation and message-passing
  */
 export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, Discv5Events>}) {
-  private logger: Logger;
+  private logger: LoggerNode;
   private status: Discv5WorkerStatus;
   private keypair: IKeypair;
 
@@ -52,14 +45,15 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
     if (this.status.status === "started") return;
 
     const workerData: Discv5WorkerData = {
-      enr: (this.opts.discv5.enr as SignableENR).toObject(),
+      enr: this.opts.discv5.enr,
       peerIdProto: exportToProtobuf(this.opts.peerId),
       bindAddr: this.opts.discv5.bindAddr,
-      config: this.opts.discv5,
+      config: this.opts.discv5.config,
       bootEnrs: this.opts.discv5.bootEnrs as string[],
       metrics: Boolean(this.opts.metrics),
       chainConfig: chainConfigFromJson(chainConfigToJson(this.opts.config)),
       genesisValidatorsRoot: this.opts.config.genesisValidatorsRoot,
+      loggerOpts: this.opts.logger.toOpts(),
     };
     const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
 

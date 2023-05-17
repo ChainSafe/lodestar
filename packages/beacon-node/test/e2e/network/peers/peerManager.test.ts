@@ -13,12 +13,13 @@ import {PeerRpcScoreStore, PeerManager} from "../../../../src/network/peers/inde
 import {Eth2Gossipsub, getConnectionsMap, NetworkEvent, NetworkEventBus} from "../../../../src/network/index.js";
 import {PeersData} from "../../../../src/network/peers/peersData.js";
 import {createNode, getAttnets, getSyncnets} from "../../../utils/network.js";
-import {MockBeaconChain} from "../../../utils/mocks/chain/chain.js";
 import {generateState} from "../../../utils/state.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
 import {testLogger} from "../../../utils/logger.js";
 import {getValidPeerId} from "../../../utils/peer.js";
 import {IAttnetsService} from "../../../../src/network/subnets/index.js";
+import {Clock} from "../../../../src/util/clock.js";
+import {LocalStatusCache} from "../../../../src/network/statusCache.js";
 
 const logger = testLogger();
 
@@ -44,17 +45,14 @@ describe("network / peers / PeerManager", function () {
       },
     });
     const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
-    const chain = new MockBeaconChain({
-      genesisTime: 0,
-      chainId: 0,
-      networkId: BigInt(0),
-      state,
-      config: beaconConfig,
-    });
+    const controller = new AbortController();
+    const clock = new Clock({config: beaconConfig, genesisTime: 0, signal: controller.signal});
+    const status = ssz.phase0.Status.defaultValue();
+    const statusCache = new LocalStatusCache(status);
     const libp2p = await createNode("/ip4/127.0.0.1/tcp/0");
 
     afterEachCallbacks.push(async () => {
-      await chain.close();
+      controller.abort();
       await libp2p.stop();
     });
 
@@ -78,7 +76,8 @@ describe("network / peers / PeerManager", function () {
         reqResp,
         logger,
         metrics: null,
-        chain,
+        clock,
+        statusCache,
         config: beaconConfig,
         peerRpcScores,
         networkEventBus,
@@ -96,7 +95,7 @@ describe("network / peers / PeerManager", function () {
     );
     await peerManager.start();
 
-    return {chain, libp2p, reqResp, peerManager, networkEventBus};
+    return {statusCache, clock, libp2p, reqResp, peerManager, networkEventBus};
   }
 
   // Create a real event emitter with stubbed methods
@@ -159,7 +158,7 @@ describe("network / peers / PeerManager", function () {
   } as Connection;
 
   it("Should emit peer connected event on relevant peer status", async function () {
-    const {chain, libp2p, networkEventBus} = await mockModules();
+    const {statusCache, libp2p, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
     getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
@@ -168,14 +167,14 @@ describe("network / peers / PeerManager", function () {
     const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, this.timeout() / 2);
 
     // Send the local status and remote status, which always passes the assertPeerRelevance function
-    const remoteStatus = chain.getStatus();
+    const remoteStatus = statusCache.get();
     networkEventBus.emit(NetworkEvent.reqRespRequest, {method: ReqRespMethod.Status, body: remoteStatus}, peerId1);
 
     await peerConnectedPromise;
   });
 
   it("On peerConnect handshake flow", async function () {
-    const {chain, libp2p, reqResp, peerManager, networkEventBus} = await mockModules();
+    const {statusCache, libp2p, reqResp, peerManager, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
     getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
@@ -184,7 +183,7 @@ describe("network / peers / PeerManager", function () {
     const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, this.timeout() / 2);
 
     // Simulate peer1 returning a PING and STATUS message
-    const remoteStatus = chain.getStatus();
+    const remoteStatus = statusCache.get();
     const remoteMetadata: altair.Metadata = {seqNumber: BigInt(1), attnets: getAttnets(), syncnets: getSyncnets()};
     reqResp.ping.resolves(remoteMetadata.seqNumber);
     reqResp.status.resolves(remoteStatus);

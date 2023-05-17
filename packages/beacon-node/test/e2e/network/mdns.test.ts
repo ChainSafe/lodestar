@@ -52,10 +52,9 @@ describe.skip("mdns", function () {
       localMultiaddrs: [],
       discv5FirstQueryDelayMs: 0,
       discv5: {
-        enr,
+        enr: enr.encodeTxt(),
         bindAddr: bindAddrUdp,
         bootEnrs: [],
-        enabled: true,
       },
     };
   }

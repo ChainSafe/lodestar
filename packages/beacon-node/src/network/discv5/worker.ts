@@ -6,6 +6,7 @@ import {expose} from "@chainsafe/threads/worker";
 import {Observable, Subject} from "@chainsafe/threads/observable";
 import {createKeypairFromPeerId, Discv5, ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/discv5";
 import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
+import {getNodeLogger} from "@lodestar/logger/node";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
 import {ENRKey} from "../metadata.js";
@@ -55,6 +56,8 @@ const workerData = worker.workerData as Discv5WorkerData;
 // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 if (!workerData) throw Error("workerData must be defined");
 
+const logger = getNodeLogger(workerData.loggerOpts);
+
 // Set up metrics, nodejs and discv5-specific
 let metricsRegistry: RegistryMetricCreator | undefined;
 let enrRelevanceMetric: Gauge<"status"> | undefined;
@@ -77,7 +80,7 @@ const config = createBeaconConfig(workerData.chainConfig, workerData.genesisVali
 
 // Initialize discv5
 const discv5 = Discv5.create({
-  enr: new SignableENR(workerData.enr.kvs, workerData.enr.seq, keypair),
+  enr: SignableENR.decodeTxt(workerData.enr, keypair),
   peerId,
   multiaddr: multiaddr(workerData.bindAddr),
   config: workerData.config,
@@ -134,3 +137,9 @@ const module: Discv5WorkerApi = {
 };
 
 expose(module);
+
+logger.info("discv5 worker started", {
+  peerId: peerId.toString(),
+  listenAddr: workerData.bindAddr,
+  initialENR: workerData.enr,
+});

@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import {Context} from "mocha";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
+import {LogLevel, sleep} from "@lodestar/utils";
+import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH, ForkName} from "@lodestar/params";
 import {ChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -10,7 +11,7 @@ import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ExecutePayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
 import {initializeExecutionEngine} from "../../src/execution/index.js";
-import {ChainEvent} from "../../src/chain/index.js";
+import {ClockEvent} from "../../src/util/clock.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
@@ -233,8 +234,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
     const testLoggerOpts: TestLoggerOpts = {
-      logLevel: LogLevel.info,
-      logFile: `${logFilesDir}/mergemock-${testName}.log`,
+      level: LogLevel.info,
+      file: {
+        filepath: `${logFilesDir}/mergemock-${testName}.log`,
+        level: LogLevel.debug,
+      },
       timestampFormat: {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,
@@ -296,10 +300,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     });
 
     await new Promise<void>((resolve, _reject) => {
-      bn.chain.emitter.on(ChainEvent.clockEpoch, (epoch) => {
+      bn.chain.clock.on(ClockEvent.epoch, (epoch) => {
         // Resolve only if the finalized checkpoint includes execution payload
         if (epoch >= expectedEpochsToFinish) {
-          console.log(`\nGot event ${ChainEvent.clockEpoch}, stopping validators and nodes\n`);
+          console.log("\nGot event epoch, stopping validators and nodes\n");
           resolve();
         }
       });

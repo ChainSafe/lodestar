@@ -71,6 +71,7 @@ describe("options / beaconNodeOptions", () => {
       bootnodes: ["enr:-somedata"],
       targetPeers: 25,
       subscribeAllSubnets: true,
+      disablePeerScoring: true,
       mdns: false,
       "network.maxPeers": 30,
       "network.connectToDiscv5Bootnodes": true,
@@ -160,7 +161,7 @@ describe("options / beaconNodeOptions", () => {
       },
       network: {
         discv5: {
-          enabled: true,
+          config: {},
           bindAddr: "/ip4/127.0.0.1/udp/9002",
           bootEnrs: ["enr:-somedata"],
         },
@@ -168,6 +169,7 @@ describe("options / beaconNodeOptions", () => {
         targetPeers: 25,
         localMultiaddrs: ["/ip4/127.0.0.1/tcp/9001"],
         subscribeAllSubnets: true,
+        disablePeerScoring: true,
         connectToDiscv5Bootnodes: true,
         discv5FirstQueryDelayMs: 1000,
         dontSendGossipAttestationsToForkchoice: true,

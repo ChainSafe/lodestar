@@ -2,7 +2,8 @@ import fs from "node:fs";
 import {Context} from "mocha";
 import {fromHexString} from "@chainsafe/ssz";
 import {isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
-import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
+import {LogLevel, sleep} from "@lodestar/utils";
+import {TimestampFormatCode} from "@lodestar/logger";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainConfig} from "@lodestar/config";
 import {routes} from "@lodestar/api";
@@ -11,7 +12,7 @@ import {ValidatorProposerConfig} from "@lodestar/validator";
 
 import {ExecutePayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
 import {initializeExecutionEngine} from "../../src/execution/index.js";
-import {ChainEvent} from "../../src/chain/index.js";
+import {ClockEvent} from "../../src/util/clock.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
@@ -265,8 +266,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
     const testLoggerOpts: TestLoggerOpts = {
-      logLevel: LogLevel.info,
-      logFile: `${logFilesDir}/merge-interop-${testName}.log`,
+      level: LogLevel.info,
+      file: {
+        filepath: `${logFilesDir}/merge-interop-${testName}.log`,
+        level: LogLevel.debug,
+      },
       timestampFormat: {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,
@@ -362,7 +366,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     await new Promise<void>((resolve, reject) => {
       // Play TX_SCENARIOS
-      bn.chain.emitter.on(ChainEvent.clockSlot, async (slot) => {
+      bn.chain.clock.on(ClockEvent.slot, async (slot) => {
         if (slot < 2) return;
         switch (slot) {
           // If bellatrixEpoch > 0, this is the case of pre-merge transaction confirmation on EL pow

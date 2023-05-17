@@ -1,4 +1,4 @@
-import {Epoch, Slot, RootHex, UintNum64} from "@lodestar/types";
+import {Epoch, Slot, RootHex, UintNum64, ValidatorIndex} from "@lodestar/types";
 
 // RootHex is a root as a hex string
 // Used for lightweight and easy comparison
@@ -53,6 +53,7 @@ export type ProtoBlock = BlockExecution & {
    * This is useful for upstream fork choice logic.
    */
   slot: Slot;
+  proposerIndex: ValidatorIndex;
   blockRoot: RootHex;
   parentRoot: RootHex;
   /**

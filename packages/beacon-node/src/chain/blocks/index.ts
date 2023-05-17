@@ -1,4 +1,4 @@
-import {allForks} from "@lodestar/types";
+import {WithOptionalBytes, allForks} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -18,10 +18,10 @@ const QUEUE_MAX_LENGTH = 256;
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<[BlockInput[], ImportBlockOpts], void>;
+  readonly jobQueue: JobItemQueue<[WithOptionalBytes<BlockInput>[], ImportBlockOpts], void>;
 
   constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
-    this.jobQueue = new JobItemQueue<[BlockInput[], ImportBlockOpts], void>(
+    this.jobQueue = new JobItemQueue<[WithOptionalBytes<BlockInput>[], ImportBlockOpts], void>(
       (job, importOpts) => {
         return processBlocks.call(chain, job, {...opts, ...importOpts});
       },
@@ -30,7 +30,7 @@ export class BlockProcessor {
     );
   }
 
-  async processBlocksJob(job: BlockInput[], opts: ImportBlockOpts = {}): Promise<void> {
+  async processBlocksJob(job: WithOptionalBytes<BlockInput>[], opts: ImportBlockOpts = {}): Promise<void> {
     await this.jobQueue.push(job, opts);
   }
 }
@@ -47,7 +47,7 @@ export class BlockProcessor {
  */
 export async function processBlocks(
   this: BeaconChain,
-  blocks: BlockInput[],
+  blocks: WithOptionalBytes<BlockInput>[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
   if (blocks.length === 0) {
@@ -57,7 +57,11 @@ export async function processBlocks(
   }
 
   try {
-    const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksSanityChecks(this, blocks, opts);
+    const {relevantBlocks, dataAvailabilityStatuses, parentSlots, parentBlock} = verifyBlocksSanityChecks(
+      this,
+      blocks,
+      opts
+    );
 
     // No relevant blocks, skip verifyBlocksInEpoch()
     if (relevantBlocks.length === 0 || parentBlock === null) {
@@ -71,6 +75,7 @@ export async function processBlocks(
       this,
       parentBlock,
       relevantBlocks,
+      dataAvailabilityStatuses,
       opts
     );
 
@@ -90,6 +95,9 @@ export async function processBlocks(
         postState: postStates[i],
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
+        // Currently dataAvailableStatus is not used upstream but that can change if we
+        // start supporting optimistic syncing/processing
+        dataAvailableStatus: dataAvailabilityStatuses[i],
         proposerBalanceDelta: proposerBalanceDeltas[i],
         // TODO: Make this param mandatory and capture in gossip
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),

@@ -30,6 +30,7 @@ describe("block api utils", function () {
       expectedRootHex = toHexString(expectedBuffer);
       expectedSummary = {
         slot: 0,
+        proposerIndex: 0,
         blockRoot: expectedRootHex,
         parentRoot: expectedRootHex,
         targetRoot: expectedRootHex,
@@ -69,6 +70,12 @@ describe("block api utils", function () {
       forkChoiceStub.getFinalizedBlock.returns(expectedSummary);
       await resolveBlockId(forkChoiceStub, dbStub, "finalized").catch(() => {});
       expect(dbStub.blockArchive.get).to.be.calledOnceWithExactly(expected);
+    });
+
+    it("should resolve justified", async function () {
+      forkChoiceStub.getJustifiedBlock.returns(expectedSummary);
+      await resolveBlockId(forkChoiceStub, dbStub, "justified").catch(() => {});
+      expect(dbStub.block.get).to.be.calledOnceWithExactly(bufferEqualsMatcher(expectedBuffer));
     });
 
     it("should resolve finalized block root", async function () {

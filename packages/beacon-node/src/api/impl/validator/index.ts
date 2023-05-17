@@ -9,7 +9,7 @@ import {
   getCurrentSlot,
 } from "@lodestar/state-transition";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {Root, Slot, ValidatorIndex, ssz, Epoch, BlockSource} from "@lodestar/types";
+import {Root, Slot, ValidatorIndex, ssz, Epoch, ProducedBlockSource} from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {toHex} from "@lodestar/utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
@@ -187,7 +187,7 @@ export function getValidatorApi({
 
   const produceBlindedBlock: ServerApi<routes.validator.Api>["produceBlindedBlock"] =
     async function produceBlindedBlock(slot, randaoReveal, graffiti) {
-      const source = BlockSource.builder;
+      const source = ProducedBlockSource.builder;
       let timer;
       metrics?.blockProductionRequests.inc({source});
       try {
@@ -232,7 +232,7 @@ export function getValidatorApi({
     randaoReveal,
     graffiti
   ) {
-    const source = BlockSource.engine;
+    const source = ProducedBlockSource.engine;
     let timer;
     metrics?.blockProductionRequests.inc({source});
     try {
@@ -544,8 +544,8 @@ export function getValidatorApi({
               indexedAttestation.attestingIndices.length,
               committeeIndices
             );
-            const sentPeers = await network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof);
-            metrics?.submitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
+            const result = await network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof);
+            metrics?.submitAggregatedAttestation(seenTimestampSec, indexedAttestation, result.recipients.length);
           } catch (e) {
             if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
               logger.debug("Ignoring known signedAggregateAndProof");

@@ -16,7 +16,7 @@ describe("encoders / requestDecode", () => {
         // TODO: Debug this type error
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const decodedBody = await pipe(arrToSource(chunks), requestDecode(protocol));
-        expect(decodedBody).to.equal(requestBody);
+        expect(decodedBody).to.deep.equal(requestBody);
       });
     }
   });

@@ -2,12 +2,12 @@ import {execSync} from "node:child_process";
 import {expect} from "chai";
 import leveldown from "leveldown";
 import all from "it-all";
+import {getEnvLogger} from "@lodestar/logger/env";
 import {LevelDbController} from "../../../src/controller/index.js";
-import {testLogger} from "../../utils/logger.js";
 
 describe("LevelDB controller", () => {
   const dbLocation = "./.__testdb";
-  const db = new LevelDbController({name: dbLocation}, {metrics: null, logger: testLogger()});
+  const db = new LevelDbController({name: dbLocation}, {metrics: null, logger: getEnvLogger()});
 
   before(async () => {
     await db.start();

@@ -13,10 +13,12 @@ export {ts as allForks} from "./allForks/index.js";
 export type RootHex = string;
 
 /** Handy enum to represent the block production source */
-export enum BlockSource {
+export enum ProducedBlockSource {
   builder = "builder",
   engine = "engine",
 }
 
 export type SlotRootHex = {slot: Slot; root: RootHex};
 export type SlotOptionalRoot = {slot: Slot; root?: RootHex};
+export type WithBytes<T extends Record<string, unknown>> = T & {serializedData: Uint8Array};
+export type WithOptionalBytes<T extends Record<string, unknown>> = T & {serializedData?: Uint8Array};

@@ -4,7 +4,7 @@ import {Stream} from "@libp2p/interface-connection";
 import {Uint8ArrayList} from "uint8arraylist";
 import {Logger, TimeoutError, withTimeout} from "@lodestar/utils";
 import {prettyPrintPeerId} from "../utils/index.js";
-import {ProtocolDefinition} from "../types.js";
+import {Protocol, ReqRespRequest} from "../types.js";
 import {requestDecode} from "../encoders/requestDecode.js";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
 import {RespStatus} from "../interface.js";
@@ -17,11 +17,11 @@ export {ResponseError};
 // Default spec values from https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#configuration
 export const DEFAULT_REQUEST_TIMEOUT = 5 * 1000; // 5 sec
 
-export interface HandleRequestOpts<Req, Resp> {
+export interface HandleRequestOpts {
   logger: Logger;
   stream: Stream;
   peerId: PeerId;
-  protocol: ProtocolDefinition<Req, Resp>;
+  protocol: Protocol;
   protocolID: string;
   rateLimiter: ReqRespRateLimiter;
   signal?: AbortSignal;
@@ -42,7 +42,7 @@ export interface HandleRequestOpts<Req, Resp> {
  * 4a. Encode and write `<response_chunks>` to peer
  * 4b. On error, encode and write an error `<response_chunk>` and stop
  */
-export async function handleRequest<Req, Resp>({
+export async function handleRequest({
   logger,
   stream,
   peerId,
@@ -53,7 +53,7 @@ export async function handleRequest<Req, Resp>({
   requestId = 0,
   peerClient = "unknown",
   requestTimeoutMs,
-}: HandleRequestOpts<Req, Resp>): Promise<void> {
+}: HandleRequestOpts): Promise<void> {
   const REQUEST_TIMEOUT = requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT;
 
   const logCtx = {method: protocol.method, client: peerClient, peer: prettyPrintPeerId(peerId), requestId};
@@ -77,24 +77,27 @@ export async function handleRequest<Req, Resp>({
           }
         });
 
-        logger.debug("Req  received", {...logCtx, body: protocol.renderRequestBody?.(requestBody)});
+        logger.debug("Req  received", logCtx);
 
+        // Max count by request for byRange and byRoot
         const requestCount = protocol?.inboundRateLimits?.getRequestCount?.(requestBody) ?? 1;
 
         if (!rateLimiter.allows(peerId, protocolID, requestCount)) {
-          throw new RequestError(
-            {code: RequestErrorCode.REQUEST_RATE_LIMITED},
-            {peer: peerId.toString(), method: protocol.method, encoding: protocol.encoding}
-          );
+          throw new RequestError({code: RequestErrorCode.REQUEST_RATE_LIMITED});
         }
+
+        const requestChunk: ReqRespRequest = {
+          data: requestBody,
+          version: protocol.version,
+        };
 
         yield* pipe(
           // TODO: Debug the reason for type conversion here
-          protocol.handler(requestBody, peerId),
+          protocol.handler(requestChunk, peerId),
           // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
           // Note: Not logging on each chunk since after 1 year it hasn't add any value when debugging
           // onChunk(() => logger.debug("Resp sending chunk", logCtx)),
-          responseEncodeSuccess<Req, Resp>(protocol)
+          responseEncodeSuccess(protocol)
         );
       } catch (e) {
         const status = e instanceof ResponseError ? e.status : RespStatus.SERVER_ERROR;

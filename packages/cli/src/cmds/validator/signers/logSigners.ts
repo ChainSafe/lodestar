@@ -1,10 +1,10 @@
 import {Signer, SignerLocal, SignerRemote, SignerType} from "@lodestar/validator";
-import {Logger} from "@lodestar/utils";
+import {LogLevel, Logger} from "@lodestar/utils";
 
 /**
  * Log each pubkeys for auditing out keys are loaded from the logs
  */
-export function logSigners(logger: Pick<Logger, "info">, signers: Signer[]): void {
+export function logSigners(logger: Pick<Logger, LogLevel.info>, signers: Signer[]): void {
   const localSigners: SignerLocal[] = [];
   const remoteSigners: SignerRemote[] = [];
 

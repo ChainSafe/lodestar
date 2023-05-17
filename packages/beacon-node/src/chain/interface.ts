@@ -1,4 +1,16 @@
-import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
+import {
+  allForks,
+  UintNum64,
+  Root,
+  phase0,
+  Slot,
+  RootHex,
+  Epoch,
+  ValidatorIndex,
+  deneb,
+  Wei,
+  WithOptionalBytes,
+} from "@lodestar/types";
 import {CachedBeaconStateAllForks, Index2PubkeyCache, PubkeyIndexMap} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
@@ -8,7 +20,7 @@ import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
-import {BeaconClock} from "./clock/interface.js";
+import {IClock} from "../util/clock.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
 import {StateContextCache, CheckpointStateCache} from "./stateCache/index.js";
@@ -62,7 +74,7 @@ export interface IBeaconChain {
 
   readonly bls: IBlsVerifier;
   readonly forkChoice: IForkChoice;
-  readonly clock: BeaconClock;
+  readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
   readonly stateCache: StateContextCache;
   readonly checkpointStateCache: CheckpointStateCache;
@@ -122,9 +134,9 @@ export interface IBeaconChain {
   produceBlindedBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BlindedBeaconBlock; blockValue: Wei}>;
 
   /** Process a block until complete */
-  processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void>;
+  processBlock(block: WithOptionalBytes<BlockInput>, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void>;
+  processChainSegment(blocks: WithOptionalBytes<BlockInput>[], opts?: ImportBlockOpts): Promise<void>;
 
   getStatus(): phase0.Status;
 

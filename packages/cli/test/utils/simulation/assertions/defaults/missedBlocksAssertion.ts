@@ -1,3 +1,4 @@
+import {isTruthy} from "../../../../utils.js";
 import {SimulationAssertion} from "../../interfaces.js";
 import {everyEpochMatcher} from "../matchers.js";
 import {headAssertion} from "./headAssertion.js";
@@ -17,7 +18,8 @@ export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[]
     const missedSlots: number[] = [];
 
     for (let slot = startSlot; slot < endSlot; slot++) {
-      if (!dependantStores["head"][node.cl.id][slot].slot) {
+      const head = dependantStores["head"][node.cl.id][slot];
+      if (!isTruthy(head) || !head.slot) {
         missedSlots.push(slot);
       }
     }

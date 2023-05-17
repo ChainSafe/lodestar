@@ -2,7 +2,7 @@ import {peerIdFromString} from "@libp2p/peer-id";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger, prettyBytes} from "@lodestar/utils";
-import {Root, Slot, ssz} from "@lodestar/types";
+import {Root, Slot, ssz, WithBytes} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {Metrics} from "../../metrics/index.js";
 import {OpSource} from "../../metrics/validatorMonitor.js";
@@ -36,7 +36,7 @@ import {PeerAction, PeerRpcScoreStore} from "../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipBlobsSidecar} from "../../chain/validation/blobsSidecar.js";
-import {BlockInput, getBlockInput} from "../../chain/blocks/types.js";
+import {BlockInput, BlockSource, getBlockInput} from "../../chain/blocks/types.js";
 import {AttnetsService} from "../subnets/attnetsService.js";
 import {sszDeserialize} from "../gossip/topic.js";
 
@@ -124,7 +124,11 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     }
   }
 
-  function handleValidBeaconBlock(blockInput: BlockInput, peerIdStr: string, seenTimestampSec: number): void {
+  function handleValidBeaconBlock(
+    blockInput: WithBytes<BlockInput>,
+    peerIdStr: string,
+    seenTimestampSec: number
+  ): void {
     const signedBlock = blockInput.block;
 
     // Handler - MUST NOT `await`, to allow validation result to be propagated
@@ -176,9 +180,9 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         throw new GossipActionError(GossipAction.REJECT, {code: "POST_DENEB_BLOCK"});
       }
 
-      const blockInput = getBlockInput.preDeneb(config, signedBlock);
+      const blockInput = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip);
       await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
-      handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+      handleValidBeaconBlock({...blockInput, serializedData}, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_block_and_blobs_sidecar]: async ({serializedData}, topic, peerIdStr, seenTimestampSec) => {
@@ -190,7 +194,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
 
       // Validate block + blob. Then forward, then handle both
-      const blockInput = getBlockInput.postDeneb(config, beaconBlock, blobsSidecar);
+      const blockInput = getBlockInput.postDeneb(config, beaconBlock, BlockSource.gossip, blobsSidecar);
       await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
       await validateGossipBlobsSidecar(beaconBlock, blobsSidecar);
       handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
