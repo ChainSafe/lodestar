@@ -1,4 +1,4 @@
-import bls from "@chainsafe/bls";
+import bls from "@chainsafe/blst";
 import {
   ForkName,
   MAX_ATTESTATIONS,
@@ -70,12 +70,12 @@ export class AggregatedAttestationPool {
     return {attestationCount, attestationDataCount};
   }
 
-  add(
+  async add(
     attestation: phase0.Attestation,
     dataRootHex: RootHex,
     attestingIndicesCount: number,
     committee: ValidatorIndex[]
-  ): InsertOutcome {
+  ): Promise<InsertOutcome> {
     const slot = attestation.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
@@ -229,7 +229,7 @@ export class MatchingDataAttestationGroup {
    * If it's a subset of an existing attestations, it's not neccesrary to add to our pool.
    * If it's a superset of an existing attestation, remove the existing attestation and add new.
    */
-  add(attestation: AttestationWithIndex): InsertOutcome {
+  async add(attestation: AttestationWithIndex): Promise<InsertOutcome> {
     const newBits = attestation.attestation.aggregationBits;
 
     const indicesToRemove = [];
@@ -245,7 +245,7 @@ export class MatchingDataAttestationGroup {
 
         case IntersectResult.Exclusive:
           // no intersection
-          aggregateInto(prevAttestation, attestation);
+          await aggregateInto(prevAttestation, attestation);
           return InsertOutcome.Aggregated;
 
         case IntersectResult.Superset:
@@ -313,13 +313,16 @@ export class MatchingDataAttestationGroup {
   }
 }
 
-export function aggregateInto(attestation1: AttestationWithIndex, attestation2: AttestationWithIndex): void {
+export async function aggregateInto(
+  attestation1: AttestationWithIndex,
+  attestation2: AttestationWithIndex
+): Promise<void> {
   // Merge bits of attestation2 into attestation1
   attestation1.attestation.aggregationBits.mergeOrWith(attestation2.attestation.aggregationBits);
 
-  const signature1 = signatureFromBytesNoCheck(attestation1.attestation.signature);
-  const signature2 = signatureFromBytesNoCheck(attestation2.attestation.signature);
-  attestation1.attestation.signature = bls.Signature.aggregate([signature1, signature2]).toBytes();
+  const signature1 = await signatureFromBytesNoCheck(attestation1.attestation.signature);
+  const signature2 = await signatureFromBytesNoCheck(attestation2.attestation.signature);
+  attestation1.attestation.signature = (await bls.aggregateSignatures([signature1, signature2])).serialize();
 }
 
 /**

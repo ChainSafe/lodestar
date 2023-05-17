@@ -1,5 +1,4 @@
-import {PointFormat, Signature} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import blst from "@chainsafe/blst";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair, Root, Slot, SubcommitteeIndex} from "@lodestar/types";
 import {BitArray, toHexString} from "@chainsafe/ssz";
@@ -22,7 +21,7 @@ const MAX_ITEMS_PER_SLOT = 512;
 
 type ContributionFast = Omit<altair.SyncCommitteeContribution, "aggregationBits" | "signature"> & {
   aggregationBits: BitArray;
-  signature: Signature;
+  signature: blst.Signature;
 };
 
 /** Hex string of `contribution.beaconBlockRoot` */
@@ -63,7 +62,11 @@ export class SyncCommitteeMessagePool {
   }
 
   // TODO: indexInSubcommittee: number should be indicesInSyncCommittee
-  add(subnet: Subnet, signature: altair.SyncCommitteeMessage, indexInSubcommittee: number): InsertOutcome {
+  async add(
+    subnet: Subnet,
+    signature: altair.SyncCommitteeMessage,
+    indexInSubcommittee: number
+  ): Promise<InsertOutcome> {
     const {slot, beaconBlockRoot} = signature;
     const rootHex = toHexString(beaconBlockRoot);
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
@@ -91,7 +94,7 @@ export class SyncCommitteeMessagePool {
       return aggregateSignatureInto(contribution, signature, indexInSubcommittee);
     } else {
       // Create new aggregate
-      contributionsByRoot.set(rootHex, signatureToAggregate(subnet, signature, indexInSubcommittee));
+      contributionsByRoot.set(rootHex, await signatureToAggregate(subnet, signature, indexInSubcommittee));
       return InsertOutcome.NewData;
     }
   }
@@ -108,7 +111,7 @@ export class SyncCommitteeMessagePool {
     return {
       ...contribution,
       aggregationBits: contribution.aggregationBits,
-      signature: contribution.signature.toBytes(PointFormat.compressed),
+      signature: contribution.signature.serialize(true),
     };
   }
 
@@ -126,19 +129,19 @@ export class SyncCommitteeMessagePool {
 /**
  * Aggregate a new signature into `contribution` mutating it
  */
-function aggregateSignatureInto(
+async function aggregateSignatureInto(
   contribution: ContributionFast,
   signature: altair.SyncCommitteeMessage,
   indexInSubcommittee: number
-): InsertOutcome {
+): Promise<InsertOutcome> {
   if (contribution.aggregationBits.get(indexInSubcommittee) === true) {
     return InsertOutcome.AlreadyKnown;
   }
 
   contribution.aggregationBits.set(indexInSubcommittee, true);
-  contribution.signature = bls.Signature.aggregate([
+  contribution.signature = await blst.aggregateSignatures([
     contribution.signature,
-    signatureFromBytesNoCheck(signature.signature),
+    await signatureFromBytesNoCheck(signature.signature),
   ]);
   return InsertOutcome.Aggregated;
 }
@@ -146,11 +149,11 @@ function aggregateSignatureInto(
 /**
  * Format `signature` into an efficient `contribution` to add more signatures in with aggregateSignatureInto()
  */
-function signatureToAggregate(
+async function signatureToAggregate(
   subnet: number,
   signature: altair.SyncCommitteeMessage,
   indexInSubcommittee: number
-): ContributionFast {
+): Promise<ContributionFast> {
   const indexesPerSubnet = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
   const aggregationBits = BitArray.fromSingleBit(indexesPerSubnet, indexInSubcommittee);
 
@@ -159,6 +162,6 @@ function signatureToAggregate(
     beaconBlockRoot: signature.beaconBlockRoot,
     subcommitteeIndex: subnet,
     aggregationBits,
-    signature: signatureFromBytesNoCheck(signature.signature),
+    signature: await signatureFromBytesNoCheck(signature.signature),
   };
 }

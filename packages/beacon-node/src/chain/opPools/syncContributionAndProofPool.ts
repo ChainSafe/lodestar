@@ -1,5 +1,4 @@
-import type {Signature} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import bls from "@chainsafe/blst";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {altair, Slot, Root, ssz} from "@lodestar/types";
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
@@ -166,11 +165,13 @@ export function contributionToFast(
  * Aggregate best contributions of each subnet into SyncAggregate
  * @returns SyncAggregate to be included in block body.
  */
-export function aggregate(bestContributionBySubnet: Map<number, SyncContributionFast>): altair.SyncAggregate {
+export async function aggregate(
+  bestContributionBySubnet: Map<number, SyncContributionFast>
+): Promise<altair.SyncAggregate> {
   // check for empty/undefined bestContributionBySubnet earlier
   const syncCommitteeBits = BitArray.fromBitLen(SYNC_COMMITTEE_SIZE);
 
-  const signatures: Signature[] = [];
+  const signatures: Promise<bls.Signature>[] = [];
   for (const [subnet, bestContribution] of bestContributionBySubnet.entries()) {
     const byteOffset = subnet * SYNC_COMMITTEE_SUBNET_BYTES;
 
@@ -182,6 +183,6 @@ export function aggregate(bestContributionBySubnet: Map<number, SyncContribution
   }
   return {
     syncCommitteeBits,
-    syncCommitteeSignature: bls.Signature.aggregate(signatures).toBytes(),
+    syncCommitteeSignature: (await bls.aggregateSignatures(await Promise.all(signatures))).serialize(),
   };
 }

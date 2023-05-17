@@ -1,6 +1,5 @@
 import {phase0, Slot, Root, RootHex} from "@lodestar/types";
-import {PointFormat, Signature} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import bls from "@chainsafe/blst";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "@lodestar/utils";
 import {BeaconClock} from "../clock/interface.js";
@@ -26,7 +25,7 @@ const MAX_ATTESTATIONS_PER_SLOT = 16_384;
 type AggregateFast = {
   data: phase0.Attestation["data"];
   aggregationBits: BitArray;
-  signature: Signature;
+  signature: bls.Signature;
 };
 
 /** Hex string of DataRoot `TODO` */
@@ -93,7 +92,7 @@ export class AttestationPool {
    * - Valid committeeIndex
    * - Valid data
    */
-  add(attestation: phase0.Attestation, attDataRootHex: RootHex): InsertOutcome {
+  async add(attestation: phase0.Attestation, attDataRootHex: RootHex): Promise<InsertOutcome> {
     const slot = attestation.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
@@ -120,7 +119,7 @@ export class AttestationPool {
       return aggregateAttestationInto(aggregate, attestation);
     } else {
       // Create new aggregate
-      aggregateByRoot.set(attDataRootHex, attestationToAggregate(attestation));
+      aggregateByRoot.set(attDataRootHex, await attestationToAggregate(attestation));
       return InsertOutcome.NewData;
     }
   }
@@ -179,7 +178,10 @@ export class AttestationPool {
 /**
  * Aggregate a new contribution into `aggregate` mutating it
  */
-function aggregateAttestationInto(aggregate: AggregateFast, attestation: phase0.Attestation): InsertOutcome {
+async function aggregateAttestationInto(
+  aggregate: AggregateFast,
+  attestation: phase0.Attestation
+): Promise<InsertOutcome> {
   const bitIndex = attestation.aggregationBits.getSingleTrueBit();
 
   // Should never happen, attestations are verified against this exact condition before
@@ -192,9 +194,9 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: phase0.
   }
 
   aggregate.aggregationBits.set(bitIndex, true);
-  aggregate.signature = bls.Signature.aggregate([
+  aggregate.signature = await bls.aggregateSignatures([
     aggregate.signature,
-    signatureFromBytesNoCheck(attestation.signature),
+    await signatureFromBytesNoCheck(attestation.signature),
   ]);
   return InsertOutcome.Aggregated;
 }
@@ -202,12 +204,12 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: phase0.
 /**
  * Format `contribution` into an efficient `aggregate` to add more contributions in with aggregateContributionInto()
  */
-function attestationToAggregate(attestation: phase0.Attestation): AggregateFast {
+async function attestationToAggregate(attestation: phase0.Attestation): Promise<AggregateFast> {
   return {
     data: attestation.data,
     // clone because it will be mutated
     aggregationBits: attestation.aggregationBits.clone(),
-    signature: signatureFromBytesNoCheck(attestation.signature),
+    signature: await signatureFromBytesNoCheck(attestation.signature),
   };
 }
 
@@ -218,6 +220,6 @@ function fastToAttestation(aggFast: AggregateFast): phase0.Attestation {
   return {
     data: aggFast.data,
     aggregationBits: aggFast.aggregationBits,
-    signature: aggFast.signature.toBytes(PointFormat.compressed),
+    signature: aggFast.signature.serialize(true),
   };
 }
