@@ -9,36 +9,36 @@ export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[]
     return clock.isLastSlotOfEpoch(slot) ? AssertionMatch.Capture | AssertionMatch.Assert : AssertionMatch.None;
   },
   dependencies: [headAssertion],
-
-  async capture({node, slot, epoch, clock, dependantStores}) {
+  async capture({node, epoch, slot, dependantStores, clock}) {
     // We need to start from the first slot as we don't store data for genesis
     const startSlot = epoch === 0 ? 1 : clock.getFirstSlotOfEpoch(epoch);
     const endSlot = slot;
-
     const missedSlots: number[] = [];
 
     for (let slot = startSlot; slot < endSlot; slot++) {
-      const head = dependantStores["head"][node.cl.id][slot];
-      if (!isTruthy(head) || !head.slot) {
+      // If some value of head is present for that slot then it was not missed
+      if (!isTruthy(dependantStores[headAssertion.id][node.cl.id][slot])) {
         missedSlots.push(slot);
       }
     }
+
     return missedSlots;
   },
 
-  async assert({nodes, store, slot}) {
+  async assert({nodes, slot, store}) {
     const errors: AssertionResult[] = [];
+
     const missedBlocksOnFirstNode = store[nodes[0].cl.id][slot];
 
     for (let i = 1; i < nodes.length; i++) {
-      const missedBlocksOnNode = store[nodes[i].cl.id][slot];
+      const missedBlocks = store[nodes[i].cl.id][slot];
 
-      if (!arrayEquals(missedBlocksOnNode, missedBlocksOnFirstNode)) {
+      if (!arrayEquals(missedBlocks, missedBlocksOnFirstNode)) {
         errors.push([
-          "node has different missed blocks than node 0",
+          "node has different missed blocks than first node",
           {
             node: nodes[i].cl.id,
-            missedBlocksOnNode,
+            missedBlocks,
             missedBlocksOnFirstNode,
           },
         ]);
