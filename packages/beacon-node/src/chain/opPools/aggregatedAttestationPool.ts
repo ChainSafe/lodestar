@@ -1,4 +1,4 @@
-import bls from "@chainsafe/blst-ts";
+import bls from "blst-ts-test";
 import {
   ForkName,
   MAX_ATTESTATIONS,

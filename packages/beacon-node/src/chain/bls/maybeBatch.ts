@@ -1,6 +1,6 @@
 import {CoordType, PublicKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
-import blstTs from "@chainsafe/blst-ts";
+import blstTs from "blst-ts-test";
 
 const MIN_SET_COUNT_TO_BATCH = 2;
 

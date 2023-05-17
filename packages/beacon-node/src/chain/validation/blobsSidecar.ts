@@ -1,4 +1,4 @@
-import bls from "@chainsafe/blst-ts";
+import bls from "blst-ts-test";
 import {deneb, Root, ssz} from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
 import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
