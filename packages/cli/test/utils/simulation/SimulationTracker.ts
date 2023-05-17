@@ -226,13 +226,8 @@ export class SimulationTracker {
       return;
     }
 
-    try {
-      await this.processCapture({slot, epoch}, node);
-      await this.processAssert({slot, epoch});
-    } catch {
-      // Incase of reorg the block may not be available
-      return;
-    }
+    await this.processCapture({slot, epoch}, node);
+    await this.processAssert({slot, epoch});
 
     this.emit(node, SimulationTrackerEvent.Slot, {slot});
   }
@@ -252,50 +247,50 @@ export class SimulationTracker {
   }
 
   private async processCapture({slot, epoch}: {slot: Slot; epoch: Epoch}, node: NodePair): Promise<void> {
-    const block = await node.cl.api.beacon.getBlockV2(slot);
-    ApiError.assert(block);
+    try {
+      const block = await node.cl.api.beacon.getBlockV2(slot);
+      ApiError.assert(block);
 
-    for (const assertion of this.assertions) {
-      const match = assertion.match({
-        slot,
-        epoch,
-        clock: this.clock,
-        forkConfig: this.forkConfig,
-        fork: this.forkConfig.getForkName(slot),
-      });
+      for (const assertion of this.assertions) {
+        const match = assertion.match({
+          slot,
+          epoch,
+          clock: this.clock,
+          forkConfig: this.forkConfig,
+          fork: this.forkConfig.getForkName(slot),
+        });
 
-      if (match & AssertionMatch.None || !(match & AssertionMatch.Capture)) continue;
+        if (match & AssertionMatch.None || !(match & AssertionMatch.Capture)) continue;
 
-      if (!assertion.capture) {
-        throw new Error(`Assertion "${assertion.id}" has no capture function`);
+        if (!assertion.capture) {
+          throw new Error(`Assertion "${assertion.id}" has no capture function`);
+        }
+
+        const value = await assertion.capture({
+          fork: this.forkConfig.getForkName(slot),
+          slot,
+          block: block.response.data,
+          clock: this.clock,
+          node,
+          forkConfig: this.forkConfig,
+          epoch,
+          store: this.stores[assertion.id][node.cl.id],
+          // TODO: Make the store safe, to filter just the dependant stores not all
+          dependantStores: this.stores,
+        });
+
+        if (!isNullish(value)) {
+          this.stores[assertion.id][node.cl.id][slot] = value;
+        }
       }
 
-      // It is observed that if capture is called for assertions in the loop
-      // the value for `dependantStores` are not updated in the real time
-      // Adding a fraction of delay to make sure the stores are updated
-      await sleep(100, this.signal);
-
-      const value = await assertion.capture({
-        fork: this.forkConfig.getForkName(slot),
-        slot,
-        block: block.response.data,
-        clock: this.clock,
-        node,
-        forkConfig: this.forkConfig,
-        epoch,
-        store: this.stores[assertion.id][node.cl.id],
-        // TODO: Make the store safe, to filter just the dependant stores not all
-        dependantStores: this.stores,
-      });
-
-      if (!isNullish(value)) {
-        this.stores[assertion.id][node.cl.id][slot] = value;
-      }
+      const capturedSlot = this.slotCapture.get(slot) ?? [];
+      capturedSlot.push(node.cl.id);
+      this.slotCapture.set(slot, capturedSlot);
+    } catch {
+      // Incase of reorg the block may not be available
+      return;
     }
-
-    const capturedSlot = this.slotCapture.get(slot) ?? [];
-    capturedSlot.push(node.cl.id);
-    this.slotCapture.set(slot, capturedSlot);
   }
 
   private async processAssert({slot, epoch}: {slot: Slot; epoch: Epoch}): Promise<void> {
