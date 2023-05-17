@@ -8,7 +8,6 @@ import {EpochClock} from "./EpochClock.js";
 import {
   AssertionMatch,
   AtLeast,
-  CLClient,
   NodeId,
   NodePair,
   SimulationAssertion,
@@ -218,7 +217,9 @@ export class SimulationTracker {
     const slot = event.slot;
     const epoch = this.clock.getEpochForSlot(slot);
     const lastSeenSlot = this.lastSeenSlot.get(node.cl.id);
+
     console.log("processOnBlock", node.cl.id, {slot, lastSeenSlot});
+
     if (lastSeenSlot !== undefined && slot > lastSeenSlot) {
       this.lastSeenSlot.set(node.cl.id, slot);
     } else {
@@ -365,7 +366,6 @@ export class SimulationTracker {
     void node.cl.api.events.eventstream(events, signal ?? this.signal, async (event) => {
       switch (event.type) {
         case routes.events.EventType.block:
-          console.log("initEventStreamForNode", node.cl.id, event.message.slot);
           await this.processOnBlock(event.message, node);
           return;
         case routes.events.EventType.head:
