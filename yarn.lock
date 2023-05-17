@@ -489,13 +489,6 @@
     bls-eth-wasm "^0.4.8"
     randombytes "^2.1.0"
 
-"@chainsafe/blst-ts@file:../blst-ts-2/rebuild":
-  version "1.0.0"
-  dependencies:
-    bindings "^1.5.0"
-    node-addon-api "^6.1.0"
-    node-gyp "^9.3.1"
-
 "@chainsafe/blst@^0.2.8":
   version "0.2.8"
   resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-0.2.8.tgz#f4513b48ba26099e2ec366076cc2b5c93b223710"
@@ -4915,6 +4908,15 @@ bls-eth-wasm@^0.4.8:
   version "0.4.8"
   resolved "https://registry.npmjs.org/bls-eth-wasm/-/bls-eth-wasm-0.4.8.tgz"
   integrity sha512-ye7+G6KFLb3i9xSrLASAoYqOUK5WLB6XA5DD8Sh0UQpZ3T999ylsYbFdoOJpmvTDuBuMi23Vy8Jm0pn/GF01CA==
+
+blst-ts-test@0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/blst-ts-test/-/blst-ts-test-0.0.1.tgz#24ffce87765fe2b8b639648b8c0c9c34a1050be6"
+  integrity sha512-Bonpznw3h2yOGdywOCE3/5ZN0PnVmv4A3W3QKA7bCdervZ/0KmUEpMDHOgnASvdKztoh0HL3RVBwKXDrH9yg6A==
+  dependencies:
+    bindings "^1.5.0"
+    node-addon-api "^6.1.0"
+    node-gyp "^9.3.1"
 
 bluebird@^3.5.0:
   version "3.7.2"
