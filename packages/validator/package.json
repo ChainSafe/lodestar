@@ -50,7 +50,6 @@
   ],
   "dependencies": {
     "@chainsafe/bls": "7.1.1",
-    "@chainsafe/blst": "file:../../../bls-ts-2",
     "@chainsafe/ssz": "^0.10.2",
     "@lodestar/api": "^1.7.2",
     "@lodestar/config": "^1.7.2",
