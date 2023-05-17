@@ -218,7 +218,7 @@ export class SimulationTracker {
     const slot = event.slot;
     const epoch = this.clock.getEpochForSlot(slot);
     const lastSeenSlot = this.lastSeenSlot.get(node.cl.id);
-
+    console.log("processOnBlock", node.cl.id, {slot, lastSeenSlot});
     if (lastSeenSlot !== undefined && slot > lastSeenSlot) {
       this.lastSeenSlot.set(node.cl.id, slot);
     } else {
