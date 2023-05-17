@@ -49,7 +49,7 @@ describe("C-KZG", () => {
     validateBlobsSidecar(slot, beaconBlockRoot, kzgCommitments, blobsSidecar);
 
     // Gossip validation
-    validateGossipBlobsSidecar(signedBeaconBlock, blobsSidecar);
+    return validateGossipBlobsSidecar(signedBeaconBlock, blobsSidecar);
   });
 });
 

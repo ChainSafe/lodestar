@@ -1,5 +1,4 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
+import bls from "@chainsafe/blst";
 import {deneb, Root, ssz} from "@lodestar/types";
 import {bytesToBigInt} from "@lodestar/utils";
 import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
@@ -11,10 +10,10 @@ import {ckzg} from "../../util/kzg.js";
 
 const BLS_MODULUS = BigInt("52435875175126190479447740508185965837690552500527637822603658699938581184513");
 
-export function validateGossipBlobsSidecar(
+export async function validateGossipBlobsSidecar(
   signedBlock: deneb.SignedBeaconBlock,
   blobsSidecar: deneb.BlobsSidecar
-): void {
+): Promise<void> {
   const block = signedBlock.message;
 
   // Spec: https://github.com/ethereum/consensus-specs/blob/4cb6fd1c8c8f190d147d15b182c2510d0423ec61/specs/eip4844/p2p-interface.md#beacon_block_and_blobs_sidecar
@@ -22,7 +21,7 @@ export function validateGossipBlobsSidecar(
   // -- i.e. all(bls.KeyValidate(commitment) for commitment in block.body.blob_kzg_commitments)
   const {blobKzgCommitments} = block.body;
   for (let i = 0; i < blobKzgCommitments.length; i++) {
-    if (!blsKeyValidate(blobKzgCommitments[i])) {
+    if (!(await blsKeyValidate(blobKzgCommitments[i]))) {
       throw new BlobsSidecarError(GossipAction.REJECT, {code: BlobsSidecarErrorCode.INVALID_KZG, kzgIdx: i});
     }
   }
@@ -54,7 +53,7 @@ export function validateGossipBlobsSidecar(
 
   // [REJECT] The KZG proof is a correctly encoded compressed BLS G1 Point
   // -- i.e. blsKeyValidate(blobs_sidecar.kzg_aggregated_proof)
-  if (!blsKeyValidate(blobsSidecar.kzgAggregatedProof)) {
+  if (!(await blsKeyValidate(blobsSidecar.kzgAggregatedProof))) {
     throw new BlobsSidecarError(GossipAction.REJECT, {code: BlobsSidecarErrorCode.INVALID_KZG_PROOF});
   }
 
@@ -122,9 +121,10 @@ export function validateBlobsSidecar(
  * From https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-bls-signature-04#section-2.5
  * KeyValidate = valid, non-identity point that is in the correct subgroup
  */
-function blsKeyValidate(g1Point: Uint8Array): boolean {
+async function blsKeyValidate(g1Point: Uint8Array): Promise<boolean> {
   try {
-    bls.PublicKey.fromBytes(g1Point, CoordType.jacobian, true);
+    const key = bls.PublicKey.deserialize(g1Point, bls.CoordType.jacobian);
+    await key.keyValidate();
     return true;
   } catch (e) {
     return false;
