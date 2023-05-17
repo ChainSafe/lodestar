@@ -13,17 +13,17 @@ import {
   ResponseIncoming,
   ResponseOutgoing,
 } from "@lodestar/reqresp";
-import {allForks, altair, deneb, phase0, Root, ssz} from "@lodestar/types";
+import {allForks, phase0, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {NetworkCoreMetrics} from "../core/metrics.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
 import {PeersData} from "../peers/peersData.js";
 import {IPeerRpcScoreStore, PeerAction} from "../peers/score/index.js";
-import {ReqRespHandlers} from "./handlers/index.js";
-import {IReqRespBeaconNode} from "./interface.js";
+import {NetworkCoreMetrics} from "../core/metrics.js";
+import {StatusCache} from "../statusCache.js";
 import {onOutgoingReqRespError} from "./score.js";
 import {
+  GetReqRespHandlerFn,
   ProtocolNoHandler,
   ReqRespMethod,
   RequestTypedContainer,
@@ -31,13 +31,11 @@ import {
   requestSszTypeByMethod,
   responseSszTypeByMethod,
 } from "./types.js";
-import {collectSequentialBlocksInRange} from "./utils/collectSequentialBlocksInRange.js";
-import {collectExactOneTyped, collectMaxResponseTyped} from "./utils/collect.js";
-import * as reqRespProtocols from "./protocols.js";
+import * as protocols from "./protocols.js";
+import {collectExactOneTyped} from "./utils/collect.js";
 
-export {getReqRespHandlers, ReqRespHandlers} from "./handlers/index.js";
+export {getReqRespHandlers} from "./handlers/index.js";
 export {ReqRespMethod, RequestTypedContainer} from "./types.js";
-export {IReqRespBeaconNode};
 
 export interface ReqRespBeaconNodeModules {
   libp2p: Libp2p;
@@ -45,15 +43,14 @@ export interface ReqRespBeaconNodeModules {
   logger: Logger;
   config: BeaconConfig;
   metrics: NetworkCoreMetrics | null;
-  reqRespHandlers: ReqRespHandlers;
   metadata: MetadataController;
   peerRpcScores: IPeerRpcScoreStore;
-  networkEventBus: INetworkEventBus;
+  events: INetworkEventBus;
+  statusCache: StatusCache;
+  getHandler: GetReqRespHandlerFn;
 }
 
 export type ReqRespBeaconNodeOpts = ReqRespOpts;
-
-const EMPTY_REQUEST = new Uint8Array();
 
 /**
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
@@ -61,12 +58,13 @@ const EMPTY_REQUEST = new Uint8Array();
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
  * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
-export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
-  private readonly reqRespHandlers: ReqRespHandlers;
+export class ReqRespBeaconNode extends ReqResp {
   private readonly metadataController: MetadataController;
   private readonly peerRpcScores: IPeerRpcScoreStore;
   private readonly networkEventBus: INetworkEventBus;
   private readonly peersData: PeersData;
+  private readonly statusCache: StatusCache;
+  private readonly getHandler: GetReqRespHandlerFn;
 
   /** Track registered fork to only send to known protocols */
   private currentRegisteredFork: ForkSeq = ForkSeq.phase0;
@@ -75,7 +73,7 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   protected readonly logger: Logger;
 
   constructor(modules: ReqRespBeaconNodeModules, options: ReqRespBeaconNodeOpts = {}) {
-    const {reqRespHandlers, networkEventBus, peersData, peerRpcScores, metadata, metrics, logger} = modules;
+    const {events, peersData, peerRpcScores, metadata, metrics, logger} = modules;
 
     super(
       {
@@ -95,13 +93,14 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
       }
     );
 
-    this.reqRespHandlers = reqRespHandlers;
     this.peerRpcScores = peerRpcScores;
     this.peersData = peersData;
     this.config = modules.config;
     this.logger = logger;
     this.metadataController = metadata;
-    this.networkEventBus = networkEventBus;
+    this.networkEventBus = events;
+    this.statusCache = modules.statusCache;
+    this.getHandler = modules.getHandler;
   }
 
   async start(): Promise<void> {
@@ -142,31 +141,50 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     }
   }
 
-  async status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status> {
-    return collectExactOneTyped(
-      this.sendRequestTyped(peerId, ReqRespMethod.Status, [Version.V1], request),
-      responseSszTypeByMethod[ReqRespMethod.Status]
-    );
+  sendRequestWithoutEncoding(
+    peerId: PeerId,
+    method: ReqRespMethod,
+    versions: number[],
+    requestData: Uint8Array
+  ): AsyncIterable<ResponseIncoming> {
+    // Remember prefered encoding
+    const encoding = this.peersData.getEncodingPreference(peerId.toString()) ?? Encoding.SSZ_SNAPPY;
+
+    // Overwritte placeholder requestData from main thread with correct sequenceNumber
+    if (method === ReqRespMethod.Ping) {
+      requestData = requestSszTypeByMethod[ReqRespMethod.Ping].serialize(this.metadataController.seqNumber);
+    }
+
+    // ReqResp outgoing request, emit from main thread to worker
+    return this.sendRequest(peerId, method, versions, encoding, requestData);
   }
 
-  async goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void> {
-    // TODO: Replace with "ignore response after request"
-    await collectExactOneTyped(
-      this.sendRequestTyped(peerId, ReqRespMethod.Goodbye, [Version.V1], request),
-      responseSszTypeByMethod[ReqRespMethod.Goodbye]
-    );
-  }
-
-  async ping(peerId: PeerId): Promise<phase0.Ping> {
+  async sendPing(peerId: PeerId): Promise<phase0.Ping> {
     return collectExactOneTyped(
-      this.sendRequestTyped(peerId, ReqRespMethod.Ping, [Version.V1], this.metadataController.seqNumber),
+      // Ping method request data is overwritten in worker with correct sequence number
+      this.sendReqRespRequest(peerId, ReqRespMethod.Ping, [Version.V1], this.metadataController.seqNumber),
       responseSszTypeByMethod[ReqRespMethod.Ping]
     );
   }
 
-  async metadata(peerId: PeerId): Promise<allForks.Metadata> {
+  async sendStatus(peerId: PeerId, request: phase0.Status): Promise<phase0.Status> {
     return collectExactOneTyped(
-      this.sendRequestTyped(
+      this.sendReqRespRequest(peerId, ReqRespMethod.Status, [Version.V1], request),
+      responseSszTypeByMethod[ReqRespMethod.Status]
+    );
+  }
+
+  async sendGoodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void> {
+    // TODO: Replace with "ignore response after request"
+    await collectExactOneTyped(
+      this.sendReqRespRequest(peerId, ReqRespMethod.Goodbye, [Version.V1], request),
+      responseSszTypeByMethod[ReqRespMethod.Goodbye]
+    );
+  }
+
+  async sendMetadata(peerId: PeerId): Promise<allForks.Metadata> {
+    return collectExactOneTyped(
+      this.sendReqRespRequest(
         peerId,
         ReqRespMethod.Metadata,
         // Before altair, prioritize V2. After altair only request V2
@@ -177,91 +195,15 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
     );
   }
 
-  async beaconBlocksByRange(
+  private sendReqRespRequest<Req>(
     peerId: PeerId,
-    request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<allForks.SignedBeaconBlock[]> {
-    return collectSequentialBlocksInRange(
-      this.sendRequestTyped(
-        peerId,
-        ReqRespMethod.BeaconBlocksByRange,
-        // Before altair, prioritize V2. After altair only request V2
-        this.currentRegisteredFork >= ForkSeq.altair ? [Version.V2] : [(Version.V2, Version.V1)],
-        request
-      ),
-      request
-    );
-  }
-
-  async beaconBlocksByRoot(
-    peerId: PeerId,
-    request: phase0.BeaconBlocksByRootRequest
-  ): Promise<allForks.SignedBeaconBlock[]> {
-    return collectMaxResponseTyped(
-      this.sendRequestTyped(
-        peerId,
-        ReqRespMethod.BeaconBlocksByRoot,
-        // Before altair, prioritize V2. After altair only request V2
-        this.currentRegisteredFork >= ForkSeq.altair ? [Version.V2] : [(Version.V2, Version.V1)],
-        request
-      ),
-      request.length,
-      responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRoot]
-    );
-  }
-
-  async lightClientBootstrap(peerId: PeerId, request: Root): Promise<allForks.LightClientBootstrap> {
-    return collectExactOneTyped(
-      this.sendRequestTyped(peerId, ReqRespMethod.LightClientBootstrap, [Version.V1], request),
-      responseSszTypeByMethod[ReqRespMethod.LightClientBootstrap]
-    );
-  }
-
-  async lightClientOptimisticUpdate(peerId: PeerId): Promise<allForks.LightClientOptimisticUpdate> {
-    return collectExactOneTyped(
-      this.sendRequestTyped(peerId, ReqRespMethod.LightClientOptimisticUpdate, [Version.V1], null),
-      responseSszTypeByMethod[ReqRespMethod.LightClientOptimisticUpdate]
-    );
-  }
-
-  async lightClientFinalityUpdate(peerId: PeerId): Promise<allForks.LightClientFinalityUpdate> {
-    return collectExactOneTyped(
-      this.sendRequestTyped(peerId, ReqRespMethod.LightClientFinalityUpdate, [Version.V1], null),
-      responseSszTypeByMethod[ReqRespMethod.LightClientFinalityUpdate]
-    );
-  }
-
-  async lightClientUpdatesByRange(
-    peerId: PeerId,
-    request: altair.LightClientUpdatesByRange
-  ): Promise<allForks.LightClientUpdate[]> {
-    return collectMaxResponseTyped(
-      this.sendRequestTyped(peerId, ReqRespMethod.LightClientUpdatesByRange, [Version.V1], request),
-      request.count,
-      responseSszTypeByMethod[ReqRespMethod.LightClientUpdatesByRange]
-    );
-  }
-
-  async blobsSidecarsByRange(
-    peerId: PeerId,
-    request: deneb.BlobsSidecarsByRangeRequest
-  ): Promise<deneb.BlobsSidecar[]> {
-    return collectMaxResponseTyped(
-      this.sendRequestTyped(peerId, ReqRespMethod.BlobsSidecarsByRange, [Version.V1], request),
-      request.count,
-      responseSszTypeByMethod[ReqRespMethod.BlobsSidecarsByRange]
-    );
-  }
-
-  async beaconBlockAndBlobsSidecarByRoot(
-    peerId: PeerId,
-    request: deneb.BeaconBlockAndBlobsSidecarByRootRequest
-  ): Promise<deneb.SignedBeaconBlockAndBlobsSidecar[]> {
-    return collectMaxResponseTyped(
-      this.sendRequestTyped(peerId, ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot, [Version.V1], request),
-      request.length,
-      responseSszTypeByMethod[ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]
-    );
+    method: ReqRespMethod,
+    versions: number[],
+    request: Req
+  ): AsyncIterable<ResponseIncoming> {
+    const requestType = requestSszTypeByMethod[method];
+    const requestData = requestType ? requestType.serialize(request as never) : new Uint8Array();
+    return this.sendRequestWithoutEncoding(peerId, method, versions, requestData);
   }
 
   /**
@@ -270,67 +212,57 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
    */
   private getProtocolsAtFork(fork: ForkName): [ProtocolNoHandler, ProtocolHandler][] {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const protocols: [ProtocolNoHandler, ProtocolHandler][] = [
-      [reqRespProtocols.Ping(this.config), this.onPing.bind(this)],
-      [reqRespProtocols.Status(this.config), this.onStatus.bind(this)],
-      [reqRespProtocols.Goodbye(this.config), this.onGoodbye.bind(this)],
+    const protocolsAtFork: [ProtocolNoHandler, ProtocolHandler][] = [
+      [protocols.Ping(this.config), this.onPing.bind(this)],
+      [protocols.Status(this.config), this.onStatus.bind(this)],
+      [protocols.Goodbye(this.config), this.onGoodbye.bind(this)],
       // Support V2 methods as soon as implemented (for altair)
       // Ref https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/altair/p2p-interface.md#transitioning-from-v1-to-v2
-      [reqRespProtocols.MetadataV2(this.config), this.onMetadata.bind(this)],
-      [reqRespProtocols.BeaconBlocksByRangeV2(this.config), this.reqRespHandlers.onBeaconBlocksByRange],
-      [reqRespProtocols.BeaconBlocksByRootV2(this.config), this.reqRespHandlers.onBeaconBlocksByRoot],
+      [protocols.MetadataV2(this.config), this.onMetadata.bind(this)],
+      [protocols.BeaconBlocksByRangeV2(this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
+      [protocols.BeaconBlocksByRootV2(this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)],
     ];
 
     if (ForkSeq[fork] < ForkSeq.altair) {
       // Unregister V1 topics at the fork boundary, so only declare for pre-altair
-      protocols.push(
-        [reqRespProtocols.Metadata(this.config), this.onMetadata.bind(this)],
-        [reqRespProtocols.BeaconBlocksByRange(this.config), this.reqRespHandlers.onBeaconBlocksByRange],
-        [reqRespProtocols.BeaconBlocksByRoot(this.config), this.reqRespHandlers.onBeaconBlocksByRoot]
+      protocolsAtFork.push(
+        [protocols.Metadata(this.config), this.onMetadata.bind(this)],
+        [protocols.BeaconBlocksByRange(this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRange)],
+        [protocols.BeaconBlocksByRoot(this.config), this.getHandler(ReqRespMethod.BeaconBlocksByRoot)]
       );
     }
 
     if (ForkSeq[fork] >= ForkSeq.altair) {
       // Should be okay to enable before altair, but for consistency only enable afterwards
-      protocols.push(
-        [reqRespProtocols.LightClientBootstrap(this.config), this.reqRespHandlers.onLightClientBootstrap],
-        [reqRespProtocols.LightClientFinalityUpdate(this.config), this.reqRespHandlers.onLightClientFinalityUpdate],
-        [reqRespProtocols.LightClientOptimisticUpdate(this.config), this.reqRespHandlers.onLightClientOptimisticUpdate],
-        [reqRespProtocols.LightClientUpdatesByRange(this.config), this.reqRespHandlers.onLightClientUpdatesByRange]
+      protocolsAtFork.push(
+        [protocols.LightClientBootstrap(this.config), this.getHandler(ReqRespMethod.LightClientBootstrap)],
+        [protocols.LightClientFinalityUpdate(this.config), this.getHandler(ReqRespMethod.LightClientFinalityUpdate)],
+        [
+          protocols.LightClientOptimisticUpdate(this.config),
+          this.getHandler(ReqRespMethod.LightClientOptimisticUpdate),
+        ],
+        [protocols.LightClientUpdatesByRange(this.config), this.getHandler(ReqRespMethod.LightClientUpdatesByRange)]
       );
     }
 
     if (ForkSeq[fork] >= ForkSeq.deneb) {
-      protocols.push(
+      protocolsAtFork.push(
         [
-          reqRespProtocols.BeaconBlockAndBlobsSidecarByRoot(this.config),
-          this.reqRespHandlers.onBeaconBlockAndBlobsSidecarByRoot,
+          protocols.BeaconBlockAndBlobsSidecarByRoot(this.config),
+          this.getHandler(ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot),
         ],
-        [reqRespProtocols.BlobsSidecarsByRange(this.config), this.reqRespHandlers.onBlobsSidecarsByRange]
+        [protocols.BlobsSidecarsByRange(this.config), this.getHandler(ReqRespMethod.BlobsSidecarsByRange)]
       );
     }
 
-    return protocols;
+    return protocolsAtFork;
   }
 
-  protected sendRequestTyped<Req>(
-    peerId: PeerId,
-    method: ReqRespMethod,
-    versions: number[],
-    request: Req
-  ): AsyncIterable<ResponseIncoming> {
-    // Remember prefered encoding
-    const encoding = this.peersData.getEncodingPreference(peerId.toString()) ?? Encoding.SSZ_SNAPPY;
-    const requestType = requestSszTypeByMethod[method];
-    const requestEncoded = requestType ? requestType.serialize(request as never) : EMPTY_REQUEST;
-    return super.sendRequest(peerId, method, versions, encoding, requestEncoded);
-  }
-
-  protected onIncomingRequestBody(req: RequestTypedContainer, peerId: PeerId): void {
+  protected onIncomingRequestBody(request: RequestTypedContainer, peer: PeerId): void {
     // Allow onRequest to return and close the stream
     // For Goodbye there may be a race condition where the listener of `receivedGoodbye`
     // disconnects in the same syncronous call, preventing the stream from ending cleanly
-    setTimeout(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, req, peerId), 0);
+    setTimeout(() => this.networkEventBus.emit(NetworkEvent.reqRespRequest, {request, peer}), 0);
   }
 
   protected onIncomingRequest(peerId: PeerId, protocol: ProtocolDescriptor): void {
@@ -350,7 +282,12 @@ export class ReqRespBeaconNode extends ReqResp implements IReqRespBeaconNode {
   private async *onStatus(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {
     const body = ssz.phase0.Status.deserialize(req.data);
     this.onIncomingRequestBody({method: ReqRespMethod.Status, body}, peerId);
-    yield* this.reqRespHandlers.onStatus(body, peerId);
+
+    yield {
+      data: ssz.phase0.Status.serialize(this.statusCache.get()),
+      // Status topic is fork-agnostic
+      fork: ForkName.phase0,
+    };
   }
 
   private async *onGoodbye(req: ReqRespRequest, peerId: PeerId): AsyncIterable<ResponseOutgoing> {

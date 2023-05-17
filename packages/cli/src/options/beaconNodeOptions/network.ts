@@ -46,15 +46,19 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   if (targetPeers != null && maxPeers != null && targetPeers > maxPeers) {
     throw new YargsError("network.maxPeers must be greater than or equal to targetPeers");
   }
+  // Set discv5 opts to null to disable only if explicitly disabled
+  const enableDiscv5 = args["discv5"] ?? true;
   return {
-    discv5: {
-      config: {},
-      bindAddr: `/ip4/${listenAddress}/udp/${udpPort}`,
-      // TODO: Okay to set to empty array?
-      bootEnrs: args["bootnodes"] ?? [],
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-      enr: undefined as any,
-    },
+    discv5: enableDiscv5
+      ? {
+          config: {},
+          bindAddr: `/ip4/${listenAddress}/udp/${udpPort}`,
+          // TODO: Okay to set to empty array?
+          bootEnrs: args["bootnodes"] ?? [],
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+          enr: undefined as any,
+        }
+      : null,
     maxPeers,
     targetPeers,
     localMultiaddrs: [`/ip4/${listenAddress}/tcp/${tcpPort}`],

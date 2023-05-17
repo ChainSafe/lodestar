@@ -1,4 +1,3 @@
-import {PeerId} from "@libp2p/interface-peer-id";
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
@@ -6,7 +5,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {BlockInput} from "../../chain/blocks/types.js";
 import {PeerAction} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
-import {PeerMap} from "../../util/peerMap.js";
+import {PeerIdStr} from "../../util/peerId.js";
 import {wrapError} from "../../util/wrapError.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH} from "../constants.js";
@@ -35,9 +34,9 @@ export type SyncChainFns = {
    */
   processChainSegment: (blocks: BlockInput[], syncType: RangeSyncType) => Promise<void>;
   /** Must download blocks, and validate their range */
-  downloadBeaconBlocksByRange: (peer: PeerId, request: phase0.BeaconBlocksByRangeRequest) => Promise<BlockInput[]>;
+  downloadBeaconBlocksByRange: (peer: PeerIdStr, request: phase0.BeaconBlocksByRangeRequest) => Promise<BlockInput[]>;
   /** Report peer for negative actions. Decouples from the full network instance */
-  reportPeer: (peer: PeerId, action: PeerAction, actionName: string) => void;
+  reportPeer: (peer: PeerIdStr, action: PeerAction, actionName: string) => void;
   /** Hook called when Chain state completes */
   onEnd: (err: Error | null, target: ChainTarget | null) => void;
 };
@@ -106,7 +105,7 @@ export class SyncChain {
   private readonly batchProcessor = new ItTrigger();
   /** Sorted map of batches undergoing some kind of processing. */
   private readonly batches = new Map<Epoch, Batch>();
-  private readonly peerset = new PeerMap<ChainTarget>();
+  private readonly peerset = new Map<PeerIdStr, ChainTarget>();
 
   private readonly logger: Logger;
   private readonly config: ChainForkConfig;
@@ -188,7 +187,7 @@ export class SyncChain {
   /**
    * Add peer to the chain and request batches if active
    */
-  addPeer(peer: PeerId, target: ChainTarget): void {
+  addPeer(peer: PeerIdStr, target: ChainTarget): void {
     this.peerset.set(peer, target);
     this.computeTarget();
     this.triggerBatchDownloader();
@@ -198,7 +197,7 @@ export class SyncChain {
    * Returns true if the peer existed and has been removed
    * NOTE: The RangeSync will take care of deleting the SyncChain if peers = 0
    */
-  removePeer(peerId: PeerId): boolean {
+  removePeer(peerId: PeerIdStr): boolean {
     const deleted = this.peerset.delete(peerId);
     this.computeTarget();
     return deleted;
@@ -228,8 +227,8 @@ export class SyncChain {
     return this.peerset.size;
   }
 
-  getPeers(): PeerId[] {
-    return this.peerset.keys();
+  getPeers(): PeerIdStr[] {
+    return Array.from(this.peerset.keys());
   }
 
   /** Full debug state for lodestar API */
@@ -247,7 +246,7 @@ export class SyncChain {
 
   private computeTarget(): void {
     if (this.peerset.size > 0) {
-      const targets = this.peerset.values();
+      const targets = Array.from(this.peerset.values());
       this.target = computeMostCommonTarget(targets);
     }
   }
@@ -315,7 +314,7 @@ export class SyncChain {
    */
   private triggerBatchDownloader(): void {
     try {
-      this.requestBatches(this.peerset.keys());
+      this.requestBatches(Array.from(this.peerset.keys()));
     } catch (e) {
       // bubble the error up to the main async iterable loop
       this.batchProcessor.end(e as Error);
@@ -326,7 +325,7 @@ export class SyncChain {
    * Attempts to request the next required batches from the peer pool if the chain is syncing.
    * It will exhaust the peer pool and left over batches until the batch buffer is reached.
    */
-  private requestBatches(peers: PeerId[]): void {
+  private requestBatches(peers: PeerIdStr[]): void {
     if (this.status !== SyncChainStatus.Syncing) {
       return;
     }
@@ -392,7 +391,7 @@ export class SyncChain {
   /**
    * Requests the batch assigned to the given id from a given peer.
    */
-  private async sendBatch(batch: Batch, peer: PeerId): Promise<void> {
+  private async sendBatch(batch: Batch, peer: PeerIdStr): Promise<void> {
     try {
       batch.startDownloading(peer);
 
@@ -481,7 +480,7 @@ export class SyncChain {
         const attemptOk = batch.validationSuccess();
         for (const attempt of batch.failedProcessingAttempts) {
           if (attempt.hash !== attemptOk.hash) {
-            if (attemptOk.peer.toString() === attempt.peer.toString()) {
+            if (attemptOk.peer === attempt.peer.toString()) {
               // The same peer corrected its previous attempt
               this.reportPeer(attempt.peer, PeerAction.MidToleranceError, "SyncChainInvalidBatchSelf");
             } else {

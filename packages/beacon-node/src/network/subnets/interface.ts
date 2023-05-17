@@ -1,6 +1,7 @@
 import {ForkName} from "@lodestar/params";
 import {Slot, ValidatorIndex} from "@lodestar/types";
 import {RequestedSubnet} from "../peers/utils/index.js";
+import {GossipTopic} from "../gossip/interface.js";
 
 /** Generic CommitteeSubscription for both beacon attnets subs and syncnets subs */
 export type CommitteeSubscription = {
@@ -31,4 +32,9 @@ export type SubnetsServiceOpts = {
   // For deterministic randomness in unit test after ESM prevents simple import mocking
   randBetweenFn?: RandBetweenFn;
   shuffleFn?: ShuffleFn;
+};
+
+export type GossipSubscriber = {
+  subscribeTopic(topic: GossipTopic): void;
+  unsubscribeTopic(topic: GossipTopic): void;
 };
