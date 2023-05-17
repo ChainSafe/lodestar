@@ -21,7 +21,7 @@ export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[]
         missedBlocks.push(slot);
       }
     }
-    console.log({node: node.cl.id, missedBlocks, heads: dependantStores[headAssertion.id][node.cl.id]});
+    console.log({node: node.cl.id, missedBlocks, heads: Object.keys(dependantStores[headAssertion.id][node.cl.id])});
     return missedBlocks;
   },
 
