@@ -1,4 +1,4 @@
-import {LodestarError} from "@lodestar/utils";
+import {ClonableLodestarError, LodestarErrorObject, lodestarErrorObjectToMetaData} from "@lodestar/utils";
 import {ResponseError} from "../response/index.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 
@@ -49,9 +49,19 @@ type RequestErrorType =
   | {code: RequestErrorCode.RESP_TIMEOUT}
   | {code: RequestErrorCode.REQUEST_RATE_LIMITED};
 
-export class RequestError extends LodestarError<RequestErrorType> {
+export const REQUEST_ERROR_CLASS_NAME = "RequestError";
+
+export class RequestError extends ClonableLodestarError<RequestErrorType> {
   constructor(type: RequestErrorType) {
     super(type, renderErrorMessage(type));
+  }
+
+  static fromObject(obj: LodestarErrorObject): RequestError {
+    if (obj.className !== "RequestError") {
+      throw new Error(`Expected className to be RequestError, but got ${obj.className}`);
+    }
+
+    return new RequestError(lodestarErrorObjectToMetaData(obj) as RequestErrorType);
   }
 }
 

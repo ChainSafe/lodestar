@@ -1,3 +1,7 @@
+export type LodestarErrorMetaData = Record<string, string | number | null>;
+export type LodestarErrorObject = LodestarErrorMetaData & {stack: string} & {className: string};
+export type FromObjectFn = (object: LodestarErrorObject) => Error;
+
 /**
  * Generic Lodestar error with attached metadata
  */
@@ -22,6 +26,34 @@ export class LodestarError<T extends {code: string}> extends Error {
       stack: this.stack || "",
     };
   }
+}
+
+/**
+ * Generic Lodestar error with attached metadata that can be cloned.
+ * Child classes should implement `fromObject` to deserialize the error.
+ */
+export class ClonableLodestarError<T extends {code: string}> extends LodestarError<T> {
+  constructor(type: T, message?: string) {
+    super(type, message);
+  }
+
+  /**
+   * Add className to the error object so that it can be deserialized.
+   */
+  toObject(): LodestarErrorObject {
+    return {
+      // Ignore message since it's just type.code
+      ...this.getMetadata(),
+      stack: this.stack || "",
+      className: this.constructor.name,
+    };
+  }
+}
+
+export function lodestarErrorObjectToMetaData(object: LodestarErrorObject): LodestarErrorMetaData {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const {stack, className, ...metadata} = object;
+  return metadata;
 }
 
 /**

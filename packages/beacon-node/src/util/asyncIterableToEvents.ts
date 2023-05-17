@@ -1,4 +1,5 @@
 import {LinkedList} from "./array.js";
+import {ThreadBoundaryError, fromThreadBoundaryError, toThreadBoundaryError} from "./error.js";
 
 export type RequestEvent<T> = {
   callArgs: T;
@@ -14,7 +15,7 @@ export enum IteratorEventType {
 export type IteratorEvent<V> =
   | {type: IteratorEventType.next; id: number; item: V}
   | {type: IteratorEventType.done; id: number}
-  | {type: IteratorEventType.error; id: number; error: unknown};
+  | {type: IteratorEventType.error; id: number; error: ThreadBoundaryError};
 
 export type AsyncIterableEventBus<Args, Item> = {
   emitRequest(data: RequestEvent<Args>): void;
@@ -113,7 +114,7 @@ export class AsyncIterableBridgeCaller<Args, Item> {
 
       case IteratorEventType.error:
         // What if there's already an error?
-        req.error = data.error as Error;
+        req.error = fromThreadBoundaryError(data.error);
 
         // Do not expect more responses
         this.pending.delete(data.id);
@@ -155,7 +156,7 @@ export class AsyncIterableBridgeHandler<Args, Item> {
       this.events.emitResponse({
         type: IteratorEventType.error,
         id: data.id,
-        error: e,
+        error: toThreadBoundaryError(e as Error),
       });
     }
   }
