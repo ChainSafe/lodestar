@@ -273,7 +273,7 @@ export class SimulationTracker {
       // It is observed that if capture is called for assertions in the loop
       // the value for `dependantStores` are not updated in the real time
       // Adding a fraction of delay to make sure the stores are updated
-      await sleep(5, this.signal);
+      await sleep(100, this.signal);
 
       const value = await assertion.capture({
         fork: this.forkConfig.getForkName(slot),
