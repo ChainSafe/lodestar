@@ -10,9 +10,9 @@ export const attestationsCountAssertion: SimulationAssertion<
   [typeof inclusionDelayAssertion]
 > = {
   id: "attestationsCount",
-  match: ({slot, clock}) => {
+  match: () => {
     // TODO : Disable the assertion for now as the attestations count could be different per slot.
-    return clock.isLastSlotOfEpoch(slot) ? AssertionMatch.Capture : AssertionMatch.None;
+    return AssertionMatch.Capture;
   },
   dependencies: [inclusionDelayAssertion],
 
