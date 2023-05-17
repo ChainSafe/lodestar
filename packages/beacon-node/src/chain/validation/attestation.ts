@@ -91,6 +91,11 @@ export async function validateGossipAttestation(
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
 
+  chain.metrics?.gossipAttestation.attestationSlotToClockSlot.observe(
+    {caller: RegenCaller.validateGossipAttestation},
+    chain.clock.currentSlot - attSlot
+  );
+
   if (!attestationOrCache.cache) {
     // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
     if (targetEpoch !== attEpoch) {
@@ -146,6 +151,7 @@ export async function validateGossipAttestation(
       attestationOrCache.attestation.data.target.root,
       attSlot,
       attEpoch,
+      RegenCaller.validateGossipAttestation,
       chain.opts.maxSkipSlots
     );
 
@@ -337,6 +343,7 @@ export function verifyHeadBlockAndTargetRoot(
   targetRoot: Root,
   attestationSlot: Slot,
   attestationEpoch: Epoch,
+  caller: string,
   maxSkipSlots?: number
 ): ProtoBlock {
   const headBlock = verifyHeadBlockIsKnown(chain, beaconBlockRoot);
@@ -344,7 +351,10 @@ export function verifyHeadBlockAndTargetRoot(
   // it's more about a DOS protection to us
   // With verifyPropagationSlotRange() and maxSkipSlots = 32, it's unlikely we have to regenerate states in queue
   // to validate beacon_attestation and aggregate_and_proof
-  if (maxSkipSlots !== undefined && attestationSlot - headBlock.slot > maxSkipSlots) {
+  const slotDistance = attestationSlot - headBlock.slot;
+  chain.metrics?.gossipAttestation.headSlotToAttestationSlot.observe({caller}, slotDistance);
+
+  if (maxSkipSlots !== undefined && slotDistance > maxSkipSlots) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.TOO_MANY_SKIPPED_SLOTS,
       attestationSlot,

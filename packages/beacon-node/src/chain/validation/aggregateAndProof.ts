@@ -52,6 +52,11 @@ export async function validateGossipAggregateAndProof(
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
 
+  chain.metrics?.gossipAttestation.attestationSlotToClockSlot.observe(
+    {caller: RegenCaller.validateGossipAggregateAndProof},
+    chain.clock.currentSlot - attSlot
+  );
+
   if (!cachedAttData) {
     // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
     if (targetEpoch !== attEpoch) {
@@ -101,6 +106,7 @@ export async function validateGossipAggregateAndProof(
     attTarget.root,
     attSlot,
     attEpoch,
+    RegenCaller.validateGossipAggregateAndProof,
     chain.opts.maxSkipSlots
   );
 
