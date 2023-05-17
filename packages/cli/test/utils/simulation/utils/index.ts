@@ -96,7 +96,7 @@ export const replaceIpFromUrl = (url: string, ip: string): string => url.replace
 
 export const makeUniqueArray = <T>(arr: T[]): T[] => [...new Set(arr)];
 
-export const regsiterProcessHandler = (env: SimulationEnvironment): void => {
+export const registerProcessHandler = (env: SimulationEnvironment): void => {
   process.on("unhandledRejection", async (reason, promise) => {
     console.error("Unhandled Rejection at:", promise, "reason:", reason);
     await env.stop(1, "Unhandled promise rejection");

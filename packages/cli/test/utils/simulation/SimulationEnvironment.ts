@@ -47,7 +47,7 @@ import {
   getEstimatedShanghaiTime,
   getEstimatedTTD,
   makeUniqueArray,
-  regsiterProcessHandler,
+  registerProcessHandler,
   replaceIpFromUrl,
 } from "./utils/index.js";
 import {generateLighthouseBeaconNode} from "./cl_clients/lighthouse.js";
@@ -166,7 +166,7 @@ export class SimulationEnvironment {
     }, msToGenesis);
 
     try {
-      regsiterProcessHandler(this);
+      registerProcessHandler(this);
       if (!fs.existsSync(this.options.rootDir)) {
         await mkdir(this.options.rootDir);
       }
