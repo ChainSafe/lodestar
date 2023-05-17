@@ -15,6 +15,7 @@ import {
 } from "../utils/simulation/utils/network.js";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
+import {createForkAssertion} from "../utils/simulation/assertions/forkAssertion.js";
 
 const genesisDelaySeconds = 20 * SIM_TESTS_SECONDS_PER_SLOT;
 const altairForkEpoch = 2;
@@ -83,37 +84,8 @@ await connectAllNodes(env.nodes);
 let lastForkEpoch = 0;
 for (const fork of env.forkConfig.forksAscendingEpochOrder) {
   if (!Number.isInteger(fork.epoch)) continue;
-
   lastForkEpoch = fork.epoch;
-  env.tracker.register({
-    id: `fork-${fork.name}`,
-    assert: async ({nodes, slot}) => {
-      const errors: string[] = [];
-      for (const node of nodes) {
-        const res = await node.cl.api.debug.getStateV2("head");
-        ApiError.assert(res);
-        const expectedForkVersion = toHexString(env.forkConfig.getForkInfo(slot).version);
-        const currentForkVersion = toHexString(res.response.data.fork.currentVersion);
-
-        if (expectedForkVersion !== currentForkVersion) {
-          errors.push(
-            `Node is not on correct fork. ${JSON.stringify({
-              id: node.cl.id,
-              slot,
-              fork: fork.name,
-              expectedForkVersion,
-              currentForkVersion,
-            })}`
-          );
-        }
-      }
-
-      return errors;
-    },
-    match: ({slot}) => {
-      return slot === env.clock.getFirstSlotOfEpoch(fork.epoch) ? {match: true, remove: true} : false;
-    },
-  });
+  env.tracker.register(createForkAssertion(fork.name, fork.epoch));
 }
 
 await waitForSlot(env.clock.getLastSlotOfEpoch(lastForkEpoch + 1), env.nodes, {
