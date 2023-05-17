@@ -32,6 +32,7 @@ export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[]
 
     for (let i = 1; i < nodes.length; i++) {
       const missedBlocks = store[nodes[i].cl.id][slot];
+      console.log({missedBlocksOnFirstNode, missedBlocks});
 
       if (!arrayEquals(missedBlocks, missedBlocksOnFirstNode)) {
         errors.push([
