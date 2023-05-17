@@ -156,7 +156,7 @@ describe("MatchingDataAttestationGroup.add()", () => {
   const committee = linspace(0, 7);
 
   for (const {id, attestationsToAdd} of testCases) {
-    it(id, () => {
+    it(id, async () => {
       const attestationGroup = new MatchingDataAttestationGroup(committee, attestationData);
 
       const attestations = attestationsToAdd.map(
@@ -167,8 +167,10 @@ describe("MatchingDataAttestationGroup.add()", () => {
         })
       );
 
-      const results = attestations.map((attestation) =>
-        attestationGroup.add({attestation, trueBitsCount: attestation.aggregationBits.getTrueBitIndexes().length})
+      const results = await Promise.all(
+        attestations.map((attestation) =>
+          attestationGroup.add({attestation, trueBitsCount: attestation.aggregationBits.getTrueBitIndexes().length})
+        )
       );
 
       expect(results).to.deep.equal(
