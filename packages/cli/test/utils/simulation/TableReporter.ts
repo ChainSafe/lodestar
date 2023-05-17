@@ -101,9 +101,8 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
 
     const head0 = heads.length > 0 ? heads[0] : null;
     const nodesHaveSameHead =
-      heads.length < nodes.length ||
+      heads.length === nodes.length &&
       heads.every((head) => head0 && !isNullish(head0.blockRoot) && head?.blockRoot === head0.blockRoot);
-    console.log({head0, heads});
 
     this.table.addRow({
       fork: forkName,
