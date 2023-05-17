@@ -16,20 +16,13 @@ export const attestationParticipationAssertion: SimulationAssertion<
 > = {
   id: "attestationParticipation",
   match: ({epoch, slot, clock, forkConfig}) => {
-    let capture = AssertionMatch.None;
-    let assert = AssertionMatch.None;
-
     // Capture data only when epoch and one extra slot passed
+    // Only assert at first slot of an epoch
     if (epoch >= forkConfig.ALTAIR_FORK_EPOCH && clock.isFirstSlotOfEpoch(slot)) {
-      capture = AssertionMatch.Capture;
+      return AssertionMatch.Capture | AssertionMatch.Assert;
     }
 
-    // Only assert after first slot of an epoch
-    if (epoch >= forkConfig.ALTAIR_FORK_EPOCH && !clock.isFirstSlotOfEpoch(slot)) {
-      assert = AssertionMatch.Assert;
-    }
-
-    return capture | assert;
+    return AssertionMatch.None;
   },
 
   async capture({node, epoch}) {

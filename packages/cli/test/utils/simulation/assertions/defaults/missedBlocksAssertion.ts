@@ -1,5 +1,6 @@
 import {isTruthy} from "../../../../utils.js";
 import {AssertionMatch, AssertionResult, SimulationAssertion} from "../../interfaces.js";
+import {arrayEquals} from "../../utils/index.js";
 import {headAssertion} from "./headAssertion.js";
 
 export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[], [typeof headAssertion]> = {
@@ -32,7 +33,7 @@ export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[]
     for (let i = 1; i < nodes.length; i++) {
       const missedBlocksOnNode = store[nodes[i].cl.id][slot];
 
-      if (missedBlocksOnNode !== missedBlocksOnFirstNode) {
+      if (!arrayEquals(missedBlocksOnNode, missedBlocksOnFirstNode)) {
         errors.push([
           "node has different missed blocks than node 0",
           {

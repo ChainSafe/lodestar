@@ -137,14 +137,10 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
         if (assertionErrors.length > 0) console.info(`├── Assertion: ${assertionId}`);
 
         for (const error of assertionErrors) {
-          const data = error.data
-            ? {...error.data, slot: error.slot, epoch: error.epoch}
-            : {slot: error.slot, epoch: error.epoch};
-
           console.info(
-            `├──── ${error.message} ${Object.entries(data)
+            `├──── ${error.message} ${Object.entries(error.data ?? {})
               .map(([k, v]) => `${k}=${v}`)
-              .join(", ")}`
+              .join(" ")}`
           );
         }
       }
