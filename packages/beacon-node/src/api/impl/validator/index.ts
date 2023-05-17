@@ -538,7 +538,7 @@ export function getValidatorApi({
               beaconBlockRoot
             );
 
-            chain.aggregatedAttestationPool.add(
+            await chain.aggregatedAttestationPool.add(
               signedAggregateAndProof.message.aggregate,
               attDataRootHex,
               indexedAttestation.attestingIndices.length,

@@ -214,7 +214,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       metrics?.registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation);
       const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
-      chain.aggregatedAttestationPool.add(
+      await chain.aggregatedAttestationPool.add(
         aggregatedAttestation,
         attDataRootHex,
         indexedAttestation.attestingIndices.length,

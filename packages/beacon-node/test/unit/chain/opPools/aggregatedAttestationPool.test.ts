@@ -70,9 +70,9 @@ describe("AggregatedAttestationPool", function () {
   ];
 
   for (const {name, attestingBits, isReturned} of testCases) {
-    it(name, function () {
+    it(name, async function () {
       const aggregationBits = new BitArray(new Uint8Array(attestingBits), 8);
-      pool.add(
+      await pool.add(
         {...attestation, aggregationBits},
         attDataRootHex,
         aggregationBits.getTrueBitIndexes().length,
@@ -92,11 +92,11 @@ describe("AggregatedAttestationPool", function () {
     });
   }
 
-  it("incorrect source", function () {
+  it("incorrect source", async function () {
     altairState.currentJustifiedCheckpoint.epoch = 1000;
     // all attesters are not seen
     const attestingIndices = [2, 3];
-    pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
+    await pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
     expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).to.be.deep.equal(
       [],
       "no attestation since incorrect source"
@@ -104,10 +104,10 @@ describe("AggregatedAttestationPool", function () {
     expect(forkchoiceStub.iterateAncestorBlocks, "forkchoice should not be called").to.not.be.calledOnce;
   });
 
-  it("incompatible shuffling - incorrect pivot block root", function () {
+  it("incompatible shuffling - incorrect pivot block root", async function () {
     // all attesters are not seen
     const attestingIndices = [2, 3];
-    pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
+    await pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
     forkchoiceStub.getBlockHex.returns(generateProtoBlock());
     forkchoiceStub.getDependentRoot.returns("0xWeird");
     expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).to.be.deep.equal(
@@ -226,7 +226,7 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
   const committee = linspace(0, 7);
 
   for (const {id, seenAttestingBits, attestationsToAdd} of testCases) {
-    it(id, () => {
+    it(id, async () => {
       const attestationGroup = new MatchingDataAttestationGroup(committee, attestationData);
 
       const attestations = attestationsToAdd.map(
@@ -238,7 +238,10 @@ describe("MatchingDataAttestationGroup.getAttestationsForBlock", () => {
       );
 
       for (const attestation of attestations) {
-        attestationGroup.add({attestation, trueBitsCount: attestation.aggregationBits.getTrueBitIndexes().length});
+        await attestationGroup.add({
+          attestation,
+          trueBitsCount: attestation.aggregationBits.getTrueBitIndexes().length,
+        });
       }
 
       const indices = new BitArray(new Uint8Array(seenAttestingBits), 8).intersectValues(committee);

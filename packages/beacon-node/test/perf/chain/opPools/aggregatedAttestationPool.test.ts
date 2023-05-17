@@ -134,7 +134,7 @@ describe("getAttestationsForBlock", () => {
   });
 });
 
-function getAggregatedAttestationPool(state: CachedBeaconStateAltair): AggregatedAttestationPool {
+async function getAggregatedAttestationPool(state: CachedBeaconStateAltair): Promise<AggregatedAttestationPool> {
   const pool = new AggregatedAttestationPool();
   for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
     const slot = state.slot - 1 - epochSlot;
@@ -163,7 +163,7 @@ function getAggregatedAttestationPool(state: CachedBeaconStateAltair): Aggregate
       const committee = state.epochCtx.getBeaconCommittee(slot, committeeIndex);
       // all attestation has full participation so getAttestationsForBlock() has to do a lot of filter
       // aggregate_and_proof messages
-      pool.add(
+      await pool.add(
         attestation,
         toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data)),
         committee.length,
