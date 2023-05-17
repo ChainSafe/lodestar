@@ -1,4 +1,4 @@
-import {SimulationAssertion} from "../../interfaces.js";
+import {AssertionResult, SimulationAssertion} from "../../interfaces.js";
 import {avg} from "../../utils/index.js";
 import {everySlotMatcher} from "../matchers.js";
 
@@ -13,22 +13,21 @@ export const inclusionDelayAssertion: SimulationAssertion<"inclusionDelay", numb
     );
   },
 
-  async assert({slot, store, epoch, nodes}) {
-    const errors: string[] = [];
+  async assert({slot, store, nodes}) {
+    const errors: AssertionResult[] = [];
 
     for (const node of nodes) {
       const inclusionDelay = store[node.cl.id][slot];
 
       if (inclusionDelay > expectedMaxInclusionDelay) {
-        errors.push(
-          `node  has has higher inclusion delay. ${JSON.stringify({
-            id: node.cl.id,
-            slot,
-            epoch,
+        errors.push([
+          "node  has has higher inclusion delay.",
+          {
+            node: node.cl.id,
             inclusionDelay,
             expectedMaxInclusionDelay: expectedMaxInclusionDelay,
-          })}`
-        );
+          },
+        ]);
       }
     }
     return errors;

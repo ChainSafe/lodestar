@@ -293,14 +293,17 @@ export interface SimulationAssertion<
   readonly id: IdType;
   capture?(input: SimulationCaptureInput<ValueType, StoreTypes<Dependencies>>): Promise<ValueType | null>;
   match: AssertionMatcher;
-  assert(input: SimulationAssertionInput<ValueType, StoreTypes<Dependencies>>): Promise<string[] | null | never>;
+  assert(input: SimulationAssertionInput<ValueType, StoreTypes<Dependencies>>): Promise<AssertionResult[] | never>;
   dependencies?: Dependencies;
 }
+export type AssertionResult = string | [string, Record<string, unknown>];
+
 export interface SimulationAssertionError {
   slot: Slot;
   epoch: Epoch;
   assertionId: string;
   message: string;
+  data?: Record<string, unknown>;
 }
 export type ChildProcessWithJobOptions = {jobOptions: JobOptions; childProcess: ChildProcess};
 

@@ -322,13 +322,19 @@ export class SimulationTracker {
             // TODO: Make the store safe, to filter just the dependant stores not all
             dependantStores: this.stores,
           });
-          if (errors) {
-            for (const err of errors) {
-              this.errors.push({slot, epoch, assertionId: assertion.id, message: err});
-            }
+
+          for (const err of errors) {
+            const message = typeof err === "string" ? err : err[0];
+            const data = typeof err === "string" ? {} : {...err[1]};
+            this.errors.push({slot, epoch, assertionId: assertion.id, message, data});
           }
         } catch (err: unknown) {
-          this.errors.push({slot, epoch, assertionId: assertion.id, message: (err as Error).message});
+          this.errors.push({
+            slot,
+            epoch,
+            assertionId: assertion.id,
+            message: (err as Error).message,
+          });
         }
       }
 

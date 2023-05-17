@@ -1,32 +1,29 @@
 import {ForkName} from "@lodestar/params";
 import {altair} from "@lodestar/types";
-import {SimulationAssertion} from "../../interfaces.js";
+import {AssertionMatch, AssertionResult, SimulationAssertion} from "../../interfaces.js";
 import {avg} from "../../utils/index.js";
-import {everyEpochMatcher} from "../matchers.js";
 
 export const expectedMinSyncParticipationRate = 0.9;
 
 export const syncCommitteeParticipationAssertion: SimulationAssertion<"syncCommitteeParticipation", number> = {
   id: "syncCommitteeParticipation",
-  match: everyEpochMatcher,
-  async capture({fork, block}) {
-    if (fork === ForkName.phase0) {
-      return 0;
-    }
+  match: ({slot, clock, epoch, forkConfig, fork}) => {
+    if (fork === ForkName.phase0) return AssertionMatch.None;
+    if (epoch < forkConfig.ALTAIR_FORK_EPOCH) return AssertionMatch.Capture;
 
+    return clock.isLastSlotOfEpoch(slot) ? AssertionMatch.Capture | AssertionMatch.Assert : AssertionMatch.Capture;
+  },
+
+  async capture({block}) {
     const {syncCommitteeBits} = (block as altair.SignedBeaconBlock).message.body.syncAggregate;
     return syncCommitteeBits.getTrueBitIndexes().length / syncCommitteeBits.bitLen;
   },
 
   async assert({nodes, store, clock, epoch, forkConfig}) {
-    const errors: string[] = [];
+    const errors: AssertionResult[] = [];
     const startSlot = clock.getFirstSlotOfEpoch(epoch);
     const endSlot = clock.getLastSlotOfEpoch(epoch);
     const altairStartSlot = clock.getFirstSlotOfEpoch(forkConfig.ALTAIR_FORK_EPOCH);
-
-    if (epoch < forkConfig.ALTAIR_FORK_EPOCH) {
-      return null;
-    }
 
     for (const node of nodes) {
       const syncCommitteeParticipation: number[] = [];
@@ -42,14 +39,14 @@ export const syncCommitteeParticipationAssertion: SimulationAssertion<"syncCommi
       const syncCommitteeParticipationAvg = avg(syncCommitteeParticipation);
 
       if (syncCommitteeParticipationAvg < expectedMinSyncParticipationRate) {
-        errors.push(
-          `node has low avg sync committee participation for epoch. ${JSON.stringify({
-            id: node.cl.id,
-            epoch,
+        errors.push([
+          "node has low avg sync committee participation for epoch",
+          {
+            node: node.cl.id,
             syncCommitteeParticipationAvg: syncCommitteeParticipationAvg,
             expectedMinSyncParticipationRate,
-          })}`
-        );
+          },
+        ]);
       }
     }
 

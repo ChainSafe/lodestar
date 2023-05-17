@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api/beacon";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {ApiError} from "@lodestar/api";
-import {CLClient, CLClientKeys, SimulationAssertion} from "../interfaces.js";
+import {AssertionResult, CLClient, CLClientKeys, SimulationAssertion} from "../interfaces.js";
 import {arrayEquals} from "../utils/index.js";
 import {neverMatcher} from "./matchers.js";
 
@@ -10,7 +10,7 @@ export const nodeAssertion: SimulationAssertion<"node", string> = {
   // Include into particular test with custom condition
   match: neverMatcher,
   async assert({nodes}) {
-    const errors: string[] = [];
+    const errors: AssertionResult[] = [];
 
     for (const node of nodes) {
       const {status: health} = await node.cl.api.node.getHealth();
@@ -19,7 +19,7 @@ export const nodeAssertion: SimulationAssertion<"node", string> = {
         (health as unknown as routes.node.NodeHealth) !== routes.node.NodeHealth.SYNCING &&
         (health as unknown as routes.node.NodeHealth) !== routes.node.NodeHealth.READY
       ) {
-        errors.push(`node health is neither READY or SYNCING. ${JSON.stringify({id: node.cl.id})}`);
+        errors.push(["node health is neither READY or SYNCING", {node: node.cl.id}]);
       }
       const keys = getAllKeys(node.cl.keys);
 
@@ -36,13 +36,14 @@ export const nodeAssertion: SimulationAssertion<"node", string> = {
       const expectedPubkeys = keys.map((k) => k.toPublicKey().toHex());
 
       if (!arrayEquals(keyManagerKeys.sort(), expectedPubkeys.sort())) {
-        errors.push(
-          `Validator should have correct number of keys loaded. ${JSON.stringify({
-            id: node.cl.id,
+        errors.push([
+          "Validator should have correct number of keys loaded",
+          {
+            node: node.cl.id,
             expectedPubkeys,
             keyManagerKeys,
-          })}`
-        );
+          },
+        ]);
       }
     }
 

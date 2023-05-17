@@ -125,19 +125,27 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
   summary(): void {
     const {errors} = this.options;
 
-    console.log(`├${"─".repeat(10)} Errors (${errors.length}) ${"─".repeat(10)}┤`);
+    console.info(`├${"─".repeat(10)} Errors (${errors.length}) ${"─".repeat(10)}┤`);
 
     const groupBySlot = arrayGroupBy(errors, (e) => String(e.slot as number));
 
     for (const [slot, slotErrors] of Object.entries(groupBySlot)) {
-      if (slotErrors.length > 0) console.log(`├─ Slot: ${slot}`);
+      if (slotErrors.length > 0) console.info(`├─ Slot: ${slot}`);
       const groupByAssertion = arrayGroupBy(slotErrors, (e) => e.assertionId);
 
       for (const [assertionId, assertionErrors] of Object.entries(groupByAssertion)) {
-        if (assertionErrors.length > 0) console.log(`├── Assertion: ${assertionId}`);
+        if (assertionErrors.length > 0) console.info(`├── Assertion: ${assertionId}`);
 
         for (const error of assertionErrors) {
-          console.error(`├──── ${error.message}`);
+          const data = error.data
+            ? {...error.data, slot: error.slot, epoch: error.epoch}
+            : {slot: error.slot, epoch: error.epoch};
+
+          console.info(
+            `├──── ${error.message} ${Object.entries(data)
+              .map(([k, v]) => `${k}=${v}`)
+              .join(", ")}`
+          );
         }
       }
     }

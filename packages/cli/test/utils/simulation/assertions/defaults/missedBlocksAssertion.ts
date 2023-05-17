@@ -1,5 +1,5 @@
 import {isTruthy} from "../../../../utils.js";
-import {AssertionMatch, SimulationAssertion} from "../../interfaces.js";
+import {AssertionMatch, AssertionResult, SimulationAssertion} from "../../interfaces.js";
 import {headAssertion} from "./headAssertion.js";
 
 export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[], [typeof headAssertion]> = {
@@ -26,18 +26,21 @@ export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[]
   },
 
   async assert({nodes, store, slot}) {
-    const errors: string[] = [];
+    const errors: AssertionResult[] = [];
     const missedBlocksOnFirstNode = store[nodes[0].cl.id][slot];
 
     for (let i = 1; i < nodes.length; i++) {
       const missedBlocksOnNode = store[nodes[i].cl.id][slot];
 
       if (missedBlocksOnNode !== missedBlocksOnFirstNode) {
-        `node has different missed blocks than node 0. ${JSON.stringify({
-          id: nodes[i].cl.id,
-          missedBlocksOnNode,
-          missedBlocksOnFirstNode,
-        })}`;
+        errors.push([
+          "node has different missed blocks than node 0",
+          {
+            node: nodes[i].cl.id,
+            missedBlocksOnNode,
+            missedBlocksOnFirstNode,
+          },
+        ]);
       }
     }
 

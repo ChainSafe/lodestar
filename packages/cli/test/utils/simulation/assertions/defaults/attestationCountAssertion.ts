@@ -1,6 +1,5 @@
 import {MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
-import {SimulationAssertion} from "../../interfaces.js";
-import {everyEpochMatcher} from "../matchers.js";
+import {AssertionMatch, AssertionResult, SimulationAssertion} from "../../interfaces.js";
 import {inclusionDelayAssertion, expectedMaxInclusionDelay} from "./inclusionDelayAssertion.js";
 
 export const expectedMinAttestationCount = MAX_COMMITTEES_PER_SLOT - 1;
@@ -11,7 +10,10 @@ export const attestationsCountAssertion: SimulationAssertion<
   [typeof inclusionDelayAssertion]
 > = {
   id: "attestationsCount",
-  match: everyEpochMatcher,
+  match: ({slot, clock}) => {
+    // TODO : Disable the assertion for now as the attestations count could be different per slot.
+    return clock.isLastSlotOfEpoch(slot) ? AssertionMatch.Capture : AssertionMatch.None;
+  },
   dependencies: [inclusionDelayAssertion],
 
   async capture(input) {
@@ -33,10 +35,7 @@ export const attestationsCountAssertion: SimulationAssertion<
   },
 
   async assert({clock, nodes, epoch, dependantStores, store}) {
-    // TODO : Disable the assertion for now as the attestations count could be different per slot.
-    return null;
-
-    const errors: string[] = [];
+    const errors: AssertionResult[] = [];
     const inclusionDelayStore = dependantStores["inclusionDelay"];
 
     for (const node of nodes) {
@@ -56,15 +55,14 @@ export const attestationsCountAssertion: SimulationAssertion<
           nextSlotInclusionDelay <= expectedMaxInclusionDelay &&
           attestationsCount < expectedMinAttestationCount
         ) {
-          errors.push(
-            `node has lower attestations count. ${JSON.stringify({
-              id: node.cl.id,
-              slot,
-              epoch,
+          errors.push([
+            "node has lower attestations count",
+            {
+              node: node.cl.id,
               attestationsCount,
               expectedMinAttestationCount: expectedMinAttestationCount,
-            })}`
-          );
+            },
+          ]);
         }
       }
     }
