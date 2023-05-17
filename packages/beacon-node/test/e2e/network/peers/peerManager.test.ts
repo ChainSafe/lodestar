@@ -2,7 +2,6 @@ import {Connection} from "@libp2p/interface-connection";
 import {CustomEvent} from "@libp2p/interfaces/events";
 import sinon from "sinon";
 import {expect} from "chai";
-import {DefaultConnectionManager} from "libp2p/connection-manager";
 import {config} from "@lodestar/config/default";
 import {BitArray} from "@chainsafe/ssz";
 import {altair, phase0, ssz} from "@lodestar/types";
@@ -156,7 +155,7 @@ describe("network / peers / PeerManager", function () {
     const {statusCache, libp2p, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
-    getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
+    getConnectionsMap(libp2p).set(peerId1.toString(), [libp2pConnectionOutboud]);
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
     const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, this.timeout() / 2);
@@ -175,7 +174,7 @@ describe("network / peers / PeerManager", function () {
     const {statusCache, libp2p, reqResp, peerManager, networkEventBus} = await mockModules();
 
     // Simualate a peer connection, get() should return truthy
-    getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
+    getConnectionsMap(libp2p).set(peerId1.toString(), [libp2pConnectionOutboud]);
 
     // Subscribe to `peerConnected` event, which must fire after checking peer relevance
     const peerConnectedPromise = waitForEvent(networkEventBus, NetworkEvent.peerConnected, this.timeout() / 2);
@@ -188,9 +187,9 @@ describe("network / peers / PeerManager", function () {
     reqResp.sendMetadata.resolves(remoteMetadata);
 
     // Simualate a peer connection, get() should return truthy
-    getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
-    (libp2p.connectionManager as DefaultConnectionManager).dispatchEvent(
-      new CustomEvent("peer:connect", {detail: libp2pConnectionOutboud})
+    getConnectionsMap(libp2p).set(peerId1.toString(), [libp2pConnectionOutboud]);
+    libp2p.services.components.events.dispatchEvent(
+      new CustomEvent("connection:open", {detail: libp2pConnectionOutboud})
     );
 
     await peerConnectedPromise;

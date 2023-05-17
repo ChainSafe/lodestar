@@ -47,4 +47,6 @@ export const GOODBYE_KNOWN_CODES: Record<string, string> = {
 export enum Libp2pEvent {
   peerConnect = "peer:connect",
   peerDisconnect = "peer:disconnect",
+  connectionOpen = "connection:open",
+  connectionClose = "connection:close",
 }

@@ -1,7 +1,6 @@
 import {Libp2p as ILibp2p} from "libp2p";
 import {Connection} from "@libp2p/interface-connection";
-import {Registrar} from "@libp2p/interface-registrar";
-import {ConnectionManager} from "@libp2p/interface-connection-manager";
+import {Components} from "libp2p/components";
 import {Slot, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
 import {BlockInput} from "../chain/blocks/types.js";
 import {PeerIdStr} from "../util/peerId.js";
@@ -70,4 +69,4 @@ export interface INetwork extends INetworkCorePublic {
 export type PeerDirection = Connection["stat"]["direction"];
 export type PeerStatus = Connection["stat"]["status"];
 
-export type Libp2p = ILibp2p & {connectionManager: ConnectionManager; registrar: Registrar};
+export type Libp2p = ILibp2p<{components: Components}>;

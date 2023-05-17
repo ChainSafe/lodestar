@@ -57,7 +57,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     return this._dbDatastore.close();
   }
 
-  async put(key: Key, val: Uint8Array): Promise<void> {
+  async put(key: Key, val: Uint8Array): Promise<Key> {
     return this._put(key, val, false);
   }
 
@@ -65,7 +65,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
    * Same interface to put with "fromDb" option, if this item is updated back from db
    * Move oldest items from memory data store to db if it's over this._maxMemoryItems
    */
-  async _put(key: Key, val: Uint8Array, fromDb = false): Promise<void> {
+  async _put(key: Key, val: Uint8Array, fromDb = false): Promise<Key> {
     while (this._memoryDatastore.size >= this._maxMemoryItems) {
       // it's likely this is called only 1 time
       await this.pruneMemoryDatastore();
@@ -83,6 +83,7 @@ export class Eth2PeerDataStore extends BaseDatastore {
     }
 
     if (!fromDb) await this._addDirtyItem(keyStr);
+    return key;
   }
 
   /**

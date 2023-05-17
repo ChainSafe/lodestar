@@ -90,7 +90,7 @@ export class Eth2Gossipsub extends GossipSub {
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
-    super(modules.libp2p, {
+    super(modules.libp2p.services.components, {
       globalSignaturePolicy: SignaturePolicy.StrictNoSign,
       allowPublishToZeroPeers: allowPublishToZeroPeers,
       D: gossipsubD ?? GOSSIP_D,

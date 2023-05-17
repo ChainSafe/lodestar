@@ -9,7 +9,7 @@ import {LoggerNode} from "@lodestar/logger/node";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Libp2p} from "../interface.js";
 import {ENRKey, SubnetType} from "../metadata.js";
-import {getConnectionsMap, getDefaultDialer, prettyPrintPeerId} from "../util.js";
+import {getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
@@ -157,12 +157,17 @@ export class PeerDiscovery {
     const cachedENRsToDial = new Map<PeerIdStr, CachedENR>();
     // Iterate in reverse to consider first the most recent ENRs
     const cachedENRsReverse: CachedENR[] = [];
+    const pendingDials = new Set(
+      this.libp2p.services.components.connectionManager
+        .getDialQueue()
+        .map((pendingDial) => pendingDial.peerId?.toString())
+    );
     for (const [id, cachedENR] of this.cachedENRs.entries()) {
       if (
         // time expired or
         Date.now() - cachedENR.addedUnixMs > MAX_CACHED_ENR_AGE_MS ||
         // already dialing
-        getDefaultDialer(this.libp2p).pendingDials.has(id)
+        pendingDials.has(id)
       ) {
         this.cachedENRs.delete(id);
       } else {
@@ -318,7 +323,11 @@ export class PeerDiscovery {
       }
 
       // Ignore dialing peers
-      if (getDefaultDialer(this.libp2p).pendingDials.has(peerId.toString())) {
+      if (
+        this.libp2p.services.components.connectionManager
+          .getDialQueue()
+          .find((pendingDial) => pendingDial.peerId && pendingDial.peerId.equals(peerId))
+      ) {
         return DiscoveredPeerStatus.already_dialing;
       }
 
@@ -385,7 +394,7 @@ export class PeerDiscovery {
 
     // Must add the multiaddrs array to the address book before dialing
     // https://github.com/libp2p/js-libp2p/blob/aec8e3d3bb1b245051b60c2a890550d262d5b062/src/index.js#L638
-    await this.libp2p.peerStore.addressBook.add(peerId, [multiaddrTCP]);
+    await this.libp2p.peerStore.merge(peerId, {multiaddrs: [multiaddrTCP]});
 
     // Note: PeerDiscovery adds the multiaddrTCP beforehand
     const peerIdShort = prettyPrintPeerId(peerId);
@@ -409,7 +418,7 @@ export class PeerDiscovery {
 
   /** Check if there is 1+ open connection with this peer */
   private isPeerConnected(peerIdStr: PeerIdStr): boolean {
-    const connections = getConnectionsMap(this.libp2p.connectionManager).get(peerIdStr);
+    const connections = getConnectionsMap(this.libp2p).get(peerIdStr);
     return Boolean(connections && connections.some((connection) => connection.stat.status === "OPEN"));
   }
 }

@@ -12,7 +12,9 @@ const EMPTY_DATA = new Uint8Array();
  * request  ::= <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export function requestDecode(protocol: MixedProtocol): Sink<Uint8Array | Uint8ArrayList, Promise<Uint8Array>> {
+export function requestDecode(
+  protocol: MixedProtocol
+): Sink<AsyncIterable<Uint8Array | Uint8ArrayList>, Promise<Uint8Array>> {
   return async function requestDecodeSink(source) {
     const type = protocol.requestSizes;
     if (type === null) {
