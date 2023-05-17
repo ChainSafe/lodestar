@@ -16,6 +16,6 @@ export function getTestdirPath(filepath: string): string {
   return fullpath;
 }
 
-export function isTruthy<T = unknown>(value: T | undefined | null): value is T {
-  return value !== undefined && value !== null;
+export function isNullish<T = unknown>(value: T | undefined | null): value is undefined | null {
+  return value === undefined || value === null;
 }

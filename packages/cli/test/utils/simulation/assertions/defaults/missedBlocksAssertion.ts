@@ -1,4 +1,4 @@
-import {isTruthy} from "../../../../utils.js";
+import {isNullish} from "../../../../utils.js";
 import {AssertionMatch, AssertionResult, SimulationAssertion} from "../../interfaces.js";
 import {arrayEquals} from "../../utils/index.js";
 import {headAssertion} from "./headAssertion.js";
@@ -17,7 +17,7 @@ export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[]
 
     for (let slot = startSlot; slot < endSlot; slot++) {
       // If some value of head is present for that slot then it was not missed
-      if (!isTruthy(dependantStores[headAssertion.id][node.cl.id][slot])) {
+      if (isNullish(dependantStores[headAssertion.id][node.cl.id][slot])) {
         missedBlocks.push(slot);
       }
     }

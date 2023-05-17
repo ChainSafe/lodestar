@@ -3,7 +3,7 @@ import {routes} from "@lodestar/api/beacon";
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot} from "@lodestar/types";
 import {ApiError} from "@lodestar/api";
-import {isTruthy} from "../../utils.js";
+import {isNullish} from "../../utils.js";
 import {EpochClock} from "./EpochClock.js";
 import {
   AssertionMatch,
@@ -282,7 +282,7 @@ export class SimulationTracker {
         dependantStores: this.stores,
       });
 
-      if (isTruthy(value)) {
+      if (!isNullish(value)) {
         this.stores[assertion.id][node.cl.id][slot] = value;
       }
     }
