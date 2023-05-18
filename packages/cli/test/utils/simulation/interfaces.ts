@@ -24,7 +24,7 @@ export type SimulationOptions = {
   logsDir: string;
   rootDir: string;
   controller: AbortController;
-  genesisTime: number;
+  eth1GenesisTime: number;
 };
 
 export enum CLClient {
@@ -84,6 +84,8 @@ export interface CLClientGeneratorOptions<C extends CLClient = CLClient> {
 export interface ELGeneratorGenesisOptions<E extends ELClient = ELClient> {
   ttd: bigint;
   cliqueSealingPeriod: number;
+  shanghaiTime: number;
+  genesisTime: number;
   clientOptions: ELClientsOptions[E];
 }
 
