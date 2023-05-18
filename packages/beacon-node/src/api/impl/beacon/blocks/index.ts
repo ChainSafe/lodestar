@@ -2,7 +2,7 @@ import {routes, ServerApi} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
-import {allForks, deneb} from "@lodestar/types";
+import {allForks, deneb, isSignedBlockContents, isSignedBlindedBlockContents} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
@@ -188,7 +188,7 @@ export function getBeaconBlockApi({
       const executionBuilder = chain.executionBuilder;
       if (!executionBuilder) throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
       // Mechanism for blobs & blocks on builder is not yet finalized
-      if ((signedBlindedBlockOrContents as allForks.SignedBlindedBlockContents).signedBlindedBlock !== undefined) {
+      if (isSignedBlindedBlockContents(signedBlindedBlockOrContents)) {
         throw Error("exeutionBuilder not yet implemented for deneb+ forks");
       } else {
         const signedBlockOrContents = await executionBuilder.submitBlindedBlock(
@@ -204,7 +204,7 @@ export function getBeaconBlockApi({
       const seenTimestampSec = Date.now() / 1000;
       let blockForImport: BlockInput, signedBlock: allForks.SignedBeaconBlock, signedBlobs: deneb.SignedBlobSidecars;
 
-      if ((signedBlockOrContents as allForks.SignedBlockContents).signedBlock !== undefined) {
+      if (isSignedBlockContents(signedBlockOrContents)) {
         // Build a blockInput for post deneb, signedBlobs will be be used in followup PRs
         ({signedBlock, signedBlobSidecars: signedBlobs} = signedBlockOrContents as allForks.SignedBlockContents);
         const beaconBlockSlot = signedBlock.message.slot;
@@ -242,7 +242,7 @@ export function getBeaconBlockApi({
       const publishPromises = [
         // Send the block, regardless of whether or not it is valid. The API
         // specification is very clear that this is the desired behaviour.
-        () => network.gossip.publishBeaconBlockMaybeBlobs(blockForImport) as Promise<unknown>,
+        () => network.publishBeaconBlockMaybeBlobs(blockForImport) as Promise<unknown>,
         () =>
           // there is no rush to persist block since we published it to gossip anyway
           chain.processBlock(blockForImport, {...opts, eagerPersistBlock: false}).catch((e) => {
