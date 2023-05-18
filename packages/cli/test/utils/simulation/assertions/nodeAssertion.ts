@@ -14,7 +14,7 @@ export const nodeAssertion: SimulationAssertion<"node", {health: number; keyMana
     let keyManagerKeys: string[];
 
     // There is an authentication issue with the lighthouse keymanager client
-    if (node.cl.client == CLClient.Lighthouse) {
+    if (node.cl.client == CLClient.Lighthouse || getAllKeys(node.cl.keys).length === 0) {
       keyManagerKeys = [];
     } else {
       const res = await node.cl.keyManager.listKeys();
