@@ -264,7 +264,8 @@ export class SimulationTracker {
         if (match & AssertionMatch.None || !(match & AssertionMatch.Capture)) continue;
 
         if (!assertion.capture) {
-          throw new Error(`Assertion "${assertion.id}" has no capture function`);
+          console.error(new Error(`Assertion "${assertion.id}" has no capture function`));
+          continue;
         }
 
         const value = await assertion.capture({
@@ -289,7 +290,7 @@ export class SimulationTracker {
       capturedSlot.push(node.cl.id);
       this.slotCapture.set(slot, capturedSlot);
     } catch (err) {
-      console.error("processCapture error", err);
+      console.error("Error during the assertion capture", err);
       // Incase of reorg the block may not be available
       return;
     }

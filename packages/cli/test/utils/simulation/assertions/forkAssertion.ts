@@ -8,8 +8,8 @@ export function createForkAssertion(fork: ForkName, epoch: Epoch): SimulationAss
   return {
     id: `fork-${fork}`,
     match: ({slot, clock}) => {
-      return slot === clock.getFirstSlotOfEpoch(epoch)
-        ? AssertionMatch.Capture | AssertionMatch.Assert | AssertionMatch.Remove
+      return clock.isFirstSlotOfEpoch(slot) && epoch === clock.getEpochForSlot(slot)
+        ? AssertionMatch.Assert | AssertionMatch.Remove
         : AssertionMatch.None;
     },
     assert: async ({nodes, slot, forkConfig}) => {
