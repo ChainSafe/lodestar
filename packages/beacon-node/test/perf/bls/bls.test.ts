@@ -56,8 +56,8 @@ describe("BLS ops", function () {
     itBench({
       id: `BLS aggregatePubkeys ${count} - Napi`,
       beforeEach: async () => Promise.all(linspace(0, count - 1).map((i) => getKeypair(i).publicKey)),
-      fn: (pubkeys) => {
-        return void bls.aggregatePublicKeys(pubkeys);
+      fn: async (pubkeys) => {
+        await bls.aggregatePublicKeys(pubkeys);
       },
     });
   }
