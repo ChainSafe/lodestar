@@ -4909,10 +4909,10 @@ bls-eth-wasm@^0.4.8:
   resolved "https://registry.npmjs.org/bls-eth-wasm/-/bls-eth-wasm-0.4.8.tgz"
   integrity sha512-ye7+G6KFLb3i9xSrLASAoYqOUK5WLB6XA5DD8Sh0UQpZ3T999ylsYbFdoOJpmvTDuBuMi23Vy8Jm0pn/GF01CA==
 
-blst-ts-test@0.0.2:
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/blst-ts-test/-/blst-ts-test-0.0.2.tgz#ea3fe0e97256817290e92bb3fb95fc317dc5f9f2"
-  integrity sha512-kpwjzcQDZq7qsGrVeg0SvyzYgKbBuGUbovmFzlsLPAHDmZINPJ1xHcqYpuBcvZNwWdQqbspu5goBRgqoSLStZA==
+blst-ts-test@0.0.3:
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/blst-ts-test/-/blst-ts-test-0.0.3.tgz#d373cc771a4b0cba16bd912f4ad1c9bab3fdda94"
+  integrity sha512-K8mTT5+uPOdjbTQm1kLz5pEbKopFlv6aFwB3f0FVSVtelP78Rif12/cgsNwGqmBjSSATkMVWgp18mA+5iL8eXA==
   dependencies:
     bindings "^1.5.0"
     node-addon-api "^6.1.0"
