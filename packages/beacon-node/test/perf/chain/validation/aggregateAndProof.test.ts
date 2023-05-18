@@ -21,7 +21,7 @@ describe("validate gossip signedAggregateAndProof", () => {
         chain.seenAggregators["validatorIndexesByEpoch"].clear();
         chain.seenAggregatedAttestations["aggregateRootsByEpoch"].clear();
       },
-      fn: async () => {
+      fn: () => {
         return void validateGossipAggregateAndProof(chain, agg);
       },
     });

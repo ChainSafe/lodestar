@@ -18,8 +18,8 @@ describe("validate gossip attestation", () => {
     itBench({
       id: `validate gossip attestation - ${id}`,
       beforeEach: () => chain.seenAttesters["validatorIndexesByEpoch"].clear(),
-      fn: async () => {
-        await validateGossipAttestation(chain, {attestation: att, serializedData: null}, subnet);
+      fn: () => {
+        return void validateGossipAttestation(chain, {attestation: att, serializedData: null}, subnet);
       },
     });
   }
