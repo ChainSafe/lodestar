@@ -288,7 +288,8 @@ export class SimulationTracker {
       const capturedSlot = this.slotCapture.get(slot) ?? [];
       capturedSlot.push(node.cl.id);
       this.slotCapture.set(slot, capturedSlot);
-    } catch {
+    } catch (err) {
+      console.error("processCapture error", err);
       // Incase of reorg the block may not be available
       return;
     }
