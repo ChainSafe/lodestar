@@ -51,17 +51,12 @@ export const CommonExecutionPayloadType = new ContainerType({
   // TODO: if there is perf issue, consider making ByteListType
   extraData: new ByteListType(MAX_EXTRA_DATA_BYTES),
   baseFeePerGas: Uint256,
-});
-
-const executionPayloadFields = {
-  ...CommonExecutionPayloadType.fields,
-  // Extra payload fields
   blockHash: Root,
-};
+});
 
 export const ExecutionPayload = new ContainerType(
   {
-    ...executionPayloadFields,
+    ...CommonExecutionPayloadType.fields,
     transactions: Transactions,
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
@@ -69,7 +64,7 @@ export const ExecutionPayload = new ContainerType(
 
 export const ExecutionPayloadHeader = new ContainerType(
   {
-    ...executionPayloadFields,
+    ...CommonExecutionPayloadType.fields,
     transactionsRoot: Root,
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}

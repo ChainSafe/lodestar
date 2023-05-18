@@ -16,9 +16,6 @@ import {
   BackfilledRanges,
   BlobSidecarsRepository,
   BlobSidecarsArchiveRepository,
-  // TODO DENEB: cleanup following blob repos post full migration
-  BlobsSidecarRepository,
-  BlobsSidecarArchiveRepository,
   BLSToExecutionChangeRepository,
 } from "../../../src/db/repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "../../../src/db/single/index.js";
@@ -38,9 +35,6 @@ export function getStubbedBeaconDb(): IBeaconDb {
 
     blobSidecars: createStubInstance(BlobSidecarsRepository),
     blobSidecarsArchive: createStubInstance(BlobSidecarsArchiveRepository),
-    // TODO: cleanup post full migration
-    blobsSidecar: createStubInstance(BlobsSidecarRepository),
-    blobsSidecarArchive: createStubInstance(BlobsSidecarArchiveRepository),
 
     // finalized states
     stateArchive: createStubInstance(StateArchiveRepository),

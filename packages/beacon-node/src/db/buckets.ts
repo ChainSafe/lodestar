@@ -37,19 +37,6 @@ export enum Bucket {
   allForks_blobSidecars = 27, // DENEB BeaconBlockRoot -> BlobSidecars
   allForks_blobSidecarsArchive = 28, // DENEB BeaconBlockSlot -> BlobSidecars
 
-  // TODO DENEB: cleanup the below buckets once BlobsSidecar fully migrated to BlobSidecars
-  // note: below buckets would not be in use till deneb hf so their number assignments
-  // can be ignored and safely deleted later on
-  allForks_blobsSidecar = 29, // DENEB BeaconBlockRoot -> BlobsSidecar
-
-  phase0_preGenesisState = 30, // Single = phase0.BeaconState
-  phase0_preGenesisStateLastProcessedBlock = 31, // Single = Uint8
-
-  // TODO DENEB: cleanup the below buckets once BlobsSidecar fully migrated to BlobSidecars
-  // note: below buckets would not be in use till deneb hf so their number assignments
-  // can be ignored and safely deleted later on
-  allForks_blobsSidecarArchive = 32, // DENEB BeaconBlockSlot -> BlobsSidecar
-
   // Lightclient server
   // altair_bestUpdatePerCommitteePeriod = 30, // DEPRECATED on v0.32.0
   // altair_latestFinalizedUpdate = 31, // DEPRECATED on v0.32.0
