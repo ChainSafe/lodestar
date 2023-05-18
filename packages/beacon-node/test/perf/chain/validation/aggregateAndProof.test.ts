@@ -22,7 +22,7 @@ describe("validate gossip signedAggregateAndProof", () => {
         chain.seenAggregatedAttestations["aggregateRootsByEpoch"].clear();
       },
       fn: async () => {
-        await validateGossipAggregateAndProof(chain, agg);
+        return void validateGossipAggregateAndProof(chain, agg);
       },
     });
   }
