@@ -1,6 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
 import bls from "blst-ts-test";
-// import type {PublicKey, SecretKey, Signature} from "@chainsafe/bls/types";
 import {linspace} from "../../../src/util/numpy.js";
 
 describe("BLS ops", function () {
