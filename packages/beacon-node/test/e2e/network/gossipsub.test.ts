@@ -39,7 +39,7 @@ const config = createChainForkConfig({
 const START_SLOT = computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH);
 
 describe("gossipsub", function () {
-  if (this.timeout() < 15 * 1000) this.timeout(15 * 1000);
+  if (this.timeout() < 20 * 1000) this.timeout(20 * 1000);
   this.retries(2); // This test fail sometimes, with a 5% rate.
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];

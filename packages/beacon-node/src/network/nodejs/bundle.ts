@@ -80,10 +80,8 @@ export async function createNodejsLibp2p(options: Libp2pOptions): Promise<Libp2p
       // the one with the least `_peerValues`. That's a custom peer generalized score that's not used, so it always
       // has the same value in current Lodestar usage.
       maxConnections: options.maxConnections,
-      // DOCS: the minimum number of connections below which libp2p not activate preemptive disconnections.
-      // If ConnectionManager.size < minConnections, it won't prune peers in _maybeDisconnectOne(). If autoDial is
-      // off it doesn't have any effect in behaviour.
-      minConnections: options.minConnections,
+      // DOCS: There is no way to turn off autodial other than setting minConnections to 0
+      minConnections: 0,
     },
     datastore: options.datastore,
     services: {
