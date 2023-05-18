@@ -1,5 +1,5 @@
-import {phase0, Slot, Root, RootHex} from "@lodestar/types";
 import bls from "blst-ts-test";
+import {phase0, Slot, Root, RootHex} from "@lodestar/types";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
