@@ -43,7 +43,7 @@ describe("BLS ops", function () {
   for (const count of [3, 8, 32]) {
     itBench({
       id: `BLS verifyMultipleSignatures ${count} - Napi`,
-      beforeEach: async () => Promise.all(linspace(0, count - 1).map((i) => getSet(i))),
+      beforeEach: () => Promise.all(linspace(0, count - 1).map((i) => getSet(i))),
       fn: async (sets) => {
         const isValid = await bls.verifyMultipleAggregateSignatures(sets);
         if (!isValid) throw Error("Invalid");
@@ -55,7 +55,7 @@ describe("BLS ops", function () {
   for (const count of [32, 128]) {
     itBench({
       id: `BLS aggregatePubkeys ${count} - Napi`,
-      beforeEach: async () => Promise.all(linspace(0, count - 1).map((i) => getKeypair(i).publicKey)),
+      beforeEach: () => Promise.all(linspace(0, count - 1).map((i) => getKeypair(i).publicKey)),
       fn: async (pubkeys) => {
         await bls.aggregatePublicKeys(pubkeys);
       },
