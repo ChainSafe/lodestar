@@ -196,7 +196,12 @@ export class UnknownBlockSync {
     // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
     // See https://github.com/ChainSafe/lodestar/issues/3792
     const res = await wrapError(
-      this.chain.processBlock(pendingBlock.blockInput, {ignoreIfKnown: true, blsVerifyOnMainThread: true})
+      this.chain.processBlock(pendingBlock.blockInput, {
+        ignoreIfKnown: true,
+        blsVerifyOnMainThread: true,
+        // block is validated with correct root, we want to process it as soon as possible
+        eagerPersistBlock: true,
+      })
     );
     pendingBlock.status = PendingBlockStatus.pending;
 

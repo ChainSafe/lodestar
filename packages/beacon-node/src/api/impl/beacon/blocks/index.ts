@@ -198,7 +198,7 @@ export function getBeaconBlockApi({
       return this.publishBlock(signedBlock, {ignoreIfKnown: true});
     },
 
-    async publishBlock(signedBlock, opts?: ImportBlockOpts) {
+    async publishBlock(signedBlock, opts: ImportBlockOpts = {}) {
       const seenTimestampSec = Date.now() / 1000;
 
       // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the
@@ -230,7 +230,8 @@ export function getBeaconBlockApi({
         () => network.publishBeaconBlockMaybeBlobs(blockForImport) as Promise<unknown>,
 
         () =>
-          chain.processBlock(blockForImport, opts).catch((e) => {
+          // there is no rush to persist block since we published it to gossip anyway
+          chain.processBlock(blockForImport, {...opts, eagerPersistBlock: false}).catch((e) => {
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
               network.events.emit(NetworkEvent.unknownBlockParent, {
                 blockInput: blockForImport,
