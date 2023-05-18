@@ -13,7 +13,6 @@ export const headAssertion: SimulationAssertion<"head", HeadSummary> = {
   id: "head",
   match: everySlotMatcher,
   async capture({node, slot}) {
-    console.log("head", node.cl.id, slot);
     const head = await node.cl.api.beacon.getBlockHeader("head");
     ApiError.assert(head);
 
