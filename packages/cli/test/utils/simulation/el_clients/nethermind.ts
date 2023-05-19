@@ -105,6 +105,7 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (o
         await got.post(ethRpcUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
         return {ok: true};
       } catch (err) {
+        console.error("Nethermind node health check failed", ethRpcUrl, (err as Error).message);
         return {ok: false, reason: (err as Error).message, checkId: "JSON RPC query net_version"};
       }
     },

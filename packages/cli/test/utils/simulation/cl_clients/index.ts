@@ -10,7 +10,10 @@ import {generateLodestarBeaconNode} from "./lodestar.js";
 
 export async function createCLNode<C extends CLClient>(
   client: C,
-  options: AtLeast<CLClientGeneratorOptions<C>, 'id' | "paths" | "config" | "paths" | "nodeIndex" | "genesisTime" > & {genesisState?: BeaconStateAllForks; runner: IRunner}
+  options: AtLeast<CLClientGeneratorOptions<C>, "id" | "paths" | "config" | "paths" | "nodeIndex" | "genesisTime"> & {
+    genesisState?: BeaconStateAllForks;
+    runner: IRunner;
+  }
 ): Promise<CLNode> {
   const {runner, config, genesisState} = options;
   const clId = `${options.id}-cl-${client}`;
@@ -26,7 +29,6 @@ export async function createCLNode<C extends CLClient>(
     engineUrls: options.engineUrls ?? [],
   };
 
-
   await createCLNodePaths(opts.paths);
   await createKeystores(opts.paths, opts.keys);
   await writeFile(opts.paths.jwtsecretFilePath, SHARED_JWT_SECRET);
@@ -38,7 +40,7 @@ export async function createCLNode<C extends CLClient>(
 
   if (genesisState) {
     await writeFile(opts.paths.genesisFilePath, genesisState.serialize());
-  }  
+  }
 
   switch (client) {
     case CLClient.Lodestar: {
@@ -46,9 +48,10 @@ export async function createCLNode<C extends CLClient>(
         {
           ...opts,
           address: "127.0.0.1",
-          engineUrls: opts.engineUrls.length ? 0
-            ? makeUniqueArray([`http://127.0.0.1:${EL_ENGINE_BASE_PORT + opts.nodeIndex + 1}`, ...opts.engineUrls])
-            : [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + opts.nodeIndex + 1}`]
+          engineUrls:
+            opts.engineUrls.length > 0
+              ? makeUniqueArray([`http://127.0.0.1:${EL_ENGINE_BASE_PORT + opts.nodeIndex + 1}`, ...opts.engineUrls])
+              : [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + opts.nodeIndex + 1}`],
         },
         runner
       );
@@ -58,9 +61,10 @@ export async function createCLNode<C extends CLClient>(
         {
           ...opts,
           address: runner.getNextIp(),
-          engineUrls: opts.engineUrls.length > 0
-            ? makeUniqueArray([...opts.engineUrls])
-            : [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + opts.nodeIndex + 1}`],
+          engineUrls:
+            opts.engineUrls.length > 0
+              ? makeUniqueArray([...opts.engineUrls])
+              : [`http://127.0.0.1:${EL_ENGINE_BASE_PORT + opts.nodeIndex + 1}`],
         },
         runner
       );
