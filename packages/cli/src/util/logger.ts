@@ -1,103 +1,40 @@
 import path from "node:path";
 import fs from "node:fs";
-import DailyRotateFile from "winston-daily-rotate-file";
-import TransportStream from "winston-transport";
-import winston from "winston";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {
-  Logger,
-  LogLevel,
-  createWinstonLogger,
-  TimestampFormat,
-  TimestampFormatCode,
-  LogFormat,
-  logFormats,
-} from "@lodestar/utils";
+import {LogFormat, TimestampFormatCode, logFormats} from "@lodestar/logger";
+import {LoggerNodeOpts} from "@lodestar/logger/node";
+import {LogLevel} from "@lodestar/utils";
+import {LogArgs} from "../options/logOptions.js";
 import {GlobalArgs} from "../options/globalOptions.js";
-import {ConsoleDynamicLevel} from "./loggerConsoleTransport.js";
 
 export const LOG_FILE_DISABLE_KEYWORD = "none";
-export const LOG_LEVEL_DEFAULT = LogLevel.info;
-export const LOG_FILE_LEVEL_DEFAULT = LogLevel.debug;
-export const LOG_DAILY_ROTATE_DEFAULT = 5;
-const DATE_PATTERN = "YYYY-MM-DD";
-
-export type LogArgs = {
-  logLevel?: LogLevel;
-  logFile?: string;
-  logFileLevel?: LogLevel;
-  logFileDailyRotate?: number;
-  logFormatGenesisTime?: number;
-  logPrefix?: string;
-  logFormat?: string;
-  logLevelModule?: string[];
-};
 
 /**
  * Setup a CLI logger, common for beacon, validator and dev commands
  */
-export function getCliLogger(
+export function parseLoggerArgs(
   args: LogArgs & Pick<GlobalArgs, "dataDir">,
   paths: {defaultLogFilepath: string},
   config: ChainForkConfig,
   opts?: {hideTimestamp?: boolean}
-): {logger: Logger; logParams: {filename: string; rotateMaxFiles: number}} {
-  const consoleTransport = new ConsoleDynamicLevel({
-    // Set defaultLevel, not level for dynamic level setting of ConsoleDynamicLvevel
-    defaultLevel: args.logLevel ?? LOG_LEVEL_DEFAULT,
-    debugStdout: true,
-    handleExceptions: true,
-  });
-
-  if (args.logLevelModule) {
-    for (const logLevelModule of args.logLevelModule ?? []) {
-      const [module, levelStr] = logLevelModule.split("=");
-      const level = levelStr as LogLevel;
-      if (LogLevel[level as LogLevel] === undefined) {
-        throw Error(`Unknown level in logLevelModule '${logLevelModule}'`);
-      }
-
-      consoleTransport.setModuleLevel(module, level);
-    }
-  }
-
-  const transports: TransportStream[] = [consoleTransport];
-
-  // yargs populates with undefined if just set but with no arg
-  // $ ./bin/lodestar.js beacon --logFileDailyRotate
-  // args = {
-  //   logFileDailyRotate: undefined,
-  // }
-  // `lodestar --logFileDailyRotate` -> enabled daily rotate with default value
-  // `lodestar --logFileDailyRotate 10` -> set daily rotate to custom value 10
-  // `lodestar --logFileDailyRotate 0` -> disable daily rotate and accumulate in same file
-  const rotateMaxFiles = args.logFileDailyRotate ?? LOG_DAILY_ROTATE_DEFAULT;
-  const filename = args.logFile ?? paths.defaultLogFilepath;
-  if (args.logFile !== LOG_FILE_DISABLE_KEYWORD) {
-    const logFileLevel = args.logFileLevel ?? LOG_FILE_LEVEL_DEFAULT;
-
-    transports.push(
-      rotateMaxFiles > 0
-        ? new DailyRotateFile({
-            level: logFileLevel,
-            //insert the date pattern in filename before the file extension.
-            filename: filename.replace(/\.(?=[^.]*$)|$/, "-%DATE%$&"),
-            datePattern: DATE_PATTERN,
-            handleExceptions: true,
-            maxFiles: rotateMaxFiles,
-            auditFile: path.join(path.dirname(filename), ".log_rotate_audit.json"),
-          })
-        : new winston.transports.File({
-            level: logFileLevel,
-            filename: filename,
-            handleExceptions: true,
-          })
-    );
-  }
-
-  const timestampFormat: TimestampFormat =
-    args.logFormatGenesisTime !== undefined
+): LoggerNodeOpts {
+  return {
+    level: parseLogLevel(args.logLevel),
+    file:
+      args.logFile === LOG_FILE_DISABLE_KEYWORD
+        ? undefined
+        : {
+            filepath: args.logFile ?? paths.defaultLogFilepath,
+            level: parseLogLevel(args.logFileLevel),
+            dailyRotate: args.logFileDailyRotate,
+          },
+    module: args.logPrefix,
+    format: args.logFormat ? parseLogFormat(args.logFormat) : undefined,
+    levelModule: args.logLevelModule && parseLogLevelModule(args.logLevelModule),
+    timestampFormat: opts?.hideTimestamp
+      ? {format: TimestampFormatCode.Hidden}
+      : args.logFormatGenesisTime !== undefined
       ? {
           format: TimestampFormatCode.EpochSlot,
           genesisTime: args.logFormatGenesisTime,
@@ -106,19 +43,31 @@ export function getCliLogger(
         }
       : {
           format: TimestampFormatCode.DateRegular,
-        };
+        },
+  };
+}
 
-  const logger = createWinstonLogger(
-    {
-      module: args.logPrefix,
-      format: args.logFormat ? parseLogFormat(args.logFormat) : "human",
-      timestampFormat,
-      hideTimestamp: opts?.hideTimestamp,
-    },
-    transports
-  );
+function parseLogFormat(format: string): LogFormat {
+  if (!logFormats.includes(format as LogFormat)) {
+    throw Error(`Unknown log format ${format}`);
+  }
+  return format as LogFormat;
+}
 
-  return {logger, logParams: {filename, rotateMaxFiles}};
+function parseLogLevel(level: string): LogLevel {
+  if (LogLevel[level as LogLevel] === undefined) {
+    throw Error(`Unknown log level '${level}'`);
+  }
+  return level as LogLevel;
+}
+
+function parseLogLevelModule(logLevelModuleArr: string[]): Record<string, LogLevel> {
+  const levelModule: Record<string, LogLevel> = {};
+  for (const logLevelModule of logLevelModuleArr) {
+    const [module, levelStr] = logLevelModule.split("=");
+    levelModule[module] = parseLogLevel(levelStr);
+  }
+  return levelModule;
 }
 
 /**
@@ -126,9 +75,10 @@ export function getCliLogger(
  * so we have to do this manually when starting the node.
  * See https://github.com/ChainSafe/lodestar/issues/4419
  */
-export function cleanOldLogFiles(filePath: string, maxFiles: number): void {
-  const folder = path.dirname(filePath);
-  const filename = path.basename(filePath);
+export function cleanOldLogFiles(args: LogArgs, paths: {defaultLogFilepath: string}): void {
+  const filepath = args.logFile ?? paths.defaultLogFilepath;
+  const folder = path.dirname(filepath);
+  const filename = path.basename(filepath);
   const lastIndexDot = filename.lastIndexOf(".");
   const prefix = filename.substring(0, lastIndexDot);
   const extension = filename.substring(lastIndexDot + 1, filename.length);
@@ -136,7 +86,7 @@ export function cleanOldLogFiles(filePath: string, maxFiles: number): void {
     .readdirSync(folder, {withFileTypes: true})
     .filter((de) => de.isFile())
     .map((de) => de.name)
-    .filter((logFileName) => shouldDeleteLogFile(prefix, extension, logFileName, maxFiles))
+    .filter((logFileName) => shouldDeleteLogFile(prefix, extension, logFileName, args.logFileDailyRotate))
     .map((logFileName) => path.join(folder, logFileName));
   // delete files
   toDelete.forEach((filename) => fs.unlinkSync(filename));
@@ -150,12 +100,4 @@ export function shouldDeleteLogFile(prefix: string, extension: string, logFileNa
     return true;
   }
   return false;
-}
-
-function parseLogFormat(format: string): LogFormat {
-  if (!logFormats.includes(format as LogFormat)) {
-    throw Error(`Invalid log format '${format}'`);
-  }
-
-  return format as LogFormat;
 }

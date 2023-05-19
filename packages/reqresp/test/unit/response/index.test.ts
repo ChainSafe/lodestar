@@ -1,11 +1,11 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {expect} from "chai";
-import {LodestarError, Logger, fromHex} from "@lodestar/utils";
+import {LodestarError, fromHex} from "@lodestar/utils";
+import {getEmptyLogger} from "@lodestar/logger/empty";
 import {Protocol, RespStatus} from "../../../src/index.js";
 import {ReqRespRateLimiter} from "../../../src/rate_limiter/ReqRespRateLimiter.js";
 import {handleRequest} from "../../../src/response/index.js";
 import {sszSnappyPing} from "../../fixtures/messages.js";
-import {createStubbedLogger} from "../../mocks/logger.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {MockLibP2pStream, expectEqualByteChunks} from "../../utils/index.js";
 import {getValidPeerId} from "../../utils/peer.js";
@@ -43,14 +43,13 @@ const testCases: {
 ];
 
 describe("response / handleRequest", () => {
+  const logger = getEmptyLogger();
   let controller: AbortController;
-  let logger: Logger;
   let peerId: PeerId;
 
   beforeEach(() => {
     controller = new AbortController();
     peerId = getValidPeerId();
-    logger = createStubbedLogger();
   });
 
   afterEach(() => controller.abort());

@@ -2,7 +2,8 @@ import fs from "node:fs";
 import {Context} from "mocha";
 import {fromHexString} from "@chainsafe/ssz";
 import {isExecutionStateType, isMergeTransitionComplete} from "@lodestar/state-transition";
-import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
+import {LogLevel, sleep} from "@lodestar/utils";
+import {TimestampFormatCode} from "@lodestar/logger";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainConfig} from "@lodestar/config";
 import {routes} from "@lodestar/api";
@@ -265,8 +266,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
     const testLoggerOpts: TestLoggerOpts = {
-      logLevel: LogLevel.info,
-      logFile: `${logFilesDir}/merge-interop-${testName}.log`,
+      level: LogLevel.info,
+      file: {
+        filepath: `${logFilesDir}/merge-interop-${testName}.log`,
+        level: LogLevel.debug,
+      },
       timestampFormat: {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,

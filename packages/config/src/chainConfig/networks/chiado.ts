@@ -40,5 +40,5 @@ export const chiadoChainConfig: ChainConfig = {
   BELLATRIX_FORK_EPOCH: 180,
   // Capella
   CAPELLA_FORK_VERSION: b("0x0300006f"),
-  CAPELLA_FORK_EPOCH: Infinity,
+  CAPELLA_FORK_EPOCH: 244224, // Wed May 24 2023 13:12:00 GMT+0000
 };

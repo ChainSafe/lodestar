@@ -4,11 +4,15 @@ import type {ConnectionManager} from "@libp2p/interface-connection-manager";
 import type {Components} from "libp2p/components.js";
 import type {DefaultConnectionManager} from "libp2p/connection-manager/index.js";
 import type {DefaultDialer} from "libp2p/connection-manager/dialer/index.js";
+import {PeerIdStr} from "../util/peerId.js";
 import type {Libp2p} from "./interface.js";
 
 export function prettyPrintPeerId(peerId: PeerId): string {
-  const id = peerId.toString();
-  return `${id.substr(0, 2)}...${id.substr(id.length - 6, id.length)}`;
+  return prettyPrintPeerIdStr(peerId.toString());
+}
+
+export function prettyPrintPeerIdStr(id: PeerIdStr): string {
+  return `${id.slice(0, 2)}...${id.slice(id.length - 6, id.length)}`;
 }
 
 /**

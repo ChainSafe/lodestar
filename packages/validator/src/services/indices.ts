@@ -135,7 +135,7 @@ export class IndicesService {
 
       const pubkeyHex = toHexString(validatorState.validator.pubkey);
       if (!this.pubkey2index.has(pubkeyHex)) {
-        this.logger.info("Validator exists in beacon chain", {
+        this.logger.info("Validator seen on beacon chain", {
           validatorIndex: validatorState.index,
           pubKey: pubkeyHex,
         });

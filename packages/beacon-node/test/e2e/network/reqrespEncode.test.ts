@@ -14,12 +14,13 @@ import {
   PeerRpcScoreStore,
   ReqRespBeaconNode,
   ReqRespBeaconNodeModules,
-  ReqRespHandlers,
 } from "../../../src/network/index.js";
 import {PeersData} from "../../../src/network/peers/peersData.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
 import {MetadataController} from "../../../src/network/metadata.js";
 import {testLogger} from "../../utils/logger.js";
+import {GetReqRespHandlerFn} from "../../../src/network/reqresp/types.js";
+import {LocalStatusCache} from "../../../src/network/statusCache.js";
 
 /* eslint-disable require-yield, @typescript-eslint/naming-convention */
 
@@ -50,25 +51,13 @@ describe("reqresp encoder", () => {
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async function getReqResp(reqRespHandlersPartial?: Partial<ReqRespHandlers>) {
+  async function getReqResp(getHandler?: GetReqRespHandlerFn) {
     const {libp2p, multiaddr} = await getLibp2p();
 
-    const notImplemented = async function* <T>(): AsyncIterable<T> {
-      throw Error("not implemented");
-    };
-
-    const reqRespHandlers: ReqRespHandlers = {
-      onStatus: notImplemented,
-      onBeaconBlocksByRange: notImplemented,
-      onBeaconBlocksByRoot: notImplemented,
-      onBlobsSidecarsByRange: notImplemented,
-      onBeaconBlockAndBlobsSidecarByRoot: notImplemented,
-      onLightClientBootstrap: notImplemented,
-      onLightClientUpdatesByRange: notImplemented,
-      onLightClientOptimisticUpdate: notImplemented,
-      onLightClientFinalityUpdate: notImplemented,
-      ...reqRespHandlersPartial,
-    };
+    const getHandlerNoop: GetReqRespHandlerFn = () =>
+      async function* <T>(): AsyncIterable<T> {
+        throw Error("not implemented");
+      };
 
     const config = createBeaconConfig({}, ZERO_HASH);
     const modules: ReqRespBeaconNodeModules = {
@@ -77,10 +66,11 @@ describe("reqresp encoder", () => {
       logger: testLogger(),
       config,
       metrics: null,
-      reqRespHandlers,
-      metadata: new MetadataController(config),
+      getHandler: getHandler ?? getHandlerNoop,
+      metadata: new MetadataController({}, {config, onSetValue: () => null}),
       peerRpcScores: new PeerRpcScoreStore(),
-      networkEventBus: new NetworkEventBus(),
+      events: new NetworkEventBus(),
+      statusCache: new LocalStatusCache(ssz.phase0.Status.defaultValue()),
     };
 
     return {libp2p, multiaddr, reqresp: new ReqRespBeaconNode(modules)};
@@ -136,14 +126,17 @@ describe("reqresp encoder", () => {
   });
 
   it("assert correct encoding of protocol with context bytes", async () => {
-    const {multiaddr: serverMultiaddr, reqresp} = await getReqResp({
-      onLightClientOptimisticUpdate: async function* () {
-        yield {
-          data: ssz.altair.LightClientOptimisticUpdate.serialize(ssz.altair.LightClientOptimisticUpdate.defaultValue()),
-          fork: ForkName.phase0, // Aware that phase0 does not makes sense here, but it's just to pick a fork digest
-        };
-      },
-    });
+    const {multiaddr: serverMultiaddr, reqresp} = await getReqResp(
+      () =>
+        async function* () {
+          yield {
+            data: ssz.altair.LightClientOptimisticUpdate.serialize(
+              ssz.altair.LightClientOptimisticUpdate.defaultValue()
+            ),
+            fork: ForkName.phase0, // Aware that phase0 does not makes sense here, but it's just to pick a fork digest
+          };
+        }
+    );
     reqresp.registerProtocolsAtFork(ForkName.altair);
     await sleep(0); // Sleep to resolve register handler promises
 

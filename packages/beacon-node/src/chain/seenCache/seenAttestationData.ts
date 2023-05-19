@@ -100,10 +100,11 @@ export class SeenAttestationDatas {
 
   private onScrapeLodestarMetrics(metrics: Metrics): void {
     metrics?.seenCache.attestationData.totalSlot.set(this.cacheEntryByAttDataBase64BySlot.size);
-    // only track current slot
-    const currentSlot = this.lowestPermissibleSlot + this.cacheSlotDistance;
+    // tracking number of attestation data at current slot may not be correct if scrape time is not at the end of slot
+    // so we track it at the previous slot
+    const previousSlot = this.lowestPermissibleSlot + this.cacheSlotDistance - 1;
     metrics?.seenCache.attestationData.countPerSlot.set(
-      this.cacheEntryByAttDataBase64BySlot.get(currentSlot)?.size ?? 0
+      this.cacheEntryByAttDataBase64BySlot.get(previousSlot)?.size ?? 0
     );
   }
 }

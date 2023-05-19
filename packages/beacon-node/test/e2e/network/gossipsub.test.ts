@@ -42,8 +42,6 @@ describe("gossipsub", function () {
   if (this.timeout() < 15 * 1000) this.timeout(15 * 1000);
   this.retries(2); // This test fail sometimes, with a 5% rate.
 
-  const logger = testLogger();
-
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {
@@ -81,7 +79,6 @@ describe("gossipsub", function () {
     };
 
     const db = new StubbedBeaconDb(config);
-    const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = gossipHandlersPartial as GossipHandlers;
 
     const loggerA = testLogger("A");
@@ -90,7 +87,8 @@ describe("gossipsub", function () {
     const modules: Omit<NetworkInitModules, "opts" | "peerId" | "logger"> = {
       config: beaconConfig,
       chain,
-      reqRespHandlers,
+      db,
+      getReqRespHandler: getReqRespHandlers({db, chain}),
       gossipHandlers,
       signal: controller.signal,
       metrics: null,
@@ -126,9 +124,9 @@ describe("gossipsub", function () {
       },
     });
 
-    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
 
     await netA.subscribeGossipCoreTopics();
     await netB.subscribeGossipCoreTopics();
@@ -136,61 +134,17 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = netA["gossipsub"].getTopics()[0];
-      if (topicStr && netA["gossipsub"].getMeshPeers(topicStr).length > 0) {
+      if (await hasSomeMeshPeer(netA)) {
         break;
       }
     }
 
     const voluntaryExit = ssz.phase0.SignedVoluntaryExit.defaultValue();
-    await netA.gossip.publishVoluntaryExit(voluntaryExit);
+    voluntaryExit.message.epoch = config.ALTAIR_FORK_EPOCH;
+    await netA.publishVoluntaryExit(voluntaryExit);
 
     const receivedVoluntaryExit = await onVoluntaryExitPromise;
     expect(receivedVoluntaryExit).to.deep.equal(ssz.phase0.SignedVoluntaryExit.serialize(voluntaryExit));
-  });
-
-  it("Publish and receive 1000 voluntaryExits", async function () {
-    const receivedVoluntaryExits: Uint8Array[] = [];
-
-    const {netA, netB, controller} = await mockModules({
-      [GossipType.voluntary_exit]: async ({serializedData}) => {
-        receivedVoluntaryExits.push(serializedData);
-      },
-    });
-
-    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
-
-    await netA.subscribeGossipCoreTopics();
-    await netB.subscribeGossipCoreTopics();
-
-    // Wait to have a peer connected to a topic
-    while (!controller.signal.aborted) {
-      await sleep(500);
-      const topicStr = netA["gossipsub"].getTopics()[0];
-      if (topicStr && netA["gossipsub"].getMeshPeers(topicStr).length > 0) {
-        break;
-      }
-    }
-
-    const msgCount = 1000;
-
-    for (let i = 0; i < msgCount; i++) {
-      const voluntaryExit = ssz.phase0.SignedVoluntaryExit.defaultValue();
-      voluntaryExit.message.epoch = i;
-      netA.gossip.publishVoluntaryExit(voluntaryExit).catch((e: Error) => {
-        logger.error("Error on publishVoluntaryExit", {}, e);
-      });
-    }
-
-    // Wait to receive all the messages. A timeout error will happen otherwise
-    while (!controller.signal.aborted) {
-      await sleep(500);
-      if (receivedVoluntaryExits.length >= msgCount) {
-        break;
-      }
-    }
   });
 
   it("Publish and receive a blsToExecutionChange", async function () {
@@ -203,9 +157,9 @@ describe("gossipsub", function () {
       },
     });
 
-    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
 
     await netA.subscribeGossipCoreTopics();
     await netB.subscribeGossipCoreTopics();
@@ -213,14 +167,13 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = netA["gossipsub"].getTopics()[0];
-      if (topicStr && netA["gossipsub"].getMeshPeers(topicStr).length > 0) {
+      if (await hasSomeMeshPeer(netA)) {
         break;
       }
     }
 
     const blsToExec = ssz.capella.SignedBLSToExecutionChange.defaultValue();
-    await netA.gossip.publishBlsToExecutionChange(blsToExec);
+    await netA.publishBlsToExecutionChange(blsToExec);
 
     const receivedblsToExec = await onBlsToExecutionChangePromise;
     expect(receivedblsToExec).to.deep.equal(ssz.capella.SignedBLSToExecutionChange.serialize(blsToExec));
@@ -238,9 +191,9 @@ describe("gossipsub", function () {
       },
     });
 
-    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
 
     await netA.subscribeGossipCoreTopics();
     await netB.subscribeGossipCoreTopics();
@@ -248,15 +201,14 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = netA["gossipsub"].getTopics()[0];
-      if (topicStr && netA["gossipsub"].getMeshPeers(topicStr).length > 0) {
+      if (await hasSomeMeshPeer(netA)) {
         break;
       }
     }
 
     const lightClientOptimisticUpdate = ssz.capella.LightClientOptimisticUpdate.defaultValue();
     lightClientOptimisticUpdate.signatureSlot = START_SLOT;
-    await netA.gossip.publishLightClientOptimisticUpdate(lightClientOptimisticUpdate);
+    await netA.publishLightClientOptimisticUpdate(lightClientOptimisticUpdate);
 
     const optimisticUpdate = await onLightClientOptimisticUpdatePromise;
     expect(optimisticUpdate).to.deep.equal(
@@ -276,9 +228,9 @@ describe("gossipsub", function () {
       },
     });
 
-    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB.peerId, netB.localMultiaddrs)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    await Promise.all([onPeerConnect(netA), onPeerConnect(netB), connect(netA, netB)]);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
 
     await netA.subscribeGossipCoreTopics();
     await netB.subscribeGossipCoreTopics();
@@ -286,17 +238,20 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = netA["gossipsub"].getTopics()[0];
-      if (topicStr && netA["gossipsub"].getMeshPeers(topicStr).length > 0) {
+      if (await hasSomeMeshPeer(netA)) {
         break;
       }
     }
 
     const lightClientFinalityUpdate = ssz.capella.LightClientFinalityUpdate.defaultValue();
     lightClientFinalityUpdate.signatureSlot = START_SLOT;
-    await netA.gossip.publishLightClientFinalityUpdate(lightClientFinalityUpdate);
+    await netA.publishLightClientFinalityUpdate(lightClientFinalityUpdate);
 
     const optimisticUpdate = await onLightClientFinalityUpdatePromise;
     expect(optimisticUpdate).to.deep.equal(ssz.capella.LightClientFinalityUpdate.serialize(lightClientFinalityUpdate));
   });
 });
+
+async function hasSomeMeshPeer(net: Network): Promise<boolean> {
+  return Object.values(await net.dumpMeshPeers()).some((peers) => peers.length > 0);
+}

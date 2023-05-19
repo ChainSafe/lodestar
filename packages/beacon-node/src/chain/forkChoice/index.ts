@@ -65,6 +65,7 @@ export function initializeForkChoice(
     ProtoArray.initialize(
       {
         slot: blockHeader.slot,
+        proposerIndex: blockHeader.proposerIndex,
         parentRoot: toHexString(blockHeader.parentRoot),
         stateRoot: toHexString(blockHeader.stateRoot),
         blockRoot: toHexString(checkpoint.root),

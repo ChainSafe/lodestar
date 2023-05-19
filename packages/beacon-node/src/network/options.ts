@@ -1,6 +1,6 @@
 import {Eth2GossipsubOpts} from "./gossip/gossipsub.js";
 import {defaultGossipHandlerOpts} from "./processor/gossipHandlers.js";
-import {PeerManagerOpts} from "./peers/index.js";
+import {PeerManagerOpts, PeerRpcScoreOpts} from "./peers/index.js";
 import {ReqRespBeaconNodeOpts} from "./reqresp/ReqRespBeaconNode.js";
 import {NetworkProcessorOpts} from "./processor/index.js";
 
@@ -10,6 +10,7 @@ export interface NetworkOptions
     // remove all Functions
     Omit<ReqRespBeaconNodeOpts, "getPeerLogMetadata" | "onRateLimit">,
     NetworkProcessorOpts,
+    PeerRpcScoreOpts,
     Eth2GossipsubOpts {
   localMultiaddrs: string[];
   bootMultiaddrs?: string[];
@@ -17,6 +18,7 @@ export interface NetworkOptions
   mdns: boolean;
   connectToDiscv5Bootnodes?: boolean;
   version?: string;
+  useWorker?: boolean;
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
@@ -33,4 +35,6 @@ export const defaultNetworkOptions: NetworkOptions = {
   // see https://github.com/ChainSafe/lodestar/issues/5420
   gossipsubDHigh: 9,
   ...defaultGossipHandlerOpts,
+  // TEMP default to try
+  useWorker: true,
 };

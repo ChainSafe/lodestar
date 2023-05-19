@@ -4,7 +4,7 @@ import {
   isStateValidatorsNodesPopulated,
   DataAvailableStatus,
 } from "@lodestar/state-transition";
-import {bellatrix} from "@lodestar/types";
+import {WithOptionalBytes, bellatrix} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {ProtoBlock} from "@lodestar/fork-choice";
@@ -20,6 +20,7 @@ import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
 import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExecutionPayloads.js";
+import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
 /**
  * Verifies 1 or more blocks are fully valid; from a linear sequence of blocks.
@@ -35,7 +36,7 @@ import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExe
 export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
-  blocksInput: BlockInput[],
+  blocksInput: WithOptionalBytes<BlockInput>[],
   dataAvailabilityStatuses: DataAvailableStatus[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
@@ -84,6 +85,7 @@ export async function verifyBlocksInEpoch(
   const abortController = new AbortController();
 
   try {
+    // batch all I/O operations to reduce overhead
     const [segmentExecStatus, {postStates, proposerBalanceDeltas}] = await Promise.all([
       // Execution payloads
       verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts),
@@ -101,6 +103,11 @@ export async function verifyBlocksInEpoch(
 
       // All signatures at once
       verifyBlocksSignatures(this.bls, this.logger, this.metrics, preState0, blocks, opts),
+
+      // ideally we want to only persist blocks after verifying them however the reality is there are
+      // rarely invalid blocks we'll batch all I/O operation here to reduce the overhead if there's
+      // an error, we'll remove blocks not in forkchoice
+      opts.eagerPersistBlock ? writeBlockInputToDb.call(this, blocksInput) : Promise.resolve(),
     ]);
 
     if (segmentExecStatus.execAborted === null && segmentExecStatus.mergeBlockFound !== null) {
