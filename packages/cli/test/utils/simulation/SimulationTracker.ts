@@ -1,4 +1,5 @@
 import EventEmitter from "node:events";
+import Debug from "debug";
 import {routes} from "@lodestar/api/beacon";
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Slot} from "@lodestar/types";
@@ -17,6 +18,8 @@ import {
 } from "./interfaces.js";
 import {defaultAssertions} from "./assertions/defaults/index.js";
 import {TableReporter} from "./TableReporter.js";
+
+const debug = Debug("lodestar:sim:tracker");
 
 interface SimulationTrackerInitOptions {
   nodes: NodePair[];
@@ -126,12 +129,14 @@ export class SimulationTracker {
   }
 
   track(node: NodePair): void {
+    debug("track", node.cl.id);
     this.initDataForNode(node);
     this.initEventStreamForNode(node);
     this.nodes.push(node);
   }
 
   async start(): Promise<void> {
+    debug("starting tracker");
     for (const node of this.nodes) {
       this.initEventStreamForNode(node);
     }
@@ -216,6 +221,7 @@ export class SimulationTracker {
     const slot = event.slot;
     const epoch = this.clock.getEpochForSlot(slot);
     const lastSeenSlot = this.lastSeenSlot.get(node.cl.id);
+    debug(`processing block node=${node.cl.id} slot=${slot} lastSeenSlot=${lastSeenSlot}`);
 
     if (lastSeenSlot !== undefined && slot > lastSeenSlot) {
       this.lastSeenSlot.set(node.cl.id, slot);
@@ -245,8 +251,10 @@ export class SimulationTracker {
   }
 
   private async processCapture({slot, epoch}: {slot: Slot; epoch: Epoch}, node: NodePair): Promise<void> {
+    debug(`processing capture node=${node.cl.id} slot=${slot}`);
     const res = await node.cl.api.beacon.getBlockV2(slot);
     if (!res.ok) {
+      debug(`block could not be found node=${node.cl.id} slot=${slot}`);
       // Incase of reorg the block may not be available
       return;
     }
@@ -259,6 +267,12 @@ export class SimulationTracker {
         forkConfig: this.forkConfig,
         fork: this.forkConfig.getForkName(slot),
       });
+
+      debug(
+        `capturing data for node=${node.cl.id} assertion=${assertion.id} slot=${slot} match=${match} capture=${
+          match & AssertionMatch.Capture
+        }`
+      );
 
       if (match & AssertionMatch.None || !(match & AssertionMatch.Capture)) continue;
 
@@ -279,6 +293,8 @@ export class SimulationTracker {
         dependantStores: this.stores,
       });
 
+      debug(`value captured node=${node.cl.id} assertion=${assertion.id} slot=${slot} value=${JSON.stringify(value)}`);
+
       if (!isNullish(value)) {
         this.stores[assertion.id][node.cl.id][slot] = value;
       }
@@ -290,8 +306,10 @@ export class SimulationTracker {
   }
 
   private async processAssert({slot, epoch}: {slot: Slot; epoch: Epoch}): Promise<void> {
+    debug(`processing assert slot=${slot} epoch=${epoch}`);
     const capturedForNodes = this.slotCapture.get(slot);
     if (!capturedForNodes || capturedForNodes.length < this.nodes.length) {
+      debug(`not all nodes have captured data for slot=${slot}`);
       // We need to wait for all nodes to capture data for that slot
       return;
     }
@@ -305,6 +323,12 @@ export class SimulationTracker {
         forkConfig: this.forkConfig,
         fork: this.forkConfig.getForkName(slot),
       });
+
+      debug(
+        `asserting assertion=${assertion.id} slot=${slot} match=${match} assert=${
+          match & AssertionMatch.Assert
+        } remove=${match & AssertionMatch.Remove}`
+      );
 
       if (match & AssertionMatch.None) continue;
 
@@ -358,9 +382,11 @@ export class SimulationTracker {
     ],
     signal?: AbortSignal
   ): void {
+    debug("event stream initialized for", node.cl.id);
     void node.cl.api.events.eventstream(events, signal ?? this.signal, async (event) => {
       switch (event.type) {
         case routes.events.EventType.block:
+          debug(`block received node=${node.cl.id} slot=${event.message.slot}`);
           await this.processOnBlock(event.message, node);
           return;
         case routes.events.EventType.head:
