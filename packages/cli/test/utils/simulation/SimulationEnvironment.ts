@@ -247,6 +247,7 @@ export class SimulationEnvironment {
         logsDir: this.options.logsDir,
       }),
       genesisTime: this.options.elGenesisTime,
+      clientOptions: elOptions.clientOptions,
     });
 
     const clOptions = typeof cl === "object" ? cl.options : {};
@@ -266,7 +267,6 @@ export class SimulationEnvironment {
       config: this.forkConfig,
       runner: this.runner,
       genesisTime: this.options.elGenesisTime,
-      clientOptions: clOptions,
       genesisState: this.genesisState,
       paths: getCLNodePaths({
         root: this.options.rootDir,
@@ -274,6 +274,7 @@ export class SimulationEnvironment {
         client: clType,
         logsDir: this.options.logsDir,
       }),
+      clientOptions: clOptions.clientOptions,
     });
 
     this.nodePairCount += 1;
