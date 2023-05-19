@@ -20,7 +20,7 @@ export type IChainOptions = BlockProcessOpts &
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
     /** Max number of produced blobs by local validators to cache */
-    maxCachedBlobsSidecar?: number;
+    maxCachedBlobSidecars?: number;
   };
 
 export type BlockProcessOpts = {

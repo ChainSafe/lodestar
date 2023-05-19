@@ -18,6 +18,7 @@ import {
 import {getReqSerializers as getBeaconReqSerializers} from "../beacon/routes/beacon/block.js";
 import {HttpStatusCode} from "../utils/client/httpStatusCode.js";
 import {ApiClientResponse} from "../interfaces.js";
+import {SignedBlindedBlockContents} from "../utils/routes.js";
 
 export type Api = {
   status(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.SERVICE_UNAVAILABLE>>;
@@ -35,7 +36,7 @@ export type Api = {
     >
   >;
   submitBlindedBlock(
-    signedBlock: allForks.SignedBlindedBeaconBlock
+    signedBlock: allForks.SignedBlindedBeaconBlock | SignedBlindedBlockContents
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.ExecutionPayload; version: ForkName}},

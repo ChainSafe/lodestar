@@ -6,7 +6,7 @@ import {
   isExecutionBlockBodyType,
   isExecutionStateType,
   isExecutionEnabled,
-  getProposerSignatureSet,
+  getBlockProposerSignatureSet,
 } from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
@@ -141,7 +141,7 @@ export async function validateGossipBlock(
   }
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
-  const signatureSet = getProposerSignatureSet(blockState, signedBlock);
+  const signatureSet = getBlockProposerSignatureSet(blockState, signedBlock);
   // Don't batch so verification is not delayed
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new BlockGossipError(GossipAction.REJECT, {
