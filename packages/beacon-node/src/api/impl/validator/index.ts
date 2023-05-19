@@ -1,4 +1,4 @@
-import {routes, ServerApi} from "@lodestar/api";
+import {routes, ServerApi, BlockContents} from "@lodestar/api";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
@@ -273,7 +273,7 @@ export function getValidatorApi({
         if (blobSidecars === undefined) {
           throw Error("blobSidecars missing in cache");
         }
-        return {data: {block, blobSidecars} as allForks.BlockContents, version, blockValue};
+        return {data: {block, blobSidecars} as BlockContents, version, blockValue};
       }
     } finally {
       if (timer) timer({source});
@@ -286,7 +286,7 @@ export function getValidatorApi({
     graffiti
   ) {
     const {data, version, blockValue} = await produceBlockV2(slot, randaoReveal, graffiti);
-    if ((data as allForks.BlockContents).block !== undefined) {
+    if ((data as BlockContents).block !== undefined) {
       throw Error(`Invalid block contents for produceBlock at fork=${version}`);
     } else {
       return {data: data as allForks.BeaconBlock, version, blockValue};

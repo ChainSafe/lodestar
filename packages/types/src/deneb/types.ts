@@ -14,10 +14,6 @@ export type BlindedBlobSidecar = ValueOf<typeof ssz.BlindedBlobSidecar>;
 export type BlindedBlobSidecars = ValueOf<typeof ssz.BlindedBlobSidecars>;
 export type SignedBlobSidecar = ValueOf<typeof ssz.SignedBlobSidecar>;
 export type SignedBlobSidecars = ValueOf<typeof ssz.SignedBlobSidecars>;
-export type BlockContents = ValueOf<typeof ssz.BlockContents>;
-export type BlindedBlockContents = ValueOf<typeof ssz.BlindedBlockContents>;
-export type SignedBlockContents = ValueOf<typeof ssz.SignedBlockContents>;
-export type SignedBlindedBlockContents = ValueOf<typeof ssz.SignedBlindedBlockContents>;
 export type SignedBlindedBlobSidecar = ValueOf<typeof ssz.SignedBlindedBlobSidecar>;
 export type SignedBlindedBlobSidecars = ValueOf<typeof ssz.SignedBlindedBlobSidecars>;
 

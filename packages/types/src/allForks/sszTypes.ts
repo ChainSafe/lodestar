@@ -157,9 +157,5 @@ export const allForksBlobs = {
     SignedBeaconBlockAndBlobsSidecar: deneb.SignedBeaconBlockAndBlobsSidecar,
     BlobSidecar: deneb.BlobSidecar,
     BlindedBlobSidecar: deneb.BlindedBlobSidecar,
-    BlockContents: deneb.BlockContents,
-    BlindedBlockContents: deneb.BlindedBlockContents,
-    SignedBlockContents: deneb.SignedBlockContents,
-    SignedBlindedBlockContents: deneb.SignedBlindedBlockContents,
   },
 };

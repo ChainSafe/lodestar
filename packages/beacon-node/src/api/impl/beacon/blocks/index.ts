@@ -1,8 +1,14 @@
-import {routes, ServerApi} from "@lodestar/api";
+import {
+  routes,
+  ServerApi,
+  isSignedBlockContents,
+  isSignedBlindedBlockContents,
+  SignedBlockContents,
+} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
-import {allForks, deneb, isSignedBlockContents, isSignedBlindedBlockContents} from "@lodestar/types";
+import {allForks, deneb} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
@@ -206,7 +212,7 @@ export function getBeaconBlockApi({
 
       if (isSignedBlockContents(signedBlockOrContents)) {
         // Build a blockInput for post deneb, signedBlobs will be be used in followup PRs
-        ({signedBlock, signedBlobSidecars: signedBlobs} = signedBlockOrContents as allForks.SignedBlockContents);
+        ({signedBlock, signedBlobSidecars: signedBlobs} = signedBlockOrContents as SignedBlockContents);
         const beaconBlockSlot = signedBlock.message.slot;
         const beaconBlockRoot = config.getForkTypes(beaconBlockSlot).BeaconBlock.hashTreeRoot(signedBlock.message);
         const blobs = signedBlobs.map((sblob) => sblob.message.blob);

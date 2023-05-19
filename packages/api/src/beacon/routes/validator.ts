@@ -35,6 +35,12 @@ import {
   ContainerData,
 } from "../../utils/index.js";
 import {fromU64Str, fromGraffitiHex, toU64Str, U64Str, toGraffitiHex} from "../../utils/serdes.js";
+import {
+  BlockContents,
+  BlindedBlockContents,
+  AllForksBlockContentsResSerializer,
+  AllForksBlindedBlockContentsResSerializer,
+} from "../../utils/routes.js";
 import {ExecutionOptimistic} from "./beacon/block.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -220,7 +226,7 @@ export type Api = {
     graffiti: string
   ): Promise<
     ApiClientResponse<
-      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock | allForks.BlockContents; version: ForkName; blockValue: Wei}},
+      {[HttpStatusCode.OK]: {data: allForks.BeaconBlock | BlockContents; version: ForkName; blockValue: Wei}},
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
@@ -233,7 +239,7 @@ export type Api = {
     ApiClientResponse<
       {
         [HttpStatusCode.OK]: {
-          data: allForks.BlindedBeaconBlock | allForks.BlindedBlockContents;
+          data: allForks.BlindedBeaconBlock | BlindedBlockContents;
           version: ForkName;
           blockValue: Wei;
         };
@@ -631,17 +637,15 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getSyncCommitteeDuties: ContainerDataExecutionOptimistic(ArrayOf(SyncDuty)),
     produceBlock: WithBlockValue(ContainerData(ssz.phase0.BeaconBlock)),
     produceBlockV2: WithBlockValue(
-      WithVersion<allForks.BeaconBlock | allForks.BlockContents>((fork: ForkName) =>
-        isForkBlobs(fork) ? ssz.allForksBlobs[fork].BlockContents : ssz[fork].BeaconBlock
+      WithVersion<allForks.BeaconBlock | BlockContents>((fork: ForkName) =>
+        isForkBlobs(fork) ? AllForksBlockContentsResSerializer(() => fork) : ssz[fork].BeaconBlock
       )
     ),
     produceBlindedBlock: WithBlockValue(
-      WithVersion<allForks.BlindedBeaconBlock | allForks.BlindedBlockContents>((fork: ForkName) =>
+      WithVersion<allForks.BlindedBeaconBlock | BlindedBlockContents>((fork: ForkName) =>
         isForkBlobs(fork)
-          ? ssz.allForksBlobs[fork].BlindedBlockContents
-          : isForkExecution(fork)
-          ? ssz.allForksBlinded[fork].BeaconBlock
-          : ssz.bellatrix.BlindedBeaconBlock
+          ? AllForksBlindedBlockContentsResSerializer(() => fork)
+          : ssz.allForksBlinded[isForkExecution(fork) ? fork : ForkName.bellatrix].BeaconBlock
       )
     ),
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),

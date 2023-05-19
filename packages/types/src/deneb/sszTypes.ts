@@ -165,22 +165,6 @@ export const SignedBlobSidecar = new ContainerType(
 );
 export const SignedBlobSidecars = new ListCompositeType(SignedBlobSidecar, MAX_BLOBS_PER_BLOCK);
 
-export const BlockContents = new ContainerType(
-  {
-    block: BeaconBlock,
-    blobSidecars: BlobSidecars,
-  },
-  {typeName: "BlockContents", jsonCase: "eth2"}
-);
-
-export const SignedBlockContents = new ContainerType(
-  {
-    signedBlock: SignedBeaconBlock,
-    signedBlobSidecars: SignedBlobSidecars,
-  },
-  {typeName: "SignedBlockContents", jsonCase: "eth2"}
-);
-
 export const BlindedBlobSidecar = new ContainerType(
   {
     blockRoot: Root,
@@ -249,22 +233,6 @@ export const SignedBlindedBeaconBlock = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
-);
-
-export const BlindedBlockContents = new ContainerType(
-  {
-    blindedBlock: BlindedBeaconBlock,
-    blindedBlobSidecars: BlindedBlobSidecars,
-  },
-  {typeName: "BlindedBlockContents", jsonCase: "eth2"}
-);
-
-export const SignedBlindedBlockContents = new ContainerType(
-  {
-    signedBlindedBlock: SignedBlindedBeaconBlock,
-    signedBlindedBlobSidecars: SignedBlindedBlobSidecars,
-  },
-  {typeName: "SignedBlindedBlockContents", jsonCase: "eth2"}
 );
 
 export const BuilderBid = new ContainerType(

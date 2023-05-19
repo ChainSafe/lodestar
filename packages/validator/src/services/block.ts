@@ -6,8 +6,6 @@ import {
   bellatrix,
   capella,
   isBlindedBeaconBlock,
-  isBlockContents,
-  isBlindedBlockContents,
   Wei,
   ProducedBlockSource,
   deneb,
@@ -16,7 +14,16 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {extendError, prettyBytes, racePromisesWithCutoff, RaceEvent} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
-import {Api, ApiError} from "@lodestar/api";
+import {
+  Api,
+  ApiError,
+  isBlockContents,
+  isBlindedBlockContents,
+  SignedBlindedBlockContents,
+  SignedBlockContents,
+  BlockContents,
+  BlindedBlockContents,
+} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -165,8 +172,8 @@ export class BlockProposingService {
           ? await this.api.beacon.publishBlindedBlock({
               signedBlindedBlock: signedBlock,
               signedBlindedBlobSidecars: signedBlobSidecars,
-            } as allForks.SignedBlindedBlockContents)
-          : await this.api.beacon.publishBlock({signedBlock, signedBlobSidecars} as allForks.SignedBlockContents)
+            } as SignedBlindedBlockContents)
+          : await this.api.beacon.publishBlock({signedBlock, signedBlobSidecars} as SignedBlockContents)
       );
     }
   };
@@ -359,7 +366,7 @@ export class BlockProposingService {
         const {
           data: {block, blobSidecars: blobs},
           blockValue,
-        } = response as {data: allForks.BlockContents; blockValue: Wei};
+        } = response as {data: BlockContents; blockValue: Wei};
         return {block, blobs, blockValue};
       }
     }
@@ -397,7 +404,7 @@ export class BlockProposingService {
         const {
           data: {blindedBlock: block, blindedBlobSidecars: blobs},
           blockValue,
-        } = response as {data: allForks.BlindedBlockContents; blockValue: Wei};
+        } = response as {data: BlindedBlockContents; blockValue: Wei};
         return {block, blobs, blockValue};
       }
     }
