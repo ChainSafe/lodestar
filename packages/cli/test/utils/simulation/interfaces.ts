@@ -226,27 +226,28 @@ export type RunnerEvent = "starting" | "started" | "stopping" | "stop";
 
 export type AtLeast<T, K extends keyof T> = Partial<T> & Pick<T, K>;
 
-export interface AssertionInput<D extends Record<string, unknown>> {
+export interface AssertionInput {
   fork: ForkName;
   forkConfig: ChainForkConfig;
   slot: Slot;
   epoch: Epoch;
   clock: EpochClock;
   node: NodePair;
+}
+
+export interface SimulationCaptureInput<D extends Record<string, unknown>> extends AssertionInput {
+  block: allForks.SignedBeaconBlock;
   dependantStores: D;
 }
 
-export interface SimulationCaptureInput<D extends Record<string, unknown>> extends AssertionInput<D> {
-  block: allForks.SignedBeaconBlock;
-}
-
 export interface SimulationAssertionInput<T, D extends Record<string, unknown> = Record<string, never>>
-  extends AssertionInput<D> {
+  extends AssertionInput {
   nodes: NodePair[];
   store: Record<Slot, T>;
+  dependantStores: D;
 }
 
-export type SimulationMatcherInput<D extends Record<string, unknown> = Record<string, never>> = AssertionInput<D>;
+export type SimulationMatcherInput = AssertionInput;
 
 /**
  * Bitwise flag to indicate what to do with the assertion

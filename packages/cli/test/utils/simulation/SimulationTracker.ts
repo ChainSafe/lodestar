@@ -308,6 +308,7 @@ export class SimulationTracker {
         node,
         forkConfig: this.forkConfig,
         epoch,
+        dependantStores: getStoresForAssertions(this.stores, [assertion, ...(assertion.dependencies ?? [])]),
       });
 
       debug(`value captured node=${node.cl.id} assertion=${assertion.id} slot=${slot} value=${JSON.stringify(value)}`);
