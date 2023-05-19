@@ -331,9 +331,11 @@ export function getValidatorApi({
       // when a validator is configured with multiple beacon node urls, this beaconBlockRoot may come from another beacon node
       // and it hasn't been in our forkchoice since we haven't seen / processing that block
       // see https://github.com/ChainSafe/lodestar/issues/5063
-      if (!chain.forkChoice.getBlock(beaconBlockRoot)) {
+      if (!chain.forkChoice.hasBlock(beaconBlockRoot)) {
+        const rootHex = toHexString(beaconBlockRoot);
+        network.searchUnknownSlotRoot({slot, root: rootHex});
         // if result of this call is false, i.e. block hasn't seen after 1 slot then the below notOnOptimisticBlockRoot call will throw error
-        await chain.waitForBlock(slot, toHexString(beaconBlockRoot));
+        await chain.waitForBlock(slot, rootHex);
       }
 
       // Check the execution status as validator shouldn't contribute on an optimistic head
@@ -533,7 +535,7 @@ export function getValidatorApi({
             // see https://github.com/ChainSafe/lodestar/issues/5098
             const {indexedAttestation, committeeIndices, attDataRootHex} = await validateGossipFnRetryUnknownRoot(
               validateFn,
-              network.events,
+              network,
               chain,
               slot,
               beaconBlockRoot
