@@ -288,13 +288,10 @@ export class SimulationTracker {
         fork: this.forkConfig.getForkName(slot),
       });
 
-      debug(
-        `capturing data for node=${node.cl.id} assertion=${assertion.id} slot=${slot} match=${match} capture=${
-          match & AssertionMatch.Capture
-        }`
-      );
-
-      if (match & AssertionMatch.None || !(match & AssertionMatch.Capture)) continue;
+      if (match & AssertionMatch.None || !(match & AssertionMatch.Capture)) {
+        debug(`skipping capture node=${node.cl.id} slot=${slot} assertion=${assertion.id}`);
+        continue;
+      }
 
       if (!assertion.capture) {
         throw new Error(`Assertion "${assertion.id}" has no capture function`);
@@ -310,8 +307,6 @@ export class SimulationTracker {
         epoch,
         dependantStores: getStoresForAssertions(this.stores, [assertion, ...(assertion.dependencies ?? [])]),
       });
-
-      debug(`value captured node=${node.cl.id} assertion=${assertion.id} slot=${slot} value=${JSON.stringify(value)}`);
 
       if (!isNullish(value)) {
         this.stores[assertion.id][node.cl.id][slot] = value;
@@ -344,51 +339,43 @@ export class SimulationTracker {
           fork: this.forkConfig.getForkName(slot),
         });
 
-        debug(
-          `asserting node=${node.cl.id} assertion=${assertion.id} slot=${slot} match=${match} assert=${
-            match & AssertionMatch.Assert
-          } remove=${match & AssertionMatch.Remove}`
-        );
-
-        if (match & AssertionMatch.None) continue;
-
-        if (match & AssertionMatch.Assert) {
-          try {
-            const errors = await assertion.assert({
-              fork: this.forkConfig.getForkName(slot),
-              slot,
-              epoch,
-              node,
-              nodes: this.nodes,
-              clock: this.clock,
-              forkConfig: this.forkConfig,
-              store: this.stores[assertion.id][node.cl.id],
-              dependantStores: getStoresForAssertions(this.stores, [assertion, ...(assertion.dependencies ?? [])]),
-            });
-
-            for (const err of errors) {
-              const message = typeof err === "string" ? err : err[0];
-              const data = typeof err === "string" ? {} : {...err[1]};
-              this.errors.push({slot, epoch, assertionId: assertion.id, nodeId: node.cl.id, message, data});
-            }
-          } catch (err: unknown) {
-            this.errors.push({
-              slot,
-              epoch,
-              nodeId: node.cl.id,
-              assertionId: assertion.id,
-              message: (err as Error).message,
-            });
-          }
+        if (match & AssertionMatch.None || !(match & AssertionMatch.Assert)) {
+          debug(`skipping assert node=${node.cl.id} slot=${slot} assertion=${assertion.id}`);
+          continue;
         }
 
-        if (match & AssertionMatch.Remove) {
-          removeAssertions.push(assertion.id);
+        try {
+          const errors = await assertion.assert({
+            fork: this.forkConfig.getForkName(slot),
+            slot,
+            epoch,
+            node,
+            nodes: this.nodes,
+            clock: this.clock,
+            forkConfig: this.forkConfig,
+            store: this.stores[assertion.id][node.cl.id],
+            dependantStores: getStoresForAssertions(this.stores, [assertion, ...(assertion.dependencies ?? [])]),
+          });
+
+          for (const err of errors) {
+            const message = typeof err === "string" ? err : err[0];
+            const data = typeof err === "string" ? {} : {...err[1]};
+            this.errors.push({slot, epoch, assertionId: assertion.id, nodeId: node.cl.id, message, data});
+          }
+        } catch (err: unknown) {
+          this.errors.push({
+            slot,
+            epoch,
+            nodeId: node.cl.id,
+            assertionId: assertion.id,
+            message: (err as Error).message,
+          });
         }
       }
     }
 
     for (const id of removeAssertions) {
+      debug(`removing assertion slot=${slot} assertion=${id}`);
       delete this.assertionIdsMap[id];
       this.assertions = this.assertions.filter((a) => a.id !== id);
     }

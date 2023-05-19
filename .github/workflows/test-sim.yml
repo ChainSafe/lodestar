@@ -6,6 +6,11 @@ on:
     branches: [unstable, stable]
   pull_request:
   workflow_dispatch:
+    inputs:
+      debug:
+        description: Runtime DEBUG value
+        required: false
+        default: ''
 
 env:
   GETH_DOCKER_IMAGE: ethereum/client-go:v1.11.6
@@ -42,7 +47,7 @@ jobs:
       # </common-build>
 
       - name: Sim tests multifork
-        run: yarn test:sim:multifork
+        run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:multifork
         working-directory: packages/cli
 
       - name: Sim tests endpoints
