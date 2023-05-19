@@ -367,7 +367,7 @@ export class UnknownBlockSync {
         const block = blockInput.block.message;
         const receivedBlockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
         if (!byteArrayEquals(receivedBlockRoot, blockRoot)) {
-          throw Error(`Wrong block received by peer, expected ${toHexString(receivedBlockRoot)} got ${blockRootHex}`);
+          throw Error(`Wrong block received by peer, got ${toHexString(receivedBlockRoot)} expected ${blockRootHex}`);
         }
 
         return {blockInput, peerIdStr: peer};

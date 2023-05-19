@@ -4,7 +4,7 @@ import {config as minimalConfig} from "@lodestar/config/default";
 import {createChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ssz} from "@lodestar/types";
-import {notNullish} from "@lodestar/utils";
+import {notNullish, sleep} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
@@ -34,40 +34,41 @@ describe("sync / UnknownBlockSync", () => {
     id: string;
     event: NetworkEvent.unknownBlockParent | NetworkEvent.unknownBlock;
     finalizedSlot: number;
-    reportPeer: boolean;
-    seenBlock: boolean;
+    reportPeer?: boolean;
+    seenBlock?: boolean;
+    wrongBlockRoot?: boolean;
   }[] = [
     {
       id: "fetch and process multiple unknown blocks",
       event: NetworkEvent.unknownBlock,
       finalizedSlot: 0,
-      reportPeer: false,
-      seenBlock: false,
     },
     {
       id: "fetch and process multiple unknown block parents",
       event: NetworkEvent.unknownBlockParent,
       finalizedSlot: 0,
-      reportPeer: false,
-      seenBlock: false,
     },
     {
       id: "downloaded parent is before finalized slot",
       event: NetworkEvent.unknownBlockParent,
       finalizedSlot: 2,
       reportPeer: true,
-      seenBlock: false,
     },
     {
       id: "unbundling attack",
-      event: NetworkEvent.unknownBlockParent,
+      event: NetworkEvent.unknownBlock,
       finalizedSlot: 0,
-      reportPeer: false,
       seenBlock: true,
+    },
+    {
+      id: "peer returns incorrect root block",
+      event: NetworkEvent.unknownBlock,
+      finalizedSlot: 0,
+      wrongBlockRoot: true,
     },
   ];
 
-  for (const {id, event, finalizedSlot, reportPeer, seenBlock} of testCases) {
+  for (const {id, event, finalizedSlot, reportPeer = false, seenBlock = false, wrongBlockRoot = false} of testCases) {
     it(id, async () => {
       const peer = await getRandPeerIdStr();
       const blockA = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -95,14 +96,21 @@ describe("sync / UnknownBlockSync", () => {
 
       let reportPeerResolveFn: (value: Parameters<INetwork["reportPeer"]>) => void;
       const reportPeerPromise = new Promise<Parameters<INetwork["reportPeer"]>>((r) => (reportPeerResolveFn = r));
+      let sendBeaconBlocksByRootResolveFn: (value: Parameters<INetwork["sendBeaconBlocksByRoot"]>) => void;
+      const sendBeaconBlocksByRootPromise = new Promise<Parameters<INetwork["sendBeaconBlocksByRoot"]>>(
+        (r) => (sendBeaconBlocksByRootResolveFn = r)
+      );
 
       const network: Partial<INetwork> = {
         events: new NetworkEventBus(),
         getConnectedPeers: () => [peer],
-        sendBeaconBlocksByRoot: async (_peerId, roots) =>
-          Array.from(roots)
+        sendBeaconBlocksByRoot: async (_peerId, roots) => {
+          sendBeaconBlocksByRootResolveFn([_peerId, roots]);
+          const correctBlocks = Array.from(roots)
             .map((root) => blocksByRoot.get(toHexString(root)))
-            .filter(notNullish),
+            .filter(notNullish);
+          return wrongBlockRoot ? [ssz.phase0.SignedBeaconBlock.defaultValue()] : correctBlocks;
+        },
 
         reportPeer: async (peerId, action, actionName) => reportPeerResolveFn([peerId, action, actionName]),
       };
@@ -133,7 +141,8 @@ describe("sync / UnknownBlockSync", () => {
       };
 
       const setTimeoutSpy = sandbox.spy(global, "setTimeout");
-      new UnknownBlockSync(config, network as INetwork, chain as IBeaconChain, logger, null);
+      const processBlockSpy = sandbox.spy(chain, "processBlock");
+      const syncService = new UnknownBlockSync(config, network as INetwork, chain as IBeaconChain, logger, null);
       if (event === NetworkEvent.unknownBlockParent) {
         network.events?.emit(NetworkEvent.unknownBlockParent, {
           blockInput: getBlockInput.preDeneb(config, blockC, BlockSource.gossip),
@@ -143,7 +152,15 @@ describe("sync / UnknownBlockSync", () => {
         network.events?.emit(NetworkEvent.unknownBlock, {rootHex: blockRootHexC, peer});
       }
 
-      if (reportPeer) {
+      if (wrongBlockRoot) {
+        const [_, requestedRoots] = await sendBeaconBlocksByRootPromise;
+        await sleep(200);
+        // should not send the invalid root block to chain
+        expect(processBlockSpy.called).to.be.false;
+        for (const requestedRoot of requestedRoots) {
+          expect(syncService["pendingBlocks"].get(toHexString(requestedRoot))?.downloadAttempts).to.be.deep.equal(1);
+        }
+      } else if (reportPeer) {
         const err = await reportPeerPromise;
         expect(err[0]).equal(peer);
         expect([err[1], err[2]]).to.be.deep.equal([PeerAction.LowToleranceError, "BadBlockByRoot"]);
