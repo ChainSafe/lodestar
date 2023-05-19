@@ -13,7 +13,6 @@ import {testLogger} from "../../utils/logger.js";
 import {getRandPeerIdStr} from "../../utils/peer.js";
 import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 import {ClockStopped} from "../../utils/mocks/clock.js";
-import {IClock} from "../../../src/util/clock.js";
 import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
 
 describe("sync / UnknownBlockSync", () => {
@@ -113,9 +112,6 @@ describe("sync / UnknownBlockSync", () => {
         hasBlock: (root) => forkChoiceKnownRoots.has(toHexString(root)),
         getFinalizedBlock: () => ({slot: finalizedSlot} as ProtoBlock),
       };
-      const clock: Pick<IClock, "secFromSlot"> = {
-        secFromSlot: () => 0,
-      };
       const seenBlockProposers: Pick<SeenBlockProposers, "isKnown"> = {
         // only return seenBlock for blockC
         isKnown: (blockSlot) => (blockSlot === blockC.message.slot ? seenBlock : false),
@@ -133,7 +129,6 @@ describe("sync / UnknownBlockSync", () => {
           forkChoiceKnownRoots.add(blockRootHex);
           if (blockRootHex === blockRootHexC) blockCResolver();
         },
-        clock: clock as IClock,
         seenBlockProposers: seenBlockProposers as SeenBlockProposers,
       };
 

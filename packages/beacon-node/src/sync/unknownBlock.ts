@@ -2,10 +2,10 @@ import {ChainForkConfig} from "@lodestar/config";
 import {Logger, pruneSetToMax} from "@lodestar/utils";
 import {Root, RootHex} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
-import {PeerIdStr} from "../util/peerId.js";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
+import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
+import {PeerIdStr} from "../util/peerId.js";
 import {IBeaconChain} from "../chain/index.js";
 import {BlockInput} from "../chain/blocks/types.js";
 import {Metrics} from "../metrics/index.js";
@@ -117,7 +117,7 @@ export class UnknownBlockSync {
       };
       this.pendingBlocks.set(blockRootHex, pendingBlock);
       this.logger.verbose("Added unknown block parent to pendingBlocks", {
-        block: blockRootHex,
+        root: blockRootHex,
         parent: parentBlockRootHex,
       });
     }
@@ -139,7 +139,7 @@ export class UnknownBlockSync {
         downloadAttempts: 0,
       };
       this.pendingBlocks.set(blockRootHex, pendingBlock);
-      this.logger.verbose("Added unknown block to pendingBlocks", {blockRootHex});
+      this.logger.verbose("Added unknown block to pendingBlocks", {root: blockRootHex});
     }
 
     if (peerIdStr) {
@@ -399,9 +399,7 @@ export class UnknownBlockSync {
       this.knownBadBlocks.add(block.blockRootHex);
       for (const peerIdStr of block.peerIdStrs) {
         // TODO: Refactor peerRpcScores to work with peerIdStr only
-        this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot").catch((e) => {
-          this.logger.debug("Error reporting peer", {}, e);
-        });
+        this.network.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadBlockByRoot");
       }
       this.logger.debug("Banning unknown block", {
         root: block.blockRootHex,
