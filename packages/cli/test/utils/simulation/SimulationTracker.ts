@@ -18,6 +18,7 @@ import {
 } from "./interfaces.js";
 import {defaultAssertions} from "./assertions/defaults/index.js";
 import {TableReporter} from "./TableReporter.js";
+import {fetchBlock} from "./utils/network.js";
 
 const debug = Debug("lodestar:sim:tracker");
 
@@ -271,8 +272,12 @@ export class SimulationTracker {
 
   private async processCapture({slot, epoch}: {slot: Slot; epoch: Epoch}, node: NodePair): Promise<void> {
     debug(`processing capture node=${node.cl.id} slot=${slot}`);
-    const res = await node.cl.api.beacon.getBlockV2(slot);
-    if (!res.ok) {
+
+    // It is observed that sometimes block is received on the node event stream
+    // But the http-api does not respond with the block
+    // This is a workaround to fetch the block with retries
+    const block = await fetchBlock(node, {slot, tries: 2, delay: 250});
+    if (!block) {
       debug(`block could not be found node=${node.cl.id} slot=${slot}`);
       // Incase of reorg the block may not be available
       return;
@@ -297,7 +302,7 @@ export class SimulationTracker {
       const value = await assertion.capture({
         fork: this.forkConfig.getForkName(slot),
         slot,
-        block: res.response.data,
+        block,
         clock: this.clock,
         node,
         forkConfig: this.forkConfig,
