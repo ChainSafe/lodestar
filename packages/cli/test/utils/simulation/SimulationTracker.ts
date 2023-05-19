@@ -276,7 +276,7 @@ export class SimulationTracker {
     // It is observed that sometimes block is received on the node event stream
     // But the http-api does not respond with the block
     // This is a workaround to fetch the block with retries
-    const block = await fetchBlock(node, {slot, tries: 2, delay: 250});
+    const block = await fetchBlock(node, {slot, tries: 2, delay: 250, signal: this.signal});
     if (!block) {
       debug(`block could not be found node=${node.cl.id} slot=${slot}`);
       // Incase of reorg the block may not be available
