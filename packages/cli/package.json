@@ -34,7 +34,7 @@
     "pretest": "yarn run check-types",
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test:e2e": "mocha --timeout 30000 'test/e2e/**/*.test.ts'",
-    "test:sim:multifork": "LODESTAR_PRESET=minimal ts-node --esm test/sim/multi_fork.test.ts",
+    "test:sim:multifork": "DEBUG=lodestar:sim:* LODESTAR_PRESET=minimal ts-node --esm test/sim/multi_fork.test.ts",
     "test:sim:endpoints": "LODESTAR_PRESET=minimal ts-node --esm test/sim/endpoints.test.ts",
     "test:sim:deneb": "LODESTAR_PRESET=minimal ts-node --esm test/sim/deneb.test.ts",
     "test:sim:backup_eth_provider": "LODESTAR_PRESET=minimal ts-node --esm test/sim/backup_eth_provider.test.ts",
