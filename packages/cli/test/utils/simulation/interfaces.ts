@@ -24,7 +24,7 @@ export type SimulationOptions = {
   logsDir: string;
   rootDir: string;
   controller: AbortController;
-  eth1GenesisTime: number;
+  elGenesisTime: number;
 };
 
 export enum CLClient {
