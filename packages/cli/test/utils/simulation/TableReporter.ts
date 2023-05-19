@@ -138,7 +138,7 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
 
         for (const error of assertionErrors) {
           console.info(
-            `├──── ${error.message} ${Object.entries(error.data ?? {})
+            `├──── ${error.nodeId}: ${error.message} ${Object.entries(error.data ?? {})
               .map(([k, v]) => `${k}=${v}`)
               .join(" ")}`
           );
