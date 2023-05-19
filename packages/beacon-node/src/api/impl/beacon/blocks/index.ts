@@ -4,7 +4,7 @@ import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {deneb, allForks} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {getBlockInput, ImportBlockOpts} from "../../../../chain/blocks/types.js";
+import {BlockSource, getBlockInput, ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
@@ -19,6 +19,11 @@ import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
  * future slot, wait some time instead of rejecting the request because it's in the future
  */
 const MAX_API_CLOCK_DISPARITY_MS = 1000;
+
+/**
+ * PeerID of identity keypair to signal self for score reporting
+ */
+const IDENTITY_PEER_ID = ""; // TODO: Compute identity keypair
 
 export function getBeaconBlockApi({
   chain,
@@ -193,7 +198,7 @@ export function getBeaconBlockApi({
       return this.publishBlock(signedBlock, {ignoreIfKnown: true});
     },
 
-    async publishBlock(signedBlock, opts?: ImportBlockOpts) {
+    async publishBlock(signedBlock, opts: ImportBlockOpts = {}) {
       const seenTimestampSec = Date.now() / 1000;
 
       // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the
@@ -214,19 +219,24 @@ export function getBeaconBlockApi({
           ? getBlockInput.postDeneb(
               config,
               signedBlock,
+              BlockSource.api,
               chain.getBlobsSidecar(signedBlock.message as deneb.BeaconBlock)
             )
-          : getBlockInput.preDeneb(config, signedBlock);
+          : getBlockInput.preDeneb(config, signedBlock, BlockSource.api);
 
-      await promiseAllMaybeAsync([
+      await promiseAllMaybeAsync<unknown>([
         // Send the block, regardless of whether or not it is valid. The API
         // specification is very clear that this is the desired behaviour.
-        () => network.gossip.publishBeaconBlockMaybeBlobs(blockForImport) as Promise<unknown>,
+        () => network.publishBeaconBlockMaybeBlobs(blockForImport) as Promise<unknown>,
 
         () =>
-          chain.processBlock(blockForImport, opts).catch((e) => {
+          // there is no rush to persist block since we published it to gossip anyway
+          chain.processBlock(blockForImport, {...opts, eagerPersistBlock: false}).catch((e) => {
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-              network.events.emit(NetworkEvent.unknownBlockParent, blockForImport, network.peerId.toString());
+              network.events.emit(NetworkEvent.unknownBlockParent, {
+                blockInput: blockForImport,
+                peer: IDENTITY_PEER_ID,
+              });
             }
             throw e;
           }),

@@ -1,5 +1,5 @@
 import {ELVerifiedRequestHandler} from "../interfaces.js";
-import {fetchAndVerifyAccount} from "../utils/execution.js";
+import {verifyAccount} from "../utils/verification.js";
 import {generateRPCResponseForPayload, generateUnverifiedResponseForPayload} from "../utils/json_rpc.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -10,12 +10,12 @@ export const eth_getTransactionCount: ELVerifiedRequestHandler<
   const {
     params: [address, block],
   } = payload;
-  const result = await fetchAndVerifyAccount({proofProvider, logger, handler, address, block});
+  const result = await verifyAccount({proofProvider, logger, handler, address, block});
 
   if (result.valid) {
     return generateRPCResponseForPayload(payload, result.data.nonce);
   }
 
-  logger.error("Request could not be verified.");
+  logger.error("Request could not be verified.", {method: payload.method, params: JSON.stringify(payload.params)});
   return generateUnverifiedResponseForPayload(payload, "eth_getTransactionCount request can not be verified.");
 };

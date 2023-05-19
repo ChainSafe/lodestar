@@ -14,6 +14,7 @@ export function createForkAssertion(fork: ForkName, epoch: Epoch): SimulationAss
     },
     assert: async ({nodes, slot, forkConfig}) => {
       const errors: AssertionResult[] = [];
+
       for (const node of nodes) {
         const res = await node.cl.api.debug.getStateV2("head");
         ApiError.assert(res);

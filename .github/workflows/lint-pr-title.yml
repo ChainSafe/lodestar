@@ -20,7 +20,20 @@ jobs:
         with:
           # Configure which types are allowed (newline-delimited).
           # Default: https://github.com/commitizen/conventional-commit-types
-          #types: |
+          # Customized based on sections defined in scripts/generate_changelog.mjs
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            revert
+            deps
+            build
+            ci
+            test
+            style
+            chore
+            docs
 
           # Configure which scopes are allowed (newline-delimited).
           # These are regex patterns auto-wrapped in `^ $`.

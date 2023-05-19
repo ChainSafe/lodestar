@@ -124,6 +124,7 @@
     "@lodestar/db": "^1.8.0",
     "@lodestar/fork-choice": "^1.8.0",
     "@lodestar/light-client": "^1.8.0",
+    "@lodestar/logger": "^1.8.0",
     "@lodestar/params": "^1.8.0",
     "@lodestar/reqresp": "^1.8.0",
     "@lodestar/state-transition": "^1.8.0",

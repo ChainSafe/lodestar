@@ -14,7 +14,7 @@
 // set LODESTAR_PRESET manually every time.
 
 // IMPORTANT: only import Lodestar code here which does not import any other Lodestar libraries
-import {setActivePreset, presetFromJson} from "@lodestar/params/setPreset";
+import {setActivePreset, presetFromJson, PresetName} from "@lodestar/params/setPreset";
 import {readFile} from "./util/file.js";
 
 const network = valueOfArg("network");
@@ -35,6 +35,9 @@ else if (process.env.LODESTAR_PRESET) {
 else if (network) {
   if (network === "dev") {
     process.env.LODESTAR_PRESET = "minimal";
+    // "c-kzg" has hardcoded the mainnet value, do not use presets
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    setActivePreset(PresetName.minimal, {FIELD_ELEMENTS_PER_BLOB: 4096});
   } else if (network === "gnosis" || network === "chiado") {
     process.env.LODESTAR_PRESET = "gnosis";
   }
@@ -44,6 +47,9 @@ else if (network) {
 else if (process.argv[2] === "dev") {
   process.env.LODESTAR_PRESET = "minimal";
   process.env.LODESTAR_NETWORK = "dev";
+  // "c-kzg" has hardcoded the mainnet value, do not use presets
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  setActivePreset(PresetName.minimal, {FIELD_ELEMENTS_PER_BLOB: 4096});
 }
 
 if (presetFile) {

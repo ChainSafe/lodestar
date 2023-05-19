@@ -5,14 +5,14 @@ import {exportToProtobuf} from "@libp2p/peer-id-factory";
 import {createKeypairFromPeerId, ENR, ENRData, IKeypair, SignableENR} from "@chainsafe/discv5";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {chainConfigFromJson, chainConfigToJson, BeaconConfig} from "@lodestar/config";
-import {Logger} from "@lodestar/utils";
+import {LoggerNode} from "@lodestar/logger/node";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {Discv5WorkerApi, Discv5WorkerData, LodestarDiscv5Opts} from "./types.js";
 
 export type Discv5Opts = {
   peerId: PeerId;
   discv5: LodestarDiscv5Opts;
-  logger: Logger;
+  logger: LoggerNode;
   config: BeaconConfig;
   metrics?: NetworkCoreMetrics;
 };
@@ -29,14 +29,12 @@ type Discv5WorkerStatus =
  * Wrapper class abstracting the details of discv5 worker instantiation and message-passing
  */
 export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, Discv5Events>}) {
-  private logger: Logger;
   private status: Discv5WorkerStatus;
   private keypair: IKeypair;
 
-  constructor(private opts: Discv5Opts) {
+  constructor(private readonly opts: Discv5Opts) {
     super();
 
-    this.logger = opts.logger;
     this.status = {status: "stopped"};
     this.keypair = createKeypairFromPeerId(this.opts.peerId);
   }
@@ -48,11 +46,12 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       enr: this.opts.discv5.enr,
       peerIdProto: exportToProtobuf(this.opts.peerId),
       bindAddr: this.opts.discv5.bindAddr,
-      config: this.opts.discv5.config,
+      config: this.opts.discv5.config ?? {},
       bootEnrs: this.opts.discv5.bootEnrs as string[],
       metrics: Boolean(this.opts.metrics),
       chainConfig: chainConfigFromJson(chainConfigToJson(this.opts.config)),
       genesisValidatorsRoot: this.opts.config.genesisValidatorsRoot,
+      loggerOpts: this.opts.logger.toOpts(),
     };
     const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
 
@@ -123,9 +122,9 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
     }
   }
 
-  async metrics(): Promise<string> {
+  async scrapeMetrics(): Promise<string> {
     if (this.status.status === "started") {
-      return this.status.workerApi.metrics();
+      return this.status.workerApi.scrapeMetrics();
     } else {
       return "";
     }

@@ -8,8 +8,8 @@ import {BitArray} from "@chainsafe/ssz";
 import {altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {createBeaconConfig} from "@lodestar/config";
-import {IReqRespBeaconNode, ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.js";
-import {PeerRpcScoreStore, PeerManager} from "../../../../src/network/peers/index.js";
+import {ReqRespMethod} from "../../../../src/network/reqresp/ReqRespBeaconNode.js";
+import {PeerRpcScoreStore, PeerManager, IReqRespBeaconNodePeerManager} from "../../../../src/network/peers/index.js";
 import {Eth2Gossipsub, getConnectionsMap, NetworkEvent, NetworkEventBus} from "../../../../src/network/index.js";
 import {PeersData} from "../../../../src/network/peers/peersData.js";
 import {createNode, getAttnets, getSyncnets} from "../../../utils/network.js";
@@ -80,7 +80,7 @@ describe("network / peers / PeerManager", function () {
         statusCache,
         config: beaconConfig,
         peerRpcScores,
-        networkEventBus,
+        events: networkEventBus,
         attnetsService: mockSubnetsService,
         syncnetsService: mockSubnetsService,
         gossip: {getScore: () => 0, scoreParams: {decayInterval: 1000}} as unknown as Eth2Gossipsub,
@@ -99,22 +99,11 @@ describe("network / peers / PeerManager", function () {
   }
 
   // Create a real event emitter with stubbed methods
-  class ReqRespFake implements IReqRespBeaconNode {
-    start = sinon.stub();
-    stop = sinon.stub();
-    status = sinon.stub();
-    metadata = sinon.stub();
-    goodbye = sinon.stub();
-    ping = sinon.stub();
-    beaconBlocksByRange = sinon.stub();
-    beaconBlocksByRoot = sinon.stub();
-    blobsSidecarsByRange = sinon.stub();
-    beaconBlockAndBlobsSidecarByRoot = sinon.stub();
-    lightClientBootstrap = sinon.stub();
-    lightClientOptimisticUpdate = sinon.stub();
-    lightClientFinalityUpdate = sinon.stub();
-    lightClientUpdate = sinon.stub();
-    lightClientUpdatesByRange = sinon.stub();
+  class ReqRespFake implements IReqRespBeaconNodePeerManager {
+    sendStatus = sinon.stub();
+    sendMetadata = sinon.stub();
+    sendGoodbye = sinon.stub();
+    sendPing = sinon.stub();
   }
 
   it("Should request metadata on receivedPing of unknown peer", async () => {
@@ -134,22 +123,28 @@ describe("network / peers / PeerManager", function () {
     const metadata: phase0.Metadata = {seqNumber, attnets: BitArray.fromBitLen(0)};
 
     // Simulate peer1 responding with its metadata
-    reqResp.metadata.resolves(metadata);
+    reqResp.sendMetadata.resolves(metadata);
 
     // We get a ping by peer1, don't have it's metadata so it gets requested
-    networkEventBus.emit(NetworkEvent.reqRespRequest, {method: ReqRespMethod.Ping, body: seqNumber}, peerId1);
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {
+      request: {method: ReqRespMethod.Ping, body: seqNumber},
+      peer: peerId1,
+    });
 
-    expect(reqResp.metadata.callCount).to.equal(1, "reqResp.metadata must be called once");
-    expect(reqResp.metadata.getCall(0).args[0]).to.equal(peerId1, "reqResp.metadata must be called with peer1");
+    expect(reqResp.sendMetadata.callCount).to.equal(1, "reqResp.sendMetadata must be called once");
+    expect(reqResp.sendMetadata.getCall(0).args[0]).to.equal(peerId1, "reqResp.sendMetadata must be called with peer1");
 
     // Allow requestMetadata promise to resolve
     await sleep(0);
 
     // We get another ping by peer1, but with an already known seqNumber
-    reqResp.metadata.reset();
-    networkEventBus.emit(NetworkEvent.reqRespRequest, {method: ReqRespMethod.Ping, body: seqNumber}, peerId1);
+    reqResp.sendMetadata.reset();
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {
+      request: {method: ReqRespMethod.Ping, body: seqNumber},
+      peer: peerId1,
+    });
 
-    expect(reqResp.metadata.callCount).to.equal(0, "reqResp.metadata must not be called again");
+    expect(reqResp.sendMetadata.callCount).to.equal(0, "reqResp.sendMetadata must not be called again");
   });
 
   const libp2pConnectionOutboud = {
@@ -168,7 +163,10 @@ describe("network / peers / PeerManager", function () {
 
     // Send the local status and remote status, which always passes the assertPeerRelevance function
     const remoteStatus = statusCache.get();
-    networkEventBus.emit(NetworkEvent.reqRespRequest, {method: ReqRespMethod.Status, body: remoteStatus}, peerId1);
+    networkEventBus.emit(NetworkEvent.reqRespRequest, {
+      request: {method: ReqRespMethod.Status, body: remoteStatus},
+      peer: peerId1,
+    });
 
     await peerConnectedPromise;
   });
@@ -185,9 +183,9 @@ describe("network / peers / PeerManager", function () {
     // Simulate peer1 returning a PING and STATUS message
     const remoteStatus = statusCache.get();
     const remoteMetadata: altair.Metadata = {seqNumber: BigInt(1), attnets: getAttnets(), syncnets: getSyncnets()};
-    reqResp.ping.resolves(remoteMetadata.seqNumber);
-    reqResp.status.resolves(remoteStatus);
-    reqResp.metadata.resolves(remoteMetadata);
+    reqResp.sendPing.resolves(remoteMetadata.seqNumber);
+    reqResp.sendStatus.resolves(remoteStatus);
+    reqResp.sendMetadata.resolves(remoteMetadata);
 
     // Simualate a peer connection, get() should return truthy
     getConnectionsMap(libp2p.connectionManager).set(peerId1.toString(), [libp2pConnectionOutboud]);
@@ -201,13 +199,13 @@ describe("network / peers / PeerManager", function () {
     await sleep(0);
 
     // After receiving the "peer:connect" event, the PeerManager must
-    // 1. Call reqResp.ping
-    // 2. Call reqResp.status
-    // 3. Receive ping result (1) and call reqResp.metadata
+    // 1. Call reqResp.sendPing
+    // 2. Call reqResp.sendStatus
+    // 3. Receive ping result (1) and call reqResp.sendMetadata
     // 4. Receive status result (2) assert peer relevance and emit `PeerManagerEvent.peerConnected`
-    expect(reqResp.ping.callCount).to.equal(1, "reqResp.ping must be called");
-    expect(reqResp.status.callCount).to.equal(1, "reqResp.status must be called");
-    expect(reqResp.metadata.callCount).to.equal(1, "reqResp.metadata must be called");
+    expect(reqResp.sendPing.callCount).to.equal(1, "reqResp.sendPing must be called");
+    expect(reqResp.sendStatus.callCount).to.equal(1, "reqResp.sendStatus must be called");
+    expect(reqResp.sendMetadata.callCount).to.equal(1, "reqResp.sendMetadata must be called");
 
     expect(peerManager["connectedPeers"].get(peerId1.toString())?.metadata).to.deep.equal(
       remoteMetadata,

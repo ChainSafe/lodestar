@@ -17,8 +17,9 @@ import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {RegenCaller} from "../regen/interface.js";
 import type {BeaconChain} from "../chain.js";
-import {BlockInputType, FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt} from "./types.js";
+import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
+import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.
@@ -51,7 +52,7 @@ export async function importBlock(
   opts: ImportBlockOpts
 ): Promise<void> {
   const {blockInput, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
-  const {block, serializedData} = blockInput;
+  const {block, source} = blockInput;
   const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toHexString(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
@@ -60,28 +61,9 @@ export async function importBlock(
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
 
   // 1. Persist block to hot DB (pre-emptively)
-  if (serializedData) {
-    // skip serializing data if we already have it
-    this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
-    await this.db.block.putBinary(this.db.block.getId(block), serializedData);
-  } else {
-    this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
-    await this.db.block.add(block);
-  }
-  this.logger.debug("Persisted block to hot DB", {
-    slot: block.message.slot,
-    root: blockRootHex,
-  });
-
-  if (blockInput.type === BlockInputType.postDeneb) {
-    const {blobs} = blockInput;
-    // NOTE: Old blobs are pruned on archive
-    await this.db.blobsSidecar.add(blobs);
-    this.logger.debug("Persisted blobsSidecar to hot DB", {
-      blobsLen: blobs.blobs.length,
-      slot: blobs.beaconBlockSlot,
-      root: toHexString(blobs.beaconBlockRoot),
-    });
+  // If eagerPersistBlock = true we do that in verifyBlocksInEpoch to batch all I/O operations to save block time to head
+  if (!opts.eagerPersistBlock) {
+    await writeBlockInputToDb.call(this, [blockInput]);
   }
 
   // 2. Import block to fork choice
@@ -100,6 +82,7 @@ export async function importBlock(
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.stateCache.add(postState);
 
+  this.metrics?.importBlock.bySource.inc({source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: block.message.slot, root: blockRootHex});
   this.emitter.emit(routes.events.EventType.block, {
     block: toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),
@@ -285,15 +268,18 @@ export async function importBlock(
     // - Persist state witness
     // - Use block's syncAggregate
     if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
-      try {
-        this.lightClientServer.onImportBlockHead(
-          block.message as allForks.AllForksLightClient["BeaconBlock"],
-          postState as CachedBeaconStateAltair,
-          parentBlockSlot
-        );
-      } catch (e) {
-        this.logger.error("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
-      }
+      // we want to import block asap so do this in the next event loop
+      setTimeout(() => {
+        try {
+          this.lightClientServer.onImportBlockHead(
+            block.message as allForks.AllForksLightClient["BeaconBlock"],
+            postState as CachedBeaconStateAltair,
+            parentBlockSlot
+          );
+        } catch (e) {
+          this.logger.verbose("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
+        }
+      }, 0);
     }
   }
 
