@@ -24,31 +24,28 @@ export const nodeAssertion: SimulationAssertion<"node", {health: number; keyMana
 
     return {health, keyManagerKeys};
   },
-  async assert({nodes, store, slot}) {
+  async assert({node, store, slot}) {
     const errors: AssertionResult[] = [];
 
-    for (const node of nodes) {
-      const {health, keyManagerKeys} = store[node.cl.id][slot];
+    // There is an authentication issue with the lighthouse keymanager client
+    if (node.cl.client == CLClient.Lighthouse) return errors;
 
-      if (health !== routes.node.NodeHealth.SYNCING && health !== routes.node.NodeHealth.READY) {
-        errors.push(["node health is neither READY or SYNCING", {node: node.cl.id}]);
-      }
+    const {health, keyManagerKeys} = store[slot];
 
-      // There is an authrntication issue with the lighthouse keymanager client
-      if (node.cl.client == CLClient.Lighthouse) continue;
+    if (health !== routes.node.NodeHealth.SYNCING && health !== routes.node.NodeHealth.READY) {
+      errors.push(["node health is neither READY or SYNCING", {node: node.cl.id}]);
+    }
 
-      const expectedPublicKeys = getAllKeys(node.cl.keys).map((k) => k.toPublicKey().toHex());
+    const expectedPublicKeys = getAllKeys(node.cl.keys).map((k) => k.toPublicKey().toHex());
 
-      if (!arrayEquals(keyManagerKeys.sort(), expectedPublicKeys.sort())) {
-        errors.push([
-          "Validator should have correct number of keys loaded",
-          {
-            node: node.cl.id,
-            expectedPublicKeys,
-            keyManagerKeys,
-          },
-        ]);
-      }
+    if (!arrayEquals(keyManagerKeys.sort(), expectedPublicKeys.sort())) {
+      errors.push([
+        "Validator should have correct number of keys loaded",
+        {
+          expectedPublicKeys,
+          keyManagerKeys,
+        },
+      ]);
     }
 
     return errors;

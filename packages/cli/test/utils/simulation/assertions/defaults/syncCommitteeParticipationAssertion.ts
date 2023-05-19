@@ -19,35 +19,32 @@ export const syncCommitteeParticipationAssertion: SimulationAssertion<"syncCommi
     return syncCommitteeBits.getTrueBitIndexes().length / syncCommitteeBits.bitLen;
   },
 
-  async assert({nodes, store, clock, epoch, forkConfig}) {
+  async assert({store, clock, epoch, forkConfig}) {
     const errors: AssertionResult[] = [];
     const startSlot = clock.getFirstSlotOfEpoch(epoch);
     const endSlot = clock.getLastSlotOfEpoch(epoch);
     const altairStartSlot = clock.getFirstSlotOfEpoch(forkConfig.ALTAIR_FORK_EPOCH);
 
-    for (const node of nodes) {
-      const syncCommitteeParticipation: number[] = [];
-      for (let slot = startSlot; slot <= endSlot; slot++) {
-        // Sync committee is not available before until 2 slots for altair epoch
-        if (slot === altairStartSlot || slot === altairStartSlot + 1) {
-          continue;
-        }
-
-        const participation = store[node.cl.id][slot];
-        syncCommitteeParticipation.push(participation);
+    const syncCommitteeParticipation: number[] = [];
+    for (let slot = startSlot; slot <= endSlot; slot++) {
+      // Sync committee is not available before until 2 slots for altair epoch
+      if (slot === altairStartSlot || slot === altairStartSlot + 1) {
+        continue;
       }
-      const syncCommitteeParticipationAvg = avg(syncCommitteeParticipation);
 
-      if (syncCommitteeParticipationAvg < expectedMinSyncParticipationRate) {
-        errors.push([
-          "node has low avg sync committee participation for epoch",
-          {
-            node: node.cl.id,
-            syncCommitteeParticipationAvg: syncCommitteeParticipationAvg,
-            expectedMinSyncParticipationRate,
-          },
-        ]);
-      }
+      const participation = store[slot];
+      syncCommitteeParticipation.push(participation);
+    }
+    const syncCommitteeParticipationAvg = avg(syncCommitteeParticipation);
+
+    if (syncCommitteeParticipationAvg < expectedMinSyncParticipationRate) {
+      errors.push([
+        "node has low avg sync committee participation for epoch",
+        {
+          syncCommitteeParticipationAvg,
+          expectedMinSyncParticipationRate,
+        },
+      ]);
     }
 
     return errors;

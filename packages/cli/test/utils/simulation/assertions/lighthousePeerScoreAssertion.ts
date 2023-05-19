@@ -9,7 +9,10 @@ let peersIdMapCache: Record<string, string>;
 export const lighthousePeerScoreAssertion: SimulationAssertion<"lighthousePeerScore", {gossipsubScore: number}> = {
   id: "lighthousePeerScore",
   match: neverMatcher,
-  async assert({nodes}) {
+  async assert({nodes, node}) {
+    // We want to run this only once, not every node
+    if (node.id !== nodes[0].id) return [];
+
     const lighthousePeer = nodes.find((n) => n.cl.client === CLClient.Lighthouse);
     if (peersIdMapCache === undefined) {
       peersIdMapCache = await getLodestarPeerIds(nodes);

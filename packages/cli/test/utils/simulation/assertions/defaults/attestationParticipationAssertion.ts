@@ -55,44 +55,39 @@ export const attestationParticipationAssertion: SimulationAssertion<
     return totalAttestingBalance;
   },
 
-  async assert({nodes, store, slot}) {
+  async assert({store, slot}) {
     const errors: AssertionResult[] = [];
 
-    for (const node of nodes) {
-      const participation = store[node.cl.id][slot];
+    const participation = store[slot];
 
-      if (participation.head < expectedMinParticipationRate) {
-        errors.push([
-          "node has low participation rate on head",
-          {
-            node: node.cl.id,
-            participation: participation.head,
-            expectedMinParticipationRate,
-          },
-        ]);
-      }
+    if (participation.head < expectedMinParticipationRate) {
+      errors.push([
+        "node has low participation rate on head",
+        {
+          participation: participation.head,
+          expectedMinParticipationRate,
+        },
+      ]);
+    }
 
-      if (participation.source < expectedMinParticipationRate) {
-        errors.push([
-          "node has low participation rate on source",
-          {
-            node: node.cl.id,
-            participation: participation.head,
-            expectedMinParticipationRate,
-          },
-        ]);
-      }
+    if (participation.source < expectedMinParticipationRate) {
+      errors.push([
+        "node has low participation rate on source",
+        {
+          participation: participation.head,
+          expectedMinParticipationRate,
+        },
+      ]);
+    }
 
-      if (participation.target < expectedMinParticipationRate) {
-        errors.push([
-          "node has low participation rate on target",
-          {
-            node: node.cl.id,
-            participation: participation.head,
-            expectedMinParticipationRate,
-          },
-        ]);
-      }
+    if (participation.target < expectedMinParticipationRate) {
+      errors.push([
+        "node has low participation rate on target",
+        {
+          participation: participation.head,
+          expectedMinParticipationRate,
+        },
+      ]);
     }
 
     return errors;

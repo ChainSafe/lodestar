@@ -226,35 +226,27 @@ export type RunnerEvent = "starting" | "started" | "stopping" | "stop";
 
 export type AtLeast<T, K extends keyof T> = Partial<T> & Pick<T, K>;
 
-export type SimulationCaptureInput<T, D extends Record<string, unknown> = Record<string, never>> = {
+export interface AssertionInput<D extends Record<string, unknown>> {
   fork: ForkName;
+  forkConfig: ChainForkConfig;
   slot: Slot;
   epoch: Epoch;
-  block: allForks.SignedBeaconBlock;
   clock: EpochClock;
   node: NodePair;
-  store: Record<Slot, T>;
-  forkConfig: ChainForkConfig;
   dependantStores: D;
-};
+}
 
-export type SimulationAssertionInput<T, D extends Record<string, unknown> = Record<string, never>> = {
-  slot: Slot;
-  epoch: Epoch;
-  clock: EpochClock;
+export interface SimulationCaptureInput<D extends Record<string, unknown>> extends AssertionInput<D> {
+  block: allForks.SignedBeaconBlock;
+}
+
+export interface SimulationAssertionInput<T, D extends Record<string, unknown> = Record<string, never>>
+  extends AssertionInput<D> {
   nodes: NodePair[];
-  store: Record<NodeId, Record<Slot, T>>;
-  dependantStores: D;
-  forkConfig: ChainForkConfig;
-};
+  store: Record<Slot, T>;
+}
 
-export type SimulationMatcherInput = {
-  slot: Slot;
-  epoch: Epoch;
-  fork: ForkName;
-  clock: EpochClock;
-  forkConfig: ChainForkConfig;
-};
+export type SimulationMatcherInput<D extends Record<string, unknown> = Record<string, never>> = AssertionInput<D>;
 
 /**
  * Bitwise flag to indicate what to do with the assertion
@@ -291,9 +283,13 @@ export interface SimulationAssertion<
   Dependencies extends SimulationAssertion[] = SimulationAssertion<string, unknown, any[]>[]
 > {
   readonly id: IdType;
-  capture?(input: SimulationCaptureInput<ValueType, StoreTypes<Dependencies>>): Promise<ValueType | null>;
+  capture?(
+    input: SimulationCaptureInput<StoreTypes<Dependencies> & StoreType<IdType, ValueType>>
+  ): Promise<ValueType | null>;
   match: AssertionMatcher;
-  assert(input: SimulationAssertionInput<ValueType, StoreTypes<Dependencies>>): Promise<AssertionResult[] | never>;
+  assert(
+    input: SimulationAssertionInput<ValueType, StoreTypes<Dependencies> & StoreType<IdType, ValueType>>
+  ): Promise<AssertionResult[] | never>;
   dependencies?: Dependencies;
 }
 export type AssertionResult = string | [string, Record<string, unknown>];
@@ -302,6 +298,7 @@ export interface SimulationAssertionError {
   slot: Slot;
   epoch: Epoch;
   assertionId: string;
+  nodeId: string;
   message: string;
   data?: Record<string, unknown>;
 }

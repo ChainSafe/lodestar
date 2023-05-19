@@ -12,25 +12,22 @@ export function createForkAssertion(fork: ForkName, epoch: Epoch): SimulationAss
         ? AssertionMatch.Assert | AssertionMatch.Remove
         : AssertionMatch.None;
     },
-    assert: async ({nodes, slot, forkConfig}) => {
+    assert: async ({node, slot, forkConfig}) => {
       const errors: AssertionResult[] = [];
 
-      for (const node of nodes) {
-        const res = await node.cl.api.debug.getStateV2("head");
-        ApiError.assert(res);
-        const expectedForkVersion = toHexString(forkConfig.getForkInfo(slot).version);
-        const currentForkVersion = toHexString(res.response.data.fork.currentVersion);
+      const res = await node.cl.api.debug.getStateV2("head");
+      ApiError.assert(res);
+      const expectedForkVersion = toHexString(forkConfig.getForkInfo(slot).version);
+      const currentForkVersion = toHexString(res.response.data.fork.currentVersion);
 
-        if (expectedForkVersion !== currentForkVersion) {
-          errors.push([
-            "Node is not on correct fork",
-            {
-              node: node.cl.id,
-              expectedForkVersion,
-              currentForkVersion,
-            },
-          ]);
-        }
+      if (expectedForkVersion !== currentForkVersion) {
+        errors.push([
+          "Node is not on correct fork",
+          {
+            expectedForkVersion,
+            currentForkVersion,
+          },
+        ]);
       }
 
       return errors;

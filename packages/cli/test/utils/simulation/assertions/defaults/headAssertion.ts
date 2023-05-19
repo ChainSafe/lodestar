@@ -21,17 +21,18 @@ export const headAssertion: SimulationAssertion<"head", HeadSummary> = {
       slot: head.response.data.header.message.slot,
     };
   },
-  async assert({nodes, store, slot}) {
+  async assert({nodes, node, store, slot, dependantStores}) {
     const errors: AssertionResult[] = [];
 
-    const headRootNode0 = store[nodes[0].cl.id][slot].blockRoot;
+    // For first node we don't need to match the head
+    if (node.id === nodes[0].id) return errors;
 
-    for (let i = 1; i < nodes.length; i++) {
-      const headRootNodeN = store[nodes[i].cl.id][slot].blockRoot;
+    const headRootNode0 = dependantStores["head" as const][nodes[0].cl.id][slot].blockRoot;
 
-      if (headRootNode0 !== headRootNodeN) {
-        errors.push(["node have different heads", {node: nodes[i].cl.id, headRootNode0, headRootNodeN}]);
-      }
+    const headRootNode = store[slot].blockRoot;
+
+    if (headRootNode0 !== headRootNode) {
+      errors.push(["node have different heads", {headRootNode0, headRootNode}]);
     }
 
     return errors;

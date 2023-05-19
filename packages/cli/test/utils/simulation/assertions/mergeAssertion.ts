@@ -7,22 +7,15 @@ export const mergeAssertion: SimulationAssertion<"merge", string> = {
   id: "merge",
   // Include into particular test with custom condition
   match: neverMatcher,
-  async assert({nodes}) {
+  async assert({node}) {
     const errors: AssertionResult[] = [];
 
-    for (const node of nodes) {
-      const res = await node.cl.api.debug.getStateV2("head");
-      ApiError.assert(res);
-      const state = res.response.data as unknown as BeaconStateAllForks;
+    const res = await node.cl.api.debug.getStateV2("head");
+    ApiError.assert(res);
+    const state = res.response.data as unknown as BeaconStateAllForks;
 
-      if (!(isExecutionStateType(state) && isMergeTransitionComplete(state))) {
-        errors.push([
-          "Node has not yet completed the merged transition",
-          {
-            node: node.cl.id,
-          },
-        ]);
-      }
+    if (!(isExecutionStateType(state) && isMergeTransitionComplete(state))) {
+      errors.push("Node has not yet completed the merged transition");
     }
 
     return errors;

@@ -25,24 +25,24 @@ export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[]
     return missedBlocks;
   },
 
-  async assert({nodes, slot, store}) {
+  async assert({nodes, node, slot, store, dependantStores}) {
     const errors: AssertionResult[] = [];
 
-    const missedBlocksOnFirstNode = store[nodes[0].cl.id][slot];
+    // For first node we don't need to match
+    if (node.id === nodes[0].id) return errors;
 
-    for (let i = 1; i < nodes.length; i++) {
-      const missedBlocks = store[nodes[i].cl.id][slot];
+    const missedBlocksOnFirstNode = dependantStores["missedBlocks" as const][nodes[0].cl.id][slot];
 
-      if (!arrayEquals(missedBlocks, missedBlocksOnFirstNode)) {
-        errors.push([
-          "node has different missed blocks than first node",
-          {
-            node: nodes[i].cl.id,
-            missedBlocks,
-            missedBlocksOnFirstNode,
-          },
-        ]);
-      }
+    const missedBlocks = store[slot];
+
+    if (!arrayEquals(missedBlocks, missedBlocksOnFirstNode)) {
+      errors.push([
+        "node has different missed blocks than first node",
+        {
+          missedBlocks,
+          missedBlocksOnFirstNode,
+        },
+      ]);
     }
 
     return errors;

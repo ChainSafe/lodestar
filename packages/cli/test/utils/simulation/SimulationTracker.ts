@@ -46,6 +46,21 @@ const eventStreamEventMap = {
   [SimulationTrackerEvent.Slot]: routes.events.EventType.block,
 };
 
+type Stores = StoreTypes<typeof defaultAssertions> & StoreType<string, unknown>;
+
+export function getStoresForAssertions<D extends SimulationAssertion[]>(
+  stores: Stores,
+  dependencies: D
+): StoreTypes<D> {
+  const filterStores: Record<string, unknown> = {};
+
+  for (const assertion of dependencies) {
+    filterStores[assertion.id] = stores[assertion.id];
+  }
+
+  return filterStores as StoreTypes<D>;
+}
+
 /* eslint-disable no-console */
 export class SimulationTracker {
   readonly emitter = new EventEmitter();
@@ -59,7 +74,7 @@ export class SimulationTracker {
   private forkConfig: ChainForkConfig;
 
   private errors: SimulationAssertionError[] = [];
-  private stores: StoreTypes<typeof defaultAssertions> & StoreType<string, unknown>;
+  private stores: Stores;
   private assertions: SimulationAssertion[];
   private assertionIdsMap: Record<string, boolean> = {};
   private constructor({signal, nodes, clock, config}: SimulationTrackerInitOptions) {
@@ -192,7 +207,11 @@ export class SimulationTracker {
   }
 
   record(error: AtLeast<SimulationAssertionError, "slot" | "message" | "assertionId">): void {
-    this.errors.push({...error, epoch: error.epoch ?? this.clock.getEpochForSlot(error.slot)});
+    this.errors.push({
+      ...error,
+      epoch: error.epoch ?? this.clock.getEpochForSlot(error.slot),
+      nodeId: error.nodeId ?? "N/A",
+    });
   }
 
   async assert(message: string, cb: () => void | Promise<void>): Promise<void> {
@@ -263,6 +282,7 @@ export class SimulationTracker {
       const match = assertion.match({
         slot,
         epoch,
+        node,
         clock: this.clock,
         forkConfig: this.forkConfig,
         fork: this.forkConfig.getForkName(slot),
@@ -288,9 +308,6 @@ export class SimulationTracker {
         node,
         forkConfig: this.forkConfig,
         epoch,
-        store: this.stores[assertion.id][node.cl.id],
-        // TODO: Make the store safe, to filter just the dependant stores not all
-        dependantStores: this.stores,
       });
 
       debug(`value captured node=${node.cl.id} assertion=${assertion.id} slot=${slot} value=${JSON.stringify(value)}`);
@@ -315,62 +332,67 @@ export class SimulationTracker {
     }
     const removeAssertions: string[] = [];
 
-    for (const assertion of this.assertions) {
-      const match = assertion.match({
-        slot,
-        epoch,
-        clock: this.clock,
-        forkConfig: this.forkConfig,
-        fork: this.forkConfig.getForkName(slot),
-      });
+    for (const node of this.nodes) {
+      for (const assertion of this.assertions) {
+        const match = assertion.match({
+          slot,
+          epoch,
+          node,
+          clock: this.clock,
+          forkConfig: this.forkConfig,
+          fork: this.forkConfig.getForkName(slot),
+        });
 
-      debug(
-        `asserting assertion=${assertion.id} slot=${slot} match=${match} assert=${
-          match & AssertionMatch.Assert
-        } remove=${match & AssertionMatch.Remove}`
-      );
+        debug(
+          `asserting node=${node.cl.id} assertion=${assertion.id} slot=${slot} match=${match} assert=${
+            match & AssertionMatch.Assert
+          } remove=${match & AssertionMatch.Remove}`
+        );
 
-      if (match & AssertionMatch.None) continue;
+        if (match & AssertionMatch.None) continue;
 
-      if (match & AssertionMatch.Assert) {
-        try {
-          const errors = await assertion.assert({
-            slot,
-            epoch,
-            nodes: this.nodes,
-            clock: this.clock,
-            forkConfig: this.forkConfig,
-            store: this.stores[assertion.id],
-            // TODO: Make the store safe, to filter just the dependant stores not all
-            dependantStores: this.stores,
-          });
+        if (match & AssertionMatch.Assert) {
+          try {
+            const errors = await assertion.assert({
+              fork: this.forkConfig.getForkName(slot),
+              slot,
+              epoch,
+              node,
+              nodes: this.nodes,
+              clock: this.clock,
+              forkConfig: this.forkConfig,
+              store: this.stores[assertion.id][node.cl.id],
+              dependantStores: getStoresForAssertions(this.stores, [assertion, ...(assertion.dependencies ?? [])]),
+            });
 
-          for (const err of errors) {
-            const message = typeof err === "string" ? err : err[0];
-            const data = typeof err === "string" ? {} : {...err[1]};
-            this.errors.push({slot, epoch, assertionId: assertion.id, message, data});
+            for (const err of errors) {
+              const message = typeof err === "string" ? err : err[0];
+              const data = typeof err === "string" ? {} : {...err[1]};
+              this.errors.push({slot, epoch, assertionId: assertion.id, nodeId: node.cl.id, message, data});
+            }
+          } catch (err: unknown) {
+            this.errors.push({
+              slot,
+              epoch,
+              nodeId: node.cl.id,
+              assertionId: assertion.id,
+              message: (err as Error).message,
+            });
           }
-        } catch (err: unknown) {
-          this.errors.push({
-            slot,
-            epoch,
-            assertionId: assertion.id,
-            message: (err as Error).message,
-          });
+        }
+
+        if (match & AssertionMatch.Remove) {
+          removeAssertions.push(assertion.id);
         }
       }
-
-      if (match & AssertionMatch.Remove) {
-        removeAssertions.push(assertion.id);
-      }
     }
-
-    this.reporter.progress(slot);
 
     for (const id of removeAssertions) {
       delete this.assertionIdsMap[id];
       this.assertions = this.assertions.filter((a) => a.id !== id);
     }
+
+    this.reporter.progress(slot);
   }
 
   private initEventStreamForNode(
