@@ -10,7 +10,7 @@ on:
       debug:
         description: Runtime DEBUG value
         required: false
-        default: ''
+        default: 'lodestar:sim:*'
 
 env:
   GETH_DOCKER_IMAGE: ethereum/client-go:v1.11.6

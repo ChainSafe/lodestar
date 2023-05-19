@@ -288,10 +288,7 @@ export class SimulationTracker {
         fork: this.forkConfig.getForkName(slot),
       });
 
-      if (match & AssertionMatch.None || !(match & AssertionMatch.Capture)) {
-        debug(`skipping capture node=${node.cl.id} slot=${slot} assertion=${assertion.id}`);
-        continue;
-      }
+      if (match & AssertionMatch.None || !(match & AssertionMatch.Capture)) continue;
 
       if (!assertion.capture) {
         throw new Error(`Assertion "${assertion.id}" has no capture function`);
@@ -322,7 +319,6 @@ export class SimulationTracker {
     debug(`processing assert slot=${slot} epoch=${epoch}`);
     const capturedForNodes = this.slotCapture.get(slot);
     if (!capturedForNodes || capturedForNodes.length < this.nodes.length) {
-      debug(`not all nodes have captured data for slot=${slot}`);
       // We need to wait for all nodes to capture data for that slot
       return;
     }
@@ -339,10 +335,7 @@ export class SimulationTracker {
           fork: this.forkConfig.getForkName(slot),
         });
 
-        if (match & AssertionMatch.None || !(match & AssertionMatch.Assert)) {
-          debug(`skipping assert node=${node.cl.id} slot=${slot} assertion=${assertion.id}`);
-          continue;
-        }
+        if (match & AssertionMatch.None || !(match & AssertionMatch.Assert)) continue;
 
         try {
           const errors = await assertion.assert({
