@@ -267,6 +267,7 @@ export class SimulationEnvironment {
       runner: this.runner,
       genesisTime: this.options.elGenesisTime,
       clientOptions: clOptions,
+      genesisState: this.genesisState,
       paths: getCLNodePaths({
         root: this.options.rootDir,
         id,
