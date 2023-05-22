@@ -1,6 +1,5 @@
 import {MAX_COMMITTEES_PER_SLOT} from "@lodestar/params";
-import {SimulationAssertion} from "../../interfaces.js";
-import {everyEpochMatcher} from "../matchers.js";
+import {AssertionMatch, AssertionResult, SimulationAssertion} from "../../interfaces.js";
 import {inclusionDelayAssertion, expectedMaxInclusionDelay} from "./inclusionDelayAssertion.js";
 
 export const expectedMinAttestationCount = MAX_COMMITTEES_PER_SLOT - 1;
@@ -11,7 +10,10 @@ export const attestationsCountAssertion: SimulationAssertion<
   [typeof inclusionDelayAssertion]
 > = {
   id: "attestationsCount",
-  match: everyEpochMatcher,
+  match: () => {
+    // TODO : Disable the assertion for now as the attestations count could be different per slot.
+    return AssertionMatch.Capture;
+  },
   dependencies: [inclusionDelayAssertion],
 
   async capture(input) {
@@ -32,40 +34,33 @@ export const attestationsCountAssertion: SimulationAssertion<
     return shuffledParticipants.size;
   },
 
-  async assert({clock, nodes, epoch, dependantStores, store}) {
-    // TODO : Disable the assertion for now as the attestations count could be different per slot.
-    return null;
-
-    const errors: string[] = [];
+  async assert({clock, store, epoch, node, dependantStores}) {
+    const errors: AssertionResult[] = [];
     const inclusionDelayStore = dependantStores["inclusionDelay"];
 
-    for (const node of nodes) {
-      const startSlot = epoch === 0 ? 1 : clock.getFirstSlotOfEpoch(epoch);
-      const endSlot = clock.getLastSlotOfEpoch(epoch);
+    const startSlot = epoch === 0 ? 1 : clock.getFirstSlotOfEpoch(epoch);
+    const endSlot = clock.getLastSlotOfEpoch(epoch);
 
-      for (let slot = startSlot; slot <= endSlot; slot++) {
-        const attestationsCount = store[node.cl.id][slot] ?? 0;
+    for (let slot = startSlot; slot <= endSlot; slot++) {
+      const attestationsCount = store[slot] ?? 0;
 
-        // Inclusion delay for future slot
-        const nextSlotInclusionDelay = inclusionDelayStore[node.cl.id][slot + 1] ?? 0;
+      // Inclusion delay for future slot
+      const nextSlotInclusionDelay = inclusionDelayStore[node.cl.id][slot + 1] ?? 0;
 
-        // If some attestations are not included, probably will be included in next slot.
-        // In that case next slot inclusion delay will be higher than expected.
-        if (
-          attestationsCount < MAX_COMMITTEES_PER_SLOT &&
-          nextSlotInclusionDelay <= expectedMaxInclusionDelay &&
-          attestationsCount < expectedMinAttestationCount
-        ) {
-          errors.push(
-            `node has lower attestations count. ${JSON.stringify({
-              id: node.cl.id,
-              slot,
-              epoch,
-              attestationsCount,
-              expectedMinAttestationCount: expectedMinAttestationCount,
-            })}`
-          );
-        }
+      // If some attestations are not included, probably will be included in next slot.
+      // In that case next slot inclusion delay will be higher than expected.
+      if (
+        attestationsCount < MAX_COMMITTEES_PER_SLOT &&
+        nextSlotInclusionDelay <= expectedMaxInclusionDelay &&
+        attestationsCount < expectedMinAttestationCount
+      ) {
+        errors.push([
+          "node has lower attestations count",
+          {
+            attestationsCount,
+            expectedMinAttestationCount: expectedMinAttestationCount,
+          },
+        ]);
       }
     }
 
