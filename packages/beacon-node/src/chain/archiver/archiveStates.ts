@@ -61,10 +61,7 @@ export class StatesArchiver {
         : PERSIST_TEMP_STATE_EVERY_EPOCHS;
 
     // Only check the current and previous intervals
-    const minEpoch = Math.max(
-      0,
-      (Math.floor(finalized.epoch / frequency) - 1) * frequency
-    );
+    const minEpoch = Math.max(0, (Math.floor(finalized.epoch / frequency) - 1) * frequency);
 
     const storedStateSlots = await this.db.stateArchive.keys({
       lt: computeStartSlotAtEpoch(finalized.epoch),
