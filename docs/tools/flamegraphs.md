@@ -14,7 +14,7 @@ sudo apt-get install linux-tools-`uname -r`  # empirically this throws if run on
 SSH into the Lodestar instance and modify `~/beacon/beacon_run.sh` to add a necessary flag.
 
 ```sh
-admin@12.34.56.78: vim ~/beacon/beacon_run.sh # add --perf-basic-prof-only-functions
+admin@12.34.56.78: vim ~/beacon/beacon_run.sh # add --perf-basic-prof flag
 admin@12.34.56.78: cat ~/beacon/beacon_run.sh # should look something like the example below
 ```
 
@@ -35,7 +35,7 @@ source ~/.nvm/nvm.sh
 # DON'T FORGET '\' CHARACTER WHEN EDITING FLAGS!!
 
 node \
-  --perf-basic-prof-only-functions \
+  --perf-basic-prof \
   --max-old-space-size=4096 \
   /usr/src/lodestar/packages/cli/bin/lodestar \
   beacon \
