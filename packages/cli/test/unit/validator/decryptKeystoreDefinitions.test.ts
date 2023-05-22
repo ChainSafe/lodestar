@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import {expect} from "chai";
 import {cachedSeckeysHex} from "../../utils/cachedKeys.js";
 import {getKeystoresStr} from "../../utils/keystores.js";
