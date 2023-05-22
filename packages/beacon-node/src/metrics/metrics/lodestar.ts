@@ -519,6 +519,18 @@ export function createLodestarMetrics(
       }),
     },
 
+    // Gossip sync committee
+    gossipSyncCommittee: {
+      equivocationCount: register.counter({
+        name: "lodestar_gossip_sync_committee_equivocation_count",
+        help: "Count of sync committee messages with same validator index for different block roots",
+      }),
+      equivocationToHeadCount: register.counter({
+        name: "lodestar_gossip_sync_committee_equivocation_to_head_count",
+        help: "Count of sync committee messages which conflict to a previous message but elect the head",
+      }),
+    },
+
     // Gossip block
     gossipBlock: {
       elapsedTimeTillReceived: register.histogram({
