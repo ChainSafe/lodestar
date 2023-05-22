@@ -99,9 +99,11 @@ export class AttestationService {
     } else {
       // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
       // Produce a single attestation for all committees and submit unaggregated attestations in one go.
-      await this.runAttestationTasksGrouped(duties, slot, signal).catch((e) => {
-        this.logger.error("Error on attestation routine", {slot}, e);
-      });
+      try {
+        await this.runAttestationTasksGrouped(duties, slot, signal);
+      } catch (e) {
+        this.logger.error("Error on attestation routine", {slot}, e as Error);
+      }
     }
   };
 
