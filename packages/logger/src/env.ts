@@ -1,6 +1,7 @@
 import {Logger} from "@lodestar/utils";
 import {LogLevel} from "@lodestar/utils";
 import {BrowserLoggerOpts, getBrowserLogger} from "./browser.js";
+import {getNodeLogger} from "./node.js";
 import {getEmptyLogger} from "./empty.js";
 
 export function getEnvLogLevel(): LogLevel | null {
@@ -13,8 +14,16 @@ export function getEnvLogLevel(): LogLevel | null {
 
 export function getEnvLogger(opts?: Partial<BrowserLoggerOpts>): Logger {
   const level = opts?.level ?? getEnvLogLevel();
-  if (level != null) {
+
+  // It's a node environment
+  if (level != null && typeof window === "undefined") {
+    return getNodeLogger({...opts, level});
+  }
+
+  // It's a browser environment
+  if (level != null && typeof window !== "undefined") {
     return getBrowserLogger({...opts, level});
   }
+
   return getEmptyLogger();
 }
