@@ -41,6 +41,7 @@ module.exports = {
       },
     ],
     "@typescript-eslint/await-thenable": "error",
+    "@typescript-eslint/return-await": "error",
     "@typescript-eslint/naming-convention": [
       "error",
       {selector: "default", format: ["camelCase"]},
@@ -134,7 +135,6 @@ module.exports = {
     "no-consecutive-blank-lines": 0,
     "no-console": "error",
     "no-var": "error",
-    "no-return-await": "error",
     "object-curly-spacing": ["error", "never"],
     "object-literal-sort-keys": 0,
     "no-prototype-builtins": 0,
@@ -168,6 +168,9 @@ module.exports = {
 
     // TEMP Disabled while eslint-plugin-import support ESM (Typescript does support it) https://github.com/import-js/eslint-plugin-import/issues/2170
     "import/no-unresolved": "off",
+
+    // superseded by @typescript-eslint/return-await, must be disabled as it can report incorrect errors
+    "no-return-await": "off",
 
     "@chainsafe/node/file-extension-in-import": ["error", "always", {esm: true}],
   },
