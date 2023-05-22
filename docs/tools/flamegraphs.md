@@ -35,7 +35,7 @@ source ~/.nvm/nvm.sh
 # DON'T FORGET '\' CHARACTER WHEN EDITING FLAGS!!
 
 node \
-  --perf-basic-prof \
+  --perf-basic-prof-only-functions \
   --max-old-space-size=4096 \
   /usr/src/lodestar/packages/cli/bin/lodestar \
   beacon \
