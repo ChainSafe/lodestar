@@ -63,7 +63,7 @@ export class StatesArchiver {
     // Only check the current and previous intervals
     const minEpoch = Math.max(
       0,
-      (Math.floor(finalized.epoch / archiveStateEpochFrequency) - 1) * archiveStateEpochFrequency
+      (Math.floor(finalized.epoch / frequency) - 1) * frequency
     );
 
     const storedStateSlots = await this.db.stateArchive.keys({
