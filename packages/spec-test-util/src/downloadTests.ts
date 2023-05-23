@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import stream from "node:stream";
 import {promisify} from "node:util";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import axios from "axios";
 import tar from "tar";
 import retry from "async-retry";

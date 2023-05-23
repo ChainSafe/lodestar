@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import sinon from "sinon";
 import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";

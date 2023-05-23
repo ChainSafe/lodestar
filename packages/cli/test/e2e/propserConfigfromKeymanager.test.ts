@@ -1,5 +1,5 @@
 import path from "node:path";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import {Interchange} from "@lodestar/validator";
 import {ApiError} from "@lodestar/api";
 import {testFilesDir} from "../utils.js";
