@@ -2,7 +2,7 @@ import {computeEpochAtSlot, isExecutionStateType, computeTimeAtSlot} from "@lode
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {Logger, sleep, fromHex} from "@lodestar/utils";
+import {Logger, sleep, fromHex, isErrorAborted} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";
@@ -172,8 +172,10 @@ export class PrepareNextSlotScheduler {
         }
       }
     } catch (e) {
-      this.metrics?.precomputeNextEpochTransition.count.inc({result: "error"}, 1);
-      this.logger.error("Failed to run prepareForNextSlot", {nextEpoch, isEpochTransition, prepareSlot}, e as Error);
+      if (!isErrorAborted(e)) {
+        this.metrics?.precomputeNextEpochTransition.count.inc({result: "error"}, 1);
+        this.logger.error("Failed to run prepareForNextSlot", {nextEpoch, isEpochTransition, prepareSlot}, e as Error);
+      }
     }
   };
 }
