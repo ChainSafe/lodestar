@@ -189,8 +189,11 @@ export class Clock extends EventEmitter implements IClock {
         this.emit(ClockEvent.epoch, currentEpoch);
       }
     }
-    //recursively invoke onNextSlot
-    this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
+
+    if (!this.signal.aborted) {
+      //recursively invoke onNextSlot
+      this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
+    }
   };
 
   private msUntilNextSlot(): number {
