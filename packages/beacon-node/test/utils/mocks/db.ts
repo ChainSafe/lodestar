@@ -15,8 +15,8 @@ import {
   SyncCommitteeWitnessRepository,
   BackfilledRanges,
 
-  BlobsSidecarRepository,
-  BlobsSidecarArchiveRepository,
+  BlobSidecarsRepository,
+  BlobSidecarsArchiveRepository,
   // TODO DENEB: cleanup following blob repos post full migration
   BlobsSidecarRepository,
   BlobsSidecarArchiveRepository,
