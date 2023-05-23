@@ -108,7 +108,6 @@ describe("maybeArchiveState", function () {
       const finalArchivedEpochs = finalArchivedStates.map((eachslot) => {
         return computeEpochAtSlot(eachslot);
       });
-      // console.log("Final archived keys", finalArchivedEpochs);
       expect(finalArchivedEpochs).to.be.deep.equal(archivedStateSlots);
     });
   });
