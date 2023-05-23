@@ -22,6 +22,10 @@ export type Polynomial = ValueOf<typeof ssz.Polynomial>;
 export type PolynomialAndCommitment = ValueOf<typeof ssz.PolynomialAndCommitment>;
 export type BLSFieldElement = ValueOf<typeof ssz.BLSFieldElement>;
 
+export type BlobIdentifier = ValueOf<typeof ssz.BlobIdentifier>;
+export type BlobSidecarsByRangeRequest = ValueOf<typeof ssz.BlobSidecarsByRangeRequest>;
+export type BlobSidecarsByRootRequest = ValueOf<typeof ssz.BlobSidecarsByRootRequest>;
+// TODO DENEB: cleanup the following old blobs types once the migration is complete
 export type BlobsSidecarsByRangeRequest = ValueOf<typeof ssz.BlobsSidecarsByRangeRequest>;
 export type BeaconBlockAndBlobsSidecarByRootRequest = ValueOf<typeof ssz.BeaconBlockAndBlobsSidecarByRootRequest>;
 

@@ -4,6 +4,7 @@ import {
   FIELD_ELEMENTS_PER_BLOB,
   MAX_BLOBS_PER_BLOCK,
   MAX_REQUEST_BLOCKS,
+  MAX_REQUEST_BLOB_SIDECARS,
   BYTES_PER_FIELD_ELEMENT,
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
@@ -83,6 +84,26 @@ export const PolynomialAndCommitment = new ContainerType(
 
 // ReqResp types
 // =============
+
+export const BlobSidecarsByRangeRequest = new ContainerType(
+  {
+    startSlot: Slot,
+    count: UintNum64,
+  },
+  {typeName: "BlobSidecarsByRangeRequest", jsonCase: "eth2"}
+);
+
+export const BlobIdentifier = new ContainerType(
+  {
+    blockRoot: Root,
+    index: BlobIndex,
+  },
+  {typeName: "BlobIdentifier", jsonCase: "eth2"}
+);
+
+export const BlobSidecarsByRootRequest = new ListCompositeType(BlobIdentifier, MAX_REQUEST_BLOB_SIDECARS);
+
+// TODO DENEB: cleanup the following types once blob migration is complete
 
 export const BlobsSidecarsByRangeRequest = new ContainerType(
   {
