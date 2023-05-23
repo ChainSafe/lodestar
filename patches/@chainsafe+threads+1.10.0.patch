@@ -1,0 +1,37 @@
+diff --git a/node_modules/@chainsafe/threads/dist/master/implementation.node.js b/node_modules/@chainsafe/threads/dist/master/implementation.node.js
+index e8a2cdb..64454e2 100644
+--- a/node_modules/@chainsafe/threads/dist/master/implementation.node.js
++++ b/node_modules/@chainsafe/threads/dist/master/implementation.node.js
+@@ -138,14 +138,7 @@ function initWorkerThreadsWorker() {
+             this.off(eventName, listener);
+         }
+     }
+-    const terminateWorkersAndMaster = () => {
+-        // we should terminate all workers and then gracefully shutdown self process
+-        Promise.all(allWorkers.map(worker => worker.terminate())).then(() => process.exit(0), () => process.exit(1));
+-        allWorkers = [];
+-    };
+-    // Take care to not leave orphaned processes behind. See #147.
+-    process.on("SIGINT", () => terminateWorkersAndMaster());
+-    process.on("SIGTERM", () => terminateWorkersAndMaster());
++
+     class BlobWorker extends Worker {
+         constructor(blob, options) {
+             super(Buffer.from(blob).toString("utf-8"), Object.assign(Object.assign({}, options), { fromSource: true }));
+@@ -202,15 +195,7 @@ function initTinyWorker() {
+             return super.terminate();
+         }
+     }
+-    const terminateWorkersAndMaster = () => {
+-        // we should terminate all workers and then gracefully shutdown self process
+-        Promise.all(allWorkers.map(worker => worker.terminate())).then(() => process.exit(0), () => process.exit(1));
+-        allWorkers = [];
+-    };
+-    // Take care to not leave orphaned processes behind
+-    // See <https://github.com/avoidwork/tiny-worker#faq>
+-    process.on("SIGINT", () => terminateWorkersAndMaster());
+-    process.on("SIGTERM", () => terminateWorkersAndMaster());
++
+     class BlobWorker extends Worker {
+         constructor(blob, options) {
+             super(Buffer.from(blob).toString("utf-8"), Object.assign(Object.assign({}, options), { fromSource: true }));
