@@ -1,15 +1,25 @@
+import sinon, {SinonStubbedInstance} from "sinon";
+import {expect} from "chai";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
-import {processSlots} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, processSlots} from "@lodestar/state-transition";
+import {defaultChainConfig, createChainForkConfig, BeaconConfig} from "@lodestar/config";
+import {Slot, ssz} from "@lodestar/types";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {AttestationErrorCode, GossipErrorCode} from "../../../../src/chain/errors/index.js";
-import {AttestationOrBytes, validateGossipAttestation} from "../../../../src/chain/validation/index.js";
+import {
+  AttestationOrBytes,
+  getStateForAttestationVerification,
+  validateGossipAttestation,
+} from "../../../../src/chain/validation/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {memoOnce} from "../../../utils/cache.js";
 import {getAttestationValidData, AttestationValidDataOpts} from "../../../utils/validationData/attestation.js";
-import {IStateRegenerator} from "../../../../src/chain/regen/interface.js";
+import {IStateRegenerator, RegenCaller} from "../../../../src/chain/regen/interface.js";
+import {StateRegenerator} from "../../../../src/chain/regen/regen.js";
+import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
 
 describe("chain / validation / attestation", () => {
   const vc = 64;
@@ -279,5 +289,74 @@ describe("chain / validation / attestation", () => {
     errorCode: string
   ): Promise<void> {
     await expectRejectedWithLodestarError(validateGossipAttestation(chain, attestationOrBytes, subnet), errorCode);
+  }
+});
+
+describe("getStateForAttestationVerification", () => {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  const config = createChainForkConfig({...defaultChainConfig, CAPELLA_FORK_EPOCH: 2});
+  const sandbox = sinon.createSandbox();
+  let regenStub: SinonStubbedInstance<StateRegenerator> & StateRegenerator;
+  let chain: IBeaconChain;
+
+  beforeEach(() => {
+    regenStub = sandbox.createStubInstance(StateRegenerator) as SinonStubbedInstance<StateRegenerator> &
+      StateRegenerator;
+    chain = {
+      config: config as BeaconConfig,
+      regen: regenStub,
+    } as Partial<IBeaconChain> as IBeaconChain;
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  const forkSlot = computeStartSlotAtEpoch(config.CAPELLA_FORK_EPOCH);
+  const getBlockSlotStateTestCases: {id: string; attSlot: Slot; headSlot: Slot; regenCall: keyof StateRegenerator}[] = [
+    {
+      id: "should call regen.getBlockSlotState at fork boundary",
+      attSlot: forkSlot + 1,
+      headSlot: forkSlot - 1,
+      regenCall: "getBlockSlotState",
+    },
+    {
+      id: "should call regen.getBlockSlotState if > 1 epoch difference",
+      attSlot: forkSlot + 2 * SLOTS_PER_EPOCH,
+      headSlot: forkSlot + 1,
+      regenCall: "getBlockSlotState",
+    },
+    {
+      id: "should call getState if 1 epoch difference",
+      attSlot: forkSlot + 2 * SLOTS_PER_EPOCH,
+      headSlot: forkSlot + SLOTS_PER_EPOCH,
+      regenCall: "getState",
+    },
+    {
+      id: "should call getState if 0 epoch difference",
+      attSlot: forkSlot + 2 * SLOTS_PER_EPOCH,
+      headSlot: forkSlot + 2 * SLOTS_PER_EPOCH,
+      regenCall: "getState",
+    },
+  ];
+
+  for (const {id, attSlot, headSlot, regenCall} of getBlockSlotStateTestCases) {
+    it(id, async () => {
+      const attEpoch = computeEpochAtSlot(attSlot);
+      const attHeadBlock = {
+        slot: headSlot,
+        stateRoot: ZERO_HASH_HEX,
+        blockRoot: ZERO_HASH_HEX,
+      } as Partial<ProtoBlock> as ProtoBlock;
+      expect(regenStub[regenCall].callCount).to.equal(0);
+      await getStateForAttestationVerification(
+        chain,
+        attSlot,
+        attEpoch,
+        attHeadBlock,
+        RegenCaller.validateGossipAttestation
+      );
+      expect(regenStub[regenCall].callCount).to.equal(1);
+    });
   }
 });

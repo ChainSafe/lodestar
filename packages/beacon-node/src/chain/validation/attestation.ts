@@ -41,6 +41,12 @@ export type AttestationOrBytes =
     };
 
 /**
+ * The beacon chain shufflings are designed to provide 1 epoch lookahead
+ * At each state, we have previous shuffling, current shuffling and next shuffling
+ */
+const SHUFFLING_LOOK_AHEAD_EPOCHS = 1;
+
+/**
  * Only deserialize the attestation if needed, use the cached AttestationData instead
  * This is to avoid deserializing similar attestation multiple times which could help the gc
  */
@@ -382,7 +388,8 @@ export async function getStateForAttestationVerification(
 ): Promise<CachedBeaconStateAllForks> {
   const isSameFork = chain.config.getForkSeq(attSlot) === chain.config.getForkSeq(attHeadBlock.slot);
   // thanks for 1 epoch look ahead of shuffling, a state at epoch n can get committee for epoch n+1
-  const headStateHasTargetEpochCommmittee = attEpoch - computeEpochAtSlot(attHeadBlock.slot) <= 1;
+  const headStateHasTargetEpochCommmittee =
+    attEpoch - computeEpochAtSlot(attHeadBlock.slot) <= SHUFFLING_LOOK_AHEAD_EPOCHS;
   try {
     if (isSameFork && headStateHasTargetEpochCommmittee) {
       // most of the time it should just use head state
