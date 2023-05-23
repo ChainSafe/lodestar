@@ -1,7 +1,7 @@
 import {Options} from "yargs";
 import {beaconNodeOptions, paramsOptions, BeaconNodeArgs} from "../../options/index.js";
-import {logOptions} from "../../options/logOptions.js";
-import {CliCommandOptions, LogArgs} from "../../util/index.js";
+import {LogArgs, logOptions} from "../../options/logOptions.js";
+import {CliCommandOptions} from "../../util/index.js";
 import {defaultBeaconPaths, BeaconPaths} from "./paths.js";
 
 type BeaconExtraArgs = {

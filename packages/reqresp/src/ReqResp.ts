@@ -147,7 +147,7 @@ export class ReqResp {
   }
 
   // Helper to reduce code duplication
-  protected async *sendRequest(
+  async *sendRequest(
     peerId: PeerId,
     method: string,
     versions: number[],

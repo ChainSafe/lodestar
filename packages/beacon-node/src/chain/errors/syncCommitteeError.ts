@@ -1,9 +1,10 @@
-import {ValidatorIndex, Slot} from "@lodestar/types";
+import {ValidatorIndex, Slot, RootHex} from "@lodestar/types";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum SyncCommitteeErrorCode {
   NOT_CURRENT_SLOT = "SYNC_COMMITTEE_ERROR_NOT_CURRENT_SLOT",
   UNKNOWN_BEACON_BLOCK_ROOT = "SYNC_COMMITTEE_ERROR_UNKNOWN_BEACON_BLOCK_ROOT",
+  SYNC_COMMITTEE_MESSAGE_KNOWN = "SYNC_COMMITTEE_ERROR_SYNC_COMMITTEE_MESSAGE_KNOWN",
   SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN = "SYNC_COMMITTEE_ERROR_SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN",
   SYNC_COMMITTEE_PARTICIPANTS_ALREADY_KNOWN = "SYNC_COMMITTEE_ERROR_SYNC_COMMITTEE_PARTICIPANTS_ALREADY_KNOWN",
   VALIDATOR_NOT_IN_SYNC_COMMITTEE = "SYNC_COMMITTEE_ERROR_VALIDATOR_NOT_IN_SYNC_COMMITTEE",
@@ -16,6 +17,13 @@ export enum SyncCommitteeErrorCode {
 export type SyncCommitteeErrorType =
   | {code: SyncCommitteeErrorCode.NOT_CURRENT_SLOT; slot: Slot; currentSlot: Slot}
   | {code: SyncCommitteeErrorCode.UNKNOWN_BEACON_BLOCK_ROOT; beaconBlockRoot: Uint8Array}
+  | {
+      code: SyncCommitteeErrorCode.SYNC_COMMITTEE_MESSAGE_KNOWN;
+      validatorIndex: ValidatorIndex;
+      slot: Slot;
+      prevRoot: RootHex;
+      newRoot: RootHex;
+    }
   | {code: SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN}
   | {code: SyncCommitteeErrorCode.SYNC_COMMITTEE_PARTICIPANTS_ALREADY_KNOWN}
   | {code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE; validatorIndex: ValidatorIndex}

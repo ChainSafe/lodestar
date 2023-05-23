@@ -5,7 +5,6 @@ import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {ApiError} from "@lodestar/api";
-import {validateBlobsAndKzgCommitments} from "../../chain/produceBlock/validateBlobsAndKzgCommitments.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {IExecutionBuilder} from "./interface.js";
 
@@ -122,49 +121,5 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
       message: {...signedBlock.message, body: {...signedBlock.message.body, executionPayload}},
     };
     return fullySignedBlock;
-  }
-
-  async submitBlindedBlockV2(
-    signedBlock: allForks.SignedBlindedBeaconBlock
-  ): Promise<allForks.SignedBeaconBlockAndBlobsSidecar> {
-    const res = await this.api.submitBlindedBlockV2(signedBlock);
-    ApiError.assert(res, "execution.builder.submitBlindedBlockV2");
-    const signedBeaconBlockAndBlobsSidecar = res.response.data;
-    // Since we get the full block back, we can just just compare the hash of blinded to returned
-    const {beaconBlock, blobsSidecar} = signedBeaconBlockAndBlobsSidecar;
-
-    // Verify if the transactions and withdrawals match with their corresponding roots
-    // since we get the full signed block back, its easy to validate response consistency
-    // if the signed blinded and signed full root simply match
-    const signedBlockRoot = this.config
-      .getBlindedForkTypes(signedBlock.message.slot)
-      .SignedBeaconBlock.hashTreeRoot(signedBlock);
-    const beaconBlockRoot = this.config
-      .getForkTypes(beaconBlock.message.slot)
-      .SignedBeaconBlock.hashTreeRoot(beaconBlock);
-    if (!byteArrayEquals(signedBlockRoot, beaconBlockRoot)) {
-      throw Error(
-        `Invalid SignedBeaconBlock of the builder submitBlindedBlockV2 response, expected=${toHexString(
-          signedBlockRoot
-        )}, actual=${toHexString(beaconBlockRoot)}`
-      );
-    }
-
-    // Sanity check consistency between payload and blobs bundle still needs to be done
-    const payload = beaconBlock.message.body.executionPayload;
-    const blockHash = toHexString(payload.blockHash);
-    const blobsBlockHash = toHexString(blobsSidecar.beaconBlockRoot);
-    if (blockHash !== blobsBlockHash) {
-      throw Error(`blobsSidecar incorrect blockHash expected=${blockHash}, actual=${blobsBlockHash}`);
-    }
-    // Sanity-check that the KZG commitments match the versioned hashes in the transactions
-    const {blobKzgCommitments: kzgs} = beaconBlock.message.body as deneb.BeaconBlockBody;
-    if (kzgs === undefined) {
-      throw Error("Missing blobKzgCommitments on beaconBlock's body");
-    }
-    const {blobs} = blobsSidecar;
-    validateBlobsAndKzgCommitments(payload, {blockHash, kzgs, blobs});
-
-    return signedBeaconBlockAndBlobsSidecar;
   }
 }

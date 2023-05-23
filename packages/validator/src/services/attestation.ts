@@ -92,14 +92,18 @@ export class AttestationService {
       await Promise.all(
         Array.from(dutiesByCommitteeIndex.entries()).map(([index, duties]) =>
           this.runAttestationTasksPerCommittee(duties, slot, index, signal).catch((e) => {
-            this.logger.error("Error on attestation routine", {slot, index}, e);
+            this.logger.error("Error on committee attestation routine", {slot, index}, e);
           })
         )
       );
     } else {
       // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
       // Produce a single attestation for all committees and submit unaggregated attestations in one go.
-      await this.runAttestationTasksGrouped(duties, slot, signal);
+      try {
+        await this.runAttestationTasksGrouped(duties, slot, signal);
+      } catch (e) {
+        this.logger.error("Error on attestation routine", {slot}, e as Error);
+      }
     }
   };
 

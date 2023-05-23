@@ -1,8 +1,8 @@
 import {BitArray} from "@chainsafe/ssz";
-import {ForkName} from "@lodestar/params";
+import {ForkSeq} from "@lodestar/params";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {altair, Epoch, phase0, ssz} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {FAR_FUTURE_EPOCH} from "../constants/index.js";
 import {getCurrentAndNextFork} from "./forks.js";
 
@@ -21,33 +21,37 @@ export type MetadataOpts = {
   metadata?: altair.Metadata;
 };
 
+export type MetadataModules = {
+  config: BeaconConfig;
+  onSetValue: (key: string, value: Uint8Array) => void;
+};
+
 /**
  * Implementation of Ethereum Consensus p2p MetaData.
  * For the spec that this code is based on, see:
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#metadata
  */
 export class MetadataController {
-  private setEnrValue?: (key: string, value: Uint8Array) => Promise<void>;
+  private onSetValue: (key: string, value: Uint8Array) => void;
+  private config: BeaconConfig;
   private _metadata: altair.Metadata;
 
-  constructor(private readonly config: BeaconConfig, opts?: MetadataOpts) {
-    this._metadata = opts?.metadata || ssz.altair.Metadata.defaultValue();
+  constructor(opts: MetadataOpts, modules: MetadataModules) {
+    this.config = modules.config;
+    this.onSetValue = modules.onSetValue;
+    this._metadata = opts.metadata || ssz.altair.Metadata.defaultValue();
   }
 
-  start(setEnrValue: ((key: string, value: Uint8Array) => Promise<void>) | undefined, currentEpoch: Epoch): void {
-    this.setEnrValue = setEnrValue;
-    if (this.setEnrValue) {
-      // updateEth2Field() MUST be called with clock epoch
-      this.updateEth2Field(currentEpoch);
+  upstreamValues(currentEpoch: Epoch): void {
+    // updateEth2Field() MUST be called with clock epoch
+    this.updateEth2Field(currentEpoch);
 
-      void this.setEnrValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
-      // Any fork after altair included
+    this.onSetValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
 
-      if (this.config.getForkName(computeStartSlotAtEpoch(currentEpoch)) !== ForkName.phase0) {
-        // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
-        // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
-        void this.setEnrValue(ENRKey.syncnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
-      }
+    if (this.config.getForkSeq(computeStartSlotAtEpoch(currentEpoch)) >= ForkSeq.altair) {
+      // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
+      // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
+      this.onSetValue(ENRKey.syncnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
     }
   }
 
@@ -60,9 +64,7 @@ export class MetadataController {
   }
 
   set syncnets(syncnets: BitArray) {
-    if (this.setEnrValue) {
-      void this.setEnrValue(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(syncnets));
-    }
+    this.onSetValue(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(syncnets));
     this._metadata.syncnets = syncnets;
   }
 
@@ -71,9 +73,7 @@ export class MetadataController {
   }
 
   set attnets(attnets: BitArray) {
-    if (this.setEnrValue) {
-      void this.setEnrValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(attnets));
-    }
+    this.onSetValue(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(attnets));
     this._metadata.seqNumber++;
     this._metadata.attnets = attnets;
   }
@@ -94,14 +94,10 @@ export class MetadataController {
    * 2. Network MUST call this method on fork transition.
    *    Current Clock implementation ensures no race conditions, epoch is correct if re-fetched
    */
-  updateEth2Field(epoch: Epoch): Uint8Array | null {
-    if (this.setEnrValue) {
-      const enrForkId = ssz.phase0.ENRForkID.serialize(getENRForkID(this.config, epoch));
-      void this.setEnrValue(ENRKey.eth2, enrForkId);
-      return enrForkId;
-    } else {
-      return null;
-    }
+  updateEth2Field(epoch: Epoch): Uint8Array {
+    const enrForkId = ssz.phase0.ENRForkID.serialize(getENRForkID(this.config, epoch));
+    this.onSetValue(ENRKey.eth2, enrForkId);
+    return enrForkId;
   }
 }
 

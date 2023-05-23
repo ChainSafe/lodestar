@@ -1,77 +1,49 @@
 import {expect} from "chai";
-import sinon from "sinon";
 import deepmerge from "deepmerge";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
-import {Logger} from "@lodestar/utils";
 import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
-import {ELVerifiedRequestHandlerOpts} from "../../../src/interfaces.js";
-import eth_getBalance_eoa from "../../fixtures/sepolia/eth_getBalance_eoa_proof.json" assert {type: "json"};
-import eth_getBalance_contract from "../../fixtures/sepolia/eth_getBalance_contract_proof.json" assert {type: "json"};
-import {createMockLogger} from "../../mocks/logger_mock.js";
 import {eth_getTransactionCount} from "../../../src/verified_requests/eth_getTransactionCount.js";
+import getTransactionCountCase1 from "../../fixtures/sepolia/eth_getTransactionCount.json" assert {type: "json"};
+import {generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 
-const testCases = [eth_getBalance_eoa, eth_getBalance_contract];
+const testCases = [getTransactionCountCase1];
 
 describe("verified_requests / eth_getTransactionCount", () => {
-  let options: {handler: sinon.SinonStub; logger: Logger; proofProvider: {getExecutionPayload: sinon.SinonStub}};
-
-  beforeEach(() => {
-    options = {
-      handler: sinon.stub(),
-      logger: createMockLogger(),
-      proofProvider: {getExecutionPayload: sinon.stub()},
-    };
-  });
-
-  for (const testCase of testCases) {
-    describe(testCase.label, () => {
+  for (const t of testCases) {
+    describe(t.label, () => {
       it("should return the valid json-rpc response for a valid account", async () => {
+        const testCase = deepmerge({}, t);
         const config = createForkConfig(networksChainConfig[testCase.network as NetworkName]);
-        const executionPayload = config
-          .getExecutionForkTypes(parseInt(testCase.headers.header.message.slot))
-          .ExecutionPayload.fromJson(testCase.executionPayload);
+        const options = generateReqHandlerOptionsMock(testCase, config);
 
-        options.handler.resolves(testCase.response);
-        options.proofProvider.getExecutionPayload.resolves(executionPayload);
-
-        const result = await eth_getTransactionCount({
+        const response = await eth_getTransactionCount({
           ...options,
           payload: {
             ...testCase.request,
-            method: "eth_getTransactionCount",
-            params: [testCase.request.params[0], "latest"],
+            params: testCase.request.params as [string, string],
           },
-          network: testCase.network,
-        } as unknown as ELVerifiedRequestHandlerOpts<[address: string, block?: string | number | undefined], string>);
+        });
 
-        expect(result).to.eql({...result, result: testCase.response.result.nonce});
+        expect(response).to.eql(testCase.response);
       });
 
       it("should return the json-rpc response with error for an invalid account", async () => {
+        const testCase = deepmerge({}, t);
+        delete testCase.dependentRequests[0].response.result.accountProof[0];
+
         const config = createForkConfig(networksChainConfig[testCase.network as NetworkName]);
-        const executionPayload = config
-          .getExecutionForkTypes(parseInt(testCase.headers.header.message.slot))
-          .ExecutionPayload.fromJson(testCase.executionPayload);
+        const options = generateReqHandlerOptionsMock(testCase, config);
 
-        const response = deepmerge({}, testCase.response);
-        // Change the proof to be invalidated with state
-        delete response.result.accountProof[0];
-
-        options.handler.resolves(response);
-        options.proofProvider.getExecutionPayload.resolves(executionPayload);
-
-        const result = await eth_getTransactionCount({
+        const response = await eth_getTransactionCount({
           ...options,
           payload: {
             ...testCase.request,
-            method: "eth_getTransactionCount",
-            params: [testCase.request.params[0], "latest"],
+            params: testCase.request.params as [string, string],
           },
-          network: testCase.network,
-        } as unknown as ELVerifiedRequestHandlerOpts<[address: string, block?: string | number | undefined], string>);
+        });
 
-        expect(result).to.eql({
+        expect(response).to.eql({
           jsonrpc: "2.0",
           id: testCase.request.id,
           error: {code: UNVERIFIED_RESPONSE_CODE, message: "eth_getTransactionCount request can not be verified."},

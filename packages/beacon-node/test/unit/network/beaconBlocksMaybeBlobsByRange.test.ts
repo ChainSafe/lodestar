@@ -1,12 +1,11 @@
-import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
-import {peerIdFromString} from "@libp2p/peer-id";
 import {ssz, deneb} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 
-import {beaconBlocksMaybeBlobsByRange, ReqRespBeaconNode} from "../../../src/network/reqresp/index.js";
-import {BlockInputType} from "../../../src/chain/blocks/types.js";
+import {beaconBlocksMaybeBlobsByRange} from "../../../src/network/reqresp/index.js";
+import {BlockInputType, BlockSource} from "../../../src/chain/blocks/types.js";
 import {ckzg, initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
+import {INetwork} from "../../../src/network/interface.js";
 
 describe("beaconBlocksMaybeBlobsByRange", () => {
   before(async function () {
@@ -15,10 +14,7 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
     loadEthereumTrustedSetup();
   });
 
-  const sandbox = sinon.createSandbox();
-  const reqResp = sandbox.createStubInstance(ReqRespBeaconNode) as SinonStubbedInstance<ReqRespBeaconNode> &
-    ReqRespBeaconNode;
-  const peerId = peerIdFromString("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
+  const peerId = "Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi";
 
   /* eslint-disable @typescript-eslint/naming-convention */
   const chainConfig = createChainForkConfig({
@@ -75,13 +71,17 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
         return {
           type: BlockInputType.postDeneb,
           block,
+          source: BlockSource.byRange,
           blobs,
         };
       });
-      reqResp.beaconBlocksByRange.resolves(blocks);
-      reqResp.blobsSidecarsByRange.resolves(blobsSidecars);
 
-      const response = await beaconBlocksMaybeBlobsByRange(config, reqResp, peerId, rangeRequest, 0);
+      const network = {
+        sendBeaconBlocksByRange: async () => blocks,
+        sendBlobsSidecarsByRange: async () => blobsSidecars,
+      } as Partial<INetwork> as INetwork;
+
+      const response = await beaconBlocksMaybeBlobsByRange(config, network, peerId, rangeRequest, 0);
       expect(response).to.be.deep.equal(expectedResponse);
     });
   });

@@ -70,7 +70,7 @@ export enum BlobsResultType {
 
 export type BlobsResult =
   | {type: BlobsResultType.preDeneb | BlobsResultType.blinded}
-  | {type: BlobsResultType.produced; blobs: deneb.Blobs; blockHash: RootHex};
+  | {type: BlobsResultType.produced; blobSidecars: deneb.BlobSidecars; blockHash: RootHex};
 
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
@@ -219,7 +219,7 @@ export async function produceBlockBody<T extends BlockType>(
           }
 
           const engineRes = await this.executionEngine.getPayload(fork, payloadId);
-          const {executionPayload} = engineRes;
+          const {executionPayload, blobsBundle} = engineRes;
           (blockBody as allForks.ExecutionBlockBody).executionPayload = executionPayload;
           blockValue = engineRes.blockValue;
 
@@ -237,16 +237,8 @@ export async function produceBlockBody<T extends BlockType>(
           }
 
           if (ForkSeq[fork] >= ForkSeq.deneb) {
-            // SPEC: https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#blob-kzg-commitments
-            // After retrieving the execution payload from the execution engine as specified in Bellatrix, use the
-            // payload_id to retrieve blobs and blob_kzg_commitments via get_blobs_and_kzg_commitments(payload_id)
-            // TODO Deneb: getBlobsBundle and getPayload must be either coupled or called in parallel to save time.
-            const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
-
-            // Sanity check consistency between getPayload() and getBlobsBundle()
-            const blockHash = toHex(executionPayload.blockHash);
-            if (blobsBundle.blockHash !== blockHash) {
-              throw Error(`blobsBundle incorrect blockHash ${blobsBundle.blockHash} != ${blockHash}`);
+            if (blobsBundle === undefined) {
+              throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
             }
 
             // Optionally sanity-check that the KZG commitments match the versioned hashes in the transactions
@@ -254,8 +246,22 @@ export async function produceBlockBody<T extends BlockType>(
               validateBlobsAndKzgCommitments(executionPayload, blobsBundle);
             }
 
-            (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs;
-            blobsResult = {type: BlobsResultType.produced, blobs: blobsBundle.blobs, blockHash};
+            (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
+            const blockHash = toHex(executionPayload.blockHash);
+
+            const blobSidecars = Array.from({length: blobsBundle.blobs.length}, (_v, index) => {
+              const blob = blobsBundle.blobs[index];
+              const commitment = blobsBundle.commitments[index];
+              const proof = blobsBundle.proofs[index];
+              const blobSidecar = {
+                index,
+                blob,
+                kzgProof: proof,
+                kzgCommitment: commitment,
+              };
+              return blobSidecar;
+            }) as deneb.BlobSidecars;
+            blobsResult = {type: BlobsResultType.produced, blobSidecars, blockHash};
           } else {
             blobsResult = {type: BlobsResultType.preDeneb};
           }

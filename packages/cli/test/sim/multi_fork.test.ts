@@ -1,10 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
-import {activePreset} from "@lodestar/params";
 import {sleep, toHexString} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
-import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
+import {AssertionMatch, CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
 import {
@@ -16,18 +15,20 @@ import {
 } from "../utils/simulation/utils/network.js";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
+import {createForkAssertion} from "../utils/simulation/assertions/forkAssertion.js";
 
-const genesisSlotsDelay = 20;
+const genesisDelaySeconds = 20 * SIM_TESTS_SECONDS_PER_SLOT;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
+const capellaForkEpoch = 6;
 // Make sure bellatrix started before TTD reach
-const additionalSlotsForTTD = activePreset.SLOTS_PER_EPOCH - 2;
-const runTillEpoch = 6;
+const additionalSlotsForTTD = 2;
+const runTillEpoch = 8;
 const syncWaitEpoch = 2;
 
 const runTimeoutMs =
   getEstimatedTimeInSecForRun({
-    genesisSlotDelay: genesisSlotsDelay,
+    genesisDelaySeconds,
     secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
     runTill: runTillEpoch + syncWaitEpoch,
     // After adding Nethermind its took longer to complete
@@ -35,8 +36,8 @@ const runTimeoutMs =
   }) * 1000;
 
 const ttd = getEstimatedTTD({
-  genesisDelay: genesisSlotsDelay,
-  bellatrixForkEpoch: bellatrixForkEpoch,
+  genesisDelaySeconds,
+  bellatrixForkEpoch,
   secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
   cliqueSealingPeriod: CLIQUE_SEALING_PERIOD,
   additionalSlots: additionalSlotsForTTD,
@@ -49,7 +50,8 @@ const env = await SimulationEnvironment.initWithDefaults(
     chainConfig: {
       ALTAIR_FORK_EPOCH: altairForkEpoch,
       BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
-      GENESIS_DELAY: genesisSlotsDelay,
+      CAPELLA_FORK_EPOCH: capellaForkEpoch,
+      GENESIS_DELAY: genesisDelaySeconds,
       TERMINAL_TOTAL_DIFFICULTY: ttd,
     },
   },
@@ -64,7 +66,7 @@ const env = await SimulationEnvironment.initWithDefaults(
 env.tracker.register({
   ...nodeAssertion,
   match: ({slot}) => {
-    return slot === 1 ? {match: true, remove: true} : false;
+    return slot === 1 ? AssertionMatch.Assert | AssertionMatch.Capture | AssertionMatch.Remove : AssertionMatch.None;
   },
 });
 
@@ -72,17 +74,25 @@ env.tracker.register({
   ...mergeAssertion,
   match: ({slot}) => {
     // Check at the end of bellatrix fork, merge should happen by then
-    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) - 1 ? {match: true, remove: true} : false;
+    return slot === env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) - 1
+      ? AssertionMatch.Assert | AssertionMatch.Remove
+      : AssertionMatch.None;
   },
 });
 
 await env.start({runTimeoutMs});
 await connectAllNodes(env.nodes);
 
-// The `TTD` will be reach around `start of bellatrixForkEpoch + additionalSlotsForMerge` slot
-// We wait for the end of that epoch with half more epoch to make sure merge transition is complete
-await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2, env.nodes, {
-  silent: true,
+let lastForkEpoch = 0;
+// Go through every fork and check which one is active and register assertion for it
+// This will make sure this test would identify if we add new fork or activate one of the existing ones
+for (const fork of env.forkConfig.forksAscendingEpochOrder) {
+  if (!Number.isInteger(fork.epoch)) continue;
+  lastForkEpoch = fork.epoch;
+  env.tracker.register(createForkAssertion(fork.name, fork.epoch));
+}
+
+await waitForSlot(env.clock.getLastSlotOfEpoch(lastForkEpoch + 1), env.nodes, {
   env,
 });
 
