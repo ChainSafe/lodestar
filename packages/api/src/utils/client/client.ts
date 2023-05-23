@@ -67,7 +67,7 @@ export function generateGenericJsonClient<
       try {
         if (returnType) {
           const res = await fetchFn.json<unknown>(fetchOptsSerializer(...args));
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/return-await
           return {ok: true, response: returnType.fromJson(res.body), status: res.status} as ReturnType<Api[keyof Api]>;
         } else {
           // We need to avoid parsing the response as the servers might just
@@ -75,6 +75,7 @@ export function generateGenericJsonClient<
           // empty json response. We return the status code.
           const res = await fetchFn.request(fetchOptsSerializer(...args));
 
+          // eslint-disable-next-line @typescript-eslint/return-await
           return {ok: true, response: undefined, status: res.status} as ReturnType<Api[keyof Api]>;
         }
       } catch (err) {
