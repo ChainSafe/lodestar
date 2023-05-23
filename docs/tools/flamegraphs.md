@@ -1,8 +1,8 @@
 # Generating Flamegraphs for a Running Node Service on Linux
 
-This guide assumes a running instance of Lodestar and will walk through how to generate a flamegraph for the process while running on Linux.
+This guide assumes a running instance of Lodestar and will walk through how to generate a flamegraph for the process while running on Linux. While it is possible to run Lodestar in a number of ways, for performance profiling it is recommended to not use Dockerized implementations.  It is best to run Lodestar as a service on a Linux machine. Follow the Lodestar docs to get the service installed and running. Then come back here when you are ready to generate the flamegraph.
 
-## Modifying Lodestar
+## Modifying Linux and Lodestar
 
 Use the following two commands to install `perf` for generating the stack traces.  You may get a warning about needing to restart the VM due to kernel updates. This is nothing to be concerned with and if so, cancel out of the restart dialog.
 
@@ -11,44 +11,30 @@ sudo apt-get install linux-tools-common linux-tools-generic
 sudo apt-get install linux-tools-`uname -r`  # empirically this throws if run on the same line above
 ```
 
-SSH into the Lodestar instance and modify `~/beacon/beacon_run.sh` to add a necessary flag.
+Next we need to update the Lodestar service by modifying the start script.  We need to add a necessary flag `--perf-basic-prof` to allow the stack traces to be useful.  Node is a virtual machine and `perf` is designed to capture host stack traces. In order to allow the JS functions to be captured meaningfully, `v8` can provide some help.  Generally Lodestar is started with a script like the following:
 
-```sh
-admin@12.34.56.78: vim ~/beacon/beacon_run.sh # add --perf-basic-prof flag
-admin@12.34.56.78: cat ~/beacon/beacon_run.sh # should look something like the example below
-```
-
-### Example beacon_run.sh
+### Example start_lodestar.sh
 
 ```sh
 #!/bin/bash
 
-# Load location of node to bin path
-source ~/.nvm/nvm.sh
-
-# Allows to edit node args, and lodestar args
-# To apply changes, restart the systemd service
-# ```
-# systemctl restart beacon
-# ```
-#
-# DON'T FORGET '\' CHARACTER WHEN EDITING FLAGS!!
+# Add the --perf-basic-prof flag to the node process
 
 node \
-  --perf-basic-prof \
+  --perf-basic-prof \ 
   --max-old-space-size=4096 \
   /usr/src/lodestar/packages/cli/bin/lodestar \
   beacon \
   --rcConfig /home/devops/beacon/rcconfig.yml
 ```
 
-After updating `beacon_run.sh` file, restart the beacon service.
+After updating the start script, restart the node process running the beacon service.  Note in the command below, that the `beacon` service may have a different name or restart command, depending on your setup.
 
 ```sh
-admin@12.34.56.78: sudo systemctl restart beacon.service
+admin@12.34.56.78: sudo systemctl restart beacon
 ```
 
-The flag that was added notifies `V8` to output a map of functions and their addresses. This is necessary for `perf` to generate the stack traces for the virtual machine in addition to the traditional host stack traces. There is a very small, but near negligible, performance overhead to output the maps but after a short while, once the process runs for a bit there functions will no longer be moving in memory and the overhead will be gone so this is safe to run in production. After a few minutes of running, listing the `beacon` directory will look similar:
+The flag that was added notifies `V8` to output a map of functions and their addresses. This is necessary for `perf` to generate the stack traces for the virtual machine in addition to the traditional host stack traces. There is a very small, performance overhead to output the maps. After a short while, once the process runs for a bit there functions will no longer be moving in memory and the overhead will be significantly reduced. The VM will still be moving objects around but this flag is generally safe to run in production. After a few minutes of running, listing the directory with the start script (`process.cwd()`) will look similar:
 
 ```sh
 -rw-r--r--  1 admin admin   9701529 May 22 00:36 beacon-2023-05-22.log
@@ -134,28 +120,6 @@ There can be a lot of "noise" in the stack traces with `libc`, `v8` and `libuv` 
 
 ```sh
 sed -r -e "/( __libc_start| uv_| LazyCompile | v8::internal::| node::| Builtins_| Builtin:| Stub:| LoadIC:| \\[unknown\\]| LoadPolymorphicIC:)/d" -e 's/ LazyCompile:[*~]?/ /'
-```
-
-```ts
-const inputPath = "/path/to/flamescope/examples/perf.out";
-const outputPath = "/path/to/flamescope/examples/perf.filtered";
-const INTERNAL_FUNCTIONS = [
-  " __libc_start",
-  " uv_",
-  " LazyCompile ",
-  " v8::internal::",
-  " node::",
-  " Builtins_",
-  " Builtin:",
-  " Stub:",
-  " LoadIC:",
-  " \\[unknown\\]",
-  " LoadPolymorphicIC:",
-].join("|");
-const sedDeleteInternals = `-e "/(${INTERNAL_FUNCTIONS})/d"`;
-const sedReplaceLazyCompile = `-e 's/ LazyCompile:[*~]?/ /'`;
-const sedCommand = `sed -r ${sedDeleteInternals} ${sedReplaceLazyCompile} ${inputPath} > ${outputPath}`;
-spawnSync(sedCommand, {stdio: "inherit", shell: true});
 ```
 
 ### Unfiltered
