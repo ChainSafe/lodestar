@@ -19,7 +19,6 @@ import {
   // TODO DENEB: cleanup following blob repos post full migration
   BlobsSidecarRepository,
   BlobsSidecarArchiveRepository,
-
   BLSToExecutionChangeRepository,
 } from "../../../src/db/repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "../../../src/db/single/index.js";
