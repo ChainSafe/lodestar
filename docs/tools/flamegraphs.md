@@ -34,7 +34,7 @@ After updating the start script, restart the node process running the beacon ser
 admin@12.34.56.78: sudo systemctl restart beacon
 ```
 
-The flag that was added notifies `V8` to output a map of functions and their addresses. This is necessary for `perf` to generate the stack traces for the virtual machine in addition to the traditional host stack traces. There is a very small, performance overhead to output the maps. After a short while, once the process runs for a bit there functions will no longer be moving in memory and the overhead will be significantly reduced. The VM will still be moving objects around but this flag is generally safe to run in production. After a few minutes of running, listing the directory with the start script (`process.cwd()`) will look similar:
+The flag that was added notifies `V8` to output a map of functions and their addresses. This is necessary for `perf` to generate the stack traces for the virtual machine in addition to the traditional host stack traces. There is a very small, performance overhead to output the maps. After a short while, once the process runs for a bit the functions will no longer be moving in memory and the overhead will be significantly reduced. The VM will still be moving objects around but this flag is generally safe to run in production. After a few minutes of running, listing the directory with the start script (`process.cwd()`) will look similar:
 
 ```sh
 -rw-r--r--  1 admin admin   9701529 May 22 00:36 beacon-2023-05-22.log
