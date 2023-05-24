@@ -10,6 +10,7 @@ on:
 env:
   GOERLI_RPC_DEFAULT_URL: https://goerli.infura.io/v3/84842078b09946638c03157f83405213
   GETH_DOCKER_IMAGE: ethereum/client-go:v1.10.25
+  NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.18.0
 
 jobs:
   tests-main:

@@ -5,14 +5,21 @@ import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.j
 import {getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
 import {connectAllNodes} from "../utils/simulation/utils/network.js";
 
-const genesisSlotsDelay = 20;
+const secondsPerSlot = 4;
+const cliqueSealingPeriod = 5;
+const genesisDelaySeconds = 30 * secondsPerSlot;
+const altairForkEpoch = 2;
+const bellatrixForkEpoch = 4;
+const capellaForkEpoch = 6;
+// Make sure bellatrix started before TTD reach
+const additionalSlotsForTTD = 2;
 
 const ttd = getEstimatedTTD({
-  genesisDelaySeconds: genesisSlotsDelay * 6,
-  bellatrixForkEpoch: 0,
-  secondsPerSlot: 6,
-  cliqueSealingPeriod: 5,
-  additionalSlots: 5,
+  genesisDelaySeconds,
+  bellatrixForkEpoch,
+  secondsPerSlot,
+  cliqueSealingPeriod,
+  additionalSlots: additionalSlotsForTTD,
 });
 
 const env = await SimulationEnvironment.initWithDefaults(
@@ -20,16 +27,16 @@ const env = await SimulationEnvironment.initWithDefaults(
     id: "e2e-test-env",
     logsDir: path.join(logFilesDir, "e2e-test-env"),
     chainConfig: {
-      ALTAIR_FORK_EPOCH: 0,
-      BELLATRIX_FORK_EPOCH: 0,
-      CAPELLA_FORK_EPOCH: 0,
-      GENESIS_DELAY: genesisSlotsDelay,
+      ALTAIR_FORK_EPOCH: altairForkEpoch,
+      BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
+      CAPELLA_FORK_EPOCH: capellaForkEpoch,
+      GENESIS_DELAY: genesisDelaySeconds,
       TERMINAL_TOTAL_DIFFICULTY: ttd,
     },
   },
   [
     {id: "node-1", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32, mining: true},
-    {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32},
+    {id: "node-2", cl: CLClient.Lodestar, el: ELClient.Nethermind, keysCount: 32},
   ]
 );
 
