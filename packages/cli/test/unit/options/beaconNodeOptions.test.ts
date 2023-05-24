@@ -124,7 +124,7 @@ describe("options / beaconNodeOptions", () => {
         maxSkipSlots: 100,
         archiveStateEpochFrequency: 1024,
         emitPayloadAttributes: false,
-        validatorMonitor:true,
+        validatorMonitor: true,
       },
       eth1: {
         enabled: true,

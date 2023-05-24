@@ -1,5 +1,5 @@
-import { defaultOptions, IBeaconNodeOptions } from "@lodestar/beacon-node";
-import { CliCommandOptions } from "../../util/index.js";
+import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {CliCommandOptions} from "../../util/index.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
@@ -57,8 +57,7 @@ export const options: CliCommandOptions<ChainArgs> = {
 
   validatorMonitor: {
     type: "boolean",
-    description:
-      "Flag to collate missed and orphan blocks data",
+    description: "Flag to collate finalzed proposal stats (and more...)",
     group: "chain",
   },
 
