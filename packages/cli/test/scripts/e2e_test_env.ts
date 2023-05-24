@@ -35,4 +35,3 @@ const env = await SimulationEnvironment.initWithDefaults(
 
 await env.start({runTimeoutMs: 0});
 await connectAllNodes(env.nodes);
-await waitForSlot(1, env.nodes, {env});
