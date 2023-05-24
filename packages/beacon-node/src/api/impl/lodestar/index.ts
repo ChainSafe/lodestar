@@ -1,5 +1,3 @@
-import {peerIdFromString} from "@libp2p/peer-id";
-import {multiaddr} from "@multiformats/multiaddr";
 import {routes, ServerApi} from "@lodestar/api";
 import {Bucket, Repository} from "@lodestar/db";
 import {toHex} from "@lodestar/utils";
@@ -116,14 +114,11 @@ export function getLodestarApi({
     },
 
     async connectPeer(peerIdStr, multiaddrStrs) {
-      const peerId = peerIdFromString(peerIdStr);
-      const multiaddrs = multiaddrStrs.map((multiaddrStr) => multiaddr(multiaddrStr));
-      await network.connectToPeer(peerId, multiaddrs);
+      await network.connectToPeer(peerIdStr, multiaddrStrs);
     },
 
     async disconnectPeer(peerIdStr) {
-      const peerId = peerIdFromString(peerIdStr);
-      await network.disconnectPeer(peerId);
+      await network.disconnectPeer(peerIdStr);
     },
 
     async getPeers(filters) {

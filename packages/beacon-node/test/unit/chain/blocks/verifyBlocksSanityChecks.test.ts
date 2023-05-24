@@ -12,7 +12,7 @@ import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
 import {IClock} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../utils/mocks/clock.js";
-import {getBlockInput} from "../../../../src/chain/blocks/types.js";
+import {BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
 
 describe("chain / blocks / verifyBlocksSanityChecks", function () {
   let forkChoice: SinonStubbedInstance<ForkChoice>;
@@ -127,7 +127,7 @@ function verifyBlocksSanityChecks(
 ): {relevantBlocks: allForks.SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
   const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksImportSanityChecks(
     modules,
-    blocks.map((block) => getBlockInput.preDeneb(config, block)),
+    blocks.map((block) => getBlockInput.preDeneb(config, block, BlockSource.byRange)),
     opts
   );
   return {

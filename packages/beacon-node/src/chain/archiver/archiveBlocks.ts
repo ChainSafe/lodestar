@@ -1,6 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
-import {Epoch, Slot} from "@lodestar/types";
-import {IForkChoice} from "@lodestar/fork-choice";
+import {Epoch, Slot, RootHex} from "@lodestar/types";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {Logger, toHex} from "@lodestar/utils";
 import {ForkSeq, SLOTS_PER_EPOCH, MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -17,6 +17,12 @@ const BLOCK_BATCH_SIZE = 256;
 const BLOB_SIDECAR_BATCH_SIZE = 32;
 
 type BlockRootSlot = {slot: Slot; root: Uint8Array};
+type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
+export type FinalizedData = {
+  finalizedCanonicalCheckpoints: CheckpointHex[];
+  finalizedCanonicalBlocks: ProtoBlock[];
+  finalizedNonCanonicalBlocks: ProtoBlock[];
+};
 
 /**
  * Archives finalized blocks from active bucket to archive bucket.
@@ -33,9 +39,9 @@ export async function archiveBlocks(
   forkChoice: IForkChoice,
   lightclientServer: LightClientServer,
   logger: Logger,
-  finalizedCheckpoint: {rootHex: string; epoch: Epoch},
+  finalizedCheckpoint: CheckpointHex,
   currentEpoch: Epoch
-): Promise<void> {
+): Promise<FinalizedData> {
   // Use fork choice to determine the blocks to archive and delete
   const finalizedCanonicalBlocks = forkChoice.getAllAncestorBlocks(finalizedCheckpoint.rootHex);
   const finalizedNonCanonicalBlocks = forkChoice.getAllNonAncestorBlocks(finalizedCheckpoint.rootHex);
@@ -96,7 +102,8 @@ export async function archiveBlocks(
   }
 
   // Prunning potential checkpoint data
-  const finalizedCanonicalNonCheckpointBlocks = getNonCheckpointBlocks(finalizedCanonicalBlockRoots);
+  const {nonCheckpointBlocks: finalizedCanonicalNonCheckpointBlocks, checkpoints: finalizedCanonicalCheckpoints} =
+    getNonCheckpointBlocks(finalizedCanonicalBlockRoots);
   const nonCheckpointBlockRoots: Uint8Array[] = [...nonCanonicalBlockRoots];
   for (const block of finalizedCanonicalNonCheckpointBlocks) {
     nonCheckpointBlockRoots.push(block.root);
@@ -108,6 +115,15 @@ export async function archiveBlocks(
     totalArchived: finalizedCanonicalBlocks.length,
     finalizedEpoch: finalizedCheckpoint.epoch,
   });
+
+  return {
+    finalizedCanonicalCheckpoints: finalizedCanonicalCheckpoints.map(({root, epoch}) => ({
+      rootHex: toHex(root),
+      epoch,
+    })),
+    finalizedCanonicalBlocks,
+    finalizedNonCanonicalBlocks,
+  };
 }
 
 async function migrateBlocksFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot[]): Promise<void> {
@@ -205,7 +221,9 @@ export function getParentRootFromSignedBlock(bytes: Uint8Array): Uint8Array {
  * @param blocks sequence of linear blocks, from child to ancestor.
  * In ProtoArray.getAllAncestorNodes child nodes are pushed first to the returned array.
  */
-export function getNonCheckpointBlocks<T extends {slot: Slot}>(blocks: T[]): T[] {
+export function getNonCheckpointBlocks<T extends {slot: Slot}>(
+  blocks: T[]
+): {checkpoints: (T & {epoch: Epoch})[]; nonCheckpointBlocks: T[]} {
   // Iterate from lowest child to highest ancestor
   // Look for the checkpoint of the lowest epoch
   // If block at `epoch * SLOTS_PER_EPOCH`, it's a checkpoint.
@@ -213,10 +231,11 @@ export function getNonCheckpointBlocks<T extends {slot: Slot}>(blocks: T[]): T[]
   // - Otherwise for the previous epoch the last block is a checkpoint
 
   if (blocks.length < 1) {
-    return [];
+    return {checkpoints: [], nonCheckpointBlocks: []};
   }
 
   const nonCheckpointBlocks: T[] = [];
+  const checkpoints: (T & {epoch: Epoch})[] = [];
   // Start with Infinity to always trigger `blockEpoch < epochPtr` in the first loop
   let epochPtr = Infinity;
   // Assume worst case, since it's unknown if a future epoch will skip the first slot or not.
@@ -248,8 +267,10 @@ export function getNonCheckpointBlocks<T extends {slot: Slot}>(blocks: T[]): T[]
 
     if (!isCheckpoint) {
       nonCheckpointBlocks.push(block);
+    } else {
+      checkpoints.push({...block, epoch: epochPtrHasFirstSlot ? blockEpoch : blockEpoch + 1});
     }
   }
 
-  return nonCheckpointBlocks;
+  return {nonCheckpointBlocks, checkpoints};
 }

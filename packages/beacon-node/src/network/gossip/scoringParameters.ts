@@ -7,9 +7,8 @@ import {
 import {computeCommitteeCount} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@lodestar/params";
-import {Eth2Context} from "../../chain/index.js";
 import {getActiveForks} from "../forks.js";
-import {Eth2GossipsubModules} from "./gossipsub.js";
+import {Eth2Context, Eth2GossipsubModules} from "./gossipsub.js";
 import {GossipType} from "./interface.js";
 import {stringifyGossipTopic} from "./topic.js";
 

@@ -46,7 +46,7 @@ describe.skip("doppelganger / doppelganger test", function () {
   };
 
   async function createBNAndVC(config?: TestConfig): Promise<{beaconNode: BeaconNode; validators: Validator[]}> {
-    const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+    const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
     const bn = await getDevBeaconNode({
@@ -126,7 +126,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       genesisTime: bn.chain.getHeadState().genesisTime,
     });
 
-    await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
+    await connect(bn2.network as Network, bn.network);
 
     expect(validators[0].isRunning).to.be.equal(true, "validator without doppelganger protection should be running");
     expect(validatorsWithDoppelganger[0].isRunning).to.be.equal(
@@ -150,7 +150,7 @@ describe.skip("doppelganger / doppelganger test", function () {
     this.timeout("10 min");
 
     const doppelgangerProtectionEnabled = true;
-    const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+    const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
 
     // set genesis time to allow at least an epoch
     const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * beaconParams.SECONDS_PER_SLOT;
@@ -206,7 +206,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       doppelgangerProtectionEnabled: false,
     });
 
-    await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
+    await connect(bn2.network as Network, bn.network);
 
     expect(validators[0].isRunning).to.be.equal(true, "validator without doppelganger protection should be running");
     expect(validatorsWithDoppelganger[0].isRunning).to.be.equal(

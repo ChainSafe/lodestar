@@ -26,7 +26,4 @@ export interface IExecutionBuilder {
     blobKzgCommitments?: deneb.BlobKzgCommitments;
   }>;
   submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<allForks.SignedBeaconBlock>;
-  submitBlindedBlockV2(
-    signedBlock: allForks.SignedBlindedBeaconBlock
-  ): Promise<allForks.SignedBeaconBlockAndBlobsSidecar>;
 }

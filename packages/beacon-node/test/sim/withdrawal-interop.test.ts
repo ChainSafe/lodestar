@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import {Context} from "mocha";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {LogLevel, sleep, TimestampFormatCode} from "@lodestar/utils";
+import {LogLevel, sleep} from "@lodestar/utils";
+import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH, ForkName} from "@lodestar/params";
 import {ChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -233,8 +234,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
     const testLoggerOpts: TestLoggerOpts = {
-      logLevel: LogLevel.info,
-      logFile: `${logFilesDir}/mergemock-${testName}.log`,
+      level: LogLevel.info,
+      file: {
+        filepath: `${logFilesDir}/mergemock-${testName}.log`,
+        level: LogLevel.debug,
+      },
       timestampFormat: {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,

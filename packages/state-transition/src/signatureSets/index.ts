@@ -6,7 +6,7 @@ import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
 import {getAttestationsSignatureSets} from "./indexedAttestation.js";
-import {getProposerSignatureSet} from "./proposer.js";
+import {getBlockProposerSignatureSet} from "./proposer.js";
 import {getRandaoRevealSignatureSet} from "./randao.js";
 import {getVoluntaryExitsSignatureSets} from "./voluntaryExits.js";
 import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
@@ -40,7 +40,7 @@ export function getBlockSignatureSets(
   ];
 
   if (!opts?.skipProposerSignature) {
-    signatureSets.push(getProposerSignatureSet(state, signedBlock));
+    signatureSets.push(getBlockProposerSignatureSet(state, signedBlock));
   }
 
   // fork based validations

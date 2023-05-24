@@ -17,10 +17,17 @@ export async function decryptKeystoreDefinitions(
   if (opts.cacheFilePath) {
     try {
       const signers = await loadKeystoreCache(opts.cacheFilePath, keystoreDefinitions);
+
+      for (const {keystorePath} of keystoreDefinitions) {
+        lockKeystore(keystorePath, opts);
+      }
+
       if (opts?.onDecrypt) {
         opts?.onDecrypt(signers.length - 1);
       }
+
       opts.logger.debug("Loaded keystores via keystore cache");
+
       return signers;
     } catch {
       // Some error loading the cache, ignore and invalidate cache
@@ -41,17 +48,7 @@ export async function decryptKeystoreDefinitions(
     defaultPoolSize
   );
   for (const [index, definition] of keystoreDefinitions.entries()) {
-    try {
-      lockFilepath(definition.keystorePath);
-    } catch (e) {
-      if (opts.ignoreLockFile) {
-        opts.logger.warn("Keystore forcefully loaded even though lockfile exists", {
-          path: definition.keystorePath,
-        });
-      } else {
-        throw e;
-      }
-    }
+    lockKeystore(definition.keystorePath, opts);
 
     const task = pool.queue((thread) => thread.decryptKeystoreDefinition(definition));
     tasks.push(task);
@@ -101,4 +98,18 @@ export async function decryptKeystoreDefinitions(
   }
 
   return signers;
+}
+
+function lockKeystore(keystorePath: string, opts: KeystoreDecryptOptions): void {
+  try {
+    lockFilepath(keystorePath);
+  } catch (e) {
+    if (opts.ignoreLockFile) {
+      opts.logger.warn("Keystore forcefully loaded even though lockfile exists", {
+        path: keystorePath,
+      });
+    } else {
+      throw e;
+    }
+  }
 }

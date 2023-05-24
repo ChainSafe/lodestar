@@ -1,16 +1,16 @@
 import {expect} from "chai";
-import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {config} from "@lodestar/config/default";
 import {Batch} from "../../../../../src/sync/range/batch.js";
 import {ChainPeersBalancer} from "../../../../../src/sync/range/utils/peerBalancer.js";
+import {getRandPeerIdStr} from "../../../../utils/peer.js";
 
 describe("sync / range / peerBalancer", () => {
   it("bestPeerToRetryBatch", async () => {
     // Run N times to make sure results are consistent with different shufflings
     for (let i = 0; i < 5; i++) {
-      const peer1 = await createSecp256k1PeerId();
-      const peer2 = await createSecp256k1PeerId();
-      const peer3 = await createSecp256k1PeerId();
+      const peer1 = await getRandPeerIdStr();
+      const peer2 = await getRandPeerIdStr();
+      const peer3 = await getRandPeerIdStr();
       const batch0 = new Batch(0, config);
       const batch1 = new Batch(1, config);
 
@@ -40,10 +40,10 @@ describe("sync / range / peerBalancer", () => {
   it("idlePeers", async () => {
     // Run N times to make sure results are consistent with different shufflings
     for (let i = 0; i < 5; i++) {
-      const peer1 = await createSecp256k1PeerId();
-      const peer2 = await createSecp256k1PeerId();
-      const peer3 = await createSecp256k1PeerId();
-      const peer4 = await createSecp256k1PeerId();
+      const peer1 = await getRandPeerIdStr();
+      const peer2 = await getRandPeerIdStr();
+      const peer3 = await getRandPeerIdStr();
+      const peer4 = await getRandPeerIdStr();
       const batch0 = new Batch(0, config);
       const batch1 = new Batch(1, config);
 

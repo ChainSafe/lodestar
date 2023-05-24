@@ -2,11 +2,11 @@ import {expect} from "chai";
 import {Libp2p} from "libp2p";
 import sinon from "sinon";
 import {Logger} from "@lodestar/utils";
+import {getEmptyLogger} from "@lodestar/logger/empty";
 import {RespStatus} from "../../src/interface.js";
 import {ReqResp} from "../../src/ReqResp.js";
 import {getEmptyHandler, sszSnappyPing} from "../fixtures/messages.js";
 import {numberToStringProtocol, numberToStringProtocolDialOnly, pingProtocol} from "../fixtures/protocols.js";
-import {createStubbedLogger} from "../mocks/logger.js";
 import {MockLibP2pStream} from "../utils/index.js";
 import {responseEncode} from "../utils/response.js";
 
@@ -35,7 +35,7 @@ describe("ResResp", () => {
       handle: sinon.spy(),
     } as unknown as Libp2p;
 
-    logger = createStubbedLogger();
+    logger = getEmptyLogger();
 
     reqresp = new ReqResp({
       libp2p,

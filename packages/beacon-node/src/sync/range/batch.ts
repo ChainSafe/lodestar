@@ -1,8 +1,8 @@
-import {PeerId} from "@libp2p/interface-peer-id";
 import {Epoch, phase0, RootHex} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {LodestarError} from "@lodestar/utils";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
+import {PeerIdStr} from "../../util/peerId.js";
 import {BlockInput} from "../../chain/blocks/types.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
@@ -31,15 +31,15 @@ export enum BatchStatus {
 
 export type Attempt = {
   /** The peer that made the attempt */
-  peer: PeerId;
+  peer: PeerIdStr;
   /** The hash of the blocks of the attempt */
   hash: RootHex;
 };
 
 export type BatchState =
   | {status: BatchStatus.AwaitingDownload}
-  | {status: BatchStatus.Downloading; peer: PeerId}
-  | {status: BatchStatus.AwaitingProcessing; peer: PeerId; blocks: BlockInput[]}
+  | {status: BatchStatus.Downloading; peer: PeerIdStr}
+  | {status: BatchStatus.AwaitingProcessing; peer: PeerIdStr; blocks: BlockInput[]}
   | {status: BatchStatus.Processing; attempt: Attempt}
   | {status: BatchStatus.AwaitingValidation; attempt: Attempt};
 
@@ -70,7 +70,7 @@ export class Batch {
   /** The `Attempts` that have been made and failed because of execution malfunction. */
   readonly executionErrorAttempts: Attempt[] = [];
   /** The number of download retries this batch has undergone due to a failed request. */
-  private readonly failedDownloadAttempts: PeerId[] = [];
+  private readonly failedDownloadAttempts: PeerIdStr[] = [];
   private readonly config: ChainForkConfig;
 
   constructor(startEpoch: Epoch, config: ChainForkConfig) {
@@ -88,7 +88,7 @@ export class Batch {
   /**
    * Gives a list of peers from which this batch has had a failed download or processing attempt.
    */
-  getFailedPeers(): PeerId[] {
+  getFailedPeers(): PeerIdStr[] {
     return [...this.failedDownloadAttempts, ...this.failedProcessingAttempts.map((a) => a.peer)];
   }
 
@@ -99,7 +99,7 @@ export class Batch {
   /**
    * AwaitingDownload -> Downloading
    */
-  startDownloading(peer: PeerId): void {
+  startDownloading(peer: PeerIdStr): void {
     if (this.state.status !== BatchStatus.AwaitingDownload) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingDownload));
     }

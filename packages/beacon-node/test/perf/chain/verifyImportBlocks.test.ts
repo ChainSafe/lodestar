@@ -16,7 +16,7 @@ import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {testLogger} from "../../utils/logger.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {BeaconDb} from "../../../src/index.js";
-import {getBlockInput, AttestationImportOpt} from "../../../src/chain/blocks/types.js";
+import {getBlockInput, AttestationImportOpt, BlockSource} from "../../../src/chain/blocks/types.js";
 
 // Define this params in `packages/state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
@@ -107,7 +107,9 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       return chain;
     },
     fn: async (chain) => {
-      const blocksImport = blocks.value.map((block) => getBlockInput.preDeneb(chain.config, block));
+      const blocksImport = blocks.value.map((block) =>
+        getBlockInput.preDeneb(chain.config, block, BlockSource.byRange)
+      );
 
       await chain.processChainSegment(blocksImport, {
         // Only skip importing attestations for finalized sync. For head sync attestation are valuable.

@@ -35,6 +35,13 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
       buckets: [-100, -50, -20, 0, 25],
       labelNames: ["client"],
     }),
+    peerGossipScoreByClient: register.histogram<"client">({
+      name: "lodestar_gossip_score_by_client",
+      help: "Gossip peer score by client",
+      labelNames: ["client"],
+      // based on gossipScoreThresholds and negativeGossipScoreIgnoreThreshold
+      buckets: [-16000, -8000, -4000, -1000, 0, 5, 100],
+    }),
     peerConnectionLength: register.histogram({
       name: "lodestar_peer_connection_seconds",
       help: "Current peer connection length in second",
@@ -143,63 +150,62 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
       }),
     },
 
-    gossipPeer: {
-      scoreByThreshold: register.gauge<"threshold">({
-        name: "lodestar_gossip_peer_score_by_threshold_count",
-        help: "Gossip peer score by threshold",
-        labelNames: ["threshold"],
-      }),
-      meshPeersByClient: register.gauge<"client">({
-        name: "lodestar_gossip_mesh_peers_by_client_count",
-        help: "number of mesh peers, labeled by client",
-        labelNames: ["client"],
-      }),
-      scoreByClient: register.histogram<"client">({
-        name: "lodestar_gossip_score_by_client",
-        help: "Gossip peer score by client",
-        labelNames: ["client"],
-        // based on gossipScoreThresholds and negativeGossipScoreIgnoreThreshold
-        buckets: [-16000, -8000, -4000, -1000, 0, 5, 100],
-      }),
-      score: register.avgMinMax({
-        name: "lodestar_gossip_score_avg_min_max",
-        help: "Avg min max of all gossip peer scores",
+    reqResp: {
+      rateLimitErrors: register.gauge<"method">({
+        name: "beacon_reqresp_rate_limiter_errors_total",
+        help: "Count rate limiter errors",
+        labelNames: ["method"],
       }),
     },
-    gossipMesh: {
-      peersByType: register.gauge<"type" | "fork">({
-        name: "lodestar_gossip_mesh_peers_by_type_count",
-        help: "Number of connected mesh peers per gossip type",
-        labelNames: ["type", "fork"],
-      }),
-      peersByBeaconAttestationSubnet: register.gauge<"subnet" | "fork">({
-        name: "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count",
-        help: "Number of connected mesh peers per beacon attestation subnet",
-        labelNames: ["subnet", "fork"],
-      }),
-      peersBySyncCommitteeSubnet: register.gauge<"subnet" | "fork">({
-        name: "lodestar_gossip_mesh_peers_by_sync_committee_subnet_count",
-        help: "Number of connected mesh peers per sync committee subnet",
-        labelNames: ["subnet", "fork"],
-      }),
-    },
-    gossipTopic: {
-      peersByType: register.gauge<"type" | "fork">({
-        name: "lodestar_gossip_topic_peers_by_type_count",
-        help: "Number of connected topic peers per gossip type",
-        labelNames: ["type", "fork"],
-      }),
-      peersByBeaconAttestationSubnet: register.gauge<"subnet" | "fork">({
-        name: "lodestar_gossip_topic_peers_by_beacon_attestation_subnet_count",
-        help: "Number of connected topic peers per beacon attestation subnet",
-        labelNames: ["subnet", "fork"],
-      }),
-      peersBySyncCommitteeSubnet: register.gauge<"subnet" | "fork">({
-        name: "lodestar_gossip_topic_peers_by_sync_committee_subnet_count",
-        help: "Number of connected topic peers per sync committee subnet",
-        labelNames: ["subnet", "fork"],
-      }),
-    },
+
+    gossipValidationAccept: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_accept_total",
+      help: "Count of total gossip validation accept",
+      labelNames: ["topic"],
+    }),
+    gossipValidationIgnore: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_ignore_total",
+      help: "Count of total gossip validation ignore",
+      labelNames: ["topic"],
+    }),
+    gossipValidationReject: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_reject_total",
+      help: "Count of total gossip validation reject",
+      labelNames: ["topic"],
+    }),
+    gossipValidationError: register.gauge<"topic" | "error">({
+      name: "lodestar_gossip_validation_error_total",
+      help: "Count of total gossip validation errors detailed",
+      labelNames: ["topic", "error"],
+    }),
+
+    gossipValidationQueueLength: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_queue_length",
+      help: "Count of total gossip validation queue length",
+      labelNames: ["topic"],
+    }),
+    gossipValidationQueueDroppedJobs: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_queue_dropped_jobs_total",
+      help: "Count of total gossip validation queue dropped jobs",
+      labelNames: ["topic"],
+    }),
+    gossipValidationQueueJobTime: register.histogram<"topic">({
+      name: "lodestar_gossip_validation_queue_job_time_seconds",
+      help: "Time to process gossip validation queue job in seconds",
+      labelNames: ["topic"],
+      buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
+    }),
+    gossipValidationQueueJobWaitTime: register.histogram<"topic">({
+      name: "lodestar_gossip_validation_queue_job_wait_time_seconds",
+      help: "Time from job added to the queue to starting the job in seconds",
+      labelNames: ["topic"],
+      buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10],
+    }),
+    gossipValidationQueueConcurrency: register.gauge<"topic">({
+      name: "lodestar_gossip_validation_queue_concurrency",
+      help: "Current count of jobs being run on network processor for topic",
+      labelNames: ["topic"],
+    }),
 
     discv5: {
       decodeEnrAttemptCount: register.counter({
@@ -258,11 +264,42 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
       }),
     },
 
-    reqResp: {
-      rateLimitErrors: register.gauge<"method">({
-        name: "beacon_reqresp_rate_limiter_errors_total",
-        help: "Count rate limiter errors",
-        labelNames: ["method"],
+    // Gossip block
+    gossipBlock: {
+      elapsedTimeTillReceived: register.histogram({
+        name: "lodestar_gossip_block_elapsed_time_till_received",
+        help: "Time elapsed between block slot time and the time block received via gossip",
+        buckets: [0.5, 1, 2, 4, 6, 12],
+      }),
+      elapsedTimeTillProcessed: register.histogram({
+        name: "lodestar_gossip_block_elapsed_time_till_processed",
+        help: "Time elapsed between block slot time and the time block processed",
+        buckets: [0.5, 1, 2, 4, 6, 12],
+      }),
+      receivedToGossipValidate: register.histogram({
+        name: "lodestar_gossip_block_received_to_gossip_validate",
+        help: "Time elapsed between block received and block validated",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToStateTransition: register.histogram({
+        name: "lodestar_gossip_block_received_to_state_transition",
+        help: "Time elapsed between block received and block state transition",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToSignaturesVerification: register.histogram({
+        name: "lodestar_gossip_block_received_to_signatures_verification",
+        help: "Time elapsed between block received and block signatures verification",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToExecutionPayloadVerification: register.histogram({
+        name: "lodestar_gossip_block_received_to_execution_payload_verification",
+        help: "Time elapsed between block received and execution payload verification",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      receivedToBlockImport: register.histogram({
+        name: "lodestar_gossip_block_received_to_block_import",
+        help: "Time elapsed between block received and block import",
+        buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
       }),
     },
   };

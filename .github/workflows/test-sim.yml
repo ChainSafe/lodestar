@@ -6,11 +6,16 @@ on:
     branches: [unstable, stable]
   pull_request:
   workflow_dispatch:
+    inputs:
+      debug:
+        description: Runtime DEBUG value
+        required: false
+        default: ''
 
 env:
-  GETH_DOCKER_IMAGE: ethereum/client-go:v1.10.25
+  GETH_DOCKER_IMAGE: ethereum/client-go:v1.11.6
   LIGHTHOUSE_DOCKER_IMAGE: sigp/lighthouse:latest-amd64-unstable-dev
-  NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.14.5
+  NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.18.0
 
 jobs:
   tests-sim:
@@ -42,7 +47,7 @@ jobs:
       # </common-build>
 
       - name: Sim tests multifork
-        run: yarn test:sim:multifork
+        run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:multifork
         working-directory: packages/cli
 
       - name: Sim tests endpoints

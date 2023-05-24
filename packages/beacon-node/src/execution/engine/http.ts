@@ -20,7 +20,6 @@ import {PayloadIdCache} from "./payloadIdCache.js";
 import {
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
-  parseBlobsBundle,
   parseExecutionPayload,
   serializeExecutionPayload,
   serializePayloadAttributes,
@@ -293,7 +292,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async getPayload(
     fork: ForkName,
     payloadId: PayloadId
-  ): Promise<{executionPayload: allForks.ExecutionPayload; blockValue: Wei}> {
+  ): Promise<{executionPayload: allForks.ExecutionPayload; blockValue: Wei; blobsBundle?: BlobsBundle}> {
     const method =
       ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_getPayloadV3"
@@ -311,22 +310,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       getPayloadOpts
     );
     return parseExecutionPayload(fork, payloadResponse);
-  }
-
-  async getBlobsBundle(payloadId: PayloadId): Promise<BlobsBundle> {
-    const method = "engine_getBlobsBundleV1";
-    const blobsBundle = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >(
-      {
-        method,
-        params: [payloadId],
-      },
-      getPayloadOpts
-    );
-
-    return parseBlobsBundle(blobsBundle);
   }
 
   /**

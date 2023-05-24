@@ -156,7 +156,8 @@ module.exports = {
             "path",
             "stream",
             "util",
-            "url"
+            "url",
+            "worker_threads"
           ),
         ],
       },
