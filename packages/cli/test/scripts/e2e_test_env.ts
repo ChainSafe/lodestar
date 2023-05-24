@@ -22,6 +22,7 @@ const env = await SimulationEnvironment.initWithDefaults(
     chainConfig: {
       ALTAIR_FORK_EPOCH: 0,
       BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
       GENESIS_DELAY: genesisSlotsDelay,
       TERMINAL_TOTAL_DIFFICULTY: ttd,
     },
