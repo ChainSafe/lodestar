@@ -3,11 +3,12 @@ import https from "node:https";
 import url from "node:url";
 import httpProxy from "http-proxy";
 import {NetworkName} from "@lodestar/config/networks";
+import {getNodeLogger} from "@lodestar/logger/node";
+import {LogLevel} from "@lodestar/logger";
 import {ConsensusNodeOptions, LogOptions} from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "./types.js";
 import {generateRPCResponseForPayload, logRequest, logResponse} from "./utils/json_rpc.js";
-import {getLogger} from "./utils/logger.js";
 import {fetchRequestPayload, fetchResponseBody} from "./utils/req_resp.js";
 import {processAndVerifyRequest} from "./utils/process.js";
 
@@ -25,7 +26,7 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
 } {
   const {executionRpcUrl, network} = opts;
   const signal = opts.signal ?? new AbortController().signal;
-  const logger = getLogger(opts);
+  const logger = opts.logger ?? getNodeLogger({level: opts.logLevel ?? LogLevel.info});
 
   const proofProvider = ProofProvider.init({
     ...opts,
