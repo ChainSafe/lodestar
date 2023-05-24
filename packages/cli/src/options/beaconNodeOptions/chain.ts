@@ -1,5 +1,5 @@
-import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {CliCommandOptions} from "../../util/index.js";
+import { defaultOptions, IBeaconNodeOptions } from "@lodestar/beacon-node";
+import { CliCommandOptions } from "../../util/index.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
@@ -20,6 +20,7 @@ export type ChainArgs = {
   "safe-slots-to-import-optimistically": number;
   "chain.archiveStateEpochFrequency": number;
   emitPayloadAttributes: boolean;
+  validatorMonitor: boolean;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -41,6 +42,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     emitPayloadAttributes: args["emitPayloadAttributes"],
+    validatorMonitor: args["validatorMonitor"],
   };
 }
 
@@ -50,6 +52,13 @@ export const options: CliCommandOptions<ChainArgs> = {
     description:
       "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling produceBlock.",
     defaultDescription: defaultOptions.chain.suggestedFeeRecipient,
+    group: "chain",
+  },
+
+  validatorMonitor: {
+    type: "boolean",
+    description:
+      "Flag to collate missed and orphan blocks data",
     group: "chain",
   },
 

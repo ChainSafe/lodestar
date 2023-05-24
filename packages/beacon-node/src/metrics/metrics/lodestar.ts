@@ -216,8 +216,8 @@ export function createLodestarMetrics(
 
     // Finalized block and proposal stats
     allValidators: {
-      expected: register.gauge({
-        name: "lodestar_all_validators_expected_count",
+      total: register.gauge({
+        name: "lodestar_all_validators_total_count",
         help: "Number of all blocks expected to be finalized",
       }),
 
@@ -238,8 +238,8 @@ export function createLodestarMetrics(
     },
 
     attachedValidators: {
-      expected: register.gauge({
-        name: "lodestar_attached_validators_expected_count",
+      total: register.gauge({
+        name: "lodestar_attached_validators_total_count",
         help: "Number of blocks expected to be finalized from the attached validators",
       }),
 

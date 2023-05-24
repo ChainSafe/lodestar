@@ -32,6 +32,7 @@ describe("options / beaconNodeOptions", () => {
       "safe-slots-to-import-optimistically": 256,
       "chain.archiveStateEpochFrequency": 1024,
       emitPayloadAttributes: false,
+      validatorMonitor: true,
 
       eth1: true,
       "eth1.providerUrl": "http://my.node:8545",
@@ -123,6 +124,7 @@ describe("options / beaconNodeOptions", () => {
         maxSkipSlots: 100,
         archiveStateEpochFrequency: 1024,
         emitPayloadAttributes: false,
+        validatorMonitor:true,
       },
       eth1: {
         enabled: true,
