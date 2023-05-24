@@ -275,7 +275,7 @@ export function getBeaconBlockApi({
       }
 
       if (!blobSidecars) {
-        throw Error("Not found in db");
+        throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toHexString(blockRoot)}`);
       }
       return {
         executionOptimistic,
