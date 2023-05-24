@@ -26,7 +26,7 @@ export type StateFormat = "json" | "ssz";
 export const mimeTypeSSZ = "application/octet-stream";
 
 const stringType = new StringType();
-const protoNodeSszType = new ContainerType(
+const protoNodeSszType = ContainerType.named(
   {
     executionPayloadBlockHash: stringType,
     executionPayloadNumber: ssz.UintNum64,
@@ -49,7 +49,7 @@ const protoNodeSszType = new ContainerType(
     bestChild: stringType,
     bestDescendant: stringType,
   },
-  {jsonCase: "eth2"}
+  {typeName: "ProtoNode", jsonCase: "eth2"}
 );
 
 type ProtoNodeApiType = ValueOf<typeof protoNodeSszType>;
@@ -165,21 +165,21 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
-  const SlotRoot = new ContainerType(
+  const SlotRoot = ContainerType.named(
     {
       slot: ssz.Slot,
       root: stringType,
     },
-    {jsonCase: "eth2"}
+    {typeName: "SlotRoot", jsonCase: "eth2"}
   );
 
-  const SlotRootExecutionOptimistic = new ContainerType(
+  const SlotRootExecutionOptimistic = ContainerType.named(
     {
       slot: ssz.Slot,
       root: stringType,
       executionOptimistic: ssz.Boolean,
     },
-    {jsonCase: "eth2"}
+    {typeName: "SlotRootExecutionOptimistic", jsonCase: "eth2"}
   );
 
   return {

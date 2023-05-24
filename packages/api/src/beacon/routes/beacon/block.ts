@@ -285,15 +285,21 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
-  const BeaconHeaderResType = new ContainerType({
-    root: ssz.Root,
-    canonical: ssz.Boolean,
-    header: ssz.phase0.SignedBeaconBlockHeader,
-  });
+  const BeaconHeaderResType = ContainerType.named(
+    {
+      root: ssz.Root,
+      canonical: ssz.Boolean,
+      header: ssz.phase0.SignedBeaconBlockHeader,
+    },
+    {typeName: "BeaconHeaderResType", jsonCase: "eth2"}
+  );
 
-  const RootContainer = new ContainerType({
-    root: ssz.Root,
-  });
+  const RootContainer = ContainerType.named(
+    {
+      root: ssz.Root,
+    },
+    {typeName: "RootContainer", jsonCase: "eth2"}
+  );
 
   return {
     getBlock: ContainerData(ssz.phase0.SignedBeaconBlock),

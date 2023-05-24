@@ -68,12 +68,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
-  const DepositContract = new ContainerType(
+  const DepositContract = ContainerType.named(
     {
       chainId: ssz.UintNum64,
       address: new ByteVectorType(20),
     },
-    {jsonCase: "eth2"}
+    {typeName: "DepositContract", jsonCase: "eth2"}
   );
 
   return {

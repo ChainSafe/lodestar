@@ -359,12 +359,12 @@ export function getReturnTypes(): ReturnTypes<Api> {
 
     listFeeRecipient: jsonType("snake"),
     getGasLimit: ContainerData(
-      new ContainerType(
+      ContainerType.named(
         {
           pubkey: stringType,
           gasLimit: ssz.UintNum64,
         },
-        {jsonCase: "eth2"}
+        {typeName: "GasLimit", jsonCase: "eth2"}
       )
     ),
   };

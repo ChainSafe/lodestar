@@ -3,7 +3,7 @@ import {ssz} from "@lodestar/types";
 
 // Misc SSZ types used only in the beacon-node package, no need to upstream to types
 
-export const signedBLSToExecutionChangeVersionedType = new ContainerType(
+export const signedBLSToExecutionChangeVersionedType = ContainerType.named(
   {
     // Assumes less than 256 forks, sounds reasonable in our lifetime
     preCapella: ssz.Boolean,

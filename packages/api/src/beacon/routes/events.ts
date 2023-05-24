@@ -136,7 +136,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
   };
 
   return {
-    [EventType.head]: new ContainerType(
+    [EventType.head]: ContainerType.named(
       {
         slot: ssz.Slot,
         block: stringType,
@@ -146,33 +146,33 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
         currentDutyDependentRoot: stringType,
         executionOptimistic: ssz.Boolean,
       },
-      {jsonCase: "eth2"}
+      {typeName: "EventDataHead", jsonCase: "eth2"}
     ),
 
-    [EventType.block]: new ContainerType(
+    [EventType.block]: ContainerType.named(
       {
         slot: ssz.Slot,
         block: stringType,
         executionOptimistic: ssz.Boolean,
       },
-      {jsonCase: "eth2"}
+      {typeName: "EventDataBlock", jsonCase: "eth2"}
     ),
 
     [EventType.attestation]: ssz.phase0.Attestation,
     [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit,
     [EventType.blsToExecutionChange]: ssz.capella.SignedBLSToExecutionChange,
 
-    [EventType.finalizedCheckpoint]: new ContainerType(
+    [EventType.finalizedCheckpoint]: ContainerType.named(
       {
         block: stringType,
         state: stringType,
         epoch: ssz.Epoch,
         executionOptimistic: ssz.Boolean,
       },
-      {jsonCase: "eth2"}
+      {typeName: "EventDataFinalizedCheckpoint", jsonCase: "eth2"}
     ),
 
-    [EventType.chainReorg]: new ContainerType(
+    [EventType.chainReorg]: ContainerType.named(
       {
         slot: ssz.Slot,
         depth: ssz.UintNum64,
@@ -183,7 +183,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
         epoch: ssz.Epoch,
         executionOptimistic: ssz.Boolean,
       },
-      {jsonCase: "eth2"}
+      {typeName: "EventDataChainReorg", jsonCase: "eth2"}
     ),
 
     [EventType.contributionAndProof]: ssz.altair.SignedContributionAndProof,

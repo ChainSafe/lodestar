@@ -295,52 +295,55 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
-  const RootContainer = new ContainerType({
-    root: ssz.Root,
-  });
+  const RootContainer = ContainerType.named(
+    {
+      root: ssz.Root,
+    },
+    {typeName: "RootContainer", jsonCase: "eth2"}
+  );
 
-  const FinalityCheckpoints = new ContainerType(
+  const FinalityCheckpoints = ContainerType.named(
     {
       previousJustified: ssz.phase0.Checkpoint,
       currentJustified: ssz.phase0.Checkpoint,
       finalized: ssz.phase0.Checkpoint,
     },
-    {jsonCase: "eth2"}
+    {typeName: "FinalityCheckpoints", jsonCase: "eth2"}
   );
 
-  const ValidatorResponse = new ContainerType(
+  const ValidatorResponse = ContainerType.named(
     {
       index: ssz.ValidatorIndex,
       balance: ssz.UintNum64,
       status: new StringType<ValidatorStatus>(),
       validator: ssz.phase0.Validator,
     },
-    {jsonCase: "eth2"}
+    {typeName: "ValidatorResponse", jsonCase: "eth2"}
   );
 
-  const ValidatorBalance = new ContainerType(
+  const ValidatorBalance = ContainerType.named(
     {
       index: ssz.ValidatorIndex,
       balance: ssz.UintNum64,
     },
-    {jsonCase: "eth2"}
+    {typeName: "ValidatorBalance", jsonCase: "eth2"}
   );
 
-  const EpochCommitteeResponse = new ContainerType(
+  const EpochCommitteeResponse = ContainerType.named(
     {
       index: ssz.CommitteeIndex,
       slot: ssz.Slot,
       validators: ssz.phase0.CommitteeIndices,
     },
-    {jsonCase: "eth2"}
+    {typeName: "EpochCommitteeResponse", jsonCase: "eth2"}
   );
 
-  const EpochSyncCommitteesResponse = new ContainerType(
+  const EpochSyncCommitteesResponse = ContainerType.named(
     {
       validators: ArrayOf(ssz.ValidatorIndex),
       validatorAggregates: ArrayOf(ArrayOf(ssz.ValidatorIndex)),
     },
-    {jsonCase: "eth2"}
+    {typeName: "EpochSyncCommitteesResponse", jsonCase: "eth2"}
   );
 
   return {

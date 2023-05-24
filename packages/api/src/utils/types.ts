@@ -85,9 +85,13 @@ export const reqOnlyBody = <T>(
 /** SSZ factory helper + typed. limit = 1e6 as a big enough random number */
 export function ArrayOf<T>(elementType: Type<T>): ArrayType<Type<T>, unknown, unknown> {
   if (isCompositeType(elementType)) {
-    return new ListCompositeType(elementType, Infinity) as unknown as ArrayType<Type<T>, unknown, unknown>;
+    return ListCompositeType.named(elementType, Infinity, {
+      typeName: elementType.typeName + "List",
+    }) as unknown as ArrayType<Type<T>, unknown, unknown>;
   } else if (isBasicType(elementType)) {
-    return new ListBasicType(elementType, Infinity) as unknown as ArrayType<Type<T>, unknown, unknown>;
+    return ListBasicType.named(elementType, Infinity, {
+      typeName: elementType.typeName + "List",
+    }) as unknown as ArrayType<Type<T>, unknown, unknown>;
   } else {
     throw Error(`Unknown type ${elementType.typeName}`);
   }

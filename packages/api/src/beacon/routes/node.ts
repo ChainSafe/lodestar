@@ -175,7 +175,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
 export function getReturnTypes(): ReturnTypes<Api> {
   const stringType = new StringType();
-  const NetworkIdentity = new ContainerType(
+  const NetworkIdentity = ContainerType.named(
     {
       peerId: stringType,
       enr: stringType,
@@ -183,17 +183,17 @@ export function getReturnTypes(): ReturnTypes<Api> {
       discoveryAddresses: ArrayOf(stringType),
       metadata: ssz.altair.Metadata,
     },
-    {jsonCase: "eth2"}
+    {typeName: "NetworkIdentity", jsonCase: "eth2"}
   );
 
-  const PeerCount = new ContainerType(
+  const PeerCount = ContainerType.named(
     {
       disconnected: ssz.UintNum64,
       connecting: ssz.UintNum64,
       connected: ssz.UintNum64,
       disconnecting: ssz.UintNum64,
     },
-    {jsonCase: "eth2"}
+    {typeName: "PeerCount", jsonCase: "eth2"}
   );
 
   return {

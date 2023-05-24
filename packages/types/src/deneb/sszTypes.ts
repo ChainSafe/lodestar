@@ -45,11 +45,13 @@ export const KZGProof = Bytes48;
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#custom-types
 
 export const Blob = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB);
-export const Blobs = new ListCompositeType(Blob, MAX_BLOBS_PER_BLOCK);
+export const Blobs = ListCompositeType.named(Blob, MAX_BLOBS_PER_BLOCK, {typeName: "Blobs"});
 export const BlindedBlob = Bytes32;
-export const BlindedBlobs = new ListCompositeType(BlindedBlob, MAX_BLOBS_PER_BLOCK);
+export const BlindedBlobs = ListCompositeType.named(BlindedBlob, MAX_BLOBS_PER_BLOCK, {typeName: "BlindedBlobs"});
 export const VersionedHash = Bytes32;
-export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOBS_PER_BLOCK);
+export const BlobKzgCommitments = ListCompositeType.named(KZGCommitment, MAX_BLOBS_PER_BLOCK, {
+  typeName: "BlobKzgCommitments",
+});
 
 // Constants
 
@@ -57,12 +59,12 @@ export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOBS
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md
 
 // A polynomial in evaluation form
-export const Polynomial = new ListCompositeType(BLSFieldElement, FIELD_ELEMENTS_PER_BLOB);
+export const Polynomial = ListCompositeType.named(BLSFieldElement, FIELD_ELEMENTS_PER_BLOB, {typeName: "Polynomial"});
 
 // class BlobsAndCommitments(Container):
 //     blobs: List[Blob, MAX_BLOBS_PER_BLOCK]
 //     kzg_commitments: List[KZGCommitment, MAX_BLOBS_PER_BLOCK]
-export const BlobsAndCommitments = new ContainerType(
+export const BlobsAndCommitments = ContainerType.named(
   {
     blobs: Blobs,
     kzgCommitments: BlobKzgCommitments,
@@ -73,7 +75,7 @@ export const BlobsAndCommitments = new ContainerType(
 // class PolynomialAndCommitment(Container):
 //     polynomial: Polynomial
 //     kzg_commitment: KZGCommitment
-export const PolynomialAndCommitment = new ContainerType(
+export const PolynomialAndCommitment = ContainerType.named(
   {
     polynomial: Polynomial,
     kzgCommitment: KZGCommitment,
@@ -84,7 +86,7 @@ export const PolynomialAndCommitment = new ContainerType(
 // ReqResp types
 // =============
 
-export const BlobsSidecarsByRangeRequest = new ContainerType(
+export const BlobsSidecarsByRangeRequest = ContainerType.named(
   {
     startSlot: Slot,
     count: UintNum64,
@@ -92,12 +94,14 @@ export const BlobsSidecarsByRangeRequest = new ContainerType(
   {typeName: "BlobsSidecarsByRangeRequest", jsonCase: "eth2"}
 );
 
-export const BeaconBlockAndBlobsSidecarByRootRequest = new ListCompositeType(Root, MAX_REQUEST_BLOCKS);
+export const BeaconBlockAndBlobsSidecarByRootRequest = ListCompositeType.named(Root, MAX_REQUEST_BLOCKS, {
+  typeName: "BeaconBlockAndBlobsSidecarByRootRequest",
+});
 
 // Beacon Chain types
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#containers
 
-export const ExecutionPayload = new ContainerType(
+export const ExecutionPayload = ContainerType.named(
   {
     ...capellaSsz.ExecutionPayload.fields,
     excessDataGas: UintBn256, // New in DENEB
@@ -105,7 +109,7 @@ export const ExecutionPayload = new ContainerType(
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
-export const ExecutionPayloadHeader = new ContainerType(
+export const ExecutionPayloadHeader = ContainerType.named(
   {
     ...capellaSsz.ExecutionPayloadHeader.fields,
     excessDataGas: UintBn256, // New in DENEB
@@ -114,33 +118,33 @@ export const ExecutionPayloadHeader = new ContainerType(
 );
 
 // We have to preserve Fields ordering while changing the type of ExecutionPayload
-export const BeaconBlockBody = new ContainerType(
+export const BeaconBlockBody = ContainerType.named(
   {
     ...altairSsz.BeaconBlockBody.fields,
     executionPayload: ExecutionPayload, // Modified in DENEB
     blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
     blobKzgCommitments: BlobKzgCommitments, // New in DENEB
   },
-  {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
+  {typeName: "BeaconBlockBodyDeneb", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
-export const BeaconBlock = new ContainerType(
+export const BeaconBlock = ContainerType.named(
   {
     ...capellaSsz.BeaconBlock.fields,
     body: BeaconBlockBody, // Modified in DENEB
   },
-  {typeName: "BeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
+  {typeName: "BeaconBlockDeneb", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
-export const SignedBeaconBlock = new ContainerType(
+export const SignedBeaconBlock = ContainerType.named(
   {
     message: BeaconBlock, // Modified in DENEB
     signature: BLSSignature,
   },
-  {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
+  {typeName: "SignedBeaconBlockDeneb", jsonCase: "eth2"}
 );
 
-export const BlobSidecar = new ContainerType(
+export const BlobSidecar = ContainerType.named(
   {
     blockRoot: Root,
     index: BlobIndex,
@@ -154,18 +158,20 @@ export const BlobSidecar = new ContainerType(
   {typeName: "BlobSidecar", jsonCase: "eth2"}
 );
 
-export const BlobSidecars = new ListCompositeType(BlobSidecar, MAX_BLOBS_PER_BLOCK);
+export const BlobSidecars = ListCompositeType.named(BlobSidecar, MAX_BLOBS_PER_BLOCK, {typeName: "BlobSidecars"});
 
-export const SignedBlobSidecar = new ContainerType(
+export const SignedBlobSidecar = ContainerType.named(
   {
     message: BlobSidecar,
     signature: BLSSignature,
   },
   {typeName: "SignedBlobSidecar", jsonCase: "eth2"}
 );
-export const SignedBlobSidecars = new ListCompositeType(SignedBlobSidecar, MAX_BLOBS_PER_BLOCK);
+export const SignedBlobSidecars = ListCompositeType.named(SignedBlobSidecar, MAX_BLOBS_PER_BLOCK, {
+  typeName: "SignedBlobSidecars",
+});
 
-export const BlindedBlobSidecar = new ContainerType(
+export const BlindedBlobSidecar = ContainerType.named(
   {
     blockRoot: Root,
     index: BlobIndex,
@@ -179,9 +185,11 @@ export const BlindedBlobSidecar = new ContainerType(
   {typeName: "BlindedBlobSidecar", jsonCase: "eth2"}
 );
 
-export const BlindedBlobSidecars = new ListCompositeType(BlindedBlobSidecar, MAX_BLOBS_PER_BLOCK);
+export const BlindedBlobSidecars = ListCompositeType.named(BlindedBlobSidecar, MAX_BLOBS_PER_BLOCK, {
+  typeName: "BlindedBlobSidecars",
+});
 
-export const SignedBlindedBlobSidecar = new ContainerType(
+export const SignedBlindedBlobSidecar = ContainerType.named(
   {
     message: BlindedBlobSidecar,
     signature: BLSSignature,
@@ -189,10 +197,12 @@ export const SignedBlindedBlobSidecar = new ContainerType(
   {typeName: "SignedBlindedBlobSidecar", jsonCase: "eth2"}
 );
 
-export const SignedBlindedBlobSidecars = new ListCompositeType(SignedBlindedBlobSidecar, MAX_BLOBS_PER_BLOCK);
+export const SignedBlindedBlobSidecars = ListCompositeType.named(SignedBlindedBlobSidecar, MAX_BLOBS_PER_BLOCK, {
+  typeName: "SignedBlindedBlobSidecars",
+});
 
 // TODO: replace and cleanup previous types when other parts integrated seamlessly
-export const BlobsSidecar = new ContainerType(
+export const BlobsSidecar = ContainerType.named(
   {
     beaconBlockRoot: Root,
     beaconBlockSlot: Slot,
@@ -202,7 +212,7 @@ export const BlobsSidecar = new ContainerType(
   {typeName: "BlobsSidecar", jsonCase: "eth2"}
 );
 
-export const SignedBeaconBlockAndBlobsSidecar = new ContainerType(
+export const SignedBeaconBlockAndBlobsSidecar = ContainerType.named(
   {
     beaconBlock: SignedBeaconBlock,
     blobsSidecar: BlobsSidecar,
@@ -210,32 +220,32 @@ export const SignedBeaconBlockAndBlobsSidecar = new ContainerType(
   {typeName: "SignedBeaconBlockAndBlobsSidecar", jsonCase: "eth2"}
 );
 
-export const BlindedBeaconBlockBody = new ContainerType(
+export const BlindedBeaconBlockBody = ContainerType.named(
   {
     ...BeaconBlockBody.fields,
     executionPayloadHeader: ExecutionPayloadHeader, // Modified in DENEB
     blobKzgCommitments: BlobKzgCommitments, // New in DENEB
   },
-  {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
+  {typeName: "BlindedBeaconBlockBodyDeneb", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
-export const BlindedBeaconBlock = new ContainerType(
+export const BlindedBeaconBlock = ContainerType.named(
   {
     ...capellaSsz.BlindedBeaconBlock.fields,
     body: BlindedBeaconBlockBody, // Modified in DENEB
   },
-  {typeName: "BlindedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
+  {typeName: "BlindedBeaconBlockDeneb", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
-export const SignedBlindedBeaconBlock = new ContainerType(
+export const SignedBlindedBeaconBlock = ContainerType.named(
   {
     message: BlindedBeaconBlock, // Modified in DENEB
     signature: BLSSignature,
   },
-  {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
+  {typeName: "SignedBlindedBeaconBlockDeneb", jsonCase: "eth2"}
 );
 
-export const BuilderBid = new ContainerType(
+export const BuilderBid = ContainerType.named(
   {
     header: ExecutionPayloadHeader,
     value: UintBn256,
@@ -245,7 +255,7 @@ export const BuilderBid = new ContainerType(
   {typeName: "BuilderBid", jsonCase: "eth2"}
 );
 
-export const SignedBuilderBid = new ContainerType(
+export const SignedBuilderBid = ContainerType.named(
   {
     message: BuilderBid,
     signature: BLSSignature,
@@ -255,7 +265,7 @@ export const SignedBuilderBid = new ContainerType(
 
 // We don't spread capella.BeaconState fields since we need to replace
 // latestExecutionPayloadHeader and we cannot keep order doing that
-export const BeaconState = new ContainerType(
+export const BeaconState = ContainerType.named(
   {
     genesisTime: UintNum64,
     genesisValidatorsRoot: Root,
@@ -266,7 +276,7 @@ export const BeaconState = new ContainerType(
     blockRoots: phase0Ssz.HistoricalBlockRoots,
     stateRoots: phase0Ssz.HistoricalStateRoots,
     // historical_roots Frozen in Capella, replaced by historical_summaries
-    historicalRoots: new ListCompositeType(Root, HISTORICAL_ROOTS_LIMIT),
+    historicalRoots: ListCompositeType.named(Root, HISTORICAL_ROOTS_LIMIT, {typeName: "HistoricalRoots"}),
     // Eth1
     eth1Data: phase0Ssz.Eth1Data,
     eth1DataVotes: phase0Ssz.Eth1DataVotes,
@@ -298,19 +308,19 @@ export const BeaconState = new ContainerType(
     // Deep history valid from Capella onwards
     historicalSummaries: capellaSsz.BeaconState.fields.historicalSummaries,
   },
-  {typeName: "BeaconState", jsonCase: "eth2"}
+  {typeName: "BeaconStateDeneb", jsonCase: "eth2"}
 );
 
-export const LightClientHeader = new ContainerType(
+export const LightClientHeader = ContainerType.named(
   {
     beacon: phase0Ssz.BeaconBlockHeader,
     execution: ExecutionPayloadHeader,
-    executionBranch: new VectorCompositeType(Bytes32, EXECUTION_PAYLOAD_DEPTH),
+    executionBranch: VectorCompositeType.named(Bytes32, EXECUTION_PAYLOAD_DEPTH, {typeName: "ExecutionBranch"}),
   },
   {typeName: "LightClientHeader", jsonCase: "eth2"}
 );
 
-export const LightClientBootstrap = new ContainerType(
+export const LightClientBootstrap = ContainerType.named(
   {
     header: LightClientHeader,
     currentSyncCommittee: altairSsz.SyncCommittee,
@@ -319,7 +329,7 @@ export const LightClientBootstrap = new ContainerType(
   {typeName: "LightClientBootstrap", jsonCase: "eth2"}
 );
 
-export const LightClientUpdate = new ContainerType(
+export const LightClientUpdate = ContainerType.named(
   {
     attestedHeader: LightClientHeader,
     nextSyncCommittee: altairSsz.SyncCommittee,
@@ -332,7 +342,7 @@ export const LightClientUpdate = new ContainerType(
   {typeName: "LightClientUpdate", jsonCase: "eth2"}
 );
 
-export const LightClientFinalityUpdate = new ContainerType(
+export const LightClientFinalityUpdate = ContainerType.named(
   {
     attestedHeader: LightClientHeader,
     finalizedHeader: LightClientHeader,
@@ -343,7 +353,7 @@ export const LightClientFinalityUpdate = new ContainerType(
   {typeName: "LightClientFinalityUpdate", jsonCase: "eth2"}
 );
 
-export const LightClientOptimisticUpdate = new ContainerType(
+export const LightClientOptimisticUpdate = ContainerType.named(
   {
     attestedHeader: LightClientHeader,
     syncAggregate: altairSsz.SyncAggregate,
@@ -352,10 +362,12 @@ export const LightClientOptimisticUpdate = new ContainerType(
   {typeName: "LightClientOptimisticUpdate", jsonCase: "eth2"}
 );
 
-export const LightClientStore = new ContainerType(
+export const LightClientStore = ContainerType.named(
   {
     snapshot: LightClientBootstrap,
-    validUpdates: new ListCompositeType(LightClientUpdate, EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH),
+    validUpdates: ListCompositeType.named(LightClientUpdate, EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH, {
+      typeName: "ValidUpdates",
+    }),
   },
   {typeName: "LightClientStore", jsonCase: "eth2"}
 );

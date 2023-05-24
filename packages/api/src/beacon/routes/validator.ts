@@ -445,27 +445,27 @@ export type ReqTypes = {
   registerValidator: {body: unknown};
 };
 
-const BeaconCommitteeSelection = new ContainerType(
+const BeaconCommitteeSelection = ContainerType.named(
   {
     validatorIndex: ssz.ValidatorIndex,
     slot: ssz.Slot,
     selectionProof: ssz.BLSSignature,
   },
-  {jsonCase: "eth2"}
+  {typeName: "BeaconCommitteeSelection", jsonCase: "eth2"}
 );
 
-const SyncCommitteeSelection = new ContainerType(
+const SyncCommitteeSelection = ContainerType.named(
   {
     validatorIndex: ssz.ValidatorIndex,
     slot: ssz.Slot,
     subcommitteeIndex: ssz.SubcommitteeIndex,
     selectionProof: ssz.BLSSignature,
   },
-  {jsonCase: "eth2"}
+  {typeName: "SyncCommitteeSelection", jsonCase: "eth2"}
 );
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
-  const BeaconCommitteeSubscription = new ContainerType(
+  const BeaconCommitteeSubscription = ContainerType.named(
     {
       validatorIndex: ssz.ValidatorIndex,
       committeeIndex: ssz.CommitteeIndex,
@@ -473,16 +473,16 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       slot: ssz.Slot,
       isAggregator: ssz.Boolean,
     },
-    {jsonCase: "eth2"}
+    {typeName: "BeaconCommitteeSubscription", jsonCase: "eth2"}
   );
 
-  const SyncCommitteeSubscription = new ContainerType(
+  const SyncCommitteeSubscription = ContainerType.named(
     {
       validatorIndex: ssz.ValidatorIndex,
       syncCommitteeIndices: ArrayOf(ssz.CommitteeIndex),
       untilEpoch: ssz.Epoch,
     },
-    {jsonCase: "eth2"}
+    {typeName: "SyncCommitteeSubscription", jsonCase: "eth2"}
   );
 
   const produceBlock: ReqSerializers<Api, ReqTypes>["produceBlock"] = {
@@ -591,16 +591,16 @@ export function getReturnTypes(): ReturnTypes<Api> {
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   const WithDependentRootExecutionOptimistic = <T>(dataType: Type<T>) =>
-    new ContainerType(
+    ContainerType.named(
       {
         executionOptimistic: ssz.Boolean,
         data: dataType,
         dependentRoot: rootHexType,
       },
-      {jsonCase: "eth2"}
+      {typeName: dataType.typeName + "WithDependentRootExecutionOptimistic", jsonCase: "eth2"}
     );
 
-  const AttesterDuty = new ContainerType(
+  const AttesterDuty = ContainerType.named(
     {
       pubkey: ssz.BLSPubkey,
       validatorIndex: ssz.ValidatorIndex,
@@ -610,25 +610,25 @@ export function getReturnTypes(): ReturnTypes<Api> {
       validatorCommitteeIndex: ssz.UintNum64,
       slot: ssz.Slot,
     },
-    {jsonCase: "eth2"}
+    {typeName: "AttesterDuty", jsonCase: "eth2"}
   );
 
-  const ProposerDuty = new ContainerType(
+  const ProposerDuty = ContainerType.named(
     {
       slot: ssz.Slot,
       validatorIndex: ssz.ValidatorIndex,
       pubkey: ssz.BLSPubkey,
     },
-    {jsonCase: "eth2"}
+    {typeName: "ProposerDuty", jsonCase: "eth2"}
   );
 
-  const SyncDuty = new ContainerType(
+  const SyncDuty = ContainerType.named(
     {
       pubkey: ssz.BLSPubkey,
       validatorIndex: ssz.ValidatorIndex,
       validatorSyncCommitteeIndices: ArrayOf(ssz.UintNum64),
     },
-    {jsonCase: "eth2"}
+    {typeName: "SyncDuty", jsonCase: "eth2"}
   );
 
   return {

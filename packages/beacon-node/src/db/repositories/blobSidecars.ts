@@ -3,7 +3,7 @@ import {Bucket, Db, Repository} from "@lodestar/db";
 import {ssz} from "@lodestar/types";
 import {ValueOf, ContainerType} from "@chainsafe/ssz";
 
-export const blobSidecarsWrapperSsz = new ContainerType(
+export const blobSidecarsWrapperSsz = ContainerType.named(
   {
     blockRoot: ssz.Root,
     slot: ssz.Slot,

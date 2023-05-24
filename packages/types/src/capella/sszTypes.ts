@@ -26,7 +26,7 @@ const {
   Bytes32,
 } = primitiveSsz;
 
-export const Withdrawal = new ContainerType(
+export const Withdrawal = ContainerType.named(
   {
     index: WithdrawalIndex,
     validatorIndex: ValidatorIndex,
@@ -36,7 +36,7 @@ export const Withdrawal = new ContainerType(
   {typeName: "Withdrawal", jsonCase: "eth2"}
 );
 
-export const BLSToExecutionChange = new ContainerType(
+export const BLSToExecutionChange = ContainerType.named(
   {
     validatorIndex: ValidatorIndex,
     fromBlsPubkey: BLSPubkey,
@@ -45,7 +45,7 @@ export const BLSToExecutionChange = new ContainerType(
   {typeName: "BLSToExecutionChange", jsonCase: "eth2"}
 );
 
-export const SignedBLSToExecutionChange = new ContainerType(
+export const SignedBLSToExecutionChange = ContainerType.named(
   {
     message: BLSToExecutionChange,
     signature: BLSSignature,
@@ -53,16 +53,16 @@ export const SignedBLSToExecutionChange = new ContainerType(
   {typeName: "SignedBLSToExecutionChange", jsonCase: "eth2"}
 );
 
-export const Withdrawals = new ListCompositeType(Withdrawal, MAX_WITHDRAWALS_PER_PAYLOAD);
-export const ExecutionPayload = new ContainerType(
+export const Withdrawals = ListCompositeType.named(Withdrawal, MAX_WITHDRAWALS_PER_PAYLOAD, {typeName: "Withdrawals"});
+export const ExecutionPayload = ContainerType.named(
   {
     ...bellatrixSsz.ExecutionPayload.fields,
     withdrawals: Withdrawals, // New in capella
   },
-  {typeName: "ExecutionPayload", jsonCase: "eth2"}
+  {typeName: "ExecutionPayloadCapella", jsonCase: "eth2"}
 );
 
-export const ExecutionPayloadHeader = new ContainerType(
+export const ExecutionPayloadHeader = ContainerType.named(
   {
     ...bellatrixSsz.ExecutionPayloadHeader.fields,
     withdrawalsRoot: Root, // New in capella
@@ -70,17 +70,19 @@ export const ExecutionPayloadHeader = new ContainerType(
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
 
-export const BLSToExecutionChanges = new ListCompositeType(SignedBLSToExecutionChange, MAX_BLS_TO_EXECUTION_CHANGES);
-export const BeaconBlockBody = new ContainerType(
+export const BLSToExecutionChanges = ListCompositeType.named(SignedBLSToExecutionChange, MAX_BLS_TO_EXECUTION_CHANGES, {
+  typeName: "BLSToExecutionChanges",
+});
+export const BeaconBlockBody = ContainerType.named(
   {
     ...altairSsz.BeaconBlockBody.fields,
     executionPayload: ExecutionPayload, // Modified in capella
     blsToExecutionChanges: BLSToExecutionChanges,
   },
-  {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
+  {typeName: "BeaconBlockBodyCapella", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
-export const BeaconBlock = new ContainerType(
+export const BeaconBlock = ContainerType.named(
   {
     slot: Slot,
     proposerIndex: ValidatorIndex,
@@ -89,18 +91,18 @@ export const BeaconBlock = new ContainerType(
     stateRoot: Root,
     body: BeaconBlockBody, // Modified in Capella
   },
-  {typeName: "BeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
+  {typeName: "BeaconBlockCapella", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
-export const SignedBeaconBlock = new ContainerType(
+export const SignedBeaconBlock = ContainerType.named(
   {
     message: BeaconBlock, // Modified in capella
     signature: BLSSignature,
   },
-  {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
+  {typeName: "SignedBeaconBlockCapella", jsonCase: "eth2"}
 );
 
-export const BuilderBid = new ContainerType(
+export const BuilderBid = ContainerType.named(
   {
     header: ExecutionPayloadHeader,
     value: UintBn256,
@@ -109,7 +111,7 @@ export const BuilderBid = new ContainerType(
   {typeName: "BuilderBid", jsonCase: "eth2"}
 );
 
-export const SignedBuilderBid = new ContainerType(
+export const SignedBuilderBid = ContainerType.named(
   {
     message: BuilderBid,
     signature: BLSSignature,
@@ -117,7 +119,7 @@ export const SignedBuilderBid = new ContainerType(
   {typeName: "SignedBuilderBid", jsonCase: "eth2"}
 );
 
-export const HistoricalSummary = new ContainerType(
+export const HistoricalSummary = ContainerType.named(
   {
     blockSummaryRoot: Root,
     stateSummaryRoot: Root,
@@ -127,7 +129,7 @@ export const HistoricalSummary = new ContainerType(
 
 // we don't reuse bellatrix.BeaconState fields since we need to replace some keys
 // and we cannot keep order doing that
-export const BeaconState = new ContainerType(
+export const BeaconState = ContainerType.named(
   {
     genesisTime: UintNum64,
     genesisValidatorsRoot: Root,
@@ -138,7 +140,7 @@ export const BeaconState = new ContainerType(
     blockRoots: phase0Ssz.HistoricalBlockRoots,
     stateRoots: phase0Ssz.HistoricalStateRoots,
     // historical_roots Frozen in Capella, replaced by historical_summaries
-    historicalRoots: new ListCompositeType(Root, HISTORICAL_ROOTS_LIMIT),
+    historicalRoots: ListCompositeType.named(Root, HISTORICAL_ROOTS_LIMIT, {typeName: "HistoricalRoots"}),
     // Eth1
     eth1Data: phase0Ssz.Eth1Data,
     eth1DataVotes: phase0Ssz.Eth1DataVotes,
@@ -168,21 +170,23 @@ export const BeaconState = new ContainerType(
     nextWithdrawalIndex: WithdrawalIndex, // [New in Capella]
     nextWithdrawalValidatorIndex: ValidatorIndex, // [New in Capella]
     // Deep history valid from Capella onwards
-    historicalSummaries: new ListCompositeType(HistoricalSummary, HISTORICAL_ROOTS_LIMIT), // [New in Capella]
+    historicalSummaries: ListCompositeType.named(HistoricalSummary, HISTORICAL_ROOTS_LIMIT, {
+      typeName: "HistoricalSummaries",
+    }), // [New in Capella]
   },
-  {typeName: "BeaconState", jsonCase: "eth2"}
+  {typeName: "BeaconStateCapella", jsonCase: "eth2"}
 );
 
-export const BlindedBeaconBlockBody = new ContainerType(
+export const BlindedBeaconBlockBody = ContainerType.named(
   {
     ...altairSsz.BeaconBlockBody.fields,
     executionPayloadHeader: ExecutionPayloadHeader, // Modified in capella
     blsToExecutionChanges: BLSToExecutionChanges, // New in capella
   },
-  {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
+  {typeName: "BlindedBeaconBlockBodyCapella", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
-export const BlindedBeaconBlock = new ContainerType(
+export const BlindedBeaconBlock = ContainerType.named(
   {
     slot: Slot,
     proposerIndex: ValidatorIndex,
@@ -191,36 +195,36 @@ export const BlindedBeaconBlock = new ContainerType(
     stateRoot: Root,
     body: BlindedBeaconBlockBody, // Modified in capella
   },
-  {typeName: "BlindedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
+  {typeName: "BlindedBeaconBlockCapella", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
-export const SignedBlindedBeaconBlock = new ContainerType(
+export const SignedBlindedBeaconBlock = ContainerType.named(
   {
     message: BlindedBeaconBlock, // Modified in capella
     signature: BLSSignature,
   },
-  {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
+  {typeName: "SignedBlindedBeaconBlockCapella", jsonCase: "eth2"}
 );
 
-export const LightClientHeader = new ContainerType(
+export const LightClientHeader = ContainerType.named(
   {
     beacon: phase0Ssz.BeaconBlockHeader,
     execution: ExecutionPayloadHeader,
-    executionBranch: new VectorCompositeType(Bytes32, EXECUTION_PAYLOAD_DEPTH),
+    executionBranch: VectorCompositeType.named(Bytes32, EXECUTION_PAYLOAD_DEPTH, {typeName: "ExecutionBranch"}),
   },
-  {typeName: "LightClientHeader", jsonCase: "eth2"}
+  {typeName: "LightClientHeaderCapella", jsonCase: "eth2"}
 );
 
-export const LightClientBootstrap = new ContainerType(
+export const LightClientBootstrap = ContainerType.named(
   {
     header: LightClientHeader,
     currentSyncCommittee: altairSsz.SyncCommittee,
     currentSyncCommitteeBranch: altairSsz.LightClientBootstrap.fields.currentSyncCommitteeBranch,
   },
-  {typeName: "LightClientBootstrap", jsonCase: "eth2"}
+  {typeName: "LightClientBootstrapCapella", jsonCase: "eth2"}
 );
 
-export const LightClientUpdate = new ContainerType(
+export const LightClientUpdate = ContainerType.named(
   {
     attestedHeader: LightClientHeader,
     nextSyncCommittee: altairSsz.SyncCommittee,
@@ -230,10 +234,10 @@ export const LightClientUpdate = new ContainerType(
     syncAggregate: altairSsz.SyncAggregate,
     signatureSlot: Slot,
   },
-  {typeName: "LightClientUpdate", jsonCase: "eth2"}
+  {typeName: "LightClientUpdateCapella", jsonCase: "eth2"}
 );
 
-export const LightClientFinalityUpdate = new ContainerType(
+export const LightClientFinalityUpdate = ContainerType.named(
   {
     attestedHeader: LightClientHeader,
     finalizedHeader: LightClientHeader,
@@ -241,28 +245,30 @@ export const LightClientFinalityUpdate = new ContainerType(
     syncAggregate: altairSsz.SyncAggregate,
     signatureSlot: Slot,
   },
-  {typeName: "LightClientFinalityUpdate", jsonCase: "eth2"}
+  {typeName: "LightClientFinalityUpdateCapella", jsonCase: "eth2"}
 );
 
-export const LightClientOptimisticUpdate = new ContainerType(
+export const LightClientOptimisticUpdate = ContainerType.named(
   {
     attestedHeader: LightClientHeader,
     syncAggregate: altairSsz.SyncAggregate,
     signatureSlot: Slot,
   },
-  {typeName: "LightClientOptimisticUpdate", jsonCase: "eth2"}
+  {typeName: "LightClientOptimisticUpdateCapella", jsonCase: "eth2"}
 );
 
-export const LightClientStore = new ContainerType(
+export const LightClientStore = ContainerType.named(
   {
     snapshot: LightClientBootstrap,
-    validUpdates: new ListCompositeType(LightClientUpdate, EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH),
+    validUpdates: ListCompositeType.named(LightClientUpdate, EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH, {
+      typeName: "ValidUpdates",
+    }),
   },
   {typeName: "LightClientStore", jsonCase: "eth2"}
 );
 
 // PayloadAttributes primarily for SSE event
-export const PayloadAttributes = new ContainerType(
+export const PayloadAttributes = ContainerType.named(
   {
     ...bellatrixSsz.PayloadAttributes.fields,
     withdrawals: Withdrawals,
@@ -270,7 +276,7 @@ export const PayloadAttributes = new ContainerType(
   {typeName: "PayloadAttributes", jsonCase: "eth2"}
 );
 
-export const SSEPayloadAttributes = new ContainerType(
+export const SSEPayloadAttributes = ContainerType.named(
   {
     ...bellatrixSsz.SSEPayloadAttributesCommon.fields,
     payloadAttributes: PayloadAttributes,
