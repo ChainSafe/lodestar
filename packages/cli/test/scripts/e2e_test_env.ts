@@ -3,12 +3,12 @@ import path from "node:path";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
-import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js";
+import {connectAllNodes} from "../utils/simulation/utils/network.js";
 
 const genesisSlotsDelay = 20;
 
 const ttd = getEstimatedTTD({
-  genesisDelay: genesisSlotsDelay,
+  genesisDelaySeconds: genesisSlotsDelay * 6,
   bellatrixForkEpoch: 0,
   secondsPerSlot: 6,
   cliqueSealingPeriod: 5,
