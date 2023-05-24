@@ -654,10 +654,10 @@
     "@chainsafe/as-sha256" "^0.4.1"
     "@chainsafe/persistent-merkle-tree" "^0.6.1"
 
-"@chainsafe/threads@^1.10.0":
-  version "1.10.0"
-  resolved "https://registry.npmjs.org/@chainsafe/threads/-/threads-1.10.0.tgz"
-  integrity sha512-1PRtW3s5welk2WUAMN0bjEGtQ3PSqLWAxlMTSeOYJ2NV+bgNgi8PsALX/xEiB/CHd8XG5gS2BlmYZ+Q3b4wR7Q==
+"@chainsafe/threads@^1.11.0":
+  version "1.11.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/threads/-/threads-1.11.0.tgz#4845f452d30901053991cf050696746a442a8933"
+  integrity sha512-l36K9eXqpE0PTnQThDBrxmkx0DX4UV2Qt0l9ASRHRbCUZW3SlSAS+b0//DfTQ2/OXeDVPuE7/72991lTOaKmdQ==
   dependencies:
     callsites "^3.1.0"
     debug "^4.2.0"
