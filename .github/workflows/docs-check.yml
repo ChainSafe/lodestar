@@ -1,0 +1,16 @@
+name: Check docs
+
+on:
+  push:
+    # We intentionally don't run push on feature branches. See PR for rational.
+    branches: [unstable, stable]
+  pull_request:
+
+jobs:
+  build:
+    name: Docs spellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: rojopolis/spellcheck-github-actions@0.32.0
+        name: Spellcheck
