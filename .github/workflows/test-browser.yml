@@ -1,5 +1,10 @@
 name: Browser tests
 
+concurrency:
+  # If PR, cancel prev commits. head_ref = source branch name on pull_request, null if push
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 on:
   push:
     # We intentionally don't run push on feature branches. See PR for rational.
