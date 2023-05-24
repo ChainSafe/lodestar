@@ -172,9 +172,6 @@ export async function validateGossipAttestation(
     //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) == attestation.data.target.root
     // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
-    // Using the target checkpoint state here caused unstable memory issue
-    // See https://github.com/ChainSafe/lodestar/issues/4896
-    // TODO: https://github.com/ChainSafe/lodestar/issues/4900
     const attHeadState = await getStateForAttestationVerification(
       chain,
       attSlot,
