@@ -53,7 +53,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
 
       - name: Run the e2e test environment
-        run: scripts/run_e2e_test_env.sh start
+        run: scripts/run_e2e_env.sh start
 
       - name: E2E tests
         run: yarn test:e2e
@@ -61,7 +61,7 @@ jobs:
           GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL!=0 && secrets.GOERLI_RPC_URL || env.GOERLI_RPC_DEFAULT_URL }}
 
       - name: Stop the e2e test environment
-        run: scripts/run_e2e_test_env.sh stop
+        run: scripts/run_e2e_env.sh stop
 
       - name: Upload debug log test for test env
         if: ${{ always() }}
