@@ -1,0 +1,16 @@
+name: General question
+description: General questions related to this project
+title: "[Descriptive title] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **NOTE: General questions should go to the [Discord chat](https://discord.com/invite/xSAwrnCWcg) instead of the issue tracker.**
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: A clear and concise description of your question. 
+      placeholder: I have a question about...
+    validations:
+      required: true    
