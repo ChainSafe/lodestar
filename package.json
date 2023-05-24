@@ -28,8 +28,7 @@
     "release:tag-rc": "node scripts/release/tag_rc.mjs",
     "release:tag-stable": "node scripts/release/tag_stable.mjs",
     "release:publish": "lerna publish from-package --yes --no-verify-access",
-    "check-readme": "lerna run check-readme",
-    "postinstall": "patch-package"
+    "check-readme": "lerna run check-readme"
   },
   "devDependencies": {
     "@chainsafe/eslint-plugin-node": "^11.2.3",
@@ -67,9 +66,7 @@
     "node-gyp": "^9.3.1",
     "npm-run-all": "^4.1.5",
     "nyc": "^15.1.0",
-    "patch-package": "^6.5.1",
     "path-browserify": "^1.0.1",
-    "postinstall-postinstall": "^2.1.0",
     "prettier": "^2.8.7",
     "process": "^0.11.10",
     "resolve-typescript-plugin": "^2.0.1",
