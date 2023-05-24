@@ -79,7 +79,7 @@ enum LoggerModule {
  * Short delay before closing db to give async operations sufficient time to complete
  * and prevent "Database is not open" errors when shutting down beacon node.
  */
-const DELAY_BEFORE_CLOSING_DB_MS = 1000;
+const DELAY_BEFORE_CLOSING_DB_MS = 500;
 
 /**
  * The main Beacon Node class.  Contains various components for getting and processing data from the
