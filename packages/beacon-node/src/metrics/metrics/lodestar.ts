@@ -531,6 +531,32 @@ export function createLodestarMetrics(
       }),
     },
 
+    // Gossip attestation
+    gossipAttestation: {
+      useHeadBlockState: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_use_head_block_state_count",
+        help: "Count of gossip attestation verification using head block state",
+        labelNames: ["caller"],
+      }),
+      useHeadBlockStateDialedToTargetEpoch: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_use_head_block_state_dialed_to_target_epoch_count",
+        help: "Count of gossip attestation verification using head block state and dialed to target epoch",
+        labelNames: ["caller"],
+      }),
+      headSlotToAttestationSlot: register.histogram<"caller">({
+        name: "lodestar_gossip_attestation_head_slot_to_attestation_slot",
+        help: "Slot distance between attestation slot and head slot",
+        labelNames: ["caller"],
+        buckets: [0, 1, 2, 4, 8, 16, 32, 64],
+      }),
+      attestationSlotToClockSlot: register.histogram<"caller">({
+        name: "lodestar_gossip_attestation_attestation_slot_to_clock_slot",
+        help: "Slot distance between clock slot and attestation slot",
+        labelNames: ["caller"],
+        buckets: [0, 1, 2, 4, 8, 16, 32, 64],
+      }),
+    },
+
     // Gossip block
     gossipBlock: {
       elapsedTimeTillReceived: register.histogram({

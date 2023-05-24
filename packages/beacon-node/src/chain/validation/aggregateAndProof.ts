@@ -12,7 +12,12 @@ import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/in
 import {RegenCaller} from "../regen/index.js";
 import {getAttDataBase64FromSignedAggregateAndProofSerialized} from "../../util/sszBytes.js";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets/index.js";
-import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation.js";
+import {
+  getCommitteeIndices,
+  getStateForAttestationVerification,
+  verifyHeadBlockAndTargetRoot,
+  verifyPropagationSlotRange,
+} from "./attestation.js";
 
 export type AggregateAndProofValidationResult = {
   indexedAttestation: phase0.IndexedAttestation;
@@ -46,6 +51,11 @@ export async function validateGossipAggregateAndProof(
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
+
+  chain.metrics?.gossipAttestation.attestationSlotToClockSlot.observe(
+    {caller: RegenCaller.validateGossipAggregateAndProof},
+    chain.clock.currentSlot - attSlot
+  );
 
   if (!cachedAttData) {
     // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
@@ -96,6 +106,7 @@ export async function validateGossipAggregateAndProof(
     attTarget.root,
     attSlot,
     attEpoch,
+    RegenCaller.validateGossipAggregateAndProof,
     chain.opts.maxSkipSlots
   );
 
@@ -103,17 +114,13 @@ export async function validateGossipAggregateAndProof(
   // -- i.e. get_ancestor(store, aggregate.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   // > Altready check in `chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)`
 
-  // Using the target checkpoint state here caused unstable memory issue
-  // See https://github.com/ChainSafe/lodestar/issues/4896
-  // TODO: https://github.com/ChainSafe/lodestar/issues/4900
-  const attHeadState = await chain.regen
-    .getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAggregateAndProof)
-    .catch((e: Error) => {
-      throw new AttestationError(GossipAction.IGNORE, {
-        code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
-        error: e as Error,
-      });
-    });
+  const attHeadState = await getStateForAttestationVerification(
+    chain,
+    attSlot,
+    attEpoch,
+    attHeadBlock,
+    RegenCaller.validateGossipAggregateAndProof
+  );
 
   const committeeIndices: number[] = cachedAttData
     ? cachedAttData.committeeIndices
