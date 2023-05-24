@@ -1,8 +1,8 @@
 import {WithOptionalBytes, allForks} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
-import {JobItemQueue} from "../../util/queue/index.js";
+import {toHex, isErrorAborted} from "@lodestar/utils";
+import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {BlockError, BlockErrorCode} from "../errors/index.js";
+import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import type {BeaconChain} from "../chain.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
@@ -111,6 +111,10 @@ export async function processBlocks(
       await importBlock.call(this, fullyVerifiedBlock, opts);
     }
   } catch (e) {
+    if (isErrorAborted(e) || isQueueErrorAborted(e) || isBlockErrorAborted(e)) {
+      return; // Ignore
+    }
+
     // above functions should only throw BlockError
     const err = getBlockError(e, blocks[0].block);
 
