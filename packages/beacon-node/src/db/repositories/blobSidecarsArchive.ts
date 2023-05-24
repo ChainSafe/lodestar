@@ -8,7 +8,7 @@ import {blobSidecarsWrapperSsz, BlobSidecarsWrapper} from "./blobSidecars.js";
 /**
  * blobSidecarsWrapper by slot
  *
- * Used to store unfinalized BlobsSidecar
+ * Used to store finalized BlobSidecars
  */
 export class BlobSidecarsArchiveRepository extends Repository<Slot, BlobSidecarsWrapper> {
   constructor(config: ChainForkConfig, db: Db) {

@@ -19,9 +19,9 @@ export const BLOB_SIDECARS_IN_WRAPPER_INDEX = 44;
 export const BLOBSIDECAR_FIXED_SIZE = 131256;
 
 /**
- * blobSidecarsWrapper by block root (= hash_tree_root(SignedBeaconBlockAndBlobsSidecar.beacon_block.message))
+ * blobSidecarsWrapper by block root (= hash_tree_root(SignedBeaconBlock.message))
  *
- * Used to store unfinalized BlobsSidecar
+ * Used to store unfinalized BlobSidecars
  */
 export class BlobSidecarsRepository extends Repository<Uint8Array, BlobSidecarsWrapper> {
   constructor(config: ChainForkConfig, db: Db) {
