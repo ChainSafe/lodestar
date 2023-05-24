@@ -7,7 +7,7 @@ import {connectAllNodes} from "../utils/simulation/utils/network.js";
 
 const secondsPerSlot = 4;
 const cliqueSealingPeriod = 5;
-const genesisDelaySeconds = 20 * secondsPerSlot;
+const genesisDelaySeconds = 30 * secondsPerSlot;
 const altairForkEpoch = 0;
 const bellatrixForkEpoch = 0;
 const capellaForkEpoch = 0;
