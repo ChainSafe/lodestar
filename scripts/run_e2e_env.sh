@@ -5,7 +5,8 @@ function start_app() {
   nohup npx ts-node --esm packages/cli/test/scripts/e2e_test_env.ts > test-logs/e2e-test-env/simulation.out 2>&1 &
   echo $! > test-logs/e2e-test-env/simulation.pid
   echo "Wait for the node to be ready"
-  npx wait-port -t 60000 0.0.0.0:5001
+  # Let the first epoch to pass
+  npx wait-port -t 90000 0.0.0.0:5001/eth/v1/beacon/headers/8
 }
 
 function stop_app() {
