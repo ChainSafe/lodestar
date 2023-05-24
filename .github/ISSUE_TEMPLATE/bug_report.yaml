@@ -13,7 +13,7 @@ body:
       description: A clear and concise description of what the bug is and steps to reproduce it.
       placeholder: This is what I'm seeing.
     validations:
-      required: true- type: input    
+      required: true   
   - type: textarea
     id: expected
     attributes:
