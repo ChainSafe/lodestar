@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        **NOTE: General questions should go to the [Discord chat](https://discord.com/invite/xSAwrnCWcg) instead of the issue tracker.**
+        **NOTE: General questions should go to the [Discord chat](https://discord.gg/aMxzVcr) instead of the issue tracker.**
   - type: textarea
     id: question
     attributes:
