@@ -2,7 +2,8 @@
 
 function start_app() {
   mkdir -p test-logs/e2e-test-env
-  nohup LODESTAR_PRESET=minimal npx ts-node --esm packages/cli/test/scripts/e2e_test_env.ts > test-logs/e2e-test-env/simulation.out 2>&1 &
+  export LODESTAR_PRESET=minimal
+  nohup npx ts-node --esm packages/cli/test/scripts/e2e_test_env.ts > test-logs/e2e-test-env/simulation.out 2>&1 &
   echo $! > test-logs/e2e-test-env/simulation.pid
   echo "Wait for the node to be ready"
   # Let the first epoch to pass
