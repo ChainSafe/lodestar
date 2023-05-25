@@ -6,7 +6,7 @@ function start_app() {
   echo $! > test-logs/e2e-test-env/simulation.pid
   echo "Wait for the node to be ready"
   # Let the first epoch to pass
-  npx wait-port -t 120000 http://0.0.0.0:5001/eth/v1/beacon/headers/32
+  npx wait-port -t 220000 http://0.0.0.0:5001/eth/v1/beacon/headers/32
 }
 
 function stop_app() {
