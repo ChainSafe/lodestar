@@ -8,9 +8,9 @@ import {connectAllNodes} from "../utils/simulation/utils/network.js";
 const secondsPerSlot = 4;
 const cliqueSealingPeriod = 5;
 const genesisDelaySeconds = 30 * secondsPerSlot;
-const altairForkEpoch = 0;
-const bellatrixForkEpoch = 0;
-const capellaForkEpoch = 0;
+const altairForkEpoch = 1;
+const bellatrixForkEpoch = 2;
+const capellaForkEpoch = 3;
 // Make sure bellatrix started before TTD reach
 const additionalSlotsForTTD = 2;
 
