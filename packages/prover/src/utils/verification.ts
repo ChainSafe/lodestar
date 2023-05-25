@@ -1,4 +1,3 @@
-import {NetworkName} from "@lodestar/config/networks";
 import {Logger} from "@lodestar/utils";
 import {ELRequestHandlerAny} from "../interfaces.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";

@@ -1,7 +1,6 @@
 import {Blockchain} from "@ethereumjs/blockchain";
 import {Account, Address} from "@ethereumjs/util";
 import {VM} from "@ethereumjs/vm";
-import {NetworkName} from "@lodestar/config/networks";
 import {allForks} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {ZERO_ADDRESS} from "../constants.js";

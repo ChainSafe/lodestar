@@ -1,5 +1,4 @@
 import {Common, CustomChain, Hardfork} from "@ethereumjs/common";
-import {NetworkName} from "@lodestar/config/networks";
 import {ELRequestHandler} from "../interfaces.js";
 import {ELApiHandlers, ELApiParams, ELApiReturn, ELResponse, ELResponseWithResult} from "../types.js";
 import {isValidResponse} from "./json_rpc.js";
