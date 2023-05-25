@@ -717,7 +717,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "semi-dark-green"
+                "color": "semi-dark-green",
+                "value": null
               }
             ]
           }
@@ -805,7 +806,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "semi-dark-green"
+                "color": "semi-dark-green",
+                "value": null
               }
             ]
           }
@@ -1653,7 +1655,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1779,7 +1782,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1874,7 +1878,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2869,7 +2874,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2986,7 +2992,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -3607,7 +3614,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -3699,7 +3707,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -4251,7 +4260,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -4371,7 +4381,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -4512,7 +4523,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "percentunit"
         },
         "overrides": []
       },
@@ -4521,6 +4533,429 @@
         "w": 12,
         "x": 0,
         "y": 162
+      },
+      "id": 602,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=\"0.5\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
+          "legendFormat": "<=0.5s",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=\"1\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "<=1s",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=\"2\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "<=2s",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=\"4\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "<=4s",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_processed_bucket{le=\"6\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "<=6s",
+          "range": true,
+          "refId": "E"
+        }
+      ],
+      "title": "Process Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 162
+      },
+      "id": 604,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"0.5\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "legendFormat": "<=0.5s",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"1\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "<=1s",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"2\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "<=2s",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"4\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "<=4s",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(lodestar_gossip_block_elapsed_time_till_received_bucket{le=\"6\"}[$rate_interval]))\n/\nsum(rate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "<=6s",
+          "range": true,
+          "refId": "E"
+        }
+      ],
+      "title": "Received Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "GOSSIP_ERROR_PAST_SLOT"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 170
+      },
+      "id": 603,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_block_process_block_errors[$rate_interval]) * 12",
+          "legendFormat": "{{error}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Process Error",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "GOSSIP_ERROR_PAST_SLOT"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 170
       },
       "id": 601,
       "options": {
@@ -4542,13 +4977,13 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_gossip_block_process_block_errors[$rate_interval]) * 12",
-          "legendFormat": "{{blockErrorCode}}",
+          "expr": "rate(lodestar_gossip_validation_error_total{topic=\"beacon_block\"}[$rate_interval]) * 12",
+          "legendFormat": "{{error}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Process Block Error - Unknown Parent",
+      "title": "Validation Errors Per Slot",
       "type": "timeseries"
     },
     {
@@ -4561,7 +4996,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 170
+        "y": 178
       },
       "id": 188,
       "panels": [],
@@ -4639,7 +5074,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 171
+        "y": 179
       },
       "id": 180,
       "options": {
@@ -4733,7 +5168,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 171
+        "y": 179
       },
       "id": 176,
       "options": {
@@ -4810,7 +5245,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -4826,7 +5262,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 179
+        "y": 187
       },
       "id": 182,
       "options": {
@@ -4903,7 +5339,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -4919,7 +5356,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 179
+        "y": 187
       },
       "id": 178,
       "options": {
@@ -4996,7 +5433,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -5012,7 +5450,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 187
+        "y": 195
       },
       "id": 498,
       "options": {
@@ -5089,7 +5527,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -5105,7 +5544,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 187
+        "y": 195
       },
       "id": 500,
       "options": {
@@ -5182,7 +5621,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -5198,7 +5638,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 195
+        "y": 203
       },
       "id": 184,
       "options": {
@@ -5275,7 +5715,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -5291,7 +5732,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 195
+        "y": 203
       },
       "id": 501,
       "options": {
