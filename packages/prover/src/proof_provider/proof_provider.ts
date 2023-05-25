@@ -26,6 +26,7 @@ type RootProviderOptions = Omit<RootProviderInitOptions, "transport"> & {
 export class ProofProvider {
   private store: PayloadStore;
   private logger: Logger;
+  readonly config: ChainForkConfig;
 
   // Make sure readyPromise doesn't throw unhandled exceptions
   private readyPromise?: Promise<void>;
@@ -34,6 +35,7 @@ export class ProofProvider {
   constructor(private opts: RootProviderOptions) {
     this.store = new PayloadStore({api: opts.api, logger: opts.logger});
     this.logger = opts.logger;
+    this.config = opts.config;
   }
 
   async waitToBeReady(): Promise<void> {
@@ -48,7 +50,11 @@ export class ProofProvider {
       network: opts.network,
       urls: opts.urls.join(","),
     });
-    const config = createChainForkConfig(networksChainConfig[opts.network]);
+
+    const config = opts.network
+      ? createChainForkConfig(networksChainConfig[opts.network])
+      : createChainForkConfig(opts.config);
+
     const api = getClient({urls: opts.urls}, {config});
     const transport = new LightClientRestTransport(api);
 

@@ -2,6 +2,7 @@ import sinon from "sinon";
 import {NetworkName} from "@lodestar/config/networks";
 import {ForkConfig} from "@lodestar/config";
 import {getEnvLogger} from "@lodestar/logger/env";
+import {PresetName} from "@lodestar/params";
 import {ELVerifiedRequestHandlerOpts} from "../../src/interfaces.js";
 import {ProofProvider} from "../../src/proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "../../src/types.js";
@@ -39,6 +40,11 @@ export function generateReqHandlerOptionsMock(
     logger: getEnvLogger(),
     proofProvider: {
       getExecutionPayload: sinon.stub().resolves(executionPayload),
+      config: {
+        ...config,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        PRESET_BASE: data.network as unknown as PresetName,
+      },
     } as unknown as ProofProvider,
     network: data.network as NetworkName,
   };

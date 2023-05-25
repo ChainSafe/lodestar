@@ -9,7 +9,6 @@ export const eth_call: ELVerifiedRequestHandler<ELApiParams["call"], ELApiReturn
   payload,
   logger,
   proofProvider,
-  network,
 }) => {
   const {
     params: [tx, block],
@@ -19,7 +18,7 @@ export const eth_call: ELVerifiedRequestHandler<ELApiParams["call"], ELApiReturn
 
   try {
     // TODO: Optimize the creation of the evm
-    const evm = await createEVM({proofProvider, network});
+    const evm = await createEVM({proofProvider});
     const evmWithState = await getEVMWithState({
       handler: handler as unknown as ELApiHandlers["eth_getProof"],
       executionPayload,

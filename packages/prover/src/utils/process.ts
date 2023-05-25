@@ -1,5 +1,4 @@
 import {LogData, Logger} from "@lodestar/utils";
-import {NetworkName} from "@lodestar/config/networks";
 import {ELRequestHandler, ELVerifiedRequestHandler} from "../interfaces.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "../types.js";
@@ -26,13 +25,11 @@ export async function processAndVerifyRequest({
   handler,
   proofProvider,
   logger,
-  network,
 }: {
   payload: ELRequestPayload;
   handler: ELRequestHandler;
   proofProvider: ProofProvider;
   logger: Logger;
-  network: NetworkName;
 }): Promise<ELResponse | undefined> {
   await proofProvider.waitToBeReady();
   logger.debug("Processing request", {method: payload.method, params: payload.params} as unknown as LogData);
@@ -40,7 +37,7 @@ export async function processAndVerifyRequest({
 
   if (verifiedHandler !== undefined) {
     logger.debug("Verified request handler found", {method: payload.method});
-    return verifiedHandler({payload, handler, proofProvider, logger, network});
+    return verifiedHandler({payload, handler, proofProvider, logger});
   }
 
   logger.warn("Verified request handler not found. Falling back to proxy.", {method: payload.method});
