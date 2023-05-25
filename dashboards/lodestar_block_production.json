@@ -1012,7 +1012,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "lodestar_all_validators_expected_count",
+          "expr": "lodestar_all_validators_total_count",
           "hide": false,
           "interval": "",
           "legendFormat": "",
@@ -1122,7 +1122,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_attached_validators_expected_count",
+          "expr": "lodestar_attached_validators_total_count",
           "format": "time_series",
           "instant": false,
           "interval": "",
