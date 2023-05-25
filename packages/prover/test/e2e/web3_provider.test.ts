@@ -1,13 +1,40 @@
+import {request} from "node:http";
 import {expect} from "chai";
 import Web3 from "web3";
 import {ethers} from "ethers";
+import {sleep} from "@lodestar/utils";
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
 
 const rpcURL = "http://0.0.0.0:8001";
 const beaconUrl = "http://0.0.0.0:5001";
+const capellaForkEpoch = 3;
 
-describe("web3_provider", () => {
+async function waitForEndpoint(url: string): Promise<void> {
+  let pass = false;
+  while (pass) {
+    pass = await new Promise((resolve) => {
+      request(url, (res) => {
+        if (res.statusCode === 200) {
+          return resolve(true);
+        }
+        resolve(false);
+      });
+    });
+    if (!pass) await sleep(1000);
+  }
+}
+
+describe("web3_provider", function () {
+  // Wait for at least teh capella fork to be started
+  // These values are based on `e2e_test_env.ts`
+  this.timeout(capellaForkEpoch * 8 * 4 * 1000);
+
+  before("wait for the capella fork", async () => {
+    // Wait for the first epoch of capella to pass so that the light client can sync from a finalized checkpoint
+    await waitForEndpoint(`${beaconUrl}/eth/v1/beacon/headers/${(capellaForkEpoch + 1) * 8}`);
+  });
+
   describe("createVerifiedExecutionProvider", function () {
     // As the code will try to sync the light client, it may take a while
     this.timeout(10000);

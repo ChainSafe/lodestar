@@ -109,7 +109,6 @@ export async function getSyncCheckpoint(api: Pick<Api, "beacon">, checkpoint?: s
   if (!syncCheckpoint) {
     const res = await api.beacon.getStateFinalityCheckpoints("head");
     ApiError.assert(res);
-    console.log({stateFinalityCheckpoints: res.response.data.finalized});
     syncCheckpoint = res.response.data.finalized.root;
   }
 
