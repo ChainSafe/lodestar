@@ -21,7 +21,6 @@ export type IChainOptions = BlockProcessOpts &
     sanityCheckExecutionEngineBlobs?: boolean;
     /** Max number of produced blobs by local validators to cache */
     maxCachedBlobSidecars?: number;
-    validatorMonitor?: boolean;
   };
 
 export type BlockProcessOpts = {
@@ -78,5 +77,4 @@ export const defaultChainOptions: IChainOptions = {
   // for gossip block validation, it's unlikely we see a reorg with 32 slots
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,
-  validatorMonitor: true,
 };

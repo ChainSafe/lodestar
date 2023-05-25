@@ -7,12 +7,7 @@ const PROPOSER_PRESERVE_EPOCHS = 2;
 
 export type ProposerPreparationData = routes.validator.ProposerPreparationData;
 
-/** Cache to track the validators registored with beacon node. Could eventually be promoted as a
- * full monitor
- */
 export class BeaconProposerCache {
-  /** Flag to switch on/off validator stats default set to true */
-  readonly validatorMonitor: boolean;
   private readonly feeRecipientByValidatorIndex: MapDef<
     string,
     {epoch: Epoch; feeRecipient: string; sinceEpoch: Epoch}
@@ -28,7 +23,6 @@ export class BeaconProposerCache {
         sinceEpoch: 0,
       })
     );
-    this.validatorMonitor = opts.validatorMonitor ?? true;
   }
 
   add(epoch: Epoch, {validatorIndex, feeRecipient}: ProposerPreparationData): void {

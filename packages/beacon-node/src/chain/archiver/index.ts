@@ -1,4 +1,4 @@
-import {Logger} from "@lodestar/utils";
+import {Logger, LogLevel} from "@lodestar/utils";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {ValidatorIndex, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -104,16 +104,14 @@ export class Archiver {
         finalized,
         this.chain.clock.currentEpoch
       );
-      if (this.chain.beaconProposerCache.validatorMonitor) {
-        this.collectFinalizedProposalStats(
-          this.chain.checkpointStateCache,
-          this.chain.forkChoice,
-          this.chain.beaconProposerCache,
-          finalizedData,
-          finalized,
-          this.prevFinalized
-        );
-      }
+      this.collectFinalizedProposalStats(
+        this.chain.checkpointStateCache,
+        this.chain.forkChoice,
+        this.chain.beaconProposerCache,
+        finalizedData,
+        finalized,
+        this.prevFinalized
+      );
       this.prevFinalized = finalized;
 
       // should be after ArchiveBlocksTask to handle restart cleanly
@@ -309,30 +307,25 @@ export class Archiver {
     //  - debug log if validators attached but no proposals were scheduled
     //  - info log if proposals were scheduled (canonical) or there were orphans (non canonical)
     if (finalizedAttachedValidatorsCount !== 0) {
-      if (attachedValidators.total !== 0 || attachedValidators.orphaned !== 0) {
-        this.logger.info("Attached validators finalized proposal stats", {
-          ...attachedValidators,
-          finalizedAttachedValidatorsCount,
-        });
-      } else {
-        this.logger.debug("Attached validators finalized proposal stats", {
-          ...attachedValidators,
-          finalizedAttachedValidatorsCount,
-        });
-      }
-
-      this.metrics?.attachedValidators.total.set(attachedValidators.total);
-      this.metrics?.attachedValidators.finalized.set(attachedValidators.finalized);
-      this.metrics?.attachedValidators.orphaned.set(attachedValidators.orphaned);
-      this.metrics?.attachedValidators.missed.set(attachedValidators.missed);
+      const logLevel =
+        attachedValidators.total !== 0 || attachedValidators.orphaned !== 0 ? LogLevel.info : LogLevel.debug;
+      this.logger[logLevel]("Attached validators finalized proposal stats", {
+        ...attachedValidators,
+        validators: finalizedAttachedValidatorsCount,
+      });
     } else {
-      this.logger.debug("No attached Proposers to the beacon", {finalizedEpoch: finalized.epoch});
+      this.logger.debug("No proposers attached to beacon node", {finalizedEpoch: finalized.epoch});
     }
 
     this.metrics?.allValidators.total.set(allValidators.total);
     this.metrics?.allValidators.finalized.set(allValidators.finalized);
     this.metrics?.allValidators.orphaned.set(allValidators.orphaned);
     this.metrics?.allValidators.missed.set(allValidators.missed);
+
+    this.metrics?.attachedValidators.total.set(attachedValidators.total);
+    this.metrics?.attachedValidators.finalized.set(attachedValidators.finalized);
+    this.metrics?.attachedValidators.orphaned.set(attachedValidators.orphaned);
+    this.metrics?.attachedValidators.missed.set(attachedValidators.missed);
 
     this.metrics?.finalizedCanonicalCheckpointsCount.set(finalizedCanonicalCheckpointsCount);
     this.metrics?.finalizedFoundCheckpointsInStateCache.set(finalizedFoundCheckpointsInStateCache);
