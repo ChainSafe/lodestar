@@ -12,10 +12,7 @@ export class BeaconProposerCache {
     string,
     {epoch: Epoch; feeRecipient: string; sinceEpoch: Epoch}
   >;
-  constructor(
-    opts: {suggestedFeeRecipient: string; validatorMonitor?: boolean},
-    private readonly metrics?: Metrics | null
-  ) {
+  constructor(opts: {suggestedFeeRecipient: string}, private readonly metrics?: Metrics | null) {
     this.feeRecipientByValidatorIndex = new MapDef<string, {epoch: Epoch; feeRecipient: string; sinceEpoch: Epoch}>(
       () => ({
         epoch: 0,
