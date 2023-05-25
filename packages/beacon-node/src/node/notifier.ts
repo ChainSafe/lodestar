@@ -34,6 +34,7 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
 
   const SLOTS_PER_SYNC_COMMITTEE_PERIOD = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
   let hasLowPeerCount = false; // Only log once
+  let isFirstTime = true;
 
   try {
     while (!signal.aborted) {
@@ -131,7 +132,8 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
       }
 
       // Log halfway through each slot
-      await sleep(timeToNextHalfSlot(config, chain), signal);
+      await sleep(timeToNextHalfSlot(config, chain, isFirstTime), signal);
+      isFirstTime = false;
     }
   } catch (e) {
     if (e instanceof ErrorAborted) {
@@ -142,11 +144,18 @@ export async function runNodeNotifier(modules: NodeNotifierModules): Promise<voi
   }
 }
 
-function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain): number {
+function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTime: boolean): number {
   const msPerSlot = config.SECONDS_PER_SLOT * 1000;
+  const msPerHalfSlot = msPerSlot / 2;
   const msFromGenesis = Date.now() - chain.genesisTime * 1000;
   const msToNextSlot = msPerSlot - (msFromGenesis % msPerSlot);
-  return msToNextSlot > msPerSlot / 2 ? msToNextSlot - msPerSlot / 2 : msToNextSlot + msPerSlot / 2;
+  if (isFirstTime) {
+    // at the 1st time we may miss the next slot
+    return msToNextSlot > msPerHalfSlot ? msToNextSlot - msPerHalfSlot : msToNextSlot + msPerHalfSlot;
+  } else {
+    // after the 1st time always wait until half of next clock slot
+    return msToNextSlot + msPerHalfSlot;
+  }
 }
 
 function getHeadExecutionInfo(
