@@ -8,7 +8,6 @@
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-
 Lodestar defines all constants and presets defined in the [Ethereum Consensus spec](https://github.com/ethereum/consensus-specs). This can be used in conjunction with other Lodestar libraries to interact with the Ethereum consensus.
 
 ## Installation

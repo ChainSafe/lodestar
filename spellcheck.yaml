@@ -16,5 +16,7 @@ matrix:
             - pre
     sources:
       - "docs/**/*.md"
-      - "README.md"
       - "CONTRIBUTING.md"
+      - "README.md"
+      # TODO
+      # - "packages/*/README.md"

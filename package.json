@@ -14,6 +14,8 @@
     "build:watch": "lerna exec --parallel -- 'yarn run build:watch'",
     "build:ifchanged": "lerna exec -- ../../scripts/build_if_changed.sh",
     "lint": "eslint --color --ext .ts packages/*/src packages/*/test",
+    "lint-docs": "prettier '**/*.md' --check",
+    "lint-docs:fix": "prettier '**/*.md' --write",
     "check-build": "lerna run check-build",
     "check-types": "lerna run check-types --no-bail",
     "coverage": "lerna run coverage --no-bail",
