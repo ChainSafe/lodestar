@@ -5,7 +5,7 @@ Prometheus is an open-source monitoring system with efficient time series databa
 ## Prometheus
 
 To start, download Prometheus from https://prometheus.io/download/.
-Unzip the downloaded .zip file and run Prometheus from its installed location with the lodestar prometheus.yml passed in as the config file
+Unzip the downloaded .zip file and run Prometheus from its installed location with the lodestar `prometheus.yml` passed in as the configuration file
 
 ```
 ./prometheus --config.file=$dataDir/prometheus.yml
@@ -13,7 +13,7 @@ Unzip the downloaded .zip file and run Prometheus from its installed location wi
 
 <!-- prettier-ignore-start -->
 !!! info
-    8008 is also the default port specified in the prometheus.yml in the lodestar repo
+    8008 is also the default port specified in the `prometheus.yml` in the lodestar repository
 <!-- prettier-ignore-end -->
 
 Then run the Lodestar beacon node with

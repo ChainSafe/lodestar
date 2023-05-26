@@ -106,13 +106,13 @@ If you are starting your node from a blank db/genesis (or from last saved state 
 
 If you have a synced beacon node available (e.g., your friend's node or an infrastructure provider) and a trusted checkpoint you can rely on, you can start off your beacon node in under a minute! And at the same time kicking the "long range attack" in its butt!
 
-Just supply these **extra args** to your beacon node command:
+Just supply these **extra arguments** to your beacon node command:
 
 ```bash
 --checkpointSyncUrl <synced node url> [--wssCheckpoint <trusted checkpoint in root:epoch format>]
 ```
 
-In case you really trust `checkpointSyncUrl` then you may skip providing `wssCheckpoint`, which will then result into your beacon node syncing and starting off the recently finalized state from the trusted url.
+In case you really trust `checkpointSyncUrl` then you may skip providing `wssCheckpoint`, which will then result into your beacon node syncing and starting off the recently finalized state from the trusted URL.
 
 <!-- prettier-ignore-start -->
 !!! warning
@@ -122,45 +122,55 @@ If possible, validate your `wssCheckpoint` from multiple places (e.g. different 
 
 ### Guide to the sync logs
 
-Lodestar beacon sync log aims to provide information of utmost importance  about your node and yet be suucint at the same time. You may see the sync logs in the following format:
+Lodestar beacon sync log aims to provide information of utmost importance about your node and yet be succinct at the same time. You may see the sync logs in the following format:
 
 `[Sync status] - [ Slot info ] - [Head info] - [Exec block info] - [Finalized info] - [Peers info]`
 
 See the following example of different kinds of sync log:
+
 ```
 Apr-20 15:24:08.034[]                 info: Searching peers - peers: 0 - slot: 6265018 - head: 6264018 0xed93…7b0a - exec-block: syncing(17088476 0x9649…) - finalized: 0xbf30…7e7c:195777
 Apr-20 15:24:17.000[]                 info: Searching peers - peers: 0 - slot: 6265019 - head: 6264018 0xed93…7b0a - exec-block: syncing(17088476 0x9649…) - finalized: 0xbf30…7e7c:195777
+```
 
+```
 Apr-20 15:13:41.298[]                 info: Syncing - 2.5 minutes left - 2.78 slots/s - slot: 6264966 - head: 6262966 0x5cec…f5b8 - exec-block: valid(17088105 0x6f74…) - finalized: 0x5cc0…3874:195764 - peers: 1
 Apr-20 15:13:41.298[]                 info: Syncing - 2 minutes left - 2.78 slots/s - slot: 6264967 - head: 6263965 0x5cec…f5b8 - exec-block: valid(17088105 0x6f74…) - finalized: 0x5cc0…3874:195764 - peers: 1
+```
 
+```
 Apr-20 15:13:53.151[]                 info: Syncing - 1.6 minutes left - 3.82 slots/s - slot: 6264967 - head: (slot -360) 0xe0cf…9f3c - exec-block: valid(17088167 0x2d6a…) - finalized: 0x8f3f…2f81:195766 - peers: 5
 Apr-20 15:14:05.425[]                 info: Syncing - 1.1 minutes left - 4.33 slots/s - slot: 6264968 - head: (slot -297) 0x3655…1658 - exec-block: valid(17088231 0xdafd…) - finalized: 0x9475…425a:195769 - peers: 2
 Apr-20 15:14:53.001[]                 info: Syncing - 9 seconds left - 5.00 slots/s - slot: 6264972 - head: (slot -45) 0x44e4…20a4 - exec-block: valid(17088475 0xca61…) - finalized: 0x9cbd…ba83:195776 - peers: 8
+```
 
+```
 Apr-20 15:15:01.443[network]          info: Subscribed gossip core topics
 Apr-20 15:15:01.446[sync]             info: Subscribed gossip core topics
 Apr-20 15:15:05.000[]                 info: Synced - slot: 6264973 - head: 0x90ea…c655 - exec-block: valid(17088521 0xca9b…) - finalized: 0x6981…682f:195778 - peers: 6
 Apr-20 15:15:17.003[]                 info: Synced - slot: 6264974 - head: 0x4f7e…0e3a - exec-block: valid(17088522 0x08b1…) - finalized: 0x6981…682f:195778 - peers: 6
+```
 
+```
 Apr-20 15:15:41.001[]                 info: Synced - slot: 6264976 - head: (slot -1) 0x17c6…71a7 - exec-block: valid(17088524 0x5bc1…) - finalized: 0x6981…682f:195778 - peers: 8
 Apr-20 15:15:53.001[]                 info: Synced - slot: 6264977 - head: (slot -2) 0x17c6…71a7 - exec-block: valid(17088524 0x5bc1…) - finalized: 0x6981…682f:195778 - peers: 8
+```
 
+```
 Apr-20 15:16:05.000[]                 info: Synced - slot: 6264978 - head: 0xc9fd…28c5 - exec-block: valid(17088526 0xb5bf…) - finalized: 0x6981…682f:195778 - peers: 8
 Apr-20 15:16:17.017[]                 info: Synced - slot: 6264979 - head: 0xde91…d4cb - exec-block: valid(17088527 0xa488…) - finalized: 0x6981…682f:195778 - peers: 7
-
 ```
 
 1. Sync status: Takes three values : `Synced` or `Syncing` (along with sync speed info) or `Searching` if node is is still looking for viable peers from where it can download blocks.
 
 2. Slot (clock) info: What is the current ongoing slot as per the chain genesis
 
-3. Head info: It specifies where the local chain head hash is. In case its far behind the Slot (clock) then it independntly shows the head slot else it show how far behind from the Slot it is if difference < 1000.
+3. Head info: It specifies where the local chain head hash is. In case its far behind the Slot (clock) then it independently shows the head slot else it show how far behind from the Slot it is if difference < 1000.
 
-4. Exec block info: It provides the execution information about the head whether its confirmed `valid` or EL is still `syncing` to it, as well as its number and a short hash to easy identification.
+4. Execution block info: It provides the execution information about the head whether its confirmed `valid` or execution layer is still `syncing` to it, as well as its number and a short hash to easy identification.
 
 5. Finalized info: What is the current local `finalized` checkpoint in the format of `[checkpoint root]:[checkpoint epoch]`, for e.g.: `0xd7ba…8386:189636`
 
 6. Peer info: Current total number of outbound or inbound peers, for e.g.: `peers: 27`
 
-For more insight into lodestar beacon functioning, you may setup lodestar metrics and use prepared grafana dashboards that you may find in the repo.
+For more insight into lodestar beacon functioning, you may setup lodestar metrics and use prepared Grafana dashboards that you may find in the repository.

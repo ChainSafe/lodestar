@@ -1,34 +1,30 @@
 # Generating Flamegraphs for a Running Node Service on Linux
 
-This guide assumes a running instance of Lodestar and will walk through how to generate a flamegraph for the process while running on Linux. While it is possible to run Lodestar in a number of ways, for performance profiling it is recommended to not use Dockerized implementations.  It is best to run Lodestar as a service on a Linux machine. Follow the Lodestar docs to get the service installed and running. Then come back here when you are ready to generate the flamegraph.
+This guide assumes a running instance of Lodestar and will walk through how to generate a flamegraph for the process while running on Linux. While it is possible to run Lodestar in a number of ways, for performance profiling it is recommended to not use Dockerized implementations. It is best to run Lodestar as a service on a Linux machine. Follow the Lodestar docs to get the service installed and running. Then come back here when you are ready to generate the flamegraph.
 
 ## Modifying Linux and Lodestar
 
-Use the following two commands to install `perf` for generating the stack traces.  You may get a warning about needing to restart the VM due to kernel updates. This is nothing to be concerned with and if so, cancel out of the restart dialog.
+Use the following two commands to install `perf` for generating the stack traces. You may get a warning about needing to restart the VM due to kernel updates. This is nothing to be concerned with and if so, cancel out of the restart dialog.
 
 ```bash
 sudo apt-get install linux-tools-common linux-tools-generic
 sudo apt-get install linux-tools-`uname -r`  # empirically this throws if run on the same line above
 ```
 
-Next we need to update the Lodestar service by modifying the start script.  We need to add a necessary flag `--perf-basic-prof` to allow the stack traces to be useful.  Node is a virtual machine and `perf` is designed to capture host stack traces. In order to allow the JS functions to be captured meaningfully, `v8` can provide some help.  Generally Lodestar is started with a script like the following:
+Next we need to update the Lodestar service by modifying the start script. We need to add a necessary flag `--perf-basic-prof` to allow the stack traces to be useful. Node is a virtual machine and `perf` is designed to capture host stack traces. In order to allow the JavaScript functions to be captured meaningfully, `v8` can provide some help. Generally Lodestar is started with a script like the following:
 
 ### Example start_lodestar.sh
 
 ```sh
-#!/bin/bash
-
-# Add the --perf-basic-prof flag to the node process
-
 node \
-  --perf-basic-prof \ 
+  --perf-basic-prof \
   --max-old-space-size=4096 \
   /usr/src/lodestar/packages/cli/bin/lodestar \
   beacon \
   --rcConfig /home/devops/beacon/rcconfig.yml
 ```
 
-After updating the start script, restart the node process running the beacon service.  Note in the command below, that the `beacon` service may have a different name or restart command, depending on your setup.
+After updating the start script, restart the node process running the beacon service. Note in the command below, that the `beacon` service may have a different name or restart command, depending on your setup.
 
 ```sh
 admin@12.34.56.78: sudo systemctl restart beacon
@@ -64,7 +60,7 @@ The `isolate-*-v8.log` files are the maps that `v8` outputs for the `perf` comma
 
 The first command below will run `perf` for 60 seconds, and then save the output to a file named `perf.out`. The second one will merge the exported, unknown, tokens with the isolate maps and output full stack traces for the render. Running both `perf` commands in the folder with the `isolate` maps will allow the data to be seamlessly spliced. Once the output is saved, update the permissions so the file can be copied to your local machine via `scp`.
 
-You can modify the frequency of capture by changing `-F 99` to a different number. Try to stay away from whole numbers as they are more likely to cause interference with periodically scheduled tasks. As an example use `99Hz` or `997Hz` instead of `100Hz` or `1000Hz`.  In testing neither seemed to have an appreciable affect on cpu usage when run for a short period of time.
+You can modify the frequency of capture by changing `-F 99` to a different number. Try to stay away from whole numbers as they are more likely to cause interference with periodically scheduled tasks. As an example use `99Hz` or `997Hz` instead of `100Hz` or `1000Hz`. In testing neither seemed to have an appreciable affect on CPU usage when run for a short period of time.
 
 To change the period of capture adjust the sleep duration (which is in seconds).
 
@@ -76,7 +72,7 @@ admin@12.34.56.78: sudo perf script -f > perf.out
 admin@12.34.56.78: sudo chmod 777 ~/beacon/perf.out
 ```
 
-And then copy the `perf.out` file to your local machine to render the flamegraph. Running at `99Hz` for 180 seconds results in a file size of about 3.5mb and `997Hz` for 60 seconds is roughly 4.4mb.
+And then copy the `perf.out` file to your local machine to render the flamegraph. Running at `99Hz` for 180 seconds results in a file size of about 3.5MB and `997Hz` for 60 seconds is roughly 4.4MB.
 
 ```sh
 scp admin@12.34.56.78:/home/devops/beacon/out.perf /some_temp_dir/perf.out
@@ -84,15 +80,15 @@ scp admin@12.34.56.78:/home/devops/beacon/out.perf /some_temp_dir/perf.out
 
 ## Rendering a Flamegraph
 
-By far the best tool to render flamegraphs is [`flamescope`](https://github.com/Netflix/flamescope) from Netflix.  It allows for easy analysis and zooming into specific time periods.  It also give a holistic view of how the process is performing over time.
+By far the best tool to render flamegraphs is [`flamescope`](https://github.com/Netflix/flamescope) from Netflix. It allows for easy analysis and zooming into specific time periods. It also give a holistic view of how the process is performing over time.
 
 ## Installation
 
 Python3 is required. Clone the repository and install the dependencies:
 
+_The original is no longer maintained and had a configuration bug. This is a fork that fixes the issue._
+
 ```sh
-# The original is no longer maintained and had a configuration bug
-# This is a fork that fixes the issue.
 git clone https://github.com/matthewkeil/flamescope
 cd flamescope
 pip3 install -r requirements.txt
@@ -116,7 +112,7 @@ Then navigate in a browser to `http://localhost:8080` and begin analyzing the da
 
 ## Filtering Results
 
-There can be a lot of "noise" in the stack traces with `libc`, `v8` and `libuv` calls.  It is possible to filter the results to make it more useful, but note this will skew the results. Looking at the graph both filtered and unfiltered can be beneficial. The following `sed` command will remove the noise from the stack traces.  You can also use the bottom script programmatically to add/remove filters.
+There can be a lot of "noise" in the stack traces with `libc`, `v8` and `libuv` calls. It is possible to filter the results to make it more useful, but note this will skew the results. Looking at the graph both filtered and unfiltered can be beneficial. The following `sed` command will remove the noise from the stack traces. You can also use the bottom script to add/remove filters.
 
 ```sh
 sed -r -e "/( __libc_start| uv_| LazyCompile | v8::internal::| node::| Builtins_| Builtin:| Stub:| LoadIC:| \\[unknown\\]| LoadPolymorphicIC:)/d" -e 's/ LazyCompile:[*~]?/ /'
@@ -137,7 +133,7 @@ sed -r -e "/( __libc_start| uv_| LazyCompile | v8::internal::| node::| Builtins_
 - <https://www.brendangregg.com/flamegraphs.html>
 - <https://nodejs.org/en/docs/guides/diagnostics-flamegraph>
 - <https://netflixtechblog.com/netflix-flamescope-a57ca19d47bb>
-- <https://jaanhio.me/blog/nodejs-flamegraph-analysis/>  (this was a great one about filtering methodology)
+- <https://jaanhio.me/blog/nodejs-flamegraph-analysis/> (this was a great one about filtering methodology)
 - <https://medium.com/voodoo-engineering/node-js-and-cpu-profiling-on-production-in-real-time-without-downtime-d6e62af173e2>
 
 ### Visualization Tools

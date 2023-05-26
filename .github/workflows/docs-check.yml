@@ -12,5 +12,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: rojopolis/spellcheck-github-actions@0.32.0
-        name: Spellcheck
+
+      # Sorted wordlist is easier to mantain and find which words are present or not.
+      # If you edit the list run this list to automatically sort it
+      # ```
+      # $ scripts/wordlist_sort.sh
+      # ```
+      - name: Check wordlist is sorted
+        run: scripts/wordlist_sort_check.sh
+
+      - name: Spellcheck
+        uses: rojopolis/spellcheck-github-actions@0.32.0

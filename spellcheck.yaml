@@ -6,7 +6,14 @@ matrix:
       wordlists:
         - .wordlist.txt
     pipeline:
+      - pyspelling.filters.url:
       - pyspelling.filters.markdown:
+      - pyspelling.filters.url:
+      - pyspelling.filters.html:
+          comments: false
+          ignores:
+            - code
+            - pre
     sources:
       - "docs/**/*.md"
       - "README.md"

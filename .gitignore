@@ -70,5 +70,6 @@ packages/cli/.git-data.json
 
 # Build artifacts
 .last_build_unixsec
+dictionary.dic
 
 temp/
