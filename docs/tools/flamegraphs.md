@@ -112,7 +112,7 @@ Then navigate in a browser to `http://localhost:8080` and begin analyzing the da
 
 ## Filtering Results
 
-There can be a lot of "noise" in the stack traces with `libc`, `v8` and `libuv` calls. It is possible to filter the results to make it more useful, but note this will skew the results. Looking at the graph both filtered and unfiltered can be beneficial. The following `sed` command will remove the noise from the stack traces. You can also use the bottom script to add/remove filters.
+There can be a lot of "noise" in the stack traces with `libc`, `v8` and `libuv` calls. It is possible to filter the results to make it more useful, but note this will skew the results. Looking at the graph both filtered and unfiltered can be beneficial. The following `sed` command will remove the noise from the stack traces.
 
 ```sh
 sed -r -e "/( __libc_start| uv_| LazyCompile | v8::internal::| node::| Builtins_| Builtin:| Stub:| LoadIC:| \\[unknown\\]| LoadPolymorphicIC:)/d" -e 's/ LazyCompile:[*~]?/ /'
