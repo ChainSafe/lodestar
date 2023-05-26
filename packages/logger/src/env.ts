@@ -13,8 +13,10 @@ export function getEnvLogLevel(): LogLevel | null {
 
 export function getEnvLogger(opts?: Partial<BrowserLoggerOpts>): Logger {
   const level = opts?.level ?? getEnvLogLevel();
+
   if (level != null) {
     return getBrowserLogger({...opts, level});
   }
+
   return getEmptyLogger();
 }
