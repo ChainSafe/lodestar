@@ -136,7 +136,7 @@ export class Network implements INetwork {
           opts: {
             ...opts,
             peerStoreDir,
-            metrics: Boolean(metrics),
+            metricsEnabled: Boolean(metrics),
             activeValidatorCount,
             genesisTime: chain.genesisTime,
             initialStatus,
@@ -145,6 +145,7 @@ export class Network implements INetwork {
           peerId,
           logger,
           events,
+          metrics,
           getReqRespHandler,
         })
       : await NetworkCore.init({

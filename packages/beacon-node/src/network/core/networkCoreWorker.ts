@@ -10,6 +10,7 @@ import {Clock} from "../../util/clock.js";
 import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {peerIdToString} from "../../util/peerId.js";
+import {getNetworkCoreWorkerMetrics} from "./metrics.js";
 import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 import {NetworkCore} from "./networkCore.js";
 import {
@@ -42,7 +43,7 @@ logger.info("libp2p worker started", {peer: peerIdToString(peerId)});
 const abortController = new AbortController();
 
 // Set up metrics, nodejs and discv5-specific
-const metricsRegister = workerData.metrics ? new RegistryMetricCreator() : null;
+const metricsRegister = workerData.metricsEnabled ? new RegistryMetricCreator() : null;
 if (metricsRegister) {
   collectNodeJSMetrics(metricsRegister, "network_worker_");
 }
@@ -76,7 +77,15 @@ const clock = new Clock({config, genesisTime: workerData.genesisTime, signal: ab
 new AsyncIterableBridgeHandler(getReqRespBridgeReqEvents(reqRespBridgeEventBus), (data) =>
   core.sendReqRespRequest(data)
 );
-const respBridgeCaller = new AsyncIterableBridgeCaller(getReqRespBridgeRespEvents(reqRespBridgeEventBus));
+const reqRespBridgeRespCaller = new AsyncIterableBridgeCaller(getReqRespBridgeRespEvents(reqRespBridgeEventBus));
+
+// respBridgeCaller metrics
+if (metricsRegister) {
+  const networkCoreWorkerMetrics = getNetworkCoreWorkerMetrics(metricsRegister);
+  networkCoreWorkerMetrics.reqRespBridgeRespCallerPending.addCollect(() => {
+    networkCoreWorkerMetrics.reqRespBridgeRespCallerPending.set(reqRespBridgeRespCaller.pendingCount);
+  });
+}
 
 const core = await NetworkCore.init({
   opts: workerData.opts,
@@ -88,7 +97,7 @@ const core = await NetworkCore.init({
   events,
   clock,
   getReqRespHandler: (method) => (req, peerId) =>
-    respBridgeCaller.getAsyncIterable({method, req, peerId: peerIdToString(peerId)}),
+    reqRespBridgeRespCaller.getAsyncIterable({method, req, peerId: peerIdToString(peerId)}),
   activeValidatorCount: workerData.activeValidatorCount,
   initialStatus: workerData.initialStatus,
 });
