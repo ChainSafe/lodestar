@@ -30,16 +30,6 @@ export enum Bucket {
   phase0_proposerSlashing = 14, // ValidatorIndex -> ProposerSlashing
   phase0_attesterSlashing = 15, // Root -> AttesterSlashing
   capella_blsToExecutionChange = 16, // ValidatorIndex -> SignedBLSToExecutionChange
-  // validator
-  // validator = 16, // DEPRECATED on v0.11.0
-  // lastProposedBlock = 17, // DEPRECATED on v0.11.0
-  // proposedAttestations = 18, // DEPRECATED on v0.11.0
-  // validator slashing protection
-  phase0_slashingProtectionBlockBySlot = 20,
-  phase0_slashingProtectionAttestationByTarget = 21,
-  phase0_slashingProtectionAttestationLowerBound = 22,
-  index_slashingProtectionMinSpanDistance = 23,
-  index_slashingProtectionMaxSpanDistance = 24,
   // allForks_pendingBlock = 25, // Root -> SignedBeaconBlock // DEPRECATED on v0.30.0
 
   index_stateArchiveRootIndex = 26, // State Root -> slot
@@ -70,8 +60,6 @@ export enum Bucket {
   // 54 was for bestPartialLightClientUpdate, allocate a fresh one
   // lightClient_bestLightClientUpdate = 55, // SyncPeriod -> LightClientUpdate // DEPRECATED on v1.5.0
   lightClient_bestLightClientUpdate = 56, // SyncPeriod -> [Slot, LightClientUpdate]
-
-  validator_metaData = 41,
 
   backfilled_ranges = 42, // Backfilled From to To, inclusive of both From, To
 }
