@@ -1,0 +1,13 @@
+matrix:
+  - name: markdown
+    aspell:
+      lang: en
+    dictionary:
+      wordlists:
+        - .wordlist.txt
+    pipeline:
+      - pyspelling.filters.markdown:
+    sources:
+      - "docs/**/*.md"
+      - "README.md"
+      - "CONTRIBUTING.md"
