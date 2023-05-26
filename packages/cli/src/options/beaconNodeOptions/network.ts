@@ -25,6 +25,7 @@ export type NetworkArgs = {
   "network.gossipsubAwaitHandler": boolean;
   "network.rateLimitMultiplier": number;
   "network.maxGossipTopicConcurrency"?: number;
+  "network.useWorker": boolean;
 
   /** @deprecated This option is deprecated and should be removed in next major release. */
   "network.requestCountPeerLimit": number;
@@ -75,6 +76,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     mdns: args["mdns"],
     rateLimitMultiplier: args["network.rateLimitMultiplier"],
     maxGossipTopicConcurrency: args["network.maxGossipTopicConcurrency"],
+    useWorker: args["network.useWorker"],
   };
 }
 
@@ -255,6 +257,12 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   "network.maxGossipTopicConcurrency": {
     type: "number",
+    hidden: true,
+    group: "network",
+  },
+
+  "network.useWorker": {
+    type: "boolean",
     hidden: true,
     group: "network",
   },
