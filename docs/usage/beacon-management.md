@@ -101,8 +101,8 @@ A young testnet should take a few hours to sync. If you see multiple or consiste
 
 ### Checkpoint Sync
 
-If you are starting your node from a blank db/genesis (or from last saved state in db) in a network which is now far ahead, your node is susceptible to "long range attacks" via something called weak subjectivity.
-[Read Vitalik's illuminating post on the same](https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/).
+If you are starting your node from a blank db/genesis (or from last saved state in db) in a network which is now far ahead, your node is susceptible to "long range attacks". Ethereum's solution to this is something called weak subjectivity.
+[Read Vitalik's illuminating post on explaining the weakly subjective paradigm](https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/).
 
 If you have a synced beacon node available (e.g., your friend's node or an infrastructure provider) and a trusted checkpoint you can rely on, you can start off your beacon node in under a minute! And at the same time kicking the "long range attack" in its butt!
 
