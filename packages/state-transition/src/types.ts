@@ -1,5 +1,5 @@
-export {EpochContext} from "./cache/epochContext.js";
-export {EpochProcess} from "./cache/epochProcess.js";
+export {EpochCache} from "./cache/epochCache.js";
+export {EpochTransitionCache} from "./cache/epochTransitionCache.js";
 
 export {
   CachedBeaconStateAllForks,
