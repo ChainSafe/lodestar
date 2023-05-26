@@ -1,6 +1,7 @@
 import {phase0, ssz, ValidatorIndex} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, Bucket, Repository} from "@lodestar/db";
+import {Db, Repository} from "@lodestar/db";
+import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**
  * AttesterSlashing indexed by root
@@ -10,7 +11,8 @@ import {Db, Bucket, Repository} from "@lodestar/db";
  */
 export class AttesterSlashingRepository extends Repository<Uint8Array, phase0.AttesterSlashing> {
   constructor(config: ChainForkConfig, db: Db) {
-    super(config, db, Bucket.phase0_attesterSlashing, ssz.phase0.AttesterSlashing);
+    const bucket = Bucket.phase0_attesterSlashing;
+    super(config, db, bucket, ssz.phase0.AttesterSlashing, getBucketNameByValue(bucket));
   }
 
   async hasAll(attesterIndices: ValidatorIndex[] = []): Promise<boolean> {

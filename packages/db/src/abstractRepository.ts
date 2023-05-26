@@ -3,8 +3,7 @@ import {Type} from "@chainsafe/ssz";
 import {BUCKET_LENGTH} from "./const.js";
 import {FilterOptions, KeyValue} from "./controller/index.js";
 import {Db, DbReqOpts} from "./controller/interface.js";
-import {Bucket, encodeKey as _encodeKey} from "./schema.js";
-import {getBucketNameByValue} from "./util.js";
+import {encodeKey as _encodeKey} from "./util.js";
 
 export type Id = Uint8Array | string | number | bigint;
 
@@ -17,26 +16,19 @@ export type Id = Uint8Array | string | number | bigint;
  * indexed by root
  */
 export abstract class Repository<I extends Id, T> {
-  protected config: ChainForkConfig;
-
-  protected db: Db;
-
-  protected bucket: Bucket;
-  private readonly bucketId: string;
   private readonly dbReqOpts: DbReqOpts;
 
   private readonly minKey: Uint8Array;
   private readonly maxKey: Uint8Array;
 
-  protected type: Type<T>;
-
-  protected constructor(config: ChainForkConfig, db: Db, bucket: Bucket, type: Type<T>) {
-    this.config = config;
-    this.db = db;
-    this.bucket = bucket;
-    this.bucketId = getBucketNameByValue(bucket);
+  protected constructor(
+    protected config: ChainForkConfig,
+    protected db: Db,
+    protected bucket: number,
+    protected type: Type<T>,
+    private readonly bucketId: string
+  ) {
     this.dbReqOpts = {bucketId: this.bucketId};
-    this.type = type;
     this.minKey = _encodeKey(bucket, Buffer.alloc(0));
     this.maxKey = _encodeKey(bucket + 1, Buffer.alloc(0));
   }
