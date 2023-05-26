@@ -150,10 +150,10 @@ function timeToNextHalfSlot(config: BeaconConfig, chain: IBeaconChain, isFirstTi
   const msFromGenesis = Date.now() - chain.genesisTime * 1000;
   const msToNextSlot = msPerSlot - (msFromGenesis % msPerSlot);
   if (isFirstTime) {
-    // at the 1st time we may miss the next slot
+    // at the 1st time we may miss middle of the current clock slot
     return msToNextSlot > msPerHalfSlot ? msToNextSlot - msPerHalfSlot : msToNextSlot + msPerHalfSlot;
   } else {
-    // after the 1st time always wait until half of next clock slot
+    // after the 1st time always wait until middle of next clock slot
     return msToNextSlot + msPerHalfSlot;
   }
 }
