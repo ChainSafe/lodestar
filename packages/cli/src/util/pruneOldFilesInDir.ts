@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 export function pruneOldFilesInDir(dirpath: string, maxAgeMs: number): void {
-  for (const entryName in fs.readdirSync(dirpath)) {
+  for (const entryName of fs.readdirSync(dirpath)) {
     const entryPath = path.join(dirpath, entryName);
 
     const stat = fs.statSync(entryPath);
