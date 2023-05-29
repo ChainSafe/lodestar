@@ -41,6 +41,7 @@ import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder, TransitionConfigurationV1} from "../execution/index.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
+import {isOptimisticBlock} from "../util/forkChoice.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
@@ -367,16 +368,43 @@ export class BeaconChain implements IBeaconChain {
     return this.regen.getBlockSlotState(head.blockRoot, startSlot, {dontTransferCache: true}, regenCaller);
   }
 
-  async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
+  async getCanonicalBlockAtSlot(
+    slot: Slot
+  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null> {
     const finalizedBlock = this.forkChoice.getFinalizedBlock();
-    if (finalizedBlock.slot > slot) {
-      return this.db.blockArchive.get(slot);
+    if (slot > finalizedBlock.slot) {
+      // Unfinalized slot, attempt to find in fork-choice
+      const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
+      if (block) {
+        const data = await this.db.block.get(fromHexString(block.blockRoot));
+        if (data) {
+          return {block: data, executionOptimistic: isOptimisticBlock(block)};
+        }
+      }
+      // A non-finalized slot expected to be found in the hot db, could be archived during
+      // this function runtime, so if not found in the hot db, fallback to the cold db
+      // TODO: Add a lock to the archiver to have determinstic behaviour on where are blocks
     }
-    const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
-    if (!block) {
-      return null;
+
+    const data = await this.db.blockArchive.get(slot);
+    return data && {block: data, executionOptimistic: false};
+  }
+
+  async getBlockByRoot(
+    root: string
+  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null> {
+    const block = this.forkChoice.getBlockHex(root);
+    if (block) {
+      const data = await this.db.block.get(fromHexString(root));
+      if (data) {
+        return {block: data, executionOptimistic: isOptimisticBlock(block)};
+      }
+      // If block is not found in hot db, try cold db since there could be an archive cycle happening
+      // TODO: Add a lock to the archiver to have determinstic behaviour on where are blocks
     }
-    return this.db.block.get(fromHexString(block.blockRoot));
+
+    const data = await this.db.blockArchive.getByRoot(fromHexString(root));
+    return data && {block: data, executionOptimistic: false};
   }
 
   produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; blockValue: Wei}> {

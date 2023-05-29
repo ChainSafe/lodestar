@@ -187,7 +187,11 @@ export class MockBeaconChain implements IBeaconChain {
     return this.state;
   }
 
-  async getCanonicalBlockAtSlot(): Promise<allForks.SignedBeaconBlock> {
+  getCanonicalBlockAtSlot(): never {
+    throw Error("Not implemented");
+  }
+
+  getBlockByRoot(): never {
     throw Error("Not implemented");
   }
 

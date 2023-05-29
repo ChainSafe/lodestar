@@ -15,7 +15,9 @@ describe("api - beacon - getBlockHeaders", function () {
 
   it.skip("no filters - assume head slot", async function () {
     server.forkChoiceStub.getHead.returns(generateProtoBlock({slot: 1}));
-    server.chainStub.getCanonicalBlockAtSlot.withArgs(1).resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
+    server.chainStub.getCanonicalBlockAtSlot
+      .withArgs(1)
+      .resolves({block: ssz.phase0.SignedBeaconBlock.defaultValue(), executionOptimistic: false});
     server.forkChoiceStub.getBlockSummariesAtSlot.withArgs(1).returns([
       generateProtoBlock(),
       //canonical block summary
@@ -48,7 +50,9 @@ describe("api - beacon - getBlockHeaders", function () {
 
   it("finalized slot", async function () {
     server.forkChoiceStub.getHead.returns(generateProtoBlock({slot: 2}));
-    server.chainStub.getCanonicalBlockAtSlot.withArgs(0).resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
+    server.chainStub.getCanonicalBlockAtSlot
+      .withArgs(0)
+      .resolves({block: ssz.phase0.SignedBeaconBlock.defaultValue(), executionOptimistic: false});
     server.forkChoiceStub.getBlockSummariesAtSlot.withArgs(0).returns([]);
     const {data: blockHeaders} = await server.blockApi.getBlockHeaders({slot: 0});
     expect(blockHeaders.length).to.be.equal(1);

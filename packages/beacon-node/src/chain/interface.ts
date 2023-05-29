@@ -120,9 +120,14 @@ export interface IBeaconChain {
    * Since we can have multiple parallel chains,
    * this methods returns blocks in current chain head according to
    * forkchoice. Works for finalized slots as well
-   * @param slot
    */
-  getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
+  getCanonicalBlockAtSlot(
+    slot: Slot
+  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null>;
+  /**
+   * Get local block by root, does not fetch from the network
+   */
+  getBlockByRoot(root: RootHex): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null>;
 
   getBlobSidecars(beaconBlock: deneb.BeaconBlock): deneb.BlobSidecars;
 

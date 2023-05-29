@@ -39,7 +39,10 @@ describe.skip("get proposers api impl", function () {
     chainStub.clock = server.sandbox.createStubInstance(Clock);
     const forkChoice = server.sandbox.createStubInstance(ForkChoice);
     chainStub.forkChoice = forkChoice;
-    chainStub.getCanonicalBlockAtSlot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
+    chainStub.getCanonicalBlockAtSlot.resolves({
+      block: ssz.phase0.SignedBeaconBlock.defaultValue(),
+      executionOptimistic: false,
+    });
     dbStub = server.dbStub;
     modules = {
       chain: server.chainStub,
