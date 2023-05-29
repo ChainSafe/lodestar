@@ -13,7 +13,7 @@ import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils.js";
 import {ISlashingProtectionArgs} from "./options.js";
 
 type ExportArgs = {
-  file: string;
+  file?: string;
   pubkeys?: string[];
 };
 
@@ -50,6 +50,9 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
     },
 
     handler: async (args) => {
+      const {file} = args;
+      if (!file) throw new YargsError("must provide file arg");
+
       const {config, network} = getBeaconConfigFromArgs(args);
       const validatorPaths = getValidatorPaths(args, network);
       // slashingProtection commands are fast so do not require logFile feature
@@ -102,8 +105,8 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
         logger
       );
 
-      logger.info("Writing slashing protection data", {file: args.file});
-      writeFile600Perm(args.file, interchange);
+      logger.info("Writing slashing protection data", {file});
+      writeFile600Perm(file, interchange);
       logger.info("Export completed successfully");
     },
   };

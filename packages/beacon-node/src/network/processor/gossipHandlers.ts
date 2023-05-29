@@ -45,15 +45,8 @@ import {AggregatorTracker} from "./aggregatorTracker.js";
  * Gossip handler options as part of network options
  */
 export type GossipHandlerOpts = {
-  dontSendGossipAttestationsToForkchoice: boolean;
-};
-
-/**
- * By default:
- * + pass gossip attestations to forkchoice
- */
-export const defaultGossipHandlerOpts = {
-  dontSendGossipAttestationsToForkchoice: false,
+  /** By default pass gossip attestations to forkchoice */
+  dontSendGossipAttestationsToForkchoice?: boolean;
 };
 
 export type ValidatorFnsModules = {

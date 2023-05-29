@@ -43,6 +43,8 @@ const STATUS_INBOUND_GRACE_PERIOD = 15 * 1000;
 const CHECK_PING_STATUS_INTERVAL = 10 * 1000;
 /** A peer is considered long connection if it's >= 1 day */
 const LONG_PEER_CONNECTION_MS = 24 * 60 * 60 * 1000;
+/** Ref https://github.com/ChainSafe/lodestar/issues/3423 */
+const DEFAULT_DISCV5_FIRST_QUERY_DELAY_MS = 1000;
 /**
  * Tag peer when it's relevant and connecting to our node.
  * When node has > maxPeer (55), libp2p randomly prune peers if we don't tag peers in use.
@@ -71,7 +73,7 @@ export type PeerManagerOpts = {
    * Delay the 1st query after starting discv5
    * See https://github.com/ChainSafe/lodestar/issues/3423
    */
-  discv5FirstQueryDelayMs: number;
+  discv5FirstQueryDelayMs?: number;
   /**
    * If null, Don't run discv5 queries, nor connect to cached peers in the peerStore
    */
@@ -167,7 +169,7 @@ export class PeerManager {
       opts.discv5 &&
       new PeerDiscovery(modules, {
         maxPeers: opts.maxPeers,
-        discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs,
+        discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs ?? DEFAULT_DISCV5_FIRST_QUERY_DELAY_MS,
         discv5: opts.discv5,
         connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
       });

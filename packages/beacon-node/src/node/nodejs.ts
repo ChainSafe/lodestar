@@ -187,10 +187,11 @@ export class BeaconNode {
     }
 
     const monitoring = opts.monitoring.endpoint
-      ? new MonitoringService("beacon", opts.monitoring, {
-          register: (metrics as Metrics).register,
-          logger: logger.child({module: LoggerModule.monitoring}),
-        })
+      ? new MonitoringService(
+          "beacon",
+          {...opts.monitoring, endpoint: opts.monitoring.endpoint},
+          {register: (metrics as Metrics).register, logger: logger.child({module: LoggerModule.monitoring})}
+        )
       : null;
 
     const chain = new BeaconChain(opts.chain, {

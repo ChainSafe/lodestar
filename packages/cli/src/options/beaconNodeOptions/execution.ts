@@ -4,7 +4,7 @@ import {CliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
 
 export type ExecutionEngineArgs = {
   "execution.urls": string[];
-  "execution.timeout": number;
+  "execution.timeout"?: number;
   "execution.retryAttempts": number;
   "execution.retryDelay": number;
   "execution.engineMock"?: boolean;
@@ -38,8 +38,7 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
   "execution.urls": {
     description: "Urls to execution client engine API",
     type: "array",
-    defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? defaultOptions.executionEngine.urls.join(" ") : "",
+    default: defaultOptions.executionEngine.mode === "http" ? defaultOptions.executionEngine.urls.join(",") : "",
     group: "execution",
   },
 
@@ -54,7 +53,7 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
   "execution.retryAttempts": {
     description: "Number of retry attempts when calling execution engine API",
     type: "number",
-    defaultDescription:
+    default:
       defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryAttempts) : "1",
     group: "execution",
   },
@@ -62,8 +61,7 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
   "execution.retryDelay": {
     description: "Delay time in milliseconds between retries when retrying calls to the execution engine API",
     type: "number",
-    defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryDelay) : "0",
+    default: defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryDelay) : "0",
     group: "execution",
   },
 

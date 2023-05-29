@@ -15,10 +15,10 @@ export class Eth1DepositsCache {
   db: IBeaconDb;
   config: ChainForkConfig;
 
-  constructor(opts: {unsafeAllowDepositDataOverwrite: boolean}, config: ChainForkConfig, db: IBeaconDb) {
+  constructor(opts: {unsafeAllowDepositDataOverwrite?: boolean}, config: ChainForkConfig, db: IBeaconDb) {
     this.config = config;
     this.db = db;
-    this.unsafeAllowDepositDataOverwrite = opts.unsafeAllowDepositDataOverwrite;
+    this.unsafeAllowDepositDataOverwrite = opts.unsafeAllowDepositDataOverwrite ?? false;
   }
 
   /**
