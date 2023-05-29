@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {expect} from "chai";
 
 describe("transfer bytes", function () {
@@ -13,6 +13,8 @@ describe("transfer bytes", function () {
     {size: 524380, name: "BlobsSidecar"},
     {size: 1_000_000, name: "Big SignedBeaconBlock"},
   ];
+
+  setBenchOpts({noThreshold: true});
 
   for (const {size, name} of sizes) {
     const array = new Uint8Array(size);
