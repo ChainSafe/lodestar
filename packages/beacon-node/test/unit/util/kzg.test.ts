@@ -1,11 +1,7 @@
 import {expect} from "chai";
 import {bellatrix, deneb, ssz} from "@lodestar/types";
-import {BLOB_TX_TYPE, BYTES_PER_FIELD_ELEMENT} from "@lodestar/params";
-import {
-  kzgCommitmentToVersionedHash,
-  OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET,
-  OPAQUE_TX_MESSAGE_OFFSET,
-} from "@lodestar/state-transition";
+import {BYTES_PER_FIELD_ELEMENT} from "@lodestar/params";
+import {kzgCommitmentToVersionedHash} from "@lodestar/state-transition";
 import {loadEthereumTrustedSetup, initCKZG, ckzg, FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../../src/util/kzg.js";
 import {validateBlobsSidecar, validateGossipBlobsSidecar} from "../../../src/chain/validation/blobsSidecar.js";
 
@@ -54,26 +50,9 @@ describe("C-KZG", () => {
 });
 
 function transactionForKzgCommitment(kzgCommitment: deneb.KZGCommitment): bellatrix.Transaction {
-  // Some random value that after the offset's position
-  const blobVersionedHashesOffset = OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET + 64;
-
-  // +32 for the size of versionedHash
-  const ab = new ArrayBuffer(blobVersionedHashesOffset + 32);
-  const dv = new DataView(ab);
-  const ua = new Uint8Array(ab);
-
-  // Set tx type
-  dv.setUint8(0, BLOB_TX_TYPE);
-
-  // Set offset to hashes array
-  // const blobVersionedHashesOffset =
-  //   OPAQUE_TX_MESSAGE_OFFSET + opaqueTxDv.getUint32(OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET, true);
-  dv.setUint32(OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET, blobVersionedHashesOffset - OPAQUE_TX_MESSAGE_OFFSET, true);
-
-  const versionedHash = kzgCommitmentToVersionedHash(kzgCommitment);
-  ua.set(versionedHash, blobVersionedHashesOffset);
-
-  return ua;
+  // a fixed RLP transaction whose versioned hashes can be updated overriden
+  const _versionedHash = kzgCommitmentToVersionedHash(kzgCommitment);
+  throw Error("RLP tx not yet implemented");
 }
 
 /**

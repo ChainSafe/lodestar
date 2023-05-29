@@ -4,8 +4,9 @@ import {
   isExecutionBlockBodyType,
   isMergeTransitionBlock as isMergeTransitionBlockFn,
   isExecutionEnabled,
+  kzgCommitmentToVersionedHash,
 } from "@lodestar/state-transition";
-import {bellatrix, allForks, Slot} from "@lodestar/types";
+import {bellatrix, allForks, Slot, deneb} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {
   IForkChoice,
@@ -18,6 +19,8 @@ import {
 } from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
 import {ErrorAborted, Logger} from "@lodestar/utils";
+import {ForkSeq} from "@lodestar/params";
+
 import {IExecutionEngine} from "../../execution/engine/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IClock} from "../../util/clock.js";
@@ -285,10 +288,12 @@ export async function verifyBlockExecutionPayload(
   }
 
   // TODO: Handle better notifyNewPayload() returning error is syncing
-  const execResult = await chain.executionEngine.notifyNewPayload(
-    chain.config.getForkName(block.message.slot),
-    executionPayloadEnabled
-  );
+  const fork = chain.config.getForkName(block.message.slot);
+  const versionedHashes =
+    ForkSeq[fork] >= ForkSeq.deneb
+      ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.map(kzgCommitmentToVersionedHash)
+      : undefined;
+  const execResult = await chain.executionEngine.notifyNewPayload(fork, executionPayloadEnabled, versionedHashes);
 
   chain.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
 
