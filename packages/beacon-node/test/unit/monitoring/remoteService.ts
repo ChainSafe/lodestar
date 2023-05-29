@@ -6,7 +6,7 @@ import {BEACON_NODE_STATS_SCHEMA, ClientStatsSchema, SYSTEM_STATS_SCHEMA, VALIDA
 
 /* eslint-disable no-console */
 
-type ReceivedData = Record<string, unknown>;
+type ReceivedData = Record<string, unknown> & {process: ProcessType};
 
 export const remoteServiceRoutes = {
   success: "/success",
@@ -69,7 +69,7 @@ function validateRequestData(data: ReceivedData): void {
       validateClientStats(data, SYSTEM_STATS_SCHEMA);
       break;
     default:
-      throw new Error(`Invalid process type "${data.process as string}"`);
+      throw new Error(`Invalid process type "${data.process}"`);
   }
 }
 
