@@ -12,7 +12,7 @@ describe("sync / range / batch", async () => {
   const startEpoch = 0;
   const peer = validPeerIdStr;
   const blocksDownloaded = [
-    getBlockInput.preDeneb(config, ssz.phase0.SignedBeaconBlock.defaultValue(), BlockSource.byRange),
+    getBlockInput.preDeneb(config, ssz.phase0.SignedBeaconBlock.defaultValue(), BlockSource.byRange, null),
   ];
 
   it("Should return correct blockByRangeRequest", () => {

@@ -218,12 +218,14 @@ export function getBeaconBlockApi({
             config,
             signedBlock,
             signedBlobs.map((sblob) => sblob.message)
-          )
+          ),
+          null
         );
       } else {
         signedBlock = signedBlockOrContents;
         signedBlobs = [];
-        blockForImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.api);
+        // TODO: Once API supports submitting data as SSZ, replace null with blockBytes
+        blockForImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.api, null);
       }
 
       // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the

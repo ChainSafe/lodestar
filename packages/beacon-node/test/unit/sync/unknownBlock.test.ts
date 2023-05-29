@@ -16,6 +16,7 @@ import {ClockStopped} from "../../utils/mocks/clock.js";
 import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
+import {ZERO_HASH} from "../../../src/constants/constants.js";
 
 describe("sync / UnknownBlockSync", () => {
   const logger = testLogger();
@@ -130,8 +131,11 @@ describe("sync / UnknownBlockSync", () => {
           sendBeaconBlocksByRootResolveFn([_peerId, roots]);
           const correctBlocks = Array.from(roots)
             .map((root) => blocksByRoot.get(toHexString(root)))
-            .filter(notNullish);
-          return wrongBlockRoot ? [ssz.phase0.SignedBeaconBlock.defaultValue()] : correctBlocks;
+            .filter(notNullish)
+            .map((data) => ({data, bytes: ZERO_HASH}));
+          return wrongBlockRoot
+            ? [{data: ssz.phase0.SignedBeaconBlock.defaultValue(), bytes: ZERO_HASH}]
+            : correctBlocks;
         },
 
         reportPeer: async (peerId, action, actionName) => reportPeerResolveFn([peerId, action, actionName]),
@@ -180,7 +184,7 @@ describe("sync / UnknownBlockSync", () => {
       syncService.subscribeToNetwork();
       if (event === NetworkEvent.unknownBlockParent) {
         network.events?.emit(NetworkEvent.unknownBlockParent, {
-          blockInput: getBlockInput.preDeneb(config, blockC, BlockSource.gossip),
+          blockInput: getBlockInput.preDeneb(config, blockC, BlockSource.gossip, null),
           peer,
         });
       } else {

@@ -7,6 +7,7 @@ import {beaconBlocksMaybeBlobsByRange} from "../../../src/network/reqresp/index.
 import {BlockInputType, BlockSource, blobSidecarsToBlobsSidecar} from "../../../src/chain/blocks/types.js";
 import {ckzg, initCKZG, loadEthereumTrustedSetup, FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../../src/util/kzg.js";
 import {INetwork} from "../../../src/network/interface.js";
+import {ZERO_HASH} from "../../../src/constants/constants.js";
 
 describe("beaconBlocksMaybeBlobsByRange", () => {
   before(async function () {
@@ -107,7 +108,7 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
       });
 
       const network = {
-        sendBeaconBlocksByRange: async () => blocks,
+        sendBeaconBlocksByRange: async () => blocks.map((data) => ({data, bytes: ZERO_HASH})),
         sendBlobSidecarsByRange: async () => blobSidecars,
       } as Partial<INetwork> as INetwork;
 

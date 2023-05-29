@@ -127,7 +127,7 @@ function verifyBlocksSanityChecks(
 ): {relevantBlocks: allForks.SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
   const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksImportSanityChecks(
     modules,
-    blocks.map((block) => getBlockInput.preDeneb(config, block, BlockSource.byRange)),
+    blocks.map((block) => getBlockInput.preDeneb(config, block, BlockSource.byRange, null)),
     opts
   );
   return {

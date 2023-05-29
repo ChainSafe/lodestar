@@ -10,6 +10,8 @@ import {GossipType} from "./gossip/interface.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {PeerAction} from "./peers/index.js";
 
+export type WithBytes<T> = {data: T; bytes: Uint8Array};
+
 /**
  * The architecture of the network looks like so:
  * - core:
@@ -34,11 +36,11 @@ export interface INetwork extends INetworkCorePublic {
   sendBeaconBlocksByRange(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<allForks.SignedBeaconBlock[]>;
+  ): Promise<WithBytes<allForks.SignedBeaconBlock>[]>;
   sendBeaconBlocksByRoot(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRootRequest
-  ): Promise<allForks.SignedBeaconBlock[]>;
+  ): Promise<WithBytes<allForks.SignedBeaconBlock>[]>;
   sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
   sendBlobSidecarsByRoot(peerId: PeerIdStr, request: deneb.BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
 
