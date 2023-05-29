@@ -15,6 +15,7 @@ type BeaconExtraArgs = {
   beaconDir?: string;
   dbDir?: string;
   persistInvalidSszObjectsDir?: string;
+  persistInvalidSszObjectsRetentionHours?: number;
   peerStoreDir?: string;
   persistNetworkIdentity?: boolean;
 };
@@ -83,6 +84,12 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     defaultDescription: defaultBeaconPaths.persistInvalidSszObjectsDir,
     hidden: true,
     type: "string",
+  },
+
+  persistInvalidSszObjectsRetentionHours: {
+    description: "Number of hours to keep invalid SSZ objects in local disk",
+    hidden: true,
+    type: "number",
   },
 
   peerStoreDir: {
