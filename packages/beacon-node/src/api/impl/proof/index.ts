@@ -20,7 +20,7 @@ export function getProofApi(
         throw new Error("Requested proof is too large.");
       }
 
-      const {state} = await resolveStateId(config, chain, db, stateId);
+      const {state} = await resolveStateId(chain, stateId);
 
       // Commit any changes before computing the state root. In normal cases the state should have no changes here
       state.commit();

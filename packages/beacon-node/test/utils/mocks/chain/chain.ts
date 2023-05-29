@@ -187,6 +187,14 @@ export class MockBeaconChain implements IBeaconChain {
     return this.state;
   }
 
+  getStateBySlot(): never {
+    throw Error("Not implemented");
+  }
+
+  getStateByStateRoot(): never {
+    throw Error("Not implemented");
+  }
+
   async getCanonicalBlockAtSlot(): Promise<allForks.SignedBeaconBlock> {
     throw Error("Not implemented");
   }
@@ -317,6 +325,7 @@ function mockForkChoice(): IForkChoice {
     getAllAncestorBlocks: () => [block],
     getAllNonAncestorBlocks: () => [block],
     getCanonicalBlockAtSlot: () => block,
+    getCanonicalBlockClosestLteSlot: () => block,
     forwarditerateAncestorBlocks: () => [block],
     forwardIterateDescendants: emptyGenerator,
     getBlockSummariesByParentRoot: () => [block],

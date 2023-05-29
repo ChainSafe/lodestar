@@ -11,7 +11,12 @@ import {
   Wei,
   WithOptionalBytes,
 } from "@lodestar/types";
-import {CachedBeaconStateAllForks, Index2PubkeyCache, PubkeyIndexMap} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  Index2PubkeyCache,
+  PubkeyIndexMap,
+} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/utils";
@@ -48,6 +53,10 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 export {BlockType, AssembledBlockType};
 export {ProposerPreparationData};
 export type BlockHash = RootHex;
+
+export type StateGetOpts = {
+  allowRegen: boolean;
+};
 
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
@@ -115,6 +124,17 @@ export interface IBeaconChain {
   getHeadState(): CachedBeaconStateAllForks;
   getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
   getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
+
+  /** Returns a local state cannonical at `slot` */
+  getStateBySlot(
+    slot: Slot,
+    opts?: StateGetOpts
+  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null>;
+  /** Returns a local state by state root */
+  getStateByStateRoot(
+    stateRoot: RootHex,
+    opts?: StateGetOpts
+  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null>;
 
   /**
    * Since we can have multiple parallel chains,

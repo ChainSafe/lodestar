@@ -13,6 +13,7 @@ export enum RegenCaller {
   validateGossipAttestation = "validateGossipAttestation",
   validateGossipVoluntaryExit = "validateGossipVoluntaryExit",
   onForkChoiceFinalized = "onForkChoiceFinalized",
+  restApi = "restApi",
 }
 
 export enum RegenFnName {

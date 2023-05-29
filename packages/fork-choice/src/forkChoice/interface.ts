@@ -176,6 +176,7 @@ export interface IForkChoice {
    */
   getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[];
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;
+  getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null;
   /**
    * Returns all ProtoBlock known to fork-choice. Must not mutated the returned array
    */
