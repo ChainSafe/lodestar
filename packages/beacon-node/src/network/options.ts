@@ -18,6 +18,7 @@ export interface NetworkOptions
   mdns: boolean;
   connectToDiscv5Bootnodes?: boolean;
   version?: string;
+  private?: boolean;
   useWorker?: boolean;
 }
 

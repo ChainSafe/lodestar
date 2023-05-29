@@ -26,6 +26,7 @@ export type Libp2pOptions = {
   metrics?: boolean;
   metricsRegistry?: Registry;
   lodestarVersion?: string;
+  hideAgentVersion?: boolean;
   mdns?: boolean;
 };
 
@@ -110,7 +111,11 @@ export async function createNodejsLibp2p(options: Libp2pOptions): Promise<Libp2p
 
     identify: {
       host: {
-        agentVersion: options.lodestarVersion ? `lodestar/${options.lodestarVersion}` : "lodestar",
+        agentVersion: options.hideAgentVersion
+          ? ""
+          : options.lodestarVersion
+          ? `lodestar/${options.lodestarVersion}`
+          : "lodestar",
       },
     },
   })) as Libp2p;

@@ -89,6 +89,7 @@ describe("options / beaconNodeOptions", () => {
       "network.rateLimitMultiplier": 1,
       "network.maxGossipTopicConcurrency": 64,
       "network.useWorker": true,
+      "network.private": true,
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
@@ -183,6 +184,7 @@ describe("options / beaconNodeOptions", () => {
         rateLimitMultiplier: 1,
         maxGossipTopicConcurrency: 64,
         useWorker: true,
+        private: true,
       },
       sync: {
         isSingleNode: true,
