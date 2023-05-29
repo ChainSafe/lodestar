@@ -87,7 +87,7 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   },
 
   persistInvalidSszObjectsRetentionHours: {
-    description: "Number of hours to keep invalid SSZ objects in local disk",
+    description: "Number of hours to keep invalid SSZ objects on local disk",
     hidden: true,
     type: "number",
   },
