@@ -105,7 +105,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
               (args.persistInvalidSszObjectsRetentionHours ?? DEFAULT_RETENTION_SSZ_OBJECTS_HOURS) * HOURS_TO_MS
             );
           } catch (e) {
-            logger.warn("error pruning invalid SSZ objects", {persistInvalidSszObjectsDir}, e as Error);
+            logger.warn("Error pruning invalid SSZ objects", {persistInvalidSszObjectsDir}, e as Error);
           }
           // Run every ~1 hour
         }, HOURS_TO_MS)
