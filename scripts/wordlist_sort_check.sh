@@ -9,7 +9,7 @@
 wordlist=".wordlist.txt"
 
 # Check if wordlist is sorted
-if ! sort --check "$wordlist"; then
+if ! sort --human-numeric-sort --check "$wordlist"; then
   echo "Error: The wordlist is not sorted."
   exit 1
 fi
