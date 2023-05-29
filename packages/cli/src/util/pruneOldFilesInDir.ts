@@ -9,7 +9,7 @@ export function pruneOldFilesInDir(dirpath: string, maxAgeMs: number): void {
     if (stat.isDirectory()) {
       pruneOldFilesInDir(entryPath, maxAgeMs);
     } else if (stat.isFile()) {
-      if (Date.now() - stat.ctimeMs > maxAgeMs) {
+      if (Date.now() - stat.mtimeMs > maxAgeMs) {
         fs.unlinkSync(entryPath);
       }
     }
