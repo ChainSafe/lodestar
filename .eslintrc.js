@@ -114,6 +114,10 @@ module.exports = {
         allowAny: true,
       },
     ],
+    "@typescript-eslint/restrict-template-expressions": [
+      "error",
+      {allowNumber: true, allowBoolean: true, allowNullish: true, allowNever: true, allowRegExp: true},
+    ],
     "import/no-extraneous-dependencies": [
       "error",
       {

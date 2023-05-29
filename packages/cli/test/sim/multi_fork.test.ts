@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
-import {sleep, toHexString} from "@lodestar/utils";
+import {sleep, toHex, toHexString} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {AssertionMatch, CLClient, ELClient} from "../utils/simulation/interfaces.js";
@@ -116,7 +116,7 @@ const checkpointSync = await env.createNodePair({
   id: "checkpoint-sync-node",
   cl: {
     type: CLClient.Lodestar,
-    options: {clientOptions: {wssCheckpoint: `${headForCheckpointSync.root}:${headForCheckpointSync.epoch}`}},
+    options: {clientOptions: {wssCheckpoint: `${toHex(headForCheckpointSync.root)}:${headForCheckpointSync.epoch}`}},
   },
   el: ELClient.Geth,
   keysCount: 0,

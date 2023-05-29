@@ -69,7 +69,7 @@ function validateRequestData(data: ReceivedData): void {
       validateClientStats(data, SYSTEM_STATS_SCHEMA);
       break;
     default:
-      throw new Error(`Invalid process type "${data.process}"`);
+      throw new Error(`Invalid process type "${data.process as string}"`);
   }
 }
 

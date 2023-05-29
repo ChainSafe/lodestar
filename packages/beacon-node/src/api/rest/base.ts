@@ -87,14 +87,14 @@ export class RestApiServer {
     // Note: Must be an async method so fastify can continue the release lifecycle. Otherwise we must call done() or the request stalls
     server.addHook("onRequest", async (req, _res) => {
       const {operationId} = req.routeConfig as RouteConfig;
-      this.logger.debug(`Req ${req.id} ${req.ip} ${operationId}`);
+      this.logger.debug(`Req ${req.id as string} ${req.ip} ${operationId}`);
       metrics?.requests.inc({operationId});
     });
 
     // Log after response
     server.addHook("onResponse", async (req, res) => {
       const {operationId} = req.routeConfig as RouteConfig;
-      this.logger.debug(`Res ${req.id} ${operationId} - ${res.raw.statusCode}`);
+      this.logger.debug(`Res ${req.id as string} ${operationId} - ${res.raw.statusCode}`);
       metrics?.responseTime.observe({operationId}, res.getResponseTime() / 1000);
     });
 
@@ -107,9 +107,9 @@ export class RestApiServer {
       const {operationId} = req.routeConfig as RouteConfig;
 
       if (err instanceof ApiError) {
-        this.logger.warn(`Req ${req.id} ${operationId} failed`, {reason: err.message});
+        this.logger.warn(`Req ${req.id as string} ${operationId} failed`, {reason: err.message});
       } else {
-        this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);
+        this.logger.error(`Req ${req.id as string} ${operationId} error`, {}, err);
       }
       metrics?.errors.inc({operationId});
     });

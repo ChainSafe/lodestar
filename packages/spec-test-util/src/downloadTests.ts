@@ -77,7 +77,7 @@ export async function downloadGenericSpecTests<TestNames extends string>(
             timeout: 30 * 60 * 1000,
           });
 
-          const totalSize = headers["content-length"];
+          const totalSize = headers["content-length"] as string;
           log(`Downloading ${url} - ${totalSize} bytes`);
 
           // extract tar into output directory
