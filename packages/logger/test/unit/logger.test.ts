@@ -52,7 +52,9 @@ describe("shouldDeleteLogFile", function () {
   ];
 
   for (const {logFile, maxFiles, result} of tcs) {
-    it(`should ${result ? "" : "not"} delete ${logFile}, maxFiles ${maxFiles}, today ${new Date()}`, () => {
+    it(`should ${
+      result ? "" : "not"
+    } delete ${logFile}, maxFiles ${maxFiles}, today ${new Date().toUTCString()}`, () => {
       expect(shouldDeleteLogFile(prefix, extension, logFile, maxFiles)).to.be.equal(result);
     });
   }

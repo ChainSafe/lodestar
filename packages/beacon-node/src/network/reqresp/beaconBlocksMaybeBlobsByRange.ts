@@ -87,7 +87,8 @@ export async function beaconBlocksMaybeBlobsByRange(
           blobsSidecars.length
         } lastMatchedSlot=${lastMatchedSlot}, pending blobsSidecars slots=${blobsSidecars
           .slice(blobSideCarIndex)
-          .map((blb) => blb.beaconBlockSlot)}`
+          .map((blb) => blb.beaconBlockSlot)
+          .join(",")}`
       );
     }
     return blockInputs;

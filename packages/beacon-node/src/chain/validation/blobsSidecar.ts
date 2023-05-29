@@ -1,7 +1,7 @@
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
 import {deneb, Root, ssz} from "@lodestar/types";
-import {bytesToBigInt} from "@lodestar/utils";
+import {bytesToBigInt, toHex} from "@lodestar/utils";
 import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
 import {verifyKzgCommitmentsAgainstTransactions} from "@lodestar/state-transition";
 import {BlobsSidecarError, BlobsSidecarErrorCode} from "../errors/blobsSidecarError.js";
@@ -83,7 +83,9 @@ export function validateBlobsSidecar(
   // assert beacon_block_root == blobs_sidecar.beacon_block_root
   if (!byteArrayEquals(beaconBlockRoot, blobsSidecar.beaconBlockRoot)) {
     throw new Error(
-      `beacon block root mismatch. Block root: ${beaconBlockRoot}, Blob root ${blobsSidecar.beaconBlockRoot}`
+      `beacon block root mismatch. Block root: ${toHex(beaconBlockRoot)}, Blob root ${toHex(
+        blobsSidecar.beaconBlockRoot
+      )}`
     );
   }
 
