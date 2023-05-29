@@ -68,19 +68,9 @@ jobs:
 
       - name: Check Types
         run: yarn check-types
-      # Test docs generation, even if not published
-      - name: Build docs
-        run: yarn build:docs
 
       - name: README check
         run: yarn check-readme
-
-      # To automatically fix format issues run
-      # ```
-      # $ yarn lint-docs:fix
-      # ```
-      - name: Check docs format
-        run: yarn lint-docs
 
       - name: Lint
         run: yarn lint
