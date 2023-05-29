@@ -78,6 +78,7 @@ Stakehouse
 stakers
 testnet
 testnets
+TOC
 TypeScript
 UI
 UTF
@@ -89,4 +90,3 @@ Vitalik
 Vitalik's
 VM
 Wagyu
-TOC
