@@ -1,5 +1,5 @@
 import {pipe} from "it-pipe";
-import {responseEncodeError, responseEncodeSuccess} from "../../src/encoders/responseEncode.js";
+import {responseEncodeError, responseEncodeSuccess} from "../../src/encoders/response_encode.js";
 import {RespStatus} from "../../src/interface.js";
 import {Protocol} from "../../src/types.js";
 import {ResponseChunk, SuccessResponseChunk} from "../fixtures/encoders.js";

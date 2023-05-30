@@ -2,7 +2,7 @@ import {expect} from "chai";
 import all from "it-all";
 import {pipe} from "it-pipe";
 import varint from "varint";
-import {writeSszSnappyPayload} from "../../../../src/encodingStrategies/sszSnappy/encode.js";
+import {writeSszSnappyPayload} from "../../../../src/encoding_strategies/ssz_snappy/encode.js";
 import {encodingStrategiesMainnetTestCases, encodingStrategiesTestCases} from "../../../fixtures/index.js";
 import {expectEqualByteChunks} from "../../../utils/index.js";
 

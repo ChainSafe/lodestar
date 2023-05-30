@@ -2,7 +2,7 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {Uint8ArrayList} from "uint8arraylist";
 import varint from "varint";
-import {readSszSnappyPayload} from "../../../../src/encodingStrategies/sszSnappy/index.js";
+import {readSszSnappyPayload} from "../../../../src/encoding_strategies/ssz_snappy/index.js";
 import {BufferedSource} from "../../../../src/utils/index.js";
 import {
   encodingStrategiesDecodingErrorCases,

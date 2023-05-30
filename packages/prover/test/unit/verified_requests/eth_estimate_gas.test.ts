@@ -4,7 +4,7 @@ import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {ELTransaction} from "../../../lib/types.js";
 import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
-import {eth_estimateGas} from "../../../src/verified_requests/eth_estimateGas.js";
+import {eth_estimateGas} from "../../../src/verified_requests/eth_estimate_gas.js";
 import ethEstimateGasCase1 from "../../fixtures/mainnet/eth_estimateGas_simple_transfer.json" assert {type: "json"};
 import ethEstimateGasCase2 from "../../fixtures/mainnet/eth_estimateGas_contract_call.json" assert {type: "json"};
 import {TestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";

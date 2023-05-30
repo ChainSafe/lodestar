@@ -3,7 +3,7 @@ import deepmerge from "deepmerge";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
-import {eth_getTransactionCount} from "../../../src/verified_requests/eth_getTransactionCount.js";
+import {eth_getTransactionCount} from "../../../src/verified_requests/eth_get_transaction_count.js";
 import getTransactionCountCase1 from "../../fixtures/sepolia/eth_getTransactionCount.json" assert {type: "json"};
 import {generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 

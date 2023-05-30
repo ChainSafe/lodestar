@@ -18,7 +18,7 @@ import {BeaconChain} from "../../../../src/chain/index.js";
 import {StubbedChainMutable} from "../../../utils/stub/index.js";
 import {generateState} from "../../../utils/state.js";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntary_exit.js";
-import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
+import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntary_exit_error.js";
 import {OpPool} from "../../../../src/chain/op_pools/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {createCachedBeaconStateTest} from "../../../utils/cached_beacon_state.js";

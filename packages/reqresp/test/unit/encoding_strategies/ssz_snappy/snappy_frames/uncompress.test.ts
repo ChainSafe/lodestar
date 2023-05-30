@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {Uint8ArrayList} from "uint8arraylist";
 import snappy from "@chainsafe/snappy-stream";
-import {SnappyFramesUncompress} from "../../../../../src/encodingStrategies/sszSnappy/snappyFrames/uncompress.js";
+import {SnappyFramesUncompress} from "../../../../../src/encoding_strategies/ssz_snappy/snappy_frames/uncompress.js";
 
 describe("encodingStrategies / sszSnappy / snappy frames / uncompress", function () {
   it("should work with short input", function (done) {

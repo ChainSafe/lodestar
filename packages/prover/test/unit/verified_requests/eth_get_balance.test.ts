@@ -3,7 +3,7 @@ import deepmerge from "deepmerge";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
-import {eth_getBalance} from "../../../src/verified_requests/eth_getBalance.js";
+import {eth_getBalance} from "../../../src/verified_requests/eth_get_balance.js";
 import eth_getBalance_eoa from "../../fixtures/sepolia/eth_getBalance_eoa.json" assert {type: "json"};
 import eth_getBalance_contract from "../../fixtures/sepolia/eth_getBalance_contract.json" assert {type: "json"};
 import {generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";

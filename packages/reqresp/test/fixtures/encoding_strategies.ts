@@ -4,7 +4,7 @@ import {fileURLToPath} from "node:url";
 import varint from "varint";
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/errors.js";
+import {SszSnappyErrorCode} from "../../src/encoding_strategies/ssz_snappy/errors.js";
 import {ResponseOutgoing, TypeSizes} from "../../src/types.js";
 import {
   sszSnappyPing,

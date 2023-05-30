@@ -4,7 +4,7 @@ import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
 import {ELBlock} from "../../../src/types.js";
-import {eth_getBlockByNumber} from "../../../src/verified_requests/eth_getBlockByNumber.js";
+import {eth_getBlockByNumber} from "../../../src/verified_requests/eth_get_block_by_number.js";
 import eth_getBlock_with_contractCreation from "../../fixtures/sepolia/eth_getBlock_with_contractCreation.json" assert {type: "json"};
 import eth_getBlock_with_no_accessList from "../../fixtures/sepolia/eth_getBlock_with_no_accessList.json" assert {type: "json"};
 import {TestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";

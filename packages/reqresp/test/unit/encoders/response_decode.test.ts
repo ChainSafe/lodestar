@@ -3,7 +3,7 @@ import chaiAsPromised from "chai-as-promised";
 import all from "it-all";
 import {pipe} from "it-pipe";
 import {LodestarError} from "@lodestar/utils";
-import {responseDecode} from "../../../src/encoders/responseDecode.js";
+import {responseDecode} from "../../../src/encoders/response_decode.js";
 import {responseEncodersErrorTestCases, responseEncodersTestCases} from "../../fixtures/encoders.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {arrToSource, onlySuccessResp} from "../../utils/index.js";

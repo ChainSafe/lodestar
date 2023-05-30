@@ -3,7 +3,7 @@ import deepmerge from "deepmerge";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
-import {eth_getCode} from "../../../src/verified_requests/eth_getCode.js";
+import {eth_getCode} from "../../../src/verified_requests/eth_get_code.js";
 import ethGetCodeCase1 from "../../fixtures/sepolia/eth_getCode.json" assert {type: "json"};
 import {generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 

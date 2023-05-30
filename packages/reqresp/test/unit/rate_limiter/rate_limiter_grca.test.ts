@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {RateLimiterGRCA} from "../../../src/rate_limiter/rateLimiterGRCA.js";
+import {RateLimiterGRCA} from "../../../src/rate_limiter/rate_limiter_grca.js";
 
 describe("rateLimiterGRCA", () => {
   let rateLimiter: RateLimiterGRCA<null>;

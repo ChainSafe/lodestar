@@ -1,5 +1,5 @@
 import {MutableVector} from "@chainsafe/persistent-ts";
-import {testRunnerMemory} from "@lodestar/beacon-node/test/memory/testRunnerMemory";
+import {testRunnerMemory} from "@lodestar/beacon-node/test/memory/test_runner_memory.js";
 import {newZeroedArray} from "../../src/index.js";
 
 // Results in Linux Feb 2022

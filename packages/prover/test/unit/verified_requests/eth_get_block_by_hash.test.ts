@@ -3,7 +3,7 @@ import deepmerge from "deepmerge";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
-import {eth_getBlockByHash} from "../../../src/verified_requests/eth_getBlockByHash.js";
+import {eth_getBlockByHash} from "../../../src/verified_requests/eth_get_block_by_hash.js";
 import eth_getBlock_with_contractCreation from "../../fixtures/sepolia/eth_getBlock_with_contractCreation.json" assert {type: "json"};
 import eth_getBlock_with_no_accessList from "../../fixtures/sepolia/eth_getBlock_with_no_accessList.json" assert {type: "json"};
 import {TestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
