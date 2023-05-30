@@ -18,7 +18,7 @@
       "import": "./lib/index.js"
     },
     "./allForks": {
-      "import": "./lib/allForks/index.js"
+      "import": "./lib/all_forks/index.js"
     },
     "./altair": {
       "import": "./lib/altair/index.js"
