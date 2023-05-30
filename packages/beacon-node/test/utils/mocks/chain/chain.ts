@@ -302,6 +302,8 @@ function mockForkChoice(): IForkChoice {
     getTime: () => 0,
     hasBlock: () => true,
     hasBlockHex: () => true,
+    hasBlockUnsafe: () => true,
+    hasBlockHexUnsafe: () => true,
     getSlotsPresent: () => 0,
     getBlock: () => block,
     getBlockHex: () => block,

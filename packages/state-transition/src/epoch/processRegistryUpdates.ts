@@ -1,6 +1,6 @@
 import {computeActivationExitEpoch} from "../util/index.js";
 import {initiateValidatorExit} from "../block/index.js";
-import {EpochProcess, CachedBeaconStateAllForks} from "../types.js";
+import {EpochTransitionCache, CachedBeaconStateAllForks} from "../types.js";
 
 /**
  * Update validator registry for validators that activate + exit
@@ -16,7 +16,7 @@ import {EpochProcess, CachedBeaconStateAllForks} from "../types.js";
  *   - indicesEligibleForActivationQueue: 0
  *   - indicesToEject: 0
  */
-export function processRegistryUpdates(state: CachedBeaconStateAllForks, epochProcess: EpochProcess): void {
+export function processRegistryUpdates(state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
   const {epochCtx} = state;
 
   // Get the validators sub tree once for all the loop
@@ -25,20 +25,20 @@ export function processRegistryUpdates(state: CachedBeaconStateAllForks, epochPr
   // TODO: Batch set this properties in the tree at once with setMany() or setNodes()
 
   // process ejections
-  for (const index of epochProcess.indicesToEject) {
+  for (const index of cache.indicesToEject) {
     // set validator exit epoch and withdrawable epoch
     // TODO: Figure out a way to quickly set properties on the validators tree
     initiateValidatorExit(state, validators.get(index));
   }
 
   // set new activation eligibilities
-  for (const index of epochProcess.indicesEligibleForActivationQueue) {
+  for (const index of cache.indicesEligibleForActivationQueue) {
     validators.get(index).activationEligibilityEpoch = epochCtx.epoch + 1;
   }
 
   const finalityEpoch = state.finalizedCheckpoint.epoch;
   // dequeue validators for activation up to churn limit
-  for (const index of epochProcess.indicesEligibleForActivation.slice(0, epochCtx.churnLimit)) {
+  for (const index of cache.indicesEligibleForActivation.slice(0, epochCtx.churnLimit)) {
     const validator = validators.get(index);
     // placement in queue is finalized
     if (validator.activationEligibilityEpoch > finalityEpoch) {
@@ -48,6 +48,6 @@ export function processRegistryUpdates(state: CachedBeaconStateAllForks, epochPr
       // So we need to filter by finalityEpoch here to comply with the spec.
       break;
     }
-    validator.activationEpoch = computeActivationExitEpoch(epochProcess.currentEpoch);
+    validator.activationEpoch = computeActivationExitEpoch(cache.currentEpoch);
   }
 }

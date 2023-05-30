@@ -14,8 +14,8 @@ export enum ReqRespMethod {
   Metadata = "metadata",
   BeaconBlocksByRange = "beacon_blocks_by_range",
   BeaconBlocksByRoot = "beacon_blocks_by_root",
-  BlobsSidecarsByRange = "blobs_sidecars_by_range",
-  BeaconBlockAndBlobsSidecarByRoot = "beacon_block_and_blobs_sidecar_by_root",
+  BlobSidecarsByRange = "blob_sidecars_by_range",
+  BlobSidecarsByRoot = "blob_sidecars_by_root",
   LightClientBootstrap = "light_client_bootstrap",
   LightClientUpdatesByRange = "light_client_updates_by_range",
   LightClientFinalityUpdate = "light_client_finality_update",
@@ -30,8 +30,8 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.Metadata]: null;
   [ReqRespMethod.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
   [ReqRespMethod.BeaconBlocksByRoot]: phase0.BeaconBlocksByRootRequest;
-  [ReqRespMethod.BlobsSidecarsByRange]: deneb.BlobsSidecarsByRangeRequest;
-  [ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]: deneb.BeaconBlockAndBlobsSidecarByRootRequest;
+  [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecarsByRangeRequest;
+  [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecarsByRootRequest;
   [ReqRespMethod.LightClientBootstrap]: Root;
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
   [ReqRespMethod.LightClientFinalityUpdate]: null;
@@ -46,8 +46,8 @@ type ResponseBodyByMethod = {
   // Do not matter
   [ReqRespMethod.BeaconBlocksByRange]: allForks.SignedBeaconBlock;
   [ReqRespMethod.BeaconBlocksByRoot]: allForks.SignedBeaconBlock;
-  [ReqRespMethod.BlobsSidecarsByRange]: deneb.BlobsSidecar;
-  [ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]: deneb.SignedBeaconBlockAndBlobsSidecar;
+  [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecar;
+  [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecar;
   [ReqRespMethod.LightClientBootstrap]: altair.LightClientBootstrap;
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdate;
   [ReqRespMethod.LightClientFinalityUpdate]: altair.LightClientFinalityUpdate;
@@ -64,8 +64,8 @@ export const requestSszTypeByMethod: {
   [ReqRespMethod.Metadata]: null,
   [ReqRespMethod.BeaconBlocksByRange]: ssz.phase0.BeaconBlocksByRangeRequest,
   [ReqRespMethod.BeaconBlocksByRoot]: ssz.phase0.BeaconBlocksByRootRequest,
-  [ReqRespMethod.BlobsSidecarsByRange]: ssz.deneb.BlobsSidecarsByRangeRequest,
-  [ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]: ssz.deneb.BeaconBlockAndBlobsSidecarByRootRequest,
+  [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
+  [ReqRespMethod.BlobSidecarsByRoot]: ssz.deneb.BlobSidecarsByRootRequest,
   [ReqRespMethod.LightClientBootstrap]: ssz.Root,
   [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
   [ReqRespMethod.LightClientFinalityUpdate]: null,
@@ -89,8 +89,8 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.Metadata]: (_, version) => (version == Version.V1 ? ssz.phase0.Metadata : ssz.altair.Metadata),
   [ReqRespMethod.BeaconBlocksByRange]: blocksResponseType,
   [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
-  [ReqRespMethod.BlobsSidecarsByRange]: () => ssz.deneb.BlobsSidecar,
-  [ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]: () => ssz.deneb.SignedBeaconBlockAndBlobsSidecar,
+  [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
+  [ReqRespMethod.BlobSidecarsByRoot]: () => ssz.deneb.BlobSidecar,
   [ReqRespMethod.LightClientBootstrap]: (fork) =>
     ssz.allForksLightClient[onlyLightclientFork(fork)].LightClientBootstrap,
   [ReqRespMethod.LightClientUpdatesByRange]: (fork) =>

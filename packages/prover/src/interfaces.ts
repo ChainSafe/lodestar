@@ -1,4 +1,4 @@
-import {ChainForkConfig} from "@lodestar/config";
+import {ChainConfig} from "@lodestar/config";
 import {NetworkName} from "@lodestar/config/networks";
 import {Logger, LogLevel} from "@lodestar/utils";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
@@ -9,13 +9,15 @@ export enum LCTransport {
   P2P = "P2P",
 }
 
+// Provide either network or config. This will be helpful to connect to a custom network
+export type NetworkOrConfig = {network: NetworkName; config?: never} | {network?: never; config: Partial<ChainConfig>};
+
 export type RootProviderInitOptions = {
-  network: NetworkName;
   signal: AbortSignal;
   logger: Logger;
-  config?: ChainForkConfig;
   wsCheckpoint?: string;
-} & ConsensusNodeOptions;
+} & ConsensusNodeOptions &
+  NetworkOrConfig;
 
 // The `undefined` is necessary to match the types for the web3 1.x
 export type ELRequestHandler<Params = unknown[], Response = unknown> = (
@@ -57,7 +59,6 @@ export type ELVerifiedRequestHandlerOpts<Params = unknown[], Response = unknown>
   handler: ELRequestHandler<Params, Response>;
   proofProvider: ProofProvider;
   logger: Logger;
-  network: NetworkName;
 };
 
 export type ELVerifiedRequestHandler<Params = unknown[], Response = unknown> = (
@@ -71,3 +72,7 @@ export type LogOptions = {logger?: Logger; logLevel?: never} | {logLevel?: LogLe
 export type ConsensusNodeOptions =
   | {transport: LCTransport.Rest; urls: string[]}
   | {transport: LCTransport.P2P; bootnodes: string[]};
+
+export type VerifiedExecutionInitOptions = LogOptions &
+  ConsensusNodeOptions &
+  NetworkOrConfig & {wsCheckpoint?: string; signal?: AbortSignal};

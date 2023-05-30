@@ -3,7 +3,7 @@ import {phase0, Root, ssz, TimeSeconds, allForks, deneb} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
-  createEmptyEpochContextImmutableData,
+  createEmptyEpochCacheImmutableData,
   initializeBeaconStateFromEth1,
   isValidGenesisState,
 } from "@lodestar/state-transition";
@@ -36,7 +36,7 @@ const genesisInitialization: TestRunnerFn<GenesisInitSpecTest, BeaconStateAllFor
       }
 
       const config = getConfig(fork);
-      const immutableData = createEmptyEpochContextImmutableData(config, {
+      const immutableData = createEmptyEpochCacheImmutableData(config, {
         // TODO: Should the genesisValidatorsRoot be random here?
         genesisValidatorsRoot: Buffer.alloc(32, 0),
       });

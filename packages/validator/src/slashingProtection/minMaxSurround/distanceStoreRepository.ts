@@ -1,7 +1,8 @@
-import {Bucket, encodeKey, DatabaseApiOptions, DbReqOpts, getBucketNameByValue} from "@lodestar/db";
+import {encodeKey, DatabaseApiOptions, DbReqOpts} from "@lodestar/db";
 import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
 import {intToBytes} from "@lodestar/utils";
 import {Type} from "@chainsafe/ssz";
+import {Bucket, getBucketNameByValue} from "../../buckets.js";
 import {LodestarValidatorDatabaseController} from "../../types.js";
 import {DistanceEntry, IDistanceStore} from "./interface.js";
 
@@ -13,8 +14,8 @@ export class DistanceStoreRepository implements IDistanceStore {
   maxSpan: SpanDistanceRepository;
 
   constructor(opts: DatabaseApiOptions) {
-    this.minSpan = new SpanDistanceRepository(opts, Bucket.index_slashingProtectionMinSpanDistance);
-    this.maxSpan = new SpanDistanceRepository(opts, Bucket.index_slashingProtectionMaxSpanDistance);
+    this.minSpan = new SpanDistanceRepository(opts, Bucket.slashingProtectionMinSpanDistance);
+    this.maxSpan = new SpanDistanceRepository(opts, Bucket.slashingProtectionMaxSpanDistance);
   }
 }
 
@@ -30,7 +31,7 @@ class SpanDistanceRepository {
     this.db = opts.controller;
     this.type = ssz.Epoch;
     this.bucket = bucket;
-    this.bucketId = getBucketNameByValue(this.bucket);
+    this.bucketId = getBucketNameByValue(bucket);
     this.dbReqOpts = {bucketId: this.bucketId};
   }
 

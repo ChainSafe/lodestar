@@ -1,6 +1,7 @@
 import sinon from "sinon";
 import {NetworkName} from "@lodestar/config/networks";
 import {ForkConfig} from "@lodestar/config";
+import {PresetName} from "@lodestar/params";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {ELVerifiedRequestHandlerOpts} from "../../src/interfaces.js";
 import {ProofProvider} from "../../src/proof_provider/proof_provider.js";
@@ -57,20 +58,16 @@ function getPayloadMatcher(expected: ELRequestPayload): sinon.SinonMatcher {
       const expectedItem = expected.params[i];
 
       if (typeof item === "string" && typeof expectedItem === "string") {
-        if (item.toLowerCase() === expectedItem.toLowerCase()) {
-          continue;
-        } else {
-          return false;
-        }
+        if (item.toLowerCase() === expectedItem.toLowerCase()) continue;
+
+        return false;
       }
 
       // Param is a transaction object
       if (typeof item === "object" && !isNullish((item as ELTransaction).to)) {
-        if (matchTransaction(item as ELTransaction, expectedItem as ELTransaction)) {
-          continue;
-        } else {
-          return false;
-        }
+        if (matchTransaction(item as ELTransaction, expectedItem as ELTransaction)) continue;
+
+        return false;
       }
     }
 
@@ -91,6 +88,12 @@ export function generateReqHandlerOptionsMock(
     logger: getEmptyLogger(),
     proofProvider: {
       getExecutionPayload: sinon.stub().resolves(executionPayload),
+      config: {
+        ...config,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        PRESET_BASE: data.network as unknown as PresetName,
+      },
+      network: data.network,
     } as unknown as ProofProvider,
     network: data.network as NetworkName,
   };

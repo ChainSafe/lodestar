@@ -12,14 +12,14 @@
       "name": "VAR_BEACON_JOB",
       "type": "constant",
       "label": "Beacon node job name",
-      "value": "${VAR_BEACON_JOB}",
+      "value": "beacon",
       "description": ""
     },
     {
       "name": "VAR_VALIDATOR_JOB",
       "type": "constant",
       "label": "Validator client job name",
-      "value": "${VAR_VALIDATOR_JOB}",
+      "value": "validator",
       "description": ""
     }
   ],

@@ -104,6 +104,13 @@ export function createLodestarMetrics(
       }),
     },
 
+    networkWorkerHandler: {
+      reqRespBridgeReqCallerPending: register.gauge({
+        name: "lodestar_network_worker_handler_reqresp_bridge_req_caller_pending_count",
+        help: "Current count of pending items in reqRespBridgeReqCaller data structure",
+      }),
+    },
+
     regenQueue: {
       length: register.gauge({
         name: "lodestar_regen_queue_length",
@@ -619,6 +626,10 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_block_elapsed_time_till_become_head",
         help: "Time elapsed between block slot time and the time block becomes head",
         buckets: [0.5, 1, 2, 4, 6, 12],
+      }),
+      setHeadAfterFirstInterval: register.gauge({
+        name: "lodestar_import_block_set_head_after_first_interval_total",
+        help: "Total times an imported block is set as head after the first slot interval",
       }),
       bySource: register.gauge<"source">({
         name: "lodestar_import_block_by_source_total",

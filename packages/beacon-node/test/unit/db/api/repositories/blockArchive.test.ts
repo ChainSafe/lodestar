@@ -4,10 +4,11 @@ import sinon from "sinon";
 import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {intToBytes} from "@lodestar/utils";
-import {LevelDbController, Bucket, encodeKey} from "@lodestar/db";
+import {LevelDbController, encodeKey} from "@lodestar/db";
 
 import {BlockArchiveRepository} from "../../../../../src/db/repositories/index.js";
 import {testLogger} from "../../../../utils/logger.js";
+import {Bucket} from "../../../../../src/db/buckets.js";
 
 describe("block archive repository", function () {
   const testDir = "./.tmp";

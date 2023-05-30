@@ -10,7 +10,6 @@ export const eth_call: ELVerifiedRequestHandler<ELApiParams["eth_call"], ELApiRe
   payload,
   logger,
   proofProvider,
-  network,
 }) => {
   const {
     params: [tx, block],
@@ -20,7 +19,7 @@ export const eth_call: ELVerifiedRequestHandler<ELApiParams["eth_call"], ELApiRe
 
   try {
     // TODO: Optimize the creation of the evm
-    const vm = await createVM({proofProvider, network});
+    const vm = await createVM({proofProvider});
     const vmWithState = await getVMWithState({
       handler: handler as unknown as ELApiHandlers["eth_getProof"],
       executionPayload,
@@ -33,7 +32,7 @@ export const eth_call: ELVerifiedRequestHandler<ELApiParams["eth_call"], ELApiRe
       tx,
       handler: handler as unknown as ELApiHandlers["eth_getBlockByHash"],
       executionPayload,
-      network,
+      network: proofProvider.network,
     });
 
     return generateRPCResponseForPayload(payload, bufferToHex(result.returnValue));

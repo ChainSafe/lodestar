@@ -9,6 +9,13 @@ import {WinstonLogger} from "./winston.js";
 
 const DATE_PATTERN = "YYYY-MM-DD";
 
+/**
+ * Increase max listeners of file transports to prevent `MaxListenersExceededWarning` warnings.
+ * Each child logger (`logger.child`) adds a new listener. Setting a reasonable limit to still
+ * detect potential memory leaks. See https://github.com/ChainSafe/lodestar/issues/5529 for details.
+ */
+const FILE_TRANSPORT_MAX_LISTENERS = 20;
+
 export type LoggerNodeOpts = {
   level: LogLevel;
   /**
@@ -104,12 +111,12 @@ function getNodeLoggerTransports(opts: LoggerNodeOpts): winston.transport[] {
             handleExceptions: true,
             maxFiles: opts.file.dailyRotate,
             auditFile: path.join(path.dirname(filename), ".log_rotate_audit.json"),
-          })
+          }).setMaxListeners(FILE_TRANSPORT_MAX_LISTENERS)
         : new winston.transports.File({
             level: opts.file.level,
             filename: filename,
             handleExceptions: true,
-          })
+          }).setMaxListeners(FILE_TRANSPORT_MAX_LISTENERS)
     );
   }
 

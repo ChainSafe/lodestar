@@ -1,15 +1,13 @@
-import {NetworkName} from "@lodestar/config/networks";
 import {Logger} from "@lodestar/utils";
 import {getBrowserLogger} from "@lodestar/logger/browser";
 import {LogLevel} from "@lodestar/logger";
 import {
-  ConsensusNodeOptions,
   EIP1193Provider,
   EthersProvider,
-  LogOptions,
   RequestProvider,
   SendAsyncProvider,
   SendProvider,
+  VerifiedExecutionInitOptions,
   Web3Provider,
 } from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
@@ -24,60 +22,48 @@ import {
 import {processAndVerifyRequest} from "./utils/process.js";
 import {logRequest, logResponse} from "./utils/json_rpc.js";
 
-type ProvableProviderInitOpts = {network?: NetworkName; wsCheckpoint?: string; signal?: AbortSignal} & LogOptions &
-  ConsensusNodeOptions;
-
-const defaultNetwork = "mainnet";
-
 export function createVerifiedExecutionProvider<T extends Web3Provider>(
   provider: T,
-  opts: ProvableProviderInitOpts
+  opts: VerifiedExecutionInitOptions
 ): {provider: T; proofProvider: ProofProvider} {
   const signal = opts.signal ?? new AbortController().signal;
   const logger = opts.logger ?? getBrowserLogger({level: opts.logLevel ?? LogLevel.info});
-  const network = opts.network ?? defaultNetwork;
 
   const proofProvider = ProofProvider.init({
     ...opts,
-    network,
     signal,
     logger,
   });
 
   if (isSendProvider(provider)) {
     logger.debug("Creating a provider which is recognized as legacy provider with 'send' method.");
-    return {provider: handleSendProvider(provider, proofProvider, logger, network) as T, proofProvider};
+    return {provider: handleSendProvider(provider, proofProvider, logger) as T, proofProvider};
   }
 
   if (isEthersProvider(provider)) {
     logger.debug("Creating a provider which is recognized as 'ethers' provider.");
-    return {provider: handleEthersProvider(provider, proofProvider, logger, network) as T, proofProvider};
+    return {provider: handleEthersProvider(provider, proofProvider, logger) as T, proofProvider};
   }
 
   if (isRequestProvider(provider)) {
     logger.debug("Creating a provider which is recognized as legacy provider with 'request' method.");
-    return {provider: handleRequestProvider(provider, proofProvider, logger, network) as T, proofProvider};
+    return {provider: handleRequestProvider(provider, proofProvider, logger) as T, proofProvider};
   }
 
   if (isSendAsyncProvider(provider)) {
     logger.debug("Creating a provider which is recognized as legacy provider with 'sendAsync' method.");
-    return {provider: handleSendAsyncProvider(provider, proofProvider, logger, network) as T, proofProvider};
+    return {provider: handleSendAsyncProvider(provider, proofProvider, logger) as T, proofProvider};
   }
 
   if (isEIP1193Provider(provider)) {
     logger.debug("Creating a provider which is recognized as 'EIP1193' provider.");
-    return {provider: handleEIP1193Provider(provider, proofProvider, logger, network) as T, proofProvider};
+    return {provider: handleEIP1193Provider(provider, proofProvider, logger) as T, proofProvider};
   }
 
   return {provider, proofProvider: proofProvider};
 }
 
-function handleSendProvider(
-  provider: SendProvider,
-  proofProvider: ProofProvider,
-  logger: Logger,
-  network: NetworkName
-): SendProvider {
+function handleSendProvider(provider: SendProvider, proofProvider: ProofProvider, logger: Logger): SendProvider {
   const send = provider.send.bind(provider);
   const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> =>
     new Promise((resolve, reject) => {
@@ -93,7 +79,7 @@ function handleSendProvider(
     });
 
   function newSend(payload: ELRequestPayload, callback: (err?: Error | null, response?: ELResponse) => void): void {
-    processAndVerifyRequest({payload, handler, proofProvider, logger, network})
+    processAndVerifyRequest({payload, handler, proofProvider, logger})
       .then((response) => callback(undefined, response))
       .catch((err) => callback(err, undefined));
   }
@@ -104,8 +90,7 @@ function handleSendProvider(
 function handleRequestProvider(
   provider: RequestProvider,
   proofProvider: ProofProvider,
-  logger: Logger,
-  network: NetworkName
+  logger: Logger
 ): RequestProvider {
   const request = provider.request.bind(provider);
   const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> =>
@@ -122,7 +107,7 @@ function handleRequestProvider(
     });
 
   function newRequest(payload: ELRequestPayload, callback: (err?: Error | null, response?: ELResponse) => void): void {
-    processAndVerifyRequest({payload, handler, proofProvider, logger, network})
+    processAndVerifyRequest({payload, handler, proofProvider, logger})
       .then((response) => callback(undefined, response))
       .catch((err) => callback(err, undefined));
   }
@@ -133,8 +118,7 @@ function handleRequestProvider(
 function handleSendAsyncProvider(
   provider: SendAsyncProvider,
   proofProvider: ProofProvider,
-  logger: Logger,
-  network: NetworkName
+  logger: Logger
 ): SendAsyncProvider {
   const sendAsync = provider.sendAsync.bind(provider);
   const handler = async (payload: ELRequestPayload): Promise<ELResponse | undefined> => {
@@ -145,7 +129,7 @@ function handleSendAsyncProvider(
   };
 
   async function newSendAsync(payload: ELRequestPayload): Promise<ELResponse | undefined> {
-    return processAndVerifyRequest({payload, handler, proofProvider, logger, network});
+    return processAndVerifyRequest({payload, handler, proofProvider, logger});
   }
 
   return Object.assign(provider, {sendAsync: newSendAsync});
@@ -154,8 +138,7 @@ function handleSendAsyncProvider(
 function handleEIP1193Provider(
   provider: EIP1193Provider,
   proofProvider: ProofProvider,
-  logger: Logger,
-  network: NetworkName
+  logger: Logger
 ): EIP1193Provider {
   const request = provider.request.bind(provider);
   const handler = async (payload: ELRequestPayload): Promise<ELResponse | undefined> => {
@@ -166,18 +149,13 @@ function handleEIP1193Provider(
   };
 
   async function newRequest(payload: ELRequestPayload): Promise<ELResponse | undefined> {
-    return processAndVerifyRequest({payload, handler, proofProvider, logger, network});
+    return processAndVerifyRequest({payload, handler, proofProvider, logger});
   }
 
   return Object.assign(provider, {request: newRequest});
 }
 
-function handleEthersProvider(
-  provider: EthersProvider,
-  proofProvider: ProofProvider,
-  logger: Logger,
-  network: NetworkName
-): EthersProvider {
+function handleEthersProvider(provider: EthersProvider, proofProvider: ProofProvider, logger: Logger): EthersProvider {
   const send = provider.send.bind(provider);
   const handler = async (payload: ELRequestPayload): Promise<ELResponse | undefined> => {
     logRequest(payload, logger);
@@ -192,7 +170,6 @@ function handleEthersProvider(
       handler,
       proofProvider,
       logger,
-      network,
     });
   }
 
