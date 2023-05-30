@@ -6,10 +6,11 @@ const genesisSlot = 0;
 const genesisEpoch = 0;
 const genesisRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
-type Opts = {
+export type Opts = {
   // assume there are 64 unfinalized blocks, this number does not make a difference in term of performance
   initialBlockCount: number;
   initialValidatorCount: number;
+  initialEquivocatedCount: number;
 };
 
 export function initializeForkChoice(opts: Opts): ForkChoice {
@@ -46,7 +47,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
     unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
     justifiedBalancesGetter: () => balances,
-    equivocatingIndices: new Set(),
+    equivocatingIndices: new Set(Array.from({length: opts.initialEquivocatedCount}, (_, i) => i)),
   };
 
   const forkchoice = new ForkChoice(config, fcStore, protoArr);

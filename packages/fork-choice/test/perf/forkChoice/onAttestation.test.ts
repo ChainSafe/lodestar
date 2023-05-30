@@ -15,7 +15,11 @@ describe("ForkChoice onAttestation", () => {
     id: "pass gossip attestations to forkchoice per slot",
     beforeEach: () => {
       const initialBlockCount = 64;
-      const forkchoice = initializeForkChoice({initialBlockCount, initialValidatorCount: 600_000});
+      const forkchoice = initializeForkChoice({
+        initialBlockCount,
+        initialValidatorCount: 600_000,
+        initialEquivocatedCount: 0,
+      });
       const head = forkchoice.updateHead();
 
       // at slot 64, forkchoice receives attestations of slot 63
