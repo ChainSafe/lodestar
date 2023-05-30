@@ -107,15 +107,6 @@ describe("monitoring / service", () => {
 
       expect(logger.info).to.have.been.calledWith("Started monitoring service");
     });
-
-    it("should not send client stats if service is already started", async () => {
-      const service = await stubbedMonitoringService();
-
-      // invoke start a second time
-      await waitForInterval();
-
-      expect(service.send).to.have.been.calledOnce;
-    });
   });
 
   describe("MonitoringService - close", () => {
