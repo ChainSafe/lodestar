@@ -63,9 +63,12 @@ export class StatesArchiver {
     // Only check the current and previous intervals
     const minEpoch = Math.max(0, (Math.floor(finalized.epoch / frequency) - 1) * frequency);
 
+    const finalizedSlot = computeStartSlotAtEpoch(finalized.epoch);
+    const minSlot = computeStartSlotAtEpoch(minEpoch);
     const storedStateSlots = await this.db.stateArchive.keys({
-      lt: computeStartSlotAtEpoch(finalized.epoch),
-      gte: computeStartSlotAtEpoch(minEpoch),
+      lt: finalizedSlot,
+      gte: minSlot,
+      limit: finalizedSlot - minSlot,
     });
     const stateSlotsToDelete = computeStateSlotsToDelete(storedStateSlots, frequency);
 
