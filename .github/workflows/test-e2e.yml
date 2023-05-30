@@ -14,6 +14,8 @@ on:
 
 env:
   GOERLI_RPC_DEFAULT_URL: https://goerli.infura.io/v3/84842078b09946638c03157f83405213
+  GETH_DOCKER_IMAGE: ethereum/client-go:v1.11.6
+  NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.18.0
 
 jobs:
   tests-main:
@@ -56,7 +58,20 @@ jobs:
         # Run only on forks
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
 
+      - name: Run the e2e test environment
+        run: scripts/run_e2e_env.sh start
+
       - name: E2E tests
         run: yarn test:e2e
         env:
           GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL!=0 && secrets.GOERLI_RPC_URL || env.GOERLI_RPC_DEFAULT_URL }}
+
+      - name: Stop the e2e test environment
+        run: scripts/run_e2e_env.sh stop
+
+      - name: Upload debug log test for test env
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: debug-e2e-test-logs
+          path: test-logs/e2e-test-env
