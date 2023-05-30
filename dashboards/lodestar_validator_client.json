@@ -9,11 +9,11 @@
       "type": "datasource"
     },
     {
-      "description": "",
-      "label": "Beacon node job name",
-      "name": "VAR_BEACON_JOB",
+      "name": "VAR_VALIDATOR_JOB",
       "type": "constant",
-      "value": "beacon"
+      "label": "Validator client job name",
+      "value": "validator",
+      "description": ""
     }
   ],
   "annotations": {
