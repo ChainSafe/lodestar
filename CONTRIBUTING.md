@@ -191,8 +191,9 @@ To edit or extend an existing Grafana dashboard with minimal diff:
 2. Import file to Grafana via the web UI at `/dashboard/import`. Give it some temporal name relevant to your work (i.e. the branch name)
 3. Visually edit the dashboard
 4. Once done make sure to leave the exact same visual aspect as before: same refresh interval, collapsed rows, etc.
-5. Run download script, see [below](#using-download-script) on how to use it
-6. Check git diff of updated dashboards, commit, push and open your PR
+5. Save the dashboard (CTRL + S)
+6. Run download script, see [below](#using-download-script) on how to use it
+7. Check git diff of updated dashboards, commit, push and open your PR
 
 ### Using Download Script
 
