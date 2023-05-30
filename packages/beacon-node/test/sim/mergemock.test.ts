@@ -17,7 +17,7 @@ import {simTestInfoTracker} from "../utils/node/sim_test.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
 import {Eth1Provider} from "../../src/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
-import {runEL, ELStartMode, ELClient} from "../utils/runEl.js";
+import {runEL, ELStartMode, ELClient} from "../utils/run_el.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 

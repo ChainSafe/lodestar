@@ -48,7 +48,7 @@ import {IBeaconChain, ProposerPreparationData, BlockHash} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./fork_choice/index.js";
-import {computeAnchorCheckpoint} from "./initState.js";
+import {computeAnchorCheckpoint} from "./init_state.js";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls/index.js";
 import {
   SeenAttesters,

@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {MapDef} from "@lodestar/utils";
-import {peerIdFromString} from "../../../../src/util/peerId.js";
+import {peerIdFromString} from "../../../../src/util/peer_id.js";
 import {
   PeerAction,
   ScoreState,

@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, phase0, deneb, Slot} from "@lodestar/types";
 import {BlockInput, BlockSource} from "../../chain/blocks/types.js";
-import {PeerIdStr} from "../../util/peerId.js";
+import {PeerIdStr} from "../../util/peer_id.js";
 import {INetwork} from "../interface.js";
 import {matchBlockWithBlobs} from "./beacon_blocks_maybe_blobs_by_range.js";
 

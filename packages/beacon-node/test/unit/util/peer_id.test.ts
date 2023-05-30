@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {peerIdFromString, peerIdToString} from "../../../src/util/peerId.js";
+import {peerIdFromString, peerIdToString} from "../../../src/util/peer_id.js";
 
 describe("network peerid", () => {
   it("PeerId serdes", async () => {

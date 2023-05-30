@@ -22,7 +22,7 @@ import {Eth1Provider} from "../../src/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";
 import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils.js";
 import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
-import {runEL, ELStartMode, ELClient, sendTransaction, getBalance} from "../utils/runEl.js";
+import {runEL, ELStartMode, ELClient, sendTransaction, getBalance} from "../utils/run_el.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 

@@ -1,4 +1,4 @@
-import {PeerIdStr} from "../../../util/peerId.js";
+import {PeerIdStr} from "../../../util/peer_id.js";
 import {shuffle} from "../../../util/shuffle.js";
 import {sortBy} from "../../../util/sort_by.js";
 import {Batch, BatchStatus} from "../batch.js";

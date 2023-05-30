@@ -9,7 +9,7 @@ import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/
 import {Clock} from "../../util/clock.js";
 import {wireEventsOnWorkerThread} from "../../util/worker_events.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
-import {peerIdToString} from "../../util/peerId.js";
+import {peerIdToString} from "../../util/peer_id.js";
 import {getNetworkCoreWorkerMetrics} from "./metrics.js";
 import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 import {NetworkCore} from "./network_core.js";

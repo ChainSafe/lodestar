@@ -16,7 +16,7 @@ import {
   isMergeTransitionComplete,
 } from "@lodestar/state-transition";
 
-import {computeAnchorCheckpoint} from "../initState.js";
+import {computeAnchorCheckpoint} from "../init_state.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {ChainEvent} from "../emitter.js";
 import {GENESIS_SLOT} from "../../constants/index.js";

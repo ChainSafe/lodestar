@@ -4,7 +4,7 @@ import {Registrar} from "@libp2p/interface-registrar";
 import {ConnectionManager} from "@libp2p/interface-connection-manager";
 import {Slot, SlotRootHex, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
 import {BlockInput} from "../chain/blocks/types.js";
-import {PeerIdStr} from "../util/peerId.js";
+import {PeerIdStr} from "../util/peer_id.js";
 import {INetworkEventBus} from "./events.js";
 import {INetworkCorePublic} from "./core/types.js";
 import {GossipType} from "./gossip/interface.js";

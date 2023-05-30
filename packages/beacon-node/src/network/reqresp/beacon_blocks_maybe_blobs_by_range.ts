@@ -4,7 +4,7 @@ import {ForkSeq, MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
 import {BlockInput, BlockSource, getBlockInput, blobSidecarsToBlobsSidecar} from "../../chain/blocks/types.js";
-import {PeerIdStr} from "../../util/peerId.js";
+import {PeerIdStr} from "../../util/peer_id.js";
 import {INetwork} from "../interface.js";
 
 export async function beaconBlocksMaybeBlobsByRange(

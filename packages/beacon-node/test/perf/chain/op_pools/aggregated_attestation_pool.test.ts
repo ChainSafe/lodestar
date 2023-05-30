@@ -13,7 +13,7 @@ import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray} from "@lodest
 import {ssz} from "@lodestar/types";
 import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test/perf/util.js";
 import {AggregatedAttestationPool} from "../../../../src/chain/op_pools/aggregated_attestation_pool.js";
-import {computeAnchorCheckpoint} from "../../../../src/chain/initState.js";
+import {computeAnchorCheckpoint} from "../../../../src/chain/init_state.js";
 
 /** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
 const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;

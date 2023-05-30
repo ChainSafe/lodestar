@@ -8,7 +8,7 @@ import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 
 import {RegistryMetricCreator} from "../../metrics/index.js";
-import {peerIdFromString} from "../../util/peerId.js";
+import {peerIdFromString} from "../../util/peer_id.js";
 import {PeersData} from "../peers/peers_data.js";
 import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";

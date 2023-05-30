@@ -1,7 +1,7 @@
 import {ContextBytesFactory, ContextBytesType, Encoding} from "@lodestar/reqresp";
 import {ForkDigestContext} from "@lodestar/config";
 import {ProtocolNoHandler, ReqRespMethod, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./types.js";
-import {rateLimitQuotas} from "./rateLimit.js";
+import {rateLimitQuotas} from "./rate_limit.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

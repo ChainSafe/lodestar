@@ -12,7 +12,7 @@ import {ForkName, ForkSeq} from "@lodestar/params";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
-import {PeerIdStr, peerIdToString} from "../util/peerId.js";
+import {PeerIdStr, peerIdToString} from "../util/peer_id.js";
 import {IClock} from "../util/clock.js";
 import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
 import {NetworkOptions} from "./options.js";

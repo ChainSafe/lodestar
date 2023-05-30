@@ -22,7 +22,7 @@ import {ZERO_HASH} from "../../src/constants/index.js";
 import {bytesToData, dataToBytes} from "../../src/eth1/provider/utils.js";
 import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
 import {ApiError} from "../../src/api/impl/errors.js";
-import {runEL, ELStartMode, ELClient} from "../utils/runEl.js";
+import {runEL, ELStartMode, ELClient} from "../utils/run_el.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 

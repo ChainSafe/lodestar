@@ -5,7 +5,7 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
-import {PeerIdStr} from "../util/peerId.js";
+import {PeerIdStr} from "../util/peer_id.js";
 import {IBeaconChain} from "../chain/index.js";
 import {BlockInput} from "../chain/blocks/types.js";
 import {Metrics} from "../metrics/index.js";

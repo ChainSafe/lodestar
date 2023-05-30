@@ -11,12 +11,12 @@ import {IBeaconChain} from "../../chain/index.js";
 import {GENESIS_SLOT, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../../network/index.js";
-import {ItTrigger} from "../../util/itTrigger.js";
-import {PeerIdStr} from "../../util/peerId.js";
+import {ItTrigger} from "../../util/it_trigger.js";
+import {PeerIdStr} from "../../util/peer_id.js";
 import {shuffleOne} from "../../util/shuffle.js";
 import {Metrics} from "../../metrics/metrics";
 import {byteArrayEquals} from "../../util/bytes.js";
-import {computeAnchorCheckpoint} from "../../chain/initState.js";
+import {computeAnchorCheckpoint} from "../../chain/init_state.js";
 import {verifyBlockProposerSignature, verifyBlockSequence, BackfillBlockHeader, BackfillBlock} from "./verify.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
 /**

@@ -1,6 +1,9 @@
 import {expect} from "chai";
 import {InsertOutcome} from "../../../../src/chain/op_pools/types.js";
-import {AttestationDataCacheEntry, SeenAttestationDatas} from "../../../../src/chain/seen_cache/seen_attestation_data.js";
+import {
+  AttestationDataCacheEntry,
+  SeenAttestationDatas,
+} from "../../../../src/chain/seen_cache/seen_attestation_data.js";
 
 // Compare this snippet from packages/beacon-node/src/chain/seenCache/seenAttestationData.ts:
 describe("SeenAttestationDatas", () => {

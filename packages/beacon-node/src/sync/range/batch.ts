@@ -2,7 +2,7 @@ import {Epoch, phase0, RootHex} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {LodestarError} from "@lodestar/utils";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
-import {PeerIdStr} from "../../util/peerId.js";
+import {PeerIdStr} from "../../util/peer_id.js";
 import {BlockInput} from "../../chain/blocks/types.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";

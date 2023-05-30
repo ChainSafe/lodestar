@@ -17,7 +17,7 @@ import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
 import {arrToSource} from "../../unit/network/reqresp/utils.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/types.js";
-import {PeerIdStr, peerIdToString} from "../../../src/util/peerId.js";
+import {PeerIdStr, peerIdToString} from "../../../src/util/peer_id.js";
 
 /* eslint-disable
     mocha/no-top-level-hooks,

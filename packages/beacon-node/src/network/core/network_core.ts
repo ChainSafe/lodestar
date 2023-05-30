@@ -30,7 +30,7 @@ import {NetworkEventBus} from "../events.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {LocalStatusCache} from "../status_cache.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
-import {peerIdFromString, peerIdToString} from "../../util/peerId.js";
+import {peerIdFromString, peerIdToString} from "../../util/peer_id.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
 import {INetworkCore, MultiaddrStr, PeerIdStr} from "./types.js";
 

@@ -17,7 +17,7 @@ import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../event
 import {CommitteeSubscription} from "../subnets/interface.js";
 import {PeerAction, PeerScoreStats} from "../peers/index.js";
 import {NetworkOptions} from "../options.js";
-import {peerIdFromString} from "../../util/peerId.js";
+import {peerIdFromString} from "../../util/peer_id.js";
 import {NetworkWorkerApi, NetworkWorkerData, INetworkCore, MultiaddrStr, PeerIdStr} from "./types.js";
 import {
   NetworkWorkerThreadEventType,

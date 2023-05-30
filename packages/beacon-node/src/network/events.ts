@@ -4,7 +4,7 @@ import {TopicValidatorResult} from "@libp2p/interface-pubsub";
 import {phase0, RootHex} from "@lodestar/types";
 import {BlockInput} from "../chain/blocks/types.js";
 import {StrictEventEmitterSingleArg} from "../util/strict_events.js";
-import {PeerIdStr} from "../util/peerId.js";
+import {PeerIdStr} from "../util/peer_id.js";
 import {EventDirection} from "../util/worker_events.js";
 import {RequestTypedContainer} from "./reqresp/req_resp_beacon_node.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
