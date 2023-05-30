@@ -10,6 +10,7 @@ import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEn
 import {RespStatus} from "../interface.js";
 import {RequestError, RequestErrorCode} from "../request/errors.js";
 import {ReqRespRateLimiter} from "../rate_limiter/ReqRespRateLimiter.js";
+import {Metrics} from "../metrics.js";
 import {ResponseError} from "./errors.js";
 
 export {ResponseError};
@@ -19,6 +20,7 @@ export const DEFAULT_REQUEST_TIMEOUT = 5 * 1000; // 5 sec
 
 export interface HandleRequestOpts {
   logger: Logger;
+  metrics: Metrics | null;
   stream: Stream;
   peerId: PeerId;
   protocol: Protocol;
@@ -44,6 +46,7 @@ export interface HandleRequestOpts {
  */
 export async function handleRequest({
   logger,
+  metrics,
   stream,
   peerId,
   protocol,
@@ -65,6 +68,9 @@ export async function handleRequest({
     // in case request whose body is a List fails at chunk_i > 0, without breaking out of the for..await..of
     (async function* requestHandlerSource() {
       try {
+        // TODO: Does the TTFB timer start on opening stream or after receiving request
+        const timerTTFB = metrics?.outgoingResponseTTFB.startTimer({method: protocol.method});
+
         const requestBody = await withTimeout(
           () => pipe(stream.source as AsyncIterable<Uint8ArrayList>, requestDecode(protocol)),
           REQUEST_TIMEOUT,
@@ -97,7 +103,11 @@ export async function handleRequest({
           // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
           // Note: Not logging on each chunk since after 1 year it hasn't add any value when debugging
           // onChunk(() => logger.debug("Resp sending chunk", logCtx)),
-          responseEncodeSuccess(protocol)
+          responseEncodeSuccess(protocol, {
+            onChunk(chunkIndex) {
+              if (chunkIndex === 0) timerTTFB?.();
+            },
+          })
         );
       } catch (e) {
         const status = e instanceof ResponseError ? e.status : RespStatus.SERVER_ERROR;
