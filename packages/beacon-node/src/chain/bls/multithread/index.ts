@@ -14,10 +14,10 @@ import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
 import {Metrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
-import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
+import {verifySignatureSetsMaybeBatch} from "../maybe_batch.js";
 import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
-import {defaultPoolSize} from "./poolSize.js";
+import {defaultPoolSize} from "./pool_size.js";
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: Logger;

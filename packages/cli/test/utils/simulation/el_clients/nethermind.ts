@@ -3,7 +3,7 @@ import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
-import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
+import {Eth1ProviderWithAdmin} from "../eth1_provider_with_admin.js";
 import {ELClient, ELClientGenerator, JobOptions, RunnerType} from "../interfaces.js";
 import {getNethermindChainSpec} from "../utils/el_genesis.js";
 import {getNodeMountedPaths} from "../utils/paths.js";

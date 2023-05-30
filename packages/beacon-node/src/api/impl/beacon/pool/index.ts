@@ -2,14 +2,14 @@ import {routes, ServerApi} from "@lodestar/api";
 import {Epoch, ssz} from "@lodestar/types";
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {validateGossipAttestation} from "../../../../chain/validation/index.js";
-import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
-import {validateGossipProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
-import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
-import {validateBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
-import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCommittee.js";
+import {validateGossipAttesterSlashing} from "../../../../chain/validation/attester_slashing.js";
+import {validateGossipProposerSlashing} from "../../../../chain/validation/proposer_slashing.js";
+import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntary_exit.js";
+import {validateBlsToExecutionChange} from "../../../../chain/validation/bls_to_execution_change.js";
+import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/sync_committee.js";
 import {ApiModules} from "../../types.js";
 import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors/index.js";
-import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
+import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossip_handlers.js";
 
 export function getBeaconPoolApi({
   chain,

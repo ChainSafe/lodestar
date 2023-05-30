@@ -8,7 +8,7 @@ import {chainConfigToJson} from "@lodestar/config";
 import {LogLevel} from "@lodestar/utils";
 import {BeaconArgs} from "../../../../src/cmds/beacon/options.js";
 import {IValidatorCliArgs} from "../../../../src/cmds/validator/options.js";
-import {GlobalArgs} from "../../../../src/options/globalOptions.js";
+import {GlobalArgs} from "../../../../src/options/global_options.js";
 import {LODESTAR_BINARY_PATH} from "../constants.js";
 import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, RunnerType} from "../interfaces.js";
 import {getNodePorts} from "../utils/ports.js";

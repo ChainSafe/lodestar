@@ -5,11 +5,11 @@ import {Uint8ArrayList} from "uint8arraylist";
 import {Logger, TimeoutError, withTimeout} from "@lodestar/utils";
 import {prettyPrintPeerId} from "../utils/index.js";
 import {Protocol, ReqRespRequest} from "../types.js";
-import {requestDecode} from "../encoders/requestDecode.js";
-import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode.js";
+import {requestDecode} from "../encoders/request_decode.js";
+import {responseEncodeError, responseEncodeSuccess} from "../encoders/response_encode.js";
 import {RespStatus} from "../interface.js";
 import {RequestError, RequestErrorCode} from "../request/errors.js";
-import {ReqRespRateLimiter} from "../rate_limiter/ReqRespRateLimiter.js";
+import {ReqRespRateLimiter} from "../rate_limiter/req_resp_rate_limiter.js";
 import {Metrics} from "../metrics.js";
 import {ResponseError} from "./errors.js";
 

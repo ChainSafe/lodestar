@@ -1,3 +1,3 @@
-export * from "./beaconNodeOptions.js";
-export * from "./beaconParams.js";
-export * from "./peerId.js";
+export * from "./beacon_node_options.js";
+export * from "./beacon_params.js";
+export * from "./peer_id.js";

@@ -5,8 +5,8 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {LogFormat, TimestampFormatCode, logFormats} from "@lodestar/logger";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
 import {LogLevel} from "@lodestar/utils";
-import {LogArgs} from "../options/logOptions.js";
-import {GlobalArgs} from "../options/globalOptions.js";
+import {LogArgs} from "../options/log_options.js";
+import {GlobalArgs} from "../options/global_options.js";
 
 export const LOG_FILE_DISABLE_KEYWORD = "none";
 

@@ -2,15 +2,15 @@ import {ForkSeq} from "@lodestar/params";
 import {allForks, altair, capella, deneb} from "@lodestar/types";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateBellatrix} from "../types.js";
-import {processExecutionPayload} from "./processExecutionPayload.js";
-import {processSyncAggregate} from "./processSyncCommittee.js";
-import {processBlockHeader} from "./processBlockHeader.js";
-import {processEth1Data} from "./processEth1Data.js";
-import {processOperations} from "./processOperations.js";
-import {processRandao} from "./processRandao.js";
-import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
-import {BlockExternalData, DataAvailableStatus} from "./externalData.js";
-import {processWithdrawals} from "./processWithdrawals.js";
+import {processExecutionPayload} from "./process_execution_payload.js";
+import {processSyncAggregate} from "./process_sync_committee.js";
+import {processBlockHeader} from "./process_block_header.js";
+import {processEth1Data} from "./process_eth1_data.js";
+import {processOperations} from "./process_operations.js";
+import {processRandao} from "./process_randao.js";
+import {processBlobKzgCommitments} from "./process_blob_kzg_commitments.js";
+import {BlockExternalData, DataAvailableStatus} from "./external_data.js";
+import {processWithdrawals} from "./process_withdrawals.js";
 import {ProcessBlockOpts} from "./types.js";
 
 // Spec tests
@@ -22,11 +22,11 @@ export {
   processSyncAggregate,
   processWithdrawals,
 };
-export * from "./processOperations.js";
+export * from "./process_operations.js";
 
-export * from "./initiateValidatorExit.js";
-export * from "./isValidIndexedAttestation.js";
-export * from "./externalData.js";
+export * from "./initiate_validator_exit.js";
+export * from "./is_valid_indexed_attestation.js";
+export * from "./external_data.js";
 
 export function processBlock(
   fork: ForkSeq,

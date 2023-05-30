@@ -9,8 +9,8 @@ import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {JsonPath, toHexString} from "@chainsafe/ssz";
 import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {Lightclient, LightclientEvent} from "../../src/index.js";
-import {LightclientServerApiMock, ProofServerApiMock} from "../mocks/LightclientServerApiMock.js";
-import {EventsServerApiMock} from "../mocks/EventsServerApiMock.js";
+import {LightclientServerApiMock, ProofServerApiMock} from "../mocks/light_client_server_api_mock.js";
+import {EventsServerApiMock} from "../mocks/events_server_api_mock.js";
 import {
   computeLightclientUpdate,
   computeLightClientSnapshot,

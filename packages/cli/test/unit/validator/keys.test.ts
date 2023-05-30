@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {expect} from "chai";
-import {importKeystoreDefinitionsFromExternalDir} from "../../../src/cmds/validator/signers/importExternalKeystores.js";
+import {importKeystoreDefinitionsFromExternalDir} from "../../../src/cmds/validator/signers/import_external_keystores.js";
 
 describe("validator / signers / importKeystoreDefinitionsFromExternalDir", () => {
   let tmpDir: string;

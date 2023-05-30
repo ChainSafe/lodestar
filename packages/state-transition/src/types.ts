@@ -1,5 +1,5 @@
-export {EpochCache} from "./cache/epochCache.js";
-export {EpochTransitionCache} from "./cache/epochTransitionCache.js";
+export {EpochCache} from "./cache/epoch_cache.js";
+export {EpochTransitionCache} from "./cache/epoch_transition_cache.js";
 
 export {
   CachedBeaconStateAllForks,
@@ -9,7 +9,7 @@ export {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
-} from "./cache/stateCache.js";
+} from "./cache/state_cache.js";
 
 export {
   BeaconStateAllForks,

@@ -1,7 +1,7 @@
 import {DOMAIN_BEACON_PROPOSER, DOMAIN_BLOB_SIDECAR} from "@lodestar/params";
 import {allForks, isBlindedBeaconBlock, isBlindedBlobSidecar, ssz} from "@lodestar/types";
 import {computeSigningRoot} from "../util/index.js";
-import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signatureSets.js";
+import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signature_sets.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 
 export function verifyProposerSignature(

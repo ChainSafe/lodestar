@@ -2,11 +2,11 @@ import {BeaconConfig} from "@lodestar/config";
 import {UPDATE_TIMEOUT} from "@lodestar/params";
 import {Slot, allForks} from "@lodestar/types";
 import {computeSyncPeriodAtSlot} from "../utils/index.js";
-import {getSyncCommitteeAtPeriod, processLightClientUpdate, ProcessUpdateOpts} from "./processLightClientUpdate.js";
+import {getSyncCommitteeAtPeriod, processLightClientUpdate, ProcessUpdateOpts} from "./process_light_client_update.js";
 import {ILightClientStore, LightClientStore, LightClientStoreEvents} from "./store.js";
 import {ZERO_FINALITY_BRANCH, ZERO_HEADER, ZERO_NEXT_SYNC_COMMITTEE_BRANCH, ZERO_SYNC_COMMITTEE} from "./utils.js";
 
-export {isBetterUpdate, toLightClientUpdateSummary, LightClientUpdateSummary} from "./isBetterUpdate.js";
+export {isBetterUpdate, toLightClientUpdateSummary, LightClientUpdateSummary} from "./is_better_update.js";
 export {upgradeLightClientHeader} from "./utils.js";
 
 export class LightclientSpec {

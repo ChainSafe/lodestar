@@ -11,7 +11,7 @@ import {
   ReqEmpty,
   ContainerData,
 } from "../../utils/index.js";
-import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {HttpStatusCode} from "../../utils/client/http_status_code.js";
 import {ApiClientResponse} from "../../interfaces.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes

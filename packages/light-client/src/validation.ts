@@ -10,7 +10,7 @@ import {
   DOMAIN_SYNC_COMMITTEE,
 } from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
-import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
+import {isValidMerkleBranch} from "./utils/verify_merkle_branch.js";
 import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils.js";
 import {SyncCommitteeFast} from "./types.js";
 import {computeSyncPeriodAtSlot} from "./utils/clock.js";

@@ -1,7 +1,7 @@
 import fetch from "cross-fetch";
 import {ForkName, activePreset} from "@lodestar/params";
 import {chainConfig} from "@lodestar/config/default";
-import {ethereumConsensusSpecsTests} from "../../../spec/specTestVersioning.js";
+import {ethereumConsensusSpecsTests} from "../../../spec/spec_test_versioning.js";
 import {specConstants} from "../../../../src/api/impl/config/constants.js";
 
 const CONSTANT_NAMES_SKIP_LIST = new Set([

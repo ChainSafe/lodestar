@@ -9,7 +9,7 @@ import {IBeaconChain} from "../chain/index.js";
 import {INetwork} from "../network/index.js";
 import {IBeaconSync, SyncState} from "../sync/index.js";
 import {prettyTimeDiffSec} from "../util/time.js";
-import {TimeSeries} from "../util/timeSeries.js";
+import {TimeSeries} from "../util/time_series.js";
 
 /** Create a warning log whenever the peer count is at or below this value */
 const WARN_PEER_COUNT = 1;

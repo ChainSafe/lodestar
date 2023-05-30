@@ -1,9 +1,9 @@
 import {CliCommand} from "../../util/index.js";
-import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
+import {getBeaconConfigFromArgs} from "../../config/beacon_params.js";
 import {GlobalArgs} from "../../options/index.js";
 import {IValidatorCliArgs} from "./options.js";
 import {getSignerPubkeyHex, getSignersFromArgs} from "./signers/index.js";
-import {logSigners} from "./signers/logSigners.js";
+import {logSigners} from "./signers/log_signers.js";
 
 export type ReturnType = string[];
 

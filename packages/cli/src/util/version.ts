@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {findUpSync} from "find-up";
-import {readAndGetGitData} from "./gitData/index.js";
+import {readAndGetGitData} from "./git_data/index.js";
 
 // Global variable __dirname no longer available in ES6 modules.
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules

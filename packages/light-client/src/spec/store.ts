@@ -2,7 +2,7 @@ import type {PublicKey} from "@chainsafe/bls/types";
 import {BeaconConfig} from "@lodestar/config";
 import {SyncPeriod, allForks} from "@lodestar/types";
 import {computeSyncPeriodAtSlot, deserializeSyncCommittee} from "../utils/index.js";
-import {LightClientUpdateSummary} from "./isBetterUpdate.js";
+import {LightClientUpdateSummary} from "./is_better_update.js";
 
 export const MAX_SYNC_PERIODS_CACHE = 2;
 

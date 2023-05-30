@@ -1,7 +1,7 @@
 import {RootHex} from "@lodestar/types";
 import {bytesToBigInt, bigIntToBytes} from "@lodestar/utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {ErrorParseJson} from "./jsonRpcHttpClient.js";
+import {ErrorParseJson} from "./json_rpc_http_client.js";
 
 /** QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API */
 export type QUANTITY = string;

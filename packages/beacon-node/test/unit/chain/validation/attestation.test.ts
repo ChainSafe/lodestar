@@ -16,7 +16,7 @@ import {
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {memoOnce} from "../../../utils/cache.js";
-import {getAttestationValidData, AttestationValidDataOpts} from "../../../utils/validationData/attestation.js";
+import {getAttestationValidData, AttestationValidDataOpts} from "../../../utils/validation_data/attestation.js";
 import {IStateRegenerator, RegenCaller} from "../../../../src/chain/regen/interface.js";
 import {StateRegenerator} from "../../../../src/chain/regen/regen.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";

@@ -20,7 +20,7 @@ import {
   Wei,
 } from "@lodestar/types";
 import {ApiClientResponse} from "../../interfaces.js";
-import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {HttpStatusCode} from "../../utils/client/http_status_code.js";
 import {
   RoutesData,
   ReturnTypes,

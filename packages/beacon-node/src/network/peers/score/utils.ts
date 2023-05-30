@@ -1,4 +1,4 @@
-import {negativeGossipScoreIgnoreThreshold} from "../../gossip/scoringParameters.js";
+import {negativeGossipScoreIgnoreThreshold} from "../../gossip/scoring_parameters.js";
 import {MIN_SCORE_BEFORE_BAN, MIN_SCORE_BEFORE_DISCONNECT} from "./constants.js";
 import {IPeerRpcScoreStore, ScoreState} from "./interface.js";
 

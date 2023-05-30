@@ -12,7 +12,7 @@ import {ENRKey, SubnetType} from "../metadata.js";
 import {getConnectionsMap, getDefaultDialer, prettyPrintPeerId} from "../util.js";
 import {Discv5Worker} from "../discv5/index.js";
 import {LodestarDiscv5Opts} from "../discv5/types.js";
-import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize.js";
+import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enr_subnets_deserialize.js";
 import {IPeerRpcScoreStore, ScoreState} from "./score/index.js";
 
 /** Max number of cached ENRs after discovering a good peer */

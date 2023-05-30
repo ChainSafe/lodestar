@@ -2,18 +2,18 @@ import {Logger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
-import {isOptimisticBlock} from "../util/forkChoice.js";
+import {isOptimisticBlock} from "../util/fork_choice.js";
 import {Metrics} from "../metrics/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {IBeaconSync, SyncModules, SyncingStatus} from "./interface.js";
 import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range.js";
-import {getPeerSyncType, PeerSyncType, peerSyncTypes} from "./utils/remoteSyncType.js";
+import {getPeerSyncType, PeerSyncType, peerSyncTypes} from "./utils/remote_sync_type.js";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
 import {SyncState, SyncChainDebugState, syncStateMetric} from "./interface.js";
 import {SyncOptions} from "./options.js";
-import {UnknownBlockSync} from "./unknownBlock.js";
+import {UnknownBlockSync} from "./unknown_block.js";
 
 export class BeaconSync implements IBeaconSync {
   private readonly logger: Logger;

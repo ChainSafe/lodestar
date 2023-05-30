@@ -1,8 +1,8 @@
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@lodestar/params";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {ArchiverOpts} from "./archiver/index.js";
-import {ForkChoiceOpts} from "./forkChoice/index.js";
-import {LightClientServerOpts} from "./lightClient/index.js";
+import {ForkChoiceOpts} from "./fork_choice/index.js";
+import {LightClientServerOpts} from "./light_client/index.js";
 
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &

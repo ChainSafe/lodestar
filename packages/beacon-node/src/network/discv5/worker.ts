@@ -8,7 +8,7 @@ import {createKeypairFromPeerId, Discv5, ENR, ENRData, SignableENR, SignableENRD
 import {createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {RegistryMetricCreator} from "../../metrics/index.js";
-import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
+import {collectNodeJSMetrics} from "../../metrics/node_js_metrics.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 import {enrRelevance, ENRRelevance} from "./utils.js";
 

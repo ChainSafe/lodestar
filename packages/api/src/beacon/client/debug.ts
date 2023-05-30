@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ApiClientResponse} from "../../interfaces.js";
-import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {HttpStatusCode} from "../../utils/client/http_status_code.js";
 import {generateGenericJsonClient, getFetchOptsSerializers, IHttpClient} from "../../utils/client/index.js";
 import {ReturnTypes} from "../../utils/types.js";
 import {StateId} from "../routes/beacon/state.js";

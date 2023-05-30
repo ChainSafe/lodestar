@@ -15,7 +15,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {Metrics} from "../../metrics/index.js";
 import {IBeaconDb} from "../../db/index.js";
-import {CheckpointStateCache, StateContextCache} from "../stateCache/index.js";
+import {CheckpointStateCache, StateContextCache} from "../state_cache/index.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {IStateRegenerator, RegenCaller, StateCloneOpts} from "./interface.js";

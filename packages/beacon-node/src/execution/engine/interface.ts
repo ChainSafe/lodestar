@@ -3,7 +3,7 @@ import {KZGCommitment, Blob, KZGProof} from "@lodestar/types/deneb";
 import {RootHex, allForks, capella, Wei} from "@lodestar/types";
 
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
-import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
+import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payload_id_cache.js";
 import {ExecutionPayloadBody} from "./types.js";
 
 export {PayloadIdCache, PayloadId, WithdrawalV1};

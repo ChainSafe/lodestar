@@ -12,8 +12,8 @@ import {LightclientEmitter, LightclientEvent} from "./events.js";
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
 import {LightclientSpec} from "./spec/index.js";
-import {validateLightClientBootstrap} from "./spec/validateLightClientBootstrap.js";
-import {ProcessUpdateOpts} from "./spec/processLightClientUpdate.js";
+import {validateLightClientBootstrap} from "./spec/validate_light_client_bootstrap.js";
+import {ProcessUpdateOpts} from "./spec/process_light_client_update.js";
 import {LightClientTransport} from "./transport/interface.js";
 
 // Re-export types

@@ -8,4 +8,4 @@ export type StubbedOf<T> = T & SinonStubbedInstance<T>;
 /** Helper type to make dependencies mutable for validation tests */
 export type StubbedChainMutable<K extends keyof IBeaconChain> = StubbedOf<Mutable<IBeaconChain, K>>;
 
-export * from "./beaconDb.js";
+export * from "./beacon_db.js";

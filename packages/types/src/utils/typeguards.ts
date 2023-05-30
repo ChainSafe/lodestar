@@ -5,7 +5,7 @@ import {
   ExecutionPayloadHeader,
   FullOrBlindedBlobSidecar,
   FullOrBlindedSignedBlobSidecar,
-} from "../allForks/types.js";
+} from "../all_forks/types.js";
 import {ts as bellatrix} from "../bellatrix/index.js";
 import {ts as deneb} from "../deneb/index.js";
 

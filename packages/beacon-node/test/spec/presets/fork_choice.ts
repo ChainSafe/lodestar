@@ -9,7 +9,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {ForkSeq, isForkBlobs} from "@lodestar/params";
 import {BeaconChain} from "../../../src/chain/index.js";
 import {ClockEvent} from "../../../src/util/clock.js";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {createCachedBeaconStateTest} from "../../utils/cached_beacon_state.js";
 import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../../utils/config.js";
 import {TestRunnerFn} from "../utils/types.js";

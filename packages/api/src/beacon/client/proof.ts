@@ -2,7 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {CompactMultiProof, ProofType} from "@chainsafe/persistent-merkle-tree";
 import {Api, ReqTypes, routesData, getReqSerializers} from "../routes/proof.js";
 import {IHttpClient, getFetchOptsSerializers, HttpError} from "../../utils/client/index.js";
-import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {HttpStatusCode} from "../../utils/client/http_status_code.js";
 
 /**
  * REST HTTP client for lightclient routes

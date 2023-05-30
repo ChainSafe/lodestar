@@ -1,9 +1,9 @@
-import {PresetName} from "./presetName.js";
+import {PresetName} from "./preset_name.js";
 import {mainnetPreset} from "./presets/mainnet.js";
 import {minimalPreset} from "./presets/minimal.js";
 import {gnosisPreset} from "./presets/gnosis.js";
-import {presetStatus} from "./presetStatus.js";
-import {userSelectedPreset, userOverrides} from "./setPreset.js";
+import {presetStatus} from "./preset_status.js";
+import {userSelectedPreset, userOverrides} from "./set_preset.js";
 
 export {BeaconPreset} from "./types.js";
 export {
@@ -16,7 +16,7 @@ export {
   isForkWithdrawals,
   isForkBlobs,
   isForkLightClient,
-} from "./forkName.js";
+} from "./fork_name.js";
 export {presetToJson} from "./json.js";
 export {PresetName};
 

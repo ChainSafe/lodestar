@@ -5,12 +5,12 @@ import {Metrics} from "../../metrics/metrics.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import type {BeaconChain} from "../chain.js";
-import {verifyBlocksInEpoch} from "./verifyBlock.js";
-import {importBlock} from "./importBlock.js";
-import {assertLinearChainSegment} from "./utils/chainSegment.js";
+import {verifyBlocksInEpoch} from "./verify_block.js";
+import {importBlock} from "./import_block.js";
+import {assertLinearChainSegment} from "./utils/chain_segment.js";
 import {BlockInput, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
-import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
-import {removeEagerlyPersistedBlockInputs} from "./writeBlockInputToDb.js";
+import {verifyBlocksSanityChecks} from "./verify_blocks_sanity_checks.js";
+import {removeEagerlyPersistedBlockInputs} from "./write_block_input_to_db.js";
 export {ImportBlockOpts, AttestationImportOpt} from "./types.js";
 
 const QUEUE_MAX_LENGTH = 256;

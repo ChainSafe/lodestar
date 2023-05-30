@@ -3,10 +3,10 @@ import path from "node:path";
 import {activePreset} from "@lodestar/params";
 import {toHex, toHexString} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
-import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
+import {nodeAssertion} from "../utils/simulation/assertions/node_assertion.js";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {AssertionMatch, CLClient, ELClient} from "../utils/simulation/interfaces.js";
-import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
+import {SimulationEnvironment} from "../utils/simulation/simulation_environment.js";
 import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
 import {connectAllNodes, connectNewNode, waitForNodeSync, waitForSlot} from "../utils/simulation/utils/network.js";
 

@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {YargsError, CliCommand, getPubkeyHexFromKeystore} from "../../util/index.js";
-import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
+import {getBeaconConfigFromArgs} from "../../config/beacon_params.js";
 import {GlobalArgs} from "../../options/index.js";
 import {validatorOptions, IValidatorCliArgs} from "./options.js";
 import {getAccountPaths} from "./paths.js";
-import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./signers/importExternalKeystores.js";
-import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
+import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./signers/import_external_keystores.js";
+import {PersistedKeysBackend} from "./keymanager/persisted_keys.js";
 
 /* eslint-disable no-console */
 

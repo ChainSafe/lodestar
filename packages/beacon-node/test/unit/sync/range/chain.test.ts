@@ -5,7 +5,7 @@ import {Epoch, phase0, Slot, ssz} from "@lodestar/types";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {linspace} from "../../../../src/util/numpy.js";
 import {SyncChain, SyncChainFns, ChainTarget} from "../../../../src/sync/range/chain.js";
-import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
+import {RangeSyncType} from "../../../../src/sync/utils/remote_sync_type.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {testLogger} from "../../../utils/logger.js";
 import {validPeerIdStr} from "../../../utils/peer.js";

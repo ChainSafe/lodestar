@@ -15,8 +15,8 @@ import {onGracefulShutdown, mkdir, writeFile600Perm, cleanOldLogFiles, parseLogg
 import {getVersionData} from "../../util/version.js";
 import {BeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
-import {initBeaconState} from "./initBeaconState.js";
-import {initPeerIdAndEnr} from "./initPeerIdAndEnr.js";
+import {initBeaconState} from "./init_beacon_state.js";
+import {initPeerIdAndEnr} from "./init_peer_id_and_enr.js";
 
 /**
  * Runs a beacon node.

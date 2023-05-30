@@ -9,7 +9,7 @@ export {
   defaultOptions,
   ProposerConfig,
   BuilderSelection,
-} from "./services/validatorStore.js";
+} from "./services/validator_store.js";
 export {waitForGenesis} from "./genesis.js";
 export {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
 // For CLI to read genesisValidatorsRoot
@@ -20,10 +20,10 @@ export {
   externalSignerGetKeys,
   externalSignerPostSignature,
   externalSignerUpCheck,
-} from "./util/externalSignerClient.js";
+} from "./util/external_signer_client.js";
 
 // Types
 export {ProcessShutdownCallback} from "./types.js";
 
-export * from "./slashingProtection/index.js";
+export * from "./slashing_protection/index.js";
 export * from "./repositories/index.js";

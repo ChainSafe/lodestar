@@ -1,4 +1,4 @@
-import {RegistryMetricCreator} from "../../metrics/utils/registryMetricCreator.js";
+import {RegistryMetricCreator} from "../../metrics/utils/registry_metric_creator.js";
 
 export type NetworkCoreMetrics = ReturnType<typeof createNetworkCoreMetrics>;
 

@@ -7,10 +7,10 @@ import {IBeaconDb} from "../../db/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {IBeaconChain} from "../interface.js";
 import {ChainEvent} from "../emitter.js";
-import {CheckpointStateCache} from "../stateCache/index.js";
+import {CheckpointStateCache} from "../state_cache/index.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {StatesArchiver, StatesArchiverOpts} from "./archiveStates.js";
-import {archiveBlocks, FinalizedData} from "./archiveBlocks.js";
+import {StatesArchiver, StatesArchiverOpts} from "./archive_states.js";
+import {archiveBlocks, FinalizedData} from "./archive_blocks.js";
 
 const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 

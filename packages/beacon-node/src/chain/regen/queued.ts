@@ -2,7 +2,7 @@ import {phase0, Slot, allForks, RootHex} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
-import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache/index.js";
+import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../state_cache/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {IStateRegenerator, RegenCaller, RegenFnName, StateCloneOpts} from "./interface.js";

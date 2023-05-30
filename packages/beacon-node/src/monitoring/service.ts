@@ -4,7 +4,7 @@ import {ErrorAborted, Logger, TimeoutError} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../metrics/index.js";
 import {HistogramExtra} from "../metrics/utils/histogram.js";
 import {defaultMonitoringOptions, MonitoringOptions} from "./options.js";
-import {createClientStats} from "./clientStats.js";
+import {createClientStats} from "./client_stats.js";
 import {ClientStats} from "./types.js";
 import system from "./system.js";
 

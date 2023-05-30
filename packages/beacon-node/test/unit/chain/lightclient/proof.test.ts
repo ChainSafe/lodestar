@@ -3,7 +3,7 @@ import {BeaconStateAltair} from "@lodestar/state-transition";
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {altair, ssz} from "@lodestar/types";
 import {verifyMerkleBranch, hash} from "@lodestar/utils";
-import {getNextSyncCommitteeBranch, getSyncCommitteesWitness} from "../../../../src/chain/lightClient/proofs.js";
+import {getNextSyncCommitteeBranch, getSyncCommitteesWitness} from "../../../../src/chain/light_client/proofs.js";
 
 const currentSyncCommitteeGindex = 54;
 const nextSyncCommitteeGindex = 55;

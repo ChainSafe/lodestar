@@ -7,11 +7,11 @@ import {chainConfig} from "@lodestar/config/default";
 import {chainConfigToJson} from "@lodestar/config";
 import {createKeypairFromPeerId, ENR, SignableENR} from "@chainsafe/discv5";
 import {LogLevel} from "@lodestar/utils";
-import {exportToJSON} from "../../../src/config/peerId.js";
+import {exportToJSON} from "../../../src/config/peer_id.js";
 import {beaconHandlerInit} from "../../../src/cmds/beacon/handler.js";
-import {initPeerIdAndEnr, isLocalMultiAddr} from "../../../src/cmds/beacon/initPeerIdAndEnr.js";
+import {initPeerIdAndEnr, isLocalMultiAddr} from "../../../src/cmds/beacon/init_peer_id_and_enr.js";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
-import {GlobalArgs} from "../../../src/options/globalOptions.js";
+import {GlobalArgs} from "../../../src/options/global_options.js";
 import {testFilesDir, testLogger} from "../../utils.js";
 
 describe("cmds / beacon / args handler", () => {

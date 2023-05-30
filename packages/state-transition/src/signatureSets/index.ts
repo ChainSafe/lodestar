@@ -2,22 +2,22 @@ import {ForkSeq} from "@lodestar/params";
 import {allForks, altair, capella} from "@lodestar/types";
 import {ISignatureSet} from "../util/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
-import {getSyncCommitteeSignatureSet} from "../block/processSyncCommittee.js";
-import {getProposerSlashingsSignatureSets} from "./proposerSlashings.js";
-import {getAttesterSlashingsSignatureSets} from "./attesterSlashings.js";
-import {getAttestationsSignatureSets} from "./indexedAttestation.js";
+import {getSyncCommitteeSignatureSet} from "../block/process_sync_committee.js";
+import {getProposerSlashingsSignatureSets} from "./proposer_slashings.js";
+import {getAttesterSlashingsSignatureSets} from "./attester_slashings.js";
+import {getAttestationsSignatureSets} from "./indexed_attestation.js";
 import {getBlockProposerSignatureSet} from "./proposer.js";
 import {getRandaoRevealSignatureSet} from "./randao.js";
-import {getVoluntaryExitsSignatureSets} from "./voluntaryExits.js";
-import {getBlsToExecutionChangeSignatureSets} from "./blsToExecutionChange.js";
+import {getVoluntaryExitsSignatureSets} from "./voluntary_exits.js";
+import {getBlsToExecutionChangeSignatureSets} from "./bls_to_execution_change.js";
 
-export * from "./attesterSlashings.js";
-export * from "./indexedAttestation.js";
+export * from "./attester_slashings.js";
+export * from "./indexed_attestation.js";
 export * from "./proposer.js";
-export * from "./proposerSlashings.js";
+export * from "./proposer_slashings.js";
 export * from "./randao.js";
-export * from "./voluntaryExits.js";
-export * from "./blsToExecutionChange.js";
+export * from "./voluntary_exits.js";
+export * from "./bls_to_execution_change.js";
 
 /**
  * Includes all signatures on the block (except the deposit signatures) for verification.

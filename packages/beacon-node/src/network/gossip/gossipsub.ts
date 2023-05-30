@@ -9,7 +9,7 @@ import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {peerIdFromString} from "../../util/peerId.js";
-import {PeersData} from "../peers/peersData.js";
+import {PeersData} from "../peers/peers_data.js";
 import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
 import {Libp2p} from "../interface.js";
@@ -25,7 +25,7 @@ import {
   GOSSIP_D,
   GOSSIP_D_HIGH,
   GOSSIP_D_LOW,
-} from "./scoringParameters.js";
+} from "./scoring_parameters.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */

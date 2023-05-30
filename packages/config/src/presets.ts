@@ -1,4 +1,4 @@
-import {chainConfig as mainnetChainConfig} from "./chainConfig/presets/mainnet.js";
-import {chainConfig as minimalChainConfig} from "./chainConfig/presets/minimal.js";
+import {chainConfig as mainnetChainConfig} from "./chain_config/presets/mainnet.js";
+import {chainConfig as minimalChainConfig} from "./chain_config/presets/minimal.js";
 
 export {mainnetChainConfig, minimalChainConfig};

@@ -11,7 +11,7 @@ import {
   getStateValidatorIndex,
 } from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {IBeaconChain} from "../../../../../../src/chain/index.js";
-import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
+import {generateProtoBlock} from "../../../../../utils/type_generator.js";
 import {generateCachedAltairState, generateCachedState, generateState} from "../../../../../utils/state.js";
 import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
 

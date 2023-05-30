@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import path from "node:path";
 import {activePreset} from "@lodestar/params";
-import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
+import {nodeAssertion} from "../utils/simulation/assertions/node_assertion.js";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {AssertionMatch, CLClient, ELClient} from "../utils/simulation/interfaces.js";
-import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
+import {SimulationEnvironment} from "../utils/simulation/simulation_environment.js";
 import {
   getEstimatedTimeInSecForRun,
   getEstimatedTTD,

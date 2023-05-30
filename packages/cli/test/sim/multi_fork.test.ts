@@ -4,7 +4,7 @@ import {sleep, toHex, toHexString} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {AssertionMatch, CLClient, ELClient} from "../utils/simulation/interfaces.js";
-import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
+import {SimulationEnvironment} from "../utils/simulation/simulation_environment.js";
 import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
 import {
   connectAllNodes,
@@ -13,9 +13,9 @@ import {
   waitForNodeSync,
   waitForSlot,
 } from "../utils/simulation/utils/network.js";
-import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
-import {mergeAssertion} from "../utils/simulation/assertions/mergeAssertion.js";
-import {createForkAssertion} from "../utils/simulation/assertions/forkAssertion.js";
+import {nodeAssertion} from "../utils/simulation/assertions/node_assertion.js";
+import {mergeAssertion} from "../utils/simulation/assertions/merge_assertion.js";
+import {createForkAssertion} from "../utils/simulation/assertions/fork_assertion.js";
 
 const genesisDelaySeconds = 20 * SIM_TESTS_SECONDS_PER_SLOT;
 const altairForkEpoch = 2;

@@ -1,4 +1,4 @@
-import {HttpStatusCode, HttpSuccessCodes} from "./utils/client/httpStatusCode.js";
+import {HttpStatusCode, HttpSuccessCodes} from "./utils/client/http_status_code.js";
 import {Resolves} from "./utils/types.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

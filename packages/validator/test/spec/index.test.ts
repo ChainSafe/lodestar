@@ -8,7 +8,7 @@ import {
   SlashingProtectionAttestation,
   InvalidBlockError,
   InvalidAttestationError,
-} from "../../src/slashingProtection/index.js";
+} from "../../src/slashing_protection/index.js";
 import {testLogger} from "../utils/logger.js";
 
 describe("slashing-protection custom tests", () => {

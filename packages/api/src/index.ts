@@ -1,7 +1,7 @@
 // Re-exporting beacon only for backwards compatibility
 export * from "./beacon/index.js";
 export * from "./interfaces.js";
-export {HttpStatusCode, HttpErrorCodes, HttpSuccessCodes} from "./utils/client/httpStatusCode.js";
+export {HttpStatusCode, HttpErrorCodes, HttpSuccessCodes} from "./utils/client/http_status_code.js";
 export {
   HttpClient,
   IHttpClient,

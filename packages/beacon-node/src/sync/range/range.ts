@@ -7,10 +7,10 @@ import {Logger, toHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {INetwork} from "../../network/index.js";
 import {Metrics} from "../../metrics/index.js";
-import {RangeSyncType, rangeSyncTypes, getRangeSyncTarget} from "../utils/remoteSyncType.js";
+import {RangeSyncType, rangeSyncTypes, getRangeSyncTarget} from "../utils/remote_sync_type.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {ImportBlockOpts, AttestationImportOpt} from "../../chain/blocks/index.js";
-import {beaconBlocksMaybeBlobsByRange} from "../../network/reqresp/beaconBlocksMaybeBlobsByRange.js";
+import {beaconBlocksMaybeBlobsByRange} from "../../network/reqresp/beacon_blocks_maybe_blobs_by_range.js";
 import {updateChains} from "./utils/index.js";
 import {ChainTarget, SyncChainFns, SyncChain, SyncChainDebugState} from "./chain.js";
 

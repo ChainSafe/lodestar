@@ -28,8 +28,8 @@ import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
 import {formatBigDecimal} from "../util/format.js";
-import {ValidatorStore, BuilderSelection} from "./validatorStore.js";
-import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
+import {ValidatorStore, BuilderSelection} from "./validator_store.js";
+import {BlockDutiesService, GENESIS_SLOT} from "./block_duties.js";
 
 const ETH_TO_WEI = BigInt("1000000000000000000");
 // display upto 5 decimal places

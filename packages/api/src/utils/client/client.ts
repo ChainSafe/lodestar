@@ -1,9 +1,9 @@
 import {TimeoutError, mapValues} from "@lodestar/utils";
-import {compileRouteUrlFormater} from "../urlFormat.js";
+import {compileRouteUrlFormater} from "../url_format.js";
 import {RouteDef, ReqGeneric, ReturnTypes, TypeJson, ReqSerializer, ReqSerializers, RoutesData} from "../types.js";
 import {APIClientHandler} from "../../interfaces.js";
-import {FetchOpts, HttpError, IHttpClient} from "./httpClient.js";
-import {HttpStatusCode} from "./httpStatusCode.js";
+import {FetchOpts, HttpError, IHttpClient} from "./http_client.js";
+import {HttpStatusCode} from "./http_status_code.js";
 
 // See /packages/api/src/routes/index.ts for reasoning
 

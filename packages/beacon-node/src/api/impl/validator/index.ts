@@ -23,15 +23,15 @@ import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError
 import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {SyncState} from "../../../sync/index.js";
-import {isOptimisticBlock} from "../../../util/forkChoice.js";
+import {isOptimisticBlock} from "../../../util/fork_choice.js";
 import {toGraffitiBuffer} from "../../../util/graffiti.js";
 import {ApiError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
-import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
+import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/sync_committee_contribution_and_proof.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {ApiModules} from "../types.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {getValidatorStatus} from "../beacon/state/utils.js";
-import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
+import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossip_handlers.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
 
 /**

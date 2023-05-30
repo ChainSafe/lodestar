@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {allForks} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
-import {getSlotFromSignedBeaconBlockSerialized} from "./sszBytes.js";
+import {getSlotFromSignedBeaconBlockSerialized} from "./ssz_bytes.js";
 
 /**
  * Slot	uint64

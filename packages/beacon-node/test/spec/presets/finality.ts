@@ -6,8 +6,8 @@ import {
 } from "@lodestar/state-transition";
 import {altair, bellatrix, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {createCachedBeaconStateTest} from "../../utils/cached_beacon_state.js";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expect_equal_beacon_state.js";
 import {shouldVerify, TestRunnerFn} from "../utils/types.js";
 import {getConfig} from "../../utils/config.js";
 import {assertCorrectProgressiveBalances} from "../config.js";

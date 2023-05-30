@@ -3,8 +3,8 @@ import {BeaconStateAllForks, beforeProcessEpoch} from "@lodestar/state-transitio
 import {getRewardsAndPenalties} from "@lodestar/state-transition/epoch";
 import {VectorCompositeType} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {createCachedBeaconStateTest} from "../../utils/cached_beacon_state.js";
+import {inputTypeSszTreeViewDU} from "../utils/expect_equal_beacon_state.js";
 import {getConfig} from "../../utils/config.js";
 import {TestRunnerFn} from "../utils/types.js";
 import {assertCorrectProgressiveBalances} from "../config.js";

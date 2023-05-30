@@ -17,7 +17,7 @@ import {
   quantityToBigint,
 } from "../../eth1/provider/utils.js";
 import {ExecutePayloadStatus, TransitionConfigurationV1, BlobsBundle, PayloadAttributes} from "./interface.js";
-import {WithdrawalV1} from "./payloadIdCache.js";
+import {WithdrawalV1} from "./payload_id_cache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

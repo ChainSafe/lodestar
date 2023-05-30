@@ -12,7 +12,7 @@ import {
   InvalidBlockError,
   SlashingProtectionBlock,
   SlashingProtectionAttestation,
-} from "../../src/slashingProtection/index.js";
+} from "../../src/slashing_protection/index.js";
 import {testLogger} from "../utils/logger.js";
 import {loadTestCases} from "../utils/spec.js";
 import {SPEC_TEST_LOCATION} from "./params.js";

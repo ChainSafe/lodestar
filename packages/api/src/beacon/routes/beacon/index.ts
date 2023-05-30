@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
 import {ApiClientResponse} from "../../../interfaces.js";
-import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
+import {HttpStatusCode} from "../../../utils/client/http_status_code.js";
 import {RoutesData, ReturnTypes, reqEmpty, ContainerData} from "../../../utils/index.js";
 import * as block from "./block.js";
 import * as pool from "./pool.js";

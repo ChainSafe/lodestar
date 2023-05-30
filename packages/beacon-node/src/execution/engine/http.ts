@@ -1,8 +1,8 @@
 import {RootHex, allForks, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 
-import {ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
-import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
+import {ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/json_rpc_http_client.js";
+import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/json_rpc_http_client.js";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
@@ -16,7 +16,7 @@ import {
   TransitionConfigurationV1,
   BlobsBundle,
 } from "./interface.js";
-import {PayloadIdCache} from "./payloadIdCache.js";
+import {PayloadIdCache} from "./payload_id_cache.js";
 import {
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,

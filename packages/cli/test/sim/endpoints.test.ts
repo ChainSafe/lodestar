@@ -5,7 +5,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ApiError} from "@lodestar/api";
 import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
-import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
+import {SimulationEnvironment} from "../utils/simulation/simulation_environment.js";
 import {getEstimatedTimeInSecForRun, logFilesDir} from "../utils/simulation/utils/index.js";
 import {waitForSlot} from "../utils/simulation/utils/network.js";
 import {SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";

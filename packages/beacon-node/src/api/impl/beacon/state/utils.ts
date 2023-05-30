@@ -18,10 +18,10 @@ import {Epoch, ValidatorIndex, Slot} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
 import {sleep, assert} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../chain/index.js";
-import {StateContextCache} from "../../../../chain/stateCache/index.js";
+import {StateContextCache} from "../../../../chain/state_cache/index.js";
 import {IBeaconDb} from "../../../../db/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
-import {isOptimisticBlock} from "../../../../util/forkChoice.js";
+import {isOptimisticBlock} from "../../../../util/fork_choice.js";
 
 type ResolveStateIdOpts = {
   /**

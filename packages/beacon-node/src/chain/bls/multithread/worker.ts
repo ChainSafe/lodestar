@@ -3,7 +3,7 @@ import worker from "node:worker_threads";
 import {expose} from "@chainsafe/threads/worker";
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
-import {verifySignatureSetsMaybeBatch, SignatureSetDeserialized} from "../maybeBatch.js";
+import {verifySignatureSetsMaybeBatch, SignatureSetDeserialized} from "../maybe_batch.js";
 import {WorkerData, BlsWorkReq, WorkResult, WorkResultCode, SerializedSet, BlsWorkResult} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 

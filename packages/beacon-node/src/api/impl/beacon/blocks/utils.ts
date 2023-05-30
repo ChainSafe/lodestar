@@ -7,7 +7,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../../../db/index.js";
 import {GENESIS_SLOT} from "../../../../constants/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
-import {isOptimisticBlock} from "../../../../util/forkChoice.js";
+import {isOptimisticBlock} from "../../../../util/fork_choice.js";
 
 export function toBeaconHeaderResponse(
   config: ChainForkConfig,

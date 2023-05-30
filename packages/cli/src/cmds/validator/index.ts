@@ -1,11 +1,11 @@
 import {CliCommand} from "../../util/index.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getAccountPaths} from "./paths.js";
-import {slashingProtection} from "./slashingProtection/index.js";
+import {slashingProtection} from "./slashing_protection/index.js";
 import {importCmd} from "./import.js";
 import {list} from "./list.js";
-import {voluntaryExit} from "./voluntaryExit.js";
-import {blsToExecutionChange} from "./blsToExecutionChange.js";
+import {voluntaryExit} from "./voluntary_exit.js";
+import {blsToExecutionChange} from "./bls_to_execution_change.js";
 import {validatorOptions, IValidatorCliArgs} from "./options.js";
 import {validatorHandler} from "./handler.js";
 

@@ -1,5 +1,5 @@
 import {allForks} from "@lodestar/types";
-import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
+import {RegistryMetricCreator} from "../utils/registry_metric_creator.js";
 import {LodestarMetadata} from "../options.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;

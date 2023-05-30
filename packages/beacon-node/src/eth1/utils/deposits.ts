@@ -5,7 +5,7 @@ import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
 import {toHexString} from "@chainsafe/ssz";
 import {FilterOptions} from "@lodestar/db";
 import {Eth1Error, Eth1ErrorCode} from "../errors.js";
-import {DepositTree} from "../../db/repositories/depositDataRoot.js";
+import {DepositTree} from "../../db/repositories/deposit_data_root.js";
 
 export type DepositGetter<T> = (indexRange: FilterOptions<number>, eth1Data: phase0.Eth1Data) => Promise<T[]>;
 

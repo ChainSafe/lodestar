@@ -1,5 +1,5 @@
 import {IJson, RpcPayload} from "../../eth1/interface.js";
-import {IJsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
+import {IJsonRpcHttpClient} from "../../eth1/provider/json_rpc_http_client.js";
 
 export type JsonRpcBackend = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

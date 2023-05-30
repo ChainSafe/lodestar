@@ -15,37 +15,37 @@ import {Logger} from "@lodestar/utils";
 
 import {ChainEventEmitter, IBeaconChain, BlockHash} from "../../../../src/chain/index.js";
 import {IClock, Clock} from "../../../../src/util/clock.js";
-import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache/index.js";
+import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/state_cache/index.js";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen/index.js";
 import {StubbedBeaconDb} from "../../stub/index.js";
 import {IBlsVerifier, BlsSingleThreadVerifier} from "../../../../src/chain/bls/index.js";
-import {AttestationPool} from "../../../../src/chain/opPools/attestationPool.js";
+import {AttestationPool} from "../../../../src/chain/op_pools/attestation_pool.js";
 import {
   SeenAggregators,
   SeenAttesters,
   SeenBlockProposers,
   SeenContributionAndProof,
   SeenSyncCommitteeMessages,
-} from "../../../../src/chain/seenCache/index.js";
+} from "../../../../src/chain/seen_cache/index.js";
 import {
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
   AggregatedAttestationPool,
   OpPool,
-} from "../../../../src/chain/opPools/index.js";
-import {LightClientServer} from "../../../../src/chain/lightClient/index.js";
+} from "../../../../src/chain/op_pools/index.js";
+import {LightClientServer} from "../../../../src/chain/light_client/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../../src/execution/engine/index.js";
 import {testLogger} from "../../logger.js";
 import {ReprocessController} from "../../../../src/chain/reprocess.js";
 import {createCachedBeaconStateTest} from "../../../../../state-transition/test/utils/state.js";
-import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAggregateAndProof.js";
-import {SeenBlockAttesters} from "../../../../src/chain/seenCache/seenBlockAttesters.js";
-import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache.js";
-import {CheckpointBalancesCache} from "../../../../src/chain/balancesCache.js";
+import {SeenAggregatedAttestations} from "../../../../src/chain/seen_cache/seen_aggregate_and_proof.js";
+import {SeenBlockAttesters} from "../../../../src/chain/seen_cache/seen_block_attesters.js";
+import {BeaconProposerCache} from "../../../../src/chain/beacon_proposer_cache.js";
+import {CheckpointBalancesCache} from "../../../../src/chain/balances_cache.js";
 import {IChainOptions} from "../../../../src/chain/options.js";
-import {BlockAttributes} from "../../../../src/chain/produceBlock/produceBlockBody.js";
-import {SeenAttestationDatas} from "../../../../src/chain/seenCache/seenAttestationData.js";
+import {BlockAttributes} from "../../../../src/chain/produce_block/produce_block_body.js";
+import {SeenAttestationDatas} from "../../../../src/chain/seen_cache/seen_attestation_data.js";
 import {IExecutionBuilder} from "../../../../src/execution/index.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */

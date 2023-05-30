@@ -4,7 +4,7 @@ import {BeaconStateAllForks, initializeBeaconStateFromEth1} from "@lodestar/stat
 import {createEmptyEpochCacheImmutableData} from "@lodestar/state-transition";
 import {ForkName, GENESIS_SLOT} from "@lodestar/params";
 
-import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
+import {DepositTree} from "../../../db/repositories/deposit_data_root.js";
 
 export const INTEROP_BLOCK_HASH = Buffer.alloc(32, "B");
 export const INTEROP_TIMESTAMP = Math.pow(2, 40);

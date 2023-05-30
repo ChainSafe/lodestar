@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {stripOffNewlines} from "./stripOffNewlines.js";
+import {stripOffNewlines} from "./strip_off_newlines.js";
 
 /**
  * Utility to read file as UTF8 and strip any trailing new lines.

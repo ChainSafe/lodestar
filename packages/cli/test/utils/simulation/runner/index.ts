@@ -2,8 +2,8 @@
 import {EventEmitter} from "node:events";
 import path from "node:path";
 import {IRunner, Job, JobOptions, RunnerEvent, RunnerType} from "../interfaces.js";
-import {ChildProcessRunner} from "./ChildProcessRunner.js";
-import {DockerRunner} from "./DockerRunner.js";
+import {ChildProcessRunner} from "./child_process_runner.js";
+import {DockerRunner} from "./docker_runner.js";
 
 export class Runner implements IRunner {
   private emitter = new EventEmitter({captureRejections: true});

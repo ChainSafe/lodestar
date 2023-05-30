@@ -3,14 +3,14 @@ import {ProtocolHandler} from "@lodestar/reqresp";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
-import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
-import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
-import {onBlobSidecarsByRoot} from "./blobSidecarsByRoot.js";
-import {onBlobSidecarsByRange} from "./blobSidecarsByRange.js";
-import {onLightClientBootstrap} from "./lightClientBootstrap.js";
-import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
-import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
-import {onLightClientUpdatesByRange} from "./lightClientUpdatesByRange.js";
+import {onBeaconBlocksByRange} from "./beacon_blocks_by_range.js";
+import {onBeaconBlocksByRoot} from "./beacon_blocks_by_root.js";
+import {onBlobSidecarsByRoot} from "./blob_sidecars_by_root.js.js";
+import {onBlobSidecarsByRange} from "./blob_sidecars_by_range.js";
+import {onLightClientBootstrap} from "./light_client_bootstrap.js";
+import {onLightClientFinalityUpdate} from "./light_client_finality_update.js";
+import {onLightClientOptimisticUpdate} from "./light_client_optimistic_update.js";
+import {onLightClientUpdatesByRange} from "./light_client_updates_by_range.js";
 
 function notImplemented(method: ReqRespMethod): ProtocolHandler {
   return () => {

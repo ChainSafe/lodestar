@@ -1,7 +1,7 @@
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {CommitteeIndex, SubcommitteeIndex} from "@lodestar/types";
-import {AttDutyAndProof} from "./attestationDuties.js";
-import {SyncDutyAndProofs, SyncDutySubnet, SyncSelectionProof} from "./syncCommitteeDuties.js";
+import {AttDutyAndProof} from "./attestation_duties.js";
+import {SyncDutyAndProofs, SyncDutySubnet, SyncSelectionProof} from "./sync_committee_duties.js";
 
 /** Sync committee duty associated to a single sub committee subnet */
 export type SubcommitteeDuty = {

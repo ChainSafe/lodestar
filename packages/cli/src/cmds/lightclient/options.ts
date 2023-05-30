@@ -1,4 +1,4 @@
-import {LogArgs, logOptions} from "../../options/logOptions.js";
+import {LogArgs, logOptions} from "../../options/log_options.js";
 import {CliCommandOptions} from "../../util/index.js";
 
 export type ILightClientArgs = LogArgs & {

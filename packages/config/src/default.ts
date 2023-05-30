@@ -1,5 +1,5 @@
-import {createChainForkConfig} from "./beaconConfig.js";
-import {defaultChainConfig} from "./chainConfig/index.js";
+import {createChainForkConfig} from "./beacon_config.js";
+import {defaultChainConfig} from "./chain_config/index.js";
 
 export const chainConfig = defaultChainConfig;
 // for testing purpose only

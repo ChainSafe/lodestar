@@ -1,9 +1,9 @@
 import http from "node:http";
 import {Registry} from "prom-client";
 import {Logger} from "@lodestar/utils";
-import {wrapError} from "../../util/wrapError.js";
-import {HttpActiveSocketsTracker} from "../../api/rest/activeSockets.js";
-import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
+import {wrapError} from "../../util/wrap_error.js";
+import {HttpActiveSocketsTracker} from "../../api/rest/active_sockets.js";
+import {RegistryMetricCreator} from "../utils/registry_metric_creator.js";
 
 export type HttpMetricsServerOpts = {
   port: number;

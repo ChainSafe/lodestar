@@ -8,7 +8,7 @@ import {
   prioritizePeers,
   PrioritizePeersOpts,
   sortPeersToPrune,
-} from "../../../../src/network/peers/utils/prioritizePeers.js";
+} from "../../../../src/network/peers/utils/prioritize_peers.js";
 import {getAttnets, getSyncnets} from "../../../utils/network.js";
 import {RequestedSubnet} from "../../../../src/network/peers/utils/index.js";
 

@@ -4,7 +4,7 @@ import {Lightclient} from "@lodestar/light-client";
 import {fromHexString} from "@chainsafe/ssz";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
+import {getBeaconConfigFromArgs} from "../../config/beacon_params.js";
 import {getGlobalPaths} from "../../paths/global.js";
 import {parseLoggerArgs} from "../../util/logger.js";
 import {GlobalArgs} from "../../options/index.js";

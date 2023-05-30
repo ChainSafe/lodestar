@@ -11,17 +11,17 @@ import {waitForGenesis} from "./genesis.js";
 import {BlockProposingService} from "./services/block.js";
 import {AttestationService} from "./services/attestation.js";
 import {IndicesService} from "./services/indices.js";
-import {SyncCommitteeService} from "./services/syncCommittee.js";
-import {pollPrepareBeaconProposer, pollBuilderValidatorRegistration} from "./services/prepareBeaconProposer.js";
-import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "./slashingProtection/index.js";
+import {SyncCommitteeService} from "./services/sync_committee.js";
+import {pollPrepareBeaconProposer, pollBuilderValidatorRegistration} from "./services/prepare_beacon_proposer.js";
+import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "./slashing_protection/index.js";
 import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.js";
-import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
+import {ChainHeaderTracker} from "./services/chain_header_tracker.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
-import {ValidatorStore, Signer, ValidatorProposerConfig} from "./services/validatorStore.js";
+import {ValidatorStore, Signer, ValidatorProposerConfig} from "./services/validator_store.js";
 import {ProcessShutdownCallback, PubkeyHex} from "./types.js";
 import {BeaconHealth, Metrics} from "./metrics.js";
-import {MetaDataRepository} from "./repositories/metaDataRepository.js";
-import {DoppelgangerService} from "./services/doppelgangerService.js";
+import {MetaDataRepository} from "./repositories/meta_data_repository.js";
+import {DoppelgangerService} from "./services/doppelganger_service.js";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;

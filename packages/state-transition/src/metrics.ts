@@ -1,6 +1,6 @@
 import {Epoch} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "./types.js";
-import {AttesterStatus} from "./util/attesterStatus.js";
+import {AttesterStatus} from "./util/attester_status.js";
 
 export type BeaconStateTransitionMetrics = {
   epochTransitionTime: Histogram;

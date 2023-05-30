@@ -8,7 +8,7 @@ import {
   isForkLightClient,
 } from "@lodestar/params";
 
-import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
+import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossip_validation.js";
 import {GossipEncoding, GossipTopic, GossipType, GossipTopicTypeMap, SSZTypeOfGossipTopic} from "./interface.js";
 import {DEFAULT_ENCODING} from "./constants.js";
 

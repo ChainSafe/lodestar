@@ -6,10 +6,10 @@ import {toHexString} from "@chainsafe/ssz";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
-import {ValidatorStore} from "./validatorStore.js";
-import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties.js";
+import {ValidatorStore} from "./validator_store.js";
+import {AttestationDutiesService, AttDutyAndProof} from "./attestation_duties.js";
 import {groupAttDutiesByCommitteeIndex} from "./utils.js";
-import {ChainHeaderTracker} from "./chainHeaderTracker.js";
+import {ChainHeaderTracker} from "./chain_header_tracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
 
 export type AttestationServiceOpts = {

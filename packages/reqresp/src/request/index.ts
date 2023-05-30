@@ -7,8 +7,8 @@ import {MixedProtocol, ResponseIncoming} from "../types.js";
 import {prettyPrintPeerId, abortableSource} from "../utils/index.js";
 import {Metrics} from "../metrics.js";
 import {ResponseError} from "../response/index.js";
-import {requestEncode} from "../encoders/requestEncode.js";
-import {responseDecode} from "../encoders/responseDecode.js";
+import {requestEncode} from "../encoders/request_encode.js";
+import {responseDecode} from "../encoders/response_decode.js";
 import {RequestError, RequestErrorCode, responseStatusErrorToRequestError} from "./errors.js";
 
 export {RequestError, RequestErrorCode};

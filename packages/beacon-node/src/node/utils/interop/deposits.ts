@@ -9,7 +9,7 @@ import {
   DOMAIN_DEPOSIT,
   MAX_EFFECTIVE_BALANCE,
 } from "@lodestar/params";
-import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
+import {DepositTree} from "../../../db/repositories/deposit_data_root.js";
 
 /**
  * Compute and return deposit data from other validators.

@@ -5,9 +5,9 @@ import {ChainForkConfig} from "@lodestar/config";
 import {createBeaconMetrics, BeaconMetrics} from "./metrics/beacon.js";
 import {createLodestarMetrics, LodestarMetrics} from "./metrics/lodestar.js";
 import {MetricsOptions} from "./options.js";
-import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
-import {createValidatorMonitor, ValidatorMonitor} from "./validatorMonitor.js";
-import {collectNodeJSMetrics} from "./nodeJsMetrics.js";
+import {RegistryMetricCreator} from "./utils/registry_metric_creator.js";
+import {createValidatorMonitor, ValidatorMonitor} from "./validator_monitor.js";
+import {collectNodeJSMetrics} from "./node_js_metrics.js";
 
 export type Metrics = BeaconMetrics & LodestarMetrics & ValidatorMonitor & {register: RegistryMetricCreator};
 

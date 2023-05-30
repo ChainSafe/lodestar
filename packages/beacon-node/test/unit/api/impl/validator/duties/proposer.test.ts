@@ -16,7 +16,7 @@ import {generateValidators} from "../../../../../utils/validator.js";
 import {StubbedBeaconDb, StubbedChainMutable} from "../../../../../utils/stub/index.js";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 import {testLogger} from "../../../../../utils/logger.js";
-import {createCachedBeaconStateTest} from "../../../../../utils/cachedBeaconState.js";
+import {createCachedBeaconStateTest} from "../../../../../utils/cached_beacon_state.js";
 import {zeroProtoBlock} from "../../../../../utils/mocks/chain/chain.js";
 
 use(chaiAsPromised);

@@ -1,5 +1,5 @@
 import {ValueOf} from "@chainsafe/ssz";
-import * as ssz from "./sszTypes.js";
+import * as ssz from "./ssz_types.js";
 
 export type AttestationSubnets = ValueOf<typeof ssz.AttestationSubnets>;
 export type BeaconBlockHeader = ValueOf<typeof ssz.BeaconBlockHeader>;

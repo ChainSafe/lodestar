@@ -3,9 +3,9 @@ import path from "node:path";
 import {ssz} from "@lodestar/types";
 import {Type} from "@chainsafe/ssz";
 import {ACTIVE_PRESET, ForkName, ForkLightClient} from "@lodestar/params";
-import {replaceUintTypeWithUintBigintType} from "../utils/replaceUintTypeWithUintBigintType.js";
-import {parseSszStaticTestcase} from "../utils/sszTestCaseParser.js";
-import {runValidSszTest} from "../utils/runValidSszTest.js";
+import {replaceUintTypeWithUintBigintType} from "../utils/replace_uint_type_with_uint_bigint_type.js";
+import {parseSszStaticTestcase} from "../utils/ssz_test_case_parser.js";
+import {runValidSszTest} from "../utils/run_valid_ssz_test.js";
 
 // ssz_static
 // | Attestation

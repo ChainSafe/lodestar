@@ -20,8 +20,8 @@ import {
   createCachedBeaconState,
   PubkeyIndexMap,
 } from "../../src/index.js";
-import {BeaconStateCache} from "../../src/cache/stateCache.js";
-import {EpochCacheOpts} from "../../src/cache/epochCache.js";
+import {BeaconStateCache} from "../../src/cache/state_cache.js";
+import {EpochCacheOpts} from "../../src/cache/epoch_cache.js";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.

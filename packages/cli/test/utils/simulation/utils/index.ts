@@ -2,7 +2,7 @@
 import {activePreset} from "@lodestar/params";
 import {Epoch} from "@lodestar/types";
 import {ETH_TTD_INCREMENT} from "../constants.js";
-import {SimulationEnvironment} from "../SimulationEnvironment.js";
+import {SimulationEnvironment} from "../simulation_environment.js";
 
 export const logFilesDir = "test-logs";
 

@@ -36,18 +36,18 @@ import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
 import {bytesToData, numToQuantity} from "../eth1/provider/utils.js";
-import {wrapError} from "../util/wrapError.js";
+import {wrapError} from "../util/wrap_error.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
 import {IExecutionEngine, IExecutionBuilder, TransitionConfigurationV1} from "../execution/index.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
-import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
+import {CheckpointStateCache, StateContextCache} from "./state_cache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {IBeaconChain, ProposerPreparationData, BlockHash} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
-import {initializeForkChoice} from "./forkChoice/index.js";
+import {initializeForkChoice} from "./fork_choice/index.js";
 import {computeAnchorCheckpoint} from "./initState.js";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls/index.js";
 import {
@@ -56,27 +56,27 @@ import {
   SeenBlockProposers,
   SeenSyncCommitteeMessages,
   SeenContributionAndProof,
-} from "./seenCache/index.js";
+} from "./seen_cache/index.js";
 import {
   AggregatedAttestationPool,
   AttestationPool,
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
   OpPool,
-} from "./opPools/index.js";
-import {LightClientServer} from "./lightClient/index.js";
+} from "./op_pools/index.js";
+import {LightClientServer} from "./light_client/index.js";
 import {Archiver} from "./archiver/index.js";
-import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
+import {PrepareNextSlotScheduler} from "./prepare_next_slot.js";
 import {ReprocessController} from "./reprocess.js";
-import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
-import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
-import {BeaconProposerCache} from "./beaconProposerCache.js";
-import {CheckpointBalancesCache} from "./balancesCache.js";
-import {AssembledBlockType, BlobsResultType, BlockType} from "./produceBlock/index.js";
-import {BlockAttributes, produceBlockBody} from "./produceBlock/produceBlockBody.js";
-import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
+import {SeenAggregatedAttestations} from "./seen_cache/seen_aggregate_and_proof.js";
+import {SeenBlockAttesters} from "./seen_cache/seen_block_attesters.js";
+import {BeaconProposerCache} from "./beacon_proposer_cache.js";
+import {CheckpointBalancesCache} from "./balances_cache.js";
+import {AssembledBlockType, BlobsResultType, BlockType} from "./produce_block/index.js";
+import {BlockAttributes, produceBlockBody} from "./produce_block/produce_block_body.js";
+import {computeNewStateRoot} from "./produce_block/compute_new_state_root.js";
 import {BlockInput} from "./blocks/types.js";
-import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
+import {SeenAttestationDatas} from "./seen_cache/seen_attestation_data.js";
 
 /**
  * Arbitrary constants, blobs should be consumed immediately in the same slot they are produced.

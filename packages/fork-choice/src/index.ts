@@ -1,4 +1,4 @@
-export {ProtoArray} from "./protoArray/protoArray.js";
+export {ProtoArray} from "./proto_array/proto_array.js";
 export {
   ProtoBlock,
   ProtoNode,
@@ -7,11 +7,11 @@ export {
   BlockExecution,
   LVHValidResponse,
   LVHInvalidResponse,
-} from "./protoArray/interface.js";
+} from "./proto_array/interface.js";
 
-export {ForkChoice, ForkChoiceOpts, assertValidTerminalPowBlock} from "./forkChoice/forkChoice.js";
-export {IForkChoice, PowBlockHex, EpochDifference, AncestorResult, AncestorStatus} from "./forkChoice/interface.js";
-export {ForkChoiceStore, IForkChoiceStore, CheckpointWithHex, JustifiedBalancesGetter} from "./forkChoice/store.js";
+export {ForkChoice, ForkChoiceOpts, assertValidTerminalPowBlock} from "./fork_choice/fork_choice.js";
+export {IForkChoice, PowBlockHex, EpochDifference, AncestorResult, AncestorStatus} from "./fork_choice/interface.js";
+export {ForkChoiceStore, IForkChoiceStore, CheckpointWithHex, JustifiedBalancesGetter} from "./fork_choice/store.js";
 export {
   InvalidAttestation,
   InvalidAttestationCode,
@@ -19,4 +19,4 @@ export {
   InvalidBlockCode,
   ForkChoiceError,
   ForkChoiceErrorCode,
-} from "./forkChoice/errors.js";
+} from "./fork_choice/errors.js";

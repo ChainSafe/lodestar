@@ -8,8 +8,8 @@ import {ForkName} from "@lodestar/params";
 import {Slot, allForks, Epoch} from "@lodestar/types";
 import {BeaconArgs} from "../../../src/cmds/beacon/options.js";
 import {GlobalArgs} from "../../../src/options/index.js";
-import {EpochClock} from "./EpochClock.js";
-import {Eth1ProviderWithAdmin} from "./Eth1ProviderWithAdmin.js";
+import {EpochClock} from "./epoch_clock.js";
+import {Eth1ProviderWithAdmin} from "./eth1_provider_with_admin.js";
 
 export type NodeId = string;
 

@@ -18,9 +18,9 @@ import {
   blobSidecarsToBlobsSidecar,
 } from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
-import {isOptimisticBlock} from "../../../../util/forkChoice.js";
+import {isOptimisticBlock} from "../../../../util/fork_choice.js";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
-import {OpSource} from "../../../../metrics/validatorMonitor.js";
+import {OpSource} from "../../../../metrics/validator_monitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
 import {ApiModules} from "../../types.js";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";

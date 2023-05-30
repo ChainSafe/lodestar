@@ -3,7 +3,12 @@ import {chainConfigToJson, ChainConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {networksChainConfig} from "@lodestar/config/networks";
 import {assertEqualParams, NotEqualParamsError} from "../../../src/util/params.js";
-import {lightHouseRopstenConfig, prysmRopstenConfig, tekuRopstenConfig, nimbusRopstenConfig} from "./interopConfigs.js";
+import {
+  lightHouseRopstenConfig,
+  prysmRopstenConfig,
+  tekuRopstenConfig,
+  nimbusRopstenConfig,
+} from "./interop_configs.js";
 
 const testCases: {name: string; items: [ChainConfig, Record<string, string>]}[] = [
   {name: "lighthouse", items: [networksChainConfig.ropsten, lightHouseRopstenConfig]},

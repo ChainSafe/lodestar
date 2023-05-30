@@ -1,4 +1,4 @@
-import {gossipScoreThresholds} from "../../gossip/scoringParameters.js";
+import {gossipScoreThresholds} from "../../gossip/scoring_parameters.js";
 
 /** The default score for new peers */
 export const DEFAULT_SCORE = 0;

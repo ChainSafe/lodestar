@@ -5,9 +5,9 @@ import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {BeaconChain, ChainEventEmitter, HeadEventData} from "../../../../../src/chain/index.js";
 import {getEventsApi} from "../../../../../src/api/impl/events/index.js";
-import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
+import {generateProtoBlock} from "../../../../utils/type_generator.js";
 import {generateCachedState} from "../../../../utils/state.js";
-import {StateContextCache} from "../../../../../src/chain/stateCache/index.js";
+import {StateContextCache} from "../../../../../src/chain/state_cache/index.js";
 import {StubbedChainMutable} from "../../../../utils/stub/index.js";
 import {ZERO_HASH_HEX} from "../../../../../src/constants/constants.js";
 

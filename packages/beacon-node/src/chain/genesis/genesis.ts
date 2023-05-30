@@ -18,7 +18,7 @@ import {Logger} from "@lodestar/utils";
 import {IEth1Provider} from "../../eth1/index.js";
 import {IEth1StreamParams} from "../../eth1/interface.js";
 import {getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1/stream.js";
-import {DepositTree} from "../../db/repositories/depositDataRoot.js";
+import {DepositTree} from "../../db/repositories/deposit_data_root.js";
 import {IGenesisBuilder, GenesisResult} from "./interface.js";
 
 export type GenesisBuilderKwargs = {

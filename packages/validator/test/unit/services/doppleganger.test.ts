@@ -3,7 +3,7 @@ import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Api, HttpStatusCode} from "@lodestar/api";
-import {DoppelgangerService, DoppelgangerStatus} from "../../../src/services/doppelgangerService.js";
+import {DoppelgangerService, DoppelgangerStatus} from "../../../src/services/doppelganger_service.js";
 import {IndicesService} from "../../../src/services/indices.js";
 import {testLogger} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";

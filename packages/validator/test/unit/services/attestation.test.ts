@@ -5,12 +5,12 @@ import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {HttpStatusCode, routes} from "@lodestar/api";
 import {AttestationService, AttestationServiceOpts} from "../../../src/services/attestation.js";
-import {AttDutyAndProof} from "../../../src/services/attestationDuties.js";
-import {ValidatorStore} from "../../../src/services/validatorStore.js";
-import {getApiClientStub} from "../../utils/apiStub.js";
+import {AttDutyAndProof} from "../../../src/services/attestation_duties.js";
+import {ValidatorStore} from "../../../src/services/validator_store.js";
+import {getApiClientStub} from "../../utils/api_stub.js";
 import {loggerVc} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
-import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
+import {ChainHeaderTracker} from "../../../src/services/chain_header_tracker.js";
 import {ValidatorEventEmitter} from "../../../src/services/emitter.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../utils/types.js";
 

@@ -29,8 +29,8 @@ import {
   BeaconStateAltair,
 } from "../../src/types.js";
 import {interopPubkeysCached} from "../utils/interop.js";
-import {getNextSyncCommittee} from "../../src/util/syncCommittee.js";
-import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements.js";
+import {getNextSyncCommittee} from "../../src/util/sync_committee.js";
+import {getEffectiveBalanceIncrements} from "../../src/cache/effective_balance_increments.js";
 import {processSlots} from "../../src/index.js";
 
 let phase0State: BeaconStatePhase0 | null = null;

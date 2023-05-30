@@ -4,7 +4,7 @@ import {toHex, fromHex} from "@lodestar/utils";
 import {nodeUtils} from "@lodestar/beacon-node";
 import {GlobalArgs} from "../../options/index.js";
 import {mkdir, onGracefulShutdown} from "../../util/index.js";
-import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
+import {getBeaconConfigFromArgs} from "../../config/beacon_params.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {getValidatorPaths} from "../validator/paths.js";
 import {beaconHandler} from "../beacon/handler.js";

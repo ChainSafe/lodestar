@@ -12,8 +12,8 @@ import {ssz, phase0, altair, bellatrix, capella} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {ForkName} from "@lodestar/params";
 
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {createCachedBeaconStateTest} from "../../utils/cached_beacon_state.js";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expect_equal_beacon_state.js";
 import {getConfig} from "../../utils/config.js";
 import {BaseSpecTest, shouldVerify, TestRunnerFn} from "../utils/types.js";
 

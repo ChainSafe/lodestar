@@ -7,7 +7,7 @@ import {ErrorAborted, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
 import {IGauge, IHistogram} from "../../metrics/index.js";
 import {ApiError, NodeIsSyncing} from "../impl/errors.js";
-import {HttpActiveSocketsTracker, SocketMetrics} from "./activeSockets.js";
+import {HttpActiveSocketsTracker, SocketMetrics} from "./active_sockets.js";
 
 export type RestApiServerOpts = {
   port: number;

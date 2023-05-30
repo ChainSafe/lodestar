@@ -9,10 +9,10 @@ import {defaultNetwork, GlobalArgs} from "../../../options/index.js";
 import {assertValidPubkeysHex, isValidHttpUrl, parseRange, YargsError} from "../../../util/index.js";
 import {getAccountPaths} from "../paths.js";
 import {IValidatorCliArgs} from "../options.js";
-import {PersistedKeysBackend} from "../keymanager/persistedKeys.js";
-import {decryptKeystoreDefinitions} from "../keymanager/decryptKeystoreDefinitions/index.js";
+import {PersistedKeysBackend} from "../keymanager/persisted_keys.js";
+import {decryptKeystoreDefinitions} from "../keymanager/decrypt_keystore_definitions/index.js";
 import {showProgress} from "../../../util/progress.js";
-import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./importExternalKeystores.js";
+import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./import_external_keystores.js";
 
 const KEYSTORE_IMPORT_PROGRESS_MS = 10000;
 

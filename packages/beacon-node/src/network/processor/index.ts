@@ -3,18 +3,18 @@ import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {pruneSetToMax} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/interface.js";
-import {GossipErrorCode} from "../../chain/errors/gossipValidation.js";
+import {GossipErrorCode} from "../../chain/errors/gossip_validation.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {IBeaconDb} from "../../db/interface.js";
 import {ClockEvent} from "../../util/clock.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {GossipHandlers, GossipType, GossipValidatorFn} from "../gossip/interface.js";
 import {PeerIdStr} from "../peers/index.js";
-import {createGossipQueues} from "./gossipQueues.js";
+import {createGossipQueues} from "./gossip_queues.js";
 import {PendingGossipsubMessage} from "./types.js";
-import {ValidatorFnsModules, GossipHandlerOpts, getGossipHandlers} from "./gossipHandlers.js";
-import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
-import {ValidatorFnModules, getGossipValidatorFn} from "./gossipValidatorFn.js";
+import {ValidatorFnsModules, GossipHandlerOpts, getGossipHandlers} from "./gossip_handlers.js";
+import {createExtractBlockSlotRootFns} from "./extract_slot_root_fns.js";
+import {ValidatorFnModules, getGossipValidatorFn} from "./gossip_validator_fn.js";
 
 export * from "./types.js";
 

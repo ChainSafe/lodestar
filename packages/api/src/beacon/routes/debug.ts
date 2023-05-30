@@ -16,7 +16,7 @@ import {
   WithExecutionOptimistic,
   ContainerData,
 } from "../../utils/index.js";
-import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
+import {HttpStatusCode} from "../../utils/client/http_status_code.js";
 import {ApiClientResponse} from "../../interfaces.js";
 import {ExecutionOptimistic, StateId} from "./beacon/state.js";
 

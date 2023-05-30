@@ -1,5 +1,5 @@
 import {ValueOf} from "@chainsafe/ssz";
-import * as ssz from "./sszTypes.js";
+import * as ssz from "./ssz_types.js";
 
 // Each type exported here contains both a compile-time type
 // (a typescript interface) and a run-time ssz type (a javascript variable)

@@ -2,8 +2,8 @@ import path from "node:path";
 import {ACTIVE_PRESET} from "@lodestar/params";
 
 import {RunnerType} from "../utils/types.js";
-import {SkipOpts, specTestIterator} from "../utils/specTestIterator.js";
-import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {SkipOpts, specTestIterator} from "../utils/spec_test_iterator.js";
+import {ethereumConsensusSpecsTests} from "../spec_test_versioning.js";
 import {epochProcessing} from "./epoch_processing.js";
 import {finality} from "./finality.js";
 import {fork} from "./fork.js";

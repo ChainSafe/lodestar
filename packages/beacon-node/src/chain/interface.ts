@@ -23,7 +23,7 @@ import {Metrics} from "../metrics/metrics.js";
 import {IClock} from "../util/clock.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
-import {StateContextCache, CheckpointStateCache} from "./stateCache/index.js";
+import {StateContextCache, CheckpointStateCache} from "./state_cache/index.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {
   SeenAttesters,
@@ -31,19 +31,19 @@ import {
   SeenBlockProposers,
   SeenSyncCommitteeMessages,
   SeenContributionAndProof,
-} from "./seenCache/index.js";
-import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools/index.js";
-import {LightClientServer} from "./lightClient/index.js";
-import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
+} from "./seen_cache/index.js";
+import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./op_pools/index.js";
+import {LightClientServer} from "./light_client/index.js";
+import {AggregatedAttestationPool} from "./op_pools/aggregated_attestation_pool.js";
 import {BlockInput, ImportBlockOpts} from "./blocks/types.js";
 import {ReprocessController} from "./reprocess.js";
-import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
-import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
-import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
-import {CheckpointBalancesCache} from "./balancesCache.js";
+import {SeenAggregatedAttestations} from "./seen_cache/seen_aggregate_and_proof.js";
+import {BeaconProposerCache, ProposerPreparationData} from "./beacon_proposer_cache.js";
+import {SeenBlockAttesters} from "./seen_cache/seen_block_attesters.js";
+import {CheckpointBalancesCache} from "./balances_cache.js";
 import {IChainOptions} from "./options.js";
-import {AssembledBlockType, BlockAttributes, BlockType} from "./produceBlock/produceBlockBody.js";
-import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
+import {AssembledBlockType, BlockAttributes, BlockType} from "./produce_block/produce_block_body.js";
+import {SeenAttestationDatas} from "./seen_cache/seen_attestation_data.js";
 
 export {BlockType, AssembledBlockType};
 export {ProposerPreparationData};

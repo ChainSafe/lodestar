@@ -7,7 +7,7 @@ import {
   OPAQUE_TX_MESSAGE_OFFSET,
 } from "@lodestar/state-transition";
 import {loadEthereumTrustedSetup, initCKZG, ckzg, FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../../src/util/kzg.js";
-import {validateBlobsSidecar, validateGossipBlobsSidecar} from "../../../src/chain/validation/blobsSidecar.js";
+import {validateBlobsSidecar, validateGossipBlobsSidecar} from "../../../src/chain/validation/blobs_sidecar.js";
 
 describe("C-KZG", () => {
   before(async function () {

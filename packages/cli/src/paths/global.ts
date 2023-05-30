@@ -1,5 +1,5 @@
 import {GlobalArgs} from "../options/index.js";
-import {getDefaultDataDir} from "./rootDir.js";
+import {getDefaultDataDir} from "./root_dir.js";
 
 export type GlobalPaths = {
   dataDir: string;

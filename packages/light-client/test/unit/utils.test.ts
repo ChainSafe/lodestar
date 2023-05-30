@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {isValidMerkleBranch} from "../../src/utils/verifyMerkleBranch.js";
+import {isValidMerkleBranch} from "../../src/utils/verify_merkle_branch.js";
 import {computeMerkleBranch} from "../utils/utils.js";
 
 describe("utils", () => {

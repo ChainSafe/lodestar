@@ -2,13 +2,13 @@ import {Logger} from "@lodestar/logger";
 import {ELRequestHandler, ELVerifiedRequestHandler} from "../interfaces.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "../types.js";
-import {eth_getBalance} from "../verified_requests/eth_getBalance.js";
-import {eth_getTransactionCount} from "../verified_requests/eth_getTransactionCount.js";
-import {eth_getBlockByHash} from "../verified_requests/eth_getBlockByHash.js";
-import {eth_getBlockByNumber} from "../verified_requests/eth_getBlockByNumber.js";
-import {eth_getCode} from "../verified_requests/eth_getCode.js";
+import {eth_getBalance} from "../verified_requests/eth_get_balance.js";
+import {eth_getTransactionCount} from "../verified_requests/eth_get_transaction_count.js";
+import {eth_getBlockByHash} from "../verified_requests/eth_get_block_by_hash.js";
+import {eth_getBlockByNumber} from "../verified_requests/eth_get_block_by_number.js";
+import {eth_getCode} from "../verified_requests/eth_get_code.js";
 import {eth_call} from "../verified_requests/eth_call.js";
-import {eth_estimateGas} from "../verified_requests/eth_estimateGas.js";
+import {eth_estimateGas} from "../verified_requests/eth_estimate_gas.js";
 
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
 export const supportedELRequests: Record<string, ELVerifiedRequestHandler<any, any>> = {

@@ -1,7 +1,7 @@
 import {routes, ServerApi} from "@lodestar/api";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {ApiModules} from "../types.js";
-import {isOptimisticBlock} from "../../../util/forkChoice.js";
+import {isOptimisticBlock} from "../../../util/fork_choice.js";
 
 export function getDebugApi({
   chain,

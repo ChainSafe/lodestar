@@ -13,7 +13,7 @@ import {ClockEvent} from "../../src/util/clock.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
-import {simTestInfoTracker} from "../utils/node/simTest.js";
+import {simTestInfoTracker} from "../utils/node/sim_test.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
 import {Eth1Provider} from "../../src/index.js";
 import {ZERO_HASH} from "../../src/constants/index.js";

@@ -7,7 +7,7 @@ import {MonitoringService} from "../../../src/monitoring/service.js";
 import {createStubbedLogger} from "../../utils/mocks/logger.js";
 import {MonitoringOptions} from "../../../src/monitoring/options.js";
 import {sleep} from "../../utils/sleep.js";
-import {startRemoteService, remoteServiceRoutes, remoteServiceError} from "./remoteService.js";
+import {startRemoteService, remoteServiceRoutes, remoteServiceError} from "./remote_service.js";
 
 describe("monitoring / service", () => {
   const sandbox = sinon.createSandbox();

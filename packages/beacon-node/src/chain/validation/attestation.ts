@@ -18,8 +18,8 @@ import {
   getAggregationBitsFromAttestationSerialized,
   getAttDataBase64FromAttestationSerialized,
   getSignatureFromAttestationSerialized,
-} from "../../util/sszBytes.js";
-import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
+} from "../../util/ssz_bytes.js";
+import {AttestationDataCacheEntry} from "../seen_cache/seen_attestation_data.js";
 import {sszDeserializeAttestation} from "../../network/gossip/topic.js";
 
 export type AttestationValidationResult = {

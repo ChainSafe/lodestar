@@ -4,7 +4,7 @@ import path from "node:path";
 import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
 import {SHARED_JWT_SECRET, SIM_ENV_NETWORK_ID} from "../constants.js";
-import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
+import {Eth1ProviderWithAdmin} from "../eth1_provider_with_admin.js";
 import {ELClient, ELClientGenerator, ELStartMode, JobOptions, RunnerType} from "../interfaces.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
 import {getNodePorts} from "../utils/ports.js";

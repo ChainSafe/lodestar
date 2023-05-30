@@ -11,7 +11,7 @@ import {generateCachedState} from "../../../utils/state.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {SinonStubFn} from "../../../utils/types.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {SeenBlockProposers} from "../../../../src/chain/seenCache/index.js";
+import {SeenBlockProposers} from "../../../../src/chain/seen_cache/index.js";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../../src/constants/index.js";
 import {StubbedChainMutable} from "../../../utils/stub/index.js";
 

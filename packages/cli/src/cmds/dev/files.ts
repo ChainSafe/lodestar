@@ -5,7 +5,7 @@ import {chainConfigToJson, ChainForkConfig} from "@lodestar/config";
 import {dumpYaml} from "@lodestar/utils";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {PersistedKeysBackend} from "../validator/keymanager/persistedKeys.js";
+import {PersistedKeysBackend} from "../validator/keymanager/persisted_keys.js";
 
 /* eslint-disable no-console */
 

@@ -1,7 +1,7 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {Slot} from "@lodestar/types";
-import {HeadEventData} from "./chainHeaderTracker.js";
+import {HeadEventData} from "./chain_header_tracker.js";
 
 export enum ValidatorEvent {
   /**

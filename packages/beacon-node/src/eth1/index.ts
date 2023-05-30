@@ -2,10 +2,10 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {Root} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
 import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider, PowMergeBlock, TDProgress} from "./interface.js";
-import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1DepositDataTracker.js";
-import {Eth1MergeBlockTracker, Eth1MergeBlockTrackerModules} from "./eth1MergeBlockTracker.js";
+import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1_deposit_data_tracker.js";
+import {Eth1MergeBlockTracker, Eth1MergeBlockTrackerModules} from "./eth1_merge_block_tracker.js";
 import {Eth1Options} from "./options.js";
-import {Eth1Provider} from "./provider/eth1Provider.js";
+import {Eth1Provider} from "./provider/eth1_provider.js";
 export {IEth1ForBlockProduction, IEth1Provider, Eth1Provider};
 
 // This module encapsulates all consumer functionality to the execution node (formerly eth1). The execution client

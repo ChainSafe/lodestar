@@ -1,5 +1,5 @@
 import {fromHex} from "@lodestar/utils";
-import {JsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
+import {JsonRpcHttpClient} from "../../eth1/provider/json_rpc_http_client.js";
 import {IExecutionEngine} from "./interface.js";
 import {ExecutionEngineDisabled} from "./disabled.js";
 import {

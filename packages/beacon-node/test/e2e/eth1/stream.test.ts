@@ -2,8 +2,8 @@ import "mocha";
 import {expect} from "chai";
 import {getTestnetConfig, medallaTestnetConfig} from "../../utils/testnet.js";
 import {getDepositsStream, getDepositsAndBlockStreamForGenesis} from "../../../src/eth1/stream.js";
-import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider.js";
-import {getGoerliRpcUrl} from "../../testParams.js";
+import {Eth1Provider} from "../../../src/eth1/provider/eth1_provider.js";
+import {getGoerliRpcUrl} from "../../test_params.js";
 import {Eth1Options} from "../../../src/eth1/options.js";
 
 describe.skip("Eth1 streams", function () {

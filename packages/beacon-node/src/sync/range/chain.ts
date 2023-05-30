@@ -6,8 +6,8 @@ import {BlockInput} from "../../chain/blocks/types.js";
 import {PeerAction} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
-import {wrapError} from "../../util/wrapError.js";
-import {RangeSyncType} from "../utils/remoteSyncType.js";
+import {wrapError} from "../../util/wrap_error.js";
+import {RangeSyncType} from "../utils/remote_sync_type.js";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH} from "../constants.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {

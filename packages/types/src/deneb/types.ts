@@ -1,5 +1,5 @@
 import {ValueOf} from "@chainsafe/ssz";
-import * as ssz from "./sszTypes.js";
+import * as ssz from "./ssz_types.js";
 
 export type KZGProof = ValueOf<typeof ssz.KZGProof>;
 export type KZGCommitment = ValueOf<typeof ssz.KZGCommitment>;

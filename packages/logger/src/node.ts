@@ -3,7 +3,7 @@ import DailyRotateFile from "winston-daily-rotate-file";
 import TransportStream from "winston-transport";
 import winston from "winston";
 import {Logger, LogLevel, logLevelNum, TimestampFormat} from "./interface.js";
-import {ConsoleDynamicLevel} from "./utils/consoleTransport.js";
+import {ConsoleDynamicLevel} from "./utils/console_transport.js";
 import {getFormat} from "./utils/format.js";
 import {WinstonLogger} from "./winston.js";
 

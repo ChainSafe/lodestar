@@ -6,23 +6,23 @@ import {
   CachedBeaconStatePhase0,
   EpochTransitionCache,
 } from "../types.js";
-import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
-import {processEth1DataReset} from "./processEth1DataReset.js";
-import {processHistoricalRootsUpdate} from "./processHistoricalRootsUpdate.js";
-import {processHistoricalSummariesUpdate} from "./processHistoricalSummariesUpdate.js";
-import {processInactivityUpdates} from "./processInactivityUpdates.js";
-import {processJustificationAndFinalization} from "./processJustificationAndFinalization.js";
-import {processParticipationFlagUpdates} from "./processParticipationFlagUpdates.js";
-import {processParticipationRecordUpdates} from "./processParticipationRecordUpdates.js";
-import {processRandaoMixesReset} from "./processRandaoMixesReset.js";
-import {processRegistryUpdates} from "./processRegistryUpdates.js";
-import {processRewardsAndPenalties} from "./processRewardsAndPenalties.js";
-import {processSlashings} from "./processSlashings.js";
-import {processSlashingsReset} from "./processSlashingsReset.js";
-import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates.js";
+import {processEffectiveBalanceUpdates} from "./process_effective_balance_updates.js";
+import {processEth1DataReset} from "./process_eth1_data_reset.js";
+import {processHistoricalRootsUpdate} from "./process_historical_roots_update.js";
+import {processHistoricalSummariesUpdate} from "./process_historical_summaries_update.js";
+import {processInactivityUpdates} from "./process_inactivity_updates.js";
+import {processJustificationAndFinalization} from "./process_justification_and_finalization.js";
+import {processParticipationFlagUpdates} from "./process_participation_flag_updates.js";
+import {processParticipationRecordUpdates} from "./process_participation_record_updates.js";
+import {processRandaoMixesReset} from "./process_randao_mixes_reset.js";
+import {processRegistryUpdates} from "./process_registry_updates.js";
+import {processRewardsAndPenalties} from "./process_rewards_and_penalties.js";
+import {processSlashings} from "./process_slashings.js";
+import {processSlashingsReset} from "./process_slashings_reset.js";
+import {processSyncCommitteeUpdates} from "./process_sync_committee_updates.js";
 
 // For spec tests
-export {getRewardsAndPenalties} from "./processRewardsAndPenalties.js";
+export {getRewardsAndPenalties} from "./process_rewards_and_penalties.js";
 export {
   processJustificationAndFinalization,
   processInactivityUpdates,
@@ -40,7 +40,7 @@ export {
   processHistoricalSummariesUpdate,
 };
 
-export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
+export {computeUnrealizedCheckpoints} from "./compute_unrealized_checkpoints.js";
 
 export function processEpoch(fork: ForkSeq, state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
   processJustificationAndFinalization(state, cache);

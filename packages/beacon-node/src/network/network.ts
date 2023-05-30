@@ -27,9 +27,9 @@ import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
 import {collectExactOneTyped, collectMaxResponseTyped} from "./reqresp/utils/collect.js";
 import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
-import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
+import {collectSequentialBlocksInRange} from "./reqresp/utils/collect_sequential_blocks_in_range.js";
 import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
-import {AggregatorTracker} from "./processor/aggregatorTracker.js";
+import {AggregatorTracker} from "./processor/aggregator_tracker.js";
 
 type NetworkModules = {
   opts: NetworkOptions;

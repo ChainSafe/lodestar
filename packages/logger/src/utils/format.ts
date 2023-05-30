@@ -1,7 +1,7 @@
 import winston from "winston";
 import {LoggerOptions, TimestampFormatCode} from "../interface.js";
 import {logCtxToJson, logCtxToString, LogData} from "./json.js";
-import {formatEpochSlotTime} from "./timeFormat.js";
+import {formatEpochSlotTime} from "./time_format.js";
 
 const {format} = winston;
 

@@ -5,7 +5,7 @@ import {ForkChoice, ProtoBlock, ExecutionStatus} from "@lodestar/fork-choice";
 import {ssz} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {resolveBlockId} from "../../../../../../src/api/impl/beacon/blocks/utils.js";
-import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
+import {generateProtoBlock} from "../../../../../utils/type_generator.js";
 import {StubbedBeaconDb} from "../../../../../utils/stub/index.js";
 import {GENESIS_SLOT} from "../../../../../../src/constants/index.js";
 import {bufferEqualsMatcher} from "../../../../../utils/sinon/matcher.js";

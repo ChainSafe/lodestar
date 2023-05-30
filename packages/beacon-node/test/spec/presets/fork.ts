@@ -9,8 +9,8 @@ import * as slotFns from "@lodestar/state-transition/slot";
 import {phase0, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
-import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expect_equal_beacon_state.js";
+import {createCachedBeaconStateTest} from "../../utils/cached_beacon_state.js";
 import {TestRunnerFn} from "../utils/types.js";
 
 export const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {

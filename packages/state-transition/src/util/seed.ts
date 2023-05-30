@@ -12,7 +12,7 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
 import {BeaconStateAllForks} from "../types.js";
-import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
+import {EffectiveBalanceIncrements} from "../cache/effective_balance_increments.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {computeEpochAtSlot} from "./epoch.js";
 

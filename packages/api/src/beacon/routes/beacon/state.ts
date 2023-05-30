@@ -1,7 +1,7 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {phase0, CommitteeIndex, Slot, ValidatorIndex, Epoch, Root, ssz, StringType, RootHex} from "@lodestar/types";
 import {ApiClientResponse} from "../../../interfaces.js";
-import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
+import {HttpStatusCode} from "../../../utils/client/http_status_code.js";
 import {
   RoutesData,
   ReturnTypes,

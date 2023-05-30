@@ -1,5 +1,5 @@
 import {defaultOptions} from "@lodestar/validator";
-import {LogArgs, logOptions} from "../../options/logOptions.js";
+import {LogArgs, logOptions} from "../../options/log_options.js";
 import {ensure0xPrefix, CliCommandOptions} from "../../util/index.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
 import {defaultAccountPaths, defaultValidatorPaths} from "./paths.js";

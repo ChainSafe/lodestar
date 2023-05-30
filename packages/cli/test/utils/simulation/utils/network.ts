@@ -3,8 +3,8 @@ import {ApiError} from "@lodestar/api";
 import {Slot, allForks} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {CLClient, CLNode, ELClient, ELNode, NodePair} from "../interfaces.js";
-import {SimulationEnvironment} from "../SimulationEnvironment.js";
-import {SimulationTrackerEvent} from "../SimulationTracker.js";
+import {SimulationEnvironment} from "../simulation_environment.js";
+import {SimulationTrackerEvent} from "../simulation_tracker.js";
 
 export async function connectAllNodes(nodes: NodePair[]): Promise<void> {
   for (const node of nodes) {

@@ -24,9 +24,9 @@ import {getVersionData} from "../../util/version.js";
 import {getAccountPaths, getValidatorPaths} from "./paths.js";
 import {IValidatorCliArgs, validatorMetricsDefaultOptions, validatorMonitoringDefaultOptions} from "./options.js";
 import {getSignersFromArgs} from "./signers/index.js";
-import {logSigners} from "./signers/logSigners.js";
+import {logSigners} from "./signers/log_signers.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
-import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
+import {PersistedKeysBackend} from "./keymanager/persisted_keys.js";
 import {IPersistedKeysBackend} from "./keymanager/interface.js";
 import {KeymanagerRestApiServer} from "./keymanager/server.js";
 

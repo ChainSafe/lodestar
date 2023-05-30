@@ -7,7 +7,7 @@ import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
 import {generateState} from "../../../utils/state.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src/eth1/utils/deposits.js";
-import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
+import {DepositTree} from "../../../../src/db/repositories/deposit_data_root.js";
 
 describe("eth1 / util / deposits", function () {
   describe("getDeposits", () => {

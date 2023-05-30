@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import jsyaml from "js-yaml";
 import {expect} from "chai";
-import {blsSpecTests} from "../specTestVersioning.js";
-import {readdirSyncSpec} from "../utils/specTestIterator.js";
+import {blsSpecTests} from "../spec_test_versioning.js";
+import {readdirSyncSpec} from "../utils/spec_test_iterator.js";
 import {testFnByType} from "./bls.js";
 
 const skippedTestNames = [
