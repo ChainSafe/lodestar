@@ -72,18 +72,16 @@ export class MonitoringService {
       buckets: [0.3, 0.5, 1, Math.floor(this.options.requestTimeout / 1000)],
     });
 
-    const {interval, initialDelay} = this.options;
-
     this.initialDelayTimeout = setTimeout(async () => {
       await this.send();
       this.nextMonitoringInterval();
-    }, initialDelay);
+    }, this.options.initialDelay);
 
     this.logger.info("Started monitoring service", {
       // do not log full URL as it may contain secrets
       remote: this.remoteServiceHost,
       machine: this.remoteServiceUrl.searchParams.get("machine"),
-      interval,
+      interval: this.options.interval,
     });
   }
 
