@@ -25,7 +25,7 @@
     "build:release": "yarn clean && yarn run build",
     "build:watch": "tsc -p tsconfig.build.json --watch",
     "build:refdocs": "ts-node --esm ./docsgen/index.ts docs/cli.md",
-    "write-git-data": "node lib/util/gitData/writeGitData.js",
+    "write-git-data": "node lib/util/git_data/write_git_data.js",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\" lodestar --help",
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/ test/",
