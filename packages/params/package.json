@@ -23,7 +23,7 @@
       "import": "./lib/presets/gnosis.js"
     },
     "./setPreset": {
-      "import": "./lib/setPreset.js"
+      "import": "./lib/set_preset.js"
     }
   },
   "types": "lib/index.d.ts",
