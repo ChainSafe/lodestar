@@ -1,15 +1,26 @@
-import {Bucket} from "./schema.js";
+import {intToBytes} from "@lodestar/utils";
+import {BUCKET_LENGTH} from "./const.js";
 
-export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {
-  const keys = Object.keys(Bucket).filter((x) => {
-    if (isNaN(parseInt(x))) {
-      return Bucket[x as keyof typeof Bucket] == enumValue;
-    } else {
-      return false;
-    }
-  }) as (keyof typeof Bucket)[];
-  if (keys.length > 0) {
-    return keys[0];
+export const uintLen = 8;
+
+/**
+ * Prepend a bucket to a key
+ */
+export function encodeKey(bucket: number, key: Uint8Array | string | number | bigint): Uint8Array {
+  let buf;
+  const prefixLength = BUCKET_LENGTH;
+  //all keys are writen with prefixLength offet
+  if (typeof key === "string") {
+    buf = Buffer.alloc(key.length + prefixLength);
+    buf.write(key, prefixLength);
+  } else if (typeof key === "number" || typeof key === "bigint") {
+    buf = Buffer.alloc(uintLen + prefixLength);
+    intToBytes(BigInt(key), uintLen, "be").copy(buf, prefixLength);
+  } else {
+    buf = Buffer.alloc(key.length + prefixLength);
+    buf.set(key, prefixLength);
   }
-  throw new Error("Missing bucket for value " + enumValue);
+  //bucket prefix on position 0
+  buf.set(intToBytes(bucket, BUCKET_LENGTH, "le"), 0);
+  return buf;
 }

@@ -11,7 +11,7 @@ import {
   CachedBeaconStateAllForks,
   createCachedBeaconState,
   BeaconStateAllForks,
-  createEmptyEpochContextImmutableData,
+  createEmptyEpochCacheImmutableData,
   getActiveValidatorIndices,
 } from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
@@ -85,8 +85,8 @@ export class GenesisBuilder implements IGenesisBuilder {
       this.fromBlock = this.eth1Provider.deployBlock;
     }
 
-    // TODO - PENDING: Ensure EpochContextImmutableData is created only once
-    this.state = createCachedBeaconState(stateView, createEmptyEpochContextImmutableData(config, stateView));
+    // TODO - PENDING: Ensure EpochCacheImmutableData is created only once
+    this.state = createCachedBeaconState(stateView, createEmptyEpochCacheImmutableData(config, stateView));
     this.config = this.state.config;
     this.activatedValidatorCount = getActiveValidatorIndices(stateView, GENESIS_EPOCH).length;
   }

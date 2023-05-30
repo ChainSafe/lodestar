@@ -5,7 +5,7 @@ import {
   CachedBeaconStateAllForks,
   BeaconStateAllForks,
   createCachedBeaconState,
-  createEmptyEpochContextImmutableData,
+  createEmptyEpochCacheImmutableData,
   PubkeyIndexMap,
   ExecutionPayloadStatus,
   DataAvailableStatus,
@@ -237,7 +237,7 @@ async function getNearestArchivedState(
   const state = (await states[Symbol.asyncIterator]().next()).value as BeaconStateAllForks;
   // TODO - PENDING: Don't create new immutable caches here
   // see https://github.com/ChainSafe/lodestar/issues/3683
-  return createCachedBeaconState(state, createEmptyEpochContextImmutableData(config, state));
+  return createCachedBeaconState(state, createEmptyEpochCacheImmutableData(config, state));
 }
 
 async function getFinalizedState(

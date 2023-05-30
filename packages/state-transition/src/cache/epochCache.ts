@@ -41,13 +41,13 @@ import {
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
 
-export type EpochContextImmutableData = {
+export type EpochCacheImmutableData = {
   config: BeaconConfig;
   pubkey2index: PubkeyIndexMap;
   index2pubkey: Index2PubkeyCache;
 };
 
-export type EpochContextOpts = {
+export type EpochCacheOpts = {
   skipSyncCommitteeCache?: boolean;
   skipSyncPubkeys?: boolean;
 };
@@ -56,12 +56,12 @@ export type EpochContextOpts = {
 type ProposersDeferred = {computed: false; seed: Uint8Array} | {computed: true; indexes: ValidatorIndex[]};
 
 /**
- * EpochContext is the parent object of:
+ * EpochCache is the parent object of:
  * - Any data-structures not part of the spec'ed BeaconState
  * - Necessary to only compute data once
  * - Must be kept at all times through an epoch
  *
- * The performance gains with EpochContext are fundamental for the BeaconNode to be able to participate in a
+ * The performance gains with EpochCache are fundamental for the BeaconNode to be able to participate in a
  * production network with 100_000s of validators. In summary, it contains:
  *
  * Expensive data constant through the epoch:
@@ -77,7 +77,7 @@ type ProposersDeferred = {computed: false; seed: Uint8Array} | {computed: true; 
  * - epoch
  * - syncPeriod
  **/
-export class EpochContext {
+export class EpochCache {
   config: BeaconConfig;
   /**
    * Unique globally shared pubkey registry. There should only exist one for the entire application.
@@ -163,7 +163,7 @@ export class EpochContext {
    * This value is equivalent to:
    * - Forward current state to end-of-epoch
    * - Run beforeProcessEpoch
-   * - epochProcess.currEpochUnslashedTargetStakeByIncrement
+   * - epochTransitionCache.currEpochUnslashedTargetStakeByIncrement
    */
   currentTargetUnslashedBalanceIncrements: number;
   /**
@@ -172,7 +172,7 @@ export class EpochContext {
    * This value is equivalent to:
    * - Forward current state to end-of-epoch
    * - Run beforeProcessEpoch
-   * - epochProcess.prevEpochUnslashedStake.targetStakeByIncrement
+   * - epochTransitionCache.prevEpochUnslashedStake.targetStakeByIncrement
    */
   previousTargetUnslashedBalanceIncrements: number;
 
@@ -241,10 +241,10 @@ export class EpochContext {
    */
   static createFromState(
     state: BeaconStateAllForks,
-    {config, pubkey2index, index2pubkey}: EpochContextImmutableData,
-    opts?: EpochContextOpts
-  ): EpochContext {
-    // syncPubkeys here to ensure EpochContextImmutableData is popualted before computing the rest of caches
+    {config, pubkey2index, index2pubkey}: EpochCacheImmutableData,
+    opts?: EpochCacheOpts
+  ): EpochCache {
+    // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
     // - computeSyncCommitteeCache() needs a fully populated pubkey2index cache
     if (!opts?.skipSyncPubkeys) {
       syncPubkeys(state, pubkey2index, index2pubkey);
@@ -383,7 +383,7 @@ export class EpochContext {
       );
     }
 
-    return new EpochContext({
+    return new EpochCache({
       config,
       pubkey2index,
       index2pubkey,
@@ -410,13 +410,13 @@ export class EpochContext {
   }
 
   /**
-   * Copies a given EpochContext while avoiding copying its immutable parts.
+   * Copies a given EpochCache while avoiding copying its immutable parts.
    */
-  clone(): EpochContext {
+  clone(): EpochCache {
     // warning: pubkey cache is not copied, it is shared, as eth1 is not expected to reorder validators.
     // Shallow copy all data from current epoch context to the next
     // All data is completely replaced, or only-appended
-    return new EpochContext({
+    return new EpochCache({
       config: this.config,
       // Common append-only structures shared with all states, no need to clone
       pubkey2index: this.pubkey2index,
@@ -428,7 +428,7 @@ export class EpochContext {
       currentShuffling: this.currentShuffling,
       nextShuffling: this.nextShuffling,
       // Uint8Array, requires cloning, but it is cloned only when necessary before an epoch transition
-      // See EpochContext.beforeEpochTransition()
+      // See EpochCache.beforeEpochTransition()
       effectiveBalanceIncrements: this.effectiveBalanceIncrements,
       // Basic types (numbers) cloned implicitly
       syncParticipantReward: this.syncParticipantReward,
@@ -453,7 +453,7 @@ export class EpochContext {
    */
   afterProcessEpoch(
     state: BeaconStateAllForks,
-    epochProcess: {
+    epochTransitionCache: {
       nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
       nextEpochTotalActiveBalanceByIncrement: number;
     }
@@ -463,14 +463,18 @@ export class EpochContext {
     const currEpoch = this.currentShuffling.epoch;
     const nextEpoch = currEpoch + 1;
 
-    this.nextShuffling = computeEpochShuffling(state, epochProcess.nextEpochShufflingActiveValidatorIndices, nextEpoch);
+    this.nextShuffling = computeEpochShuffling(
+      state,
+      epochTransitionCache.nextEpochShufflingActiveValidatorIndices,
+      nextEpoch
+    );
     const currentProposerSeed = getSeed(state, this.currentShuffling.epoch, DOMAIN_BEACON_PROPOSER);
     this.proposers = computeProposers(currentProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements);
 
     // Only pre-compute the seed since it's very cheap. Do the expensive computeProposers() call only on demand.
     this.proposersNextEpoch = {computed: false, seed: getSeed(state, this.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER)};
 
-    // TODO: DEDUPLICATE from createEpochContext
+    // TODO: DEDUPLICATE from createEpochCache
     //
     // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
     // active validator indices set changes in size. Validators change active status only when:
@@ -495,7 +499,7 @@ export class EpochContext {
       this.exitQueueChurn = 0;
     }
 
-    this.totalActiveBalanceIncrements = epochProcess.nextEpochTotalActiveBalanceByIncrement;
+    this.totalActiveBalanceIncrements = epochTransitionCache.nextEpochTotalActiveBalanceByIncrement;
     if (currEpoch >= this.config.ALTAIR_FORK_EPOCH) {
       this.syncParticipantReward = computeSyncParticipantReward(this.totalActiveBalanceIncrements);
       this.syncProposerReward = Math.floor(this.syncParticipantReward * PROPOSER_WEIGHT_FACTOR);
@@ -509,7 +513,7 @@ export class EpochContext {
     // state.slot is advanced right before calling this function
     // ```
     // postState.slot++;
-    // afterProcessEpoch(postState, epochProcess);
+    // afterProcessEpoch(postState, epochTransitionCache);
     // ```
     this.epoch = computeEpochAtSlot(state.slot);
     this.syncPeriod = computeSyncPeriodAtEpoch(this.epoch);
@@ -527,8 +531,8 @@ export class EpochContext {
   getBeaconCommittee(slot: Slot, index: CommitteeIndex): ValidatorIndex[] {
     const slotCommittees = this.getShufflingAtSlot(slot).committees[slot % SLOTS_PER_EPOCH];
     if (index >= slotCommittees.length) {
-      throw new EpochContextError({
-        code: EpochContextErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
+      throw new EpochCacheError({
+        code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
         index,
         maxIndex: slotCommittees.length,
       });
@@ -745,7 +749,7 @@ export class EpochContext {
   }
 
   /**
-   * **DO NOT USE FOR GOSSIP VALIDATION**: Sync committee duties are offset by one slot. @see {@link EpochContext.getIndexedSyncCommittee}
+   * **DO NOT USE FOR GOSSIP VALIDATION**: Sync committee duties are offset by one slot. @see {@link EpochCache.getIndexedSyncCommittee}
    *
    * Get indexed sync committee at epoch without offsets
    */
@@ -799,22 +803,22 @@ type AttesterDuty = {
   slot: Slot;
 };
 
-export enum EpochContextErrorCode {
+export enum EpochCacheErrorCode {
   COMMITTEE_INDEX_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",
 }
 
-type EpochContextErrorType = {
-  code: EpochContextErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE;
+type EpochCacheErrorType = {
+  code: EpochCacheErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE;
   index: number;
   maxIndex: number;
 };
 
-export class EpochContextError extends LodestarError<EpochContextErrorType> {}
+export class EpochCacheError extends LodestarError<EpochCacheErrorType> {}
 
-export function createEmptyEpochContextImmutableData(
+export function createEmptyEpochCacheImmutableData(
   chainConfig: ChainConfig,
   state: Pick<BeaconStateAllForks, "genesisValidatorsRoot">
-): EpochContextImmutableData {
+): EpochCacheImmutableData {
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
     // This is a test state, there's no need to have a global shared cache of keys

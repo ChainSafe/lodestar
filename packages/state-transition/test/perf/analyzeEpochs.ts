@@ -99,7 +99,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
     const stateTB = ssz.phase0.BeaconState.toViewDU(state as phase0.BeaconState);
     const postState = createCachedBeaconStateTest(stateTB, config);
 
-    const epochProcess = beforeProcessEpoch(postState);
+    const cache = beforeProcessEpoch(postState);
     processSlots(postState, nextEpochSlot);
 
     const validatorCount = state.validators.length;
@@ -118,7 +118,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
     const attesterFlagsCount = {...attesterFlagsCountZero};
     const keys = Object.keys(attesterFlagsCountZero) as (keyof typeof attesterFlagsCountZero)[];
-    for (const status of epochProcess.statuses) {
+    for (const status of cache.statuses) {
       const flags = parseAttesterFlags(status.flags);
       for (const key of keys) {
         if (flags[key]) attesterFlagsCount[key]++;
@@ -136,10 +136,10 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
       ...validatorChangesCount,
       ...attesterFlagsCount,
 
-      indicesEligibleForActivation: epochProcess.indicesEligibleForActivation.length,
-      indicesEligibleForActivationQueue: epochProcess.indicesEligibleForActivationQueue.length,
-      indicesToEject: epochProcess.indicesToEject.length,
-      indicesToSlash: epochProcess.indicesToSlash.length,
+      indicesEligibleForActivation: cache.indicesEligibleForActivation.length,
+      indicesEligibleForActivationQueue: cache.indicesEligibleForActivationQueue.length,
+      indicesToEject: cache.indicesToEject.length,
+      indicesToSlash: cache.indicesToSlash.length,
 
       previousEpochAttestations: previousEpochAttestations.length,
       currentEpochAttestations: currentEpochAttestations.length,

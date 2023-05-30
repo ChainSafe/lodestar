@@ -1,6 +1,7 @@
-import {Db, encodeKey, Bucket} from "@lodestar/db";
+import {Db, encodeKey} from "@lodestar/db";
 import {Slot, Root, allForks, ssz} from "@lodestar/types";
 import {intToBytes} from "@lodestar/utils";
+import {Bucket} from "../buckets.js";
 
 export async function storeRootIndex(db: Db, slot: Slot, blockRoot: Root): Promise<void> {
   return db.put(getRootIndexKey(blockRoot), intToBytes(slot, 8, "be"));

@@ -34,7 +34,7 @@ export type BlockProcessOpts = {
    */
   safeSlotsToImportOptimistically: number;
   /**
-   * Assert progressive balances the same to EpochProcess
+   * Assert progressive balances the same to EpochTransitionCache
    */
   assertCorrectProgressiveBalances?: boolean;
   /** Used for fork_choice spec tests */

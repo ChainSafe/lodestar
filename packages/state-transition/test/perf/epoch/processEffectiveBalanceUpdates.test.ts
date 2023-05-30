@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
 import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
-import {beforeProcessEpoch, CachedBeaconStateAllForks, EpochProcess} from "../../../src/index.js";
+import {beforeProcessEpoch, CachedBeaconStateAllForks, EpochTransitionCache} from "../../../src/index.js";
 import {processEffectiveBalanceUpdates} from "../../../src/epoch/processEffectiveBalanceUpdates.js";
 import {numValidators} from "../util.js";
 import {StateEpoch} from "../types.js";
@@ -25,7 +25,7 @@ describe("phase0 processEffectiveBalanceUpdates", () => {
     {id: "worstcase 0.5", changeRatio: 0.5},
   ];
 
-  // Provide flat `epochProcess.balances` + flat `epochProcess.validators`
+  // Provide flat `cache.balances` + flat `cache.validators`
   // which will it update validators tree
 
   for (const {id, changeRatio} of testCases) {
@@ -34,8 +34,8 @@ describe("phase0 processEffectiveBalanceUpdates", () => {
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       minRuns: 5, // Worst case is very slow
       before: () => getEffectiveBalanceTestData(vc, changeRatio),
-      beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-      fn: ({state, epochProcess}) => processEffectiveBalanceUpdates(state, epochProcess),
+      beforeEach: ({state, cache}) => ({state: state.clone(), cache}),
+      fn: ({state, cache}) => processEffectiveBalanceUpdates(state, cache),
     });
   }
 });
@@ -48,7 +48,7 @@ function getEffectiveBalanceTestData(
   changeRatio: number
 ): {
   state: CachedBeaconStateAllForks;
-  epochProcess: EpochProcess;
+  cache: EpochTransitionCache;
 } {
   const stateTree = ssz.phase0.BeaconState.defaultViewDU();
   stateTree.slot = 1;
@@ -75,11 +75,11 @@ function getEffectiveBalanceTestData(
   stateTree.commit();
 
   const cachedBeaconState = createCachedBeaconStateTest(stateTree, config, {skipSyncPubkeys: true});
-  const epochProcess = beforeProcessEpoch(cachedBeaconState);
-  epochProcess.balances = balances;
+  const cache = beforeProcessEpoch(cachedBeaconState);
+  cache.balances = balances;
 
   return {
     state: cachedBeaconState,
-    epochProcess: epochProcess,
+    cache: cache,
   };
 }

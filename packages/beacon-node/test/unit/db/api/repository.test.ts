@@ -5,7 +5,8 @@ import all from "it-all";
 import {ContainerType} from "@chainsafe/ssz";
 import {Bytes32, ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
-import {Db, LevelDbController, Repository, Bucket} from "@lodestar/db";
+import {Db, LevelDbController, Repository} from "@lodestar/db";
+import {Bucket} from "../../../../src/db/buckets.js";
 
 interface TestType {
   bool: boolean;
@@ -20,7 +21,7 @@ const TestSSZType = new ContainerType({
 
 class TestRepository extends Repository<string, TestType> {
   constructor(db: Db) {
-    super(config, db, Bucket.phase0_depositEvent, TestSSZType);
+    super(config, db, Bucket.phase0_depositEvent, TestSSZType, "phase0_depositEvent");
   }
 }
 

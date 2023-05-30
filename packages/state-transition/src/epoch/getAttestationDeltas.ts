@@ -8,7 +8,7 @@ import {
 } from "@lodestar/params";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../constants/index.js";
 import {newZeroedArray} from "../util/index.js";
-import {EpochProcess, CachedBeaconStatePhase0} from "../types.js";
+import {EpochTransitionCache, CachedBeaconStatePhase0} from "../types.js";
 import {hasMarkers} from "../util/attesterStatus.js";
 
 /**
@@ -48,24 +48,27 @@ type RewardPenaltyItem = {
  *   - unslashed:          100%
  *   - eligibleAttester:   98%
  */
-export function getAttestationDeltas(state: CachedBeaconStatePhase0, epochProcess: EpochProcess): [number[], number[]] {
-  const validatorCount = epochProcess.statuses.length;
+export function getAttestationDeltas(
+  state: CachedBeaconStatePhase0,
+  cache: EpochTransitionCache
+): [number[], number[]] {
+  const validatorCount = cache.statuses.length;
   const rewards = newZeroedArray(validatorCount);
   const penalties = newZeroedArray(validatorCount);
 
-  // no need this as we make sure it in EpochProcess
-  // let totalBalance = bigIntMax(epochProcess.totalActiveStake, increment);
-  const totalBalance = epochProcess.totalActiveStakeByIncrement;
+  // no need this as we make sure it in EpochTransitionCache
+  // let totalBalance = bigIntMax(epochTransitionCache.totalActiveStake, increment);
+  const totalBalance = cache.totalActiveStakeByIncrement;
   const totalBalanceInGwei = BigInt(totalBalance) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
 
   // increment is factored out from balance totals to avoid overflow
-  const prevEpochSourceStakeByIncrement = epochProcess.prevEpochUnslashedStake.sourceStakeByIncrement;
-  const prevEpochTargetStakeByIncrement = epochProcess.prevEpochUnslashedStake.targetStakeByIncrement;
-  const prevEpochHeadStakeByIncrement = epochProcess.prevEpochUnslashedStake.headStakeByIncrement;
+  const prevEpochSourceStakeByIncrement = cache.prevEpochUnslashedStake.sourceStakeByIncrement;
+  const prevEpochTargetStakeByIncrement = cache.prevEpochUnslashedStake.targetStakeByIncrement;
+  const prevEpochHeadStakeByIncrement = cache.prevEpochUnslashedStake.headStakeByIncrement;
 
   // sqrt first, before factoring out the increment for later usage
   const balanceSqRoot = bnToNum(bigIntSqrt(totalBalanceInGwei));
-  const finalityDelay = epochProcess.prevEpoch - state.finalizedCheckpoint.epoch;
+  const finalityDelay = cache.prevEpoch - state.finalizedCheckpoint.epoch;
 
   const BASE_REWARDS_PER_EPOCH = BASE_REWARDS_PER_EPOCH_CONST;
   const proposerRewardQuotient = PROPOSER_REWARD_QUOTIENT;
@@ -74,7 +77,7 @@ export function getAttestationDeltas(state: CachedBeaconStatePhase0, epochProces
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
   // so there are limited values of them like 32, 31, 30
   const rewardPnaltyItemCache = new Map<number, RewardPenaltyItem>();
-  const {statuses} = epochProcess;
+  const {statuses} = cache;
   const {effectiveBalanceIncrements} = state.epochCtx;
   for (let i = 0; i < statuses.length; i++) {
     const effectiveBalanceIncrement = effectiveBalanceIncrements[i];

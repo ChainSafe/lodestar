@@ -7,7 +7,7 @@ import {
   MAX_EFFECTIVE_BALANCE,
   TIMELY_TARGET_FLAG_INDEX,
 } from "@lodestar/params";
-import {EpochProcess, CachedBeaconStateAllForks, BeaconStateAltair} from "../types.js";
+import {EpochTransitionCache, CachedBeaconStateAllForks, BeaconStateAltair} from "../types.js";
 
 /** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
@@ -21,7 +21,7 @@ const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
  * - On normal mainnet conditions 0 validators change their effective balance
  * - In case of big innactivity event a medium portion of validators may have their effectiveBalance updated
  */
-export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks, epochProcess: EpochProcess): void {
+export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
   const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / HYSTERESIS_QUOTIENT;
   const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER;
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
@@ -32,9 +32,9 @@ export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks,
 
   // update effective balances with hysteresis
 
-  // epochProcess.balances is set in processRewardsAndPenalties(), so it's recycled here for performance.
+  // epochTransitionCache.balances is set in processRewardsAndPenalties(), so it's recycled here for performance.
   // It defaults to `state.balances.getAll()` to make Typescript happy and for spec tests
-  const balances = epochProcess.balances ?? state.balances.getAll();
+  const balances = cache.balances ?? state.balances.getAll();
 
   for (let i = 0, len = balances.length; i < len; i++) {
     const balance = balances[i];
@@ -67,8 +67,8 @@ export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks,
           epochCtx.previousTargetUnslashedBalanceIncrements += deltaEffectiveBalanceIncrement;
         }
 
-        // currentTargetUnslashedBalanceIncrements is transfered to previousTargetUnslashedBalanceIncrements in afterEpochProcess
-        // at epoch transition of next epoch (in EpochProcess), prevTargetUnslStake is calculated based on newEffectiveBalanceIncrement
+        // currentTargetUnslashedBalanceIncrements is transfered to previousTargetUnslashedBalanceIncrements in afterEpochTransitionCache
+        // at epoch transition of next epoch (in EpochTransitionCache), prevTargetUnslStake is calculated based on newEffectiveBalanceIncrement
         if (!validator.slashed && (currentEpochParticipation.get(i) & TIMELY_TARGET) === TIMELY_TARGET) {
           epochCtx.currentTargetUnslashedBalanceIncrements += deltaEffectiveBalanceIncrement;
         }
@@ -78,12 +78,12 @@ export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks,
       effectiveBalanceIncrements[i] = effectiveBalanceIncrement;
     }
 
-    // TODO: Do this in afterEpochProcess, looping a Uint8Array should be very cheap
-    if (epochProcess.isActiveNextEpoch[i]) {
+    // TODO: Do this in afterEpochTransitionCache, looping a Uint8Array should be very cheap
+    if (cache.isActiveNextEpoch[i]) {
       // We track nextEpochTotalActiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
       nextEpochTotalActiveBalanceByIncrement += effectiveBalanceIncrement;
     }
   }
 
-  epochProcess.nextEpochTotalActiveBalanceByIncrement = nextEpochTotalActiveBalanceByIncrement;
+  cache.nextEpochTotalActiveBalanceByIncrement = nextEpochTotalActiveBalanceByIncrement;
 }

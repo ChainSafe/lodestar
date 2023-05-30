@@ -76,7 +76,7 @@ export type NetworkWorkerData = {
   initialStatus: phase0.Status;
   peerIdProto: Uint8Array;
   localMultiaddrs: string[];
-  metrics: boolean;
+  metricsEnabled: boolean;
   peerStoreDir?: string;
   loggerOpts: LoggerNodeOpts;
 };
