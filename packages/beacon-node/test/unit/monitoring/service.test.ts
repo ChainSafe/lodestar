@@ -160,6 +160,7 @@ describe("monitoring / service", () => {
   });
 
   describe("MonitoringService - send", () => {
+    let service: MonitoringService | undefined;
     let remoteServiceUrl: URL;
     let baseUrl: string;
 
@@ -169,10 +170,14 @@ describe("monitoring / service", () => {
       baseUrl = remoteServiceUrl.origin;
     });
 
+    afterEach(() => {
+      service?.close();
+    });
+
     (["beacon", "validator"] as const).forEach((client) => {
       it(`should collect and send ${client} stats to remote service`, async () => {
         const endpoint = `${baseUrl}${remoteServiceRoutes.success}`;
-        const service = new MonitoringService(client, {endpoint, collectSystemStats: true}, {register, logger});
+        service = new MonitoringService(client, {endpoint, collectSystemStats: true}, {register, logger});
 
         await service.send();
 
@@ -185,7 +190,7 @@ describe("monitoring / service", () => {
 
     it("should properly handle remote service errors", async () => {
       const endpoint = `${baseUrl}${remoteServiceRoutes.error}`;
-      const service = new MonitoringService("beacon", {endpoint, collectSystemStats: false}, {register, logger});
+      service = new MonitoringService("beacon", {endpoint, collectSystemStats: false}, {register, logger});
 
       await service.send();
 
@@ -195,7 +200,7 @@ describe("monitoring / service", () => {
     it("should properly handle errors if remote service is unreachable", async () => {
       const differentPort = Number(remoteServiceUrl.port) - 1;
       const endpoint = `http://127.0.0.1:${differentPort}/`;
-      const service = new MonitoringService("beacon", {endpoint}, {register, logger});
+      service = new MonitoringService("beacon", {endpoint}, {register, logger});
 
       await service.send();
 
@@ -204,7 +209,7 @@ describe("monitoring / service", () => {
 
     it("should abort pending requests if timeout is reached", async () => {
       const endpoint = `${baseUrl}${remoteServiceRoutes.pending}`;
-      const service = new MonitoringService(
+      service = new MonitoringService(
         "beacon",
         {endpoint, requestTimeout: 10, collectSystemStats: false},
         {register, logger}
@@ -217,7 +222,7 @@ describe("monitoring / service", () => {
 
     it("should abort pending requests if monitoring service is closed", (done) => {
       const endpoint = `${baseUrl}${remoteServiceRoutes.pending}`;
-      const service = new MonitoringService("beacon", {endpoint, collectSystemStats: false}, {register, logger});
+      service = new MonitoringService("beacon", {endpoint, collectSystemStats: false}, {register, logger});
 
       service.send().finally(() => {
         try {
@@ -229,7 +234,7 @@ describe("monitoring / service", () => {
       });
 
       // wait for request to be sent before closing
-      setTimeout(() => service.close(), 10);
+      setTimeout(() => service?.close(), 10);
     });
 
     function assertError(error: {message: string}): void {
