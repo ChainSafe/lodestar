@@ -269,7 +269,9 @@ export class NetworkCore implements INetworkCore {
   }
 
   async scrapeMetrics(): Promise<string> {
-    return (await this.metrics?.register.metrics()) ?? "";
+    return `${(await this.metrics?.register.metrics()) ?? ""}/n/n${
+      (await this.peerManager["discovery"]?.discv5.scrapeMetrics()) ?? ""
+    }`;
   }
 
   async updateStatus(status: phase0.Status): Promise<void> {
