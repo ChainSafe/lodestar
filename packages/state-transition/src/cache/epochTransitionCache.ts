@@ -15,30 +15,30 @@ import {
   FLAG_CURR_TARGET_ATTESTER,
   FLAG_CURR_HEAD_ATTESTER,
 } from "../util/attesterStatus.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "..";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../index.js";
 import {computeBaseRewardPerIncrement} from "../util/altair.js";
 import {processPendingAttestations} from "../epoch/processPendingAttestations.js";
 
-export type EpochProcessOpts = {
+export type EpochTransitionCacheOpts = {
   /**
-   * Assert progressive balances the same to EpochProcess
+   * Assert progressive balances the same to EpochTransitionCache
    */
   assertCorrectProgressiveBalances?: boolean;
 };
 
 /**
- * EpochProcess is the parent object of:
+ * EpochTransitionCache is the parent object of:
  * - Any data-structures not part of the spec'ed BeaconState
  * - Necessary to only compute data once
  * - Only necessary for epoch processing, can be disposed immediately
- * - Not already part of `EpochContext` {@see} {@link EpochContext}
+ * - Not already part of `EpochCache` {@see} {@link EpochCache}
  *
- * EpochProcess speeds up epoch processing as a whole at the cost of more memory temporarily. This is okay since
+ * EpochTransitionCache speeds up epoch processing as a whole at the cost of more memory temporarily. This is okay since
  * only epoch process is done at once, limiting the max total memory increase. In summary it helps:
  * - Only loop state.validators once for all `process_*` fns
  * - Only loop status array once
  */
-export interface EpochProcess {
+export interface EpochTransitionCache {
   prevEpoch: Epoch;
   currentEpoch: Epoch;
   /**
@@ -144,7 +144,7 @@ export interface EpochProcess {
    * | epoch process fn                 | nextEpochTotalActiveBalance action |
    * | -------------------------------- | ---------------------------------- |
    * | beforeProcessEpoch               | calculate during the validator loop|
-   * | afterEpochProcess                | read it                            |
+   * | afterEpochTransitionCache                | read it                            |
    */
   nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
 
@@ -157,7 +157,7 @@ export interface EpochProcess {
    * | -------------------------------- | ---------------------------------- |
    * | beforeProcessEpoch               | initialize as BigInt(0)            |
    * | processEffectiveBalancesUpdate   | calculate during the loop          |
-   * | afterEpochProcess                | read it                            |
+   * | afterEpochTransitionCache                | read it                            |
    */
   nextEpochTotalActiveBalanceByIncrement: number;
 
@@ -168,7 +168,10 @@ export interface EpochProcess {
   isActiveNextEpoch: boolean[];
 }
 
-export function beforeProcessEpoch(state: CachedBeaconStateAllForks, opts?: EpochProcessOpts): EpochProcess {
+export function beforeProcessEpoch(
+  state: CachedBeaconStateAllForks,
+  opts?: EpochTransitionCacheOpts
+): EpochTransitionCache {
   const {config, epochCtx} = state;
   const forkSeq = config.getForkSeq(state.slot);
   const currentEpoch = epochCtx.epoch;

@@ -2,7 +2,7 @@ import {itBench} from "@dapplion/benchmark";
 import {getAttestationDeltas} from "../../../src/epoch/getAttestationDeltas.js";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 import {StatePhase0Epoch} from "../types.js";
-import {FlagFactors, generateBalanceDeltasEpochProcess} from "./utilPhase0.js";
+import {FlagFactors, generateBalanceDeltasEpochTransitionCache} from "./utilPhase0.js";
 
 // - On normal mainnet conditions
 //   - prevSourceAttester: 98%
@@ -44,12 +44,12 @@ describe("phase0 getAttestationDeltas", () => {
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       before: () => {
         const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
-        const epochProcess = generateBalanceDeltasEpochProcess(state, isInInactivityLeak, flagFactors);
-        return {state, epochProcess};
+        const cache = generateBalanceDeltasEpochTransitionCache(state, isInInactivityLeak, flagFactors);
+        return {state, cache};
       },
-      beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-      fn: ({state, epochProcess}) => {
-        getAttestationDeltas(state, epochProcess);
+      beforeEach: ({state, cache}) => ({state: state.clone(), cache}),
+      fn: ({state, cache}) => {
+        getAttestationDeltas(state, cache);
       },
     });
   }

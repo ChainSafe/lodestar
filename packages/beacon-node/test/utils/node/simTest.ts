@@ -44,13 +44,14 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
   function logParticipation(state: CachedBeaconStateAllForks): void {
     // Compute participation (takes 5ms with 64 validators)
     // Need a CachedBeaconStateAllForks where (state.slot + 1) % SLOTS_EPOCH == 0
-    const epochProcess = beforeProcessEpoch(state);
+    const epochTransitionCache = beforeProcessEpoch(state);
     const epoch = computeEpochAtSlot(state.slot);
 
     const prevParticipation =
-      epochProcess.prevEpochUnslashedStake.targetStakeByIncrement / epochProcess.totalActiveStakeByIncrement;
+      epochTransitionCache.prevEpochUnslashedStake.targetStakeByIncrement /
+      epochTransitionCache.totalActiveStakeByIncrement;
     const currParticipation =
-      epochProcess.currEpochUnslashedTargetStakeByIncrement / epochProcess.totalActiveStakeByIncrement;
+      epochTransitionCache.currEpochUnslashedTargetStakeByIncrement / epochTransitionCache.totalActiveStakeByIncrement;
     prevParticipationPerEpoch.set(epoch - 1, prevParticipation);
     currParticipationPerEpoch.set(epoch, currParticipation);
     logger.info("> Participation", {

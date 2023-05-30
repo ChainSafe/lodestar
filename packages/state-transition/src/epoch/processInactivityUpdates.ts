@@ -1,5 +1,5 @@
 import {GENESIS_EPOCH} from "@lodestar/params";
-import {CachedBeaconStateAltair, EpochProcess} from "../types.js";
+import {CachedBeaconStateAltair, EpochTransitionCache} from "../types.js";
 import * as attesterStatusUtil from "../util/attesterStatus.js";
 import {isInInactivityLeak} from "../util/index.js";
 
@@ -17,14 +17,14 @@ import {isInInactivityLeak} from "../util/index.js";
  *
  * TODO: Compute from altair testnet inactivityScores updates on average
  */
-export function processInactivityUpdates(state: CachedBeaconStateAltair, epochProcess: EpochProcess): void {
+export function processInactivityUpdates(state: CachedBeaconStateAltair, cache: EpochTransitionCache): void {
   if (state.epochCtx.epoch === GENESIS_EPOCH) {
     return;
   }
 
   const {config, inactivityScores} = state;
   const {INACTIVITY_SCORE_BIAS, INACTIVITY_SCORE_RECOVERY_RATE} = config;
-  const {statuses, eligibleValidatorIndices} = epochProcess;
+  const {statuses, eligibleValidatorIndices} = cache;
   const inActivityLeak = isInInactivityLeak(state);
 
   // this avoids importing FLAG_ELIGIBLE_ATTESTER inside the for loop, check the compiled code
