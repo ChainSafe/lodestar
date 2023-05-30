@@ -27,7 +27,7 @@ You can run any of npm task prefixed with `test:sim:*`. There are different scen
 
 ### Enable Metics for the sim tests
 
-To enable metrics for the SIM tests you can set `SIM_METRIC_SERVER` environment variable with the host and port e.g. `127.0.0.1:4000`.
+To enable metrics for the SIM tests you can set `SIM_METRIC_SERVER_URL` environment variable with the host and port e.g. `127.0.0.1:4000`.
 
 ## Architecture
 

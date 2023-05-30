@@ -29,7 +29,7 @@ export async function createCLNode<C extends CLClient>(
     engineUrls: options.engineUrls ?? [],
   };
 
-  const metricServer = process.env.SIM_METRIC_SERVER;
+  const metricServer = process.env.SIM_METRIC_SERVER_URL;
   if (metricServer) {
     const server = new URL(metricServer.startsWith("http") ? metricServer : `http://${metricServer}`);
     opts.metrics = {
