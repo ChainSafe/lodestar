@@ -9,7 +9,7 @@ import {getReqRespHandlers, Network, NetworkInitModules} from "../../../src/netw
 import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 import {GossipType, GossipHandlers} from "../../../src/network/gossip/index.js";
 
-import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
+import {getMockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain.js";
 import {createNetworkModules, connect, onPeerConnect} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
@@ -63,13 +63,7 @@ describe("gossipsub", function () {
     });
 
     const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
-    const chain = new MockBeaconChain({
-      genesisTime: 0,
-      chainId: 0,
-      networkId: BigInt(0),
-      state,
-      config: beaconConfig,
-    });
+    const chain = getMockBeaconChain();
 
     chain.forkChoice.getHead = () => {
       return {

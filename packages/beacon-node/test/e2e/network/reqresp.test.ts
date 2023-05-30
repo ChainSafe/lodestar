@@ -11,7 +11,7 @@ import {Network, NetworkInitModules, ReqRespBeaconNodeOpts} from "../../../src/n
 import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
 import {testLogger} from "../../utils/logger.js";
-import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
+import {getMockBeaconChain} from "../../utils/mocks/chain.js";
 import {connect, createNetworkModules, onPeerConnect} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
@@ -60,7 +60,7 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
 
   const state = generateState({}, config);
   const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
-  const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config: beaconConfig});
+  const chain = getMockBeaconChain();
   const db = new StubbedBeaconDb();
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];

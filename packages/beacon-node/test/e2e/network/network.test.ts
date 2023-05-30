@@ -22,7 +22,7 @@ import {
 import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 import {GoodByeReasonCode} from "../../../src/constants/index.js";
 
-import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
+import {getMockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
 import {createNetworkModules, connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/network.js";
@@ -94,14 +94,8 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function createTestNode(nodeName: string) {
-    const {state, config} = getStaticData();
-    const chain = new MockBeaconChain({
-      genesisTime: state.genesisTime,
-      chainId: 0,
-      networkId: BigInt(0),
-      state,
-      config,
-    });
+    const {config} = getStaticData();
+    const chain = getMockBeaconChain();
 
     chain.forkChoice.getHead = () => {
       return {
