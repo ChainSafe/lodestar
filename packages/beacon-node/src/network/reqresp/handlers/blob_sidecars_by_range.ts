@@ -4,7 +4,7 @@ import {deneb, Slot} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {BLOB_SIDECARS_IN_WRAPPER_INDEX, BLOBSIDECAR_FIXED_SIZE} from "../../../db/repositories/blobSidecars.js";
+import {BLOB_SIDECARS_IN_WRAPPER_INDEX, BLOBSIDECAR_FIXED_SIZE} from "../../../db/repositories/blob_sidecars.js";
 
 export async function* onBlobSidecarsByRange(
   request: deneb.BlobSidecarsByRangeRequest,

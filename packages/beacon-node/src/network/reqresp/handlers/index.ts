@@ -5,7 +5,7 @@ import {IBeaconDb} from "../../../db/index.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
 import {onBeaconBlocksByRange} from "./beacon_blocks_by_range.js";
 import {onBeaconBlocksByRoot} from "./beacon_blocks_by_root.js";
-import {onBlobSidecarsByRoot} from "./blob_sidecars_by_root.js.js";
+import {onBlobSidecarsByRoot} from "./blob_sidecars_by_root.js";
 import {onBlobSidecarsByRange} from "./blob_sidecars_by_range.js";
 import {onLightClientBootstrap} from "./light_client_bootstrap.js";
 import {onLightClientFinalityUpdate} from "./light_client_finality_update.js";
