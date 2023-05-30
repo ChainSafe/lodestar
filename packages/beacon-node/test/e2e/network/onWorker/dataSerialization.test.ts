@@ -87,6 +87,10 @@ describe("data serialization through worker boundary", function () {
       },
       peer,
     },
+    [NetworkEvent.unknownBlock]: {
+      rootHex: ZERO_HASH_HEX,
+      peer,
+    },
     [NetworkEvent.pendingGossipsubMessage]: {
       topic: {type: GossipType.beacon_block, fork: ForkName.altair},
       msg: {

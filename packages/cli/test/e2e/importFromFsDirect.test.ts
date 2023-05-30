@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import {testFilesDir} from "../utils.js";
 import {describeCliTest} from "../utils/childprocRunner.js";
 import {getAfterEachCallbacks} from "../utils/runUtils.js";

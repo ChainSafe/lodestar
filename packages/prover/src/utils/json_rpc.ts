@@ -1,4 +1,4 @@
-import {LogData, Logger} from "@lodestar/utils";
+import {Logger} from "@lodestar/logger";
 import {UNVERIFIED_RESPONSE_CODE} from "../constants.js";
 import {ELResponseWithError} from "../types.js";
 import {ELRequestPayload, ELResponse, ELResponseWithResult} from "../types.js";
@@ -75,8 +75,8 @@ export function logRequest(payload: ELRequestPayload, logger: Logger): void {
   logger.debug("PR -> EL", {
     id: payload.id,
     method: payload.method,
-    params: payload.params,
-  } as unknown as LogData);
+    params: JSON.stringify(payload.params),
+  });
 }
 
 export function logResponse(response: ELResponse | null | undefined, logger: Logger): void {
@@ -88,12 +88,12 @@ export function logResponse(response: ELResponse | null | undefined, logger: Log
   if (isValidResponse(response)) {
     logger.debug("PR <- EL", {
       id: response.id,
-      result: response.result as Record<string, string> | string,
-    } as unknown as LogData);
+      result: JSON.stringify(response.result),
+    });
   } else {
     logger.debug("PR <- E:", {
       id: response.id,
-      error: response.error,
-    } as unknown as LogData);
+      error: JSON.stringify(response.error),
+    });
   }
 }

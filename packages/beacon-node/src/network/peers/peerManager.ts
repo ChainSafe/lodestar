@@ -628,7 +628,7 @@ export class PeerManager {
     try {
       await this.libp2p.hangUp(peer);
     } catch (e) {
-      this.logger.warn("Unclean disconnect", {peer: prettyPrintPeerId(peer)}, e as Error);
+      this.logger.debug("Unclean disconnect", {peer: prettyPrintPeerId(peer)}, e as Error);
     }
   }
 

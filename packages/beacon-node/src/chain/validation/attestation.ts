@@ -41,6 +41,12 @@ export type AttestationOrBytes =
     };
 
 /**
+ * The beacon chain shufflings are designed to provide 1 epoch lookahead
+ * At each state, we have previous shuffling, current shuffling and next shuffling
+ */
+const SHUFFLING_LOOK_AHEAD_EPOCHS = 1;
+
+/**
  * Only deserialize the attestation if needed, use the cached AttestationData instead
  * This is to avoid deserializing similar attestation multiple times which could help the gc
  */
@@ -90,6 +96,11 @@ export async function validateGossipAttestation(
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
+
+  chain.metrics?.gossipAttestation.attestationSlotToClockSlot.observe(
+    {caller: RegenCaller.validateGossipAttestation},
+    chain.clock.currentSlot - attSlot
+  );
 
   if (!attestationOrCache.cache) {
     // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
@@ -146,6 +157,7 @@ export async function validateGossipAttestation(
       attestationOrCache.attestation.data.target.root,
       attSlot,
       attEpoch,
+      RegenCaller.validateGossipAttestation,
       chain.opts.maxSkipSlots
     );
 
@@ -160,17 +172,13 @@ export async function validateGossipAttestation(
     //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) == attestation.data.target.root
     // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
-    // Using the target checkpoint state here caused unstable memory issue
-    // See https://github.com/ChainSafe/lodestar/issues/4896
-    // TODO: https://github.com/ChainSafe/lodestar/issues/4900
-    const attHeadState = await chain.regen
-      .getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAttestation)
-      .catch((e: Error) => {
-        throw new AttestationError(GossipAction.IGNORE, {
-          code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
-          error: e as Error,
-        });
-      });
+    const attHeadState = await getStateForAttestationVerification(
+      chain,
+      attSlot,
+      attEpoch,
+      attHeadBlock,
+      RegenCaller.validateGossipAttestation
+    );
 
     // [REJECT] The committee index is within the expected range
     // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
@@ -338,6 +346,7 @@ export function verifyHeadBlockAndTargetRoot(
   targetRoot: Root,
   attestationSlot: Slot,
   attestationEpoch: Epoch,
+  caller: string,
   maxSkipSlots?: number
 ): ProtoBlock {
   const headBlock = verifyHeadBlockIsKnown(chain, beaconBlockRoot);
@@ -345,7 +354,10 @@ export function verifyHeadBlockAndTargetRoot(
   // it's more about a DOS protection to us
   // With verifyPropagationSlotRange() and maxSkipSlots = 32, it's unlikely we have to regenerate states in queue
   // to validate beacon_attestation and aggregate_and_proof
-  if (maxSkipSlots !== undefined && attestationSlot - headBlock.slot > maxSkipSlots) {
+  const slotDistance = attestationSlot - headBlock.slot;
+  chain.metrics?.gossipAttestation.headSlotToAttestationSlot.observe({caller}, slotDistance);
+
+  if (maxSkipSlots !== undefined && slotDistance > maxSkipSlots) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.TOO_MANY_SKIPPED_SLOTS,
       attestationSlot,
@@ -354,6 +366,44 @@ export function verifyHeadBlockAndTargetRoot(
   }
   verifyAttestationTargetRoot(headBlock, targetRoot, attestationEpoch);
   return headBlock;
+}
+
+/**
+ * Get a state for attestation verification.
+ * Use head state if:
+ *   - attestation slot is in the same fork as head block
+ *   - head state includes committees of target epoch
+ *
+ * Otherwise, regenerate state from head state dialing to target epoch
+ */
+export async function getStateForAttestationVerification(
+  chain: IBeaconChain,
+  attSlot: Slot,
+  attEpoch: Epoch,
+  attHeadBlock: ProtoBlock,
+  regenCaller: RegenCaller
+): Promise<CachedBeaconStateAllForks> {
+  const isSameFork = chain.config.getForkSeq(attSlot) === chain.config.getForkSeq(attHeadBlock.slot);
+  // thanks for 1 epoch look ahead of shuffling, a state at epoch n can get committee for epoch n+1
+  const headStateHasTargetEpochCommmittee =
+    attEpoch - computeEpochAtSlot(attHeadBlock.slot) <= SHUFFLING_LOOK_AHEAD_EPOCHS;
+  try {
+    if (isSameFork && headStateHasTargetEpochCommmittee) {
+      // most of the time it should just use head state
+      chain.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
+      return await chain.regen.getState(attHeadBlock.stateRoot, regenCaller);
+    }
+
+    // at fork boundary we should dial head state to target epoch
+    // see https://github.com/ChainSafe/lodestar/pull/4849
+    chain.metrics?.gossipAttestation.useHeadBlockStateDialedToTargetEpoch.inc({caller: regenCaller});
+    return await chain.regen.getBlockSlotState(attHeadBlock.blockRoot, attSlot, {dontTransferCache: true}, regenCaller);
+  } catch (e) {
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.MISSING_STATE_TO_VERIFY_ATTESTATION,
+      error: e as Error,
+    });
+  }
 }
 
 /**

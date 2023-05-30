@@ -150,3 +150,11 @@ export async function isValidCodeHash({
 
   return bufferToHex(keccak256(hexToBuffer(codeResponse))) === codeHash;
 }
+
+export function isNullish<T>(val: T | undefined | null): val is null | undefined {
+  return val === null || val === undefined;
+}
+
+export function isPresent<T>(val: T | undefined | null): val is T {
+  return !isNullish(val);
+}

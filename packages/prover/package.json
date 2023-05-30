@@ -43,6 +43,7 @@
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
     "build": "tsc -p tsconfig.build.json",
+    "build:watch": "yarn run build --watch",
     "build:release": "yarn clean && yarn run build",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
@@ -58,11 +59,13 @@
     "generate-fixtures": "npx ts-node --esm scripts/generate_fixtures.ts"
   },
   "dependencies": {
+    "@ethereumjs/tx": "^4.1.2",
     "@ethereumjs/block": "^4.2.2",
-    "@ethereumjs/common": "^3.1.2",  
+    "@ethereumjs/common": "^3.1.2",
     "@ethereumjs/rlp": "^4.0.1",
     "@ethereumjs/trie": "^5.0.5",
     "@ethereumjs/util": "^8.0.6",
+    "@ethereumjs/evm": "^1.3.2",
     "@ethereumjs/vm": "^6.4.2",
     "@ethereumjs/blockchain": "^6.2.2",
     "@lodestar/api": "^1.8.0",

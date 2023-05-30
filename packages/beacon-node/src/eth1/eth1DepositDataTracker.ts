@@ -162,8 +162,7 @@ export class Eth1DepositDataTracker {
   private async runAutoUpdate(): Promise<void> {
     let lastRunMs = 0;
 
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    while (!this.signal.aborted) {
       lastRunMs = Date.now();
 
       try {

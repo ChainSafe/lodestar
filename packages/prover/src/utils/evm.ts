@@ -1,17 +1,20 @@
 import {Blockchain} from "@ethereumjs/blockchain";
 import {Account, Address} from "@ethereumjs/util";
-import {VM} from "@ethereumjs/vm";
+import {VM, RunTxResult} from "@ethereumjs/vm";
+import {TransactionFactory} from "@ethereumjs/tx";
+import {Block, BlockHeader} from "@ethereumjs/block";
+import {NetworkName} from "@lodestar/config/networks";
 import {allForks} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {ZERO_ADDRESS} from "../constants.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
-import {ELApiHandlers, ELBlock, ELProof, ELTransaction, HexString} from "../types.js";
+import {ELApiHandlers, ELBlock, ELProof, ELTransaction} from "../types.js";
 import {bufferToHex, cleanObject, hexToBigInt, hexToBuffer, numberToHex, padLeft} from "./conversion.js";
-import {elRpc, getChainCommon} from "./execution.js";
+import {elRpc, getChainCommon, getTxType} from "./execution.js";
 import {isValidResponse} from "./json_rpc.js";
-import {isValidAccount, isValidCodeHash, isValidStorageKeys} from "./validation.js";
+import {isNullish, isValidAccount, isValidCodeHash, isValidStorageKeys} from "./validation.js";
 
-export async function createEVM({proofProvider}: {proofProvider: ProofProvider}): Promise<VM> {
+export async function createVM({proofProvider}: {proofProvider: ProofProvider}): Promise<VM> {
   const common = getChainCommon(proofProvider.config.PRESET_BASE as string);
   const blockchain = await Blockchain.create({common});
 
@@ -28,15 +31,15 @@ export async function createEVM({proofProvider}: {proofProvider: ProofProvider})
   return vm;
 }
 
-export async function getEVMWithState({
+export async function getVMWithState({
   handler,
   executionPayload,
   tx,
-  evm,
+  vm,
   logger,
 }: {
   handler: ELApiHandlers["eth_getProof"] | ELApiHandlers["eth_getCode"] | ELApiHandlers["eth_createAccessList"];
-  evm: VM;
+  vm: VM;
   executionPayload: allForks.ExecutionPayload;
   tx: ELTransaction;
   logger: Logger;
@@ -59,7 +62,7 @@ export async function getEVMWithState({
   ]);
 
   if (!isValidResponse(response) || response.result.error) {
-    throw new Error("Invalid response from RPC");
+    throw new Error(`Invalid response from RPC. method: eth_createAccessList, params: ${JSON.stringify(tx)}`);
   }
 
   const storageKeysMap: Record<string, string[]> = {};
@@ -104,7 +107,7 @@ export async function getEVMWithState({
     proofsAndCodes[address] = {proof, code: codeResponse};
   }
 
-  await evm.stateManager.checkpoint();
+  await vm.stateManager.checkpoint();
   for (const [addressHex, {proof, code}] of Object.entries(proofsAndCodes)) {
     const address = Address.fromString(addressHex);
     const codeBuffer = hexToBuffer(code);
@@ -115,34 +118,32 @@ export async function getEVMWithState({
       codeHash: proof.codeHash,
     });
 
-    await evm.stateManager.putAccount(address, account);
+    await vm.stateManager.putAccount(address, account);
 
     for (const {key, value} of proof.storageProof) {
-      await evm.stateManager.putContractStorage(
-        address,
-        padLeft(hexToBuffer(key), 32),
-        padLeft(hexToBuffer(value), 32)
-      );
+      await vm.stateManager.putContractStorage(address, padLeft(hexToBuffer(key), 32), padLeft(hexToBuffer(value), 32));
     }
 
-    if (codeBuffer.byteLength !== 0) await evm.stateManager.putContractCode(address, codeBuffer);
+    if (codeBuffer.byteLength !== 0) await vm.stateManager.putContractCode(address, codeBuffer);
   }
 
-  await evm.stateManager.commit();
-  return evm;
+  await vm.stateManager.commit();
+  return vm;
 }
 
-export async function executeEVM({
+export async function executeVMCall({
   handler,
   tx,
-  evm,
+  vm,
   executionPayload,
+  network,
 }: {
   handler: ELApiHandlers["eth_getBlockByHash"];
   tx: ELTransaction;
-  evm: VM;
+  vm: VM;
   executionPayload: allForks.ExecutionPayload;
-}): Promise<HexString> {
+  network: NetworkName;
+}): Promise<RunTxResult["execResult"]> {
   const {from, to, gas, gasPrice, maxPriorityFeePerGas, value, data} = tx;
   const {result: block} = await elRpc(
     handler,
@@ -155,7 +156,7 @@ export async function executeEVM({
     throw new Error(`Block not found: ${bufferToHex(executionPayload.blockHash)}`);
   }
 
-  const {execResult} = await evm.evm.runCall({
+  const {execResult} = await vm.evm.runCall({
     caller: from ? Address.fromString(from) : undefined,
     to: to ? Address.fromString(to) : undefined,
     gasLimit: hexToBigInt(gas ?? block.gasLimit),
@@ -163,7 +164,7 @@ export async function executeEVM({
     value: hexToBigInt(value ?? "0x0"),
     data: data ? hexToBuffer(data) : undefined,
     block: {
-      header: evmBlockHeaderFromELBlock(block, executionPayload),
+      header: getVMBlockHeaderFromELBlock(block, executionPayload, network),
     },
   });
 
@@ -171,31 +172,96 @@ export async function executeEVM({
     throw new Error(execResult.exceptionError.error);
   }
 
-  return bufferToHex(execResult.returnValue);
+  return execResult;
 }
 
-export function evmBlockHeaderFromELBlock(
+export async function executeVMTx({
+  handler,
+  tx,
+  vm,
+  executionPayload,
+  network,
+}: {
+  handler: ELApiHandlers["eth_getBlockByHash"];
+  tx: ELTransaction;
+  vm: VM;
+  executionPayload: allForks.ExecutionPayload;
+  network: NetworkName;
+}): Promise<RunTxResult> {
+  const {result: block} = await elRpc(
+    handler,
+    "eth_getBlockByHash",
+    [bufferToHex(executionPayload.blockHash), true],
+    true
+  );
+
+  if (!block) {
+    throw new Error(`Block not found: ${bufferToHex(executionPayload.blockHash)}`);
+  }
+  const txType = getTxType(tx);
+  const from = tx.from ? Address.fromString(tx.from) : Address.zero();
+  const to = tx.to ? Address.fromString(tx.to) : undefined;
+
+  const txData = {
+    ...tx,
+    from,
+    to,
+    type: txType,
+    // If no gas limit is specified use the last block gas limit as an upper bound.
+    gasLimit: hexToBigInt(tx.gas ?? block.gasLimit),
+  };
+
+  if (txType === 2) {
+    // Handle EIP-1559 transactions
+    // To fix the vm error: Transaction's maxFeePerGas (0) is less than the block's baseFeePerGas
+    txData.maxFeePerGas = txData.maxFeePerGas ?? block.baseFeePerGas;
+  } else {
+    // Legacy transaction
+    txData.gasPrice = isNullish(txData.gasPrice) || txData.gasPrice === "0x0" ? block.baseFeePerGas : txData.gasPrice;
+  }
+
+  const txObject = TransactionFactory.fromTxData(txData, {common: getChainCommon(network), freeze: false});
+
+  // Override to avoid tx signature verification
+  txObject.getSenderAddress = () => (tx.from ? Address.fromString(tx.from) : Address.zero());
+
+  const result = await vm.runTx({
+    tx: txObject,
+    skipNonce: true,
+    skipBalance: true,
+    skipBlockGasLimitValidation: true,
+    skipHardForkValidation: true,
+    block: {
+      header: getVMBlockHeaderFromELBlock(block, executionPayload, network),
+    } as Block,
+  });
+
+  return result;
+}
+
+export function getVMBlockHeaderFromELBlock(
   block: ELBlock,
-  executionPayload: allForks.ExecutionPayload
-): {
-  number: bigint;
-  cliqueSigner(): Address;
-  coinbase: Address;
-  timestamp: bigint;
-  difficulty: bigint;
-  prevRandao: Buffer;
-  gasLimit: bigint;
-  baseFeePerGas?: bigint;
-} {
-  return {
+  executionPayload: allForks.ExecutionPayload,
+  network: NetworkName
+): BlockHeader {
+  const blockHeaderData = {
     number: hexToBigInt(block.number),
     cliqueSigner: () => Address.fromString(block.miner),
     timestamp: hexToBigInt(block.timestamp),
     difficulty: hexToBigInt(block.difficulty),
     gasLimit: hexToBigInt(block.gasLimit),
     baseFeePerGas: block.baseFeePerGas ? hexToBigInt(block.baseFeePerGas) : undefined,
+
+    // Use these values from the execution payload
+    // instead of the block values to ensure that
+    // the VM is using the verified values from the lightclient
     prevRandao: Buffer.from(executionPayload.prevRandao),
+    stateRoot: Buffer.from(executionPayload.stateRoot),
+    parentHash: Buffer.from(executionPayload.parentHash),
+
     // TODO: Fix the coinbase address
     coinbase: Address.fromString(block.miner),
   };
+
+  return BlockHeader.fromHeaderData(blockHeaderData, {common: getChainCommon(network)});
 }

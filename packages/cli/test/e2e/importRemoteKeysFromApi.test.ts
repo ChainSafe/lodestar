@@ -1,5 +1,5 @@
 import path from "node:path";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import {expect} from "chai";
 import {Api, DeleteRemoteKeyStatus, getClient, ImportRemoteKeyStatus} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";

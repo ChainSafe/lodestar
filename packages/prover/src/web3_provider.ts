@@ -1,4 +1,6 @@
 import {Logger} from "@lodestar/utils";
+import {getBrowserLogger} from "@lodestar/logger/browser";
+import {LogLevel} from "@lodestar/logger";
 import {
   EIP1193Provider,
   EthersProvider,
@@ -17,7 +19,6 @@ import {
   isSendAsyncProvider,
   isSendProvider,
 } from "./utils/assertion.js";
-import {getLogger} from "./utils/logger.js";
 import {processAndVerifyRequest} from "./utils/process.js";
 import {logRequest, logResponse} from "./utils/json_rpc.js";
 
@@ -26,7 +27,7 @@ export function createVerifiedExecutionProvider<T extends Web3Provider>(
   opts: VerifiedExecutionInitOptions
 ): {provider: T; proofProvider: ProofProvider} {
   const signal = opts.signal ?? new AbortController().signal;
-  const logger = getLogger(opts);
+  const logger = opts.logger ?? getBrowserLogger({level: opts.logLevel ?? LogLevel.info});
 
   const proofProvider = ProofProvider.init({
     ...opts,

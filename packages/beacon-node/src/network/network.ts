@@ -4,7 +4,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
-import {phase0, allForks, deneb, altair, Root, capella} from "@lodestar/types";
+import {phase0, allForks, deneb, altair, Root, capella, SlotRootHex} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {ResponseIncoming} from "@lodestar/reqresp";
@@ -222,6 +222,10 @@ export class Network implements INetwork {
    */
   async reStatusPeers(peers: PeerIdStr[]): Promise<void> {
     return this.core.reStatusPeers(peers);
+  }
+
+  searchUnknownSlotRoot(slotRoot: SlotRootHex, peer?: PeerIdStr): void {
+    this.networkProcessor.searchUnknownSlotRoot(slotRoot, peer);
   }
 
   async reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {

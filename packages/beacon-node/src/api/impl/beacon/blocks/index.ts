@@ -265,9 +265,22 @@ export function getBeaconBlockApi({
       await promiseAllMaybeAsync(publishPromises);
     },
 
-    async getBlobSidecars(_blockId) {
-      // TODO DENEB: Add implementation on the DB structure change PR
-      throw Error("");
+    async getBlobSidecars(blockId) {
+      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+
+      let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
+      if (!blobSidecars) {
+        ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
+      }
+
+      if (!blobSidecars) {
+        throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toHexString(blockRoot)}`);
+      }
+      return {
+        executionOptimistic,
+        data: blobSidecars,
+      };
     },
   };
 }

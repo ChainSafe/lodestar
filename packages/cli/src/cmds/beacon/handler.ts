@@ -95,7 +95,22 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       abortController.abort();
     }, logger.info.bind(logger));
 
-    abortController.signal.addEventListener("abort", () => node.close(), {once: true});
+    abortController.signal.addEventListener(
+      "abort",
+      async () => {
+        try {
+          await node.close();
+          logger.debug("Beacon node closed");
+        } catch (e) {
+          logger.error("Error closing beacon node", {}, e as Error);
+          // Make sure db is always closed gracefully
+          await db.stop();
+          // Must explicitly exit process due to potential active handles
+          process.exit(1);
+        }
+      },
+      {once: true}
+    );
   } catch (e) {
     await db.stop();
 

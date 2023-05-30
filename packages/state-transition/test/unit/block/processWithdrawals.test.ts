@@ -25,18 +25,18 @@ describe("getExpectedWithdrawals", () => {
 
   for (const opts of testCases) {
     const caseID = [
-      `eb ${opts.excessBalance}`,
-      `eth1 ${opts.eth1Credentials}`,
-      `we ${opts.withdrawable}`,
-      `wn ${opts.withdrawn}`,
+      `eb:${opts.excessBalance}`,
+      `eth1:${opts.eth1Credentials}`,
+      `we:${opts.withdrawable}`,
+      `wn:${opts.withdrawn}`,
     ]
       .filter((str) => str)
-      .join(" ");
+      .join(",");
 
     // Clone true to drop cache
     const state = beforeValue(() => getExpectedWithdrawalsTestData(vc, opts).clone(true));
 
-    it(`vc - ${vc} ${caseID}`, () => {
+    it(`getExpectedWithdrawals ${vc} ${caseID}`, () => {
       const {sampledValidators, withdrawals} = getExpectedWithdrawals(state.value);
       expect(sampledValidators).equals(opts.sampled, "Wrong sampledValidators");
       expect(withdrawals.length).equals(opts.withdrawals, "Wrong withdrawals");

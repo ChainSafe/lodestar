@@ -1,8 +1,8 @@
 import {Common, CustomChain, Hardfork} from "@ethereumjs/common";
 import {ELRequestHandler} from "../interfaces.js";
-import {ELApiHandlers, ELApiParams, ELApiReturn, ELResponse, ELResponseWithResult} from "../types.js";
+import {ELApiHandlers, ELApiParams, ELApiReturn, ELResponse, ELResponseWithResult, ELTransaction} from "../types.js";
 import {isValidResponse} from "./json_rpc.js";
-import {isBlockNumber} from "./validation.js";
+import {isBlockNumber, isPresent} from "./validation.js";
 
 export function getRequestId(): string {
   // TODO: Find better way to generate random id
@@ -83,4 +83,16 @@ export function getChainCommon(network: string): Common {
     default:
       throw new Error(`Non supported network "${network}"`);
   }
+}
+
+export function getTxType(tx: ELTransaction): number {
+  if (isPresent(tx.maxFeePerGas) || isPresent(tx.maxPriorityFeePerGas)) {
+    return 2;
+  }
+
+  if (isPresent(tx.accessList)) {
+    return 1;
+  }
+
+  return 0;
 }

@@ -1,6 +1,6 @@
 import {Api, getClient} from "@lodestar/api/beacon";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
-import {networksChainConfig} from "@lodestar/config/networks";
+import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {Lightclient, LightclientEvent, RunStatusCode} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {isForkWithdrawals} from "@lodestar/params";
@@ -27,6 +27,7 @@ export class ProofProvider {
   private store: PayloadStore;
   private logger: Logger;
   readonly config: ChainForkConfig;
+  readonly network: NetworkName;
 
   // Make sure readyPromise doesn't throw unhandled exceptions
   private readyPromise?: Promise<void>;
@@ -36,6 +37,7 @@ export class ProofProvider {
     this.store = new PayloadStore({api: opts.api, logger: opts.logger});
     this.logger = opts.logger;
     this.config = opts.config;
+    this.network = opts.config.PRESET_BASE as NetworkName;
   }
 
   async waitToBeReady(): Promise<void> {

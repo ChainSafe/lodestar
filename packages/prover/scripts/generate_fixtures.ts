@@ -219,3 +219,102 @@ await generateFixture(
   }),
   "mainnet"
 );
+
+await generateFixture(
+  "eth_estimateGas_simple_transfer",
+  ({latest}) => ({
+    request: {
+      method: "eth_estimateGas",
+      params: [
+        {
+          from: "0x690B9A9E9aa1C9dB991C7721a92d351Db4FaC990",
+          to: "0x388c818ca8b9251b393131c08a736a67ccb19297",
+          value: "0xFF00900",
+        },
+        latest,
+      ],
+    },
+    slot: "head",
+    dependentRequests: [
+      {
+        method: "eth_createAccessList",
+        params: [
+          {
+            to: "0x388c818ca8b9251b393131c08a736a67ccb19297",
+            from: "0x690b9a9e9aa1c9db991c7721a92d351db4fac990",
+            value: "0xff00900",
+            gas: "0x1c9c380",
+            gasPrice: "0x0",
+          },
+          latest,
+        ],
+      },
+      {
+        method: "eth_getProof",
+        params: ["0x690b9a9e9aa1c9db991c7721a92d351db4fac990", [], latest],
+      },
+      {
+        method: "eth_getCode",
+        params: ["0x690b9a9e9aa1c9db991c7721a92d351db4fac990", latest],
+      },
+      {
+        method: "eth_getProof",
+        params: ["0x388c818ca8b9251b393131c08a736a67ccb19297", [], latest],
+      },
+      {
+        method: "eth_getCode",
+        params: ["0x388c818ca8b9251b393131c08a736a67ccb19297", latest],
+      },
+    ],
+  }),
+  "mainnet"
+);
+
+await generateFixture(
+  "eth_estimateGas_contract_call",
+  ({latest}) => ({
+    request: {
+      method: "eth_estimateGas",
+      params: [
+        {
+          data: "0xd05c78da000000000000000000000000000000000000000000000000000000025408a08b000000000000000000000000000000000000000000000000000000cef5d5bf7f",
+          to: "0xade2a9c8b033d60ffcdb8cfc974dd87b2a9c1f27",
+        },
+        latest,
+      ],
+    },
+    slot: "head",
+    dependentRequests: [
+      {
+        method: "eth_createAccessList",
+        params: [
+          {
+            to: "0xade2a9c8b033d60ffcdb8cfc974dd87b2a9c1f27",
+            from: "0x0000000000000000000000000000000000000000",
+            data: "0xd05c78da000000000000000000000000000000000000000000000000000000025408a08b000000000000000000000000000000000000000000000000000000cef5d5bf7f",
+            gas: "0x1c9c380",
+            gasPrice: "0x0",
+          },
+          latest,
+        ],
+      },
+      {
+        method: "eth_getProof",
+        params: ["0x0000000000000000000000000000000000000000", [], latest],
+      },
+      {
+        method: "eth_getCode",
+        params: ["0x0000000000000000000000000000000000000000", latest],
+      },
+      {
+        method: "eth_getProof",
+        params: ["0xade2a9c8b033d60ffcdb8cfc974dd87b2a9c1f27", [], latest],
+      },
+      {
+        method: "eth_getCode",
+        params: ["0xade2a9c8b033d60ffcdb8cfc974dd87b2a9c1f27", latest],
+      },
+    ],
+  }),
+  "mainnet"
+);

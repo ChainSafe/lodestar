@@ -216,8 +216,8 @@ export function createLodestarMetrics(
 
     // Finalized block and proposal stats
     allValidators: {
-      expected: register.gauge({
-        name: "lodestar_all_validators_expected_count",
+      total: register.gauge({
+        name: "lodestar_all_validators_total_count",
         help: "Number of all blocks expected to be finalized",
       }),
 
@@ -238,8 +238,8 @@ export function createLodestarMetrics(
     },
 
     attachedValidators: {
-      expected: register.gauge({
-        name: "lodestar_attached_validators_expected_count",
+      total: register.gauge({
+        name: "lodestar_attached_validators_total_count",
         help: "Number of blocks expected to be finalized from the attached validators",
       }),
 
@@ -485,9 +485,10 @@ export function createLodestarMetrics(
     },
 
     syncUnknownBlock: {
-      requests: register.gauge({
+      requests: register.gauge<"type">({
         name: "lodestar_sync_unknown_block_requests_total",
-        help: "Total number of unknownBlockParent events or requests",
+        help: "Total number of unknown block events or requests",
+        labelNames: ["type"],
       }),
       pendingBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_pending_blocks_size",
@@ -517,6 +518,11 @@ export function createLodestarMetrics(
         name: "lodestar_sync_unknown_block_removed_blocks_total",
         help: "Total number of removed bad blocks in UnknownBlockSync",
       }),
+      elapsedTimeTillReceived: register.histogram({
+        name: "lodestar_sync_unknown_block_elapsed_time_till_received",
+        help: "Time elapsed between block slot time and the time block received via unknown block sync",
+        buckets: [0.5, 1, 2, 4, 6, 12],
+      }),
     },
 
     // Gossip sync committee
@@ -528,6 +534,32 @@ export function createLodestarMetrics(
       equivocationToHeadCount: register.counter({
         name: "lodestar_gossip_sync_committee_equivocation_to_head_count",
         help: "Count of sync committee messages which conflict to a previous message but elect the head",
+      }),
+    },
+
+    // Gossip attestation
+    gossipAttestation: {
+      useHeadBlockState: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_use_head_block_state_count",
+        help: "Count of gossip attestation verification using head block state",
+        labelNames: ["caller"],
+      }),
+      useHeadBlockStateDialedToTargetEpoch: register.gauge<"caller">({
+        name: "lodestar_gossip_attestation_use_head_block_state_dialed_to_target_epoch_count",
+        help: "Count of gossip attestation verification using head block state and dialed to target epoch",
+        labelNames: ["caller"],
+      }),
+      headSlotToAttestationSlot: register.histogram<"caller">({
+        name: "lodestar_gossip_attestation_head_slot_to_attestation_slot",
+        help: "Slot distance between attestation slot and head slot",
+        labelNames: ["caller"],
+        buckets: [0, 1, 2, 4, 8, 16, 32, 64],
+      }),
+      attestationSlotToClockSlot: register.histogram<"caller">({
+        name: "lodestar_gossip_attestation_attestation_slot_to_clock_slot",
+        help: "Slot distance between clock slot and attestation slot",
+        labelNames: ["caller"],
+        buckets: [0, 1, 2, 4, 8, 16, 32, 64],
       }),
     },
 
@@ -567,6 +599,11 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_block_received_to_block_import",
         help: "Time elapsed between block received and block import",
         buckets: [0.05, 0.1, 0.2, 0.5, 1, 1.5, 2, 4],
+      }),
+      processBlockErrors: register.gauge<"error">({
+        name: "lodestar_gossip_block_process_block_errors",
+        help: "Count of errors, by error type, while processing blocks",
+        labelNames: ["error"],
       }),
     },
     importBlock: {

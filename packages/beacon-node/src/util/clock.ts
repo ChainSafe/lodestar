@@ -176,7 +176,7 @@ export class Clock extends EventEmitter implements IClock {
   private onNextSlot = (slot?: Slot): void => {
     const clockSlot = slot ?? getCurrentSlot(this.config, this.genesisTime);
     // process multiple clock slots in the case the main thread has been saturated for > SECONDS_PER_SLOT
-    while (this._currentSlot < clockSlot) {
+    while (this._currentSlot < clockSlot && !this.signal.aborted) {
       const previousSlot = this._currentSlot;
       this._currentSlot++;
 
@@ -189,8 +189,11 @@ export class Clock extends EventEmitter implements IClock {
         this.emit(ClockEvent.epoch, currentEpoch);
       }
     }
-    //recursively invoke onNextSlot
-    this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
+
+    if (!this.signal.aborted) {
+      //recursively invoke onNextSlot
+      this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
+    }
   };
 
   private msUntilNextSlot(): number {

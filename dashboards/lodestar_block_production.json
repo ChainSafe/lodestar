@@ -1,4 +1,21 @@
 {
+  "__inputs": [
+    {
+      "description": "",
+      "label": "Prometheus",
+      "name": "DS_PROMETHEUS",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus",
+      "type": "datasource"
+    },
+    {
+      "description": "",
+      "label": "Beacon node job name",
+      "name": "VAR_BEACON_JOB",
+      "type": "constant",
+      "value": "beacon"
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -23,8 +40,8 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "id": 32,
+  "graphTooltip": 1,
+  "id": null,
   "links": [
     {
       "asDropdown": true,
@@ -995,7 +1012,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "lodestar_all_validators_expected_count",
+          "expr": "lodestar_all_validators_total_count",
           "hide": false,
           "interval": "",
           "legendFormat": "",
@@ -1105,7 +1122,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "lodestar_attached_validators_expected_count",
+          "expr": "lodestar_attached_validators_total_count",
           "format": "time_series",
           "instant": false,
           "interval": "",

@@ -25,13 +25,6 @@ To run tests:
 - :test_tube: Run `yarn check-types` to check TypeScript types.
 - :test_tube: Run `yarn lint` to run the linter (ESLint).
 
-Contributing to tests:
-
-- Test must not depend on external live resources, such that running tests for a commit must be deterministic:
-  - Do not pull data from external APIs like execution JSON RPC (instead run a local node).
-  - Do not pull unpinned versions from dockerhub (use deterministic tag) or Github (checkout commit not branch).
-  - Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.
-
 ### Debugging Spec Tests
 
 - To fix errors always focus on passing all minimal tests first without running mainnet tests.
@@ -154,6 +147,22 @@ We're currently experimenting with hosting the majority of lodestar packages and
   - Use `/** **/` commenting format for documenting a function/variable.
 - Code whitespace can be helpful for reading complex code, please add some.
 - For unit tests, we forbid import stubbing when other approaches are feasible.
+
+## Tests style guide
+
+Test must not depend on external live resources, such that running tests for a commit must be deterministic:
+
+- Do not pull data from external APIs like execution JSON RPC (instead run a local node).
+- Do not pull unpinned versions from dockerhub (use deterministic tag) or Github (checkout commit not branch).
+- Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.
+
+Add assertion messages where possible to ease fixing tests if they fail. If an assertion message is called from multiple times with the same stack trace, you **MUST** include an assertion message. For example, if an assertion is inside a for loop add some metadata to be able to locate the error source:
+
+```ts
+for (const blockResult of blocksResult) {
+  expect(blockResult.status).equals("processed", `wrong block ${blockResult.id} result status`);
+}
+```
 
 ## Logging policy
 
