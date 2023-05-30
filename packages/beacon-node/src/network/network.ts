@@ -471,25 +471,25 @@ export class Network implements INetwork {
     );
   }
 
-  async sendBlobsSidecarsByRange(
+  async sendBlobSidecarsByRange(
     peerId: PeerIdStr,
-    request: deneb.BlobsSidecarsByRangeRequest
-  ): Promise<deneb.BlobsSidecar[]> {
+    request: deneb.BlobSidecarsByRangeRequest
+  ): Promise<deneb.BlobSidecar[]> {
     return collectMaxResponseTyped(
-      this.sendReqRespRequest(peerId, ReqRespMethod.BlobsSidecarsByRange, [Version.V1], request),
+      this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRange, [Version.V1], request),
       request.count,
-      responseSszTypeByMethod[ReqRespMethod.BlobsSidecarsByRange]
+      responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange]
     );
   }
 
-  async sendBeaconBlockAndBlobsSidecarByRoot(
+  async sendBlobSidecarsByRoot(
     peerId: PeerIdStr,
-    request: deneb.BeaconBlockAndBlobsSidecarByRootRequest
-  ): Promise<deneb.SignedBeaconBlockAndBlobsSidecar[]> {
+    request: deneb.BlobSidecarsByRootRequest
+  ): Promise<deneb.BlobSidecar[]> {
     return collectMaxResponseTyped(
-      this.sendReqRespRequest(peerId, ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot, [Version.V1], request),
+      this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRoot, [Version.V1], request),
       request.length,
-      responseSszTypeByMethod[ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]
+      responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRoot]
     );
   }
 
