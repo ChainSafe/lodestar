@@ -15,7 +15,7 @@ module.exports = {
     project: "./tsconfig.json",
     sourceType: "module",
   },
-  plugins: ["@typescript-eslint", "eslint-plugin-import", "@chainsafe/eslint-plugin-node", "prettier"],
+  plugins: ["@typescript-eslint", "eslint-plugin-import", "@chainsafe/eslint-plugin-node", "unicorn", "prettier"],
   extends: [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
@@ -147,6 +147,7 @@ module.exports = {
     "prettier/prettier": "error",
     quotes: ["error", "double"],
     semi: "off",
+    "unicorn/filename-case": ["error", {case: "snakeCase"}],
   },
   settings: {
     "import/internal-regex": "^@chainsafe/",
