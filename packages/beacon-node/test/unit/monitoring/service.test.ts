@@ -30,8 +30,7 @@ describe("monitoring / service", () => {
     it("should return an instance of the monitoring service", () => {
       const service = new MonitoringService("beacon", {endpoint}, {register, logger});
 
-      expect(service.start).to.be.a("function");
-      expect(service.stop).to.be.a("function");
+      expect(service.close).to.be.a("function");
       expect(service.send).to.be.a("function");
     });
 
@@ -109,7 +108,6 @@ describe("monitoring / service", () => {
       const service = await startedMonitoringService();
 
       // invoke start a second time
-      service.start();
       await waitForStart();
 
       expect(service.send).to.have.been.calledOnce;
@@ -126,7 +124,7 @@ describe("monitoring / service", () => {
     it("should set the status to stopped", async () => {
       const service = await startedMonitoringService();
 
-      service.stop();
+      service.close();
 
       expect(service["status"]).to.equal("stopped");
     });
@@ -134,7 +132,7 @@ describe("monitoring / service", () => {
     it("should clear the monitoring interval", async () => {
       const service = await startedMonitoringService();
 
-      service.stop();
+      service.close();
 
       expect(clearTimeout).to.have.been.calledWith(service["monitoringInterval"]);
     });
@@ -142,7 +140,7 @@ describe("monitoring / service", () => {
     it("should clear the initial delay timeout", async () => {
       const service = await startedMonitoringService({initialDelay: 1000});
 
-      service.stop();
+      service.close();
 
       expect(clearTimeout).to.have.been.calledWith(service["initialDelayTimeout"]);
     });
@@ -151,7 +149,7 @@ describe("monitoring / service", () => {
       const service = await startedMonitoringService();
       service["pendingRequest"] = Promise.resolve();
 
-      service.stop();
+      service.close();
 
       expect(service["fetchAbortController"]?.abort).to.have.been.calledOnce;
     });
@@ -216,7 +214,6 @@ describe("monitoring / service", () => {
     it("should abort pending requests if monitoring service is stopped", (done) => {
       const endpoint = `${baseUrl}${remoteServiceRoutes.pending}`;
       const service = new MonitoringService("beacon", {endpoint, collectSystemStats: false}, {register, logger});
-      service.start();
 
       service.send().finally(() => {
         try {
@@ -228,7 +225,7 @@ describe("monitoring / service", () => {
       });
 
       // wait for request to be sent before stopping
-      setTimeout(() => service.stop(), 10);
+      setTimeout(() => service.close(), 10);
     });
 
     function assertError(error: {message: string}): void {
@@ -251,12 +248,11 @@ describe("monitoring / service", () => {
 
   async function startedMonitoringService(options: Partial<MonitoringOptions> = {}): Promise<MonitoringService> {
     const service = stubbedMonitoringService(options);
-    service.start();
 
     // ensure start is finished
     await waitForStart();
 
-    after(service.stop);
+    after(service.close);
 
     return service;
   }
