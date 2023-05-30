@@ -104,6 +104,13 @@ export function createLodestarMetrics(
       }),
     },
 
+    networkWorkerHandler: {
+      reqRespBridgeReqCallerPending: register.gauge({
+        name: "lodestar_network_worker_handler_reqresp_bridge_req_caller_pending_count",
+        help: "Current count of pending items in reqRespBridgeReqCaller data structure",
+      }),
+    },
+
     regenQueue: {
       length: register.gauge({
         name: "lodestar_regen_queue_length",

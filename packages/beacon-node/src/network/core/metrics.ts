@@ -304,3 +304,13 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
     },
   };
 }
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export function getNetworkCoreWorkerMetrics(register: RegistryMetricCreator) {
+  return {
+    reqRespBridgeRespCallerPending: register.gauge({
+      name: "lodestar_network_worker_reqresp_bridge_caller_pending_count",
+      help: "Current count of pending elements in respBridgeCaller",
+    }),
+  };
+}
