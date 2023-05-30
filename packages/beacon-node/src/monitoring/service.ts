@@ -16,13 +16,13 @@ export type RemoteServiceError = {
 };
 
 enum FetchAbortReason {
-  Stop = "stop",
+  Close = "close",
   Timeout = "timeout",
 }
 
 enum Status {
   Started = "started",
-  Closed = "stopped",
+  Closed = "closed",
 }
 
 export type Client = "beacon" | "validator";
@@ -101,7 +101,7 @@ export class MonitoringService {
       clearTimeout(this.monitoringInterval);
     }
     if (this.pendingRequest) {
-      this.fetchAbortController?.abort(FetchAbortReason.Stop);
+      this.fetchAbortController?.abort(FetchAbortReason.Close);
     }
   }
 
@@ -187,7 +187,7 @@ export class MonitoringService {
       }
 
       // error was thrown by abort signal
-      if (signal.reason === FetchAbortReason.Stop) {
+      if (signal.reason === FetchAbortReason.Close) {
         throw new ErrorAborted(`request to ${this.remoteServiceHost}`);
       } else if (signal.reason === FetchAbortReason.Timeout) {
         throw new TimeoutError(`reached for request to ${this.remoteServiceHost}`);
