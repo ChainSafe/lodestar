@@ -4,7 +4,7 @@ import assert from "node:assert";
 // This script is should be run in an e2e !!
 // It demonstrates how to properly change the Lodestar preset safely
 
-// 1. Import from @lodestar/params/setPreset only
+// 1. Import from @lodestar/params/set_preset only
 import {setActivePreset, PresetName} from "../../src/set_preset.js";
 // eslint-disable-next-line @typescript-eslint/naming-convention
 setActivePreset(PresetName.minimal, {SLOTS_PER_EPOCH: 2});

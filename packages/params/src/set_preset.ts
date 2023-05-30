@@ -34,7 +34,7 @@ application entry point, before importing @lodestar/params, or any library that 
 
 \`\`\`
 // index.ts
-import {setActivePreset, PresetName} from "@lodestar/params/setPreset"
+import {setActivePreset, PresetName} from "@lodestar/params/set_preset"
 setActivePreset(PresetName.minimal)
 // Now you can safely import from other paths and consume params
 import {SLOTS_PER_EPOCH} from "@lodestar/params"

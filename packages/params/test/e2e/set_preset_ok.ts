@@ -2,7 +2,7 @@
 // This script is should be run in an e2e !!
 // It demostrates how to properly change the Lodestar preset safely
 
-// 1. Import from @lodestar/params/setPreset only
+// 1. Import from @lodestar/params/set_preset only
 import {setActivePreset, PresetName} from "../../src/set_preset.js";
 setActivePreset(PresetName.minimal);
 
