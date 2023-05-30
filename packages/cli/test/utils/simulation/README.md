@@ -25,6 +25,10 @@ You can run any of npm task prefixed with `test:sim:*`. There are different scen
 | Lighthouse | LIGHTHOUSE_DOCKER_IMAGE | Similar to other clients use it to set Lighouse docker image. Make use you use `-dev` suffixed image tags as these are the only one supporting `minimal` preset.                                                      |
 | Lighthouse | LIGHTHOUSE_BINARY_PATH  | Use local compiled binary. Make sure it's compiled with the `minimal` spec enabled.                                                                                                                                   |
 
+### Enable Metics for the sim tests
+
+To enable metrics for the SIM tests you can set `SIM_METRIC_SERVER` environment variable with the host and port e.g. `127.0.0.1:4000`.
+
 ## Architecture
 
 Based on the parameters passed to `SimulationEnvironment.initWithDefaults` the following directory structure is created by the `SimulationEnvironment` and passed relevant directories to the individual client generators. For understanding we call this process as bootstrapping.
