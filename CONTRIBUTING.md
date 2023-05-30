@@ -189,10 +189,25 @@ To edit or extend an existing Grafana dashboard with minimal diff:
 
 1. Grab the .json dashboard file from current unstable
 2. Import file to Grafana via the web UI at `/dashboard/import`. Give it some temporal name relevant to your work (i.e. the branch name)
-3. Do edits on the Dashboard
+3. Visually edit the dashboard
 4. Once done make sure to leave the exact same visual aspect as before: same refresh interval, collapsed rows, etc.
-5. Click the "share dashboard" icon next to the title at the top left corner. Go to the "Export" tab, set "Export for sharing externally" to true and click "Save to file"
-6. Paste the contents of the downloaded file in the Github repo, commit and open your PR
+5. Run download script, see [below](#using-download-script) on how to use it
+6. Check git diff of updated dashboards, commit, push and open your PR
+
+### Using Download Script
+
+Create a file `.secrets.env` with envs
+
+```sh
+GRAFANA_API_KEY=$token
+GRAFANA_URL=https://yourgrafanaapi.io
+```
+
+Run script to download dashboards to `./dashboards` folder
+
+```sh
+node scripts/download_dashboards.mjs
+```
 
 ## Label Guide
 
