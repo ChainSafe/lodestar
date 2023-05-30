@@ -97,14 +97,10 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   onGracefulShutdownCbs.push(async () => abortController.abort());
 
-  const dbOps = {
-    config,
-    controller: new LevelDbController({name: dbPath}, {metrics: null, logger}),
-  };
-  onGracefulShutdownCbs.push(() => dbOps.controller.stop());
-  await dbOps.controller.start();
+  const db = await LevelDbController.create({name: dbPath}, {metrics: null, logger});
+  onGracefulShutdownCbs.push(() => db.close());
 
-  const slashingProtection = new SlashingProtection(dbOps);
+  const slashingProtection = new SlashingProtection(db);
 
   // Create metrics registry if metrics are enabled or monitoring endpoint is configured
   // Send version and network data for static registries
@@ -153,7 +149,8 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   const validator = await Validator.initializeFromBeaconNode(
     {
-      dbOps,
+      db,
+      config,
       slashingProtection,
       api: args.beaconNodes,
       logger,

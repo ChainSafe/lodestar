@@ -48,12 +48,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     networkRegistry = new Registry();
     metricsRegistries.push(networkRegistry);
   }
-  const db = new BeaconDb({
-    config,
-    controller: new LevelDbController(options.db, {metrics: null, logger}),
-  });
-
-  await db.start();
+  const db = new BeaconDb(config, await LevelDbController.create(options.db, {metrics: null, logger}));
   logger.info("Connected to LevelDB database", {path: options.db.name});
 
   // BeaconNode setup
@@ -104,7 +99,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
         } catch (e) {
           logger.error("Error closing beacon node", {}, e as Error);
           // Make sure db is always closed gracefully
-          await db.stop();
+          await db.close();
           // Must explicitly exit process due to potential active handles
           process.exit(1);
         }
@@ -112,7 +107,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       {once: true}
     );
   } catch (e) {
-    await db.stop();
+    await db.close();
 
     if (e instanceof ErrorAborted) {
       logger.info(e.message); // Let the user know the abort was received but don't print as error
