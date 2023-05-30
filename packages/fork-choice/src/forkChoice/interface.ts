@@ -137,6 +137,11 @@ export interface IForkChoice {
    */
   hasBlock(blockRoot: Root): boolean;
   hasBlockHex(blockRoot: RootHex): boolean;
+  /**
+   * Same to hasBlock, but without checking if the block is a descendant of the finalized root.
+   */
+  hasBlockUnsafe(blockRoot: Root): boolean;
+  hasBlockHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
