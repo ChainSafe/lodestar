@@ -8,7 +8,7 @@ import {generateRPCResponseForPayload, generateUnverifiedResponseForPayload} fro
 export const eth_estimateGas: ELVerifiedRequestHandler<
   ELApiParams["eth_estimateGas"],
   ELApiReturn["eth_estimateGas"]
-> = async ({handler, payload, logger, proofProvider, network}) => {
+> = async ({handler, payload, logger, proofProvider}) => {
   const {
     params: [tx, block],
   } = payload;
@@ -17,7 +17,7 @@ export const eth_estimateGas: ELVerifiedRequestHandler<
 
   try {
     // TODO: Optimize the creation of the evm
-    const evm = await createVM({proofProvider, network});
+    const evm = await createVM({proofProvider});
     const vmWithState = await getVMWithState({
       handler: handler as unknown as ELApiHandlers["eth_getProof"],
       executionPayload,
@@ -31,7 +31,7 @@ export const eth_estimateGas: ELVerifiedRequestHandler<
       tx,
       handler: handler as unknown as ELApiHandlers["eth_getBlockByHash"],
       executionPayload,
-      network,
+      network: proofProvider.network,
     });
 
     return generateRPCResponseForPayload(payload, bigIntToHex(result.totalGasSpent));

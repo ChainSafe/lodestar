@@ -14,14 +14,8 @@ import {elRpc, getChainCommon, getTxType} from "./execution.js";
 import {isValidResponse} from "./json_rpc.js";
 import {isNullish, isValidAccount, isValidCodeHash, isValidStorageKeys} from "./validation.js";
 
-export async function createVM({
-  proofProvider,
-  network,
-}: {
-  proofProvider: ProofProvider;
-  network: NetworkName;
-}): Promise<VM> {
-  const common = getChainCommon(network);
+export async function createVM({proofProvider}: {proofProvider: ProofProvider}): Promise<VM> {
+  const common = getChainCommon(proofProvider.config.PRESET_BASE as string);
   const blockchain = await Blockchain.create({common});
 
   // Connect blockchain object with existing proof provider for block history
