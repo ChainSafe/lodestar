@@ -148,8 +148,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       {register: register as RegistryMetricCreator, logger}
     );
 
-    onGracefulShutdownCbs.push(() => monitoring.stop());
-    monitoring.start();
+    onGracefulShutdownCbs.push(() => monitoring.close());
   }
 
   // This promise resolves once genesis is available.

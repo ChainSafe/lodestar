@@ -188,14 +188,12 @@ export class BeaconNode {
       db.setMetrics(metrics.db);
     }
 
-    let monitoring = null;
-    if (opts.monitoring.endpoint) {
-      monitoring = new MonitoringService("beacon", opts.monitoring, {
-        register: (metrics as Metrics).register,
-        logger: logger.child({module: LoggerModule.monitoring}),
-      });
-      monitoring.start();
-    }
+    const monitoring = opts.monitoring.endpoint
+      ? new MonitoringService("beacon", opts.monitoring, {
+          register: (metrics as Metrics).register,
+          logger: logger.child({module: LoggerModule.monitoring}),
+        })
+      : null;
 
     const chain = new BeaconChain(opts.chain, {
       config,
@@ -318,7 +316,7 @@ export class BeaconNode {
       this.backfillSync?.close();
       await this.network.close();
       if (this.metricsServer) await this.metricsServer.close();
-      if (this.monitoring) this.monitoring.stop();
+      if (this.monitoring) this.monitoring.close();
       if (this.restApi) await this.restApi.close();
       await this.chain.persistToDisk();
       await this.chain.close();
