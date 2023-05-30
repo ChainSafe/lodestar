@@ -1,6 +1,6 @@
 colors: true
 require:
-  - ./test/setupPreset.ts
+  - ./test/setup_preset.ts
   - ./test/setup.ts
 timeout: 5000
 exit: true
