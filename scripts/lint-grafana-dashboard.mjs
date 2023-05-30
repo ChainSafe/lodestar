@@ -18,6 +18,7 @@ no-console
  * @property {any} [__elements]
  * @property {Input[]} [__inputs]
  * @property {any} [__requires]
+ * @property {number} [graphTooltip]
  * @property {null} [id]
  * @property {Panel[]} [panels]
  * @property {string[]} [tags]
@@ -106,6 +107,9 @@ export function lintGrafanaDashboard(json) {
     ],
     ...json,
   };
+
+  // Set to "Shared crosshair" option
+  json.graphTooltip = 1;
 
   // null id to match "Export for sharing externally" format, only set to null if set to respect order
   if (json !== undefined) {
