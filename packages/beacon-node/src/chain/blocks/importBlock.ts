@@ -1,5 +1,5 @@
 import {capella, ssz, allForks, altair} from "@lodestar/types";
-import {ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAltair,
@@ -235,8 +235,11 @@ export async function importBlock(
       this.metrics.headSlot.set(newHead.slot);
       // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
       // We want to track recent blocks coming from gossip, unknown block sync, and API.
-      if (delaySec < 64 * this.config.SECONDS_PER_SLOT) {
+      if (delaySec < SLOTS_PER_EPOCH * this.config.SECONDS_PER_SLOT) {
         this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
+        if (delaySec > this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT) {
+          this.metrics.importBlock.setHeadAfterFirstInterval.inc();
+        }
       }
     }
 
