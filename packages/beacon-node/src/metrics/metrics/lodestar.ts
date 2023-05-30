@@ -485,9 +485,10 @@ export function createLodestarMetrics(
     },
 
     syncUnknownBlock: {
-      requests: register.gauge({
+      requests: register.gauge<"type">({
         name: "lodestar_sync_unknown_block_requests_total",
-        help: "Total number of unknownBlockParent events or requests",
+        help: "Total number of unknown block events or requests",
+        labelNames: ["type"],
       }),
       pendingBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_pending_blocks_size",
@@ -516,6 +517,11 @@ export function createLodestarMetrics(
       removedBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_removed_blocks_total",
         help: "Total number of removed bad blocks in UnknownBlockSync",
+      }),
+      elapsedTimeTillReceived: register.histogram({
+        name: "lodestar_sync_unknown_block_elapsed_time_till_received",
+        help: "Time elapsed between block slot time and the time block received via unknown block sync",
+        buckets: [0.5, 1, 2, 4, 6, 12],
       }),
     },
 

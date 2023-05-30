@@ -1,6 +1,7 @@
 import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
-import {RootHex, Slot} from "@lodestar/types";
+import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
 import {routes} from "@lodestar/api";
+import {pruneSetToMax} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/interface.js";
 import {GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -8,6 +9,7 @@ import {IBeaconDb} from "../../db/interface.js";
 import {ClockEvent} from "../../util/clock.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {GossipHandlers, GossipType, GossipValidatorFn} from "../gossip/interface.js";
+import {PeerIdStr} from "../peers/index.js";
 import {createGossipQueues} from "./gossipQueues.js";
 import {PendingGossipsubMessage} from "./types.js";
 import {ValidatorFnsModules, GossipHandlerOpts, getGossipHandlers} from "./gossipHandlers.js";
@@ -30,6 +32,11 @@ export type NetworkProcessorModules = ValidatorFnsModules &
 export type NetworkProcessorOpts = GossipHandlerOpts & {
   maxGossipTopicConcurrency?: number;
 };
+
+/**
+ * Keep up to 3 slot of unknown roots, so we don't always emit to UnknownBlock sync.
+ */
+const MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE = 3;
 
 /**
  * This is respective to gossipsub seenTTL (which is 550 * 0.7 = 385s), also it's respective
@@ -143,6 +150,7 @@ export class NetworkProcessor {
   private readonly awaitingGossipsubMessagesByRootBySlot: MapDef<Slot, MapDef<RootHex, Set<PendingGossipsubMessage>>>;
   private unknownBlockGossipsubMessagesCount = 0;
   private isProcessingCurrentSlotBlock = false;
+  private unknownRootsBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
 
   constructor(modules: NetworkProcessorModules, private readonly opts: NetworkProcessorOpts) {
     const {chain, events, logger, metrics} = modules;
@@ -201,6 +209,14 @@ export class NetworkProcessor {
     return queue.getAll();
   }
 
+  searchUnknownSlotRoot({slot, root}: SlotRootHex, peer?: PeerIdStr): void {
+    // Search for the unknown block
+    if (!this.unknownRootsBySlot.getOrDefault(slot).has(root)) {
+      this.unknownRootsBySlot.getOrDefault(slot).add(root);
+      this.events.emit(NetworkEvent.unknownBlock, {rootHex: root, peer});
+    }
+  }
+
   private onPendingGossipsubMessage(message: PendingGossipsubMessage): void {
     const topicType = message.topic.type;
     const extractBlockSlotRootFn = this.extractBlockSlotRootFns[topicType];
@@ -229,6 +245,8 @@ export class NetworkProcessor {
         }
         message.msgSlot = slot;
         if (root && !this.chain.forkChoice.hasBlockHex(root)) {
+          this.searchUnknownSlotRoot({slot, root}, message.propagationSource.toString());
+
           if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
             // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
             this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.reached_limit});
@@ -310,6 +328,7 @@ export class NetworkProcessor {
         this.awaitingGossipsubMessagesByRootBySlot.delete(slot);
       }
     }
+    pruneSetToMax(this.unknownRootsBySlot, MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE);
     this.unknownBlockGossipsubMessagesCount = 0;
   }
 

@@ -121,9 +121,9 @@ export async function processBlocks(
     // TODO: De-duplicate with logic above
     // ChainEvent.errorBlock
     if (!(err instanceof BlockError)) {
-      this.logger.error("Non BlockError received", {}, err);
+      this.logger.debug("Non BlockError received", {}, err);
     } else if (!opts.disableOnBlockError) {
-      this.logger.error("Block error", {slot: err.signedBlock.message.slot}, err);
+      this.logger.debug("Block error", {slot: err.signedBlock.message.slot}, err);
 
       if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
         const {signedBlock} = err;

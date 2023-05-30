@@ -38,6 +38,7 @@ import {validateGossipBlobsSidecar} from "../../chain/validation/blobsSidecar.js
 import {BlockInput, BlockSource, getBlockInput} from "../../chain/blocks/types.js";
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetworkCore} from "../core/index.js";
+import {INetwork} from "../interface.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
 
 /**
@@ -400,6 +401,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
  */
 export async function validateGossipFnRetryUnknownRoot<T>(
   fn: () => Promise<T>,
+  network: INetwork,
   chain: IBeaconChain,
   slot: Slot,
   blockRoot: Root
@@ -414,8 +416,13 @@ export async function validateGossipFnRetryUnknownRoot<T>(
         e instanceof AttestationError &&
         e.type.code === AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT
       ) {
-        if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {
+        if (unknownBlockRootRetries === 0) {
           // Trigger unknown block root search here
+          const rootHex = toHexString(blockRoot);
+          network.searchUnknownSlotRoot({slot, root: rootHex});
+        }
+
+        if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {
           const foundBlock = await chain.waitForBlock(slot, toHexString(blockRoot));
           // Returns true if the block was found on time. In that case, try to get it from the fork-choice again.
           // Otherwise, throw the error below.

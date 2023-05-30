@@ -2,7 +2,7 @@ import {Libp2p as ILibp2p} from "libp2p";
 import {Connection} from "@libp2p/interface-connection";
 import {Registrar} from "@libp2p/interface-registrar";
 import {ConnectionManager} from "@libp2p/interface-connection-manager";
-import {Slot, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
+import {Slot, SlotRootHex, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
 import {BlockInput} from "../chain/blocks/types.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {INetworkEventBus} from "./events.js";
@@ -29,7 +29,7 @@ export interface INetwork extends INetworkCorePublic {
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;
   shouldAggregate(subnet: number, slot: Slot): boolean;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
-
+  searchUnknownSlotRoot(slotRoot: SlotRootHex, peer?: PeerIdStr): void;
   // ReqResp
   sendBeaconBlocksByRange(
     peerId: PeerIdStr,
