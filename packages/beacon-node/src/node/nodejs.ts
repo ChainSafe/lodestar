@@ -15,7 +15,7 @@ import {Network, getReqRespHandlers} from "../network/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
-import {createMetrics, Metrics, HttpMetricsServer} from "../metrics/index.js";
+import {createMetrics, Metrics, HttpMetricsServer, getHttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
@@ -36,7 +36,7 @@ export type BeaconNodeModules = {
   api: {[K in keyof Api]: ServerApi<Api[K]>};
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
-  metricsServer?: HttpMetricsServer;
+  metricsServer: HttpMetricsServer | null;
   monitoring: MonitoringService | null;
   restApi?: BeaconRestApiServer;
   controller?: AbortController;
@@ -90,7 +90,7 @@ export class BeaconNode {
   config: BeaconConfig;
   db: IBeaconDb;
   metrics: Metrics | null;
-  metricsServer?: HttpMetricsServer;
+  metricsServer: HttpMetricsServer | null;
   monitoring: MonitoringService | null;
   network: Network;
   chain: IBeaconChain;
@@ -272,15 +272,12 @@ export class BeaconNode {
 
     // only start server if metrics are explicitly enabled
     const metricsServer = opts.metrics.enabled
-      ? new HttpMetricsServer(opts.metrics, {
+      ? await getHttpMetricsServer(opts.metrics, {
           register: (metrics as Metrics).register,
           getOtherMetrics: () => network.scrapeMetrics(),
           logger: logger.child({module: LoggerModule.metrics}),
         })
-      : undefined;
-    if (metricsServer) {
-      await metricsServer.start();
-    }
+      : null;
 
     const restApi = new BeaconRestApiServer(opts.api.rest, {
       config,
@@ -320,7 +317,7 @@ export class BeaconNode {
       this.sync.close();
       this.backfillSync?.close();
       await this.network.close();
-      if (this.metricsServer) await this.metricsServer.stop();
+      if (this.metricsServer) await this.metricsServer.close();
       if (this.monitoring) this.monitoring.stop();
       if (this.restApi) await this.restApi.close();
       await this.chain.persistToDisk();
