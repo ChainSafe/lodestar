@@ -213,15 +213,13 @@ export class NetworkCore implements INetworkCore {
     await reqResp.start();
 
     await gossip.start();
-    attnetsService.start();
-    syncnetsService.start();
 
     // Network spec decides version changes based on clock fork, not head fork
     const forkCurrentSlot = config.getForkName(clock.currentSlot);
     // Register only ReqResp protocols relevant to clock's fork
     reqResp.registerProtocolsAtFork(forkCurrentSlot);
 
-    await peerManager.start();
+    await peerManager.startDiscovery();
 
     // Bind discv5's ENR to local metadata
     discv5 = peerManager["discovery"]?.discv5;
@@ -255,14 +253,14 @@ export class NetworkCore implements INetworkCore {
 
     // Must goodbye and disconnect before stopping libp2p
     await this.peerManager.goodbyeAndDisconnectAllPeers();
-    await this.peerManager.stop();
+    await this.peerManager.close();
     await this.gossip.stop();
 
     await this.reqResp.stop();
     await this.reqResp.unregisterAllProtocols();
 
-    this.attnetsService.stop();
-    this.syncnetsService.stop();
+    this.attnetsService.close();
+    this.syncnetsService.close();
     await this.libp2p.stop();
 
     this.closed = true;
