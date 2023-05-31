@@ -1,7 +1,7 @@
 export * from "./state_transition.js";
 export * from "./constants/index.js";
 export * from "./util/index.js";
-export * from "./signatureSets/index.js";
+export * from "./signature_sets/index.js";
 export {BeaconStateTransitionMetrics} from "./metrics.js";
 
 export {

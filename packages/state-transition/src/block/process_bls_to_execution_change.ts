@@ -2,7 +2,7 @@ import {capella} from "@lodestar/types";
 import {BLS_WITHDRAWAL_PREFIX, ETH1_ADDRESS_WITHDRAWAL_PREFIX} from "@lodestar/params";
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
 import {digest} from "@chainsafe/as-sha256";
-import {verifyBlsToExecutionChangeSignature} from "../signatureSets/index.js";
+import {verifyBlsToExecutionChangeSignature} from "../signature_sets/index.js";
 
 import {CachedBeaconStateCapella} from "../types.js";
 

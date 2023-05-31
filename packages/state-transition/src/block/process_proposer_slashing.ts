@@ -3,7 +3,7 @@ import {ForkSeq} from "@lodestar/params";
 import {isSlashableValidator} from "../util/index.js";
 import {verifySignatureSet} from "../util/signature_sets.js";
 import {CachedBeaconStateAllForks} from "../types.js";
-import {getProposerSlashingSignatureSets} from "../signatureSets/index.js";
+import {getProposerSlashingSignatureSets} from "../signature_sets/index.js";
 import {slashValidator} from "./slash_validator.js";
 
 /**

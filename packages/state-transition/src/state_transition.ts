@@ -11,7 +11,7 @@ import {
   CachedBeaconStateCapella,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
-import {verifyProposerSignature} from "./signatureSets/index.js";
+import {verifyProposerSignature} from "./signature_sets/index.js";
 import {
   processSlot,
   upgradeStateToAltair,

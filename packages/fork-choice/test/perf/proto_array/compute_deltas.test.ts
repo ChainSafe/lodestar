@@ -7,7 +7,7 @@ import {
   getEffectiveBalanceIncrementsZeroed,
 } from "@lodestar/state-transition";
 import {TIMELY_SOURCE_FLAG_INDEX} from "@lodestar/params";
-import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test/perf/util.js";
+import {generatePerfTestCachedStateAltair} from "../../../../state-transition/test/perf/util.js";
 import {VoteTracker} from "../../../src/proto_array/interface.js";
 import {computeDeltas} from "../../../src/proto_array/compute_deltas.js";
 import {computeProposerBoostScoreFromBalances} from "../../../src/fork_choice/fork_choice.js";

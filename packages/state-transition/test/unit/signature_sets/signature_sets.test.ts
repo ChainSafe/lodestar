@@ -6,7 +6,7 @@ import {phase0, capella, ValidatorIndex, BLSSignature, ssz} from "@lodestar/type
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
 import {ZERO_HASH} from "../../../src/constants/index.js";
-import {getBlockSignatureSets} from "../../../src/signatureSets/index.js";
+import {getBlockSignatureSets} from "../../../src/signature_sets/index.js";
 import {generateCachedState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 

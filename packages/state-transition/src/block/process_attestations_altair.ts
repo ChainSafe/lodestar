@@ -17,7 +17,7 @@ import {
 import {increaseBalance, verifySignatureSet} from "../util/index.js";
 import {CachedBeaconStateAltair} from "../types.js";
 import {RootCache} from "../util/root_cache.js";
-import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexed_attestation.js";
+import {getAttestationWithIndicesSignatureSet} from "../signature_sets/indexed_attestation.js";
 import {checkpointToStr, validateAttestation} from "./process_attestation_phase0.js";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;

@@ -11,7 +11,7 @@ import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH, TIMELY_SOURCE_FLAG_INDEX} from 
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray} from "@lodestar/fork-choice";
 import {ssz} from "@lodestar/types";
-import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test/perf/util.js";
+import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {AggregatedAttestationPool} from "../../../../src/chain/op_pools/aggregated_attestation_pool.js";
 import {computeAnchorCheckpoint} from "../../../../src/chain/init_state.js";
 

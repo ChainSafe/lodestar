@@ -3,7 +3,7 @@ import {digest} from "@chainsafe/as-sha256";
 import {allForks} from "@lodestar/types";
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@lodestar/params";
 import {getRandaoMix} from "../util/index.js";
-import {verifyRandaoSignature} from "../signatureSets/index.js";
+import {verifyRandaoSignature} from "../signature_sets/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 
 /**

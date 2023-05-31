@@ -2,7 +2,7 @@ import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
 import {isActiveValidator} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
-import {verifyVoluntaryExitSignature} from "../signatureSets/index.js";
+import {verifyVoluntaryExitSignature} from "../signature_sets/index.js";
 import {initiateValidatorExit} from "./index.js";
 
 /**
