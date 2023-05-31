@@ -14,6 +14,7 @@ export type RestApiServerOpts = {
   cors?: string;
   address?: string;
   bearerToken?: string;
+  headerLimit?: number;
   bodyLimit?: number;
 };
 
@@ -60,6 +61,7 @@ export class RestApiServer {
           parseArrays: false,
         }),
       bodyLimit: opts.bodyLimit,
+      http: {maxHeaderSize: opts.headerLimit},
     });
 
     this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics);
