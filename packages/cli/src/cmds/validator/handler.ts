@@ -193,6 +193,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
         port: args["keymanager.port"],
         cors: args["keymanager.cors"],
         isAuthEnabled: args["keymanager.authEnabled"],
+        headerLimit: args["keymanager.headerLimit"],
         bodyLimit: args["keymanager.bodyLimit"],
         tokenDir: dbPath,
       },

@@ -15,6 +15,7 @@ describe("options / beaconNodeOptions", () => {
       rest: true,
       "rest.address": "127.0.0.1",
       "rest.port": 7654,
+      "rest.headerLimit": 16384,
       "rest.bodyLimit": 30e6,
 
       "chain.blsVerifyAllMultiThread": true,
@@ -105,6 +106,7 @@ describe("options / beaconNodeOptions", () => {
           enabled: true,
           address: "127.0.0.1",
           port: 7654,
+          headerLimit: 16384,
           bodyLimit: 30e6,
         },
       },
