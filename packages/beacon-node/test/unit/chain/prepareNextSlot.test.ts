@@ -19,7 +19,7 @@ import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
 import {ExecutionEngineHttp} from "../../../src/execution/engine/http.js";
 import {IExecutionEngine} from "../../../src/execution/engine/interface.js";
 import {StubbedChainMutable} from "../../utils/stub/index.js";
-import {zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
+import {zeroProtoBlock} from "../../utils/mocks/chain.js";
 import {createStubbedLogger} from "../../utils/mocks/logger.js";
 
 type StubbedChain = StubbedChainMutable<"clock" | "forkChoice" | "emitter" | "regen" | "opts">;

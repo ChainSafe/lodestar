@@ -17,7 +17,7 @@ import {StubbedBeaconDb, StubbedChainMutable} from "../../../../../utils/stub/in
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 import {testLogger} from "../../../../../utils/logger.js";
 import {createCachedBeaconStateTest} from "../../../../../utils/cachedBeaconState.js";
-import {zeroProtoBlock} from "../../../../../utils/mocks/chain/chain.js";
+import {zeroProtoBlock} from "../../../../../utils/mocks/chain.js";
 
 use(chaiAsPromised);
 

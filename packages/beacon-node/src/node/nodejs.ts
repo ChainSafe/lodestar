@@ -230,7 +230,6 @@ export class BeaconNode {
       peerId,
       peerStoreDir,
       getReqRespHandler: getReqRespHandlers({db, chain}),
-      signal,
     });
 
     const sync = new BeaconSync(opts.sync, {
