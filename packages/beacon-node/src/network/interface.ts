@@ -21,6 +21,7 @@ import {PeerAction} from "./peers/index.js";
  */
 
 export interface INetwork extends INetworkCorePublic {
+  readonly closed: boolean;
   events: INetworkEventBus;
 
   getConnectedPeers(): PeerIdStr[];
