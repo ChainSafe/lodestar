@@ -31,7 +31,7 @@ describe("gossip block validation", function () {
   const maxSkipSlots = 10;
 
   beforeEach(function () {
-    chain = sinon.createStubInstance(BeaconChain);
+    chain = sinon.createStubInstance(BeaconChain) as typeof chain;
     chain.clock = sinon.createStubInstance(Clock);
     sinon.stub(chain.clock, "currentSlotWithGossipDisparity").get(() => clockSlot);
     forkChoice = sinon.createStubInstance(ForkChoice);

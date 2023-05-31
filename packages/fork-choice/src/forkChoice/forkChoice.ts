@@ -716,6 +716,19 @@ export class ForkChoice implements IForkChoice {
     return null;
   }
 
+  getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null {
+    if (slot >= this.head.slot) {
+      return this.head;
+    }
+
+    for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot)) {
+      if (slot >= block.slot) {
+        return block;
+      }
+    }
+    return null;
+  }
+
   /** Very expensive function, iterates the entire ProtoArray. TODO: Is this function even necessary? */
   forwarditerateAncestorBlocks(): ProtoBlock[] {
     return this.protoArray.nodes;

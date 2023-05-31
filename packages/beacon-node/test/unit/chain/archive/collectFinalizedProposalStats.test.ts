@@ -24,7 +24,7 @@ describe("collectFinalizedProposalStats", function () {
   let archiver: Archiver;
 
   beforeEach(function () {
-    chainStub = sinon.createStubInstance(BeaconChain);
+    chainStub = sinon.createStubInstance(BeaconChain) as typeof chainStub;
     chainStub.forkChoice = sinon.createStubInstance(ForkChoice);
     const suggestedFeeRecipient = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     chainStub.beaconProposerCache = new BeaconProposerCache({suggestedFeeRecipient});

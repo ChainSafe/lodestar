@@ -19,7 +19,7 @@ describe("Events api impl", function () {
     let api: ReturnType<typeof getEventsApi>;
 
     beforeEach(function () {
-      chainStub = sinon.createStubInstance(BeaconChain);
+      chainStub = sinon.createStubInstance(BeaconChain) as typeof chainStub;
       stateCacheStub = sinon.createStubInstance(StateContextCache);
       chainStub.stateCache = stateCacheStub as unknown as StateContextCache;
       chainEventEmmitter = new ChainEventEmitter();

@@ -45,7 +45,7 @@ import {isOptimisticBlock} from "../util/forkChoice.js";
 import {CheckpointStateCache, StateContextCache} from "./stateCache/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
-import {IBeaconChain, ProposerPreparationData, BlockHash} from "./interface.js";
+import {IBeaconChain, ProposerPreparationData, BlockHash, StateGetOpts} from "./interface.js";
 import {IChainOptions} from "./options.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {initializeForkChoice} from "./forkChoice/index.js";
@@ -368,6 +368,70 @@ export class BeaconChain implements IBeaconChain {
     const head = this.forkChoice.getHead();
     const startSlot = computeStartSlotAtEpoch(epoch);
     return this.regen.getBlockSlotState(head.blockRoot, startSlot, {dontTransferCache: true}, regenCaller);
+  }
+
+  async getStateBySlot(
+    slot: Slot,
+    opts?: StateGetOpts
+  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null> {
+    const finalizedBlock = this.forkChoice.getFinalizedBlock();
+
+    if (slot >= finalizedBlock.slot) {
+      // request for non-finalized state
+
+      if (opts?.allowRegen) {
+        // Find closest canonical block to slot, then trigger regen
+        const block = this.forkChoice.getCanonicalBlockClosestLteSlot(slot) ?? finalizedBlock;
+        const state = await this.regen.getBlockSlotState(
+          block.blockRoot,
+          slot,
+          {dontTransferCache: true},
+          RegenCaller.restApi
+        );
+        return {state, executionOptimistic: isOptimisticBlock(block)};
+      } else {
+        // Just check if state is already in the cache. If it's not dialed to the correct slot,
+        // do not bother in advancing the state. restApiCanTriggerRegen == false means do no work
+        const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
+        if (!block) {
+          return null;
+        }
+
+        const state = this.stateCache.get(block.stateRoot);
+        return state && {state, executionOptimistic: isOptimisticBlock(block)};
+      }
+    } else {
+      // request for finalized state
+
+      // do not attempt regen, just check if state is already in DB
+      const state = await this.db.stateArchive.get(slot);
+      return state && {state, executionOptimistic: false};
+    }
+  }
+
+  async getStateByStateRoot(
+    stateRoot: RootHex,
+    opts?: StateGetOpts
+  ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null> {
+    if (opts?.allowRegen) {
+      const state = await this.regen.getState(stateRoot, RegenCaller.restApi);
+      const block = this.forkChoice.getBlock(state.latestBlockHeader.hashTreeRoot());
+      return {state, executionOptimistic: block != null && isOptimisticBlock(block)};
+    }
+
+    // TODO: This can only fulfill requests for a very narrow set of roots.
+    // - very recent states that happen to be in the cache
+    // - 1 every 100s of states that are persisted in the archive state
+
+    // TODO: This is very inneficient for debug requests of serialized content, since it deserializes to serialize again
+    const cachedStateCtx = this.stateCache.get(stateRoot);
+    if (cachedStateCtx) {
+      const block = this.forkChoice.getBlock(cachedStateCtx.latestBlockHeader.hashTreeRoot());
+      return {state: cachedStateCtx, executionOptimistic: block != null && isOptimisticBlock(block)};
+    }
+
+    const data = await this.db.stateArchive.getByRoot(fromHexString(stateRoot));
+    return data && {state: data, executionOptimistic: false};
   }
 
   async getCanonicalBlockAtSlot(
