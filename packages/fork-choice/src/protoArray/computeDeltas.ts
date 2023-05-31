@@ -35,16 +35,16 @@ export function computeDeltas(
 
     // IF the validator was not included in the _old_ balances (i.e. it did not exist yet)
     // then say its balance was 0
-    const oldBalance = oldBalances[vIndex] || 0;
+    const oldBalance = oldBalances[vIndex] ?? 0;
 
     // If the validator's vote is not known in the _new_ balances, then use a balance of zero.
     //
     // It is possible that there was a vote for an unknown validator if we change our justified
     // state to a new state with a higher epoch that is on a different fork because that fork may have
     // on-boarded fewer validators than the prior fork.
-    const newBalance = newBalances[vIndex] || 0;
+    const newBalance = newBalances[vIndex] ?? 0;
 
-    if (equivocatingIndices.has(vIndex)) {
+    if (equivocatingIndices.size > 0 && equivocatingIndices.has(vIndex)) {
       // this function could be called multiple times but we only want to process slashing validator for 1 time
       if (currentRoot !== zeroHash) {
         const currentDeltaIndex = indices.get(currentRoot);
