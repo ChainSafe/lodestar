@@ -7,7 +7,7 @@ import {ApiOptions} from "../../options.js";
 
 export function getProofApi(
   opts: ApiOptions,
-  {chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">
+  {chain, config}: Pick<ApiModules, "chain" | "config" | "db">
 ): ServerApi<routes.proof.Api> {
   // It's currently possible to request gigantic proofs (eg: a proof of the entire beacon state)
   // We want some some sort of resistance against this DoS vector.
