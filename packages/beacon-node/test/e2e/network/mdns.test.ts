@@ -97,7 +97,6 @@ describe.skip("mdns", function () {
       db,
       getReqRespHandler: getReqRespHandlers({db, chain}),
       gossipHandlers,
-      signal: controller.signal,
       metrics: null,
     };
 
