@@ -5,13 +5,13 @@ import {phase0, Slot, ssz} from "@lodestar/types";
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {BeaconConfig} from "@lodestar/config";
-import {IBeaconChain} from "../../../src/chain/index.js";
-import {IStateRegenerator} from "../../../src/chain/regen/index.js";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
 } from "@lodestar/state-transition/test/perf/util.js";
+import {IBeaconChain} from "../../../src/chain/index.js";
+import {IStateRegenerator} from "../../../src/chain/regen/index.js";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
 import {SeenAttesters} from "../../../src/chain/seen_cache/index.js";
 import {BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
 import {signCached} from "../cache.js";
