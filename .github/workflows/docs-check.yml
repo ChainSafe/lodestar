@@ -40,8 +40,10 @@ jobs:
       # ```
       # $ scripts/wordlist_sort.sh
       # ```
-      - name: Check wordlist is sorted
-        run: scripts/wordlist_sort_check.sh
+
+      # TODO: sort in CI differs from local https://github.com/ChainSafe/lodestar/pull/5527#issuecomment-1569985518
+      # - name: Check wordlist is sorted
+      #   run: scripts/wordlist_sort_check.sh
 
       # Run prettier check BEFORE generating the docs, since the CLI reference is not formated with prettier's
       # To automatically fix format issues run
