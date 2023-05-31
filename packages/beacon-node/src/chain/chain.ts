@@ -370,14 +370,14 @@ export class BeaconChain implements IBeaconChain {
 
   async getStateBySlot(
     slot: Slot,
-    opts: StateGetOpts
+    opts?: StateGetOpts
   ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null> {
     const finalizedBlock = this.forkChoice.getFinalizedBlock();
 
     if (slot >= finalizedBlock.slot) {
       // request for non-finalized state
 
-      if (opts.allowRegen) {
+      if (opts?.allowRegen) {
         // Find closest canonical block to slot, then trigger regen
         const block = this.forkChoice.getCanonicalBlockClosestLteSlot(slot) ?? finalizedBlock;
         const state = await this.regen.getBlockSlotState(
@@ -409,9 +409,9 @@ export class BeaconChain implements IBeaconChain {
 
   async getStateByStateRoot(
     stateRoot: RootHex,
-    opts: StateGetOpts
+    opts?: StateGetOpts
   ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null> {
-    if (opts.allowRegen) {
+    if (opts?.allowRegen) {
       const state = await this.regen.getState(stateRoot, RegenCaller.restApi);
       const block = this.forkChoice.getBlock(state.latestBlockHeader.hashTreeRoot());
       return {state, executionOptimistic: block != null && isOptimisticBlock(block)};
