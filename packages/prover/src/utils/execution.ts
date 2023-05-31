@@ -1,5 +1,4 @@
 import {Common, CustomChain, Hardfork} from "@ethereumjs/common";
-import {NetworkName} from "@lodestar/config/networks";
 import {ELRequestHandler} from "../interfaces.js";
 import {ELApiHandlers, ELApiParams, ELApiReturn, ELResponse, ELResponseWithResult, ELTransaction} from "../types.js";
 import {isValidResponse} from "./json_rpc.js";
@@ -68,7 +67,7 @@ export async function getELBlock(
   return block.result;
 }
 
-export function getChainCommon(network: NetworkName): Common {
+export function getChainCommon(network: string): Common {
   switch (network) {
     case "mainnet":
     case "goerli":
@@ -76,6 +75,9 @@ export function getChainCommon(network: NetworkName): Common {
     case "sepolia":
       // TODO: Not sure how to detect the fork during runtime
       return new Common({chain: network, hardfork: Hardfork.Shanghai});
+    case "minimal":
+      // TODO: Not sure how to detect the fork during runtime
+      return new Common({chain: "mainnet", hardfork: Hardfork.Shanghai});
     case "gnosis":
       return new Common({chain: CustomChain.xDaiChain});
     default:

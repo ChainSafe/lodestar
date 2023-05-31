@@ -7,8 +7,8 @@ import {generateUnverifiedResponseForPayload, generateVerifiedResponseForPayload
 export const eth_getBlockByNumber: ELVerifiedRequestHandler<
   [block: string | number, hydrated: boolean],
   ELBlock
-> = async ({handler, payload, logger, proofProvider, network}) => {
-  const result = await verifyBlock({payload, proofProvider, logger, handler, network});
+> = async ({handler, payload, logger, proofProvider}) => {
+  const result = await verifyBlock({payload, proofProvider, logger, handler});
 
   if (result.valid) {
     return generateVerifiedResponseForPayload(payload, result.data);

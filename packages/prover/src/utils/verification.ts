@@ -1,4 +1,3 @@
-import {NetworkName} from "@lodestar/config/networks";
 import {Logger} from "@lodestar/utils";
 import {ELRequestHandlerAny} from "../interfaces.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
@@ -71,13 +70,11 @@ export async function verifyBlock({
   proofProvider,
   logger,
   handler,
-  network,
 }: {
   payload: ELRequestPayload<[block: string | number, hydrated: boolean]>;
   handler: ELRequestHandlerAny;
   proofProvider: ProofProvider;
   logger: Logger;
-  network: NetworkName;
 }): Promise<VerificationResult<ELBlock>> {
   const executionPayload = await proofProvider.getExecutionPayload(payload.params[0]);
   const block = await getELBlock(handler, payload.params);
@@ -90,7 +87,7 @@ export async function verifyBlock({
       logger,
       block,
       executionPayload,
-      network,
+      config: proofProvider.config,
     })
   ) {
     return {data: block, valid: true};

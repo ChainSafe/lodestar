@@ -1,14 +1,14 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {altair, ssz} from "@lodestar/types";
 
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {MockBeaconChain} from "../../../utils/mocks/chain/chain.js";
-import {generateState} from "../../../utils/state.js";
+import {getMockBeaconChain} from "../../../utils/mocks/chain.js";
 import {validateLightClientFinalityUpdate} from "../../../../src/chain/validation/lightClientFinalityUpdate.js";
 import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientError.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
+import {LightClientServer} from "../../../../src/chain/lightClient/index.js";
 
 describe("Light Client Finality Update validation", function () {
   let fakeClock: sinon.SinonFakeTimers;
@@ -33,27 +33,9 @@ describe("Light Client Finality Update validation", function () {
   });
 
   function mockChain(): IBeaconChain {
-    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
-    const state = generateState({
-      finalizedCheckpoint: {
-        epoch: 0,
-        root: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
-      },
-    });
-
-    const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
-    const chain = new MockBeaconChain({
-      genesisTime: 0,
-      chainId: 0,
-      networkId: BigInt(0),
-      state,
-      config: beaconConfig,
-    });
-
-    afterEachCallbacks.push(async () => {
-      await chain.close();
-    });
-
+    const chain = getMockBeaconChain<"lightClientServer" | "config" | "genesisTime">();
+    chain.lightClientServer = sinon.createStubInstance(LightClientServer);
+    chain.genesisTime = 0;
     return chain;
   }
 
@@ -135,6 +117,7 @@ describe("Light Client Finality Update validation", function () {
     lightClientFinalityUpdate.attestedHeader.beacon.slot = lightClientFinalityUpdate.finalizedHeader.beacon.slot + 1;
 
     const chain = mockChain();
+    chain.lightClientServer.getFinalityUpdate = () => ssz.altair.LightClientFinalityUpdate.defaultValue();
 
     // make update not too early
     const timeAtSignatureSlot =

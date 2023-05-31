@@ -4,6 +4,8 @@ import {allForks, deneb, Slot, WithOptionalBytes} from "@lodestar/types";
 import {ForkSeq, MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 
+import {ckzg} from "../../util/kzg.js";
+
 export enum BlockInputType {
   preDeneb = "preDeneb",
   postDeneb = "postDeneb",
@@ -27,6 +29,25 @@ export function blockRequiresBlobs(config: ChainForkConfig, blockSlot: Slot, clo
     // Only request blobs if they are recent enough
     computeEpochAtSlot(blockSlot) >= computeEpochAtSlot(clockSlot) - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
   );
+}
+
+// TODO DENEB: a helper function to convert blobSidecars to blobsSidecar, to be cleanup on BlockInput
+// migration
+export function blobSidecarsToBlobsSidecar(
+  config: ChainForkConfig,
+  signedBlock: allForks.SignedBeaconBlock,
+  blobSidecars: deneb.BlobSidecars
+): deneb.BlobsSidecar {
+  const beaconBlockSlot = signedBlock.message.slot;
+  const beaconBlockRoot = config.getForkTypes(beaconBlockSlot).BeaconBlock.hashTreeRoot(signedBlock.message);
+  const blobs = blobSidecars.map(({blob}) => blob);
+  const blobsSidecar = {
+    beaconBlockRoot,
+    beaconBlockSlot,
+    blobs,
+    kzgAggregatedProof: ckzg.computeAggregateKzgProof(blobs),
+  };
+  return blobsSidecar;
 }
 
 export const getBlockInput = {

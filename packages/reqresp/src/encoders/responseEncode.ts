@@ -13,10 +13,16 @@ import {RespStatus, RpcResponseStatusError} from "../interface.js";
  * Note: `response` has zero or more chunks (denoted by `<>*`)
  */
 export function responseEncodeSuccess(
-  protocol: Protocol
+  protocol: Protocol,
+  cbs: {onChunk: (chunkIndex: number) => void}
 ): (source: AsyncIterable<ResponseOutgoing>) => AsyncIterable<Buffer> {
   return async function* responseEncodeSuccessTransform(source) {
+    let chunkIndex = 0;
+
     for await (const chunk of source) {
+      // Postfix increment, return 0 as first chunk
+      cbs.onChunk(chunkIndex++);
+
       // <result>
       yield Buffer.from([RespStatus.SUCCESS]);
 

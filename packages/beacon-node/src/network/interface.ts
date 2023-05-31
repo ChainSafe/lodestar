@@ -21,6 +21,7 @@ import {PeerAction} from "./peers/index.js";
  */
 
 export interface INetwork extends INetworkCorePublic {
+  readonly closed: boolean;
   events: INetworkEventBus;
 
   getConnectedPeers(): PeerIdStr[];
@@ -39,14 +40,8 @@ export interface INetwork extends INetworkCorePublic {
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRootRequest
   ): Promise<allForks.SignedBeaconBlock[]>;
-  sendBlobsSidecarsByRange(
-    peerId: PeerIdStr,
-    request: deneb.BlobsSidecarsByRangeRequest
-  ): Promise<deneb.BlobsSidecar[]>;
-  sendBeaconBlockAndBlobsSidecarByRoot(
-    peerId: PeerIdStr,
-    request: deneb.BeaconBlockAndBlobsSidecarByRootRequest
-  ): Promise<deneb.SignedBeaconBlockAndBlobsSidecar[]>;
+  sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
+  sendBlobSidecarsByRoot(peerId: PeerIdStr, request: deneb.BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
 
   // Gossip
   publishBeaconBlockMaybeBlobs(blockInput: BlockInput): Promise<number>;

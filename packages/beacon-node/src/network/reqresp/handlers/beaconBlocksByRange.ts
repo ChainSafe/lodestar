@@ -12,14 +12,14 @@ export function onBeaconBlocksByRange(
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
-  return onBlocksOrBlobsSidecarsByRange(request, chain, {
+  return onBlocksOrBlobSidecarsByRange(request, chain, {
     finalized: db.blockArchive,
     unfinalized: db.block,
   });
 }
 
-export async function* onBlocksOrBlobsSidecarsByRange(
-  request: deneb.BlobsSidecarsByRangeRequest,
+export async function* onBlocksOrBlobSidecarsByRange(
+  request: phase0.BeaconBlocksByRangeRequest,
   chain: IBeaconChain,
   db: {
     finalized: Pick<IBeaconDb["blockArchive"], "binaryEntriesStream" | "decodeKey">;
@@ -88,8 +88,8 @@ export async function* onBlocksOrBlobsSidecarsByRange(
 }
 
 export function validateBeaconBlocksByRangeRequest(
-  request: deneb.BlobsSidecarsByRangeRequest
-): deneb.BlobsSidecarsByRangeRequest {
+  request: deneb.BlobSidecarsByRangeRequest
+): deneb.BlobSidecarsByRangeRequest {
   const {startSlot} = request;
   let {count} = request;
 

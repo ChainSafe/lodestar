@@ -5,7 +5,7 @@ export {createNodeJsLibp2p, NodeJsLibp2pOpts} from "./network/index.js";
 export * from "./node/index.js";
 
 // Export metrics utilities to de-duplicate validator metrics
-export {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "./metrics/index.js";
+export {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer, getHttpMetricsServer} from "./metrics/index.js";
 
 // Export monitoring service to make it usable by validator
 export {MonitoringService} from "./monitoring/index.js";

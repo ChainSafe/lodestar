@@ -97,13 +97,6 @@ export function lintGrafanaDashboard(json) {
         pluginName: "Prometheus",
         type: "datasource",
       },
-      {
-        description: "",
-        label: "Beacon node job name",
-        name: "VAR_BEACON_JOB",
-        type: "constant",
-        value: "beacon",
-      },
     ],
     ...json,
   };
