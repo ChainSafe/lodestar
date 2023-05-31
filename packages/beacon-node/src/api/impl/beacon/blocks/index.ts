@@ -10,14 +10,19 @@ import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {allForks, deneb} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../../chain/blocks/types.js";
+import {
+  BlockSource,
+  getBlockInput,
+  ImportBlockOpts,
+  BlockInput,
+  blobSidecarsToBlobsSidecar,
+} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
 import {OpSource} from "../../../../metrics/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
 import {ApiModules} from "../../types.js";
-import {ckzg} from "../../../../util/kzg.js";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
 
 /**
@@ -213,21 +218,18 @@ export function getBeaconBlockApi({
       if (isSignedBlockContents(signedBlockOrContents)) {
         // Build a blockInput for post deneb, signedBlobs will be be used in followup PRs
         ({signedBlock, signedBlobSidecars: signedBlobs} = signedBlockOrContents as SignedBlockContents);
-        const beaconBlockSlot = signedBlock.message.slot;
-        const beaconBlockRoot = config.getForkTypes(beaconBlockSlot).BeaconBlock.hashTreeRoot(signedBlock.message);
-        const blobs = signedBlobs.map((sblob) => sblob.message.blob);
+        const blobsSidecar = blobSidecarsToBlobsSidecar(
+          config,
+          signedBlock,
+          signedBlobs.map(({message}) => message)
+        );
 
         blockForImport = getBlockInput.postDeneb(
           config,
           signedBlock,
           BlockSource.api,
           // The blobsSidecar will be replaced in the followup PRs with just blobs
-          {
-            beaconBlockRoot,
-            beaconBlockSlot,
-            blobs,
-            kzgAggregatedProof: ckzg.computeAggregateKzgProof(blobs),
-          }
+          blobsSidecar
         );
       } else {
         signedBlock = signedBlockOrContents as allForks.SignedBeaconBlock;

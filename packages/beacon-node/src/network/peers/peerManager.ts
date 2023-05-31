@@ -4,6 +4,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 import {allForks, altair, phase0} from "@lodestar/types";
+import {withTimeout} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
@@ -643,7 +644,8 @@ export class PeerManager {
         this.metrics?.peerLongConnectionDisconnect.inc({reason});
       }
 
-      await this.reqResp.sendGoodbye(peer, BigInt(goodbye));
+      // Wrap with shorter timeout than regular ReqResp requests to speed up shutdown
+      await withTimeout(() => this.reqResp.sendGoodbye(peer, BigInt(goodbye)), 1_000);
     } catch (e) {
       this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
     } finally {

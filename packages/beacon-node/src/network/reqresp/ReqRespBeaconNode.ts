@@ -247,11 +247,8 @@ export class ReqRespBeaconNode extends ReqResp {
 
     if (ForkSeq[fork] >= ForkSeq.deneb) {
       protocolsAtFork.push(
-        [
-          protocols.BeaconBlockAndBlobsSidecarByRoot(this.config),
-          this.getHandler(ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot),
-        ],
-        [protocols.BlobsSidecarsByRange(this.config), this.getHandler(ReqRespMethod.BlobsSidecarsByRange)]
+        [protocols.BlobSidecarsByRoot(this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRoot)],
+        [protocols.BlobSidecarsByRange(this.config), this.getHandler(ReqRespMethod.BlobSidecarsByRange)]
       );
     }
 

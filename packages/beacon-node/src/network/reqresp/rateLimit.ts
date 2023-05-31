@@ -31,15 +31,15 @@ export const rateLimitQuotas: Record<ReqRespMethod, InboundRateLimitQuota> = {
     byPeer: {quota: 128, quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(ReqRespMethod.BeaconBlocksByRoot, (req) => req.length),
   },
-  [ReqRespMethod.BlobsSidecarsByRange]: {
+  [ReqRespMethod.BlobSidecarsByRange]: {
     // TODO DENEB: For now same value as BeaconBlocksByRange https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
     byPeer: {quota: MAX_REQUEST_BLOCKS, quotaTimeMs: 10_000},
-    getRequestCount: getRequestCountFn(ReqRespMethod.BlobsSidecarsByRange, (req) => req.count),
+    getRequestCount: getRequestCountFn(ReqRespMethod.BlobSidecarsByRange, (req) => req.count),
   },
-  [ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]: {
+  [ReqRespMethod.BlobSidecarsByRoot]: {
     // TODO DENEB: For now same value as BeaconBlocksByRoot https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
     byPeer: {quota: 128, quotaTimeMs: 10_000},
-    getRequestCount: getRequestCountFn(ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot, (req) => req.length),
+    getRequestCount: getRequestCountFn(ReqRespMethod.BlobSidecarsByRoot, (req) => req.length),
   },
   [ReqRespMethod.LightClientBootstrap]: {
     // As similar in the nature of `Status` protocol so we use the same rate limits.

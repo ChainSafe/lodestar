@@ -7,16 +7,15 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
-import {BeaconStateAllForks, getCurrentSlot} from "@lodestar/state-transition";
-import {MockBeaconChain} from "../../../utils/mocks/chain/chain.js";
-import {generateState} from "../../../utils/state.js";
+import {getCurrentSlot} from "@lodestar/state-transition";
 import {testLogger} from "../../../utils/logger.js";
 import {MetadataController} from "../../../../src/network/metadata.js";
 import {Eth2Gossipsub, GossipType} from "../../../../src/network/gossip/index.js";
 import {AttnetsService, CommitteeSubscription, ShuffleFn} from "../../../../src/network/subnets/index.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
-import {IBeaconChain} from "../../../../src/chain/index.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
+import {IClock} from "../../../../src/util/clock.js";
+import {Clock} from "../../../../src/util/clock.js";
 
 describe("AttnetsService", function () {
   const COMMITTEE_SUBNET_SUBSCRIPTION = 10;
@@ -31,8 +30,7 @@ describe("AttnetsService", function () {
   let gossipStub: SinonStubbedInstance<Eth2Gossipsub> & Eth2Gossipsub;
   let metadata: MetadataController;
 
-  let chain: IBeaconChain;
-  let state: BeaconStateAllForks;
+  let clock: IClock;
   const logger = testLogger();
   const subscription: CommitteeSubscription = {
     validatorIndex: 2021,
@@ -62,18 +60,16 @@ describe("AttnetsService", function () {
       return [randomSubnet++ % ATTESTATION_SUBNET_COUNT, ...arr];
     }
 
-    state = generateState();
-    chain = new MockBeaconChain({
+    clock = new Clock({
       genesisTime: Math.floor(Date.now() / 1000 - config.SECONDS_PER_SLOT * startSlot),
-      chainId: 0,
-      networkId: BigInt(0),
-      state,
       config,
+      signal: new AbortController().signal,
     });
+
     // load getCurrentSlot first, vscode not able to debug without this
     getCurrentSlot(config, Math.floor(Date.now() / 1000));
     metadata = new MetadataController({}, {config, onSetValue: () => null});
-    service = new AttnetsService(config, chain.clock, gossipStub, metadata, logger, null, {
+    service = new AttnetsService(config, clock, gossipStub, metadata, logger, null, {
       randBetweenFn,
       shuffleFn: shuffleFn as ShuffleFn,
     });
@@ -86,7 +82,7 @@ describe("AttnetsService", function () {
   });
 
   it("should not subscribe when there is no active validator", () => {
-    chain.clock.emit(ClockEvent.slot, 1);
+    clock.emit(ClockEvent.slot, 1);
     expect(gossipStub.subscribeTopic).to.be.not.called;
   });
 
@@ -133,7 +129,7 @@ describe("AttnetsService", function () {
 
   // Reproduce issue https://github.com/ChainSafe/lodestar/issues/4929
   it("should NOT unsubscribe any subnet if there are 64 known validators", async () => {
-    expect(chain.clock.currentSlot).to.be.equal(startSlot, "incorrect start slot");
+    expect(clock.currentSlot).to.be.equal(startSlot, "incorrect start slot");
     // after random subnet expiration but before the next epoch
     const tcSubscription = {
       ...subscription,
