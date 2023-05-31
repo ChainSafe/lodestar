@@ -156,8 +156,15 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const {peerId, enr} = await initPeerIdAndEnr(args, beaconPaths.beaconDir, logger);
   // Inject ENR to beacon options
   beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
-  // Add simple version string for libp2p agent version
-  beaconNodeOptions.set({network: {version: version.split("/")[0]}});
+
+  if (args.private) {
+    beaconNodeOptions.set({network: {private: true}});
+  } else {
+    // Add simple version string for libp2p agent version
+    beaconNodeOptions.set({network: {version: version.split("/")[0]}});
+    // Casting to `as string` so that if version type changes this line does not compile
+    beaconNodeOptions.set({executionBuilder: {userAgent: `Lodestar/${getVersionData().version as string}`}});
+  }
 
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();

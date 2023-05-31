@@ -26,7 +26,6 @@ export type NetworkArgs = {
   "network.rateLimitMultiplier": number;
   "network.maxGossipTopicConcurrency"?: number;
   "network.useWorker": boolean;
-  "network.private": boolean;
 
   /** @deprecated This option is deprecated and should be removed in next major release. */
   "network.requestCountPeerLimit": number;
@@ -78,7 +77,6 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     rateLimitMultiplier: args["network.rateLimitMultiplier"],
     maxGossipTopicConcurrency: args["network.maxGossipTopicConcurrency"],
     useWorker: args["network.useWorker"],
-    private: args["network.private"],
   };
 }
 
@@ -266,13 +264,6 @@ export const options: CliCommandOptions<NetworkArgs> = {
   "network.useWorker": {
     type: "boolean",
     hidden: true,
-    group: "network",
-  },
-
-  "network.private": {
-    description: "Do not send implementation and version name over p2p identify protocol",
-    type: "boolean",
-    alias: ["private"],
     group: "network",
   },
 };

@@ -17,6 +17,7 @@ type BeaconExtraArgs = {
   persistInvalidSszObjectsDir?: string;
   peerStoreDir?: string;
   persistNetworkIdentity?: boolean;
+  private?: boolean;
 };
 
 export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
@@ -95,6 +96,11 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   persistNetworkIdentity: {
     hidden: true,
     description: "Whether to reuse the same peer-id across restarts",
+    type: "boolean",
+  },
+
+  private: {
+    description: "Do not send implementation and version name over p2p identify protocol and builder requests",
     type: "boolean",
   },
 };
