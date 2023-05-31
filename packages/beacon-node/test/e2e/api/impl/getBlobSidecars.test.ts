@@ -4,7 +4,7 @@ import {ssz} from "@lodestar/types";
 import {GENESIS_SLOT} from "@lodestar/params";
 
 import {setupApiImplTestServer, ApiImplTestModules} from "../../../unit/api/impl/index.test.js";
-import {zeroProtoBlock} from "../../../utils/mocks/chain/chain.js";
+import {zeroProtoBlock} from "../../../utils/mocks/chain.js";
 
 describe("getBlobSideCar", function () {
   let server: ApiImplTestModules;
