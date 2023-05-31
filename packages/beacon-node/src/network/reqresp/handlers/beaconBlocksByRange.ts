@@ -55,6 +55,7 @@ export async function* onBlocksOrBlobSidecarsByRange(
     const headRoot = chain.forkChoice.getHeadRoot();
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
+    // getAllAncestorBlocks response includes the head node, so it's the full chain.
 
     // Iterate head chain with ascending block numbers
     for (let i = headChain.length - 1; i >= 0; i--) {

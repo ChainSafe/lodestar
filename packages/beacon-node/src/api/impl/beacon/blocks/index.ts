@@ -99,9 +99,9 @@ export function getBeaconBlockApi({
           return {executionOptimistic: false, data: []};
         }
         const canonicalRoot = config
-          .getForkTypes(canonicalBlock.message.slot)
-          .BeaconBlock.hashTreeRoot(canonicalBlock.message);
-        result.push(toBeaconHeaderResponse(config, canonicalBlock, true));
+          .getForkTypes(canonicalBlock.block.message.slot)
+          .BeaconBlock.hashTreeRoot(canonicalBlock.block.message);
+        result.push(toBeaconHeaderResponse(config, canonicalBlock.block, true));
 
         // fork blocks
         // TODO: What is this logic?
@@ -128,7 +128,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlockHeader(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: toBeaconHeaderResponse(config, block, true),
@@ -136,14 +136,14 @@ export function getBeaconBlockApi({
     },
 
     async getBlock(blockId) {
-      const {block} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block} = await resolveBlockId(chain, blockId);
       return {
         data: block,
       };
     },
 
     async getBlockV2(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: block,
@@ -152,7 +152,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlockAttestations(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: Array.from(block.message.body.attestations),
@@ -188,7 +188,7 @@ export function getBeaconBlockApi({
       }
 
       // Slow path
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: {root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)},
@@ -268,7 +268,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlobSidecars(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
 
       let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
