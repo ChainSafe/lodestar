@@ -162,7 +162,7 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   } else {
     // Add simple version string for libp2p agent version
     beaconNodeOptions.set({network: {version: version.split("/")[0]}});
-    // Casting to `as string` so that if version type changes this line does not compile
+    // Add User-Agent header to all builder requests
     beaconNodeOptions.set({executionBuilder: {userAgent: `Lodestar/${version}`}});
   }
 
