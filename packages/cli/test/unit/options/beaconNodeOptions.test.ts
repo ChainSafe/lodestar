@@ -53,7 +53,6 @@ describe("options / beaconNodeOptions", () => {
       "builder.timeout": 12000,
       "builder.faultInspectionWindow": 32,
       "builder.allowedFaults": 16,
-      "builder.userAgent": "lodestar/-",
 
       metrics: true,
       "metrics.port": 8765,
@@ -148,7 +147,6 @@ describe("options / beaconNodeOptions", () => {
         timeout: 12000,
         faultInspectionWindow: 32,
         allowedFaults: 16,
-        userAgent: "lodestar/-",
       },
       metrics: {
         enabled: true,
