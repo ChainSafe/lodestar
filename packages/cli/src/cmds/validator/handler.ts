@@ -9,7 +9,12 @@ import {
   BuilderSelection,
 } from "@lodestar/validator";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
-import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer, MonitoringService} from "@lodestar/beacon-node";
+import {
+  RegistryMetricCreator,
+  collectNodeJSMetrics,
+  getHttpMetricsServer,
+  MonitoringService,
+} from "@lodestar/beacon-node";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
@@ -122,10 +127,9 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
     if (args["metrics"]) {
       const port = args["metrics.port"] ?? validatorMetricsDefaultOptions.port;
       const address = args["metrics.address"] ?? validatorMetricsDefaultOptions.address;
-      const metricsServer = new HttpMetricsServer({port, address}, {register, logger});
+      const metricsServer = await getHttpMetricsServer({port, address}, {register, logger});
 
-      onGracefulShutdownCbs.push(() => metricsServer.stop());
-      await metricsServer.start();
+      onGracefulShutdownCbs.push(() => metricsServer.close());
     }
   }
 
@@ -144,8 +148,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       {register: register as RegistryMetricCreator, logger}
     );
 
-    onGracefulShutdownCbs.push(() => monitoring.stop());
-    monitoring.start();
+    onGracefulShutdownCbs.push(() => monitoring.close());
   }
 
   // This promise resolves once genesis is available.
@@ -190,6 +193,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
         port: args["keymanager.port"],
         cors: args["keymanager.cors"],
         isAuthEnabled: args["keymanager.authEnabled"],
+        headerLimit: args["keymanager.headerLimit"],
         bodyLimit: args["keymanager.bodyLimit"],
         tokenDir: dbPath,
       },

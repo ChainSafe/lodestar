@@ -5,18 +5,18 @@ import {
   AttesterStatus,
   toAttesterFlags,
 } from "../../../src/index.js";
-import {CachedBeaconStatePhase0, CachedBeaconStateAltair, EpochProcess} from "../../../src/types.js";
+import {CachedBeaconStatePhase0, CachedBeaconStateAltair, EpochTransitionCache} from "../../../src/types.js";
 
 /**
- * Generate an incomplete EpochProcess to simulate any network condition relevant to getAttestationDeltas
+ * Generate an incomplete EpochTransitionCache to simulate any network condition relevant to getAttestationDeltas
  * @param isInInactivityLeak true if in inactivity leak
  * @param flagFactors factor (0,1) of validators that have that flag set to true
  */
-export function generateBalanceDeltasEpochProcess(
+export function generateBalanceDeltasEpochTransitionCache(
   state: CachedBeaconStatePhase0 | CachedBeaconStateAltair,
   isInInactivityLeak: boolean,
   flagFactors: FlagFactors
-): EpochProcess {
+): EpochTransitionCache {
   const vc = state.validators.length;
 
   const statuses = generateStatuses(state.validators.length, flagFactors);
@@ -27,7 +27,7 @@ export function generateBalanceDeltasEpochProcess(
     }
   }
 
-  const epochProcess: Partial<EpochProcess> = {
+  const cache: Partial<EpochTransitionCache> = {
     statuses,
     eligibleValidatorIndices,
     totalActiveStakeByIncrement: vc,
@@ -40,7 +40,7 @@ export function generateBalanceDeltasEpochProcess(
     prevEpoch: isInInactivityLeak ? state.finalizedCheckpoint.epoch - 500 : state.finalizedCheckpoint.epoch,
   };
 
-  return epochProcess as EpochProcess;
+  return cache as EpochTransitionCache;
 }
 
 export type FlagFactors = Record<keyof AttesterFlags, number> | number;

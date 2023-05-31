@@ -12,14 +12,14 @@ export function onBeaconBlocksByRange(
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
-  return onBlocksOrBlobsSidecarsByRange(request, chain, {
+  return onBlocksOrBlobSidecarsByRange(request, chain, {
     finalized: db.blockArchive,
     unfinalized: db.block,
   });
 }
 
-export async function* onBlocksOrBlobsSidecarsByRange(
-  request: deneb.BlobsSidecarsByRangeRequest,
+export async function* onBlocksOrBlobSidecarsByRange(
+  request: phase0.BeaconBlocksByRangeRequest,
   chain: IBeaconChain,
   db: {
     finalized: Pick<IBeaconDb["blockArchive"], "binaryEntriesStream" | "decodeKey">;
@@ -55,6 +55,7 @@ export async function* onBlocksOrBlobsSidecarsByRange(
     const headRoot = chain.forkChoice.getHeadRoot();
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
+    // getAllAncestorBlocks response includes the head node, so it's the full chain.
 
     // Iterate head chain with ascending block numbers
     for (let i = headChain.length - 1; i >= 0; i--) {
@@ -88,8 +89,8 @@ export async function* onBlocksOrBlobsSidecarsByRange(
 }
 
 export function validateBeaconBlocksByRangeRequest(
-  request: deneb.BlobsSidecarsByRangeRequest
-): deneb.BlobsSidecarsByRangeRequest {
+  request: deneb.BlobSidecarsByRangeRequest
+): deneb.BlobSidecarsByRangeRequest {
   const {startSlot} = request;
   let {count} = request;
 

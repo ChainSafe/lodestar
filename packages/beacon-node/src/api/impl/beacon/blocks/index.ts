@@ -10,14 +10,19 @@ import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {allForks, deneb} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../../chain/blocks/types.js";
+import {
+  BlockSource,
+  getBlockInput,
+  ImportBlockOpts,
+  BlockInput,
+  blobSidecarsToBlobsSidecar,
+} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
 import {OpSource} from "../../../../metrics/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
 import {ApiModules} from "../../types.js";
-import {ckzg} from "../../../../util/kzg.js";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
 
 /**
@@ -94,9 +99,9 @@ export function getBeaconBlockApi({
           return {executionOptimistic: false, data: []};
         }
         const canonicalRoot = config
-          .getForkTypes(canonicalBlock.message.slot)
-          .BeaconBlock.hashTreeRoot(canonicalBlock.message);
-        result.push(toBeaconHeaderResponse(config, canonicalBlock, true));
+          .getForkTypes(canonicalBlock.block.message.slot)
+          .BeaconBlock.hashTreeRoot(canonicalBlock.block.message);
+        result.push(toBeaconHeaderResponse(config, canonicalBlock.block, true));
 
         // fork blocks
         // TODO: What is this logic?
@@ -123,7 +128,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlockHeader(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: toBeaconHeaderResponse(config, block, true),
@@ -131,14 +136,14 @@ export function getBeaconBlockApi({
     },
 
     async getBlock(blockId) {
-      const {block} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block} = await resolveBlockId(chain, blockId);
       return {
         data: block,
       };
     },
 
     async getBlockV2(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: block,
@@ -147,7 +152,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlockAttestations(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: Array.from(block.message.body.attestations),
@@ -183,7 +188,7 @@ export function getBeaconBlockApi({
       }
 
       // Slow path
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: {root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)},
@@ -213,21 +218,18 @@ export function getBeaconBlockApi({
       if (isSignedBlockContents(signedBlockOrContents)) {
         // Build a blockInput for post deneb, signedBlobs will be be used in followup PRs
         ({signedBlock, signedBlobSidecars: signedBlobs} = signedBlockOrContents as SignedBlockContents);
-        const beaconBlockSlot = signedBlock.message.slot;
-        const beaconBlockRoot = config.getForkTypes(beaconBlockSlot).BeaconBlock.hashTreeRoot(signedBlock.message);
-        const blobs = signedBlobs.map((sblob) => sblob.message.blob);
+        const blobsSidecar = blobSidecarsToBlobsSidecar(
+          config,
+          signedBlock,
+          signedBlobs.map(({message}) => message)
+        );
 
         blockForImport = getBlockInput.postDeneb(
           config,
           signedBlock,
           BlockSource.api,
           // The blobsSidecar will be replaced in the followup PRs with just blobs
-          {
-            beaconBlockRoot,
-            beaconBlockSlot,
-            blobs,
-            kzgAggregatedProof: ckzg.computeAggregateKzgProof(blobs),
-          }
+          blobsSidecar
         );
       } else {
         signedBlock = signedBlockOrContents as allForks.SignedBeaconBlock;
@@ -266,7 +268,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlobSidecars(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
 
       let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};

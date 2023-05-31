@@ -1,7 +1,8 @@
 import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
-import {Bucket, encodeKey, DatabaseApiOptions, DbReqOpts, getBucketNameByValue} from "@lodestar/db";
+import {encodeKey, DatabaseApiOptions, DbReqOpts} from "@lodestar/db";
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {LodestarValidatorDatabaseController} from "../../types.js";
+import {Bucket, getBucketNameByValue} from "../../buckets.js";
 
 // Only used locally here
 export interface SlashingProtectionLowerBound {
@@ -16,10 +17,10 @@ export interface SlashingProtectionLowerBound {
 export class AttestationLowerBoundRepository {
   protected type: Type<SlashingProtectionLowerBound>;
   protected db: LodestarValidatorDatabaseController;
-  protected bucket = Bucket.phase0_slashingProtectionAttestationLowerBound;
+  protected bucket = Bucket.slashingProtectionAttestationLowerBound;
 
-  private readonly bucketId: string;
-  private readonly dbReqOpts: DbReqOpts;
+  private readonly bucketId = getBucketNameByValue(this.bucket);
+  private readonly dbReqOpts: DbReqOpts = {bucketId: this.bucketId};
 
   constructor(opts: DatabaseApiOptions) {
     this.db = opts.controller;
@@ -27,7 +28,6 @@ export class AttestationLowerBoundRepository {
       minSourceEpoch: ssz.Epoch,
       minTargetEpoch: ssz.Epoch,
     }); // casing doesn't matter
-    this.bucketId = getBucketNameByValue(this.bucket);
     this.dbReqOpts = {bucketId: this.bucketId};
   }
 

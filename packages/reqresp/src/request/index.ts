@@ -5,6 +5,7 @@ import {Uint8ArrayList} from "uint8arraylist";
 import {ErrorAborted, Logger, withTimeout, TimeoutError} from "@lodestar/utils";
 import {MixedProtocol, ResponseIncoming} from "../types.js";
 import {prettyPrintPeerId, abortableSource} from "../utils/index.js";
+import {Metrics} from "../metrics.js";
 import {ResponseError} from "../response/index.js";
 import {requestEncode} from "../encoders/requestEncode.js";
 import {responseDecode} from "../encoders/responseDecode.js";
@@ -32,6 +33,7 @@ export interface SendRequestOpts {
 type SendRequestModules = {
   logger: Logger;
   libp2p: Libp2p;
+  metrics: Metrics | null;
   peerClient?: string;
 };
 
@@ -47,7 +49,7 @@ type SendRequestModules = {
  *    - The maximum number of requested chunks are read. Does not throw, returns read chunks only.
  */
 export async function* sendRequest(
-  {logger, libp2p, peerClient}: SendRequestModules,
+  {logger, libp2p, metrics, peerClient}: SendRequestModules,
   peerId: PeerId,
   protocols: MixedProtocol[],
   protocolIDs: string[],
@@ -109,6 +111,9 @@ export async function* sendRequest(
         throw new RequestError({code: RequestErrorCode.DIAL_ERROR, error: e as Error});
       }
     });
+
+    // TODO: Does the TTFB timer start on opening stream or after receiving request
+    const timerTTFB = metrics?.outgoingResponseTTFB.startTimer({method});
 
     // Parse protocol selected by the responder
     const protocolId = stream.stat.protocol ?? "unknown";
@@ -177,6 +182,7 @@ export async function* sendRequest(
           onFirstHeader() {
             // On first byte, cancel the single use TTFB_TIMEOUT, and start RESP_TIMEOUT
             clearTimeout(timeoutTTFB);
+            timerTTFB?.();
             restartRespTimeout();
           },
           onFirstResponseChunk() {

@@ -54,7 +54,7 @@
     "test": "yarn test:unit && yarn test:e2e",
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test:browsers": "yarn karma start karma.config.cjs",
-    "test:e2e": "mocha 'test/e2e/**/*.test.ts'",
+    "test:e2e": "LODESTAR_PRESET=minimal mocha 'test/e2e/**/*.test.ts'",
     "check-readme": "typescript-docs-verifier",
     "generate-fixtures": "npx ts-node --esm scripts/generate_fixtures.ts"
   },

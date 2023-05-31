@@ -12,7 +12,7 @@ import {Bytes32, phase0, Root, ssz, TimeSeconds} from "@lodestar/types";
 import {CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
-import {EpochContextImmutableData} from "../cache/epochContext.js";
+import {EpochCacheImmutableData} from "../cache/epochCache.js";
 import {processDeposit} from "../block/processDeposit.js";
 import {computeEpochAtSlot} from "./epoch.js";
 import {getActiveValidatorIndices} from "./validator.js";
@@ -205,7 +205,7 @@ export function applyDeposits(
  */
 export function initializeBeaconStateFromEth1(
   config: ChainForkConfig,
-  immutableData: EpochContextImmutableData,
+  immutableData: EpochCacheImmutableData,
   eth1BlockHash: Bytes32,
   eth1Timestamp: TimeSeconds,
   deposits: phase0.Deposit[],

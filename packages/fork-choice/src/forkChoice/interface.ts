@@ -37,8 +37,19 @@ export type AncestorResult =
   | {code: AncestorStatus.NoCommonAncenstor}
   | {code: AncestorStatus.BlockUnknown};
 
+export type ForkChoiceMetrics = {
+  votes: number;
+  queuedAttestations: number;
+  validatedAttestationDatas: number;
+  balancesLength: number;
+  nodes: number;
+  indices: number;
+};
+
 export interface IForkChoice {
   irrecoverableError?: Error;
+
+  getMetrics(): ForkChoiceMetrics;
   /**
    * Returns the block root of an ancestor of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)
@@ -137,6 +148,11 @@ export interface IForkChoice {
    */
   hasBlock(blockRoot: Root): boolean;
   hasBlockHex(blockRoot: RootHex): boolean;
+  /**
+   * Same to hasBlock, but without checking if the block is a descendant of the finalized root.
+   */
+  hasBlockUnsafe(blockRoot: Root): boolean;
+  hasBlockHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.

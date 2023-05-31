@@ -1,6 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {phase0, ssz} from "@lodestar/types";
-import {Db, Bucket, Repository} from "@lodestar/db";
+import {Db, Repository} from "@lodestar/db";
+import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**
  * DepositData indexed by deposit index
@@ -8,7 +9,8 @@ import {Db, Bucket, Repository} from "@lodestar/db";
  */
 export class DepositEventRepository extends Repository<number, phase0.DepositEvent> {
   constructor(config: ChainForkConfig, db: Db) {
-    super(config, db, Bucket.phase0_depositEvent, ssz.phase0.DepositEvent);
+    const bucket = Bucket.phase0_depositEvent;
+    super(config, db, bucket, ssz.phase0.DepositEvent, getBucketNameByValue(bucket));
   }
 
   async deleteOld(depositCount: number): Promise<void> {

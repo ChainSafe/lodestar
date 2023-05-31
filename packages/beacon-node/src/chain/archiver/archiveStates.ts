@@ -35,7 +35,7 @@ export class StatesArchiver {
   /**
    * Persist states every some epochs to
    * - Minimize disk space, storing the least states possible
-   * - Minimize the sync progress lost on unexpected crash, storing last finalized always
+   * - Minimize the sync progress lost on unexpected crash, storing temp state every few epochs
    *
    * At epoch `e` there will be states peristed at intervals of `PERSIST_STATE_EVERY_EPOCHS` = 32
    * and one at `PERSIST_TEMP_STATE_EVERY_EPOCHS` = 1024
@@ -43,41 +43,38 @@ export class StatesArchiver {
    *        |                |             |           .
    * epoch - 1024*2    epoch - 1024    epoch - 32    epoch
    * ```
-   *
-   * An extra last finalized state is stored which might be cleaned up in next archiving cycle
-   * if there is already a previous state in the `PERSIST_STATE_EVERY_EPOCHS` window
    */
   async maybeArchiveState(finalized: CheckpointWithHex): Promise<void> {
     const lastStoredSlot = await this.db.stateArchive.lastKey();
     const lastStoredEpoch = computeEpochAtSlot(lastStoredSlot ?? 0);
     const {archiveStateEpochFrequency} = this.opts;
 
-    // If the new big window has started, we need to cleanup on the big interval archiveStateEpochFrequency(1024)
-    // else we need to cleanup within the small PERSIST_TEMP_STATE_EVERY_EPOCHS interval
-    const frequency =
-      Math.floor(lastStoredEpoch / archiveStateEpochFrequency) <
-      Math.floor(finalized.epoch / archiveStateEpochFrequency)
-        ? archiveStateEpochFrequency
-        : PERSIST_TEMP_STATE_EVERY_EPOCHS;
+    if (finalized.epoch - lastStoredEpoch > Math.min(PERSIST_TEMP_STATE_EVERY_EPOCHS, archiveStateEpochFrequency)) {
+      await this.archiveState(finalized);
 
-    // Only check the current and previous intervals
-    const minEpoch = Math.max(0, (Math.floor(finalized.epoch / frequency) - 1) * frequency);
+      // Only check the current and previous intervals
+      const minEpoch = Math.max(
+        0,
+        (Math.floor(finalized.epoch / archiveStateEpochFrequency) - 1) * archiveStateEpochFrequency
+      );
 
-    const storedStateSlots = await this.db.stateArchive.keys({
-      lt: computeStartSlotAtEpoch(finalized.epoch),
-      gte: computeStartSlotAtEpoch(minEpoch),
-    });
-    const stateSlotsToDelete = computeStateSlotsToDelete(storedStateSlots, frequency);
+      const storedStateSlots = await this.db.stateArchive.keys({
+        lt: computeStartSlotAtEpoch(finalized.epoch),
+        gte: computeStartSlotAtEpoch(minEpoch),
+      });
 
-    // 1. Always archive latest state so as to allow restarts to happen from last finalized.
-    //    It will be cleaned up next cycle even if it results into two states for this interval
-    //
-    // 2. Delete the states only after storing the latest finalized so as to prevent any race in non
-    //    availability of finalized state to boot from
-    //
-    await this.archiveState(finalized);
-    if (stateSlotsToDelete.length > 0) {
-      await this.db.stateArchive.batchDelete(stateSlotsToDelete);
+      const statesSlotsToDelete = computeStateSlotsToDelete(storedStateSlots, archiveStateEpochFrequency);
+      if (statesSlotsToDelete.length > 0) {
+        await this.db.stateArchive.batchDelete(statesSlotsToDelete);
+      }
+
+      // More logs to investigate the rss spike issue https://github.com/ChainSafe/lodestar/issues/5591
+      this.logger.verbose("Archived state completed", {
+        finalizedEpoch: finalized.epoch,
+        minEpoch,
+        storedStateSlots: storedStateSlots.join(","),
+        statesSlotsToDelete: statesSlotsToDelete.join(","),
+      });
     }
   }
 
@@ -92,7 +89,7 @@ export class StatesArchiver {
     }
     await this.db.stateArchive.put(finalizedState.slot, finalizedState);
     // don't delete states before the finalized state, auto-prune will take care of it
-    this.logger.verbose("Archive states completed", {finalizedEpoch: finalized.epoch});
+    this.logger.verbose("Archived finalized state", {finalizedEpoch: finalized.epoch});
   }
 }
 

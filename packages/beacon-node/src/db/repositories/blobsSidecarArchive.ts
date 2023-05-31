@@ -1,7 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, Repository, KeyValue, FilterOptions, Bucket} from "@lodestar/db";
+import {Db, Repository, KeyValue, FilterOptions} from "@lodestar/db";
 import {Slot, Root, ssz, deneb} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
+import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 export interface BlockFilterOptions extends FilterOptions<Slot> {
   step?: number;
@@ -18,7 +19,8 @@ export type BlockArchiveBatchPutBinaryItem = KeyValue<Slot, Uint8Array> & {
  */
 export class BlobsSidecarArchiveRepository extends Repository<Slot, deneb.BlobsSidecar> {
   constructor(config: ChainForkConfig, db: Db) {
-    super(config, db, Bucket.allForks_blobsSidecarArchive, ssz.deneb.BlobsSidecar);
+    const bucket = Bucket.allForks_blobsSidecarArchive;
+    super(config, db, bucket, ssz.deneb.BlobsSidecar, getBucketNameByValue(bucket));
   }
 
   // Handle key as slot

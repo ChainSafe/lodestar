@@ -11,6 +11,7 @@ import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {wireEventsOnMainThread} from "../../util/workerEvents.js";
+import {Metrics} from "../../metrics/index.js";
 import {IncomingRequestArgs, OutgoingRequestArgs, GetReqRespHandlerFn} from "../reqresp/types.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {CommitteeSubscription} from "../subnets/interface.js";
@@ -28,7 +29,7 @@ import {
 } from "./events.js";
 
 export type WorkerNetworkCoreOpts = NetworkOptions & {
-  metrics: boolean;
+  metricsEnabled: boolean;
   peerStoreDir?: string;
   activeValidatorCount: number;
   genesisTime: number;
@@ -41,6 +42,7 @@ export type WorkerNetworkCoreInitModules = {
   logger: LoggerNode;
   peerId: PeerId;
   events: NetworkEventBus;
+  metrics: Metrics | null;
   getReqRespHandler: GetReqRespHandlerFn;
 };
 
@@ -78,11 +80,18 @@ export class WorkerNetworkCore implements INetworkCore {
       modules.worker as unknown as worker_threads.Worker,
       reqRespBridgeEventDirection
     );
+
+    const {metrics} = modules;
+    if (metrics) {
+      metrics.networkWorkerHandler.reqRespBridgeReqCallerPending.addCollect(() => {
+        metrics.networkWorkerHandler.reqRespBridgeReqCallerPending.set(this.reqRespBridgeReqCaller.pendingCount);
+      });
+    }
   }
 
   static async init(modules: WorkerNetworkCoreInitModules): Promise<WorkerNetworkCore> {
     const {opts, config, peerId} = modules;
-    const {genesisTime, peerStoreDir, activeValidatorCount, localMultiaddrs, metrics, initialStatus} = opts;
+    const {genesisTime, peerStoreDir, activeValidatorCount, localMultiaddrs, metricsEnabled, initialStatus} = opts;
 
     const workerData: NetworkWorkerData = {
       opts,
@@ -90,7 +99,7 @@ export class WorkerNetworkCore implements INetworkCore {
       genesisValidatorsRoot: config.genesisValidatorsRoot,
       peerIdProto: exportToProtobuf(peerId),
       localMultiaddrs,
-      metrics,
+      metricsEnabled,
       peerStoreDir,
       genesisTime,
       initialStatus,
@@ -117,7 +126,9 @@ export class WorkerNetworkCore implements INetworkCore {
 
   async close(): Promise<void> {
     await this.getApi().close();
+    this.modules.logger.debug("terminating network worker");
     await Thread.terminate(this.modules.workerApi as unknown as Thread);
+    this.modules.logger.debug("terminated network worker");
   }
 
   async test(): Promise<void> {

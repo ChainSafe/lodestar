@@ -39,6 +39,7 @@ import {
   EpochDifference,
   AncestorResult,
   AncestorStatus,
+  ForkChoiceMetrics,
 } from "./interface.js";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
 
@@ -110,6 +111,17 @@ export class ForkChoice implements IForkChoice {
   ) {
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
+  }
+
+  getMetrics(): ForkChoiceMetrics {
+    return {
+      votes: this.votes.length,
+      queuedAttestations: this.queuedAttestations.size,
+      validatedAttestationDatas: this.validatedAttestationDatas.size,
+      balancesLength: this.balances.length,
+      nodes: this.protoArray.nodes.length,
+      indices: this.protoArray.indices.size,
+    };
   }
 
   /**
@@ -582,6 +594,20 @@ export class ForkChoice implements IForkChoice {
    */
   hasBlockHex(blockRoot: RootHex): boolean {
     return this.protoArray.hasBlock(blockRoot) && this.isDescendantOfFinalized(blockRoot);
+  }
+
+  /**
+   * Same to hasBlock but without checking if the block is a descendant of the finalized root.
+   */
+  hasBlockUnsafe(blockRoot: Root): boolean {
+    return this.hasBlockHexUnsafe(toHexString(blockRoot));
+  }
+
+  /**
+   * Same to hasBlockHex but without checking if the block is a descendant of the finalized root.
+   */
+  hasBlockHexUnsafe(blockRoot: RootHex): boolean {
+    return this.protoArray.hasBlock(blockRoot);
   }
 
   /**
