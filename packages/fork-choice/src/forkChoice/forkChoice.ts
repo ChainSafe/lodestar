@@ -39,6 +39,7 @@ import {
   EpochDifference,
   AncestorResult,
   AncestorStatus,
+  ForkChoiceMetrics,
 } from "./interface.js";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
 
@@ -110,6 +111,17 @@ export class ForkChoice implements IForkChoice {
   ) {
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
+  }
+
+  getMetrics(): ForkChoiceMetrics {
+    return {
+      votes: this.votes.length,
+      queuedAttestations: this.queuedAttestations.size,
+      validatedAttestationDatas: this.validatedAttestationDatas.size,
+      balancesLength: this.balances.length,
+      nodes: this.protoArray.nodes.length,
+      indices: this.protoArray.indices.size,
+    };
   }
 
   /**

@@ -285,7 +285,9 @@ export class BeaconChain implements IBeaconChain {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
     }
 
-    metrics?.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics());
+    if (metrics) {
+      metrics.opPool.aggregatedAttestationPoolSize.addCollect(() => this.onScrapeMetrics(metrics));
+    }
 
     // Event handlers. emitter is created internally and dropped on close(). Not need to .removeListener()
     clock.addListener(ClockEvent.slot, this.onClockSlot.bind(this));
@@ -432,16 +434,43 @@ export class BeaconChain implements IBeaconChain {
     return data && {state: data, executionOptimistic: false};
   }
 
-  async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
+  async getCanonicalBlockAtSlot(
+    slot: Slot
+  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null> {
     const finalizedBlock = this.forkChoice.getFinalizedBlock();
-    if (finalizedBlock.slot > slot) {
-      return this.db.blockArchive.get(slot);
+    if (slot > finalizedBlock.slot) {
+      // Unfinalized slot, attempt to find in fork-choice
+      const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
+      if (block) {
+        const data = await this.db.block.get(fromHexString(block.blockRoot));
+        if (data) {
+          return {block: data, executionOptimistic: isOptimisticBlock(block)};
+        }
+      }
+      // A non-finalized slot expected to be found in the hot db, could be archived during
+      // this function runtime, so if not found in the hot db, fallback to the cold db
+      // TODO: Add a lock to the archiver to have determinstic behaviour on where are blocks
     }
-    const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
-    if (!block) {
-      return null;
+
+    const data = await this.db.blockArchive.get(slot);
+    return data && {block: data, executionOptimistic: false};
+  }
+
+  async getBlockByRoot(
+    root: string
+  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null> {
+    const block = this.forkChoice.getBlockHex(root);
+    if (block) {
+      const data = await this.db.block.get(fromHexString(root));
+      if (data) {
+        return {block: data, executionOptimistic: isOptimisticBlock(block)};
+      }
+      // If block is not found in hot db, try cold db since there could be an archive cycle happening
+      // TODO: Add a lock to the archiver to have determinstic behaviour on where are blocks
     }
-    return this.db.block.get(fromHexString(block.blockRoot));
+
+    const data = await this.db.blockArchive.getByRoot(fromHexString(root));
+    return data && {block: data, executionOptimistic: false};
   }
 
   produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; blockValue: Wei}> {
@@ -717,17 +746,25 @@ export class BeaconChain implements IBeaconChain {
     this.logger.debug("Persisted invalid ssz object", {id: suffix, filepath});
   }
 
-  private onScrapeMetrics(): void {
+  private onScrapeMetrics(metrics: Metrics): void {
     const {attestationCount, attestationDataCount} = this.aggregatedAttestationPool.getAttestationCount();
-    this.metrics?.opPool.aggregatedAttestationPoolSize.set(attestationCount);
-    this.metrics?.opPool.aggregatedAttestationPoolUniqueData.set(attestationDataCount);
-    this.metrics?.opPool.attestationPoolSize.set(this.attestationPool.getAttestationCount());
-    this.metrics?.opPool.attesterSlashingPoolSize.set(this.opPool.attesterSlashingsSize);
-    this.metrics?.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
-    this.metrics?.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
-    this.metrics?.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
-    this.metrics?.opPool.syncContributionAndProofPoolSize.set(this.syncContributionAndProofPool.size);
-    this.metrics?.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
+    metrics.opPool.aggregatedAttestationPoolSize.set(attestationCount);
+    metrics.opPool.aggregatedAttestationPoolUniqueData.set(attestationDataCount);
+    metrics.opPool.attestationPoolSize.set(this.attestationPool.getAttestationCount());
+    metrics.opPool.attesterSlashingPoolSize.set(this.opPool.attesterSlashingsSize);
+    metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
+    metrics.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
+    metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
+    metrics.opPool.syncContributionAndProofPoolSize.set(this.syncContributionAndProofPool.size);
+    metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
+
+    const forkChoiceMetrics = this.forkChoice.getMetrics();
+    metrics.forkChoice.votes.set(forkChoiceMetrics.votes);
+    metrics.forkChoice.queuedAttestations.set(forkChoiceMetrics.queuedAttestations);
+    metrics.forkChoice.validatedAttestationDatas.set(forkChoiceMetrics.validatedAttestationDatas);
+    metrics.forkChoice.balancesLength.set(forkChoiceMetrics.balancesLength);
+    metrics.forkChoice.nodes.set(forkChoiceMetrics.nodes);
+    metrics.forkChoice.indices.set(forkChoiceMetrics.indices);
   }
 
   private onClockSlot(slot: Slot): void {
