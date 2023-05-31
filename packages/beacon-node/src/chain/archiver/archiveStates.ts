@@ -67,6 +67,14 @@ export class StatesArchiver {
       if (statesSlotsToDelete.length > 0) {
         await this.db.stateArchive.batchDelete(statesSlotsToDelete);
       }
+
+      // More logs to investigate the rss spike issue https://github.com/ChainSafe/lodestar/issues/5591
+      this.logger.verbose("Archived state completed", {
+        finalizedEpoch: finalized.epoch,
+        minEpoch,
+        storedStateSlots: storedStateSlots.join(","),
+        statesSlotsToDelete: statesSlotsToDelete.join(","),
+      });
     }
   }
 
@@ -81,7 +89,7 @@ export class StatesArchiver {
     }
     await this.db.stateArchive.put(finalizedState.slot, finalizedState);
     // don't delete states before the finalized state, auto-prune will take care of it
-    this.logger.verbose("Archive states completed", {finalizedEpoch: finalized.epoch});
+    this.logger.verbose("Archived finalized state", {finalizedEpoch: finalized.epoch});
   }
 }
 
