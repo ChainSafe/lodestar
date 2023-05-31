@@ -73,11 +73,10 @@ describe("AttnetsService", function () {
       randBetweenFn,
       shuffleFn: shuffleFn as ShuffleFn,
     });
-    service.start();
   });
 
   afterEach(() => {
-    service.stop();
+    service.close();
     sandbox.restore();
     randomSubnet = 0;
   });

@@ -176,10 +176,7 @@ export class PeerManager {
     if (metrics) {
       metrics.peers.addCollect(() => this.runPeerCountMetrics(metrics));
     }
-  }
 
-  async start(): Promise<void> {
-    await this.discovery?.start();
     this.libp2p.connectionManager.addEventListener(Libp2pEvent.peerConnect, this.onLibp2pPeerConnect);
     this.libp2p.connectionManager.addEventListener(Libp2pEvent.peerDisconnect, this.onLibp2pPeerDisconnect);
     this.networkEventBus.on(NetworkEvent.reqRespRequest, this.onRequest);
@@ -196,7 +193,11 @@ export class PeerManager {
     ];
   }
 
-  async stop(): Promise<void> {
+  async startDiscovery(): Promise<void> {
+    await this.discovery?.start();
+  }
+
+  async close(): Promise<void> {
     await this.discovery?.stop();
     this.libp2p.connectionManager.removeEventListener(Libp2pEvent.peerConnect, this.onLibp2pPeerConnect);
     this.libp2p.connectionManager.removeEventListener(Libp2pEvent.peerDisconnect, this.onLibp2pPeerDisconnect);
