@@ -79,6 +79,10 @@ export interface CLClientGeneratorOptions<C extends CLClient = CLClient> {
   engineUrls: string[];
   engineMock: boolean;
   clientOptions: CLClientsOptions[C];
+  metrics?: {
+    host: string;
+    port: number;
+  };
 }
 
 export interface ELGeneratorGenesisOptions<E extends ELClient = ELClient> {
