@@ -20,6 +20,7 @@ import {getAttestationValidData, AttestationValidDataOpts} from "../../../utils/
 import {IStateRegenerator, RegenCaller} from "../../../../src/chain/regen/interface.js";
 import {StateRegenerator} from "../../../../src/chain/regen/regen.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/constants.js";
+import {QueuedStateRegenerator} from "../../../../src/chain/regen/queued.js";
 
 describe("chain / validation / attestation", () => {
   const vc = 64;
@@ -296,12 +297,12 @@ describe("getStateForAttestationVerification", () => {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createChainForkConfig({...defaultChainConfig, CAPELLA_FORK_EPOCH: 2});
   const sandbox = sinon.createSandbox();
-  let regenStub: SinonStubbedInstance<StateRegenerator> & StateRegenerator;
+  let regenStub: SinonStubbedInstance<QueuedStateRegenerator> & QueuedStateRegenerator;
   let chain: IBeaconChain;
 
   beforeEach(() => {
-    regenStub = sandbox.createStubInstance(StateRegenerator) as SinonStubbedInstance<StateRegenerator> &
-      StateRegenerator;
+    regenStub = sandbox.createStubInstance(QueuedStateRegenerator) as SinonStubbedInstance<QueuedStateRegenerator> &
+      QueuedStateRegenerator;
     chain = {
       config: config as BeaconConfig,
       regen: regenStub,

@@ -28,7 +28,6 @@ import {Metrics} from "../metrics/metrics.js";
 import {IClock} from "../util/clock.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
-import {StateContextCache, CheckpointStateCache} from "./stateCache/index.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {
   SeenAttesters,
@@ -80,8 +79,6 @@ export interface IBeaconChain {
   readonly forkChoice: IForkChoice;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
-  readonly stateCache: StateContextCache;
-  readonly checkpointStateCache: CheckpointStateCache;
   readonly regen: IStateRegenerator;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;

@@ -11,7 +11,7 @@ import {IBeaconChain} from "../../../src/chain/interface.js";
 import {IChainOptions} from "../../../src/chain/options.js";
 import {Clock} from "../../../src/util/clock.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
-import {StateRegenerator} from "../../../src/chain/regen/index.js";
+import {QueuedStateRegenerator} from "../../../src/chain/regen/index.js";
 import {SinonStubFn} from "../../utils/types.js";
 import {generateCachedBellatrixState} from "../../utils/state.js";
 import {BeaconProposerCache} from "../../../src/chain/beaconProposerCache.js";
@@ -31,7 +31,7 @@ describe("PrepareNextSlot scheduler", () => {
   let chainStub: StubbedChain;
   let scheduler: PrepareNextSlotScheduler;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
-  let regenStub: SinonStubbedInstance<StateRegenerator> & StateRegenerator;
+  let regenStub: SinonStubbedInstance<QueuedStateRegenerator> & QueuedStateRegenerator;
   let loggerStub: SinonStubbedInstance<LoggerNode> & LoggerNode;
   let beaconProposerCacheStub: SinonStubbedInstance<BeaconProposerCache> & BeaconProposerCache;
   let getForkStub: SinonStubFn<(typeof config)["getForkName"]>;
@@ -49,8 +49,8 @@ describe("PrepareNextSlot scheduler", () => {
     chainStub.forkChoice = forkChoiceStub;
     const emitter = new ChainEventEmitter();
     chainStub.emitter = emitter;
-    regenStub = sandbox.createStubInstance(StateRegenerator) as SinonStubbedInstance<StateRegenerator> &
-      StateRegenerator;
+    regenStub = sandbox.createStubInstance(QueuedStateRegenerator) as SinonStubbedInstance<QueuedStateRegenerator> &
+      QueuedStateRegenerator;
     chainStub.regen = regenStub;
     loggerStub = createStubbedLogger(sandbox);
     beaconProposerCacheStub = sandbox.createStubInstance(
