@@ -10,6 +10,7 @@ export * from "./logger.js";
 export * from "./object.js";
 export * from "./passphrase.js";
 export * from "./process.js";
+export * from "./pruneOldFilesInDir.js";
 export * from "./sleep.js";
 export * from "./stripOffNewlines.js";
 export * from "./types.js";

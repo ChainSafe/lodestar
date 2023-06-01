@@ -11,12 +11,22 @@ import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
-import {onGracefulShutdown, mkdir, writeFile600Perm, cleanOldLogFiles, parseLoggerArgs} from "../../util/index.js";
+import {
+  onGracefulShutdown,
+  mkdir,
+  writeFile600Perm,
+  cleanOldLogFiles,
+  parseLoggerArgs,
+  pruneOldFilesInDir,
+} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {BeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
 import {initBeaconState} from "./initBeaconState.js";
 import {initPeerIdAndEnr} from "./initPeerIdAndEnr.js";
+
+const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
+const HOURS_TO_MS = 3600 * 1000;
 
 /**
  * Runs a beacon node.
@@ -80,8 +90,28 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       metricsRegistries,
     });
 
-    if (args.attachToGlobalThis) (globalThis as unknown as {bn: BeaconNode}).bn = node;
+    // dev debug option to have access to the BN instance
+    if (args.attachToGlobalThis) {
+      (globalThis as unknown as {bn: BeaconNode}).bn = node;
+    }
 
+    // Prune invalid SSZ objects every interval
+    const {persistInvalidSszObjectsDir} = args;
+    const pruneInvalidSSZObjectsInterval = persistInvalidSszObjectsDir
+      ? setInterval(() => {
+          try {
+            pruneOldFilesInDir(
+              persistInvalidSszObjectsDir,
+              (args.persistInvalidSszObjectsRetentionHours ?? DEFAULT_RETENTION_SSZ_OBJECTS_HOURS) * HOURS_TO_MS
+            );
+          } catch (e) {
+            logger.warn("Error pruning invalid SSZ objects", {persistInvalidSszObjectsDir}, e as Error);
+          }
+          // Run every ~1 hour
+        }, HOURS_TO_MS)
+      : null;
+
+    // Intercept SIGINT signal, to perform final ops before exiting
     onGracefulShutdown(async () => {
       if (args.persistNetworkIdentity) {
         try {
@@ -93,6 +123,10 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
         }
       }
       abortController.abort();
+
+      if (pruneInvalidSSZObjectsInterval !== null) {
+        clearInterval(pruneInvalidSSZObjectsInterval);
+      }
     }, logger.info.bind(logger));
 
     abortController.signal.addEventListener(
