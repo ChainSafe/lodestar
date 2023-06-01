@@ -3,6 +3,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {Logger, prettyBytes} from "@lodestar/utils";
 import {Root, Slot, ssz} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
+import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
 import {OpSource} from "../../metrics/validatorMonitor.js";
 import {IBeaconChain} from "../../chain/index.js";
@@ -177,6 +178,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       const blockInput = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, serializedData);
       await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
       handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+
+      // Do not emit block on eventstream API, it will be emitted after successful import
     },
 
     [GossipType.blob_sidecar]: async (_data, _topic, _peerIdStr, _seenTimestampSec) => {
@@ -235,6 +238,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
           );
         }
       }
+
+      chain.emitter.emit(routes.events.EventType.attestation, signedAggregateAndProof.message.aggregate);
     },
 
     [GossipType.beacon_attestation]: async ({serializedData, msgSlot}, {subnet}, _peer, seenTimestampSec) => {
@@ -278,6 +283,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
           logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
         }
       }
+
+      chain.emitter.emit(routes.events.EventType.attestation, attestation);
     },
 
     [GossipType.attester_slashing]: async ({serializedData}, topic) => {
@@ -318,6 +325,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       } catch (e) {
         logger.error("Error adding voluntaryExit to pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
     },
 
     [GossipType.sync_committee_contribution_and_proof]: async ({serializedData}, topic) => {
@@ -340,6 +349,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       } catch (e) {
         logger.error("Error adding to contributionAndProof pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.contributionAndProof, contributionAndProof);
     },
 
     [GossipType.sync_committee]: async ({serializedData}, topic) => {
@@ -386,6 +397,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       } catch (e) {
         logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
     },
   };
 }
