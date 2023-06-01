@@ -2,19 +2,12 @@ import path from "node:path";
 import DailyRotateFile from "winston-daily-rotate-file";
 import TransportStream from "winston-transport";
 import winston from "winston";
-import {Logger, LogLevel, logLevelNum, TimestampFormat} from "./interface.js";
+import type {Logger as Winston} from "winston";
+import {Logger, LogLevel, TimestampFormat} from "./interface.js";
 import {ConsoleDynamicLevel} from "./utils/consoleTransport.js";
-import {getFormat} from "./utils/format.js";
 import {WinstonLogger} from "./winston.js";
 
 const DATE_PATTERN = "YYYY-MM-DD";
-
-/**
- * Increase max listeners of file transports to prevent `MaxListenersExceededWarning` warnings.
- * Each child logger (`logger.child`) adds a new listener. Setting a reasonable limit to still
- * detect potential memory leaks. See https://github.com/ChainSafe/lodestar/issues/5529 for details.
- */
-const FILE_TRANSPORT_MAX_LISTENERS = 20;
 
 export type LoggerNodeOpts = {
   level: LogLevel;
@@ -111,12 +104,12 @@ function getNodeLoggerTransports(opts: LoggerNodeOpts): winston.transport[] {
             handleExceptions: true,
             maxFiles: opts.file.dailyRotate,
             auditFile: path.join(path.dirname(filename), ".log_rotate_audit.json"),
-          }).setMaxListeners(FILE_TRANSPORT_MAX_LISTENERS)
+          })
         : new winston.transports.File({
             level: opts.file.level,
             filename: filename,
             handleExceptions: true,
-          }).setMaxListeners(FILE_TRANSPORT_MAX_LISTENERS)
+          })
     );
   }
 
@@ -128,36 +121,34 @@ interface DefaultMeta {
 }
 
 export class WinstonLoggerNode extends WinstonLogger implements LoggerNode {
-  constructor(private readonly opts: LoggerNodeOpts, private readonly transports: winston.transport[]) {
-    const defaultMeta: DefaultMeta = {module: opts?.module || ""};
-    super(
-      winston.createLogger({
-        // Do not set level at the logger level. Always control by Transport, unless for testLogger
-        level: opts.level,
-        defaultMeta,
-        format: getFormat(opts),
-        transports,
-        exitOnError: false,
-        levels: logLevelNum,
-      })
-    );
+  constructor(protected readonly winston: Winston, private readonly opts: LoggerNodeOpts) {
+    super(winston);
+  }
+
+  static fromOpts(opts: LoggerNodeOpts, transports: winston.transport[]): WinstonLoggerNode {
+    return new WinstonLoggerNode(this.createWinstonInstance(opts, transports), opts);
   }
 
   static fromNewTransports(opts: LoggerNodeOpts): WinstonLoggerNode {
-    return new WinstonLoggerNode(opts, getNodeLoggerTransports(opts));
+    return WinstonLoggerNode.fromOpts(opts, getNodeLoggerTransports(opts));
   }
 
-  // Return a new logger instance with different module and log level
-  // but a reference to the same transports, such that there's only one
-  // transport instance per tree of child loggers
   child(opts: LoggerNodeChildOpts): LoggerNode {
-    return new WinstonLoggerNode(
-      {
-        ...this.opts,
-        module: [this.opts?.module, opts.module].filter(Boolean).join("/"),
-      },
-      this.transports
-    );
+    const parentMeta = this.winston.defaultMeta as DefaultMeta | undefined;
+    const childModule = [parentMeta?.module, opts.module].filter(Boolean).join("/");
+    const childOpts: LoggerNodeOpts = {...this.opts, module: childModule};
+    const defaultMeta: DefaultMeta = {module: childModule};
+
+    // Same strategy as Winston's source .child.
+    // However, their implementation of child is to merge info objects where parent takes precedence, so it's
+    // impossible for child to overwrite 'module' field. Instead the winston class is cloned as defaultMeta
+    // overwritten completely.
+    // https://github.com/winstonjs/winston/blob/3f1dcc13cda384eb30fe3b941764e47a5a5efc26/lib/winston/logger.js#L47
+    const childWinston = Object.create(this.winston) as typeof this.winston;
+
+    childWinston.defaultMeta = defaultMeta;
+
+    return new WinstonLoggerNode(childWinston, childOpts);
   }
 
   toOpts(): LoggerNodeOpts {

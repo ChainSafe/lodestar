@@ -79,7 +79,7 @@ describe("winston logger", () => {
       for (const format of logFormats) {
         it(`${id} ${format} output`, async () => {
           const memoryTransport = new MemoryTransport();
-          const logger = new WinstonLoggerNode(
+          const logger = WinstonLoggerNode.fromOpts(
             {level: LogLevel.info, format, timestampFormat: {format: TimestampFormatCode.Hidden}},
             [memoryTransport]
           );
@@ -94,7 +94,7 @@ describe("winston logger", () => {
   describe("child logger", () => {
     it("Should parse child module", async () => {
       const memoryTransport = new MemoryTransport();
-      const loggerA = new WinstonLoggerNode(
+      const loggerA = WinstonLoggerNode.fromOpts(
         {level: LogLevel.info, timestampFormat: {format: TimestampFormatCode.Hidden}, module: "a"},
         [memoryTransport]
       );
