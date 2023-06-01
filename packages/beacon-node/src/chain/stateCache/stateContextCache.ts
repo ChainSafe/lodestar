@@ -122,6 +122,7 @@ export class StateContextCache {
       root: toHexString(state.hashTreeRoot()),
       reads: this.cache.readCount.get(key) ?? 0,
       lastRead: this.cache.lastRead.get(key) ?? 0,
+      checkpointState: false,
     }));
   }
 

@@ -7,8 +7,8 @@ import {IBeaconDb} from "../../db/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {IBeaconChain} from "../interface.js";
 import {ChainEvent} from "../emitter.js";
-import {CheckpointStateCache} from "../stateCache/index.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {IStateRegenerator} from "../regen/interface.js";
 import {StatesArchiver, StatesArchiverOpts} from "./archiveStates.js";
 import {archiveBlocks, FinalizedData} from "./archiveBlocks.js";
 
@@ -51,7 +51,7 @@ export class Archiver {
     opts: ArchiverOpts,
     private readonly metrics: Metrics | null
   ) {
-    this.statesArchiver = new StatesArchiver(chain.checkpointStateCache, db, logger, opts);
+    this.statesArchiver = new StatesArchiver(chain.regen, db, logger, opts);
     this.prevFinalized = chain.forkChoice.getFinalizedCheckpoint();
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
       maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN,
@@ -84,11 +84,11 @@ export class Archiver {
 
   private onCheckpoint = (): void => {
     const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
-    this.chain.checkpointStateCache.prune(
+    this.chain.regen.pruneOnCheckpoint(
       this.chain.forkChoice.getFinalizedCheckpoint().epoch,
-      this.chain.forkChoice.getJustifiedCheckpoint().epoch
+      this.chain.forkChoice.getJustifiedCheckpoint().epoch,
+      headStateRoot
     );
-    this.chain.stateCache.prune(headStateRoot);
   };
 
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
@@ -105,7 +105,7 @@ export class Archiver {
         this.chain.clock.currentEpoch
       );
       this.collectFinalizedProposalStats(
-        this.chain.checkpointStateCache,
+        this.chain.regen,
         this.chain.forkChoice,
         this.chain.beaconProposerCache,
         finalizedData,
@@ -117,8 +117,8 @@ export class Archiver {
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiver.maybeArchiveState(finalized);
 
-      this.chain.checkpointStateCache.pruneFinalized(finalizedEpoch);
-      this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch);
+      this.chain.regen.pruneOnFinalized(finalizedEpoch);
+
       // tasks rely on extended fork choice
       this.chain.forkChoice.prune(finalized.rootHex);
       await this.updateBackfillRange(finalized);
@@ -176,7 +176,7 @@ export class Archiver {
   };
 
   private collectFinalizedProposalStats(
-    checkpointStateCache: CheckpointStateCache,
+    regen: IStateRegenerator,
     forkChoice: IForkChoice,
     beaconProposerCache: IBeaconChain["beaconProposerCache"],
     finalizedData: FinalizedData,
@@ -241,7 +241,7 @@ export class Archiver {
     let finalizedAttachedValidatorsMissedCount = 0;
 
     for (const checkpointHex of finalizedProposersCheckpoints) {
-      const checkpointState = checkpointStateCache.get(checkpointHex);
+      const checkpointState = regen.getCheckpointStateSync(checkpointHex);
 
       // Generate stats for attached validators if we have state info
       if (checkpointState !== null) {

@@ -103,8 +103,6 @@ export class BeaconChain implements IBeaconChain {
   readonly forkChoice: IForkChoice;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
-  readonly stateCache: StateContextCache;
-  readonly checkpointStateCache: CheckpointStateCache;
   readonly regen: QueuedStateRegenerator;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;
@@ -260,6 +258,7 @@ export class BeaconChain implements IBeaconChain {
       checkpointStateCache,
       db,
       metrics,
+      logger,
       emitter,
       signal,
     });
@@ -274,8 +273,6 @@ export class BeaconChain implements IBeaconChain {
     this.clock = clock;
     this.regen = regen;
     this.bls = bls;
-    this.checkpointStateCache = checkpointStateCache;
-    this.stateCache = stateCache;
     this.emitter = emitter;
     this.lightClientServer = lightClientServer;
 
@@ -298,8 +295,6 @@ export class BeaconChain implements IBeaconChain {
 
   async close(): Promise<void> {
     this.abortController.abort();
-    this.stateCache.clear();
-    this.checkpointStateCache.clear();
     await this.bls.close();
   }
 
@@ -344,8 +339,7 @@ export class BeaconChain implements IBeaconChain {
   getHeadState(): CachedBeaconStateAllForks {
     // head state should always exist
     const head = this.forkChoice.getHead();
-    const headState =
-      this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
+    const headState = this.regen.getClosestHeadState(head);
     if (!headState) {
       throw Error(`headState does not exist for head root=${head.blockRoot} slot=${head.slot}`);
     }
@@ -397,7 +391,7 @@ export class BeaconChain implements IBeaconChain {
           return null;
         }
 
-        const state = this.stateCache.get(block.stateRoot);
+        const state = this.regen.getStateSync(block.stateRoot);
         return state && {state, executionOptimistic: isOptimisticBlock(block)};
       }
     } else {
@@ -424,7 +418,7 @@ export class BeaconChain implements IBeaconChain {
     // - 1 every 100s of states that are persisted in the archive state
 
     // TODO: This is very inneficient for debug requests of serialized content, since it deserializes to serialize again
-    const cachedStateCtx = this.stateCache.get(stateRoot);
+    const cachedStateCtx = this.regen.getStateSync(stateRoot);
     if (cachedStateCtx) {
       const block = this.forkChoice.getBlock(cachedStateCtx.latestBlockHeader.hashTreeRoot());
       return {state: cachedStateCtx, executionOptimistic: block != null && isOptimisticBlock(block)};
@@ -679,7 +673,7 @@ export class BeaconChain implements IBeaconChain {
     checkpoint: CheckpointWithHex,
     blockState: CachedBeaconStateAllForks
   ): {state: CachedBeaconStateAllForks; stateId: string; shouldWarn: boolean} {
-    const state = this.checkpointStateCache.get(checkpoint);
+    const state = this.regen.getCheckpointStateSync(checkpoint);
     if (state) {
       return {state, stateId: "checkpoint_state", shouldWarn: false};
     }
@@ -692,7 +686,7 @@ export class BeaconChain implements IBeaconChain {
     // Find a state in the same branch of checkpoint at same epoch. Balances should exactly the same
     for (const descendantBlock of this.forkChoice.forwardIterateDescendants(checkpoint.rootHex)) {
       if (computeEpochAtSlot(descendantBlock.slot) === checkpoint.epoch) {
-        const descendantBlockState = this.stateCache.get(descendantBlock.stateRoot);
+        const descendantBlockState = this.regen.getStateSync(descendantBlock.stateRoot);
         if (descendantBlockState) {
           return {state: descendantBlockState, stateId: "descendant_state_same_epoch", shouldWarn: true};
         }
@@ -708,7 +702,7 @@ export class BeaconChain implements IBeaconChain {
     // Note: must call .forwardIterateDescendants() again since nodes are not sorted
     for (const descendantBlock of this.forkChoice.forwardIterateDescendants(checkpoint.rootHex)) {
       if (computeEpochAtSlot(descendantBlock.slot) > checkpoint.epoch) {
-        const descendantBlockState = this.stateCache.get(descendantBlock.stateRoot);
+        const descendantBlockState = this.regen.getStateSync(descendantBlock.stateRoot);
         if (descendantBlockState) {
           return {state: blockState, stateId: "descendant_state_latter_epoch", shouldWarn: true};
         }
@@ -847,8 +841,8 @@ export class BeaconChain implements IBeaconChain {
     this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
 
     // TODO: Improve using regen here
-    const headState = this.stateCache.get(this.forkChoice.getHead().stateRoot);
-    const finalizedState = this.checkpointStateCache.get(cp);
+    const headState = this.regen.getStateSync(this.forkChoice.getHead().stateRoot);
+    const finalizedState = this.regen.getCheckpointStateSync(cp);
     if (headState) {
       this.opPool.pruneAll(headState, finalizedState);
     }
