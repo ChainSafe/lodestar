@@ -40,19 +40,21 @@ export class WinstonLogger implements Logger {
   constructor(protected readonly winston: Winston) {}
 
   static fromOpts(options: Partial<LoggerOptions> = {}, transports?: winston.transport[]): WinstonLogger {
+    return new WinstonLogger(this.createWinstonInstance(options, transports));
+  }
+
+  static createWinstonInstance(options: Partial<LoggerOptions> = {}, transports?: winston.transport[]): Winston {
     const defaultMeta: DefaultMeta = {module: options?.module || ""};
 
-    return new WinstonLogger(
-      winston.createLogger({
-        // Do not set level at the logger level. Always control by Transport, unless for testLogger
-        level: options.level,
-        defaultMeta,
-        format: getFormat(options),
-        transports,
-        exitOnError: false,
-        levels: logLevelNum,
-      })
-    );
+    return winston.createLogger({
+      // Do not set level at the logger level. Always control by Transport, unless for testLogger
+      level: options.level,
+      defaultMeta,
+      format: getFormat(options),
+      transports,
+      exitOnError: false,
+      levels: logLevelNum,
+    });
   }
 
   error(message: string, context?: LogData, error?: Error): void {
