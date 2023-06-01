@@ -842,6 +842,11 @@ export function createLodestarMetrics(
         help: "The count of times a sync signature was seen inside an aggregate",
         buckets: [0, 1, 2, 3, 5, 10],
       }),
+      prevEpochAttestationSummary: register.gauge<"summary">({
+        name: "validator_monitor_prev_epoch_attestation_summary",
+        help: "Best guess of the node of the result of previous epoch validators attestation actions and causality",
+        labelNames: ["summary"],
+      }),
 
       // Validator Monitor Metrics (real-time)
 
