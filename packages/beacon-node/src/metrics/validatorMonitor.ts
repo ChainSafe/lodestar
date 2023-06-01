@@ -135,7 +135,7 @@ type EpochSummary = {
   syncSignatureAggregateInclusions: number;
 };
 
-function withEpochSummary(validator: MonitoredValidator, epoch: Epoch, fn: (summary: EpochSummary) => void): void {
+function getEpochSummary(validator: MonitoredValidator, epoch: Epoch): EpochSummary {
   let summary = validator.summaries.get(epoch);
   if (!summary) {
     summary = {
@@ -156,8 +156,6 @@ function withEpochSummary(validator: MonitoredValidator, epoch: Epoch, fn: (summ
     validator.summaries.set(epoch, summary);
   }
 
-  fn(summary);
-
   // Prune
   const toPrune = validator.summaries.size - HISTORIC_EPOCHS;
   if (toPrune > 0) {
@@ -167,6 +165,8 @@ function withEpochSummary(validator: MonitoredValidator, epoch: Epoch, fn: (summ
       if (++pruned >= toPrune) break;
     }
   }
+
+  return summary;
 }
 
 /// A validator that is being monitored by the `ValidatorMonitor`. */
@@ -338,10 +338,9 @@ export function createValidatorMonitor(
         if (validator) {
           metrics.validatorMonitor.unaggregatedAttestationTotal.inc({src});
           metrics.validatorMonitor.unaggregatedAttestationDelaySeconds.observe({src}, delaySec);
-          withEpochSummary(validator, epoch, (summary) => {
-            summary.attestations += 1;
-            summary.attestationMinDelay = Math.min(delaySec, summary.attestationMinDelay ?? Infinity);
-          });
+          const summary = getEpochSummary(validator, epoch);
+          summary.attestations += 1;
+          summary.attestationMinDelay = Math.min(delaySec, summary.attestationMinDelay ?? Infinity);
         }
       }
     },
@@ -378,10 +377,9 @@ export function createValidatorMonitor(
       if (validtorAggregator) {
         metrics.validatorMonitor.aggregatedAttestationTotal.inc({src});
         metrics.validatorMonitor.aggregatedAttestationDelaySeconds.observe({src}, delaySec);
-        withEpochSummary(validtorAggregator, epoch, (summary) => {
-          summary.aggregates += 1;
-          summary.aggregateMinDelay = Math.min(delaySec, summary.aggregateMinDelay ?? Infinity);
-        });
+        const summary = getEpochSummary(validtorAggregator, epoch);
+        summary.aggregates += 1;
+        summary.aggregateMinDelay = Math.min(delaySec, summary.aggregateMinDelay ?? Infinity);
       }
 
       for (const index of indexedAttestation.attestingIndices) {
@@ -389,9 +387,8 @@ export function createValidatorMonitor(
         if (validator) {
           metrics.validatorMonitor.attestationInAggregateTotal.inc({src});
           metrics.validatorMonitor.attestationInAggregateDelaySeconds.observe({src}, delaySec);
-          withEpochSummary(validator, epoch, (summary) => {
-            summary.attestationAggregateIncusions += 1;
-          });
+          const summary = getEpochSummary(validator, epoch);
+          summary.attestationAggregateIncusions += 1;
           logger.debug("Local validator attestation is included in AggregatedAndProof", {
             validatorIndex: validator.index,
             slot: data.slot,
@@ -415,19 +412,18 @@ export function createValidatorMonitor(
           metrics.validatorMonitor.attestationInBlockTotal.inc();
           metrics.validatorMonitor.attestationInBlockDelaySlots.observe(delay);
 
-          withEpochSummary(validator, epoch, (summary) => {
-            summary.attestationBlockInclusions += 1;
-            if (summary.attestationMinBlockInclusionDistance !== null) {
-              summary.attestationMinBlockInclusionDistance = Math.min(
-                summary.attestationMinBlockInclusionDistance,
-                inclusionDistance
-              );
-            } else {
-              summary.attestationMinBlockInclusionDistance = inclusionDistance;
-            }
+          const summary = getEpochSummary(validator, epoch);
+          summary.attestationBlockInclusions += 1;
+          if (summary.attestationMinBlockInclusionDistance !== null) {
+            summary.attestationMinBlockInclusionDistance = Math.min(
+              summary.attestationMinBlockInclusionDistance,
+              inclusionDistance
+            );
+          } else {
+            summary.attestationMinBlockInclusionDistance = inclusionDistance;
+          }
 
-            summary.attestationCorrectHead = correctHead;
-          });
+          summary.attestationCorrectHead = correctHead;
 
           logger.debug("Local validator attestation is included in block", {
             validatorIndex: validator.index,
@@ -448,9 +444,8 @@ export function createValidatorMonitor(
         if (validator) {
           metrics.validatorMonitor.syncSignatureInAggregateTotal.inc();
 
-          withEpochSummary(validator, epoch, (summary) => {
-            summary.syncSignatureAggregateInclusions += 1;
-          });
+          const summary = getEpochSummary(validator, epoch);
+          summary.syncSignatureAggregateInclusions += 1;
         }
       }
     },
@@ -459,13 +454,12 @@ export function createValidatorMonitor(
       for (let i = 0; i < syncCommitteeIndices.length; i++) {
         const validator = validators.get(syncCommitteeIndices[i]);
         if (validator) {
-          withEpochSummary(validator, epoch, (summary) => {
-            if (syncAggregate.syncCommitteeBits.get(i)) {
-              summary.syncCommitteeHits++;
-            } else {
-              summary.syncCommitteeMisses++;
-            }
-          });
+          const summary = getEpochSummary(validator, epoch);
+          if (syncAggregate.syncCommitteeBits.get(i)) {
+            summary.syncCommitteeHits++;
+          } else {
+            summary.syncCommitteeMisses++;
+          }
         }
       }
     },
