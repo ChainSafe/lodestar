@@ -275,7 +275,7 @@ export class NetworkCore implements INetworkCore {
       (await this.peerManager["discovery"]?.discv5.scrapeMetrics()) ?? "",
     ]
       .filter((str) => str.length > 0)
-      .join("/n/n");
+      .join("\n\n");
   }
 
   async updateStatus(status: phase0.Status): Promise<void> {
