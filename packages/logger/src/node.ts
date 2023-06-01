@@ -90,19 +90,16 @@ function getNodeLoggerTransports(opts: LoggerNodeOpts): winston.transport[] {
 
   const transports: TransportStream[] = [consoleTransport];
 
-  // yargs populates with undefined if just set but with no arg
-  // $ ./bin/lodestar.js beacon --logFileDailyRotate
-  // args = {
-  //   logFileDailyRotate: undefined,
-  // }
-  // `lodestar --logFileDailyRotate` -> enabled daily rotate with default value
-  // `lodestar --logFileDailyRotate 10` -> set daily rotate to custom value 10
-  // `lodestar --logFileDailyRotate 0` -> disable daily rotate and accumulate in same file
   if (opts.file) {
     const filename = opts.file.filepath;
 
+    // `lodestar --logFileDailyRotate` -> enable daily rotate with default value
+    // `lodestar --logFileDailyRotate 10` -> set daily rotate to custom value 10
+    // `lodestar --logFileDailyRotate 0` -> disable daily rotate and accumulate in same file
+    const enableDailyRotate = opts.file.dailyRotate != null && opts.file.dailyRotate > 0;
+
     transports.push(
-      opts.file.dailyRotate != null
+      enableDailyRotate
         ? new DailyRotateFile({
             level: opts.file.level,
             //insert the date pattern in filename before the file extension.
