@@ -60,7 +60,6 @@ describe("getAttestationsForBlock", () => {
     protoArray = ProtoArray.initialize(
       {
         slot: blockHeader.slot,
-        proposerIndex: 0,
         parentRoot: toHexString(blockHeader.parentRoot),
         stateRoot: toHexString(blockHeader.stateRoot),
         blockRoot: toHexString(checkpoint.root),
@@ -84,7 +83,6 @@ describe("getAttestationsForBlock", () => {
       protoArray.onBlock(
         {
           slot,
-          proposerIndex: 0,
           blockRoot: toHexString(getBlockRootAtSlot(originalState, slot)),
           parentRoot: toHexString(getBlockRootAtSlot(originalState, slot - 1)),
           stateRoot: toHexString(originalState.stateRoots.get(slot % HISTORICAL_ROOTS_LIMIT)),

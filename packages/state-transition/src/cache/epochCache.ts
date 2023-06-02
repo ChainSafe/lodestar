@@ -104,6 +104,9 @@ export class EpochCache {
    */
   proposers: ValidatorIndex[];
 
+  /** Proposers for previous epoch, initialized to null in first epoch */
+  proposersPrevEpoch: ValidatorIndex[] | null;
+
   /**
    * The next proposer seed is only used in the getBeaconProposersNextEpoch call. It cannot be moved into
    * getBeaconProposersNextEpoch because it needs state as input and all data needed by getBeaconProposersNextEpoch
@@ -190,6 +193,7 @@ export class EpochCache {
     pubkey2index: PubkeyIndexMap;
     index2pubkey: Index2PubkeyCache;
     proposers: number[];
+    proposersPrevEpoch: number[] | null;
     proposersNextEpoch: ProposersDeferred;
     previousShuffling: EpochShuffling;
     currentShuffling: EpochShuffling;
@@ -213,6 +217,7 @@ export class EpochCache {
     this.pubkey2index = data.pubkey2index;
     this.index2pubkey = data.index2pubkey;
     this.proposers = data.proposers;
+    this.proposersPrevEpoch = data.proposersPrevEpoch;
     this.proposersNextEpoch = data.proposersNextEpoch;
     this.previousShuffling = data.previousShuffling;
     this.currentShuffling = data.currentShuffling;
@@ -388,6 +393,8 @@ export class EpochCache {
       pubkey2index,
       index2pubkey,
       proposers,
+      // On first epoch, set to null to prevent unnecessary work since this is only used for metrics
+      proposersPrevEpoch: null,
       proposersNextEpoch,
       previousShuffling,
       currentShuffling,
@@ -423,6 +430,7 @@ export class EpochCache {
       index2pubkey: this.index2pubkey,
       // Immutable data
       proposers: this.proposers,
+      proposersPrevEpoch: this.proposersPrevEpoch,
       proposersNextEpoch: this.proposersNextEpoch,
       previousShuffling: this.previousShuffling,
       currentShuffling: this.currentShuffling,
@@ -468,6 +476,10 @@ export class EpochCache {
       epochTransitionCache.nextEpochShufflingActiveValidatorIndices,
       nextEpoch
     );
+
+    // Roll current proposers into previous proposers for metrics
+    this.proposersPrevEpoch = this.proposers;
+
     const currentProposerSeed = getSeed(state, this.currentShuffling.epoch, DOMAIN_BEACON_PROPOSER);
     this.proposers = computeProposers(currentProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements);
 

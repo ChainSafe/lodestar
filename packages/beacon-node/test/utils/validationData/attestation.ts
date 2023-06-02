@@ -53,7 +53,6 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
   // Add block to forkChoice
   const headBlock: ProtoBlock = {
     slot: attSlot,
-    proposerIndex: 0,
     blockRoot: toHexString(beaconBlockRoot),
     parentRoot: ZERO_HASH_HEX,
     stateRoot: ZERO_HASH_HEX,

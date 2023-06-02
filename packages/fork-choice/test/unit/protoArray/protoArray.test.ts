@@ -18,7 +18,6 @@ describe("ProtoArray", () => {
     const fc = ProtoArray.initialize(
       {
         slot: genesisSlot,
-        proposerIndex: proposerIndex,
         stateRoot,
         parentRoot,
         blockRoot: finalizedRoot,
@@ -41,7 +40,6 @@ describe("ProtoArray", () => {
     fc.onBlock(
       {
         slot: genesisSlot + 1,
-        proposerIndex: proposerIndex,
         blockRoot: finalizedDesc,
         parentRoot: finalizedRoot,
         stateRoot,
@@ -65,7 +63,6 @@ describe("ProtoArray", () => {
     fc.onBlock(
       {
         slot: genesisSlot + 1,
-        proposerIndex: proposerIndex,
         blockRoot: notFinalizedDesc,
         parentRoot: unknown,
         stateRoot,
