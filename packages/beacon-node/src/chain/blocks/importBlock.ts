@@ -111,7 +111,7 @@ export async function importBlock(
     for (const attestation of attestations) {
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
-        const {target, slot, beaconBlockRoot} = attestation.data;
+        const {target, beaconBlockRoot} = attestation.data;
 
         const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
         this.seenAggregatedAttestations.add(
@@ -136,8 +136,19 @@ export async function importBlock(
         // Note: To avoid slowing down sync, only register attestations within FORK_CHOICE_ATT_EPOCH_LIMIT
         this.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
 
-        const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(slot), beaconBlockRoot);
-        this.metrics?.registerAttestationInBlock(indexedAttestation, parentBlockSlot, correctHead);
+        const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(attestation.data.slot), beaconBlockRoot);
+        const missedSlotVote = ssz.Root.equals(
+          rootCache.getBlockRootAtSlot(attestation.data.slot - 1),
+          rootCache.getBlockRootAtSlot(attestation.data.slot)
+        );
+        this.metrics?.registerAttestationInBlock(
+          indexedAttestation,
+          parentBlockSlot,
+          correctHead,
+          missedSlotVote,
+          blockRootHex,
+          block.message.slot
+        );
 
         // don't want to log the processed attestations here as there are so many attestations and it takes too much disc space,
         // users may want to keep more log files instead of unnecessary processed attestations log

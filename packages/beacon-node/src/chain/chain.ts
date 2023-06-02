@@ -28,9 +28,9 @@ import {
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
-import {Logger, pruneSetToMax, toHex} from "@lodestar/utils";
+import {Logger, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
 import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -803,6 +803,16 @@ export class BeaconChain implements IBeaconChain {
           }
         }
       }
+    }
+
+    const metrics = this.metrics;
+    if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {
+      // On the last slot of the epoch
+      sleep((1000 * this.config.SECONDS_PER_SLOT) / 2)
+        .then(() => metrics.onceEveryEndOfEpoch(this.getHeadState()))
+        .catch((e) => {
+          if (!isErrorAborted(e)) this.logger.error("error on validator monitor onceEveryEndOfEpoch", {slot}, e);
+        });
     }
   }
 
