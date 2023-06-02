@@ -1,23 +1,16 @@
-import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {expect} from "chai";
-import {createBeaconConfig, createChainForkConfig, ChainForkConfig} from "@lodestar/config";
+import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqresp";
 import {allForks, altair, phase0, Root, ssz} from "@lodestar/types";
 import {sleep as _sleep} from "@lodestar/utils";
-import {GossipHandlers} from "../../../src/network/gossip/index.js";
-import {Network, NetworkInitModules, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
-import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
+import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
 import {expectRejectedWithLodestarError} from "../../utils/errors.js";
-import {testLogger} from "../../utils/logger.js";
-import {MockBeaconChain} from "../../utils/mocks/chain/chain.js";
-import {connect, createNetworkModules, onPeerConnect} from "../../utils/network.js";
-import {generateState} from "../../utils/state.js";
-import {StubbedBeaconDb} from "../../utils/stub/index.js";
+import {connect, getNetworkForTest, getPeerIdOf, onPeerConnect} from "../../utils/network.js";
 import {arrToSource} from "../../unit/network/reqresp/utils.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/types.js";
-import {PeerIdStr, peerIdToString} from "../../../src/util/peerId.js";
+import {PeerIdStr} from "../../../src/util/peerId.js";
 
 /* eslint-disable
     mocha/no-top-level-hooks,
@@ -34,34 +27,15 @@ describe("network / reqresp / worker", function () {
   runTests.bind(this)({useWorker: true});
 });
 
-function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
+function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
   if (this.timeout() < 60_000) this.timeout(60_000);
   this.retries(2); // This test fail sometimes, with a 5% rate.
-
-  const multiaddrPort0 = "/ip4/127.0.0.1/tcp/0";
-  const networkOptsDefault: NetworkOptions = {
-    ...defaultNetworkOptions,
-    maxPeers: 1,
-    targetPeers: 1,
-    bootMultiaddrs: [],
-    localMultiaddrs: [],
-    discv5FirstQueryDelayMs: 0,
-    discv5: null,
-    // Disable rate limiting for the tests
-    rateLimitMultiplier: 0,
-    useWorker: opts.useWorker,
-  };
 
   // Schedule ALTAIR_FORK_EPOCH to trigger registering lightclient ReqResp protocols immediately
   const config = createChainForkConfig({
     ...chainConfig,
     ALTAIR_FORK_EPOCH: 0,
   });
-
-  const state = generateState({}, config);
-  const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
-  const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config: beaconConfig});
-  const db = new StubbedBeaconDb();
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
@@ -78,59 +52,23 @@ function runTests(this: Mocha.Suite, opts: {useWorker: boolean}): void {
     await _sleep(ms, controller.signal);
   }
 
-  async function createPeer(getReqRespHandler?: GetReqRespHandlerFn, reqRespOpts?: ReqRespBeaconNodeOpts) {
-    const controller = new AbortController();
-    const peerId = await createSecp256k1PeerId();
-
-    const notImplemented: GetReqRespHandlerFn = () =>
-      async function* (): AsyncIterable<ResponseOutgoing> {
-        throw Error("not implemented");
-      };
-
-    const gossipHandlers = {} as GossipHandlers;
-    const opts = {...networkOptsDefault, ...reqRespOpts};
-    const modules: Omit<NetworkInitModules, "logger" | "opts" | "peerId"> = {
-      config: beaconConfig,
-      db,
-      chain,
-      gossipHandlers,
-      signal: controller.signal,
-      metrics: null,
-      getReqRespHandler: getReqRespHandler ?? notImplemented,
-    };
-    const network = await Network.init({
-      ...modules,
-      ...(await createNetworkModules(multiaddrPort0, peerId, opts)),
-      logger: testLogger("A"),
-    });
-
-    afterEachCallbacks.push(async () => {
-      await chain.close();
-      controller.abort();
-      await network.close();
-    });
-
-    return {network, peerId};
-  }
-
   async function createAndConnectPeers(
     getReqRespHandler?: GetReqRespHandlerFn,
-    reqRespOpts?: ReqRespBeaconNodeOpts
+    opts?: ReqRespBeaconNodeOpts
   ): Promise<[Network, Network, PeerIdStr, PeerIdStr]> {
-    const {network: netA, peerId: peerIdA} = await createPeer(getReqRespHandler, reqRespOpts);
-    const {network: netB, peerId: peerIdB} = await createPeer(getReqRespHandler, reqRespOpts);
+    const [netA, closeA] = await getNetworkForTest("A", config, {getReqRespHandler, opts: {...opts, useWorker}});
+    const [netB, closeB] = await getNetworkForTest("B", config, {getReqRespHandler, opts: {...opts, useWorker}});
+
+    afterEachCallbacks.push(async () => {
+      await closeA();
+      await closeB();
+    });
 
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
     await connect(netA, netB);
     await connected;
 
-    afterEachCallbacks.push(async () => {
-      await chain.close();
-      controller.abort();
-      await Promise.all([netA.close(), netB.close()]);
-    });
-
-    return [netA, netB, peerIdToString(peerIdA), peerIdToString(peerIdB)];
+    return [netA, netB, await getPeerIdOf(netA), await getPeerIdOf(netB)];
   }
 
   // it("should send/receive a ping message", async function () {

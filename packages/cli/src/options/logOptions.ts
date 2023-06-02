@@ -36,7 +36,7 @@ export const logOptions: CliCommandOptions<LogArgs> = {
 
   logFileDailyRotate: {
     description:
-      "Daily rotate log files, set to an integer to limit the file count, set to 0(zero) to disable rotation",
+      "Daily rotate log files, set to an integer to limit the file count, set to 0 (zero) to disable rotation",
     default: 5,
     type: "number",
   },

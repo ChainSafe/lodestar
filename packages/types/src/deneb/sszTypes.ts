@@ -4,6 +4,7 @@ import {
   FIELD_ELEMENTS_PER_BLOB,
   MAX_BLOBS_PER_BLOCK,
   MAX_REQUEST_BLOCKS,
+  MAX_REQUEST_BLOB_SIDECARS,
   BYTES_PER_FIELD_ELEMENT,
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
@@ -46,6 +47,8 @@ export const KZGProof = Bytes48;
 
 export const Blob = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB);
 export const Blobs = new ListCompositeType(Blob, MAX_BLOBS_PER_BLOCK);
+export const BlindedBlob = Bytes32;
+export const BlindedBlobs = new ListCompositeType(BlindedBlob, MAX_BLOBS_PER_BLOCK);
 export const VersionedHash = Bytes32;
 export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOBS_PER_BLOCK);
 
@@ -81,6 +84,26 @@ export const PolynomialAndCommitment = new ContainerType(
 
 // ReqResp types
 // =============
+
+export const BlobSidecarsByRangeRequest = new ContainerType(
+  {
+    startSlot: Slot,
+    count: UintNum64,
+  },
+  {typeName: "BlobSidecarsByRangeRequest", jsonCase: "eth2"}
+);
+
+export const BlobIdentifier = new ContainerType(
+  {
+    blockRoot: Root,
+    index: BlobIndex,
+  },
+  {typeName: "BlobIdentifier", jsonCase: "eth2"}
+);
+
+export const BlobSidecarsByRootRequest = new ListCompositeType(BlobIdentifier, MAX_REQUEST_BLOB_SIDECARS);
+
+// TODO DENEB: cleanup the following types once blob migration is complete
 
 export const BlobsSidecarsByRangeRequest = new ContainerType(
   {
@@ -153,6 +176,41 @@ export const BlobSidecar = new ContainerType(
 );
 
 export const BlobSidecars = new ListCompositeType(BlobSidecar, MAX_BLOBS_PER_BLOCK);
+
+export const SignedBlobSidecar = new ContainerType(
+  {
+    message: BlobSidecar,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBlobSidecar", jsonCase: "eth2"}
+);
+export const SignedBlobSidecars = new ListCompositeType(SignedBlobSidecar, MAX_BLOBS_PER_BLOCK);
+
+export const BlindedBlobSidecar = new ContainerType(
+  {
+    blockRoot: Root,
+    index: BlobIndex,
+    slot: Slot,
+    blockParentRoot: Root,
+    proposerIndex: ValidatorIndex,
+    blobRoot: BlindedBlob,
+    kzgCommitment: KZGCommitment,
+    kzgProof: KZGProof,
+  },
+  {typeName: "BlindedBlobSidecar", jsonCase: "eth2"}
+);
+
+export const BlindedBlobSidecars = new ListCompositeType(BlindedBlobSidecar, MAX_BLOBS_PER_BLOCK);
+
+export const SignedBlindedBlobSidecar = new ContainerType(
+  {
+    message: BlindedBlobSidecar,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBlindedBlobSidecar", jsonCase: "eth2"}
+);
+
+export const SignedBlindedBlobSidecars = new ListCompositeType(SignedBlindedBlobSidecar, MAX_BLOBS_PER_BLOCK);
 
 // TODO: replace and cleanup previous types when other parts integrated seamlessly
 export const BlobsSidecar = new ContainerType(

@@ -62,6 +62,7 @@ export async function createNodeJsLibp2p(
     metrics: nodeJsLibp2pOpts.metrics,
     metricsRegistry: nodeJsLibp2pOpts.metricsRegistry,
     lodestarVersion: networkOpts.version,
+    hideAgentVersion: networkOpts.private,
     mdns: networkOpts.mdns,
   });
 }

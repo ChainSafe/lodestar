@@ -3,9 +3,9 @@ import {RLP} from "@ethereumjs/rlp";
 import {Trie} from "@ethereumjs/trie";
 import {Account, KECCAK256_NULL_S} from "@ethereumjs/util";
 import {keccak256} from "ethereum-cryptography/keccak.js";
-import {NetworkName} from "@lodestar/config/networks";
 import {Bytes32, allForks} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+import {ChainForkConfig} from "@lodestar/config";
 import {ELBlock, ELProof, ELStorageProof, HexString} from "../types.js";
 import {blockDataFromELBlock, bufferToHex, hexToBuffer, padLeft} from "./conversion.js";
 import {getChainCommon} from "./execution.js";
@@ -95,14 +95,14 @@ export async function isValidBlock({
   executionPayload,
   block,
   logger,
-  network,
+  config,
 }: {
   executionPayload: allForks.ExecutionPayload;
   block: ELBlock;
   logger: Logger;
-  network: NetworkName;
+  config: ChainForkConfig;
 }): Promise<boolean> {
-  const common = getChainCommon(network);
+  const common = getChainCommon(config.PRESET_BASE);
   common.setHardforkByBlockNumber(executionPayload.blockNumber, undefined, executionPayload.timestamp);
 
   const blockObject = Block.fromBlockData(blockDataFromELBlock(block), {common});
@@ -149,4 +149,12 @@ export async function isValidCodeHash({
   if (codeResponse === "0x" && codeHash === `0x${KECCAK256_NULL_S}`) return true;
 
   return bufferToHex(keccak256(hexToBuffer(codeResponse))) === codeHash;
+}
+
+export function isNullish<T>(val: T | undefined | null): val is null | undefined {
+  return val === null || val === undefined;
+}
+
+export function isPresent<T>(val: T | undefined | null): val is T {
+  return !isNullish(val);
 }

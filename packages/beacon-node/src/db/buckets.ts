@@ -1,6 +1,3 @@
-import {intToBytes} from "@lodestar/utils";
-import {BUCKET_LENGTH} from "./const.js";
-
 // Buckets are separate database namespaces
 export enum Bucket {
   // beacon chain
@@ -33,22 +30,18 @@ export enum Bucket {
   phase0_proposerSlashing = 14, // ValidatorIndex -> ProposerSlashing
   phase0_attesterSlashing = 15, // Root -> AttesterSlashing
   capella_blsToExecutionChange = 16, // ValidatorIndex -> SignedBLSToExecutionChange
-  // validator
-  // validator = 16, // DEPRECATED on v0.11.0
-  // lastProposedBlock = 17, // DEPRECATED on v0.11.0
-  // proposedAttestations = 18, // DEPRECATED on v0.11.0
-  // validator slashing protection
-  phase0_slashingProtectionBlockBySlot = 20,
-  phase0_slashingProtectionAttestationByTarget = 21,
-  phase0_slashingProtectionAttestationLowerBound = 22,
-  index_slashingProtectionMinSpanDistance = 23,
-  index_slashingProtectionMaxSpanDistance = 24,
   // allForks_pendingBlock = 25, // Root -> SignedBeaconBlock // DEPRECATED on v0.30.0
 
   index_stateArchiveRootIndex = 26, // State Root -> slot
 
-  allForks_blobsSidecar = 27, // DENEB BeaconBlockRoot -> BlobsSidecar
-  allForks_blobsSidecarArchive = 28, // DENEB BeaconBlockSlot -> BlobsSidecar
+  allForks_blobSidecars = 27, // DENEB BeaconBlockRoot -> BlobSidecars
+  allForks_blobSidecarsArchive = 28, // DENEB BeaconBlockSlot -> BlobSidecars
+
+  // TODO DENEB: cleanup the below buckets once BlobsSidecar fully migrated to BlobSidecars
+  // note: below buckets would not be in use till deneb hf so their number assignments
+  // can be ignored and safely deleted later on
+  allForks_blobsSidecar = 29, // DENEB BeaconBlockRoot -> BlobsSidecar
+  allForks_blobsSidecarArchive = 30, // DENEB BeaconBlockSlot -> BlobsSidecar
 
   // Lightclient server
   // altair_bestUpdatePerCommitteePeriod = 30, // DEPRECATED on v0.32.0
@@ -68,42 +61,19 @@ export enum Bucket {
   // lightClient_bestLightClientUpdate = 55, // SyncPeriod -> LightClientUpdate // DEPRECATED on v1.5.0
   lightClient_bestLightClientUpdate = 56, // SyncPeriod -> [Slot, LightClientUpdate]
 
-  validator_metaData = 41,
-
   backfilled_ranges = 42, // Backfilled From to To, inclusive of both From, To
 }
 
-export enum Key {
-  chainHeight = 0,
-
-  latestState = 1,
-  finalizedState = 2,
-  justifiedState = 3,
-
-  finalizedBlock = 4,
-  justifiedBlock = 5,
-}
-
-export const uintLen = 8;
-
-/**
- * Prepend a bucket to a key
- */
-export function encodeKey(bucket: Bucket, key: Uint8Array | string | number | bigint): Uint8Array {
-  let buf;
-  const prefixLength = BUCKET_LENGTH;
-  //all keys are writen with prefixLength offet
-  if (typeof key === "string") {
-    buf = Buffer.alloc(key.length + prefixLength);
-    buf.write(key, prefixLength);
-  } else if (typeof key === "number" || typeof key === "bigint") {
-    buf = Buffer.alloc(uintLen + prefixLength);
-    intToBytes(BigInt(key), uintLen, "be").copy(buf, prefixLength);
-  } else {
-    buf = Buffer.alloc(key.length + prefixLength);
-    buf.set(key, prefixLength);
+export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {
+  const keys = Object.keys(Bucket).filter((x) => {
+    if (isNaN(parseInt(x))) {
+      return Bucket[x as keyof typeof Bucket] == enumValue;
+    } else {
+      return false;
+    }
+  }) as (keyof typeof Bucket)[];
+  if (keys.length > 0) {
+    return keys[0];
   }
-  //bucket prefix on position 0
-  buf.set(intToBytes(bucket, BUCKET_LENGTH, "le"), 0);
-  return buf;
+  throw new Error("Missing bucket for value " + enumValue);
 }

@@ -1,4 +1,14 @@
 {
+  "__inputs": [
+    {
+      "description": "",
+      "label": "Prometheus",
+      "name": "DS_PROMETHEUS",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus",
+      "type": "datasource"
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -20,8 +30,8 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "id": 2,
+  "graphTooltip": 1,
+  "id": null,
   "links": [
     {
       "asDropdown": true,

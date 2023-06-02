@@ -127,7 +127,7 @@ describe("winston transport log to file", () => {
     const filenameRx = /^child-logger-test/;
     const filepath = path.join(tmpDir, filename);
 
-    const logger = getNodeLoggerTest({module: "a", file: {filepath, level: LogLevel.info}});
+    const logger = getNodeLoggerTest({module: "a", file: {filepath, level: LogLevel.info, dailyRotate: 5}});
 
     stdoutHook = hookProcessStdout();
 

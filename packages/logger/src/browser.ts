@@ -38,9 +38,9 @@ class BrowserConsole extends Transport {
   }
 
   log(method: string | number, message: unknown): void {
-    setImmediate(() => {
+    setTimeout(() => {
       this.emit("logged", method);
-    });
+    }, 0);
 
     const val = this.levels[method as LogLevel];
     const mappedMethod = this.methods[method as LogLevel];

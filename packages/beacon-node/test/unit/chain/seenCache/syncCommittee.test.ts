@@ -10,29 +10,30 @@ describe("chain / seenCache / SeenSyncCommittee caches", function () {
     const slot = 10;
     const subnet = 2;
     const validatorIndex = 100;
+    const rootHex = "0x1234";
 
     it("should find a sync committee based on same slot and validator index", () => {
       const cache = new SeenSyncCommitteeMessages();
 
-      expect(cache.isKnown(slot, subnet, validatorIndex)).to.equal(false, "Should not know before adding");
-      cache.add(slot, subnet, validatorIndex);
-      expect(cache.isKnown(slot, subnet, validatorIndex)).to.equal(true, "Should know before adding");
+      expect(cache.get(slot, subnet, validatorIndex), "Should not know before adding").to.be.null;
+      cache.add(slot, subnet, validatorIndex, rootHex);
+      expect(cache.get(slot, subnet, validatorIndex)).to.equal(rootHex, "Should know before adding");
 
-      expect(cache.isKnown(slot + 1, subnet, validatorIndex)).to.equal(false, "Should not know a diff slot");
-      expect(cache.isKnown(slot, subnet + 1, validatorIndex)).to.equal(false, "Should not know a diff subnet");
-      expect(cache.isKnown(slot, subnet, validatorIndex + 1)).to.equal(false, "Should not know a diff index");
+      expect(cache.get(slot + 1, subnet, validatorIndex), "Should not know a diff slot").to.be.null;
+      expect(cache.get(slot, subnet + 1, validatorIndex), "Should not know a diff subnet").to.be.null;
+      expect(cache.get(slot, subnet, validatorIndex + 1), "Should not know a diff index").to.be.null;
     });
 
     it("should prune", () => {
       const cache = new SeenSyncCommitteeMessages();
 
       for (let i = 0; i < NUM_SLOTS_IN_CACHE; i++) {
-        cache.add(slot, subnet, validatorIndex);
+        cache.add(slot + i, subnet, validatorIndex, rootHex);
       }
 
-      expect(cache.isKnown(slot, subnet, validatorIndex)).to.equal(true, "Should know before prune");
+      expect(cache.get(slot, subnet, validatorIndex)).to.equal(rootHex, "Should know before prune");
       cache.prune(99);
-      expect(cache.isKnown(slot, subnet, validatorIndex)).to.equal(false, "Should not know after prune");
+      expect(cache.get(slot, subnet, validatorIndex), "Should not know after prune").to.be.null;
     });
   });
 

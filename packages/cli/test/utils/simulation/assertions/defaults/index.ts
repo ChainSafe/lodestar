@@ -5,7 +5,7 @@ import {finalizedAssertion} from "./finalizedAssertion.js";
 import {headAssertion} from "./headAssertion.js";
 import {inclusionDelayAssertion} from "./inclusionDelayAssertion.js";
 import {missedBlocksAssertion} from "./missedBlocksAssertion.js";
-import {syncCommitteeParticipation} from "./syncCommitteeParticipation.js";
+import {syncCommitteeParticipationAssertion} from "./syncCommitteeParticipationAssertion.js";
 
 export const defaultAssertions = [
   inclusionDelayAssertion,
@@ -15,5 +15,5 @@ export const defaultAssertions = [
   finalizedAssertion,
   headAssertion,
   missedBlocksAssertion,
-  syncCommitteeParticipation,
+  syncCommitteeParticipationAssertion,
 ];

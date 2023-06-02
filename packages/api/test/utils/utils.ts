@@ -15,7 +15,7 @@ export function getTestServer(): {baseUrl: string; server: FastifyInstance} {
 
   server.addHook("onError", (request, reply, error, done) => {
     // eslint-disable-next-line no-console
-    console.log(`onError: ${error}`);
+    console.log(`onError: ${error.toString()}`);
     done();
   });
 

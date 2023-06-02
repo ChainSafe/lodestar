@@ -1,16 +1,9 @@
 import {BLSPubkey, Slot, ssz} from "@lodestar/types";
 import {intToBytes, bytesToInt} from "@lodestar/utils";
-import {
-  Bucket,
-  DatabaseApiOptions,
-  DB_PREFIX_LENGTH,
-  DbReqOpts,
-  encodeKey,
-  uintLen,
-  getBucketNameByValue,
-} from "@lodestar/db";
+import {DatabaseApiOptions, DB_PREFIX_LENGTH, DbReqOpts, encodeKey, uintLen} from "@lodestar/db";
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {LodestarValidatorDatabaseController} from "../../types.js";
+import {Bucket, getBucketNameByValue} from "../../buckets.js";
 import {SlashingProtectionBlock} from "../types.js";
 import {blsPubkeyLen, uniqueVectorArr} from "../utils.js";
 
@@ -22,11 +15,10 @@ import {blsPubkeyLen, uniqueVectorArr} from "../utils.js";
 export class BlockBySlotRepository {
   protected type: Type<SlashingProtectionBlock>;
   protected db: LodestarValidatorDatabaseController;
-  protected bucket = Bucket.phase0_slashingProtectionBlockBySlot;
+  protected bucket = Bucket.slashingProtectionBlockBySlot;
 
-  private readonly bucketId: string;
-  private readonly dbReqOpts: DbReqOpts;
-
+  private readonly bucketId = getBucketNameByValue(this.bucket);
+  private readonly dbReqOpts: DbReqOpts = {bucketId: this.bucketId};
   private readonly minKey: Uint8Array;
   private readonly maxKey: Uint8Array;
 
@@ -36,8 +28,6 @@ export class BlockBySlotRepository {
       slot: ssz.Slot,
       signingRoot: ssz.Root,
     }); // casing doesn't matter
-    this.bucketId = getBucketNameByValue(this.bucket);
-    this.dbReqOpts = {bucketId: this.bucketId};
     this.minKey = encodeKey(this.bucket, Buffer.alloc(0));
     this.maxKey = encodeKey(this.bucket + 1, Buffer.alloc(0));
   }

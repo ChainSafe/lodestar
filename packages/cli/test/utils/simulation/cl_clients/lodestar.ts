@@ -14,7 +14,7 @@ import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, Runne
 import {getNodePorts} from "../utils/ports.js";
 
 export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = (opts, runner) => {
-  const {address, id, config, keys, genesisTime, engineUrls, engineMock, clientOptions, nodeIndex} = opts;
+  const {address, id, config, keys, genesisTime, engineUrls, engineMock, clientOptions, nodeIndex, metrics} = opts;
   const {
     paths: {jwtsecretFilePath, rootDir, genesisFilePath, logFilePath},
   } = opts;
@@ -39,7 +39,6 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     "network.rateLimitMultiplier": 0,
     listenAddress: "0.0.0.0",
     port: ports.cl.port,
-    metrics: false,
     bootnodes: [],
     logPrefix: id,
     logFormatGenesisTime: `${genesisTime}`,
@@ -59,6 +58,14 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     rcConfig["eth1"] = true;
     rcConfig["execution.engineMock"] = false;
     rcConfig["execution.urls"] = [...engineUrls];
+  }
+
+  if (metrics) {
+    rcConfig.metrics = true;
+    rcConfig["metrics.port"] = metrics.port;
+    rcConfig["metrics.address"] = metrics.host;
+  } else {
+    rcConfig.metrics = false;
   }
 
   const validatorClientsJobs: JobOptions[] = [];

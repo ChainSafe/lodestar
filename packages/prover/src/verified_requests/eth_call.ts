@@ -1,15 +1,15 @@
 import {ELVerifiedRequestHandler} from "../interfaces.js";
 import {ELApiHandlers, ELApiParams, ELApiReturn} from "../types.js";
-import {createEVM, executeEVM, getEVMWithState} from "../utils/evm.js";
+import {bufferToHex} from "../utils/conversion.js";
+import {createVM, executeVMCall, getVMWithState} from "../utils/evm.js";
 import {generateRPCResponseForPayload, generateUnverifiedResponseForPayload} from "../utils/json_rpc.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const eth_call: ELVerifiedRequestHandler<ELApiParams["call"], ELApiReturn["call"]> = async ({
+export const eth_call: ELVerifiedRequestHandler<ELApiParams["eth_call"], ELApiReturn["eth_call"]> = async ({
   handler,
   payload,
   logger,
   proofProvider,
-  network,
 }) => {
   const {
     params: [tx, block],
@@ -19,22 +19,23 @@ export const eth_call: ELVerifiedRequestHandler<ELApiParams["call"], ELApiReturn
 
   try {
     // TODO: Optimize the creation of the evm
-    const evm = await createEVM({proofProvider, network});
-    const evmWithState = await getEVMWithState({
+    const vm = await createVM({proofProvider});
+    const vmWithState = await getVMWithState({
       handler: handler as unknown as ELApiHandlers["eth_getProof"],
       executionPayload,
       tx,
-      evm,
+      vm,
       logger,
     });
-    const result = await executeEVM({
-      evm: evmWithState,
+    const result = await executeVMCall({
+      vm: vmWithState,
       tx,
       handler: handler as unknown as ELApiHandlers["eth_getBlockByHash"],
       executionPayload,
+      network: proofProvider.network,
     });
 
-    return generateRPCResponseForPayload(payload, result);
+    return generateRPCResponseForPayload(payload, bufferToHex(result.returnValue));
   } catch (err) {
     logger.error(
       "Request could not be verified.",

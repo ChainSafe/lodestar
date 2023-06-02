@@ -653,10 +653,10 @@
     "@chainsafe/as-sha256" "^0.4.1"
     "@chainsafe/persistent-merkle-tree" "^0.6.1"
 
-"@chainsafe/threads@^1.10.0":
-  version "1.10.0"
-  resolved "https://registry.npmjs.org/@chainsafe/threads/-/threads-1.10.0.tgz"
-  integrity sha512-1PRtW3s5welk2WUAMN0bjEGtQ3PSqLWAxlMTSeOYJ2NV+bgNgi8PsALX/xEiB/CHd8XG5gS2BlmYZ+Q3b4wR7Q==
+"@chainsafe/threads@^1.11.0":
+  version "1.11.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/threads/-/threads-1.11.0.tgz#4845f452d30901053991cf050696746a442a8933"
+  integrity sha512-l36K9eXqpE0PTnQThDBrxmkx0DX4UV2Qt0l9ASRHRbCUZW3SlSAS+b0//DfTQ2/OXeDVPuE7/72991lTOaKmdQ==
   dependencies:
     callsites "^3.1.0"
     debug "^4.2.0"
@@ -3385,6 +3385,13 @@
   dependencies:
     datastore-level "*"
 
+"@types/debug@^4.1.7":
+  version "4.1.7"
+  resolved "https://registry.yarnpkg.com/@types/debug/-/debug-4.1.7.tgz#7cc0ea761509124709b8b2d1090d8f6c17aadb82"
+  integrity sha512-9AonUzyTjXXhEOa0DnqpzZi6VHlqKMswga9EXjpXnnqxwLtdvPPtlO8evrI5D9S6asFRCQ6v+wpiUKbw+vKqyg==
+  dependencies:
+    "@types/ms" "*"
+
 "@types/dns-packet@*":
   version "5.2.4"
   resolved "https://registry.yarnpkg.com/@types/dns-packet/-/dns-packet-5.2.4.tgz#0de4ee48f900a62b014ce61a3c9ab5d33dc06b0d"
@@ -3558,6 +3565,11 @@
   version "1.4.30"
   resolved "https://registry.yarnpkg.com/@types/mockery/-/mockery-1.4.30.tgz#25f07fa7340371c7ee0fb9239511a34e0a19d5b7"
   integrity sha512-uv53RrNdhbkV/3VmVCtfImfYCWC3GTTRn3R11Whni3EJ+gb178tkZBVNj2edLY5CMrB749dQi+SJkg87jsN8UQ==
+
+"@types/ms@*":
+  version "0.7.31"
+  resolved "https://registry.yarnpkg.com/@types/ms/-/ms-0.7.31.tgz#31b7ca6407128a3d2bbc27fe2d21b345397f6197"
+  integrity sha512-iiUgKzV9AuaEkZqkOLDIvlQiL6ltuZd9tGcW3gwpnX8JbuiuhFlEGmmFXEXkN50Cvq7Os88IY2v0dkDqXYWVgA==
 
 "@types/multicast-dns@^7.2.1":
   version "7.2.1"
@@ -13318,7 +13330,7 @@ rfdc@^1.2.0, rfdc@^1.3.0:
 
 rimraf@^2.6.1:
   version "2.7.1"
-  resolved "https://registry.npmjs.org/rimraf/-/rimraf-2.7.1.tgz"
+  resolved "https://registry.yarnpkg.com/rimraf/-/rimraf-2.7.1.tgz#35797f13a7fdadc566142c29d4f07ccad483e3ec"
   integrity sha512-uWjbaKIK3T1OSVptzX7Nl6PvQ3qAGtKEtVRjRuazjfL3Bx5eI409VZSqgND+4UNnmzLVdPj9FqFJNPqBZFve4w==
   dependencies:
     glob "^7.1.3"

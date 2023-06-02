@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import {Slot} from "@lodestar/types";
-import {isTruthy} from "../../utils.js";
+import {isNullish} from "../../utils.js";
 import {HeadSummary} from "./assertions/defaults/headAssertion.js";
 import {defaultAssertions} from "./assertions/defaults/index.js";
 import {SimulationReporter} from "./interfaces.js";
@@ -84,25 +84,25 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
 
     for (const node of nodes) {
       const finalized = stores["finalized"][node.cl.id][slot];
-      isTruthy(finalized) && finalizedSlots.push(finalized);
+      !isNullish(finalized) && finalizedSlots.push(finalized);
 
       const inclusionDelay = stores["inclusionDelay"][node.cl.id][slot];
-      isTruthy(inclusionDelay) && inclusionDelays.push(inclusionDelay);
+      !isNullish(inclusionDelay) && inclusionDelays.push(inclusionDelay);
 
       const attestationsCount = stores["attestationsCount"][node.cl.id][slot];
-      isTruthy(attestationsCount) && attestationCounts.push(attestationsCount);
+      !isNullish(attestationsCount) && attestationCounts.push(attestationsCount);
 
       const head = stores["head"][node.cl.id][slot];
-      isTruthy(head) && heads.push(head);
+      !isNullish(head) && heads.push(head);
 
       const connectedPeerCount = stores["connectedPeerCount"][node.cl.id][slot];
-      isTruthy(connectedPeerCount) && peersCount.push(connectedPeerCount);
+      !isNullish(connectedPeerCount) && peersCount.push(connectedPeerCount);
     }
 
     const head0 = heads.length > 0 ? heads[0] : null;
-    const nodesHaveSameHead = heads.every(
-      (head) => head0 && isTruthy(head0.blockRoot) && head?.blockRoot === head0.blockRoot
-    );
+    const nodesHaveSameHead =
+      heads.length === nodes.length &&
+      heads.every((head) => head0 && !isNullish(head0.blockRoot) && head?.blockRoot === head0.blockRoot);
 
     this.table.addRow({
       fork: forkName,
@@ -125,19 +125,23 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
   summary(): void {
     const {errors} = this.options;
 
-    console.log(`├${"─".repeat(10)} Errors (${errors.length}) ${"─".repeat(10)}┤`);
+    console.info(`├${"─".repeat(10)} Errors (${errors.length}) ${"─".repeat(10)}┤`);
 
     const groupBySlot = arrayGroupBy(errors, (e) => String(e.slot as number));
 
     for (const [slot, slotErrors] of Object.entries(groupBySlot)) {
-      if (slotErrors.length > 0) console.log(`├─ Slot: ${slot}`);
+      if (slotErrors.length > 0) console.info(`├─ Slot: ${slot}`);
       const groupByAssertion = arrayGroupBy(slotErrors, (e) => e.assertionId);
 
       for (const [assertionId, assertionErrors] of Object.entries(groupByAssertion)) {
-        if (assertionErrors.length > 0) console.log(`├── Assertion: ${assertionId}`);
+        if (assertionErrors.length > 0) console.info(`├── Assertion: ${assertionId}`);
 
         for (const error of assertionErrors) {
-          console.error(`├──── ${error.message}`);
+          console.info(
+            `├──── ${error.nodeId}: ${error.message} ${Object.entries(error.data ?? {})
+              .map(([k, v]) => `${k}=${v as string}`)
+              .join(" ")}`
+          );
         }
       }
     }

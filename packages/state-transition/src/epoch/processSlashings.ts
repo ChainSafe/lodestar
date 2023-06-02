@@ -8,7 +8,7 @@ import {
 } from "@lodestar/params";
 
 import {decreaseBalance} from "../util/index.js";
-import {CachedBeaconStateAllForks, EpochProcess} from "../types.js";
+import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
 
 /**
  * Update validator registry for validators that activate + exit
@@ -19,13 +19,13 @@ import {CachedBeaconStateAllForks, EpochProcess} from "../types.js";
  *
  * - On normal mainnet conditions indicesToSlash = 0
  */
-export function processSlashings(state: CachedBeaconStateAllForks, process: EpochProcess): void {
+export function processSlashings(state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
   // No need to compute totalSlashings if there no index to slash
-  if (process.indicesToSlash.length === 0) {
+  if (cache.indicesToSlash.length === 0) {
     return;
   }
-  // TODO: have the regular totalBalance in EpochProcess too?
-  const totalBalance = BigInt(process.totalActiveStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
+  // TODO: have the regular totalBalance in EpochTransitionCache too?
+  const totalBalance = BigInt(cache.totalActiveStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
 
   // TODO: Could totalSlashings be number?
   // TODO: Could totalSlashing be cached?
@@ -46,7 +46,7 @@ export function processSlashings(state: CachedBeaconStateAllForks, process: Epoc
   const {effectiveBalanceIncrements} = state.epochCtx;
   const adjustedTotalSlashingBalance = bigIntMin(totalSlashings * BigInt(proportionalSlashingMultiplier), totalBalance);
   const increment = EFFECTIVE_BALANCE_INCREMENT;
-  for (const index of process.indicesToSlash) {
+  for (const index of cache.indicesToSlash) {
     const effectiveBalanceIncrement = effectiveBalanceIncrements[index];
     const penaltyNumerator = BigInt(effectiveBalanceIncrement) * adjustedTotalSlashingBalance;
     const penalty = Number(penaltyNumerator / totalBalance) * increment;

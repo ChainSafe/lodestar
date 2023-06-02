@@ -21,7 +21,7 @@ import {
   PubkeyIndexMap,
 } from "../../src/index.js";
 import {BeaconStateCache} from "../../src/cache/stateCache.js";
-import {EpochContextOpts} from "../../src/cache/epochContext.js";
+import {EpochCacheOpts} from "../../src/cache/epochCache.js";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -100,7 +100,7 @@ export function generateCachedState(
 export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
   state: T,
   configCustom: ChainForkConfig = config,
-  opts?: EpochContextOpts
+  opts?: EpochCacheOpts
 ): T & BeaconStateCache {
   return createCachedBeaconState<T>(
     state,

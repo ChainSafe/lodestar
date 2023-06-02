@@ -12,3 +12,7 @@ export class QueueError extends LodestarError<QueueErrorCodeType> {
     super(type);
   }
 }
+
+export function isQueueErrorAborted(e: unknown): e is QueueError {
+  return e instanceof QueueError && e.type.code === QueueErrorCode.QUEUE_ABORTED;
+}

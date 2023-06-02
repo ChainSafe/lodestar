@@ -1,5 +1,5 @@
 import {capella, ssz, allForks, altair} from "@lodestar/types";
-import {ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAltair,
@@ -10,15 +10,17 @@ import {
 } from "@lodestar/state-transition";
 import {routes} from "@lodestar/api";
 import {ForkChoiceError, ForkChoiceErrorCode, EpochDifference, AncestorStatus} from "@lodestar/fork-choice";
+import {isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {toCheckpointHex} from "../stateCache/index.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
+import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
-import {RegenCaller} from "../regen/interface.js";
 import type {BeaconChain} from "../chain.js";
-import {BlockInputType, FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt} from "./types.js";
+import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
+import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.
@@ -51,7 +53,7 @@ export async function importBlock(
   opts: ImportBlockOpts
 ): Promise<void> {
   const {blockInput, postState, parentBlockSlot, executionStatus} = fullyVerifiedBlock;
-  const {block, serializedData, source} = blockInput;
+  const {block, source} = blockInput;
   const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   const blockRootHex = toHexString(blockRoot);
   const currentEpoch = computeEpochAtSlot(this.forkChoice.getTime());
@@ -60,28 +62,9 @@ export async function importBlock(
   const blockDelaySec = (fullyVerifiedBlock.seenTimestampSec - postState.genesisTime) % this.config.SECONDS_PER_SLOT;
 
   // 1. Persist block to hot DB (pre-emptively)
-  if (serializedData) {
-    // skip serializing data if we already have it
-    this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
-    await this.db.block.putBinary(this.db.block.getId(block), serializedData);
-  } else {
-    this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
-    await this.db.block.add(block);
-  }
-  this.logger.debug("Persisted block to hot DB", {
-    slot: block.message.slot,
-    root: blockRootHex,
-  });
-
-  if (blockInput.type === BlockInputType.postDeneb) {
-    const {blobs} = blockInput;
-    // NOTE: Old blobs are pruned on archive
-    await this.db.blobsSidecar.add(blobs);
-    this.logger.debug("Persisted blobsSidecar to hot DB", {
-      blobsLen: blobs.blobs.length,
-      slot: blobs.beaconBlockSlot,
-      root: toHexString(blobs.beaconBlockRoot),
-    });
+  // If eagerPersistBlock = true we do that in verifyBlocksInEpoch to batch all I/O operations to save block time to head
+  if (!opts.eagerPersistBlock) {
+    await writeBlockInputToDb.call(this, [blockInput]);
   }
 
   // 2. Import block to fork choice
@@ -98,7 +81,7 @@ export async function importBlock(
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
-  this.stateCache.add(postState);
+  this.regen.addPostState(postState);
 
   this.metrics?.importBlock.bySource.inc({source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: block.message.slot, root: blockRootHex});
@@ -128,7 +111,7 @@ export async function importBlock(
     for (const attestation of attestations) {
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
-        const {target, slot, beaconBlockRoot} = attestation.data;
+        const {target, beaconBlockRoot} = attestation.data;
 
         const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
         this.seenAggregatedAttestations.add(
@@ -153,8 +136,19 @@ export async function importBlock(
         // Note: To avoid slowing down sync, only register attestations within FORK_CHOICE_ATT_EPOCH_LIMIT
         this.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
 
-        const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(slot), beaconBlockRoot);
-        this.metrics?.registerAttestationInBlock(indexedAttestation, parentBlockSlot, correctHead);
+        const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(attestation.data.slot), beaconBlockRoot);
+        const missedSlotVote = ssz.Root.equals(
+          rootCache.getBlockRootAtSlot(attestation.data.slot - 1),
+          rootCache.getBlockRootAtSlot(attestation.data.slot)
+        );
+        this.metrics?.registerAttestationInBlock(
+          indexedAttestation,
+          parentBlockSlot,
+          correctHead,
+          missedSlotVote,
+          blockRootHex,
+          block.message.slot
+        );
 
         // don't want to log the processed attestations here as there are so many attestations and it takes too much disc space,
         // users may want to keep more log files instead of unnecessary processed attestations log
@@ -214,21 +208,7 @@ export async function importBlock(
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // Set head state as strong reference
-    const headState =
-      newHead.stateRoot === toHexString(postState.hashTreeRoot()) ? postState : this.stateCache.get(newHead.stateRoot);
-    if (headState) {
-      this.stateCache.setHeadState(headState);
-    } else {
-      // Trigger regen on head change if necessary
-      this.logger.warn("Head state not available, triggering regen", {stateRoot: newHead.stateRoot});
-      // head has changed, so the existing cached head state is no longer useful. Set strong reference to null to free
-      // up memory for regen step below. During regen, node won't be functional but eventually head will be available
-      this.stateCache.setHeadState(null);
-      this.regen.getState(newHead.stateRoot, RegenCaller.processBlock).then(
-        (headStateRegen) => this.stateCache.setHeadState(headStateRegen),
-        (e) => this.logger.error("Error on head state regen", {}, e)
-      );
-    }
+    this.regen.updateHeadState(newHead.stateRoot, postState);
 
     this.emitter.emit(routes.events.EventType.head, {
       block: newHead.blockRoot,
@@ -251,8 +231,11 @@ export async function importBlock(
       this.metrics.headSlot.set(newHead.slot);
       // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
       // We want to track recent blocks coming from gossip, unknown block sync, and API.
-      if (delaySec < 64 * this.config.SECONDS_PER_SLOT) {
+      if (delaySec < SLOTS_PER_EPOCH * this.config.SECONDS_PER_SLOT) {
         this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
+        if (delaySec > this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT) {
+          this.metrics.importBlock.setHeadAfterFirstInterval.inc();
+        }
       }
     }
 
@@ -286,15 +269,18 @@ export async function importBlock(
     // - Persist state witness
     // - Use block's syncAggregate
     if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
-      try {
-        this.lightClientServer.onImportBlockHead(
-          block.message as allForks.AllForksLightClient["BeaconBlock"],
-          postState as CachedBeaconStateAltair,
-          parentBlockSlot
-        );
-      } catch (e) {
-        this.logger.error("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
-      }
+      // we want to import block asap so do this in the next event loop
+      setTimeout(() => {
+        try {
+          this.lightClientServer.onImportBlockHead(
+            block.message as allForks.AllForksLightClient["BeaconBlock"],
+            postState as CachedBeaconStateAltair,
+            parentBlockSlot
+          );
+        } catch (e) {
+          this.logger.verbose("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
+        }
+      }, 0);
     }
   }
 
@@ -332,7 +318,9 @@ export async function importBlock(
           finalizedBlockHash
         )
         .catch((e) => {
-          this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
+          if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+            this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
+          }
         });
     }
   }
@@ -345,7 +333,7 @@ export async function importBlock(
     // Cache state to preserve epoch transition work
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
-    this.checkpointStateCache.add(cp, checkpointState);
+    this.regen.addCheckpointState(cp, checkpointState);
     this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
 
     // Note: in-lined code from previos handler of ChainEvent.checkpoint

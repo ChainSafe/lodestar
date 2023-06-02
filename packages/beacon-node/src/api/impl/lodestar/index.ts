@@ -1,5 +1,5 @@
 import {routes, ServerApi} from "@lodestar/api";
-import {Bucket, Repository} from "@lodestar/db";
+import {Repository} from "@lodestar/db";
 import {toHex} from "@lodestar/utils";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
@@ -86,11 +86,7 @@ export function getLodestarApi({
     },
 
     async getStateCacheItems() {
-      return {data: (chain as BeaconChain)["stateCache"].dumpSummary()};
-    },
-
-    async getCheckpointStateCacheItems() {
-      return {data: (chain as BeaconChain)["checkpointStateCache"].dumpSummary()};
+      return {data: chain.regen.dumpCacheSummary()};
     },
 
     async getGossipPeerScoreStats() {
@@ -109,8 +105,7 @@ export function getLodestarApi({
     },
 
     async dropStateCache() {
-      chain.stateCache.clear();
-      chain.checkpointStateCache.clear();
+      chain.regen.dropCache();
     },
 
     async connectPeer(peerIdStr, multiaddrStrs) {
@@ -144,14 +139,13 @@ export function getLodestarApi({
     async dumpDbBucketKeys(bucketReq) {
       for (const repo of Object.values(db) as IBeaconDb[keyof IBeaconDb][]) {
         if (repo instanceof Repository) {
-          const bucket = (repo as RepositoryAny)["bucket"];
-          if (bucket === bucket || Bucket[bucket] === bucketReq) {
+          if (String(repo["bucket"]) === bucketReq || repo["bucketId"] === bucketReq) {
             return {data: stringifyKeys(await repo.keys())};
           }
         }
       }
 
-      throw Error(`Unknown Bucket '${bucketReq}' available: ${Object.keys(Bucket).join(", ")}`);
+      throw Error(`Unknown Bucket '${bucketReq}'`);
     },
 
     async dumpDbStateIndex() {
@@ -185,9 +179,6 @@ function regenRequestToJson(config: ChainForkConfig, regenRequest: RegenRequest)
       };
   }
 }
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type RepositoryAny = Repository<any, any>;
 
 function stringifyKeys(keys: (Uint8Array | number | string)[]): string[] {
   return keys.map((key) => {

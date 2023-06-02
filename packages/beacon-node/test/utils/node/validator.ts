@@ -86,8 +86,8 @@ export async function getAndInitDevValidators({
 }
 
 export function getApiFromServerHandlers(api: {[K in keyof Api]: ServerApi<Api[K]>}): Api {
-  return mapValues(api, (module) =>
-    mapValues(module, (api: APIServerHandler) => {
+  return mapValues(api, (apiModule) =>
+    mapValues(apiModule, (api: APIServerHandler) => {
       return async (...args: any) => {
         let code: HttpStatusCode = HttpStatusCode.OK;
         try {
@@ -110,7 +110,7 @@ export function getApiFromServerHandlers(api: {[K in keyof Api]: ServerApi<Api[K
             error: {
               code: code ?? HttpStatusCode.INTERNAL_SERVER_ERROR,
               message: (err as Error).message,
-              operationId: `${module}.${api.name}`,
+              operationId: api.name,
             },
           };
         }

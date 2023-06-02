@@ -18,7 +18,8 @@ describe("Produce Block with BuilderSelection", function () {
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
     sinon.SinonStubbedInstance<ValidatorStore>;
 
-  const config = createChainForkConfig(mainnetConfig);
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  const config = createChainForkConfig({...mainnetConfig, ALTAIR_FORK_EPOCH: 0, BELLATRIX_FORK_EPOCH: 0});
 
   const clock = new ClockMock();
   const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null);

@@ -2,7 +2,8 @@ import {ByteVectorType, CompositeViewDU, ListCompositeType} from "@chainsafe/ssz
 import {Root, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {bytesToInt} from "@lodestar/utils";
-import {Db, Bucket, Repository, KeyValue} from "@lodestar/db";
+import {Db, Repository, KeyValue} from "@lodestar/db";
+import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 // TODO: Review where is best to put this type
 export type DepositTree = CompositeViewDU<ListCompositeType<ByteVectorType>>;
@@ -11,7 +12,8 @@ export class DepositDataRootRepository extends Repository<number, Root> {
   private depositRootTree?: DepositTree;
 
   constructor(config: ChainForkConfig, db: Db) {
-    super(config, db, Bucket.index_depositDataRoot, ssz.Root);
+    const bucket = Bucket.index_depositDataRoot;
+    super(config, db, bucket, ssz.Root, getBucketNameByValue(bucket));
   }
 
   decodeKey(data: Buffer): number {

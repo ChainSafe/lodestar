@@ -45,7 +45,7 @@ export function presetFromJson(json: Record<string, unknown>): Partial<BeaconPre
  */
 function deserializePresetValue(valueStr: unknown, keyName: string): number {
   if (typeof valueStr !== "string") {
-    throw Error(`Invalid ${keyName} value ${valueStr} expected string`);
+    throw Error(`Invalid ${keyName} value ${valueStr as string} expected string`);
   }
 
   const value = parseInt(valueStr, 10);

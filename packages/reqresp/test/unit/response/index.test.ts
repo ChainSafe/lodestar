@@ -61,6 +61,7 @@ describe("response / handleRequest", () => {
 
       const resultPromise = handleRequest({
         logger,
+        metrics: null,
         protocol,
         protocolID: protocol.method,
         stream,

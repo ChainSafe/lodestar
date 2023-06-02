@@ -1,5 +1,5 @@
 import {ApiError} from "@lodestar/api";
-import {CLClient, LighthouseAPI, NodePair, SimulationAssertion} from "../interfaces.js";
+import {AssertionResult, CLClient, LighthouseAPI, NodePair, SimulationAssertion} from "../interfaces.js";
 import {neverMatcher} from "./matchers.js";
 
 const MIN_GOSSIPSUB_SCORE = 10;
@@ -9,13 +9,16 @@ let peersIdMapCache: Record<string, string>;
 export const lighthousePeerScoreAssertion: SimulationAssertion<"lighthousePeerScore", {gossipsubScore: number}> = {
   id: "lighthousePeerScore",
   match: neverMatcher,
-  async assert({nodes}) {
+  async assert({nodes, node}) {
+    // We want to run this only once, not every node
+    if (node.id !== nodes[0].id) return [];
+
     const lighthousePeer = nodes.find((n) => n.cl.client === CLClient.Lighthouse);
     if (peersIdMapCache === undefined) {
       peersIdMapCache = await getLodestarPeerIds(nodes);
     }
 
-    const errors = [];
+    const errors: AssertionResult[] = [];
 
     try {
       const peerScores = await (lighthousePeer?.cl.api as LighthouseAPI).lighthouse.getPeers();
@@ -29,9 +32,10 @@ export const lighthousePeerScoreAssertion: SimulationAssertion<"lighthousePeerSc
           },
         } = peerScore;
         if (gossipsub_score < MIN_GOSSIPSUB_SCORE) {
-          errors.push(
-            `Node "${peersIdMapCache[peer_id]}" has low gossipsub score on Lighthouse.  gossipsub_score: ${gossipsub_score}, MIN_GOSSIPSUB_SCORE: ${MIN_GOSSIPSUB_SCORE}`
-          );
+          errors.push([
+            `Node "${peersIdMapCache[peer_id]}" has low gossipsub score on Lighthouse`,
+            {gossipsubScore: gossipsub_score, minGossipsubScore: MIN_GOSSIPSUB_SCORE},
+          ]);
         }
       }
     } catch (error) {

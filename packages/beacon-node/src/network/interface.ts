@@ -1,7 +1,7 @@
 import {Libp2p as ILibp2p} from "libp2p";
 import {Connection} from "@libp2p/interface-connection";
 import {Components} from "libp2p/components";
-import {Slot, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
+import {Slot, SlotRootHex, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
 import {BlockInput} from "../chain/blocks/types.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {INetworkEventBus} from "./events.js";
@@ -20,6 +20,7 @@ import {PeerAction} from "./peers/index.js";
  */
 
 export interface INetwork extends INetworkCorePublic {
+  readonly closed: boolean;
   events: INetworkEventBus;
 
   getConnectedPeers(): PeerIdStr[];
@@ -28,7 +29,7 @@ export interface INetwork extends INetworkCorePublic {
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;
   shouldAggregate(subnet: number, slot: Slot): boolean;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
-
+  searchUnknownSlotRoot(slotRoot: SlotRootHex, peer?: PeerIdStr): void;
   // ReqResp
   sendBeaconBlocksByRange(
     peerId: PeerIdStr,
@@ -38,14 +39,8 @@ export interface INetwork extends INetworkCorePublic {
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRootRequest
   ): Promise<allForks.SignedBeaconBlock[]>;
-  sendBlobsSidecarsByRange(
-    peerId: PeerIdStr,
-    request: deneb.BlobsSidecarsByRangeRequest
-  ): Promise<deneb.BlobsSidecar[]>;
-  sendBeaconBlockAndBlobsSidecarByRoot(
-    peerId: PeerIdStr,
-    request: deneb.BeaconBlockAndBlobsSidecarByRootRequest
-  ): Promise<deneb.SignedBeaconBlockAndBlobsSidecar[]>;
+  sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
+  sendBlobSidecarsByRoot(peerId: PeerIdStr, request: deneb.BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
 
   // Gossip
   publishBeaconBlockMaybeBlobs(blockInput: BlockInput): Promise<number>;

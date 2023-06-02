@@ -4,6 +4,7 @@ import {Registry} from "prom-client";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {BeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
+import {sleep} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {Api, ServerApi} from "@lodestar/api";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
@@ -14,7 +15,7 @@ import {Network, getReqRespHandlers} from "../network/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
-import {createMetrics, Metrics, HttpMetricsServer} from "../metrics/index.js";
+import {createMetrics, Metrics, HttpMetricsServer, getHttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
@@ -35,7 +36,7 @@ export type BeaconNodeModules = {
   api: {[K in keyof Api]: ServerApi<Api[K]>};
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
-  metricsServer?: HttpMetricsServer;
+  metricsServer: HttpMetricsServer | null;
   monitoring: MonitoringService | null;
   restApi?: BeaconRestApiServer;
   controller?: AbortController;
@@ -75,6 +76,12 @@ enum LoggerModule {
 }
 
 /**
+ * Short delay before closing db to give async operations sufficient time to complete
+ * and prevent "Database is not open" errors when shutting down beacon node.
+ */
+const DELAY_BEFORE_CLOSING_DB_MS = 500;
+
+/**
  * The main Beacon Node class.  Contains various components for getting and processing data from the
  * Ethereum Consensus ecosystem as well as systems for getting beacon node metadata.
  */
@@ -83,7 +90,7 @@ export class BeaconNode {
   config: BeaconConfig;
   db: IBeaconDb;
   metrics: Metrics | null;
-  metricsServer?: HttpMetricsServer;
+  metricsServer: HttpMetricsServer | null;
   monitoring: MonitoringService | null;
   network: Network;
   chain: IBeaconChain;
@@ -181,14 +188,12 @@ export class BeaconNode {
       db.setMetrics(metrics.db);
     }
 
-    let monitoring = null;
-    if (opts.monitoring.endpoint) {
-      monitoring = new MonitoringService("beacon", opts.monitoring, {
-        register: (metrics as Metrics).register,
-        logger: logger.child({module: LoggerModule.monitoring}),
-      });
-      monitoring.start();
-    }
+    const monitoring = opts.monitoring.endpoint
+      ? new MonitoringService("beacon", opts.monitoring, {
+          register: (metrics as Metrics).register,
+          logger: logger.child({module: LoggerModule.monitoring}),
+        })
+      : null;
 
     const chain = new BeaconChain(opts.chain, {
       config,
@@ -225,7 +230,6 @@ export class BeaconNode {
       peerId,
       peerStoreDir,
       getReqRespHandler: getReqRespHandlers({db, chain}),
-      signal,
     });
 
     const sync = new BeaconSync(opts.sync, {
@@ -265,15 +269,12 @@ export class BeaconNode {
 
     // only start server if metrics are explicitly enabled
     const metricsServer = opts.metrics.enabled
-      ? new HttpMetricsServer(opts.metrics, {
+      ? await getHttpMetricsServer(opts.metrics, {
           register: (metrics as Metrics).register,
           getOtherMetrics: () => network.scrapeMetrics(),
           logger: logger.child({module: LoggerModule.metrics}),
         })
-      : undefined;
-    if (metricsServer) {
-      await metricsServer.start();
-    }
+      : null;
 
     const restApi = new BeaconRestApiServer(opts.api.rest, {
       config,
@@ -313,14 +314,14 @@ export class BeaconNode {
       this.sync.close();
       this.backfillSync?.close();
       await this.network.close();
-      if (this.metricsServer) await this.metricsServer.stop();
-      if (this.monitoring) this.monitoring.stop();
+      if (this.metricsServer) await this.metricsServer.close();
+      if (this.monitoring) this.monitoring.close();
       if (this.restApi) await this.restApi.close();
-
       await this.chain.persistToDisk();
       await this.chain.close();
-      await this.db.stop();
       if (this.controller) this.controller.abort();
+      await sleep(DELAY_BEFORE_CLOSING_DB_MS);
+      await this.db.stop();
       this.status = BeaconNodeStatus.closed;
     }
   }

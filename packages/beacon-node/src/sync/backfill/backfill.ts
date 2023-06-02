@@ -3,7 +3,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconStateAllForks, blockToHeader} from "@lodestar/state-transition";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {phase0, Root, Slot, allForks, ssz} from "@lodestar/types";
-import {ErrorAborted, Logger, sleep} from "@lodestar/utils";
+import {ErrorAborted, Logger, sleep, toHex} from "@lodestar/utils";
 import {toHexString} from "@chainsafe/ssz";
 
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -528,7 +528,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       )
         // TODO: explode and stop the entire node
         throw new Error(
-          `InvalidWsCheckpoint root=${this.wsCheckpointHeader.root}, epoch=${
+          `InvalidWsCheckpoint root=${toHex(this.wsCheckpointHeader.root)}, epoch=${
             this.wsCheckpointHeader.slot / SLOTS_PER_EPOCH
           }, ${
             wsDbCheckpointBlock
@@ -590,9 +590,9 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             } else {
               validSequence = false;
               this.logger.warn(
-                `Invalid backfill sequence: previous finalized or checkpoint block root=${
+                `Invalid backfill sequence: previous finalized or checkpoint block root=${toHex(
                   this.prevFinalizedCheckpointBlock.root
-                }, slot=${this.prevFinalizedCheckpointBlock.slot} ${
+                )}, slot=${this.prevFinalizedCheckpointBlock.slot} ${
                   prevBackfillCpBlock ? "found at slot=" + prevBackfillCpBlock.message.slot : "not found"
                 }, ignoring the sequence`
               );
@@ -644,7 +644,9 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     if (cleanupSeqs.length > 0) {
       await this.db.backfilledRanges.batchDelete(cleanupSeqs.map((entry) => entry.key));
       this.logger.debug(
-        `Cleaned up the old sequences between ${this.backfillStartFromSlot},${this.syncAnchor.lastBackSyncedBlock}`,
+        `Cleaned up the old sequences between ${this.backfillStartFromSlot},${toHex(
+          this.syncAnchor.lastBackSyncedBlock.root
+        )}`,
         {cleanupSeqs: JSON.stringify(cleanupSeqs)}
       );
     }
@@ -668,7 +670,9 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     if (expectedSlot !== null && anchorBlock.message.slot !== expectedSlot)
       throw Error(
-        `Invalid slot of anchorBlock read from DB with root=${anchorBlockRoot}, expected=${expectedSlot}, actual=${anchorBlock.message.slot}`
+        `Invalid slot of anchorBlock read from DB with root=${toHex(
+          anchorBlockRoot
+        )}, expected=${expectedSlot}, actual=${anchorBlock.message.slot}`
       );
 
     // If possible, read back till anchorBlock > this.prevFinalizedCheckpointBlock
@@ -683,9 +687,9 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       // Before moving anchorBlock back, we need check for prevFinalizedCheckpointBlock
       if (anchorBlock.message.slot < this.prevFinalizedCheckpointBlock.slot) {
         throw Error(
-          `Skipped a prevFinalizedCheckpointBlock with slot=${this.prevFinalizedCheckpointBlock}, root=${toHexString(
+          `Skipped a prevFinalizedCheckpointBlock with slot=${toHex(
             this.prevFinalizedCheckpointBlock.root
-          )}`
+          )}, root=${toHexString(this.prevFinalizedCheckpointBlock.root)}`
         );
       }
       if (anchorBlock.message.slot === this.prevFinalizedCheckpointBlock.slot) {
@@ -696,7 +700,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           throw Error(
             `Invalid root for prevFinalizedCheckpointBlock at slot=${
               this.prevFinalizedCheckpointBlock.slot
-            }, expected=${toHexString(this.prevFinalizedCheckpointBlock.root)}, found=${anchorBlockRoot}`
+            }, expected=${toHexString(this.prevFinalizedCheckpointBlock.root)}, found=${toHex(anchorBlockRoot)}`
           );
         }
 

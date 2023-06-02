@@ -25,13 +25,6 @@ To run tests:
 - :test_tube: Run `yarn check-types` to check TypeScript types.
 - :test_tube: Run `yarn lint` to run the linter (ESLint).
 
-Contributing to tests:
-
-- Test must not depend on external live resources, such that running tests for a commit must be deterministic:
-  - Do not pull data from external APIs like execution JSON RPC (instead run a local node).
-  - Do not pull unpinned versions from dockerhub (use deterministic tag) or Github (checkout commit not branch).
-  - Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.
-
 ### Debugging Spec Tests
 
 - To fix errors always focus on passing all minimal tests first without running mainnet tests.
@@ -155,6 +148,22 @@ We're currently experimenting with hosting the majority of lodestar packages and
 - Code whitespace can be helpful for reading complex code, please add some.
 - For unit tests, we forbid import stubbing when other approaches are feasible.
 
+## Tests style guide
+
+Test must not depend on external live resources, such that running tests for a commit must be deterministic:
+
+- Do not pull data from external APIs like execution JSON RPC (instead run a local node).
+- Do not pull unpinned versions from dockerhub (use deterministic tag) or Github (checkout commit not branch).
+- Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.
+
+Add assertion messages where possible to ease fixing tests if they fail. If an assertion message is called from multiple times with the same stack trace, you **MUST** include an assertion message. For example, if an assertion is inside a for loop add some metadata to be able to locate the error source:
+
+```ts
+for (const blockResult of blocksResult) {
+  expect(blockResult.status).equals("processed", `wrong block ${blockResult.id} result status`);
+}
+```
+
 ## Logging policy
 
 ### Logging Levels
@@ -180,10 +189,26 @@ To edit or extend an existing Grafana dashboard with minimal diff:
 
 1. Grab the .json dashboard file from current unstable
 2. Import file to Grafana via the web UI at `/dashboard/import`. Give it some temporal name relevant to your work (i.e. the branch name)
-3. Do edits on the Dashboard
+3. Visually edit the dashboard
 4. Once done make sure to leave the exact same visual aspect as before: same refresh interval, collapsed rows, etc.
-5. Click the "share dashboard" icon next to the title at the top left corner. Go to the "Export" tab, set "Export for sharing externally" to true and click "Save to file"
-6. Paste the contents of the downloaded file in the Github repo, commit and open your PR
+5. Save the dashboard (CTRL + S)
+6. Run download script, see [below](#using-download-script) on how to use it
+7. Check git diff of updated dashboards, commit, push and open your PR
+
+### Using Download Script
+
+Create a file `.secrets.env` with envs
+
+```sh
+GRAFANA_API_KEY=$token
+GRAFANA_URL=https://yourgrafanaapi.io
+```
+
+Run script to download dashboards to `./dashboards` folder
+
+```sh
+node scripts/download_dashboards.mjs
+```
 
 ## Label Guide
 

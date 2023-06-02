@@ -13,7 +13,7 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Network, NetworkInitModules, getReqRespHandlers} from "../../../src/network/index.js";
 import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 
-import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
+import {getMockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain.js";
 import {createNetworkModules, onPeerConnect} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
@@ -73,8 +73,8 @@ describe.skip("mdns", function () {
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function createTestNode(nodeName: string) {
-    const {state, config} = getStaticData();
-    const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});
+    const {config} = getStaticData();
+    const chain = getMockBeaconChain();
 
     chain.forkChoice.getHead = () => {
       return {
@@ -97,7 +97,6 @@ describe.skip("mdns", function () {
       db,
       getReqRespHandler: getReqRespHandlers({db, chain}),
       gossipHandlers,
-      signal: controller.signal,
       metrics: null,
     };
 

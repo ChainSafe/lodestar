@@ -1,4 +1,4 @@
-import {routes, ServerApi} from "@lodestar/api";
+import {routes, ServerApi, BlockContents} from "@lodestar/api";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
@@ -8,8 +8,14 @@ import {
   computeEpochAtSlot,
   getCurrentSlot,
 } from "@lodestar/state-transition";
-import {GENESIS_SLOT, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {Root, Slot, ValidatorIndex, ssz, Epoch, ProducedBlockSource} from "@lodestar/types";
+import {
+  GENESIS_SLOT,
+  SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
+  SYNC_COMMITTEE_SUBNET_SIZE,
+  ForkSeq,
+} from "@lodestar/params";
+import {Root, Slot, ValidatorIndex, ssz, Epoch, ProducedBlockSource, bellatrix, allForks} from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {toHex} from "@lodestar/utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
@@ -73,9 +79,11 @@ export function getValidatorApi({
         genesisBlockRoot = state.blockRoots.get(0);
       }
 
-      const genesisBlock = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
-      if (genesisBlock) {
-        genesisBlockRoot = config.getForkTypes(genesisBlock.message.slot).SignedBeaconBlock.hashTreeRoot(genesisBlock);
+      const blockRes = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
+      if (blockRes) {
+        genesisBlockRoot = config
+          .getForkTypes(blockRes.block.message.slot)
+          .SignedBeaconBlock.hashTreeRoot(blockRes.block);
       }
     }
 
@@ -227,7 +235,7 @@ export function getValidatorApi({
       }
     };
 
-  const produceBlock: ServerApi<routes.validator.Api>["produceBlockV2"] = async function produceBlock(
+  const produceBlockV2: ServerApi<routes.validator.Api>["produceBlockV2"] = async function produceBlockV2(
     slot,
     randaoReveal,
     graffiti
@@ -258,15 +266,38 @@ export function getValidatorApi({
         blockValue,
         root: toHexString(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)),
       });
-      return {data: block, version: config.getForkName(block.slot), blockValue};
+      const version = config.getForkName(block.slot);
+      if (ForkSeq[version] < ForkSeq.deneb) {
+        return {data: block, version, blockValue};
+      } else {
+        const blockHash = toHex((block as bellatrix.BeaconBlock).body.executionPayload.blockHash);
+        const {blobSidecars} = chain.producedBlobSidecarsCache.get(blockHash) ?? {};
+        if (blobSidecars === undefined) {
+          throw Error("blobSidecars missing in cache");
+        }
+        return {data: {block, blobSidecars} as BlockContents, version, blockValue};
+      }
     } finally {
       if (timer) timer({source});
     }
   };
 
+  const produceBlock: ServerApi<routes.validator.Api>["produceBlock"] = async function produceBlock(
+    slot,
+    randaoReveal,
+    graffiti
+  ) {
+    const {data, version, blockValue} = await produceBlockV2(slot, randaoReveal, graffiti);
+    if ((data as BlockContents).block !== undefined) {
+      throw Error(`Invalid block contents for produceBlock at fork=${version}`);
+    } else {
+      return {data: data as allForks.BeaconBlock, version, blockValue};
+    }
+  };
+
   return {
     produceBlock: produceBlock,
-    produceBlockV2: produceBlock,
+    produceBlockV2: produceBlockV2,
     produceBlindedBlock,
 
     async produceAttestationData(committeeIndex, slot) {
@@ -331,9 +362,11 @@ export function getValidatorApi({
       // when a validator is configured with multiple beacon node urls, this beaconBlockRoot may come from another beacon node
       // and it hasn't been in our forkchoice since we haven't seen / processing that block
       // see https://github.com/ChainSafe/lodestar/issues/5063
-      if (!chain.forkChoice.getBlock(beaconBlockRoot)) {
+      if (!chain.forkChoice.hasBlock(beaconBlockRoot)) {
+        const rootHex = toHexString(beaconBlockRoot);
+        network.searchUnknownSlotRoot({slot, root: rootHex});
         // if result of this call is false, i.e. block hasn't seen after 1 slot then the below notOnOptimisticBlockRoot call will throw error
-        await chain.waitForBlock(slot, toHexString(beaconBlockRoot));
+        await chain.waitForBlock(slot, rootHex);
       }
 
       // Check the execution status as validator shouldn't contribute on an optimistic head
@@ -533,6 +566,7 @@ export function getValidatorApi({
             // see https://github.com/ChainSafe/lodestar/issues/5098
             const {indexedAttestation, committeeIndices, attDataRootHex} = await validateGossipFnRetryUnknownRoot(
               validateFn,
+              network,
               chain,
               slot,
               beaconBlockRoot
@@ -545,7 +579,7 @@ export function getValidatorApi({
               committeeIndices
             );
             const sentPeers = await network.publishBeaconAggregateAndProof(signedAggregateAndProof);
-            metrics?.submitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
+            metrics?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
           } catch (e) {
             if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
               logger.debug("Ignoring known signedAggregateAndProof");

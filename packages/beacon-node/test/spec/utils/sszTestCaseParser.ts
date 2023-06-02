@@ -47,7 +47,7 @@ export function parseSszValidTestcase(dirpath: string, metaFilename: string): Va
   const metaStr = fs.readFileSync(path.join(dirpath, metaFilename), "utf8");
   const meta = jsyaml.load(metaStr) as {root: string};
   if (typeof meta.root !== "string") {
-    throw Error(`meta.root not a string: ${meta.root}\n${fs}`);
+    throw Error(`meta.root not a string: ${meta.root}\n${metaStr}`);
   }
 
   // The serialized value is stored in serialized.ssz_snappy

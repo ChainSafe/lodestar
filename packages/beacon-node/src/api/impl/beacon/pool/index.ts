@@ -60,6 +60,7 @@ export function getBeaconPoolApi({
             // see https://github.com/ChainSafe/lodestar/issues/5098
             const {indexedAttestation, subnet, attDataRootHex} = await validateGossipFnRetryUnknownRoot(
               validateFn,
+              network,
               chain,
               slot,
               beaconBlockRoot
@@ -70,7 +71,7 @@ export function getBeaconPoolApi({
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
-            metrics?.submitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
+            metrics?.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
           } catch (e) {
             errors.push(e as Error);
             logger.error(

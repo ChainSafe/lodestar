@@ -14,6 +14,9 @@ import {
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   BackfilledRanges,
+  BlobSidecarsRepository,
+  BlobSidecarsArchiveRepository,
+  // TODO DENEB: cleanup following blob repos post full migration
   BlobsSidecarRepository,
   BlobsSidecarArchiveRepository,
   BLSToExecutionChangeRepository,
@@ -30,10 +33,13 @@ export function getStubbedBeaconDb(): IBeaconDb {
   return {
     // unfinalized blocks
     block: createStubInstance(BlockRepository),
-    blobsSidecar: createStubInstance(BlobsSidecarRepository),
-
     // finalized blocks
     blockArchive: createStubInstance(BlockArchiveRepository),
+
+    blobSidecars: createStubInstance(BlobSidecarsRepository),
+    blobSidecarsArchive: createStubInstance(BlobSidecarsArchiveRepository),
+    // TODO: cleanup post full migration
+    blobsSidecar: createStubInstance(BlobsSidecarRepository),
     blobsSidecarArchive: createStubInstance(BlobsSidecarArchiveRepository),
 
     // finalized states

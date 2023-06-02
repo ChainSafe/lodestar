@@ -1,4 +1,4 @@
-import {Logger} from "@lodestar/utils";
+import {Logger, LogLevel} from "@lodestar/utils";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {ValidatorIndex, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -7,8 +7,8 @@ import {IBeaconDb} from "../../db/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {IBeaconChain} from "../interface.js";
 import {ChainEvent} from "../emitter.js";
-import {CheckpointStateCache} from "../stateCache/index.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {IStateRegenerator} from "../regen/interface.js";
 import {StatesArchiver, StatesArchiverOpts} from "./archiveStates.js";
 import {archiveBlocks, FinalizedData} from "./archiveBlocks.js";
 
@@ -19,7 +19,7 @@ export type ArchiverOpts = StatesArchiverOpts & {
 };
 
 type ProposalStats = {
-  expected: number;
+  total: number;
   finalized: number;
   orphaned: number;
   missed: number;
@@ -51,7 +51,7 @@ export class Archiver {
     opts: ArchiverOpts,
     private readonly metrics: Metrics | null
   ) {
-    this.statesArchiver = new StatesArchiver(chain.checkpointStateCache, db, logger, opts);
+    this.statesArchiver = new StatesArchiver(chain.regen, db, logger, opts);
     this.prevFinalized = chain.forkChoice.getFinalizedCheckpoint();
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
       maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN,
@@ -84,11 +84,11 @@ export class Archiver {
 
   private onCheckpoint = (): void => {
     const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
-    this.chain.checkpointStateCache.prune(
+    this.chain.regen.pruneOnCheckpoint(
       this.chain.forkChoice.getFinalizedCheckpoint().epoch,
-      this.chain.forkChoice.getJustifiedCheckpoint().epoch
+      this.chain.forkChoice.getJustifiedCheckpoint().epoch,
+      headStateRoot
     );
-    this.chain.stateCache.prune(headStateRoot);
   };
 
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
@@ -105,7 +105,7 @@ export class Archiver {
         this.chain.clock.currentEpoch
       );
       this.collectFinalizedProposalStats(
-        this.chain.checkpointStateCache,
+        this.chain.regen,
         this.chain.forkChoice,
         this.chain.beaconProposerCache,
         finalizedData,
@@ -117,8 +117,8 @@ export class Archiver {
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiver.maybeArchiveState(finalized);
 
-      this.chain.checkpointStateCache.pruneFinalized(finalizedEpoch);
-      this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch);
+      this.chain.regen.pruneOnFinalized(finalizedEpoch);
+
       // tasks rely on extended fork choice
       this.chain.forkChoice.prune(finalized.rootHex);
       await this.updateBackfillRange(finalized);
@@ -176,7 +176,7 @@ export class Archiver {
   };
 
   private collectFinalizedProposalStats(
-    checkpointStateCache: CheckpointStateCache,
+    regen: IStateRegenerator,
     forkChoice: IForkChoice,
     beaconProposerCache: IBeaconChain["beaconProposerCache"],
     finalizedData: FinalizedData,
@@ -220,7 +220,7 @@ export class Archiver {
     const finalizedMissedProposalsCount = expectedTotalProposalsCount - slotProposers.size;
 
     const allValidators: ProposalStats = {
-      expected: expectedTotalProposalsCount,
+      total: expectedTotalProposalsCount,
       finalized: finalizedCanonicalBlocksCount,
       orphaned: finalizedOrphanedProposalsCount,
       missed: finalizedMissedProposalsCount,
@@ -241,7 +241,7 @@ export class Archiver {
     let finalizedAttachedValidatorsMissedCount = 0;
 
     for (const checkpointHex of finalizedProposersCheckpoints) {
-      const checkpointState = checkpointStateCache.get(checkpointHex);
+      const checkpointState = regen.getCheckpointStateSync(checkpointHex);
 
       // Generate stats for attached validators if we have state info
       if (checkpointState !== null) {
@@ -290,7 +290,7 @@ export class Archiver {
     }
 
     const attachedValidators: ProposalStats = {
-      expected: expectedAttachedValidatorsProposalsCount,
+      total: expectedAttachedValidatorsProposalsCount,
       finalized: finalizedAttachedValidatorsProposalsCount,
       orphaned: finalizedAttachedValidatorsOrphanCount,
       missed: finalizedAttachedValidatorsMissedCount,
@@ -301,17 +301,28 @@ export class Archiver {
       finalizedCanonicalCheckpointsCount,
       finalizedFoundCheckpointsInStateCache,
     });
-    this.logger.info("Attached validators finalized proposal stats", {
-      ...attachedValidators,
-      finalizedAttachedValidatorsCount,
-    });
 
-    this.metrics?.allValidators.expected.set(allValidators.expected);
+    // Only log to info if there is some relevant data to show
+    //  - No need to explicitly track SYNCED state since no validators attached would be there to show
+    //  - debug log if validators attached but no proposals were scheduled
+    //  - info log if proposals were scheduled (canonical) or there were orphans (non canonical)
+    if (finalizedAttachedValidatorsCount !== 0) {
+      const logLevel =
+        attachedValidators.total !== 0 || attachedValidators.orphaned !== 0 ? LogLevel.info : LogLevel.debug;
+      this.logger[logLevel]("Attached validators finalized proposal stats", {
+        ...attachedValidators,
+        validators: finalizedAttachedValidatorsCount,
+      });
+    } else {
+      this.logger.debug("No proposers attached to beacon node", {finalizedEpoch: finalized.epoch});
+    }
+
+    this.metrics?.allValidators.total.set(allValidators.total);
     this.metrics?.allValidators.finalized.set(allValidators.finalized);
     this.metrics?.allValidators.orphaned.set(allValidators.orphaned);
     this.metrics?.allValidators.missed.set(allValidators.missed);
 
-    this.metrics?.attachedValidators.expected.set(attachedValidators.expected);
+    this.metrics?.attachedValidators.total.set(attachedValidators.total);
     this.metrics?.attachedValidators.finalized.set(attachedValidators.finalized);
     this.metrics?.attachedValidators.orphaned.set(attachedValidators.orphaned);
     this.metrics?.attachedValidators.missed.set(attachedValidators.missed);

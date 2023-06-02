@@ -27,6 +27,7 @@ export type Libp2pOptions = {
   metrics?: boolean;
   metricsRegistry?: Registry;
   lodestarVersion?: string;
+  hideAgentVersion?: boolean;
   mdns?: boolean;
 };
 
@@ -86,7 +87,11 @@ export async function createNodejsLibp2p(options: Libp2pOptions): Promise<Libp2p
     datastore: options.datastore,
     services: {
       identify: identifyService({
-        agentVersion: options.lodestarVersion ? `lodestar/${options.lodestarVersion}` : "lodestar",
+        agentVersion: options.hideAgentVersion
+          ? ""
+          : options.lodestarVersion
+          ? `lodestar/${options.lodestarVersion}`
+          : "lodestar",
       }),
       // individual components are specified because the components object is a Proxy
       // and passing it here directly causes problems downstream, not to mention is slowwww

@@ -143,6 +143,7 @@ export class ReqResp {
   }
 
   async stop(): Promise<void> {
+    this.rateLimiter.stop();
     this.controller.abort();
   }
 
@@ -173,7 +174,7 @@ export class ReqResp {
 
     try {
       yield* sendRequest(
-        {logger: this.logger, libp2p: this.libp2p, peerClient},
+        {logger: this.logger, libp2p: this.libp2p, metrics: this.metrics, peerClient},
         peerId,
         protocols,
         protocolIDs,
@@ -217,6 +218,7 @@ export class ReqResp {
       try {
         await handleRequest({
           logger: this.logger,
+          metrics: this.metrics,
           stream,
           peerId,
           protocol: protocol as Protocol,

@@ -155,5 +155,7 @@ export const allForksLightClient = {
 export const allForksBlobs = {
   deneb: {
     SignedBeaconBlockAndBlobsSidecar: deneb.SignedBeaconBlockAndBlobsSidecar,
+    BlobSidecar: deneb.BlobSidecar,
+    BlindedBlobSidecar: deneb.BlindedBlobSidecar,
   },
 };

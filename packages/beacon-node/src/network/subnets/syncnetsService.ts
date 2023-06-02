@@ -39,13 +39,11 @@ export class SyncnetsService implements SubnetsService {
     if (metrics) {
       metrics.syncnetsService.subscriptionsCommittee.addCollect(() => this.onScrapeLodestarMetrics(metrics));
     }
-  }
 
-  start(): void {
     this.clock.on(ClockEvent.epoch, this.onEpoch);
   }
 
-  stop(): void {
+  close(): void {
     this.clock.off(ClockEvent.epoch, this.onEpoch);
   }
 

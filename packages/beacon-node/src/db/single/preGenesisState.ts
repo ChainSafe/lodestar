@@ -1,8 +1,9 @@
 import {GENESIS_SLOT} from "@lodestar/params";
 import {allForks} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, Bucket} from "@lodestar/db";
+import {Db} from "@lodestar/db";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {Bucket} from "../buckets.js";
 
 export class PreGenesisState {
   private readonly config: ChainForkConfig;

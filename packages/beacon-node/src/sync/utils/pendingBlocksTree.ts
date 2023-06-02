@@ -6,7 +6,9 @@ export function getAllDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHe
   // Do one pass over all blocks to index by parent
   const byParent = new MapDef<RootHex, PendingBlock[]>(() => []);
   for (const block of blocks.values()) {
-    byParent.getOrDefault(block.parentBlockRootHex).push(block);
+    if (block.parentBlockRootHex != null) {
+      byParent.getOrDefault(block.parentBlockRootHex).push(block);
+    }
   }
 
   // Then, do a second pass recursively to get `blockRootHex` child blocks
@@ -41,11 +43,11 @@ export function getDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, 
   return descendantBlocks;
 }
 
-export function getLowestPendingUnknownParents(blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
+export function getUnknownBlocks(blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
   const blocksToFetch: PendingBlock[] = [];
 
   for (const block of blocks.values()) {
-    if (block.status === PendingBlockStatus.pending && !blocks.has(block.parentBlockRootHex)) {
+    if (block.status === PendingBlockStatus.pending && block.blockInput == null && block.parentBlockRootHex == null) {
       blocksToFetch.push(block);
     }
   }

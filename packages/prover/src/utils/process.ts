@@ -1,5 +1,4 @@
-import {LogData, Logger} from "@lodestar/utils";
-import {NetworkName} from "@lodestar/config/networks";
+import {Logger} from "@lodestar/logger";
 import {ELRequestHandler, ELVerifiedRequestHandler} from "../interfaces.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {ELRequestPayload, ELResponse} from "../types.js";
@@ -9,6 +8,7 @@ import {eth_getBlockByHash} from "../verified_requests/eth_getBlockByHash.js";
 import {eth_getBlockByNumber} from "../verified_requests/eth_getBlockByNumber.js";
 import {eth_getCode} from "../verified_requests/eth_getCode.js";
 import {eth_call} from "../verified_requests/eth_call.js";
+import {eth_estimateGas} from "../verified_requests/eth_estimateGas.js";
 
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
 export const supportedELRequests: Record<string, ELVerifiedRequestHandler<any, any>> = {
@@ -18,6 +18,7 @@ export const supportedELRequests: Record<string, ELVerifiedRequestHandler<any, a
   eth_getBlockByNumber: eth_getBlockByNumber,
   eth_getCode: eth_getCode,
   eth_call: eth_call,
+  eth_estimateGas: eth_estimateGas,
 };
 /* eslint-enable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any*/
 
@@ -26,21 +27,19 @@ export async function processAndVerifyRequest({
   handler,
   proofProvider,
   logger,
-  network,
 }: {
   payload: ELRequestPayload;
   handler: ELRequestHandler;
   proofProvider: ProofProvider;
   logger: Logger;
-  network: NetworkName;
 }): Promise<ELResponse | undefined> {
   await proofProvider.waitToBeReady();
-  logger.debug("Processing request", {method: payload.method, params: payload.params} as unknown as LogData);
+  logger.debug("Processing request", {method: payload.method, params: JSON.stringify(payload.params)});
   const verifiedHandler = supportedELRequests[payload.method];
 
   if (verifiedHandler !== undefined) {
     logger.debug("Verified request handler found", {method: payload.method});
-    return verifiedHandler({payload, handler, proofProvider, logger, network});
+    return verifiedHandler({payload, handler, proofProvider, logger});
   }
 
   logger.warn("Verified request handler not found. Falling back to proxy.", {method: payload.method});

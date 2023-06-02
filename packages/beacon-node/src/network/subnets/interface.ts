@@ -12,8 +12,7 @@ export type CommitteeSubscription = {
 };
 
 export type SubnetsService = {
-  start(): void;
-  stop(): void;
+  close(): void;
   addCommitteeSubscriptions(subscriptions: CommitteeSubscription[]): void;
   getActiveSubnets(): RequestedSubnet[];
   subscribeSubnetsToNextFork(nextFork: ForkName): void;

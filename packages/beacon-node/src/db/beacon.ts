@@ -15,6 +15,8 @@ import {
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   BackfilledRanges,
+  BlobSidecarsRepository,
+  BlobSidecarsArchiveRepository,
   BlobsSidecarRepository,
   BlobsSidecarArchiveRepository,
   BLSToExecutionChangeRepository,
@@ -23,9 +25,14 @@ import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
   block: BlockRepository;
-  blobsSidecar: BlobsSidecarRepository;
   blockArchive: BlockArchiveRepository;
+
+  blobSidecars: BlobSidecarsRepository;
+  blobSidecarsArchive: BlobSidecarsArchiveRepository;
+  // TODO DENEB: cleanup post full migration
+  blobsSidecar: BlobsSidecarRepository;
   blobsSidecarArchive: BlobsSidecarArchiveRepository;
+
   stateArchive: StateArchiveRepository;
 
   voluntaryExit: VoluntaryExitRepository;
@@ -52,9 +59,14 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/beacon-node/test/utils/stub/beaconDb.ts' -
     this.block = new BlockRepository(this.config, this.db);
-    this.blobsSidecar = new BlobsSidecarRepository(this.config, this.db);
     this.blockArchive = new BlockArchiveRepository(this.config, this.db);
+
+    this.blobSidecars = new BlobSidecarsRepository(this.config, this.db);
+    this.blobSidecarsArchive = new BlobSidecarsArchiveRepository(this.config, this.db);
+    // TODO DENEB: cleanup post full migration
+    this.blobsSidecar = new BlobsSidecarRepository(this.config, this.db);
     this.blobsSidecarArchive = new BlobsSidecarArchiveRepository(this.config, this.db);
+
     this.stateArchive = new StateArchiveRepository(this.config, this.db);
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
     this.blsToExecutionChange = new BLSToExecutionChangeRepository(this.config, this.db);

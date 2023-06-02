@@ -115,9 +115,9 @@ export enum AttestationErrorCode {
    */
   COMMITTEE_INDEX_OUT_OF_RANGE = "ATTESTATION_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",
   /**
-   * Missing attestation head state
+   * Missing state to verify attestation
    */
-  MISSING_ATTESTATION_HEAD_STATE = "ATTESTATION_ERROR_MISSING_ATTESTATION_HEAD_STATE",
+  MISSING_STATE_TO_VERIFY_ATTESTATION = "ATTESTATION_ERROR_MISSING_STATE_TO_VERIFY_ATTESTATION",
   /**
    * Invalid aggregator.
    */
@@ -162,7 +162,7 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.INVALID_TARGET_ROOT; targetRoot: RootHex; expected: string | null}
   | {code: AttestationErrorCode.TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK}
   | {code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE; index: number}
-  | {code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE; error: Error}
+  | {code: AttestationErrorCode.MISSING_STATE_TO_VERIFY_ATTESTATION; error: Error}
   | {code: AttestationErrorCode.INVALID_AGGREGATOR}
   | {code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION}
   | {code: AttestationErrorCode.INVALID_SERIALIZED_BYTES}
@@ -174,7 +174,7 @@ export class AttestationError extends GossipActionError<AttestationErrorType> {
     switch (type.code) {
       case AttestationErrorCode.UNKNOWN_TARGET_ROOT:
         return {code: type.code, root: toHexString(type.root)};
-      case AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE:
+      case AttestationErrorCode.MISSING_STATE_TO_VERIFY_ATTESTATION:
         // TODO: The stack trace gets lost here
         return {code: type.code, error: type.error.message};
 

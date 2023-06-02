@@ -48,7 +48,14 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
     if (this.status === Status.started) return;
     this.status = Status.started;
 
-    await this.db.open();
+    try {
+      await this.db.open();
+    } catch (e) {
+      if ((e as LevelDbError).cause?.code === "LEVEL_LOCKED") {
+        throw new Error("Database is already in use by another Lodestar instance");
+      }
+      throw e;
+    }
 
     if (this.metrics) {
       this.collectDbSizeMetric();
@@ -219,4 +226,4 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
 }
 
 /** From https://www.npmjs.com/package/level */
-type LevelDbError = {code: "LEVEL_NOT_FOUND"};
+type LevelDbError = {code: "LEVEL_NOT_FOUND"; cause?: {code: "LEVEL_LOCKED"}};

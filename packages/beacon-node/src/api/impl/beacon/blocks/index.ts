@@ -1,17 +1,28 @@
-import {routes, ServerApi} from "@lodestar/api";
+import {
+  routes,
+  ServerApi,
+  isSignedBlockContents,
+  isSignedBlindedBlockContents,
+  SignedBlockContents,
+} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
-import {deneb, allForks} from "@lodestar/types";
+import {allForks, deneb} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {BlockSource, getBlockInput, ImportBlockOpts} from "../../../../chain/blocks/types.js";
+import {
+  BlockSource,
+  getBlockInput,
+  ImportBlockOpts,
+  BlockInput,
+  blobSidecarsToBlobsSidecar,
+} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
 import {OpSource} from "../../../../metrics/validatorMonitor.js";
 import {NetworkEvent} from "../../../../network/index.js";
 import {ApiModules} from "../../types.js";
-import {ckzg} from "../../../../util/kzg.js";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
 
 /**
@@ -88,9 +99,9 @@ export function getBeaconBlockApi({
           return {executionOptimistic: false, data: []};
         }
         const canonicalRoot = config
-          .getForkTypes(canonicalBlock.message.slot)
-          .BeaconBlock.hashTreeRoot(canonicalBlock.message);
-        result.push(toBeaconHeaderResponse(config, canonicalBlock, true));
+          .getForkTypes(canonicalBlock.block.message.slot)
+          .BeaconBlock.hashTreeRoot(canonicalBlock.block.message);
+        result.push(toBeaconHeaderResponse(config, canonicalBlock.block, true));
 
         // fork blocks
         // TODO: What is this logic?
@@ -117,7 +128,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlockHeader(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: toBeaconHeaderResponse(config, block, true),
@@ -125,14 +136,14 @@ export function getBeaconBlockApi({
     },
 
     async getBlock(blockId) {
-      const {block} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block} = await resolveBlockId(chain, blockId);
       return {
         data: block,
       };
     },
 
     async getBlockV2(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: block,
@@ -141,7 +152,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlockAttestations(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: Array.from(block.message.body.attestations),
@@ -177,29 +188,54 @@ export function getBeaconBlockApi({
       }
 
       // Slow path
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: {root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)},
       };
     },
 
-    async publishBlindedBlock(signedBlindedBlock) {
+    async publishBlindedBlock(signedBlindedBlockOrContents) {
       const executionBuilder = chain.executionBuilder;
       if (!executionBuilder) throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
-      let signedBlock: allForks.SignedBeaconBlock;
-      if (config.getForkSeq(signedBlindedBlock.message.slot) >= ForkSeq.deneb) {
+      // Mechanism for blobs & blocks on builder is not yet finalized
+      if (isSignedBlindedBlockContents(signedBlindedBlockOrContents)) {
         throw Error("exeutionBuilder not yet implemented for deneb+ forks");
       } else {
-        signedBlock = await executionBuilder.submitBlindedBlock(signedBlindedBlock);
+        const signedBlockOrContents = await executionBuilder.submitBlindedBlock(
+          signedBlindedBlockOrContents as allForks.SignedBlindedBeaconBlock
+        );
+        // the full block is published by relay and it's possible that the block is already known to us by gossip
+        // see https://github.com/ChainSafe/lodestar/issues/5404
+        return this.publishBlock(signedBlockOrContents, {ignoreIfKnown: true});
       }
-      // the full block is published by relay and it's possible that the block is already known to us by gossip
-      // see https://github.com/ChainSafe/lodestar/issues/5404
-      return this.publishBlock(signedBlock, {ignoreIfKnown: true});
     },
 
-    async publishBlock(signedBlock, opts?: ImportBlockOpts) {
+    async publishBlock(signedBlockOrContents, opts: ImportBlockOpts = {}) {
       const seenTimestampSec = Date.now() / 1000;
+      let blockForImport: BlockInput, signedBlock: allForks.SignedBeaconBlock, signedBlobs: deneb.SignedBlobSidecars;
+
+      if (isSignedBlockContents(signedBlockOrContents)) {
+        // Build a blockInput for post deneb, signedBlobs will be be used in followup PRs
+        ({signedBlock, signedBlobSidecars: signedBlobs} = signedBlockOrContents as SignedBlockContents);
+        const blobsSidecar = blobSidecarsToBlobsSidecar(
+          config,
+          signedBlock,
+          signedBlobs.map(({message}) => message)
+        );
+
+        blockForImport = getBlockInput.postDeneb(
+          config,
+          signedBlock,
+          BlockSource.api,
+          // The blobsSidecar will be replaced in the followup PRs with just blobs
+          blobsSidecar
+        );
+      } else {
+        signedBlock = signedBlockOrContents as allForks.SignedBeaconBlock;
+        signedBlobs = [];
+        blockForImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.api);
+      }
 
       // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the
       // REST request promise without any extra infrastructure.
@@ -210,27 +246,14 @@ export function getBeaconBlockApi({
       }
 
       // TODO: Validate block
-
-      metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
-
-      // TODO Deneb: Open question if broadcast to both block topic + block_and_blobs topic
-      const blockForImport =
-        config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb
-          ? getBlockInput.postDeneb(
-              config,
-              signedBlock,
-              BlockSource.api,
-              chain.getBlobsSidecar(signedBlock.message as deneb.BeaconBlock)
-            )
-          : getBlockInput.preDeneb(config, signedBlock, BlockSource.api);
-
-      await promiseAllMaybeAsync<unknown>([
+      metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, blockForImport.block.message);
+      const publishPromises = [
         // Send the block, regardless of whether or not it is valid. The API
         // specification is very clear that this is the desired behaviour.
         () => network.publishBeaconBlockMaybeBlobs(blockForImport) as Promise<unknown>,
-
         () =>
-          chain.processBlock(blockForImport, opts).catch((e) => {
+          // there is no rush to persist block since we published it to gossip anyway
+          chain.processBlock(blockForImport, {...opts, eagerPersistBlock: false}).catch((e) => {
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
               network.events.emit(NetworkEvent.unknownBlockParent, {
                 blockInput: blockForImport,
@@ -239,29 +262,26 @@ export function getBeaconBlockApi({
             }
             throw e;
           }),
-      ]);
+        // TODO deneb: publish signed blobs as well
+      ];
+      await promiseAllMaybeAsync(publishPromises);
     },
 
-    async getBlobsSidecar(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
-
+    async getBlobSidecars(blockId) {
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
 
-      let blobsSidecar = await db.blobsSidecar.get(blockRoot);
-      if (!blobsSidecar) {
-        blobsSidecar = await db.blobsSidecarArchive.get(block.message.slot);
-        if (!blobsSidecar) {
-          blobsSidecar = {
-            beaconBlockRoot: blockRoot,
-            beaconBlockSlot: block.message.slot,
-            blobs: [] as deneb.Blobs,
-            kzgAggregatedProof: ckzg.computeAggregateKzgProof([]),
-          };
-        }
+      let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
+      if (!blobSidecars) {
+        ({blobSidecars} = (await db.blobSidecarsArchive.get(block.message.slot)) ?? {});
+      }
+
+      if (!blobSidecars) {
+        throw Error(`blobSidecars not found in db for slot=${block.message.slot} root=${toHexString(blockRoot)}`);
       }
       return {
         executionOptimistic,
-        data: blobsSidecar,
+        data: blobSidecars,
       };
     },
   };

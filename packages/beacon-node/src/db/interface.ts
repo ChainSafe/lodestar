@@ -14,6 +14,9 @@ import {
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   BackfilledRanges,
+  BlobSidecarsRepository,
+  BlobSidecarsArchiveRepository,
+  // TODO DENEB: cleanup once fully migrated from blobsSidecar to blobSidecars
   BlobsSidecarRepository,
   BlobsSidecarArchiveRepository,
   BLSToExecutionChangeRepository,
@@ -28,10 +31,14 @@ import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index
 export interface IBeaconDb {
   // unfinalized blocks
   block: BlockRepository;
-  blobsSidecar: BlobsSidecarRepository;
-
   // finalized blocks
   blockArchive: BlockArchiveRepository;
+
+  blobSidecars: BlobSidecarsRepository;
+  blobSidecarsArchive: BlobSidecarsArchiveRepository;
+
+  // TODO DENEB: cleanup following two blobs... repos once BlobsSidecar fully migrated to BlobSidecars
+  blobsSidecar: BlobsSidecarRepository;
   blobsSidecarArchive: BlobsSidecarArchiveRepository;
 
   // finalized states

@@ -4,6 +4,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 import {allForks, altair, phase0} from "@lodestar/types";
+import {withTimeout} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
@@ -178,7 +179,6 @@ export class PeerManager {
   }
 
   async start(): Promise<void> {
-    await this.discovery?.start();
     this.libp2p.services.components.events.addEventListener(Libp2pEvent.connectionOpen, this.onLibp2pPeerConnect);
     this.libp2p.services.components.events.addEventListener(Libp2pEvent.connectionClose, this.onLibp2pPeerDisconnect);
     this.networkEventBus.on(NetworkEvent.reqRespRequest, this.onRequest);
@@ -195,7 +195,11 @@ export class PeerManager {
     ];
   }
 
-  async stop(): Promise<void> {
+  async startDiscovery(): Promise<void> {
+    await this.discovery?.start();
+  }
+
+  async close(): Promise<void> {
     await this.discovery?.stop();
     this.libp2p.services.components.events.removeEventListener(Libp2pEvent.connectionOpen, this.onLibp2pPeerConnect);
     this.libp2p.services.components.events.removeEventListener(
@@ -633,7 +637,7 @@ export class PeerManager {
     try {
       await this.libp2p.hangUp(peer);
     } catch (e) {
-      this.logger.warn("Unclean disconnect", {peer: prettyPrintPeerId(peer)}, e as Error);
+      this.logger.debug("Unclean disconnect", {peer: prettyPrintPeerId(peer)}, e as Error);
     }
   }
 
@@ -647,7 +651,8 @@ export class PeerManager {
         this.metrics?.peerLongConnectionDisconnect.inc({reason});
       }
 
-      await this.reqResp.sendGoodbye(peer, BigInt(goodbye));
+      // Wrap with shorter timeout than regular ReqResp requests to speed up shutdown
+      await withTimeout(() => this.reqResp.sendGoodbye(peer, BigInt(goodbye)), 1_000);
     } catch (e) {
       this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
     } finally {

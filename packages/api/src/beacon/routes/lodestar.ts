@@ -67,6 +67,7 @@ export type StateCacheItem = {
   reads: number;
   /** Unix timestamp (ms) of the last read */
   lastRead: number;
+  checkpointState: boolean;
 };
 
 export type LodestarNodePeer = NodePeer & {
@@ -88,8 +89,6 @@ export type Api = {
   getBlockProcessorQueueItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: BlockProcessorQueueItem[]}}>>;
   /** Dump a summary of the states in the StateContextCache */
   getStateCacheItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: StateCacheItem[]}}>>;
-  /** Dump a summary of the states in the CheckpointStateCache */
-  getCheckpointStateCacheItems(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: StateCacheItem[]}}>>;
   /** Dump peer gossip stats by peer */
   getGossipPeerScoreStats(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: GossipPeerScoreStat[]}}>>;
   /** Dump lodestar score stats by peer */
@@ -132,7 +131,6 @@ export const routesData: RoutesData<Api> = {
   getRegenQueueItems: {url: "/eth/v1/lodestar/regen-queue-items", method: "GET"},
   getBlockProcessorQueueItems: {url: "/eth/v1/lodestar/block-processor-queue-items", method: "GET"},
   getStateCacheItems: {url: "/eth/v1/lodestar/state-cache-items", method: "GET"},
-  getCheckpointStateCacheItems: {url: "/eth/v1/lodestar/checkpoint-state-cache-items", method: "GET"},
   getGossipPeerScoreStats: {url: "/eth/v1/lodestar/gossip-peer-score-stats", method: "GET"},
   getLodestarPeerScoreStats: {url: "/eth/v1/lodestar/lodestar-peer-score-stats", method: "GET"},
   runGC: {url: "/eth/v1/lodestar/gc", method: "POST"},
@@ -153,7 +151,6 @@ export type ReqTypes = {
   getRegenQueueItems: ReqEmpty;
   getBlockProcessorQueueItems: ReqEmpty;
   getStateCacheItems: ReqEmpty;
-  getCheckpointStateCacheItems: ReqEmpty;
   getGossipPeerScoreStats: ReqEmpty;
   getLodestarPeerScoreStats: ReqEmpty;
   runGC: ReqEmpty;
@@ -183,7 +180,6 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getRegenQueueItems: reqEmpty,
     getBlockProcessorQueueItems: reqEmpty,
     getStateCacheItems: reqEmpty,
-    getCheckpointStateCacheItems: reqEmpty,
     getGossipPeerScoreStats: reqEmpty,
     getLodestarPeerScoreStats: reqEmpty,
     runGC: reqEmpty,
@@ -222,7 +218,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getRegenQueueItems: jsonType("snake"),
     getBlockProcessorQueueItems: jsonType("snake"),
     getStateCacheItems: jsonType("snake"),
-    getCheckpointStateCacheItems: jsonType("snake"),
     getGossipPeerScoreStats: jsonType("snake"),
     getLodestarPeerScoreStats: jsonType("snake"),
     getPeers: jsonType("snake"),

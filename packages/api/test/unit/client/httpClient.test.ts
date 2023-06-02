@@ -5,6 +5,8 @@ import {ErrorAborted, TimeoutError} from "@lodestar/utils";
 import {HttpClient, HttpError} from "../../../src/utils/client/index.js";
 import {HttpStatusCode} from "../../../src/utils/client/httpStatusCode.js";
 
+/* eslint-disable @typescript-eslint/return-await */
+
 type User = {
   id?: number;
   name: string;

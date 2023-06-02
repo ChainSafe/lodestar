@@ -1,5 +1,5 @@
-import request from "supertest";
-import {HttpMetricsServer} from "../../../../src/metrics/index.js";
+import fetch from "cross-fetch";
+import {getHttpMetricsServer, HttpMetricsServer} from "../../../../src/metrics/index.js";
 import {testLogger} from "../../../utils/logger.js";
 import {createMetricsTest} from "../utils.js";
 
@@ -7,16 +7,17 @@ describe("HttpMetricsServer", () => {
   const logger = testLogger();
 
   let server: HttpMetricsServer | null = null;
+  const port = 14500;
 
   it("should serve metrics on /metrics", async () => {
     const metrics = createMetricsTest();
-    server = new HttpMetricsServer({port: 0}, {register: metrics.register, logger});
+    server = await getHttpMetricsServer({port}, {register: metrics.register, logger});
 
-    await server.start();
-    await request(server["server"]).get("/metrics").expect(200);
+    const res = await fetch(`http://127.0.0.1:${port}/metrics`);
+    await res.text();
   });
 
   after(async () => {
-    if (server) await server.stop();
+    if (server) await server.close();
   });
 });

@@ -1,8 +1,8 @@
 import {WithOptionalBytes, allForks} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
-import {JobItemQueue} from "../../util/queue/index.js";
+import {toHex, isErrorAborted} from "@lodestar/utils";
+import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {BlockError, BlockErrorCode} from "../errors/index.js";
+import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import type {BeaconChain} from "../chain.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
@@ -10,6 +10,7 @@ import {importBlock} from "./importBlock.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {BlockInput, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
+import {removeEagerlyPersistedBlockInputs} from "./writeBlockInputToDb.js";
 export {ImportBlockOpts, AttestationImportOpt} from "./types.js";
 
 const QUEUE_MAX_LENGTH = 256;
@@ -110,15 +111,19 @@ export async function processBlocks(
       await importBlock.call(this, fullyVerifiedBlock, opts);
     }
   } catch (e) {
+    if (isErrorAborted(e) || isQueueErrorAborted(e) || isBlockErrorAborted(e)) {
+      return; // Ignore
+    }
+
     // above functions should only throw BlockError
     const err = getBlockError(e, blocks[0].block);
 
     // TODO: De-duplicate with logic above
     // ChainEvent.errorBlock
     if (!(err instanceof BlockError)) {
-      this.logger.error("Non BlockError received", {}, err);
+      this.logger.debug("Non BlockError received", {}, err);
     } else if (!opts.disableOnBlockError) {
-      this.logger.error("Block error", {slot: err.signedBlock.message.slot}, err);
+      this.logger.debug("Block error", {slot: err.signedBlock.message.slot}, err);
 
       if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
         const {signedBlock} = err;
@@ -139,6 +144,24 @@ export async function processBlocks(
         this.persistInvalidSszView(preState, `${suffix}_preState`);
         this.persistInvalidSszView(postState, `${suffix}_postState`);
       }
+    }
+
+    // Clean db if we don't have blocks in forkchoice but already persisted them to db
+    //
+    // NOTE: this function is awaited to ensure that DB size remains constant, otherwise an attacker may bloat the
+    // disk with big malicious payloads. Our sequential block importer will wait for this promise before importing
+    // another block. The removal call error is not propagated since that would halt the chain.
+    //
+    // LOG: Because the error is not propagated and there's a risk of db bloat, the error is logged at warn level
+    // to alert the user of potential db bloat. This error _should_ never happen user must act and report to us
+    if (opts.eagerPersistBlock) {
+      await removeEagerlyPersistedBlockInputs.call(this, blocks).catch((e) => {
+        this.logger.warn(
+          "Error pruning eagerly imported block inputs, DB may grow in size if this error happens frequently",
+          {slot: blocks.map((block) => block.block.message.slot).join(",")},
+          e
+        );
+      });
     }
 
     throw err;

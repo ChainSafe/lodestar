@@ -36,7 +36,7 @@ describe("verified_requests / eth_call", () => {
         // Temper the responses to make them invalid
         for (const tx of testCase.dependentRequests) {
           if (tx.payload.method === "eth_getCode") {
-            tx.response.result = `${tx.response.result}12`;
+            tx.response.result = `${tx.response.result as string}12`;
           }
         }
 

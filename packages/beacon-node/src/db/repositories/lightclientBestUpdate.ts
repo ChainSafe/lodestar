@@ -1,6 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Bucket, DatabaseController, Repository} from "@lodestar/db";
+import {DatabaseController, Repository} from "@lodestar/db";
 import {ssz, SyncPeriod, allForks} from "@lodestar/types";
+import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 const SLOT_BYTE_COUNT = 8;
 
@@ -12,7 +13,8 @@ const SLOT_BYTE_COUNT = 8;
 export class BestLightClientUpdateRepository extends Repository<SyncPeriod, allForks.LightClientUpdate> {
   constructor(config: ChainForkConfig, db: DatabaseController<Uint8Array, Uint8Array>) {
     // Pick some type but won't be used
-    super(config, db, Bucket.lightClient_bestLightClientUpdate, ssz.altair.LightClientUpdate);
+    const bucket = Bucket.lightClient_bestLightClientUpdate;
+    super(config, db, bucket, ssz.altair.LightClientUpdate, getBucketNameByValue(bucket));
   }
 
   // Overrides for multi-fork

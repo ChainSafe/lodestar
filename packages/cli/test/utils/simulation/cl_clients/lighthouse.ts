@@ -27,7 +27,7 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
 
   const isDocker = process.env.LIGHTHOUSE_DOCKER_IMAGE !== undefined;
 
-  const {address, id, config, keys, nodeIndex} = opts;
+  const {address, id, config, keys, nodeIndex, metrics} = opts;
   const {engineUrls, engineMock, clientOptions} = opts;
   const {
     cl: {httpPort, port, keymanagerPort},
@@ -66,6 +66,12 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
   } else {
     cliParams["execution-jwt"] = jwtsecretFilePathMounted;
     cliParams["execution-endpoint"] = [...engineUrls].join(",");
+  }
+
+  if (metrics) {
+    cliParams["metrics-allow-origin"] = "*";
+    cliParams["metrics-port"] = metrics.port;
+    cliParams["metrics-address"] = metrics.host;
   }
 
   const beaconNodeJob: JobOptions = {
