@@ -176,9 +176,7 @@ export class PeerManager {
     if (metrics) {
       metrics.peers.addCollect(() => this.runPeerCountMetrics(metrics));
     }
-  }
 
-  async start(): Promise<void> {
     this.libp2p.services.components.events.addEventListener(Libp2pEvent.connectionOpen, this.onLibp2pPeerConnect);
     this.libp2p.services.components.events.addEventListener(Libp2pEvent.connectionClose, this.onLibp2pPeerDisconnect);
     this.networkEventBus.on(NetworkEvent.reqRespRequest, this.onRequest);
