@@ -1,18 +1,14 @@
 import crypto from "node:crypto";
-import {
-  kzgCommitmentToVersionedHash,
-  OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET,
-  OPAQUE_TX_MESSAGE_OFFSET,
-} from "@lodestar/state-transition";
+import {kzgCommitmentToVersionedHash} from "@lodestar/state-transition";
 import {bellatrix, deneb, RootHex, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {
   BYTES_PER_FIELD_ELEMENT,
   FIELD_ELEMENTS_PER_BLOB,
-  BLOB_TX_TYPE,
   ForkSeq,
   ForkExecution,
   ForkName,
+  BLOB_TX_TYPE,
 } from "@lodestar/params";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ckzg} from "../../util/kzg.js";
@@ -139,7 +135,9 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
    * `engine_newPayloadV1`
    */
   private notifyNewPayload(
-    executionPayloadRpc: EngineApiRpcParamTypes["engine_newPayloadV1"][0]
+    executionPayloadRpc: EngineApiRpcParamTypes["engine_newPayloadV1"][0],
+    // TODO deneb: add versionedHashes validation
+    _versionedHashes?: EngineApiRpcParamTypes["engine_newPayloadV3"][1]
   ): EngineApiRpcReturnTypes["engine_newPayloadV1"] {
     const blockHash = executionPayloadRpc.blockHash;
     const parentHash = executionPayloadRpc.parentHash;
@@ -405,26 +403,13 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
 }
 
 function transactionForKzgCommitment(kzgCommitment: deneb.KZGCommitment): bellatrix.Transaction {
-  // Some random value that after the offset's position
-  const blobVersionedHashesOffset = OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET + 64;
-
-  // +32 for the size of versionedHash
-  const ab = new ArrayBuffer(blobVersionedHashesOffset + 32);
-  const dv = new DataView(ab);
-  const ua = new Uint8Array(ab);
-
-  // Set tx type
-  dv.setUint8(0, BLOB_TX_TYPE);
-
-  // Set offset to hashes array
-  // const blobVersionedHashesOffset =
-  //   OPAQUE_TX_MESSAGE_OFFSET + opaqueTxDv.getUint32(OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET, true);
-  dv.setUint32(OPAQUE_TX_BLOB_VERSIONED_HASHES_OFFSET, blobVersionedHashesOffset - OPAQUE_TX_MESSAGE_OFFSET, true);
-
+  // Just use versionedHash as the transaction encoding to mock newPayloadV3 verification
+  // prefixed with BLOB_TX_TYPE
+  const transaction = new Uint8Array(33);
   const versionedHash = kzgCommitmentToVersionedHash(kzgCommitment);
-  ua.set(versionedHash, blobVersionedHashesOffset);
-
-  return ua;
+  transaction[0] = BLOB_TX_TYPE;
+  transaction.set(versionedHash, 1);
+  return transaction;
 }
 
 /**

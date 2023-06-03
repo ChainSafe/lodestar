@@ -70,6 +70,8 @@ export type BlobsBundle = {
   proofs: KZGProof[];
 };
 
+export type VersionedHashes = Uint8Array[];
+
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
  * - JSON RPC over network
@@ -87,7 +89,11 @@ export interface IExecutionEngine {
    *
    * Should be called in advance before, after or in parallel to block processing
    */
-  notifyNewPayload(fork: ForkName, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse>;
+  notifyNewPayload(
+    fork: ForkName,
+    executionPayload: allForks.ExecutionPayload,
+    versionedHashes?: VersionedHashes
+  ): Promise<ExecutePayloadResponse>;
 
   /**
    * Signal fork choice updates

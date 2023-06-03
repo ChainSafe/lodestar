@@ -1,5 +1,5 @@
 import {ForkSeq} from "@lodestar/params";
-import {allForks, altair, capella, deneb} from "@lodestar/types";
+import {allForks, altair, capella} from "@lodestar/types";
 import {getFullOrBlindedPayload, isExecutionEnabled} from "../util/execution.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateCapella, CachedBeaconStateBellatrix} from "../types.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
@@ -62,7 +62,7 @@ export function processBlock(
   }
 
   if (fork >= ForkSeq.deneb) {
-    processBlobKzgCommitments(block.body as deneb.BeaconBlockBody);
+    processBlobKzgCommitments(externalData);
     // Only throw preDeneb so beacon can also sync/process blocks optimistically
     // and let forkChoice handle it
     if (externalData.dataAvailableStatus === DataAvailableStatus.preDeneb) {
