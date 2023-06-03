@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {bellatrix, deneb, ssz} from "@lodestar/types";
-import {BYTES_PER_FIELD_ELEMENT} from "@lodestar/params";
+import {BYTES_PER_FIELD_ELEMENT, BLOB_TX_TYPE} from "@lodestar/params";
 import {kzgCommitmentToVersionedHash} from "@lodestar/state-transition";
 import {loadEthereumTrustedSetup, initCKZG, ckzg, FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../../src/util/kzg.js";
 import {validateBlobsSidecar, validateGossipBlobsSidecar} from "../../../src/chain/validation/blobsSidecar.js";
@@ -50,9 +50,13 @@ describe("C-KZG", () => {
 });
 
 function transactionForKzgCommitment(kzgCommitment: deneb.KZGCommitment): bellatrix.Transaction {
-  // a fixed RLP transaction whose versioned hashes can be updated overriden
-  const _versionedHash = kzgCommitmentToVersionedHash(kzgCommitment);
-  throw Error("RLP tx not yet implemented");
+  // Just use versionedHash as the transaction encoding to mock newPayloadV3 verification
+  // prefixed with BLOB_TX_TYPE
+  const transaction = new Uint8Array(33);
+  const versionedHash = kzgCommitmentToVersionedHash(kzgCommitment);
+  transaction[0] = BLOB_TX_TYPE;
+  transaction.set(versionedHash, 1);
+  return transaction;
 }
 
 /**

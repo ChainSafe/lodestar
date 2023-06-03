@@ -2,7 +2,14 @@ import crypto from "node:crypto";
 import {kzgCommitmentToVersionedHash} from "@lodestar/state-transition";
 import {bellatrix, deneb, RootHex, ssz} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
-import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB, ForkSeq, ForkExecution, ForkName} from "@lodestar/params";
+import {
+  BYTES_PER_FIELD_ELEMENT,
+  FIELD_ELEMENTS_PER_BLOB,
+  ForkSeq,
+  ForkExecution,
+  ForkName,
+  BLOB_TX_TYPE,
+} from "@lodestar/params";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ckzg} from "../../util/kzg.js";
 import {quantityToNum} from "../../eth1/provider/utils.js";
@@ -128,7 +135,9 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
    * `engine_newPayloadV1`
    */
   private notifyNewPayload(
-    executionPayloadRpc: EngineApiRpcParamTypes["engine_newPayloadV1"][0]
+    executionPayloadRpc: EngineApiRpcParamTypes["engine_newPayloadV1"][0],
+    // TODO deneb: add versionedHashes validation
+    _versionedHashes: EngineApiRpcParamTypes["engine_newPayloadV3"][1]
   ): EngineApiRpcReturnTypes["engine_newPayloadV1"] {
     const blockHash = executionPayloadRpc.blockHash;
     const parentHash = executionPayloadRpc.parentHash;
@@ -394,9 +403,13 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
 }
 
 function transactionForKzgCommitment(kzgCommitment: deneb.KZGCommitment): bellatrix.Transaction {
-  // a fixed RLP transaction whose versioned hashes can be updated overriden
-  const _versionedHash = kzgCommitmentToVersionedHash(kzgCommitment);
-  throw Error("RLP tx not yet implemented");
+  // Just use versionedHash as the transaction encoding to mock newPayloadV3 verification
+  // prefixed with BLOB_TX_TYPE
+  const transaction = new Uint8Array(33);
+  const versionedHash = kzgCommitmentToVersionedHash(kzgCommitment);
+  transaction[0] = BLOB_TX_TYPE;
+  transaction.set(versionedHash, 1);
+  return transaction;
 }
 
 /**
