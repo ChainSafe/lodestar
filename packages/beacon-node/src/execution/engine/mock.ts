@@ -137,7 +137,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
   private notifyNewPayload(
     executionPayloadRpc: EngineApiRpcParamTypes["engine_newPayloadV1"][0],
     // TODO deneb: add versionedHashes validation
-    _versionedHashes: EngineApiRpcParamTypes["engine_newPayloadV3"][1]
+    _versionedHashes?: EngineApiRpcParamTypes["engine_newPayloadV3"][1]
   ): EngineApiRpcReturnTypes["engine_newPayloadV1"] {
     const blockHash = executionPayloadRpc.blockHash;
     const parentHash = executionPayloadRpc.parentHash;
