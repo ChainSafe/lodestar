@@ -65,7 +65,9 @@ export class StatesArchiver {
 
       const statesSlotsToDelete = computeStateSlotsToDelete(storedStateSlots, archiveStateEpochFrequency);
       if (statesSlotsToDelete.length > 0) {
-        await this.db.stateArchive.batchDelete(statesSlotsToDelete);
+        // using this.db.stateArchive.batchDelete() causes rss memory spike since v1.9.0
+        // see https://github.com/ChainSafe/lodestar/issues/5591#issuecomment-1575754902
+        await Promise.all(statesSlotsToDelete.map((slot) => this.db.stateArchive.delete(slot)));
       }
 
       // More logs to investigate the rss spike issue https://github.com/ChainSafe/lodestar/issues/5591
