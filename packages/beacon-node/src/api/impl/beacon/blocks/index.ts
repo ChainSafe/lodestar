@@ -62,10 +62,10 @@ export function getBeaconBlockApi({
           nonFinalizedBlocks.map(async (summary) => {
             const block = await db.block.get(fromHexString(summary.blockRoot));
             if (block) {
-              const cannonical = chain.forkChoice.getCanonicalBlockAtSlot(block.message.slot);
-              if (cannonical) {
-                result.push(toBeaconHeaderResponse(config, block, cannonical.blockRoot === summary.blockRoot));
-                if (isOptimisticBlock(cannonical)) {
+              const canonical = chain.forkChoice.getCanonicalBlockAtSlot(block.message.slot);
+              if (canonical) {
+                result.push(toBeaconHeaderResponse(config, block, canonical.blockRoot === summary.blockRoot));
+                if (isOptimisticBlock(canonical)) {
                   executionOptimistic = true;
                 }
               }

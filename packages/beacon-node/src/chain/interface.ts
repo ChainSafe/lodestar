@@ -122,7 +122,7 @@ export interface IBeaconChain {
   getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
   getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
 
-  /** Returns a local state cannonical at `slot` */
+  /** Returns a local state canonical at `slot` */
   getStateBySlot(
     slot: Slot,
     opts?: StateGetOpts
