@@ -11,7 +11,7 @@ import {
   Web3Provider,
 } from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
-import {JsonRpcRequestOrBatch, JsonRpcResponseOrBatch} from "./types.js";
+import {JsonRpcRequest, JsonRpcRequestOrBatch, JsonRpcResponseOrBatch} from "./types.js";
 import {
   isEIP1193Provider,
   isEthersProvider,
@@ -68,11 +68,8 @@ function handleSendProvider(provider: SendProvider, proofProvider: ProofProvider
   const send = provider.send.bind(provider);
   const handler = (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> =>
     new Promise((resolve, reject) => {
-      if (isBatchRequest(payload)) {
-        throw new Error("The provider public interface does not support batch requests.");
-      }
-
-      send(payload, (err, response) => {
+      // web3 providers supports batch requests but don't have valid types
+      send(payload as JsonRpcRequest, (err, response) => {
         if (err) {
           reject(err);
         } else {

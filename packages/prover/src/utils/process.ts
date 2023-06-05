@@ -63,7 +63,8 @@ export async function processAndVerifyRequest({
       method: request.method,
       params: JSON.stringify(request.params),
     });
-    const response = await supportedELRequests[request.method]({payload: request, rpc, proofProvider, logger});
+    const verifiableRequestHandler = supportedELRequests[request.method];
+    const response = await verifiableRequestHandler({payload: request, rpc, proofProvider, logger});
     verifiedResponses.push(response);
   }
 
