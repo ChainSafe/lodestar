@@ -74,11 +74,11 @@ export async function processAndVerifyRequest({
     nonVerifiedResponses.push(...response);
   }
 
-  if (verifiedResponses.length === 1 && nonVerifiedResponses.length === 0) {
-    return verifiedResponses[0];
-  } else if (verifiedResponses.length === 0 && nonVerifiedResponses.length === 1) {
-    return nonVerifiedResponses[0];
+  const responses = [...verifiedResponses, ...nonVerifiedResponses];
+
+  if (responses.length === 1) {
+    return responses[0];
   } else {
-    return [...verifiedResponses, ...nonVerifiedResponses];
+    return responses;
   }
 }

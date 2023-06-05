@@ -20,23 +20,28 @@ export async function verifyAccount({
   logger: Logger;
   block?: number | string;
 }): Promise<VerificationResult<ELProof>> {
-  const executionPayload = await proofProvider.getExecutionPayload(block ?? "latest");
-  const proof = await getELProof(rpc, [address, [], bufferToHex(executionPayload.blockHash)]);
-  const validAccount = await isValidAccount({
-    address: address,
-    stateRoot: executionPayload.stateRoot,
-    proof,
-    logger,
-  });
+  try {
+    const executionPayload = await proofProvider.getExecutionPayload(block ?? "latest");
+    const proof = await getELProof(rpc, [address, [], bufferToHex(executionPayload.blockHash)]);
+    const validAccount = await isValidAccount({
+      address: address,
+      stateRoot: executionPayload.stateRoot,
+      proof,
+      logger,
+    });
 
-  // If account is invalid don't check the storage
-  const validStorage = validAccount && (await isValidStorageKeys({storageKeys: [], proof, logger}));
+    // If account is invalid don't check the storage
+    const validStorage = validAccount && (await isValidStorageKeys({storageKeys: [], proof, logger}));
 
-  if (validAccount && validStorage) {
-    return {data: proof, valid: true};
+    if (validAccount && validStorage) {
+      return {data: proof, valid: true};
+    }
+
+    return {valid: false};
+  } catch (err) {
+    logger.error("Error while verifying account", {address}, err as Error);
+    return {valid: false};
   }
-
-  return {valid: false};
 }
 
 export async function verifyCode({
@@ -54,14 +59,18 @@ export async function verifyCode({
   codeHash: HexString;
   block?: number | string;
 }): Promise<VerificationResult<string>> {
-  const executionPayload = await proofProvider.getExecutionPayload(block ?? "latest");
-  const code = await getELCode(rpc, [address, bufferToHex(executionPayload.blockHash)]);
+  try {
+    const executionPayload = await proofProvider.getExecutionPayload(block ?? "latest");
+    const code = await getELCode(rpc, [address, bufferToHex(executionPayload.blockHash)]);
 
-  if (await isValidCodeHash({codeHash, codeResponse: code, logger})) {
-    return {data: code, valid: true};
+    if (await isValidCodeHash({codeHash, codeResponse: code, logger})) {
+      return {data: code, valid: true};
+    }
+    return {valid: false};
+  } catch (err) {
+    logger.error("Error while verifying code", {address}, err as Error);
+    return {valid: false};
   }
-
-  return {valid: false};
 }
 
 export async function verifyBlock({
@@ -75,22 +84,27 @@ export async function verifyBlock({
   proofProvider: ProofProvider;
   logger: Logger;
 }): Promise<VerificationResult<ELBlock>> {
-  const executionPayload = await proofProvider.getExecutionPayload(payload.params[0]);
-  const block = await getELBlock(rpc, payload.params);
+  try {
+    const executionPayload = await proofProvider.getExecutionPayload(payload.params[0]);
+    const block = await getELBlock(rpc, payload.params);
 
-  // If response is not valid from the EL we don't need to verify it
-  if (!block) return {data: block, valid: false};
+    // If response is not valid from the EL we don't need to verify it
+    if (!block) return {data: block, valid: false};
 
-  if (
-    await isValidBlock({
-      logger,
-      block,
-      executionPayload,
-      config: proofProvider.config,
-    })
-  ) {
-    return {data: block, valid: true};
+    if (
+      await isValidBlock({
+        logger,
+        block,
+        executionPayload,
+        config: proofProvider.config,
+      })
+    ) {
+      return {data: block, valid: true};
+    }
+
+    return {valid: false};
+  } catch (err) {
+    logger.error("Error while verifying block", {block: payload.params[0]}, err as Error);
+    return {valid: false};
   }
-
-  return {valid: false};
 }

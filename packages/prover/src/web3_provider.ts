@@ -162,13 +162,17 @@ function handleEIP1193Provider(
 function handleEthersProvider(provider: EthersProvider, proofProvider: ProofProvider, logger: Logger): EthersProvider {
   const send = provider.send.bind(provider);
   const handler = async (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> => {
+    // Because ethers provider public interface does not support batch requests
+    // so we need to handle it manually
     if (isBatchRequest(payload)) {
-      throw new Error("Ethers provider public interface does not support batch requests.");
+      const responses = [];
+      for (const request of payload) {
+        responses.push(await send(request.method, request.params));
+      }
+      return responses;
     }
 
-    const response = await send(payload.method, payload.params);
-
-    return response;
+    return send(payload.method, payload.params);
   };
   const rpc = new ELRpc(handler, logger);
 

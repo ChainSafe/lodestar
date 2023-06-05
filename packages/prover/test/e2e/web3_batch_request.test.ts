@@ -48,7 +48,7 @@ describe("web3_batch_requests", function () {
             batch.add(
               // @ts-expect-error web3 types are not up to date
               // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-              web3.eth.getBalance.request(account, "latest", (result, err) => {
+              web3.eth.getBalance.request(account, "latest", (err, result) => {
                 if (err) return reject(err);
 
                 resolve(result);
@@ -61,7 +61,7 @@ describe("web3_batch_requests", function () {
             batch.add(
               // @ts-expect-error web3 types are not up to date
               // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-              web3.eth.getProof.request(account, [], "latest", (result, err) => {
+              web3.eth.getProof.request(account, [], "latest", (err, result) => {
                 if (err) return reject(err);
 
                 resolve(result);
@@ -85,19 +85,20 @@ describe("web3_batch_requests", function () {
         batch.add(
           // @ts-expect-error web3 types are not up to date
           // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-          web3.eth.getBalance.request(accounts[0], "latest", (result, err) => {
+          web3.eth.getBalance.request(accounts[0], "latest", (err, result) => {
             if (err) return reject(err);
 
             resolve(result);
           })
         );
       });
-      const invalidAddress = accounts[0].slice(0, -1);
+
+      const invalidHash = "0x9dccb8cd5417e188701e2f36adf8ad17eec7913d34c3517ba74fcfd870bed8e6";
       const errorRequest = new Promise((resolve, reject) => {
         batch.add(
           // @ts-expect-error web3 types are not up to date
           // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-          web3.eth.getBalance.request(invalidAddress, "latest", (result, err) => {
+          web3.eth.getBlock.request(invalidHash, (err, result) => {
             if (err) return reject(err);
 
             resolve(result);
@@ -108,7 +109,7 @@ describe("web3_batch_requests", function () {
       batch.execute();
 
       await expect(successRequest).to.be.fulfilled;
-      await expect(errorRequest).to.be.rejectedWith(`Provided address ${invalidAddress} is invalid`);
+      await expect(errorRequest).to.be.rejectedWith("eth_getBlockByHash request can not be verified");
     });
   });
 });
