@@ -5,7 +5,7 @@ import {PresetName} from "@lodestar/params";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {ELVerifiedRequestHandlerOpts} from "../../src/interfaces.js";
 import {ProofProvider} from "../../src/proof_provider/proof_provider.js";
-import {ELBlock, ELTransaction, JsonRpcRequest, JsonRpcRequestPayload, JsonRpcResponse} from "../../src/types.js";
+import {ELBlock, ELTransaction, JsonRpcRequestPayload, JsonRpcResponse} from "../../src/types.js";
 import {isNullish} from "../../src/utils/validation.js";
 
 type Writeable<T> = {
