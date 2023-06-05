@@ -720,7 +720,7 @@ function renderAttestationSummary(
     // include the attestation. Then block as slot N+1 re-orgs slot N setting as parent A and includes the attestations
     // from block at slot N.
     //
-    // TODO: Track block inclusions, and then check which ones are cannonical
+    // TODO: Track block inclusions, and then check which ones are canonical
 
     if (!summary) {
       // In normal conditions should never happen, validator is expected to submit an attestation to the tracking node.
@@ -728,14 +728,14 @@ function renderAttestationSummary(
       return "unexpected_timely_target_without_summary";
     }
 
-    const cannonicalBlockInclusion = summary.blockInclusions.find((block) => isCannonical(rootCache, block));
-    if (!cannonicalBlockInclusion) {
+    const canonicalBlockInclusion = summary.blockInclusions.find((block) => isCanonical(rootCache, block));
+    if (!canonicalBlockInclusion) {
       // Should never happen, because for a state to exist that registers a validator's participation this specific
       // beacon node must have imported a block with the attestation that caused the change in participation.
-      return "unexpected_timely_target_without_cannonical_inclusion";
+      return "unexpected_timely_target_without_canonical_inclusion";
     }
 
-    const {votedCorrectHeadRoot, blockSlot, attestationSlot} = cannonicalBlockInclusion;
+    const {votedCorrectHeadRoot, blockSlot, attestationSlot} = canonicalBlockInclusion;
     const inclusionDistance = Math.max(blockSlot - attestationSlot - MIN_ATTESTATION_INCLUSION_DELAY, 0);
 
     if (votedCorrectHeadRoot && inclusionDistance === 0) {
@@ -756,11 +756,11 @@ function renderAttestationSummary(
     let out = "timely_target";
 
     if (!votedCorrectHeadRoot) {
-      out += "_" + whyIsHeadVoteWrong(rootCache, cannonicalBlockInclusion);
+      out += "_" + whyIsHeadVoteWrong(rootCache, canonicalBlockInclusion);
     }
 
     if (inclusionDistance > 0) {
-      out += "_" + whyIsDistanceNotOk(rootCache, cannonicalBlockInclusion, summary);
+      out += "_" + whyIsDistanceNotOk(rootCache, canonicalBlockInclusion, summary);
     }
 
     return out;
@@ -785,9 +785,9 @@ function renderAttestationSummary(
       return "no_submission";
     }
 
-    const cannonicalBlockInclusion = summary.blockInclusions.find((block) => isCannonical(rootCache, block));
-    if (cannonicalBlockInclusion) {
-      // Cannonical block inclusion with no participation flags set means wrong target + late source
+    const canonicalBlockInclusion = summary.blockInclusions.find((block) => isCanonical(rootCache, block));
+    if (canonicalBlockInclusion) {
+      // Canonical block inclusion with no participation flags set means wrong target + late source
       return "wrong_target_late_source";
     }
 
@@ -820,9 +820,9 @@ function renderAttestationSummary(
   }
 }
 
-function whyIsHeadVoteWrong(rootCache: RootHexCache, cannonicalBlockInclusion: AttestationBlockInclusion): string {
-  const {votedForMissedSlot, attestationSlot} = cannonicalBlockInclusion;
-  const cannonicalAttestationSlotMissed = isMissedSlot(rootCache, attestationSlot);
+function whyIsHeadVoteWrong(rootCache: RootHexCache, canonicalBlockInclusion: AttestationBlockInclusion): string {
+  const {votedForMissedSlot, attestationSlot} = canonicalBlockInclusion;
+  const canonicalAttestationSlotMissed = isMissedSlot(rootCache, attestationSlot);
 
   // __A_______C
   //    \_B1
@@ -837,7 +837,7 @@ function whyIsHeadVoteWrong(rootCache: RootHexCache, cannonicalBlockInclusion: A
   //
   // We vote for B1, and due to some issue a longer reorg happens orphaning our vote.
   // This scenario is considered in the above
-  if (!votedForMissedSlot && cannonicalAttestationSlotMissed) {
+  if (!votedForMissedSlot && canonicalAttestationSlotMissed) {
     // TODO: Did the block arrive late?
     return "vote_orphaned";
   }
@@ -848,7 +848,7 @@ function whyIsHeadVoteWrong(rootCache: RootHexCache, cannonicalBlockInclusion: A
   //
   // We vote for A assuming skip block, next proposer's view differs
   // This scenario happens sometimes when blocks are published late
-  if (votedForMissedSlot && !cannonicalAttestationSlotMissed) {
+  if (votedForMissedSlot && !canonicalAttestationSlotMissed) {
     // TODO: Did the block arrive late?
     return "wrong_skip_vote";
   }
@@ -872,7 +872,7 @@ function whyIsHeadVoteWrong(rootCache: RootHexCache, cannonicalBlockInclusion: A
 
 function whyIsDistanceNotOk(
   rootCache: RootHexCache,
-  cannonicalBlockInclusion: AttestationBlockInclusion,
+  canonicalBlockInclusion: AttestationBlockInclusion,
   summary: AttestationSummary
 ): string {
   // If the attestation is not included in any aggregate it's likely because it was sent late.
@@ -881,7 +881,7 @@ function whyIsDistanceNotOk(
   }
 
   // If the next slot of an attestation is missed, distance will be > 0 even if everything else was timely
-  if (isMissedSlot(rootCache, cannonicalBlockInclusion.attestationSlot + 1)) {
+  if (isMissedSlot(rootCache, canonicalBlockInclusion.attestationSlot + 1)) {
     return "next_slot_missed";
   }
 
@@ -892,7 +892,7 @@ function whyIsDistanceNotOk(
 }
 
 /** Returns true if the state's root record includes `block` */
-function isCannonical(rootCache: RootHexCache, block: AttestationBlockInclusion): boolean {
+function isCanonical(rootCache: RootHexCache, block: AttestationBlockInclusion): boolean {
   return rootCache.getBlockRootAtSlot(block.blockSlot) === block.blockRoot;
 }
 
