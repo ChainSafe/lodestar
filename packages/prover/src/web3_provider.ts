@@ -11,7 +11,7 @@ import {
   Web3Provider,
 } from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
-import {ELRequestPayload, ELResponse} from "./types.js";
+import {JsonRpcRequestOrBatch, JsonRpcResponseOrBatch} from "./types.js";
 import {
   isEIP1193Provider,
   isEthersProvider,
@@ -20,7 +20,8 @@ import {
   isSendProvider,
 } from "./utils/assertion.js";
 import {processAndVerifyRequest} from "./utils/process.js";
-import {logRequest, logResponse} from "./utils/json_rpc.js";
+import {isBatchRequest} from "./utils/json_rpc.js";
+import {ELRpc} from "./utils/execution.js";
 
 export function createVerifiedExecutionProvider<T extends Web3Provider>(
   provider: T,
@@ -65,11 +66,13 @@ export function createVerifiedExecutionProvider<T extends Web3Provider>(
 
 function handleSendProvider(provider: SendProvider, proofProvider: ProofProvider, logger: Logger): SendProvider {
   const send = provider.send.bind(provider);
-  const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> =>
+  const handler = (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> =>
     new Promise((resolve, reject) => {
-      logRequest(payload, logger);
+      if (isBatchRequest(payload)) {
+        throw new Error("The provider public interface does not support batch requests.");
+      }
+
       send(payload, (err, response) => {
-        logResponse(response, logger);
         if (err) {
           reject(err);
         } else {
@@ -77,9 +80,13 @@ function handleSendProvider(provider: SendProvider, proofProvider: ProofProvider
         }
       });
     });
+  const rpc = new ELRpc(handler, logger);
 
-  function newSend(payload: ELRequestPayload, callback: (err?: Error | null, response?: ELResponse) => void): void {
-    processAndVerifyRequest({payload, handler, proofProvider, logger})
+  function newSend(
+    payload: JsonRpcRequestOrBatch,
+    callback: (err?: Error | null, response?: JsonRpcResponseOrBatch) => void
+  ): void {
+    processAndVerifyRequest({payload, rpc, proofProvider, logger})
       .then((response) => callback(undefined, response))
       .catch((err) => callback(err, undefined));
   }
@@ -93,11 +100,9 @@ function handleRequestProvider(
   logger: Logger
 ): RequestProvider {
   const request = provider.request.bind(provider);
-  const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> =>
+  const handler = (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> =>
     new Promise((resolve, reject) => {
-      logRequest(payload, logger);
       request(payload, (err, response) => {
-        logResponse(response, logger);
         if (err) {
           reject(err);
         } else {
@@ -105,9 +110,13 @@ function handleRequestProvider(
         }
       });
     });
+  const rpc = new ELRpc(handler, logger);
 
-  function newRequest(payload: ELRequestPayload, callback: (err?: Error | null, response?: ELResponse) => void): void {
-    processAndVerifyRequest({payload, handler, proofProvider, logger})
+  function newRequest(
+    payload: JsonRpcRequestOrBatch,
+    callback: (err?: Error | null, response?: JsonRpcResponseOrBatch) => void
+  ): void {
+    processAndVerifyRequest({payload, rpc, proofProvider, logger})
       .then((response) => callback(undefined, response))
       .catch((err) => callback(err, undefined));
   }
@@ -121,15 +130,14 @@ function handleSendAsyncProvider(
   logger: Logger
 ): SendAsyncProvider {
   const sendAsync = provider.sendAsync.bind(provider);
-  const handler = async (payload: ELRequestPayload): Promise<ELResponse | undefined> => {
-    logRequest(payload, logger);
+  const handler = async (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> => {
     const response = await sendAsync(payload);
-    logResponse(response, logger);
     return response;
   };
+  const rpc = new ELRpc(handler, logger);
 
-  async function newSendAsync(payload: ELRequestPayload): Promise<ELResponse | undefined> {
-    return processAndVerifyRequest({payload, handler, proofProvider, logger});
+  async function newSendAsync(payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> {
+    return processAndVerifyRequest({payload, rpc, proofProvider, logger});
   }
 
   return Object.assign(provider, {sendAsync: newSendAsync});
@@ -141,15 +149,14 @@ function handleEIP1193Provider(
   logger: Logger
 ): EIP1193Provider {
   const request = provider.request.bind(provider);
-  const handler = async (payload: ELRequestPayload): Promise<ELResponse | undefined> => {
-    logRequest(payload, logger);
+  const handler = async (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> => {
     const response = await request(payload);
-    logResponse(response, logger);
     return response;
   };
+  const rpc = new ELRpc(handler, logger);
 
-  async function newRequest(payload: ELRequestPayload): Promise<ELResponse | undefined> {
-    return processAndVerifyRequest({payload, handler, proofProvider, logger});
+  async function newRequest(payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> {
+    return processAndVerifyRequest({payload, rpc, proofProvider, logger});
   }
 
   return Object.assign(provider, {request: newRequest});
@@ -157,17 +164,21 @@ function handleEIP1193Provider(
 
 function handleEthersProvider(provider: EthersProvider, proofProvider: ProofProvider, logger: Logger): EthersProvider {
   const send = provider.send.bind(provider);
-  const handler = async (payload: ELRequestPayload): Promise<ELResponse | undefined> => {
-    logRequest(payload, logger);
+  const handler = async (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> => {
+    if (isBatchRequest(payload)) {
+      throw new Error("Ethers provider public interface does not support batch requests.");
+    }
+
     const response = await send(payload.method, payload.params);
-    logResponse(response, logger);
+
     return response;
   };
+  const rpc = new ELRpc(handler, logger);
 
-  async function newSend(method: string, params: Array<unknown>): Promise<ELResponse | undefined> {
+  async function newSend(method: string, params: Array<unknown>): Promise<JsonRpcResponseOrBatch | undefined> {
     return processAndVerifyRequest({
       payload: {jsonrpc: "2.0", id: 0, method, params},
-      handler,
+      rpc,
       proofProvider,
       logger,
     });

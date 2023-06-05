@@ -1,18 +1,32 @@
 import {Logger} from "@lodestar/logger";
 import {UNVERIFIED_RESPONSE_CODE} from "../constants.js";
-import {ELResponseWithError} from "../types.js";
-import {ELRequestPayload, ELResponse, ELResponseWithResult} from "../types.js";
+import {
+  JsonRpcErrorPayload,
+  JsonRpcNotificationPayload,
+  JsonRpcRequestPayload,
+  JsonRpcRequest,
+  JsonRpcResponse,
+  JsonRpcResponseWithErrorPayload,
+  JsonRpcResponseWithResultPayload,
+  JsonRpcResponseOrBatch,
+  JsonRpcBatchResponse,
+  JsonRpcRequestOrBatch,
+  JsonRpcBatchRequest,
+} from "../types.js";
+import {isNullish} from "./validation.js";
 
-export function generateRPCResponseForPayload<P, R, E = unknown>(
-  payload: ELRequestPayload<P>,
+export function getResponseForRequest<P, R, E = unknown>(
+  payload: JsonRpcRequest<P>,
   res?: R,
-  error?: {
-    readonly code?: number;
-    readonly data?: E;
-    readonly message: string;
+  error?: JsonRpcErrorPayload<E>
+): JsonRpcResponse<R, E> {
+  // If it's a notification
+  if (!isRequest(payload)) {
+    console.log({payload});
+    throw new Error("Cannot generate response for notification");
   }
-): ELResponse<R, E> {
-  if (res !== undefined && error === undefined) {
+
+  if (!isNullish(res) && isNullish(error)) {
     return {
       jsonrpc: payload.jsonrpc,
       id: payload.id,
@@ -20,7 +34,7 @@ export function generateRPCResponseForPayload<P, R, E = unknown>(
     };
   }
 
-  if (error !== undefined) {
+  if (!isNullish(error)) {
     return {
       jsonrpc: payload.jsonrpc,
       id: payload.id,
@@ -31,55 +45,70 @@ export function generateRPCResponseForPayload<P, R, E = unknown>(
   throw new Error("Either result or error must be defined.");
 }
 
-export function generateVerifiedResponseForPayload<D, P>(
-  payload: ELRequestPayload<P>,
-  res: D
-): ELResponseWithResult<D> {
-  return {
-    jsonrpc: payload.jsonrpc,
-    id: payload.id,
-    result: res,
-  };
-}
-
-export function generateUnverifiedResponseForPayload<P, D = unknown>(
-  payload: ELRequestPayload<P>,
+export function getErrorResponseForUnverifiedRequest<P, D = unknown>(
+  payload: JsonRpcRequest<P>,
   message: string,
   data?: D
-): ELResponseWithError<D> {
-  return data !== undefined || data !== null
-    ? {
-        jsonrpc: payload.jsonrpc,
-        id: payload.id,
-        error: {
-          code: UNVERIFIED_RESPONSE_CODE,
-          message,
-        },
-      }
-    : {
-        jsonrpc: payload.jsonrpc,
-        id: payload.id,
-        error: {
-          code: UNVERIFIED_RESPONSE_CODE,
-          message,
-          data,
-        },
-      };
+): JsonRpcResponseWithErrorPayload<D> {
+  return isNullish(data)
+    ? (getResponseForRequest(payload, undefined, {
+        code: UNVERIFIED_RESPONSE_CODE,
+        message,
+      }) as JsonRpcResponseWithErrorPayload<D>)
+    : (getResponseForRequest(payload, undefined, {
+        code: UNVERIFIED_RESPONSE_CODE,
+        message,
+        data,
+      }) as JsonRpcResponseWithErrorPayload<D>);
 }
 
-export function isValidResponse<R, E>(response: ELResponse<R, E> | undefined): response is ELResponseWithResult<R> {
-  return response !== undefined && response.error === undefined;
+function isValidResponsePayload<R, E>(
+  response: JsonRpcResponse<R, E> | undefined
+): response is JsonRpcResponseWithResultPayload<R> {
+  return !isNullish(response) && isNullish(response.error);
 }
 
-export function logRequest(payload: ELRequestPayload, logger: Logger): void {
+export function isValidResponse<R, E>(
+  response: JsonRpcResponseOrBatch<R, E> | undefined
+): response is JsonRpcResponseWithResultPayload<R> | JsonRpcResponseWithResultPayload<R>[] {
+  return Array.isArray(response) ? response.every(isValidResponsePayload) : isValidResponsePayload(response);
+}
+
+export function isNotification<P>(payload: JsonRpcRequest<P>): payload is JsonRpcNotificationPayload<P> {
+  return !("id" in payload);
+}
+
+export function isRequest<P>(payload: JsonRpcRequest<P>): payload is JsonRpcRequestPayload<P> {
+  return "id" in payload;
+}
+
+export function isBatchRequest<P>(payload: JsonRpcRequestOrBatch<P>): payload is JsonRpcBatchRequest<P> {
+  return Array.isArray(payload);
+}
+
+export function isBatchResponse<R>(response: JsonRpcResponseOrBatch<R>): response is JsonRpcBatchResponse<R> {
+  return Array.isArray(response);
+}
+
+function logRequestPayload(payload: JsonRpcRequest, logger: Logger): void {
   logger.debug("PR -> EL", {
-    id: payload.id,
+    id: isRequest(payload) ? payload.id : "notification",
     method: payload.method,
     params: JSON.stringify(payload.params),
   });
 }
 
-export function logResponse(response: ELResponse | null | undefined, logger: Logger): void {
+export function logRequest(payload: JsonRpcRequestOrBatch | undefined | null, logger: Logger): void {
+  if (payload === undefined || payload === null) {
+    return;
+  }
+
+  for (const p of isBatchRequest(payload) ? payload : [payload]) {
+    logRequestPayload(p, logger);
+  }
+}
+
+function logResponsePayload(response: JsonRpcResponse | null | undefined, logger: Logger): void {
   if (response === undefined || response === null) {
     logger.debug("PR <- EL (empty response)");
     return;
@@ -95,5 +124,15 @@ export function logResponse(response: ELResponse | null | undefined, logger: Log
       id: response.id,
       error: JSON.stringify(response.error),
     });
+  }
+}
+
+export function logResponse(response: JsonRpcResponseOrBatch | undefined, logger: Logger): void {
+  if (response === undefined || response === null) {
+    return;
+  }
+
+  for (const p of isBatchResponse(response) ? response : [response]) {
+    logResponsePayload(p, logger);
   }
 }

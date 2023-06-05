@@ -1,7 +1,7 @@
 import {Logger} from "@lodestar/logger";
-import {ELRequestHandler, ELVerifiedRequestHandler} from "../interfaces.js";
+import {ELVerifiedRequestHandler} from "../interfaces.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
-import {ELRequestPayload, ELResponse} from "../types.js";
+import {JsonRpcRequestOrBatch, JsonRpcBatchRequest, JsonRpcResponseOrBatch, JsonRpcBatchResponse} from "../types.js";
 import {eth_getBalance} from "../verified_requests/eth_getBalance.js";
 import {eth_getTransactionCount} from "../verified_requests/eth_getTransactionCount.js";
 import {eth_getBlockByHash} from "../verified_requests/eth_getBlockByHash.js";
@@ -9,6 +9,9 @@ import {eth_getBlockByNumber} from "../verified_requests/eth_getBlockByNumber.js
 import {eth_getCode} from "../verified_requests/eth_getCode.js";
 import {eth_call} from "../verified_requests/eth_call.js";
 import {eth_estimateGas} from "../verified_requests/eth_estimateGas.js";
+import {ELRpc} from "./execution.js";
+import {isBatchRequest, isRequest} from "./json_rpc.js";
+import {isNullish} from "./validation.js";
 
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
 export const supportedELRequests: Record<string, ELVerifiedRequestHandler<any, any>> = {
@@ -20,28 +23,61 @@ export const supportedELRequests: Record<string, ELVerifiedRequestHandler<any, a
   eth_call: eth_call,
   eth_estimateGas: eth_estimateGas,
 };
-/* eslint-enable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any*/
+
+export function splitRequestsInChunks(payload: JsonRpcRequestOrBatch): {
+  verifiable: JsonRpcBatchRequest;
+  nonVerifiable: JsonRpcBatchRequest;
+} {
+  const verifiable: JsonRpcBatchRequest = [];
+  const nonVerifiable: JsonRpcBatchRequest = [];
+
+  for (const pay of isBatchRequest(payload) ? payload : [payload]) {
+    if (isRequest(pay) && !isNullish(supportedELRequests[pay.method])) {
+      verifiable.push(pay);
+    } else {
+      nonVerifiable.push(pay);
+    }
+  }
+
+  return {verifiable, nonVerifiable};
+}
 
 export async function processAndVerifyRequest({
   payload,
-  handler,
+  rpc,
   proofProvider,
   logger,
 }: {
-  payload: ELRequestPayload;
-  handler: ELRequestHandler;
+  payload: JsonRpcRequestOrBatch;
+  rpc: ELRpc;
   proofProvider: ProofProvider;
   logger: Logger;
-}): Promise<ELResponse | undefined> {
+}): Promise<JsonRpcResponseOrBatch | undefined> {
   await proofProvider.waitToBeReady();
-  logger.debug("Processing request", {method: payload.method, params: JSON.stringify(payload.params)});
-  const verifiedHandler = supportedELRequests[payload.method];
+  const {verifiable, nonVerifiable} = splitRequestsInChunks(payload);
+  const verifiedResponses: JsonRpcBatchResponse = [];
+  const nonVerifiedResponses: JsonRpcBatchResponse = [];
 
-  if (verifiedHandler !== undefined) {
-    logger.debug("Verified request handler found", {method: payload.method});
-    return verifiedHandler({payload, handler, proofProvider, logger});
+  for (const request of verifiable) {
+    logger.debug("Processing verifiable request", {
+      method: request.method,
+      params: JSON.stringify(request.params),
+    });
+    const response = await supportedELRequests[request.method]({payload: request, rpc, proofProvider, logger});
+    verifiedResponses.push(response);
   }
 
-  logger.warn("Verified request handler not found. Falling back to proxy.", {method: payload.method});
-  return handler(payload);
+  if (nonVerifiable.length > 0) {
+    logger.warn("Forwarding non-verifiable requests to EL provider.", {count: nonVerifiable.length});
+    const response = await rpc.batchRequest(nonVerifiable);
+    nonVerifiedResponses.push(...response);
+  }
+
+  if (verifiedResponses.length === 1 && nonVerifiedResponses.length === 0) {
+    return verifiedResponses[0];
+  } else if (verifiedResponses.length === 0 && nonVerifiedResponses.length === 1) {
+    return nonVerifiedResponses[0];
+  } else {
+    return [...verifiedResponses, ...nonVerifiedResponses];
+  }
 }
