@@ -4,7 +4,7 @@ import bls from "@chainsafe/bls";
 import {LocalKeystoreDefinition} from "../interface.js";
 import {clearKeystoreCache, loadKeystoreCache, writeKeystoreCache} from "../keystoreCache.js";
 import {lockFilepath, unlockFilepath} from "../../../../util/lockfile.js";
-import {defaultPoolSize} from "./poolSize.js";
+import {maxPoolSize} from "./poolSize.js";
 import {DecryptKeystoreWorkerAPI, KeystoreDecryptOptions} from "./types.js";
 
 /**
@@ -35,8 +35,9 @@ export async function decryptKeystoreDefinitions(
     }
   }
 
-  const signers = new Array(keystoreDefinitions.length) as SignerLocal[];
-  const passwords = new Array(keystoreDefinitions.length) as string[];
+  const keystoreCount = keystoreDefinitions.length;
+  const signers = new Array<SignerLocal>(keystoreCount);
+  const passwords = new Array<string>(keystoreCount);
   const tasks: QueuedTask<ModuleThread<DecryptKeystoreWorkerAPI>, Uint8Array>[] = [];
   const errors: Error[] = [];
   const pool = Pool(
@@ -45,7 +46,7 @@ export async function decryptKeystoreDefinitions(
         // The number below is big enough to almost disable the timeout which helps during tests run on unpredictablely slow hosts
         timeout: 5 * 60 * 1000,
       }),
-    defaultPoolSize
+    Math.min(keystoreCount, maxPoolSize)
   );
   for (const [index, definition] of keystoreDefinitions.entries()) {
     lockKeystore(definition.keystorePath, opts);
