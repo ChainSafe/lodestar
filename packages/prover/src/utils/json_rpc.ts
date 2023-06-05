@@ -22,7 +22,6 @@ export function getResponseForRequest<P, R, E = unknown>(
 ): JsonRpcResponse<R, E> {
   // If it's a notification
   if (!isRequest(payload)) {
-    console.log({payload});
     throw new Error("Cannot generate response for notification");
   }
 

@@ -68,16 +68,6 @@ function matchParams(params: unknown[], expected: unknown[]): boolean {
   return true;
 }
 
-function getPayloadMatcher(expected: JsonRpcRequest): sinon.SinonMatcher {
-  return sinon.match(function (value: JsonRpcRequest): boolean {
-    if (value.method !== expected.method || value.params.length !== expected.params.length) {
-      return false;
-    }
-
-    return matchParams(value.params, expected.params);
-  }, "payload match params");
-}
-
 function getPayloadParamsMatcher(expected: unknown[]): sinon.SinonMatcher {
   return sinon.match(function (params: unknown[]): boolean {
     return matchParams(params, expected);
