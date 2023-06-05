@@ -98,6 +98,8 @@ export function upgradeLightClientHeader(
 
     // eslint-disable-next-line no-fallthrough
     case ForkName.deneb:
+      (upgradedHeader as deneb.LightClientHeader).execution.dataGasUsed =
+        ssz.deneb.LightClientHeader.fields.execution.fields.dataGasUsed.defaultValue();
       (upgradedHeader as deneb.LightClientHeader).execution.excessDataGas =
         ssz.deneb.LightClientHeader.fields.execution.fields.excessDataGas.defaultValue();
 
@@ -127,8 +129,10 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: allFor
 
   if (epoch < config.DENEB_FORK_EPOCH) {
     if (
-      (header as deneb.LightClientHeader).execution.excessDataGas &&
-      (header as deneb.LightClientHeader).execution.excessDataGas !== BigInt(0)
+      ((header as deneb.LightClientHeader).execution.dataGasUsed &&
+        (header as deneb.LightClientHeader).execution.dataGasUsed !== BigInt(0)) ||
+      ((header as deneb.LightClientHeader).execution.excessDataGas &&
+        (header as deneb.LightClientHeader).execution.excessDataGas !== BigInt(0))
     ) {
       return false;
     }

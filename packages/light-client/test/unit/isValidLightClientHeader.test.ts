@@ -76,7 +76,7 @@ describe("isValidLightClientHeader", function () {
 
   const capellaUpgradedDenebHeader = {
     beacon: capellaLCHeader.beacon,
-    execution: {...capellaLCHeader.execution, excessDataGas: 0},
+    execution: {...capellaLCHeader.execution, dataGasUsed: 0, excessDataGas: 0},
     executionBranch: capellaLCHeader.executionBranch,
   };
 
