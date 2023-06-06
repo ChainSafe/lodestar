@@ -57,8 +57,7 @@ export const startOptions: CliCommandOptions<StartArgs> = {
   },
 
   "unverified-whitelist": {
-    description: `Comma separated list of methods which are allowed to forward. If not provided, all methods are allowed.${alwaysAllowedMethods.join(
-      ","
+    description: `Comma separated list of methods which are allowed to forward. If not provided, all methods are allowed.  ${alwaysAllowedMethods.join(
     )} are always allowed.`,
     type: "string",
     demandOption: false,
