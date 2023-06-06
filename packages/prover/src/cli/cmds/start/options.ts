@@ -4,12 +4,12 @@ import {alwaysAllowedMethods} from "../../../utils/process.js";
 
 export type StartArgs = {
   port: number;
-  "execution-rpc-url": string;
+  executionRpcUrl: string;
   transport: "rest" | "p2p";
-  "beacon-urls"?: string[];
-  "beacon-bootnodes"?: string[];
-  "ws-checkpoint"?: string;
-  "unverified-whitelist"?: string;
+  beaconUrls?: string[];
+  beaconBootnodes?: string[];
+  wsCheckpoint?: string;
+  unverifiedWhitelist?: string;
 };
 
 export type StartOptions = {
@@ -25,7 +25,7 @@ export const startOptions: CliCommandOptions<StartArgs> = {
     type: "number",
     default: 8080,
   },
-  "execution-rpc-url": {
+  executionRpcUrl: {
     description: "RPC url for the execution node.",
     type: "string",
   },
@@ -36,29 +36,28 @@ export const startOptions: CliCommandOptions<StartArgs> = {
     choices: ["rest", "p2p"],
   },
 
-  "beacon-urls": {
+  beaconUrls: {
     description: "The beacon node PRC urls for 'rest' mode.",
     type: "string",
     array: true,
     demandOption: false,
   },
 
-  "beacon-bootnodes": {
+  beaconBootnodes: {
     description: "The beacon node PRC urls for 'p2p' mode.",
     type: "string",
     array: true,
     demandOption: false,
   },
 
-  "ws-checkpoint": {
+  wsCheckpoint: {
     description:
       "The trusted checkpoint root to start the lightclient. If not provided will initialize from the latest finalized slot. It shouldn't be older than weak subjectivity period",
     type: "string",
   },
 
-  "unverified-whitelist": {
-    description: `Comma separated list of methods which are allowed to forward. If not provided, all methods are allowed.  ${alwaysAllowedMethods.join(
-    )} are always allowed.`,
+  unverifiedWhitelist: {
+    description: `Comma separated list of methods which are allowed to forward. If not provided, all methods are allowed.  ${alwaysAllowedMethods.join()} are always allowed.`,
     type: "string",
     demandOption: false,
   },
@@ -67,12 +66,12 @@ export const startOptions: CliCommandOptions<StartArgs> = {
 export function parseStartArgs(args: StartArgs): StartOptions {
   // Remove undefined values to allow deepmerge to inject default values downstream
   return {
-    port: args["port"],
-    executionRpcUrl: args["execution-rpc-url"],
-    transport: args["transport"] === "p2p" ? LCTransport.P2P : LCTransport.Rest,
-    urls: args["transport"] === "rest" ? args["beacon-urls"] ?? [] : [],
-    bootnodes: args["transport"] === "p2p" ? args["beacon-bootnodes"] ?? [] : [],
-    wsCheckpoint: args["ws-checkpoint"],
-    unverifiedWhitelist: args["unverified-whitelist"]?.split(","),
+    port: args.port,
+    executionRpcUrl: args.executionRpcUrl,
+    transport: args.transport === "p2p" ? LCTransport.P2P : LCTransport.Rest,
+    urls: args.transport === "rest" ? args.beaconUrls ?? [] : [],
+    bootnodes: args.transport === "p2p" ? args.beaconBootnodes ?? [] : [],
+    wsCheckpoint: args.wsCheckpoint,
+    unverifiedWhitelist: args.unverifiedWhitelist?.split(","),
   };
 }
