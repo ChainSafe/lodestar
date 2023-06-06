@@ -1,5 +1,6 @@
 import {LCTransport} from "../../../interfaces.js";
 import {CliCommandOptions} from "../../../utils/command.js";
+import {alwaysAllowedMethods} from "../../../utils/process.js";
 
 export type StartArgs = {
   port: number;
@@ -8,12 +9,14 @@ export type StartArgs = {
   "beacon-urls"?: string[];
   "beacon-bootnodes"?: string[];
   "ws-checkpoint"?: string;
+  "unverified-whitelist"?: string;
 };
 
 export type StartOptions = {
   executionRpcUrl: string;
   port: number;
   wsCheckpoint?: string;
+  unverifiedWhitelist?: string[];
 } & ({transport: LCTransport.Rest; urls: string[]} | {transport: LCTransport.P2P; bootnodes: string[]});
 
 export const startOptions: CliCommandOptions<StartArgs> = {
@@ -52,6 +55,14 @@ export const startOptions: CliCommandOptions<StartArgs> = {
       "The trusted checkpoint root to start the lightclient. If not provided will initialize from the latest finalized slot. It shouldn't be older than weak subjectivity period",
     type: "string",
   },
+
+  "unverified-whitelist": {
+    description: `Comma separated list of methods which are allowed to forward. If not provided, all methods are allowed.${alwaysAllowedMethods.join(
+      ","
+    )} are always allowed.`,
+    type: "string",
+    demandOption: false,
+  },
 };
 
 export function parseStartArgs(args: StartArgs): StartOptions {
@@ -63,5 +74,6 @@ export function parseStartArgs(args: StartArgs): StartOptions {
     urls: args["transport"] === "rest" ? args["beacon-urls"] ?? [] : [],
     bootnodes: args["transport"] === "p2p" ? args["beacon-bootnodes"] ?? [] : [],
     wsCheckpoint: args["ws-checkpoint"],
+    unverifiedWhitelist: args["unverified-whitelist"]?.split(","),
   };
 }

@@ -33,7 +33,7 @@ export class ProofProvider {
   private readyPromise?: Promise<void>;
   lightClient?: Lightclient;
 
-  constructor(private opts: RootProviderOptions) {
+  constructor(readonly opts: RootProviderOptions) {
     this.store = new PayloadStore({api: opts.api, logger: opts.logger});
     this.logger = opts.logger;
     this.config = opts.config;

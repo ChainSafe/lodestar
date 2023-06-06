@@ -13,12 +13,13 @@ export enum LCTransport {
 // Provide either network or config. This will be helpful to connect to a custom network
 export type NetworkOrConfig = {network: NetworkName; config?: never} | {network?: never; config: Partial<ChainConfig>};
 
-export type RootProviderInitOptions = {
-  signal: AbortSignal;
-  logger: Logger;
-  wsCheckpoint?: string;
-} & ConsensusNodeOptions &
-  NetworkOrConfig;
+export type RootProviderInitOptions = ConsensusNodeOptions &
+  NetworkOrConfig & {
+    signal: AbortSignal;
+    logger: Logger;
+    wsCheckpoint?: string;
+    unverifiedWhitelist?: string[];
+  };
 
 // The `undefined` is necessary to match the types for the web3 1.x
 export type ELRequestHandler<Params = unknown[], Response = unknown> = (
@@ -78,6 +79,10 @@ export type ConsensusNodeOptions =
   | {transport: LCTransport.Rest; urls: string[]}
   | {transport: LCTransport.P2P; bootnodes: string[]};
 
-export type VerifiedExecutionInitOptions = LogOptions &
-  ConsensusNodeOptions &
-  NetworkOrConfig & {wsCheckpoint?: string; signal?: AbortSignal};
+export type RootProviderOptions = {
+  wsCheckpoint?: string;
+  signal?: AbortSignal;
+  unverifiedWhitelist?: string[];
+};
+
+export type VerifiedExecutionInitOptions = LogOptions & ConsensusNodeOptions & NetworkOrConfig & RootProviderOptions;
