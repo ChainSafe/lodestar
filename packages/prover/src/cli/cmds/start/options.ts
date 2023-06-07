@@ -5,11 +5,10 @@ import {alwaysAllowedMethods} from "../../../utils/process.js";
 export type StartArgs = {
   port: number;
   executionRpcUrl: string;
-  transport: "rest" | "p2p";
   beaconUrls?: string[];
   beaconBootnodes?: string[];
   wsCheckpoint?: string;
-  unverifiedWhitelist?: string;
+  unverifiedWhitelist?: string[];
 };
 
 export type StartOptions = {
@@ -25,53 +24,61 @@ export const startOptions: CliCommandOptions<StartArgs> = {
     type: "number",
     default: 8080,
   },
+
   executionRpcUrl: {
     description: "RPC url for the execution node.",
     type: "string",
+    demandOption: true,
+    group: "execution",
   },
 
-  transport: {
-    description: "The Light client mode to connect to. 'rest', 'p2p'",
-    type: "string",
-    choices: ["rest", "p2p"],
+  unverifiedWhitelist: {
+    description: `Methods which are allowed to forward. If not provided, all methods are allowed. ${alwaysAllowedMethods.join(
+      ","
+    )} are always allowed.`,
+    type: "array",
+    demandOption: false,
+    group: "execution",
   },
 
   beaconUrls: {
     description: "The beacon node PRC urls for 'rest' mode.",
     type: "string",
     array: true,
-    demandOption: false,
+    conflicts: ["beaconBootnodes"],
+    group: "beacon",
   },
 
   beaconBootnodes: {
     description: "The beacon node PRC urls for 'p2p' mode.",
     type: "string",
     array: true,
-    demandOption: false,
+    conflicts: ["beaconUrls"],
+    group: "beacon",
   },
 
   wsCheckpoint: {
     description:
       "The trusted checkpoint root to start the lightclient. If not provided will initialize from the latest finalized slot. It shouldn't be older than weak subjectivity period",
     type: "string",
-  },
-
-  unverifiedWhitelist: {
-    description: `Comma separated list of methods which are allowed to forward. If not provided, all methods are allowed.  ${alwaysAllowedMethods.join()} are always allowed.`,
-    type: "string",
     demandOption: false,
+    group: "beacon",
   },
 };
 
 export function parseStartArgs(args: StartArgs): StartOptions {
+  if (!args.beaconUrls && !args.beaconBootnodes) {
+    throw new Error("Either --beaconUrls or --beaconBootnodes must be provided");
+  }
+
   // Remove undefined values to allow deepmerge to inject default values downstream
   return {
     port: args.port,
     executionRpcUrl: args.executionRpcUrl,
-    transport: args.transport === "p2p" ? LCTransport.P2P : LCTransport.Rest,
-    urls: args.transport === "rest" ? args.beaconUrls ?? [] : [],
-    bootnodes: args.transport === "p2p" ? args.beaconBootnodes ?? [] : [],
+    transport: args.beaconUrls ? LCTransport.Rest : LCTransport.P2P,
+    urls: args.beaconUrls ?? [],
+    bootnodes: args.beaconBootnodes ?? [],
     wsCheckpoint: args.wsCheckpoint,
-    unverifiedWhitelist: args.unverifiedWhitelist?.split(","),
+    unverifiedWhitelist: args.unverifiedWhitelist,
   };
 }
