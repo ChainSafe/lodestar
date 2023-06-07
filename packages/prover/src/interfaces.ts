@@ -80,8 +80,8 @@ export type ConsensusNodeOptions =
   | {transport: LCTransport.P2P; bootnodes: string[]};
 
 export type RootProviderOptions = {
-  wsCheckpoint?: string;
   signal?: AbortSignal;
+  wsCheckpoint?: string;
   unverifiedWhitelist?: string[];
 };
 
