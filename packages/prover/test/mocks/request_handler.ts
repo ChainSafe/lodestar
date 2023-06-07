@@ -5,8 +5,7 @@ import {PresetName} from "@lodestar/params";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {ELVerifiedRequestHandlerOpts} from "../../src/interfaces.js";
 import {ProofProvider} from "../../src/proof_provider/proof_provider.js";
-import {ELRequestPayload, ELResponse} from "../../src/types.js";
-import {ELBlock, ELTransaction} from "../../src/types.js";
+import {ELBlock, ELTransaction, JsonRpcRequestPayload, JsonRpcResponse} from "../../src/types.js";
 import {isNullish} from "../../src/utils/validation.js";
 
 type Writeable<T> = {
@@ -16,8 +15,8 @@ type Writeable<T> = {
 export interface TestFixture<R = unknown, P = unknown[]> {
   label: string;
   network: string;
-  request: ELRequestPayload<P>;
-  response: Writeable<ELResponse<R>>;
+  request: JsonRpcRequestPayload<P>;
+  response: Writeable<JsonRpcResponse<R>>;
   execution: {
     block: ELBlock;
   };
@@ -25,7 +24,7 @@ export interface TestFixture<R = unknown, P = unknown[]> {
     executionPayload: Record<string, unknown>;
     headers: {header: {message: {slot: string}}};
   };
-  dependentRequests: {payload: ELRequestPayload; response: Writeable<ELResponse>}[];
+  dependentRequests: {payload: JsonRpcRequestPayload; response: Writeable<JsonRpcResponse>}[];
 }
 
 function matchTransaction(value: ELTransaction, expected: ELTransaction): boolean {
@@ -47,44 +46,43 @@ function matchTransaction(value: ELTransaction, expected: ELTransaction): boolea
   return true;
 }
 
-function getPayloadMatcher(expected: ELRequestPayload): sinon.SinonMatcher {
-  return sinon.match(function (value: ELRequestPayload): boolean {
-    if (value.method !== expected.method || value.params.length !== expected.params.length) {
+function matchParams(params: unknown[], expected: unknown[]): boolean {
+  for (let i = 0; i < params.length; i++) {
+    const item = params[i];
+    const expectedItem = expected[i];
+
+    if (typeof item === "string" && typeof expectedItem === "string") {
+      if (item.toLowerCase() === expectedItem.toLowerCase()) continue;
+
       return false;
     }
 
-    for (let i = 0; i < value.params.length; i++) {
-      const item = value.params[i];
-      const expectedItem = expected.params[i];
+    // Param is a transaction object
+    if (typeof item === "object" && !isNullish((item as ELTransaction).to)) {
+      if (matchTransaction(item as ELTransaction, expectedItem as ELTransaction)) continue;
 
-      if (typeof item === "string" && typeof expectedItem === "string") {
-        if (item.toLowerCase() === expectedItem.toLowerCase()) continue;
-
-        return false;
-      }
-
-      // Param is a transaction object
-      if (typeof item === "object" && !isNullish((item as ELTransaction).to)) {
-        if (matchTransaction(item as ELTransaction, expectedItem as ELTransaction)) continue;
-
-        return false;
-      }
+      return false;
     }
+  }
 
-    return true;
+  return true;
+}
+
+function getPayloadParamsMatcher(expected: unknown[]): sinon.SinonMatcher {
+  return sinon.match(function (params: unknown[]): boolean {
+    return matchParams(params, expected);
   }, "payload match params");
 }
 
 export function generateReqHandlerOptionsMock(
   data: TestFixture,
   config: ForkConfig
-): Omit<ELVerifiedRequestHandlerOpts<any, any>, "payload"> {
+): Omit<ELVerifiedRequestHandlerOpts<any>, "payload"> {
   const executionPayload = config
     .getExecutionForkTypes(parseInt(data.beacon.headers.header.message.slot))
     .ExecutionPayload.fromJson(data.beacon.executionPayload);
 
   const options = {
-    handler: sinon.stub(),
     logger: getEmptyLogger(),
     proofProvider: {
       getExecutionPayload: sinon.stub().resolves(executionPayload),
@@ -96,31 +94,28 @@ export function generateReqHandlerOptionsMock(
       network: data.network,
     } as unknown as ProofProvider,
     network: data.network as NetworkName,
+    rpc: {
+      request: sinon.stub(),
+    },
   };
 
-  options.handler.withArgs(getPayloadMatcher(data.request)).resolves(data.response);
+  options.rpc.request
+    .withArgs(data.request.method, getPayloadParamsMatcher(data.request.params), sinon.match.any)
+    .resolves(data.response);
 
   for (const req of data.dependentRequests) {
-    options.handler.withArgs(getPayloadMatcher(req.payload)).resolves(req.response);
+    options.rpc.request
+      .withArgs(req.payload.method, getPayloadParamsMatcher(req.payload.params), sinon.match.any)
+      .resolves(req.response);
   }
 
-  options.handler
-    .withArgs({
-      jsonrpc: sinon.match.any,
-      id: sinon.match.any,
-      method: "eth_getBlockByNumber",
-      params: [data.execution.block.number, true],
-    })
+  options.rpc.request
+    .withArgs("eth_getBlockByNumber", [data.execution.block.number, true], sinon.match.any)
     .resolves({id: 1233, jsonrpc: "2.0", result: data.execution.block});
 
-  options.handler
-    .withArgs({
-      jsonrpc: sinon.match.any,
-      id: sinon.match.any,
-      method: "eth_getBlockByHash",
-      params: [data.execution.block.hash, true],
-    })
+  options.rpc.request
+    .withArgs("eth_getBlockByHash", [data.execution.block.hash, true], sinon.match.any)
     .resolves({id: 1233, jsonrpc: "2.0", result: data.execution.block});
 
-  return options;
+  return options as unknown as Omit<ELVerifiedRequestHandlerOpts<any>, "payload">;
 }

@@ -1,7 +1,7 @@
 import http from "node:http";
-import {ELRequestPayload, ELResponse} from "../types.js";
+import {JsonRpcRequestPayload, JsonRpcResponse} from "../types.js";
 
-export const fetchRequestPayload = async (req: http.IncomingMessage): Promise<ELRequestPayload> => {
+export const fetchRequestPayload = async (req: http.IncomingMessage): Promise<JsonRpcRequestPayload> => {
   return new Promise((resolve, reject) => {
     let body = "";
     req.on("data", (chunk) => {
@@ -9,7 +9,7 @@ export const fetchRequestPayload = async (req: http.IncomingMessage): Promise<EL
     });
     req.on("end", () => {
       try {
-        resolve(JSON.parse(body) as ELRequestPayload);
+        resolve(JSON.parse(body) as JsonRpcRequestPayload);
       } catch (err) {
         reject(err);
       }
@@ -17,7 +17,7 @@ export const fetchRequestPayload = async (req: http.IncomingMessage): Promise<EL
   });
 };
 
-export const fetchResponseBody = async (res: http.IncomingMessage): Promise<ELResponse> => {
+export const fetchResponseBody = async (res: http.IncomingMessage): Promise<JsonRpcResponse> => {
   return new Promise((resolve, reject) => {
     let body = "";
     res.on("data", (chunk) => {
@@ -25,7 +25,7 @@ export const fetchResponseBody = async (res: http.IncomingMessage): Promise<ELRe
     });
     res.on("end", () => {
       try {
-        resolve(JSON.parse(body) as ELResponse);
+        resolve(JSON.parse(body) as JsonRpcResponse);
       } catch (err) {
         reject(err);
       }

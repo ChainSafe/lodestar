@@ -6,10 +6,11 @@ import {getNodeLogger} from "@lodestar/logger/node";
 import {LogLevel} from "@lodestar/logger";
 import {VerifiedExecutionInitOptions} from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
-import {ELRequestPayload, ELResponse} from "./types.js";
-import {generateRPCResponseForPayload, logRequest, logResponse} from "./utils/json_rpc.js";
+import {JsonRpcRequestOrBatch, JsonRpcRequestPayload, JsonRpcResponseOrBatch} from "./types.js";
+import {getResponseForRequest, isBatchRequest} from "./utils/json_rpc.js";
 import {fetchRequestPayload, fetchResponseBody} from "./utils/req_resp.js";
 import {processAndVerifyRequest} from "./utils/process.js";
+import {ELRpc} from "./utils/execution.js";
 
 export type VerifiedProxyOptions = VerifiedExecutionInitOptions & {
   executionRpcUrl: string;
@@ -41,7 +42,7 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
 
   let proxyServerListeningAddress: {host: string; port: number} | undefined;
 
-  function handler(payload: ELRequestPayload): Promise<ELResponse | undefined> {
+  function handler(payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> {
     return new Promise((resolve, reject) => {
       if (!proxyServerListeningAddress) return reject(new Error("Proxy server not listening"));
       const req = http.request(
@@ -58,17 +59,16 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
         (res) => {
           fetchResponseBody(res)
             .then((response) => {
-              logResponse(response, logger);
               resolve(response);
             })
             .catch(reject);
         }
       );
-      logRequest(payload, logger);
       req.write(JSON.stringify(payload));
       req.end();
     });
   }
+  const rpc = new ELRpc(handler, logger);
 
   logger.info("Creating http server");
   const proxyServer = http.createServer(function proxyRequestHandler(req, res) {
@@ -78,21 +78,25 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
       return;
     }
 
-    let payload: ELRequestPayload;
+    let payload: JsonRpcRequestPayload;
     fetchRequestPayload(req)
       .then((data) => {
         payload = data;
-        logger.debug("Received request", {method: payload.method});
-        return processAndVerifyRequest({payload, proofProvider, handler, logger});
+        return processAndVerifyRequest({payload, proofProvider, rpc, logger});
       })
       .then((response) => {
-        logger.debug("Sending response", {method: payload.method});
         res.write(JSON.stringify(response));
         res.end();
       })
       .catch((err) => {
-        logger.error("Error processing request", {method: payload.method}, err);
-        res.write(JSON.stringify(generateRPCResponseForPayload(payload, undefined, {message: (err as Error).message})));
+        logger.error("Error processing request", err);
+        const message = (err as Error).message;
+        if (isBatchRequest(payload)) {
+          res.write(JSON.stringify(payload.map((req) => getResponseForRequest(req, {message}))));
+        } else {
+          res.write(JSON.stringify(getResponseForRequest(payload, undefined, {message})));
+        }
+
         res.end();
       });
   });

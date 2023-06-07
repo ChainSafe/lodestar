@@ -1,53 +1,91 @@
 import {Common, CustomChain, Hardfork} from "@ethereumjs/common";
+import {Logger} from "@lodestar/logger";
 import {ELRequestHandler} from "../interfaces.js";
-import {ELApiHandlers, ELApiParams, ELApiReturn, ELResponse, ELResponseWithResult, ELTransaction} from "../types.js";
-import {isValidResponse} from "./json_rpc.js";
-import {isBlockNumber, isPresent} from "./validation.js";
+import {
+  ELApi,
+  ELApiParams,
+  ELApiReturn,
+  ELTransaction,
+  JsonRpcRequest,
+  JsonRpcResponse,
+  JsonRpcResponseWithResultPayload,
+  JsonRpcBatchRequest,
+  JsonRpcBatchResponse,
+} from "../types.js";
+import {isRequest, isValidResponse, logRequest, logResponse} from "./json_rpc.js";
+import {isBlockNumber, isNullish, isPresent} from "./validation.js";
 
-export function getRequestId(): string {
-  // TODO: Find better way to generate random id
-  return (Math.random() * 10000).toFixed(0);
-}
+export type Optional<T, K extends keyof T> = Omit<T, K> & {[P in keyof T]?: T[P] | undefined};
 
-export async function elRpc<
-  P,
-  R,
-  E extends boolean = false,
-  Return = E extends true ? ELResponseWithResult<R> : ELResponse<R> | undefined
->(handler: ELRequestHandler<P, R>, method: string, args: P, raiseError?: E): Promise<Return> {
-  const response = await handler({
-    jsonrpc: "2.0",
-    method,
-    params: args,
-    id: getRequestId(),
-  });
+export class ELRpc {
+  private handler: ELRequestHandler;
+  private logger: Logger;
 
-  if (raiseError && !isValidResponse(response)) {
-    throw new Error(`Invalid response from RPC. method=${method} args=${JSON.stringify(args)}`);
+  constructor(handler: ELRequestHandler, logger: Logger) {
+    this.handler = handler;
+    this.logger = logger;
   }
 
-  return response as Return;
+  async request<K extends keyof ELApi, E extends boolean>(
+    method: K,
+    params: ELApiParams[K],
+    opts: {raiseError: E}
+  ): Promise<E extends false ? JsonRpcResponse<ELApiReturn[K]> : JsonRpcResponseWithResultPayload<ELApiReturn[K]>> {
+    const {raiseError} = opts;
+
+    const payload: JsonRpcRequest = {jsonrpc: "2.0", method, params, id: this.getRequestId()};
+    logRequest(payload, this.logger);
+
+    const response = await this.handler(payload);
+    logResponse(response, this.logger);
+
+    if (raiseError && !isValidResponse(response)) {
+      throw new Error(`Invalid response from RPC. method=${method} params=${JSON.stringify(params)}`);
+    }
+
+    return response as JsonRpcResponseWithResultPayload<ELApiReturn[K]>;
+  }
+
+  async batchRequest(input: JsonRpcBatchRequest): Promise<JsonRpcBatchResponse> {
+    const payloads: JsonRpcBatchRequest = [];
+
+    for (const req of input) {
+      if (isRequest(req) && isNullish(req.id)) {
+        payloads.push({jsonrpc: "2.0", method: req.method, params: req.params, id: this.getRequestId()});
+      } else {
+        payloads.push(req);
+      }
+    }
+
+    logRequest(payloads, this.logger);
+    const response = await this.handler(payloads);
+    logResponse(response, this.logger);
+
+    if (isNullish(response)) {
+      throw new Error("Invalid empty response from server.");
+    }
+
+    return response as JsonRpcResponse[];
+  }
+
+  private getRequestId(): string {
+    // TODO: Find better way to generate random id
+    return (Math.random() * 10000).toFixed(0);
+  }
 }
 
-export async function getELCode(
-  handler: ELApiHandlers["eth_getCode"],
-  args: ELApiParams["eth_getCode"]
-): Promise<ELApiReturn["eth_getCode"]> {
-  const codeResult = await elRpc(handler, "eth_getCode", args);
+export async function getELCode(rpc: ELRpc, args: ELApiParams["eth_getCode"]): Promise<ELApiReturn["eth_getCode"]> {
+  const codeResult = await rpc.request("eth_getCode", args, {raiseError: false});
 
   if (!isValidResponse(codeResult)) {
-    throw new Error(`Can not find code. address=${args[0]}`);
+    throw new Error(`Can not find code for address=${args[0]}`);
   }
 
   return codeResult.result;
 }
 
-export async function getELProof(
-  handler: ELApiHandlers["eth_getProof"],
-  args: ELApiParams["eth_getProof"]
-): Promise<ELApiReturn["eth_getProof"]> {
-  const proof = await elRpc(handler, "eth_getProof", args);
-
+export async function getELProof(rpc: ELRpc, args: ELApiParams["eth_getProof"]): Promise<ELApiReturn["eth_getProof"]> {
+  const proof = await rpc.request("eth_getProof", args, {raiseError: false});
   if (!isValidResponse(proof)) {
     throw new Error(`Can not find proof for address=${args[0]}`);
   }
@@ -55,10 +93,12 @@ export async function getELProof(
 }
 
 export async function getELBlock(
-  handler: ELApiHandlers["eth_getBlockByNumber"],
+  rpc: ELRpc,
   args: ELApiParams["eth_getBlockByNumber"]
 ): Promise<ELApiReturn["eth_getBlockByNumber"]> {
-  const block = await elRpc(handler, isBlockNumber(args[0]) ? "eth_getBlockByNumber" : "eth_getBlockByHash", args);
+  const block = await rpc.request(isBlockNumber(args[0]) ? "eth_getBlockByNumber" : "eth_getBlockByHash", args, {
+    raiseError: false,
+  });
 
   if (!isValidResponse(block)) {
     throw new Error(`Can not find block. id=${args[0]}`);
