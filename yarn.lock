@@ -102,9 +102,9 @@
   resolved "https://registry.npmjs.org/@actions/io/-/io-1.1.1.tgz"
   integrity sha512-Qi4JoKXjmE0O67wAOH6y0n26QXhMKMFo7GD/4IXNVcrtLjUlGjGuVys6pQgwF3ArfGTQu0XpqaNr0YhED2RaRA==
 
-"@adraffy/ens-normalize@git+https://github.com/ricmoo/ens-normalize.js.git":
+"@adraffy/ens-normalize@https://github.com/ricmoo/ens-normalize.js":
   version "1.9.0"
-  resolved "git+https://github.com/ricmoo/ens-normalize.js.git#2d040533e57e4f25f9a7cc4715e219658ad454b5"
+  resolved "https://github.com/ricmoo/ens-normalize.js#2d040533e57e4f25f9a7cc4715e219658ad454b5"
 
 "@azure/abort-controller@^1.0.0":
   version "1.0.4"
