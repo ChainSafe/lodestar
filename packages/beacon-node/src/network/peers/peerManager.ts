@@ -146,7 +146,7 @@ export class PeerManager {
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
 
-  constructor(modules: PeerManagerModules, opts: PeerManagerOpts) {
+  constructor(modules: PeerManagerModules, opts: PeerManagerOpts, discovery: PeerDiscovery | null) {
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
     this.metrics = modules.metrics;
@@ -161,16 +161,7 @@ export class PeerManager {
     this.networkEventBus = modules.events;
     this.connectedPeers = modules.peersData.connectedPeers;
     this.opts = opts;
-
-    // opts.discv5 === null, discovery is disabled
-    this.discovery =
-      opts.discv5 &&
-      new PeerDiscovery(modules, {
-        maxPeers: opts.maxPeers,
-        discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs,
-        discv5: opts.discv5,
-        connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
-      });
+    this.discovery = discovery;
 
     const {metrics} = modules;
     if (metrics) {
@@ -193,8 +184,18 @@ export class PeerManager {
     ];
   }
 
-  async startDiscovery(): Promise<void> {
-    await this.discovery?.start();
+  static async init(modules: PeerManagerModules, opts: PeerManagerOpts): Promise<PeerManager> {
+    // opts.discv5 === null, discovery is disabled
+    const discovery = opts.discv5
+      ? await PeerDiscovery.init(modules, {
+          maxPeers: opts.maxPeers,
+          discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs,
+          discv5: opts.discv5,
+          connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
+        })
+      : null;
+
+    return new PeerManager(modules, opts, discovery);
   }
 
   async close(): Promise<void> {
@@ -507,6 +508,13 @@ export class PeerManager {
     }
 
     timer?.();
+
+    this.logger.debug("peerManager heartbeat result", {
+      peersToDisconnect: peersToDisconnect.size,
+      peersToConnect: peersToConnect,
+      attnetQueries: attnetQueries.length,
+      syncnetQueries: syncnetQueries.length,
+    });
   }
 
   private updateGossipsubScores(): void {

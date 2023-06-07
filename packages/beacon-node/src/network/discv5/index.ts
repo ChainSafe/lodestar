@@ -21,37 +21,32 @@ export type Discv5Events = {
   discovered: (enr: ENR) => void;
 };
 
-type Discv5WorkerStatus =
-  | {status: "stopped"}
-  | {status: "started"; workerApi: Discv5WorkerApi; subscription: {unsubscribe(): void}};
-
 /**
  * Wrapper class abstracting the details of discv5 worker instantiation and message-passing
  */
 export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, Discv5Events>}) {
-  private status: Discv5WorkerStatus;
-  private keypair: IKeypair;
+  private readonly keypair: IKeypair;
+  private readonly subscription: {unsubscribe: () => void};
+  private closed = false;
 
-  constructor(private readonly opts: Discv5Opts) {
+  constructor(private readonly opts: Discv5Opts, private readonly workerApi: Discv5WorkerApi) {
     super();
 
-    this.status = {status: "stopped"};
     this.keypair = createKeypairFromPeerId(this.opts.peerId);
+    this.subscription = workerApi.discovered().subscribe((enrObj) => this.onDiscovered(enrObj));
   }
 
-  async start(): Promise<void> {
-    if (this.status.status === "started") return;
-
+  static async init(opts: Discv5Opts): Promise<Discv5Worker> {
     const workerData: Discv5WorkerData = {
-      enr: this.opts.discv5.enr,
-      peerIdProto: exportToProtobuf(this.opts.peerId),
-      bindAddr: this.opts.discv5.bindAddr,
-      config: this.opts.discv5.config ?? {},
-      bootEnrs: this.opts.discv5.bootEnrs as string[],
-      metrics: Boolean(this.opts.metrics),
-      chainConfig: chainConfigFromJson(chainConfigToJson(this.opts.config)),
-      genesisValidatorsRoot: this.opts.config.genesisValidatorsRoot,
-      loggerOpts: this.opts.logger.toOpts(),
+      enr: opts.discv5.enr,
+      peerIdProto: exportToProtobuf(opts.peerId),
+      bindAddr: opts.discv5.bindAddr,
+      config: opts.discv5.config ?? {},
+      bootEnrs: opts.discv5.bootEnrs as string[],
+      metrics: Boolean(opts.metrics),
+      chainConfig: chainConfigFromJson(chainConfigToJson(opts.config)),
+      genesisValidatorsRoot: opts.config.genesisValidatorsRoot,
+      loggerOpts: opts.logger.toOpts(),
     };
     const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
 
@@ -61,19 +56,16 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       timeout: 5 * 60 * 1000,
     });
 
-    const subscription = workerApi.discovered().subscribe((enrObj) => this.onDiscovered(enrObj));
-
-    this.status = {status: "started", workerApi, subscription};
+    return new Discv5Worker(opts, workerApi);
   }
 
-  async stop(): Promise<void> {
-    if (this.status.status === "stopped") return;
+  async close(): Promise<void> {
+    if (this.closed) return;
+    this.closed = true;
 
-    this.status.subscription.unsubscribe();
-    await this.status.workerApi.close();
-    await Thread.terminate(this.status.workerApi as unknown as Thread);
-
-    this.status = {status: "stopped"};
+    this.subscription.unsubscribe();
+    await this.workerApi.close();
+    await Thread.terminate(this.workerApi as unknown as Thread);
   }
 
   onDiscovered(obj: ENRData): void {
@@ -84,50 +76,28 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
   }
 
   async enr(): Promise<SignableENR> {
-    if (this.status.status === "started") {
-      const obj = await this.status.workerApi.enr();
-      return new SignableENR(obj.kvs, obj.seq, this.keypair);
-    } else {
-      throw new Error("Cannot get enr before module is started");
-    }
+    const obj = await this.workerApi.enr();
+    return new SignableENR(obj.kvs, obj.seq, this.keypair);
   }
 
-  async setEnrValue(key: string, value: Uint8Array): Promise<void> {
-    if (this.status.status === "started") {
-      await this.status.workerApi.setEnrValue(key, value);
-    } else {
-      throw new Error("Cannot setEnrValue before module is started");
-    }
+  setEnrValue(key: string, value: Uint8Array): Promise<void> {
+    return this.workerApi.setEnrValue(key, value);
   }
 
   async kadValues(): Promise<ENR[]> {
-    if (this.status.status === "started") {
-      return this.decodeEnrs(await this.status.workerApi.kadValues());
-    } else {
-      return [];
-    }
+    return this.decodeEnrs(await this.workerApi.kadValues());
   }
 
-  async discoverKadValues(): Promise<void> {
-    if (this.status.status === "started") {
-      await this.status.workerApi.discoverKadValues();
-    }
+  discoverKadValues(): Promise<void> {
+    return this.workerApi.discoverKadValues();
   }
 
   async findRandomNode(): Promise<ENR[]> {
-    if (this.status.status === "started") {
-      return this.decodeEnrs(await this.status.workerApi.findRandomNode());
-    } else {
-      return [];
-    }
+    return this.decodeEnrs(await this.workerApi.findRandomNode());
   }
 
-  async scrapeMetrics(): Promise<string> {
-    if (this.status.status === "started") {
-      return this.status.workerApi.scrapeMetrics();
-    } else {
-      return "";
-    }
+  scrapeMetrics(): Promise<string> {
+    return this.workerApi.scrapeMetrics();
   }
 
   private decodeEnrs(objs: ENRData[]): ENR[] {
