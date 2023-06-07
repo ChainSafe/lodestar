@@ -1,7 +1,7 @@
-import {Discv5, ENRData, SignableENRData} from "@chainsafe/discv5";
-import {Observable} from "@chainsafe/threads/observable";
+import {Discv5, ENR, ENRData, SignableENRData} from "@chainsafe/discv5";
 import {ChainConfig} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
+import {EventDirection} from "../../util/workerEvents.js";
 
 // TODO export IDiscv5Config so we don't need this convoluted type
 type Discv5Config = Parameters<(typeof Discv5)["create"]>[0]["config"];
@@ -43,11 +43,23 @@ export type Discv5WorkerApi = {
   discoverKadValues(): Promise<void>;
   /** Begin a random search through the DHT, return discovered ENRs */
   findRandomNode(): Promise<ENRData[]>;
-  /** Stream of discovered ENRs */
-  discovered(): Observable<ENRData>;
 
   /** Prometheus metrics string */
   scrapeMetrics(): Promise<string>;
   /** tear down discv5 resources */
   close(): Promise<void>;
+};
+
+export const DISCV5_WORKER_EVENTID = "discv5WorkerEvent";
+
+export enum Discv5WorkerEvent {
+  discoveredENR = "discv5-worker.discoveredENR",
+}
+
+export type Discv5WorkerEventData = {
+  [Discv5WorkerEvent.discoveredENR]: ENR;
+};
+
+export const discv5WorkerEventDirection: Record<Discv5WorkerEvent, EventDirection> = {
+  [Discv5WorkerEvent.discoveredENR]: EventDirection.workerToMain,
 };

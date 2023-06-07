@@ -301,6 +301,7 @@ export class PeerDiscovery {
 
     const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, attnets, syncnets);
     this.metrics?.discovery.discoveredStatus.inc({status});
+    this.logger.debug("onDiscoveredENR", {status, peerId: peerId.toString()});
   };
 
   /**

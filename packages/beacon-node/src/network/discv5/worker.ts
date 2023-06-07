@@ -3,13 +3,19 @@ import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {multiaddr} from "@multiformats/multiaddr";
 import {Gauge} from "prom-client";
 import {expose} from "@chainsafe/threads/worker";
-import {Observable, Subject} from "@chainsafe/threads/observable";
 import {createKeypairFromPeerId, Discv5, ENR, ENRData, SignableENR, SignableENRData} from "@chainsafe/discv5";
 import {createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
-import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
+import {WorkerBridgeEvent} from "../../util/workerEvents.js";
+import {
+  DISCV5_WORKER_EVENTID,
+  Discv5WorkerApi,
+  Discv5WorkerData,
+  Discv5WorkerEvent,
+  Discv5WorkerEventData,
+} from "./types.js";
 import {enrRelevance, ENRRelevance} from "./utils.js";
 
 // This discv5 worker will start discv5 on initialization (there is no `start` function to call)
@@ -18,8 +24,11 @@ import {enrRelevance, ENRRelevance} from "./utils.js";
 
 // Cloned data from instatiation
 const workerData = worker.workerData as Discv5WorkerData;
+const parentPort = worker.parentPort;
 // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 if (!workerData) throw Error("workerData must be defined");
+// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+if (!parentPort) throw Error("parentPort must be defined");
 
 const logger = getNodeLogger(workerData.loggerOpts);
 
@@ -57,14 +66,16 @@ for (const bootEnr of workerData.bootEnrs) {
   discv5.addEnr(bootEnr);
 }
 
-/** Used to push discovered ENRs */
-const subject = new Subject<ENRData>();
-
 const onDiscovered = (enr: ENR): void => {
   const status = enrRelevance(enr, config);
   enrRelevanceMetric?.inc({status});
   if (status === ENRRelevance.relevant) {
-    subject.next(enr.toObject());
+    const workerEvent: WorkerBridgeEvent<Discv5WorkerEventData> = {
+      type: DISCV5_WORKER_EVENTID,
+      event: Discv5WorkerEvent.discoveredENR,
+      data: enr,
+    };
+    parentPort.postMessage(workerEvent);
   }
 };
 discv5.addListener("discovered", onDiscovered);
@@ -88,15 +99,11 @@ const module: Discv5WorkerApi = {
   async findRandomNode(): Promise<ENRData[]> {
     return (await discv5.findRandomNode()).map((enr) => enr.toObject());
   },
-  discovered() {
-    return Observable.from(subject);
-  },
   async scrapeMetrics(): Promise<string> {
     return (await metricsRegistry?.metrics()) ?? "";
   },
   async close() {
     discv5.removeListener("discovered", onDiscovered);
-    subject.complete();
     await discv5.stop();
   },
 };

@@ -1,4 +1,5 @@
 import EventEmitter from "events";
+import worker_threads from "node:worker_threads";
 import {PeerId} from "@libp2p/interface-peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
@@ -7,7 +8,14 @@ import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {chainConfigFromJson, chainConfigToJson, BeaconConfig} from "@lodestar/config";
 import {LoggerNode} from "@lodestar/logger/node";
 import {NetworkCoreMetrics} from "../core/metrics.js";
-import {Discv5WorkerApi, Discv5WorkerData, LodestarDiscv5Opts} from "./types.js";
+import {WorkerBridgeEvent} from "../../util/workerEvents.js";
+import {
+  Discv5WorkerApi,
+  Discv5WorkerData,
+  Discv5WorkerEvent,
+  Discv5WorkerEventData,
+  LodestarDiscv5Opts,
+} from "./types.js";
 
 export type Discv5Opts = {
   peerId: PeerId;
@@ -26,14 +34,23 @@ export type Discv5Events = {
  */
 export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, Discv5Events>}) {
   private readonly keypair: IKeypair;
-  private readonly subscription: {unsubscribe: () => void};
+  private readonly workerApi: Discv5WorkerApi;
   private closed = false;
 
-  constructor(private readonly opts: Discv5Opts, private readonly workerApi: Discv5WorkerApi) {
+  constructor(private readonly opts: Discv5Opts, worker: {api: Discv5WorkerApi; worker: Worker}) {
     super();
 
+    (worker.worker as unknown as worker_threads.Worker).on(
+      "message",
+      (data: WorkerBridgeEvent<Discv5WorkerEventData>) => {
+        if (typeof data === "object" && data.event === Discv5WorkerEvent.discoveredENR) {
+          this.onDiscovered(data.data);
+        }
+      }
+    );
+
     this.keypair = createKeypairFromPeerId(this.opts.peerId);
-    this.subscription = workerApi.discovered().subscribe((enrObj) => this.onDiscovered(enrObj));
+    this.workerApi = worker.api;
   }
 
   static async init(opts: Discv5Opts): Promise<Discv5Worker> {
@@ -50,20 +67,19 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
     };
     const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
 
-    const workerApi = await spawn<Discv5WorkerApi>(worker, {
+    const api = await spawn<Discv5WorkerApi>(worker, {
       // A Lodestar Node may do very expensive task at start blocking the event loop and causing
       // the initialization to timeout. The number below is big enough to almost disable the timeout
       timeout: 5 * 60 * 1000,
     });
 
-    return new Discv5Worker(opts, workerApi);
+    return new Discv5Worker(opts, {worker, api});
   }
 
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
 
-    this.subscription.unsubscribe();
     await this.workerApi.close();
     await Thread.terminate(this.workerApi as unknown as Thread);
   }
