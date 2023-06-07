@@ -53,7 +53,7 @@ lodestar-prover start \
 
 ⌛ - Todo
 
-➡️ - Request will be forward to EL without any intermediary manipulations. You can limit these by providing `unverifiedWhitelist` option for provider or `--unverified-whitelist` from the cli. If not set then all methods will be forwarded.
+➡️ - Request will be forward to EL without any intermediary manipulations. You can limit these by providing `unverifiedWhitelist` option for provider or `--unverifiedWhitelist` from the cli. If not set then all methods will be forwarded.
 
 ❇️ - Always forwarded to EL.
 
