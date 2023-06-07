@@ -74,6 +74,7 @@ export async function processAndVerifyRequest({
   logger: Logger;
 }): Promise<JsonRpcResponseOrBatch | undefined> {
   await proofProvider.waitToBeReady();
+
   const {verifiable, nonVerifiable, blocked} = splitRequestsInChunks(payload, proofProvider.opts.unverifiedWhitelist);
   const verifiedResponses: JsonRpcBatchResponse = [];
   const nonVerifiedResponses: JsonRpcBatchResponse = [];

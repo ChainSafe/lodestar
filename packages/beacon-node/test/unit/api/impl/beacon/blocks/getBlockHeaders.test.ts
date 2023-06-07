@@ -72,11 +72,11 @@ describe("api - beacon - getBlockHeaders", function () {
       generateProtoBlock({slot: 2}),
       generateProtoBlock({slot: 1}),
     ]);
-    const cannonical = generateSignedBlockAtSlot(2);
+    const canonical = generateSignedBlockAtSlot(2);
     server.forkChoiceStub.getCanonicalBlockAtSlot.withArgs(1).returns(generateProtoBlock());
     server.forkChoiceStub.getCanonicalBlockAtSlot
       .withArgs(2)
-      .returns(generateProtoBlock({blockRoot: toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(cannonical.message))}));
+      .returns(generateProtoBlock({blockRoot: toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(canonical.message))}));
     server.dbStub.block.get.onFirstCall().resolves(generateSignedBlockAtSlot(1));
     server.dbStub.block.get.onSecondCall().resolves(generateSignedBlockAtSlot(2));
     const {data: blockHeaders} = await server.blockApi.getBlockHeaders({parentRoot});
@@ -106,11 +106,11 @@ describe("api - beacon - getBlockHeaders", function () {
       generateProtoBlock({slot: 2}),
       generateProtoBlock({slot: 1}),
     ]);
-    const cannonical = generateSignedBlockAtSlot(2);
+    const canonical = generateSignedBlockAtSlot(2);
     server.forkChoiceStub.getCanonicalBlockAtSlot.withArgs(1).returns(generateProtoBlock());
     server.forkChoiceStub.getCanonicalBlockAtSlot
       .withArgs(2)
-      .returns(generateProtoBlock({blockRoot: toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(cannonical.message))}));
+      .returns(generateProtoBlock({blockRoot: toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(canonical.message))}));
     server.dbStub.block.get.onFirstCall().resolves(generateSignedBlockAtSlot(1));
     server.dbStub.block.get.onSecondCall().resolves(generateSignedBlockAtSlot(2));
     const {data: blockHeaders} = await server.blockApi.getBlockHeaders({

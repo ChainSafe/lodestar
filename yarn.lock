@@ -488,11 +488,12 @@
     bls-eth-wasm "^0.4.8"
     randombytes "^2.1.0"
 
-"@chainsafe/blst@^0.2.8":
-  version "0.2.8"
-  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-0.2.8.tgz#f4513b48ba26099e2ec366076cc2b5c93b223710"
-  integrity sha512-f3uXSSJcQ+go7qIh9uYZfMaWeA2+XiU8QhRUKor6aqYjVT6N2JdEip3hbVbJu7BIr/qSWOKRQEeGMVNvNfwJQQ==
+"@chainsafe/blst@^0.2.9":
+  version "0.2.9"
+  resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-0.2.9.tgz#b356b47759c3ce127677227fc24faa3ac6c72032"
+  integrity sha512-6MXBUy5Co6k6V9Bv0EC5YrHD7kwWIpzwBO4yCqurLw//Zm3cUmN6DohuYuEGcS4QMNEswa/cXqzZLf+LFBJPiw==
   dependencies:
+    "@types/tar" "^6.1.4"
     node-fetch "^2.6.1"
     node-gyp "^8.4.0"
 
