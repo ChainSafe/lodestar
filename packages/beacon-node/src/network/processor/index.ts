@@ -244,9 +244,7 @@ export class NetworkProcessor {
           this.isProcessingCurrentSlotBlock = true;
         }
         message.msgSlot = slot;
-        // check if we processed a block with this root
-        // no need to check if root is a descendant of the current finalized block, it will be checked once we validate the message if needed
-        if (root && !this.chain.forkChoice.hasBlockHexUnsafe(root)) {
+        if (root && !this.chain.forkChoice.hasBlockHex(root)) {
           this.searchUnknownSlotRoot({slot, root}, message.propagationSource.toString());
 
           if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {

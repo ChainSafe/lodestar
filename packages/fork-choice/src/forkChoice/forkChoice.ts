@@ -597,20 +597,6 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Same to hasBlock but without checking if the block is a descendant of the finalized root.
-   */
-  hasBlockUnsafe(blockRoot: Root): boolean {
-    return this.hasBlockHexUnsafe(toHexString(blockRoot));
-  }
-
-  /**
-   * Same to hasBlockHex but without checking if the block is a descendant of the finalized root.
-   */
-  hasBlockHexUnsafe(blockRoot: RootHex): boolean {
-    return this.protoArray.hasBlock(blockRoot);
-  }
-
-  /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
   getBlockHex(blockRoot: RootHex): ProtoBlock | null {
