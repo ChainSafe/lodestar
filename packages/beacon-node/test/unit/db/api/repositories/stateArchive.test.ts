@@ -39,8 +39,7 @@ describe("Reproduce RSS spike issue", function () {
       }
       const storedStateSlots = await db.stateArchive.keys({
         lt: startSlot + frequency,
-        // keep 1 state in LevelDB
-        gt: startSlot,
+        gte: startSlot,
       });
       await db.stateArchive.batchDelete(storedStateSlots);
       console.log("@@@ num slots in db", (await db.stateArchive.keys()).length);
