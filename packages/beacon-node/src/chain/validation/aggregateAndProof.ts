@@ -1,4 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
+import {} from "@lodestar/blst-ts";
 import {phase0, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
 import {
   computeEpochAtSlot,
