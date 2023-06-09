@@ -10,7 +10,7 @@ import {assertValidPubkeysHex, isValidHttpUrl, parseRange, YargsError} from "../
 import {getAccountPaths} from "../paths.js";
 import {IValidatorCliArgs} from "../options.js";
 import {PersistedKeysBackend} from "../keymanager/persistedKeys.js";
-import {decryptKeystoreDefinitions} from "../keymanager/decryptKeystoreDefinitions/index.js";
+import {decryptKeystoreDefinitions} from "../keymanager/decryptKeystoreDefinitions.js";
 import {showProgress} from "../../../util/progress.js";
 import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./importExternalKeystores.js";
 
@@ -100,6 +100,7 @@ export async function getSignersFromArgs(
       onDecrypt: needle,
       cacheFilePath: path.join(accountPaths.cacheDir, "imported_keystores.cache"),
       logger,
+      signal,
     });
   }
 
@@ -133,6 +134,7 @@ export async function getSignersFromArgs(
       onDecrypt: needle,
       cacheFilePath: path.join(accountPaths.cacheDir, "local_keystores.cache"),
       logger,
+      signal,
     });
 
     // Read local remote keys, imported via keymanager api
