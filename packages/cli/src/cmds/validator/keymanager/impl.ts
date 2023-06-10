@@ -148,28 +148,24 @@ export class KeymanagerApi implements Api {
         decryptKeystores.queue(
           {keystoreStr, password},
           (secretKeyBytes: Uint8Array) => {
-            try {
-              const secretKey = bls.SecretKey.fromBytes(secretKeyBytes);
+            const secretKey = bls.SecretKey.fromBytes(secretKeyBytes);
 
-              // Persist the key to disk for restarts, before adding to in-memory store
-              // If the keystore exist and has a lock it will throw
-              this.persistedKeysBackend.writeKeystore({
-                keystoreStr,
-                password,
-                // Lock immediately since it's gonna be used
-                lockBeforeWrite: true,
-                // Always write, even if it's already persisted for consistency.
-                // The in-memory validatorStore is the ground truth to decide duplicates
-                persistIfDuplicate: true,
-              });
+            // Persist the key to disk for restarts, before adding to in-memory store
+            // If the keystore exist and has a lock it will throw
+            this.persistedKeysBackend.writeKeystore({
+              keystoreStr,
+              password,
+              // Lock immediately since it's gonna be used
+              lockBeforeWrite: true,
+              // Always write, even if it's already persisted for consistency.
+              // The in-memory validatorStore is the ground truth to decide duplicates
+              persistIfDuplicate: true,
+            });
 
-              // Add to in-memory store to start validating immediately
-              this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
+            // Add to in-memory store to start validating immediately
+            this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
-              statuses[i] = {status: ImportStatus.imported};
-            } catch (e) {
-              statuses[i] = {status: ImportStatus.error, message: (e as Error).message};
-            }
+            statuses[i] = {status: ImportStatus.imported};
           },
           (e: Error) => {
             statuses[i] = {status: ImportStatus.error, message: e.message};
