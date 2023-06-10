@@ -164,7 +164,7 @@ const libp2pWorkerApi: NetworkWorkerApi = {
           session.post("Profiler.stop", (err, {profile}) => {
             // Write profile to disk, upload, etc.
             if (!err) {
-              const filePath = `network_thread_${new Date().toISOString()}.profile`;
+              const filePath = `network_thread_${new Date().toISOString()}.cpuprofile`;
               fs.writeFileSync(filePath, JSON.stringify(profile));
               resolve(filePath);
             } else {
