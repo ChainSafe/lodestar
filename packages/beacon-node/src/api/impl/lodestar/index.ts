@@ -47,6 +47,11 @@ export function getLodestarApi({
       }
     },
 
+    async writeNetworkThreadProfile() {
+      const filepath = await network.takeProfile();
+      return {data: {filepath}};
+    },
+
     async getLatestWeakSubjectivityCheckpointEpoch() {
       const state = chain.getHeadState();
       return {data: getLatestWeakSubjectivityCheckpointEpoch(config, state)};

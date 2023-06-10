@@ -544,6 +544,10 @@ export class Network implements INetwork {
     return this.networkProcessor.dumpGossipQueue(gossipType);
   }
 
+  async takeProfile(): Promise<string> {
+    return this.core.takeProfile();
+  }
+
   private onLightClientFinalityUpdate = async (finalityUpdate: allForks.LightClientFinalityUpdate): Promise<void> => {
     // TODO: Review is OK to remove if (this.hasAttachedSyncCommitteeMember())
 

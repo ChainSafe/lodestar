@@ -60,6 +60,7 @@ export interface INetwork extends INetworkCorePublic {
 
   // Debug
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;
+  takeProfile(): Promise<string>;
 }
 
 export type PeerDirection = Connection["stat"]["direction"];

@@ -1,9 +1,12 @@
 import worker from "node:worker_threads";
+import inspector from "node:inspector";
+import fs from "node:fs";
 import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import type {WorkerModule} from "@chainsafe/threads/dist/types/worker.js";
+import {sleep} from "@lodestar/utils";
 import {collectNodeJSMetrics, RegistryMetricCreator} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {Clock} from "../../util/clock.js";
@@ -147,6 +150,31 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   dumpGossipPeerScoreStats: () => core.dumpGossipPeerScoreStats(),
   dumpDiscv5KadValues: () => core.dumpDiscv5KadValues(),
   dumpMeshPeers: () => core.dumpMeshPeers(),
+  takeProfile: () => {
+    return new Promise<string>((resolve, reject) => {
+      // Start the inspector and connect to it
+      const session = new inspector.Session();
+      session.connect();
+
+      // Enable the Profiler
+      session.post("Profiler.enable", () => {
+        // Start Profiler
+        session.post("Profiler.start", async () => {
+          await sleep(10 * 60 * 1000);
+          session.post("Profiler.stop", (err, {profile}) => {
+            // Write profile to disk, upload, etc.
+            if (!err) {
+              const filePath = `network_thread_${new Date().toISOString()}.profile`;
+              fs.writeFileSync(filePath, JSON.stringify(profile));
+              resolve(filePath);
+            } else {
+              reject(err);
+            }
+          });
+        });
+      });
+    });
+  },
 };
 
 expose(libp2pWorkerApi as WorkerModule<keyof NetworkWorkerApi>);
