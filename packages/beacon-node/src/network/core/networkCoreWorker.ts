@@ -170,6 +170,10 @@ const libp2pWorkerApi: NetworkWorkerApi = {
             } else {
               reject(err);
             }
+
+            // Detach from the inspector and close the session
+            session.post("Profiler.disable");
+            session.disconnect();
           });
         });
       });
