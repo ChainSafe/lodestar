@@ -14,6 +14,7 @@ export function onGracefulShutdown(
   for (const signal of exitSignals) {
     process.once(signal, async function onSignal() {
       logFn("Stopping gracefully, use Ctrl+C again to force process exit");
+      console.log("Process ID", process.pid);
 
       process.on(signal, function onSecondSignal() {
         logFn("Forcing process exit");
