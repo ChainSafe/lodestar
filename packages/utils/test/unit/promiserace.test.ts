@@ -84,6 +84,20 @@ describe("racePromisesWithCutoff", () => {
     ["none resolve/reject pre timeout", [1600, -1700], ["pending", "pending"], [cutoff, timeout]],
   ];
 
+  let unhandledRejectionListener: (error: Error) => void;
+
+  before(() => {
+    unhandledRejectionListener = (error) => {
+      // eslint-disable-next-line no-console
+      console.error("unhandledRejection", error);
+    };
+    process.on("unhandledRejection", unhandledRejectionListener);
+  });
+
+  after(() => {
+    process.removeListener("unhandledRejection", unhandledRejectionListener);
+  });
+
   for (const [name, promises, results, events] of testcases) {
     it(name, async () => {
       const testPromises = promises.map((timeMs) => {
