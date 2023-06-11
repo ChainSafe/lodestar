@@ -8,6 +8,7 @@ import type {Logger as Winston} from "winston";
 import {Logger, LogLevel, TimestampFormat} from "./interface.js";
 import {ConsoleDynamicLevel} from "./utils/consoleTransport.js";
 import {WinstonLogger} from "./winston.js";
+import {getEmptyLogger} from "./empty.js";
 
 const DATE_PATTERN = "YYYY-MM-DD";
 
@@ -66,7 +67,14 @@ export type LoggerNode = Logger & {
  * Setup a CLI logger, common for beacon, validator and dev commands
  */
 export function getNodeLogger(opts: LoggerNodeOpts): LoggerNode {
-  return WinstonLoggerNode.fromNewTransports(opts);
+  const logger = getEmptyLogger() as LoggerNode;
+  logger.toOpts = () => opts;
+  logger.child = () => {
+    const child = getEmptyLogger() as LoggerNode;
+    child.toOpts = () => opts;
+    return child;
+  };
+  return logger;
 }
 
 function getNodeLoggerTransports(opts: LoggerNodeOpts): winston.transport[] {
