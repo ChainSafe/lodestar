@@ -26,17 +26,20 @@ type RootProviderOptions = Omit<RootProviderInitOptions, "transport"> & {
 export class ProofProvider {
   private store: PayloadStore;
   private logger: Logger;
-  readonly config: ChainForkConfig;
-  readonly network: NetworkName;
-
   // Make sure readyPromise doesn't throw unhandled exceptions
   private readyPromise?: Promise<void>;
+
+  readonly config: ChainForkConfig;
+  readonly network: NetworkName;
+  readonly api: Api;
+
   lightClient?: Lightclient;
 
   constructor(readonly opts: RootProviderOptions) {
     this.store = new PayloadStore({api: opts.api, logger: opts.logger});
     this.logger = opts.logger;
     this.config = opts.config;
+    this.api = opts.api;
     this.network = opts.config.PRESET_BASE as NetworkName;
   }
 
