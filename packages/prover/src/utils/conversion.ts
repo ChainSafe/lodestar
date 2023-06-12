@@ -95,3 +95,8 @@ export function cleanObject<T extends Record<string, unknown> | unknown[]>(obj: 
 
   return obj;
 }
+
+export function chunkIntoN<T extends unknown[]>(arr: T, n: number): T[] {
+  const size = Math.ceil(arr.length / n);
+  return Array.from({length: n}, (v, i) => arr.slice(i * size, i * size + size)) as T[];
+}

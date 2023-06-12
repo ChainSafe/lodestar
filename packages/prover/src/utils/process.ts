@@ -92,8 +92,8 @@ export async function processAndVerifyRequest({
 
   if (nonVerifiable.length > 0) {
     logger.warn("Forwarding non-verifiable requests to EL provider.", {count: nonVerifiable.length});
-    const response = await rpc.batchRequest(nonVerifiable);
-    nonVerifiedResponses.push(...response);
+    const response = await rpc.batchRequest(nonVerifiable, {raiseError: false});
+    nonVerifiedResponses.push(...response.map((r) => r.response));
   }
 
   for (const request of blocked) {

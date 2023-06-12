@@ -12,7 +12,14 @@ import {
   JsonRpcBatchRequest,
   JsonRpcBatchResponse,
 } from "../types.js";
-import {isRequest, isValidResponse, logRequest, logResponse} from "./json_rpc.js";
+import {
+  isRequest,
+  isValidBatchResponse,
+  isValidResponse,
+  logRequest,
+  logResponse,
+  mergeBatchReqResp,
+} from "./json_rpc.js";
 import {isBlockNumber, isNullish, isPresent} from "./validation.js";
 
 export type Optional<T, K extends keyof T> = Omit<T, K> & {[P in keyof T]?: T[P] | undefined};
@@ -46,7 +53,14 @@ export class ELRpc {
     return response as JsonRpcResponseWithResultPayload<ELApiReturn[K]>;
   }
 
-  async batchRequest(input: JsonRpcBatchRequest): Promise<JsonRpcBatchResponse> {
+  async batchRequest<E extends boolean>(
+    input: JsonRpcBatchRequest,
+    opts: {raiseError: E}
+  ): Promise<
+    E extends false
+      ? {request: JsonRpcRequest; response: JsonRpcResponse}[]
+      : {request: JsonRpcRequest; response: JsonRpcResponseWithResultPayload<unknown>}[]
+  > {
     const payloads: JsonRpcBatchRequest = [];
 
     for (const req of input) {
@@ -65,7 +79,15 @@ export class ELRpc {
       throw new Error("Invalid empty response from server.");
     }
 
-    return response as JsonRpcResponse[];
+    if (opts.raiseError && !isValidBatchResponse(payloads, response as JsonRpcBatchResponse)) {
+      throw new Error(
+        `Invalid response from RPC. payload=${JSON.stringify(payloads)} response=${JSON.stringify(response)}}`
+      );
+    }
+
+    return mergeBatchReqResp(payloads, response as JsonRpcBatchResponse) as E extends false
+      ? {request: JsonRpcRequest; response: JsonRpcResponse}[]
+      : {request: JsonRpcRequest; response: JsonRpcResponseWithResultPayload<unknown>}[];
   }
 
   private getRequestId(): string {
