@@ -186,7 +186,12 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       );
     }
 
-    const keymanagerApi = new KeymanagerApi(validator, persistedKeysBackend, proposerConfigWriteDisabled);
+    const keymanagerApi = new KeymanagerApi(
+      validator,
+      persistedKeysBackend,
+      abortController.signal,
+      proposerConfigWriteDisabled
+    );
     const keymanagerServer = new KeymanagerRestApiServer(
       {
         address: args["keymanager.address"],
