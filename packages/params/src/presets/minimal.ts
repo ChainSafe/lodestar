@@ -121,5 +121,5 @@ export const minimalPreset: BeaconPreset = {
   // https://github.com/ethereum/consensus-specs/blob/dev/presets/minimal/eip4844.yaml
   FIELD_ELEMENTS_PER_BLOB: 4,
   MAX_BLOB_COMMITMENTS_PER_BLOCK: 16,
-  MAX_BLOBS_PER_BLOCK: 4,
+  MAX_BLOBS_PER_BLOCK: 6,
 };
