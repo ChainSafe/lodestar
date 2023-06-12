@@ -6,21 +6,22 @@ import {getNodeLogger} from "@lodestar/logger/node";
 import {LogLevel} from "@lodestar/logger";
 import {VerifiedExecutionInitOptions} from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
-import {JsonRpcRequestOrBatch, JsonRpcRequestPayload, JsonRpcResponseOrBatch} from "./types.js";
+import {JsonRpcRequestPayload} from "./types.js";
 import {getResponseForRequest, isBatchRequest} from "./utils/json_rpc.js";
-import {fetchRequestPayload, fetchResponseBody} from "./utils/req_resp.js";
+import {fetchRequestPayload} from "./utils/req_resp.js";
 import {processAndVerifyRequest} from "./utils/process.js";
-import {ELRpc} from "./utils/rpc.js";
+import {ELRpc, createHttpHandler} from "./utils/rpc.js";
 
 export type VerifiedProxyOptions = VerifiedExecutionInitOptions & {
   executionRpcUrl: string;
+  requestTimeout: number;
 };
 
 export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
   server: http.Server;
   proofProvider: ProofProvider;
 } {
-  const {executionRpcUrl} = opts;
+  const {executionRpcUrl, requestTimeout} = opts;
   const signal = opts.signal ?? new AbortController().signal;
   const logger = opts.logger ?? getNodeLogger({level: opts.logLevel ?? LogLevel.info});
 
@@ -41,34 +42,23 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
   });
 
   let proxyServerListeningAddress: {host: string; port: number} | undefined;
+  const rpc = new ELRpc(
+    createHttpHandler({
+      signal,
+      info: () => {
+        if (!proxyServerListeningAddress) {
+          return "Proxy server not listening";
+        }
 
-  function handler(payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> {
-    return new Promise((resolve, reject) => {
-      if (!proxyServerListeningAddress) return reject(new Error("Proxy server not listening"));
-      const req = http.request(
-        {
-          method: "POST",
-          path: "/proxy",
+        return {
           port: proxyServerListeningAddress.port,
           host: proxyServerListeningAddress.host,
-          signal,
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-        (res) => {
-          fetchResponseBody(res)
-            .then((response) => {
-              resolve(response);
-            })
-            .catch(reject);
-        }
-      );
-      req.write(JSON.stringify(payload));
-      req.end();
-    });
-  }
-  const rpc = new ELRpc(handler, logger);
+          timeout: requestTimeout,
+        };
+      },
+    }),
+    logger
+  );
 
   rpc.verifyCompatibility().catch((err) => {
     logger.error("Error verifying execution layer support", err);
