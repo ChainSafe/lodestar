@@ -60,7 +60,7 @@ export class BeaconDb implements IBeaconDb {
 
   backfilledRanges: BackfilledRanges;
 
-  constructor(config: ChainForkConfig, private readonly db: Db) {
+  constructor(config: ChainForkConfig, protected readonly db: Db) {
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/beacon-node/test/utils/stub/beaconDb.ts' -
     this.block = new BlockRepository(config, db);
     this.blockArchive = new BlockArchiveRepository(config, db);

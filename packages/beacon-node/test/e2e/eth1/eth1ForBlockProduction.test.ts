@@ -43,19 +43,14 @@ describe.skip("eth1 / Eth1Provider", function () {
     // Nuke DB to make sure it's empty
     await promisify<string>(leveldown.destroy)(dbLocation);
 
-    dbController = new LevelDbController({name: dbLocation}, {logger});
-    db = new BeaconDb({
-      config,
-      controller: dbController,
-    });
-
-    await db.start();
+    dbController = await LevelDbController.create({name: dbLocation}, {logger});
+    db = new BeaconDb(config, dbController);
   });
 
   after(async () => {
     clearInterval(interval);
     controller.abort();
-    await db.stop();
+    await db.close();
     await promisify<string>(leveldown.destroy)(dbLocation);
   });
 

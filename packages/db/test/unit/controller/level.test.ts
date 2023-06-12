@@ -7,14 +7,14 @@ import {LevelDbController} from "../../../src/controller/index.js";
 
 describe("LevelDB controller", () => {
   const dbLocation = "./.__testdb";
-  const db = new LevelDbController({name: dbLocation}, {metrics: null, logger: getEnvLogger()});
+  let db: LevelDbController;
 
   before(async () => {
-    await db.start();
+    db = await LevelDbController.create({name: dbLocation}, {metrics: null, logger: getEnvLogger()});
   });
 
   after(async () => {
-    await db.stop();
+    await db.close();
     await new Promise<void>((resolve, reject) => {
       leveldown.destroy(dbLocation, (err) => {
         if (err) reject(err);

@@ -3,7 +3,6 @@ import {expect} from "chai";
 import {rimraf} from "rimraf";
 import {fromHexString} from "@chainsafe/ssz";
 import {LevelDbController} from "@lodestar/db";
-import {config} from "@lodestar/config/default";
 import {ZERO_HASH} from "@lodestar/state-transition";
 import {
   SlashingProtection,
@@ -20,7 +19,7 @@ import {SPEC_TEST_LOCATION} from "./params.js";
 describe("slashing-protection-interchange-tests", () => {
   const testCases = loadTestCases(path.join(SPEC_TEST_LOCATION, "/tests/generated"));
   const dbLocation = "./.__testdb";
-  const controller = new LevelDbController({name: dbLocation}, {logger: testLogger()});
+  let db: LevelDbController;
 
   after(() => {
     rimraf.sync(dbLocation);
@@ -28,17 +27,17 @@ describe("slashing-protection-interchange-tests", () => {
 
   for (const testCase of testCases) {
     describe(testCase.name, () => {
-      const slashingProtection = new SlashingProtection({config, controller});
+      const slashingProtection = new SlashingProtection(db);
 
       for (const step of testCase.steps) {
         beforeEach(async () => {
-          await controller.start();
-          await controller.clear();
+          db = await LevelDbController.create({name: dbLocation}, {logger: testLogger()});
+          await db.clear();
         });
 
         // Import
         beforeEach("Import interchange", async () => {
-          expect(await controller.keys()).lengthOf(0, "DB is not empty");
+          expect(await db.keys()).lengthOf(0, "DB is not empty");
 
           const genesisValidatorsRoot = fromHexString(testCase.genesis_validators_root);
           if (step.should_succeed) {
@@ -59,7 +58,7 @@ describe("slashing-protection-interchange-tests", () => {
         });
 
         afterEach(async () => {
-          await controller.stop();
+          await db.close();
         });
 
         if (!step.contains_slashable_data) {

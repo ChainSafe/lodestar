@@ -16,12 +16,11 @@ describe("block archive repository", function () {
   let controller: LevelDbController;
 
   beforeEach(async function () {
-    controller = new LevelDbController({name: testDir}, {logger: testLogger()});
+    controller = await LevelDbController.create({name: testDir}, {logger: testLogger()});
     blockArchive = new BlockArchiveRepository(config, controller);
-    await controller.start();
   });
   afterEach(async function () {
-    await controller.stop();
+    await controller.close();
     rimraf.sync(testDir);
   });
 
