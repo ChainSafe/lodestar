@@ -1,18 +1,17 @@
 import worker from "node:worker_threads";
-import inspector from "node:inspector";
 import fs from "node:fs";
 import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import type {WorkerModule} from "@chainsafe/threads/dist/types/worker.js";
-import {sleep} from "@lodestar/utils";
 import {collectNodeJSMetrics, RegistryMetricCreator} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {Clock} from "../../util/clock.js";
 import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {peerIdToString} from "../../util/peerId.js";
+import {profileNodeJS} from "../../util/profile.js";
 import {getNetworkCoreWorkerMetrics} from "./metrics.js";
 import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 import {NetworkCore} from "./networkCore.js";
@@ -150,34 +149,11 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   dumpGossipPeerScoreStats: () => core.dumpGossipPeerScoreStats(),
   dumpDiscv5KadValues: () => core.dumpDiscv5KadValues(),
   dumpMeshPeers: () => core.dumpMeshPeers(),
-  takeProfile: () => {
-    return new Promise<string>((resolve, reject) => {
-      // Start the inspector and connect to it
-      const session = new inspector.Session();
-      session.connect();
-
-      // Enable the Profiler
-      session.post("Profiler.enable", () => {
-        // Start Profiler
-        session.post("Profiler.start", async () => {
-          await sleep(10 * 60 * 1000);
-          session.post("Profiler.stop", (err, {profile}) => {
-            // Write profile to disk, upload, etc.
-            if (!err) {
-              const filePath = `network_thread_${new Date().toISOString()}.cpuprofile`;
-              fs.writeFileSync(filePath, JSON.stringify(profile));
-              resolve(filePath);
-            } else {
-              reject(err);
-            }
-
-            // Detach from the inspector and close the session
-            session.post("Profiler.disable");
-            session.disconnect();
-          });
-        });
-      });
-    });
+  writeProfile: async (dirpath = ".") => {
+    const profile = await profileNodeJS();
+    const filePath = `${dirpath}/network_thread_${new Date().toISOString()}.cpuprofile`;
+    fs.writeFileSync(filePath, profile);
+    return filePath;
   },
 };
 

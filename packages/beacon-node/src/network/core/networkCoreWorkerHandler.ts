@@ -210,8 +210,8 @@ export class WorkerNetworkCore implements INetworkCore {
   dumpMeshPeers(): Promise<Record<string, string[]>> {
     return this.getApi().dumpMeshPeers();
   }
-  takeProfile(): Promise<string> {
-    return this.getApi().takeProfile();
+  writeNetworkThreadProfile(dirpath?: string): Promise<string> {
+    return this.getApi().writeProfile(dirpath);
   }
 
   private getApi(): NetworkWorkerApi {

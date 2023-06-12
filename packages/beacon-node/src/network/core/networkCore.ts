@@ -412,7 +412,7 @@ export class NetworkCore implements INetworkCore {
     return meshPeers;
   }
 
-  async takeProfile(): Promise<string> {
+  async writeNetworkThreadProfile(): Promise<string> {
     throw new Error("Method not implemented, please configure network thread");
   }
 

@@ -19,6 +19,7 @@ export function getLodestarApi({
   sync,
 }: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): ServerApi<routes.lodestar.Api> {
   let writingHeapdump = false;
+  let writingNetworkProfile = false;
 
   return {
     async writeHeapdump(dirpath = ".") {
@@ -47,9 +48,17 @@ export function getLodestarApi({
       }
     },
 
-    async writeNetworkThreadProfile() {
-      const filepath = await network.takeProfile();
-      return {data: {filepath}};
+    async writeNetworkThreadProfile(dirpath = ".") {
+      if (writingNetworkProfile) {
+        throw Error("Already writing network profile");
+      }
+
+      try {
+        const filepath = await network.writeNetworkThreadProfile(dirpath);
+        return {data: {filepath}};
+      } finally {
+        writingNetworkProfile = false;
+      }
     },
 
     async getLatestWeakSubjectivityCheckpointEpoch() {

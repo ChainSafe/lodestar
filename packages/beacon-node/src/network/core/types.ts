@@ -61,7 +61,7 @@ export interface INetworkCore extends INetworkCorePublic {
 
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;
-  takeProfile(): Promise<string>;
+  writeNetworkThreadProfile(dirpath?: string): Promise<string>;
 }
 
 /**
@@ -100,7 +100,7 @@ export type NetworkWorkerApi = INetworkCorePublic & {
 
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;
-  takeProfile(): Promise<string>;
+  writeProfile(dirpath?: string): Promise<string>;
 
   // TODO: ReqResp outgoing
   // TODO: ReqResp incoming
