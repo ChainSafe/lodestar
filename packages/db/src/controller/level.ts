@@ -6,7 +6,7 @@ import {LevelDbControllerMetrics} from "./metrics.js";
 
 enum Status {
   started = "started",
-  closed = "stopped",
+  closed = "closed",
 }
 
 type LevelNodeJS = ClassicLevel<Uint8Array, Uint8Array>;
