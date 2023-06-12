@@ -20,18 +20,22 @@ describe("slashing-protection-interchange-tests", () => {
   const testCases = loadTestCases(path.join(SPEC_TEST_LOCATION, "/tests/generated"));
   const dbLocation = "./.__testdb";
   let db: LevelDbController;
+  let slashingProtection: SlashingProtection;
 
-  after(() => {
+  before(async () => {
+    db = await LevelDbController.create({name: dbLocation}, {logger: testLogger()});
+    slashingProtection = new SlashingProtection(db);
+  });
+
+  after(async () => {
+    await db.close();
     rimraf.sync(dbLocation);
   });
 
   for (const testCase of testCases) {
     describe(testCase.name, () => {
-      const slashingProtection = new SlashingProtection(db);
-
       for (const step of testCase.steps) {
         beforeEach(async () => {
-          db = await LevelDbController.create({name: dbLocation}, {logger: testLogger()});
           await db.clear();
         });
 
@@ -55,10 +59,6 @@ describe("slashing-protection-interchange-tests", () => {
               slashingProtection.importInterchange(step.interchange, genesisValidatorsRoot)
             ).to.not.be.rejectedWith(InterchangeError);
           }
-        });
-
-        afterEach(async () => {
-          await db.close();
         });
 
         if (!step.contains_slashable_data) {
