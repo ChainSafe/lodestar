@@ -13,14 +13,14 @@ import {Bucket} from "../../../../../src/db/buckets.js";
 describe("block archive repository", function () {
   const testDir = "./.tmp";
   let blockArchive: BlockArchiveRepository;
-  let controller: LevelDbController;
+  let db: LevelDbController;
 
   beforeEach(async function () {
-    controller = await LevelDbController.create({name: testDir}, {logger: testLogger()});
-    blockArchive = new BlockArchiveRepository(config, controller);
+    db = await LevelDbController.create({name: testDir}, {logger: testLogger()});
+    blockArchive = new BlockArchiveRepository(config, db);
   });
   afterEach(async function () {
-    await controller.close();
+    await db.close();
     rimraf.sync(testDir);
   });
 
@@ -108,7 +108,7 @@ describe("block archive repository", function () {
   });
 
   it("should store indexes when adding single block", async function () {
-    const spy = sinon.spy(controller, "put");
+    const spy = sinon.spy(db, "put");
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     await blockArchive.add(block);
     expect(
@@ -126,7 +126,7 @@ describe("block archive repository", function () {
   });
 
   it("should store indexes when block batch", async function () {
-    const spy = sinon.spy(controller, "put");
+    const spy = sinon.spy(db, "put");
     const blocks = [ssz.phase0.SignedBeaconBlock.defaultValue(), ssz.phase0.SignedBeaconBlock.defaultValue()];
     await blockArchive.batchAdd(blocks);
     expect(

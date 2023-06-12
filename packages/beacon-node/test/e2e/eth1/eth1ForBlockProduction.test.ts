@@ -36,15 +36,13 @@ describe.skip("eth1 / Eth1Provider", function () {
   const logger = testLogger();
 
   let db: BeaconDb;
-  let dbController: LevelDbController;
   let interval: NodeJS.Timeout;
 
   before(async () => {
     // Nuke DB to make sure it's empty
     await promisify<string>(leveldown.destroy)(dbLocation);
 
-    dbController = await LevelDbController.create({name: dbLocation}, {logger});
-    db = new BeaconDb(config, dbController);
+    db = new BeaconDb(config, await LevelDbController.create({name: dbLocation}, {logger}));
   });
 
   after(async () => {
