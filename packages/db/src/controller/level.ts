@@ -29,7 +29,7 @@ const DB_SIZE_METRIC_INTERVAL_MS = 5 * 60 * 1000;
  * The LevelDB implementation of DB
  */
 export class LevelDbController implements DatabaseController<Uint8Array, Uint8Array> {
-  private status = Status.closed;
+  private status = Status.started;
 
   private dbSizeMetricInterval?: NodeJS.Timer;
 
