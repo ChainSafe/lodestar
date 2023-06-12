@@ -21,7 +21,13 @@ import {
 } from "./utils/assertion.js";
 import {processAndVerifyRequest} from "./utils/process.js";
 import {isBatchRequest} from "./utils/json_rpc.js";
-import {ELRpc} from "./utils/execution.js";
+import {ELRpc} from "./utils/rpc.js";
+
+export type Web3ProviderTypeHandler<T extends Web3Provider> = (
+  provider: T,
+  proofProvider: ProofProvider,
+  logger: Logger
+) => {provider: T; rpc: ELRpc};
 
 export function createVerifiedExecutionProvider<T extends Web3Provider>(
   provider: T,
@@ -36,35 +42,21 @@ export function createVerifiedExecutionProvider<T extends Web3Provider>(
     logger,
   });
 
-  if (isSendProvider(provider)) {
-    logger.debug("Creating a provider which is recognized as legacy provider with 'send' method.");
-    return {provider: handleSendProvider(provider, proofProvider, logger) as T, proofProvider};
-  }
+  const handler = getProviderTypeHandler(provider, logger);
+  const {provider: newInstance, rpc} = handler(provider, proofProvider, logger);
 
-  if (isEthersProvider(provider)) {
-    logger.debug("Creating a provider which is recognized as 'ethers' provider.");
-    return {provider: handleEthersProvider(provider, proofProvider, logger) as T, proofProvider};
-  }
+  rpc.verifyCompatibility().catch((err) => {
+    logger.error("Error verifying execution layer support", err);
+  });
 
-  if (isRequestProvider(provider)) {
-    logger.debug("Creating a provider which is recognized as legacy provider with 'request' method.");
-    return {provider: handleRequestProvider(provider, proofProvider, logger) as T, proofProvider};
-  }
-
-  if (isSendAsyncProvider(provider)) {
-    logger.debug("Creating a provider which is recognized as legacy provider with 'sendAsync' method.");
-    return {provider: handleSendAsyncProvider(provider, proofProvider, logger) as T, proofProvider};
-  }
-
-  if (isEIP1193Provider(provider)) {
-    logger.debug("Creating a provider which is recognized as 'EIP1193' provider.");
-    return {provider: handleEIP1193Provider(provider, proofProvider, logger) as T, proofProvider};
-  }
-
-  return {provider, proofProvider: proofProvider};
+  return {provider: newInstance, proofProvider: proofProvider};
 }
 
-function handleSendProvider(provider: SendProvider, proofProvider: ProofProvider, logger: Logger): SendProvider {
+function handleSendProvider(
+  provider: SendProvider,
+  proofProvider: ProofProvider,
+  logger: Logger
+): {provider: SendProvider; rpc: ELRpc} {
   const send = provider.send.bind(provider);
   const handler = (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> =>
     new Promise((resolve, reject) => {
@@ -88,14 +80,14 @@ function handleSendProvider(provider: SendProvider, proofProvider: ProofProvider
       .catch((err) => callback(err, undefined));
   }
 
-  return Object.assign(provider, {send: newSend});
+  return {provider: Object.assign(provider, {send: newSend}), rpc};
 }
 
 function handleRequestProvider(
   provider: RequestProvider,
   proofProvider: ProofProvider,
   logger: Logger
-): RequestProvider {
+): {provider: RequestProvider; rpc: ELRpc} {
   const request = provider.request.bind(provider);
   const handler = (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> =>
     new Promise((resolve, reject) => {
@@ -118,14 +110,14 @@ function handleRequestProvider(
       .catch((err) => callback(err, undefined));
   }
 
-  return Object.assign(provider, {request: newRequest});
+  return {provider: Object.assign(provider, {request: newRequest}), rpc};
 }
 
 function handleSendAsyncProvider(
   provider: SendAsyncProvider,
   proofProvider: ProofProvider,
   logger: Logger
-): SendAsyncProvider {
+): {provider: SendAsyncProvider; rpc: ELRpc} {
   const sendAsync = provider.sendAsync.bind(provider);
   const handler = async (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> => {
     const response = await sendAsync(payload);
@@ -137,14 +129,14 @@ function handleSendAsyncProvider(
     return processAndVerifyRequest({payload, rpc, proofProvider, logger});
   }
 
-  return Object.assign(provider, {sendAsync: newSendAsync});
+  return {provider: Object.assign(provider, {sendAsync: newSendAsync}), rpc};
 }
 
 function handleEIP1193Provider(
   provider: EIP1193Provider,
   proofProvider: ProofProvider,
   logger: Logger
-): EIP1193Provider {
+): {provider: EIP1193Provider; rpc: ELRpc} {
   const request = provider.request.bind(provider);
   const handler = async (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> => {
     const response = await request(payload);
@@ -156,10 +148,14 @@ function handleEIP1193Provider(
     return processAndVerifyRequest({payload, rpc, proofProvider, logger});
   }
 
-  return Object.assign(provider, {request: newRequest});
+  return {provider: Object.assign(provider, {request: newRequest}), rpc};
 }
 
-function handleEthersProvider(provider: EthersProvider, proofProvider: ProofProvider, logger: Logger): EthersProvider {
+function handleEthersProvider(
+  provider: EthersProvider,
+  proofProvider: ProofProvider,
+  logger: Logger
+): {provider: EthersProvider; rpc: ELRpc} {
   const send = provider.send.bind(provider);
   const handler = async (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> => {
     // Because ethers provider public interface does not support batch requests
@@ -185,5 +181,37 @@ function handleEthersProvider(provider: EthersProvider, proofProvider: ProofProv
     });
   }
 
-  return Object.assign(provider, {send: newSend});
+  return {provider: Object.assign(provider, {send: newSend}), rpc};
+}
+
+export function getProviderTypeHandler<T extends Web3Provider>(
+  provider: T,
+  logger: Logger
+): Web3ProviderTypeHandler<T> {
+  if (isSendProvider(provider)) {
+    logger.debug("Provider is recognized as legacy provider with 'send' method.");
+    return handleSendProvider as unknown as Web3ProviderTypeHandler<T>;
+  }
+
+  if (isEthersProvider(provider)) {
+    logger.debug("Provider is recognized as 'ethers' provider.");
+    return handleEthersProvider as unknown as Web3ProviderTypeHandler<T>;
+  }
+
+  if (isRequestProvider(provider)) {
+    logger.debug("Provider is recognized as legacy provider with 'request' method.");
+    return handleRequestProvider as unknown as Web3ProviderTypeHandler<T>;
+  }
+
+  if (isSendAsyncProvider(provider)) {
+    logger.debug("Provider is recognized as legacy provider with 'sendAsync' method.");
+    return handleSendAsyncProvider as unknown as Web3ProviderTypeHandler<T>;
+  }
+
+  if (isEIP1193Provider(provider)) {
+    logger.debug("Provider is recognized as 'EIP1193' provider.");
+    return handleEIP1193Provider as unknown as Web3ProviderTypeHandler<T>;
+  }
+
+  throw new Error("Unsupported provider type");
 }

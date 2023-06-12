@@ -10,7 +10,7 @@ import {JsonRpcRequestOrBatch, JsonRpcRequestPayload, JsonRpcResponseOrBatch} fr
 import {getResponseForRequest, isBatchRequest} from "./utils/json_rpc.js";
 import {fetchRequestPayload, fetchResponseBody} from "./utils/req_resp.js";
 import {processAndVerifyRequest} from "./utils/process.js";
-import {ELRpc} from "./utils/execution.js";
+import {ELRpc} from "./utils/rpc.js";
 
 export type VerifiedProxyOptions = VerifiedExecutionInitOptions & {
   executionRpcUrl: string;
@@ -69,6 +69,11 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
     });
   }
   const rpc = new ELRpc(handler, logger);
+
+  rpc.verifyCompatibility().catch((err) => {
+    logger.error("Error verifying execution layer support", err);
+    process.exit(1);
+  });
 
   logger.info("Creating http server");
   const proxyServer = http.createServer(function proxyRequestHandler(req, res) {

@@ -10,9 +10,10 @@ import {ZERO_ADDRESS} from "../constants.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {ELBlock, ELProof, ELTransaction} from "../types.js";
 import {bufferToHex, chunkIntoN, cleanObject, hexToBigInt, hexToBuffer, numberToHex, padLeft} from "./conversion.js";
-import {ELRpc, getChainCommon, getTxType} from "./execution.js";
-import {isValidResponse, mergeBatchReqResp} from "./json_rpc.js";
+import {getChainCommon, getTxType} from "./execution.js";
+import {isValidResponse} from "./json_rpc.js";
 import {isNullish, isValidAccount, isValidCodeHash, isValidStorageKeys} from "./validation.js";
+import {ELRpc} from "./rpc.js";
 
 export async function createVM({proofProvider}: {proofProvider: ProofProvider}): Promise<VM> {
   const common = getChainCommon(proofProvider.config.PRESET_BASE as string);
