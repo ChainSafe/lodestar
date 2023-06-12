@@ -80,11 +80,11 @@ export async function racePromisesWithCutoff<T>(
 ): Promise<(Error | T)[]> {
   // start the cutoff and timeout timers
   let cutoffObserved = false;
-  const cutoffPromise = new Promise((resolve) => setTimeout(resolve, cutoffMs)).then(() => {
+  const cutoffPromise = sleep(cutoffMs).then(() => {
     cutoffObserved = true;
   });
   let timeoutObserved = false;
-  const timeoutPromise = new Promise((resolve) => setTimeout(resolve, timeoutMs)).then(() => {
+  const timeoutPromise = sleep(timeoutMs).then(() => {
     timeoutObserved = true;
   });
   const startTime = Date.now();
