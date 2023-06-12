@@ -78,7 +78,9 @@ export type Api = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
   writeHeapdump(dirpath?: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
   /** Trigger to write 10m network thread profile to disk */
-  writeNetworkThreadProfile(dirpath?: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
+  writeNetworkThreadProfile(
+    dirpath?: string
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
   /** TODO: description */
   getLatestWeakSubjectivityCheckpointEpoch(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: Epoch}}>>;
   /** TODO: description */
