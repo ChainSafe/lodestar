@@ -1,5 +1,4 @@
-import {deneb} from "@lodestar/types";
-import {verifyKzgCommitmentsAgainstTransactions} from "../util/index.js";
+import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 
 /**
  * https://github.com/ethereum/consensus-specs/blob/11a037fd9227e29ee809c9397b09f8cc3383a8c0/specs/eip4844/beacon-chain.md#blob-kzg-commitments
@@ -10,8 +9,13 @@ import {verifyKzgCommitmentsAgainstTransactions} from "../util/index.js";
  *     body.blob_kzg_commitments
  *   )
  */
-export function processBlobKzgCommitments(body: deneb.BeaconBlockBody): void {
-  if (!verifyKzgCommitmentsAgainstTransactions(body.executionPayload.transactions, body.blobKzgCommitments)) {
-    throw Error("Invalid KZG commitments against transactions");
+export function processBlobKzgCommitments(externalData: BlockExternalData): void {
+  switch (externalData.executionPayloadStatus) {
+    case ExecutionPayloadStatus.preMerge:
+      throw Error("executionPayloadStatus preMerge");
+    case ExecutionPayloadStatus.invalid:
+      throw Error("Invalid execution payload");
+    case ExecutionPayloadStatus.valid:
+      break; // ok
   }
 }

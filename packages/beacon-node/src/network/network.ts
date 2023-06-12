@@ -37,7 +37,6 @@ type NetworkModules = {
   config: BeaconConfig;
   logger: LoggerNode;
   chain: IBeaconChain;
-  signal: AbortSignal;
   networkEventBus: NetworkEventBus;
   aggregatorTracker: AggregatorTracker;
   networkProcessor: NetworkProcessor;
@@ -54,7 +53,6 @@ export type NetworkInitModules = {
   chain: IBeaconChain;
   db: IBeaconDb;
   getReqRespHandler: GetReqRespHandlerFn;
-  signal: AbortSignal;
   // Optionally pass custom GossipHandlers, for testing
   gossipHandlers?: GossipHandlers;
 };
@@ -76,7 +74,8 @@ export class Network implements INetwork {
   private readonly config: BeaconConfig;
   private readonly clock: IClock;
   private readonly chain: IBeaconChain;
-  private readonly signal: AbortSignal;
+  // Used only for sleep() statements
+  private readonly controller: AbortController;
 
   // TODO: Review
   private readonly networkProcessor: NetworkProcessor;
@@ -86,7 +85,6 @@ export class Network implements INetwork {
   private subscribedToCoreTopics = false;
   private connectedPeers = new Set<PeerIdStr>();
   private regossipBlsChangesPromise: Promise<void> | null = null;
-  private closed = false;
 
   constructor(modules: NetworkModules) {
     this.peerId = modules.peerId;
@@ -94,7 +92,7 @@ export class Network implements INetwork {
     this.logger = modules.logger;
     this.chain = modules.chain;
     this.clock = modules.chain.clock;
-    this.signal = modules.signal;
+    this.controller = new AbortController();
     this.events = modules.networkEventBus;
     this.networkProcessor = modules.networkProcessor;
     this.core = modules.core;
@@ -105,7 +103,6 @@ export class Network implements INetwork {
     this.chain.emitter.on(routes.events.EventType.head, this.onHead);
     this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
-    modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
   }
 
   static async init({
@@ -115,7 +112,6 @@ export class Network implements INetwork {
     metrics,
     chain,
     db,
-    signal,
     gossipHandlers,
     peerId,
     peerStoreDir,
@@ -176,7 +172,6 @@ export class Network implements INetwork {
       config,
       logger,
       chain,
-      signal,
       networkEventBus: events,
       aggregatorTracker,
       networkProcessor,
@@ -184,9 +179,15 @@ export class Network implements INetwork {
     });
   }
 
+  get closed(): boolean {
+    return this.controller.signal.aborted;
+  }
+
   /** Destroy this instance. Can only be called once. */
   async close(): Promise<void> {
     if (this.closed) return;
+    // Used only for sleep() statements
+    this.controller.abort();
 
     this.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
@@ -194,8 +195,7 @@ export class Network implements INetwork {
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     await this.core.close();
-
-    this.closed = true;
+    this.logger.debug("network core closed");
   }
 
   async scrapeMetrics(): Promise<string> {
@@ -471,25 +471,25 @@ export class Network implements INetwork {
     );
   }
 
-  async sendBlobsSidecarsByRange(
+  async sendBlobSidecarsByRange(
     peerId: PeerIdStr,
-    request: deneb.BlobsSidecarsByRangeRequest
-  ): Promise<deneb.BlobsSidecar[]> {
+    request: deneb.BlobSidecarsByRangeRequest
+  ): Promise<deneb.BlobSidecar[]> {
     return collectMaxResponseTyped(
-      this.sendReqRespRequest(peerId, ReqRespMethod.BlobsSidecarsByRange, [Version.V1], request),
+      this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRange, [Version.V1], request),
       request.count,
-      responseSszTypeByMethod[ReqRespMethod.BlobsSidecarsByRange]
+      responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange]
     );
   }
 
-  async sendBeaconBlockAndBlobsSidecarByRoot(
+  async sendBlobSidecarsByRoot(
     peerId: PeerIdStr,
-    request: deneb.BeaconBlockAndBlobsSidecarByRootRequest
-  ): Promise<deneb.SignedBeaconBlockAndBlobsSidecar[]> {
+    request: deneb.BlobSidecarsByRootRequest
+  ): Promise<deneb.BlobSidecar[]> {
     return collectMaxResponseTyped(
-      this.sendReqRespRequest(peerId, ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot, [Version.V1], request),
+      this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRoot, [Version.V1], request),
       request.length,
-      responseSszTypeByMethod[ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]
+      responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRoot]
     );
   }
 
@@ -583,7 +583,7 @@ export class Network implements INetwork {
   private waitOneThirdOfSlot = async (slot: number): Promise<void> => {
     const secAtSlot = computeTimeAtSlot(this.config, slot + 1 / 3, this.chain.genesisTime);
     const msToSlot = secAtSlot * 1000 - Date.now();
-    await sleep(msToSlot, this.signal);
+    await sleep(msToSlot, this.controller.signal);
   };
 
   private onHead = async (): Promise<void> => {

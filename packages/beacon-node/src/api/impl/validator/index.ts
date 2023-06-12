@@ -79,9 +79,11 @@ export function getValidatorApi({
         genesisBlockRoot = state.blockRoots.get(0);
       }
 
-      const genesisBlock = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
-      if (genesisBlock) {
-        genesisBlockRoot = config.getForkTypes(genesisBlock.message.slot).SignedBeaconBlock.hashTreeRoot(genesisBlock);
+      const blockRes = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
+      if (blockRes) {
+        genesisBlockRoot = config
+          .getForkTypes(blockRes.block.message.slot)
+          .SignedBeaconBlock.hashTreeRoot(blockRes.block);
       }
     }
 
@@ -577,7 +579,7 @@ export function getValidatorApi({
               committeeIndices
             );
             const sentPeers = await network.publishBeaconAggregateAndProof(signedAggregateAndProof);
-            metrics?.submitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
+            metrics?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
           } catch (e) {
             if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
               logger.debug("Ignoring known signedAggregateAndProof");

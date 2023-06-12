@@ -20,6 +20,7 @@ const config = {
   BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
   CAPELLA_FORK_EPOCH: capellaForkEpoch,
   GENESIS_DELAY: genesisDelaySeconds,
+  SECONDS_PER_SLOT: secondsPerSlot,
 };
 
 async function waitForEndpoint(url: string): Promise<void> {

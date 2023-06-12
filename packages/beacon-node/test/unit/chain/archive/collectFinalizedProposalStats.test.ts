@@ -1,34 +1,36 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {RootHex, Slot, Epoch, ValidatorIndex} from "@lodestar/types";
+import {Slot, Epoch, ValidatorIndex} from "@lodestar/types";
 import {ForkChoice, ProtoBlock, CheckpointWithHex} from "@lodestar/fork-choice";
-import {fromHexString} from "@chainsafe/ssz";
+import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ZERO_HASH_HEX, ZERO_HASH} from "../../../../src/constants/index.js";
 import {StubbedBeaconDb, StubbedChainMutable} from "../../../utils/stub/index.js";
 import {testLogger} from "../../../utils/logger.js";
 import {Archiver, FinalizedStats} from "../../../../src/chain/archiver/index.js";
 import {FinalizedData} from "../../../../src/chain/archiver/archiveBlocks.js";
-import {BeaconChain, CheckpointStateCache} from "../../../../src/chain/index.js";
+import {BeaconChain, CheckpointHex} from "../../../../src/chain/index.js";
 import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache.js";
 import {generateCachedState} from "../../../utils/state.js";
+import {QueuedStateRegenerator} from "../../../../src/chain/regen/queued.js";
 
 describe("collectFinalizedProposalStats", function () {
   const logger = testLogger();
 
-  let chainStub: StubbedChainMutable<
-    "forkChoice" | "stateCache" | "emitter" | "beaconProposerCache" | "checkpointStateCache"
-  >;
-
+  let chainStub: StubbedChainMutable<"forkChoice" | "emitter" | "beaconProposerCache" | "regen">;
   let dbStub: StubbedBeaconDb;
+  let cpStateCache: Map<string, CachedBeaconStateAllForks>;
   // let beaconProposerCacheStub = SinonStubbedInstance<BeaconProposerCache> & BeaconProposerCache;
   let archiver: Archiver;
 
   beforeEach(function () {
-    chainStub = sinon.createStubInstance(BeaconChain);
+    cpStateCache = new Map();
+    const regen = sinon.createStubInstance(QueuedStateRegenerator);
+    regen.getCheckpointStateSync.callsFake((cp) => cpStateCache.get(cpKey(cp)) ?? null);
+    chainStub = sinon.createStubInstance(BeaconChain) as typeof chainStub;
     chainStub.forkChoice = sinon.createStubInstance(ForkChoice);
     const suggestedFeeRecipient = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     chainStub.beaconProposerCache = new BeaconProposerCache({suggestedFeeRecipient});
-    chainStub.checkpointStateCache = new CheckpointStateCache({});
+    chainStub.regen = regen;
     const controller = new AbortController();
 
     dbStub = new StubbedBeaconDb();
@@ -156,14 +158,14 @@ describe("collectFinalizedProposalStats", function () {
       const finalized = makeCheckpoint(finalizedEpoch);
 
       addtoBeaconCache(chainStub["beaconProposerCache"], finalized.epoch, attachedValidators);
-      addDummyStateCache(chainStub["checkpointStateCache"], prevFinalized, allValidators);
+      addDummyStateCache(prevFinalized, allValidators);
       finalizedCanonicalCheckpoints.forEach((eachCheckpoint) => {
-        addDummyStateCache(chainStub["checkpointStateCache"], eachCheckpoint, allValidators);
+        addDummyStateCache(eachCheckpoint, allValidators);
       });
 
       const finalizedData = {finalizedCanonicalCheckpoints, finalizedCanonicalBlocks, finalizedNonCanonicalBlocks};
       const processedStats = archiver["collectFinalizedProposalStats"](
-        chainStub.checkpointStateCache,
+        chainStub.regen,
         chainStub.forkChoice,
         chainStub.beaconProposerCache,
         finalizedData as FinalizedData,
@@ -173,6 +175,17 @@ describe("collectFinalizedProposalStats", function () {
 
       expect(expectedStats).to.deep.equal(processedStats);
     });
+  }
+
+  function addDummyStateCache(checkpoint: CheckpointHex, proposers: number[]): void {
+    const checkpointstate = generateCachedState();
+    checkpointstate.epochCtx.proposers = proposers;
+    checkpointstate.epochCtx.epoch = checkpoint.epoch;
+    cpStateCache.set(cpKey(checkpoint), checkpointstate);
+  }
+
+  function cpKey(cp: CheckpointHex): string {
+    return JSON.stringify(cp);
   }
 });
 
@@ -190,17 +203,4 @@ function addtoBeaconCache(cache: BeaconProposerCache, epoch: number, proposers: 
   proposers.forEach((eachProposer) => {
     cache.add(epoch, {validatorIndex: `${eachProposer}`, feeRecipient: suggestedFeeRecipient});
   });
-}
-
-function addDummyStateCache(
-  checkpointStateCache: BeaconChain["checkpointStateCache"],
-  checkpoint: {epoch: number; rootHex: RootHex},
-  proposers: number[]
-): void {
-  const rootCP = {epoch: checkpoint.epoch, root: fromHexString(checkpoint.rootHex)};
-
-  const checkpointstate = generateCachedState();
-  checkpointstate.epochCtx.proposers = proposers;
-  checkpointstate.epochCtx.epoch = checkpoint.epoch;
-  checkpointStateCache.add(rootCP, checkpointstate);
 }

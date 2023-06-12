@@ -9,7 +9,12 @@ import {
   BuilderSelection,
 } from "@lodestar/validator";
 import {getMetrics, MetricsRegister} from "@lodestar/validator";
-import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer, MonitoringService} from "@lodestar/beacon-node";
+import {
+  RegistryMetricCreator,
+  collectNodeJSMetrics,
+  getHttpMetricsServer,
+  MonitoringService,
+} from "@lodestar/beacon-node";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
@@ -69,6 +74,13 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
   // This AbortController interrupts various validators ops: genesis req, clients call, clock etc
   const abortController = new AbortController();
 
+  // We set infinity for abort controller used for validator operations,
+  // to prevent MaxListenersExceededWarning which get logged when listeners > 10
+  // Since it is perfectly fine to have listeners > 10
+  setMaxListeners(Infinity, abortController.signal);
+
+  onGracefulShutdownCbs.push(async () => abortController.abort());
+
   /**
    * For rationale and documentation of how signers are loaded from args and disk,
    * see {@link PersistedKeysBackend} and {@link getSignersFromArgs}
@@ -89,13 +101,6 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
   }
 
   logSigners(logger, signers);
-
-  // We set infinity for abort controller used for validator operations,
-  // to prevent MaxListenersExceededWarning which get logged when listeners > 10
-  // Since it is perfectly fine to have listeners > 10
-  setMaxListeners(Infinity, abortController.signal);
-
-  onGracefulShutdownCbs.push(async () => abortController.abort());
 
   const db = await LevelDbController.create({name: dbPath}, {metrics: null, logger});
   onGracefulShutdownCbs.push(() => db.close());
@@ -118,10 +123,9 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
     if (args["metrics"]) {
       const port = args["metrics.port"] ?? validatorMetricsDefaultOptions.port;
       const address = args["metrics.address"] ?? validatorMetricsDefaultOptions.address;
-      const metricsServer = new HttpMetricsServer({port, address}, {register, logger});
+      const metricsServer = await getHttpMetricsServer({port, address}, {register, logger});
 
-      onGracefulShutdownCbs.push(() => metricsServer.stop());
-      await metricsServer.start();
+      onGracefulShutdownCbs.push(() => metricsServer.close());
     }
   }
 
@@ -140,8 +144,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       {register: register as RegistryMetricCreator, logger}
     );
 
-    onGracefulShutdownCbs.push(() => monitoring.stop());
-    monitoring.start();
+    onGracefulShutdownCbs.push(() => monitoring.close());
   }
 
   // This promise resolves once genesis is available.
@@ -180,13 +183,19 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       );
     }
 
-    const keymanagerApi = new KeymanagerApi(validator, persistedKeysBackend, proposerConfigWriteDisabled);
+    const keymanagerApi = new KeymanagerApi(
+      validator,
+      persistedKeysBackend,
+      abortController.signal,
+      proposerConfigWriteDisabled
+    );
     const keymanagerServer = new KeymanagerRestApiServer(
       {
         address: args["keymanager.address"],
         port: args["keymanager.port"],
         cors: args["keymanager.cors"],
         isAuthEnabled: args["keymanager.authEnabled"],
+        headerLimit: args["keymanager.headerLimit"],
         bodyLimit: args["keymanager.bodyLimit"],
         tokenDir: dbPath,
       },

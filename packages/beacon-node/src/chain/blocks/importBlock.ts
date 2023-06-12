@@ -17,7 +17,6 @@ import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
-import {RegenCaller} from "../regen/interface.js";
 import type {BeaconChain} from "../chain.js";
 import {FullyVerifiedBlock, ImportBlockOpts, AttestationImportOpt} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
@@ -82,7 +81,7 @@ export async function importBlock(
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
-  this.stateCache.add(postState);
+  this.regen.addPostState(postState);
 
   this.metrics?.importBlock.bySource.inc({source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: block.message.slot, root: blockRootHex});
@@ -112,7 +111,7 @@ export async function importBlock(
     for (const attestation of attestations) {
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
-        const {target, slot, beaconBlockRoot} = attestation.data;
+        const {target, beaconBlockRoot} = attestation.data;
 
         const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
         this.seenAggregatedAttestations.add(
@@ -137,8 +136,19 @@ export async function importBlock(
         // Note: To avoid slowing down sync, only register attestations within FORK_CHOICE_ATT_EPOCH_LIMIT
         this.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
 
-        const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(slot), beaconBlockRoot);
-        this.metrics?.registerAttestationInBlock(indexedAttestation, parentBlockSlot, correctHead);
+        const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(attestation.data.slot), beaconBlockRoot);
+        const missedSlotVote = ssz.Root.equals(
+          rootCache.getBlockRootAtSlot(attestation.data.slot - 1),
+          rootCache.getBlockRootAtSlot(attestation.data.slot)
+        );
+        this.metrics?.registerAttestationInBlock(
+          indexedAttestation,
+          parentBlockSlot,
+          correctHead,
+          missedSlotVote,
+          blockRootHex,
+          block.message.slot
+        );
 
         // don't want to log the processed attestations here as there are so many attestations and it takes too much disc space,
         // users may want to keep more log files instead of unnecessary processed attestations log
@@ -198,21 +208,7 @@ export async function importBlock(
 
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // Set head state as strong reference
-    const headState =
-      newHead.stateRoot === toHexString(postState.hashTreeRoot()) ? postState : this.stateCache.get(newHead.stateRoot);
-    if (headState) {
-      this.stateCache.setHeadState(headState);
-    } else {
-      // Trigger regen on head change if necessary
-      this.logger.warn("Head state not available, triggering regen", {stateRoot: newHead.stateRoot});
-      // head has changed, so the existing cached head state is no longer useful. Set strong reference to null to free
-      // up memory for regen step below. During regen, node won't be functional but eventually head will be available
-      this.stateCache.setHeadState(null);
-      this.regen.getState(newHead.stateRoot, RegenCaller.processBlock).then(
-        (headStateRegen) => this.stateCache.setHeadState(headStateRegen),
-        (e) => this.logger.error("Error on head state regen", {}, e)
-      );
-    }
+    this.regen.updateHeadState(newHead.stateRoot, postState);
 
     this.emitter.emit(routes.events.EventType.head, {
       block: newHead.blockRoot,
@@ -337,7 +333,7 @@ export async function importBlock(
     // Cache state to preserve epoch transition work
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
-    this.checkpointStateCache.add(cp, checkpointState);
+    this.regen.addCheckpointState(cp, checkpointState);
     this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
 
     // Note: in-lined code from previos handler of ChainEvent.checkpoint

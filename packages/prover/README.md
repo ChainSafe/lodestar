@@ -53,7 +53,9 @@ lodestar-prover start \
 
 ⌛ - Todo
 
-➡️ - Request will be forward to EL without any intermediary manipulations.
+➡️ - Request will be forward to EL without any intermediary manipulations. You can limit these by providing `unverifiedWhitelist` option for provider or `--unverifiedWhitelist` from the cli. If not set then all methods will be forwarded.
+
+❇️ - Always forwarded to EL.
 
 | Group             | Method                                  | Status | Version |
 | ----------------- | --------------------------------------- | ------ | ------- |
@@ -92,13 +94,15 @@ lodestar-prover start \
 |                   | eth_getStorageAt                        | ⌛     | v1      |
 |                   | eth_getTransactionCount                 | ⌛     | v2      |
 |                   | eth_getCode                             | ✅     | v0      |
-|                   | eth_getProof                            | ➡️     |
+|                   | eth_getProof                            | ❇️     | v0      |
 | Transactions      | eth_sendTransaction                     | ➡️     |
 |                   | eth_sendRawTransaction                  | ➡️     |
 |                   | eth_getTransactionByHash                | ⌛     | v2      |
 |                   | eth_getTransactionByBlockHashAndIndex   | ⌛     | v2      |
 |                   | eth_getTransactionByBlockNumberAndIndex | ⌛     | v2      |
 |                   | eth_getTransactionReceipt               | ⌛     | v2      |
+| Events            | eth_subscribe                           | ❇️     | v0      |
+|                   | eth_unsubscribe                         | ❇️     | v0      |
 
 ## Non-supported features
 

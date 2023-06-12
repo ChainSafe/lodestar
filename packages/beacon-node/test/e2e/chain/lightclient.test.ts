@@ -141,7 +141,7 @@ describe("chain / lightclient", function () {
             // Test fetching proofs
             const {proof, header} = await getHeadStateProof(lightclient, api, [["latestBlockHeader", "bodyRoot"]]);
             const stateRootHex = toHexString(header.beacon.stateRoot);
-            const lcHeadState = bn.chain.stateCache.get(stateRootHex);
+            const lcHeadState = bn.chain.regen.getStateSync(stateRootHex);
             if (!lcHeadState) {
               throw Error(`LC head state not in cache ${stateRootHex}`);
             }

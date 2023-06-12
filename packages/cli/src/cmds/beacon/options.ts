@@ -15,8 +15,10 @@ type BeaconExtraArgs = {
   beaconDir?: string;
   dbDir?: string;
   persistInvalidSszObjectsDir?: string;
+  persistInvalidSszObjectsRetentionHours?: number;
   peerStoreDir?: string;
   persistNetworkIdentity?: boolean;
+  private?: boolean;
 };
 
 export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
@@ -85,6 +87,12 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     type: "string",
   },
 
+  persistInvalidSszObjectsRetentionHours: {
+    description: "Number of hours to keep invalid SSZ objects on local disk",
+    hidden: true,
+    type: "number",
+  },
+
   peerStoreDir: {
     hidden: true,
     description: "Peer store directory",
@@ -95,6 +103,11 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   persistNetworkIdentity: {
     hidden: true,
     description: "Whether to reuse the same peer-id across restarts",
+    type: "boolean",
+  },
+
+  private: {
+    description: "Do not send implementation details over p2p identify protocol and in builder requests",
     type: "boolean",
   },
 };

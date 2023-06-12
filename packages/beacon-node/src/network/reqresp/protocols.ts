@@ -35,12 +35,6 @@ export const Status = toProtocol({
   contextBytesType: ContextBytesType.Empty,
 });
 
-export const BeaconBlockAndBlobsSidecarByRoot = toProtocol({
-  method: ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot,
-  version: Version.V1,
-  contextBytesType: ContextBytesType.ForkDigest,
-});
-
 export const BeaconBlocksByRange = toProtocol({
   method: ReqRespMethod.BeaconBlocksByRange,
   version: Version.V1,
@@ -65,8 +59,14 @@ export const BeaconBlocksByRootV2 = toProtocol({
   contextBytesType: ContextBytesType.ForkDigest,
 });
 
-export const BlobsSidecarsByRange = toProtocol({
-  method: ReqRespMethod.BlobsSidecarsByRange,
+export const BlobSidecarsByRange = toProtocol({
+  method: ReqRespMethod.BlobSidecarsByRange,
+  version: Version.V1,
+  contextBytesType: ContextBytesType.ForkDigest,
+});
+
+export const BlobSidecarsByRoot = toProtocol({
+  method: ReqRespMethod.BlobSidecarsByRoot,
   version: Version.V1,
   contextBytesType: ContextBytesType.ForkDigest,
 });

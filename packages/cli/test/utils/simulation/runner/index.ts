@@ -57,7 +57,7 @@ export class Runner implements IRunner {
         await job.start();
 
         this.emitter.emit("started", jobOption.id);
-        console.log(`Started "${jobOption.id}"...`);
+        console.log(`Started "${jobOption.id}" logFile=${jobOption.logs.stdoutFilePath}...`);
 
         if (childrenJob) await childrenJob.start();
       });

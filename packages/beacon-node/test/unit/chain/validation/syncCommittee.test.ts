@@ -44,7 +44,7 @@ describe("Sync Committee Signature validation", function () {
   });
 
   beforeEach(function () {
-    chain = sandbox.createStubInstance(BeaconChain);
+    chain = sandbox.createStubInstance(BeaconChain) as typeof chain;
     (
       chain as {
         seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
