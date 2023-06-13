@@ -7,6 +7,6 @@ export function formatBigDecimal(numerator: bigint, denominator: bigint, maxDeci
   const fraction = ((numerator - full * denominator) * maxDecimalFactor) / denominator;
 
   // zeros to be added post decimal are number of zeros in maxDecimalFactor - number of digits in fraction
-  const zerosPostDecimal = `${maxDecimalFactor}`.length - 1 - `${fraction}`.length;
+  const zerosPostDecimal = String(maxDecimalFactor).length - 1 - String(fraction).length;
   return `${full}.${"0".repeat(zerosPostDecimal)}${fraction}`;
 }
