@@ -545,10 +545,9 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/is-ip/-/is-ip-2.0.1.tgz#62cb285669d91f88fd9fa285048dde3882f0993b"
   integrity sha512-nqSJ8u2a1Rv9FYbyI8qpDhTYujaKEyLknNrTejLYoSWmdeg+2WB7R6BZqPZYfrJzDxVi3rl6ZQuoaEvpKRZWgQ==
 
-"@chainsafe/libp2p-gossipsub@^6.2.0":
+"@chainsafe/libp2p-gossipsub@github://tuyennhv/js-libp2p-gossipsub.git#tuyen/v6.2.0/yield_to_event_loop":
   version "6.2.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-6.2.0.tgz#1266ae5a10cd57e297bd30edf3b365c907ce78e7"
-  integrity sha512-b3xEgjaatCmzJgNyE7qbTl/JBIymcNWbLUtW1nGA9a0n9Y0IjnNLyUmHH0y3xe22trVTAf6o7qpAdkbXILU9sg==
+  resolved "https://codeload.github.com/tuyennhv/js-libp2p-gossipsub/tar.gz/bb6e433d2647524e1815788dbc9634a1c89c8000"
   dependencies:
     "@libp2p/crypto" "^1.0.3"
     "@libp2p/interface-connection" "^3.0.1"
@@ -1894,6 +1893,17 @@
     it-stream-types "^1.0.4"
     uint8arraylist "^2.1.2"
 
+"@libp2p/interface-connection@^4.0.0":
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/@libp2p/interface-connection/-/interface-connection-4.0.0.tgz#fcc830ca891820fac89a4c6bd4fcc2df4874f49b"
+  integrity sha512-6xx/NmEc84HX7QmsjSC3hHredQYjHv4Dkf4G27adAPf+qN+vnPxmQ7gaTnk243a0++DOFTbZ2gKX/15G2B6SRg==
+  dependencies:
+    "@libp2p/interface-peer-id" "^2.0.0"
+    "@libp2p/interfaces" "^3.0.0"
+    "@multiformats/multiaddr" "^12.0.0"
+    it-stream-types "^1.0.4"
+    uint8arraylist "^2.1.2"
+
 "@libp2p/interface-content-routing@^2.0.0":
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/@libp2p/interface-content-routing/-/interface-content-routing-2.0.1.tgz#e050dc42adc3e9b4f1666eafa889c88f892ba1c4"
@@ -2249,25 +2259,23 @@
     it-stream-types "^1.0.4"
 
 "@libp2p/pubsub@^6.0.0":
-  version "6.0.0"
-  resolved "https://registry.yarnpkg.com/@libp2p/pubsub/-/pubsub-6.0.0.tgz#8072ff511e901e5c0bb4226fa14f9529315af01d"
-  integrity sha512-WWViQ+fEL3JWt415UznUR6wQCm+UCi65SNQWQoTRYaCM2DYVCrIRfGpmFWAyKPCr76L6UesucIkZHuyh2c3xNA==
+  version "6.0.6"
+  resolved "https://registry.yarnpkg.com/@libp2p/pubsub/-/pubsub-6.0.6.tgz#7acf5a1de8fa5d982afc109ddd31e240111e7fe8"
+  integrity sha512-/JU4xvtZIYDxOyiHIk4MlpnAJuqfZsabDP+4f59QlXNsppOmiIujaDhN3eFBFIKG29XDSgHZBzKMLK+XsB8O5g==
   dependencies:
     "@libp2p/crypto" "^1.0.0"
-    "@libp2p/interface-connection" "^3.0.1"
+    "@libp2p/interface-connection" "^4.0.0"
     "@libp2p/interface-peer-id" "^2.0.0"
     "@libp2p/interface-pubsub" "^3.0.0"
     "@libp2p/interface-registrar" "^2.0.0"
-    "@libp2p/interfaces" "^3.0.2"
+    "@libp2p/interfaces" "^3.2.0"
     "@libp2p/logger" "^2.0.0"
     "@libp2p/peer-collections" "^3.0.0"
     "@libp2p/peer-id" "^2.0.0"
     "@libp2p/topology" "^4.0.0"
-    "@multiformats/multiaddr" "^11.0.0"
     abortable-iterator "^4.0.2"
-    err-code "^3.0.1"
-    it-length-prefixed "^8.0.2"
-    it-pipe "^2.0.3"
+    it-length-prefixed "^9.0.0"
+    it-pipe "^3.0.0"
     it-pushable "^3.0.0"
     multiformats "^11.0.0"
     p-queue "^7.2.0"
@@ -9655,6 +9663,13 @@ it-merge@^2.0.0:
   dependencies:
     it-pushable "^3.1.0"
 
+it-merge@^3.0.0:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/it-merge/-/it-merge-3.0.1.tgz#20cc293593586e5afcbfed8ba88a94def5ccfcfa"
+  integrity sha512-I6hjU1ABO+k3xY1H6JtCSDXvUME88pxIXSgKeT4WI5rPYbQzpr98ldacVuG95WbjaJxKl6Qot6lUdxduLBQPHA==
+  dependencies:
+    it-pushable "^3.1.0"
+
 it-pair@^2.0.2:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/it-pair/-/it-pair-2.0.2.tgz#1e6c7f35e8042019942b8996c0c13784d576e2d7"
@@ -9684,6 +9699,15 @@ it-pipe@^2.0.3, it-pipe@^2.0.4, it-pipe@^2.0.5:
     it-merge "^2.0.0"
     it-pushable "^3.1.0"
     it-stream-types "^1.0.3"
+
+it-pipe@^3.0.0:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/it-pipe/-/it-pipe-3.0.1.tgz#b25720df82f4c558a8532602b5fbc37bbe4e7ba5"
+  integrity sha512-sIoNrQl1qSRg2seYSBH/3QxWhJFn9PKYvOf/bHdtCBF0bnghey44VyASsWzn5dAx0DCDDABq1hZIuzKmtBZmKA==
+  dependencies:
+    it-merge "^3.0.0"
+    it-pushable "^3.1.2"
+    it-stream-types "^2.0.1"
 
 it-pushable@^3.0.0, it-pushable@^3.1.0:
   version "3.1.0"
@@ -9719,6 +9743,11 @@ it-stream-types@^1.0.5:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/it-stream-types/-/it-stream-types-1.0.5.tgz#9c72e6adefdea9dac69d0a28fbea783deebd508d"
   integrity sha512-I88Ka1nHgfX62e5mi5LLL+oueqz7Ltg0bUdtsUKDe9SoUqbQPf2Mp5kxDTe9pNhHQGs4pvYPAINwuZ1HAt42TA==
+
+it-stream-types@^2.0.1:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/it-stream-types/-/it-stream-types-2.0.1.tgz#69cb4d7e79e707b8257a8997e02751ccb6c3af32"
+  integrity sha512-6DmOs5r7ERDbvS4q8yLKENcj6Yecr7QQTqWApbZdfAUTEC947d+PEha7PCqhm//9oxaLYL7TWRekwhoXl2s6fg==
 
 it-take@^2.0.0:
   version "2.0.0"
