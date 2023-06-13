@@ -1,5 +1,4 @@
 import http from "node:http";
-import https from "node:https";
 import url from "node:url";
 import httpProxy from "http-proxy";
 import {getNodeLogger} from "@lodestar/logger/node";
@@ -35,7 +34,7 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
   const proxy = httpProxy.createProxy({
     target: executionRpcUrl,
     ws: executionRpcUrl.startsWith("ws"),
-    agent: https.globalAgent,
+    agent: http.globalAgent,
     xfwd: true,
     ignorePath: true,
     changeOrigin: true,
@@ -59,11 +58,6 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
     }),
     logger
   );
-
-  rpc.verifyCompatibility().catch((err) => {
-    logger.error("Error verifying execution layer support", err);
-    process.exit(1);
-  });
 
   logger.info("Creating http server");
   const proxyServer = http.createServer(function proxyRequestHandler(req, res) {
@@ -116,6 +110,11 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
     logger.info(
       `Lodestar Prover Proxy listening on ${proxyServerListeningAddress.host}:${proxyServerListeningAddress.port}`
     );
+
+    rpc.verifyCompatibility().catch((err) => {
+      logger.error(err);
+      process.exit(1);
+    });
   });
 
   proxyServer.on("upgrade", function proxyRequestUpgrade(req, socket, head) {

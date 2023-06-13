@@ -30,7 +30,6 @@ export type Optional<T, K extends keyof T> = Omit<T, K> & {[P in keyof T]?: T[P]
 export class ELRpc {
   private handler: ELRequestHandler;
   private logger: Logger;
-  private isCompatible?: boolean;
 
   constructor(handler: ELRequestHandler, logger: Logger) {
     this.handler = handler;
@@ -42,7 +41,6 @@ export class ELRpc {
     params: ELApiParams[K],
     opts: {raiseError: E}
   ): Promise<E extends false ? JsonRpcResponse<ELApiReturn[K]> : JsonRpcResponseWithResultPayload<ELApiReturn[K]>> {
-    await this.verifyCompatibility();
     const {raiseError} = opts;
 
     const payload: JsonRpcRequest = {jsonrpc: "2.0", method, params, id: this.getRequestId()};
@@ -66,7 +64,6 @@ export class ELRpc {
       ? {request: JsonRpcRequest; response: JsonRpcResponse}[]
       : {request: JsonRpcRequest; response: JsonRpcResponseWithResultPayload<unknown>}[]
   > {
-    await this.verifyCompatibility();
     const payloads: JsonRpcBatchRequest = [];
 
     for (const req of input) {
@@ -97,16 +94,10 @@ export class ELRpc {
   }
 
   async verifyCompatibility(): Promise<void> {
-    if (isNullish(this.isCompatible)) {
-      try {
-        await this.request("eth_getProof", [ZERO_ADDRESS, [], "latest"], {raiseError: true});
-        this.isCompatible = true;
-      } catch {
-        this.isCompatible = false;
-      }
-    }
-
-    if (!this.isCompatible) {
+    try {
+      await this.request("eth_getProof", [ZERO_ADDRESS, [], "latest"], {raiseError: true});
+    } catch (err) {
+      this.logger.error("Execution compatibility failed.", undefined, err as Error);
       throw new Error("RPC does not support 'eth_getProof', which is required for the prover to work properly.");
     }
   }

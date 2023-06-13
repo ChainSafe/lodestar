@@ -46,7 +46,8 @@ export function createVerifiedExecutionProvider<T extends Web3Provider>(
   const {provider: newInstance, rpc} = handler(provider, proofProvider, logger);
 
   rpc.verifyCompatibility().catch((err) => {
-    logger.error("Error verifying execution layer support", err);
+    logger.error(err);
+    logger.error("Due to compatibility issues, verified execution may not work properly.");
   });
 
   return {provider: newInstance, proofProvider: proofProvider};

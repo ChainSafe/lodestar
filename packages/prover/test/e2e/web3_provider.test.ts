@@ -1,52 +1,16 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {request} from "node:http";
 import {expect} from "chai";
 import Web3 from "web3";
 import {ethers} from "ethers";
-import {sleep} from "@lodestar/utils";
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
-
-const rpcURL = "http://0.0.0.0:8001";
-const beaconUrl = "http://0.0.0.0:5001";
-// Wait for at least teh capella fork to be started
-const secondsPerSlot = 4;
-const altairForkEpoch = 1;
-const bellatrixForkEpoch = 2;
-const capellaForkEpoch = 3;
-const genesisDelaySeconds = 30 * secondsPerSlot;
-const config = {
-  ALTAIR_FORK_EPOCH: altairForkEpoch,
-  BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
-  CAPELLA_FORK_EPOCH: capellaForkEpoch,
-  GENESIS_DELAY: genesisDelaySeconds,
-  SECONDS_PER_SLOT: secondsPerSlot,
-};
-
-async function waitForEndpoint(url: string): Promise<void> {
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const status = await new Promise((resolve) => {
-      const req = request(url, {method: "GET"}, (res) => {
-        resolve(res.statusCode);
-      });
-      req.end();
-    });
-    if (status === 200) {
-      break;
-    } else {
-      await sleep(1000);
-    }
-  }
-}
+import {waitForCapellaFork, testTimeout, rpcURL, beaconUrl, config} from "../utils/e2e_env.js";
 
 describe("web3_provider", function () {
-  // Wait for at least teh capella fork to be started
-  this.timeout((capellaForkEpoch + 2) * 8 * 4 * 1000);
+  this.timeout(testTimeout);
 
   before("wait for the capella fork", async () => {
-    // Wait for the two epoch of capella to pass so that the light client can sync from a finalized checkpoint
-    await waitForEndpoint(`${beaconUrl}/eth/v1/beacon/headers/${(capellaForkEpoch + 2) * 8}`);
+    await waitForCapellaFork();
   });
 
   describe("createVerifiedExecutionProvider", () => {
