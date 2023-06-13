@@ -174,6 +174,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     // Very helpful when syncing finalized, sync may submit +1000 sets so chunkify allows to distribute to many workers
     if (opts.verifyWithLibuvPool && !this.blsVerifyAllMultiThread) {
       // const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
+
+      // TODO need to break this into separate function that mimics worker.js
+      // refactor verifyManySignatureSets to be called from here and from worker.js or similar
       results = await Promise.all(
         chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map((chunk) =>
           asyncVerifySignatureSetsMaybeBatch(
