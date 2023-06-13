@@ -10,22 +10,9 @@
     "lib",
     "src"
   ],
-  "type": "module",
+  "type": "commonjs",
   "types": "./import/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./import/index.js"
-    }
-  },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "*",
-        "import/*",
-        "import/*/index"
-      ]
-    }
-  },
+  "main": "./import/index.js",
   "scripts": {
     "clean": "npm run clean:dist; npm run clean:build",
     "clean:dist": "rm -rf dist",

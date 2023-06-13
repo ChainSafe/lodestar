@@ -1,6 +1,6 @@
 import {CoordType, PublicKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
-import {verifyMultipleAggregateSignatures, verify} from "@lodestar/blst-ts";
+import * as blstTs from "@lodestar/blst-ts";
 
 const MIN_SET_COUNT_TO_BATCH = 2;
 
@@ -47,7 +47,7 @@ export function verifySignatureSetsMaybeBatch(sets: SignatureSetDeserialized[]):
 
 export async function asyncVerifySignatureSetsMaybeBatch(sets: SignatureSetSerialized[]): Promise<boolean> {
   if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
-    return verifyMultipleAggregateSignatures(
+    return blstTs.verifyMultipleAggregateSignatures(
       sets.map((s) => ({
         publicKey: s.publicKey,
         msg: s.message,
@@ -62,5 +62,7 @@ export async function asyncVerifySignatureSetsMaybeBatch(sets: SignatureSetSeria
   }
 
   // If too few signature sets verify them without batching
-  return sets.every((set) => verify(set.message, set.publicKey, set.signature));
+  return (await Promise.all(sets.map((set) => blstTs.verify(set.message, set.publicKey, set.signature)))).every(
+    (v) => !!v
+  );
 }
