@@ -140,7 +140,7 @@ describe("data serialization through worker boundary", function () {
     publishGossip: ["test-topic", bytes, {allowPublishToZeroPeers: true, ignoreDuplicatePublishError: true}],
     close: [],
     scrapeMetrics: [],
-    writeProfile: [""],
+    writeProfile: [0, ""],
   };
 
   const lodestarPeer: routes.lodestar.LodestarNodePeer = {
