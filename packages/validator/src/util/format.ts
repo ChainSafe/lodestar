@@ -5,5 +5,8 @@ export function isValidatePubkeyHex(pubkeyHex: string): boolean {
 export function formatBigDecimal(numerator: bigint, denominator: bigint, maxDecimalFactor: bigint): string {
   const full = numerator / denominator;
   const fraction = ((numerator - full * denominator) * maxDecimalFactor) / denominator;
-  return `${full}.${fraction}`;
+
+  // zeros to be added post decimal are number of zeros in maxDecimalFactor - number of digits in fraction
+  const zerosPostDecimal = `${maxDecimalFactor}`.length - 1 - `${fraction}`.length;
+  return `${full}.${"0".repeat(zerosPostDecimal)}${fraction}`;
 }
