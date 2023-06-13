@@ -544,8 +544,8 @@ export class Network implements INetwork {
     return this.networkProcessor.dumpGossipQueue(gossipType);
   }
 
-  async writeNetworkThreadProfile(dirpath = "."): Promise<string> {
-    return this.core.writeNetworkThreadProfile(dirpath);
+  async writeNetworkThreadProfile(durationMs?: number, dirpath?: string): Promise<string> {
+    return this.core.writeNetworkThreadProfile(durationMs, dirpath);
   }
 
   private onLightClientFinalityUpdate = async (finalityUpdate: allForks.LightClientFinalityUpdate): Promise<void> => {

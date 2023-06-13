@@ -1,11 +1,9 @@
 import {sleep} from "@lodestar/utils";
 
-const DEFAULT_PROFILE_DURATION = 10 * 60 * 1000;
-
 /**
  * Take 10m profile of the current thread without promise tracking.
  */
-export async function profileNodeJS(): Promise<string> {
+export async function profileNodeJS(durationMs: number): Promise<string> {
   const inspector = await import("node:inspector");
 
   // due to some typing issues, not able to use promisify here
@@ -16,7 +14,7 @@ export async function profileNodeJS(): Promise<string> {
 
     session.post("Profiler.enable", () => {
       session.post("Profiler.start", async () => {
-        await sleep(DEFAULT_PROFILE_DURATION);
+        await sleep(durationMs);
         session.post("Profiler.stop", (err, {profile}) => {
           if (!err) {
             resolve(JSON.stringify(profile));

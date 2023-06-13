@@ -79,6 +79,7 @@ export type Api = {
   writeHeapdump(dirpath?: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
   /** Trigger to write 10m network thread profile to disk */
   writeNetworkThreadProfile(
+    duration?: number,
     dirpath?: string
   ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
   /** TODO: description */
@@ -129,7 +130,7 @@ export type Api = {
  */
 export const routesData: RoutesData<Api> = {
   writeHeapdump: {url: "/eth/v1/lodestar/writeheapdump", method: "POST"},
-  writeNetworkThreadProfile: {url: "/eth/v1/lodestar/writenetworkthreadprofile", method: "POST"},
+  writeNetworkThreadProfile: {url: "/eth/v1/lodestar/write_network_thread_profile", method: "POST"},
   getLatestWeakSubjectivityCheckpointEpoch: {url: "/eth/v1/lodestar/ws_epoch", method: "GET"},
   getSyncChainsDebugState: {url: "/eth/v1/lodestar/sync-chains-debug-state", method: "GET"},
   getGossipQueueItems: {url: "/eth/v1/lodestar/gossip-queue-items/:gossipType", method: "GET"},
@@ -150,7 +151,7 @@ export const routesData: RoutesData<Api> = {
 
 export type ReqTypes = {
   writeHeapdump: {query: {dirpath?: string}};
-  writeNetworkThreadProfile: {query: {dirpath?: string}};
+  writeNetworkThreadProfile: {query: {duration?: number; dirpath?: string}};
   getLatestWeakSubjectivityCheckpointEpoch: ReqEmpty;
   getSyncChainsDebugState: ReqEmpty;
   getGossipQueueItems: {params: {gossipType: string}};
@@ -177,8 +178,8 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       schema: {query: {dirpath: Schema.String}},
     },
     writeNetworkThreadProfile: {
-      writeReq: (dirpath) => ({query: {dirpath}}),
-      parseReq: ({query}) => [query.dirpath],
+      writeReq: (duration, dirpath) => ({query: {duration, dirpath}}),
+      parseReq: ({query}) => [query.duration, query.dirpath],
       schema: {query: {dirpath: Schema.String}},
     },
     getLatestWeakSubjectivityCheckpointEpoch: reqEmpty,
