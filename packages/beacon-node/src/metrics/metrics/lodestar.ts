@@ -428,6 +428,11 @@ export function createLodestarMetrics(
         // Time can vary significantly, so just track usage ratio
         buckets: [0],
       }),
+      libuvDurationInThreadPool: register.histogram({
+        name: "lodestar_bls_thread_pool_libuv_time_seconds",
+        help: "Time to verify signatures in libuv with thread pool mode",
+        // buckets: [0],
+      }),
       timePerSigSet: register.histogram({
         name: "lodestar_bls_worker_thread_time_per_sigset_seconds",
         help: "Time to verify each sigset with worker thread mode",
