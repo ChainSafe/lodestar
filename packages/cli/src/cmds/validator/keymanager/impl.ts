@@ -17,6 +17,7 @@ import {Interchange, SignerType, Validator} from "@lodestar/validator";
 import {ServerApi} from "@lodestar/api";
 import {getPubkeyHexFromKeystore, isValidatePubkeyHex, isValidHttpUrl} from "../../../util/format.js";
 import {parseFeeRecipient} from "../../../util/index.js";
+import {DecryptKeystoresThreadPool} from "./decryptKeystores/index.js";
 import {IPersistedKeysBackend} from "./interface.js";
 
 type Api = ServerApi<KeyManagerClientApi>;
@@ -25,6 +26,7 @@ export class KeymanagerApi implements Api {
   constructor(
     private readonly validator: Validator,
     private readonly persistedKeysBackend: IPersistedKeysBackend,
+    private readonly signal: AbortSignal,
     private readonly proposerConfigWriteDisabled?: boolean
   ) {}
 
@@ -124,6 +126,7 @@ export class KeymanagerApi implements Api {
     }
 
     const statuses: {status: ImportStatus; message?: string}[] = [];
+    const decryptKeystores = new DecryptKeystoresThreadPool(keystoresStr.length, this.signal);
 
     for (let i = 0; i < keystoresStr.length; i++) {
       try {
@@ -142,29 +145,38 @@ export class KeymanagerApi implements Api {
           continue;
         }
 
-        // Attempt to decrypt before writing to disk
-        const secretKey = bls.SecretKey.fromBytes(await keystore.decrypt(password));
+        decryptKeystores.queue(
+          {keystoreStr, password},
+          (secretKeyBytes: Uint8Array) => {
+            const secretKey = bls.SecretKey.fromBytes(secretKeyBytes);
 
-        // Persist the key to disk for restarts, before adding to in-memory store
-        // If the keystore exist and has a lock it will throw
-        this.persistedKeysBackend.writeKeystore({
-          keystoreStr,
-          password,
-          // Lock immediately since it's gonna be used
-          lockBeforeWrite: true,
-          // Always write, even if it's already persisted for consistency.
-          // The in-memory validatorStore is the ground truth to decide duplicates
-          persistIfDuplicate: true,
-        });
+            // Persist the key to disk for restarts, before adding to in-memory store
+            // If the keystore exist and has a lock it will throw
+            this.persistedKeysBackend.writeKeystore({
+              keystoreStr,
+              password,
+              // Lock immediately since it's gonna be used
+              lockBeforeWrite: true,
+              // Always write, even if it's already persisted for consistency.
+              // The in-memory validatorStore is the ground truth to decide duplicates
+              persistIfDuplicate: true,
+            });
 
-        // Add to in-memory store to start validating immediately
-        this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
+            // Add to in-memory store to start validating immediately
+            this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
-        statuses[i] = {status: ImportStatus.imported};
+            statuses[i] = {status: ImportStatus.imported};
+          },
+          (e: Error) => {
+            statuses[i] = {status: ImportStatus.error, message: e.message};
+          }
+        );
       } catch (e) {
         statuses[i] = {status: ImportStatus.error, message: (e as Error).message};
       }
     }
+
+    await decryptKeystores.completed();
 
     return {data: statuses};
   }
