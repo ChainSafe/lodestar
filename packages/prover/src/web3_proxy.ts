@@ -3,18 +3,62 @@ import url from "node:url";
 import httpProxy from "http-proxy";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {LogLevel} from "@lodestar/logger";
-import {VerifiedExecutionInitOptions} from "./interfaces.js";
+import {ELRequestHandler, VerifiedExecutionInitOptions} from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
-import {JsonRpcRequestPayload} from "./types.js";
+import {JsonRpcRequestOrBatch, JsonRpcRequestPayload, JsonRpcResponseOrBatch} from "./types.js";
 import {getResponseForRequest, isBatchRequest} from "./utils/json_rpc.js";
-import {fetchRequestPayload} from "./utils/req_resp.js";
+import {fetchRequestPayload, fetchResponseBody} from "./utils/req_resp.js";
 import {processAndVerifyRequest} from "./utils/process.js";
-import {ELRpc, createHttpHandler} from "./utils/rpc.js";
+import {ELRpc} from "./utils/rpc.js";
 
 export type VerifiedProxyOptions = VerifiedExecutionInitOptions & {
   executionRpcUrl: string;
   requestTimeout: number;
 };
+
+function createHttpHandler({
+  info,
+  signal,
+}: {
+  signal: AbortSignal;
+  info: () => {port: number; host: string; timeout: number} | string;
+}): ELRequestHandler {
+  return function handler(payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> {
+    return new Promise((resolve, reject) => {
+      const serverInfo = info();
+      if (typeof serverInfo === "string") {
+        return reject(new Error(serverInfo));
+      }
+
+      const req = http.request(
+        {
+          method: "POST",
+          path: "/proxy",
+          port: serverInfo.port,
+          host: serverInfo.host,
+          timeout: serverInfo.timeout,
+          signal,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+        (res) => {
+          fetchResponseBody(res)
+            .then((response) => {
+              resolve(response);
+            })
+            .catch(reject);
+        }
+      );
+      req.on("timeout", () => {
+        req.destroy();
+        reject(new Error("Request timeout"));
+      });
+      req.write(JSON.stringify(payload));
+      req.end();
+    });
+  };
+}
 
 export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
   server: http.Server;

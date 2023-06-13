@@ -1,4 +1,3 @@
-import http from "node:http";
 import {Logger} from "@lodestar/logger";
 import {ZERO_ADDRESS} from "../constants.js";
 import {ELRequestHandler} from "../interfaces.js";
@@ -9,9 +8,7 @@ import {
   JsonRpcBatchRequest,
   JsonRpcBatchResponse,
   JsonRpcRequest,
-  JsonRpcRequestOrBatch,
   JsonRpcResponse,
-  JsonRpcResponseOrBatch,
   JsonRpcResponseWithResultPayload,
 } from "../types.js";
 import {
@@ -23,7 +20,6 @@ import {
   mergeBatchReqResp,
 } from "./json_rpc.js";
 import {isNullish} from "./validation.js";
-import {fetchResponseBody} from "./req_resp.js";
 
 export type Optional<T, K extends keyof T> = Omit<T, K> & {[P in keyof T]?: T[P] | undefined};
 
@@ -106,48 +102,4 @@ export class ELRpc {
     // TODO: Find better way to generate random id
     return (Math.random() * 10000).toFixed(0);
   }
-}
-
-export function createHttpHandler({
-  info,
-  signal,
-}: {
-  signal: AbortSignal;
-  info: () => {port: number; host: string; timeout: number} | string;
-}): ELRequestHandler {
-  return function handler(payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> {
-    return new Promise((resolve, reject) => {
-      const serverInfo = info();
-      if (typeof serverInfo === "string") {
-        return reject(new Error(serverInfo));
-      }
-
-      const req = http.request(
-        {
-          method: "POST",
-          path: "/proxy",
-          port: serverInfo.port,
-          host: serverInfo.host,
-          timeout: serverInfo.timeout,
-          signal,
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-        (res) => {
-          fetchResponseBody(res)
-            .then((response) => {
-              resolve(response);
-            })
-            .catch(reject);
-        }
-      );
-      req.on("timeout", () => {
-        req.destroy();
-        reject(new Error("Request timeout"));
-      });
-      req.write(JSON.stringify(payload));
-      req.end();
-    });
-  };
 }
