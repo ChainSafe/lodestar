@@ -91,7 +91,8 @@
     "source-map-support": "^0.5.21",
     "uint8arrays": "^4.0.3",
     "uuidv4": "^6.2.13",
-    "yargs": "^17.7.1"
+    "yargs": "^17.7.1",
+    "wtfnode": "^0.9.1"
   },
   "devDependencies": {
     "@types/debug": "^4.1.7",
@@ -100,6 +101,7 @@
     "@types/inquirer": "^9.0.3",
     "@types/lodash": "^4.14.192",
     "@types/yargs": "^17.0.24",
+    "@types/wtfnode": "^0.7.0",
     "@lodestar/test-utils": "^1.9.1"
   }
 }

@@ -1,4 +1,5 @@
 import path from "node:path";
+import wtf from "wtfnode";
 import {Registry} from "prom-client";
 import {ErrorAborted} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
@@ -130,6 +131,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
         try {
           await node.close();
           logger.debug("Beacon node closed");
+          wtf.dump();
           // Explicitly exit until active handles issue is resolved
           // See https://github.com/ChainSafe/lodestar/issues/5642
           process.exit(0);
