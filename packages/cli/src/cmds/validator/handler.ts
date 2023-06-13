@@ -74,6 +74,13 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
   // This AbortController interrupts various validators ops: genesis req, clients call, clock etc
   const abortController = new AbortController();
 
+  // We set infinity for abort controller used for validator operations,
+  // to prevent MaxListenersExceededWarning which get logged when listeners > 10
+  // Since it is perfectly fine to have listeners > 10
+  setMaxListeners(Infinity, abortController.signal);
+
+  onGracefulShutdownCbs.push(async () => abortController.abort());
+
   /**
    * For rationale and documentation of how signers are loaded from args and disk,
    * see {@link PersistedKeysBackend} and {@link getSignersFromArgs}
@@ -94,13 +101,6 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
   }
 
   logSigners(logger, signers);
-
-  // We set infinity for abort controller used for validator operations,
-  // to prevent MaxListenersExceededWarning which get logged when listeners > 10
-  // Since it is perfectly fine to have listeners > 10
-  setMaxListeners(Infinity, abortController.signal);
-
-  onGracefulShutdownCbs.push(async () => abortController.abort());
 
   const dbOps = {
     config,
@@ -186,7 +186,12 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       );
     }
 
-    const keymanagerApi = new KeymanagerApi(validator, persistedKeysBackend, proposerConfigWriteDisabled);
+    const keymanagerApi = new KeymanagerApi(
+      validator,
+      persistedKeysBackend,
+      abortController.signal,
+      proposerConfigWriteDisabled
+    );
     const keymanagerServer = new KeymanagerRestApiServer(
       {
         address: args["keymanager.address"],

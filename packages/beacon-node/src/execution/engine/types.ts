@@ -16,7 +16,13 @@ import {
   QUANTITY,
   quantityToBigint,
 } from "../../eth1/provider/utils.js";
-import {ExecutePayloadStatus, TransitionConfigurationV1, BlobsBundle, PayloadAttributes} from "./interface.js";
+import {
+  ExecutePayloadStatus,
+  TransitionConfigurationV1,
+  BlobsBundle,
+  PayloadAttributes,
+  VersionedHashes,
+} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -27,7 +33,7 @@ export type EngineApiRpcParamTypes = {
    */
   engine_newPayloadV1: [ExecutionPayloadRpc];
   engine_newPayloadV2: [ExecutionPayloadRpc];
-  engine_newPayloadV3: [ExecutionPayloadRpc];
+  engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -129,6 +135,7 @@ export type ExecutionPayloadRpc = {
   blockHash: DATA; // 32 bytes
   transactions: DATA[];
   withdrawals?: WithdrawalRpc[]; // Capella hardfork
+  dataGasUsed?: QUANTITY; // DENEB
   excessDataGas?: QUANTITY; // DENEB
 };
 
@@ -138,6 +145,8 @@ export type WithdrawalRpc = {
   address: DATA;
   amount: QUANTITY;
 };
+
+export type VersionedHashesRpc = DATA[];
 
 export type PayloadAttributesRpc = {
   /** QUANTITY, 64 Bits - value for the timestamp field of the new payload */
@@ -179,12 +188,18 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
     payload.withdrawals = withdrawals.map(serializeWithdrawal);
   }
 
-  // DENEB adds excessDataGas to the ExecutionPayload
-  if ((data as deneb.ExecutionPayload).excessDataGas !== undefined) {
-    payload.excessDataGas = numToQuantity((data as deneb.ExecutionPayload).excessDataGas);
+  // DENEB adds dataGasUsed & excessDataGas to the ExecutionPayload
+  if (ForkSeq[fork] >= ForkSeq.deneb) {
+    const {dataGasUsed, excessDataGas} = data as deneb.ExecutionPayload;
+    payload.dataGasUsed = numToQuantity(dataGasUsed);
+    payload.excessDataGas = numToQuantity(excessDataGas);
   }
 
   return payload;
+}
+
+export function serializeVersionedHashes(vHashes: VersionedHashes): VersionedHashesRpc {
+  return vHashes.map(bytesToData);
 }
 
 export function hasBlockValue(response: ExecutionPayloadResponse): response is ExecutionPayloadRpcWithBlockValue {
@@ -239,12 +254,21 @@ export function parseExecutionPayload(
 
   // DENEB adds excessDataGas to the ExecutionPayload
   if (ForkSeq[fork] >= ForkSeq.deneb) {
-    if (data.excessDataGas == null) {
+    const {dataGasUsed, excessDataGas} = data;
+
+    if (dataGasUsed == null) {
+      throw Error(
+        `dataGasUsed missing for ${fork} >= deneb executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+      );
+    }
+    if (excessDataGas == null) {
       throw Error(
         `excessDataGas missing for ${fork} >= deneb executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as deneb.ExecutionPayload).excessDataGas = quantityToBigint(data.excessDataGas);
+
+    (executionPayload as deneb.ExecutionPayload).dataGasUsed = quantityToBigint(dataGasUsed);
+    (executionPayload as deneb.ExecutionPayload).excessDataGas = quantityToBigint(excessDataGas);
   }
 
   return {executionPayload, blockValue, blobsBundle};

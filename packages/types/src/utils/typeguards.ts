@@ -1,10 +1,13 @@
 import {
   FullOrBlindedBeaconBlock,
   FullOrBlindedSignedBeaconBlock,
+  FullOrBlindedBeaconBlockBody,
   FullOrBlindedExecutionPayload,
   ExecutionPayloadHeader,
   FullOrBlindedBlobSidecar,
   FullOrBlindedSignedBlobSidecar,
+  BlindedBeaconBlockBody,
+  BlindedBeaconBlock,
 } from "../allForks/types.js";
 import {ts as bellatrix} from "../bellatrix/index.js";
 import {ts as deneb} from "../deneb/index.js";
@@ -15,8 +18,12 @@ export function isBlindedExecution(payload: FullOrBlindedExecutionPayload): payl
   return (payload as ExecutionPayloadHeader).transactionsRoot !== undefined;
 }
 
-export function isBlindedBeaconBlock(block: FullOrBlindedBeaconBlock): block is bellatrix.BlindedBeaconBlock {
-  return (block as bellatrix.BlindedBeaconBlock).body.executionPayloadHeader !== undefined;
+export function isBlindedBeaconBlock(block: FullOrBlindedBeaconBlock): block is BlindedBeaconBlock {
+  return isBlindedBeaconBlockBody(block.body);
+}
+
+export function isBlindedBeaconBlockBody(body: FullOrBlindedBeaconBlockBody): body is BlindedBeaconBlockBody {
+  return (body as BlindedBeaconBlockBody).executionPayloadHeader !== undefined;
 }
 
 export function isBlindedSignedBeaconBlock(

@@ -70,7 +70,7 @@
     "buffer-xor": "^2.0.2"
   },
   "devDependencies": {
-    "@chainsafe/blst": "^0.2.8",
+    "@chainsafe/blst": "^0.2.9",
     "@types/buffer-xor": "^2.0.0",
     "@types/mockery": "^1.4.30",
     "mockery": "^2.1.0"
