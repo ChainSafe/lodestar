@@ -170,8 +170,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     let results: boolean[];
     // Allow for option to use libuv pool for verify or worker pool
     //
-    // Very helpful when syncing finalized, sync may submit +1000 sets so chunkify allows to distribute to many workers
     // Split large array of sets into smaller.
+    // Very helpful when syncing finalized, sync may submit +1000 sets so chunkify allows to distribute to many workers
     if (opts.verifyWithLibuvPool && !this.blsVerifyAllMultiThread) {
       // const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
       results = await Promise.all(
