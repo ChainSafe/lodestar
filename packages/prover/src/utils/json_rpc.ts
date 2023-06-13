@@ -90,16 +90,13 @@ export function mergeBatchReqResp(
   response: JsonRpcBatchResponse
 ): {request: JsonRpcRequest; response: JsonRpcResponse}[] {
   const result = [];
-
   for (const [index, req] of payload.entries()) {
     if (isRequest(req)) {
-      if (response[index].id !== req.id) {
-        throw new Error("Invalid batch response");
-      }
+      // Some providers return raw json-rpc response, some return only result
+      // we need to just merge the result back based on the provider
       result.push({request: req, response: response[index]});
     }
   }
-
   return result;
 }
 
