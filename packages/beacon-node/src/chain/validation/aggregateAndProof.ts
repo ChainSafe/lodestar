@@ -177,7 +177,7 @@ export async function validateGossipAggregateAndProof(
   ];
   // no need to write to SeenAttestationDatas
 
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
+  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, verifyWithLibuvPool: true}))) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
   }
 
