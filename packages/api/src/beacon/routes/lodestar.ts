@@ -77,6 +77,11 @@ export type LodestarNodePeer = NodePeer & {
 export type Api = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
   writeHeapdump(dirpath?: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
+  /** Trigger to write 10m network thread profile to disk */
+  writeNetworkThreadProfile(
+    duration?: number,
+    dirpath?: string
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
   /** TODO: description */
   getLatestWeakSubjectivityCheckpointEpoch(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: Epoch}}>>;
   /** TODO: description */
@@ -125,6 +130,7 @@ export type Api = {
  */
 export const routesData: RoutesData<Api> = {
   writeHeapdump: {url: "/eth/v1/lodestar/writeheapdump", method: "POST"},
+  writeNetworkThreadProfile: {url: "/eth/v1/lodestar/write_network_thread_profile", method: "POST"},
   getLatestWeakSubjectivityCheckpointEpoch: {url: "/eth/v1/lodestar/ws_epoch", method: "GET"},
   getSyncChainsDebugState: {url: "/eth/v1/lodestar/sync-chains-debug-state", method: "GET"},
   getGossipQueueItems: {url: "/eth/v1/lodestar/gossip-queue-items/:gossipType", method: "GET"},
@@ -145,6 +151,7 @@ export const routesData: RoutesData<Api> = {
 
 export type ReqTypes = {
   writeHeapdump: {query: {dirpath?: string}};
+  writeNetworkThreadProfile: {query: {duration?: number; dirpath?: string}};
   getLatestWeakSubjectivityCheckpointEpoch: ReqEmpty;
   getSyncChainsDebugState: ReqEmpty;
   getGossipQueueItems: {params: {gossipType: string}};
@@ -168,6 +175,11 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     writeHeapdump: {
       writeReq: (dirpath) => ({query: {dirpath}}),
       parseReq: ({query}) => [query.dirpath],
+      schema: {query: {dirpath: Schema.String}},
+    },
+    writeNetworkThreadProfile: {
+      writeReq: (duration, dirpath) => ({query: {duration, dirpath}}),
+      parseReq: ({query}) => [query.duration, query.dirpath],
       schema: {query: {dirpath: Schema.String}},
     },
     getLatestWeakSubjectivityCheckpointEpoch: reqEmpty,
@@ -212,6 +224,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 export function getReturnTypes(): ReturnTypes<Api> {
   return {
     writeHeapdump: sameType(),
+    writeNetworkThreadProfile: sameType(),
     getLatestWeakSubjectivityCheckpointEpoch: sameType(),
     getSyncChainsDebugState: jsonType("snake"),
     getGossipQueueItems: jsonType("snake"),
