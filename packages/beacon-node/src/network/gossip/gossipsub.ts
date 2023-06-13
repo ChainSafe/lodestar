@@ -294,7 +294,7 @@ export class Eth2Gossipsub extends GossipSub {
 
   private onValidationResult(data: NetworkEventData[NetworkEvent.gossipMessageValidationResult]): void {
     // TODO: reportMessageValidationResult should take PeerIdStr since it only uses string version
-    this.reportMessageValidationResult(data.msgId, peerIdFromString(data.propagationSource), data.acceptance);
+    this.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
   }
 }
 
