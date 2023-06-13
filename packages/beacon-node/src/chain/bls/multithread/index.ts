@@ -14,7 +14,7 @@ import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
 import {Metrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
-import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
+import {asyncVerifySignatureSetsMaybeBatch, verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 import {defaultPoolSize} from "./poolSize.js";
@@ -127,7 +127,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     const implementation = bls.implementation;
 
     // Use compressed for herumi for now.
-    // THe worker is not able to deserialize from uncompressed
+    // The worker is not able to deserialize from uncompressed
     // `Error: err _wrapDeserialize`
     this.format = implementation === "blst-native" ? PointFormat.uncompressed : PointFormat.compressed;
     this.workers = this.createWorkers(implementation, defaultPoolSize);
@@ -167,20 +167,38 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       }
     }
 
-    // Split large array of sets into smaller.
+    let results: boolean[];
+    // Allow for option to use libuv pool for verify or worker pool
+    //
     // Very helpful when syncing finalized, sync may submit +1000 sets so chunkify allows to distribute to many workers
-    const results = await Promise.all(
-      chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map((setsWorker) =>
-        this.queueBlsWork({
-          opts,
-          sets: setsWorker.map((s) => ({
-            publicKey: getAggregatedPubkey(s).toBytes(this.format),
-            message: s.signingRoot,
-            signature: s.signature,
-          })),
-        })
-      )
-    );
+    // Split large array of sets into smaller.
+    if (opts.verifyWithLibuvPool && !this.blsVerifyAllMultiThread) {
+      // const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
+      results = await Promise.all(
+        chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map((chunk) =>
+          asyncVerifySignatureSetsMaybeBatch(
+            chunk.map((s) => ({
+              publicKey: getAggregatedPubkey(s).toBytes(PointFormat.uncompressed),
+              message: s.signingRoot,
+              signature: s.signature,
+            }))
+          )
+        )
+      );
+    } else {
+      results = await Promise.all(
+        chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map((setsWorker) =>
+          this.queueBlsWork({
+            opts,
+            sets: setsWorker.map((s) => ({
+              publicKey: getAggregatedPubkey(s).toBytes(this.format),
+              message: s.signingRoot,
+              signature: s.signature,
+            })),
+          })
+        )
+      );
+    }
 
     // .every on an empty array returns true
     if (results.length === 0) {

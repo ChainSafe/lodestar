@@ -15,6 +15,11 @@ export type VerifySignatureOpts = {
    * Ignore the batchable option if this is true.
    */
   verifyOnMainThread?: boolean;
+
+  /**
+   * Use libuv worker pool to verify signatures with await and new blst bindings.
+   */
+  verifyWithLibuvPool?: boolean;
 };
 
 export interface IBlsVerifier {
