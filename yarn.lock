@@ -545,23 +545,22 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/is-ip/-/is-ip-2.0.1.tgz#62cb285669d91f88fd9fa285048dde3882f0993b"
   integrity sha512-nqSJ8u2a1Rv9FYbyI8qpDhTYujaKEyLknNrTejLYoSWmdeg+2WB7R6BZqPZYfrJzDxVi3rl6ZQuoaEvpKRZWgQ==
 
-"@chainsafe/libp2p-gossipsub@^8.0.0":
+"@chainsafe/libp2p-gossipsub@chainsafe/js-libp2p-gossipsub#maschad/fix/tag-peers-on-graft":
   version "8.0.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-gossipsub/-/libp2p-gossipsub-8.0.0.tgz#ab0fa001650ba9d856ebe081474b8d9580791da1"
-  integrity sha512-0cnjE2ND0T6VeqIlzBghmR8aalssQUNF3RtGzrI31VWNF1D8RSayyg32A8PHRUiNKxpl+CMm9xwk9NkBRf3J4g==
+  resolved "https://codeload.github.com/chainsafe/js-libp2p-gossipsub/tar.gz/aa07178847b072dc7601560300fe6470f4ac5d6e"
   dependencies:
     "@libp2p/crypto" "^1.0.3"
-    "@libp2p/interface-connection" "^5.0.1"
+    "@libp2p/interface-connection" "^5.1.0"
     "@libp2p/interface-connection-manager" "^3.0.1"
     "@libp2p/interface-keys" "^1.0.3"
-    "@libp2p/interface-peer-id" "^2.0.0"
+    "@libp2p/interface-peer-id" "^2.0.2"
     "@libp2p/interface-peer-store" "^2.0.3"
     "@libp2p/interface-pubsub" "^4.0.0"
     "@libp2p/interface-registrar" "^2.0.3"
     "@libp2p/interfaces" "^3.2.0"
     "@libp2p/logger" "^2.0.0"
-    "@libp2p/peer-id" "^2.0.0"
-    "@libp2p/peer-record" "^5.0.0"
+    "@libp2p/peer-id" "^2.0.3"
+    "@libp2p/peer-record" "^5.0.3"
     "@libp2p/pubsub" "^7.0.1"
     "@libp2p/topology" "^4.0.0"
     "@multiformats/multiaddr" "^12.0.0"
