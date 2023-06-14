@@ -10,7 +10,7 @@ import {ELRpc} from "../../src/utils/rpc.js";
 describe("web3_provider", () => {
   const sandbox = sinon.createSandbox();
 
-  beforeEach(() => {
+  afterEach(() => {
     sandbox.restore();
   });
 

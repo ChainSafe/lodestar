@@ -10,7 +10,7 @@ export type StartArgs = {
   beaconBootnodes?: string[];
   wsCheckpoint?: string;
   unverifiedWhitelist?: string[];
-  requestTimeout?: number;
+  requestTimeout: number;
 };
 
 export type StartOptions = {
@@ -45,7 +45,8 @@ export const startOptions: CliCommandOptions<StartArgs> = {
   },
 
   requestTimeout: {
-    description: `Number of ms to wait for a response from the execution node. Default is ${DEFAULT_PROXY_REQUEST_TIMEOUT}.`,
+    description: "Number of ms to wait for a response from the execution node.",
+    default: DEFAULT_PROXY_REQUEST_TIMEOUT,
     type: "number",
     demandOption: false,
     group: "execution",

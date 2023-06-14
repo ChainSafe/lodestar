@@ -72,7 +72,7 @@ export async function getVMWithState({
     storageKeysMap[address] = storageKeys;
   }
 
-  // If from address is not present then we have to fetch it with for all keys
+  // If from address is not present then we have to fetch it for all keys
   if (isNullish(storageKeysMap[from])) {
     storageKeysMap[from] = [];
   }
