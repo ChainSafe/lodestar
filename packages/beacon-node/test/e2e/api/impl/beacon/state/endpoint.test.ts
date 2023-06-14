@@ -9,7 +9,7 @@ import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
 import {BeaconNode} from "../../../../../../src/node/nodejs.js";
 
 describe("beacon state api", function () {
-  this.timeout("10 min");
+  this.timeout("30s");
 
   const restPort = 9596;
   const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
