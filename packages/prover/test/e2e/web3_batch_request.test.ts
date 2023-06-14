@@ -3,22 +3,7 @@ import {expect} from "chai";
 import Web3 from "web3";
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
-
-const rpcURL = "http://0.0.0.0:8001";
-const beaconUrl = "http://0.0.0.0:5001";
-// Wait for at least teh capella fork to be started
-const secondsPerSlot = 4;
-const altairForkEpoch = 1;
-const bellatrixForkEpoch = 2;
-const capellaForkEpoch = 3;
-const genesisDelaySeconds = 30 * secondsPerSlot;
-const config = {
-  ALTAIR_FORK_EPOCH: altairForkEpoch,
-  BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
-  CAPELLA_FORK_EPOCH: capellaForkEpoch,
-  GENESIS_DELAY: genesisDelaySeconds,
-  SECONDS_PER_SLOT: secondsPerSlot,
-};
+import {rpcURL, beaconUrl, config} from "../utils/e2e_env.js";
 
 describe("web3_batch_requests", function () {
   // Give some margin to sync light client

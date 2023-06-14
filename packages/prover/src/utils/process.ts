@@ -9,9 +9,9 @@ import {eth_getBlockByNumber} from "../verified_requests/eth_getBlockByNumber.js
 import {eth_getCode} from "../verified_requests/eth_getCode.js";
 import {eth_call} from "../verified_requests/eth_call.js";
 import {eth_estimateGas} from "../verified_requests/eth_estimateGas.js";
-import {ELRpc} from "./execution.js";
 import {getResponseForRequest, isBatchRequest, isRequest} from "./json_rpc.js";
 import {isNullish} from "./validation.js";
+import {ELRpc} from "./rpc.js";
 
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
 export const verifiableMethodHandlers: Record<string, ELVerifiedRequestHandler<any, any>> = {
@@ -92,8 +92,8 @@ export async function processAndVerifyRequest({
 
   if (nonVerifiable.length > 0) {
     logger.warn("Forwarding non-verifiable requests to EL provider.", {count: nonVerifiable.length});
-    const response = await rpc.batchRequest(nonVerifiable);
-    nonVerifiedResponses.push(...response);
+    const response = await rpc.batchRequest(nonVerifiable, {raiseError: false});
+    nonVerifiedResponses.push(...response.map((r) => r.response));
   }
 
   for (const request of blocked) {
