@@ -3,7 +3,7 @@ import {NetworkName} from "@lodestar/config/networks";
 import {Logger, LogLevel} from "@lodestar/utils";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
 import {JsonRpcRequest, JsonRpcRequestOrBatch, JsonRpcResponse, JsonRpcResponseOrBatch} from "./types.js";
-import {ELRpc} from "./utils/execution.js";
+import {ELRpc} from "./utils/rpc.js";
 
 export enum LCTransport {
   Rest = "Rest",

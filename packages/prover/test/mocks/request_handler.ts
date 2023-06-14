@@ -5,8 +5,18 @@ import {PresetName} from "@lodestar/params";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {ELVerifiedRequestHandlerOpts} from "../../src/interfaces.js";
 import {ProofProvider} from "../../src/proof_provider/proof_provider.js";
-import {ELBlock, ELTransaction, JsonRpcRequestPayload, JsonRpcResponse} from "../../src/types.js";
+import {
+  ELBlock,
+  ELTransaction,
+  JsonRpcBatchRequest,
+  JsonRpcBatchResponse,
+  JsonRpcRequestOrBatch,
+  JsonRpcRequestPayload,
+  JsonRpcResponse,
+  JsonRpcResponseOrBatch,
+} from "../../src/types.js";
 import {isNullish} from "../../src/utils/validation.js";
+import {isBatchRequest, mergeBatchReqResp} from "../../src/utils/json_rpc.js";
 
 type Writeable<T> = {
   -readonly [K in keyof T]?: T[K] extends object ? Writeable<T[K]> : T[K];
@@ -24,7 +34,7 @@ export interface TestFixture<R = unknown, P = unknown[]> {
     executionPayload: Record<string, unknown>;
     headers: {header: {message: {slot: string}}};
   };
-  dependentRequests: {payload: JsonRpcRequestPayload; response: Writeable<JsonRpcResponse>}[];
+  dependentRequests: {payload: JsonRpcRequestOrBatch; response: Writeable<JsonRpcResponseOrBatch>}[];
 }
 
 function matchTransaction(value: ELTransaction, expected: ELTransaction): boolean {
@@ -74,6 +84,16 @@ function getPayloadParamsMatcher(expected: unknown[]): sinon.SinonMatcher {
   }, "payload match params");
 }
 
+function getBatchPayloadMatcher(expected: JsonRpcBatchRequest): sinon.SinonMatcher {
+  return sinon.match(function (value: JsonRpcBatchRequest): boolean {
+    for (const [index, item] of value.entries()) {
+      if (item.method !== expected[index].method) return false;
+      if (!matchParams(item.params, expected[index].params)) return false;
+    }
+    return true;
+  }, "batch payload match");
+}
+
 export function generateReqHandlerOptionsMock(
   data: TestFixture,
   config: ForkConfig
@@ -96,6 +116,7 @@ export function generateReqHandlerOptionsMock(
     network: data.network as NetworkName,
     rpc: {
       request: sinon.stub(),
+      batchRequest: sinon.stub(),
     },
   };
 
@@ -103,10 +124,16 @@ export function generateReqHandlerOptionsMock(
     .withArgs(data.request.method, getPayloadParamsMatcher(data.request.params), sinon.match.any)
     .resolves(data.response);
 
-  for (const req of data.dependentRequests) {
-    options.rpc.request
-      .withArgs(req.payload.method, getPayloadParamsMatcher(req.payload.params), sinon.match.any)
-      .resolves(req.response);
+  for (const {payload, response} of data.dependentRequests) {
+    if (isBatchRequest(payload)) {
+      options.rpc.batchRequest
+        .withArgs(getBatchPayloadMatcher(payload), sinon.match.any)
+        .resolves(mergeBatchReqResp(payload, response as JsonRpcBatchResponse));
+    } else {
+      options.rpc.request
+        .withArgs(payload.method, getPayloadParamsMatcher(payload.params), sinon.match.any)
+        .resolves(response);
+    }
   }
 
   options.rpc.request

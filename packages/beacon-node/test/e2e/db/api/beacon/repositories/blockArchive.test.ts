@@ -13,7 +13,7 @@ describe("BlockArchiveRepository", function () {
   });
 
   after(async () => {
-    await db.stop();
+    await db.close();
   });
 
   it("batchPutBinary should result in the same to batchPut", async () => {

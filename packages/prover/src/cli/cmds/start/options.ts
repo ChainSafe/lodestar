@@ -1,3 +1,4 @@
+import {DEFAULT_PROXY_REQUEST_TIMEOUT} from "../../../constants.js";
 import {LCTransport} from "../../../interfaces.js";
 import {CliCommandOptions} from "../../../utils/command.js";
 import {alwaysAllowedMethods} from "../../../utils/process.js";
@@ -9,6 +10,7 @@ export type StartArgs = {
   beaconBootnodes?: string[];
   wsCheckpoint?: string;
   unverifiedWhitelist?: string[];
+  requestTimeout: number;
 };
 
 export type StartOptions = {
@@ -16,6 +18,7 @@ export type StartOptions = {
   port: number;
   wsCheckpoint?: string;
   unverifiedWhitelist?: string[];
+  requestTimeout: number;
 } & ({transport: LCTransport.Rest; urls: string[]} | {transport: LCTransport.P2P; bootnodes: string[]});
 
 export const startOptions: CliCommandOptions<StartArgs> = {
@@ -37,6 +40,14 @@ export const startOptions: CliCommandOptions<StartArgs> = {
       ","
     )} are always allowed.`,
     type: "array",
+    demandOption: false,
+    group: "execution",
+  },
+
+  requestTimeout: {
+    description: "Number of ms to wait for a response from the execution node.",
+    default: DEFAULT_PROXY_REQUEST_TIMEOUT,
+    type: "number",
     demandOption: false,
     group: "execution",
   },
@@ -80,5 +91,6 @@ export function parseStartArgs(args: StartArgs): StartOptions {
     bootnodes: args.beaconBootnodes ?? [],
     wsCheckpoint: args.wsCheckpoint,
     unverifiedWhitelist: args.unverifiedWhitelist,
+    requestTimeout: args.requestTimeout ?? DEFAULT_PROXY_REQUEST_TIMEOUT,
   };
 }

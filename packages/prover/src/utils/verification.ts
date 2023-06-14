@@ -2,8 +2,9 @@ import {Logger} from "@lodestar/utils";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
 import {ELBlock, ELProof, HexString, JsonRpcRequest} from "../types.js";
 import {bufferToHex} from "./conversion.js";
-import {ELRpc, getELBlock, getELCode, getELProof} from "./execution.js";
+import {getELBlock, getELCode, getELProof} from "./execution.js";
 import {isValidAccount, isValidBlock, isValidCodeHash, isValidStorageKeys} from "./validation.js";
+import {ELRpc} from "./rpc.js";
 
 type VerificationResult<T> = {data: T; valid: true} | {valid: false; data?: undefined};
 
