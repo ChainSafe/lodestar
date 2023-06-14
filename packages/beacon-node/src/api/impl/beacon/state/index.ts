@@ -3,6 +3,7 @@ import {
   BeaconStateAllForks,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
+  computeStartSlotAtEpoch,
   getCurrentEpoch,
 } from "@lodestar/state-transition";
 import {ApiError} from "../../errors.js";
@@ -171,14 +172,17 @@ export function getBeaconStateApi({
         throw new ApiError(400, `No cached state available for stateId: ${stateId}`);
       }
 
-      const shuffling = stateCached.epochCtx.getShufflingAtEpoch(filters?.epoch ?? computeEpochAtSlot(state.slot));
-      const committes = shuffling.committees;
-      const committesFlat = committes.flatMap((slotCommittees, committeeIndex) => {
-        if (filters?.index !== undefined && filters.index !== committeeIndex) {
+      const epoch = filters?.epoch ?? computeEpochAtSlot(state.slot);
+      const startSlot = computeStartSlotAtEpoch(epoch);
+      const shuffling = stateCached.epochCtx.getShufflingAtEpoch(epoch);
+      const committees = shuffling.committees;
+      const committeesFlat = committees.flatMap((slotCommittees, slotInEpoch) => {
+        const slot = startSlot + slotInEpoch;
+        if (filters?.slot !== undefined && filters.slot !== slot) {
           return [];
         }
-        return slotCommittees.flatMap((committee, slot) => {
-          if (filters?.slot !== undefined && filters.slot !== slot) {
+        return slotCommittees.flatMap((committee, committeeIndex) => {
+          if (filters?.index !== undefined && filters.index !== committeeIndex) {
             return [];
           }
           return [
@@ -193,7 +197,7 @@ export function getBeaconStateApi({
 
       return {
         executionOptimistic,
-        data: committesFlat,
+        data: committeesFlat,
       };
     },
 
