@@ -180,6 +180,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
   return {
     [GossipType.beacon_block]: async ({serializedData}, topic, peerIdStr, seenTimestampSec) => {
       const signedBlock = sszDeserialize(topic, serializedData);
+      logger.debug("Handle gossip block", {slot: signedBlock.message.slot, length: serializedData.length});
       // TODO Deneb: Can blocks be received by this topic?
       if (config.getForkSeq(signedBlock.message.slot) >= ForkSeq.deneb) {
         throw new GossipActionError(GossipAction.REJECT, {code: "POST_DENEB_BLOCK"});

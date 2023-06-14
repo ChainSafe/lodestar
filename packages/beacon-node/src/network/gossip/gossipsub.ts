@@ -283,8 +283,8 @@ export class Eth2Gossipsub extends GossipSub {
     // Get seenTimestamp before adding the message to the queue or add async delays
     const seenTimestampSec = Date.now() / 1000;
 
-    // skip validating attestation to test reduce postMessage
-    if (topic.type === GossipType.beacon_attestation) {
+    // skip validating all topics except beacon_block to test reduce postMessage
+    if (topic.type !== GossipType.beacon_block) {
       this.reportMessageValidationResult(msgId, propagationSource, TopicValidatorResult.Accept);
       this.metrics2?.skipValidatingGossipMessage.inc();
       return;
