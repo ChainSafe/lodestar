@@ -21,7 +21,7 @@ describe("ThreadBoundaryError", () => {
     if (!(clonedRequestError instanceof RequestError)) {
       expect.fail("clonedRequestError should be instance of RequestError");
     }
-    expect((clonedRequestError as RequestError).toObject()).to.be.deep.equal(requestError.toObject());
+    expect(clonedRequestError.toObject()).to.be.deep.equal(requestError.toObject());
   });
 
   it("should clone ResponseError through thread boundary", () => {
@@ -37,6 +37,6 @@ describe("ThreadBoundaryError", () => {
     if (!(clonedResponseError instanceof ResponseError)) {
       expect.fail("clonedResponseError should be instance of ResponseError");
     }
-    expect((clonedResponseError as ResponseError).toObject()).to.be.deep.equal(responseError.toObject());
+    expect(clonedResponseError.toObject()).to.be.deep.equal(responseError.toObject());
   });
 });

@@ -1,7 +1,6 @@
-import {PeerId} from "@libp2p/interface-peer-id";
 import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
-import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
+import {PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
@@ -172,10 +171,10 @@ export class Eth2Gossipsub extends GossipSub {
   }
 
   private onScrapeLodestarMetrics(metrics: Eth2GossipsubMetrics): void {
-    const mesh = this["mesh"] as Map<string, Set<string>>;
+    const mesh = this["mesh"];
     const topics = this["topics"] as Map<string, Set<string>>;
-    const peers = this["peers"] as Set<string>;
-    const score = this["score"] as PeerScore;
+    const peers = this["peers"];
+    const score = this["score"];
     const meshPeersByClient = new Map<string, number>();
     const meshPeerIdStrs = new Set<string>();
 
@@ -286,7 +285,7 @@ export class Eth2Gossipsub extends GossipSub {
       msg,
       msgId,
       // Hot path, use cached .toString() version
-      propagationSource: (propagationSource as PeerId).toString(),
+      propagationSource: propagationSource.toString(),
       seenTimestampSec,
       startProcessUnixSec: null,
     });

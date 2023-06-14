@@ -81,7 +81,7 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
   ];
   testCases.map(([testName, blocksWithBlobs]) => {
     it(testName, async () => {
-      const blocks = blocksWithBlobs.map(([block, _blobs]) => block as deneb.SignedBeaconBlock);
+      const blocks = blocksWithBlobs.map(([block, _blobs]) => block);
 
       const blobSidecars = blocksWithBlobs
         .map(([_block, blobs]) => blobs as deneb.BlobSidecars)

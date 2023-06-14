@@ -172,7 +172,7 @@ function getBlockError(e: unknown, block: allForks.SignedBeaconBlock): BlockErro
   if (e instanceof BlockError) {
     return e;
   } else if (e instanceof Error) {
-    const blockError = new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e as Error});
+    const blockError = new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e});
     blockError.stack = e.stack;
     return blockError;
   } else {

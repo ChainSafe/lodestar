@@ -108,7 +108,7 @@ export async function* sendRequest(
       if (e instanceof TimeoutError) {
         throw new RequestError({code: RequestErrorCode.DIAL_TIMEOUT});
       } else {
-        throw new RequestError({code: RequestErrorCode.DIAL_ERROR, error: e as Error});
+        throw new RequestError({code: RequestErrorCode.DIAL_ERROR, error: e});
       }
     });
 

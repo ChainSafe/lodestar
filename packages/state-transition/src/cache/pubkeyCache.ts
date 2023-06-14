@@ -23,7 +23,7 @@ function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
     return hex;
   }
 
-  return Buffer.from(hex as Uint8Array).toString("hex");
+  return Buffer.from(hex).toString("hex");
 }
 
 export class PubkeyIndexMap {
