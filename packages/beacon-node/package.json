@@ -66,7 +66,9 @@
     "*.js"
   ],
   "scripts": {
+    "preinstall": "cd ../../temp-deps/blst-ts; yarn",
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
+    "prebuild": "cd ../../temp-deps/blst-ts; yarn build",
     "build": "tsc -p tsconfig.build.json",
     "build:watch": "yarn run build --watch",
     "build:release": "yarn clean && yarn run build",
@@ -119,7 +121,6 @@
     "@libp2p/prometheus-metrics": "^1.1.3",
     "@libp2p/tcp": "6.1.0",
     "@lodestar/api": "^1.8.0",
-    "@lodestar/blst-ts": "0.0.1",
     "@lodestar/config": "^1.8.0",
     "@lodestar/db": "^1.8.0",
     "@lodestar/fork-choice": "^1.8.0",
@@ -133,6 +134,7 @@
     "@lodestar/validator": "^1.8.0",
     "@multiformats/multiaddr": "^11.0.0",
     "@types/datastore-level": "^3.0.0",
+    "blst-ts": "file:../../temp-deps/blst-ts",
     "buffer-xor": "^2.0.2",
     "c-kzg": "^1.0.9",
     "cross-fetch": "^3.1.4",
