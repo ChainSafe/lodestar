@@ -70,3 +70,5 @@ bindings/node.js
 bindings/emscripten
 bin/
 obj/
+
+!build
