@@ -5,6 +5,10 @@ export type Eth2GossipsubMetrics = ReturnType<typeof createEth2GossipsubMetrics>
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function createEth2GossipsubMetrics(register: RegistryMetricCreator) {
   return {
+    skipValidatingGossipMessage: register.counter({
+      name: "lodestar_gossip_skip_validating_gossip_message_total",
+      help: "Number of gossip messages skipped validation",
+    }),
     gossipPeer: {
       scoreByThreshold: register.gauge<"threshold">({
         name: "lodestar_gossip_peer_score_by_threshold_count",

@@ -1,4 +1,5 @@
 import {PeerId} from "@libp2p/interface-peer-id";
+import {TopicValidatorResult} from "@libp2p/interface-pubsub";
 import {GossipSub, GossipsubEvents} from "@chainsafe/libp2p-gossipsub";
 import {SignaturePolicy, TopicStr} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
@@ -80,6 +81,7 @@ export class Eth2Gossipsub extends GossipSub {
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
+  private metrics2: ReturnType<typeof createEth2GossipsubMetrics> | null = null;
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
     const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
@@ -137,6 +139,7 @@ export class Eth2Gossipsub extends GossipSub {
 
     if (metricsRegister) {
       const metrics = createEth2GossipsubMetrics(metricsRegister);
+      this.metrics2 = metrics;
       metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics));
     }
 
@@ -279,6 +282,13 @@ export class Eth2Gossipsub extends GossipSub {
 
     // Get seenTimestamp before adding the message to the queue or add async delays
     const seenTimestampSec = Date.now() / 1000;
+
+    // skip validating attestation to test reduce postMessage
+    if (topic.type === GossipType.beacon_attestation) {
+      this.reportMessageValidationResult(msgId, propagationSource, TopicValidatorResult.Accept);
+      this.metrics2?.skipValidatingGossipMessage.inc();
+      return;
+    }
 
     // Emit message to network processor
     this.events.emit(NetworkEvent.pendingGossipsubMessage, {
