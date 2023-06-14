@@ -3,7 +3,7 @@ import {expect} from "chai";
 import Web3 from "web3";
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
-import {rpcURL, beaconUrl, config} from "../utils/e2e_env.js";
+import {rpcUrl, beaconUrl, config} from "../utils/e2e_env.js";
 
 describe("web3_batch_requests", function () {
   // Give some margin to sync light client
@@ -12,7 +12,7 @@ describe("web3_batch_requests", function () {
   let web3: Web3;
 
   before(() => {
-    const {provider} = createVerifiedExecutionProvider(new Web3.providers.HttpProvider(rpcURL), {
+    const {provider} = createVerifiedExecutionProvider(new Web3.providers.HttpProvider(rpcUrl), {
       transport: LCTransport.Rest,
       urls: [beaconUrl],
       config,
