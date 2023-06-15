@@ -14,6 +14,7 @@ import {getRandPeerIdStr} from "../../utils/peer.js";
 import {BlockSource, getBlockInput} from "../../../src/chain/blocks/types.js";
 import {ClockStopped} from "../../utils/mocks/clock.js";
 import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
+import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
 
 describe("sync / UnknownBlockSync", () => {
   const logger = testLogger();
@@ -65,6 +66,11 @@ describe("sync / UnknownBlockSync", () => {
       event: NetworkEvent.unknownBlock,
       finalizedSlot: 0,
       wrongBlockRoot: true,
+    },
+    {
+      id: "peer returns prefinalized block",
+      event: NetworkEvent.unknownBlock,
+      finalizedSlot: 1,
     },
   ];
 
@@ -130,8 +136,13 @@ describe("sync / UnknownBlockSync", () => {
       const chain: Partial<IBeaconChain> = {
         clock: new ClockStopped(0),
         forkChoice: forkChoice as IForkChoice,
-        processBlock: async ({block}) => {
+        processBlock: async ({block}, opts) => {
           if (!forkChoice.hasBlock(block.message.parentRoot)) throw Error("Unknown parent");
+          const blockSlot = block.message.slot;
+          if (blockSlot <= finalizedSlot && !opts?.ignoreIfFinalized) {
+            // same behavior to BeaconChain to reproduce https://github.com/ChainSafe/lodestar/issues/5650
+            throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
+          }
           // Simluate adding the block to the forkchoice
           const blockRootHex = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
           forkChoiceKnownRoots.add(blockRootHex);
