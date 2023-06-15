@@ -123,7 +123,7 @@ describe("chain / lightclient", function () {
         transport: new LightClientRestTransport(api),
         genesisData: {
           genesisTime: bn.chain.genesisTime,
-          genesisValidatorsRoot: bn.chain.genesisValidatorsRoot as Uint8Array,
+          genesisValidatorsRoot: bn.chain.genesisValidatorsRoot,
         },
         checkpointRoot: fromHexString(head.block),
       });
@@ -146,10 +146,7 @@ describe("chain / lightclient", function () {
               throw Error(`LC head state not in cache ${stateRootHex}`);
             }
 
-            const stateLcFromProof = ssz.altair.BeaconState.createFromProof(
-              proof,
-              header.beacon.stateRoot as Uint8Array
-            );
+            const stateLcFromProof = ssz.altair.BeaconState.createFromProof(proof, header.beacon.stateRoot);
             expect(toHexString(stateLcFromProof.latestBlockHeader.bodyRoot)).to.equal(
               toHexString(lcHeadState.latestBlockHeader.bodyRoot),
               `Recovered 'latestBlockHeader.bodyRoot' from state ${stateRootHex} not correct`

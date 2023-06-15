@@ -68,18 +68,13 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
 
   execution_payload: (state, testCase: {body: bellatrix.BeaconBlockBody; execution: {execution_valid: boolean}}) => {
     const fork = state.config.getForkSeq(state.slot);
-    blockFns.processExecutionPayload(
-      fork,
-      state as CachedBeaconStateAllForks as CachedBeaconStateBellatrix,
-      testCase.body,
-      {
-        executionPayloadStatus: testCase.execution.execution_valid
-          ? ExecutionPayloadStatus.valid
-          : ExecutionPayloadStatus.invalid,
-        // TODO Deneb: Make this value dynamic on fork Deneb
-        dataAvailableStatus: DataAvailableStatus.preDeneb,
-      }
-    );
+    blockFns.processExecutionPayload(fork, state as CachedBeaconStateBellatrix, testCase.body, {
+      executionPayloadStatus: testCase.execution.execution_valid
+        ? ExecutionPayloadStatus.valid
+        : ExecutionPayloadStatus.invalid,
+      // TODO Deneb: Make this value dynamic on fork Deneb
+      dataAvailableStatus: DataAvailableStatus.preDeneb,
+    });
   },
 
   bls_to_execution_change: (state, testCase: {address_change: capella.SignedBLSToExecutionChange}) => {

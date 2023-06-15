@@ -211,7 +211,7 @@ export function jsonType<T extends Record<string, unknown> | Record<string, unkn
 export function sameType<T>(): TypeJson<T> {
   return {
     toJson: (val) => val as unknown,
-    fromJson: (json) => json as unknown as T,
+    fromJson: (json) => json as T,
   };
 }
 

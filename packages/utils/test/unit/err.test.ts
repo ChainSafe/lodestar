@@ -28,11 +28,11 @@ describe("Result Err", () => {
     for (const [i, value] of values.entries()) {
       it(`${i} Ok(${String(value)})`, () => {
         // Any value must not be detected as error
-        expectEquals(isErr(value as Result<any, Error>), false);
+        expectEquals(isErr(value), false);
       });
       it(`${i} Err(${String(value)})`, () => {
         // Any value can be wrapped in Err
-        expectEquals(isErr(Err(value as Result<any, Error>)), true);
+        expectEquals(isErr(Err(value)), true);
       });
     }
   });

@@ -8,7 +8,6 @@ import {Validator} from "@lodestar/validator";
 import {PubkeyHex} from "@lodestar/validator/src/types";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {ClockEvent} from "../../../src/util/clock.js";
-import {Network} from "../../../src/network/index.js";
 import {connect} from "../../utils/network.js";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
@@ -126,7 +125,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       genesisTime: bn.chain.getHeadState().genesisTime,
     });
 
-    await connect(bn2.network as Network, bn.network);
+    await connect(bn2.network, bn.network);
 
     expect(validators[0].isRunning).to.be.equal(true, "validator without doppelganger protection should be running");
     expect(validatorsWithDoppelganger[0].isRunning).to.be.equal(
@@ -206,7 +205,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       doppelgangerProtectionEnabled: false,
     });
 
-    await connect(bn2.network as Network, bn.network);
+    await connect(bn2.network, bn.network);
 
     expect(validators[0].isRunning).to.be.equal(true, "validator without doppelganger protection should be running");
     expect(validatorsWithDoppelganger[0].isRunning).to.be.equal(

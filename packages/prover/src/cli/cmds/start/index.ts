@@ -1,4 +1,4 @@
-import {CliCommand, CliCommandOptions} from "../../../utils/command.js";
+import {CliCommand} from "../../../utils/command.js";
 import {GlobalArgs} from "../../options.js";
 import {proverProxyStartHandler} from "./handler.js";
 import {StartArgs, startOptions} from "./options.js";
@@ -13,6 +13,6 @@ export const proverProxyStartCommand: CliCommand<StartArgs, GlobalArgs> = {
       description: "Start a proxy server and connect to the sepolia testnet",
     },
   ],
-  options: startOptions as CliCommandOptions<StartArgs>,
+  options: startOptions,
   handler: proverProxyStartHandler,
 };

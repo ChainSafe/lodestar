@@ -2,7 +2,6 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ApiClientResponse} from "../../interfaces.js";
 import {HttpStatusCode} from "../../utils/client/httpStatusCode.js";
 import {generateGenericJsonClient, getFetchOptsSerializers, IHttpClient} from "../../utils/client/index.js";
-import {ReturnTypes} from "../../utils/types.js";
 import {StateId} from "../routes/beacon/state.js";
 import {Api, getReqSerializers, getReturnTypes, ReqTypes, routesData, StateFormat} from "../routes/debug.js";
 
@@ -16,12 +15,7 @@ export function getClient(_config: ChainForkConfig, httpClient: IHttpClient): Ap
   const reqSerializers = getReqSerializers();
   const returnTypes = getReturnTypes();
   // Some routes return JSON, use a client auto-generator
-  const client = generateGenericJsonClient<Api, ReqTypes>(
-    routesData,
-    reqSerializers,
-    returnTypes as ReturnTypes<Api>,
-    httpClient
-  );
+  const client = generateGenericJsonClient<Api, ReqTypes>(routesData, reqSerializers, returnTypes, httpClient);
   // For `getState()` generate request serializer
   const fetchOptsSerializers = getFetchOptsSerializers<Api, ReqTypes>(routesData, reqSerializers);
 
