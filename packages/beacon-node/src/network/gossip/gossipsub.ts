@@ -5,8 +5,9 @@ import {PeerScore, PeerScoreParams} from "@chainsafe/libp2p-gossipsub/score";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "@chainsafe/libp2p-gossipsub/metrics";
 import {BeaconConfig} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
-import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
+import {Logger, Map2d, Map2dArr, sleep} from "@lodestar/utils";
 
+import type {RPC} from "@chainsafe/libp2p-gossipsub/dist/src/message/rpc.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {peerIdFromString} from "../../util/peerId.js";
 import {PeersData} from "../peers/peersData.js";
@@ -81,6 +82,8 @@ export class Eth2Gossipsub extends GossipSub {
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
 
+  private lastYield = Date.now();
+
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
     const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
     const gossipTopicCache = new GossipTopicCache(modules.config);
@@ -148,6 +151,28 @@ export class Eth2Gossipsub extends GossipSub {
     if (!opts.skipParamsLog) {
       this.logger.debug("Gossipsub score params", {params: JSON.stringify(scoreParams)});
     }
+
+    // @ts-expect-error overriding a private method
+    this.validateReceivedMessage = async (propagationSource: PeerId, rpcMsg: RPC.IMessage): Promise<unknown> => {
+      const now = Date.now();
+      if (now - this.lastYield > 30) {
+        this.lastYield = now;
+        await sleep(0);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
+      return super["validateReceivedMessage"](propagationSource, rpcMsg);
+    };
+
+    // @ts-expect-error overriding a private method
+    this.handleReceivedMessage = async (from: PeerId, rpcMsg: RPC.IMessage): Promise<void> => {
+      const now = Date.now();
+      if (now - this.lastYield > 30) {
+        this.lastYield = now;
+        await sleep(0);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
+      return super["handleReceivedMessage"](from, rpcMsg);
+    };
   }
 
   /**

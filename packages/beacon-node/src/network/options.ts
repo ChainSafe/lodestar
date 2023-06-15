@@ -37,5 +37,5 @@ export const defaultNetworkOptions: NetworkOptions = {
   gossipsubDHigh: 9,
   ...defaultGossipHandlerOpts,
   // TODO set to false in order to release 1.9.0 in a timely manner
-  useWorker: false,
+  useWorker: true,
 };
