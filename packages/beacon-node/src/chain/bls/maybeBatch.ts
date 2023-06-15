@@ -1,4 +1,4 @@
-import * as blstTs from "blst-ts";
+import blstTs from "blst-ts";
 import {CoordType, PublicKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 
