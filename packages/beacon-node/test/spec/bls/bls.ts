@@ -1,3 +1,4 @@
+import blstTs from "blst-ts";
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
 import {toHexString} from "@lodestar/utils";
@@ -80,11 +81,11 @@ function fast_aggregate_verify(input: {pubkeys: string[]; message: string; signa
 function batch_verify(input: {pubkeys: string[]; messages: string[]; signatures: string[]}): boolean | null {
   const {pubkeys, messages, signatures} = input;
   try {
-    return bls.Signature.verifyMultipleSignatures(
+    return blstTs.verifyMultipleAggregateSignaturesSync(
       pubkeys.map((pubkey, i) => ({
-        publicKey: bls.PublicKey.fromBytes(fromHexString(pubkey), CoordType.jacobian, true),
-        message: fromHexString(messages[i]),
-        signature: bls.Signature.fromBytes(fromHexString(signatures[i]), undefined, true),
+        publicKey: fromHexString(pubkey),
+        msg: fromHexString(messages[i]),
+        signature: fromHexString(signatures[i]),
       }))
     );
   } catch (e) {
@@ -118,8 +119,12 @@ function sign(input: {privkey: string; message: string}): string | null {
  * https://github.com/ethereum/bls12-381-tests/blob/master/formats/verify.md
  */
 function verify(input: {pubkey: string; message: string; signature: string}): boolean {
-  const {pubkey, message, signature} = input;
-  return bls.verify(fromHexString(pubkey), fromHexString(message), fromHexString(signature));
+  try {
+    const {pubkey, message, signature} = input;
+    return blstTs.verifySync(fromHexString(message), fromHexString(pubkey), fromHexString(signature));
+  } catch {
+    return false;
+  }
 }
 
 /**
