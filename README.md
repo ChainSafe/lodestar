@@ -30,7 +30,7 @@
 ## Prerequisites
 
 - :gear: [NodeJS](https://nodejs.org/) (LTS)
-- :toolbox: [Yarn](https://yarnpkg.com/)/[Lerna](https://lerna.js.org/)
+- :toolbox: [Yarn](https://yarnpkg.com/)
 
 ###### Developer Quickstart:
 
