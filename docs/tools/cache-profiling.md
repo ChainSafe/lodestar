@@ -7,6 +7,7 @@
 [brendangregg - perf examples](https://www.brendangregg.com/perf.html)
 [SO - cache misses](https://stackoverflow.com/questions/2486840/linux-c-how-to-profile-time-wasted-due-to-cache-misses)
 [Valgrind tool set](https://valgrind.org/info/tools.html)
+[callgrind_control (can attach to running process)](https://valgrind.org/docs/manual/cl-manual.html)
 [kcachegrind](https://kcachegrind.github.io/html/Home.html)
 [cache locality profiling search](https://www.google.com/search?q=cache+locality+profiling)
 
