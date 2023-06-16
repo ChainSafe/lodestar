@@ -169,7 +169,13 @@ export class UnknownBlockSync {
       return;
     }
 
-    for (const block of getUnknownBlocks(this.pendingBlocks)) {
+    const unknownBlocks = getUnknownBlocks(this.pendingBlocks);
+    if (unknownBlocks.length === 0) {
+      this.logger.debug("No unknown block to download", {pendingBlocks: this.pendingBlocks.size});
+      return;
+    }
+
+    for (const block of unknownBlocks) {
       this.downloadBlock(block, connectedPeers).catch((e) => {
         this.logger.debug("Unexpected error - downloadBlock", {root: block.blockRootHex}, e);
       });
@@ -180,6 +186,11 @@ export class UnknownBlockSync {
     if (block.status !== PendingBlockStatus.pending) {
       return;
     }
+
+    this.logger.verbose("Downloading unknown block", {
+      root: block.blockRootHex,
+      pendingBlocks: this.pendingBlocks.size,
+    });
 
     block.status = PendingBlockStatus.fetching;
     const res = await wrapError(this.fetchUnknownBlockRoot(fromHexString(block.blockRootHex), connectedPeers));
@@ -201,7 +212,14 @@ export class UnknownBlockSync {
       const delaySec = Date.now() / 1000 - (this.chain.genesisTime + blockSlot * this.config.SECONDS_PER_SLOT);
       this.metrics?.syncUnknownBlock.elapsedTimeTillReceived.observe(delaySec);
 
-      if (this.chain.forkChoice.hasBlock(blockInput.block.message.parentRoot)) {
+      const parentInForkchoice = this.chain.forkChoice.hasBlock(blockInput.block.message.parentRoot);
+      this.logger.verbose("Downloaded unknown block", {
+        root: block.blockRootHex,
+        pendingBlocks: this.pendingBlocks.size,
+        parentInForkchoice,
+      });
+
+      if (parentInForkchoice) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
         this.processBlock(block).catch((e) => {
           this.logger.debug("Unexpected error - processBlock", {}, e);
@@ -277,6 +295,9 @@ export class UnknownBlockSync {
     const res = await wrapError(
       this.chain.processBlock(pendingBlock.blockInput, {
         ignoreIfKnown: true,
+        // there could be finalized/head sync at the same time so we need to ignore if finalized
+        // see https://github.com/ChainSafe/lodestar/issues/5650
+        ignoreIfFinalized: true,
         blsVerifyOnMainThread: true,
         // block is validated with correct root, we want to process it as soon as possible
         eagerPersistBlock: true,
