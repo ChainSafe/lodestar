@@ -29,6 +29,7 @@ export class UnknownBlockSync {
   private readonly pendingBlocks = new Map<RootHex, PendingBlock>();
   private readonly knownBadBlocks = new Set<RootHex>();
   private readonly proposerBoostSecWindow: number;
+  private readonly maxPendingBlocks;
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -46,6 +47,7 @@ export class UnknownBlockSync {
     } else {
       this.logger.debug("UnknownBlockSync disabled.");
     }
+    this.maxPendingBlocks = opts?.maxPendingBlocks ?? MAX_PENDING_BLOCKS;
 
     this.proposerBoostSecWindow = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
 
@@ -147,7 +149,7 @@ export class UnknownBlockSync {
     }
 
     // Limit pending blocks to prevent DOS attacks that cause OOM
-    const prunedItemCount = pruneSetToMax(this.pendingBlocks, MAX_PENDING_BLOCKS);
+    const prunedItemCount = pruneSetToMax(this.pendingBlocks, this.maxPendingBlocks);
     if (prunedItemCount > 0) {
       this.logger.warn(`Pruned ${prunedItemCount} pending blocks from UnknownBlockSync`);
     }
