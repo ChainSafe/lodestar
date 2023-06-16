@@ -410,6 +410,10 @@ export class NetworkCore implements INetworkCore {
     return meshPeers;
   }
 
+  async writeNetworkThreadProfile(): Promise<string> {
+    throw new Error("Method not implemented, please configure network thread");
+  }
+
   /**
    * Handle subscriptions through fork transitions, @see FORK_EPOCH_LOOKAHEAD
    */

@@ -239,7 +239,7 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
     toJson: (data) =>
       isSignedBlockContents(data)
         ? AllForksSignedBlockContentsReqSerializer(getSignedBeaconBlockType).toJson(data)
-        : getSignedBeaconBlockType(data as allForks.SignedBeaconBlock).toJson(data as allForks.SignedBeaconBlock),
+        : getSignedBeaconBlockType(data).toJson(data),
 
     fromJson: (data) =>
       (data as {signed_block: unknown}).signed_block !== undefined
@@ -257,9 +257,7 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
       toJson: (data) =>
         isSignedBlindedBlockContents(data)
           ? AllForksSignedBlindedBlockContentsReqSerializer(getSignedBlindedBeaconBlockType).toJson(data)
-          : getSignedBlindedBeaconBlockType(data as allForks.SignedBlindedBeaconBlock).toJson(
-              data as allForks.SignedBlindedBeaconBlock
-            ),
+          : getSignedBlindedBeaconBlockType(data).toJson(data),
 
       fromJson: (data) =>
         (data as {signed_blinded_block: unknown}).signed_blinded_block !== undefined

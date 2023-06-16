@@ -68,6 +68,9 @@ module.exports = {
     "@typescript-eslint/no-floating-promises": "error",
     "@typescript-eslint/no-non-null-assertion": "error",
     "@typescript-eslint/no-require-imports": "error",
+    // We usually type-cast these standard types because the concerned function accepts any type
+    // and we want to TS detect error if original variable type changes
+    "@typescript-eslint/no-unnecessary-type-assertion": ["error", {typesToIgnore: ["string", "bigint", "number"]}],
     "@typescript-eslint/no-unsafe-assignment": "error",
     "@typescript-eslint/no-unsafe-call": "error",
     "@typescript-eslint/no-unsafe-member-access": "error",

@@ -42,7 +42,7 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
       peerIdProto: exportToProtobuf(opts.peerId),
       bindAddr: opts.discv5.bindAddr,
       config: opts.discv5.config ?? {},
-      bootEnrs: opts.discv5.bootEnrs as string[],
+      bootEnrs: opts.discv5.bootEnrs,
       metrics: Boolean(opts.metrics),
       chainConfig: chainConfigFromJson(chainConfigToJson(opts.config)),
       genesisValidatorsRoot: opts.config.genesisValidatorsRoot,

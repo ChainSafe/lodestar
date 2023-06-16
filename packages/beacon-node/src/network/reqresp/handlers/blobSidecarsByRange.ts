@@ -65,11 +65,11 @@ export function* iterateBlobBytesFromWrapper(
   blobSideCarsBytesWrapped: Uint8Array,
   blockSlot: Slot
 ): Iterable<ResponseOutgoing> {
-  const blobSideCarsBytes = blobSideCarsBytesWrapped.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
-  const blobsLen = blobSideCarsBytes.length / BLOBSIDECAR_FIXED_SIZE;
+  const allBlobSideCarsBytes = blobSideCarsBytesWrapped.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
+  const blobsLen = allBlobSideCarsBytes.length / BLOBSIDECAR_FIXED_SIZE;
 
   for (let index = 0; index < blobsLen; index++) {
-    const blobSideCarBytes = blobSideCarsBytes.slice(
+    const blobSideCarBytes = allBlobSideCarsBytes.slice(
       index * BLOBSIDECAR_FIXED_SIZE,
       (index + 1) * BLOBSIDECAR_FIXED_SIZE
     );
@@ -80,7 +80,7 @@ export function* iterateBlobBytesFromWrapper(
       );
     }
     yield {
-      data: blobSideCarsBytes,
+      data: blobSideCarBytes,
       fork: chain.config.getForkName(blockSlot),
     };
   }

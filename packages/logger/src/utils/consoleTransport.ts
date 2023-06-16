@@ -37,7 +37,7 @@ export class ConsoleDynamicLevel extends winston.transports.Console {
   }
 
   _write(info: LogInfo, enc: BufferEncoding, callback: (error?: Error | null | undefined) => void): void {
-    const moduleLevel = this.levelByModule.get((info as LogInfo).module) ?? this.defaultLevel;
+    const moduleLevel = this.levelByModule.get(info.module) ?? this.defaultLevel;
 
     // Min number is highest prio log level
     // levels = {error: 0, warn: 1, info: 2, ...}

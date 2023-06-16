@@ -1,15 +1,19 @@
 import worker from "node:worker_threads";
+import fs from "node:fs";
+import path from "node:path";
 import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import type {WorkerModule} from "@chainsafe/threads/dist/types/worker.js";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {collectNodeJSMetrics, RegistryMetricCreator} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {Clock} from "../../util/clock.js";
 import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {peerIdToString} from "../../util/peerId.js";
+import {profileNodeJS} from "../../util/profile.js";
 import {getNetworkCoreWorkerMetrics} from "./metrics.js";
 import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 import {NetworkCore} from "./networkCore.js";
@@ -32,6 +36,7 @@ if (!parentPort) throw Error("parentPort must be defined");
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
 const peerId = await createFromProtobuf(workerData.peerIdProto);
+const DEFAULT_PROFILE_DURATION = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000;
 
 // TODO: Pass options from main thread for logging
 // TODO: Logging won't be visible in file loggers
@@ -147,6 +152,12 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   dumpGossipPeerScoreStats: () => core.dumpGossipPeerScoreStats(),
   dumpDiscv5KadValues: () => core.dumpDiscv5KadValues(),
   dumpMeshPeers: () => core.dumpMeshPeers(),
+  writeProfile: async (durationMs = DEFAULT_PROFILE_DURATION, dirpath = ".") => {
+    const profile = await profileNodeJS(durationMs);
+    const filePath = path.join(dirpath, `network_thread_${new Date().toISOString()}.cpuprofile`);
+    fs.writeFileSync(filePath, profile);
+    return filePath;
+  },
 };
 
 expose(libp2pWorkerApi as WorkerModule<keyof NetworkWorkerApi>);

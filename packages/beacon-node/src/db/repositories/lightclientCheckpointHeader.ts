@@ -19,7 +19,7 @@ export class CheckpointHeaderRepository extends Repository<Uint8Array, allForks.
 
   // Overrides for multi-fork
   encodeValue(value: allForks.LightClientHeader): Uint8Array {
-    return this.config.getLightClientForkTypes(value.beacon.slot).LightClientHeader.serialize(value) as Uint8Array;
+    return this.config.getLightClientForkTypes(value.beacon.slot).LightClientHeader.serialize(value);
   }
 
   decodeValue(data: Uint8Array): allForks.LightClientHeader {

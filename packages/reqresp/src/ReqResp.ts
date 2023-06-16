@@ -213,7 +213,7 @@ export class ReqResp {
       this.metrics?.incomingRequests.inc({method});
       const timer = this.metrics?.incomingRequestHandlerTime.startTimer({method});
 
-      this.onIncomingRequest?.(peerId, protocol as MixedProtocol);
+      this.onIncomingRequest?.(peerId, protocol);
 
       try {
         await handleRequest({

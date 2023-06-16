@@ -164,8 +164,6 @@ export class BeaconNode {
       loadEthereumTrustedSetup();
     }
 
-    // start db if not already started
-    await db.start();
     // Prune hot db repos
     // TODO: Should this call be awaited?
     await db.pruneHotDb();
@@ -321,7 +319,7 @@ export class BeaconNode {
       await this.chain.close();
       if (this.controller) this.controller.abort();
       await sleep(DELAY_BEFORE_CLOSING_DB_MS);
-      await this.db.stop();
+      await this.db.close();
       this.status = BeaconNodeStatus.closed;
     }
   }

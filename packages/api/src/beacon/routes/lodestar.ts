@@ -77,6 +77,11 @@ export type LodestarNodePeer = NodePeer & {
 export type Api = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
   writeHeapdump(dirpath?: string): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
+  /** Trigger to write 10m network thread profile to disk */
+  writeNetworkThreadProfile(
+    duration?: number,
+    dirpath?: string
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: {filepath: string}}}>>;
   /** TODO: description */
   getLatestWeakSubjectivityCheckpointEpoch(): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: Epoch}}>>;
   /** TODO: description */
@@ -124,27 +129,29 @@ export type Api = {
  * Define javascript values for each route
  */
 export const routesData: RoutesData<Api> = {
-  writeHeapdump: {url: "/eth/v1/lodestar/writeheapdump", method: "POST"},
+  writeHeapdump: {url: "/eth/v1/lodestar/write_heapdump", method: "POST"},
+  writeNetworkThreadProfile: {url: "/eth/v1/lodestar/write_network_thread_profile", method: "POST"},
   getLatestWeakSubjectivityCheckpointEpoch: {url: "/eth/v1/lodestar/ws_epoch", method: "GET"},
-  getSyncChainsDebugState: {url: "/eth/v1/lodestar/sync-chains-debug-state", method: "GET"},
-  getGossipQueueItems: {url: "/eth/v1/lodestar/gossip-queue-items/:gossipType", method: "GET"},
-  getRegenQueueItems: {url: "/eth/v1/lodestar/regen-queue-items", method: "GET"},
-  getBlockProcessorQueueItems: {url: "/eth/v1/lodestar/block-processor-queue-items", method: "GET"},
-  getStateCacheItems: {url: "/eth/v1/lodestar/state-cache-items", method: "GET"},
-  getGossipPeerScoreStats: {url: "/eth/v1/lodestar/gossip-peer-score-stats", method: "GET"},
-  getLodestarPeerScoreStats: {url: "/eth/v1/lodestar/lodestar-peer-score-stats", method: "GET"},
+  getSyncChainsDebugState: {url: "/eth/v1/lodestar/sync_chains_debug_state", method: "GET"},
+  getGossipQueueItems: {url: "/eth/v1/lodestar/gossip_queue_items/:gossipType", method: "GET"},
+  getRegenQueueItems: {url: "/eth/v1/lodestar/regen_queue_items", method: "GET"},
+  getBlockProcessorQueueItems: {url: "/eth/v1/lodestar/block_processor_queue_items", method: "GET"},
+  getStateCacheItems: {url: "/eth/v1/lodestar/state_cache_items", method: "GET"},
+  getGossipPeerScoreStats: {url: "/eth/v1/lodestar/gossip_peer_score_stats", method: "GET"},
+  getLodestarPeerScoreStats: {url: "/eth/v1/lodestar/lodestar_peer_score_stats", method: "GET"},
   runGC: {url: "/eth/v1/lodestar/gc", method: "POST"},
-  dropStateCache: {url: "/eth/v1/lodestar/drop-state-cache", method: "POST"},
+  dropStateCache: {url: "/eth/v1/lodestar/drop_state_cache", method: "POST"},
   connectPeer: {url: "/eth/v1/lodestar/connect_peer", method: "POST"},
   disconnectPeer: {url: "/eth/v1/lodestar/disconnect_peer", method: "POST"},
   getPeers: {url: "/eth/v1/lodestar/peers", method: "GET"},
-  discv5GetKadValues: {url: "/eth/v1/debug/discv5-kad-values", method: "GET"},
-  dumpDbBucketKeys: {url: "/eth/v1/debug/dump-db-bucket-keys/:bucket", method: "GET"},
-  dumpDbStateIndex: {url: "/eth/v1/debug/dump-db-state-index", method: "GET"},
+  discv5GetKadValues: {url: "/eth/v1/debug/discv5_kad_values", method: "GET"},
+  dumpDbBucketKeys: {url: "/eth/v1/debug/dump_db_bucket_keys/:bucket", method: "GET"},
+  dumpDbStateIndex: {url: "/eth/v1/debug/dump_db_state_index", method: "GET"},
 };
 
 export type ReqTypes = {
   writeHeapdump: {query: {dirpath?: string}};
+  writeNetworkThreadProfile: {query: {duration?: number; dirpath?: string}};
   getLatestWeakSubjectivityCheckpointEpoch: ReqEmpty;
   getSyncChainsDebugState: ReqEmpty;
   getGossipQueueItems: {params: {gossipType: string}};
@@ -168,6 +175,11 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     writeHeapdump: {
       writeReq: (dirpath) => ({query: {dirpath}}),
       parseReq: ({query}) => [query.dirpath],
+      schema: {query: {dirpath: Schema.String}},
+    },
+    writeNetworkThreadProfile: {
+      writeReq: (duration, dirpath) => ({query: {duration, dirpath}}),
+      parseReq: ({query}) => [query.duration, query.dirpath],
       schema: {query: {dirpath: Schema.String}},
     },
     getLatestWeakSubjectivityCheckpointEpoch: reqEmpty,
@@ -212,6 +224,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 export function getReturnTypes(): ReturnTypes<Api> {
   return {
     writeHeapdump: sameType(),
+    writeNetworkThreadProfile: sameType(),
     getLatestWeakSubjectivityCheckpointEpoch: sameType(),
     getSyncChainsDebugState: jsonType("snake"),
     getGossipQueueItems: jsonType("snake"),

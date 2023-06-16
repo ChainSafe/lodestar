@@ -135,6 +135,7 @@ export type ExecutionPayloadRpc = {
   blockHash: DATA; // 32 bytes
   transactions: DATA[];
   withdrawals?: WithdrawalRpc[]; // Capella hardfork
+  dataGasUsed?: QUANTITY; // DENEB
   excessDataGas?: QUANTITY; // DENEB
 };
 
@@ -187,9 +188,11 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
     payload.withdrawals = withdrawals.map(serializeWithdrawal);
   }
 
-  // DENEB adds excessDataGas to the ExecutionPayload
-  if ((data as deneb.ExecutionPayload).excessDataGas !== undefined) {
-    payload.excessDataGas = numToQuantity((data as deneb.ExecutionPayload).excessDataGas);
+  // DENEB adds dataGasUsed & excessDataGas to the ExecutionPayload
+  if (ForkSeq[fork] >= ForkSeq.deneb) {
+    const {dataGasUsed, excessDataGas} = data as deneb.ExecutionPayload;
+    payload.dataGasUsed = numToQuantity(dataGasUsed);
+    payload.excessDataGas = numToQuantity(excessDataGas);
   }
 
   return payload;
@@ -251,12 +254,21 @@ export function parseExecutionPayload(
 
   // DENEB adds excessDataGas to the ExecutionPayload
   if (ForkSeq[fork] >= ForkSeq.deneb) {
-    if (data.excessDataGas == null) {
+    const {dataGasUsed, excessDataGas} = data;
+
+    if (dataGasUsed == null) {
+      throw Error(
+        `dataGasUsed missing for ${fork} >= deneb executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+      );
+    }
+    if (excessDataGas == null) {
       throw Error(
         `excessDataGas missing for ${fork} >= deneb executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as deneb.ExecutionPayload).excessDataGas = quantityToBigint(data.excessDataGas);
+
+    (executionPayload as deneb.ExecutionPayload).dataGasUsed = quantityToBigint(dataGasUsed);
+    (executionPayload as deneb.ExecutionPayload).excessDataGas = quantityToBigint(excessDataGas);
   }
 
   return {executionPayload, blockValue, blobsBundle};
