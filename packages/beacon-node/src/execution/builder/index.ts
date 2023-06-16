@@ -7,7 +7,7 @@ import {ExecutionBuilderHttp, ExecutionBuilderHttpOpts, defaultExecutionBuilderH
 export {IExecutionBuilder, ExecutionBuilderHttp, defaultExecutionBuilderHttpOpts};
 
 export type ExecutionBuilderOpts = {mode?: "http"} & ExecutionBuilderHttpOpts;
-export const defaultExecutionBuilderOpts: ExecutionBuilderOpts = {...defaultExecutionBuilderHttpOpts, mode: "http"};
+export const defaultExecutionBuilderOpts: ExecutionBuilderOpts = defaultExecutionBuilderHttpOpts;
 
 export function initializeExecutionBuilder(
   opts: ExecutionBuilderOpts,

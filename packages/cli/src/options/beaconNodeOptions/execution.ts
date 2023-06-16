@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {defaultExecutionEngineHttpOpts, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
 
 export type ExecutionEngineArgs = {
@@ -38,29 +38,28 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
   "execution.urls": {
     description: "Urls to execution client engine API",
     type: "array",
-    default: defaultOptions.executionEngine.mode === "http" ? defaultOptions.executionEngine.urls.join(",") : "",
+    default: defaultExecutionEngineHttpOpts.urls.join(","),
     group: "execution",
   },
 
   "execution.timeout": {
     description: "Timeout in milliseconds for execution engine API HTTP client",
     type: "number",
-    defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.timeout) : "",
+    defaultDescription: String(defaultExecutionEngineHttpOpts.timeout),
     group: "execution",
   },
 
   "execution.retryAttempts": {
     description: "Number of retry attempts when calling execution engine API",
     type: "number",
-    default: defaultOptions.executionEngine.mode === "http" ? defaultOptions.executionEngine.retryAttempts : 1,
+    default: defaultExecutionEngineHttpOpts.retryAttempts,
     group: "execution",
   },
 
   "execution.retryDelay": {
     description: "Delay time in milliseconds between retries when retrying calls to the execution engine API",
     type: "number",
-    default: defaultOptions.executionEngine.mode === "http" ? defaultOptions.executionEngine.retryDelay : 0,
+    default: defaultExecutionEngineHttpOpts.retryDelay,
     group: "execution",
   },
 

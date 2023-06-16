@@ -1,4 +1,4 @@
-import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {defaultExecutionBuilderHttpOpts, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "../../util/index.js";
 
 export type ExecutionBuilderArgs = {
@@ -12,9 +12,7 @@ export type ExecutionBuilderArgs = {
 export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["executionBuilder"] {
   return {
     enabled: args["builder"],
-    urls:
-      args["builder.urls"] ??
-      (defaultOptions.executionBuilder.mode === "http" ? defaultOptions.executionBuilder.urls : []),
+    urls: args["builder.urls"] ?? defaultExecutionBuilderHttpOpts.urls,
     timeout: args["builder.timeout"],
     faultInspectionWindow: args["builder.faultInspectionWindow"],
     allowedFaults: args["builder.allowedFaults"],
@@ -25,23 +23,21 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
   builder: {
     description: "Enable builder interface",
     type: "boolean",
-    default: defaultOptions.executionBuilder.mode === "http" ? defaultOptions.executionBuilder.enabled : false,
+    default: defaultExecutionBuilderHttpOpts.enabled,
     group: "builder",
   },
 
   "builder.urls": {
     description: "Urls hosting the builder API",
     type: "array",
-    defaultDescription:
-      defaultOptions.executionBuilder.mode === "http" ? defaultOptions.executionBuilder.urls.join(",") : "",
+    defaultDescription: defaultExecutionBuilderHttpOpts.urls.join(","),
     group: "builder",
   },
 
   "builder.timeout": {
     description: "Timeout in milliseconds for builder API HTTP client",
     type: "number",
-    defaultDescription:
-      defaultOptions.executionBuilder.mode === "http" ? String(defaultOptions.executionBuilder.timeout) : "",
+    defaultDescription: String(defaultExecutionBuilderHttpOpts.timeout),
     group: "builder",
   },
 
