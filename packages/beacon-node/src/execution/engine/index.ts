@@ -17,7 +17,7 @@ export type ExecutionEngineOpts =
   | ({mode?: "http"} & ExecutionEngineHttpOpts)
   | ({mode: "mock"} & ExecutionEngineMockOpts)
   | {mode: "disabled"};
-export const defaultExecutionEngineOpts: ExecutionEngineOpts = defaultExecutionEngineHttpOpts;
+export const defaultExecutionEngineOpts: ExecutionEngineOpts = {...defaultExecutionEngineHttpOpts, mode: "http"};
 
 export function getExecutionEngineFromBackend(
   backend: JsonRpcBackend,
