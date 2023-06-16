@@ -177,6 +177,7 @@ describe("sync / UnknownBlockSync", () => {
         ...defaultSyncOptions,
         maxPendingBlocks,
       });
+      syncService.subscribeToNetwork();
       if (event === NetworkEvent.unknownBlockParent) {
         network.events?.emit(NetworkEvent.unknownBlockParent, {
           blockInput: getBlockInput.preDeneb(config, blockC, BlockSource.gossip),
@@ -220,6 +221,8 @@ describe("sync / UnknownBlockSync", () => {
           "Wrong blocks in mock ForkChoice"
         );
       }
+
+      syncService.close();
     });
   }
 });
