@@ -53,15 +53,14 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
   "execution.retryAttempts": {
     description: "Number of retry attempts when calling execution engine API",
     type: "number",
-    default:
-      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryAttempts) : "1",
+    default: defaultOptions.executionEngine.mode === "http" ? defaultOptions.executionEngine.retryAttempts : 1,
     group: "execution",
   },
 
   "execution.retryDelay": {
     description: "Delay time in milliseconds between retries when retrying calls to the execution engine API",
     type: "number",
-    default: defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryDelay) : "0",
+    default: defaultOptions.executionEngine.mode === "http" ? defaultOptions.executionEngine.retryDelay : 0,
     group: "execution",
   },
 
