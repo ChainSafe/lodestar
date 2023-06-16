@@ -8,6 +8,7 @@
 [SO - cache misses](https://stackoverflow.com/questions/2486840/linux-c-how-to-profile-time-wasted-due-to-cache-misses)
 [Valgrind tool set](https://valgrind.org/info/tools.html)
 [kcachegrind](https://kcachegrind.github.io/html/Home.html)
+[cache locality profiling search](https://www.google.com/search?q=cache+locality+profiling)
 
 ## Commands
 
