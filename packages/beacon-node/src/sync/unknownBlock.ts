@@ -172,7 +172,7 @@ export class UnknownBlockSync {
     }
 
     const {unknowns, ancestors} = getUnknownAndAncestorBlocks(this.pendingBlocks);
-    // it's rare when there is no pending block
+    // it's rare when there is no unknown block
     // see https://github.com/ChainSafe/lodestar/issues/5649#issuecomment-1594213550
     if (unknowns.length === 0) {
       let processedBlocks = 0;
