@@ -1,5 +1,14 @@
 # Cache Profiling
 
+## Docs
+
+[perf-stat](https://man7.org/linux/man-pages/man1/perf-stat.1.html)
+[kernel profiling](https://perf.wiki.kernel.org/index.php/Tutorial)
+[brendangregg - perf examples](https://www.brendangregg.com/perf.html)
+[SO - cache misses](https://stackoverflow.com/questions/2486840/linux-c-how-to-profile-time-wasted-due-to-cache-misses)
+[Valgrind tool set](https://valgrind.org/info/tools.html)
+[kcachegrind](https://kcachegrind.github.io/html/Home.html)
+
 ## Commands
 
 Basics:
