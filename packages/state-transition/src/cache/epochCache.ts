@@ -13,12 +13,12 @@ import {
   SLOTS_PER_EPOCH,
   WEIGHT_DENOMINATOR,
 } from "@lodestar/params";
-import {LodestarError} from "@lodestar/utils";
+import {LodestarError, intDiv} from "@lodestar/utils";
 import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  getChurnLimit,
+  getChurnLimitGwei,
   isActiveValidator,
   isAggregatorFromCommitteeLength,
   computeSyncPeriodAtEpoch,
@@ -141,7 +141,7 @@ export class EpochCache {
    * Rate at which validators can enter or leave the set per epoch. Depends only on activeIndexes, so it does not
    * change through the epoch. It's used in initiateValidatorExit(). Must be update after changing active indexes.
    */
-  churnLimit: number;
+  churnLimitGwei: number;
   /**
    * Closest epoch with available churn for validators to exit at. May be updated every block as validators are
    * initiateValidatorExit(). This value may vary on each fork of the state.
@@ -155,7 +155,7 @@ export class EpochCache {
    *
    * NOTE: Changes block to block
    */
-  exitQueueChurn: number;
+  exitQueueChurnGwei: number;
 
   /**
    * Total cumulative balance increments through epoch for current target.
@@ -199,9 +199,9 @@ export class EpochCache {
     syncProposerReward: number;
     baseRewardPerIncrement: number;
     totalActiveBalanceIncrements: number;
-    churnLimit: number;
+    churnLimitGwei: number;
     exitQueueEpoch: Epoch;
-    exitQueueChurn: number;
+    exitQueueChurnGwei: number;
     currentTargetUnslashedBalanceIncrements: number;
     previousTargetUnslashedBalanceIncrements: number;
     currentSyncCommitteeIndexed: SyncCommitteeCache;
@@ -222,9 +222,9 @@ export class EpochCache {
     this.syncProposerReward = data.syncProposerReward;
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
     this.totalActiveBalanceIncrements = data.totalActiveBalanceIncrements;
-    this.churnLimit = data.churnLimit;
+    this.churnLimitGwei = data.churnLimitGwei;
     this.exitQueueEpoch = data.exitQueueEpoch;
-    this.exitQueueChurn = data.exitQueueChurn;
+    this.exitQueueChurnGwei = data.exitQueueChurnGwei;
     this.currentTargetUnslashedBalanceIncrements = data.currentTargetUnslashedBalanceIncrements;
     this.previousTargetUnslashedBalanceIncrements = data.previousTargetUnslashedBalanceIncrements;
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
@@ -257,7 +257,7 @@ export class EpochCache {
 
     let totalActiveBalanceIncrements = 0;
     let exitQueueEpoch = computeActivationExitEpoch(currentEpoch);
-    let exitQueueChurn = 0;
+    let exitQueueChurnGwei = 0;
 
     const validators = state.validators.getAllReadonlyValues();
     const validatorCount = validators.length;
@@ -285,13 +285,13 @@ export class EpochCache {
         nextActiveIndices.push(i);
       }
 
-      const {exitEpoch} = validator;
+      const {exitEpoch, effectiveBalance} = validator;
       if (exitEpoch !== FAR_FUTURE_EPOCH) {
         if (exitEpoch > exitQueueEpoch) {
           exitQueueEpoch = exitEpoch;
-          exitQueueChurn = 1;
+          exitQueueChurnGwei = effectiveBalance;
         } else if (exitEpoch === exitQueueEpoch) {
-          exitQueueChurn += 1;
+          exitQueueChurnGwei += effectiveBalance;
         }
       }
     }
@@ -358,11 +358,10 @@ export class EpochCache {
     // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
-    const churnLimit = getChurnLimit(config, currentShuffling.activeIndices.length);
-    if (exitQueueChurn >= churnLimit) {
-      exitQueueEpoch += 1;
-      exitQueueChurn = 0;
-    }
+    const churnLimitGwei = getChurnLimitGwei(config, totalActiveBalanceIncrements);
+    // TODO: Consider state.exitQueueExcessChurn in this computation
+    exitQueueEpoch += intDiv(exitQueueChurnGwei, churnLimitGwei);
+    exitQueueChurnGwei = exitQueueChurnGwei % churnLimitGwei;
 
     // TODO: describe issue. Compute progressive target balances
     // Compute balances from zero, note this state could be mid-epoch so target balances != 0
@@ -397,9 +396,9 @@ export class EpochCache {
       syncProposerReward,
       baseRewardPerIncrement,
       totalActiveBalanceIncrements,
-      churnLimit,
+      churnLimitGwei,
       exitQueueEpoch,
-      exitQueueChurn,
+      exitQueueChurnGwei,
       previousTargetUnslashedBalanceIncrements,
       currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed,
@@ -435,9 +434,9 @@ export class EpochCache {
       syncProposerReward: this.syncProposerReward,
       baseRewardPerIncrement: this.baseRewardPerIncrement,
       totalActiveBalanceIncrements: this.totalActiveBalanceIncrements,
-      churnLimit: this.churnLimit,
+      churnLimitGwei: this.churnLimitGwei,
       exitQueueEpoch: this.exitQueueEpoch,
-      exitQueueChurn: this.exitQueueChurn,
+      exitQueueChurnGwei: this.exitQueueChurnGwei,
       previousTargetUnslashedBalanceIncrements: this.previousTargetUnslashedBalanceIncrements,
       currentTargetUnslashedBalanceIncrements: this.currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
@@ -490,13 +489,15 @@ export class EpochCache {
     // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
-    this.churnLimit = getChurnLimit(this.config, this.currentShuffling.activeIndices.length);
+
+    // TODO: @tuyen should this be next epoch or current epoch total active balance?
+    this.churnLimitGwei = getChurnLimitGwei(this.config, epochTransitionCache.nextEpochTotalActiveBalanceByIncrement);
 
     // Maybe advance exitQueueEpoch at the end of the epoch if there haven't been any exists for a while
     const exitQueueEpoch = computeActivationExitEpoch(currEpoch);
     if (exitQueueEpoch > this.exitQueueEpoch) {
       this.exitQueueEpoch = exitQueueEpoch;
-      this.exitQueueChurn = 0;
+      this.exitQueueChurnGwei = 0;
     }
 
     this.totalActiveBalanceIncrements = epochTransitionCache.nextEpochTotalActiveBalanceByIncrement;

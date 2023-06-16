@@ -48,7 +48,7 @@ export function processEpoch(fork: ForkSeq, state: CachedBeaconStateAllForks, ca
     processInactivityUpdates(state as CachedBeaconStateAltair, cache);
   }
   processRewardsAndPenalties(state, cache);
-  processRegistryUpdates(state, cache);
+  processRegistryUpdates(fork, state, cache);
   processSlashings(state, cache);
   processEth1DataReset(state, cache);
   processEffectiveBalanceUpdates(state, cache);

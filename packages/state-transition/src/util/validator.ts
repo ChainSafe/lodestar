@@ -1,5 +1,5 @@
 import {Epoch, phase0, ValidatorIndex} from "@lodestar/types";
-import {intDiv} from "@lodestar/utils";
+import {EFFECTIVE_BALANCE_INCREMENT, MIN_ACTIVATION_BALANCE} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks} from "../types.js";
 
@@ -35,6 +35,23 @@ export function getActiveValidatorIndices(state: BeaconStateAllForks, epoch: Epo
   return indices;
 }
 
-export function getChurnLimit(config: ChainForkConfig, activeValidatorCount: number): number {
-  return Math.max(config.MIN_PER_EPOCH_CHURN_LIMIT, intDiv(activeValidatorCount, config.CHURN_LIMIT_QUOTIENT));
+// TODO: Return mod EFFECTIVE_BALANCE_INCREMENT
+// https://github.com/michaelneuder/consensus-specs/pull/3/files#r1230944685
+export function getChurnLimitGwei(config: ChainForkConfig, totalActiveBalanceIncrements: number): number {
+  // Number.MAX_SAFE_INTEGER / 1e9 = 9007199
+  return Math.max(
+    // MIN_PER_EPOCH_CHURN_LIMIT = 4, so first line is safe an number
+    config.MIN_PER_EPOCH_CHURN_LIMIT * MIN_ACTIVATION_BALANCE,
+    // CHURN_LIMIT_QUOTIENT = 65536 (mainnet), 4096 (gnosis), 32 (minimal)
+    // Current mainnet EFFECTIVE_BALANCE_INCREMENT = 1ETH, totalActiveBalanceIncrements = 20,000,000
+    //
+    //           CHURN_LIMIT_QUOTIENT   totalActiveBalanceIncrements limit   max token supply
+    // mainnet   65536                  590,295,000,000                      120,000,000
+    // gnosis     4096                   36,893,000,000                        3,000,000
+    // minimal      32                      288,000,000                              ???
+    Number(
+      ((BigInt(totalActiveBalanceIncrements) * BigInt(EFFECTIVE_BALANCE_INCREMENT)) /
+        BigInt(config.CHURN_LIMIT_QUOTIENT)) as bigint
+    )
+  );
 }

@@ -17,6 +17,7 @@ export type BeaconPreset = {
 
   // Gwei Values
   MIN_DEPOSIT_AMOUNT: number;
+  MIN_ACTIVATION_BALANCE: number;
   MAX_EFFECTIVE_BALANCE: number;
   EFFECTIVE_BALANCE_INCREMENT: number;
 
@@ -101,6 +102,7 @@ export const beaconPresetTypes: BeaconPresetTypes = {
 
   // Gwei Values
   MIN_DEPOSIT_AMOUNT: "number",
+  MIN_ACTIVATION_BALANCE: "number",
   MAX_EFFECTIVE_BALANCE: "number",
   EFFECTIVE_BALANCE_INCREMENT: "number",
 

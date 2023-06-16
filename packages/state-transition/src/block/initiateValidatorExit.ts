@@ -1,7 +1,7 @@
-import {FAR_FUTURE_EPOCH} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {CachedBeaconStateAllForks, CachedBeaconStateCapella} from "../types.js";
 
 /**
  * Initiate the exit of the validator with index ``index``.
@@ -24,6 +24,7 @@ import {CachedBeaconStateAllForks} from "../types.js";
  * Forcing consumers to pass the SubTree of `validator` directly mitigates this issue.
  */
 export function initiateValidatorExit(
+  fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   validator: CompositeViewDU<typeof ssz.phase0.Validator>
 ): void {
@@ -34,18 +35,38 @@ export function initiateValidatorExit(
     return;
   }
 
-  // Limits the number of validators that can exit on each epoch.
-  // Expects all state.validators to follow this rule, i.e. no validator.exitEpoch is greater than exitQueueEpoch.
-  // If there the churnLimit is reached at this current exitQueueEpoch, advance epoch and reset churn.
-  if (epochCtx.exitQueueChurn >= epochCtx.churnLimit) {
-    epochCtx.exitQueueEpoch += 1;
-    epochCtx.exitQueueChurn = 1; // = 1 to account for this validator with exitQueueEpoch
+  if (fork >= ForkSeq.capella) {
+    accountExitQueueChurnMAXEB(state as CachedBeaconStateCapella, validator.effectiveBalance);
   } else {
-    // Add this validator to the current exitQueueEpoch churn
-    epochCtx.exitQueueChurn += 1;
+    accountExitQueueChurn(state);
   }
 
   // set validator exit epoch and withdrawable epoch
   validator.exitEpoch = epochCtx.exitQueueEpoch;
   validator.withdrawableEpoch = epochCtx.exitQueueEpoch + config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
+}
+
+function accountExitQueueChurn(state: CachedBeaconStateAllForks): void {
+  // Limits the number of validators that can exit on each epoch.
+  // Expects all state.validators to follow this rule, i.e. no validator.exitEpoch is greater than exitQueueEpoch.
+  // If there the churnLimit is reached at this current exitQueueEpoch, advance epoch and reset churn.
+  if (state.epochCtx.exitQueueChurn >= state.epochCtx.churnLimit) {
+    state.epochCtx.exitQueueEpoch += 1;
+    state.epochCtx.exitQueueChurn = 1; // = 1 to account for this validator with exitQueueEpoch
+  } else {
+    // Add this validator to the current exitQueueEpoch churn
+    state.epochCtx.exitQueueChurn += 1;
+  }
+}
+
+function accountExitQueueChurnMAXEB(state: CachedBeaconStateCapella, effectiveBalance: number): void {
+  if (state.exitQueueChurn + effectiveBalance <= state.epochCtx.churnLimitGwei) {
+    state.exitQueueChurn += effectiveBalance;
+  } else {
+    // Exit balance rolls over to subsequent epoch(s)
+    state.exitQueueChurn = (state.exitQueueChurn + effectiveBalance) % state.epochCtx.churnLimitGwei;
+    state.epochCtx.exitQueueEpoch += Math.floor(
+      state.exitQueueChurn + effectiveBalance / state.epochCtx.churnLimitGwei
+    );
+  }
 }

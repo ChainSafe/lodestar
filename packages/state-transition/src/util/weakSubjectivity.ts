@@ -8,7 +8,7 @@ import {ZERO_HASH} from "../constants/constants.js";
 import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types.js";
 import {computeEpochAtSlot, getCurrentEpoch, computeCheckpointEpochAtStateSlot} from "./epoch.js";
 import {getCurrentSlot} from "./slot.js";
-import {getActiveValidatorIndices, getChurnLimit} from "./validator.js";
+import {getActiveValidatorIndices, getChurnLimitGwei} from "./validator.js";
 
 export const ETH_TO_GWEI = 10 ** 9;
 const SAFETY_DECAY = 10;
@@ -40,7 +40,7 @@ export function computeWeakSubjectivityPeriodCachedState(
   return computeWeakSubjectivityPeriodFromConstituents(
     activeValidatorCount,
     state.epochCtx.totalActiveBalanceIncrements,
-    getChurnLimit(config, activeValidatorCount),
+    getChurnLimitGwei(config, state.epochCtx.totalActiveBalanceIncrements),
     config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
   );
 }
@@ -62,7 +62,7 @@ export function computeWeakSubjectivityPeriod(config: ChainForkConfig, state: Be
   return computeWeakSubjectivityPeriodFromConstituents(
     activeIndices.length,
     totalActiveBalanceIncrements,
-    getChurnLimit(config, activeIndices.length),
+    getChurnLimitGwei(config, totalActiveBalanceIncrements),
     config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
   );
 }
@@ -70,16 +70,18 @@ export function computeWeakSubjectivityPeriod(config: ChainForkConfig, state: Be
 export function computeWeakSubjectivityPeriodFromConstituents(
   activeValidatorCount: number,
   totalBalanceByIncrement: number,
-  churnLimit: number,
+  churnLimitGwei: number,
   minWithdrawabilityDelay: number
 ): number {
+  // TODO: Math here is broken, needs to consider exits as weight
+
   const N = activeValidatorCount;
   // originally const t = Number(totalBalance / BigInt(N) / BigInt(ETH_TO_GWEI));
   // totalBalanceByIncrement = totalBalance / MAX_EFFECTIVE_BALANCE and MAX_EFFECTIVE_BALANCE = ETH_TO_GWEI atm
   // we need to change this calculation just in case MAX_EFFECTIVE_BALANCE != ETH_TO_GWEI
   const t = Math.floor(totalBalanceByIncrement / N);
   const T = MAX_EFFECTIVE_BALANCE / ETH_TO_GWEI;
-  const delta = churnLimit;
+  const delta = churnLimitGwei;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const Delta = MAX_DEPOSITS * SLOTS_PER_EPOCH;
   const D = SAFETY_DECAY;

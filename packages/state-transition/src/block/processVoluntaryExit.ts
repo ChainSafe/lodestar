@@ -1,4 +1,4 @@
-import {FAR_FUTURE_EPOCH} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkSeq} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
 import {isActiveValidator} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
@@ -11,6 +11,7 @@ import {initiateValidatorExit} from "./index.js";
  * PERF: Work depends on number of VoluntaryExit per block. On regular networks the average is 0 / block.
  */
 export function processVoluntaryExit(
+  fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
@@ -20,7 +21,7 @@ export function processVoluntaryExit(
   }
 
   const validator = state.validators.get(signedVoluntaryExit.message.validatorIndex);
-  initiateValidatorExit(state, validator);
+  initiateValidatorExit(fork, state, validator);
 }
 
 export function isValidVoluntaryExit(

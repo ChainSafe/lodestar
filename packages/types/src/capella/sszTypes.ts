@@ -169,6 +169,8 @@ export const BeaconState = new ContainerType(
     nextWithdrawalValidatorIndex: ValidatorIndex, // [New in Capella]
     // Deep history valid from Capella onwards
     historicalSummaries: new ListCompositeType(HistoricalSummary, HISTORICAL_ROOTS_LIMIT), // [New in Capella]
+    activationQueueExcessChurn: UintNum64, // [New in MAXEB]
+    exitQueueExcessChurn: UintNum64, // [New in MAXEB]
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
