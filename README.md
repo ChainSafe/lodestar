@@ -35,7 +35,7 @@
 ###### Developer Quickstart:
 
 ```bash
-lerna bootstrap
+yarn install
 yarn build
 ./lodestar --help
 ```
