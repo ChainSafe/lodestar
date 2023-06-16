@@ -51,11 +51,14 @@ export class BeaconSync implements IBeaconSync {
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
     if (!opts.disableRangeSync) {
+      // prod code
       this.logger.debug("RangeSync enabled.");
       this.rangeSync.on(RangeSyncEvent.completedChain, this.updateSyncState);
       this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
       this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
     } else {
+      // test code, this is needed for Unknown block sync sim test
+      this.unknownBlockSync.subscribeToNetwork();
       this.logger.debug("RangeSync disabled.");
     }
 
