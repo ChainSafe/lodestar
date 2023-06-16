@@ -84,8 +84,7 @@ type WorkerStatus =
   | {code: WorkerStatusCode.notInitialized}
   | {code: WorkerStatusCode.initializing; initPromise: Promise<WorkerApi>}
   | {code: WorkerStatusCode.initializationError; error: Error}
-  | {code: WorkerStatusCode.idle; workerApi: WorkerApi}
-  | {code: WorkerStatusCode.running; workerApi: WorkerApi};
+  | {code: WorkerStatusCode.idle | WorkerStatusCode.running; workerApi: WorkerApi}
 
 type WorkerDescriptor = {
   worker: Worker;
@@ -106,7 +105,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
   private readonly format: PointFormat;
   private readonly workers: WorkerDescriptor[];
-  private readonly jobs: JobQueueItem[] = [];
+  private readonly jobs: JobQueueItem<boolean>[] = [];
   private bufferedJobs: {
     jobs: JobQueueItem[];
     sigCount: number;
@@ -346,8 +345,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     // and free-up memory, only needs to keep the job's Promise handlers.
     // Maybe it's not useful since all data referenced in jobs is likely referenced by others
 
-    const workerApi = worker.status.workerApi;
-    worker.status = {code: WorkerStatusCode.running, workerApi};
+    worker.status.code = WorkerStatusCode.running;
     this.workersBusy++;
 
     try {
@@ -366,7 +364,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       // Only downside is the the job promise may be resolved twice, but that's not an issue
 
       const jobStartNs = process.hrtime.bigint();
-      const workResult = await workerApi.verifyManySignatureSets(jobs.map((job) => job.workReq));
+      const workResult = await worker.status.workerApi.verifyManySignatureSets(jobs.map((job) => job.workReq));
       const jobEndNs = process.hrtime.bigint();
       const {workerId, batchRetries, batchSigsSuccess, workerStartNs, workerEndNs, results} = workResult;
 
@@ -413,7 +411,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       }
     }
 
-    worker.status = {code: WorkerStatusCode.idle, workerApi};
+    worker.status.code = WorkerStatusCode.idle;
     this.workersBusy--;
 
     // Potentially run a new job
