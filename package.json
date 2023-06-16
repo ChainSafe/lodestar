@@ -19,6 +19,7 @@
     "check-build": "lerna run check-build",
     "check-types": "lerna run check-types --no-bail",
     "coverage": "lerna run coverage --no-bail",
+    "test": "lerna run test --no-bail --concurrency 1",
     "test:unit": "lerna run test:unit --no-bail --concurrency 1",
     "test:browsers": "lerna run test:browsers",
     "test:e2e": "lerna run test:e2e --no-bail --concurrency 1",
