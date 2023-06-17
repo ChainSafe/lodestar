@@ -14,7 +14,6 @@ import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {IClock} from "../util/clock.js";
-import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
 import {NetworkOptions} from "./options.js";
 import {INetwork} from "./interface.js";
 import {ReqRespMethod} from "./reqresp/index.js";
@@ -276,19 +275,6 @@ export class Network implements INetwork {
 
   // Gossip
 
-  async publishBeaconBlockMaybeBlobs(blockInput: BlockInput): Promise<number> {
-    switch (blockInput.type) {
-      case BlockInputType.preDeneb:
-        return this.publishBeaconBlock(blockInput.block);
-
-      case BlockInputType.postDeneb:
-        return this.publishSignedBeaconBlockAndBlobsSidecar({
-          beaconBlock: blockInput.block as deneb.SignedBeaconBlock,
-          blobsSidecar: blockInput.blobs,
-        });
-    }
-  }
-
   async publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<number> {
     const fork = this.config.getForkName(signedBlock.message.slot);
     return this.publishGossip<GossipType.beacon_block>({type: GossipType.beacon_block, fork}, signedBlock, {
@@ -296,11 +282,12 @@ export class Network implements INetwork {
     });
   }
 
-  async publishSignedBeaconBlockAndBlobsSidecar(item: deneb.SignedBeaconBlockAndBlobsSidecar): Promise<number> {
-    const fork = this.config.getForkName(item.beaconBlock.message.slot);
-    return this.publishGossip<GossipType.beacon_block_and_blobs_sidecar>(
-      {type: GossipType.beacon_block_and_blobs_sidecar, fork},
-      item,
+  async publishBlobSidecar(signedBlobSidecar: deneb.SignedBlobSidecar): Promise<number> {
+    const fork = this.config.getForkName(signedBlobSidecar.message.slot);
+    const index = signedBlobSidecar.message.index;
+    return this.publishGossip<GossipType.blob_sidecar>(
+      {type: GossipType.blob_sidecar, fork, index},
+      signedBlobSidecar,
       {ignoreDuplicatePublishError: true}
     );
   }

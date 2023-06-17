@@ -73,6 +73,8 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
       return `${topic.type}_${topic.subnet}`;
+    case GossipType.blob_sidecar:
+      return `${topic.type}_${topic.index}`;
   }
 }
 
@@ -82,6 +84,8 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.beacon_block:
       // beacon_block is updated in altair to support the updated SignedBeaconBlock type
       return ssz[topic.fork].SignedBeaconBlock;
+    case GossipType.blob_sidecar:
+      return ssz.deneb.SignedBlobSidecar;
     case GossipType.beacon_block_and_blobs_sidecar:
       return ssz.deneb.SignedBeaconBlockAndBlobsSidecar;
     case GossipType.beacon_aggregate_and_proof:
@@ -253,6 +257,7 @@ function parseEncodingStr(encodingStr: string): GossipEncoding {
 // TODO: Review which yes, and which not
 export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean> = {
   [GossipType.beacon_block]: true,
+  [GossipType.blob_sidecar]: true,
   [GossipType.beacon_block_and_blobs_sidecar]: true,
   [GossipType.beacon_aggregate_and_proof]: true,
   [GossipType.beacon_attestation]: true,

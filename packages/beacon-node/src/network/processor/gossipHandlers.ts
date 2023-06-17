@@ -190,6 +190,10 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       handleValidBeaconBlock({...blockInput, serializedData}, peerIdStr, seenTimestampSec);
     },
 
+    [GossipType.blob_sidecar]: async (_data, _topic, _peerIdStr, _seenTimestampSec) => {
+      // TODO DENEB: impl to be added on migration of blockinput
+    },
+
     [GossipType.beacon_block_and_blobs_sidecar]: async ({serializedData}, topic, peerIdStr, seenTimestampSec) => {
       const blockAndBlocks = sszDeserialize(topic, serializedData);
       const {beaconBlock, blobsSidecar} = blockAndBlocks;
