@@ -210,12 +210,12 @@ export class BeaconSync implements IBeaconSync {
           .catch((e) => {
             this.logger.error("Error subscribing to gossip core topics", {}, e);
           });
+      }
 
-        // also start searching for unknown blocks
-        if (!this.unknownBlockSync.isSubscribedToNetwork()) {
-          this.unknownBlockSync.subscribeToNetwork();
-          this.metrics?.syncUnknownBlock.switchNetworkSubscriptions.inc({action: "subscribed"});
-        }
+      // also start searching for unknown blocks
+      if (!this.unknownBlockSync.isSubscribedToNetwork()) {
+        this.unknownBlockSync.subscribeToNetwork();
+        this.metrics?.syncUnknownBlock.switchNetworkSubscriptions.inc({action: "subscribed"});
       }
     }
 
