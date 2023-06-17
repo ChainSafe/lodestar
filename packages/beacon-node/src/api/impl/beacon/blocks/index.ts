@@ -213,6 +213,7 @@ export function getBeaconBlockApi({
           config,
           signedBlock,
           BlockSource.api,
+          // The blobsSidecar will be replaced in the followup PRs with just blobs
           blobSidecarsToBlobsSidecar(
             config,
             signedBlock,
