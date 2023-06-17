@@ -185,6 +185,13 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       }
     }
 
+    if (gossipTypeStr.startsWith(GossipType.blob_sidecar)) {
+      const indexStr = gossipTypeStr.slice(GossipType.blob_sidecar.length + 1); // +1 for '_' concatenating the topic name and the index
+      const index = parseInt(indexStr, 10);
+      if (Number.isNaN(index)) throw Error(`index ${indexStr} is not a number`);
+      return {type: GossipType.blob_sidecar, index, fork, encoding};
+    }
+
     throw Error(`Unknown gossip type ${gossipTypeStr}`);
   } catch (e) {
     (e as Error).message = `Invalid gossip topic ${topicStr}: ${(e as Error).message}`;
