@@ -279,7 +279,9 @@ export class Eth2Gossipsub extends GossipSub {
     // Get seenTimestamp before adding the message to the queue or add async delays
     const seenTimestampSec = Date.now() / 1000;
 
-    // Emit message to network processor
+    // Use setTimeout to yield to the macro queue
+    // Without this we'll have huge event loop lag
+    // See https://github.com/ChainSafe/lodestar/issues/5604
     setTimeout(() => {
       this.events.emit(NetworkEvent.pendingGossipsubMessage, {
         topic,
@@ -294,7 +296,9 @@ export class Eth2Gossipsub extends GossipSub {
   }
 
   private onValidationResult(data: NetworkEventData[NetworkEvent.gossipMessageValidationResult]): void {
-    // test sending validation results on the next event loop
+    // Use setTimeout to yield to the macro queue
+    // Without this we'll have huge event loop lag
+    // See https://github.com/ChainSafe/lodestar/issues/5604
     setTimeout(() => {
       // TODO: reportMessageValidationResult should take PeerIdStr since it only uses string version
       this.reportMessageValidationResult(data.msgId, peerIdFromString(data.propagationSource), data.acceptance);
