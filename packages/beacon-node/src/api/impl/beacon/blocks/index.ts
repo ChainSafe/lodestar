@@ -1,10 +1,4 @@
-import {
-  routes,
-  ServerApi,
-  isSignedBlockContents,
-  isSignedBlindedBlockContents,
-  SignedBlockContents,
-} from "@lodestar/api";
+import {routes, ServerApi, isSignedBlockContents, isSignedBlindedBlockContents} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
@@ -202,9 +196,7 @@ export function getBeaconBlockApi({
       if (isSignedBlindedBlockContents(signedBlindedBlockOrContents)) {
         throw Error("exeutionBuilder not yet implemented for deneb+ forks");
       } else {
-        const signedBlockOrContents = await executionBuilder.submitBlindedBlock(
-          signedBlindedBlockOrContents as allForks.SignedBlindedBeaconBlock
-        );
+        const signedBlockOrContents = await executionBuilder.submitBlindedBlock(signedBlindedBlockOrContents);
         // the full block is published by relay and it's possible that the block is already known to us by gossip
         // see https://github.com/ChainSafe/lodestar/issues/5404
         return this.publishBlock(signedBlockOrContents, {ignoreIfKnown: true});
@@ -217,7 +209,7 @@ export function getBeaconBlockApi({
 
       if (isSignedBlockContents(signedBlockOrContents)) {
         // Build a blockInput for post deneb, signedBlobs will be be used in followup PRs
-        ({signedBlock, signedBlobSidecars: signedBlobs} = signedBlockOrContents as SignedBlockContents);
+        ({signedBlock, signedBlobSidecars: signedBlobs} = signedBlockOrContents);
         const blobsSidecar = blobSidecarsToBlobsSidecar(
           config,
           signedBlock,
@@ -232,7 +224,7 @@ export function getBeaconBlockApi({
           blobsSidecar
         );
       } else {
-        signedBlock = signedBlockOrContents as allForks.SignedBeaconBlock;
+        signedBlock = signedBlockOrContents;
         signedBlobs = [];
         blockForImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.api);
       }

@@ -190,7 +190,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         return verifySignatureSetsMaybeBatch(
           sets.map((set) => ({
             publicKey: getAggregatedPubkey(set),
-            message: set.signingRoot.valueOf() as Uint8Array,
+            message: set.signingRoot.valueOf(),
             signature: set.signature,
           }))
         );

@@ -226,7 +226,7 @@ describe("data serialization through worker boundary", function () {
 
   for (const testCase of testCases) {
     it(testCase.id, async () => {
-      const dataPong = (await echoWorker.send(testCase.data)) as unknown;
+      const dataPong = await echoWorker.send(testCase.data);
       if (testCase.shouldFail) {
         expect(dataPong).not.deep.equals(testCase.data);
       } else {

@@ -31,9 +31,13 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
 
   "builder.urls": {
     description: "Urls hosting the builder API",
-    type: "array",
     defaultDescription:
       defaultOptions.executionBuilder.mode === "http" ? defaultOptions.executionBuilder.urls.join(" ") : "",
+    type: "array",
+    string: true,
+    coerce: (urls: string[]): string[] =>
+      // Parse ["url1,url2"] to ["url1", "url2"]
+      urls.map((item) => item.split(",")).flat(1),
     group: "builder",
   },
 

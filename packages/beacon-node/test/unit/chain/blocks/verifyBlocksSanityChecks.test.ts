@@ -178,7 +178,7 @@ function getForkChoice(knownBlocks: allForks.SignedBeaconBlock[], finalizedEpoch
 function toProtoBlock(block: allForks.SignedBeaconBlock): ProtoBlock {
   return {
     slot: block.message.slot,
-    blockRoot: toHex(ssz.phase0.BeaconBlock.hashTreeRoot((block as allForks.SignedBeaconBlock).message)),
+    blockRoot: toHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message)),
     parentRoot: toHex(block.message.parentRoot),
     stateRoot: toHex(block.message.stateRoot),
   } as Partial<ProtoBlock> as ProtoBlock;
