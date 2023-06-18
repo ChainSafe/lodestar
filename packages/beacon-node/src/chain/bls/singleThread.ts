@@ -28,8 +28,8 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     // Don't use a try/catch, only count run without exceptions
     const endNs = process.hrtime.bigint();
     const totalSec = Number(startNs - endNs) / 1e9;
-    this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.observe(totalSec);
-    this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.observe(totalSec / sets.length);
+    this.metrics?.bls.mainThread.durationOnThread.observe(totalSec);
+    this.metrics?.bls.mainThread.durationOnThread.observe(totalSec / sets.length);
 
     return isValid;
   }

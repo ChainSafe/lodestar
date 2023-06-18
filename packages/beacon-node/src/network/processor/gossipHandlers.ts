@@ -209,6 +209,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       let validationResult: AggregateAndProofValidationResult;
       const signedAggregateAndProof = sszDeserialize(topic, serializedData);
 
+      // Validate incoming aggregate and proof for a block
       try {
         validationResult = await validateGossipAggregateAndProof(chain, signedAggregateAndProof, false, serializedData);
       } catch (e) {
@@ -218,11 +219,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         throw e;
       }
 
-      // Handler
+      // Handle aggregated, proven attestations appropriately
       const {indexedAttestation, committeeIndices, attDataRootHex} = validationResult;
       metrics?.registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation);
       const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
+      // Add validated, aggregated attestation to others in attestationGroup
       chain.aggregatedAttestationPool.add(
         aggregatedAttestation,
         attDataRootHex,
@@ -231,6 +233,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       );
 
       if (!options.dontSendGossipAttestationsToForkchoice) {
+        // Add vote for block to forkChoice
         try {
           chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
         } catch (e) {
@@ -247,7 +250,9 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       if (msgSlot == undefined) {
         throw Error("msgSlot is undefined for beacon_attestation topic");
       }
-      // do not deserialize gossipSerializedData here, it's done in validateGossipAttestation only if needed
+
+      // Validate incoming attestation
+      // Do not deserialize gossipSerializedData here, it's done in validateGossipAttestation only if needed
       let validationResult: AttestationValidationResult;
       try {
         validationResult = await validateGossipAttestation(
@@ -262,13 +267,14 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         throw e;
       }
 
-      // Handler
+      // Handle attestation appropriately
       const {indexedAttestation, attDataRootHex, attestation} = validationResult;
       metrics?.registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation);
 
       try {
-        // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
-        // but don't add to attestation pool, to save CPU and RAM
+        // Optionally add attestation to attestationPool. Node may be subscribe to extra subnets
+        // (long-lived random subnets). For those, validate the messages but don't add to
+        // the attestation pool to save CPU and RAM.
         if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
           const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
           metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
@@ -278,6 +284,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
 
       if (!options.dontSendGossipAttestationsToForkchoice) {
+        // Add vote for block to forkChoice
         try {
           chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
         } catch (e) {

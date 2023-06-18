@@ -25,14 +25,14 @@ export type WorkResult<R> = {code: WorkResultCode.success; result: R} | {code: W
 
 export type BlsWorkResult = {
   /** Ascending integer identifying the worker for metrics */
-  workerId: number;
+  workerId?: number;
   /** Total num of batches that had to be retried */
   batchRetries: number;
   /** Total num of sigs that have been successfully verified with batching */
   batchSigsSuccess: number;
   /** Time worker function starts - UNIX timestamp in nanoseconds */
-  workerStartNs: bigint;
+  workStartNs: bigint;
   /** Time worker function ends - UNIX timestamp in nanoseconds */
-  workerEndNs: bigint;
+  workEndNs: bigint;
   results: WorkResult<boolean>[];
 };

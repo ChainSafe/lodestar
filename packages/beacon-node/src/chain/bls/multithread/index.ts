@@ -14,10 +14,11 @@ import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
 import {Metrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
-import {asyncVerifySignatureSetsMaybeBatch, verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
+import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 import {defaultPoolSize} from "./poolSize.js";
+import {asyncVerifyManySignatureSets} from "./verifyManySignatureSets.js";
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: Logger;
@@ -84,7 +85,7 @@ type WorkerStatus =
   | {code: WorkerStatusCode.notInitialized}
   | {code: WorkerStatusCode.initializing; initPromise: Promise<WorkerApi>}
   | {code: WorkerStatusCode.initializationError; error: Error}
-  | {code: WorkerStatusCode.idle | WorkerStatusCode.running; workerApi: WorkerApi}
+  | {code: WorkerStatusCode.idle | WorkerStatusCode.running; workerApi: WorkerApi};
 
 type WorkerDescriptor = {
   worker: Worker;
@@ -105,13 +106,22 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
   private readonly format: PointFormat;
   private readonly workers: WorkerDescriptor[];
-  private readonly jobs: JobQueueItem<boolean>[] = [];
-  private bufferedJobs: {
+  private readonly workerJobs: JobQueueItem<boolean>[] = [];
+  private bufferedWorkerJobs: {
     jobs: JobQueueItem[];
     sigCount: number;
     firstPush: number;
     timeout: NodeJS.Timeout;
   } | null = null;
+
+  private readonly libuvJobs: JobQueueItem<boolean>[] = [];
+  private bufferedLibuvJobs: {
+    jobs: JobQueueItem[];
+    sigCount: number;
+    firstPush: number;
+    timeout: NodeJS.Timeout;
+  } | null = null;
+
   private blsVerifyAllMultiThread: boolean;
   private closed = false;
   private workersBusy = 0;
@@ -132,18 +142,41 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.workers = this.createWorkers(implementation, defaultPoolSize);
 
     if (metrics) {
-      metrics.blsThreadPool.queueLength.addCollect(() => {
-        metrics.blsThreadPool.queueLength.set(this.jobs.length);
-        metrics.blsThreadPool.workersBusy.set(this.workersBusy);
+      metrics.bls.workerThreadPool.queueLength.addCollect(() => {
+        metrics.bls.workerThreadPool.queueLength.set(this.workerJobs.length);
+        metrics.bls.workerThreadPool.workersBusy.set(this.workersBusy);
       });
     }
+  }
+
+  async close(): Promise<void> {
+    if (this.bufferedWorkerJobs) {
+      clearTimeout(this.bufferedWorkerJobs.timeout);
+    }
+
+    // Abort all jobs
+    for (const job of this.workerJobs) {
+      job.reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
+    }
+    this.workerJobs.splice(0, this.workerJobs.length);
+
+    // Terminate all workers. await to ensure no workers are left hanging
+    await Promise.all(
+      Array.from(this.workers.entries()).map(([id, worker]) =>
+        // NOTE: 'threads' has not yet updated types, and NodeJS complains with
+        // [DEP0132] DeprecationWarning: Passing a callback to worker.terminate() is deprecated. It returns a Promise instead.
+        (worker.worker.terminate() as unknown as Promise<void>).catch((e: Error) => {
+          this.logger.error("Error terminating worker", {id}, e);
+        })
+      )
+    );
   }
 
   canAcceptWork(): boolean {
     return (
       this.workersBusy < defaultPoolSize &&
       // TODO: Should also bound the jobs queue?
-      this.jobs.length < MAX_JOBS_CAN_ACCEPT_WORK
+      this.workerJobs.length < MAX_JOBS_CAN_ACCEPT_WORK
     );
   }
 
@@ -152,7 +185,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
 
     if (opts.verifyOnMainThread && !this.blsVerifyAllMultiThread) {
-      const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
+      const timer = this.metrics?.bls.mainThread.durationOnThread.startTimer();
       try {
         return verifySignatureSetsMaybeBatch(
           sets.map((set) => ({
@@ -172,25 +205,24 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     // Split large array of sets into smaller.
     // Very helpful when syncing finalized, sync may submit +1000 sets so chunkify allows to distribute to many workers
     if (opts.verifyWithLibuvPool && !this.blsVerifyAllMultiThread) {
-      // const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
-
-      // TODO need to break this into separate function that mimics worker.js
-      // refactor verifyManySignatureSets to be called from here and from worker.js or similar
+      const timer = this.metrics?.bls.libuvThreadPool.durationInThreadPool.startTimer();
       results = await Promise.all(
         chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map((chunk) =>
-          asyncVerifySignatureSetsMaybeBatch(
-            chunk.map((s) => ({
+          this.queWorkLibuv({
+            opts,
+            sets: chunk.map((s) => ({
               publicKey: getAggregatedPubkey(s).toBytes(PointFormat.uncompressed),
               message: s.signingRoot,
               signature: s.signature,
-            }))
-          )
+            })),
+          })
         )
       );
+      if (timer) timer();
     } else {
       results = await Promise.all(
         chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map((setsWorker) =>
-          this.queueBlsWork({
+          this.queueWorkWorkerPool({
             opts,
             sets: setsWorker.map((s) => ({
               publicKey: getAggregatedPubkey(s).toBytes(this.format),
@@ -210,29 +242,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     return results.every((isValid) => isValid === true);
   }
 
-  async close(): Promise<void> {
-    if (this.bufferedJobs) {
-      clearTimeout(this.bufferedJobs.timeout);
-    }
-
-    // Abort all jobs
-    for (const job of this.jobs) {
-      job.reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
-    }
-    this.jobs.splice(0, this.jobs.length);
-
-    // Terminate all workers. await to ensure no workers are left hanging
-    await Promise.all(
-      Array.from(this.workers.entries()).map(([id, worker]) =>
-        // NOTE: 'threads' has not yet updated types, and NodeJS complains with
-        // [DEP0132] DeprecationWarning: Passing a callback to worker.terminate() is deprecated. It returns a Promise instead.
-        (worker.worker.terminate() as unknown as Promise<void>).catch((e: Error) => {
-          this.logger.error("Error terminating worker", {id}, e);
-        })
-      )
-    );
-  }
-
+  /**
+   * Creates a worker pool with the given implementation and size
+   */
   private createWorkers(implementation: Implementation, poolSize: number): WorkerDescriptor[] {
     const workers: WorkerDescriptor[] = [];
 
@@ -259,7 +271,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         .then((workerApi) => {
           workerDescriptor.status = {code: WorkerStatusCode.idle, workerApi};
           // Potentially run jobs that were queued before initialization of the first worker
-          setTimeout(this.runJob, 0);
+          setTimeout(this.runJobWorkerPool, 0);
         })
         .catch((error: Error) => {
           workerDescriptor.status = {code: WorkerStatusCode.initializationError, error};
@@ -272,7 +284,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   /**
    * Register BLS work to be done eventually in a worker
    */
-  private async queueBlsWork(workReq: BlsWorkReq): Promise<boolean> {
+  private async queueWorkWorkerPool(workReq: BlsWorkReq): Promise<boolean> {
     if (this.closed) {
       throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
     }
@@ -295,19 +307,19 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       // Append batchable sets to `bufferedJobs`, starting a timeout to push them into `jobs`.
       // Do not call `runJob()`, it is called from `runBufferedJobs()`
       if (workReq.opts.batchable) {
-        if (!this.bufferedJobs) {
-          this.bufferedJobs = {
+        if (!this.bufferedWorkerJobs) {
+          this.bufferedWorkerJobs = {
             jobs: [],
             sigCount: 0,
             firstPush: Date.now(),
-            timeout: setTimeout(this.runBufferedJobs, MAX_BUFFER_WAIT_MS),
+            timeout: setTimeout(this.runBufferedJobsWorkerPool, MAX_BUFFER_WAIT_MS),
           };
         }
-        this.bufferedJobs.jobs.push(job);
-        this.bufferedJobs.sigCount += job.workReq.sets.length;
-        if (this.bufferedJobs.sigCount > MAX_BUFFERED_SIGS) {
-          clearTimeout(this.bufferedJobs.timeout);
-          this.runBufferedJobs();
+        this.bufferedWorkerJobs.jobs.push(job);
+        this.bufferedWorkerJobs.sigCount += job.workReq.sets.length;
+        if (this.bufferedWorkerJobs.sigCount > MAX_BUFFERED_SIGS) {
+          clearTimeout(this.bufferedWorkerJobs.timeout);
+          this.runBufferedJobsWorkerPool();
         }
       }
 
@@ -315,16 +327,18 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       // This is useful to allow batching job submitted from a synchronous for loop,
       // and to prevent large stacks since runJob may be called recursively.
       else {
-        this.jobs.push(job);
-        setTimeout(this.runJob, 0);
+        this.workerJobs.push(job);
+        setTimeout(this.runJobWorkerPool, 0);
       }
     });
   }
 
   /**
    * Potentially submit jobs to an idle worker, only if there's a worker and jobs
+   *
+   * @note arrow function to preserve class binding in setTimeout
    */
-  private runJob = async (): Promise<void> => {
+  private runJobWorkerPool = async (): Promise<void> => {
     if (this.closed) {
       return;
     }
@@ -336,7 +350,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     }
 
     // Prepare work package
-    const jobs = this.prepareWork();
+    const jobs = this.prepareWorkerPoolWork();
     if (jobs.length === 0) {
       return;
     }
@@ -344,20 +358,19 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     // TODO: After sending the work to the worker the main thread can drop the job arguments
     // and free-up memory, only needs to keep the job's Promise handlers.
     // Maybe it's not useful since all data referenced in jobs is likely referenced by others
-
     worker.status.code = WorkerStatusCode.running;
     this.workersBusy++;
 
     try {
       let startedSigSets = 0;
       for (const job of jobs) {
-        this.metrics?.blsThreadPool.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
+        this.metrics?.bls.workerThreadPool.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
         startedSigSets += job.workReq.sets.length;
       }
 
-      this.metrics?.blsThreadPool.totalJobsGroupsStarted.inc(1);
-      this.metrics?.blsThreadPool.totalJobsStarted.inc(jobs.length);
-      this.metrics?.blsThreadPool.totalSigSetsStarted.inc(startedSigSets);
+      this.metrics?.bls.workerThreadPool.totalJobsGroupsStarted.inc(1);
+      this.metrics?.bls.workerThreadPool.totalJobsStarted.inc(jobs.length);
+      this.metrics?.bls.workerThreadPool.totalSigSetsStarted.inc(startedSigSets);
 
       // Send work package to the worker
       // If the job, metrics or any code below throws: the job will reject never going stale.
@@ -366,7 +379,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       const jobStartNs = process.hrtime.bigint();
       const workResult = await worker.status.workerApi.verifyManySignatureSets(jobs.map((job) => job.workReq));
       const jobEndNs = process.hrtime.bigint();
-      const {workerId, batchRetries, batchSigsSuccess, workerStartNs, workerEndNs, results} = workResult;
+      const {workerId, batchRetries, batchSigsSuccess, workStartNs, workEndNs, results} = workResult;
 
       let successCount = 0;
       let errorCount = 0;
@@ -390,18 +403,18 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         }
       }
 
-      const workerJobTimeSec = Number(workerEndNs - workerStartNs) / 1e9;
-      const latencyToWorkerSec = Number(workerStartNs - jobStartNs) / 1e9;
-      const latencyFromWorkerSec = Number(jobEndNs - workerEndNs) / 1e9;
+      const workerJobTimeSec = Number(workEndNs - workStartNs) / 1e9;
+      const latencyToWorkerSec = Number(workStartNs - jobStartNs) / 1e9;
+      const latencyFromWorkerSec = Number(jobEndNs - workEndNs) / 1e9;
 
-      this.metrics?.blsThreadPool.timePerSigSet.observe(workerJobTimeSec / startedSigSets);
-      this.metrics?.blsThreadPool.jobsWorkerTime.inc({workerId}, workerJobTimeSec);
-      this.metrics?.blsThreadPool.latencyToWorker.observe(latencyToWorkerSec);
-      this.metrics?.blsThreadPool.latencyFromWorker.observe(latencyFromWorkerSec);
-      this.metrics?.blsThreadPool.successJobsSignatureSetsCount.inc(successCount);
-      this.metrics?.blsThreadPool.errorJobsSignatureSetsCount.inc(errorCount);
-      this.metrics?.blsThreadPool.batchRetries.inc(batchRetries);
-      this.metrics?.blsThreadPool.batchSigsSuccess.inc(batchSigsSuccess);
+      this.metrics?.bls.workerThreadPool.timePerSigSet.observe(workerJobTimeSec / startedSigSets);
+      this.metrics?.bls.workerThreadPool.jobsWorkerTime.inc({workerId}, workerJobTimeSec);
+      this.metrics?.bls.workerThreadPool.latencyToWorker.observe(latencyToWorkerSec);
+      this.metrics?.bls.workerThreadPool.latencyFromWorker.observe(latencyFromWorkerSec);
+      this.metrics?.bls.workerThreadPool.successJobsSignatureSetsCount.inc(successCount);
+      this.metrics?.bls.workerThreadPool.errorJobsSignatureSetsCount.inc(errorCount);
+      this.metrics?.bls.workerThreadPool.batchRetries.inc(batchRetries);
+      this.metrics?.bls.workerThreadPool.batchSigsSuccess.inc(batchSigsSuccess);
     } catch (e) {
       // Worker communications should never reject
       if (!this.closed) this.logger.error("BlsMultiThreadWorkerPool error", {}, e as Error);
@@ -415,18 +428,20 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.workersBusy--;
 
     // Potentially run a new job
-    setTimeout(this.runJob, 0);
+    setTimeout(this.runJobWorkerPool, 0);
   };
 
   /**
    * Grab pending work up to a max number of signatures
+   *
+   * @note arrow function to preserve class binding in setTimeout
    */
-  private prepareWork(): JobQueueItem<boolean>[] {
+  private prepareWorkerPoolWork = (): JobQueueItem<boolean>[] => {
     const jobs: JobQueueItem<boolean>[] = [];
     let totalSigs = 0;
 
     while (totalSigs < MAX_SIGNATURE_SETS_PER_JOB) {
-      const job = this.jobs.shift();
+      const job = this.workerJobs.shift();
       if (!job) {
         break;
       }
@@ -436,16 +451,155 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     }
 
     return jobs;
-  }
+  };
 
   /**
    * Add all buffered jobs to the job queue and potentially run them immediately
+   *
+   * @note arrow function to preserve class binding in setTimeout
    */
-  private runBufferedJobs = (): void => {
-    if (this.bufferedJobs) {
-      this.jobs.push(...this.bufferedJobs.jobs);
-      this.bufferedJobs = null;
-      setTimeout(this.runJob, 0);
+  private runBufferedJobsWorkerPool = (): void => {
+    if (this.bufferedWorkerJobs) {
+      this.workerJobs.push(...this.bufferedWorkerJobs.jobs);
+      this.bufferedWorkerJobs = null;
+      setTimeout(this.runJobWorkerPool, 0);
+    }
+  };
+
+  /**
+   * Register BLS work to be done by the libuv worker pool
+   */
+  private queWorkLibuv(workReq: BlsWorkReq): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      const job = {resolve, reject, addedTimeMs: Date.now(), workReq};
+
+      // Append batchable sets to `bufferedLibuvJobs`, starting a timeout to push them into `jobs`.
+      // Do not call `runJobLibuv()`, it is called from `runBufferedJobsLibuv()`
+      if (workReq.opts.batchable) {
+        if (!this.bufferedLibuvJobs) {
+          this.bufferedLibuvJobs = {
+            jobs: [],
+            sigCount: 0,
+            firstPush: Date.now(),
+            timeout: setTimeout(this.runBufferedJobsLibuv, MAX_BUFFER_WAIT_MS),
+          };
+        }
+        this.bufferedLibuvJobs.jobs.push(job);
+        this.bufferedLibuvJobs.sigCount += job.workReq.sets.length;
+        if (this.bufferedLibuvJobs.sigCount > MAX_BUFFERED_SIGS) {
+          clearTimeout(this.bufferedLibuvJobs.timeout);
+          this.runBufferedJobsLibuv();
+        }
+      }
+
+      // Push job and schedule to call `runJobLibuv` in the next macro event loop cycle.
+      // This is useful to allow batching job submitted from a synchronous for loop,
+      // and to prevent large stacks since runJob may be called recursively.
+      else {
+        this.libuvJobs.push(job);
+        setTimeout(this.runJobLibuv, 0);
+      }
+    });
+  }
+
+  /**
+   * Potentially submit jobs to libuv, only if there's jobs
+   *
+   * @note arrow function to preserve class binding in setTimeout
+   */
+  private runJobLibuv = async (): Promise<void> => {
+    // Prepare work package
+    const jobs = this.prepareWorkLibuv();
+    if (jobs.length === 0) {
+      return;
+    }
+
+    try {
+      let startedSigSets = 0;
+      for (const job of jobs) {
+        this.metrics?.bls.libuvThreadPool.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
+        startedSigSets += job.workReq.sets.length;
+      }
+
+      this.metrics?.bls.libuvThreadPool.totalJobsGroupsStarted.inc(1);
+      this.metrics?.bls.libuvThreadPool.totalJobsStarted.inc(jobs.length);
+      this.metrics?.bls.libuvThreadPool.totalSigSetsStarted.inc(startedSigSets);
+
+      // Send work package to libuv
+      // If any code below throws: the job will reject never going stale.
+      // Only downside is the the job promise may be resolved twice, but that's not an issue
+
+      const workResult = await asyncVerifyManySignatureSets(jobs.map((job) => job.workReq));
+      const {batchRetries, batchSigsSuccess, workStartNs, workEndNs, results} = workResult;
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Un-wrap work package
+      for (let i = 0; i < jobs.length; i++) {
+        const job = jobs[i];
+        const jobResult = results[i];
+        const sigSetCount = job.workReq.sets.length;
+        if (!jobResult) {
+          job.reject(Error(`No jobResult for index ${i}`));
+          errorCount += sigSetCount;
+        } else if (jobResult.code === WorkResultCode.success) {
+          job.resolve(jobResult.result);
+          successCount += sigSetCount;
+        } else {
+          const workerError = Error(jobResult.error.message);
+          if (jobResult.error.stack) workerError.stack = jobResult.error.stack;
+          job.reject(workerError);
+          errorCount += sigSetCount;
+        }
+      }
+
+      const workerJobTimeSec = Number(workEndNs - workStartNs) / 1e9;
+      this.metrics?.bls.libuvThreadPool.timePerSigSet.observe(workerJobTimeSec / startedSigSets);
+      this.metrics?.bls.libuvThreadPool.jobsWorkTime.inc(workerJobTimeSec);
+      this.metrics?.bls.libuvThreadPool.successJobsSignatureSetsCount.inc(successCount);
+      this.metrics?.bls.libuvThreadPool.errorJobsSignatureSetsCount.inc(errorCount);
+      this.metrics?.bls.libuvThreadPool.batchRetries.inc(batchRetries);
+      this.metrics?.bls.libuvThreadPool.batchSigsSuccess.inc(batchSigsSuccess);
+    } catch (e) {
+      this.logger.error("BlsMultiThreadLibuv error", {}, e as Error);
+      // Reject all
+      for (const job of jobs) {
+        job.reject(e as Error);
+      }
+    }
+
+    // Potentially run a new job
+    setTimeout(this.runJobLibuv, 0);
+  };
+
+  /**
+   * Grab pending work up to a max number of signatures
+   *
+   * @note arrow function to preserve class binding in setTimeout
+   */
+  private prepareWorkLibuv = (): JobQueueItem<boolean>[] => {
+    const jobs: JobQueueItem<boolean>[] = [];
+    let totalSigs = 0;
+
+    while (totalSigs < MAX_SIGNATURE_SETS_PER_JOB) {
+      const job = this.libuvJobs.shift();
+      if (!job) {
+        break;
+      }
+
+      jobs.push(job);
+      totalSigs += job.workReq.sets.length;
+    }
+
+    return jobs;
+  };
+
+  private runBufferedJobsLibuv = (): void => {
+    if (this.bufferedLibuvJobs) {
+      this.libuvJobs.push(...this.bufferedLibuvJobs.jobs);
+      this.bufferedLibuvJobs = null;
+      setTimeout(this.runJobLibuv, 0);
     }
   };
 
