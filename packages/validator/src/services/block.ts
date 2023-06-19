@@ -240,7 +240,7 @@ export class BlockProposingService {
       fullBlock = await fullBlockPromise;
     } else {
       throw Error(
-        `Neither builder not execution proposal flow activated: isBuilderEnabled=${isBuilderEnabled} builderSelection=${builderSelection}`
+        `Neither builder nor execution proposal flow activated: isBuilderEnabled=${isBuilderEnabled} builderSelection=${builderSelection}`
       );
     }
     this.logger.info("Started block production", {});
