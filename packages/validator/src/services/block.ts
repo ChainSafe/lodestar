@@ -197,7 +197,16 @@ export class BlockProposingService {
     // Start calls for building execution and builder blocks
     const blindedBlockPromise = isBuilderEnabled ? this.produceBlindedBlock(slot, randaoReveal, graffiti) : null;
     const fullBlockPromise =
-      builderSelection !== BuilderSelection.BuilderOnly ? this.produceBlock(slot, randaoReveal, graffiti) : null;
+      // At any point either the builder or execution or both flows should be active.
+      //
+      // Ideally such a scenario should be prevented on startup, but proposerSettingsFile or keymanager
+      // configurations could cause a validator pubkey to have builder disabled with builder selection builder only
+      // (TODO: independently make sure such an options update is not successful for a validator pubkey)
+      //
+      // So if builder is disabled ignore builder selection of builderonly if caused by user mistake
+      !isBuilderEnabled || builderSelection !== BuilderSelection.BuilderOnly
+        ? this.produceBlock(slot, randaoReveal, graffiti)
+        : null;
 
     let blindedBlock, fullBlock;
     if (blindedBlockPromise !== null && fullBlockPromise !== null) {
@@ -240,10 +249,9 @@ export class BlockProposingService {
       fullBlock = await fullBlockPromise;
     } else {
       throw Error(
-        `Neither builder nor execution proposal flow activated: isBuilderEnabled=${isBuilderEnabled} builderSelection=${builderSelection}`
+        `Internal Error: Neither builder nor execution proposal flow activated isBuilderEnabled=${isBuilderEnabled} builderSelection=${builderSelection}`
       );
     }
-    this.logger.info("Started block production", {});
 
     const builderBlockValue = blindedBlock?.blockValue ?? BigInt(0);
     const engineBlockValue = fullBlock?.blockValue ?? BigInt(0);
