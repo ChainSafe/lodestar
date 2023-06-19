@@ -18,7 +18,7 @@ export function queryParseProofPathsArr(pathStrs: string | string[]): JsonPath[]
   if (Array.isArray(pathStrs)) {
     return pathStrs.map((pathStr) => queryParseProofPaths(pathStr));
   } else {
-    return [queryParseProofPaths(pathStrs) as JsonPath];
+    return [queryParseProofPaths(pathStrs)];
   }
 }
 

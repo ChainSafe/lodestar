@@ -84,6 +84,7 @@ describe("data serialization through worker boundary", function () {
         type: BlockInputType.preDeneb,
         block: ssz.capella.SignedBeaconBlock.defaultValue(),
         source: BlockSource.gossip,
+        blockBytes: ZERO_HASH,
       },
       peer,
     },
@@ -226,7 +227,7 @@ describe("data serialization through worker boundary", function () {
 
   for (const testCase of testCases) {
     it(testCase.id, async () => {
-      const dataPong = (await echoWorker.send(testCase.data)) as unknown;
+      const dataPong = await echoWorker.send(testCase.data);
       if (testCase.shouldFail) {
         expect(dataPong).not.deep.equals(testCase.data);
       } else {

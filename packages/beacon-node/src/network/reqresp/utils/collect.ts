@@ -1,6 +1,7 @@
 import {ResponseIncoming, RequestErrorCode, RequestError} from "@lodestar/reqresp";
 import {Type} from "@chainsafe/ssz";
 import {ResponseTypeGetter} from "../types.js";
+import {WithBytes} from "../../interface.js";
 
 /**
  * Sink for `<response_chunk>*`, from
@@ -39,6 +40,32 @@ export async function collectMaxResponseTyped<T>(
     const type = typeFn(chunk.fork, chunk.protocolVersion);
     const response = sszDeserializeResponse(type, chunk.data);
     responses.push(response);
+
+    if (maxResponses !== undefined && responses.length >= maxResponses) {
+      break;
+    }
+  }
+  return responses;
+}
+
+/**
+ * Sink for `<response_chunk>*`, from
+ * ```bnf
+ * response ::= <response_chunk>*
+ * ```
+ * Collects a bounded list of responses up to `maxResponses`
+ */
+export async function collectMaxResponseTypedWithBytes<T>(
+  source: AsyncIterable<ResponseIncoming>,
+  maxResponses: number,
+  typeFn: ResponseTypeGetter<T>
+): Promise<WithBytes<T>[]> {
+  // else: zero or more responses
+  const responses: WithBytes<T>[] = [];
+  for await (const chunk of source) {
+    const type = typeFn(chunk.fork, chunk.protocolVersion);
+    const data = sszDeserializeResponse(type, chunk.data);
+    responses.push({data, bytes: chunk.data});
 
     if (maxResponses !== undefined && responses.length >= maxResponses) {
       break;

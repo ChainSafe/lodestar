@@ -15,7 +15,7 @@ export function parseSszValidTestcase(dirpath: string, metaFilename: string): Va
   // The root is stored in meta.yml as:
   //   root: 0xDEADBEEF
   const metaStr = fs.readFileSync(path.join(dirpath, metaFilename), "utf8");
-  const meta = loadYaml(metaStr) as {root: string};
+  const meta: {root: string} = loadYaml(metaStr);
   if (typeof meta.root !== "string") {
     throw Error(`meta.root not a string: ${meta.root}\n${metaStr}`);
   }

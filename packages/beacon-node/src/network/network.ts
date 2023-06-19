@@ -14,9 +14,8 @@ import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {IClock} from "../util/clock.js";
-import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
 import {NetworkOptions} from "./options.js";
-import {INetwork} from "./interface.js";
+import {WithBytes, INetwork} from "./interface.js";
 import {ReqRespMethod} from "./reqresp/index.js";
 import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
@@ -25,7 +24,11 @@ import {CommitteeSubscription} from "./subnets/index.js";
 import {isPublishToZeroPeersError} from "./util.js";
 import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
-import {collectExactOneTyped, collectMaxResponseTyped} from "./reqresp/utils/collect.js";
+import {
+  collectExactOneTyped,
+  collectMaxResponseTyped,
+  collectMaxResponseTypedWithBytes,
+} from "./reqresp/utils/collect.js";
 import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
@@ -276,19 +279,6 @@ export class Network implements INetwork {
 
   // Gossip
 
-  async publishBeaconBlockMaybeBlobs(blockInput: BlockInput): Promise<number> {
-    switch (blockInput.type) {
-      case BlockInputType.preDeneb:
-        return this.publishBeaconBlock(blockInput.block);
-
-      case BlockInputType.postDeneb:
-        return this.publishSignedBeaconBlockAndBlobsSidecar({
-          beaconBlock: blockInput.block as deneb.SignedBeaconBlock,
-          blobsSidecar: blockInput.blobs,
-        });
-    }
-  }
-
   async publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<number> {
     const fork = this.config.getForkName(signedBlock.message.slot);
     return this.publishGossip<GossipType.beacon_block>({type: GossipType.beacon_block, fork}, signedBlock, {
@@ -296,11 +286,12 @@ export class Network implements INetwork {
     });
   }
 
-  async publishSignedBeaconBlockAndBlobsSidecar(item: deneb.SignedBeaconBlockAndBlobsSidecar): Promise<number> {
-    const fork = this.config.getForkName(item.beaconBlock.message.slot);
-    return this.publishGossip<GossipType.beacon_block_and_blobs_sidecar>(
-      {type: GossipType.beacon_block_and_blobs_sidecar, fork},
-      item,
+  async publishBlobSidecar(signedBlobSidecar: deneb.SignedBlobSidecar): Promise<number> {
+    const fork = this.config.getForkName(signedBlobSidecar.message.slot);
+    const index = signedBlobSidecar.message.index;
+    return this.publishGossip<GossipType.blob_sidecar>(
+      {type: GossipType.blob_sidecar, fork, index},
+      signedBlobSidecar,
       {ignoreDuplicatePublishError: true}
     );
   }
@@ -409,7 +400,7 @@ export class Network implements INetwork {
   async sendBeaconBlocksByRange(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<allForks.SignedBeaconBlock[]> {
+  ): Promise<WithBytes<allForks.SignedBeaconBlock>[]> {
     return collectSequentialBlocksInRange(
       this.sendReqRespRequest(
         peerId,
@@ -425,8 +416,8 @@ export class Network implements INetwork {
   async sendBeaconBlocksByRoot(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRootRequest
-  ): Promise<allForks.SignedBeaconBlock[]> {
-    return collectMaxResponseTyped(
+  ): Promise<WithBytes<allForks.SignedBeaconBlock>[]> {
+    return collectMaxResponseTypedWithBytes(
       this.sendReqRespRequest(
         peerId,
         ReqRespMethod.BeaconBlocksByRoot,

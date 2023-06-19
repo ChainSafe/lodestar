@@ -110,7 +110,7 @@ describe("altair processBlock", () => {
         id: `altair processBlock - ${perfStateId} ${id}` + (hashState ? " hashState" : ""),
         before: () => {
           const state = generatePerfTestCachedStateAltair();
-          const block = getBlockAltair(state as CachedBeaconStateAltair, opts);
+          const block = getBlockAltair(state, opts);
           // Populate permanent root caches of the block
           ssz.altair.BeaconBlock.hashTreeRoot(block.message);
           // Populate tree root caches of the state

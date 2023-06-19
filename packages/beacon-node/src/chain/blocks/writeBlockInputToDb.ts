@@ -1,4 +1,4 @@
-import {WithOptionalBytes, allForks, deneb} from "@lodestar/types";
+import {allForks, deneb} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
 import {BlockInput, BlockInputType} from "./types.js";
@@ -10,20 +10,17 @@ import {BlockInput, BlockInputType} from "./types.js";
  * This operation may be performed before, during or after importing to the fork-choice. As long as errors
  * are handled properly for eventual consistency.
  */
-export async function writeBlockInputToDb(
-  this: BeaconChain,
-  blocksInput: WithOptionalBytes<BlockInput>[]
-): Promise<void> {
+export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockInput[]): Promise<void> {
   const fnPromises: Promise<void>[] = [];
 
   for (const blockInput of blocksInput) {
-    const {block, serializedData, type} = blockInput;
+    const {block, blockBytes, type} = blockInput;
     const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     const blockRootHex = toHex(blockRoot);
-    if (serializedData) {
+    if (blockBytes) {
       // skip serializing data if we already have it
       this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
-      fnPromises.push(this.db.block.putBinary(this.db.block.getId(block), serializedData));
+      fnPromises.push(this.db.block.putBinary(this.db.block.getId(block), blockBytes));
     } else {
       this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
       fnPromises.push(this.db.block.add(block));
@@ -51,10 +48,7 @@ export async function writeBlockInputToDb(
 /**
  * Prunes eagerly persisted block inputs only if not known to the fork-choice
  */
-export async function removeEagerlyPersistedBlockInputs(
-  this: BeaconChain,
-  blockInputs: WithOptionalBytes<BlockInput>[]
-): Promise<void> {
+export async function removeEagerlyPersistedBlockInputs(this: BeaconChain, blockInputs: BlockInput[]): Promise<void> {
   const blockToRemove: allForks.SignedBeaconBlock[] = [];
   const blobsToRemove: deneb.BlobsSidecar[] = [];
 

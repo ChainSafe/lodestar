@@ -66,7 +66,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
         signal: controller.signal,
         metrics: null,
       },
-      eth1Provider as IEth1Provider
+      eth1Provider
     );
     eth1MergeBlockTracker.startPollingMergeBlock();
 
@@ -230,7 +230,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
         signal: controller.signal,
         metrics: null,
       },
-      eth1Provider as IEth1Provider
+      eth1Provider
     );
     eth1MergeBlockTracker.startPollingMergeBlock();
 

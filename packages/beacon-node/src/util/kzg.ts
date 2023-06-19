@@ -2,6 +2,7 @@ import path from "node:path";
 import fs from "node:fs";
 import {fileURLToPath} from "node:url";
 import {fromHex, toHex} from "@lodestar/utils";
+import {ssz} from "@lodestar/types";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -16,6 +17,11 @@ export let ckzg: {
   freeTrustedSetup(): void;
   loadTrustedSetup(filePath: string): void;
   blobToKzgCommitment(blob: Uint8Array): Uint8Array;
+  computeBlobKzgProof(blob: Uint8Array, commitment: Uint8Array): Uint8Array;
+  verifyBlobKzgProof(blob: Uint8Array, commitment: Uint8Array, proof: Uint8Array): boolean;
+  verifyBlobKzgProofBatch(blobs: Uint8Array[], expectedKzgCommitments: Uint8Array[], kzgProofs: Uint8Array[]): boolean;
+
+  // TODO DENEB: Add these dummy methods to be removed on full transition to blobsidecars
   computeAggregateKzgProof(blobs: Uint8Array[]): Uint8Array;
   verifyAggregateKzgProof(
     blobs: Uint8Array[],
@@ -26,6 +32,11 @@ export let ckzg: {
   freeTrustedSetup: ckzgNotLoaded,
   loadTrustedSetup: ckzgNotLoaded,
   blobToKzgCommitment: ckzgNotLoaded,
+  computeBlobKzgProof: ckzgNotLoaded,
+  verifyBlobKzgProof: ckzgNotLoaded,
+  verifyBlobKzgProofBatch: ckzgNotLoaded,
+
+  // TODO DENEB: Add these dummy methods to be removed on full transition to blobsidecars
   computeAggregateKzgProof: ckzgNotLoaded,
   verifyAggregateKzgProof: ckzgNotLoaded,
 };
@@ -47,8 +58,25 @@ const TOTAL_SIZE = 2 * POINT_COUNT_BYTES + G1POINT_BYTES * G1POINT_COUNT + G2POI
 export async function initCKZG(): Promise<void> {
   /* eslint-disable import/no-extraneous-dependencies, @typescript-eslint/ban-ts-comment */
   // @ts-ignore
-  ckzg = (await import("c-kzg")) as typeof ckzg;
+  ckzg = (await import("c-kzg")).default as typeof ckzg;
   /* eslint-enable import/no-extraneous-dependencies, @typescript-eslint/ban-ts-comment */
+
+  // TODO DENEB: Add this dummy methods to be removed on full transition to blobsidecars
+  ckzg.computeAggregateKzgProof = (_blobs: Uint8Array[]) => {
+    return ssz.deneb.KZGProof.defaultValue();
+  };
+  ckzg.verifyAggregateKzgProof = (
+    _blobs: Uint8Array[],
+    _expectedKzgCommitments: Uint8Array[],
+    _kzgAggregatedProof: Uint8Array
+  ) => {
+    return true;
+  };
+}
+
+export enum TrustedFileMode {
+  Bin = "bin",
+  Txt = "txt",
 }
 
 /**
@@ -56,21 +84,25 @@ export async function initCKZG(): Promise<void> {
  * We persist the trusted setup as serialized bytes to save space over TXT or JSON formats.
  * However the current c-kzg API **requires** to read from a file with a specific .txt format
  */
-export function loadEthereumTrustedSetup(): void {
+export function loadEthereumTrustedSetup(mode: TrustedFileMode = TrustedFileMode.Txt, filePath?: string): void {
   try {
-    const bytes = fs.readFileSync(TRUSTED_SETUP_BIN_FILEPATH);
-    const json = trustedSetupBinToJson(bytes);
-    const txt = trustedSetupJsonToTxt(json);
-    fs.writeFileSync(TRUSTED_SETUP_TXT_FILEPATH, txt);
+    let setupFilePath;
+    if (mode === TrustedFileMode.Bin) {
+      const binPath = filePath ?? TRUSTED_SETUP_BIN_FILEPATH;
+      const bytes = fs.readFileSync(binPath);
+      const json = trustedSetupBinToJson(bytes);
+      const txt = trustedSetupJsonToTxt(json);
+      fs.writeFileSync(TRUSTED_SETUP_TXT_FILEPATH, txt);
+      setupFilePath = TRUSTED_SETUP_TXT_FILEPATH;
+    } else {
+      setupFilePath = filePath ?? TRUSTED_SETUP_TXT_FILEPATH;
+    }
 
     try {
       // in unit tests, calling loadTrustedSetup() twice has error so we have to free and retry
-      ckzg.loadTrustedSetup(TRUSTED_SETUP_TXT_FILEPATH);
+      ckzg.loadTrustedSetup(setupFilePath);
     } catch (e) {
-      if ((e as Error).message === "Call freeTrustedSetup before loading a new trusted setup.") {
-        ckzg.freeTrustedSetup();
-        ckzg.loadTrustedSetup(TRUSTED_SETUP_TXT_FILEPATH);
-      } else {
+      if ((e as Error).message !== "Error trusted setup is already loaded") {
         throw e;
       }
     }

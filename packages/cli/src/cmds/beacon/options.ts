@@ -12,6 +12,7 @@ type BeaconExtraArgs = {
   checkpointSyncUrl?: string;
   checkpointState?: string;
   wssCheckpoint?: string;
+  forceCheckpointSync?: boolean;
   beaconDir?: string;
   dbDir?: string;
   persistInvalidSszObjectsDir?: string;
@@ -64,6 +65,13 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     description:
       "Start beacon node off a state at the provided weak subjectivity checkpoint, to be supplied in <blockRoot>:<epoch> format. For example, 0x1234:100 will sync and start off from the weakSubjectivity state at checkpoint of epoch 100 with block root 0x1234.",
     type: "string",
+    group: "weak subjectivity",
+  },
+
+  forceCheckpointSync: {
+    description:
+      "Force syncing from checkpoint state even if db state is within weak subjectivity period. This helps to avoid long sync times after node has been offline for a while.",
+    type: "boolean",
     group: "weak subjectivity",
   },
 

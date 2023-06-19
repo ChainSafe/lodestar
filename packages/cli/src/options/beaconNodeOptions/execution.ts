@@ -37,8 +37,12 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
 export const options: CliCommandOptions<ExecutionEngineArgs> = {
   "execution.urls": {
     description: "Urls to execution client engine API",
-    type: "array",
     default: defaultExecutionEngineHttpOpts.urls.join(","),
+    type: "array",
+    string: true,
+    coerce: (urls: string[]): string[] =>
+      // Parse ["url1,url2"] to ["url1", "url2"]
+      urls.map((item) => item.split(",")).flat(1),
     group: "execution",
   },
 
