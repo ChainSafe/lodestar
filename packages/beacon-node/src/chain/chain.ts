@@ -23,7 +23,6 @@ import {
   ValidatorIndex,
   deneb,
   Wei,
-  WithOptionalBytes,
   bellatrix,
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
@@ -558,11 +557,11 @@ export class BeaconChain implements IBeaconChain {
     return blobSidecars;
   }
 
-  async processBlock(block: WithOptionalBytes<BlockInput>, opts?: ImportBlockOpts): Promise<void> {
+  async processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob([block], opts);
   }
 
-  async processChainSegment(blocks: WithOptionalBytes<BlockInput>[], opts?: ImportBlockOpts): Promise<void> {
+  async processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob(blocks, opts);
   }
 

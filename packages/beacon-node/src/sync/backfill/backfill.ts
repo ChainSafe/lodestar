@@ -746,31 +746,32 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   }
 
   private async syncBlockByRoot(peer: PeerIdStr, anchorBlockRoot: Root): Promise<void> {
-    const [anchorBlock] = await this.network.sendBeaconBlocksByRoot(peer, [anchorBlockRoot]);
-    if (anchorBlock == null) throw new Error("InvalidBlockSyncedFromPeer");
+    const res = await this.network.sendBeaconBlocksByRoot(peer, [anchorBlockRoot]);
+    if (res.length < 1) throw new Error("InvalidBlockSyncedFromPeer");
+    const anchorBlock = res[0];
 
     // GENESIS_SLOT doesn't has valid signature
-    if (anchorBlock.message.slot === GENESIS_SLOT) return;
+    if (anchorBlock.data.message.slot === GENESIS_SLOT) return;
     await verifyBlockProposerSignature(this.chain.bls, this.chain.getHeadState(), [anchorBlock]);
 
     // We can write to the disk if this is ahead of prevFinalizedCheckpointBlock otherwise
     // we will need to go make checks on the top of sync loop before writing as it might
     // override prevFinalizedCheckpointBlock
-    if (this.prevFinalizedCheckpointBlock.slot < anchorBlock.message.slot)
-      await this.db.blockArchive.put(anchorBlock.message.slot, anchorBlock);
+    if (this.prevFinalizedCheckpointBlock.slot < anchorBlock.data.message.slot)
+      await this.db.blockArchive.putBinary(anchorBlock.data.message.slot, anchorBlock.bytes);
 
     this.syncAnchor = {
-      anchorBlock,
+      anchorBlock: anchorBlock.data,
       anchorBlockRoot,
-      anchorSlot: anchorBlock.message.slot,
-      lastBackSyncedBlock: {root: anchorBlockRoot, slot: anchorBlock.message.slot, block: anchorBlock},
+      anchorSlot: anchorBlock.data.message.slot,
+      lastBackSyncedBlock: {root: anchorBlockRoot, slot: anchorBlock.data.message.slot, block: anchorBlock.data},
     };
 
     this.metrics?.backfillSync.totalBlocks.inc({method: BackfillSyncMethod.blockbyroot});
 
     this.logger.verbose("Fetched new anchorBlock", {
       root: toHexString(anchorBlockRoot),
-      slot: anchorBlock.message.slot,
+      slot: anchorBlock.data.message.slot,
     });
 
     return;
@@ -822,10 +823,18 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       // Verified blocks are in reverse order with the nextAnchor being the smallest slot
       // if nextAnchor is on the same slot as prevFinalizedCheckpointBlock, we can't save
       // it before returning to top of sync loop for validation
-      await this.db.blockArchive.batchAdd(
+      const blocksToPut =
         nextAnchor.slot > this.prevFinalizedCheckpointBlock.slot
           ? verifiedBlocks
-          : verifiedBlocks.slice(0, verifiedBlocks.length - 1)
+          : verifiedBlocks.slice(0, verifiedBlocks.length - 1);
+      await this.db.blockArchive.batchPutBinary(
+        blocksToPut.map((block) => ({
+          key: block.data.message.slot,
+          value: block.bytes,
+          slot: block.data.message.slot,
+          blockRoot: this.config.getForkTypes(block.data.message.slot).BeaconBlock.hashTreeRoot(block.data.message),
+          parentRoot: block.data.message.parentRoot,
+        }))
       );
       this.metrics?.backfillSync.totalBlocks.inc({method: BackfillSyncMethod.rangesync}, verifiedBlocks.length);
     }
