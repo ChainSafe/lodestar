@@ -208,20 +208,17 @@ export function getBeaconBlockApi({
       let blockForImport: BlockInput, signedBlock: allForks.SignedBeaconBlock, signedBlobs: deneb.SignedBlobSidecars;
 
       if (isSignedBlockContents(signedBlockOrContents)) {
-        // Build a blockInput for post deneb, signedBlobs will be be used in followup PRs
         ({signedBlock, signedBlobSidecars: signedBlobs} = signedBlockOrContents);
-        const blobsSidecar = blobSidecarsToBlobsSidecar(
-          config,
-          signedBlock,
-          signedBlobs.map(({message}) => message)
-        );
-
         blockForImport = getBlockInput.postDeneb(
           config,
           signedBlock,
           BlockSource.api,
           // The blobsSidecar will be replaced in the followup PRs with just blobs
-          blobsSidecar
+          blobSidecarsToBlobsSidecar(
+            config,
+            signedBlock,
+            signedBlobs.map((sblob) => sblob.message)
+          )
         );
       } else {
         signedBlock = signedBlockOrContents;
@@ -231,7 +228,8 @@ export function getBeaconBlockApi({
 
       // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the
       // REST request promise without any extra infrastructure.
-      const msToBlockSlot = computeTimeAtSlot(config, signedBlock.message.slot, chain.genesisTime) * 1000 - Date.now();
+      const msToBlockSlot =
+        computeTimeAtSlot(config, blockForImport.block.message.slot, chain.genesisTime) * 1000 - Date.now();
       if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
         // If block is a bit early, hold it in a promise. Equivalent to a pending queue.
         await sleep(msToBlockSlot);
@@ -242,7 +240,7 @@ export function getBeaconBlockApi({
       const publishPromises = [
         // Send the block, regardless of whether or not it is valid. The API
         // specification is very clear that this is the desired behaviour.
-        () => network.publishBeaconBlockMaybeBlobs(blockForImport) as Promise<unknown>,
+        () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
         () =>
           // there is no rush to persist block since we published it to gossip anyway
           chain.processBlock(blockForImport, {...opts, eagerPersistBlock: false}).catch((e) => {
@@ -254,7 +252,7 @@ export function getBeaconBlockApi({
             }
             throw e;
           }),
-        // TODO deneb: publish signed blobs as well
+        ...signedBlobs.map((signedBlob) => () => network.publishBlobSidecar(signedBlob)),
       ];
       await promiseAllMaybeAsync(publishPromises);
     },

@@ -3,7 +3,6 @@ import {Connection} from "@libp2p/interface-connection";
 import {Registrar} from "@libp2p/interface-registrar";
 import {ConnectionManager} from "@libp2p/interface-connection-manager";
 import {Slot, SlotRootHex, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
-import {BlockInput} from "../chain/blocks/types.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {INetworkEventBus} from "./events.js";
 import {INetworkCorePublic} from "./core/types.js";
@@ -44,9 +43,8 @@ export interface INetwork extends INetworkCorePublic {
   sendBlobSidecarsByRoot(peerId: PeerIdStr, request: deneb.BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
 
   // Gossip
-  publishBeaconBlockMaybeBlobs(blockInput: BlockInput): Promise<number>;
   publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<number>;
-  publishSignedBeaconBlockAndBlobsSidecar(item: deneb.SignedBeaconBlockAndBlobsSidecar): Promise<number>;
+  publishBlobSidecar(signedBlobSidecar: deneb.SignedBlobSidecar): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number>;
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;
