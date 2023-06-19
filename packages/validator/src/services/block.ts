@@ -109,13 +109,19 @@ export class BlockProposingService {
 
       const debugLogCtx = {...logCtx, validator: pubkeyHex};
 
-      this.logger.debug("Producing block", debugLogCtx);
-      this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
-
       const strictFeeRecipientCheck = this.validatorStore.strictFeeRecipientCheck(pubkeyHex);
       const isBuilderEnabled = this.validatorStore.isBuilderEnabled(pubkeyHex);
       const builderSelection = this.validatorStore.getBuilderSelection(pubkeyHex);
       const expectedFeeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
+
+      this.logger.debug("Producing block", {
+        ...debugLogCtx,
+        isBuilderEnabled,
+        builderSelection,
+        expectedFeeRecipient,
+        strictFeeRecipientCheck,
+      });
+      this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
       const blockContents = await this.produceBlockWrapper(slot, randaoReveal, graffiti, {
         expectedFeeRecipient,
@@ -190,10 +196,11 @@ export class BlockProposingService {
   > => {
     // Start calls for building execution and builder blocks
     const blindedBlockPromise = isBuilderEnabled ? this.produceBlindedBlock(slot, randaoReveal, graffiti) : null;
-    const fullBlockPromise = this.produceBlock(slot, randaoReveal, graffiti);
+    const fullBlockPromise =
+      builderSelection !== BuilderSelection.BuilderOnly ? this.produceBlock(slot, randaoReveal, graffiti) : null;
 
     let blindedBlock, fullBlock;
-    if (blindedBlockPromise !== null) {
+    if (blindedBlockPromise !== null && fullBlockPromise !== null) {
       // reference index of promises in the race
       const promisesOrder = [ProducedBlockSource.builder, ProducedBlockSource.engine];
       [blindedBlock, fullBlock] = await racePromisesWithCutoff<{
@@ -225,10 +232,18 @@ export class BlockProposingService {
         this.logger.error("Failed to produce execution block", {}, fullBlock);
         fullBlock = null;
       }
-    } else {
-      fullBlock = await fullBlockPromise;
+    } else if (blindedBlockPromise !== null && fullBlockPromise === null) {
+      blindedBlock = await blindedBlockPromise;
+      fullBlock = null;
+    } else if (blindedBlockPromise === null && fullBlockPromise !== null) {
       blindedBlock = null;
+      fullBlock = await fullBlockPromise;
+    } else {
+      throw Error(
+        `Neither builder not execution proposal flow activated: isBuilderEnabled=${isBuilderEnabled} builderSelection=${builderSelection}`
+      );
     }
+    this.logger.info("Started block production", {});
 
     const builderBlockValue = blindedBlock?.blockValue ?? BigInt(0);
     const engineBlockValue = fullBlock?.blockValue ?? BigInt(0);
@@ -252,7 +267,7 @@ export class BlockProposingService {
           break;
         }
 
-        case BuilderSelection.BuilderAlways:
+        // For everything else just select the builder
         default: {
           selectedSource = ProducedBlockSource.builder;
           selectedBlock = blindedBlock;
