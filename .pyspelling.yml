@@ -9,6 +9,11 @@ matrix:
     pipeline:
       - pyspelling.filters.url:
       - pyspelling.filters.markdown:
+          markdown_extensions:
+          - pymdownx.superfences:
+          - pymdownx.highlight:
+          - pymdownx.striphtml:
+          - pymdownx.magiclink:
       - pyspelling.filters.url:
       - pyspelling.filters.html:
           comments: false
@@ -21,17 +26,11 @@ matrix:
           # Ignore possessive endings
           - open: '(?<=\w)''s(?!\w)'
             close: '\b'
-          # Ignore multiline content between fences (fences can have 3 or more back ticks)
-          # ```
-          # content
-          # ```
-          # - open: '^(?P<open>`{3,})$'
-            # close: '^(?P=open)$'
-          # Ignore text between inline back ticks
-          # - open: '(?P<open>`+)'
-            # close: '(?P=open)'
+          # Ignore eth methods (e.g. eth_estimateGas)
+          - open: '(?:\s)eth_(?:\w*)'
+            close: '\s'
     sources:
       - "docs/**/*.md"
       - "CONTRIBUTING.md"
       - "README.md"
-      # - "packages/*/README.md"
+      - "packages/*/README.md"
