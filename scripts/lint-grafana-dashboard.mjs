@@ -90,12 +90,12 @@ export function lintGrafanaDashboard(json) {
   // Always add Prometheus to __inputs
   const inputs = [
     {
-      description: "",
-      label: "Prometheus",
       name: variableNameDatasource,
+      type: "datasource",
+      label: "Prometheus",
+      description: "",
       pluginId: "prometheus",
       pluginName: "Prometheus",
-      type: "datasource",
     },
   ];
 
