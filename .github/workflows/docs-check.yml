@@ -42,8 +42,8 @@ jobs:
       # ```
 
       # TODO: sort in CI differs from local https://github.com/ChainSafe/lodestar/pull/5527#issuecomment-1569985518
-      # - name: Check wordlist is sorted
-      #   run: scripts/wordlist_sort_check.sh
+      - name: Check wordlist is sorted
+        run: scripts/wordlist_sort_check.sh
 
 
       - name: Build and collect docs
