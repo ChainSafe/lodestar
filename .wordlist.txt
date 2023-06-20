@@ -6,7 +6,6 @@ CLA
 CLI
 CTRL
 ChainSafe
-ChainSafe's
 Customizations
 Discv
 DockerHub
@@ -40,7 +39,6 @@ NVM
 Nethermind
 NodeJS
 NodeSource
-NodeSource's
 PR
 PRs
 Plaintext
@@ -57,7 +55,6 @@ UI
 UTF
 VM
 Vitalik
-Vitalik's
 Wagyu
 api
 beaconcha
@@ -100,3 +97,5 @@ util
 utils
 validator
 validators
+sharding
+async

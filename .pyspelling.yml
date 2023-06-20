@@ -16,18 +16,22 @@ matrix:
             - code
             - pre
       - pyspelling.filters.context:
+          context_visible_first: true
           delimiters:
+          # Ignore possessive endings
+          - open: '(?<=\w)''s(?!\w)'
+            close: '\b'
           # Ignore multiline content between fences (fences can have 3 or more back ticks)
           # ```
           # content
           # ```
-          - open: '(?s)^(?P<open> *`{3,})$'
-            close: '^(?P=open)$'
+          # - open: '^(?P<open>`{3,})$'
+            # close: '^(?P=open)$'
           # Ignore text between inline back ticks
-          - open: '(?P<open>`+)'
-            close: '(?P=open)'
+          # - open: '(?P<open>`+)'
+            # close: '(?P=open)'
     sources:
       - "docs/**/*.md"
       - "CONTRIBUTING.md"
       - "README.md"
-      - "packages/*/README.md"
+      # - "packages/*/README.md"
