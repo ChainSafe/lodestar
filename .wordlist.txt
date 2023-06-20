@@ -6,6 +6,7 @@ CLA
 CLI
 CTRL
 ChainSafe
+ChainSafe's
 Customizations
 Discv
 DockerHub
@@ -62,11 +63,15 @@ api
 beaconcha
 bootnode
 bootnodes
+chainConfig
 chainsafe
 cli
 config
+configs
+const
 dApp
 dApps
+deserialization
 devnet
 envs
 flamegraph
@@ -77,7 +82,10 @@ keystores
 linter
 mainnet
 merkle
+merkleization
 monorepo
+namespace
+namespaces
 nodemodule
 params
 plaintext
