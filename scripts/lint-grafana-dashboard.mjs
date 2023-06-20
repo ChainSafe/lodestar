@@ -71,6 +71,7 @@ no-console
  *
  * @typedef {Object} TemplatingListItem
  * @property {string} name
+ * @property {string} query
  */
 
 const variableNameDatasource = "DS_PROMETHEUS";
@@ -86,18 +87,44 @@ export function lintGrafanaDashboard(json) {
   delete json.__elements;
   delete json.__requires;
 
+  // Always add Prometheus to __inputs
+  const inputs = [
+    {
+      description: "",
+      label: "Prometheus",
+      name: variableNameDatasource,
+      pluginId: "prometheus",
+      pluginName: "Prometheus",
+      type: "datasource",
+    },
+  ];
+
+  // Add job names to __inputs if used by dashboard
+  if (json.templating && json.templating.list) {
+    for (const item of json.templating.list) {
+      if (item.query === "${VAR_BEACON_JOB}") {
+        inputs.push({
+          name: "VAR_BEACON_JOB",
+          type: "constant",
+          label: "Beacon node job name",
+          value: "beacon",
+          description: "",
+        });
+      } else if (item.query === "${VAR_VALIDATOR_JOB}") {
+        inputs.push({
+          name: "VAR_VALIDATOR_JOB",
+          type: "constant",
+          label: "Validator client job name",
+          value: "validator",
+          description: "",
+        });
+      }
+    }
+  }
+
   // Ensure __inputs is first property to reduce diff
   json = {
-    __inputs: [
-      {
-        description: "",
-        label: "Prometheus",
-        name: variableNameDatasource,
-        pluginId: "prometheus",
-        pluginName: "Prometheus",
-        type: "datasource",
-      },
-    ],
+    __inputs: inputs,
     ...json,
   };
 
