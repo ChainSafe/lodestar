@@ -45,7 +45,6 @@ jobs:
       - name: Check wordlist is sorted
         run: scripts/wordlist_sort_check.sh
 
-
       - name: Build and collect docs
         run: yarn build:docs
 
