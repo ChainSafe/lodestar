@@ -32,8 +32,8 @@ export type IValidatorCliArgs = AccountValidatorArgs &
   LogArgs & {
     validatorsDbDir?: string;
     beaconNodes: string[];
-    force: boolean;
-    graffiti: string;
+    force?: boolean;
+    graffiti?: string;
     afterBlockDelaySlotFraction?: number;
     scAfterBlockDelaySlotFraction?: number;
     disableAttestationGrouping?: boolean;
