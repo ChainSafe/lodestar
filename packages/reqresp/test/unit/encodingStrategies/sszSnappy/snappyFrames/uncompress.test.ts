@@ -1,45 +1,46 @@
 import {expect} from "chai";
 import {Uint8ArrayList} from "uint8arraylist";
-import snappy from "@chainsafe/snappy-stream";
+import {pipe} from "it-pipe";
 import {SnappyFramesUncompress} from "../../../../../src/encodingStrategies/sszSnappy/snappyFrames/uncompress.js";
+import {encodeSnappy} from "../../../../../src/encodingStrategies/sszSnappy/snappyFrames/compress.js";
 
 describe("encodingStrategies / sszSnappy / snappy frames / uncompress", function () {
   it("should work with short input", function (done) {
-    const compressStream = snappy.createCompressStream();
+    const testData = "Small test data";
+    const compressIterable = encodeSnappy(Buffer.from(testData));
 
     const decompress = new SnappyFramesUncompress();
 
-    const testData = "Small test data";
-
-    compressStream.on("data", function (data) {
-      const result = decompress.uncompress(data);
-      if (result) {
-        expect(result.subarray().toString()).to.be.equal(testData);
-        done();
+    void pipe(compressIterable, async function (source) {
+      for await (const data of source) {
+        const result = decompress.uncompress(new Uint8ArrayList(data));
+        if (result) {
+          expect(result.subarray().toString()).to.be.equal(testData);
+          done();
+        }
       }
     });
-
-    compressStream.write(testData);
   });
 
   it("should work with huge input", function (done) {
-    const compressStream = snappy.createCompressStream();
-
+    const testData = Buffer.alloc(100000, 4).toString();
+    const compressIterable = encodeSnappy(Buffer.from(testData));
+    let result = Buffer.alloc(0);
     const decompress = new SnappyFramesUncompress();
 
-    const testData = Buffer.alloc(100000, 4).toString();
-    let result = Buffer.alloc(0);
-
-    compressStream.on("data", function (data) {
-      // testData will come compressed as two or more chunks
-      result = Buffer.concat([result, decompress.uncompress(data)?.subarray() ?? Buffer.alloc(0)]);
-      if (result.length === testData.length) {
-        expect(result.toString()).to.be.equal(testData);
-        done();
+    void pipe(compressIterable, async function (source) {
+      for await (const data of source) {
+        // testData will come compressed as two or more chunks
+        result = Buffer.concat([
+          result,
+          decompress.uncompress(new Uint8ArrayList(data))?.subarray() ?? Buffer.alloc(0),
+        ]);
+        if (result.length === testData.length) {
+          expect(result.toString()).to.be.equal(testData);
+          done();
+        }
       }
     });
-
-    compressStream.write(testData);
   });
 
   it("should detect malformed input", function () {
