@@ -132,7 +132,7 @@ export function lintGrafanaDashboard(json) {
   json.graphTooltip = 1;
 
   // null id to match "Export for sharing externally" format, only set to null if set to respect order
-  if (json !== undefined) {
+  if (json.id !== undefined) {
     json.id = null;
   }
 
