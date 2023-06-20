@@ -54,11 +54,11 @@ export async function getExecutionPayloads({
   const payloads: Record<number, allForks.ExecutionPayload> = {};
 
   let slot = endSlot;
-  let block = (await fetchNearestBlock(api, slot, "down")) as capella.SignedBeaconBlock;
+  let block = await fetchNearestBlock(api, slot, "down");
   payloads[block.message.slot] = block.message.body.executionPayload;
 
   while (slot >= startSlot) {
-    const previousBlock = (await fetchNearestBlock(api, block.message.slot - 1, "down")) as capella.SignedBeaconBlock;
+    const previousBlock = await fetchNearestBlock(api, block.message.slot - 1, "down");
 
     if (block.message.body.executionPayload.parentHash === previousBlock.message.body.executionPayload.blockHash) {
       payloads[block.message.slot] = block.message.body.executionPayload;
@@ -78,11 +78,11 @@ export async function getExecutionPayloadForBlockNumber(
 ): Promise<Record<number, allForks.ExecutionPayload>> {
   const payloads: Record<number, allForks.ExecutionPayload> = {};
 
-  let block = (await fetchNearestBlock(api, startSlot, "down")) as capella.SignedBeaconBlock;
+  let block = await fetchNearestBlock(api, startSlot, "down");
   payloads[block.message.slot] = block.message.body.executionPayload;
 
   while (payloads[block.message.slot].blockNumber !== blockNumber) {
-    const previousBlock = (await fetchNearestBlock(api, block.message.slot - 1, "down")) as capella.SignedBeaconBlock;
+    const previousBlock = await fetchNearestBlock(api, block.message.slot - 1, "down");
     block = previousBlock;
   }
 

@@ -39,7 +39,7 @@ export async function* onBlobSidecarsByRange(
 
       // Must include only blobs in the range requested
       if (block.slot >= startSlot && block.slot < endSlot) {
-        // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the cannonical chain
+        // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
         // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
@@ -65,11 +65,11 @@ export function* iterateBlobBytesFromWrapper(
   blobSideCarsBytesWrapped: Uint8Array,
   blockSlot: Slot
 ): Iterable<ResponseOutgoing> {
-  const blobSideCarsBytes = blobSideCarsBytesWrapped.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
-  const blobsLen = blobSideCarsBytes.length / BLOBSIDECAR_FIXED_SIZE;
+  const allBlobSideCarsBytes = blobSideCarsBytesWrapped.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
+  const blobsLen = allBlobSideCarsBytes.length / BLOBSIDECAR_FIXED_SIZE;
 
   for (let index = 0; index < blobsLen; index++) {
-    const blobSideCarBytes = blobSideCarsBytes.slice(
+    const blobSideCarBytes = allBlobSideCarsBytes.slice(
       index * BLOBSIDECAR_FIXED_SIZE,
       (index + 1) * BLOBSIDECAR_FIXED_SIZE
     );
@@ -80,7 +80,7 @@ export function* iterateBlobBytesFromWrapper(
       );
     }
     yield {
-      data: blobSideCarsBytes,
+      data: blobSideCarBytes,
       fork: chain.config.getForkName(blockSlot),
     };
   }

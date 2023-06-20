@@ -1,6 +1,6 @@
 import {BLSPubkey, Slot, ssz} from "@lodestar/types";
 import {intToBytes, bytesToInt} from "@lodestar/utils";
-import {DatabaseApiOptions, DB_PREFIX_LENGTH, DbReqOpts, encodeKey, uintLen} from "@lodestar/db";
+import {DB_PREFIX_LENGTH, DbReqOpts, encodeKey, uintLen} from "@lodestar/db";
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {LodestarValidatorDatabaseController} from "../../types.js";
 import {Bucket, getBucketNameByValue} from "../../buckets.js";
@@ -14,7 +14,6 @@ import {blsPubkeyLen, uniqueVectorArr} from "../utils.js";
  */
 export class BlockBySlotRepository {
   protected type: Type<SlashingProtectionBlock>;
-  protected db: LodestarValidatorDatabaseController;
   protected bucket = Bucket.slashingProtectionBlockBySlot;
 
   private readonly bucketId = getBucketNameByValue(this.bucket);
@@ -22,8 +21,7 @@ export class BlockBySlotRepository {
   private readonly minKey: Uint8Array;
   private readonly maxKey: Uint8Array;
 
-  constructor(opts: DatabaseApiOptions) {
-    this.db = opts.controller;
+  constructor(protected db: LodestarValidatorDatabaseController) {
     this.type = new ContainerType({
       slot: ssz.Slot,
       signingRoot: ssz.Root,

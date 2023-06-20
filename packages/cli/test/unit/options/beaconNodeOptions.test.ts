@@ -15,6 +15,7 @@ describe("options / beaconNodeOptions", () => {
       rest: true,
       "rest.address": "127.0.0.1",
       "rest.port": 7654,
+      "rest.headerLimit": 16384,
       "rest.bodyLimit": 30e6,
 
       "chain.blsVerifyAllMultiThread": true,
@@ -31,6 +32,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.maxSkipSlots": 100,
       "safe-slots-to-import-optimistically": 256,
       "chain.archiveStateEpochFrequency": 1024,
+      "chain.trustedSetup": "",
       emitPayloadAttributes: false,
 
       eth1: true,
@@ -52,7 +54,6 @@ describe("options / beaconNodeOptions", () => {
       "builder.timeout": 12000,
       "builder.faultInspectionWindow": 32,
       "builder.allowedFaults": 16,
-      "builder.userAgent": "lodestar/-",
 
       metrics: true,
       "metrics.port": 8765,
@@ -105,6 +106,7 @@ describe("options / beaconNodeOptions", () => {
           enabled: true,
           address: "127.0.0.1",
           port: 7654,
+          headerLimit: 16384,
           bodyLimit: 30e6,
         },
       },
@@ -124,6 +126,7 @@ describe("options / beaconNodeOptions", () => {
         maxSkipSlots: 100,
         archiveStateEpochFrequency: 1024,
         emitPayloadAttributes: false,
+        trustedSetup: "",
       },
       eth1: {
         enabled: true,
@@ -146,7 +149,6 @@ describe("options / beaconNodeOptions", () => {
         timeout: 12000,
         faultInspectionWindow: 32,
         allowedFaults: 16,
-        userAgent: "lodestar/-",
       },
       metrics: {
         enabled: true,

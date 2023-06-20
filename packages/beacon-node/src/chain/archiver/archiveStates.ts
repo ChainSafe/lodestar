@@ -4,7 +4,7 @@ import {Slot, Epoch} from "@lodestar/types";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconDb} from "../../db/index.js";
-import {CheckpointStateCache} from "../stateCache/index.js";
+import {IStateRegenerator} from "../regen/interface.js";
 
 /**
  * Minimum number of epochs between single temp archived states
@@ -26,7 +26,7 @@ export interface StatesArchiverOpts {
  */
 export class StatesArchiver {
   constructor(
-    private readonly checkpointStateCache: CheckpointStateCache,
+    private readonly regen: IStateRegenerator,
     private readonly db: IBeaconDb,
     private readonly logger: Logger,
     private readonly opts: StatesArchiverOpts
@@ -83,7 +83,7 @@ export class StatesArchiver {
    * Only the new finalized state is stored to disk
    */
   async archiveState(finalized: CheckpointWithHex): Promise<void> {
-    const finalizedState = this.checkpointStateCache.get(finalized);
+    const finalizedState = this.regen.getCheckpointStateSync(finalized);
     if (!finalizedState) {
       throw Error("No state in cache for finalized checkpoint state epoch #" + finalized.epoch);
     }

@@ -35,7 +35,7 @@ api.beacon
 
 ## Prerequisites
 
-- [Lerna](https://github.com/lerna/lerna)
+- [NodeJS](https://nodejs.org/) (LTS)
 - [Yarn](https://yarnpkg.com/)
 
 ## What you need

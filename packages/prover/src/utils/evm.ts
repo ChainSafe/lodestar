@@ -8,11 +8,12 @@ import {allForks} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {ZERO_ADDRESS} from "../constants.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
-import {ELApiHandlers, ELBlock, ELProof, ELTransaction} from "../types.js";
-import {bufferToHex, cleanObject, hexToBigInt, hexToBuffer, numberToHex, padLeft} from "./conversion.js";
-import {elRpc, getChainCommon, getTxType} from "./execution.js";
+import {ELBlock, ELProof, ELTransaction} from "../types.js";
+import {bufferToHex, chunkIntoN, cleanObject, hexToBigInt, hexToBuffer, numberToHex, padLeft} from "./conversion.js";
+import {getChainCommon, getTxType} from "./execution.js";
 import {isValidResponse} from "./json_rpc.js";
 import {isNullish, isValidAccount, isValidCodeHash, isValidStorageKeys} from "./validation.js";
+import {ELRpc} from "./rpc.js";
 
 export async function createVM({proofProvider}: {proofProvider: ProofProvider}): Promise<VM> {
   const common = getChainCommon(proofProvider.config.PRESET_BASE as string);
@@ -32,13 +33,13 @@ export async function createVM({proofProvider}: {proofProvider: ProofProvider}):
 }
 
 export async function getVMWithState({
-  handler,
+  rpc,
   executionPayload,
   tx,
   vm,
   logger,
 }: {
-  handler: ELApiHandlers["eth_getProof"] | ELApiHandlers["eth_getCode"] | ELApiHandlers["eth_createAccessList"];
+  rpc: ELRpc;
   vm: VM;
   executionPayload: allForks.ExecutionPayload;
   tx: ELTransaction;
@@ -47,19 +48,20 @@ export async function getVMWithState({
   const {stateRoot, blockHash, gasLimit} = executionPayload;
   const blockHashHex = bufferToHex(blockHash);
 
+  // If tx does not have a from address then it must be initiated via zero address
+  const from = tx.from ?? ZERO_ADDRESS;
+  const to = tx.to;
+
   // Create Access List for the contract call
   const accessListTx = cleanObject({
-    to: tx.to,
-    from: tx.from ?? ZERO_ADDRESS,
+    to,
+    from,
     data: tx.data,
     value: tx.value,
     gas: tx.gas ? tx.gas : numberToHex(gasLimit),
     gasPrice: "0x0",
   }) as ELTransaction;
-  const response = await elRpc(handler as ELApiHandlers["eth_createAccessList"], "eth_createAccessList", [
-    accessListTx,
-    blockHashHex,
-  ]);
+  const response = await rpc.request("eth_createAccessList", [accessListTx, blockHashHex], {raiseError: false});
 
   if (!isValidResponse(response) || response.result.error) {
     throw new Error(`Invalid response from RPC. method: eth_createAccessList, params: ${JSON.stringify(tx)}`);
@@ -70,45 +72,55 @@ export async function getVMWithState({
     storageKeysMap[address] = storageKeys;
   }
 
-  if (storageKeysMap[tx.from ?? ZERO_ADDRESS] === undefined) {
-    storageKeysMap[tx.from ?? ZERO_ADDRESS] = [];
+  // If from address is not present then we have to fetch it for all keys
+  if (isNullish(storageKeysMap[from])) {
+    storageKeysMap[from] = [];
   }
 
-  if (tx.to && storageKeysMap[tx.to] === undefined) {
-    storageKeysMap[tx.to] = [];
+  // If to address is not present then we have to fetch it with for all keys
+  if (to && isNullish(storageKeysMap[to])) {
+    storageKeysMap[to] = [];
   }
 
-  // TODO: When we support batch requests, process with a single request
-  const proofsAndCodes: Record<string, {proof: ELProof; code: string}> = {};
+  const batchRequests = [];
   for (const [address, storageKeys] of Object.entries(storageKeysMap)) {
-    const {result: proof} = await elRpc(
-      handler as ELApiHandlers["eth_getProof"],
-      "eth_getProof",
-      [address, storageKeys, blockHashHex],
-      true
-    );
-    const validAccount = await isValidAccount({address, proof, logger, stateRoot});
+    batchRequests.push({jsonrpc: "2.0", method: "eth_getProof", params: [address, storageKeys, blockHashHex]});
+    batchRequests.push({jsonrpc: "2.0", method: "eth_getCode", params: [address, blockHashHex]});
+  }
+
+  // If all responses are valid then we will have even number of responses
+  // For each address, one response for eth_getProof and one for eth_getCode
+  const batchResponse = await rpc.batchRequest(batchRequests, {raiseError: true});
+  const batchResponseInChunks = chunkIntoN(batchResponse, 2);
+
+  const vmState: VMState = {};
+  for (const [proofResponse, codeResponse] of batchResponseInChunks) {
+    const addressHex = proofResponse.request.params[0] as string;
+    if (!isNullish(vmState[addressHex])) continue;
+
+    const proof = proofResponse.response.result as ELProof;
+    const storageKeys = proofResponse.request.params[1] as string[];
+    const code = codeResponse.response.result as string;
+
+    const validAccount = await isValidAccount({address: addressHex, proof, logger, stateRoot});
     const validStorage = validAccount && (await isValidStorageKeys({storageKeys, proof, logger}));
     if (!validAccount || !validStorage) {
-      throw new Error(`Invalid account: ${address}`);
+      throw new Error(`Invalid account: ${addressHex}`);
     }
 
-    const {result: codeResponse} = await elRpc(
-      handler as ELApiHandlers["eth_getCode"],
-      "eth_getCode",
-      [address, blockHashHex],
-      true
-    );
-
-    if (!(await isValidCodeHash({codeResponse, logger, codeHash: proof.codeHash}))) {
-      throw new Error(`Invalid code hash: ${address}`);
+    if (!(await isValidCodeHash({codeResponse: code, logger, codeHash: proof.codeHash}))) {
+      throw new Error(`Invalid code hash: ${addressHex}`);
     }
 
-    proofsAndCodes[address] = {proof, code: codeResponse};
+    vmState[addressHex] = {code, proof};
   }
 
+  return updateVMWithState({vm, state: vmState, logger});
+}
+type VMState = Record<string, {code: string; proof: ELProof}>;
+export async function updateVMWithState({vm, state}: {logger: Logger; state: VMState; vm: VM}): Promise<VM> {
   await vm.stateManager.checkpoint();
-  for (const [addressHex, {proof, code}] of Object.entries(proofsAndCodes)) {
+  for (const [addressHex, {proof, code}] of Object.entries(state)) {
     const address = Address.fromString(addressHex);
     const codeBuffer = hexToBuffer(code);
 
@@ -123,7 +135,6 @@ export async function getVMWithState({
     for (const {key, value} of proof.storageProof) {
       await vm.stateManager.putContractStorage(address, padLeft(hexToBuffer(key), 32), padLeft(hexToBuffer(value), 32));
     }
-
     if (codeBuffer.byteLength !== 0) await vm.stateManager.putContractCode(address, codeBuffer);
   }
 
@@ -132,25 +143,22 @@ export async function getVMWithState({
 }
 
 export async function executeVMCall({
-  handler,
+  rpc,
   tx,
   vm,
   executionPayload,
   network,
 }: {
-  handler: ELApiHandlers["eth_getBlockByHash"];
+  rpc: ELRpc;
   tx: ELTransaction;
   vm: VM;
   executionPayload: allForks.ExecutionPayload;
   network: NetworkName;
 }): Promise<RunTxResult["execResult"]> {
   const {from, to, gas, gasPrice, maxPriorityFeePerGas, value, data} = tx;
-  const {result: block} = await elRpc(
-    handler,
-    "eth_getBlockByHash",
-    [bufferToHex(executionPayload.blockHash), true],
-    true
-  );
+  const {result: block} = await rpc.request("eth_getBlockByHash", [bufferToHex(executionPayload.blockHash), true], {
+    raiseError: true,
+  });
 
   if (!block) {
     throw new Error(`Block not found: ${bufferToHex(executionPayload.blockHash)}`);
@@ -176,24 +184,21 @@ export async function executeVMCall({
 }
 
 export async function executeVMTx({
-  handler,
+  rpc,
   tx,
   vm,
   executionPayload,
   network,
 }: {
-  handler: ELApiHandlers["eth_getBlockByHash"];
+  rpc: ELRpc;
   tx: ELTransaction;
   vm: VM;
   executionPayload: allForks.ExecutionPayload;
   network: NetworkName;
 }): Promise<RunTxResult> {
-  const {result: block} = await elRpc(
-    handler,
-    "eth_getBlockByHash",
-    [bufferToHex(executionPayload.blockHash), true],
-    true
-  );
+  const {result: block} = await rpc.request("eth_getBlockByHash", [bufferToHex(executionPayload.blockHash), true], {
+    raiseError: true,
+  });
 
   if (!block) {
     throw new Error(`Block not found: ${bufferToHex(executionPayload.blockHash)}`);

@@ -64,8 +64,7 @@ describe("network / peers / PeerManager", function () {
       getActiveSubnets: () => [],
       shouldProcess: () => true,
       addCommitteeSubscriptions: () => {},
-      start: () => {},
-      stop: () => {},
+      close: () => {},
       subscribeSubnetsToNextFork: () => {},
       unsubscribeSubnetsFromPrevFork: () => {},
     };
@@ -91,9 +90,9 @@ describe("network / peers / PeerManager", function () {
         maxPeers: 50,
         discv5: null,
         discv5FirstQueryDelayMs: 0,
-      }
+      },
+      null
     );
-    await peerManager.start();
 
     return {statusCache, clock, libp2p, reqResp, peerManager, networkEventBus};
   }

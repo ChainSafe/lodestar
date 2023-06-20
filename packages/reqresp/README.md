@@ -43,7 +43,7 @@ async function getReqResp(libp2p: Libp2p, logger: Logger): Promise<void> {
 
 ## Prerequisites
 
-- [Lerna](https://github.com/lerna/lerna)
+- [NodeJS](https://nodejs.org/) (LTS)
 - [Yarn](https://yarnpkg.com/)
 
 ## What you need

@@ -120,6 +120,15 @@ In case you really trust `checkpointSyncUrl` then you may skip providing `wssChe
 If possible, validate your `wssCheckpoint` from multiple places (e.g. different client distributions) or from other trusted sources. This will highly reduce the risk of starting off on a malicious chain.
 <!-- prettier-ignore-end -->
 
+**Taking too long to sync?**
+
+After your node has been offline for a while, it might be the case that it takes a long time to sync even though a `checkpointSyncUrl` is specified.
+This is due to the fact that the last db state is still within the weak subjectivity period (~15 days on mainnet) which causes the node
+to sync from the db state instead of the checkpoint state.
+
+It is possible to force syncing from checkpoint state by supplying the `--forceCheckpointSync` flag. This option is only recommended if it is absolutely
+necessary for the node to be synced right away to fulfill its duties as there is an inherent risk each time the state is obtained from an external source.
+
 ### Guide to the sync logs
 
 Lodestar beacon sync log aims to provide information of utmost importance about your node and yet be succinct at the same time. You may see the sync logs in the following format:

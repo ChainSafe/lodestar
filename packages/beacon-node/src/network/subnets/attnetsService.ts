@@ -93,14 +93,12 @@ export class AttnetsService implements IAttnetsService {
     if (metrics) {
       metrics.attnetsService.subscriptionsRandom.addCollect(() => this.onScrapeLodestarMetrics(metrics));
     }
-  }
 
-  start(): void {
     this.clock.on(ClockEvent.slot, this.onSlot);
     this.clock.on(ClockEvent.epoch, this.onEpoch);
   }
 
-  stop(): void {
+  close(): void {
     this.clock.off(ClockEvent.slot, this.onSlot);
     this.clock.off(ClockEvent.epoch, this.onEpoch);
   }

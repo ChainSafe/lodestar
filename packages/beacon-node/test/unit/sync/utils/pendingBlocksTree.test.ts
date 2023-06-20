@@ -1,10 +1,10 @@
 import {expect} from "chai";
 import {RootHex} from "@lodestar/types";
-import {PendingBlock, PendingBlockStatus} from "../../../../src/sync/index.js";
+import {PendingBlock, PendingBlockStatus, UnknownAndAncestorBlocks} from "../../../../src/sync/index.js";
 import {
   getAllDescendantBlocks,
   getDescendantBlocks,
-  getUnknownBlocks,
+  getUnknownAndAncestorBlocks,
 } from "../../../../src/sync/utils/pendingBlocksTree.js";
 
 describe("sync / pendingBlocksTree", () => {
@@ -13,14 +13,14 @@ describe("sync / pendingBlocksTree", () => {
     blocks: {block: string; parent: string | null}[];
     getAllDescendantBlocks: {block: string; res: string[]}[];
     getDescendantBlocks: {block: string; res: string[]}[];
-    getUnknownBlocks: string[];
+    getUnknownOrAncestorBlocks: {unknowns: string[]; ancestors: string[]};
   }[] = [
     {
       id: "empty case",
       blocks: [],
       getAllDescendantBlocks: [{block: "0A", res: []}],
       getDescendantBlocks: [{block: "0A", res: []}],
-      getUnknownBlocks: [],
+      getUnknownOrAncestorBlocks: {unknowns: [], ancestors: []},
     },
     {
       id: "two branches with multiple blocks",
@@ -44,7 +44,7 @@ describe("sync / pendingBlocksTree", () => {
         {block: "3C", res: ["4C"]},
         {block: "3B", res: []},
       ],
-      getUnknownBlocks: ["0A"],
+      getUnknownOrAncestorBlocks: {unknowns: ["0A"], ancestors: ["4C"]},
     },
   ];
 
@@ -72,7 +72,7 @@ describe("sync / pendingBlocksTree", () => {
       }
 
       it("getUnknownBlocks", () => {
-        expect(toRes(getUnknownBlocks(blocks))).to.deep.equal(testCase.getUnknownBlocks);
+        expect(toRes2(getUnknownAndAncestorBlocks(blocks))).to.deep.equal(testCase.getUnknownOrAncestorBlocks);
       });
     });
   }
@@ -80,4 +80,11 @@ describe("sync / pendingBlocksTree", () => {
 
 function toRes(blocks: PendingBlock[]): string[] {
   return blocks.map((block) => block.blockRootHex);
+}
+
+function toRes2(blocks: UnknownAndAncestorBlocks): {unknowns: string[]; ancestors: string[]} {
+  return {
+    unknowns: blocks.unknowns.map((block) => block.blockRootHex),
+    ancestors: blocks.ancestors.map((block) => block.blockRootHex),
+  };
 }

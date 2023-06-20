@@ -94,30 +94,39 @@ export class PeerDiscovery {
 
   private connectToDiscv5BootnodesOnStart: boolean | undefined = false;
 
-  constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts) {
+  constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts, discv5: Discv5Worker) {
     const {libp2p, peerRpcScores, metrics, logger, config} = modules;
     this.libp2p = libp2p;
     this.peerRpcScores = peerRpcScores;
     this.metrics = metrics;
     this.logger = logger;
     this.config = config;
+    this.discv5 = discv5;
     this.maxPeers = opts.maxPeers;
     this.discv5StartMs = 0;
+    this.discv5StartMs = Date.now();
     this.discv5FirstQueryDelayMs = opts.discv5FirstQueryDelayMs;
     this.connectToDiscv5BootnodesOnStart = opts.connectToDiscv5Bootnodes;
 
-    this.discv5 = new Discv5Worker({
-      discv5: opts.discv5,
-      peerId: modules.libp2p.peerId,
-      metrics: modules.metrics ?? undefined,
-      logger: this.logger,
-      config: this.config,
-    });
+    this.libp2p.addEventListener("peer:discovery", this.onDiscoveredPeer);
+    this.discv5.on("discovered", this.onDiscoveredENR);
+
     const numBootEnrs = opts.discv5.bootEnrs.length;
     if (numBootEnrs === 0) {
       this.logger.error("PeerDiscovery: discv5 has no boot enr");
     } else {
       this.logger.verbose("PeerDiscovery: number of bootEnrs", {bootEnrs: numBootEnrs});
+    }
+
+    if (this.connectToDiscv5BootnodesOnStart) {
+      // In devnet scenarios, especially, we want more control over which peers we connect to.
+      // Only dial the discv5.bootEnrs if the option
+      // network.connectToDiscv5Bootnodes has been set to true.
+      for (const bootENR of opts.discv5.bootEnrs) {
+        this.onDiscoveredENR(ENR.decodeTxt(bootENR)).catch((e) =>
+          this.logger.error("error onDiscoveredENR bootENR", {}, e)
+        );
+      }
     }
 
     if (metrics) {
@@ -128,25 +137,22 @@ export class PeerDiscovery {
     }
   }
 
-  async start(): Promise<void> {
-    await this.discv5.start();
-    this.discv5StartMs = Date.now();
+  static async init(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts): Promise<PeerDiscovery> {
+    const discv5 = await Discv5Worker.init({
+      discv5: opts.discv5,
+      peerId: modules.libp2p.peerId,
+      metrics: modules.metrics ?? undefined,
+      logger: modules.logger,
+      config: modules.config,
+    });
 
-    this.libp2p.addEventListener("peer:discovery", this.onDiscoveredPeer);
-    this.discv5.on("discovered", this.onDiscoveredENR);
-
-    if (this.connectToDiscv5BootnodesOnStart) {
-      // In devnet scenarios, especially, we want more control over which peers we connect to.
-      // Only dial the discv5.bootEnrs if the option
-      // network.connectToDiscv5Bootnodes has been set to true.
-      await this.discv5.discoverKadValues();
-    }
+    return new PeerDiscovery(modules, opts, discv5);
   }
 
   async stop(): Promise<void> {
     this.libp2p.removeEventListener("peer:discovery", this.onDiscoveredPeer);
     this.discv5.off("discovered", this.onDiscoveredENR);
-    await this.discv5.stop();
+    await this.discv5.close();
   }
 
   /**
@@ -258,11 +264,11 @@ export class PeerDiscovery {
   /**
    * Progressively called by libp2p peer discovery as a result of any query.
    */
-  private onDiscoveredPeer = async (evt: CustomEvent<PeerInfo>): Promise<void> => {
+  private onDiscoveredPeer = (evt: CustomEvent<PeerInfo>): void => {
     const {id, multiaddrs} = evt.detail;
     const attnets = zeroAttnets;
     const syncnets = zeroSyncnets;
-    const status = await this.handleDiscoveredPeer(id, multiaddrs[0], attnets, syncnets);
+    const status = this.handleDiscoveredPeer(id, multiaddrs[0], attnets, syncnets);
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
 
@@ -293,19 +299,19 @@ export class PeerDiscovery {
     const attnets = attnetsBytes ? deserializeEnrSubnets(attnetsBytes, ATTESTATION_SUBNET_COUNT) : zeroAttnets;
     const syncnets = syncnetsBytes ? deserializeEnrSubnets(syncnetsBytes, SYNC_COMMITTEE_SUBNET_COUNT) : zeroSyncnets;
 
-    const status = await this.handleDiscoveredPeer(peerId, multiaddrTCP, attnets, syncnets);
+    const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, attnets, syncnets);
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
 
   /**
    * Progressively called by peer discovery as a result of any query.
    */
-  private async handleDiscoveredPeer(
+  private handleDiscoveredPeer(
     peerId: PeerId,
     multiaddrTCP: Multiaddr,
     attnets: boolean[],
     syncnets: boolean[]
-  ): Promise<DiscoveredPeerStatus> {
+  ): DiscoveredPeerStatus {
     try {
       // Check if peer is not banned or disconnected
       if (this.peerRpcScores.getScoreState(peerId) !== ScoreState.Healthy) {

@@ -4,7 +4,7 @@ import {CliCommandOptions} from "../utils/command.js";
 
 export type GlobalArgs = {
   network: string;
-  "log-level": string;
+  logLevel: string;
 };
 
 export type GlobalOptions = {
@@ -19,7 +19,7 @@ export const globalOptions: CliCommandOptions<GlobalArgs> = {
     choices: Object.keys(networksChainConfig),
   },
 
-  "log-level": {
+  logLevel: {
     description: "Set the log level.",
     type: "string",
     choices: LogLevels,
@@ -30,7 +30,7 @@ export const globalOptions: CliCommandOptions<GlobalArgs> = {
 export function parseGlobalArgs(args: GlobalArgs): GlobalOptions {
   // Remove undefined values to allow deepmerge to inject default values downstream
   return {
-    network: args["network"] as NetworkName,
-    logLevel: args["log-level"] as LogLevel,
+    network: args.network as NetworkName,
+    logLevel: args.logLevel as LogLevel,
   };
 }

@@ -1,6 +1,5 @@
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "../../util/index.js";
-import {getVersionData} from "../../util/version.js";
 
 export type ExecutionBuilderArgs = {
   builder: boolean;
@@ -8,7 +7,6 @@ export type ExecutionBuilderArgs = {
   "builder.timeout": number;
   "builder.faultInspectionWindow": number;
   "builder.allowedFaults": number;
-  "builder.userAgent": string;
 };
 
 export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["executionBuilder"] {
@@ -18,7 +16,6 @@ export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["execu
     timeout: args["builder.timeout"],
     faultInspectionWindow: args["builder.faultInspectionWindow"],
     allowedFaults: args["builder.allowedFaults"],
-    userAgent: args["builder.userAgent"],
   };
 }
 
@@ -34,9 +31,13 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
 
   "builder.urls": {
     description: "Urls hosting the builder API",
-    type: "array",
     defaultDescription:
       defaultOptions.executionBuilder.mode === "http" ? defaultOptions.executionBuilder.urls.join(" ") : "",
+    type: "array",
+    string: true,
+    coerce: (urls: string[]): string[] =>
+      // Parse ["url1,url2"] to ["url1", "url2"]
+      urls.map((item) => item.split(",")).flat(1),
     group: "builder",
   },
 
@@ -57,14 +58,6 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
   "builder.allowedFaults": {
     type: "number",
     description: "Number of missed slots allowed in the faultInspectionWindow for builder circuit",
-    group: "builder",
-  },
-
-  "builder.userAgent": {
-    type: "string",
-    description: "User-Agent header attached to all builder requests",
-    // Casting to `as string` so that if version type changes this line does not compile
-    default: `Lodestar/${getVersionData().version as string}`,
     group: "builder",
   },
 };

@@ -20,7 +20,7 @@ import {MonitoringService} from "../monitoring/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
-import {initCKZG, loadEthereumTrustedSetup} from "../util/kzg.js";
+import {initCKZG, loadEthereumTrustedSetup, TrustedFileMode} from "../util/kzg.js";
 import {IBeaconNodeOptions} from "./options.js";
 import {runNodeNotifier} from "./notifier.js";
 
@@ -161,11 +161,9 @@ export class BeaconNode {
       // TODO DENEB: "c-kzg" is not installed by default, so if the library is not installed this will throw
       // See "Not able to build lodestar from source" https://github.com/ChainSafe/lodestar/issues/4886
       await initCKZG();
-      loadEthereumTrustedSetup();
+      loadEthereumTrustedSetup(TrustedFileMode.Txt, opts.chain.trustedSetup);
     }
 
-    // start db if not already started
-    await db.start();
     // Prune hot db repos
     // TODO: Should this call be awaited?
     await db.pruneHotDb();
@@ -230,7 +228,6 @@ export class BeaconNode {
       peerId,
       peerStoreDir,
       getReqRespHandler: getReqRespHandlers({db, chain}),
-      signal,
     });
 
     const sync = new BeaconSync(opts.sync, {
@@ -322,7 +319,7 @@ export class BeaconNode {
       await this.chain.close();
       if (this.controller) this.controller.abort();
       await sleep(DELAY_BEFORE_CLOSING_DB_MS);
-      await this.db.stop();
+      await this.db.close();
       this.status = BeaconNodeStatus.closed;
     }
   }

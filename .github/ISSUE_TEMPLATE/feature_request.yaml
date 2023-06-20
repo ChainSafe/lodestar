@@ -3,10 +3,6 @@ description: Suggest an idea for this project
 title: "[Descriptive title] "
 labels: [meta-feature-request]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        **NOTE: General questions should go to the [Discord chat](https://discord.gg/aMxzVcr) instead of the issue tracker.**
   - type: textarea
     id: problem
     attributes:

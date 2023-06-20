@@ -1,4 +1,4 @@
-import {WithOptionalBytes, allForks} from "@lodestar/types";
+import {allForks} from "@lodestar/types";
 import {toHex, isErrorAborted} from "@lodestar/utils";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -19,10 +19,10 @@ const QUEUE_MAX_LENGTH = 256;
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<[WithOptionalBytes<BlockInput>[], ImportBlockOpts], void>;
+  readonly jobQueue: JobItemQueue<[BlockInput[], ImportBlockOpts], void>;
 
   constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
-    this.jobQueue = new JobItemQueue<[WithOptionalBytes<BlockInput>[], ImportBlockOpts], void>(
+    this.jobQueue = new JobItemQueue<[BlockInput[], ImportBlockOpts], void>(
       (job, importOpts) => {
         return processBlocks.call(chain, job, {...opts, ...importOpts});
       },
@@ -31,7 +31,7 @@ export class BlockProcessor {
     );
   }
 
-  async processBlocksJob(job: WithOptionalBytes<BlockInput>[], opts: ImportBlockOpts = {}): Promise<void> {
+  async processBlocksJob(job: BlockInput[], opts: ImportBlockOpts = {}): Promise<void> {
     await this.jobQueue.push(job, opts);
   }
 }
@@ -48,7 +48,7 @@ export class BlockProcessor {
  */
 export async function processBlocks(
   this: BeaconChain,
-  blocks: WithOptionalBytes<BlockInput>[],
+  blocks: BlockInput[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
   if (blocks.length === 0) {
@@ -172,7 +172,7 @@ function getBlockError(e: unknown, block: allForks.SignedBeaconBlock): BlockErro
   if (e instanceof BlockError) {
     return e;
   } else if (e instanceof Error) {
-    const blockError = new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e as Error});
+    const blockError = new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e});
     blockError.stack = e.stack;
     return blockError;
   } else {

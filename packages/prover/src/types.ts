@@ -1,34 +1,62 @@
-import {ELRequestHandler} from "./interfaces.js";
+export type JsonRpcId = number | string;
+export type JsonRpcVersion = string | ("2.0" | "1.0");
 
-export interface ELRequestPayload<T = unknown[]> {
-  readonly jsonrpc: string | ("2.0" | "1.0");
-  readonly id: number | string;
+export interface JsonRpcRequestPayload<T = unknown[]> {
+  readonly jsonrpc: JsonRpcVersion;
+  readonly id: JsonRpcId;
   readonly method: string;
   readonly params: T;
   readonly requestOptions?: unknown;
 }
 
-export type ELResponseWithResult<T> = {
+export interface JsonRpcNotificationPayload<T = unknown[]> {
+  readonly jsonrpc: JsonRpcVersion;
+  readonly method: string;
+  readonly params: T;
+  readonly requestOptions?: unknown;
+}
+
+export type JsonRpcRequest<T = unknown[]> = JsonRpcRequestPayload<T> | JsonRpcNotificationPayload<T>;
+export type JsonRpcBatchRequest<T = unknown[]> = JsonRpcRequest<T>[];
+
+// The request can be a single request, a notification
+// or an array of requests and notifications as batch request
+export type JsonRpcRequestOrBatch<T = unknown[]> = JsonRpcRequest<T> | JsonRpcBatchRequest<T>;
+
+// Make the response compatible with different libraries, we don't use the readonly modifier
+export interface JsonRpcResponseWithResultPayload<T> {
   readonly id: number | string;
   jsonrpc: string;
   result: T;
   error?: never;
-};
+}
 
-export type ELResponseWithError<T> = {
+export interface JsonRpcErrorPayload<T> {
+  readonly code?: number;
+  readonly data?: T;
+  readonly message: string;
+}
+
+export interface JsonRpcResponseWithErrorPayload<T> {
   readonly id: number | string;
   jsonrpc: string;
   result?: never;
-  error: {
-    readonly code?: number;
-    readonly data?: T;
-    readonly message: string;
-  };
-};
+  error: JsonRpcErrorPayload<T>;
+}
 
 // Make the very flexible el response type to match different libraries easily
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ELResponse<T = any, E = any> = ELResponseWithResult<T> | ELResponseWithError<E>;
+export type JsonRpcResponse<T = any, E = any> =
+  | JsonRpcResponseWithResultPayload<T>
+  | JsonRpcResponseWithErrorPayload<E>;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type JsonRpcBatchResponse<T = any, E = any> = JsonRpcResponse<T, E>[];
+
+// Response can be a single response or an array of responses in case of batch request
+// Make the very flexible el response type to match different libraries easily
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type JsonRpcResponseOrBatch<T = any, E = any> = JsonRpcResponse<T, E> | JsonRpcBatchResponse<T, E>;
 
 export type HexString = string;
 
@@ -132,8 +160,5 @@ export type ELApiParams = {
 };
 export type ELApiReturn = {
   [K in keyof ELApi]: ReturnType<ELApi[K]>;
-};
-export type ELApiHandlers = {
-  [K in keyof ELApi]: ELRequestHandler<ELApiParams[K], ELApiReturn[K]>;
 };
 /* eslint-enable @typescript-eslint/naming-convention */

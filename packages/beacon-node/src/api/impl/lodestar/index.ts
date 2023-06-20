@@ -19,6 +19,7 @@ export function getLodestarApi({
   sync,
 }: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): ServerApi<routes.lodestar.Api> {
   let writingHeapdump = false;
+  let writingNetworkProfile = false;
 
   return {
     async writeHeapdump(dirpath = ".") {
@@ -44,6 +45,19 @@ export function getLodestarApi({
         return {data: {filepath}};
       } finally {
         writingHeapdump = false;
+      }
+    },
+
+    async writeNetworkThreadProfile(durationMs?: number, dirpath?: string) {
+      if (writingNetworkProfile) {
+        throw Error("Already writing network profile");
+      }
+
+      try {
+        const filepath = await network.writeNetworkThreadProfile(durationMs, dirpath);
+        return {data: {filepath}};
+      } finally {
+        writingNetworkProfile = false;
       }
     },
 
@@ -86,11 +100,7 @@ export function getLodestarApi({
     },
 
     async getStateCacheItems() {
-      return {data: (chain as BeaconChain)["stateCache"].dumpSummary()};
-    },
-
-    async getCheckpointStateCacheItems() {
-      return {data: (chain as BeaconChain)["checkpointStateCache"].dumpSummary()};
+      return {data: chain.regen.dumpCacheSummary()};
     },
 
     async getGossipPeerScoreStats() {
@@ -109,8 +119,7 @@ export function getLodestarApi({
     },
 
     async dropStateCache() {
-      chain.stateCache.clear();
-      chain.checkpointStateCache.clear();
+      chain.regen.dropCache();
     },
 
     async connectPeer(peerIdStr, multiaddrStrs) {

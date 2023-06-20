@@ -188,7 +188,7 @@ export class NetworkCore implements INetworkCore {
     const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, opts);
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
-    const peerManager = new PeerManager(
+    const peerManager = await PeerManager.init(
       {
         libp2p,
         gossip: gossip,
@@ -213,15 +213,11 @@ export class NetworkCore implements INetworkCore {
     await reqResp.start();
 
     await gossip.start();
-    attnetsService.start();
-    syncnetsService.start();
 
     // Network spec decides version changes based on clock fork, not head fork
     const forkCurrentSlot = config.getForkName(clock.currentSlot);
     // Register only ReqResp protocols relevant to clock's fork
     reqResp.registerProtocolsAtFork(forkCurrentSlot);
-
-    await peerManager.start();
 
     // Bind discv5's ENR to local metadata
     discv5 = peerManager["discovery"]?.discv5;
@@ -255,15 +251,18 @@ export class NetworkCore implements INetworkCore {
 
     // Must goodbye and disconnect before stopping libp2p
     await this.peerManager.goodbyeAndDisconnectAllPeers();
-    await this.peerManager.stop();
+    this.logger.debug("network sent goodbye to all peers");
+    await this.peerManager.close();
+    this.logger.debug("network peerManager closed");
     await this.gossip.stop();
-
+    this.logger.debug("network gossip closed");
     await this.reqResp.stop();
     await this.reqResp.unregisterAllProtocols();
-
-    this.attnetsService.stop();
-    this.syncnetsService.stop();
+    this.logger.debug("network reqResp closed");
+    this.attnetsService.close();
+    this.syncnetsService.close();
     await this.libp2p.stop();
+    this.logger.debug("network lib2p closed");
 
     this.closed = true;
   }
@@ -274,7 +273,7 @@ export class NetworkCore implements INetworkCore {
       (await this.peerManager["discovery"]?.discv5.scrapeMetrics()) ?? "",
     ]
       .filter((str) => str.length > 0)
-      .join("/n/n");
+      .join("\n\n");
   }
 
   async updateStatus(status: phase0.Status): Promise<void> {
@@ -409,6 +408,10 @@ export class NetworkCore implements INetworkCore {
       meshPeers[topic] = this.gossip.getMeshPeers(topic);
     }
     return meshPeers;
+  }
+
+  async writeNetworkThreadProfile(): Promise<string> {
+    throw new Error("Method not implemented, please configure network thread");
   }
 
   /**

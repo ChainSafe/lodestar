@@ -4,6 +4,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 import {allForks, altair, phase0} from "@lodestar/types";
+import {withTimeout} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
 import {IClock} from "../../util/clock.js";
@@ -145,7 +146,7 @@ export class PeerManager {
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
 
-  constructor(modules: PeerManagerModules, opts: PeerManagerOpts) {
+  constructor(modules: PeerManagerModules, opts: PeerManagerOpts, discovery: PeerDiscovery | null) {
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
     this.metrics = modules.metrics;
@@ -160,25 +161,13 @@ export class PeerManager {
     this.networkEventBus = modules.events;
     this.connectedPeers = modules.peersData.connectedPeers;
     this.opts = opts;
-
-    // opts.discv5 === null, discovery is disabled
-    this.discovery =
-      opts.discv5 &&
-      new PeerDiscovery(modules, {
-        maxPeers: opts.maxPeers,
-        discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs,
-        discv5: opts.discv5,
-        connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
-      });
+    this.discovery = discovery;
 
     const {metrics} = modules;
     if (metrics) {
       metrics.peers.addCollect(() => this.runPeerCountMetrics(metrics));
     }
-  }
 
-  async start(): Promise<void> {
-    await this.discovery?.start();
     this.libp2p.connectionManager.addEventListener(Libp2pEvent.peerConnect, this.onLibp2pPeerConnect);
     this.libp2p.connectionManager.addEventListener(Libp2pEvent.peerDisconnect, this.onLibp2pPeerDisconnect);
     this.networkEventBus.on(NetworkEvent.reqRespRequest, this.onRequest);
@@ -195,7 +184,21 @@ export class PeerManager {
     ];
   }
 
-  async stop(): Promise<void> {
+  static async init(modules: PeerManagerModules, opts: PeerManagerOpts): Promise<PeerManager> {
+    // opts.discv5 === null, discovery is disabled
+    const discovery = opts.discv5
+      ? await PeerDiscovery.init(modules, {
+          maxPeers: opts.maxPeers,
+          discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs,
+          discv5: opts.discv5,
+          connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
+        })
+      : null;
+
+    return new PeerManager(modules, opts, discovery);
+  }
+
+  async close(): Promise<void> {
     await this.discovery?.stop();
     this.libp2p.connectionManager.removeEventListener(Libp2pEvent.peerConnect, this.onLibp2pPeerConnect);
     this.libp2p.connectionManager.removeEventListener(Libp2pEvent.peerDisconnect, this.onLibp2pPeerDisconnect);
@@ -505,6 +508,13 @@ export class PeerManager {
     }
 
     timer?.();
+
+    this.logger.debug("peerManager heartbeat result", {
+      peersToDisconnect: peersToDisconnect.size,
+      peersToConnect: peersToConnect,
+      attnetQueries: attnetQueries.length,
+      syncnetQueries: syncnetQueries.length,
+    });
   }
 
   private updateGossipsubScores(): void {
@@ -642,7 +652,8 @@ export class PeerManager {
         this.metrics?.peerLongConnectionDisconnect.inc({reason});
       }
 
-      await this.reqResp.sendGoodbye(peer, BigInt(goodbye));
+      // Wrap with shorter timeout than regular ReqResp requests to speed up shutdown
+      await withTimeout(() => this.reqResp.sendGoodbye(peer, BigInt(goodbye)), 1_000);
     } catch (e) {
       this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
     } finally {

@@ -1,10 +1,4 @@
-import {
-  routes,
-  ServerApi,
-  isSignedBlockContents,
-  isSignedBlindedBlockContents,
-  SignedBlockContents,
-} from "@lodestar/api";
+import {routes, ServerApi, isSignedBlockContents, isSignedBlindedBlockContents} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
@@ -62,10 +56,10 @@ export function getBeaconBlockApi({
           nonFinalizedBlocks.map(async (summary) => {
             const block = await db.block.get(fromHexString(summary.blockRoot));
             if (block) {
-              const cannonical = chain.forkChoice.getCanonicalBlockAtSlot(block.message.slot);
-              if (cannonical) {
-                result.push(toBeaconHeaderResponse(config, block, cannonical.blockRoot === summary.blockRoot));
-                if (isOptimisticBlock(cannonical)) {
+              const canonical = chain.forkChoice.getCanonicalBlockAtSlot(block.message.slot);
+              if (canonical) {
+                result.push(toBeaconHeaderResponse(config, block, canonical.blockRoot === summary.blockRoot));
+                if (isOptimisticBlock(canonical)) {
                   executionOptimistic = true;
                 }
               }
@@ -99,9 +93,9 @@ export function getBeaconBlockApi({
           return {executionOptimistic: false, data: []};
         }
         const canonicalRoot = config
-          .getForkTypes(canonicalBlock.message.slot)
-          .BeaconBlock.hashTreeRoot(canonicalBlock.message);
-        result.push(toBeaconHeaderResponse(config, canonicalBlock, true));
+          .getForkTypes(canonicalBlock.block.message.slot)
+          .BeaconBlock.hashTreeRoot(canonicalBlock.block.message);
+        result.push(toBeaconHeaderResponse(config, canonicalBlock.block, true));
 
         // fork blocks
         // TODO: What is this logic?
@@ -128,7 +122,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlockHeader(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: toBeaconHeaderResponse(config, block, true),
@@ -136,14 +130,14 @@ export function getBeaconBlockApi({
     },
 
     async getBlock(blockId) {
-      const {block} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block} = await resolveBlockId(chain, blockId);
       return {
         data: block,
       };
     },
 
     async getBlockV2(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: block,
@@ -152,7 +146,7 @@ export function getBeaconBlockApi({
     },
 
     async getBlockAttestations(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: Array.from(block.message.body.attestations),
@@ -188,7 +182,7 @@ export function getBeaconBlockApi({
       }
 
       // Slow path
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       return {
         executionOptimistic,
         data: {root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)},
@@ -202,9 +196,7 @@ export function getBeaconBlockApi({
       if (isSignedBlindedBlockContents(signedBlindedBlockOrContents)) {
         throw Error("exeutionBuilder not yet implemented for deneb+ forks");
       } else {
-        const signedBlockOrContents = await executionBuilder.submitBlindedBlock(
-          signedBlindedBlockOrContents as allForks.SignedBlindedBeaconBlock
-        );
+        const signedBlockOrContents = await executionBuilder.submitBlindedBlock(signedBlindedBlockOrContents);
         // the full block is published by relay and it's possible that the block is already known to us by gossip
         // see https://github.com/ChainSafe/lodestar/issues/5404
         return this.publishBlock(signedBlockOrContents, {ignoreIfKnown: true});
@@ -216,30 +208,30 @@ export function getBeaconBlockApi({
       let blockForImport: BlockInput, signedBlock: allForks.SignedBeaconBlock, signedBlobs: deneb.SignedBlobSidecars;
 
       if (isSignedBlockContents(signedBlockOrContents)) {
-        // Build a blockInput for post deneb, signedBlobs will be be used in followup PRs
-        ({signedBlock, signedBlobSidecars: signedBlobs} = signedBlockOrContents as SignedBlockContents);
-        const blobsSidecar = blobSidecarsToBlobsSidecar(
-          config,
-          signedBlock,
-          signedBlobs.map(({message}) => message)
-        );
-
+        ({signedBlock, signedBlobSidecars: signedBlobs} = signedBlockOrContents);
         blockForImport = getBlockInput.postDeneb(
           config,
           signedBlock,
           BlockSource.api,
           // The blobsSidecar will be replaced in the followup PRs with just blobs
-          blobsSidecar
+          blobSidecarsToBlobsSidecar(
+            config,
+            signedBlock,
+            signedBlobs.map((sblob) => sblob.message)
+          ),
+          null
         );
       } else {
-        signedBlock = signedBlockOrContents as allForks.SignedBeaconBlock;
+        signedBlock = signedBlockOrContents;
         signedBlobs = [];
-        blockForImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.api);
+        // TODO: Once API supports submitting data as SSZ, replace null with blockBytes
+        blockForImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.api, null);
       }
 
       // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the
       // REST request promise without any extra infrastructure.
-      const msToBlockSlot = computeTimeAtSlot(config, signedBlock.message.slot, chain.genesisTime) * 1000 - Date.now();
+      const msToBlockSlot =
+        computeTimeAtSlot(config, blockForImport.block.message.slot, chain.genesisTime) * 1000 - Date.now();
       if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
         // If block is a bit early, hold it in a promise. Equivalent to a pending queue.
         await sleep(msToBlockSlot);
@@ -250,7 +242,7 @@ export function getBeaconBlockApi({
       const publishPromises = [
         // Send the block, regardless of whether or not it is valid. The API
         // specification is very clear that this is the desired behaviour.
-        () => network.publishBeaconBlockMaybeBlobs(blockForImport) as Promise<unknown>,
+        () => network.publishBeaconBlock(signedBlock) as Promise<unknown>,
         () =>
           // there is no rush to persist block since we published it to gossip anyway
           chain.processBlock(blockForImport, {...opts, eagerPersistBlock: false}).catch((e) => {
@@ -262,13 +254,13 @@ export function getBeaconBlockApi({
             }
             throw e;
           }),
-        // TODO deneb: publish signed blobs as well
+        ...signedBlobs.map((signedBlob) => () => network.publishBlobSidecar(signedBlob)),
       ];
       await promiseAllMaybeAsync(publishPromises);
     },
 
     async getBlobSidecars(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
 
       let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};

@@ -28,6 +28,6 @@ export function processRandao(
   }
 
   // mix in RANDAO reveal
-  const randaoMix = xor(Buffer.from(getRandaoMix(state, epoch) as Uint8Array), Buffer.from(digest(randaoReveal)));
+  const randaoMix = xor(Buffer.from(getRandaoMix(state, epoch)), Buffer.from(digest(randaoReveal)));
   state.randaoMixes.set(epoch % EPOCHS_PER_HISTORICAL_VECTOR, randaoMix);
 }

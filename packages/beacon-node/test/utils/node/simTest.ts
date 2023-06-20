@@ -33,8 +33,8 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
     // Check if there was a proposed block and how many attestations it includes
     const block = await bn.chain.getCanonicalBlockAtSlot(head.slot);
     if (block) {
-      const bits = sumAttestationBits(block.message);
-      const inclDelay = avgInclusionDelay(block.message);
+      const bits = sumAttestationBits(block.block.message);
+      const inclDelay = avgInclusionDelay(block.block.message);
       attestationsPerBlock.set(slot, bits);
       inclusionDelayPerBlock.set(slot, inclDelay);
       logger.info("> Block attestations", {slot, bits, inclDelay});

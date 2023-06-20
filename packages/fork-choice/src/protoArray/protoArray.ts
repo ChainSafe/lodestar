@@ -216,24 +216,19 @@ export class ProtoArray {
       bestDescendant: undefined,
     };
 
-    let nodeIndex = this.nodes.length;
+    const nodeIndex = this.nodes.length;
 
     this.indices.set(node.blockRoot, nodeIndex);
     this.nodes.push(node);
 
-    let parentIndex = node.parent;
     // If this node is valid, lets propagate the valid status up the chain
     // and throw error if we counter invalid, as this breaks consensus
-    if (node.executionStatus === ExecutionStatus.Valid && parentIndex !== undefined) {
-      this.propagateValidExecutionStatusByIndex(parentIndex);
-    }
+    if (node.parent !== undefined) {
+      this.maybeUpdateBestChildAndDescendant(node.parent, nodeIndex, currentSlot);
 
-    let n: ProtoNode | undefined = node;
-    while (parentIndex !== undefined) {
-      this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex, currentSlot);
-      nodeIndex = parentIndex;
-      n = this.getNodeByIndex(nodeIndex);
-      parentIndex = n?.parent;
+      if (node.executionStatus === ExecutionStatus.Valid) {
+        this.propagateValidExecutionStatusByIndex(node.parent);
+      }
     }
   }
 

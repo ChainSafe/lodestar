@@ -11,7 +11,7 @@ describe("getBlockRoot", () => {
       slot: GENESIS_SLOT + 1,
       blockRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => Buffer.from([0xab])),
     });
-    const res = Buffer.from(getBlockRoot(state, GENESIS_SLOT) as Uint8Array);
+    const res = Buffer.from(getBlockRoot(state, GENESIS_SLOT));
     const expectedRes = BigInt("0xab");
     assert(toBigIntLE(res) === expectedRes, `got: ${toBigIntLE(res)}, expected: ${expectedRes.toString(16)}`);
   });

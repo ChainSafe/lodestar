@@ -1,11 +1,7 @@
-name: Bug Report
+name: Bug report
 description: Create a bug report to help us improve
 title: "[Descriptive title] "
 body:
-  - type: markdown
-    attributes:
-      value: |
-        **NOTE: General questions should go to the [Discord chat](https://discord.gg/aMxzVcr) instead of the issue tracker.**
   - type: textarea
     id: describe
     attributes:
@@ -28,10 +24,10 @@ body:
       label: Steps to reproduce
       description: List the steps to reproduce the behavior
       placeholder: |
-        1. Go to '...'
-        2. Click on '....'
-        3. Scroll down to '....'
-        4. See error    
+        1. Run command './lodestar beacon --flag'
+        2. Wait for node syncing log
+        3. Query API at 'beacon:9596/eth/v1/api'
+        4. See error
     validations:
       required: false
   - type: textarea

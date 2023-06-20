@@ -12,6 +12,8 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   // TODO DENEB: This constant was added then removed on a spec re-write.
   // When developing DENEB branch the tracked version still doesn't have released the removal
   "DOMAIN_BLOB_SIDECAR",
+  // TODO DENEB: Configure the blob subnets in a followup PR
+  "BLOB_SIDECAR_SUBNET_COUNT",
 ]);
 
 describe("api / impl / config", function () {

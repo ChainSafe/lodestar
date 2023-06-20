@@ -10,6 +10,7 @@ import {JobItemQueue} from "../../util/queue/index.js";
 
 export enum GossipType {
   beacon_block = "beacon_block",
+  blob_sidecar = "blob_sidecar",
   beacon_block_and_blobs_sidecar = "beacon_block_and_blobs_sidecar",
   beacon_aggregate_and_proof = "beacon_aggregate_and_proof",
   beacon_attestation = "beacon_attestation",
@@ -38,6 +39,7 @@ export interface IGossipTopic {
 
 export type GossipTopicTypeMap = {
   [GossipType.beacon_block]: {type: GossipType.beacon_block};
+  [GossipType.blob_sidecar]: {type: GossipType.blob_sidecar; index: number};
   [GossipType.beacon_block_and_blobs_sidecar]: {type: GossipType.beacon_block_and_blobs_sidecar};
   [GossipType.beacon_aggregate_and_proof]: {type: GossipType.beacon_aggregate_and_proof};
   [GossipType.beacon_attestation]: {type: GossipType.beacon_attestation; subnet: number};
@@ -68,6 +70,7 @@ export type SSZTypeOfGossipTopic<T extends GossipTopic> = T extends {type: infer
 
 export type GossipTypeMap = {
   [GossipType.beacon_block]: allForks.SignedBeaconBlock;
+  [GossipType.blob_sidecar]: deneb.SignedBlobSidecar;
   [GossipType.beacon_block_and_blobs_sidecar]: deneb.SignedBeaconBlockAndBlobsSidecar;
   [GossipType.beacon_aggregate_and_proof]: phase0.SignedAggregateAndProof;
   [GossipType.beacon_attestation]: phase0.Attestation;
@@ -83,6 +86,7 @@ export type GossipTypeMap = {
 
 export type GossipFnByType = {
   [GossipType.beacon_block]: (signedBlock: allForks.SignedBeaconBlock) => Promise<void> | void;
+  [GossipType.blob_sidecar]: (signedBlobSidecar: deneb.SignedBlobSidecar) => Promise<void> | void;
   [GossipType.beacon_block_and_blobs_sidecar]: (
     signedBeaconBlockAndBlobsSidecar: deneb.SignedBeaconBlockAndBlobsSidecar
   ) => Promise<void> | void;

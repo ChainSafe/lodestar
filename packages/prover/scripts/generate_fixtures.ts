@@ -5,9 +5,12 @@ import url from "node:url";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import axios from "axios";
 // eslint-disable-next-line @typescript-eslint/naming-convention
-const __filename = url.fileURLToPath(import.meta.url);
-// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
+
+type JSONRequest = {method: string; params: unknown[]};
+type JSONBatchRequest = JSONRequest[];
+type JSONPayload = JSONRequest & {id: number; jsonrpc: string};
+type JSONBatchPayload = JSONPayload[];
 
 type NETWORK = "sepolia" | "mainnet";
 const networkURLs: Record<NETWORK, {beacon: string; rpc: string}> = {
@@ -23,12 +26,18 @@ const networkURLs: Record<NETWORK, {beacon: string; rpc: string}> = {
 
 let idIndex = Math.floor(Math.random() * 1000000);
 
+const requestToPayload = ({method, params}: JSONRequest): JSONPayload => ({
+  id: idIndex++,
+  jsonrpc: "2.0",
+  method,
+  params,
+});
+
 async function rawEth(
   network: NETWORK,
-  method: string,
-  params: unknown[]
-): Promise<{payload: Record<string, unknown>; response: Record<string, unknown>}> {
-  const payload = {id: idIndex++, jsonrpc: "2.0", method, params};
+  request: JSONRequest | JSONBatchRequest
+): Promise<{payload: JSONPayload | JSONBatchPayload; response: Record<string, unknown>}> {
+  const payload = Array.isArray(request) ? request.map(requestToPayload) : requestToPayload(request);
 
   const response = (
     await axios({
@@ -47,15 +56,15 @@ async function rawBeacon(network: NETWORK, path: string): Promise<Record<string,
 }
 
 type Generator = (opts: {latest: string; finalized: string}) => {
-  request: {method: string; params: unknown[]};
+  request: JSONRequest;
   slot: number | string;
-  dependentRequests?: {method: string; params: unknown[]}[];
+  dependentRequests?: (JSONRequest | JSONBatchRequest)[];
 };
 
 type Block = {hash: string; number: string};
 
 const getBlockByNumber = async (network: NETWORK, number: string | number, dehydrate = false): Promise<Block> => {
-  const {response} = await rawEth(network, "eth_getBlockByNumber", [number, dehydrate]);
+  const {response} = await rawEth(network, {method: "eth_getBlockByNumber", params: [number, dehydrate]});
 
   if (response.error || !response.result) {
     throw new Error("Invalid response" + JSON.stringify(response));
@@ -65,7 +74,7 @@ const getBlockByNumber = async (network: NETWORK, number: string | number, dehyd
 };
 
 const getBlockByHash = async (network: NETWORK, hash: string | number, dehydrate = false): Promise<Block> => {
-  const {response} = await rawEth(network, "eth_getBlockByHash", [hash, dehydrate]);
+  const {response} = await rawEth(network, {method: "eth_getBlockByHash", params: [hash, dehydrate]});
 
   if (response.error || !response.result) {
     throw new Error("Invalid response" + JSON.stringify(response));
@@ -80,7 +89,7 @@ async function generateFixture(label: string, generator: Generator, network: NET
 
   const opts = generator({latest: latest.hash, finalized: finalized.hash});
   const slot = opts.slot;
-  const {payload: request, response} = await rawEth(network, opts.request.method, opts.request.params);
+  const {payload: request, response} = await rawEth(network, opts.request);
   if (response.error || !response.result) {
     throw new Error("Invalid response" + JSON.stringify(response));
   }
@@ -105,9 +114,9 @@ async function generateFixture(label: string, generator: Generator, network: NET
   };
 
   const dependentRequests = [];
-  for (const {method, params} of opts.dependentRequests ?? []) {
-    const {payload, response} = await rawEth(network, method, params);
-    if (response.error || !response.result) {
+  for (const req of opts.dependentRequests ?? []) {
+    const {payload, response} = await rawEth(network, req);
+    if (!Array.isArray(payload) && (response.error || !response.result)) {
       throw new Error("Invalid response" + JSON.stringify(response));
     }
     dependentRequests.push({payload, response});
@@ -199,22 +208,24 @@ await generateFixture(
           latest,
         ],
       },
-      {
-        method: "eth_getProof",
-        params: ["0x0000000000000000000000000000000000000000", [], latest],
-      },
-      {
-        method: "eth_getCode",
-        params: ["0x0000000000000000000000000000000000000000", latest],
-      },
-      {
-        method: "eth_getProof",
-        params: ["0xade2a9c8b033d60ffcdb8cfc974dd87b2a9c1f27", [], latest],
-      },
-      {
-        method: "eth_getCode",
-        params: ["0xade2a9c8b033d60ffcdb8cfc974dd87b2a9c1f27", latest],
-      },
+      [
+        {
+          method: "eth_getProof",
+          params: ["0x0000000000000000000000000000000000000000", [], latest],
+        },
+        {
+          method: "eth_getCode",
+          params: ["0x0000000000000000000000000000000000000000", latest],
+        },
+        {
+          method: "eth_getProof",
+          params: ["0xade2a9c8b033d60ffcdb8cfc974dd87b2a9c1f27", [], latest],
+        },
+        {
+          method: "eth_getCode",
+          params: ["0xade2a9c8b033d60ffcdb8cfc974dd87b2a9c1f27", latest],
+        },
+      ],
     ],
   }),
   "mainnet"
@@ -249,22 +260,24 @@ await generateFixture(
           latest,
         ],
       },
-      {
-        method: "eth_getProof",
-        params: ["0x690b9a9e9aa1c9db991c7721a92d351db4fac990", [], latest],
-      },
-      {
-        method: "eth_getCode",
-        params: ["0x690b9a9e9aa1c9db991c7721a92d351db4fac990", latest],
-      },
-      {
-        method: "eth_getProof",
-        params: ["0x388c818ca8b9251b393131c08a736a67ccb19297", [], latest],
-      },
-      {
-        method: "eth_getCode",
-        params: ["0x388c818ca8b9251b393131c08a736a67ccb19297", latest],
-      },
+      [
+        {
+          method: "eth_getProof",
+          params: ["0x690b9a9e9aa1c9db991c7721a92d351db4fac990", [], latest],
+        },
+        {
+          method: "eth_getCode",
+          params: ["0x690b9a9e9aa1c9db991c7721a92d351db4fac990", latest],
+        },
+        {
+          method: "eth_getProof",
+          params: ["0x388c818ca8b9251b393131c08a736a67ccb19297", [], latest],
+        },
+        {
+          method: "eth_getCode",
+          params: ["0x388c818ca8b9251b393131c08a736a67ccb19297", latest],
+        },
+      ],
     ],
   }),
   "mainnet"
@@ -298,22 +311,24 @@ await generateFixture(
           latest,
         ],
       },
-      {
-        method: "eth_getProof",
-        params: ["0x0000000000000000000000000000000000000000", [], latest],
-      },
-      {
-        method: "eth_getCode",
-        params: ["0x0000000000000000000000000000000000000000", latest],
-      },
-      {
-        method: "eth_getProof",
-        params: ["0xade2a9c8b033d60ffcdb8cfc974dd87b2a9c1f27", [], latest],
-      },
-      {
-        method: "eth_getCode",
-        params: ["0xade2a9c8b033d60ffcdb8cfc974dd87b2a9c1f27", latest],
-      },
+      [
+        {
+          method: "eth_getProof",
+          params: ["0x0000000000000000000000000000000000000000", [], latest],
+        },
+        {
+          method: "eth_getCode",
+          params: ["0x0000000000000000000000000000000000000000", latest],
+        },
+        {
+          method: "eth_getProof",
+          params: ["0xade2a9c8b033d60ffcdb8cfc974dd87b2a9c1f27", [], latest],
+        },
+        {
+          method: "eth_getCode",
+          params: ["0xade2a9c8b033d60ffcdb8cfc974dd87b2a9c1f27", latest],
+        },
+      ],
     ],
   }),
   "mainnet"

@@ -46,7 +46,7 @@ export class StubbedBeaconDb extends BeaconDb {
 
   constructor(config = minimalConfig) {
     // eslint-disable-next-line
-    super({config, controller: {} as any});
+    super(config, {} as any);
     this.block = createStubInstance(BlockRepository);
     this.blockArchive = createStubInstance(BlockArchiveRepository);
     this.stateArchive = createStubInstance(StateArchiveRepository);

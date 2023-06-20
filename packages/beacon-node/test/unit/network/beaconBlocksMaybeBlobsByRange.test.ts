@@ -4,9 +4,10 @@ import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lo
 import {BYTES_PER_FIELD_ELEMENT} from "@lodestar/params";
 
 import {beaconBlocksMaybeBlobsByRange} from "../../../src/network/reqresp/index.js";
-import {BlockInputType, BlockSource, blobSidecarsToBlobsSidecar} from "../../../src/chain/blocks/types.js";
+import {BlockInput, BlockInputType, BlockSource, blobSidecarsToBlobsSidecar} from "../../../src/chain/blocks/types.js";
 import {ckzg, initCKZG, loadEthereumTrustedSetup, FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../../src/util/kzg.js";
 import {INetwork} from "../../../src/network/interface.js";
+import {ZERO_HASH} from "../../../src/constants/constants.js";
 
 describe("beaconBlocksMaybeBlobsByRange", () => {
   before(async function () {
@@ -81,14 +82,14 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
   ];
   testCases.map(([testName, blocksWithBlobs]) => {
     it(testName, async () => {
-      const blocks = blocksWithBlobs.map(([block, _blobs]) => block as deneb.SignedBeaconBlock);
+      const blocks = blocksWithBlobs.map(([block, _blobs]) => block);
 
       const blobSidecars = blocksWithBlobs
         .map(([_block, blobs]) => blobs as deneb.BlobSidecars)
         .filter((blobs) => blobs !== undefined)
         .reduce((acc, elem) => acc.concat(elem), []);
 
-      const expectedResponse = blocksWithBlobs.map(([block, blobSidecars]) => {
+      const expectedResponse: BlockInput[] = blocksWithBlobs.map(([block, blobSidecars]) => {
         const blobs = (blobSidecars !== undefined ? blobSidecars : []).map((bscar) => {
           // TODO DENEB: cleanup the following generation as its not required to generate
           // proper field elements for the aggregate proofs compute
@@ -103,11 +104,16 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
           source: BlockSource.byRange,
           // TODO DENEB: Cleanup the conversion once migration complete
           blobs: blobSidecarsToBlobsSidecar(chainConfig, block, blobs),
+          blockBytes: null,
         };
       });
 
       const network = {
-        sendBeaconBlocksByRange: async () => blocks,
+        sendBeaconBlocksByRange: async () =>
+          blocks.map((data) => ({
+            data,
+            bytes: ZERO_HASH,
+          })),
         sendBlobSidecarsByRange: async () => blobSidecars,
       } as Partial<INetwork> as INetwork;
 

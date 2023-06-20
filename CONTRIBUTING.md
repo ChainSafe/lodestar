@@ -5,7 +5,7 @@ Thanks for your interest in contributing to Lodestar. It's people like you that 
 ## Prerequisites
 
 - :gear: [NodeJS](https://nodejs.org/) (LTS)
-- :toolbox: [Yarn](https://yarnpkg.com/)/[Lerna](https://lerna.js.org/)
+- :toolbox: [Yarn](https://yarnpkg.com/)
 
 ## Getting Started
 
@@ -18,10 +18,10 @@ Thanks for your interest in contributing to Lodestar. It's people like you that 
 
 To run tests:
 
-- :test_tube: Run `lerna run test:unit` for unit tests.
-- :test_tube: Run `lerna run test:e2e` for end-to-end tests.
-- :test_tube: Run `lerna run test:spec` for spec tests.
-- :test_tube: Run `lerna run test` to run all tests.
+- :test_tube: Run `yarn test:unit` for unit tests.
+- :test_tube: Run `yarn test:e2e` for end-to-end tests.
+- :test_tube: Run `yarn test:spec` for spec tests.
+- :test_tube: Run `yarn test` to run all tests.
 - :test_tube: Run `yarn check-types` to check TypeScript types.
 - :test_tube: Run `yarn lint` to run the linter (ESLint).
 

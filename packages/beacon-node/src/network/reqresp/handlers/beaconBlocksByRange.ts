@@ -55,6 +55,7 @@ export async function* onBlocksOrBlobSidecarsByRange(
     const headRoot = chain.forkChoice.getHeadRoot();
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
+    // getAllAncestorBlocks response includes the head node, so it's the full chain.
 
     // Iterate head chain with ascending block numbers
     for (let i = headChain.length - 1; i >= 0; i--) {
@@ -62,7 +63,7 @@ export async function* onBlocksOrBlobSidecarsByRange(
 
       // Must include only blocks in the range requested
       if (block.slot >= startSlot && block.slot < endSlot) {
-        // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the cannonical chain
+        // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
         // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1

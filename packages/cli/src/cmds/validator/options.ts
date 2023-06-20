@@ -76,6 +76,7 @@ export type KeymanagerArgs = {
   "keymanager.port"?: number;
   "keymanager.address"?: string;
   "keymanager.cors"?: string;
+  "keymanager.headerLimit"?: number;
   "keymanager.bodyLimit"?: number;
 };
 
@@ -109,6 +110,11 @@ export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
     description: "Configures the Access-Control-Allow-Origin CORS header for keymanager API",
     defaultDescription: keymanagerRestApiServerOptsDefault.cors,
     group: "keymanager",
+  },
+  "keymanager.headerLimit": {
+    hidden: true,
+    type: "number",
+    description: "Defines the maximum length of request headers, in bytes, the server is allowed to accept",
   },
   "keymanager.bodyLimit": {
     hidden: true,
@@ -231,7 +237,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "builder.selection": {
     type: "string",
-    description: "Default builder block selection strategy: maxprofit or builderalways",
+    description: "Default builder block selection strategy: maxprofit, builderalways, or builderonly",
     defaultDescription: `${defaultOptions.builderSelection}`,
     group: "builder",
   },

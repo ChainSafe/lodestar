@@ -43,12 +43,6 @@ Build across all packages.
 yarn run build
 ```
 
-Or if you are using [Lerna](https://lerna.js.org/):
-
-```bash
-lerna bootstrap
-```
-
 ## Lodestar CLI
 
 Lodestar should now be ready for use.
