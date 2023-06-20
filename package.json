@@ -19,6 +19,7 @@
     "lint-docs": "prettier '**/*.md' --check",
     "lint-docs:fix": "prettier '**/*.md' --write",
     "check-build": "lerna run check-build",
+    "check-readme": "lerna run check-readme",
     "check-types": "lerna run check-types --no-bail",
     "coverage": "lerna run coverage --no-bail",
     "test": "lerna run test --no-bail --concurrency 1",
@@ -32,8 +33,7 @@
     "release:create-rc": "node scripts/release/create_rc.mjs",
     "release:tag-rc": "node scripts/release/tag_rc.mjs",
     "release:tag-stable": "node scripts/release/tag_stable.mjs",
-    "release:publish": "lerna publish from-package --yes --no-verify-access",
-    "check-readme": "lerna run check-readme"
+    "release:publish": "lerna publish from-package --yes --no-verify-access"
   },
   "devDependencies": {
     "@chainsafe/eslint-plugin-node": "^11.2.3",
