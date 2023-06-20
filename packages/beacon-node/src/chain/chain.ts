@@ -308,20 +308,35 @@ export class BeaconChain implements IBeaconChain {
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean {
     // Caller must check that epoch is not older that current epoch - 1
     // else the caches for that epoch may already be pruned.
+    const seenBlockAttesters = this.seenBlockAttesters.isKnown(epoch, index);
+    const seenAttesters = this.seenAttesters.isKnown(epoch, index);
+    const seenAggregators = this.seenAggregators.isKnown(epoch, index);
+    const seenBlockProposers = this.seenBlockProposers.seenAtEpoch(epoch, index);
 
-    return (
-      // Dedicated cache for liveness checks, registers attesters seen through blocks.
+    const hasBeenSeen = // Dedicated cache for liveness checks, registers attesters seen through blocks.
       // Note: this check should be cheaper + overlap with counting participants of aggregates from gossip.
-      this.seenBlockAttesters.isKnown(epoch, index) ||
+      seenBlockAttesters ||
       //
       // Re-use gossip caches. Populated on validation of gossip + API messages
       //   seenAttesters = single signer of unaggregated attestations
-      this.seenAttesters.isKnown(epoch, index) ||
+      seenAttesters ||
       //   seenAggregators = single aggregator index, not participants of the aggregate
-      this.seenAggregators.isKnown(epoch, index) ||
+      seenAggregators ||
       //   seenBlockProposers = single block proposer
-      this.seenBlockProposers.seenAtEpoch(epoch, index)
-    );
+      seenBlockProposers;
+
+    if (hasBeenSeen) {
+      this.logger.debug("validatorSeenAtEpoch", {
+        index,
+        epoch,
+        seenBlockAttesters,
+        seenAttesters,
+        seenAggregators,
+        seenBlockProposers,
+      });
+    }
+
+    return hasBeenSeen;
   }
 
   /** Populate in-memory caches with persisted data. Call at least once on startup */
