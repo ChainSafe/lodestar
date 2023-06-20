@@ -51,7 +51,10 @@ export class DoppelgangerService {
       metrics.doppelganger.statusCount.addCollect(() => this.onScrapeMetrics(metrics));
     }
 
-    this.logger.info("doppelganger protection enabled", {detectionEpochs: DEFAULT_REMAINING_DETECTION_EPOCHS});
+    this.logger.info("doppelganger protection enabled", {
+      currentEpoch: this.clock.currentEpoch,
+      detectionEpochs: DEFAULT_REMAINING_DETECTION_EPOCHS,
+    });
   }
 
   registerValidator(pubkeyHex: PubkeyHex): void {
@@ -60,13 +63,15 @@ export class DoppelgangerService {
     // There's no activity before genesis, so doppelganger is pointless.
     const remainingEpochs = currentEpoch <= 0 ? 0 : DEFAULT_REMAINING_DETECTION_EPOCHS;
 
+    const nextEpochToCheck = this.clock.currentEpoch + 1;
+
     // Log here to alert that validation won't be active until remainingEpochs == 0
     if (remainingEpochs > 0) {
-      this.logger.info("Registered validator for doppelganger", {remainingEpochs, pubkeyHex});
+      this.logger.info("Registered validator for doppelganger", {remainingEpochs, nextEpochToCheck, pubkeyHex});
     }
 
     this.doppelgangerStateByPubkey.set(pubkeyHex, {
-      nextEpochToCheck: this.clock.currentEpoch + 1,
+      nextEpochToCheck,
       remainingEpochs,
     });
   }
@@ -148,6 +153,7 @@ export class DoppelgangerService {
       );
       return {epoch, responses: []};
     }
+    this.logger.debug("getLiveness response", {epoch, data: JSON.stringify(res.response.data)});
     return {epoch, responses: res.response.data};
   }
 
