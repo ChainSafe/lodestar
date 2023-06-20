@@ -62,7 +62,7 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
 
   wssCheckpoint: {
     description:
-      "Start beacon node off a state at the provided weak subjectivity checkpoint, to be supplied in <blockRoot>:<epoch> format. For example, 0x1234:100 will sync and start off from the weakSubjectivity state at checkpoint of epoch 100 with block root 0x1234.",
+      "Start beacon node off a state at the provided weak subjectivity checkpoint, to be supplied in <blockRoot>:<epoch> format. For example, 0x1234:100 will sync and start off from the weak subjectivity state at checkpoint of epoch 100 with block root 0x1234.",
     type: "string",
     group: "weak subjectivity",
   },

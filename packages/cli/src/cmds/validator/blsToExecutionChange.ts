@@ -37,7 +37,7 @@ like to choose for BLS To Execution Change.",
 
   options: {
     publicKey: {
-      description: "Validator pubkey for which to set withdrawal address hence enabling withdrawals",
+      description: "Validator public key for which to set withdrawal address hence enabling withdrawals",
       type: "string",
       string: true,
     },

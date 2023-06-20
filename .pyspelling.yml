@@ -29,6 +29,12 @@ matrix:
           # Ignore eth methods (e.g. eth_estimateGas)
           - open: '(?:\s)eth_(?:\w*)'
             close: '\s'
+          # Ignore flags in cli.md
+          - open: '--(?:\w*)'
+            close: '[^\w]'
+          # Ignore hex strings
+          - open: '0x[a-fA-F0-9]'
+            close: '[^a-fA-F0-9]'
     sources:
       - "docs/**/*.md"
       - "CONTRIBUTING.md"
