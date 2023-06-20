@@ -18,5 +18,4 @@ matrix:
       - "docs/**/*.md"
       - "CONTRIBUTING.md"
       - "README.md"
-      # TODO
       # - "packages/*/README.md"
