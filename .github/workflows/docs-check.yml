@@ -33,15 +33,7 @@ jobs:
       - name: Build
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
-      # </common-build>
 
-      # Sorted wordlist is easier to mantain and find which words are present or not.
-      # If you edit the list run this list to automatically sort it
-      # ```
-      # $ scripts/wordlist_sort.sh
-      # ```
-
-      # TODO: sort in CI differs from local https://github.com/ChainSafe/lodestar/pull/5527#issuecomment-1569985518
       - name: Check wordlist is sorted
         run: scripts/wordlist_sort_check.sh
 
