@@ -211,7 +211,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
           this.queWorkLibuv({
             opts,
             sets: chunk.map((s) => ({
-              publicKey: getAggregatedPubkey(s).toBytes(PointFormat.uncompressed),
+              publicKey: getAggregatedPubkey(s).toBytes(this.format),
               message: s.signingRoot,
               signature: s.signature,
             })),
@@ -472,7 +472,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private queWorkLibuv(workReq: BlsWorkReq): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
       const job = {resolve, reject, addedTimeMs: Date.now(), workReq};
-
       // Append batchable sets to `bufferedLibuvJobs`, starting a timeout to push them into `jobs`.
       // Do not call `runJobLibuv()`, it is called from `runBufferedJobsLibuv()`
       if (workReq.opts.batchable) {
@@ -486,6 +485,10 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         }
         this.bufferedLibuvJobs.jobs.push(job);
         this.bufferedLibuvJobs.sigCount += job.workReq.sets.length;
+        this.logger.debug("BLS libuv job buffered", {
+          sigsAdded: job.workReq.sets.length,
+          totalSigs: this.bufferedLibuvJobs.sigCount,
+        });
         if (this.bufferedLibuvJobs.sigCount > MAX_BUFFERED_SIGS) {
           clearTimeout(this.bufferedLibuvJobs.timeout);
           this.runBufferedJobsLibuv();
@@ -529,7 +532,11 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       // If any code below throws: the job will reject never going stale.
       // Only downside is the the job promise may be resolved twice, but that's not an issue
 
-      const workResult = await asyncVerifyManySignatureSets(jobs.map((job) => job.workReq));
+      this.logger.debug("Running BLS libuv job", {jobs: jobs.length});
+      const workResult = await asyncVerifyManySignatureSets(
+        this.logger,
+        jobs.map((job) => job.workReq)
+      );
       const {batchRetries, batchSigsSuccess, workStartNs, workEndNs, results} = workResult;
 
       let successCount = 0;
@@ -547,9 +554,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
           job.resolve(jobResult.result);
           successCount += sigSetCount;
         } else {
-          const workerError = Error(jobResult.error.message);
-          if (jobResult.error.stack) workerError.stack = jobResult.error.stack;
-          job.reject(workerError);
+          const libuvError = Error(jobResult.error.message);
+          if (jobResult.error.stack) libuvError.stack = jobResult.error.stack;
+          job.reject(libuvError);
           errorCount += sigSetCount;
         }
       }

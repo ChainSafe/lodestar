@@ -1,5 +1,6 @@
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
+import {Logger} from "@lodestar/utils";
 import {
   verifySignatureSetsMaybeBatch,
   SignatureSetDeserialized,
@@ -112,7 +113,7 @@ export function verifyManySignatureSets(workerId: number, workReqArr: BlsWorkReq
 /**
  * Same as verifyManySignatureSets but uses libuv thread pool instead of worker threads
  */
-export async function asyncVerifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
+export async function asyncVerifyManySignatureSets(logger: Logger, workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
   const workStartNs = process.hrtime.bigint();
   const results: WorkResult<boolean>[] = [];
   let batchRetries = 0;
@@ -148,7 +149,9 @@ export async function asyncVerifyManySignatureSets(workReqArr: BlsWorkReq[]): Pr
 
       try {
         // Attempt to verify multiple sets at once
-        const isValid = await asyncVerifySignatureSetsMaybeBatch(allSets);
+        logger.debug(`Attempting asyncVerifySignatureSetsMaybeBatch of ${allSets.length} signature sets`);
+        const isValid = await asyncVerifySignatureSetsMaybeBatch(logger, allSets);
+        logger.debug(`Batch verification returned: ${isValid}`);
 
         if (isValid) {
           // The entire batch is valid, return success to all
@@ -173,7 +176,7 @@ export async function asyncVerifyManySignatureSets(workReqArr: BlsWorkReq[]): Pr
 
   await Promise.all(
     nonBatchableSets.map(({idx, sets}) =>
-      asyncVerifySignatureSetsMaybeBatch(sets)
+      asyncVerifySignatureSetsMaybeBatch(logger, sets)
         .then((isValid) => {
           results[idx] = {code: WorkResultCode.success, result: isValid};
         })
