@@ -7,6 +7,20 @@
       "pluginId": "prometheus",
       "pluginName": "Prometheus",
       "type": "datasource"
+    },
+    {
+      "name": "VAR_BEACON_JOB",
+      "type": "constant",
+      "label": "Beacon node job name",
+      "value": "beacon",
+      "description": ""
+    },
+    {
+      "name": "VAR_VALIDATOR_JOB",
+      "type": "constant",
+      "label": "Validator client job name",
+      "value": "validator",
+      "description": ""
     }
   ],
   "annotations": {
