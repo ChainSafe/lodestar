@@ -15,7 +15,7 @@ import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {beaconBlocksMaybeBlobsByRoot} from "../network/reqresp/beaconBlocksMaybeBlobsByRoot.js";
 import {wrapError} from "../util/wrapError.js";
 import {PendingBlock, PendingBlockStatus, PendingBlockType} from "./interface.js";
-import {getDescendantBlocks, getAllDescendantBlocks, getUnknownBlocks} from "./utils/pendingBlocksTree.js";
+import {getDescendantBlocks, getAllDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
 import {SyncOptions} from "./options.js";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
@@ -29,6 +29,8 @@ export class UnknownBlockSync {
   private readonly pendingBlocks = new Map<RootHex, PendingBlock>();
   private readonly knownBadBlocks = new Set<RootHex>();
   private readonly proposerBoostSecWindow: number;
+  private readonly maxPendingBlocks;
+  private subscribedToNetworkEvents = false;
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -36,17 +38,9 @@ export class UnknownBlockSync {
     private readonly chain: IBeaconChain,
     private readonly logger: Logger,
     private readonly metrics: Metrics | null,
-    opts?: SyncOptions
+    private readonly opts?: SyncOptions
   ) {
-    if (!opts?.disableUnknownBlockSync) {
-      this.logger.debug("UnknownBlockSync enabled.");
-      this.network.events.on(NetworkEvent.unknownBlock, this.onUnknownBlock);
-      this.network.events.on(NetworkEvent.unknownBlockParent, this.onUnknownParent);
-      this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
-    } else {
-      this.logger.debug("UnknownBlockSync disabled.");
-    }
-
+    this.maxPendingBlocks = opts?.maxPendingBlocks ?? MAX_PENDING_BLOCKS;
     this.proposerBoostSecWindow = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
 
     if (metrics) {
@@ -59,10 +53,34 @@ export class UnknownBlockSync {
     }
   }
 
-  close(): void {
+  subscribeToNetwork(): void {
+    if (!this.opts?.disableUnknownBlockSync) {
+      // cannot chain to the above if or the log will be incorrect
+      if (!this.subscribedToNetworkEvents) {
+        this.logger.debug("UnknownBlockSync enabled.");
+        this.network.events.on(NetworkEvent.unknownBlock, this.onUnknownBlock);
+        this.network.events.on(NetworkEvent.unknownBlockParent, this.onUnknownParent);
+        this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
+        this.subscribedToNetworkEvents = true;
+      }
+    } else {
+      this.logger.debug("UnknownBlockSync disabled.");
+    }
+  }
+
+  unsubscribeFromNetwork(): void {
     this.network.events.off(NetworkEvent.unknownBlock, this.onUnknownBlock);
     this.network.events.off(NetworkEvent.unknownBlockParent, this.onUnknownParent);
     this.network.events.off(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
+  }
+
+  close(): void {
+    this.unsubscribeFromNetwork();
+    // add more in the future if needed
+  }
+
+  isSubscribedToNetwork(): boolean {
+    return this.subscribedToNetworkEvents;
   }
 
   /**
@@ -147,7 +165,7 @@ export class UnknownBlockSync {
     }
 
     // Limit pending blocks to prevent DOS attacks that cause OOM
-    const prunedItemCount = pruneSetToMax(this.pendingBlocks, MAX_PENDING_BLOCKS);
+    const prunedItemCount = pruneSetToMax(this.pendingBlocks, this.maxPendingBlocks);
     if (prunedItemCount > 0) {
       this.logger.warn(`Pruned ${prunedItemCount} pending blocks from UnknownBlockSync`);
     }
@@ -169,7 +187,32 @@ export class UnknownBlockSync {
       return;
     }
 
-    for (const block of getUnknownBlocks(this.pendingBlocks)) {
+    const {unknowns, ancestors} = getUnknownAndAncestorBlocks(this.pendingBlocks);
+    // it's rare when there is no unknown block
+    // see https://github.com/ChainSafe/lodestar/issues/5649#issuecomment-1594213550
+    if (unknowns.length === 0) {
+      let processedBlocks = 0;
+
+      for (const block of ancestors) {
+        // when this happens, it's likely the block and parent block are processed by head sync
+        if (this.chain.forkChoice.hasBlockHex(block.parentBlockRootHex)) {
+          processedBlocks++;
+          this.processBlock(block).catch((e) => {
+            this.logger.debug("Unexpected error - process old downloaded block", {}, e);
+          });
+        }
+      }
+
+      this.logger.verbose("No unknown block, process ancestor downloaded blocks", {
+        pendingBlocks: this.pendingBlocks.size,
+        ancestorBlocks: ancestors.length,
+        processedBlocks,
+      });
+      return;
+    }
+
+    // most of the time there is exactly 1 unknown block
+    for (const block of unknowns) {
       this.downloadBlock(block, connectedPeers).catch((e) => {
         this.logger.debug("Unexpected error - downloadBlock", {root: block.blockRootHex}, e);
       });
@@ -180,6 +223,11 @@ export class UnknownBlockSync {
     if (block.status !== PendingBlockStatus.pending) {
       return;
     }
+
+    this.logger.verbose("Downloading unknown block", {
+      root: block.blockRootHex,
+      pendingBlocks: this.pendingBlocks.size,
+    });
 
     block.status = PendingBlockStatus.fetching;
     const res = await wrapError(this.fetchUnknownBlockRoot(fromHexString(block.blockRootHex), connectedPeers));
@@ -201,10 +249,17 @@ export class UnknownBlockSync {
       const delaySec = Date.now() / 1000 - (this.chain.genesisTime + blockSlot * this.config.SECONDS_PER_SLOT);
       this.metrics?.syncUnknownBlock.elapsedTimeTillReceived.observe(delaySec);
 
-      if (this.chain.forkChoice.hasBlock(blockInput.block.message.parentRoot)) {
+      const parentInForkchoice = this.chain.forkChoice.hasBlock(blockInput.block.message.parentRoot);
+      this.logger.verbose("Downloaded unknown block", {
+        root: block.blockRootHex,
+        pendingBlocks: this.pendingBlocks.size,
+        parentInForkchoice,
+      });
+
+      if (parentInForkchoice) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
         this.processBlock(block).catch((e) => {
-          this.logger.debug("Unexpected error - processBlock", {}, e);
+          this.logger.debug("Unexpected error - process newly downloaded block", {}, e);
         });
       } else if (blockSlot <= finalizedSlot) {
         // the common ancestor of the downloading chain and canonical chain should be at least the finalized slot and
@@ -277,6 +332,9 @@ export class UnknownBlockSync {
     const res = await wrapError(
       this.chain.processBlock(pendingBlock.blockInput, {
         ignoreIfKnown: true,
+        // there could be finalized/head sync at the same time so we need to ignore if finalized
+        // see https://github.com/ChainSafe/lodestar/issues/5650
+        ignoreIfFinalized: true,
         blsVerifyOnMainThread: true,
         // block is validated with correct root, we want to process it as soon as possible
         eagerPersistBlock: true,
@@ -293,7 +351,7 @@ export class UnknownBlockSync {
       // Send child blocks to the processor
       for (const descendantBlock of getDescendantBlocks(pendingBlock.blockRootHex, this.pendingBlocks)) {
         this.processBlock(descendantBlock).catch((e) => {
-          this.logger.debug("Unexpected error - processBlock", {}, e);
+          this.logger.debug("Unexpected error - process descendant block", {}, e);
         });
       }
     } else {

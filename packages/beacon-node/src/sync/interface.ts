@@ -55,28 +55,36 @@ export interface SyncModules {
   wsCheckpoint?: phase0.Checkpoint;
 }
 
+export type UnknownAndAncestorBlocks = {
+  unknowns: UnknownBlock[];
+  ancestors: DownloadedBlock[];
+};
+
 /**
  * onUnknownBlock: store 1 record with undefined parentBlockRootHex & blockInput, blockRootHex as key, status pending
  * onUnknownBlockParent:
  *   - store 1 record with known parentBlockRootHex & blockInput, blockRootHex as key, status downloaded
  *   - store 1 record with undefined parentBlockRootHex & blockInput, parentBlockRootHex as key, status pending
  */
-export type PendingBlock = {
+export type PendingBlock = UnknownBlock | DownloadedBlock;
+
+type PendingBlockCommon = {
   blockRootHex: RootHex;
   peerIdStrs: Set<string>;
   downloadAttempts: number;
-} & (
-  | {
-      status: PendingBlockStatus.pending | PendingBlockStatus.fetching;
-      parentBlockRootHex: null;
-      blockInput: null;
-    }
-  | {
-      status: PendingBlockStatus.downloaded | PendingBlockStatus.processing;
-      parentBlockRootHex: RootHex;
-      blockInput: BlockInput;
-    }
-);
+};
+
+export type UnknownBlock = PendingBlockCommon & {
+  status: PendingBlockStatus.pending | PendingBlockStatus.fetching;
+  parentBlockRootHex: null;
+  blockInput: null;
+};
+
+export type DownloadedBlock = PendingBlockCommon & {
+  status: PendingBlockStatus.downloaded | PendingBlockStatus.processing;
+  parentBlockRootHex: RootHex;
+  blockInput: BlockInput;
+};
 
 export enum PendingBlockStatus {
   pending = "pending",

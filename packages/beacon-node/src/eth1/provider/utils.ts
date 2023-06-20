@@ -83,7 +83,7 @@ export function quantityToBytes(hex: QUANTITY): Uint8Array {
  * Compress a 32 ByteVector into a QUANTITY
  */
 export function bytesToQuantity(bytes: Uint8Array): QUANTITY {
-  const bn = bytesToBigInt(bytes as Uint8Array, "le");
+  const bn = bytesToBigInt(bytes, "le");
   return numToQuantity(bn);
 }
 

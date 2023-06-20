@@ -68,10 +68,7 @@ export function getStubbedBeaconDb(): IBeaconDb {
 
     backfilledRanges: createStubInstance(BackfilledRanges),
 
-    /** Start the connection to the db instance and open the db store. */
-    async start(): Promise<void> {},
-    /**  Stop the connection to the db instance and close the db store. */
-    async stop(): Promise<void> {},
+    async close(): Promise<void> {},
     /** To inject metrics after CLI initialization */
     setMetrics(): void {},
     async pruneHotDb(): Promise<void> {},

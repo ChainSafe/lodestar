@@ -74,6 +74,13 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
   // This AbortController interrupts various validators ops: genesis req, clients call, clock etc
   const abortController = new AbortController();
 
+  // We set infinity for abort controller used for validator operations,
+  // to prevent MaxListenersExceededWarning which get logged when listeners > 10
+  // Since it is perfectly fine to have listeners > 10
+  setMaxListeners(Infinity, abortController.signal);
+
+  onGracefulShutdownCbs.push(async () => abortController.abort());
+
   /**
    * For rationale and documentation of how signers are loaded from args and disk,
    * see {@link PersistedKeysBackend} and {@link getSignersFromArgs}
@@ -95,21 +102,10 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   logSigners(logger, signers);
 
-  // We set infinity for abort controller used for validator operations,
-  // to prevent MaxListenersExceededWarning which get logged when listeners > 10
-  // Since it is perfectly fine to have listeners > 10
-  setMaxListeners(Infinity, abortController.signal);
+  const db = await LevelDbController.create({name: dbPath}, {metrics: null, logger});
+  onGracefulShutdownCbs.push(() => db.close());
 
-  onGracefulShutdownCbs.push(async () => abortController.abort());
-
-  const dbOps = {
-    config,
-    controller: new LevelDbController({name: dbPath}, {metrics: null, logger}),
-  };
-  onGracefulShutdownCbs.push(() => dbOps.controller.stop());
-  await dbOps.controller.start();
-
-  const slashingProtection = new SlashingProtection(dbOps);
+  const slashingProtection = new SlashingProtection(db);
 
   // Create metrics registry if metrics are enabled or monitoring endpoint is configured
   // Send version and network data for static registries
@@ -156,7 +152,8 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   const validator = await Validator.initializeFromBeaconNode(
     {
-      dbOps,
+      db,
+      config,
       slashingProtection,
       api: args.beaconNodes,
       logger,
@@ -186,7 +183,12 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       );
     }
 
-    const keymanagerApi = new KeymanagerApi(validator, persistedKeysBackend, proposerConfigWriteDisabled);
+    const keymanagerApi = new KeymanagerApi(
+      validator,
+      persistedKeysBackend,
+      abortController.signal,
+      proposerConfigWriteDisabled
+    );
     const keymanagerServer = new KeymanagerRestApiServer(
       {
         address: args["keymanager.address"],
@@ -251,6 +253,8 @@ function parseBuilderSelection(builderSelection?: string): BuilderSelection | un
       case "maxprofit":
         break;
       case "builderalways":
+        break;
+      case "builderonly":
         break;
       default:
         throw Error("Invalid input for builder selection, check help.");

@@ -83,7 +83,7 @@ export class DoppelgangerService {
     return getStatus(this.doppelgangerStateByPubkey.get(pubKeyHex)) === DoppelgangerStatus.VerifiedSafe;
   }
 
-  private pollLiveness = async (currentEpoch: Epoch): Promise<void> => {
+  private pollLiveness = async (currentEpoch: Epoch, signal: AbortSignal): Promise<void> => {
     if (currentEpoch < 0) {
       return;
     }
@@ -91,7 +91,7 @@ export class DoppelgangerService {
     const endSlotOfCurrentEpoch = computeStartSlotAtEpoch(currentEpoch + 1) - 1;
     // Run the doppelganger protection check 75% through the last slot of this epoch. This
     // *should* mean that the BN has seen the blocks and attestations for the epoch
-    await sleep(this.clock.msToSlot(endSlotOfCurrentEpoch + 3 / 4));
+    await sleep(this.clock.msToSlot(endSlotOfCurrentEpoch + 3 / 4), signal);
 
     // Collect indices that still need doppelganger checks
     const pubkeysToCheckWithoutIndex: PubkeyHex[] = [];

@@ -5,12 +5,13 @@ import {expect} from "chai";
 import {cachedSeckeysHex} from "../../utils/cachedKeys.js";
 import {getKeystoresStr} from "../../utils/keystores.js";
 import {testFilesDir} from "../../utils.js";
-import {decryptKeystoreDefinitions} from "../../../src/cmds/validator/keymanager/decryptKeystoreDefinitions/index.js";
+import {decryptKeystoreDefinitions} from "../../../src/cmds/validator/keymanager/decryptKeystoreDefinitions.js";
 import {LocalKeystoreDefinition} from "../../../src/cmds/validator/keymanager/interface.js";
 
 describe("decryptKeystoreDefinitions", function () {
   this.timeout(100_000);
 
+  const signal = new AbortController().signal;
   const dataDir = path.join(testFilesDir, "decrypt-keystores-test");
   const importFromDir = path.join(dataDir, "eth2.0_deposit_out");
 
@@ -43,7 +44,7 @@ describe("decryptKeystoreDefinitions", function () {
 
     beforeEach(async () => {
       // create cache file to ensure keystores are loaded from cache during tests
-      await decryptKeystoreDefinitions(definitions, {logger: console, cacheFilePath});
+      await decryptKeystoreDefinitions(definitions, {logger: console, cacheFilePath, signal});
       expect(fs.existsSync(cacheFilePath)).to.be.true;
 
       // remove lockfiles created during cache file preparation
@@ -59,7 +60,7 @@ describe("decryptKeystoreDefinitions", function () {
 
   function testDecryptKeystoreDefinitions(cacheFilePath?: string): void {
     it("decrypt keystores", async () => {
-      const signers = await decryptKeystoreDefinitions(definitions, {logger: console, cacheFilePath});
+      const signers = await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
       expect(signers.length).to.equal(secretKeys.length);
       for (const signer of signers) {
         const hexSecret = signer.secretKey.toHex();
@@ -68,11 +69,11 @@ describe("decryptKeystoreDefinitions", function () {
     });
 
     it("fail to decrypt keystores if lockfiles already exist", async () => {
-      await decryptKeystoreDefinitions(definitions, {logger: console, cacheFilePath});
+      await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
       // lockfiles should exist after the first run
 
       try {
-        await decryptKeystoreDefinitions(definitions, {logger: console, cacheFilePath});
+        await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
         expect.fail("Second decrypt should fail due to failure to get lockfile");
       } catch (e) {
         expect((e as Error).message.startsWith("EEXIST: file already exists"), "Wrong error is thrown").to.be.true;
@@ -80,10 +81,10 @@ describe("decryptKeystoreDefinitions", function () {
     });
 
     it("decrypt keystores if lockfiles already exist if ignoreLockFile=true", async () => {
-      await decryptKeystoreDefinitions(definitions, {logger: console, cacheFilePath});
+      await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
       // lockfiles should exist after the first run
 
-      await decryptKeystoreDefinitions(definitions, {logger: console, cacheFilePath, ignoreLockFile: true});
+      await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath, ignoreLockFile: true});
     });
   }
 });

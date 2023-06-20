@@ -199,7 +199,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       fromJson: (data) =>
         getLightClientTypeFromHeader(
           // eslint-disable-next-line @typescript-eslint/naming-convention
-          (data as unknown as {attested_header: allForks.LightClientHeader}).attested_header
+          (data as {attested_header: allForks.LightClientHeader}).attested_header
         )["LightClientOptimisticUpdate"].fromJson(data),
     },
     [EventType.lightClientFinalityUpdate]: {
@@ -210,7 +210,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       fromJson: (data) =>
         getLightClientTypeFromHeader(
           // eslint-disable-next-line @typescript-eslint/naming-convention
-          (data as unknown as {attested_header: allForks.LightClientHeader}).attested_header
+          (data as {attested_header: allForks.LightClientHeader}).attested_header
         )["LightClientFinalityUpdate"].fromJson(data),
     },
     [EventType.lightClientUpdate]: {
@@ -221,7 +221,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       fromJson: (data) =>
         getLightClientTypeFromHeader(
           // eslint-disable-next-line @typescript-eslint/naming-convention
-          (data as unknown as {attested_header: allForks.LightClientHeader}).attested_header
+          (data as {attested_header: allForks.LightClientHeader}).attested_header
         )["LightClientUpdate"].fromJson(data),
     },
   };

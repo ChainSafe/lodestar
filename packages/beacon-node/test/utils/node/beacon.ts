@@ -40,8 +40,7 @@ export async function getDevBeaconNode(
   const config = createChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
 
-  const db = new BeaconDb({config, controller: new LevelDbController({name: tmpDir.name}, {logger})});
-  await db.start();
+  const db = new BeaconDb(config, await LevelDbController.create({name: tmpDir.name}, {logger}));
 
   options = deepmerge(
     // This deepmerge should NOT merge the array with the defaults but overwrite them

@@ -20,7 +20,7 @@ async function getGenesisData(): Promise<void> {
     ApiError.assert(res);
     console.log(network, {
       genesisTime: Number(res.response.data.genesisTime),
-      genesisValidatorsRoot: "0x" + Buffer.from(res.response.data.genesisValidatorsRoot as Uint8Array).toString("hex"),
+      genesisValidatorsRoot: "0x" + Buffer.from(res.response.data.genesisValidatorsRoot).toString("hex"),
     });
   }
 }

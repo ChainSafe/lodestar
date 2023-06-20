@@ -3,13 +3,14 @@ import {Connection} from "@libp2p/interface-connection";
 import {Registrar} from "@libp2p/interface-registrar";
 import {ConnectionManager} from "@libp2p/interface-connection-manager";
 import {Slot, SlotRootHex, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
-import {BlockInput} from "../chain/blocks/types.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {INetworkEventBus} from "./events.js";
 import {INetworkCorePublic} from "./core/types.js";
 import {GossipType} from "./gossip/interface.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {PeerAction} from "./peers/index.js";
+
+export type WithBytes<T> = {data: T; bytes: Uint8Array};
 
 /**
  * The architecture of the network looks like so:
@@ -35,18 +36,17 @@ export interface INetwork extends INetworkCorePublic {
   sendBeaconBlocksByRange(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<allForks.SignedBeaconBlock[]>;
+  ): Promise<WithBytes<allForks.SignedBeaconBlock>[]>;
   sendBeaconBlocksByRoot(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRootRequest
-  ): Promise<allForks.SignedBeaconBlock[]>;
+  ): Promise<WithBytes<allForks.SignedBeaconBlock>[]>;
   sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
   sendBlobSidecarsByRoot(peerId: PeerIdStr, request: deneb.BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
 
   // Gossip
-  publishBeaconBlockMaybeBlobs(blockInput: BlockInput): Promise<number>;
   publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<number>;
-  publishSignedBeaconBlockAndBlobsSidecar(item: deneb.SignedBeaconBlockAndBlobsSidecar): Promise<number>;
+  publishBlobSidecar(signedBlobSidecar: deneb.SignedBlobSidecar): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number>;
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;
@@ -60,6 +60,7 @@ export interface INetwork extends INetworkCorePublic {
 
   // Debug
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;
+  writeNetworkThreadProfile(durationMs?: number, dirpath?: string): Promise<string>;
 }
 
 export type PeerDirection = Connection["stat"]["direction"];

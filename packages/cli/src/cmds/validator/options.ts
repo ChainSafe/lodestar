@@ -32,8 +32,8 @@ export type IValidatorCliArgs = AccountValidatorArgs &
   LogArgs & {
     validatorsDbDir?: string;
     beaconNodes: string[];
-    force: boolean;
-    graffiti: string;
+    force?: boolean;
+    graffiti?: string;
     afterBlockDelaySlotFraction?: number;
     scAfterBlockDelaySlotFraction?: number;
     disableAttestationGrouping?: boolean;
@@ -237,7 +237,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "builder.selection": {
     type: "string",
-    description: "Default builder block selection strategy: maxprofit or builderalways",
+    description: "Default builder block selection strategy: maxprofit, builderalways, or builderonly",
     defaultDescription: `${defaultOptions.builderSelection}`,
     group: "builder",
   },

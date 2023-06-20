@@ -58,7 +58,7 @@ export function isMergeTransitionComplete(state: BeaconStateExecutions): boolean
     );
   } else {
     return !ssz.capella.ExecutionPayloadHeader.equals(
-      (state as BeaconStateCapella).latestExecutionPayloadHeader,
+      state.latestExecutionPayloadHeader,
       // TODO: Performance
       ssz.capella.ExecutionPayloadHeader.defaultValue()
     );

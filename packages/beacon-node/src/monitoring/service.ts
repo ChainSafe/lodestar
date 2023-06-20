@@ -49,7 +49,7 @@ export class MonitoringService {
 
   constructor(
     client: Client,
-    options: MonitoringOptions,
+    options: Required<Pick<MonitoringOptions, "endpoint">> & MonitoringOptions,
     {register, logger}: {register: RegistryMetricCreator; logger: Logger}
   ) {
     this.options = {...defaultMonitoringOptions, ...options};

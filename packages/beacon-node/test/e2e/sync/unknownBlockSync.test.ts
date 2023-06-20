@@ -117,7 +117,7 @@ describe("sync / unknown block sync", function () {
       );
 
       await connect(bn2.network, bn.network);
-      const headInput = getBlockInput.preDeneb(config, head, BlockSource.gossip);
+      const headInput = getBlockInput.preDeneb(config, head, BlockSource.gossip, null);
 
       switch (event) {
         case NetworkEvent.unknownBlockParent:

@@ -20,6 +20,8 @@ export type SyncOptions = {
    * allocation to backfill sync. The default of 0 would mean backfill sync will be skipped
    */
   backfillBatchSize: number;
+  /** For testing only, MAX_PENDING_BLOCKS by default */
+  maxPendingBlocks?: number;
 };
 
 export const defaultSyncOptions: SyncOptions = {

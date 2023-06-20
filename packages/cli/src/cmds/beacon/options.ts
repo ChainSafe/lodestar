@@ -12,6 +12,7 @@ type BeaconExtraArgs = {
   checkpointSyncUrl?: string;
   checkpointState?: string;
   wssCheckpoint?: string;
+  forceCheckpointSync?: boolean;
   beaconDir?: string;
   dbDir?: string;
   persistInvalidSszObjectsDir?: string;
@@ -19,6 +20,7 @@ type BeaconExtraArgs = {
   peerStoreDir?: string;
   persistNetworkIdentity?: boolean;
   private?: boolean;
+  attachToGlobalThis?: boolean;
 };
 
 export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
@@ -66,6 +68,13 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     group: "weak subjectivity",
   },
 
+  forceCheckpointSync: {
+    description:
+      "Force syncing from checkpoint state even if db state is within weak subjectivity period. This helps to avoid long sync times after node has been offline for a while.",
+    type: "boolean",
+    group: "weak subjectivity",
+  },
+
   beaconDir: {
     description: "Beacon root directory",
     defaultDescription: defaultBeaconPaths.beaconDir,
@@ -108,6 +117,12 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
 
   private: {
     description: "Do not send implementation details over p2p identify protocol and in builder requests",
+    type: "boolean",
+  },
+
+  attachToGlobalThis: {
+    hidden: true,
+    description: "Attach the beacon node to `globalThis`. Useful to inspect a running beacon node.",
     type: "boolean",
   },
 };
@@ -160,16 +175,7 @@ const enrOptions: Record<string, Options> = {
   },
 };
 
-export type DebugArgs = {attachToGlobalThis: boolean};
-export const debugOptions: CliCommandOptions<DebugArgs> = {
-  attachToGlobalThis: {
-    hidden: true,
-    description: "Attach the beacon node to `globalThis`. Useful to inspect a running beacon node.",
-    type: "boolean",
-  },
-};
-
-export type BeaconArgs = BeaconExtraArgs & LogArgs & BeaconPaths & BeaconNodeArgs & ENRArgs & DebugArgs;
+export type BeaconArgs = BeaconExtraArgs & LogArgs & BeaconPaths & BeaconNodeArgs & ENRArgs;
 
 export const beaconOptions: {[k: string]: Options} = {
   ...beaconExtraOptions,
@@ -177,5 +183,4 @@ export const beaconOptions: {[k: string]: Options} = {
   ...beaconNodeOptions,
   ...paramsOptions,
   ...enrOptions,
-  ...debugOptions,
 };

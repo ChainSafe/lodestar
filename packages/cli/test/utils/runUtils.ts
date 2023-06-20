@@ -20,6 +20,13 @@ export function expectDeepEquals<T>(a: T, b: T, message: string): void {
   expect(a).deep.equals(b, message);
 }
 
+/**
+ * Similar to `expectDeepEquals` but only checks presence of all elements in array, irrespective of their order.
+ */
+export function expectDeepEqualsUnordered<T>(a: T[], b: T[], message: string): void {
+  expect(a).to.have.deep.members(b, message);
+}
+
 export type DoneCb = (err?: Error) => void;
 
 /**

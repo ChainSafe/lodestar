@@ -69,10 +69,8 @@ export interface IBeaconDb {
 
   pruneHotDb(): Promise<void>;
 
-  /** Start the connection to the db instance and open the db store. */
-  start(): Promise<void>;
-  /**  Stop the connection to the db instance and close the db store. */
-  stop(): Promise<void>;
+  /**  Close the connection to the db instance and close the db store. */
+  close(): Promise<void>;
   /** To inject metrics after CLI initialization */
   setMetrics(metrics: LevelDbControllerMetrics): void;
 }
