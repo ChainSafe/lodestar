@@ -36,12 +36,17 @@ jobs:
       - name: Build and collect docs
         run: yarn build:docs
 
+      - name: Lint built docs
+        run: yarn lint-docs:fix
+
       - name: Set up Python
         uses: actions/setup-python@v1
+        
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r docs/requirements.txt
+
       - name: Build docs
         run: mkdocs build --site-dir site -v --clean
 
