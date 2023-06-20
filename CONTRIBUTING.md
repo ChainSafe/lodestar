@@ -25,16 +25,12 @@ To run tests:
 - :test_tube: Run `yarn check-types` to check TypeScript types.
 - :test_tube: Run `yarn lint` to run the linter (ESLint).
 
-# <<<<<<< HEAD
-
 Contributing to tests:
 
 - Test must not depend on external live resources, such that running tests for a commit must be deterministic:
   - Do not pull data from external APIs like execution JSON RPC (instead run a local node).
   - Do not pull unpinned versions from DockerHub (use deterministic tag) or Github (checkout commit not branch).
   - Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.
-
-> > > > > > > e566a920d1 (Fix docs spelling)
 
 ### Debugging Spec Tests
 
@@ -43,7 +39,7 @@ Contributing to tests:
 - A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use mocha's option `--bail` to stop at the first failed test
 - To then run only that failed test you can run against a specific file as use mocha's option `--grep` to run only one case
 
-```
+```sh
 LODESTAR_PRESET=minimal ../../node_modules/.bin/mocha --config .mocharc.spec.yml test/spec/phase0/sanity.test.ts --inline-diffs --bail --grep "attestation"
 ```
 
@@ -51,29 +47,29 @@ LODESTAR_PRESET=minimal ../../node_modules/.bin/mocha --config .mocharc.spec.yml
 
 The docker-compose file requires that a `.env` file be present in this directory. The `default.env` file provides a template and can be copied `.env`:
 
-```
+```sh
 cp default.env .env
 ```
 
-###### Beacon node only:
+###### Beacon node only
 
-```
+```sh
 docker-compose up -d
 ```
 
-###### Beacon node and validator:
+###### Beacon node and validator
 
 First, you must have keystores and their secrets available locally at `./keystores` and your `password.txt` in `./secrets`
 
-```
+```sh
 docker-compose -f docker-compose.yml -f docker-compose.validator.yml up -d
 ```
 
-###### Dockerized metrics + local beacon node:
+###### Dockerized metrics + local beacon node
 
 Run a local beacon with `--metrics` enabled. Then start Prometheus + Grafana with all dashboards in `./dashboards` automatically loaded running:
 
-```
+```sh
 ./docker/docker-compose.local_dev.sh
 ```
 
