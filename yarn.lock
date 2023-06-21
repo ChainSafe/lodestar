@@ -627,6 +627,11 @@
   resolved "https://registry.npmjs.org/@chainsafe/persistent-ts/-/persistent-ts-0.19.1.tgz"
   integrity sha512-fUFFFFxdcpYkMAHnjm83EYL/R/smtVmEkJr3FGSI6dwPk4ue9rXjEHf7FTd3V8AbVOcTJGriN4cYf2V+HOYkjQ==
 
+"@chainsafe/prometheus-gc-stats@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/prometheus-gc-stats/-/prometheus-gc-stats-1.0.0.tgz#9404abcf7e7a823596ecf3d71697f644568bde8c"
+  integrity sha512-l9aKCxQHBBBZIbCAl0y+7D4gded1cHUbIIRips68vN5zgpEuxjojUJSebuhLm+cgYdK1Wvf35gusA802bVfcdQ==
+
 "@chainsafe/ssz@^0.10.2":
   version "0.10.2"
   resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.10.2.tgz#c782929e1bb25fec66ba72e75934b31fd087579e"
@@ -3774,11 +3779,6 @@
   dependencies:
     "@types/node" "*"
 
-"@types/prometheus-gc-stats@^0.6.2":
-  version "0.6.2"
-  resolved "https://registry.yarnpkg.com/@types/prometheus-gc-stats/-/prometheus-gc-stats-0.6.2.tgz#b84246b13d0e7bd8bb61fa97a9ab624306b92697"
-  integrity sha512-HkT55AB8gPA7mrlkSVEoUgKQmnadWfioPZs0AakXRiggZzGKRCyLHe+WUpnvFashtWOJHUBQDjuR/siT9BKr/Q==
-
 "@types/qs@^6.9.7":
   version "6.9.7"
   resolved "https://registry.yarnpkg.com/@types/qs/-/qs-6.9.7.tgz#63bb7d067db107cc1e457c303bc25d511febf6cb"
@@ -4910,7 +4910,7 @@ binary-extensions@^2.0.0:
   resolved "https://registry.npmjs.org/binary-extensions/-/binary-extensions-2.2.0.tgz"
   integrity sha512-jDctJ/IVQbZoJykoeHbhXpOlNBqGNcwXJKJog42E5HDPUwQTSdjCHdihjj0DlnheQ7blbT6dHOafNAiS8ooQKA==
 
-bindings@^1.3.0, bindings@^1.3.1, bindings@^1.5.0:
+bindings@^1.3.0, bindings@^1.5.0:
   version "1.5.0"
   resolved "https://registry.npmjs.org/bindings/-/bindings-1.5.0.tgz"
   integrity sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==
@@ -12049,11 +12049,6 @@ open@^8.4.0:
     is-docker "^2.1.1"
     is-wsl "^2.2.0"
 
-optional@^0.1.3:
-  version "0.1.4"
-  resolved "https://registry.npmjs.org/optional/-/optional-0.1.4.tgz"
-  integrity sha512-gtvrrCfkE08wKcgXaVwQVgwEQ8vel2dc5DDBn9RLQZ3YtmtkBss6A2HY6BnJH4N/4Ku97Ri/SF8sNWE2225WJw==
-
 optionator@^0.9.1:
   version "0.9.1"
   resolved "https://registry.npmjs.org/optionator/-/optionator-0.9.1.tgz"
@@ -12735,15 +12730,6 @@ prom-client@^14.2.0:
   integrity sha512-sF308EhTenb/pDRPakm+WgiN+VdM/T1RaHj1x+MvAuT8UiQP8JmOEbxVqtkbfR4LrvOg5n7ic01kRBDGXjYikA==
   dependencies:
     tdigest "^0.1.1"
-
-prometheus-gc-stats@^0.6.4:
-  version "0.6.4"
-  resolved "https://registry.yarnpkg.com/prometheus-gc-stats/-/prometheus-gc-stats-0.6.4.tgz#7326216b92ef71591a535cc31b89ee3f94150fe9"
-  integrity sha512-HtxtDYRurj7gZS9AqjcfEAldf2e053mh+XW//OjifRxr6Y/aLx8y7ETwWesnJ9DaufvAMyqUUQJUzhB9jLc6vg==
-  dependencies:
-    optional "^0.1.3"
-  optionalDependencies:
-    gc-stats "^1.4.0"
 
 promise-all-reject-late@^1.0.0:
   version "1.0.1"
