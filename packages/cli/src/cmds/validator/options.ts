@@ -40,7 +40,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     suggestedFeeRecipient?: string;
     proposerSettingsFile?: string;
     strictFeeRecipientCheck?: boolean;
-    doppelgangerProtectionEnabled?: boolean;
+    doppelgangerProtection?: boolean;
     defaultGasLimit?: number;
 
     builder?: boolean;
@@ -256,7 +256,8 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "string",
   },
 
-  doppelgangerProtectionEnabled: {
+  doppelgangerProtection: {
+    alias: ["doppelgangerProtectionEnabled"],
     description: "Enables Doppelganger protection",
     default: false,
     type: "boolean",
