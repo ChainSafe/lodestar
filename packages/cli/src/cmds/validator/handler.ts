@@ -36,7 +36,7 @@ import {KeymanagerRestApiServer} from "./keymanager/server.js";
 export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Promise<void> {
   const {config, network} = getBeaconConfigFromArgs(args);
 
-  const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
+  const {doppelgangerProtection} = args;
 
   const validatorPaths = getValidatorPaths(args, network);
   const accountPaths = getAccountPaths(args, network);
@@ -160,7 +160,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       processShutdownCallback,
       signers,
       abortController,
-      doppelgangerProtectionEnabled,
+      doppelgangerProtection,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
       scAfterBlockDelaySlotFraction: args.scAfterBlockDelaySlotFraction,
       disableAttestationGrouping: args.disableAttestationGrouping,
