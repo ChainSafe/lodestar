@@ -1,6 +1,11 @@
 import {Options, Argv} from "yargs";
 
-export type CliCommandOptions<OwnArgs> = Required<{[key in keyof OwnArgs]: Options}>;
+export type CliCommandOptions<OwnArgs> = Required<{
+  [K in keyof OwnArgs]: undefined extends OwnArgs[K]
+    ? Options
+    : // If arg cannot be undefined it must specify a default value
+      Options & Required<Pick<Options, "default">>;
+}>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface CliCommand<OwnArgs = Record<never, never>, ParentArgs = Record<never, never>, R = any> {

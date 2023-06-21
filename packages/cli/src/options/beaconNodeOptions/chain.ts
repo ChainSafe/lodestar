@@ -4,24 +4,24 @@ import {CliCommandOptions} from "../../util/index.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
-  "chain.blsVerifyAllMultiThread": boolean;
-  "chain.blsVerifyAllMainThread": boolean;
-  "chain.disableBlsBatchVerify": boolean;
-  "chain.persistInvalidSszObjects": boolean;
+  "chain.blsVerifyAllMultiThread"?: boolean;
+  "chain.blsVerifyAllMainThread"?: boolean;
+  "chain.disableBlsBatchVerify"?: boolean;
+  "chain.persistInvalidSszObjects"?: boolean;
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
   // as this is defined as part of BeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
-  "chain.proposerBoostEnabled": boolean;
-  "chain.disableImportExecutionFcU": boolean;
-  "chain.preaggregateSlotDistance": number;
-  "chain.attDataCacheSlotDistance": number;
-  "chain.computeUnrealized": boolean;
-  "chain.assertCorrectProgressiveBalances": boolean;
-  "chain.maxSkipSlots": number;
-  "chain.trustedSetup": string;
+  "chain.proposerBoostEnabled"?: boolean;
+  "chain.disableImportExecutionFcU"?: boolean;
+  "chain.preaggregateSlotDistance"?: number;
+  "chain.attDataCacheSlotDistance"?: number;
+  "chain.computeUnrealized"?: boolean;
+  "chain.assertCorrectProgressiveBalances"?: boolean;
+  "chain.maxSkipSlots"?: number;
+  "chain.trustedSetup"?: string;
   "safe-slots-to-import-optimistically": number;
   "chain.archiveStateEpochFrequency": number;
-  emitPayloadAttributes: boolean;
+  emitPayloadAttributes?: boolean;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -52,7 +52,7 @@ export const options: CliCommandOptions<ChainArgs> = {
     type: "string",
     description:
       "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling `produceBlock`.",
-    defaultDescription: defaultOptions.chain.suggestedFeeRecipient,
+    default: defaultOptions.chain.suggestedFeeRecipient,
     group: "chain",
   },
 
@@ -160,13 +160,14 @@ Will double processing times. Use only for debugging purposes.",
     type: "number",
     description:
       "Slots from current (clock) slot till which its safe to import a block optimistically if the merge is not justified yet.",
-    defaultDescription: String(defaultOptions.chain.safeSlotsToImportOptimistically),
+    default: defaultOptions.chain.safeSlotsToImportOptimistically,
     group: "chain",
   },
 
   "chain.archiveStateEpochFrequency": {
     hidden: true,
     description: "Minimum number of epochs between archived states",
+    default: defaultOptions.chain.archiveStateEpochFrequency,
     type: "number",
     group: "chain",
   },
