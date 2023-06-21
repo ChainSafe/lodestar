@@ -53,7 +53,7 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
 
   "builder.allowedFaults": {
     type: "number",
-    description: "Number of missed slots allowed in the faultInspectionWindow for builder circuit",
+    description: "Number of missed slots allowed in the `faultInspectionWindow` for builder circuit",
     group: "builder",
   },
 };

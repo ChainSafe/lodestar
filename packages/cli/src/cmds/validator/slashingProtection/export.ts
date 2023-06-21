@@ -37,7 +37,7 @@ export const exportCmd: CliCommand<ExportArgs, ISlashingProtectionArgs & Account
         type: "string",
       },
       pubkeys: {
-        description: "Export slashing protection data only for a given subset of pubkeys",
+        description: "Export slashing protection data only for a given subset of public keys",
         type: "array",
         string: true, // Ensures the pubkey string is not automatically converted to numbers
         coerce: (pubkeys: string[]): string[] =>

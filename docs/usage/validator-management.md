@@ -19,7 +19,7 @@ The mnemonic is randomly generated during wallet creation and printed out to the
 
 Lodestar is deprecating its functionality to create wallets.
 
-To create a wallet, we recommend using the official [staking-deposit-cli](https://github.com/ethereum/staking-deposit-cli/releases) from the Ethereum Foundation for users comfortable with command line interfaces.
+To create a wallet, we recommend using the official [`staking-deposit-cli`](https://github.com/ethereum/staking-deposit-cli/releases) from the Ethereum Foundation for users comfortable with command line interfaces.
 
 Alternatively, for a graphical user interface, you can use the [Stakehouse Wagyu Key Generator](https://wagyu.gg/) developed by members of the EthStaker community.
 
@@ -34,20 +34,25 @@ Validators are represented by a BLS keypair. Use your generated mnemonic from on
 
 ### Import a validator keystore from your wallet to Lodestar
 
-To import a validator keystore that was created via one of the methods described above, you must locate the validator keystore JSONs exported by those tools (ex. `keystore-m_12381_3600_0_0_0-1654128694.json`).
+To import a validator keystore that was created via one of the methods described above, you must locate the validator JSON keystores exported by those tools (ex. `keystore-m_12381_3600_0_0_0-1654128694.json`).
 
-Inside the keystore JSON file, you should have an [EIP-2335 conformant keystore file](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2335.md#json-schema).
+Inside the keystore JSON file, you should have an [EIP-2335 keystore file](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2335.md#json-schema).
 
 You will also need the passphrase used the encrypt the keystore. This can be specified interactively, or provided in a plaintext file.
 
 #### Option 1: Import Keys To Lodestar's Keystores Folder
 
 You can load the keys into the keystore folder using the `validator import` command. There are two methods for importing keystores:
-```bash
-# Interactive passphrase import
-./lodestar validator import --importKeystores ./validator_keys
 
-# Plaintext passphrase file import
+_Interactive passphrase import_
+
+```bash
+./lodestar validator import --importKeystores ./validator_keys
+```
+
+_Plaintext passphrase file import_
+
+```bash
 ./lodestar validator import --importKeystores ./validator_keys --importKeystoresPassword ./password.txt
 ```
 
@@ -61,6 +66,7 @@ You can load the keys into the keystore folder using the `validator import` comm
 Once imported with either method, these keystores will be automatically loaded when you start the validator. To list the imported keystores, use the `validator list` command.
 
 ---
+
 #### Option 2: Import Keys When Starting the Validator
 
 To import keys when you start the validator specify the `--importKeystores` and `--importKeystoresPassword` flags with the `validator` command:
@@ -74,7 +80,6 @@ To import keys when you start the validator specify the `--importKeystores` and 
     If you import keys using `--importKeystores` at runtime (Option 2) any keys loaded to the keystores folder from Option 1 will be ignored.
 <!-- prettier-ignore-end -->
 
-
 ### Configuring the fee recipient address
 
 Post-Merge Ethereum requires validators to set a **Fee Recipient** which allows you to receive priority fees when proposing blocks. If you do not set this address, your priority fees will be sent to the [burn address](https://etherscan.io/address/0x0000000000000000000000000000000000000000).
@@ -86,6 +91,7 @@ You may choose to use the `--strictFeeRecipientCheck` flag to enable a strict ch
 ### Submit a validator deposit
 
 Please use the official tools to perform your deposits
+
 - `staking-deposit-cli`: <https://github.com/ethereum/staking-deposit-cli>
 - Ethereum Foundation launchpad: <https://launchpad.ethereum.org>
 

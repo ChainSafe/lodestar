@@ -1,6 +1,7 @@
 # Geth Docker setup for running the sim merge tests on local machine
 
 ###### Geth docker image
+
 Pull the latest `geth` image from the dockerhub
 
 ```bash

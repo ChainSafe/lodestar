@@ -51,7 +51,7 @@ export const options: CliCommandOptions<ChainArgs> = {
   suggestedFeeRecipient: {
     type: "string",
     description:
-      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling produceBlock.",
+      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling `produceBlock`.",
     default: defaultOptions.chain.suggestedFeeRecipient,
     group: "chain",
   },
@@ -59,7 +59,7 @@ export const options: CliCommandOptions<ChainArgs> = {
   emitPayloadAttributes: {
     type: "boolean",
     defaultDescription: String(defaultOptions.chain.emitPayloadAttributes),
-    description: "Flag to SSE emit execution payloadAttributes before every slot",
+    description: "Flag to SSE emit execution `payloadAttributes` before every slot",
     group: "chain",
   },
 

@@ -67,13 +67,10 @@ jobs:
         run: scripts/assert_eslintrc_sorted.mjs
 
       - name: Check Types
-        run: yarn run check-types
-      # Test docs generation, even if not published
-      - name: Build docs
-        run: yarn build:docs
+        run: yarn check-types
 
       - name: README check
-        run: yarn run check-readme
+        run: yarn check-readme
 
       - name: Lint
         run: yarn lint

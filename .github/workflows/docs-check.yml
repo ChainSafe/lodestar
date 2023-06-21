@@ -1,13 +1,15 @@
-name: Deploy docs
+name: Check docs
 
 on:
   push:
-    branches:
-      - stable
+    # We intentionally don't run push on feature branches. See PR for rational.
+    branches: [unstable, stable]
+  pull_request:
 
 jobs:
-  docs:
-    runs-on: buildjet-4vcpu-ubuntu-2204
+  build:
+    name: Docs spellcheck
+    runs-on: ubuntu-latest
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v3
@@ -31,27 +33,18 @@ jobs:
       - name: Build
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
-      # </common-build>
+
+      - name: Check wordlist is sorted
+        run: scripts/wordlist_sort_check.sh
 
       - name: Build and collect docs
         run: yarn build:docs
 
-      - name: Lint built docs
+      # Run prettier check with fix after generating the docs. The CLI reference is formatted with prettier for
+      # deployed version so this will fail if not "fixable"
+      - name: Check docs format
         run: yarn lint-docs:fix
 
-      - name: Set up Python
-        uses: actions/setup-python@v1
-        
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r docs/requirements.txt
-
-      - name: Build docs
-        run: mkdocs build --site-dir site -v --clean
-
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
+      # Run spellcheck AFTER building docs, in case the CLI reference has issues
+      - name: Spellcheck
+        uses: rojopolis/spellcheck-github-actions@0.32.0
