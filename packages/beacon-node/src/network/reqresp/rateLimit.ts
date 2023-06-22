@@ -1,4 +1,9 @@
-import {MAX_REQUEST_BLOCKS, MAX_REQUEST_LIGHT_CLIENT_UPDATES} from "@lodestar/params";
+import {
+  MAX_REQUEST_BLOCKS,
+  MAX_REQUEST_LIGHT_CLIENT_UPDATES,
+  MAX_BLOBS_PER_BLOCK,
+  MAX_REQUEST_BLOB_SIDECARS,
+} from "@lodestar/params";
 import {InboundRateLimitQuota} from "@lodestar/reqresp";
 import {ReqRespMethod, RequestBodyByMethod} from "./types.js";
 import {requestSszTypeByMethod} from "./types.js";
@@ -32,13 +37,13 @@ export const rateLimitQuotas: Record<ReqRespMethod, InboundRateLimitQuota> = {
     getRequestCount: getRequestCountFn(ReqRespMethod.BeaconBlocksByRoot, (req) => req.length),
   },
   [ReqRespMethod.BlobSidecarsByRange]: {
-    // TODO DENEB: For now same value as BeaconBlocksByRange https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
-    byPeer: {quota: MAX_REQUEST_BLOCKS, quotaTimeMs: 10_000},
+    // TODO DENEB: For now same value as blobs in BeaconBlocksByRange https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
+    byPeer: {quota: MAX_REQUEST_BLOB_SIDECARS, quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(ReqRespMethod.BlobSidecarsByRange, (req) => req.count),
   },
   [ReqRespMethod.BlobSidecarsByRoot]: {
-    // TODO DENEB: For now same value as BeaconBlocksByRoot https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
-    byPeer: {quota: 128, quotaTimeMs: 10_000},
+    // TODO DENEB: For now same value as blobs in  BeaconBlocksByRoot https://github.com/sigp/lighthouse/blob/bf533c8e42cc73c35730e285c21df8add0195369/beacon_node/lighthouse_network/src/rpc/mod.rs#L118-L130
+    byPeer: {quota: 128 * MAX_BLOBS_PER_BLOCK, quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(ReqRespMethod.BlobSidecarsByRoot, (req) => req.length),
   },
   [ReqRespMethod.LightClientBootstrap]: {
