@@ -19,7 +19,7 @@
         <link rel="next" href="../../libraries/">
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.9">
+      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.16">
     
     
       
@@ -27,10 +27,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.85bb2934.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.26e3688c.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.a6bdf11c.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ecc896b0.min.css">
       
       
 
@@ -936,6 +936,18 @@
 <td></td>
 </tr>
 <tr>
+<td><code>--forceCheckpointSync</code></td>
+<td>boolean</td>
+<td>Force syncing from checkpoint state even if db state is within weak subjectivity period. This helps to avoid long sync times after node has been offline for a while.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--private</code></td>
+<td>boolean</td>
+<td>Do not send implementation details over p2p identify protocol and in builder requests</td>
+<td></td>
+</tr>
+<tr>
 <td><code>--logLevel</code></td>
 <td>string</td>
 <td>Logging verbosity level for emittings logs to terminal</td>
@@ -956,7 +968,7 @@
 <tr>
 <td><code>--logFileDailyRotate</code></td>
 <td>number</td>
-<td>Daily rotate log files, set to an integer to limit the file count, set to 0(zero) to disable rotation</td>
+<td>Daily rotate log files, set to an integer to limit the file count, set to 0 (zero) to disable rotation</td>
 <td>5</td>
 </tr>
 <tr>
@@ -1074,12 +1086,6 @@
 <td></td>
 </tr>
 <tr>
-<td><code>--builder.userAgent</code></td>
-<td>string</td>
-<td>User-Agent header attached to all builder requests</td>
-<td>Lodestar/v1.8.0/stable/a4b29cf</td>
-</tr>
-<tr>
 <td><code>--metrics</code></td>
 <td>boolean</td>
 <td>Enable the Prometheus metrics HTTP server</td>
@@ -1149,6 +1155,12 @@
 <td><code>--subscribeAllSubnets</code></td>
 <td>boolean</td>
 <td>Subscribe to all subnets regardless of validator count</td>
+<td>false</td>
+</tr>
+<tr>
+<td><code>--disablePeerScoring</code></td>
+<td>boolean</td>
+<td>Disable peer scoring, used for testing on devnets</td>
 <td>false</td>
 </tr>
 <tr>
@@ -1258,7 +1270,7 @@
 <tr>
 <td><code>--logFileDailyRotate</code></td>
 <td>number</td>
-<td>Daily rotate log files, set to an integer to limit the file count, set to 0(zero) to disable rotation</td>
+<td>Daily rotate log files, set to an integer to limit the file count, set to 0 (zero) to disable rotation</td>
 <td>5</td>
 </tr>
 <tr>
@@ -1495,6 +1507,12 @@
 <td>The slashing protection interchange file to export to (.json).</td>
 <td></td>
 </tr>
+<tr>
+<td><code>--pubkeys</code></td>
+<td>array</td>
+<td>Export slashing protection data only for a given subset of pubkeys</td>
+<td></td>
+</tr>
 </tbody>
 </table>
 <h3 id="validator-import"><code>validator import</code><a class="headerlink" href="#validator-import" title="Permanent link">&para;</a></h3>
@@ -1535,7 +1553,7 @@
 <tr>
 <td><code>--logFileDailyRotate</code></td>
 <td>number</td>
-<td>Daily rotate log files, set to an integer to limit the file count, set to 0(zero) to disable rotation</td>
+<td>Daily rotate log files, set to an integer to limit the file count, set to 0 (zero) to disable rotation</td>
 <td>5</td>
 </tr>
 <tr>
@@ -1728,7 +1746,7 @@
 <tr>
 <td><code>--pubkeys</code></td>
 <td>array</td>
-<td>Pubkeys to exit, must be available as local signers. Multiple keys have to be provided as comma-separated values.</td>
+<td>Pubkeys to exit, must be available as local signers</td>
 <td></td>
 </tr>
 <tr>
@@ -1814,7 +1832,7 @@
 <tr>
 <td><code>--logFileDailyRotate</code></td>
 <td>number</td>
-<td>Daily rotate log files, set to an integer to limit the file count, set to 0(zero) to disable rotation</td>
+<td>Daily rotate log files, set to an integer to limit the file count, set to 0 (zero) to disable rotation</td>
 <td>5</td>
 </tr>
 <tr>
@@ -2095,7 +2113,7 @@
     <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.208ed371.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.fac441b0.min.js"></script>
+      <script src="../../assets/javascripts/bundle.a51614de.min.js"></script>
       
     
   </body>

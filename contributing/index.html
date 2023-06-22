@@ -17,7 +17,7 @@
       
       
       <link rel="icon" href="../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.9">
+      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.16">
     
     
       
@@ -25,10 +25,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.85bb2934.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.26e3688c.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.a6bdf11c.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ecc896b0.min.css">
       
       
 
@@ -712,6 +712,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#tests-style-guide" class="md-nav__link">
+    Tests style guide
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#logging-policy" class="md-nav__link">
     Logging policy
   </a>
@@ -742,6 +749,19 @@
   <a href="#contributing-to-grafana-dashboards" class="md-nav__link">
     Contributing to Grafana dashboards
   </a>
+  
+    <nav class="md-nav" aria-label="Contributing to Grafana dashboards">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-download-script" class="md-nav__link">
+    Using Download Script
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -945,6 +965,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#tests-style-guide" class="md-nav__link">
+    Tests style guide
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#logging-policy" class="md-nav__link">
     Logging policy
   </a>
@@ -975,6 +1002,19 @@
   <a href="#contributing-to-grafana-dashboards" class="md-nav__link">
     Contributing to Grafana dashboards
   </a>
+  
+    <nav class="md-nav" aria-label="Contributing to Grafana dashboards">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-download-script" class="md-nav__link">
+    Using Download Script
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1056,7 +1096,7 @@
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
 <li>:gear: <a href="https://nodejs.org/">NodeJS</a> (LTS)</li>
-<li>:toolbox: <a href="https://yarnpkg.com/">Yarn</a>/<a href="https://lerna.js.org/">Lerna</a></li>
+<li>:toolbox: <a href="https://yarnpkg.com/">Yarn</a></li>
 </ul>
 <h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1066,11 +1106,12 @@
 <li>:computer: Run <code>./lodestar --help</code> to get a list of available commands and arguments.</li>
 </ul>
 <h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
+<p>To run tests:</p>
 <ul>
-<li>:test_tube: Run <code>lerna run test:unit</code> for unit tests.</li>
-<li>:test_tube: Run <code>lerna run test:e2e</code> for end-to-end tests.</li>
-<li>:test_tube: Run <code>lerna run test:spec</code> for spec tests.</li>
-<li>:test_tube: Run <code>lerna run test</code> to run all tests.</li>
+<li>:test_tube: Run <code>yarn test:unit</code> for unit tests.</li>
+<li>:test_tube: Run <code>yarn test:e2e</code> for end-to-end tests.</li>
+<li>:test_tube: Run <code>yarn test:spec</code> for spec tests.</li>
+<li>:test_tube: Run <code>yarn test</code> to run all tests.</li>
 <li>:test_tube: Run <code>yarn check-types</code> to check TypeScript types.</li>
 <li>:test_tube: Run <code>yarn lint</code> to run the linter (ESLint).</li>
 </ul>
@@ -1175,6 +1216,18 @@
 <li>Code whitespace can be helpful for reading complex code, please add some.</li>
 <li>For unit tests, we forbid import stubbing when other approaches are feasible.</li>
 </ul>
+<h2 id="tests-style-guide">Tests style guide<a class="headerlink" href="#tests-style-guide" title="Permanent link">&para;</a></h2>
+<p>Test must not depend on external live resources, such that running tests for a commit must be deterministic:</p>
+<ul>
+<li>Do not pull data from external APIs like execution JSON RPC (instead run a local node).</li>
+<li>Do not pull unpinned versions from dockerhub (use deterministic tag) or Github (checkout commit not branch).</li>
+<li>Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.</li>
+</ul>
+<p>Add assertion messages where possible to ease fixing tests if they fail. If an assertion message is called from multiple times with the same stack trace, you <strong>MUST</strong> include an assertion message. For example, if an assertion is inside a for loop add some metadata to be able to locate the error source:</p>
+<div class="highlight"><pre><span></span><code><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="nx">blockResult</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="nx">blocksResult</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">expect</span><span class="p">(</span><span class="nx">blockResult</span><span class="p">.</span><span class="nx">status</span><span class="p">).</span><span class="nx">equals</span><span class="p">(</span><span class="s2">&quot;processed&quot;</span><span class="p">,</span><span class="w"> </span><span class="sb">`wrong block </span><span class="si">${</span><span class="nx">blockResult</span><span class="p">.</span><span class="nx">id</span><span class="si">}</span><span class="sb"> result status`</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
 <h2 id="logging-policy">Logging policy<a class="headerlink" href="#logging-policy" title="Permanent link">&para;</a></h2>
 <h3 id="logging-levels">Logging Levels<a class="headerlink" href="#logging-levels" title="Permanent link">&para;</a></h3>
 <p>Contributors must choose the log level carefully to ensure a consistent experience for every type of user:</p>
@@ -1197,11 +1250,20 @@
 <ol>
 <li>Grab the .json dashboard file from current unstable</li>
 <li>Import file to Grafana via the web UI at <code>/dashboard/import</code>. Give it some temporal name relevant to your work (i.e. the branch name)</li>
-<li>Do edits on the Dashboard</li>
+<li>Visually edit the dashboard</li>
 <li>Once done make sure to leave the exact same visual aspect as before: same refresh interval, collapsed rows, etc.</li>
-<li>Click the "share dashboard" icon next to the title at the top left corner. Go to the "Export" tab, set "Export for sharing externally" to true and click "Save to file"</li>
-<li>Paste the contents of the downloaded file in the Github repo, commit and open your PR</li>
+<li>Save the dashboard (CTRL + S)</li>
+<li>Run download script, see <a href="#using-download-script">below</a> on how to use it</li>
+<li>Check git diff of updated dashboards, commit, push and open your PR</li>
 </ol>
+<h3 id="using-download-script">Using Download Script<a class="headerlink" href="#using-download-script" title="Permanent link">&para;</a></h3>
+<p>Create a file <code>.secrets.env</code> with envs</p>
+<div class="highlight"><pre><span></span><code><span class="nv">GRAFANA_API_KEY</span><span class="o">=</span><span class="nv">$token</span>
+<span class="nv">GRAFANA_URL</span><span class="o">=</span>https://yourgrafanaapi.io
+</code></pre></div>
+<p>Run script to download dashboards to <code>./dashboards</code> folder</p>
+<div class="highlight"><pre><span></span><code>node<span class="w"> </span>scripts/download_dashboards.mjs
+</code></pre></div>
 <h2 id="label-guide">Label Guide<a class="headerlink" href="#label-guide" title="Permanent link">&para;</a></h2>
 <p>Issues and pull requests are subject to the following labeling guidelines.</p>
 <ul>
@@ -1349,7 +1411,7 @@
     <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.208ed371.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.fac441b0.min.js"></script>
+      <script src="../assets/javascripts/bundle.a51614de.min.js"></script>
       
     
   </body>
