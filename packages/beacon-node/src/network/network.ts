@@ -8,7 +8,7 @@ import {phase0, allForks, deneb, altair, Root, capella, SlotRootHex} from "@lode
 import {routes} from "@lodestar/api";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
@@ -468,7 +468,8 @@ export class Network implements INetwork {
   ): Promise<deneb.BlobSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRange, [Version.V1], request),
-      request.count,
+      // request's count represent the slots, so the actual max count received could be slots * blobs per slot
+      request.count * MAX_BLOBS_PER_BLOCK,
       responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange]
     );
   }
