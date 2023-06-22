@@ -28,7 +28,6 @@ export function generateProtoBlock(overrides: Partial<ProtoBlock> = {}): ProtoBl
     ...overrides,
 
     slot: 0,
-    proposerIndex: 0,
     blockRoot: ZERO_HASH_HEX,
     parentRoot: ZERO_HASH_HEX,
     stateRoot: ZERO_HASH_HEX,
