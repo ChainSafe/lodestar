@@ -8,7 +8,6 @@ describe("ProtoArray", () => {
     const genesisSlot = 0;
     const genesisEpoch = 0;
 
-    const proposerIndex = 0;
     const stateRoot = "0";
     const finalizedRoot = "1";
     const parentRoot = "1";
