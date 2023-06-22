@@ -628,9 +628,9 @@
   integrity sha512-fUFFFFxdcpYkMAHnjm83EYL/R/smtVmEkJr3FGSI6dwPk4ue9rXjEHf7FTd3V8AbVOcTJGriN4cYf2V+HOYkjQ==
 
 "@chainsafe/prometheus-gc-stats@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/prometheus-gc-stats/-/prometheus-gc-stats-1.0.0.tgz#9404abcf7e7a823596ecf3d71697f644568bde8c"
-  integrity sha512-l9aKCxQHBBBZIbCAl0y+7D4gded1cHUbIIRips68vN5zgpEuxjojUJSebuhLm+cgYdK1Wvf35gusA802bVfcdQ==
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/prometheus-gc-stats/-/prometheus-gc-stats-1.0.2.tgz#585f8f1555251db156d7e50ef8c86dd4f3e78f70"
+  integrity sha512-h3mFKduSX85XMVbOdWOYvx9jNq99jGcRVNyW5goGOqju1CsI+ZJLhu5z4zBb/G+ksL0R4uLVulu/mIMe7Y0rNg==
 
 "@chainsafe/ssz@^0.10.2":
   version "0.10.2"
