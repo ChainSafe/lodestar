@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {Slot, ValidatorIndex} from "@lodestar/types";
+import {Bytes32, Slot, ValidatorIndex} from "@lodestar/types";
 import {RequestedSubnet} from "../peers/utils/index.js";
 import {GossipTopic} from "../gossip/interface.js";
 
@@ -37,3 +37,6 @@ export type GossipSubscriber = {
   subscribeTopic(topic: GossipTopic): void;
   unsubscribeTopic(topic: GossipTopic): void;
 };
+
+// uint256 in the spec
+export type NodeId = Bytes32;
