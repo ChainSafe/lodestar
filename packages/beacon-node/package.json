@@ -101,6 +101,7 @@
     "@chainsafe/libp2p-gossipsub": "^6.2.0",
     "@chainsafe/libp2p-noise": "^11.0.4",
     "@chainsafe/persistent-merkle-tree": "^0.5.0",
+    "@chainsafe/prometheus-gc-stats": "^1.0.0",
     "@chainsafe/ssz": "^0.10.2",
     "@chainsafe/threads": "^1.11.0",
     "@ethersproject/abi": "^5.7.0",
@@ -145,7 +146,6 @@
     "jwt-simple": "0.5.6",
     "libp2p": "0.42.2",
     "prom-client": "^14.2.0",
-    "prometheus-gc-stats": "^0.6.4",
     "qs": "^6.11.1",
     "snappyjs": "^0.7.0",
     "strict-event-emitter-types": "^2.0.0",
@@ -158,7 +158,6 @@
   "devDependencies": {
     "@types/eventsource": "^1.1.11",
     "@types/leveldown": "^4.0.3",
-    "@types/prometheus-gc-stats": "^0.6.2",
     "@types/qs": "^6.9.7",
     "@types/supertest": "^2.0.12",
     "@types/tmp": "^0.2.3",

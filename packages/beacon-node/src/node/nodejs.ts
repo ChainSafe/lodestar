@@ -184,6 +184,7 @@ export class BeaconNode {
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db);
+      signal.addEventListener("abort", metrics.close, {once: true});
     }
 
     const monitoring = opts.monitoring.endpoint
