@@ -1,5 +1,5 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS} from "@lodestar/params";
-import {ContextBytesType, EncodedPayloadBytes, EncodedPayloadType, ResponseError, RespStatus} from "@lodestar/reqresp";
+import {ResponseError, ResponseOutgoing, RespStatus} from "@lodestar/reqresp";
 import {deneb, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
@@ -11,21 +11,21 @@ export function onBeaconBlocksByRange(
   request: phase0.BeaconBlocksByRangeRequest,
   chain: IBeaconChain,
   db: IBeaconDb
-): AsyncIterable<EncodedPayloadBytes> {
-  return onBlocksOrBlobsSidecarsByRange(request, chain, {
+): AsyncIterable<ResponseOutgoing> {
+  return onBlocksOrBlobSidecarsByRange(request, chain, {
     finalized: db.blockArchive,
     unfinalized: db.block,
   });
 }
 
-export async function* onBlocksOrBlobsSidecarsByRange(
-  request: deneb.BlobsSidecarsByRangeRequest,
+export async function* onBlocksOrBlobSidecarsByRange(
+  request: phase0.BeaconBlocksByRangeRequest,
   chain: IBeaconChain,
   db: {
     finalized: Pick<IBeaconDb["blockArchive"], "binaryEntriesStream" | "decodeKey">;
     unfinalized: Pick<IBeaconDb["block"], "getBinary">;
   }
-): AsyncIterable<EncodedPayloadBytes> {
+): AsyncIterable<ResponseOutgoing> {
   const {startSlot, count} = validateBeaconBlocksByRangeRequest(request);
   const endSlot = startSlot + count;
 
@@ -43,12 +43,8 @@ export async function* onBlocksOrBlobsSidecarsByRange(
     // Chain of blobs won't change
     for await (const {key, value} of db.finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
       yield {
-        type: EncodedPayloadType.bytes,
-        bytes: value,
-        contextBytes: {
-          type: ContextBytesType.ForkDigest,
-          forkSlot: db.finalized.decodeKey(key),
-        },
+        data: value,
+        fork: chain.config.getForkName(db.finalized.decodeKey(key)),
       };
     }
   }
@@ -59,6 +55,7 @@ export async function* onBlocksOrBlobsSidecarsByRange(
     const headRoot = chain.forkChoice.getHeadRoot();
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
+    // getAllAncestorBlocks response includes the head node, so it's the full chain.
 
     // Iterate head chain with ascending block numbers
     for (let i = headChain.length - 1; i >= 0; i--) {
@@ -66,7 +63,7 @@ export async function* onBlocksOrBlobsSidecarsByRange(
 
       // Must include only blocks in the range requested
       if (block.slot >= startSlot && block.slot < endSlot) {
-        // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the cannonical chain
+        // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
         // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
@@ -78,12 +75,8 @@ export async function* onBlocksOrBlobsSidecarsByRange(
         }
 
         yield {
-          type: EncodedPayloadType.bytes,
-          bytes: blockBytes,
-          contextBytes: {
-            type: ContextBytesType.ForkDigest,
-            forkSlot: block.slot,
-          },
+          data: blockBytes,
+          fork: chain.config.getForkName(block.slot),
         };
       }
 
@@ -96,8 +89,8 @@ export async function* onBlocksOrBlobsSidecarsByRange(
 }
 
 export function validateBeaconBlocksByRangeRequest(
-  request: deneb.BlobsSidecarsByRangeRequest
-): deneb.BlobsSidecarsByRangeRequest {
+  request: deneb.BlobSidecarsByRangeRequest
+): deneb.BlobSidecarsByRangeRequest {
   const {startSlot} = request;
   let {count} = request;
 

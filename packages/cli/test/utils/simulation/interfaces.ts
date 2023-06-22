@@ -24,7 +24,7 @@ export type SimulationOptions = {
   logsDir: string;
   rootDir: string;
   controller: AbortController;
-  genesisTime: number;
+  elGenesisTime: number;
 };
 
 export enum CLClient {
@@ -79,11 +79,17 @@ export interface CLClientGeneratorOptions<C extends CLClient = CLClient> {
   engineUrls: string[];
   engineMock: boolean;
   clientOptions: CLClientsOptions[C];
+  metrics?: {
+    host: string;
+    port: number;
+  };
 }
 
 export interface ELGeneratorGenesisOptions<E extends ELClient = ELClient> {
   ttd: bigint;
   cliqueSealingPeriod: number;
+  shanghaiTime: number;
+  genesisTime: number;
   clientOptions: ELClientsOptions[E];
 }
 
@@ -224,36 +230,45 @@ export type RunnerEvent = "starting" | "started" | "stopping" | "stop";
 
 export type AtLeast<T, K extends keyof T> = Partial<T> & Pick<T, K>;
 
-export type SimulationCaptureInput<T, D extends Record<string, unknown> = Record<string, never>> = {
+export interface AssertionInput {
   fork: ForkName;
+  forkConfig: ChainForkConfig;
   slot: Slot;
   epoch: Epoch;
-  block: allForks.SignedBeaconBlock;
   clock: EpochClock;
   node: NodePair;
-  store: Record<Slot, T>;
-  forkConfig: ChainForkConfig;
-  dependantStores: D;
-};
+}
 
-export type SimulationAssertionInput<T, D extends Record<string, unknown> = Record<string, never>> = {
-  slot: Slot;
-  epoch: Epoch;
-  clock: EpochClock;
+export interface SimulationCaptureInput<D extends Record<string, unknown>> extends AssertionInput {
+  block: allForks.SignedBeaconBlock;
+  dependantStores: D;
+}
+
+export interface SimulationAssertionInput<T, D extends Record<string, unknown> = Record<string, never>>
+  extends AssertionInput {
   nodes: NodePair[];
-  store: Record<NodeId, Record<Slot, T>>;
+  store: Record<Slot, T>;
   dependantStores: D;
-  forkConfig: ChainForkConfig;
-};
+}
 
-export type SimulationMatcherInput = {
-  slot: Slot;
-  epoch: Epoch;
-  clock: EpochClock;
-  forkConfig: ChainForkConfig;
-};
+export type SimulationMatcherInput = AssertionInput;
 
-export type AssertionMatcher = (input: SimulationMatcherInput) => boolean | {match: boolean; remove: boolean};
+/**
+ * Bitwise flag to indicate what to do with the assertion
+ * 1. Capture the assertion
+ * 2. Assert the assertion
+ * 3. Remove the assertion
+ *
+ * @example
+ * Capture and assert: `AssertionMatch.Capture | AssertionMatch.Assert`
+ */
+export enum AssertionMatch {
+  None = 0,
+  Capture = 1 << 0,
+  Assert = 1 << 1,
+  Remove = 1 << 2,
+}
+export type AssertionMatcher = (input: SimulationMatcherInput) => AssertionMatch;
 export type ExtractAssertionType<T, I> = T extends SimulationAssertion<infer A, infer B>
   ? A extends I
     ? B
@@ -265,7 +280,7 @@ export type StoreType<AssertionId extends string, Value = unknown> = Record<
   Record<NodeId, Record<Slot, Value>>
 >;
 export type StoreTypes<T extends SimulationAssertion[], IDs extends string = ExtractAssertionId<T[number]>> = {
-  [Id in IDs]: Record<NodeId, Record<Slot, ExtractAssertionType<T[number], Id>>>;
+  [Id in IDs]: Record<NodeId, Record<Slot, ExtractAssertionType<T[number], Id> | undefined>>;
 };
 export interface SimulationAssertion<
   IdType extends string = string,
@@ -273,16 +288,24 @@ export interface SimulationAssertion<
   Dependencies extends SimulationAssertion[] = SimulationAssertion<string, unknown, any[]>[]
 > {
   readonly id: IdType;
-  capture?(input: SimulationCaptureInput<ValueType, StoreTypes<Dependencies>>): Promise<ValueType | null>;
+  capture?(
+    input: SimulationCaptureInput<StoreTypes<Dependencies> & StoreType<IdType, ValueType>>
+  ): Promise<ValueType | null>;
   match: AssertionMatcher;
-  assert(input: SimulationAssertionInput<ValueType, StoreTypes<Dependencies>>): Promise<string[] | null | never>;
+  assert(
+    input: SimulationAssertionInput<ValueType, StoreTypes<Dependencies> & StoreType<IdType, ValueType>>
+  ): Promise<AssertionResult[] | never>;
   dependencies?: Dependencies;
 }
+export type AssertionResult = string | [string, Record<string, unknown>];
+
 export interface SimulationAssertionError {
   slot: Slot;
   epoch: Epoch;
   assertionId: string;
+  nodeId: string;
   message: string;
+  data?: Record<string, unknown>;
 }
 export type ChildProcessWithJobOptions = {jobOptions: JobOptions; childProcess: ChildProcess};
 

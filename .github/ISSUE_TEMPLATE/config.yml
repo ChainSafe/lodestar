@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: General questions
+    url: https://github.com/ChainSafe/lodestar/discussions
+    about: General questions should be directed to our Github discussions instead of an issue.
+  - name: Join our Discord community
+    url: https://discord.gg/aMxzVcr
+    about: Engage in our Lodestar community of contributors, users and supporters.
+  - name: Ethereum Bug Bounty
+    url: https://ethereum.org/en/bug-bounty/
+    about: Earn up to $250,000 USD and a place on the leaderboard by finding protocol, client and Solidity bugs affecting the Ethereum network.

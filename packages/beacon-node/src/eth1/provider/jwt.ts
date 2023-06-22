@@ -8,7 +8,7 @@ const {encode, decode} = jwt;
 type JwtClaim = {iat: number; exp?: number};
 
 export function encodeJwtToken(
-  claim: Record<string, unknown> & JwtClaim,
+  claim: JwtClaim,
   jwtSecret: Buffer | Uint8Array | string,
   algorithm: TAlgorithm = "HS256"
 ): string {

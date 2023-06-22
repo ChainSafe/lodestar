@@ -43,18 +43,18 @@ describe("getExpectedWithdrawals", () => {
 
   for (const opts of testCases) {
     const caseID = [
-      `eb ${opts.excessBalance}`,
-      `eth1 ${opts.eth1Credentials}`,
-      `we ${opts.withdrawable}`,
-      `wn ${opts.withdrawn}`,
+      `eb:${opts.excessBalance}`,
+      `eth1:${opts.eth1Credentials}`,
+      `we:${opts.withdrawable}`,
+      `wn:${opts.withdrawn}`,
       opts.cache ? null : "nocache",
-      `- smpl ${opts.sampled}`,
+      `smpl:${opts.sampled}`,
     ]
       .filter((str) => str)
-      .join(" ");
+      .join(",");
 
     itBench<CachedBeaconStateCapella, CachedBeaconStateCapella>({
-      id: `vc - ${vc} ${caseID}`,
+      id: `getExpectedWithdrawals ${vc} ${caseID}`,
       yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
       before: () => {
         const state = getExpectedWithdrawalsTestData(vc, opts);

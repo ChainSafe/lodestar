@@ -62,6 +62,9 @@ packages/beacon-node/trusted_setup.txt
 # docker-compose .env file
 .env
 
+# Grafana secret
+.secrets.env
+
 # Git artifacts
 packages/cli/.git-data.json
 

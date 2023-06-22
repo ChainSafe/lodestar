@@ -12,6 +12,7 @@ export type NetworkArgs = {
   bootnodes?: string[];
   targetPeers: number;
   subscribeAllSubnets: boolean;
+  disablePeerScoring: boolean;
   mdns: boolean;
   "network.maxPeers": number;
   "network.connectToDiscv5Bootnodes": boolean;
@@ -24,6 +25,7 @@ export type NetworkArgs = {
   "network.gossipsubAwaitHandler": boolean;
   "network.rateLimitMultiplier": number;
   "network.maxGossipTopicConcurrency"?: number;
+  "network.useWorker": boolean;
 
   /** @deprecated This option is deprecated and should be removed in next major release. */
   "network.requestCountPeerLimit": number;
@@ -45,19 +47,24 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   if (targetPeers != null && maxPeers != null && targetPeers > maxPeers) {
     throw new YargsError("network.maxPeers must be greater than or equal to targetPeers");
   }
+  // Set discv5 opts to null to disable only if explicitly disabled
+  const enableDiscv5 = args["discv5"] ?? true;
   return {
-    discv5: {
-      enabled: args["discv5"] ?? true,
-      bindAddr: `/ip4/${listenAddress}/udp/${udpPort}`,
-      // TODO: Okay to set to empty array?
-      bootEnrs: args["bootnodes"] ?? [],
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-      enr: undefined as any,
-    },
+    discv5: enableDiscv5
+      ? {
+          config: {},
+          bindAddr: `/ip4/${listenAddress}/udp/${udpPort}`,
+          // TODO: Okay to set to empty array?
+          bootEnrs: args["bootnodes"] ?? [],
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+          enr: undefined as any,
+        }
+      : null,
     maxPeers,
     targetPeers,
     localMultiaddrs: [`/ip4/${listenAddress}/tcp/${tcpPort}`],
     subscribeAllSubnets: args["subscribeAllSubnets"],
+    disablePeerScoring: args["disablePeerScoring"],
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
     dontSendGossipAttestationsToForkchoice: args["network.dontSendGossipAttestationsToForkchoice"],
@@ -69,6 +76,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     mdns: args["mdns"],
     rateLimitMultiplier: args["network.rateLimitMultiplier"],
     maxGossipTopicConcurrency: args["network.maxGossipTopicConcurrency"],
+    useWorker: args["network.useWorker"],
   };
 }
 
@@ -125,6 +133,13 @@ export const options: CliCommandOptions<NetworkArgs> = {
     type: "boolean",
     description: "Subscribe to all subnets regardless of validator count",
     defaultDescription: String(defaultOptions.network.subscribeAllSubnets === true),
+    group: "network",
+  },
+
+  disablePeerScoring: {
+    type: "boolean",
+    description: "Disable peer scoring, used for testing on devnets",
+    defaultDescription: String(defaultOptions.network.disablePeerScoring === true),
     group: "network",
   },
 
@@ -242,6 +257,12 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   "network.maxGossipTopicConcurrency": {
     type: "number",
+    hidden: true,
+    group: "network",
+  },
+
+  "network.useWorker": {
+    type: "boolean",
     hidden: true,
     group: "network",
   },

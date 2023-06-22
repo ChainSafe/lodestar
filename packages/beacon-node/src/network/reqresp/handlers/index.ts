@@ -1,60 +1,60 @@
-import {HandlerTypeFromMessage} from "@lodestar/reqresp";
-import * as protocols from "@lodestar/reqresp/protocols";
+import {ssz} from "@lodestar/types";
+import {ProtocolHandler} from "@lodestar/reqresp";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
-import {onBeaconBlockAndBlobsSidecarByRoot} from "./beaconBlockAndBlobsSidecarByRoot.js";
-import {onBlobsSidecarsByRange} from "./blobsSidecarsByRange.js";
+import {onBlobSidecarsByRoot} from "./blobSidecarsByRoot.js";
+import {onBlobSidecarsByRange} from "./blobSidecarsByRange.js";
 import {onLightClientBootstrap} from "./lightClientBootstrap.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
 import {onLightClientUpdatesByRange} from "./lightClientUpdatesByRange.js";
-import {onStatus} from "./status.js";
 
-export interface ReqRespHandlers {
-  onStatus: HandlerTypeFromMessage<typeof protocols.Status>;
-  onBeaconBlocksByRange: HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRange>;
-  onBeaconBlocksByRoot: HandlerTypeFromMessage<typeof protocols.BeaconBlocksByRoot>;
-  onBeaconBlockAndBlobsSidecarByRoot: HandlerTypeFromMessage<typeof protocols.BeaconBlockAndBlobsSidecarByRoot>;
-  onBlobsSidecarsByRange: HandlerTypeFromMessage<typeof protocols.BlobsSidecarsByRange>;
-  onLightClientBootstrap: HandlerTypeFromMessage<typeof protocols.LightClientBootstrap>;
-  onLightClientUpdatesByRange: HandlerTypeFromMessage<typeof protocols.LightClientUpdatesByRange>;
-  onLightClientFinalityUpdate: HandlerTypeFromMessage<typeof protocols.LightClientFinalityUpdate>;
-  onLightClientOptimisticUpdate: HandlerTypeFromMessage<typeof protocols.LightClientOptimisticUpdate>;
+function notImplemented(method: ReqRespMethod): ProtocolHandler {
+  return () => {
+    throw Error(`Handler not implemented for ${method}`);
+  };
 }
+
 /**
  * The ReqRespHandler module handles app-level requests / responses from other peers,
  * fetching state from the chain and database as needed.
  */
-export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconChain}): ReqRespHandlers {
-  return {
-    async *onStatus() {
-      yield* onStatus(chain);
+export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconChain}): GetReqRespHandlerFn {
+  const handlers: Record<ReqRespMethod, ProtocolHandler> = {
+    [ReqRespMethod.Status]: notImplemented(ReqRespMethod.Status),
+    [ReqRespMethod.Goodbye]: notImplemented(ReqRespMethod.Goodbye),
+    [ReqRespMethod.Ping]: notImplemented(ReqRespMethod.Ping),
+    [ReqRespMethod.Metadata]: notImplemented(ReqRespMethod.Metadata),
+    [ReqRespMethod.BeaconBlocksByRange]: (req) => {
+      const body = ssz.phase0.BeaconBlocksByRangeRequest.deserialize(req.data);
+      return onBeaconBlocksByRange(body, chain, db);
     },
-    async *onBeaconBlocksByRange(req) {
-      yield* onBeaconBlocksByRange(req, chain, db);
+    [ReqRespMethod.BeaconBlocksByRoot]: (req) => {
+      const body = ssz.phase0.BeaconBlocksByRootRequest.deserialize(req.data);
+      return onBeaconBlocksByRoot(body, chain, db);
     },
-    async *onBeaconBlocksByRoot(req) {
-      yield* onBeaconBlocksByRoot(req, chain, db);
+    [ReqRespMethod.BlobSidecarsByRoot]: (req) => {
+      const body = ssz.deneb.BlobSidecarsByRootRequest.deserialize(req.data);
+      return onBlobSidecarsByRoot(body, chain, db);
     },
-    async *onBeaconBlockAndBlobsSidecarByRoot(req) {
-      yield* onBeaconBlockAndBlobsSidecarByRoot(req, chain, db);
+    [ReqRespMethod.BlobSidecarsByRange]: (req) => {
+      const body = ssz.deneb.BlobSidecarsByRangeRequest.deserialize(req.data);
+      return onBlobSidecarsByRange(body, chain, db);
     },
-    async *onBlobsSidecarsByRange(req) {
-      yield* onBlobsSidecarsByRange(req, chain, db);
+    [ReqRespMethod.LightClientBootstrap]: (req) => {
+      const body = ssz.Root.deserialize(req.data);
+      return onLightClientBootstrap(body, chain);
     },
-    async *onLightClientBootstrap(req) {
-      yield* onLightClientBootstrap(req, chain);
+    [ReqRespMethod.LightClientUpdatesByRange]: (req) => {
+      const body = ssz.altair.LightClientUpdatesByRange.deserialize(req.data);
+      return onLightClientUpdatesByRange(body, chain);
     },
-    async *onLightClientUpdatesByRange(req) {
-      yield* onLightClientUpdatesByRange(req, chain);
-    },
-    async *onLightClientFinalityUpdate() {
-      yield* onLightClientFinalityUpdate(chain);
-    },
-    async *onLightClientOptimisticUpdate() {
-      yield* onLightClientOptimisticUpdate(chain);
-    },
+    [ReqRespMethod.LightClientFinalityUpdate]: () => onLightClientFinalityUpdate(chain),
+    [ReqRespMethod.LightClientOptimisticUpdate]: () => onLightClientOptimisticUpdate(chain),
   };
+
+  return (method) => handlers[method];
 }

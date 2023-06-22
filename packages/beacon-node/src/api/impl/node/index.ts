@@ -9,20 +9,8 @@ export function getNodeApi(
 ): ServerApi<routes.node.Api> {
   return {
     async getNetworkIdentity() {
-      const enr = await network.getEnr();
-      const discoveryAddresses = [
-        enr?.getLocationMultiaddr("tcp")?.toString() ?? null,
-        enr?.getLocationMultiaddr("udp")?.toString() ?? null,
-      ].filter((addr): addr is string => Boolean(addr));
-
       return {
-        data: {
-          peerId: network.peerId.toString(),
-          enr: enr?.encodeTxt() || "",
-          discoveryAddresses,
-          p2pAddresses: network.localMultiaddrs.map((m) => m.toString()),
-          metadata: await network.getMetadata(),
-        },
+        data: await network.getNetworkIdentity(),
       };
     },
 

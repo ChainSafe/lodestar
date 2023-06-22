@@ -1,11 +1,11 @@
-import {PeerId} from "@libp2p/interface-peer-id";
 import {Logger} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Slot, phase0} from "@lodestar/types";
-import {INetwork, NetworkEvent} from "../network/index.js";
+import {Slot} from "@lodestar/types";
+import {INetwork, NetworkEvent, NetworkEventData} from "../network/index.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {Metrics} from "../metrics/index.js";
-import {ChainEvent, IBeaconChain} from "../chain/index.js";
+import {IBeaconChain} from "../chain/index.js";
+import {ClockEvent} from "../util/clock.js";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {IBeaconSync, SyncModules, SyncingStatus} from "./interface.js";
 import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range.js";
@@ -51,16 +51,19 @@ export class BeaconSync implements IBeaconSync {
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
     if (!opts.disableRangeSync) {
+      // prod code
       this.logger.debug("RangeSync enabled.");
       this.rangeSync.on(RangeSyncEvent.completedChain, this.updateSyncState);
       this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
       this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
     } else {
+      // test code, this is needed for Unknown block sync sim test
+      this.unknownBlockSync.subscribeToNetwork();
       this.logger.debug("RangeSync disabled.");
     }
 
     // TODO: It's okay to start this on initial sync?
-    this.chain.emitter.on(ChainEvent.clockEpoch, this.onClockEpoch);
+    this.chain.clock.on(ClockEvent.epoch, this.onClockEpoch);
 
     if (metrics) {
       metrics.syncStatus.addCollect(() => this.scrapeMetrics(metrics));
@@ -70,7 +73,7 @@ export class BeaconSync implements IBeaconSync {
   close(): void {
     this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
-    this.chain.emitter.off(ChainEvent.clockEpoch, this.onClockEpoch);
+    this.chain.clock.off(ClockEvent.epoch, this.onClockEpoch);
     this.rangeSync.close();
     this.unknownBlockSync.close();
   }
@@ -166,15 +169,15 @@ export class BeaconSync implements IBeaconSync {
    * If the peer is within the `SLOT_IMPORT_TOLERANCE`, then it's head is sufficiently close to
    * ours that we consider it fully sync'd with respect to our current chain.
    */
-  private addPeer = (peerId: PeerId, peerStatus: phase0.Status): void => {
+  private addPeer = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
     const localStatus = this.chain.getStatus();
-    const syncType = getPeerSyncType(localStatus, peerStatus, this.chain.forkChoice, this.slotImportTolerance);
+    const syncType = getPeerSyncType(localStatus, data.status, this.chain.forkChoice, this.slotImportTolerance);
 
     // For metrics only
-    this.peerSyncType.set(peerId.toString(), syncType);
+    this.peerSyncType.set(data.peer.toString(), syncType);
 
     if (syncType === PeerSyncType.Advanced) {
-      this.rangeSync.addPeer(peerId, localStatus, peerStatus);
+      this.rangeSync.addPeer(data.peer, localStatus, data.status);
     }
 
     this.updateSyncState();
@@ -183,10 +186,10 @@ export class BeaconSync implements IBeaconSync {
   /**
    * Must be called by libp2p when a peer is removed from the peer manager
    */
-  private removePeer = (peerId: PeerId): void => {
-    this.rangeSync.removePeer(peerId);
+  private removePeer = (data: NetworkEventData[NetworkEvent.peerDisconnected]): void => {
+    this.rangeSync.removePeer(data.peer);
 
-    this.peerSyncType.delete(peerId.toString());
+    this.peerSyncType.delete(data.peer.toString());
   };
 
   /**
@@ -196,36 +199,48 @@ export class BeaconSync implements IBeaconSync {
     const state = this.state; // Don't run the getter twice
 
     // We have become synced, subscribe to all the gossip core topics
-    if (
-      state === SyncState.Synced &&
-      !this.network.isSubscribedToGossipCoreTopics() &&
-      this.chain.clock.currentEpoch >= MIN_EPOCH_TO_START_GOSSIP
-    ) {
-      this.network
-        .subscribeGossipCoreTopics()
-        .then(() => {
-          this.metrics?.syncSwitchGossipSubscriptions.inc({action: "subscribed"});
-          this.logger.info("Subscribed gossip core topics");
-        })
-        .catch((e) => {
-          this.logger.error("Error subscribing to gossip core topics", {}, e);
-        });
+    if (state === SyncState.Synced && this.chain.clock.currentEpoch >= MIN_EPOCH_TO_START_GOSSIP) {
+      if (!this.network.isSubscribedToGossipCoreTopics()) {
+        this.network
+          .subscribeGossipCoreTopics()
+          .then(() => {
+            this.metrics?.syncSwitchGossipSubscriptions.inc({action: "subscribed"});
+            this.logger.info("Subscribed gossip core topics");
+          })
+          .catch((e) => {
+            this.logger.error("Error subscribing to gossip core topics", {}, e);
+          });
+      }
+
+      // also start searching for unknown blocks
+      if (!this.unknownBlockSync.isSubscribedToNetwork()) {
+        this.unknownBlockSync.subscribeToNetwork();
+        this.metrics?.syncUnknownBlock.switchNetworkSubscriptions.inc({action: "subscribed"});
+      }
     }
 
     // If we stopped being synced and falled significantly behind, stop gossip
-    else if (state !== SyncState.Synced && this.network.isSubscribedToGossipCoreTopics()) {
+    else if (state !== SyncState.Synced) {
       const syncDiff = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot;
       if (syncDiff > this.slotImportTolerance * 2) {
         this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots`);
-        this.network
-          .unsubscribeGossipCoreTopics()
-          .then(() => {
-            this.metrics?.syncSwitchGossipSubscriptions.inc({action: "unsubscribed"});
-            this.logger.info("Un-subscribed gossip core topics");
-          })
-          .catch((e) => {
-            this.logger.error("Error unsubscribing to gossip core topics", {}, e);
-          });
+        if (this.network.isSubscribedToGossipCoreTopics()) {
+          this.network
+            .unsubscribeGossipCoreTopics()
+            .then(() => {
+              this.metrics?.syncSwitchGossipSubscriptions.inc({action: "unsubscribed"});
+              this.logger.info("Un-subscribed gossip core topics");
+            })
+            .catch((e) => {
+              this.logger.error("Error unsubscribing to gossip core topics", {}, e);
+            });
+        }
+
+        // also stop searching for unknown blocks
+        if (this.unknownBlockSync.isSubscribedToNetwork()) {
+          this.unknownBlockSync.unsubscribeFromNetwork();
+          this.metrics?.syncUnknownBlock.switchNetworkSubscriptions.inc({action: "unsubscribed"});
+        }
       }
     }
   };

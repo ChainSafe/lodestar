@@ -3,13 +3,13 @@ import {BeaconConfig} from "@lodestar/config";
 import {ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {Epoch, ssz} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {ChainEvent, IBeaconChain} from "../../chain/index.js";
+import {ClockEvent, IClock} from "../../util/clock.js";
 import {getActiveForks} from "../forks.js";
-import {Eth2Gossipsub, GossipType} from "../gossip/index.js";
+import {GossipType} from "../gossip/index.js";
 import {MetadataController} from "../metadata.js";
 import {RequestedSubnet, SubnetMap} from "../peers/utils/index.js";
-import {Metrics} from "../../metrics/metrics.js";
-import {CommitteeSubscription, SubnetsService, SubnetsServiceOpts} from "./interface.js";
+import {NetworkCoreMetrics} from "../core/metrics.js";
+import {CommitteeSubscription, GossipSubscriber, SubnetsService, SubnetsServiceOpts} from "./interface.js";
 
 const gossipType = GossipType.sync_committee;
 
@@ -29,31 +29,29 @@ export class SyncnetsService implements SubnetsService {
 
   constructor(
     private readonly config: BeaconConfig,
-    private readonly chain: IBeaconChain,
-    private readonly gossip: Eth2Gossipsub,
+    private readonly clock: IClock,
+    private readonly gossip: GossipSubscriber,
     private readonly metadata: MetadataController,
     private readonly logger: Logger,
-    private readonly metrics: Metrics | null,
+    private readonly metrics: NetworkCoreMetrics | null,
     private readonly opts?: SubnetsServiceOpts
   ) {
     if (metrics) {
       metrics.syncnetsService.subscriptionsCommittee.addCollect(() => this.onScrapeLodestarMetrics(metrics));
     }
+
+    this.clock.on(ClockEvent.epoch, this.onEpoch);
   }
 
-  start(): void {
-    this.chain.emitter.on(ChainEvent.clockEpoch, this.onEpoch);
-  }
-
-  stop(): void {
-    this.chain.emitter.off(ChainEvent.clockEpoch, this.onEpoch);
+  close(): void {
+    this.clock.off(ClockEvent.epoch, this.onEpoch);
   }
 
   /**
    * Get all active subnets for the hearbeat.
    */
   getActiveSubnets(): RequestedSubnet[] {
-    return this.subscriptionsCommittee.getActiveTtl(this.chain.clock.currentSlot);
+    return this.subscriptionsCommittee.getActiveTtl(this.clock.currentSlot);
   }
 
   /**
@@ -120,7 +118,7 @@ export class SyncnetsService implements SubnetsService {
 
   /** Tigger a gossip subcription only if not already subscribed */
   private subscribeToSubnets(subnets: number[]): void {
-    const forks = getActiveForks(this.config, this.chain.clock.currentEpoch);
+    const forks = getActiveForks(this.config, this.clock.currentEpoch);
     for (const subnet of subnets) {
       if (!this.subscriptionsCommittee.has(subnet)) {
         for (const fork of forks) {
@@ -133,7 +131,7 @@ export class SyncnetsService implements SubnetsService {
 
   /** Trigger a gossip un-subscrition only if no-one is still subscribed */
   private unsubscribeSubnets(subnets: number[]): void {
-    const forks = getActiveForks(this.config, this.chain.clock.currentEpoch);
+    const forks = getActiveForks(this.config, this.clock.currentEpoch);
     for (const subnet of subnets) {
       // No need to check if active in subscriptionsCommittee since we only have a single SubnetMap
       if (!this.opts?.subscribeAllSubnets) {
@@ -145,7 +143,7 @@ export class SyncnetsService implements SubnetsService {
     }
   }
 
-  private onScrapeLodestarMetrics(metrics: Metrics): void {
+  private onScrapeLodestarMetrics(metrics: NetworkCoreMetrics): void {
     metrics.syncnetsService.subscriptionsCommittee.set(this.subscriptionsCommittee.size);
   }
 }

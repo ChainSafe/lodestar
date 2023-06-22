@@ -32,7 +32,7 @@ export function runTestCheckAgainstSpec(
   for (const [operationId, routeSpec] of openApiSpec.entries()) {
     describe(operationId, () => {
       const {requestSchema, responseOkSchema} = routeSpec;
-      const routeId = operationId as keyof typeof testDatas;
+      const routeId = operationId;
       const testData = testDatas[routeId];
       const routeData = routesData[routeId];
 

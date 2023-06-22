@@ -20,7 +20,9 @@ export type IChainOptions = BlockProcessOpts &
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
     /** Max number of produced blobs by local validators to cache */
-    maxCachedBlobsSidecar?: number;
+    maxCachedBlobSidecars?: number;
+    /** Option to load a custom kzg trusted setup in txt format */
+    trustedSetup?: string;
   };
 
 export type BlockProcessOpts = {
@@ -34,7 +36,7 @@ export type BlockProcessOpts = {
    */
   safeSlotsToImportOptimistically: number;
   /**
-   * Assert progressive balances the same to EpochProcess
+   * Assert progressive balances the same to EpochTransitionCache
    */
   assertCorrectProgressiveBalances?: boolean;
   /** Used for fork_choice spec tests */

@@ -1,4 +1,9 @@
 name: Tests
+# only one can run at a time
+concurrency:
+  # If PR, cancel prev commits. head_ref = source branch name on pull_request, null if push
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 on:
   push:
@@ -58,6 +63,8 @@ jobs:
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
       - name: Assert ESM module exports
         run: node scripts/assert_exports.mjs
+      - name: Assert eslintrc rules sorted
+        run: scripts/assert_eslintrc_sorted.mjs
 
       - name: Check Types
         run: yarn run check-types

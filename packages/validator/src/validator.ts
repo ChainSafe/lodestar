@@ -1,6 +1,5 @@
-import {DatabaseApiOptions} from "@lodestar/db";
 import {BLSPubkey, ssz} from "@lodestar/types";
-import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
+import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
 import {Logger} from "@lodestar/utils";
 import {getClient, Api, routes, ApiError} from "@lodestar/api";
@@ -18,14 +17,15 @@ import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ValidatorStore, Signer, ValidatorProposerConfig} from "./services/validatorStore.js";
-import {ProcessShutdownCallback, PubkeyHex} from "./types.js";
+import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
 import {BeaconHealth, Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
-  dbOps: DatabaseApiOptions;
+  db: LodestarValidatorDatabaseController;
+  config: ChainForkConfig;
   api: Api | string | string[];
   signers: Signer[];
   logger: Logger;
@@ -63,12 +63,13 @@ export class Validator {
   private readonly clock: IClock;
   private readonly chainHeaderTracker: ChainHeaderTracker;
   private readonly logger: Logger;
+  private readonly db: LodestarValidatorDatabaseController;
   private state: Status;
   private readonly controller: AbortController;
 
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
-    const {dbOps, logger, slashingProtection, signers, valProposerConfig} = opts;
-    const config = createBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
+    const {db, config: chainConfig, logger, slashingProtection, signers, valProposerConfig} = opts;
+    const config = createBeaconConfig(chainConfig, genesis.genesisValidatorsRoot);
     this.controller = opts.abortController;
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const loggerVc = getLoggerVc(logger, clock);
@@ -151,13 +152,14 @@ export class Validator {
     this.config = config;
     this.logger = logger;
     this.api = api;
+    this.db = db;
     this.clock = clock;
     this.validatorStore = validatorStore;
     this.chainHeaderTracker = chainHeaderTracker;
     this.slashingProtection = slashingProtection;
 
     if (metrics) {
-      opts.dbOps.controller.setMetrics(metrics.db);
+      db.setMetrics(metrics.db);
     }
 
     if (opts.closed) {
@@ -185,8 +187,7 @@ export class Validator {
 
   /** Waits for genesis and genesis time */
   static async initializeFromBeaconNode(opts: ValidatorOptions, metrics?: Metrics | null): Promise<Validator> {
-    const {config} = opts.dbOps;
-    const {logger} = opts;
+    const {logger, config} = opts;
 
     let api: Api;
     if (typeof opts.api === "string" || Array.isArray(opts.api)) {
@@ -224,6 +225,7 @@ export class Validator {
   async close(): Promise<void> {
     if (this.state === Status.closed) return;
     this.controller.abort();
+    await this.db.close();
     this.state = Status.closed;
   }
 
@@ -279,7 +281,7 @@ export class Validator {
 /** Assert the same genesisValidatorRoot and genesisTime */
 async function assertEqualGenesis(opts: ValidatorOptions, genesis: Genesis): Promise<void> {
   const nodeGenesisValidatorRoot = genesis.genesisValidatorsRoot;
-  const metaDataRepository = new MetaDataRepository(opts.dbOps);
+  const metaDataRepository = new MetaDataRepository(opts.db);
   const genesisValidatorsRoot = await metaDataRepository.getGenesisValidatorsRoot();
   if (genesisValidatorsRoot) {
     if (!ssz.Root.equals(genesisValidatorsRoot, nodeGenesisValidatorRoot)) {

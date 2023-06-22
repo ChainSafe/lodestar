@@ -1,7 +1,8 @@
-import {Bucket, encodeKey, DatabaseApiOptions, DbReqOpts, getBucketNameByValue} from "@lodestar/db";
+import {encodeKey, DbReqOpts} from "@lodestar/db";
 import {Root, UintNum64} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {LodestarValidatorDatabaseController} from "../types.js";
+import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 const GENESIS_VALIDATORS_ROOT = Buffer.from("GENESIS_VALIDATORS_ROOT");
 const GENESIS_TIME = Buffer.from("GENESIS_TIME");
@@ -10,15 +11,12 @@ const GENESIS_TIME = Buffer.from("GENESIS_TIME");
  * Store MetaData of validator.
  */
 export class MetaDataRepository {
-  protected db: LodestarValidatorDatabaseController;
   protected bucket = Bucket.validator_metaData;
 
-  private readonly bucketId: string;
-  private readonly dbReqOpts: DbReqOpts;
+  private readonly bucketId = getBucketNameByValue(this.bucket);
+  private readonly dbReqOpts: DbReqOpts = {bucketId: this.bucketId};
 
-  constructor(opts: DatabaseApiOptions) {
-    this.db = opts.controller;
-    this.bucketId = getBucketNameByValue(this.bucket);
+  constructor(protected db: LodestarValidatorDatabaseController) {
     this.dbReqOpts = {bucketId: this.bucketId};
   }
 

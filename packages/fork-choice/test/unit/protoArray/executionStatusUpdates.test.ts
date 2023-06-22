@@ -91,6 +91,7 @@ function setupForkChoice(): ProtoArray {
     fc.onBlock(
       {
         slot: block.slot,
+        proposerIndex: 0,
         blockRoot: block.root,
         parentRoot: block.parent,
         stateRoot: "-",

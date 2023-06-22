@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import stream from "node:stream";
 import {promisify} from "node:util";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import axios from "axios";
 import tar from "tar";
 import retry from "async-retry";
@@ -77,7 +77,7 @@ export async function downloadGenericSpecTests<TestNames extends string>(
             timeout: 30 * 60 * 1000,
           });
 
-          const totalSize = headers["content-length"];
+          const totalSize = headers["content-length"] as string;
           log(`Downloading ${url} - ${totalSize} bytes`);
 
           // extract tar into output directory

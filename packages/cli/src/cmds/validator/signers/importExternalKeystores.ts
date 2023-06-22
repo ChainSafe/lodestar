@@ -37,9 +37,6 @@ export async function readPassphraseOrPrompt(args: {importKeystoresPassword?: st
       },
     ]);
 
-    // eslint-disable-next-line no-console
-    console.log("Password is correct");
-
     return answers.password;
   }
 }

@@ -10,6 +10,7 @@ export type ApiArgs = {
   rest: boolean;
   "rest.address": string;
   "rest.port": number;
+  "rest.headerLimit": number;
   "rest.bodyLimit": number;
 };
 
@@ -22,6 +23,7 @@ export function parseArgs(args: ApiArgs): IBeaconNodeOptions["api"] {
       enabled: args["rest"],
       address: args["rest.address"],
       port: args["rest.port"],
+      headerLimit: args["rest.headerLimit"],
       bodyLimit: args["rest.bodyLimit"],
     },
   };
@@ -76,6 +78,11 @@ export const options: CliCommandOptions<ApiArgs> = {
     description: "Set port for HTTP API",
     defaultDescription: String(defaultOptions.api.rest.port),
     group: "api",
+  },
+  "rest.headerLimit": {
+    hidden: true,
+    type: "number",
+    description: "Defines the maximum length of request headers, in bytes, the server is allowed to accept",
   },
   "rest.bodyLimit": {
     hidden: true,

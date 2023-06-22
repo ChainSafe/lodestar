@@ -1,5 +1,5 @@
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
-import {PeerAction} from "../peers/score.js";
+import {PeerAction} from "../peers/score/index.js";
 import {ReqRespMethod} from "./types.js";
 
 /**
@@ -23,6 +23,7 @@ const multiStreamSelectErrorCodes = {
 export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): PeerAction | null {
   switch (e.type.code) {
     case RequestErrorCode.INVALID_REQUEST:
+    case RequestErrorCode.INVALID_RESPONSE_SSZ:
       return PeerAction.LowToleranceError;
 
     case RequestErrorCode.SERVER_ERROR:

@@ -2,29 +2,39 @@ import {BlockData, HeaderData} from "@ethereumjs/block";
 import {ELBlock, ELTransaction} from "../types.js";
 import {isTruthy} from "./assertion.js";
 
-export function numberToHex(n: number | bigint): string {
-  return "0x" + n.toString(16);
+export function numberToHex(num: number | bigint): string {
+  return "0x" + num.toString(16);
 }
 
-export function hexToNumber(n: string): number {
-  return n.startsWith("0x") ? parseInt(n.slice(2), 16) : parseInt(n, 16);
+export function hexToNumber(num: string): number {
+  return num.startsWith("0x") ? parseInt(num.slice(2), 16) : parseInt(num, 16);
+}
+
+export function hexToBigInt(num: string): bigint {
+  return num.startsWith("0x") ? BigInt(num) : BigInt(`0x${num}`);
+}
+
+export function bigIntToHex(num: bigint): string {
+  return `0x${num.toString(16)}`;
 }
 
 export function bufferToHex(buffer: Buffer | Uint8Array): string {
   return "0x" + Buffer.from(buffer).toString("hex");
 }
 
-export function hexToBuffer(v: string): Buffer {
-  return Buffer.from(v.replace("0x", ""), "hex");
+export function hexToBuffer(val: string): Buffer {
+  return Buffer.from(val.replace("0x", ""), "hex");
 }
 
-export function padLeft(v: Uint8Array, length: number): Uint8Array {
+export function padLeft<T extends Buffer | Uint8Array>(v: T, length: number): T {
   const buf = Buffer.alloc(length);
   Buffer.from(v).copy(buf, length - v.length);
-  return buf;
+
+  if (Buffer.isBuffer(v)) return buf as T;
+
+  return Uint8Array.from(buf) as T;
 }
 
-// TODO: fix blockInfo type
 export function headerDataFromELBlock(blockInfo: ELBlock): HeaderData {
   return {
     parentHash: blockInfo.parentHash,
@@ -55,7 +65,7 @@ export function txDataFromELBlock(txInfo: ELTransaction) {
     gasPrice: isTruthy(txInfo.gasPrice) ? BigInt(txInfo.gasPrice) : null,
     gasLimit: txInfo.gas,
     to: isTruthy(txInfo.to) ? padLeft(hexToBuffer(txInfo.to), 20) : undefined,
-    value: BigInt(txInfo.value),
+    value: txInfo.value ? BigInt(txInfo.value) : undefined,
     maxFeePerGas: isTruthy(txInfo.maxFeePerGas) ? BigInt(txInfo.maxFeePerGas) : undefined,
     maxPriorityFeePerGas: isTruthy(txInfo.maxPriorityFeePerGas) ? BigInt(txInfo.maxPriorityFeePerGas) : undefined,
   };
@@ -66,4 +76,33 @@ export function blockDataFromELBlock(blockInfo: ELBlock): BlockData {
     header: headerDataFromELBlock(blockInfo),
     transactions: blockInfo.transactions.map(txDataFromELBlock) as BlockData["transactions"],
   };
+}
+
+export function cleanObject<T extends Record<string, unknown> | unknown[]>(obj: T): T {
+  const isNullify = (v: unknown): boolean => v === undefined || v === null;
+
+  if (Array.isArray(obj)) return obj.filter((v) => isNullify(v)) as T;
+
+  if (typeof obj === "object") {
+    for (const key of Object.keys(obj)) {
+      if (isNullify(obj[key])) {
+        delete obj[key];
+      } else if (typeof obj[key] === "object") {
+        cleanObject(obj[key] as Record<string, unknown>);
+      }
+    }
+  }
+
+  return obj;
+}
+
+/**
+ * Convert an array to array of chunks
+ * @example
+ * chunkIntoN([1,2,3,4], 2)
+ * => [[1,2], [3,4]]
+ */
+export function chunkIntoN<T extends unknown[]>(arr: T, n: number): T[] {
+  const size = Math.ceil(arr.length / n);
+  return Array.from({length: n}, (v, i) => arr.slice(i * size, i * size + size)) as T[];
 }

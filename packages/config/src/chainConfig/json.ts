@@ -52,7 +52,7 @@ export function serializeSpecValue(value: SpecValue, typeName: SpecValueTypeName
   switch (typeName) {
     case "number":
       if (typeof value !== "number") {
-        throw Error(`Invalid value ${value} expected number`);
+        throw Error(`Invalid value ${value.toString()} expected number`);
       }
       if (value === Infinity) {
         return MAX_UINT64_JSON;
@@ -61,19 +61,19 @@ export function serializeSpecValue(value: SpecValue, typeName: SpecValueTypeName
 
     case "bigint":
       if (typeof value !== "bigint") {
-        throw Error(`Invalid value ${value} expected bigint`);
+        throw Error(`Invalid value ${value.toString()} expected bigint`);
       }
       return value.toString(10);
 
     case "bytes":
       if (!(value instanceof Uint8Array)) {
-        throw Error(`Invalid value ${value} expected Uint8Array`);
+        throw Error(`Invalid value ${value.toString()} expected Uint8Array`);
       }
       return toHexString(value);
 
     case "string":
       if (typeof value !== "string") {
-        throw Error(`Invalid value ${value} expected string`);
+        throw Error(`Invalid value ${value.toString()} expected string`);
       }
       return value;
   }
@@ -81,7 +81,7 @@ export function serializeSpecValue(value: SpecValue, typeName: SpecValueTypeName
 
 export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeName, keyName: string): SpecValue {
   if (typeof valueStr !== "string") {
-    throw Error(`Invalid ${keyName} value ${valueStr} expected string`);
+    throw Error(`Invalid ${keyName} value ${valueStr as string} expected string`);
   }
 
   switch (typeName) {

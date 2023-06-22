@@ -18,12 +18,14 @@ import Web3 from "web3";
 import {createVerifiedExecutionProvider, LCTransport} from "@lodestar/prover";
 
 const {provider, proofProvider} = createVerifiedExecutionProvider(
-  new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io"), {
-  transport: LCTransport.Rest,
-  urls: ["https://lodestar-sepolia.chainsafe.io"],
-  network: "sepolia",
-  wsCheckpoint: "trusted-checkpoint"
-});
+  new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io"),
+  {
+    transport: LCTransport.Rest,
+    urls: ["https://lodestar-sepolia.chainsafe.io"],
+    network: "sepolia",
+    wsCheckpoint: "trusted-checkpoint",
+  }
+);
 
 const web3 = new Web3(provider);
 
@@ -35,7 +37,7 @@ console.log({balance, address});
 You can also invoke the package as binary.
 
 ```bash
-npm -i g @lodestar/prover 
+npm -i g @lodestar/prover
 
 lodestar-prover start \
   --network sepolia \
@@ -45,9 +47,74 @@ lodestar-prover start \
   --port 8080
 ```
 
+## Supported Web3 Methods
+
+✅ - Completed
+
+⌛ - Todo
+
+➡️ - Request will be forward to EL without any intermediary manipulations. You can limit these by providing `unverifiedWhitelist` option for provider or `--unverifiedWhitelist` from the cli. If not set then all methods will be forwarded.
+
+❇️ - Always forwarded to EL.
+
+| Group             | Method                                  | Status | Version |
+| ----------------- | --------------------------------------- | ------ | ------- |
+| Block             | eth_getBlockByHash                      | ✅     | v0      |
+|                   | eth_getBlockByNumber                    | ✅     | v0      |
+|                   | eth_getBlockTransactionCountByHash      | ⌛     | v2      |
+|                   | eth_getBlockTransactionCountByNumber    | ⌛     | v2      |
+|                   | eth_getUncleCountByBlockHash            | ⌛     | v2      |
+|                   | eth_getUncleCountByBlockNumber          | ⌛     | v2      |
+| Chain/Network     | eth_chainId                             | ➡️     |
+|                   | eth_syncing                             | ⌛     | v1      |
+|                   | eth_coinbase                            | ⌛     | v2      |
+|                   | eth_accounts                            | ➡️     |
+|                   | eth_blockNumber                         | ➡️     |
+| Call and Estimate | eth_call                                | ✅     | v0      |
+|                   | eth_estimateGas                         | ✅     | v0      |
+|                   | eth_createAccessList                    | ⌛     | v2      |
+|                   | eth_gasPrice                            | ⌛     | v1      |
+|                   | eth_maxPriorityFeePerGas                | ⌛     | v1      |
+|                   | eth_feeHistory                          | ⌛     | v2      |
+| Filters           | eth_newFilter                           | ⌛     | v2      |
+|                   | eth_newBlockFilter                      | ⌛     | v2      |
+|                   | eth_newPendingTransactionFilter         | ⌛     | v2      |
+|                   | eth_uninstallFilter                     | ⌛     | v2      |
+|                   | eth_getFilterChanges                    | ⌛     | v2      |
+|                   | eth_getFilterLogs                       | ⌛     | v2      |
+|                   | eth_getLogs                             | ⌛     | v1      |
+| Mining            | eth_mining                              | ➡️     |
+|                   | eth_hashrate                            | ➡️     |
+|                   | eth_getWork                             | ➡️     |
+|                   | eth_submitWork                          | ➡️     |
+|                   | eth_submitHashrate                      | ➡️     |
+| Signing           | eth_sign                                | ➡️     |
+|                   | eth_signTransaction                     | ➡️     |
+| State             | eth_getBalance                          | ✅     | v0      |
+|                   | eth_getStorageAt                        | ⌛     | v1      |
+|                   | eth_getTransactionCount                 | ⌛     | v2      |
+|                   | eth_getCode                             | ✅     | v0      |
+|                   | eth_getProof                            | ❇️     | v0      |
+| Transactions      | eth_sendTransaction                     | ➡️     |
+|                   | eth_sendRawTransaction                  | ➡️     |
+|                   | eth_getTransactionByHash                | ⌛     | v2      |
+|                   | eth_getTransactionByBlockHashAndIndex   | ⌛     | v2      |
+|                   | eth_getTransactionByBlockNumberAndIndex | ⌛     | v2      |
+|                   | eth_getTransactionReceipt               | ⌛     | v2      |
+| Events            | eth_subscribe                           | ❇️     | v0      |
+|                   | eth_unsubscribe                         | ❇️     | v0      |
+
+## Non-supported features
+
+- Currently does not support batch requests.
+
+## Warnings
+
+- To use this prover the ehtereum provider must support the `eth_getProof` method. Unfortunately, Infura does not currently support this endpoint. As an alternative, we suggest using Alchemy.
+
 ## Prerequisites
 
-- [Lerna](https://github.com/lerna/lerna)
+- [NodeJS](https://nodejs.org/) (LTS)
 - [Yarn](https://yarnpkg.com/)
 
 ## What you need

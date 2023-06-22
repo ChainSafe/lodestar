@@ -26,6 +26,7 @@ const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIG
 const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
 const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
 const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
+const SLOTS_PER_EPOCH_SQRT = intSqrt(SLOTS_PER_EPOCH);
 
 export function processAttestationsAltair(
   state: CachedBeaconStateAltair,
@@ -150,7 +151,7 @@ export function getAttestationParticipationStatus(
     isMatchingTarget && byteArrayEquals(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot));
 
   let flags = 0;
-  if (isMatchingSource && inclusionDelay <= intSqrt(SLOTS_PER_EPOCH)) flags |= TIMELY_SOURCE;
+  if (isMatchingSource && inclusionDelay <= SLOTS_PER_EPOCH_SQRT) flags |= TIMELY_SOURCE;
   if (isMatchingTarget && inclusionDelay <= SLOTS_PER_EPOCH) flags |= TIMELY_TARGET;
   if (isMatchingHead && inclusionDelay === MIN_ATTESTATION_INCLUSION_DELAY) flags |= TIMELY_HEAD;
 

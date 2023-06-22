@@ -4,8 +4,9 @@ import {
   isExecutionBlockBodyType,
   isMergeTransitionBlock as isMergeTransitionBlockFn,
   isExecutionEnabled,
+  kzgCommitmentToVersionedHash,
 } from "@lodestar/state-transition";
-import {bellatrix, allForks, Slot} from "@lodestar/types";
+import {bellatrix, allForks, Slot, deneb} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {
   IForkChoice,
@@ -18,9 +19,11 @@ import {
 } from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
 import {ErrorAborted, Logger} from "@lodestar/utils";
+import {ForkSeq} from "@lodestar/params";
+
 import {IExecutionEngine} from "../../execution/engine/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {BeaconClock} from "../clock/index.js";
+import {IClock} from "../../util/clock.js";
 import {BlockProcessOpts} from "../options.js";
 import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
 import {IEth1ForBlockProduction} from "../../eth1/index.js";
@@ -30,7 +33,7 @@ import {ImportBlockOpts} from "./types.js";
 export type VerifyBlockExecutionPayloadModules = {
   eth1: IEth1ForBlockProduction;
   executionEngine: IExecutionEngine;
-  clock: BeaconClock;
+  clock: IClock;
   logger: Logger;
   metrics: Metrics | null;
   forkChoice: IForkChoice;
@@ -285,10 +288,12 @@ export async function verifyBlockExecutionPayload(
   }
 
   // TODO: Handle better notifyNewPayload() returning error is syncing
-  const execResult = await chain.executionEngine.notifyNewPayload(
-    chain.config.getForkName(block.message.slot),
-    executionPayloadEnabled
-  );
+  const fork = chain.config.getForkName(block.message.slot);
+  const versionedHashes =
+    ForkSeq[fork] >= ForkSeq.deneb
+      ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.map(kzgCommitmentToVersionedHash)
+      : undefined;
+  const execResult = await chain.executionEngine.notifyNewPayload(fork, executionPayloadEnabled, versionedHashes);
 
   chain.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
 

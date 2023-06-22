@@ -12,10 +12,11 @@ describe("BeaconMetrics", () => {
     expect(metricsAsText).to.not.equal("");
 
     // check updating beacon-specific metrics
-    await expect(metrics.register.getSingleMetricAsString("libp2p_peers")).eventually.include("libp2p_peers 0");
-    metrics.peers.set(1);
-    await expect(metrics.register.getSingleMetricAsString("libp2p_peers")).eventually.include("libp2p_peers 1");
-    metrics.peers.set(20);
-    await expect(metrics.register.getSingleMetricAsString("libp2p_peers")).eventually.include("libp2p_peers 20");
+    const headSlotName = "beacon_head_slot";
+    await expect(metrics.register.getSingleMetricAsString(headSlotName)).eventually.include(`${headSlotName} 0`);
+    metrics.headSlot.set(1);
+    await expect(metrics.register.getSingleMetricAsString(headSlotName)).eventually.include(`${headSlotName} 1`);
+    metrics.headSlot.set(20);
+    await expect(metrics.register.getSingleMetricAsString(headSlotName)).eventually.include(`${headSlotName} 20`);
   });
 });

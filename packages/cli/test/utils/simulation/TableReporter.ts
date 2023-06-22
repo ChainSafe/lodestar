@@ -1,10 +1,11 @@
 /* eslint-disable no-console */
 import {Slot} from "@lodestar/types";
+import {isNullish} from "../../utils.js";
 import {HeadSummary} from "./assertions/defaults/headAssertion.js";
 import {defaultAssertions} from "./assertions/defaults/index.js";
 import {SimulationReporter} from "./interfaces.js";
 import {TableRenderer} from "./TableRenderer.js";
-import {arrayGroupBy, avg, arrayIsUnique} from "./utils/index.js";
+import {arrayGroupBy, avg, isSingletonArray} from "./utils/index.js";
 
 export class TableReporter extends SimulationReporter<typeof defaultAssertions> {
   private lastPrintedSlot = -1;
@@ -13,9 +14,9 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
     fork: 10,
     eph: 5,
     slot: 4,
-    head: 8,
-    finzed: 6,
-    peers: 6,
+    head: 10,
+    finzed: 8,
+    peers: 8,
     attCount: 8,
     incDelay: 8,
     errors: 10,
@@ -55,10 +56,10 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
         const participation: {head: number; source: number; target: number}[] = [];
 
         for (const node of nodes) {
-          participation.push(stores["attestationParticipation"][node.cl.id][slot] ?? 0);
+          participation.push(stores["attestationParticipation"][node.cl.id][slot] ?? {head: 0, source: 0, target: 0});
           const syncCommitteeParticipation: number[] = [];
           for (let slot = startSlot; slot <= endSlot; slot++) {
-            syncCommitteeParticipation.push(stores["syncCommitteeParticipation"][node.cl.id][slot]);
+            syncCommitteeParticipation.push(stores["syncCommitteeParticipation"][node.cl.id][slot] ?? 0);
           }
           nodesSyncParticipationAvg.push(avg(syncCommitteeParticipation));
         }
@@ -76,59 +77,71 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
     }
 
     const finalizedSlots: number[] = [];
-    const inclusionDelay: number[] = [];
-    const attestationCount: number[] = [];
+    const inclusionDelays: number[] = [];
+    const attestationCounts: number[] = [];
     const heads: HeadSummary[] = [];
-    const peerCount: number[] = [];
+    const peersCount: number[] = [];
 
     for (const node of nodes) {
-      finalizedSlots.push(stores["finalized"][node.cl.id][slot] ?? "-");
-      inclusionDelay.push(stores["inclusionDelay"][node.cl.id][slot] ?? "-");
-      attestationCount.push(stores["attestationsCount"][node.cl.id][slot] ?? "-");
-      heads.push(stores["head"][node.cl.id][slot] ?? "-");
-      peerCount.push(stores["connectedPeerCount"][node.cl.id][slot] ?? "-");
+      const finalized = stores["finalized"][node.cl.id][slot];
+      !isNullish(finalized) && finalizedSlots.push(finalized);
+
+      const inclusionDelay = stores["inclusionDelay"][node.cl.id][slot];
+      !isNullish(inclusionDelay) && inclusionDelays.push(inclusionDelay);
+
+      const attestationsCount = stores["attestationsCount"][node.cl.id][slot];
+      !isNullish(attestationsCount) && attestationCounts.push(attestationsCount);
+
+      const head = stores["head"][node.cl.id][slot];
+      !isNullish(head) && heads.push(head);
+
+      const connectedPeerCount = stores["connectedPeerCount"][node.cl.id][slot];
+      !isNullish(connectedPeerCount) && peersCount.push(connectedPeerCount);
     }
 
     const head0 = heads.length > 0 ? heads[0] : null;
-    const nodesHaveSameHead = heads.every(
-      (head) =>
-        head0 && head0.blockRoot !== null && head0.blockRoot !== undefined && head?.blockRoot === head0.blockRoot
-    );
-    const errorCount = errors.filter((e) => e.slot === slot).length;
+    const nodesHaveSameHead =
+      heads.length === nodes.length &&
+      heads.every((head) => head0 && !isNullish(head0.blockRoot) && head?.blockRoot === head0.blockRoot);
 
     this.table.addRow({
       fork: forkName,
       eph: epochStr,
-      slot: head0 ? head0.slot : "-",
-      head: head0 ? (nodesHaveSameHead ? `${head0?.blockRoot.slice(0, 6)}..` : "different") : "-",
+      slot: head0 ? head0.slot : "---",
+      head: heads.length === 0 ? "---" : nodesHaveSameHead ? `${head0?.blockRoot.slice(0, 6)}..` : "different",
       finzed:
-        !arrayIsUnique(finalizedSlots) && finalizedSlots[0] !== undefined
+        finalizedSlots.length === 0
+          ? "---"
+          : isSingletonArray(finalizedSlots)
           ? finalizedSlots[0]
           : finalizedSlots.join(","),
-      peers: !arrayIsUnique(peerCount) && peerCount[0] !== undefined ? peerCount[0] : peerCount.join(","),
-      attCount: !arrayIsUnique(attestationCount) && attestationCount[0] !== undefined ? attestationCount[0] : "---",
-      incDelay:
-        !arrayIsUnique(inclusionDelay) && inclusionDelay[0] !== undefined ? inclusionDelay[0].toFixed(2) : "---",
-      errors: errorCount,
+      peers: peersCount.length === 0 ? "---" : isSingletonArray(peersCount) ? peersCount[0] : peersCount.join(","),
+      attCount: attestationCounts.length > 0 && isSingletonArray(attestationCounts) ? attestationCounts[0] : "---",
+      incDelay: inclusionDelays.length > 0 && isSingletonArray(inclusionDelays) ? inclusionDelays[0].toFixed(2) : "---",
+      errors: errors.filter((e) => e.slot === slot).length,
     });
   }
 
   summary(): void {
     const {errors} = this.options;
 
-    console.log(`├${"─".repeat(10)} Errors (${errors.length}) ${"─".repeat(10)}┤`);
+    console.info(`├${"─".repeat(10)} Errors (${errors.length}) ${"─".repeat(10)}┤`);
 
     const groupBySlot = arrayGroupBy(errors, (e) => String(e.slot as number));
 
     for (const [slot, slotErrors] of Object.entries(groupBySlot)) {
-      if (slotErrors.length > 0) console.log(`├─ Slot: ${slot}`);
+      if (slotErrors.length > 0) console.info(`├─ Slot: ${slot}`);
       const groupByAssertion = arrayGroupBy(slotErrors, (e) => e.assertionId);
 
       for (const [assertionId, assertionErrors] of Object.entries(groupByAssertion)) {
-        if (assertionErrors.length > 0) console.log(`├── Assertion: ${assertionId}`);
+        if (assertionErrors.length > 0) console.info(`├── Assertion: ${assertionId}`);
 
         for (const error of assertionErrors) {
-          console.error(`├──── ${error.message}`);
+          console.info(
+            `├──── ${error.nodeId}: ${error.message} ${Object.entries(error.data ?? {})
+              .map(([k, v]) => `${k}=${v as string}`)
+              .join(" ")}`
+          );
         }
       }
     }

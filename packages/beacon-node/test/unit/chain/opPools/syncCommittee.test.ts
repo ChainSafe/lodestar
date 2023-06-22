@@ -4,7 +4,7 @@ import bls from "@chainsafe/bls";
 import {altair} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {SyncCommitteeMessagePool} from "../../../../src/chain/opPools/index.js";
-import {LocalClock} from "../../../../src/chain/clock/LocalClock.js";
+import {Clock} from "../../../../src/util/clock.js";
 
 describe("chain / opPools / SyncCommitteeMessagePool", function () {
   const sandbox = sinon.createSandbox();
@@ -14,7 +14,7 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
   const beaconBlockRoot = Buffer.alloc(32, 1);
   const slot = 10;
   let syncCommittee: altair.SyncCommitteeMessage;
-  let clockStub: SinonStubbedInstance<LocalClock>;
+  let clockStub: SinonStubbedInstance<Clock>;
   const cutOffTime = 1;
 
   before("Init BLS", async () => {
@@ -28,7 +28,7 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
   });
 
   beforeEach(() => {
-    clockStub = sandbox.createStubInstance(LocalClock);
+    clockStub = sandbox.createStubInstance(Clock);
     cache = new SyncCommitteeMessagePool(clockStub, cutOffTime);
     cache.add(subcommitteeIndex, syncCommittee, indexInSubcommittee);
   });

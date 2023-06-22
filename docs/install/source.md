@@ -29,10 +29,10 @@ cd lodestar
 
 ## Install packages
 
-Install across all packages. Lodestar follows a [monorepo](https://github.com/lerna/lerna) structure, so all commands below must be run in the project root. Use the `--ignore-optional` flag to prevent downloading the Ethereum Consensus spec tests.
+Install across all packages. Lodestar follows a [monorepo](https://github.com/lerna/lerna) structure, so all commands below must be run in the project root.
 
 ```bash
-yarn install --ignore-optional
+yarn install
 ```
 
 ## Build source code
@@ -41,12 +41,6 @@ Build across all packages.
 
 ```bash
 yarn run build
-```
-
-Or if you are using [Lerna](https://lerna.js.org/):
-
-```bash
-lerna bootstrap
 ```
 
 ## Lodestar CLI

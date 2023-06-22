@@ -1,6 +1,6 @@
 import {defaultOptions} from "@lodestar/validator";
-import {logOptions} from "../../options/logOptions.js";
-import {ensure0xPrefix, CliCommandOptions, LogArgs} from "../../util/index.js";
+import {LogArgs, logOptions} from "../../options/logOptions.js";
+import {ensure0xPrefix, CliCommandOptions} from "../../util/index.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
 import {defaultAccountPaths, defaultValidatorPaths} from "./paths.js";
 
@@ -76,6 +76,7 @@ export type KeymanagerArgs = {
   "keymanager.port"?: number;
   "keymanager.address"?: string;
   "keymanager.cors"?: string;
+  "keymanager.headerLimit"?: number;
   "keymanager.bodyLimit"?: number;
 };
 
@@ -109,6 +110,11 @@ export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
     description: "Configures the Access-Control-Allow-Origin CORS header for keymanager API",
     defaultDescription: keymanagerRestApiServerOptsDefault.cors,
     group: "keymanager",
+  },
+  "keymanager.headerLimit": {
+    hidden: true,
+    type: "number",
+    description: "Defines the maximum length of request headers, in bytes, the server is allowed to accept",
   },
   "keymanager.bodyLimit": {
     hidden: true,

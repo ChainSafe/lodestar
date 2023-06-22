@@ -4,12 +4,13 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {createBeaconConfig, createChainForkConfig, ChainConfig} from "@lodestar/config";
-import {Logger, RecursivePartial} from "@lodestar/utils";
+import {RecursivePartial} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 import {phase0, ssz} from "@lodestar/types";
 import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {isPlainObject} from "@lodestar/utils";
+import {LoggerNode} from "@lodestar/logger/node";
 import {BeaconNode} from "../../../src/index.js";
 import {defaultNetworkOptions} from "../../../src/network/options.js";
 import {initDevState, writeDeposits} from "../../../src/node/utils/state.js";
@@ -24,7 +25,7 @@ export async function getDevBeaconNode(
     params: Partial<ChainConfig>;
     options?: RecursivePartial<IBeaconNodeOptions>;
     validatorCount?: number;
-    logger?: Logger;
+    logger?: LoggerNode;
     peerId?: PeerId;
     peerStoreDir?: string;
     anchorState?: BeaconStateAllForks;
@@ -39,8 +40,7 @@ export async function getDevBeaconNode(
   const config = createChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
 
-  const db = new BeaconDb({config, controller: new LevelDbController({name: tmpDir.name}, {logger})});
-  await db.start();
+  const db = new BeaconDb(config, await LevelDbController.create({name: tmpDir.name}, {logger}));
 
   options = deepmerge(
     // This deepmerge should NOT merge the array with the defaults but overwrite them

@@ -113,5 +113,6 @@ export const mainnetPreset: BeaconPreset = {
   ///////////
   // https://github.com/ethereum/consensus-specs/blob/dev/presets/mainnet/eip4844.yaml
   FIELD_ELEMENTS_PER_BLOB: 4096,
-  MAX_BLOBS_PER_BLOCK: 4,
+  MAX_BLOB_COMMITMENTS_PER_BLOCK: 4096,
+  MAX_BLOBS_PER_BLOCK: 6,
 };

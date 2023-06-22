@@ -15,14 +15,15 @@ import {
   PayloadAttributes,
   TransitionConfigurationV1,
   BlobsBundle,
+  VersionedHashes,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
   EngineApiRpcParamTypes,
   EngineApiRpcReturnTypes,
-  parseBlobsBundle,
   parseExecutionPayload,
   serializeExecutionPayload,
+  serializeVersionedHashes,
   serializePayloadAttributes,
   ExecutionPayloadBody,
   assertReqSizeLimit,
@@ -134,20 +135,44 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    *
    * If any of the above fails due to errors unrelated to the normal processing flow of the method, client software MUST respond with an error object.
    */
-  async notifyNewPayload(fork: ForkName, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
+  async notifyNewPayload(
+    fork: ForkName,
+    executionPayload: allForks.ExecutionPayload,
+    versionedHashes?: VersionedHashes
+  ): Promise<ExecutePayloadResponse> {
     const method =
       ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_newPayloadV3"
         : ForkSeq[fork] >= ForkSeq.capella
         ? "engine_newPayloadV2"
         : "engine_newPayloadV1";
+
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
-    const {status, latestValidHash, validationError} = await (
-      this.rpcFetchQueue.push({
+    const serializedVersionedHashes =
+      versionedHashes !== undefined ? serializeVersionedHashes(versionedHashes) : undefined;
+
+    let engingRequest: EngineRequest;
+    if (ForkSeq[fork] >= ForkSeq.deneb) {
+      if (serializedVersionedHashes === undefined) {
+        throw Error(`versionedHashes required in notifyNewPayload for fork=${fork}`);
+      }
+      const method = "engine_newPayloadV3";
+      engingRequest = {
+        method,
+        params: [serializedExecutionPayload, serializedVersionedHashes],
+        methodOpts: notifyNewPayloadOpts,
+      };
+    } else {
+      const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_newPayloadV2" : "engine_newPayloadV1";
+      engingRequest = {
         method,
         params: [serializedExecutionPayload],
         methodOpts: notifyNewPayloadOpts,
-      }) as Promise<EngineApiRpcReturnTypes[typeof method]>
+      };
+    }
+
+    const {status, latestValidHash, validationError} = await (
+      this.rpcFetchQueue.push(engingRequest) as Promise<EngineApiRpcReturnTypes[typeof method]>
     )
       // If there are errors by EL like connection refused, internal error, they need to be
       // treated separate from being INVALID. For now, just pass the error upstream.
@@ -293,7 +318,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async getPayload(
     fork: ForkName,
     payloadId: PayloadId
-  ): Promise<{executionPayload: allForks.ExecutionPayload; blockValue: Wei}> {
+  ): Promise<{executionPayload: allForks.ExecutionPayload; blockValue: Wei; blobsBundle?: BlobsBundle}> {
     const method =
       ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_getPayloadV3"
@@ -311,22 +336,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       getPayloadOpts
     );
     return parseExecutionPayload(fork, payloadResponse);
-  }
-
-  async getBlobsBundle(payloadId: PayloadId): Promise<BlobsBundle> {
-    const method = "engine_getBlobsBundleV1";
-    const blobsBundle = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >(
-      {
-        method,
-        params: [payloadId],
-      },
-      getPayloadOpts
-    );
-
-    return parseBlobsBundle(blobsBundle);
   }
 
   /**

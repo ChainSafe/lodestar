@@ -39,6 +39,7 @@ import {
   EpochDifference,
   AncestorResult,
   AncestorStatus,
+  ForkChoiceMetrics,
 } from "./interface.js";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, JustifiedBalances} from "./store.js";
 
@@ -110,6 +111,17 @@ export class ForkChoice implements IForkChoice {
   ) {
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
+  }
+
+  getMetrics(): ForkChoiceMetrics {
+    return {
+      votes: this.votes.length,
+      queuedAttestations: this.queuedAttestations.size,
+      validatedAttestationDatas: this.validatedAttestationDatas.size,
+      balancesLength: this.balances.length,
+      nodes: this.protoArray.nodes.length,
+      indices: this.protoArray.indices.size,
+    };
   }
 
   /**
@@ -433,6 +445,7 @@ export class ForkChoice implements IForkChoice {
     // it can still be identified as the head even if it doesn't have any votes.
     const protoBlock: ProtoBlock = {
       slot: slot,
+      proposerIndex: block.proposerIndex,
       blockRoot: blockRootHex,
       parentRoot: parentRootHex,
       targetRoot: toHexString(targetRoot),
@@ -584,6 +597,20 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
+   * Same to hasBlock but without checking if the block is a descendant of the finalized root.
+   */
+  hasBlockUnsafe(blockRoot: Root): boolean {
+    return this.hasBlockHexUnsafe(toHexString(blockRoot));
+  }
+
+  /**
+   * Same to hasBlockHex but without checking if the block is a descendant of the finalized root.
+   */
+  hasBlockHexUnsafe(blockRoot: RootHex): boolean {
+    return this.protoArray.hasBlock(blockRoot);
+  }
+
+  /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
   getBlockHex(blockRoot: RootHex): ProtoBlock | null {
@@ -683,6 +710,19 @@ export class ForkChoice implements IForkChoice {
 
     for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot)) {
       if (block.slot === slot) {
+        return block;
+      }
+    }
+    return null;
+  }
+
+  getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null {
+    if (slot >= this.head.slot) {
+      return this.head;
+    }
+
+    for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot)) {
+      if (slot >= block.slot) {
         return block;
       }
     }

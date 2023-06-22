@@ -1,18 +1,11 @@
 import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
 import {intToBytes, bytesToInt} from "@lodestar/utils";
-import {
-  Bucket,
-  DatabaseApiOptions,
-  DB_PREFIX_LENGTH,
-  DbReqOpts,
-  encodeKey,
-  uintLen,
-  getBucketNameByValue,
-} from "@lodestar/db";
+import {DB_PREFIX_LENGTH, DbReqOpts, encodeKey, uintLen} from "@lodestar/db";
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {LodestarValidatorDatabaseController} from "../../types.js";
 import {SlashingProtectionAttestation} from "../types.js";
 import {blsPubkeyLen, uniqueVectorArr} from "../utils.js";
+import {Bucket, getBucketNameByValue} from "../../buckets.js";
 
 /**
  * Manages validator db storage of attestations.
@@ -21,29 +14,29 @@ import {blsPubkeyLen, uniqueVectorArr} from "../utils.js";
  */
 export class AttestationByTargetRepository {
   protected type: Type<SlashingProtectionAttestation>;
-  protected db: LodestarValidatorDatabaseController;
-  protected bucket = Bucket.phase0_slashingProtectionAttestationByTarget;
+  protected bucket = Bucket.slashingProtectionAttestationByTarget;
 
-  private readonly bucketId: string;
-  private readonly dbReqOpts: DbReqOpts;
+  private readonly bucketId = getBucketNameByValue(this.bucket);
+  private readonly dbReqOpts: DbReqOpts = {bucketId: this.bucketId};
+  private readonly minKey: Uint8Array;
+  private readonly maxKey: Uint8Array;
 
-  constructor(opts: DatabaseApiOptions) {
-    this.db = opts.controller;
+  constructor(protected db: LodestarValidatorDatabaseController) {
     this.type = new ContainerType({
       sourceEpoch: ssz.Epoch,
       targetEpoch: ssz.Epoch,
       signingRoot: ssz.Root,
     }); // casing doesn't matter
-    this.bucketId = getBucketNameByValue(this.bucket);
-    this.dbReqOpts = {bucketId: this.bucketId};
+    this.minKey = encodeKey(this.bucket, Buffer.alloc(0));
+    this.maxKey = encodeKey(this.bucket + 1, Buffer.alloc(0));
   }
 
   async getAll(pubkey: BLSPubkey, limit?: number): Promise<SlashingProtectionAttestation[]> {
     const attestations = await this.db.values({
-      ...this.dbReqOpts,
       limit,
       gte: this.encodeKey(pubkey, 0),
       lt: this.encodeKey(pubkey, Number.MAX_SAFE_INTEGER),
+      bucketId: this.bucketId,
     });
     return attestations.map((attestation) => this.type.deserialize(attestation));
   }
@@ -64,7 +57,7 @@ export class AttestationByTargetRepository {
   }
 
   async listPubkeys(): Promise<BLSPubkey[]> {
-    const keys = await this.db.keys(this.dbReqOpts);
+    const keys = await this.db.keys({gte: this.minKey, lt: this.maxKey, bucketId: this.bucketId});
     return uniqueVectorArr(keys.map((key) => this.decodeKey(key).pubkey));
   }
 

@@ -1,7 +1,7 @@
 import {Options} from "yargs";
 import {beaconNodeOptions, paramsOptions, BeaconNodeArgs} from "../../options/index.js";
-import {logOptions} from "../../options/logOptions.js";
-import {CliCommandOptions, LogArgs} from "../../util/index.js";
+import {LogArgs, logOptions} from "../../options/logOptions.js";
+import {CliCommandOptions} from "../../util/index.js";
 import {defaultBeaconPaths, BeaconPaths} from "./paths.js";
 
 type BeaconExtraArgs = {
@@ -12,11 +12,14 @@ type BeaconExtraArgs = {
   checkpointSyncUrl?: string;
   checkpointState?: string;
   wssCheckpoint?: string;
+  forceCheckpointSync?: boolean;
   beaconDir?: string;
   dbDir?: string;
   persistInvalidSszObjectsDir?: string;
+  persistInvalidSszObjectsRetentionHours?: number;
   peerStoreDir?: string;
   persistNetworkIdentity?: boolean;
+  private?: boolean;
 };
 
 export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
@@ -64,6 +67,13 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     group: "weak subjectivity",
   },
 
+  forceCheckpointSync: {
+    description:
+      "Force syncing from checkpoint state even if db state is within weak subjectivity period. This helps to avoid long sync times after node has been offline for a while.",
+    type: "boolean",
+    group: "weak subjectivity",
+  },
+
   beaconDir: {
     description: "Beacon root directory",
     defaultDescription: defaultBeaconPaths.beaconDir,
@@ -85,6 +95,12 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
     type: "string",
   },
 
+  persistInvalidSszObjectsRetentionHours: {
+    description: "Number of hours to keep invalid SSZ objects on local disk",
+    hidden: true,
+    type: "number",
+  },
+
   peerStoreDir: {
     hidden: true,
     description: "Peer store directory",
@@ -95,6 +111,11 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   persistNetworkIdentity: {
     hidden: true,
     description: "Whether to reuse the same peer-id across restarts",
+    type: "boolean",
+  },
+
+  private: {
+    description: "Do not send implementation details over p2p identify protocol and in builder requests",
     type: "boolean",
   },
 };

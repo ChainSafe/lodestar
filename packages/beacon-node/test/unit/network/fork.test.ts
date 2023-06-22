@@ -143,7 +143,7 @@ for (const testScenario of testScenarios) {
       it(` on epoch ${epoch} should return ${JSON.stringify({
         currentFork,
         nextFork,
-      })}, getActiveForks: ${activeForks}`, () => {
+      })}, getActiveForks: ${activeForks.join(",")}`, () => {
         expect(getCurrentAndNextFork(forkConfig, epoch)).to.deep.equal({
           currentFork: forks[currentFork as ForkName],
           nextFork: (nextFork && forks[nextFork as ForkName]) ?? undefined,

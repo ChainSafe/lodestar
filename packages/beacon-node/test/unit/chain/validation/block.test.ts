@@ -4,8 +4,8 @@ import {ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {allForks, ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {BeaconChain} from "../../../../src/chain/index.js";
-import {LocalClock} from "../../../../src/chain/clock/index.js";
-import {StateRegenerator} from "../../../../src/chain/regen/index.js";
+import {Clock} from "../../../../src/util/clock.js";
+import {QueuedStateRegenerator} from "../../../../src/chain/regen/index.js";
 import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
 import {generateCachedState} from "../../../utils/state.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
@@ -20,7 +20,7 @@ type StubbedChain = StubbedChainMutable<"clock" | "forkChoice" | "regen" | "bls"
 describe("gossip block validation", function () {
   let chain: StubbedChain;
   let forkChoice: SinonStubbedInstance<ForkChoice>;
-  let regen: SinonStubbedInstance<StateRegenerator>;
+  let regen: SinonStubbedInstance<QueuedStateRegenerator>;
   let verifySignature: SinonStubFn<() => Promise<boolean>>;
   let job: allForks.SignedBeaconBlock;
   const proposerIndex = 0;
@@ -31,13 +31,13 @@ describe("gossip block validation", function () {
   const maxSkipSlots = 10;
 
   beforeEach(function () {
-    chain = sinon.createStubInstance(BeaconChain);
-    chain.clock = sinon.createStubInstance(LocalClock);
+    chain = sinon.createStubInstance(BeaconChain) as typeof chain;
+    chain.clock = sinon.createStubInstance(Clock);
     sinon.stub(chain.clock, "currentSlotWithGossipDisparity").get(() => clockSlot);
     forkChoice = sinon.createStubInstance(ForkChoice);
     forkChoice.getBlockHex.returns(null);
     chain.forkChoice = forkChoice;
-    regen = chain.regen = sinon.createStubInstance(StateRegenerator);
+    regen = chain.regen = sinon.createStubInstance(QueuedStateRegenerator);
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     (chain as any).opts = {maxSkipSlots};

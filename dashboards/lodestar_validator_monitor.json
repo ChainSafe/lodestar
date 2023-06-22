@@ -1,4 +1,14 @@
 {
+  "__inputs": [
+    {
+      "description": "",
+      "label": "Prometheus",
+      "name": "DS_PROMETHEUS",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus",
+      "type": "datasource"
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -23,8 +33,8 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "id": 31,
+  "graphTooltip": 1,
+  "id": null,
   "links": [
     {
       "asDropdown": true,
@@ -287,23 +297,11 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "avg(\n  delta(validator_monitor_prev_epoch_on_chain_balance_total[32m])\n)",
+          "expr": "avg(\n  delta(validator_monitor_prev_epoch_on_chain_balance[32m])\n)",
           "hide": false,
           "interval": "",
           "legendFormat": "balance_delta",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "avg(\n  delta(validator_monitor_prev_epoch_on_chain_balance[32m])\n)",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "balance_delta_new",
-          "refId": "B"
         }
       ],
       "title": "balance delta prev epoch",
@@ -1172,7 +1170,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(validator_monitor_prev_epoch_attestations_total)/sum(validator_monitor_validators)",
+          "expr": "validator_monitor_prev_epoch_attestations_count / validator_monitor_validators",
           "interval": "",
           "legendFormat": "attestations_sent",
           "refId": "A"
@@ -1183,7 +1181,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum(validator_monitor_prev_epoch_aggregates_total)/sum(validator_monitor_validators)",
+          "expr": "validator_monitor_prev_epoch_aggregates_count / validator_monitor_validators",
           "hide": false,
           "interval": "",
           "legendFormat": "aggregates_sent",
@@ -1584,34 +1582,10 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "avg(validator_monitor_prev_epoch_attestation_block_inclusions_total)",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "block_inclusions",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "avg(validator_monitor_prev_epoch_attestation_aggregate_inclusions_total)",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "aggregate_inclusions",
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
           "expr": "validator_monitor_prev_epoch_attestation_block_inclusions_sum\n/\nvalidator_monitor_prev_epoch_attestation_block_inclusions_count",
           "hide": false,
           "interval": "",
-          "legendFormat": "block_inclusions new",
+          "legendFormat": "block_inclusions",
           "refId": "A"
         },
         {
@@ -1623,8 +1597,8 @@
           "expr": "validator_monitor_prev_epoch_attestation_aggregate_inclusions_sum\n/\nvalidator_monitor_prev_epoch_attestation_aggregate_inclusions_count",
           "hide": false,
           "interval": "",
-          "legendFormat": "aggregate_inclusions new",
-          "refId": "D"
+          "legendFormat": "aggregate_inclusions",
+          "refId": "B"
         }
       ],
       "title": "Attestation inclusions epoch per validator",

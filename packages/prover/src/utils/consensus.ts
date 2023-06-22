@@ -45,15 +45,20 @@ export async function getExecutionPayloads({
   logger: Logger;
 }): Promise<Record<number, allForks.ExecutionPayload>> {
   [startSlot, endSlot] = [Math.min(startSlot, endSlot), Math.max(startSlot, endSlot)];
-  logger.debug("Fetching EL payloads", {startSlot, endSlot});
+  if (startSlot === endSlot) {
+    logger.debug("Fetching EL payload", {slot: startSlot});
+  } else {
+    logger.debug("Fetching EL payloads", {startSlot, endSlot});
+  }
+
   const payloads: Record<number, allForks.ExecutionPayload> = {};
 
   let slot = endSlot;
-  let block = (await fetchNearestBlock(api, slot, "down")) as capella.SignedBeaconBlock;
+  let block = await fetchNearestBlock(api, slot, "down");
   payloads[block.message.slot] = block.message.body.executionPayload;
 
   while (slot >= startSlot) {
-    const previousBlock = (await fetchNearestBlock(api, block.message.slot - 1, "down")) as capella.SignedBeaconBlock;
+    const previousBlock = await fetchNearestBlock(api, block.message.slot - 1, "down");
 
     if (block.message.body.executionPayload.parentHash === previousBlock.message.body.executionPayload.blockHash) {
       payloads[block.message.slot] = block.message.body.executionPayload;
@@ -73,11 +78,11 @@ export async function getExecutionPayloadForBlockNumber(
 ): Promise<Record<number, allForks.ExecutionPayload>> {
   const payloads: Record<number, allForks.ExecutionPayload> = {};
 
-  let block = (await fetchNearestBlock(api, startSlot, "down")) as capella.SignedBeaconBlock;
+  let block = await fetchNearestBlock(api, startSlot, "down");
   payloads[block.message.slot] = block.message.body.executionPayload;
 
   while (payloads[block.message.slot].blockNumber !== blockNumber) {
-    const previousBlock = (await fetchNearestBlock(api, block.message.slot - 1, "down")) as capella.SignedBeaconBlock;
+    const previousBlock = await fetchNearestBlock(api, block.message.slot - 1, "down");
     block = previousBlock;
   }
 
@@ -95,14 +100,13 @@ export async function getGenesisData(api: Pick<Api, "beacon">): Promise<GenesisD
 }
 
 export async function getSyncCheckpoint(api: Pick<Api, "beacon">, checkpoint?: string): Promise<Bytes32> {
-  if (checkpoint && checkpoint.length !== 32) {
-    throw Error(`Checkpoint root must be 32 bytes long: ${checkpoint.length}`);
-  }
-  let syncCheckpoint: Uint8Array;
+  let syncCheckpoint: Bytes32 | undefined = checkpoint ? hexToBuffer(checkpoint) : undefined;
 
-  if (checkpoint) {
-    syncCheckpoint = hexToBuffer(checkpoint);
-  } else {
+  if (syncCheckpoint && syncCheckpoint.byteLength !== 32) {
+    throw Error(`Checkpoint root must be 32 bytes. length=${syncCheckpoint.byteLength}`);
+  }
+
+  if (!syncCheckpoint) {
     const res = await api.beacon.getStateFinalityCheckpoints("head");
     ApiError.assert(res);
     syncCheckpoint = res.response.data.finalized.root;

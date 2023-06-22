@@ -1,31 +1,31 @@
 import {expect} from "chai";
 import {RootHex} from "@lodestar/types";
-import {PendingBlock, PendingBlockStatus} from "../../../../src/sync/index.js";
+import {PendingBlock, PendingBlockStatus, UnknownAndAncestorBlocks} from "../../../../src/sync/index.js";
 import {
   getAllDescendantBlocks,
   getDescendantBlocks,
-  getLowestPendingUnknownParents,
+  getUnknownAndAncestorBlocks,
 } from "../../../../src/sync/utils/pendingBlocksTree.js";
 
 describe("sync / pendingBlocksTree", () => {
   const testCases: {
     id: string;
-    blocks: {block: string; parent: string}[];
+    blocks: {block: string; parent: string | null}[];
     getAllDescendantBlocks: {block: string; res: string[]}[];
     getDescendantBlocks: {block: string; res: string[]}[];
-    getLowestPendingUnknownParents: string[];
+    getUnknownOrAncestorBlocks: {unknowns: string[]; ancestors: string[]};
   }[] = [
     {
       id: "empty case",
       blocks: [],
       getAllDescendantBlocks: [{block: "0A", res: []}],
       getDescendantBlocks: [{block: "0A", res: []}],
-      getLowestPendingUnknownParents: [],
+      getUnknownOrAncestorBlocks: {unknowns: [], ancestors: []},
     },
     {
       id: "two branches with multiple blocks",
       blocks: [
-        {block: "0A", parent: "-"},
+        {block: "0A", parent: null},
         {block: "1A", parent: "0A"},
         {block: "2A", parent: "1A"},
         {block: "3A", parent: "2A"},
@@ -44,7 +44,7 @@ describe("sync / pendingBlocksTree", () => {
         {block: "3C", res: ["4C"]},
         {block: "3B", res: []},
       ],
-      getLowestPendingUnknownParents: ["0A", "4C"],
+      getUnknownOrAncestorBlocks: {unknowns: ["0A"], ancestors: ["4C"]},
     },
   ];
 
@@ -54,7 +54,7 @@ describe("sync / pendingBlocksTree", () => {
       blocks.set(block.block, {
         blockRootHex: block.block,
         parentBlockRootHex: block.parent,
-        status: PendingBlockStatus.pending,
+        status: block.parent == null ? PendingBlockStatus.pending : PendingBlockStatus.downloaded,
       } as PendingBlock);
     }
 
@@ -71,8 +71,8 @@ describe("sync / pendingBlocksTree", () => {
         });
       }
 
-      it("getLowestPendingUnknownParents", () => {
-        expect(toRes(getLowestPendingUnknownParents(blocks))).to.deep.equal(testCase.getLowestPendingUnknownParents);
+      it("getUnknownBlocks", () => {
+        expect(toRes2(getUnknownAndAncestorBlocks(blocks))).to.deep.equal(testCase.getUnknownOrAncestorBlocks);
       });
     });
   }
@@ -80,4 +80,11 @@ describe("sync / pendingBlocksTree", () => {
 
 function toRes(blocks: PendingBlock[]): string[] {
   return blocks.map((block) => block.blockRootHex);
+}
+
+function toRes2(blocks: UnknownAndAncestorBlocks): {unknowns: string[]; ancestors: string[]} {
+  return {
+    unknowns: blocks.unknowns.map((block) => block.blockRootHex),
+    ancestors: blocks.ancestors.map((block) => block.blockRootHex),
+  };
 }

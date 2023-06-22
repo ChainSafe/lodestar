@@ -1,158 +1,111 @@
-import {Block} from "@ethereumjs/block";
-import {Common, CustomChain, Hardfork} from "@ethereumjs/common";
-import {RLP} from "@ethereumjs/rlp";
-import {Trie} from "@ethereumjs/trie";
-import {Account, KECCAK256_NULL_S} from "@ethereumjs/util";
-import {keccak256} from "ethereum-cryptography/keccak.js";
-import {NetworkName} from "@lodestar/config/networks";
-import {Bytes32, allForks} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {ELBlock, ELProof, ELStorageProof, HexString} from "../types.js";
-import {blockDataFromELBlock, bufferToHex, hexToBuffer, padLeft} from "./conversion.js";
+import {ProofProvider} from "../proof_provider/proof_provider.js";
+import {ELBlock, ELProof, HexString, JsonRpcRequest} from "../types.js";
+import {bufferToHex} from "./conversion.js";
+import {getELBlock, getELCode, getELProof} from "./execution.js";
+import {isValidAccount, isValidBlock, isValidCodeHash, isValidStorageKeys} from "./validation.js";
+import {ELRpc} from "./rpc.js";
 
-const emptyAccountSerialize = new Account().serialize();
-const storageKeyLength = 32;
+type VerificationResult<T> = {data: T; valid: true} | {valid: false; data?: undefined};
 
-export async function isValidAccount({
+export async function verifyAccount({
   address,
-  stateRoot,
-  proof,
+  proofProvider,
   logger,
+  rpc,
+  block,
 }: {
   address: HexString;
-  stateRoot: Bytes32;
-  proof: ELProof;
+  rpc: ELRpc;
+  proofProvider: ProofProvider;
   logger: Logger;
-}): Promise<boolean> {
-  const trie = await Trie.create();
-  const key = keccak256(hexToBuffer(address));
-
+  block?: number | string;
+}): Promise<VerificationResult<ELProof>> {
   try {
-    const expectedAccountRLP = await trie.verifyProof(
-      Buffer.from(stateRoot),
-      Buffer.from(key),
-      proof.accountProof.map(hexToBuffer)
-    );
-
-    // Shresth Agrawal (2022) Patronum source code. https://github.com/lightclients/patronum
-    const account = Account.fromAccountData({
-      nonce: BigInt(proof.nonce),
-      balance: BigInt(proof.balance),
-      storageRoot: proof.storageHash,
-      codeHash: proof.codeHash,
+    const executionPayload = await proofProvider.getExecutionPayload(block ?? "latest");
+    const proof = await getELProof(rpc, [address, [], bufferToHex(executionPayload.blockHash)]);
+    const validAccount = await isValidAccount({
+      address: address,
+      stateRoot: executionPayload.stateRoot,
+      proof,
+      logger,
     });
-    return account.serialize().equals(expectedAccountRLP ? expectedAccountRLP : emptyAccountSerialize);
-  } catch (err) {
-    logger.error("Error verifying account proof", undefined, err as Error);
-    return false;
-  }
-}
 
-export async function isValidStorageKeys({
-  storageKeys,
-  proof,
-  logger,
-}: {
-  storageKeys: HexString[];
-  proof: ELStorageProof;
-  logger: Logger;
-}): Promise<boolean> {
-  const trie = await Trie.create();
+    // If account is invalid don't check the storage
+    const validStorage = validAccount && (await isValidStorageKeys({storageKeys: [], proof, logger}));
 
-  for (let i = 0; i < storageKeys.length; i++) {
-    const sp = proof.storageProof[i];
-    const key = keccak256(padLeft(hexToBuffer(storageKeys[i]), storageKeyLength));
-    try {
-      const expectedStorageRLP = await trie.verifyProof(
-        hexToBuffer(proof.storageHash),
-        Buffer.from(key),
-        sp.proof.map(hexToBuffer)
-      );
-
-      const isStorageValid =
-        (!expectedStorageRLP && sp.value === "0x0") ||
-        (!!expectedStorageRLP && expectedStorageRLP.equals(RLP.encode(sp.value)));
-      if (!isStorageValid) return false;
-    } catch (err) {
-      logger.error("Error verifying storage keys", undefined, err as Error);
-      return false;
+    if (validAccount && validStorage) {
+      return {data: proof, valid: true};
     }
-  }
 
-  return true;
-}
-
-function networkToChainCommon(network: NetworkName): Common {
-  switch (network) {
-    case "mainnet":
-    case "goerli":
-    case "ropsten":
-    case "sepolia":
-      // TODO: Not sure how to detect the fork during runtime
-      return new Common({chain: network, hardfork: Hardfork.Shanghai});
-    case "gnosis":
-      return new Common({chain: CustomChain.xDaiChain});
-    default:
-      throw new Error(`Non supported network "${network}"`);
+    return {valid: false};
+  } catch (err) {
+    logger.error("Error while verifying account", {address}, err as Error);
+    return {valid: false};
   }
 }
 
-export async function isValidBlock({
-  executionPayload,
-  block,
+export async function verifyCode({
+  address,
+  proofProvider,
   logger,
-  network,
+  rpc,
+  codeHash,
+  block,
 }: {
-  executionPayload: allForks.ExecutionPayload;
-  block: ELBlock;
+  address: HexString;
+  rpc: ELRpc;
+  proofProvider: ProofProvider;
   logger: Logger;
-  network: NetworkName;
-}): Promise<boolean> {
-  const common = networkToChainCommon(network);
-  common.setHardforkByBlockNumber(executionPayload.blockNumber, undefined, executionPayload.timestamp);
+  codeHash: HexString;
+  block?: number | string;
+}): Promise<VerificationResult<string>> {
+  try {
+    const executionPayload = await proofProvider.getExecutionPayload(block ?? "latest");
+    const code = await getELCode(rpc, [address, bufferToHex(executionPayload.blockHash)]);
 
-  const blockObject = Block.fromBlockData(blockDataFromELBlock(block), {common});
-
-  if (bufferToHex(executionPayload.blockHash) !== bufferToHex(blockObject.hash())) {
-    logger.error("Block hash does not match", {
-      rpcBlockHash: bufferToHex(blockObject.hash()),
-      beaconExecutionBlockHash: bufferToHex(executionPayload.blockHash),
-    });
-
-    return false;
+    if (await isValidCodeHash({codeHash, codeResponse: code, logger})) {
+      return {data: code, valid: true};
+    }
+    return {valid: false};
+  } catch (err) {
+    logger.error("Error while verifying code", {address}, err as Error);
+    return {valid: false};
   }
-
-  if (bufferToHex(executionPayload.parentHash) !== bufferToHex(blockObject.header.parentHash)) {
-    logger.error("Block parent hash does not match", {
-      rpcBlockHash: bufferToHex(blockObject.header.parentHash),
-      beaconExecutionBlockHash: bufferToHex(executionPayload.parentHash),
-    });
-
-    return false;
-  }
-
-  if (!(await blockObject.validateTransactionsTrie())) {
-    logger.error("Block transactions could not be verified.", {
-      blockHash: bufferToHex(blockObject.hash()),
-      blockNumber: blockObject.header.number,
-    });
-
-    return false;
-  }
-
-  return true;
 }
 
-export async function isValidCodeHash({
-  codeHash,
-  codeResponse,
+export async function verifyBlock({
+  payload,
+  proofProvider,
+  logger,
+  rpc,
 }: {
-  codeHash: string;
-  codeResponse: string;
+  payload: JsonRpcRequest<[block: string | number, hydrated: boolean]>;
+  rpc: ELRpc;
+  proofProvider: ProofProvider;
   logger: Logger;
-}): Promise<boolean> {
-  // if there is no code hash for that address
-  if (codeResponse === "0x" && codeHash === `0x${KECCAK256_NULL_S}`) return true;
+}): Promise<VerificationResult<ELBlock>> {
+  try {
+    const executionPayload = await proofProvider.getExecutionPayload(payload.params[0]);
+    const block = await getELBlock(rpc, payload.params);
 
-  return bufferToHex(keccak256(hexToBuffer(codeResponse))) === codeHash;
+    // If response is not valid from the EL we don't need to verify it
+    if (!block) return {data: block, valid: false};
+
+    if (
+      await isValidBlock({
+        logger,
+        block,
+        executionPayload,
+        config: proofProvider.config,
+      })
+    ) {
+      return {data: block, valid: true};
+    }
+
+    return {valid: false};
+  } catch (err) {
+    logger.error("Error while verifying block", {block: payload.params[0]}, err as Error);
+    return {valid: false};
+  }
 }

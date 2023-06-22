@@ -1,9 +1,8 @@
 import {Stream, StreamStat} from "@libp2p/interface-connection";
 import {expect} from "chai";
-import {Uint8ArrayList} from "uint8arraylist";
 import {toHexString} from "@chainsafe/ssz";
 import {fromHex} from "@lodestar/utils";
-import {EncodedPayload, RespStatus} from "../../src/index.js";
+import {ResponseIncoming, RespStatus} from "../../src/index.js";
 import {ResponseChunk} from "../fixtures/index.js";
 
 /**
@@ -43,7 +42,7 @@ export class MockLibP2pStream implements Stream {
   source: Stream["source"];
   resultChunks: Uint8Array[] = [];
 
-  constructor(requestChunks: Uint8ArrayList[] | AsyncIterable<any> | AsyncGenerator<any>, protocol?: string) {
+  constructor(requestChunks: Uint8Array[] | AsyncIterable<any> | AsyncGenerator<any>, protocol?: string) {
     this.source = Array.isArray(requestChunks) ? arrToSource(requestChunks) : requestChunks;
     this.stat.protocol = protocol ?? "mock";
   }
@@ -70,6 +69,5 @@ export function fromHexBuf(hex: string): Buffer {
 
 export const ZERO_HASH = Buffer.alloc(32, 0);
 
-export const onlySuccessResp = (
-  resp: ResponseChunk
-): resp is {status: RespStatus.SUCCESS; payload: EncodedPayload<unknown>} => resp.status === RespStatus.SUCCESS;
+export const onlySuccessResp = (resp: ResponseChunk): resp is {status: RespStatus.SUCCESS; payload: ResponseIncoming} =>
+  resp.status === RespStatus.SUCCESS;

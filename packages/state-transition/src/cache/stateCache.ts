@@ -1,5 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
-import {EpochContext, EpochContextImmutableData, EpochContextOpts} from "./epochContext.js";
+import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
 import {
   BeaconStateAllForks,
   BeaconStateExecutions,
@@ -12,7 +12,7 @@ import {
 
 export type BeaconStateCache = {
   config: BeaconConfig;
-  epochCtx: EpochContext;
+  epochCtx: EpochCache;
   /** Count of clones created from this BeaconStateCache instance. readonly to prevent accidental usage downstream */
   readonly clonedCount: number;
   readonly clonedCountWithTransferCache: number;
@@ -130,16 +130,16 @@ export type CachedBeaconStateDeneb = CachedBeaconState<BeaconStateDeneb>;
 export type CachedBeaconStateAllForks = CachedBeaconState<BeaconStateAllForks>;
 export type CachedBeaconStateExecutions = CachedBeaconState<BeaconStateExecutions>;
 /**
- * Create CachedBeaconState computing a new EpochContext instance
+ * Create CachedBeaconState computing a new EpochCache instance
  */
 export function createCachedBeaconState<T extends BeaconStateAllForks>(
   state: T,
-  immutableData: EpochContextImmutableData,
-  opts?: EpochContextOpts
+  immutableData: EpochCacheImmutableData,
+  opts?: EpochCacheOpts
 ): T & BeaconStateCache {
   return getCachedBeaconState(state, {
     config: immutableData.config,
-    epochCtx: EpochContext.createFromState(state, immutableData, opts),
+    epochCtx: EpochCache.createFromState(state, immutableData, opts),
     clonedCount: 0,
     clonedCountWithTransferCache: 0,
     createdWithTransferCache: false,

@@ -1,12 +1,20 @@
 import {RootHex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
-import {PendingBlock, PendingBlockStatus} from "../interface.js";
+import {
+  DownloadedBlock,
+  PendingBlock,
+  PendingBlockStatus,
+  UnknownAndAncestorBlocks,
+  UnknownBlock,
+} from "../interface.js";
 
 export function getAllDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
   // Do one pass over all blocks to index by parent
   const byParent = new MapDef<RootHex, PendingBlock[]>(() => []);
   for (const block of blocks.values()) {
-    byParent.getOrDefault(block.parentBlockRootHex).push(block);
+    if (block.parentBlockRootHex != null) {
+      byParent.getOrDefault(block.parentBlockRootHex).push(block);
+    }
   }
 
   // Then, do a second pass recursively to get `blockRootHex` child blocks
@@ -41,14 +49,27 @@ export function getDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, 
   return descendantBlocks;
 }
 
-export function getLowestPendingUnknownParents(blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
-  const blocksToFetch: PendingBlock[] = [];
+/**
+ * Given this chain segment unknown block n => downloaded block n + 1 => downloaded block n + 2
+ *   return `{unknowns: [n], ancestors: []}`
+ *
+ * Given this chain segment: downloaded block n => downloaded block n + 1 => downloaded block n + 2
+ *   return {unknowns: [], ancestors: [n]}
+ */
+export function getUnknownAndAncestorBlocks(blocks: Map<RootHex, PendingBlock>): UnknownAndAncestorBlocks {
+  const unknowns: UnknownBlock[] = [];
+  const ancestors: DownloadedBlock[] = [];
 
   for (const block of blocks.values()) {
-    if (block.status === PendingBlockStatus.pending && !blocks.has(block.parentBlockRootHex)) {
-      blocksToFetch.push(block);
+    const parentHex = block.parentBlockRootHex;
+    if (block.status === PendingBlockStatus.pending && block.blockInput == null && parentHex == null) {
+      unknowns.push(block);
+    }
+
+    if (parentHex && !blocks.has(parentHex)) {
+      ancestors.push(block);
     }
   }
 
-  return blocksToFetch;
+  return {unknowns, ancestors};
 }

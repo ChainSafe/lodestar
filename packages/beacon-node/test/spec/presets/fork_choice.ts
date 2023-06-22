@@ -7,7 +7,8 @@ import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types"
 import {bnToNum} from "@lodestar/utils";
 import {createBeaconConfig} from "@lodestar/config";
 import {ForkSeq, isForkBlobs} from "@lodestar/params";
-import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
+import {BeaconChain} from "../../../src/chain/index.js";
+import {ClockEvent} from "../../../src/util/clock.js";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {testLogger} from "../../utils/logger.js";
 import {getConfig} from "../../utils/config.js";
@@ -19,7 +20,7 @@ import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js"
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
 import {ClockStopped} from "../../utils/mocks/clock.js";
-import {getBlockInput, AttestationImportOpt} from "../../../src/chain/blocks/types.js";
+import {getBlockInput, AttestationImportOpt, BlockSource} from "../../../src/chain/blocks/types.js";
 import {getEmptyBlobsSidecar} from "../../../src/util/blobs.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
@@ -108,7 +109,7 @@ export const forkChoiceTest =
               tickTime = bnToNum(step.tick);
               const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
               logger.debug(`Step ${i}/${stepsLen} tick`, {currentSlot, valid: Boolean(step.valid), time: tickTime});
-              chain.emitter.emit(ChainEvent.clockSlot, currentSlot);
+              clock.emit(ClockEvent.slot, currentSlot);
               clock.setSlot(currentSlot);
             }
 
@@ -156,10 +157,11 @@ export const forkChoiceTest =
 
               const blockImport =
                 config.getForkSeq(slot) < ForkSeq.deneb
-                  ? getBlockInput.preDeneb(config, signedBlock)
+                  ? getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip)
                   : getBlockInput.postDeneb(
                       config,
                       signedBlock,
+                      BlockSource.gossip,
                       getEmptyBlobsSidecar(config, signedBlock as deneb.SignedBeaconBlock)
                     );
 

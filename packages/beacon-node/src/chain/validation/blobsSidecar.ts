@@ -1,9 +1,8 @@
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
 import {deneb, Root, ssz} from "@lodestar/types";
-import {bytesToBigInt} from "@lodestar/utils";
+import {bytesToBigInt, toHex} from "@lodestar/utils";
 import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
-import {verifyKzgCommitmentsAgainstTransactions} from "@lodestar/state-transition";
 import {BlobsSidecarError, BlobsSidecarErrorCode} from "../errors/blobsSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
 import {byteArrayEquals} from "../../util/bytes.js";
@@ -25,14 +24,6 @@ export function validateGossipBlobsSidecar(
     if (!blsKeyValidate(blobKzgCommitments[i])) {
       throw new BlobsSidecarError(GossipAction.REJECT, {code: BlobsSidecarErrorCode.INVALID_KZG, kzgIdx: i});
     }
-  }
-
-  // [REJECT] The KZG commitments correspond to the versioned hashes in the transactions list.
-  // -- i.e. verify_kzg_commitments_against_transactions(block.body.execution_payload.transactions, block.body.blob_kzg_commitments)
-  if (
-    !verifyKzgCommitmentsAgainstTransactions(block.body.executionPayload.transactions, block.body.blobKzgCommitments)
-  ) {
-    throw new BlobsSidecarError(GossipAction.REJECT, {code: BlobsSidecarErrorCode.INVALID_KZG_TXS});
   }
 
   // [IGNORE] the sidecar.beacon_block_slot is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
@@ -83,7 +74,9 @@ export function validateBlobsSidecar(
   // assert beacon_block_root == blobs_sidecar.beacon_block_root
   if (!byteArrayEquals(beaconBlockRoot, blobsSidecar.beaconBlockRoot)) {
     throw new Error(
-      `beacon block root mismatch. Block root: ${beaconBlockRoot}, Blob root ${blobsSidecar.beaconBlockRoot}`
+      `beacon block root mismatch. Block root: ${toHex(beaconBlockRoot)}, Blob root ${toHex(
+        blobsSidecar.beaconBlockRoot
+      )}`
     );
   }
 

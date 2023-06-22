@@ -1,24 +1,25 @@
 import {Connection} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
 import {allForks, altair, phase0} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
-import {IBeaconChain} from "../../chain/index.js";
+import {withTimeout} from "@lodestar/utils";
+import {LoggerNode} from "@lodestar/logger/node";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants/index.js";
-import {Metrics} from "../../metrics/index.js";
-import {NetworkEvent, INetworkEventBus} from "../events.js";
+import {IClock} from "../../util/clock.js";
+import {NetworkEvent, INetworkEventBus, NetworkEventData} from "../events.js";
 import {Libp2p} from "../interface.js";
-import {IReqRespBeaconNode, ReqRespMethod, RequestTypedContainer} from "../reqresp/ReqRespBeaconNode.js";
+import {ReqRespMethod} from "../reqresp/ReqRespBeaconNode.js";
 import {getConnection, getConnectionsMap, prettyPrintPeerId} from "../util.js";
 import {SubnetsService} from "../subnets/index.js";
 import {SubnetType} from "../metadata.js";
 import {Eth2Gossipsub} from "../gossip/gossipsub.js";
-import {PeersData, PeerData} from "./peersData.js";
+import {StatusCache} from "../statusCache.js";
+import {NetworkCoreMetrics} from "../core/metrics.js";
+import {LodestarDiscv5Opts} from "../discv5/types.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
-import {IPeerRpcScoreStore, ScoreState, updateGossipsubScores} from "./score.js";
+import {PeersData, PeerData} from "./peersData.js";
 import {clientFromAgentVersion, ClientKind} from "./client.js";
 import {
   getConnectedPeerIds,
@@ -27,6 +28,7 @@ import {
   prioritizePeers,
   renderIrrelevantPeerType,
 } from "./utils/index.js";
+import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score/index.js";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -73,26 +75,37 @@ export type PeerManagerOpts = {
   /**
    * If null, Don't run discv5 queries, nor connect to cached peers in the peerStore
    */
-  discv5: IDiscv5DiscoveryInputOptions | null;
+  discv5: LodestarDiscv5Opts | null;
   /**
    * If set to true, connect to Discv5 bootnodes. If not set or false, do not connect
    */
   connectToDiscv5Bootnodes?: boolean;
 };
 
+/**
+ * ReqResp methods used only be PeerManager, so the main thread never has to call them
+ */
+export interface IReqRespBeaconNodePeerManager {
+  sendPing(peerId: PeerId): Promise<phase0.Ping>;
+  sendStatus(peerId: PeerId, request: phase0.Status): Promise<phase0.Status>;
+  sendGoodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void>;
+  sendMetadata(peerId: PeerId): Promise<allForks.Metadata>;
+}
+
 export type PeerManagerModules = {
   libp2p: Libp2p;
-  logger: Logger;
-  metrics: Metrics | null;
-  reqResp: IReqRespBeaconNode;
+  logger: LoggerNode;
+  metrics: NetworkCoreMetrics | null;
+  reqResp: IReqRespBeaconNodePeerManager;
   gossip: Eth2Gossipsub;
   attnetsService: SubnetsService;
   syncnetsService: SubnetsService;
-  chain: IBeaconChain;
+  clock: IClock;
   config: BeaconConfig;
   peerRpcScores: IPeerRpcScoreStore;
-  networkEventBus: INetworkEventBus;
+  events: INetworkEventBus;
   peersData: PeersData;
+  statusCache: StatusCache;
 };
 
 type PeerIdStr = string;
@@ -112,19 +125,20 @@ enum RelevantPeerStatus {
  * - Disconnect peers if over target peers
  */
 export class PeerManager {
-  private libp2p: Libp2p;
-  private logger: Logger;
-  private metrics: Metrics | null;
-  private reqResp: IReqRespBeaconNode;
-  private gossipsub: Eth2Gossipsub;
-  private attnetsService: SubnetsService;
-  private syncnetsService: SubnetsService;
-  private chain: IBeaconChain;
-  private config: BeaconConfig;
-  private peerRpcScores: IPeerRpcScoreStore;
+  private readonly libp2p: Libp2p;
+  private readonly logger: LoggerNode;
+  private readonly metrics: NetworkCoreMetrics | null;
+  private readonly reqResp: IReqRespBeaconNodePeerManager;
+  private readonly gossipsub: Eth2Gossipsub;
+  private readonly attnetsService: SubnetsService;
+  private readonly syncnetsService: SubnetsService;
+  private readonly clock: IClock;
+  private readonly config: BeaconConfig;
+  private readonly peerRpcScores: IPeerRpcScoreStore;
   /** If null, discovery is disabled */
-  private discovery: PeerDiscovery | null;
-  private networkEventBus: INetworkEventBus;
+  private readonly discovery: PeerDiscovery | null;
+  private readonly networkEventBus: INetworkEventBus;
+  private readonly statusCache: StatusCache;
 
   // A single map of connected peers with all necessary data to handle PINGs, STATUS, and metrics
   private connectedPeers: Map<PeerIdStr, PeerData>;
@@ -132,7 +146,7 @@ export class PeerManager {
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
 
-  constructor(modules: PeerManagerModules, opts: PeerManagerOpts) {
+  constructor(modules: PeerManagerModules, opts: PeerManagerOpts, discovery: PeerDiscovery | null) {
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
     this.metrics = modules.metrics;
@@ -140,31 +154,20 @@ export class PeerManager {
     this.gossipsub = modules.gossip;
     this.attnetsService = modules.attnetsService;
     this.syncnetsService = modules.syncnetsService;
-    this.chain = modules.chain;
+    this.statusCache = modules.statusCache;
+    this.clock = modules.clock;
     this.config = modules.config;
     this.peerRpcScores = modules.peerRpcScores;
-    this.networkEventBus = modules.networkEventBus;
+    this.networkEventBus = modules.events;
     this.connectedPeers = modules.peersData.connectedPeers;
     this.opts = opts;
-
-    // opts.discv5 === null, discovery is disabled
-    this.discovery =
-      opts.discv5 &&
-      new PeerDiscovery(modules, {
-        maxPeers: opts.maxPeers,
-        discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs,
-        discv5: opts.discv5,
-        connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
-      });
+    this.discovery = discovery;
 
     const {metrics} = modules;
     if (metrics) {
       metrics.peers.addCollect(() => this.runPeerCountMetrics(metrics));
     }
-  }
 
-  async start(): Promise<void> {
-    await this.discovery?.start();
     this.libp2p.connectionManager.addEventListener(Libp2pEvent.peerConnect, this.onLibp2pPeerConnect);
     this.libp2p.connectionManager.addEventListener(Libp2pEvent.peerDisconnect, this.onLibp2pPeerDisconnect);
     this.networkEventBus.on(NetworkEvent.reqRespRequest, this.onRequest);
@@ -181,7 +184,21 @@ export class PeerManager {
     ];
   }
 
-  async stop(): Promise<void> {
+  static async init(modules: PeerManagerModules, opts: PeerManagerOpts): Promise<PeerManager> {
+    // opts.discv5 === null, discovery is disabled
+    const discovery = opts.discv5
+      ? await PeerDiscovery.init(modules, {
+          maxPeers: opts.maxPeers,
+          discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs,
+          discv5: opts.discv5,
+          connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
+        })
+      : null;
+
+    return new PeerManager(modules, opts, discovery);
+  }
+
+  async close(): Promise<void> {
     await this.discovery?.stop();
     this.libp2p.connectionManager.removeEventListener(Libp2pEvent.peerConnect, this.onLibp2pPeerConnect);
     this.libp2p.connectionManager.removeEventListener(Libp2pEvent.peerDisconnect, this.onLibp2pPeerDisconnect);
@@ -221,12 +238,16 @@ export class PeerManager {
     this.heartbeat();
   }
 
+  reportPeer(peer: PeerId, action: PeerAction, actionName: string): void {
+    this.peerRpcScores.applyAction(peer, action, actionName);
+  }
+
   /**
    * The app layer needs to refresh the status of some peers. The sync have reached a target
    */
-  reStatusPeers(peers: PeerId[]): void {
+  reStatusPeers(peers: PeerIdStr[]): void {
     for (const peer of peers) {
-      const peerData = this.connectedPeers.get(peer.toString());
+      const peerData = this.connectedPeers.get(peer);
       if (peerData) {
         // Set to 0 to trigger a status request after calling pingAndStatusTimeouts()
         peerData.lastStatusUnixTsMs = 0;
@@ -235,10 +256,14 @@ export class PeerManager {
     this.pingAndStatusTimeouts();
   }
 
+  dumpPeerScoreStats(): PeerScoreStats {
+    return this.peerRpcScores.dumpPeerScoreStats();
+  }
+
   /**
    * Must be called when network ReqResp receives incoming requests
    */
-  private onRequest = (request: RequestTypedContainer, peer: PeerId): void => {
+  private onRequest = ({peer, request}: NetworkEventData[NetworkEvent.reqRespRequest]): void => {
     try {
       const peerData = this.connectedPeers.get(peer.toString());
       if (peerData) {
@@ -313,7 +338,7 @@ export class PeerManager {
 
     let isIrrelevant: boolean;
     try {
-      const irrelevantReasonType = assertPeerRelevance(status, this.chain);
+      const irrelevantReasonType = assertPeerRelevance(status, this.statusCache.get(), this.clock.currentSlot);
       if (irrelevantReasonType === null) {
         isIrrelevant = false;
       } else {
@@ -345,13 +370,13 @@ export class PeerManager {
       peerData.relevantStatus = RelevantPeerStatus.relevant;
     }
     if (getConnection(this.libp2p.connectionManager, peer.toString())) {
-      this.networkEventBus.emit(NetworkEvent.peerConnected, peer, status);
+      this.networkEventBus.emit(NetworkEvent.peerConnected, {peer: peer.toString(), status});
     }
   }
 
   private async requestMetadata(peer: PeerId): Promise<void> {
     try {
-      this.onMetadata(peer, await this.reqResp.metadata(peer));
+      this.onMetadata(peer, await this.reqResp.sendMetadata(peer));
     } catch (e) {
       // TODO: Downvote peer here or in the reqResp layer
     }
@@ -359,7 +384,7 @@ export class PeerManager {
 
   private async requestPing(peer: PeerId): Promise<void> {
     try {
-      this.onPing(peer, await this.reqResp.ping(peer));
+      this.onPing(peer, await this.reqResp.sendPing(peer));
 
       // If peer replies a PING request also update lastReceivedMsg
       const peerData = this.connectedPeers.get(peer.toString());
@@ -371,7 +396,7 @@ export class PeerManager {
 
   private async requestStatus(peer: PeerId, localStatus: phase0.Status): Promise<void> {
     try {
-      this.onStatus(peer, await this.reqResp.status(peer, localStatus));
+      this.onStatus(peer, await this.reqResp.sendStatus(peer, localStatus));
     } catch (e) {
       // TODO: Failed to get peer latest status: downvote but don't disconnect
     }
@@ -379,7 +404,7 @@ export class PeerManager {
 
   private async requestStatusMany(peers: PeerId[]): Promise<void> {
     try {
-      const localStatus = this.chain.getStatus();
+      const localStatus = this.statusCache.get();
       await Promise.all(peers.map(async (peer) => this.requestStatus(peer, localStatus)));
     } catch (e) {
       this.logger.verbose("Error requesting new status to peers", {}, e as Error);
@@ -445,7 +470,7 @@ export class PeerManager {
             subnet: query.subnet,
             type,
             maxPeersToDiscover: query.maxPeersToDiscover,
-            toUnixMs: 1000 * (this.chain.genesisTime + query.toSlot * this.config.SECONDS_PER_SLOT),
+            toUnixMs: 1000 * (this.clock.genesisTime + query.toSlot * this.config.SECONDS_PER_SLOT),
           });
         }
 
@@ -483,6 +508,13 @@ export class PeerManager {
     }
 
     timer?.();
+
+    this.logger.debug("peerManager heartbeat result", {
+      peersToDisconnect: peersToDisconnect.size,
+      peersToConnect: peersToConnect,
+      attnetQueries: attnetQueries.length,
+      syncnetQueries: syncnetQueries.length,
+    });
   }
 
   private updateGossipsubScores(): void {
@@ -567,7 +599,7 @@ export class PeerManager {
     if (direction === "outbound") {
       //this.pingAndStatusTimeouts();
       void this.requestPing(peer);
-      void this.requestStatus(peer, this.chain.getStatus());
+      void this.requestStatus(peer, this.statusCache.get());
     }
 
     // AgentVersion was set in libp2p IdentifyService, 'peer:connect' event handler
@@ -595,7 +627,7 @@ export class PeerManager {
     this.connectedPeers.delete(peer.toString());
 
     this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(peer), direction, status});
-    this.networkEventBus.emit(NetworkEvent.peerDisconnected, peer);
+    this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: peer.toString()});
     this.metrics?.peerDisconnectedEvent.inc({direction});
     this.libp2p.peerStore
       .unTagPeer(peer, PEER_RELEVANT_TAG)
@@ -606,7 +638,7 @@ export class PeerManager {
     try {
       await this.libp2p.hangUp(peer);
     } catch (e) {
-      this.logger.warn("Unclean disconnect", {peer: prettyPrintPeerId(peer)}, e as Error);
+      this.logger.debug("Unclean disconnect", {peer: prettyPrintPeerId(peer)}, e as Error);
     }
   }
 
@@ -620,7 +652,8 @@ export class PeerManager {
         this.metrics?.peerLongConnectionDisconnect.inc({reason});
       }
 
-      await this.reqResp.goodbye(peer, BigInt(goodbye));
+      // Wrap with shorter timeout than regular ReqResp requests to speed up shutdown
+      await withTimeout(() => this.reqResp.sendGoodbye(peer, BigInt(goodbye)), 1_000);
     } catch (e) {
       this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
     } finally {
@@ -629,7 +662,7 @@ export class PeerManager {
   }
 
   /** Register peer count metrics */
-  private async runPeerCountMetrics(metrics: Metrics): Promise<void> {
+  private async runPeerCountMetrics(metrics: NetworkCoreMetrics): Promise<void> {
     let total = 0;
 
     const peersByDirection = new Map<string, number>();
@@ -640,7 +673,7 @@ export class PeerManager {
     metrics.peerLongLivedAttnets.reset();
     metrics.peerScoreByClient.reset();
     metrics.peerConnectionLength.reset();
-    metrics.gossipPeer.scoreByClient.reset();
+    metrics.peerGossipScoreByClient.reset();
 
     // reset client counts _for each client_ to 0
     for (const client of Object.values(ClientKind)) {
@@ -662,7 +695,7 @@ export class PeerManager {
         // TODO: Consider optimizing by doing observe in batch
         metrics.peerLongLivedAttnets.observe(attnets ? attnets.getTrueBitIndexes().length : 0);
         metrics.peerScoreByClient.observe({client}, this.peerRpcScores.getScore(peerId));
-        metrics.gossipPeer.scoreByClient.observe({client}, this.peerRpcScores.getGossipScore(peerId));
+        metrics.peerGossipScoreByClient.observe({client}, this.peerRpcScores.getGossipScore(peerId));
         metrics.peerConnectionLength.observe((now - openCnx.stat.timeline.open) / 1000);
         total++;
       }

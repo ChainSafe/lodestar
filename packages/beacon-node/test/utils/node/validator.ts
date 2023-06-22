@@ -38,11 +38,8 @@ export async function getAndInitDevValidators({
     const endIndex = startIndexVc + validatorsPerClient - 1;
     const logger = testLogger(`Vali ${startIndexVc}-${endIndex}`, testLoggerOpts);
     const tmpDir = tmp.dirSync({unsafeCleanup: true});
-    const dbOps = {
-      config: node.config,
-      controller: new LevelDbController({name: tmpDir.name}, {logger}),
-    };
-    const slashingProtection = new SlashingProtection(dbOps);
+    const db = await LevelDbController.create({name: tmpDir.name}, {logger});
+    const slashingProtection = new SlashingProtection(db);
 
     const secretKeysValidator = Array.from({length: validatorsPerClient}, (_, i) => interopSecretKey(i + startIndexVc));
     secretKeys.push(...secretKeysValidator);
@@ -64,7 +61,8 @@ export async function getAndInitDevValidators({
 
     validators.push(
       Validator.initializeFromBeaconNode({
-        dbOps,
+        db,
+        config: node.config,
         api: useRestApi ? getNodeApiUrl(node) : getApiFromServerHandlers(node.api),
         slashingProtection,
         logger,
@@ -86,8 +84,8 @@ export async function getAndInitDevValidators({
 }
 
 export function getApiFromServerHandlers(api: {[K in keyof Api]: ServerApi<Api[K]>}): Api {
-  return mapValues(api, (module) =>
-    mapValues(module, (api: APIServerHandler) => {
+  return mapValues(api, (apiModule) =>
+    mapValues(apiModule, (api: APIServerHandler) => {
       return async (...args: any) => {
         let code: HttpStatusCode = HttpStatusCode.OK;
         try {
@@ -110,7 +108,7 @@ export function getApiFromServerHandlers(api: {[K in keyof Api]: ServerApi<Api[K
             error: {
               code: code ?? HttpStatusCode.INTERNAL_SERVER_ERROR,
               message: (err as Error).message,
-              operationId: `${module}.${api.name}`,
+              operationId: api.name,
             },
           };
         }

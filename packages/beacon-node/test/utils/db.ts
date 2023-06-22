@@ -10,13 +10,7 @@ export async function startTmpBeaconDb(config: ChainForkConfig): Promise<BeaconD
   // Clean-up db first
   child_process.execSync(`rm -rf ${TEMP_DB_LOCATION}`);
 
-  const db = new BeaconDb({
-    config,
-    controller: new LevelDbController({name: TEMP_DB_LOCATION}, {logger: testLogger()}),
-  });
-  await db.start();
-
-  return db;
+  return new BeaconDb(config, await LevelDbController.create({name: TEMP_DB_LOCATION}, {logger: testLogger()}));
 }
 
 /**

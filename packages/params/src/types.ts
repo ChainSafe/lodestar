@@ -79,6 +79,7 @@ export type BeaconPreset = {
   // DENEB
   ///////////
   FIELD_ELEMENTS_PER_BLOB: number;
+  MAX_BLOB_COMMITMENTS_PER_BLOCK: number;
   MAX_BLOBS_PER_BLOCK: number;
 };
 
@@ -162,6 +163,7 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   // DENEB
   ///////////
   FIELD_ELEMENTS_PER_BLOB: "number",
+  MAX_BLOB_COMMITMENTS_PER_BLOCK: "number",
   MAX_BLOBS_PER_BLOCK: "number",
 };
 

@@ -1,4 +1,4 @@
-import {allForks, bellatrix, capella, isBlindedBeaconBlock, ssz} from "@lodestar/types";
+import {allForks, bellatrix, capella, isBlindedBeaconBlockBody, ssz} from "@lodestar/types";
 import {
   BeaconStateBellatrix,
   BeaconStateCapella,
@@ -58,7 +58,7 @@ export function isMergeTransitionComplete(state: BeaconStateExecutions): boolean
     );
   } else {
     return !ssz.capella.ExecutionPayloadHeader.equals(
-      (state as BeaconStateCapella).latestExecutionPayloadHeader,
+      state.latestExecutionPayloadHeader,
       // TODO: Performance
       ssz.capella.ExecutionPayloadHeader.defaultValue()
     );
@@ -93,10 +93,16 @@ export function isExecutionBlockBodyType(
 export function getFullOrBlindedPayload(
   block: allForks.FullOrBlindedBeaconBlock
 ): allForks.FullOrBlindedExecutionPayload {
-  if (isBlindedBeaconBlock(block)) {
-    return block.body.executionPayloadHeader;
-  } else if ((block as bellatrix.BeaconBlock).body.executionPayload !== undefined) {
-    return (block as bellatrix.BeaconBlock).body.executionPayload;
+  return getFullOrBlindedPayloadFromBody(block.body);
+}
+
+export function getFullOrBlindedPayloadFromBody(
+  body: allForks.FullOrBlindedBeaconBlockBody
+): allForks.FullOrBlindedExecutionPayload {
+  if (isBlindedBeaconBlockBody(body)) {
+    return body.executionPayloadHeader;
+  } else if ((body as bellatrix.BeaconBlockBody).executionPayload !== undefined) {
+    return (body as bellatrix.BeaconBlockBody).executionPayload;
   } else {
     throw Error("Ǹot allForks.FullOrBlindedBeaconBlock");
   }

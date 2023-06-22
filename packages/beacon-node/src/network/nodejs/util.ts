@@ -1,9 +1,9 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Registry} from "prom-client";
-import {ENR, SignableENR} from "@chainsafe/discv5";
+import {ENR} from "@chainsafe/discv5";
 import {Libp2p} from "../interface.js";
 import {Eth2PeerDataStore} from "../peers/datastore.js";
-import {defaultDiscv5Options, defaultNetworkOptions, NetworkOptions} from "../options.js";
+import {defaultNetworkOptions, NetworkOptions} from "../options.js";
 import {createNodejsLibp2p as _createNodejsLibp2p} from "./bundle.js";
 
 export type NodeJsLibp2pOpts = {
@@ -27,12 +27,7 @@ export async function createNodeJsLibp2p(
   const peerId = await Promise.resolve(peerIdOrPromise);
   const localMultiaddrs = networkOpts.localMultiaddrs || defaultNetworkOptions.localMultiaddrs;
   const bootMultiaddrs = networkOpts.bootMultiaddrs || defaultNetworkOptions.bootMultiaddrs;
-  const enr = networkOpts.discv5?.enr;
   const {peerStoreDir, disablePeerDiscovery} = nodeJsLibp2pOpts;
-
-  if (enr !== undefined && typeof enr !== "string" && !(enr instanceof SignableENR)) {
-    throw Error("network.discv5.enr must be an instance of SignableENR");
-  }
 
   let datastore: undefined | Eth2PeerDataStore = undefined;
   if (peerStoreDir) {
@@ -45,10 +40,7 @@ export async function createNodeJsLibp2p(
     if (!networkOpts.bootMultiaddrs) {
       networkOpts.bootMultiaddrs = [];
     }
-    if (!networkOpts.discv5) {
-      networkOpts.discv5 = defaultDiscv5Options;
-    }
-    for (const enrOrStr of networkOpts.discv5.bootEnrs) {
+    for (const enrOrStr of networkOpts.discv5?.bootEnrs ?? []) {
       const enr = typeof enrOrStr === "string" ? ENR.decodeTxt(enrOrStr) : enrOrStr;
       const fullMultiAddr = await enr.getFullMultiaddr("tcp");
       const multiaddrWithPeerId = fullMultiAddr?.toString();
@@ -70,6 +62,7 @@ export async function createNodeJsLibp2p(
     metrics: nodeJsLibp2pOpts.metrics,
     metricsRegistry: nodeJsLibp2pOpts.metricsRegistry,
     lodestarVersion: networkOpts.version,
+    hideAgentVersion: networkOpts.private,
     mdns: networkOpts.mdns,
   });
 }

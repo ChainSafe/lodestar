@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import {expect} from "chai";
 import {testFilesDir} from "../utils.js";
 import {describeCliTest, execCli} from "../utils/childprocRunner.js";

@@ -3,7 +3,7 @@ import {Api, getClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
 import {ApiError} from "@lodestar/api";
 import {getMockBeaconApiServer} from "./mockBeaconApiServer.js";
-import {AfterEachCallback, expectDeepEquals, findApiToken, itDone} from "./runUtils.js";
+import {AfterEachCallback, expectDeepEqualsUnordered, findApiToken, itDone} from "./runUtils.js";
 import {DescribeArgs} from "./childprocRunner.js";
 
 type TestContext = {
@@ -78,7 +78,8 @@ export function getKeymanagerTestRunner({args: {spawnCli}, afterEachCallbacks, d
 export async function expectKeys(keymanagerClient: Api, expectedPubkeys: string[], message: string): Promise<void> {
   const keys = await keymanagerClient.listKeys();
   ApiError.assert(keys);
-  expectDeepEquals(
+  // The order of keys isn't always deterministic so we can't use deep equal
+  expectDeepEqualsUnordered(
     keys.response.data,
     expectedPubkeys.map((pubkey) => ({validatingPubkey: pubkey, derivationPath: "", readonly: false})),
     message

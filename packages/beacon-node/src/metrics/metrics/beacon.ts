@@ -13,10 +13,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
     // From https://github.com/ethereum/beacon-metrics/blob/master/metrics.md
     // Interop-metrics
 
-    peers: register.gauge({
-      name: "libp2p_peers",
-      help: "number of connected peers",
-    }),
     headSlot: register.gauge({
       name: "beacon_head_slot",
       help: "slot of the head block of the beacon chain",
@@ -87,6 +83,30 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         // Add buckets up to 100 to capture high depth re-orgs. Above 100 things are going really bad.
         buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
       }),
+      votes: register.gauge({
+        name: "beacon_fork_choice_votes_count",
+        help: "Current count of votes in fork choice data structures",
+      }),
+      queuedAttestations: register.gauge({
+        name: "beacon_fork_choice_queued_attestations_count",
+        help: "Current count of queued_attestations in fork choice data structures",
+      }),
+      validatedAttestationDatas: register.gauge({
+        name: "beacon_fork_choice_validated_attestation_datas_count",
+        help: "Current count of validatedAttestationDatas in fork choice data structures",
+      }),
+      balancesLength: register.gauge({
+        name: "beacon_fork_choice_balances_length",
+        help: "Current length of balances in fork choice data structures",
+      }),
+      nodes: register.gauge({
+        name: "beacon_fork_choice_nodes_count",
+        help: "Current count of nodes in fork choice data structures",
+      }),
+      indices: register.gauge({
+        name: "beacon_fork_choice_indices_count",
+        help: "Current count of indices in fork choice data structures",
+      }),
     },
 
     parentBlockDistance: register.histogram({
@@ -94,14 +114,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "Histogram of distance to parent block of valid imported blocks",
       buckets: [1, 2, 3, 5, 7, 10, 20, 30, 50, 100],
     }),
-
-    reqResp: {
-      rateLimitErrors: register.gauge<"method">({
-        name: "beacon_reqresp_rate_limiter_errors_total",
-        help: "Count rate limiter errors",
-        labelNames: ["method"],
-      }),
-    },
 
     blockProductionTime: register.histogram<"source">({
       name: "beacon_block_production_seconds",

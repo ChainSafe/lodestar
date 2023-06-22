@@ -9,7 +9,7 @@ import {globalOptions} from "./options.js";
 const {version} = getVersionData();
 const topBanner = `🌟 Lodestar Prover Proxy: Ethereum RPC proxy for RPC responses, verified against the trusted block hashes.
   * Version: ${version}
-  * by ChainSafe Systems, 2018-2022`;
+  * by ChainSafe Systems, 2018-${new Date().getFullYear()}`;
 const bottomBanner = `📖 For more information, check the CLI reference:
   * https://chainsafe.github.io/lodestar/reference/cli
 

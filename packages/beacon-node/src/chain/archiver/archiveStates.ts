@@ -4,7 +4,7 @@ import {Slot, Epoch} from "@lodestar/types";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconDb} from "../../db/index.js";
-import {CheckpointStateCache} from "../stateCache/index.js";
+import {IStateRegenerator} from "../regen/interface.js";
 
 /**
  * Minimum number of epochs between single temp archived states
@@ -26,7 +26,7 @@ export interface StatesArchiverOpts {
  */
 export class StatesArchiver {
   constructor(
-    private readonly checkpointStateCache: CheckpointStateCache,
+    private readonly regen: IStateRegenerator,
     private readonly db: IBeaconDb,
     private readonly logger: Logger,
     private readonly opts: StatesArchiverOpts
@@ -67,6 +67,14 @@ export class StatesArchiver {
       if (statesSlotsToDelete.length > 0) {
         await this.db.stateArchive.batchDelete(statesSlotsToDelete);
       }
+
+      // More logs to investigate the rss spike issue https://github.com/ChainSafe/lodestar/issues/5591
+      this.logger.verbose("Archived state completed", {
+        finalizedEpoch: finalized.epoch,
+        minEpoch,
+        storedStateSlots: storedStateSlots.join(","),
+        statesSlotsToDelete: statesSlotsToDelete.join(","),
+      });
     }
   }
 
@@ -75,13 +83,13 @@ export class StatesArchiver {
    * Only the new finalized state is stored to disk
    */
   async archiveState(finalized: CheckpointWithHex): Promise<void> {
-    const finalizedState = this.checkpointStateCache.get(finalized);
+    const finalizedState = this.regen.getCheckpointStateSync(finalized);
     if (!finalizedState) {
       throw Error("No state in cache for finalized checkpoint state epoch #" + finalized.epoch);
     }
     await this.db.stateArchive.put(finalizedState.slot, finalizedState);
     // don't delete states before the finalized state, auto-prune will take care of it
-    this.logger.verbose("Archive states completed", {finalizedEpoch: finalized.epoch});
+    this.logger.verbose("Archived finalized state", {finalizedEpoch: finalized.epoch});
   }
 }
 

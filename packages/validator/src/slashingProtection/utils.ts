@@ -28,7 +28,7 @@ export function numToString(num: number): string {
 }
 
 export function minEpoch(epochs: Epoch[]): Epoch | null {
-  return epochs.length > 0 ? Math.min(...epochs) : null;
+  return epochs.length > 0 ? epochs.reduce((minEpoch, epoch) => (minEpoch < epoch ? minEpoch : epoch)) : null;
 }
 
 export function uniqueVectorArr(buffers: Uint8Array[]): Uint8Array[] {
