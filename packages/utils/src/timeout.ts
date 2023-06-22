@@ -8,7 +8,7 @@ export async function withTimeout<T>(
   signal?: AbortSignal
 ): Promise<T> {
   const timeoutAbortController = new AbortController();
-  const timeoutAndParentSignal = anySignal([timeoutAbortController.signal, ...(signal ? [signal] : [])]) as AbortSignal;
+  const timeoutAndParentSignal = anySignal([timeoutAbortController.signal, ...(signal ? [signal] : [])]);
 
   async function timeoutPromise(signal: AbortSignal): Promise<never> {
     await sleep(timeoutMs, signal);

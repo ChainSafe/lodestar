@@ -432,6 +432,11 @@ export function createLodestarMetrics(
     },
 
     syncUnknownBlock: {
+      switchNetworkSubscriptions: register.gauge<"action">({
+        name: "lodestar_sync_unknown_block_network_subscriptions_count",
+        help: "Switch network subscriptions on/off",
+        labelNames: ["action"],
+      }),
       requests: register.gauge<"type">({
         name: "lodestar_sync_unknown_block_requests_total",
         help: "Total number of unknown block events or requests",

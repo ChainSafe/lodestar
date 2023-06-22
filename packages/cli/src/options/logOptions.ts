@@ -17,7 +17,7 @@ export type LogArgs = {
 export const logOptions: CliCommandOptions<LogArgs> = {
   logLevel: {
     choices: LogLevels,
-    description: "Logging verbosity level for emittings logs to terminal",
+    description: "Logging verbosity level for emitting logs to terminal",
     default: LogLevel.info,
     type: "string",
   },
@@ -29,7 +29,7 @@ export const logOptions: CliCommandOptions<LogArgs> = {
 
   logFileLevel: {
     choices: LogLevels,
-    description: "Logging verbosity level for emittings logs to file",
+    description: "Logging verbosity level for emitting logs to file",
     default: LogLevel.debug,
     type: "string",
   },

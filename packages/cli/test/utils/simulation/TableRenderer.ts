@@ -10,7 +10,7 @@ export class TableRenderer<Columns extends string[number]> {
     this.columnsSizes = columnWithSizes;
     this.columns = Object.keys(columnWithSizes) as Columns[];
     this.rows = [];
-    const sizes = Object.values(this.columnsSizes) as number[];
+    const sizes: number[] = Object.values(this.columnsSizes);
     this.totalWidth = sizes.reduce((a, b) => a + b, 0) + this.columns.length + 1 + this.columns.length * 2;
   }
 

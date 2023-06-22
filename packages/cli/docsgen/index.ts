@@ -58,7 +58,7 @@ function cmdToMarkdownSection(cmd: CliCommand<any>, parentCommand?: string): Mar
     body.push("**Options**");
 
     if (cmd.subcommands) {
-      body.push("The options below apply to all subcommands.");
+      body.push("The options below apply to all sub-commands.");
     }
 
     // De-duplicate beaconOptions. If all beaconOptions exists in this command, skip them

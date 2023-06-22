@@ -132,7 +132,6 @@ export type SyncCommitteeSelection = {
 
 export type LivenessResponseData = {
   index: ValidatorIndex;
-  epoch: Epoch;
   isLive: boolean;
 };
 
@@ -390,9 +389,9 @@ export type Api = {
 
   /** Returns validator indices that have been observed to be active on the network */
   getLiveness(
-    indices: ValidatorIndex[],
-    epoch: Epoch
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: LivenessResponseData[]}}>>;
+    epoch: Epoch,
+    validatorIndices: ValidatorIndex[]
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: LivenessResponseData[]}}, HttpStatusCode.BAD_REQUEST>>;
 
   registerValidator(
     registrations: bellatrix.SignedValidatorRegistrationV1[]
@@ -419,7 +418,7 @@ export const routesData: RoutesData<Api> = {
   prepareBeaconProposer: {url: "/eth/v1/validator/prepare_beacon_proposer", method: "POST"},
   submitBeaconCommitteeSelections: {url: "/eth/v1/validator/beacon_committee_selections", method: "POST"},
   submitSyncCommitteeSelections: {url: "/eth/v1/validator/sync_committee_selections", method: "POST"},
-  getLiveness: {url: "/eth/v1/validator/liveness", method: "GET"},
+  getLiveness: {url: "/eth/v1/validator/liveness/{epoch}", method: "POST"},
   registerValidator: {url: "/eth/v1/validator/register_validator", method: "POST"},
 };
 
@@ -441,7 +440,7 @@ export type ReqTypes = {
   prepareBeaconProposer: {body: unknown};
   submitBeaconCommitteeSelections: {body: unknown};
   submitSyncCommitteeSelections: {body: unknown};
-  getLiveness: {query: {indices: ValidatorIndex[]; epoch: Epoch}};
+  getLiveness: {params: {epoch: Epoch}; body: U64Str[]};
   registerValidator: {body: unknown};
 };
 
@@ -578,9 +577,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: () => [[]],
     },
     getLiveness: {
-      writeReq: (indices, epoch) => ({query: {indices, epoch}}),
-      parseReq: ({query}) => [query.indices, query.epoch],
-      schema: {query: {indices: Schema.UintArray, epoch: Schema.Uint}},
+      writeReq: (epoch, indexes) => ({params: {epoch}, body: indexes.map((i) => toU64Str(i))}),
+      parseReq: ({params, body}) => [params.epoch, body.map((i) => fromU64Str(i))],
+      schema: {
+        params: {epoch: Schema.UintRequired},
+        body: Schema.StringArray,
+      },
     },
     registerValidator: reqOnlyBody(ArrayOf(ssz.bellatrix.SignedValidatorRegistrationV1), Schema.ObjectArray),
   };

@@ -16,7 +16,7 @@ export async function getAndInitDevValidators({
   useRestApi,
   testLoggerOpts,
   externalSignerUrl,
-  doppelgangerProtectionEnabled = false,
+  doppelgangerProtection = false,
   valProposerConfig,
 }: {
   node: BeaconNode;
@@ -26,7 +26,7 @@ export async function getAndInitDevValidators({
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
   externalSignerUrl?: string;
-  doppelgangerProtectionEnabled?: boolean;
+  doppelgangerProtection?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
@@ -70,7 +70,7 @@ export async function getAndInitDevValidators({
         processShutdownCallback: () => {},
         abortController,
         signers,
-        doppelgangerProtectionEnabled,
+        doppelgangerProtection,
         valProposerConfig,
       })
     );

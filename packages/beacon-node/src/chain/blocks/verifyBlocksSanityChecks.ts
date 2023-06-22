@@ -1,7 +1,7 @@
 import {computeStartSlotAtEpoch, DataAvailableStatus} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {Slot, deneb, WithOptionalBytes} from "@lodestar/types";
+import {Slot, deneb} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -22,10 +22,10 @@ import {BlockInput, BlockInputType, ImportBlockOpts} from "./types.js";
  */
 export function verifyBlocksSanityChecks(
   chain: {forkChoice: IForkChoice; clock: IClock; config: ChainForkConfig},
-  blocks: WithOptionalBytes<BlockInput>[],
+  blocks: BlockInput[],
   opts: ImportBlockOpts
 ): {
-  relevantBlocks: WithOptionalBytes<BlockInput>[];
+  relevantBlocks: BlockInput[];
   dataAvailabilityStatuses: DataAvailableStatus[];
   parentSlots: Slot[];
   parentBlock: ProtoBlock | null;
@@ -34,7 +34,7 @@ export function verifyBlocksSanityChecks(
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
-  const relevantBlocks: WithOptionalBytes<BlockInput>[] = [];
+  const relevantBlocks: BlockInput[] = [];
   const dataAvailabilityStatuses: DataAvailableStatus[] = [];
   const parentSlots: Slot[] = [];
   let parentBlock: ProtoBlock | null = null;

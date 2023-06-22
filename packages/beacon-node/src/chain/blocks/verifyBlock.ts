@@ -4,7 +4,7 @@ import {
   isStateValidatorsNodesPopulated,
   DataAvailableStatus,
 } from "@lodestar/state-transition";
-import {WithOptionalBytes, bellatrix} from "@lodestar/types";
+import {bellatrix} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {ProtoBlock} from "@lodestar/fork-choice";
@@ -37,7 +37,7 @@ import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
-  blocksInput: WithOptionalBytes<BlockInput>[],
+  blocksInput: BlockInput[],
   dataAvailabilityStatuses: DataAvailableStatus[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{

@@ -42,12 +42,12 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
   options: {
     exitEpoch: {
       description:
-        "The epoch upon which to submit the voluntary exit.  If no value is provided, then we default to the currentEpoch.",
+        "The epoch upon which to submit the voluntary exit.  If no value is provided, then we default to the current epoch.",
       type: "number",
     },
 
     pubkeys: {
-      description: "Pubkeys to exit, must be available as local signers",
+      description: "Public keys to exit, must be available as local signers",
       type: "array",
       string: true, // Ensures the pubkey string is not automatically converted to numbers
       coerce: (pubkeys: string[]): string[] =>

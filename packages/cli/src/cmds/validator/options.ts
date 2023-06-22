@@ -32,15 +32,15 @@ export type IValidatorCliArgs = AccountValidatorArgs &
   LogArgs & {
     validatorsDbDir?: string;
     beaconNodes: string[];
-    force: boolean;
-    graffiti: string;
+    force?: boolean;
+    graffiti?: string;
     afterBlockDelaySlotFraction?: number;
     scAfterBlockDelaySlotFraction?: number;
     disableAttestationGrouping?: boolean;
     suggestedFeeRecipient?: string;
     proposerSettingsFile?: string;
     strictFeeRecipientCheck?: boolean;
-    doppelgangerProtectionEnabled?: boolean;
+    doppelgangerProtection?: boolean;
     defaultGasLimit?: number;
 
     builder?: boolean;
@@ -83,31 +83,31 @@ export type KeymanagerArgs = {
 export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
   keymanager: {
     type: "boolean",
-    description: "Enable keymanager API server",
+    description: "Enable key manager API server",
     default: false,
     group: "keymanager",
   },
   "keymanager.authEnabled": {
     type: "boolean",
-    description: "Enable token bearer authentication for keymanager API server",
+    description: "Enable token bearer authentication for key manager API server",
     default: true,
     group: "keymanager",
   },
   "keymanager.port": {
     type: "number",
-    description: "Set port for keymanager API",
+    description: "Set port for key manager API",
     defaultDescription: String(keymanagerRestApiServerOptsDefault.port),
     group: "keymanager",
   },
   "keymanager.address": {
     type: "string",
-    description: "Set host for keymanager API",
+    description: "Set host for key manager API",
     defaultDescription: keymanagerRestApiServerOptsDefault.address,
     group: "keymanager",
   },
   "keymanager.cors": {
     type: "string",
-    description: "Configures the Access-Control-Allow-Origin CORS header for keymanager API",
+    description: "Configures the Access-Control-Allow-Origin CORS header for key manager API",
     defaultDescription: keymanagerRestApiServerOptsDefault.cors,
     group: "keymanager",
   },
@@ -207,24 +207,24 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   proposerSettingsFile: {
     description:
-      "A yaml file to specify detailed default and per validator pubkey customized proposer configs. PS: This feature and its format is in alpha and subject to change",
+      "A yaml file to specify detailed default and per validator public key customized proposer configs. PS: This feature and its format is in alpha and subject to change",
     type: "string",
   },
 
   suggestedFeeRecipient: {
     description:
-      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or keymanager API. Only used post merge.",
+      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or key manager API. Only used post merge.",
     defaultDescription: defaultOptions.suggestedFeeRecipient,
     type: "string",
   },
 
   strictFeeRecipientCheck: {
-    description: "Enable strict checking of the validator's feeRecipient with the one returned by engine",
+    description: "Enable strict checking of the validator's `feeRecipient` with the one returned by engine",
     type: "boolean",
   },
 
   defaultGasLimit: {
-    description: "Suggested gasLimit to the engine/builder for building execution payloads. Only used post merge.",
+    description: "Suggested gas limit to the engine/builder for building execution payloads. Only used post merge.",
     defaultDescription: `${defaultOptions.defaultGasLimit}`,
     type: "number",
   },
@@ -237,26 +237,27 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "builder.selection": {
     type: "string",
-    description: "Default builder block selection strategy: maxprofit or builderalways",
-    defaultDescription: `${defaultOptions.builderSelection}`,
+    description: "Default builder block selection strategy: `maxprofit`, `builderalways`, or `builderonly`",
+    defaultDescription: `\`${defaultOptions.builderSelection}\``,
     group: "builder",
   },
 
   importKeystores: {
     alias: ["keystore"], // Backwards compatibility with old `validator import` cmdx
-    description: "Path(s) to a directory or single filepath to validator keystores, i.e. Launchpad validators",
+    description: "Path(s) to a directory or single file path to validator keystores, i.e. Launchpad validators",
     defaultDescription: "./keystores/*.json",
     type: "array",
   },
 
   importKeystoresPassword: {
     alias: ["passphraseFile"], // Backwards compatibility with old `validator import` cmd
-    description: "Path to a file with password to decrypt all keystores from importKeystores option",
-    defaultDescription: "./password.txt",
+    description: "Path to a file with password to decrypt all keystores from `importKeystores` option",
+    defaultDescription: "`./password.txt`",
     type: "string",
   },
 
-  doppelgangerProtectionEnabled: {
+  doppelgangerProtection: {
+    alias: ["doppelgangerProtectionEnabled"],
     description: "Enables Doppelganger protection",
     default: false,
     type: "boolean",
@@ -288,7 +289,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   "externalSigner.fetch": {
     conflicts: ["externalSigner.pubkeys"],
-    description: "Fetch then list of pubkeys to validate from an external signer",
+    description: "Fetch then list of public keys to validate from an external signer",
     type: "boolean",
     group: "externalSignerUrl",
   },

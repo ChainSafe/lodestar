@@ -34,7 +34,7 @@ export type ValidatorOptions = {
   afterBlockDelaySlotFraction?: number;
   scAfterBlockDelaySlotFraction?: number;
   disableAttestationGrouping?: boolean;
-  doppelgangerProtectionEnabled?: boolean;
+  doppelgangerProtection?: boolean;
   closed?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
   distributed?: boolean;
@@ -93,7 +93,7 @@ export class Validator {
     }
 
     const indicesService = new IndicesService(logger, api, metrics);
-    const doppelgangerService = opts.doppelgangerProtectionEnabled
+    const doppelgangerService = opts.doppelgangerProtection
       ? new DoppelgangerService(logger, clock, api, indicesService, opts.processShutdownCallback, metrics)
       : null;
 

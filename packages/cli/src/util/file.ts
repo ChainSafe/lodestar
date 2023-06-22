@@ -56,7 +56,7 @@ export function stringify(obj: unknown, fileFormat: FileFormat): string {
       contents = dump(obj, {schema: yamlSchema});
       break;
     default:
-      contents = obj as unknown as string;
+      contents = obj as string;
   }
   return contents;
 }

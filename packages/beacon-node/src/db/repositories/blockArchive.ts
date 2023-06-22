@@ -31,7 +31,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
   // Overrides for multi-fork
 
   encodeValue(value: allForks.SignedBeaconBlock): Uint8Array {
-    return this.config.getForkTypes(value.message.slot).SignedBeaconBlock.serialize(value) as Uint8Array;
+    return this.config.getForkTypes(value.message.slot).SignedBeaconBlock.serialize(value);
   }
 
   decodeValue(data: Uint8Array): allForks.SignedBeaconBlock {

@@ -50,7 +50,8 @@ const abortController = new AbortController();
 // Set up metrics, nodejs and discv5-specific
 const metricsRegister = workerData.metricsEnabled ? new RegistryMetricCreator() : null;
 if (metricsRegister) {
-  collectNodeJSMetrics(metricsRegister, "network_worker_");
+  const closeMetrics = collectNodeJSMetrics(metricsRegister, "network_worker_");
+  abortController.signal.addEventListener("abort", closeMetrics, {once: true});
 }
 
 // Main event bus shared across the stack

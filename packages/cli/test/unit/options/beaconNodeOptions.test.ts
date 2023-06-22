@@ -32,6 +32,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.maxSkipSlots": 100,
       "safe-slots-to-import-optimistically": 256,
       "chain.archiveStateEpochFrequency": 1024,
+      "chain.trustedSetup": "",
       emitPayloadAttributes: false,
 
       eth1: true,
@@ -125,6 +126,7 @@ describe("options / beaconNodeOptions", () => {
         maxSkipSlots: 100,
         archiveStateEpochFrequency: 1024,
         emitPayloadAttributes: false,
+        trustedSetup: "",
       },
       eth1: {
         enabled: true,

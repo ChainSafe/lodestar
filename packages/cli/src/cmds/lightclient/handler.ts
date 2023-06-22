@@ -7,6 +7,7 @@ import {getNodeLogger} from "@lodestar/logger/node";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {getGlobalPaths} from "../../paths/global.js";
 import {parseLoggerArgs} from "../../util/logger.js";
+import {YargsError} from "../../util/errors.js";
 import {GlobalArgs} from "../../options/index.js";
 import {ILightClientArgs} from "./options.js";
 
@@ -17,7 +18,11 @@ export async function lightclientHandler(args: ILightClientArgs & GlobalArgs): P
   const logger = getNodeLogger(
     parseLoggerArgs(args, {defaultLogFilepath: path.join(globalPaths.dataDir, "lightclient.log")}, config)
   );
+
   const {beaconApiUrl, checkpointRoot} = args;
+  if (!beaconApiUrl) throw new YargsError("must provide beaconApiUrl arg");
+  if (!checkpointRoot) throw new YargsError("must provide checkpointRoot arg");
+
   const api = getClient({baseUrl: beaconApiUrl}, {config});
   const res = await api.beacon.getGenesis();
   ApiError.assert(res, "Can not fetch genesis data");

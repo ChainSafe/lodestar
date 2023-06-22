@@ -127,7 +127,7 @@ function verifyBlocksSanityChecks(
 ): {relevantBlocks: allForks.SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
   const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksImportSanityChecks(
     modules,
-    blocks.map((block) => getBlockInput.preDeneb(config, block, BlockSource.byRange)),
+    blocks.map((block) => getBlockInput.preDeneb(config, block, BlockSource.byRange, null)),
     opts
   );
   return {
@@ -178,7 +178,7 @@ function getForkChoice(knownBlocks: allForks.SignedBeaconBlock[], finalizedEpoch
 function toProtoBlock(block: allForks.SignedBeaconBlock): ProtoBlock {
   return {
     slot: block.message.slot,
-    blockRoot: toHex(ssz.phase0.BeaconBlock.hashTreeRoot((block as allForks.SignedBeaconBlock).message)),
+    blockRoot: toHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message)),
     parentRoot: toHex(block.message.parentRoot),
     stateRoot: toHex(block.message.stateRoot),
   } as Partial<ProtoBlock> as ProtoBlock;
