@@ -24,14 +24,12 @@
           '-Werror',
           '-Wall',
           '-Wextra',
-          '-Wpedantic',
       ],
       'cflags_cc': [
           '-fexceptions',
           '-Werror',
           '-Wall',
           '-Wextra',
-          '-Wpedantic',
       ],
       'conditions': [
         [ 'OS=="win"', {

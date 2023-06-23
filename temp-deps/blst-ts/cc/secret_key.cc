@@ -121,7 +121,7 @@ SecretKey::SecretKey(const Napi::CallbackInfo &info)
             .ThrowAsJavaScriptException();
         return;
     }
-};
+}
 
 Napi::Value SecretKey::Serialize(const Napi::CallbackInfo &info) {
     Napi::Env env = info.Env();
