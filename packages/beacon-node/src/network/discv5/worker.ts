@@ -26,9 +26,10 @@ const logger = getNodeLogger(workerData.loggerOpts);
 // Set up metrics, nodejs and discv5-specific
 let metricsRegistry: RegistryMetricCreator | undefined;
 let enrRelevanceMetric: Gauge<"status"> | undefined;
+let closeMetrics: () => void | undefined;
 if (workerData.metrics) {
   metricsRegistry = new RegistryMetricCreator();
-  collectNodeJSMetrics(metricsRegistry, "discv5_worker_");
+  closeMetrics = collectNodeJSMetrics(metricsRegistry, "discv5_worker_");
 
   // add enr relevance metric
   enrRelevanceMetric = metricsRegistry.gauge<"status">({
@@ -95,6 +96,7 @@ const module: Discv5WorkerApi = {
     return (await metricsRegistry?.metrics()) ?? "";
   },
   async close() {
+    closeMetrics?.();
     discv5.removeListener("discovered", onDiscovered);
     subject.complete();
     await discv5.stop();

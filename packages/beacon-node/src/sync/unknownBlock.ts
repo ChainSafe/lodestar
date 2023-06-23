@@ -30,6 +30,7 @@ export class UnknownBlockSync {
   private readonly knownBadBlocks = new Set<RootHex>();
   private readonly proposerBoostSecWindow: number;
   private readonly maxPendingBlocks;
+  private subscribedToNetworkEvents = false;
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -37,18 +38,9 @@ export class UnknownBlockSync {
     private readonly chain: IBeaconChain,
     private readonly logger: Logger,
     private readonly metrics: Metrics | null,
-    opts?: SyncOptions
+    private readonly opts?: SyncOptions
   ) {
-    if (!opts?.disableUnknownBlockSync) {
-      this.logger.debug("UnknownBlockSync enabled.");
-      this.network.events.on(NetworkEvent.unknownBlock, this.onUnknownBlock);
-      this.network.events.on(NetworkEvent.unknownBlockParent, this.onUnknownParent);
-      this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
-    } else {
-      this.logger.debug("UnknownBlockSync disabled.");
-    }
     this.maxPendingBlocks = opts?.maxPendingBlocks ?? MAX_PENDING_BLOCKS;
-
     this.proposerBoostSecWindow = this.config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT;
 
     if (metrics) {
@@ -61,10 +53,34 @@ export class UnknownBlockSync {
     }
   }
 
-  close(): void {
+  subscribeToNetwork(): void {
+    if (!this.opts?.disableUnknownBlockSync) {
+      // cannot chain to the above if or the log will be incorrect
+      if (!this.subscribedToNetworkEvents) {
+        this.logger.debug("UnknownBlockSync enabled.");
+        this.network.events.on(NetworkEvent.unknownBlock, this.onUnknownBlock);
+        this.network.events.on(NetworkEvent.unknownBlockParent, this.onUnknownParent);
+        this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
+        this.subscribedToNetworkEvents = true;
+      }
+    } else {
+      this.logger.debug("UnknownBlockSync disabled.");
+    }
+  }
+
+  unsubscribeFromNetwork(): void {
     this.network.events.off(NetworkEvent.unknownBlock, this.onUnknownBlock);
     this.network.events.off(NetworkEvent.unknownBlockParent, this.onUnknownParent);
     this.network.events.off(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
+  }
+
+  close(): void {
+    this.unsubscribeFromNetwork();
+    // add more in the future if needed
+  }
+
+  isSubscribedToNetwork(): boolean {
+    return this.subscribedToNetworkEvents;
   }
 
   /**

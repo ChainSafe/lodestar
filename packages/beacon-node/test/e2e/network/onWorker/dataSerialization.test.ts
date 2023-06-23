@@ -84,6 +84,7 @@ describe("data serialization through worker boundary", function () {
         type: BlockInputType.preDeneb,
         block: ssz.capella.SignedBeaconBlock.defaultValue(),
         source: BlockSource.gossip,
+        blockBytes: ZERO_HASH,
       },
       peer,
     },

@@ -9,6 +9,7 @@ import {shell} from "../sim/shell.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable no-console */
+let txRpcId = 1;
 
 export enum ELStartMode {
   PreMerge = "pre-merge",
@@ -219,8 +220,23 @@ export async function sendTransaction(url: string, transaction: Record<string, u
   await shell(
     `curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_sendTransaction","params":[${JSON.stringify(
       transaction
-    )}],"id":67}' ${url}`
+    )}],"id":${txRpcId++}}' ${url}`
   );
+}
+
+/**
+ * Send a big raw transaction by writing to the json file first and then curl post the file
+ */
+export async function sendRawTransactionBig(
+  url: string,
+  transactionRawHex: string,
+  dataFilePath: string
+): Promise<void> {
+  fs.writeFileSync(
+    dataFilePath,
+    `{"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["${transactionRawHex}"],"id":${txRpcId++}}`
+  );
+  await shell(`curl -d @${dataFilePath} -H "Content-Type: application/json"  -X POST ${url}; rm ${dataFilePath}`);
 }
 
 export async function getBalance(url: string, account: string): Promise<string> {

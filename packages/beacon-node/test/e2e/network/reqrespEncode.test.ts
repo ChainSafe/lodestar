@@ -96,8 +96,9 @@ describe("reqresp encoder", () => {
     }
 
     const chunks = await all(stream.source);
+    const join = (c: string[]): string => c.join("").replace(/0x/g, "");
     const chunksHex = chunks.map((chunk) => toHex(chunk.slice(0, chunk.byteLength)));
-    expect(chunksHex).deep.equals(expectedChunks, `not expected response to ${protocol}`);
+    expect(join(chunksHex)).deep.equals(join(expectedChunks), `not expected response to ${protocol}`);
   }
 
   it("assert correct handler switch between metadata v2 and v1", async () => {

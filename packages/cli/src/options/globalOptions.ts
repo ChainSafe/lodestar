@@ -6,7 +6,7 @@ import {paramsOptions, IParamsArgs} from "./paramsOptions.js";
 type GlobalSingleArgs = {
   dataDir?: string;
   network?: NetworkName;
-  paramsFile: string;
+  paramsFile?: string;
   preset: string;
   presetFile?: string;
 };

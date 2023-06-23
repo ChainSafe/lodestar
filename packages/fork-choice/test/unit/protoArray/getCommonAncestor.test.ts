@@ -27,7 +27,6 @@ describe("getCommonAncestor", () => {
   const fc = ProtoArray.initialize(
     {
       slot: 0,
-      proposerIndex: 0,
       stateRoot: "-",
       parentRoot: "-",
       blockRoot: "0",
@@ -50,7 +49,6 @@ describe("getCommonAncestor", () => {
     fc.onBlock(
       {
         slot: block.slot,
-        proposerIndex: 0,
         blockRoot: block.root,
         parentRoot: block.parent,
         stateRoot: "-",

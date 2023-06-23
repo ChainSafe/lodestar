@@ -15,7 +15,7 @@ export const list: CliCommand<IValidatorCliArgs, GlobalArgs, ReturnType> = {
   examples: [
     {
       command: "validator list",
-      description: "List all validator pubkeys previously imported",
+      description: "List all validator public keys previously imported",
     },
   ],
 

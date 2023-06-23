@@ -67,6 +67,8 @@ export type SignerRemote = {
 export enum BuilderSelection {
   BuilderAlways = "builderalways",
   MaxProfit = "maxprofit",
+  /** Only activate builder flow for DVT block proposal protocols */
+  BuilderOnly = "builderonly",
 }
 
 type DefaultProposerConfig = {

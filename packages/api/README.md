@@ -25,7 +25,7 @@ api.beacon
     "0x933ad9491b62059dd065b560d256d8957a8c402cc6e8d8ee7290ae11e8f7329267a8811c397529dac52ae1342ba58c95"
   )
   .then((res) => {
-    if(res.ok) {
+    if (res.ok) {
       console.log("Your balance is:", res.response.data.balance, res.ok, res.status);
     } else {
       console.error(res.status, res.error.code, res.error.message);

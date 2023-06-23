@@ -10,12 +10,12 @@ Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install).
     It is important to make sure the NodeJS version is not changed after reboot by setting a default `nvm alias default <version> && nvm use default`.
 
 !!! note
-    Node Version Manager (NVM) will only install NodeJS for use with the active user. If you intend on setting up Lodestar to run under another user, we recommend using [Nodesource's source for NodeJS](https://github.com/nodesource/distributions/blob/master/README.md#installation-instructions) so you can install NodeJS globally.
+    Node Version Manager (NVM) will only install NodeJS for use with the active user. If you intend on setting up Lodestar to run under another user, we recommend using [NodeSource's source for NodeJS](https://github.com/nodesource/distributions/blob/master/README.md#installation-instructions) so you can install NodeJS globally.
 <!-- prettier-ignore-end -->
 
 ## Clone repository
 
-Clone the repo locally and build from the stable release branch.
+Clone the repository locally and build from the stable release branch.
 
 ```bash
 git clone -b stable https://github.com/chainsafe/lodestar.git

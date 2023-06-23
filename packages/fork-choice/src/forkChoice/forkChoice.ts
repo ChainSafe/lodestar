@@ -445,7 +445,6 @@ export class ForkChoice implements IForkChoice {
     // it can still be identified as the head even if it doesn't have any votes.
     const protoBlock: ProtoBlock = {
       slot: slot,
-      proposerIndex: block.proposerIndex,
       blockRoot: blockRootHex,
       parentRoot: parentRootHex,
       targetRoot: toHexString(targetRoot),

@@ -1,5 +1,5 @@
 import {Epoch, ValidatorIndex} from "@lodestar/types";
-import {Api, ApiError} from "@lodestar/api";
+import {Api, ApiError, routes} from "@lodestar/api";
 import {Logger, sleep} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ProcessShutdownCallback, PubkeyHex} from "../types.js";
@@ -12,10 +12,10 @@ import {IndicesService} from "./indices.js";
 const DEFAULT_REMAINING_DETECTION_EPOCHS = 1;
 const REMAINING_EPOCHS_IF_DOPPLEGANGER = Infinity;
 
-export type LivenessResponseData = {
-  index: ValidatorIndex;
+/** Liveness responses for a given epoch */
+type EpochLivenessData = {
   epoch: Epoch;
-  isLive: boolean;
+  responses: routes.validator.LivenessResponseData[];
 };
 
 export type DoppelgangerState = {
@@ -83,7 +83,7 @@ export class DoppelgangerService {
     return getStatus(this.doppelgangerStateByPubkey.get(pubKeyHex)) === DoppelgangerStatus.VerifiedSafe;
   }
 
-  private pollLiveness = async (currentEpoch: Epoch): Promise<void> => {
+  private pollLiveness = async (currentEpoch: Epoch, signal: AbortSignal): Promise<void> => {
     if (currentEpoch < 0) {
       return;
     }
@@ -91,7 +91,7 @@ export class DoppelgangerService {
     const endSlotOfCurrentEpoch = computeStartSlotAtEpoch(currentEpoch + 1) - 1;
     // Run the doppelganger protection check 75% through the last slot of this epoch. This
     // *should* mean that the BN has seen the blocks and attestations for the epoch
-    await sleep(this.clock.msToSlot(endSlotOfCurrentEpoch + 3 / 4));
+    await sleep(this.clock.msToSlot(endSlotOfCurrentEpoch + 3 / 4), signal);
 
     // Collect indices that still need doppelganger checks
     const pubkeysToCheckWithoutIndex: PubkeyHex[] = [];
@@ -127,34 +127,34 @@ export class DoppelgangerService {
     // in the remaining 25% of the last slot of the previous epoch
     const indicesToCheck = Array.from(indicesToCheckMap.keys());
     const [previous, current] = await Promise.all([
-      this.getLiveness(indicesToCheck, currentEpoch - 1),
-      this.getLiveness(indicesToCheck, currentEpoch),
+      this.getLiveness(currentEpoch - 1, indicesToCheck),
+      this.getLiveness(currentEpoch, indicesToCheck),
     ]);
 
     this.detectDoppelganger(currentEpoch, previous, current, indicesToCheckMap);
   };
 
-  private async getLiveness(indicesToCheck: ValidatorIndex[], epoch: Epoch): Promise<LivenessResponseData[]> {
+  private async getLiveness(epoch: Epoch, indicesToCheck: ValidatorIndex[]): Promise<EpochLivenessData> {
     if (epoch < 0) {
-      return [];
+      return {epoch, responses: []};
     }
 
-    const res = await this.api.validator.getLiveness(indicesToCheck, epoch);
+    const res = await this.api.validator.getLiveness(epoch, indicesToCheck);
     if (!res.ok) {
       this.logger.error(
         `Error getting liveness data for epoch ${epoch}`,
         {},
         new ApiError(res.error.message ?? "", res.error.code, "validator.getLiveness")
       );
-      return [];
+      return {epoch, responses: []};
     }
-    return res.response.data;
+    return {epoch, responses: res.response.data};
   }
 
   private detectDoppelganger(
     currentEpoch: Epoch,
-    previousEpochLiveness: LivenessResponseData[],
-    currentEpochLiveness: LivenessResponseData[],
+    previousEpochLiveness: EpochLivenessData,
+    currentEpochLiveness: EpochLivenessData,
     indicesToCheckMap: Map<ValidatorIndex, PubkeyHex>
   ): void {
     const previousEpoch = currentEpoch - 1;
@@ -165,7 +165,7 @@ export class DoppelgangerService {
     // A following loop will update the states of each validator, depending on whether or not
     // any violators were detected here.
 
-    for (const responses of [previousEpochLiveness, currentEpochLiveness]) {
+    for (const {epoch, responses} of [previousEpochLiveness, currentEpochLiveness]) {
       for (const response of responses) {
         if (!response.isLive) {
           continue;
@@ -177,7 +177,7 @@ export class DoppelgangerService {
           continue;
         }
 
-        if (state.nextEpochToCheck <= response.epoch) {
+        if (state.nextEpochToCheck <= epoch) {
           // Doppleganger detected
           violators.push(response.index);
         }
@@ -209,21 +209,16 @@ export class DoppelgangerService {
       //
       // Do not bother iterating through the current epoch responses since they've already been
       // checked for violators and they don't result in updating the state.
-      for (const response of previousEpochLiveness) {
-        if (response.epoch !== previousEpoch) {
-          // Server sending bad data
-          throw Error(`Inconsistent livenessResponseData epoch ${response.epoch} != ${previousEpoch}`);
-        }
-
+      for (const response of previousEpochLiveness.responses) {
         const state = this.doppelgangerStateByPubkey.get(indicesToCheckMap.get(response.index) ?? "");
         if (!state) {
           this.logger.error(`Inconsistent livenessResponseData unknown index ${response.index}`);
           continue;
         }
 
-        if (!response.isLive && state.nextEpochToCheck <= response.epoch) {
+        if (!response.isLive && state.nextEpochToCheck <= previousEpoch) {
           state.remainingEpochs--;
-          state.nextEpochToCheck = response.epoch + 1;
+          state.nextEpochToCheck = currentEpoch;
           this.metrics?.doppelganger.epochsChecked.inc(1);
 
           const {remainingEpochs} = state;

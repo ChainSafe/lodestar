@@ -94,6 +94,7 @@ Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Githu
 - `git checkout stable`
 - `yarn release:tag-stable 1.1.0`
   - Must be run locally from a write-access account capable of triggering CI.
+
 #### Manual steps (for example version `v1.1.0`):
 
 - Check out the new stable
@@ -112,6 +113,7 @@ Tagging a stable release will trigger CI to publish to NPM, dockerhub, and Githu
 If a stable version requires an immediate hot-fix before the next release, a hot-fix release is started.
 
 A similar process for a stable release is used, with the three differences.
+
 - The candidate commit must be chosen from the `stable` branch instead of the `unstable` branch.
 - Depending on the severity of the bug being fixed, the testing window may be decreased.
 - All hotfixes are committed with an `unstable` first strategy rather than directly on the RC branch itself. Hotfixes are always merged to `unstable` first, then cherry-picked into hotfix release candidates.
@@ -142,7 +144,7 @@ A similar process for a stable release is used, with the three differences.
 - Commit changes
   - `git commit -am "v1.1.1"`
   - `git push origin rc/v1.1.1`
-Open draft PR from `rc/v1.1.1` to `stable` with the title `v1.1.1 release`.
+    Open draft PR from `rc/v1.1.1` to `stable` with the title `v1.1.1 release`.
 
 ### 2. Tag release candidate
 
@@ -239,7 +241,9 @@ The release should be announced on the following social channels:
 - Blog post (if necessary): To outline specific changes that require additional context for users
 
 # Release Manager Checklist
+
 This section is to guide the Release Manager tasked with the next version release to ensure all items have been completed.
+
 - Start thread on communication channels for new release
 - Confirm consensus on `unstable` release candidate commit
 - Complete Step 1: Create release candidate

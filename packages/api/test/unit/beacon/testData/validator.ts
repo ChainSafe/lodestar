@@ -100,7 +100,7 @@ export const testData: GenericServerTestCases<Api> = {
     res: {data: [{validatorIndex: 1, slot: 2, subcommitteeIndex: 3, selectionProof}]},
   },
   getLiveness: {
-    args: [[0], 0],
+    args: [0, [0]],
     res: {data: []},
   },
   registerValidator: {
