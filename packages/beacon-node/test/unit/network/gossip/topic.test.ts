@@ -21,12 +21,6 @@ describe("network / gossip / topic", function () {
         topicStr: "/eth2/46acb19a/blob_sidecar_1/ssz_snappy",
       },
     ],
-    [GossipType.beacon_block_and_blobs_sidecar]: [
-      {
-        topic: {type: GossipType.beacon_block_and_blobs_sidecar, fork: ForkName.deneb, encoding},
-        topicStr: "/eth2/46acb19a/beacon_block_and_blobs_sidecar/ssz_snappy",
-      },
-    ],
     [GossipType.beacon_aggregate_and_proof]: [
       {
         topic: {type: GossipType.beacon_aggregate_and_proof, fork: ForkName.phase0, encoding},

@@ -128,7 +128,7 @@ export type ImportBlockOpts = {
    */
   validSignatures?: boolean;
   /** Set to true if already run `validateBlobsSidecar()` sucessfully on the blobs */
-  validBlobsSidecar?: boolean;
+  validBlobSidecars?: boolean;
   /** Seen timestamp seconds */
   seenTimestampSec?: number;
   /** Set to true if persist block right at verification time */

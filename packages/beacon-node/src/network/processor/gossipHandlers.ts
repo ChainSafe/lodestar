@@ -35,7 +35,6 @@ import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {PeerAction} from "../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
-import {validateGossipBlobsSidecar} from "../../chain/validation/blobsSidecar.js";
 import {BlockInput, BlockSource, getBlockInput} from "../../chain/blocks/types.js";
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetworkCore} from "../core/index.js";
@@ -130,8 +129,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       .processBlock(blockInput, {
         // proposer signature already checked in validateBeaconBlock()
         validProposerSignature: true,
-        // blobsSidecar already checked in validateGossipBlobsSidecar()
-        validBlobsSidecar: true,
+        // blobSidecars already checked in validateGossipBlobSidecars()
+        validBlobSidecars: true,
         // It's critical to keep a good number of mesh peers.
         // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
         // Gossip Job Wait Time depends on the BLS Job Wait Time
@@ -184,22 +183,6 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
     [GossipType.blob_sidecar]: async (_data, _topic, _peerIdStr, _seenTimestampSec) => {
       // TODO DENEB: impl to be added on migration of blockinput
-    },
-
-    [GossipType.beacon_block_and_blobs_sidecar]: async ({serializedData}, topic, peerIdStr, seenTimestampSec) => {
-      const blockAndBlocks = sszDeserialize(topic, serializedData);
-      const {beaconBlock, blobsSidecar} = blockAndBlocks;
-      // TODO Deneb: Should throw for pre fork blocks?
-      if (config.getForkSeq(beaconBlock.message.slot) < ForkSeq.deneb) {
-        throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
-      }
-
-      // Validate block + blob. Then forward, then handle both
-      // TODO DENEB: replace null with proper binary data for block and blobs separately
-      const blockInput = getBlockInput.postDeneb(config, beaconBlock, BlockSource.gossip, blobsSidecar, null);
-      await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
-      validateGossipBlobsSidecar(beaconBlock, blobsSidecar);
-      handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_aggregate_and_proof]: async ({serializedData}, topic, _peer, seenTimestampSec) => {
