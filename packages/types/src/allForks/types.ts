@@ -63,7 +63,8 @@ export type SignedBlindedBeaconBlock =
 // Full or blinded types
 export type FullOrBlindedExecutionPayload =
   | bellatrix.FullOrBlindedExecutionPayload
-  | capella.FullOrBlindedExecutionPayload;
+  | capella.FullOrBlindedExecutionPayload
+  | deneb.FullOrBlindedExecutionPayload;
 export type FullOrBlindedBeaconBlockBody = BeaconBlockBody | BlindedBeaconBlockBody;
 export type FullOrBlindedBeaconBlock = BeaconBlock | BlindedBeaconBlock;
 export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | SignedBlindedBeaconBlock;
