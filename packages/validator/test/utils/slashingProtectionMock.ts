@@ -10,6 +10,9 @@ export class SlashingProtectionMock implements ISlashingProtection {
   async checkAndInsertAttestation(): Promise<void> {
     //
   }
+  async hasAttestedInEpoch(): Promise<boolean> {
+    return false;
+  }
   async importInterchange(): Promise<void> {
     //
   }

@@ -149,7 +149,7 @@ export class KeymanagerApi implements Api {
 
         decryptKeystores.queue(
           {keystoreStr, password},
-          (secretKeyBytes: Uint8Array) => {
+          async (secretKeyBytes: Uint8Array) => {
             const secretKey = bls.SecretKey.fromBytes(secretKeyBytes);
 
             // Persist the key to disk for restarts, before adding to in-memory store
@@ -165,7 +165,7 @@ export class KeymanagerApi implements Api {
             });
 
             // Add to in-memory store to start validating immediately
-            this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
+            await this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
             statuses[i] = {status: ImportStatus.imported};
           },
@@ -292,7 +292,7 @@ export class KeymanagerApi implements Api {
   async importRemoteKeys(
     remoteSigners: Pick<SignerDefinition, "pubkey" | "url">[]
   ): ReturnType<Api["importRemoteKeys"]> {
-    const results = remoteSigners.map(({pubkey, url}): ResponseStatus<ImportRemoteKeyStatus> => {
+    const importPromises = remoteSigners.map(async ({pubkey, url}): Promise<ResponseStatus<ImportRemoteKeyStatus>> => {
       try {
         if (!isValidatePubkeyHex(pubkey)) {
           throw Error(`Invalid pubkey ${pubkey}`);
@@ -308,7 +308,7 @@ export class KeymanagerApi implements Api {
 
         // Else try to add it
 
-        this.validator.validatorStore.addSigner({type: SignerType.Remote, pubkey, url});
+        await this.validator.validatorStore.addSigner({type: SignerType.Remote, pubkey, url});
 
         this.persistedKeysBackend.writeRemoteKey({
           pubkey,
@@ -325,7 +325,7 @@ export class KeymanagerApi implements Api {
     });
 
     return {
-      data: results,
+      data: await Promise.all(importPromises),
     };
   }
 

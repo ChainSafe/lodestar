@@ -7,6 +7,7 @@ import {DoppelgangerService, DoppelgangerStatus} from "../../../src/services/dop
 import {IndicesService} from "../../../src/services/indices.js";
 import {testLogger} from "../../utils/logger.js";
 import {ClockMock} from "../../utils/clock.js";
+import {SlashingProtectionMock} from "../../utils/slashingProtectionMock.js";
 
 // At genesis start validating immediately
 
@@ -96,10 +97,20 @@ describe("doppelganger service", () => {
       const initialEpoch = 1;
       const clock = new ClockMockMsToSlot(initialEpoch);
 
-      const doppelganger = new DoppelgangerService(logger, clock, beaconApi, indicesService, noop, null);
+      const slashingProtection = new SlashingProtectionMock();
+
+      const doppelganger = new DoppelgangerService(
+        logger,
+        clock,
+        beaconApi,
+        indicesService,
+        slashingProtection,
+        noop,
+        null
+      );
 
       // Add validator to doppelganger
-      doppelganger.registerValidator(pubkeyHex);
+      await doppelganger.registerValidator(pubkeyHex);
 
       // Go step by step
       for (const [step, [isLivePrev, isLiveCurr, expectedStatus]] of testCase.entries()) {

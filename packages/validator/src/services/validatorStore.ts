@@ -282,18 +282,18 @@ export class ValidatorStore {
     return proposerConfig;
   }
 
-  addSigner(signer: Signer, valProposerConfig?: ValidatorProposerConfig): void {
+  async addSigner(signer: Signer, valProposerConfig?: ValidatorProposerConfig): Promise<void> {
     const pubkey = getSignerPubkeyHex(signer);
     const proposerConfig = (valProposerConfig?.proposerConfig ?? {})[pubkey];
 
     if (!this.validators.has(pubkey)) {
+      await this.doppelgangerService?.registerValidator(pubkey);
+
       this.pubkeysToDiscover.push(pubkey);
       this.validators.set(pubkey, {
         signer,
         ...proposerConfig,
       });
-
-      this.doppelgangerService?.registerValidator(pubkey);
     }
   }
 

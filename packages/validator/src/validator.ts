@@ -98,7 +98,15 @@ export class Validator {
 
     const indicesService = new IndicesService(logger, api, metrics);
     const doppelgangerService = opts.doppelgangerProtection
-      ? new DoppelgangerService(logger, clock, api, indicesService, opts.processShutdownCallback, metrics)
+      ? new DoppelgangerService(
+          logger,
+          clock,
+          api,
+          indicesService,
+          slashingProtection,
+          opts.processShutdownCallback,
+          metrics
+        )
       : null;
 
     const validatorStore = new ValidatorStore(
