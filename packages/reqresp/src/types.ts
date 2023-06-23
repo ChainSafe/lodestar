@@ -71,6 +71,10 @@ export type ProtocolHandler = (req: ReqRespRequest, peerId: PeerId) => AsyncIter
  * ReqResp Protocol Deceleration
  */
 export interface ProtocolAttributes {
+  /**
+   * Messages are grouped into families identified by a shared libp2p protocol
+   * name prefix. In this case, we use /eth2/beacon_chain/req
+   */
   readonly protocolPrefix: string;
   /** Protocol name identifier `beacon_blocks_by_range` or `status` */
   readonly method: string;
@@ -79,12 +83,14 @@ export interface ProtocolAttributes {
   readonly encoding: Encoding;
 }
 
+/**
+ * `protocolPrefix` is constant and added runtime so not part of definition
+ */
 export interface ProtocolDescriptor extends Omit<ProtocolAttributes, "protocolPrefix"> {
   contextBytes: ContextBytesFactory;
   ignoreResponse?: boolean;
 }
 
-// `protocolPrefix` is added runtime so not part of definition
 /**
  * ReqResp Protocol definition for full duplex protocols
  */
