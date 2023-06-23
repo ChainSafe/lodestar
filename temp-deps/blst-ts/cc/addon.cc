@@ -31,7 +31,7 @@ bool is_valid_length(
     };
     error_out.append(" bytes long");
     return false;
-};
+}
 
 BlstTsAddon::BlstTsAddon(Napi::Env env, Napi::Object exports)
     : _dst{"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"},
