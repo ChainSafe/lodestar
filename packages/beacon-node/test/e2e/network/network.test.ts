@@ -131,11 +131,11 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
 
     await netA.subscribeGossipCoreTopics();
     expect(await getTopics(netA)).deep.equals([
+      "/eth2/18ae4ccb/beacon_block/ssz_snappy",
       "/eth2/18ae4ccb/beacon_aggregate_and_proof/ssz_snappy",
       "/eth2/18ae4ccb/voluntary_exit/ssz_snappy",
       "/eth2/18ae4ccb/proposer_slashing/ssz_snappy",
       "/eth2/18ae4ccb/attester_slashing/ssz_snappy",
-      "/eth2/18ae4ccb/beacon_block/ssz_snappy",
     ]);
 
     await netA.unsubscribeGossipCoreTopics();
