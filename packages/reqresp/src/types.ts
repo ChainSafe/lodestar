@@ -104,7 +104,7 @@ export interface Protocol extends ProtocolDescriptor {
 /**
  * ReqResp Protocol definition for dial only protocols
  */
-export interface DialOnlyProtocol extends Omit<Protocol, "handler" | "inboundRateLimits" | "renderRequestBody"> {
+export interface DialOnlyProtocol extends Omit<Protocol, "handler" | "inboundRateLimits"> {
   handler?: never;
   inboundRateLimits?: never;
   renderRequestBody?: never;
