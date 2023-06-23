@@ -70,13 +70,7 @@ describe("C-KZG", async () => {
     expect(signedBlobSidecars.length).to.equal(2);
 
     // Full validation
-    validateBlobSidecars(
-      slot,
-      blockRoot,
-      signedBeaconBlock.message.body.executionPayload.transactions,
-      kzgCommitments,
-      blobSidecars
-    );
+    validateBlobSidecars(slot, blockRoot, kzgCommitments, blobSidecars);
 
     signedBlobSidecars.forEach(async (signedBlobSidecar) => {
       await validateGossipBlobSidecar(chain.config, chain, signedBlobSidecar, signedBlobSidecar.message.index);
