@@ -117,7 +117,8 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
   // Collect NodeJS metrics defined in the Lodestar repo
 
   if (metrics) {
-    collectNodeJSMetrics(register);
+    const closeMetrics = collectNodeJSMetrics(register);
+    onGracefulShutdownCbs.push(() => closeMetrics());
 
     // only start server if metrics are explicitly enabled
     if (args["metrics"]) {
