@@ -52,7 +52,7 @@ export async function asyncVerifySignatureSetsMaybeBatch(
 ): Promise<boolean> {
   if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
     logger.debug(`Attempting batch verification of ${sets.length} signature sets`);
-    return blstTs.verifyMultipleAggregateSignatures(
+    return blstTs.asyncVerifyMultipleAggregateSignatures(
       sets.map((s) => ({
         publicKey: s.publicKey,
         msg: s.message,
@@ -69,7 +69,7 @@ export async function asyncVerifySignatureSetsMaybeBatch(
   // If too few signature sets verify them without batching
   logger.debug(`Attempting individual verification of ${sets.length} signature sets`);
   const verifications = await Promise.all(
-    sets.map((set) => blstTs.verify(set.message, set.publicKey, set.signature).catch(() => false))
+    sets.map((set) => blstTs.asyncVerify(set.message, set.publicKey, set.signature).catch(() => false))
   );
   return verifications.every((v) => v);
 }

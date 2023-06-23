@@ -1,267 +1,326 @@
 #ifndef BLST_TS_ADDON_H__
 #define BLST_TS_ADDON_H__
 
-#include <iostream>
-#include <sstream>
-#include <memory>
-#include <mutex>
 #include <openssl/rand.h>
+
+#include <iostream>
+#include <memory>
 #include <sstream>
-#include "napi.h"
+#include <string>
+#include <string_view>
+
 #include "blst.hpp"
+#include "napi.h"
 
 // TODO: these should come out post PR review
 using std::cout;
 using std::endl;
 
-#define BLST_TS_SECRET_KEY_LENGTH 32U
-#define BLST_TS_PUBLIC_KEY_LENGTH_COMPRESSED 48U
-#define BLST_TS_PUBLIC_KEY_LENGTH_UNCOMPRESSED 96U
-#define BLST_TS_SIGNATURE_LENGTH_COMPRESSED 96U
-#define BLST_TS_SIGNATURE_LENGTH_UNCOMPRESSED 192U
 #define BLST_TS_RANDOM_BYTES_LENGTH 8U
 
-#define BLST_TS_SECRET_KEY_LOWER_TAG 0ULL
-#define BLST_TS_SECRET_KEY_UPPER_TAG 1ULL
-#define BLST_TS_PUBLIC_KEY_LOWER_TAG 2ULL
-#define BLST_TS_PUBLIC_KEY_UPPER_TAG 3ULL
-#define BLST_TS_SIGNATURE_LOWER_TAG 4ULL
-#define BLST_TS_SIGNATURE_UPPER_TAG 5ULL
+#define BLST_TS_FUNCTION_PREAMBLE                                              \
+    Napi::Env env = info.Env();                                                \
+    Napi::EscapableHandleScope scope(env);                                     \
+    BlstTsAddon *module = env.GetInstanceData<BlstTsAddon>();
 
-#define WORKER_TRY_CATCH_BEGIN               \
-    Napi::HandleScope scope(BlstBase::_env); \
-    try                                      \
-    {
+#define BLST_TS_UNWRAP_UINT_8_ARRAY(value_name, arr_name, js_name)             \
+    if (!value_name.IsTypedArray()) {                                          \
+        Napi::TypeError::New(env, js_name " must be a BlstBuffer")             \
+            .ThrowAsJavaScriptException();                                     \
+        return env.Undefined();                                                \
+    }                                                                          \
+    Napi::TypedArray arr_name##_array = value_name.As<Napi::TypedArray>();     \
+    if (arr_name##_array.TypedArrayType() != napi_uint8_array) {               \
+        Napi::TypeError::New(env, js_name " must be a BlstBuffer")             \
+            .ThrowAsJavaScriptException();                                     \
+        return env.Undefined();                                                \
+    }                                                                          \
+    Napi::Uint8Array arr_name =                                                \
+        arr_name##_array.As<Napi::TypedArrayOf<uint8_t>>();
 
-#define WORKER_TRY_CATCH_END(name)                                 \
-    }                                                              \
-    catch (blst::BLST_ERROR & err)                                 \
-    {                                                              \
-        std::ostringstream msg;                                    \
-        msg << "BLST_ERROR::" << _module->GetBlstErrorString(err); \
-        SetError(msg.str());                                       \
-        goto out_err;                                              \
-    }                                                              \
-    catch (Napi::Error & err)                                      \
-    {                                                              \
-        SetError(err.Message());                                   \
-        goto out_err;                                              \
-    }                                                              \
-    catch (std::exception & err)                                   \
-    {                                                              \
-        std::ostringstream msg;                                    \
-        msg << "caught exception in " #name ": " << err.what();    \
-        SetError(msg.str());                                       \
-        goto out_err;                                              \
-    }                                                              \
-    catch (...)                                                    \
-    {                                                              \
-        SetError("caught unknown exception in " #name);            \
-        goto out_err;                                              \
-    }                                                              \
-                                                                   \
-    out_err:                                                       \
-    ThrowJsException();                                            \
-    return BlstBase::_env.Undefined();
+#define BLST_TS_ASYNC_UNWRAP_UINT_8_ARRAY(value_name, arr_name, js_name)       \
+    if (!value_name.IsTypedArray()) {                                          \
+        SetError(js_name " must be a BlstBuffer");                             \
+        return;                                                                \
+    }                                                                          \
+    Napi::TypedArray arr_name##_array = value_name.As<Napi::TypedArray>();     \
+    if (arr_name##_array.TypedArrayType() != napi_uint8_array) {               \
+        SetError(js_name " must be a BlstBuffer");                             \
+        return;                                                                \
+    }                                                                          \
+    Napi::Uint8Array arr_name =                                                \
+        arr_name##_array.As<Napi::TypedArrayOf<uint8_t>>();
 
-class BlstTsAddon;
+#define BLST_TS_CREAT_UNWRAPPED_OBJECT(obj_name, class_name, instance_name)    \
+    /* Allocate object in javascript heap */                                   \
+    Napi::Object wrapped = module->_##obj_name##_ctr.New(                      \
+        {Napi::External<void>::New(env, nullptr)});                            \
+    /* Setup object correctly.  Start with type tagging wrapper class. */      \
+    wrapped.TypeTag(&module->_##obj_name##_tag);                               \
+    /* Unwrap object to get native instance */                                 \
+    class_name *instance_name = class_name::Unwrap(wrapped);
 
-typedef enum
-{
-    Affine,
-    Jacobian
-} CoordType;
+#define BLST_TS_SERIALIZE_POINT(macro_name, class_name)                        \
+    Napi::Env env = info.Env();                                                \
+    Napi::EscapableHandleScope scope(env);                                     \
+                                                                               \
+    bool compressed{true};                                                     \
+    if (!info[0].IsUndefined()) {                                              \
+        compressed = info[0].ToBoolean().Value();                              \
+    }                                                                          \
+    Napi::Buffer<uint8_t> serialized = Napi::Buffer<uint8_t>::New(             \
+        env,                                                                   \
+        compressed ? BLST_TS_##macro_name##_LENGTH_COMPRESSED                  \
+                   : BLST_TS_##macro_name##_LENGTH_UNCOMPRESSED);              \
+                                                                               \
+    if (_has_jacobian) {                                                       \
+        compressed ? _jacobian->compress(serialized.Data())                    \
+                   : _jacobian->serialize(serialized.Data());                  \
+    } else if (_has_affine) {                                                  \
+        compressed ? _affine->compress(serialized.Data())                      \
+                   : _affine->serialize(serialized.Data());                    \
+    } else {                                                                   \
+        Napi::Error::New(                                                      \
+            env, class_name " cannot be serialized. No point found!")          \
+            .ThrowAsJavaScriptException();                                     \
+        return scope.Escape(env.Undefined());                                  \
+    }                                                                          \
+                                                                               \
+    return scope.Escape(serialized);
 
-class BlstBase
-{
-public:
-    bool IsZeroBytes(const uint8_t *data, size_t start_byte, size_t byte_length);
-    bool HasError() { return _error.size() > 0; };
-    std::string GetError() { return _error; };
-    size_t GetBadIndex() { return _bad_index; };
-    void ThrowJsException()
-    {
-        Napi::Error::New(_env, _error).ThrowAsJavaScriptException();
-    };
+#define BLST_TS_UNWRAP_POINT_ARG(                                              \
+    val_name,                                                                  \
+    unique_ptr,                                                                \
+    raw_pointer,                                                               \
+    instance_name,                                                             \
+    class_name,                                                                \
+    macro_name,                                                                \
+    js_class_name,                                                             \
+    blst_point,                                                                \
+    group_num,                                                                 \
+    coord_type,                                                                \
+    member_name)                                                               \
+    /* Arg is a serialized point */                                            \
+    if (val_name.IsTypedArray()) {                                             \
+        Napi::TypedArray untyped = val_name.As<Napi::TypedArray>();            \
+        if (untyped.TypedArrayType() != napi_uint8_array) {                    \
+            Napi::TypeError::New(                                              \
+                env, js_class_name "Arg must be a BlstBuffer")                 \
+                .ThrowAsJavaScriptException();                                 \
+            return scope.Escape(env.Undefined());                              \
+        }                                                                      \
+        Napi::Uint8Array typed = untyped.As<Napi::Uint8Array>();               \
+        std::string err_out{js_class_name "Arg"};                              \
+        if (!is_valid_length(                                                  \
+                err_out,                                                       \
+                typed.ByteLength(),                                            \
+                BLST_TS_##macro_name##_LENGTH_COMPRESSED,                      \
+                BLST_TS_##macro_name##_LENGTH_UNCOMPRESSED)) {                 \
+            Napi::TypeError::New(env, err_out).ThrowAsJavaScriptException();   \
+            return scope.Escape(env.Undefined());                              \
+        }                                                                      \
+        if (strcmp(js_class_name, "PublicKey") == 0 &&                         \
+            is_zero_bytes(typed.Data(), 0, typed.ByteLength())) {              \
+            Napi::TypeError::New(env, "PublicKeyArg must not be zero key")     \
+                .ThrowAsJavaScriptException();                                 \
+            return scope.Escape(env.Undefined());                              \
+        }                                                                      \
+        /** this can potentially throw. macro must be in try/catch. Leave in   \
+         *  outer context so that loop counter can be used in error message    \
+         *                                                                     \
+         *  Only need to create this ptr to hold the blst::point and make sure \
+         *  its deleted. Deserialized objects have a member smart pointer      \
+         */                                                                    \
+        unique_ptr.reset(new blst_point{typed.Data(), typed.ByteLength()});    \
+        raw_pointer = unique_ptr.get();                                        \
+                                                                               \
+        /* Arg is a deserialized point */                                      \
+    } else if (val_name.IsObject()) {                                          \
+        Napi::Object wrapped = val_name.As<Napi::Object>();                    \
+        if (!wrapped.CheckTypeTag(&module->_##instance_name##_tag)) {          \
+            Napi::TypeError::New(                                              \
+                env, js_class_name " must be a " js_class_name "Arg")          \
+                .ThrowAsJavaScriptException();                                 \
+            return scope.Escape(env.Undefined());                              \
+        }                                                                      \
+        class_name *instance_name = class_name::Unwrap(wrapped);               \
+        /* Check that the required point type has been created */              \
+        if (coord_type == CoordType::Jacobian) {                               \
+            if (!instance_name->_has_jacobian) {                               \
+                if (!instance_name->_has_affine) {                             \
+                    Napi::Error::New(env, js_class_name " not initialized")    \
+                        .ThrowAsJavaScriptException();                         \
+                    return scope.Escape(env.Undefined());                      \
+                }                                                              \
+                instance_name->_jacobian.reset(new blst::P##group_num{         \
+                    instance_name->_affine->to_jacobian()});                   \
+                instance_name->_has_jacobian = true;                           \
+            }                                                                  \
+        } else {                                                               \
+            if (!instance_name->_has_affine) {                                 \
+                if (!instance_name->_has_jacobian) {                           \
+                    Napi::Error::New(env, js_class_name " not initialized")    \
+                        .ThrowAsJavaScriptException();                         \
+                    return scope.Escape(env.Undefined());                      \
+                }                                                              \
+                instance_name->_affine.reset(new blst::P##group_num##_Affine{  \
+                    instance_name->_jacobian->to_affine()});                   \
+                instance_name->_has_affine = true;                             \
+            }                                                                  \
+        }                                                                      \
+        /* copy raw_pointer to context outside of macro */                     \
+        raw_pointer = instance_name->member_name.get();                        \
+    } else {                                                                   \
+        Napi::TypeError::New(                                                  \
+            env, js_class_name " must be a " js_class_name "Arg")              \
+            .ThrowAsJavaScriptException();                                     \
+        return scope.Escape(env.Undefined());                                  \
+    }
 
-protected:
-    BlstBase(Napi::Env env)
-        : _env{env},
-          _module{_env.GetInstanceData<BlstTsAddon>()},
-          _error{},
-          _bad_index{0} {};
+#define BLST_TS_ASYNC_UNWRAP_POINT_ARG(                                        \
+    val_name,                                                                  \
+    unique_ptr,                                                                \
+    raw_pointer,                                                               \
+    instance_name,                                                             \
+    class_name,                                                                \
+    macro_name,                                                                \
+    js_class_name,                                                             \
+    blst_point,                                                                \
+    group_num,                                                                 \
+    coord_type,                                                                \
+    member_name)                                                               \
+    /* Arg is a serialized point */                                            \
+    if (val_name.IsTypedArray()) {                                             \
+        Napi::TypedArray untyped = val_name.As<Napi::TypedArray>();            \
+        if (untyped.TypedArrayType() != napi_uint8_array) {                    \
+            Napi::TypeError::New(                                              \
+                env, js_class_name "Arg must be a BlstBuffer")                 \
+                .ThrowAsJavaScriptException();                                 \
+            m_has_error = true;                                                \
+            return;                                                            \
+        }                                                                      \
+        Napi::Uint8Array typed = untyped.As<Napi::Uint8Array>();               \
+        std::string err_out{js_class_name "Arg"};                              \
+        if (!is_valid_length(                                                  \
+                err_out,                                                       \
+                typed.ByteLength(),                                            \
+                BLST_TS_##macro_name##_LENGTH_COMPRESSED,                      \
+                BLST_TS_##macro_name##_LENGTH_UNCOMPRESSED)) {                 \
+            Napi::TypeError::New(env, err_out).ThrowAsJavaScriptException();   \
+            m_has_error = true;                                                \
+            return;                                                            \
+        }                                                                      \
+        if (strcmp(js_class_name, "PublicKey") == 0 &&                         \
+            is_zero_bytes(typed.Data(), 0, typed.ByteLength())) {              \
+            Napi::TypeError::New(env, "PublicKeyArg must not be zero key")     \
+                .ThrowAsJavaScriptException();                                 \
+            m_has_error = true;                                                \
+            return;                                                            \
+        }                                                                      \
+        /** this can potentially throw. macro must be in try/catch. Leave in   \
+         *  outer context so that loop counter can be used in error message    \
+         *                                                                     \
+         *  Only need to create this ptr to hold the blst::point and make sure \
+         *  its deleted. Deserialized objects have a member smart pointer      \
+         */                                                                    \
+        unique_ptr.reset(new blst_point{typed.Data(), typed.ByteLength()});    \
+        raw_pointer = unique_ptr.get();                                        \
+                                                                               \
+        /* Arg is a deserialized point */                                      \
+    } else if (val_name.IsObject()) {                                          \
+        Napi::Object wrapped = val_name.As<Napi::Object>();                    \
+        if (!wrapped.CheckTypeTag(&m_module->_##instance_name##_tag)) {        \
+            Napi::TypeError::New(                                              \
+                env, js_class_name " must be a " js_class_name "Arg")          \
+                .ThrowAsJavaScriptException();                                 \
+            m_has_error = true;                                                \
+            return;                                                            \
+        }                                                                      \
+        class_name *instance_name = class_name::Unwrap(wrapped);               \
+        /* Check that the required point type has been created */              \
+        if (coord_type == CoordType::Jacobian) {                               \
+            if (!instance_name->_has_jacobian) {                               \
+                if (!instance_name->_has_affine) {                             \
+                    Napi::Error::New(env, js_class_name " not initialized")    \
+                        .ThrowAsJavaScriptException();                         \
+                    m_has_error = true;                                        \
+                    return;                                                    \
+                }                                                              \
+                instance_name->_jacobian.reset(new blst::P##group_num{         \
+                    instance_name->_affine->to_jacobian()});                   \
+                instance_name->_has_jacobian = true;                           \
+            }                                                                  \
+        } else {                                                               \
+            if (!instance_name->_has_affine) {                                 \
+                if (!instance_name->_has_jacobian) {                           \
+                    Napi::Error::New(env, js_class_name " not initialized")    \
+                        .ThrowAsJavaScriptException();                         \
+                    m_has_error = true;                                        \
+                    return;                                                    \
+                }                                                              \
+                instance_name->_affine.reset(new blst::P##group_num##_Affine{  \
+                    instance_name->_jacobian->to_affine()});                   \
+                instance_name->_has_affine = true;                             \
+            }                                                                  \
+        }                                                                      \
+        /* copy raw_pointer to context outside of macro */                     \
+        raw_pointer = instance_name->member_name.get();                        \
+    } else {                                                                   \
+        Napi::TypeError::New(                                                  \
+            env, js_class_name " must be a " js_class_name "Arg")              \
+            .ThrowAsJavaScriptException();                                     \
+        m_has_error = true;                                                    \
+        return;                                                                \
+    }
 
-    void SetError(const std::string &err, const size_t bad_index = 0)
-    {
-        _error = err;
-        _bad_index = bad_index;
-    };
+typedef enum { Affine, Jacobian } CoordType;
 
-    // All classes in this library extend BlstBase so store the env/module here
-    Napi::Env _env;
-    BlstTsAddon *_module;
-    std::string _error;
-    size_t _bad_index;
-};
+/**
+ * Checks a byte array to see if it is all zeros. Can pass start byte for the
+ * cases where the first byte is the tag (infinity point and
+ * compress/uncompressed).
+ *
+ * @param data uint8_t*
+ * @param start_byte size_t
+ * @param byte_length size_t
+ *
+ * @return bool
+ */
+bool is_zero_bytes(
+    const uint8_t *data, const size_t start_byte, const size_t byte_length);
 
-class BlstAsyncWorker : public BlstBase, public Napi::AsyncWorker
-{
-public:
-    BlstAsyncWorker(const Napi::CallbackInfo &info)
-        : BlstBase{info.Env()},
-          Napi::AsyncWorker{BlstBase::_env},
-          _env{BlstBase::_env},
-          _info{info},
-          _deferred{BlstBase::_env},
-          _use_deferred{false} {};
-    /**
-     * Runs the worker synchronously with the execution phase on-thread. When
-     * running synchronously, the worker should be stack allocated.
-     */
-    Napi::Value RunSync();
-    /**
-     * Runs the worker asynchronously and queue's the work for execution by
-     * libuv. When running asynchronously, the worker should be heap allocated
-     * with `new`. Realistically this should be the only `new`'s in the addon
-     * code.
-     */
-    Napi::Value Run();
+/**
+ * Checks if a byte array is a valid length. If not, sets the error message and
+ * returns false.  If valid returns true for use in conditional statements.
+ *
+ * @param[out] error_out &std::string - error message to set if invalid
+ * @param[in] byte_length size_t - length of the byte array to validate
+ * @param[in] length1 size_t - first valid length
+ * @param[in] length2 size_t - second valid length (optional)
+ *
+ * @return bool
+ */
+bool is_valid_length(
+    std::string &error_out,
+    size_t byte_length,
+    size_t length1,
+    size_t length2 = 0);
 
-protected:
-    /**
-     * Both BlstBase and Napi::AsyncWorker have an _env member.  Save a ref to
-     * the correct one to avoid `BlstBase::_env` sprinkled throughout the code.
-     */
-    Napi::Env &_env;
-    const Napi::CallbackInfo &_info;
-
-    /**
-     * Pure virtual functions that must be implemented by the function worker to
-     * parse the incoming CallbackInfo into native values for the execution
-     * phase.  This function will be run on-thread.
-     *
-     * @remark It is CRITICALLY important that errors which do not inherit from
-     * std::exception are caught by the implementer.  Any exceptions that escape
-     * from here cannot be caught by javascript and will cause the node process
-     * to hard abort. This is NON-RECOVERABLE.
-     */
-    virtual void Setup() = 0;
-    /**
-     * Pure virtual function that must be implemented by the function worker to
-     * get the value returned from the execution phase.  This function will
-     * convert the native return value to a Napi::Value and will be run
-     * on-thread.
-     *
-     * @note The AsyncWorker::GetResult also exists but is meant for arguments
-     * that would get called to a callback function if using AsyncWorker
-     * without promises. Return type overloading is not supported in C++ and
-     * only a single return value is supported.
-     */
-    virtual Napi::Value GetReturnValue() = 0;
-
-    /**
-     * Virtual function that overloads by calling both BlstBase::SetError
-     * and AsyncWorker::SetError to ensure clean execution.
-     * AsyncWorker::_error is a private, not protected, member so it cannot be
-     * accessed directly for synchronous execution error reporting.
-     */
-    virtual void SetError(const std::string &err);
-
-    /**
-     * Overload OnOK and make `final` to ensure consumers to not attempt to
-     * implement. OnOK is called by the runtime when async work is complete.
-     * The runtime will call this function on the main event loop thread. The
-     * AsyncWorked class creates a `HandleScope` before calling OnOk.
-     *
-     * @note https://github.com/nodejs/node-addon-api/blob/d01304437cd4c661f0eda4deb84eb34d7e533f32/napi-inl.h#L5015
-     */
-    void virtual OnOK() override final;
-    /**
-     * Overload OnError and make `final` to ensure consumers to not attempt to
-     * implement. OnError is called by the runtime when async work is complete.
-     * The runtime will call this function on the main event loop thread. The
-     * AsyncWorked class creates a `HandleScope` before calling OnError.
-     *
-     * @note https://github.com/nodejs/node-addon-api/blob/d01304437cd4c661f0eda4deb84eb34d7e533f32/napi-inl.h#L5017
-     */
-    void virtual OnError(Napi::Error const &err) override final;
-
-private:
-    Napi::Promise::Deferred _deferred;
-    bool _use_deferred;
-
-    /**
-     * GetPromise associated with _deferred for return to JS
-     */
-    Napi::Promise GetPromise();
-};
-
-class Uint8ArrayArg : public BlstBase
-{
-public:
-    Uint8ArrayArg(Napi::Env env)
-        : BlstBase{env},
-          _error_prefix{},
-          _data{nullptr},
-          _byte_length{0},
-          _ref{} {};
-    Uint8ArrayArg(
-        Napi::Env env,
-        const Napi::Value &val,
-        const std::string &err_prefix);
-
-    Uint8ArrayArg &operator=(const Uint8ArrayArg &source) = delete;
-    Uint8ArrayArg(const Uint8ArrayArg &source) = delete;
-    Uint8ArrayArg &operator=(Uint8ArrayArg &&source) = default;
-    Uint8ArrayArg(Uint8ArrayArg &&source) = default;
-
-    const uint8_t *Data();
-    size_t ByteLength();
-    bool ValidateLength(size_t length1, size_t length2 = 0);
-
-protected:
-    std::string _error_prefix;
-
-private:
-    uint8_t *_data;
-    size_t _byte_length;
-    Napi::Reference<Napi::Uint8Array> _ref;
-};
-
-class Uint8ArrayArgArray : public BlstBase
-{
-public:
-    Uint8ArrayArgArray(
-        Napi::Env env,
-        const Napi::Value &arr_val,
-        const std::string &err_prefix_singular,
-        const std::string &err_prefix_plural);
-    Uint8ArrayArgArray(const Uint8ArrayArgArray &source) = delete;
-    Uint8ArrayArgArray(Uint8ArrayArgArray &&source) = default;
-
-    Uint8ArrayArgArray &operator=(const Uint8ArrayArgArray &source) = delete;
-    Uint8ArrayArgArray &operator=(Uint8ArrayArgArray &&source) = delete;
-    Uint8ArrayArg &operator[](size_t index) { return _args[index]; }
-
-    size_t Size() { return _args.size(); }
-    void Reserve(size_t size) { return _args.reserve(size); }
-
-private:
-    std::vector<Uint8ArrayArg> _args;
-};
-
-class BlstTsAddon;
 /**
  * Circular dependency if these are moved up to the top of the file.
  */
-#include "secret_key.h"
-#include "public_key.h"
-#include "signature.h"
+class BlstTsAddon;
 #include "functions.h"
+#include "public_key.h"
+#include "secret_key.h"
+#include "signature.h"
 
-class BlstTsAddon : public Napi::Addon<BlstTsAddon>
-{
-public:
+/**
+ * BlstTsAddon is the main entry point for the library. It is responsible
+ * for initialization and holding global values.
+ */
+class BlstTsAddon : public Napi::Addon<BlstTsAddon> {
+   public:
     std::string _dst;
     std::string _blst_error_strings[8];
     Napi::FunctionReference _secret_key_ctr;
@@ -271,8 +330,23 @@ public:
     Napi::FunctionReference _signature_ctr;
     napi_type_tag _signature_tag;
 
+    /**
+     * BlstTsAddon::BlstTsAddon constructor used by Node.js to create an
+     * instance of the addon.
+     *
+     * @param env Napi::Env
+     * @param exports Napi::Object
+     *
+     * @return BlstTsAddon
+     *
+     * @throws Napi::Error
+     */
     BlstTsAddon(Napi::Env env, Napi::Object exports);
 
+    /**
+     * References are by default non-copyable and non-movable. This is just
+     * to make it explicit that it's not allowed to be copied or moved.
+     */
     BlstTsAddon(BlstTsAddon &&source) = delete;
     BlstTsAddon(const BlstTsAddon &source) = delete;
     BlstTsAddon &operator=(BlstTsAddon &&source) = delete;
@@ -287,14 +361,6 @@ public:
      * Uses the same openssl method as node to generate random bytes
      */
     bool GetRandomBytes(blst::byte *ikm, size_t length);
-
-    Napi::Value RunTest(const Napi::CallbackInfo &info);
-
-private:
-    /**
-     *  Creates a constants objects to pass to JS
-     */
-    Napi::Object BuildJsConstants(Napi::Env &env);
 };
 
 #endif /* BLST_TS_ADDON_H__ */

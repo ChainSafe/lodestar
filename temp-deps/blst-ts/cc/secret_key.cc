@@ -1,246 +1,168 @@
-#include "addon.h"
+#include "secret_key.h"
 
-void SecretKey::Init(Napi::Env env, Napi::Object &exports, BlstTsAddon *module)
-{
-    Napi::HandleScope scope(env); // no need to Escape, Persistent will take care of it
+void SecretKey::Init(
+    Napi::Env env, Napi::Object &exports, BlstTsAddon *module) {
+    Napi::HandleScope scope(
+        env);  // no need to EscapeHandleScope, Persistent will take care of it
     auto proto = {
-        StaticMethod("fromKeygen", &SecretKey::FromKeygen, static_cast<napi_property_attributes>(napi_static | napi_enumerable)),
-        StaticMethod("fromKeygenSync", &SecretKey::FromKeygenSync, static_cast<napi_property_attributes>(napi_static | napi_enumerable)),
-        StaticMethod("deserialize", &SecretKey::Deserialize, static_cast<napi_property_attributes>(napi_static | napi_enumerable)),
-        InstanceMethod("serialize", &SecretKey::Serialize, static_cast<napi_property_attributes>(napi_enumerable)),
-        InstanceMethod("toPublicKey", &SecretKey::ToPublicKey, static_cast<napi_property_attributes>(napi_enumerable)),
-        InstanceMethod("sign", &SecretKey::Sign, static_cast<napi_property_attributes>(napi_enumerable)),
-        InstanceMethod("signSync", &SecretKey::SignSync, static_cast<napi_property_attributes>(napi_enumerable))};
+        StaticMethod(
+            "fromKeygen",
+            &SecretKey::FromKeygen,
+            static_cast<napi_property_attributes>(
+                napi_static | napi_enumerable)),
+        StaticMethod(
+            "deserialize",
+            &SecretKey::Deserialize,
+            static_cast<napi_property_attributes>(
+                napi_static | napi_enumerable)),
+        InstanceMethod(
+            "serialize",
+            &SecretKey::Serialize,
+            static_cast<napi_property_attributes>(napi_enumerable)),
+        InstanceMethod(
+            "toPublicKey",
+            &SecretKey::ToPublicKey,
+            static_cast<napi_property_attributes>(napi_enumerable)),
+        InstanceMethod(
+            "sign",
+            &SecretKey::Sign,
+            static_cast<napi_property_attributes>(napi_enumerable)),
+    };
+
     Napi::Function ctr = DefineClass(env, "SecretKey", proto, module);
     module->_secret_key_ctr = Napi::Persistent(ctr);
-    module->_secret_key_tag = {BLST_TS_SECRET_KEY_LOWER_TAG, BLST_TS_SECRET_KEY_UPPER_TAG};
+    // These tag values must be unique across all classes
+    module->_secret_key_tag = {0ULL, 1ULL};
     exports.Set(Napi::String::New(env, "SecretKey"), ctr);
+
+    exports.Get("BLST_CONSTANTS")
+        .As<Napi::Object>()
+        .Set(
+            Napi::String::New(env, "SECRET_KEY_LENGTH"),
+            Napi::Number::New(env, BLST_TS_SECRET_KEY_LENGTH));
 }
 
-/**
- *
- *
- * SecretKey Workers
- *
- *
- */
-namespace
-{
-    class FromKeygenWorker : public BlstAsyncWorker
-    {
-    public:
-        FromKeygenWorker(const Napi::CallbackInfo &info)
-            : BlstAsyncWorker(info),
-              _key{},
-              _entropy{_env},
-              _info_str{},
-              _is_zero_key{false} {};
-
-        void Setup() override
-        {
-            if (!_info[0].IsUndefined()) // no entropy passed
-            {
-                _entropy = Uint8ArrayArg{_env, _info[0], "ikm"};
-                _entropy.ValidateLength(BLST_TS_SECRET_KEY_LENGTH);
-                if (_entropy.HasError())
-                {
-                    SetError(_entropy.GetError());
-                    return;
-                }
-            }
-            if (_info[1].IsUndefined())
-            {
-                return;
-            }
-            if (!_info[1].IsString())
-            {
-                SetError("info must be a string or undefined");
-                return;
-            }
-            // no way to not do the data copy here.  `.Utf8Value()` uses napi_env
-            // and has to be run on-thread. copy the string we shall... sigh.
-            _info_str.append(_info[1].As<Napi::String>().Utf8Value());
-        };
-
-        /**
-         * The keygen function defaults to empty string so just pass in the
-         * the info string. Is initialized to empty string if not passed.
-         */
-        void Execute() override
-        {
-            if (_entropy.Data() == nullptr)
-            {
-                blst::byte ikm[BLST_TS_SECRET_KEY_LENGTH];
-                _module->GetRandomBytes(ikm, BLST_TS_SECRET_KEY_LENGTH);
-                _key.keygen(ikm, BLST_TS_SECRET_KEY_LENGTH, _info_str);
-                return;
-            }
-            _key.keygen(_entropy.Data(), BLST_TS_SECRET_KEY_LENGTH, _info_str);
-            blst::byte key_bytes[BLST_TS_SECRET_KEY_LENGTH];
-            _key.to_bendian(key_bytes);
-            if (this->IsZeroBytes(key_bytes, 0, BLST_TS_SECRET_KEY_LENGTH))
-            {
-                _is_zero_key = true;
-            }
-        };
-
-        Napi::Value GetReturnValue() override
-        {
-            Napi::EscapableHandleScope scope(_env);
-            Napi::Object wrapped = _module->_secret_key_ctr.New({Napi::External<void *>::New(Env(), nullptr)});
-            wrapped.TypeTag(&_module->_secret_key_tag);
-            SecretKey *sk = SecretKey::Unwrap(wrapped);
-            sk->_key.reset(new blst::SecretKey{_key});
-            if (_is_zero_key)
-            {
-                sk->_is_zero_key = true;
-            }
-            return scope.Escape(wrapped);
-        };
-
-    private:
-        blst::SecretKey _key;
-        Uint8ArrayArg _entropy;
-        std::string _info_str;
-        bool _is_zero_key;
-    };
-
-    class SignWorker : public BlstAsyncWorker
-    {
-    public:
-        SignWorker(
-            const Napi::CallbackInfo &info,
-            const blst::SecretKey &key,
-            const bool is_zero_key)
-            : BlstAsyncWorker{info},
-              _key{key},
-              _is_zero_key{is_zero_key},
-              _point{},
-              _msg{_env, info[0], "msg to sign"} {};
-        void Setup() override{};
-        void Execute() override
-        {
-            if (_is_zero_key)
-            {
-                return;
-            }
-            _point.hash_to(_msg.Data(), _msg.ByteLength(), _module->_dst);
-            _point.sign_with(_key);
-        };
-        Napi::Value GetReturnValue() override
-        {
-            Napi::EscapableHandleScope scope(_env);
-            if (_is_zero_key)
-            {
-                return scope.Escape(_env.Null());
-            }
-            Napi::Object wrapped = _module->_signature_ctr.New({Napi::External<void *>::New(Env(), nullptr)});
-            wrapped.TypeTag(&_module->_signature_tag);
-            Signature *sig = Signature::Unwrap(wrapped);
-            sig->_jacobian.reset(new blst::P2{_point});
-            sig->_has_jacobian = true;
-            return scope.Escape(wrapped);
-        };
-
-    private:
-        const blst::SecretKey &_key;
-        const bool _is_zero_key;
-        blst::P2 _point;
-        Uint8ArrayArg _msg;
-    };
-} // namespace (anonymous)
-
-/**
- *
- *
- * SecretKey
- *
- *
- */
-Napi::Value SecretKey::FromKeygen(const Napi::CallbackInfo &info)
-{
-    Napi::EscapableHandleScope scope(info.Env());
-    FromKeygenWorker *worker = new FromKeygenWorker{info};
-    return scope.Escape(worker->Run());
-}
-
-Napi::Value SecretKey::FromKeygenSync(const Napi::CallbackInfo &info)
-{
-    Napi::EscapableHandleScope scope(info.Env());
-    FromKeygenWorker worker{info};
-    return scope.Escape(worker.RunSync());
-}
-
-Napi::Value SecretKey::Deserialize(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    Napi::EscapableHandleScope scope(env);
-    BlstTsAddon *module = env.GetInstanceData<BlstTsAddon>();
-    Napi::Object wrapped = module->_secret_key_ctr.New({Napi::External<void>::New(env, nullptr)});
-    wrapped.TypeTag(&module->_secret_key_tag);
-    SecretKey *sk = SecretKey::Unwrap(wrapped);
-    Uint8ArrayArg skBytes{env, info[0], "skBytes"};
-    skBytes.ValidateLength(BLST_TS_SECRET_KEY_LENGTH);
-    if (skBytes.HasError())
-    {
-        skBytes.ThrowJsException();
+Napi::Value SecretKey::FromKeygen(const Napi::CallbackInfo &info) {
+    BLST_TS_FUNCTION_PREAMBLE
+    Napi::Value ikm_value = info[0];
+    BLST_TS_UNWRAP_UINT_8_ARRAY(ikm_value, ikm, "ikm")
+    if (ikm.ByteLength() < BLST_TS_SECRET_KEY_LENGTH) {
+        std::ostringstream msg;
+        msg << "ikm must be greater than or equal to "
+            << BLST_TS_SECRET_KEY_LENGTH << " bytes";
+        Napi::TypeError::New(env, msg.str()).ThrowAsJavaScriptException();
         return env.Undefined();
     }
-    sk->_key->from_bendian(skBytes.Data());
-    if (skBytes.IsZeroBytes(skBytes.Data(), 0, skBytes.ByteLength()))
-    {
+    BLST_TS_CREAT_UNWRAPPED_OBJECT(secret_key, SecretKey, sk)
+
+    // If `info` string is passed use it otherwise use default without. Is
+    // optional parameter from blst library.
+    if (!info[1].IsUndefined()) {
+        if (!info[1].IsString()) {
+            Napi::TypeError::New(env, "info must be a string")
+                .ThrowAsJavaScriptException();
+            return env.Undefined();
+        }
+        sk->_key->keygen(
+            ikm.Data(),
+            ikm.ByteLength(),
+            info[1].As<Napi::String>().Utf8Value());
+    } else {
+        sk->_key->keygen(ikm.Data(), ikm.ByteLength());
+    }
+
+    // Check if key is zero and set flag if so. Several specs depend on this
+    // check
+    blst::byte key_bytes[BLST_TS_SECRET_KEY_LENGTH];
+    sk->_key->to_bendian(key_bytes);
+    if (is_zero_bytes(key_bytes, 0, BLST_TS_SECRET_KEY_LENGTH)) {
         sk->_is_zero_key = true;
     }
+
+    return scope.Escape(wrapped);
+}
+
+Napi::Value SecretKey::Deserialize(const Napi::CallbackInfo &info) {
+    BLST_TS_FUNCTION_PREAMBLE
+    Napi::Value sk_bytes_value = info[0];
+    BLST_TS_UNWRAP_UINT_8_ARRAY(sk_bytes_value, sk_bytes, "skBytes")
+    std::string err_out{"skBytes"};
+    if (!is_valid_length(
+            err_out, sk_bytes.ByteLength(), BLST_TS_SECRET_KEY_LENGTH)) {
+        Napi::TypeError::New(env, err_out).ThrowAsJavaScriptException();
+        return scope.Escape(env.Undefined());
+    }
+
+    BLST_TS_CREAT_UNWRAPPED_OBJECT(secret_key, SecretKey, sk)
+    // Deserialize key
+    sk->_key->from_bendian(sk_bytes.Data());
+
+    // Check if key is zero and set flag if so. Several specs depend on this
+    // check
+    blst::byte key_bytes[BLST_TS_SECRET_KEY_LENGTH];
+    sk->_key->to_bendian(key_bytes);
+    if (is_zero_bytes(key_bytes, 0, BLST_TS_SECRET_KEY_LENGTH)) {
+        sk->_is_zero_key = true;
+    }
+
     return scope.Escape(wrapped);
 }
 
 SecretKey::SecretKey(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<SecretKey>{info},
       _key{new blst::SecretKey},
-      _is_zero_key{false},
-      _module{reinterpret_cast<BlstTsAddon *>(info.Data())}
-{
+      _is_zero_key{false} {
     Napi::Env env = info.Env();
-    if (!info[0].IsExternal())
-    {
-        Napi::Error::New(env, "SecretKey constructor is private").ThrowAsJavaScriptException();
+    Napi::HandleScope scope(env);
+    // Check that constructor was called from C++ and not JS. Externals can only
+    // be created natively.
+    if (!info[0].IsExternal()) {
+        Napi::Error::New(env, "SecretKey constructor is private")
+            .ThrowAsJavaScriptException();
         return;
     }
 };
 
-Napi::Value SecretKey::Serialize(const Napi::CallbackInfo &info)
-{
+Napi::Value SecretKey::Serialize(const Napi::CallbackInfo &info) {
     Napi::Env env = info.Env();
     Napi::EscapableHandleScope scope(env);
-    Napi::Buffer<uint8_t> serialized = Napi::Buffer<uint8_t>::New(env, BLST_TS_SECRET_KEY_LENGTH);
+
+    Napi::Buffer<uint8_t> serialized =
+        Napi::Buffer<uint8_t>::New(env, BLST_TS_SECRET_KEY_LENGTH);
     _key->to_bendian(serialized.Data());
+
     return scope.Escape(serialized);
 }
 
-Napi::Value SecretKey::ToPublicKey(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    Napi::EscapableHandleScope scope(env);
-    Napi::Object wrapped = _module->_public_key_ctr.New({Napi::External<void *>::New(Env(), nullptr)});
-    wrapped.TypeTag(&_module->_public_key_tag);
-    PublicKey *pk = PublicKey::Unwrap(wrapped);
+Napi::Value SecretKey::ToPublicKey(const Napi::CallbackInfo &info) {
+    BLST_TS_FUNCTION_PREAMBLE
+    BLST_TS_CREAT_UNWRAPPED_OBJECT(public_key, PublicKey, pk)
+    // Derive public key from secret key. Default to jacobian coordinates
     pk->_jacobian.reset(new blst::P1{*_key});
     pk->_has_jacobian = true;
+
     return scope.Escape(wrapped);
 }
 
-Napi::Value SecretKey::Sign(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    Napi::EscapableHandleScope scope(env);
-    SignWorker *worker = new SignWorker{info, *_key, _is_zero_key};
-    return scope.Escape(worker->Run());
-}
+Napi::Value SecretKey::Sign(const Napi::CallbackInfo &info) {
+    BLST_TS_FUNCTION_PREAMBLE
 
-Napi::Value SecretKey::SignSync(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    Napi::EscapableHandleScope scope(env);
-    SignWorker worker{info, *_key, _is_zero_key};
-    return scope.Escape(worker.RunSync());
+    // Check for zero key and throw error to meet spec requirements
+    if (_is_zero_key) {
+        Napi::TypeError::New(env, "cannot sign message with zero private key")
+            .ThrowAsJavaScriptException();
+        return scope.Escape(info.Env().Undefined());
+    }
+
+    Napi::Value msg_value = info[0];
+    BLST_TS_UNWRAP_UINT_8_ARRAY(msg_value, msg, "msg")
+    BLST_TS_CREAT_UNWRAPPED_OBJECT(signature, Signature, sig)
+    // Default to jacobian coordinates
+    sig->_jacobian.reset(new blst::P2);
+    sig->_has_jacobian = true;
+    // Hash to point and sign message
+    sig->_jacobian->hash_to(msg.Data(), msg.ByteLength(), module->_dst);
+    sig->_jacobian->sign_with(*_key);
+
+    return scope.Escape(wrapped);
 }

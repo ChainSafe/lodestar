@@ -5,33 +5,33 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 const bindings = require("bindings")("blst_ts_addon");
 
-bindings.verify = async function verify(msg, pk, sig) {
+bindings.verify = function verify(msg, pk, sig) {
   return bindings.aggregateVerify([msg], [pk], sig);
 };
-bindings.verifySync = function verifySync(msg, pk, sig) {
-  return bindings.aggregateVerifySync([msg], [pk], sig);
+
+bindings.asyncVerify = function asyncVerify(msg, pk, sig) {
+  return bindings.asyncAggregateVerify([msg], [pk], sig);
 };
-bindings.fastAggregateVerify = async function fastAggregateVerify(msg, pks, sig) {
+
+bindings.fastAggregateVerify = function fastAggregateVerify(msg, pks, sig) {
   try {
-    const aggPk = await bindings.aggregatePublicKeys(pks);
-    return bindings.aggregateVerify([msg], [aggPk], sig);
+    return bindings.aggregateVerify([msg], [bindings.aggregatePublicKeys(pks)], sig);
   } catch {
     return false;
   }
 };
-bindings.fastAggregateVerifySync = function fastAggregateVerifySync(msg, pks, sig) {
+
+bindings.asyncFastAggregateVerify = function asyncFastAggregateVerify(msg, pks, sig) {
   try {
-    const keys = [];
-    const aggPk = bindings.aggregatePublicKeysSync(pks);
-    if (aggPk !== null) keys.push(aggPk);
-    return bindings.aggregateVerifySync([msg], keys, sig);
+    return bindings.asyncAggregateVerify([msg], [bindings.aggregatePublicKeys(pks)], sig);
   } catch {
     return false;
   }
 };
+
 bindings.CoordType = {
   affine: 0,
-  jacobian: 1
+  jacobian: 1,
 };
 
 module.exports = exports = bindings;
