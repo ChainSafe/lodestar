@@ -11,6 +11,7 @@ export type NetworkArgs = {
   discoveryPort?: number;
   bootnodes?: string[];
   targetPeers?: number;
+  deterministicLongLivedAttnets?: boolean;
   subscribeAllSubnets?: boolean;
   disablePeerScoring?: boolean;
   mdns?: boolean;
@@ -63,6 +64,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     maxPeers: maxPeers ?? defaultOptions.network.maxPeers,
     targetPeers: targetPeers ?? defaultOptions.network.targetPeers,
     localMultiaddrs: [`/ip4/${listenAddress}/tcp/${tcpPort}`],
+    deterministicLongLivedAttnets: args["deterministicLongLivedAttnets"],
     subscribeAllSubnets: args["subscribeAllSubnets"],
     disablePeerScoring: args["disablePeerScoring"],
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
@@ -126,6 +128,13 @@ export const options: CliCommandOptions<NetworkArgs> = {
     type: "number",
     description: "The target connected peers. Above this number peers will be disconnected",
     defaultDescription: String(defaultOptions.network.targetPeers),
+    group: "network",
+  },
+
+  deterministicLongLivedAttnets: {
+    type: "boolean",
+    description: "Use deterministic subnet selection for long-lived subnet subscriptions",
+    defaultDescription: String(defaultOptions.network.deterministicLongLivedAttnets === true),
     group: "network",
   },
 
