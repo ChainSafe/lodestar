@@ -41,6 +41,7 @@ const skipOpts: SkipOpts = {
     // Deneb signed voluntary exits will not be valid so skipping this
     // To be cleaned up with the spec version update
     "deneb/operations/voluntary_exit/",
+    "deneb/random/random",
   ],
 };
 
