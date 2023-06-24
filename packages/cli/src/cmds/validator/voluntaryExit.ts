@@ -97,11 +97,11 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
     }
 
     for (const [i, {index, signer, pubkey}] of validatorsToExit.entries()) {
-      // Deneb onwards the signature domain fork is fixed to Deneb
+      // Deneb onwards the signature domain fork is fixed to Capella version
       const domain =
         exitEpoch < config.DENEB_FORK_EPOCH
           ? config.getDomain(computeStartSlotAtEpoch(exitEpoch), DOMAIN_VOLUNTARY_EXIT)
-          : config.getDomainAtFork(ForkName.deneb, DOMAIN_VOLUNTARY_EXIT);
+          : config.getDomainAtFork(ForkName.capella, DOMAIN_VOLUNTARY_EXIT);
       const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex: index};
       const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
 

@@ -564,11 +564,11 @@ export class ValidatorStore {
     exitEpoch: Epoch
   ): Promise<phase0.SignedVoluntaryExit> {
     const signingSlot = computeStartSlotAtEpoch(exitEpoch);
-    // Deneb onwards the signature fork is fixed to Deneb
+    // Deneb onwards the signature fork is fixed to Capella version
     const domain =
       exitEpoch < this.config.DENEB_FORK_EPOCH
         ? this.config.getDomain(signingSlot, DOMAIN_VOLUNTARY_EXIT)
-        : this.config.getDomainAtFork(ForkName.deneb, DOMAIN_VOLUNTARY_EXIT);
+        : this.config.getDomainAtFork(ForkName.capella, DOMAIN_VOLUNTARY_EXIT);
 
     const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex};
     const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);

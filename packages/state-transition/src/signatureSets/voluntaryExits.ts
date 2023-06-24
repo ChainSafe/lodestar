@@ -27,14 +27,11 @@ export function getVoluntaryExitSignatureSet(
   const slot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
   const denebSlot = computeStartSlotAtEpoch(state.config.DENEB_FORK_EPOCH);
 
-  // Deneb onwards the domain fork is fixed to Deneb
-  //
-  // note that previously signed domain for e.g. capella domain sigs will no more be valid on deneb
-  // generally the signatures stay valid across one fork boundary
+  // Deneb onwards the domain fork is fixed to Capella version
   const domain =
     state.slot < denebSlot
       ? state.config.getDomain(state.slot, DOMAIN_VOLUNTARY_EXIT, slot)
-      : state.config.getDomainAtFork(ForkName.deneb, DOMAIN_VOLUNTARY_EXIT);
+      : state.config.getDomainAtFork(ForkName.capella, DOMAIN_VOLUNTARY_EXIT);
 
   return {
     type: SignatureSetType.single,
