@@ -27,7 +27,11 @@ export type RandBetweenFn = (min: number, max: number) => number;
 export type ShuffleFn = <T>(arr: T[]) => T[];
 
 export type SubnetsServiceOpts = {
+  deterministicLongLivedAttnets?: boolean;
   subscribeAllSubnets?: boolean;
+};
+
+export type SubnetsServiceTestOpts = {
   // For deterministic randomness in unit test after ESM prevents simple import mocking
   randBetweenFn?: RandBetweenFn;
   shuffleFn?: ShuffleFn;
