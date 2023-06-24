@@ -37,7 +37,7 @@ export function signatureFromBytesNoCheck(signature: Uint8Array): Signature {
  * Ensures that a SignedBLSToExecutionChange object is _still_ valid for block inclusion. An object valid for the pool,
  * can become invalid for certain forks.
  */
-export function isValidBlsToExecutionChangeForBlockInclusion(
+export function isValidBLSToExecutionChangeForBlockInclusion(
   state: CachedBeaconStateAllForks,
   signedBLSToExecutionChange: capella.SignedBLSToExecutionChange
 ): boolean {

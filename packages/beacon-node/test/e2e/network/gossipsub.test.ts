@@ -86,12 +86,12 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
   });
 
   it("Publish and receive a blsToExecutionChange", async function () {
-    let onBlsToExecutionChange: (blsToExec: Uint8Array) => void;
-    const onBlsToExecutionChangePromise = new Promise<Uint8Array>((resolve) => (onBlsToExecutionChange = resolve));
+    let onBLSToExecutionChange: (blsToExec: Uint8Array) => void;
+    const onBLSToExecutionChangePromise = new Promise<Uint8Array>((resolve) => (onBLSToExecutionChange = resolve));
 
     const {netA, netB} = await mockModules({
       [GossipType.bls_to_execution_change]: async ({serializedData}) => {
-        onBlsToExecutionChange(serializedData);
+        onBLSToExecutionChange(serializedData);
       },
     });
 
@@ -111,9 +111,9 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     }
 
     const blsToExec = ssz.capella.SignedBLSToExecutionChange.defaultValue();
-    await netA.publishBlsToExecutionChange(blsToExec);
+    await netA.publishBLSToExecutionChange(blsToExec);
 
-    const receivedblsToExec = await onBlsToExecutionChangePromise;
+    const receivedblsToExec = await onBLSToExecutionChangePromise;
     expect(receivedblsToExec).to.deep.equal(ssz.capella.SignedBLSToExecutionChange.serialize(blsToExec));
   });
 

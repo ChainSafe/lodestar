@@ -5,7 +5,7 @@ import {validateGossipAttestation} from "../../../../chain/validation/index.js";
 import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateGossipProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
 import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
-import {validateBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
+import {validateBLSToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
 import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCommittee.js";
 import {ApiModules} from "../../types.js";
 import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors/index.js";
@@ -41,8 +41,8 @@ export function getBeaconPoolApi({
       return {data: chain.opPool.getAllVoluntaryExits()};
     },
 
-    async getPoolBlsToExecutionChanges() {
-      return {data: chain.opPool.getAllBlsToExecutionChanges().map(({data}) => data)};
+    async getPoolBLSToExecutionChanges() {
+      return {data: chain.opPool.getAllBLSToExecutionChanges().map(({data}) => data)};
     },
 
     async submitPoolAttestations(attestations) {
@@ -111,23 +111,23 @@ export function getBeaconPoolApi({
       await network.publishVoluntaryExit(voluntaryExit);
     },
 
-    async submitPoolBlsToExecutionChange(blsToExecutionChanges) {
+    async submitPoolBLSToExecutionChange(blsToExecutionChanges) {
       const errors: Error[] = [];
 
       await Promise.all(
         blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
           try {
             // Ignore even if the change exists and reprocess
-            await validateBlsToExecutionChange(chain, blsToExecutionChange, true);
+            await validateBLSToExecutionChange(chain, blsToExecutionChange, true);
             const preCapella = chain.clock.currentEpoch < chain.config.CAPELLA_FORK_EPOCH;
-            chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, preCapella);
+            chain.opPool.insertBLSToExecutionChange(blsToExecutionChange, preCapella);
             if (!preCapella) {
-              await network.publishBlsToExecutionChange(blsToExecutionChange);
+              await network.publishBLSToExecutionChange(blsToExecutionChange);
             }
           } catch (e) {
             errors.push(e as Error);
             logger.error(
-              `Error on submitPoolBlsToExecutionChange [${i}]`,
+              `Error on submitPoolBLSToExecutionChange [${i}]`,
               {validatorIndex: blsToExecutionChange.message.validatorIndex},
               e as Error
             );
@@ -136,7 +136,7 @@ export function getBeaconPoolApi({
       );
 
       if (errors.length > 1) {
-        throw Error("Multiple errors on submitPoolBlsToExecutionChange\n" + errors.map((e) => e.message).join("\n"));
+        throw Error("Multiple errors on submitPoolBLSToExecutionChange\n" + errors.map((e) => e.message).join("\n"));
       } else if (errors.length === 1) {
         throw errors[0];
       }

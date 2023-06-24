@@ -26,7 +26,7 @@ import {
   validateGossipSyncCommittee,
   validateSyncCommitteeGossipContributionAndProof,
   validateGossipVoluntaryExit,
-  validateBlsToExecutionChange,
+  validateBLSToExecutionChange,
   AttestationValidationResult,
   AggregateAndProofValidationResult,
 } from "../../chain/validation/index.js";
@@ -378,11 +378,11 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     // blsToExecutionChange is to be generated and validated against GENESIS_FORK_VERSION
     [GossipType.bls_to_execution_change]: async ({serializedData}, topic) => {
       const blsToExecutionChange = sszDeserialize(topic, serializedData);
-      await validateBlsToExecutionChange(chain, blsToExecutionChange);
+      await validateBLSToExecutionChange(chain, blsToExecutionChange);
 
       // Handler
       try {
-        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+        chain.opPool.insertBLSToExecutionChange(blsToExecutionChange);
       } catch (e) {
         logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
       }

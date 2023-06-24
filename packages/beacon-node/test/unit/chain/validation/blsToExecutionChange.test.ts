@@ -19,8 +19,8 @@ import {createBeaconConfig} from "@lodestar/config";
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {StubbedChainMutable} from "../../../utils/stub/index.js";
 import {generateState} from "../../../utils/state.js";
-import {validateBlsToExecutionChange} from "../../../../src/chain/validation/blsToExecutionChange.js";
-import {BlsToExecutionChangeErrorCode} from "../../../../src/chain/errors/blsToExecutionChangeError.js";
+import {validateBLSToExecutionChange} from "../../../../src/chain/validation/blsToExecutionChange.js";
+import {BLSToExecutionChangeErrorCode} from "../../../../src/chain/errors/blsToExecutionChangeError.js";
 import {OpPool} from "../../../../src/chain/opPools/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState.js";
@@ -111,17 +111,17 @@ describe("validate bls to execution change", () => {
       signature: Buffer.alloc(96, 0),
     };
 
-    // Return BlsToExecutionChange known
-    opPool.hasSeenBlsToExecutionChange.returns(true);
+    // Return BLSToExecutionChange known
+    opPool.hasSeenBLSToExecutionChange.returns(true);
 
     await expectRejectedWithLodestarError(
-      validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
-      BlsToExecutionChangeErrorCode.ALREADY_EXISTS
+      validateBLSToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
+      BLSToExecutionChangeErrorCode.ALREADY_EXISTS
     );
   });
 
   it("should return valid blsToExecutionChange ", async () => {
-    await validateBlsToExecutionChange(chainStub, signedBlsToExecChange);
+    await validateBLSToExecutionChange(chainStub, signedBlsToExecChange);
   });
 
   it("should return invalid bls to execution Change - invalid validatorIndex", async () => {
@@ -135,8 +135,8 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
-      BlsToExecutionChangeErrorCode.INVALID
+      validateBLSToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
+      BLSToExecutionChangeErrorCode.INVALID
     );
   });
 
@@ -150,8 +150,8 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
-      BlsToExecutionChangeErrorCode.INVALID
+      validateBLSToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
+      BLSToExecutionChangeErrorCode.INVALID
     );
   });
 
@@ -166,8 +166,8 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
-      BlsToExecutionChangeErrorCode.INVALID
+      validateBLSToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
+      BLSToExecutionChangeErrorCode.INVALID
     );
   });
 
@@ -182,8 +182,8 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateBlsToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
-      BlsToExecutionChangeErrorCode.INVALID
+      validateBLSToExecutionChange(chainStub, signedBlsToExecChangeInvalid),
+      BLSToExecutionChangeErrorCode.INVALID
     );
   });
 });

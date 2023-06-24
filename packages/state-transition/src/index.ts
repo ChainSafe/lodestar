@@ -44,7 +44,7 @@ export {
 
 // BeaconChain validation
 export {isValidVoluntaryExit} from "./block/processVoluntaryExit.js";
-export {isValidBlsToExecutionChange} from "./block/processBlsToExecutionChange.js";
+export {isValidBLSToExecutionChange} from "./block/processBLSToExecutionChange.js";
 export {assertValidProposerSlashing} from "./block/processProposerSlashing.js";
 export {assertValidAttesterSlashing} from "./block/processAttesterSlashing.js";
 export {ExecutionPayloadStatus, DataAvailableStatus, BlockExternalData} from "./block/externalData.js";

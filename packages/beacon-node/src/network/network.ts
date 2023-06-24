@@ -321,7 +321,7 @@ export class Network implements INetwork {
     });
   }
 
-  async publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number> {
+  async publishBLSToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number> {
     return this.publishGossip<GossipType.bls_to_execution_change>(
       {type: GossipType.bls_to_execution_change, fork: ForkName.capella},
       blsToExecutionChange,

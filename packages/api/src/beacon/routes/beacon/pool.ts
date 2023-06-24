@@ -63,7 +63,7 @@ export type Api = {
    * @returns any Successful response
    * @throws ApiError
    */
-  getPoolBlsToExecutionChanges(): Promise<
+  getPoolBLSToExecutionChanges(): Promise<
     ApiClientResponse<{[HttpStatusCode.OK]: {data: capella.SignedBLSToExecutionChange[]}}>
   >;
 
@@ -123,7 +123,7 @@ export type Api = {
    * @returns any BLSToExecutionChange is stored in node and broadcasted to network
    * @throws ApiError
    */
-  submitPoolBlsToExecutionChange(
+  submitPoolBLSToExecutionChange(
     blsToExecutionChange: capella.SignedBLSToExecutionChange[]
   ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: void}, HttpStatusCode.BAD_REQUEST>>;
 
@@ -143,12 +143,12 @@ export const routesData: RoutesData<Api> = {
   getPoolAttesterSlashings: {url: "/eth/v1/beacon/pool/attester_slashings", method: "GET"},
   getPoolProposerSlashings: {url: "/eth/v1/beacon/pool/proposer_slashings", method: "GET"},
   getPoolVoluntaryExits: {url: "/eth/v1/beacon/pool/voluntary_exits", method: "GET"},
-  getPoolBlsToExecutionChanges: {url: "/eth/v1/beacon/pool/bls_to_execution_changes", method: "GET"},
+  getPoolBLSToExecutionChanges: {url: "/eth/v1/beacon/pool/bls_to_execution_changes", method: "GET"},
   submitPoolAttestations: {url: "/eth/v1/beacon/pool/attestations", method: "POST"},
   submitPoolAttesterSlashings: {url: "/eth/v1/beacon/pool/attester_slashings", method: "POST"},
   submitPoolProposerSlashings: {url: "/eth/v1/beacon/pool/proposer_slashings", method: "POST"},
   submitPoolVoluntaryExit: {url: "/eth/v1/beacon/pool/voluntary_exits", method: "POST"},
-  submitPoolBlsToExecutionChange: {url: "/eth/v1/beacon/pool/bls_to_execution_changes", method: "POST"},
+  submitPoolBLSToExecutionChange: {url: "/eth/v1/beacon/pool/bls_to_execution_changes", method: "POST"},
   submitPoolSyncCommitteeSignatures: {url: "/eth/v1/beacon/pool/sync_committees", method: "POST"},
 };
 
@@ -158,12 +158,12 @@ export type ReqTypes = {
   getPoolAttesterSlashings: ReqEmpty;
   getPoolProposerSlashings: ReqEmpty;
   getPoolVoluntaryExits: ReqEmpty;
-  getPoolBlsToExecutionChanges: ReqEmpty;
+  getPoolBLSToExecutionChanges: ReqEmpty;
   submitPoolAttestations: {body: unknown};
   submitPoolAttesterSlashings: {body: unknown};
   submitPoolProposerSlashings: {body: unknown};
   submitPoolVoluntaryExit: {body: unknown};
-  submitPoolBlsToExecutionChange: {body: unknown};
+  submitPoolBLSToExecutionChange: {body: unknown};
   submitPoolSyncCommitteeSignatures: {body: unknown};
 };
 
@@ -177,12 +177,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getPoolAttesterSlashings: reqEmpty,
     getPoolProposerSlashings: reqEmpty,
     getPoolVoluntaryExits: reqEmpty,
-    getPoolBlsToExecutionChanges: reqEmpty,
+    getPoolBLSToExecutionChanges: reqEmpty,
     submitPoolAttestations: reqOnlyBody(ArrayOf(ssz.phase0.Attestation), Schema.ObjectArray),
     submitPoolAttesterSlashings: reqOnlyBody(ssz.phase0.AttesterSlashing, Schema.Object),
     submitPoolProposerSlashings: reqOnlyBody(ssz.phase0.ProposerSlashing, Schema.Object),
     submitPoolVoluntaryExit: reqOnlyBody(ssz.phase0.SignedVoluntaryExit, Schema.Object),
-    submitPoolBlsToExecutionChange: reqOnlyBody(ArrayOf(ssz.capella.SignedBLSToExecutionChange), Schema.ObjectArray),
+    submitPoolBLSToExecutionChange: reqOnlyBody(ArrayOf(ssz.capella.SignedBLSToExecutionChange), Schema.ObjectArray),
     submitPoolSyncCommitteeSignatures: reqOnlyBody(ArrayOf(ssz.altair.SyncCommitteeMessage), Schema.ObjectArray),
   };
 }
@@ -193,6 +193,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getPoolAttesterSlashings: ContainerData(ArrayOf(ssz.phase0.AttesterSlashing)),
     getPoolProposerSlashings: ContainerData(ArrayOf(ssz.phase0.ProposerSlashing)),
     getPoolVoluntaryExits: ContainerData(ArrayOf(ssz.phase0.SignedVoluntaryExit)),
-    getPoolBlsToExecutionChanges: ContainerData(ArrayOf(ssz.capella.SignedBLSToExecutionChange)),
+    getPoolBLSToExecutionChanges: ContainerData(ArrayOf(ssz.capella.SignedBLSToExecutionChange)),
   };
 }
