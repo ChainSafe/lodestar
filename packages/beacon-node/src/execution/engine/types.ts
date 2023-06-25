@@ -1,4 +1,4 @@
-import {allForks, capella, deneb, Wei, bellatrix} from "@lodestar/types";
+import {allForks, capella, deneb, Wei, bellatrix, Root} from "@lodestar/types";
 import {
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
@@ -281,6 +281,10 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map(serializeWithdrawal),
   };
+}
+
+export function serializeBeaconBlockRoot(data: Root): DATA {
+  return bytesToData(data);
 }
 
 export function deserializePayloadAttributes(data: PayloadAttributesRpc): PayloadAttributes {

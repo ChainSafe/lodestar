@@ -1,4 +1,4 @@
-import {RootHex, allForks, Wei} from "@lodestar/types";
+import {Root, RootHex, allForks, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 
 import {ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
@@ -25,6 +25,7 @@ import {
   serializeExecutionPayload,
   serializeVersionedHashes,
   serializePayloadAttributes,
+  serializeBeaconBlockRoot,
   ExecutionPayloadBody,
   assertReqSizeLimit,
   deserializeExecutionPayloadBody,
@@ -138,7 +139,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async notifyNewPayload(
     fork: ForkName,
     executionPayload: allForks.ExecutionPayload,
-    versionedHashes?: VersionedHashes
+    versionedHashes?: VersionedHashes,
+    parentBlockRoot?: Root
   ): Promise<ExecutePayloadResponse> {
     const method =
       ForkSeq[fork] >= ForkSeq.deneb
@@ -148,18 +150,23 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         : "engine_newPayloadV1";
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
-    const serializedVersionedHashes =
-      versionedHashes !== undefined ? serializeVersionedHashes(versionedHashes) : undefined;
 
     let engingRequest: EngineRequest;
     if (ForkSeq[fork] >= ForkSeq.deneb) {
-      if (serializedVersionedHashes === undefined) {
+      if (versionedHashes === undefined) {
         throw Error(`versionedHashes required in notifyNewPayload for fork=${fork}`);
       }
+      if (parentBlockRoot === undefined) {
+        throw Error(`parentBlockRoot required in notifyNewPayload for fork=${fork}`);
+      }
+
+      const serializedVersionedHashes = serializeVersionedHashes(versionedHashes);
+      const parentBeaconBlockRoot = serializeBeaconBlockRoot(parentBlockRoot);
+
       const method = "engine_newPayloadV3";
       engingRequest = {
         method,
-        params: [serializedExecutionPayload, serializedVersionedHashes],
+        params: [serializedExecutionPayload, serializedVersionedHashes, parentBeaconBlockRoot],
         methodOpts: notifyNewPayloadOpts,
       };
     } else {
