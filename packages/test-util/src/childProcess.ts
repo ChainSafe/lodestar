@@ -211,7 +211,9 @@ export async function spawnChildProcess(
               } else {
                 const timeSinceHealthCheckStart = Date.now() - startHealthCheckMs;
                 if (timeSinceHealthCheckStart > logHealthChecksAfterMs) {
-                  console.log(`Health check unsuccessful pid='${proc.pid}' after ${timeSinceHealthCheckStart} ms`);
+                  console.log(
+                    `Health check unsuccessful. logPrefix=${logPrefix} pid=${proc.pid}  timeSinceHealthCheckStart=${timeSinceHealthCheckStart}`
+                  );
                 }
               }
             })
@@ -233,7 +235,9 @@ export async function spawnChildProcess(
           clearTimeout(healthTimeoutId);
           reject(
             new Error(
-              `process exited before healthy. pid=${proc.pid}, code=${code}, command="${command} ${args.join(" ")}"`
+              `process exited before healthy. logPrefix=${logPrefix} pid=${
+                proc.pid
+              }, code=${code}, command="${command} ${args.join(" ")}"`
             )
           );
         });
