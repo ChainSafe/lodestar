@@ -293,7 +293,13 @@ export async function verifyBlockExecutionPayload(
     ForkSeq[fork] >= ForkSeq.deneb
       ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.map(kzgCommitmentToVersionedHash)
       : undefined;
-  const execResult = await chain.executionEngine.notifyNewPayload(fork, executionPayloadEnabled, versionedHashes);
+  const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
+  const execResult = await chain.executionEngine.notifyNewPayload(
+    fork,
+    executionPayloadEnabled,
+    versionedHashes,
+    parentBlockRoot
+  );
 
   chain.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
 
