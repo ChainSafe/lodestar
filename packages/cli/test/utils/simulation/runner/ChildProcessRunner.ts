@@ -23,7 +23,7 @@ export class ChildProcessRunner implements RunnerEnv<RunnerType.ChildProcess> {
     const health = jobOption.health;
 
     if (health) {
-      spawnOpts.healthTimeoutMs = 10000;
+      spawnOpts.healthTimeoutMs = 30000;
       spawnOpts.health = async (): Promise<ChildProcessHealthStatus> =>
         health()
           .then((status) => {
