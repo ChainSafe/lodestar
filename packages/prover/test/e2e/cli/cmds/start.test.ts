@@ -48,7 +48,7 @@ describe("prover/start", () => {
       proc = await spawnCliCommand(
         "packages/prover/bin/lodestar-prover.js",
         ["--port", String(proxyPort as number), "--executionRpcUrl", rpcUrl, "--beaconUrls", beaconUrl],
-        {runWith: "ts-node", pipeStdToParent: true}
+        {runWith: "ts-node", pipeStdioToParent: true}
       );
     });
 

@@ -27,7 +27,7 @@ describe("voluntaryExit cmd", function () {
         // Allow voluntary exists to be valid immediately
         "--params.SHARD_COMMITTEE_PERIOD=0",
       ],
-      {pipeStdToParent: false, logPrefix: "dev"}
+      {pipeStdioToParent: false, logPrefix: "dev"}
     );
 
     // Exit early if process exits
@@ -72,7 +72,7 @@ describe("voluntaryExit cmd", function () {
         `--server=${baseUrl}`,
         `--pubkeys=${pubkeysToExit.join(",")}`,
       ],
-      {pipeStdToParent: false, logPrefix: "voluntary-exit"}
+      {pipeStdioToParent: false, logPrefix: "voluntary-exit"}
     );
 
     for (const pubkey of pubkeysToExit) {

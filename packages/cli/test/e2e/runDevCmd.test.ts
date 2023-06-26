@@ -12,7 +12,7 @@ describe("Run dev command", function () {
     const devProc = await spawnCliCommand(
       "packages/cli/bin/lodestar.js",
       ["dev", "--reset", "--startValidators=0..7", `--rest.port=${beaconPort}`],
-      {pipeStdToParent: false, pipeOnlyError: true, logPrefix: "dev"}
+      {pipeStdioToParent: false, pipeOnlyError: true, logPrefix: "dev"}
     );
 
     // Exit early if process exits

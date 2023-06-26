@@ -5,8 +5,8 @@ import {DeletionStatus, getClient, ImportStatus} from "@lodestar/api/keymanager"
 import {config} from "@lodestar/config/default";
 import {Interchange} from "@lodestar/validator";
 import {ApiError, HttpStatusCode} from "@lodestar/api";
+import {bufferStderr} from "@lodestar/test-util";
 import {testFilesDir} from "../utils.js";
-import {bufferStderr} from "../utils/childprocRunner.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
