@@ -97,6 +97,7 @@
     "@chainsafe/as-chacha20poly1305": "^0.1.0",
     "@chainsafe/as-sha256": "^0.3.1",
     "@chainsafe/bls": "7.1.1",
+    "@chainsafe/blst": "^0.2.9",
     "@chainsafe/discv5": "^3.0.0",
     "@chainsafe/libp2p-gossipsub": "^6.2.0",
     "@chainsafe/libp2p-noise": "^11.0.4",
