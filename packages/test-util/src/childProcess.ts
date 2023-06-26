@@ -98,6 +98,8 @@ enum ChildProcessResolve {
   Healthy,
 }
 
+export type ChildProcessHealthStatus = {healthy: boolean; error?: string};
+
 export type SpawnChildProcessOptions = {
   env?: Record<string, string>;
   pipeStdioToFile?: string;
