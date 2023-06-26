@@ -196,9 +196,7 @@ export class NetworkCore implements INetworkCore {
     await gossip.start();
 
     const enr = opts.discv5?.enr;
-    // TODO-dll: why optional network discv5 enr? while we always set in beaconNodeOptions
-    if (!enr) throw Error("No enr configured");
-    const nodeId = fromHexString(ENR.decodeTxt(enr).nodeId);
+    const nodeId = enr ? fromHexString(ENR.decodeTxt(enr).nodeId) : null;
     const attnetsService = opts.deterministicLongLivedAttnets
       ? new DLLAttnetsService(config, clock, gossip, metadata, logger, metrics, nodeId, opts)
       : new AttnetsService(config, clock, gossip, metadata, logger, metrics, opts);

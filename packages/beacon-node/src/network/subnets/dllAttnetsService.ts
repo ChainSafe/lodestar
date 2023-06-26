@@ -54,7 +54,7 @@ export class DLLAttnetsService implements IAttnetsService {
     private readonly metadata: MetadataController,
     private readonly logger: Logger,
     private readonly metrics: NetworkCoreMetrics | null,
-    private readonly nodeId: NodeId,
+    private readonly nodeId: NodeId | null,
     private readonly opts?: SubnetsServiceOpts
   ) {
     // if subscribeAllSubnets, we act like we have >= ATTESTATION_SUBNET_COUNT validators connecting to this node
@@ -193,6 +193,11 @@ export class DLLAttnetsService implements IAttnetsService {
   };
 
   private recomputeLongLivedSubnets(): void {
+    if (this.nodeId === null) {
+      this.logger.verbose("Cannot recompute long-lived subscriptions, no nodeId");
+      return;
+    }
+
     const oldSubnets = this.longLivedSubscriptions;
     const newSubnets = computeSubscribedSubnet(this.nodeId, this.clock.currentEpoch);
     this.logger.verbose("Recomputing long-lived subscriptions", {
