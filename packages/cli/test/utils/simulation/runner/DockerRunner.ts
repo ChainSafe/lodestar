@@ -98,6 +98,7 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
     const health = jobOption.health;
 
     if (health) {
+      spawnOpts.healthTimeoutMs = 10000;
       spawnOpts.health = async (): Promise<ChildProcessHealthStatus> =>
         health()
           .then((status) => {

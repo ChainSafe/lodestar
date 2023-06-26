@@ -226,7 +226,11 @@ export async function spawnChildProcess(
           clearTimeout(healthTimeoutId);
 
           if (intervalId !== undefined) {
-            reject(new Error(`Health check timeout pid='${proc.pid}' after ${healthTimeoutMs} ms`));
+            reject(
+              new Error(
+                `Health check timeout. logPrefix=${logPrefix} pid=${proc.pid}  healthTimeoutMs=${healthTimeoutMs}`
+              )
+            );
           }
         }, healthTimeoutMs);
 
