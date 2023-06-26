@@ -235,13 +235,16 @@ export async function spawnChildProcess(
         }, healthTimeoutMs);
 
         proc.once("exit", (code: number) => {
+          if (healthTimeoutId !== undefined) return;
+
           clearInterval(intervalId);
           clearTimeout(healthTimeoutId);
+
           reject(
             new Error(
               `process exited before healthy. logPrefix=${logPrefix} pid=${
                 proc.pid
-              }, code=${code}, command="${command} ${args.join(" ")}"`
+              } healthTimeoutMs=${healthTimeoutMs} code=${code} command="${command} ${args.join(" ")}"`
             )
           );
         });
