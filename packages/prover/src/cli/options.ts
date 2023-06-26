@@ -1,10 +1,13 @@
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {LogLevel, LogLevels} from "@lodestar/utils";
+import {ACTIVE_PRESET} from "@lodestar/params";
 import {CliCommandOptions} from "../utils/command.js";
 
 export type GlobalArgs = {
   network: string;
   logLevel: string;
+  presetFile?: string;
+  preset: string;
 };
 
 export type GlobalOptions = {
@@ -24,6 +27,19 @@ export const globalOptions: CliCommandOptions<GlobalArgs> = {
     type: "string",
     choices: LogLevels,
     default: "info",
+  },
+
+  // hidden option to allow for LODESTAR_PRESET to be set
+  preset: {
+    hidden: true,
+    type: "string",
+    default: ACTIVE_PRESET,
+  },
+
+  presetFile: {
+    hidden: true,
+    description: "Preset configuration file to override the active preset with custom values",
+    type: "string",
   },
 };
 
