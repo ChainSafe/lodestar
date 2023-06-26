@@ -110,11 +110,11 @@ lodestar-prover start \
 
 ## Warnings
 
-- To use this prover the ehtereum provider must support the `eth_getProof` method. Unfortunately, Infura does not currently support this endpoint. As an alternative, we suggest using Alchemy.
+- To use this prover the ethereum provider must support the `eth_getProof` method. Unfortunately, Infura does not currently support this endpoint. As an alternative, we suggest using Alchemy.
 
 ## Prerequisites
 
-- [Lerna](https://github.com/lerna/lerna)
+- [NodeJS](https://nodejs.org/) (LTS)
 - [Yarn](https://yarnpkg.com/)
 
 ## What you need

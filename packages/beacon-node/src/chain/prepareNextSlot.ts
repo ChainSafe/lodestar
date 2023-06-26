@@ -8,6 +8,7 @@ import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";
 import {TransitionConfigurationV1} from "../execution/engine/interface.js";
 import {ClockEvent} from "../util/clock.js";
+import {isQueueErrorAborted} from "../util/queue/index.js";
 import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBlock/produceBlockBody.js";
 import {IBeaconChain} from "./interface.js";
 import {RegenCaller} from "./regen/index.js";
@@ -146,6 +147,7 @@ export class PrepareNextSlotScheduler {
             this.chain,
             this.logger,
             fork as ForkExecution, // State is of execution type
+            fromHex(headRoot),
             safeBlockHash,
             finalizedBlockHash,
             prepareState,
@@ -172,7 +174,7 @@ export class PrepareNextSlotScheduler {
         }
       }
     } catch (e) {
-      if (!isErrorAborted(e)) {
+      if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "error"}, 1);
         this.logger.error("Failed to run prepareForNextSlot", {nextEpoch, isEpochTransition, prepareSlot}, e as Error);
       }

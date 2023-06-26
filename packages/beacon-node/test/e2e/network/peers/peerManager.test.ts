@@ -89,7 +89,8 @@ describe("network / peers / PeerManager", function () {
         maxPeers: 50,
         discv5: null,
         discv5FirstQueryDelayMs: 0,
-      }
+      },
+      null
     );
 
     return {statusCache, clock, libp2p, reqResp, peerManager, networkEventBus};

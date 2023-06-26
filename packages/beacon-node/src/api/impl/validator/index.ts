@@ -731,23 +731,23 @@ export function getValidatorApi({
       throw new OnlySupportedByDVT();
     },
 
-    async getLiveness(indices: ValidatorIndex[], epoch: Epoch) {
-      if (indices.length === 0) {
+    async getLiveness(epoch, validatorIndices) {
+      if (validatorIndices.length === 0) {
         return {
           data: [],
         };
       }
       const currentEpoch = chain.clock.currentEpoch;
       if (epoch < currentEpoch - 1 || epoch > currentEpoch + 1) {
-        throw new Error(
+        throw new ApiError(
+          400,
           `Request epoch ${epoch} is more than one epoch before or after the current epoch ${currentEpoch}`
         );
       }
 
       return {
-        data: indices.map((index: ValidatorIndex) => ({
+        data: validatorIndices.map((index) => ({
           index,
-          epoch,
           isLive: chain.validatorSeenAtEpoch(index, epoch),
         })),
       };

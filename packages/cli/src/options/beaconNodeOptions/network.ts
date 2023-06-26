@@ -10,31 +10,31 @@ export type NetworkArgs = {
   port?: number;
   discoveryPort?: number;
   bootnodes?: string[];
-  targetPeers: number;
-  subscribeAllSubnets: boolean;
-  disablePeerScoring: boolean;
-  mdns: boolean;
-  "network.maxPeers": number;
-  "network.connectToDiscv5Bootnodes": boolean;
-  "network.discv5FirstQueryDelayMs": number;
-  "network.dontSendGossipAttestationsToForkchoice": boolean;
-  "network.allowPublishToZeroPeers": boolean;
-  "network.gossipsubD": number;
-  "network.gossipsubDLow": number;
-  "network.gossipsubDHigh": number;
-  "network.gossipsubAwaitHandler": boolean;
-  "network.rateLimitMultiplier": number;
+  targetPeers?: number;
+  subscribeAllSubnets?: boolean;
+  disablePeerScoring?: boolean;
+  mdns?: boolean;
+  "network.maxPeers"?: number;
+  "network.connectToDiscv5Bootnodes"?: boolean;
+  "network.discv5FirstQueryDelayMs"?: number;
+  "network.dontSendGossipAttestationsToForkchoice"?: boolean;
+  "network.allowPublishToZeroPeers"?: boolean;
+  "network.gossipsubD"?: number;
+  "network.gossipsubDLow"?: number;
+  "network.gossipsubDHigh"?: number;
+  "network.gossipsubAwaitHandler"?: boolean;
+  "network.rateLimitMultiplier"?: number;
   "network.maxGossipTopicConcurrency"?: number;
-  "network.useWorker": boolean;
+  "network.useWorker"?: boolean;
 
   /** @deprecated This option is deprecated and should be removed in next major release. */
-  "network.requestCountPeerLimit": number;
+  "network.requestCountPeerLimit"?: number;
   /** @deprecated This option is deprecated and should be removed in next major release. */
-  "network.blockCountTotalLimit": number;
+  "network.blockCountTotalLimit"?: number;
   /** @deprecated This option is deprecated and should be removed in next major release. */
-  "network.blockCountPeerLimit": number;
+  "network.blockCountPeerLimit"?: number;
   /** @deprecated This option is deprecated and should be removed in next major release. */
-  "network.rateTrackerTimeoutMs": number;
+  "network.rateTrackerTimeoutMs"?: number;
 };
 
 export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
@@ -60,8 +60,8 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
           enr: undefined as any,
         }
       : null,
-    maxPeers,
-    targetPeers,
+    maxPeers: maxPeers ?? defaultOptions.network.maxPeers,
+    targetPeers: targetPeers ?? defaultOptions.network.targetPeers,
     localMultiaddrs: [`/ip4/${listenAddress}/tcp/${tcpPort}`],
     subscribeAllSubnets: args["subscribeAllSubnets"],
     disablePeerScoring: args["disablePeerScoring"],

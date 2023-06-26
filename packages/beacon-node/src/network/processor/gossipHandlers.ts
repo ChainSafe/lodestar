@@ -1,8 +1,9 @@
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger, prettyBytes} from "@lodestar/utils";
-import {Root, Slot, ssz, WithBytes} from "@lodestar/types";
+import {Root, Slot, ssz} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
+import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
 import {OpSource} from "../../metrics/validatorMonitor.js";
 import {IBeaconChain} from "../../chain/index.js";
@@ -45,15 +46,8 @@ import {AggregatorTracker} from "./aggregatorTracker.js";
  * Gossip handler options as part of network options
  */
 export type GossipHandlerOpts = {
-  dontSendGossipAttestationsToForkchoice: boolean;
-};
-
-/**
- * By default:
- * + pass gossip attestations to forkchoice
- */
-export const defaultGossipHandlerOpts = {
-  dontSendGossipAttestationsToForkchoice: false,
+  /** By default pass gossip attestations to forkchoice */
+  dontSendGossipAttestationsToForkchoice?: boolean;
 };
 
 export type ValidatorFnsModules = {
@@ -125,11 +119,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     }
   }
 
-  function handleValidBeaconBlock(
-    blockInput: WithBytes<BlockInput>,
-    peerIdStr: string,
-    seenTimestampSec: number
-  ): void {
+  function handleValidBeaconBlock(blockInput: BlockInput, peerIdStr: string, seenTimestampSec: number): void {
     const signedBlock = blockInput.block;
 
     // Handler - MUST NOT `await`, to allow validation result to be propagated
@@ -185,9 +175,15 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         throw new GossipActionError(GossipAction.REJECT, {code: "POST_DENEB_BLOCK"});
       }
 
-      const blockInput = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip);
+      const blockInput = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, serializedData);
       await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
-      handleValidBeaconBlock({...blockInput, serializedData}, peerIdStr, seenTimestampSec);
+      handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+
+      // Do not emit block on eventstream API, it will be emitted after successful import
+    },
+
+    [GossipType.blob_sidecar]: async (_data, _topic, _peerIdStr, _seenTimestampSec) => {
+      // TODO DENEB: impl to be added on migration of blockinput
     },
 
     [GossipType.beacon_block_and_blobs_sidecar]: async ({serializedData}, topic, peerIdStr, seenTimestampSec) => {
@@ -199,10 +195,11 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
 
       // Validate block + blob. Then forward, then handle both
-      const blockInput = getBlockInput.postDeneb(config, beaconBlock, BlockSource.gossip, blobsSidecar);
+      // TODO DENEB: replace null with proper binary data for block and blobs separately
+      const blockInput = getBlockInput.postDeneb(config, beaconBlock, BlockSource.gossip, blobsSidecar, null);
       await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
       validateGossipBlobsSidecar(beaconBlock, blobsSidecar);
-      handleValidBeaconBlock({...blockInput, serializedData}, peerIdStr, seenTimestampSec);
+      handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
     },
 
     [GossipType.beacon_aggregate_and_proof]: async ({serializedData}, topic, _peer, seenTimestampSec) => {
@@ -241,6 +238,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
           );
         }
       }
+
+      chain.emitter.emit(routes.events.EventType.attestation, signedAggregateAndProof.message.aggregate);
     },
 
     [GossipType.beacon_attestation]: async ({serializedData, msgSlot}, {subnet}, _peer, seenTimestampSec) => {
@@ -284,6 +283,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
           logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
         }
       }
+
+      chain.emitter.emit(routes.events.EventType.attestation, attestation);
     },
 
     [GossipType.attester_slashing]: async ({serializedData}, topic) => {
@@ -324,6 +325,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       } catch (e) {
         logger.error("Error adding voluntaryExit to pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
     },
 
     [GossipType.sync_committee_contribution_and_proof]: async ({serializedData}, topic) => {
@@ -346,6 +349,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       } catch (e) {
         logger.error("Error adding to contributionAndProof pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.contributionAndProof, contributionAndProof);
     },
 
     [GossipType.sync_committee]: async ({serializedData}, topic) => {
@@ -392,6 +397,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       } catch (e) {
         logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
     },
   };
 }

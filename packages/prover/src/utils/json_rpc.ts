@@ -73,6 +73,33 @@ export function isValidResponse<R, E>(
   return Array.isArray(response) ? response.every(isValidResponsePayload) : isValidResponsePayload(response);
 }
 
+export function isValidBatchResponse<R, E>(
+  payload: JsonRpcBatchRequest,
+  response: JsonRpcBatchResponse<R, E>
+): response is JsonRpcBatchResponse<R, E> | JsonRpcResponseWithResultPayload<R>[] {
+  for (const [index, req] of payload.entries()) {
+    if (isRequest(req)) {
+      if (response[index].id !== req.id || !isValidResponse(response[index])) return false;
+    }
+  }
+  return true;
+}
+
+export function mergeBatchReqResp(
+  payload: JsonRpcBatchRequest,
+  response: JsonRpcBatchResponse
+): {request: JsonRpcRequest; response: JsonRpcResponse}[] {
+  const result = [];
+  for (const [index, req] of payload.entries()) {
+    if (isRequest(req)) {
+      // Some providers return raw json-rpc response, some return only result
+      // we need to just merge the result back based on the provider
+      result.push({request: req, response: response[index]});
+    }
+  }
+  return result;
+}
+
 export function isNotification<P>(payload: JsonRpcRequest<P>): payload is JsonRpcNotificationPayload<P> {
   return !("id" in payload);
 }

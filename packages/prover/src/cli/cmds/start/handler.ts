@@ -17,6 +17,7 @@ export async function proverProxyStartHandler(args: StartArgs & GlobalArgs): Pro
     executionRpcUrl,
     wsCheckpoint,
     unverifiedWhitelist: opts.unverifiedWhitelist,
+    requestTimeout: opts.requestTimeout,
     ...(opts.transport === LCTransport.Rest
       ? {transport: LCTransport.Rest, urls: opts.urls}
       : {transport: LCTransport.P2P, bootnodes: opts.bootnodes}),

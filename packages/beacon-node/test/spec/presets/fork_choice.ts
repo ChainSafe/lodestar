@@ -157,12 +157,13 @@ export const forkChoiceTest =
 
               const blockImport =
                 config.getForkSeq(slot) < ForkSeq.deneb
-                  ? getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip)
+                  ? getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, null)
                   : getBlockInput.postDeneb(
                       config,
                       signedBlock,
                       BlockSource.gossip,
-                      getEmptyBlobsSidecar(config, signedBlock as deneb.SignedBeaconBlock)
+                      getEmptyBlobsSidecar(config, signedBlock as deneb.SignedBeaconBlock),
+                      null
                     );
 
               try {

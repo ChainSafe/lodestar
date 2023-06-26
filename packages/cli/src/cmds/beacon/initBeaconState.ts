@@ -84,6 +84,9 @@ export async function initBeaconState(
   logger: Logger,
   signal: AbortSignal
 ): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
+  if (args.forceCheckpointSync && !(args.checkpointState || args.checkpointSyncUrl)) {
+    throw new Error("Forced checkpoint sync without specifying a checkpointState or checkpointSyncUrl");
+  }
   // fetch the latest state stored in the db which will be used in all cases, if it exists, either
   //   i)  used directly as the anchor state
   //   ii) used during verification of a weak subjectivity state,
@@ -91,15 +94,26 @@ export async function initBeaconState(
   if (lastDbState) {
     const config = createBeaconConfig(chainForkConfig, lastDbState.genesisValidatorsRoot);
     const wssCheck = isWithinWeakSubjectivityPeriod(config, lastDbState, getCheckpointFromState(lastDbState));
-    // All cases when we want to directly use lastDbState as the anchor state:
-    //  - if no checkpoint sync args provided, or
-    //  - the lastDbState is within weak subjectivity period:
-    if ((!args.checkpointState && !args.checkpointSyncUrl) || wssCheck) {
-      const anchorState = await initStateFromAnchorState(config, db, logger, lastDbState, {
-        isWithinWeakSubjectivityPeriod: wssCheck,
-        isCheckpointState: false,
-      });
-      return {anchorState};
+
+    // Explicitly force syncing from checkpoint state
+    if (args.forceCheckpointSync) {
+      // Forcing to sync from checkpoint is only recommended if node is taking too long to sync from last db state.
+      // It is important to remind the user to remove this flag again unless it is absolutely necessary.
+      if (wssCheck) {
+        logger.warn("Forced syncing from checkpoint even though db state is within weak subjectivity period");
+        logger.warn("Please consider removing --forceCheckpointSync flag unless absolutely necessary");
+      }
+    } else {
+      // All cases when we want to directly use lastDbState as the anchor state:
+      //  - if no checkpoint sync args provided, or
+      //  - the lastDbState is within weak subjectivity period:
+      if ((!args.checkpointState && !args.checkpointSyncUrl) || wssCheck) {
+        const anchorState = await initStateFromAnchorState(config, db, logger, lastDbState, {
+          isWithinWeakSubjectivityPeriod: wssCheck,
+          isCheckpointState: false,
+        });
+        return {anchorState};
+      }
     }
   }
 

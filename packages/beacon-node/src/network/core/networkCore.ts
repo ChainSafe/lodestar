@@ -188,7 +188,7 @@ export class NetworkCore implements INetworkCore {
     const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, opts);
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
-    const peerManager = new PeerManager(
+    const peerManager = await PeerManager.init(
       {
         libp2p,
         gossip: gossip,
@@ -218,8 +218,6 @@ export class NetworkCore implements INetworkCore {
     const forkCurrentSlot = config.getForkName(clock.currentSlot);
     // Register only ReqResp protocols relevant to clock's fork
     reqResp.registerProtocolsAtFork(forkCurrentSlot);
-
-    await peerManager.startDiscovery();
 
     // Bind discv5's ENR to local metadata
     discv5 = peerManager["discovery"]?.discv5;
@@ -410,6 +408,10 @@ export class NetworkCore implements INetworkCore {
       meshPeers[topic] = this.gossip.getMeshPeers(topic);
     }
     return meshPeers;
+  }
+
+  async writeNetworkThreadProfile(): Promise<string> {
+    throw new Error("Method not implemented, please configure network thread");
   }
 
   /**

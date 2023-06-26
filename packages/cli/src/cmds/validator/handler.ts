@@ -36,7 +36,7 @@ import {KeymanagerRestApiServer} from "./keymanager/server.js";
 export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Promise<void> {
   const {config, network} = getBeaconConfigFromArgs(args);
 
-  const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
+  const {doppelgangerProtection} = args;
 
   const validatorPaths = getValidatorPaths(args, network);
   const accountPaths = getAccountPaths(args, network);
@@ -102,14 +102,10 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   logSigners(logger, signers);
 
-  const dbOps = {
-    config,
-    controller: new LevelDbController({name: dbPath}, {metrics: null, logger}),
-  };
-  onGracefulShutdownCbs.push(() => dbOps.controller.stop());
-  await dbOps.controller.start();
+  const db = await LevelDbController.create({name: dbPath}, {metrics: null, logger});
+  onGracefulShutdownCbs.push(() => db.close());
 
-  const slashingProtection = new SlashingProtection(dbOps);
+  const slashingProtection = new SlashingProtection(db);
 
   // Create metrics registry if metrics are enabled or monitoring endpoint is configured
   // Send version and network data for static registries
@@ -121,7 +117,8 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
   // Collect NodeJS metrics defined in the Lodestar repo
 
   if (metrics) {
-    collectNodeJSMetrics(register);
+    const closeMetrics = collectNodeJSMetrics(register);
+    onGracefulShutdownCbs.push(() => closeMetrics());
 
     // only start server if metrics are explicitly enabled
     if (args["metrics"]) {
@@ -156,14 +153,15 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   const validator = await Validator.initializeFromBeaconNode(
     {
-      dbOps,
+      db,
+      config,
       slashingProtection,
       api: args.beaconNodes,
       logger,
       processShutdownCallback,
       signers,
       abortController,
-      doppelgangerProtectionEnabled,
+      doppelgangerProtection,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
       scAfterBlockDelaySlotFraction: args.scAfterBlockDelaySlotFraction,
       disableAttestationGrouping: args.disableAttestationGrouping,
@@ -256,6 +254,8 @@ function parseBuilderSelection(builderSelection?: string): BuilderSelection | un
       case "maxprofit":
         break;
       case "builderalways":
+        break;
+      case "builderonly":
         break;
       default:
         throw Error("Invalid input for builder selection, check help.");

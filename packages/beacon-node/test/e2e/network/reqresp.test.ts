@@ -144,7 +144,10 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     expect(returnedBlocks).to.have.length(req.count, "Wrong returnedBlocks length");
 
     for (const [i, returnedBlock] of returnedBlocks.entries()) {
-      expect(ssz.phase0.SignedBeaconBlock.equals(returnedBlock, blocks[i])).to.equal(true, `Wrong returnedBlock[${i}]`);
+      expect(ssz.phase0.SignedBeaconBlock.equals(returnedBlock.data, blocks[i])).to.equal(
+        true,
+        `Wrong returnedBlock[${i}]`
+      );
     }
   });
 

@@ -3,7 +3,7 @@
 Lodestar has the ability to send client stats to a remote service for collection.
 At the moment, the main service offering remote monitoring is [beaconcha.in](https://beaconcha.in/).
 
-Instructions for setting up client monitoring with *beaconcha.in* can be found in their docs about
+Instructions for setting up client monitoring with _beaconcha.in_ can be found in their docs about
 [Mobile App <> Node Monitoring](https://kb.beaconcha.in/beaconcha.in-explorer/mobile-app-less-than-greater-than-beacon-node)
 and in your [account settings](https://beaconcha.in/user/settings#app).
 
@@ -19,7 +19,7 @@ Client monitoring can be enabled by setting the `--monitoring.endpoint` flag to 
 lodestar beacon --monitoring.endpoint "https://beaconcha.in/api/v1/client/metrics?apikey={apikey}&machine={machineName}"
 ```
 
-In case of *beaconcha.in*, the API key can be found in your [account settings](https://beaconcha.in/user/settings#api).
+In case of _beaconcha.in_, the API key can be found in your [account settings](https://beaconcha.in/user/settings#api).
 Setting the machine is optional but it is especially useful if you are monitoring multiple nodes.
 
 <!-- prettier-ignore-start -->

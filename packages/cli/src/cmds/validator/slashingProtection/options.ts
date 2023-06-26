@@ -9,7 +9,7 @@ export const slashingProtectionOptions: CliCommandOptions<ISlashingProtectionArg
   beaconNodes: validatorOptions.beaconNodes,
 
   force: {
-    description: "If genesisValidatorsRoot can't be fetched from the Beacon node, use a zero hash",
+    description: "If `genesisValidatorsRoot` can't be fetched from the Beacon node, use a zero hash",
     type: "boolean",
   },
 };

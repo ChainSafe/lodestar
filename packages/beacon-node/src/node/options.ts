@@ -8,12 +8,17 @@ import {defaultNetworkOptions, NetworkOptions} from "../network/options.js";
 import {defaultSyncOptions, SyncOptions} from "../sync/options.js";
 import {
   defaultExecutionEngineOpts,
+  defaultExecutionEngineHttpOpts,
   ExecutionEngineOpts,
   ExecutionBuilderOpts,
   defaultExecutionBuilderOpts,
+  defaultExecutionBuilderHttpOpts,
 } from "../execution/index.js";
 // Re-export so the CLI doesn't need to depend on lodestar-api
 export {allNamespaces} from "../api/rest/index.js";
+
+// Re-export to use as default values in CLI args
+export {defaultExecutionEngineHttpOpts, defaultExecutionBuilderHttpOpts};
 
 export interface IBeaconNodeOptions {
   api: ApiOptions;

@@ -21,7 +21,7 @@ export function processRewardsAndPenalties(state: CachedBeaconStateAllForks, cac
   }
 
   const [rewards, penalties] = getRewardsAndPenalties(state, cache);
-  const balances = state.balances.getAll() as number[];
+  const balances = state.balances.getAll();
 
   for (let i = 0, len = rewards.length; i < len; i++) {
     balances[i] += rewards[i] - penalties[i];

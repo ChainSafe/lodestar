@@ -43,6 +43,8 @@ const STATUS_INBOUND_GRACE_PERIOD = 15 * 1000;
 const CHECK_PING_STATUS_INTERVAL = 10 * 1000;
 /** A peer is considered long connection if it's >= 1 day */
 const LONG_PEER_CONNECTION_MS = 24 * 60 * 60 * 1000;
+/** Ref https://github.com/ChainSafe/lodestar/issues/3423 */
+const DEFAULT_DISCV5_FIRST_QUERY_DELAY_MS = 1000;
 /**
  * Tag peer when it's relevant and connecting to our node.
  * When node has > maxPeer (55), libp2p randomly prune peers if we don't tag peers in use.
@@ -71,7 +73,7 @@ export type PeerManagerOpts = {
    * Delay the 1st query after starting discv5
    * See https://github.com/ChainSafe/lodestar/issues/3423
    */
-  discv5FirstQueryDelayMs: number;
+  discv5FirstQueryDelayMs?: number;
   /**
    * If null, Don't run discv5 queries, nor connect to cached peers in the peerStore
    */
@@ -146,7 +148,7 @@ export class PeerManager {
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
 
-  constructor(modules: PeerManagerModules, opts: PeerManagerOpts) {
+  constructor(modules: PeerManagerModules, opts: PeerManagerOpts, discovery: PeerDiscovery | null) {
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
     this.metrics = modules.metrics;
@@ -161,16 +163,7 @@ export class PeerManager {
     this.networkEventBus = modules.events;
     this.connectedPeers = modules.peersData.connectedPeers;
     this.opts = opts;
-
-    // opts.discv5 === null, discovery is disabled
-    this.discovery =
-      opts.discv5 &&
-      new PeerDiscovery(modules, {
-        maxPeers: opts.maxPeers,
-        discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs,
-        discv5: opts.discv5,
-        connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
-      });
+    this.discovery = discovery;
 
     const {metrics} = modules;
     if (metrics) {
@@ -193,8 +186,18 @@ export class PeerManager {
     ];
   }
 
-  async startDiscovery(): Promise<void> {
-    await this.discovery?.start();
+  static async init(modules: PeerManagerModules, opts: PeerManagerOpts): Promise<PeerManager> {
+    // opts.discv5 === null, discovery is disabled
+    const discovery = opts.discv5
+      ? await PeerDiscovery.init(modules, {
+          maxPeers: opts.maxPeers,
+          discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs ?? DEFAULT_DISCV5_FIRST_QUERY_DELAY_MS,
+          discv5: opts.discv5,
+          connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
+        })
+      : null;
+
+    return new PeerManager(modules, opts, discovery);
   }
 
   async close(): Promise<void> {
@@ -512,6 +515,13 @@ export class PeerManager {
     }
 
     timer?.();
+
+    this.logger.debug("peerManager heartbeat result", {
+      peersToDisconnect: peersToDisconnect.size,
+      peersToConnect: peersToConnect,
+      attnetQueries: attnetQueries.length,
+      syncnetQueries: syncnetQueries.length,
+    });
   }
 
   private updateGossipsubScores(): void {
