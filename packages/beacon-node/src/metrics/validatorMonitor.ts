@@ -632,7 +632,7 @@ export function createValidatorMonitor(
           if (validator) {
             // If expected proposer is a tracked validator
             const summary = validator.summaries.get(prevEpoch);
-            metrics.validatorMonitor.prevEpochAttestationSummary.inc({
+            metrics.validatorMonitor.prevEpochBlockProposalSummary.inc({
               summary: renderBlockProposalSummary(config, rootCache, summary, SLOTS_PER_EPOCH * prevEpoch + slotIndex),
             });
           }
