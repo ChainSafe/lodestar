@@ -4,6 +4,7 @@ import {
   stopChildProcess,
   ChildProcessHealthStatus,
   SpawnChildProcessOptions,
+  ChildProcessResolve,
 } from "@lodestar/test-util";
 import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
 
@@ -30,6 +31,8 @@ export class ChildProcessRunner implements RunnerEnv<RunnerType.ChildProcess> {
           .catch((error) => {
             return {healthy: false, message: (error as Error).message};
           });
+    } else {
+      spawnOpts.resolveOn = ChildProcessResolve.Completion;
     }
 
     return {

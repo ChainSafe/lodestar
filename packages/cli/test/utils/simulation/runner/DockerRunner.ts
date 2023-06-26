@@ -7,6 +7,7 @@ import {
   execChildProcess,
   spawnChildProcess,
   stopChildProcess,
+  ChildProcessResolve,
 } from "@lodestar/test-util";
 import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
 
@@ -105,6 +106,8 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
           .catch((error) => {
             return {healthy: false, message: (error as Error).message};
           });
+    } else {
+      spawnOpts.resolveOn = ChildProcessResolve.Completion;
     }
 
     return {

@@ -92,7 +92,7 @@ export const stopChildProcess = async (
   });
 };
 
-enum ChildProcessResolve {
+export enum ChildProcessResolve {
   Immediate,
   Completion,
   Healthy,
