@@ -26,10 +26,10 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
 
   async start(): Promise<void> {
     try {
-      await execChildProcess(
-        `docker network create ${dockerNetworkName} --subnet ${dockerNetworkIpRange}.0/24 ${dockerNetworkName}`,
-        {logPrefix: "docker-runner", pipeStdioToFile: this.logFilePath}
-      );
+      await execChildProcess(`docker network create --subnet ${dockerNetworkIpRange}.0/24 ${dockerNetworkName}`, {
+        logPrefix: "docker-runner",
+        pipeStdioToFile: this.logFilePath,
+      });
     } catch {
       // During multiple sim tests files the network might already exist
     }
