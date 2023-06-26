@@ -70,6 +70,9 @@ export function getBeaconPoolApi({
               const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }
+
+            chain.emitter.emit(routes.events.EventType.attestation, attestation);
+
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
             metrics?.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
           } catch (e) {
@@ -108,6 +111,7 @@ export function getBeaconPoolApi({
     async submitPoolVoluntaryExit(voluntaryExit) {
       await validateGossipVoluntaryExit(chain, voluntaryExit);
       chain.opPool.insertVoluntaryExit(voluntaryExit);
+      chain.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
       await network.publishVoluntaryExit(voluntaryExit);
     },
 
@@ -121,6 +125,9 @@ export function getBeaconPoolApi({
             await validateBlsToExecutionChange(chain, blsToExecutionChange, true);
             const preCapella = chain.clock.currentEpoch < chain.config.CAPELLA_FORK_EPOCH;
             chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, preCapella);
+
+            chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
+
             if (!preCapella) {
               await network.publishBlsToExecutionChange(blsToExecutionChange);
             }
