@@ -1,7 +1,6 @@
 import type {PeerId} from "@libp2p/interface-peer-id";
 import type {Connection} from "@libp2p/interface-connection";
 import type {DefaultConnectionManager} from "libp2p/connection-manager/index.js";
-import type {PeerMap} from "@libp2p/peer-collections";
 import type {PeerIdStr} from "../util/peerId.js";
 import type {Libp2p} from "./interface.js";
 
@@ -18,9 +17,10 @@ export function prettyPrintPeerIdStr(id: PeerIdStr): string {
  */
 // Compat function for efficiency reasons
 export function getConnectionsMap(libp2p: Libp2p): Map<string, Connection[]> {
-  return (libp2p.services.components.connectionManager as DefaultConnectionManager)["connections"] as PeerMap<
+  return (libp2p.services.components.connectionManager as DefaultConnectionManager)["connections"] as Map<
+    string,
     Connection[]
-  >["map"] as Map<string, Connection[]>;
+  >;
 }
 
 export function getConnection(libp2p: Libp2p, peerIdStr: string): Connection | undefined {
