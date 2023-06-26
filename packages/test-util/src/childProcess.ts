@@ -11,34 +11,58 @@ import path from "node:path";
  */
 const defaultTimeout = 15 * 60 * 1000; // ms
 
-export type ShellOpts = {
+export type ExecChildProcessOptions = {
+  env?: Record<string, string>;
+  pipeStdioToFile?: string;
+  pipeStdioToParent?: boolean;
+  logPrefix?: string;
   timeoutMs?: number;
   maxBuffer?: number;
   signal?: AbortSignal;
-  pipeStdToParent?: boolean;
 };
 
 /**
  * Run arbitrary commands in a shell
  * If the child process exits with code > 0, rejects
  */
-export async function execChildProcess(cmd: string | string[], options?: ShellOpts): Promise<string> {
-  const timeout = options?.timeoutMs ?? defaultTimeout;
-  const maxBuffer = options?.maxBuffer;
+export async function execChildProcess(cmd: string | string[], options?: ExecChildProcessOptions): Promise<string> {
+  const {timeoutMs, maxBuffer, logPrefix, pipeStdioToParent, pipeStdioToFile} = options ?? {};
   const cmdStr = Array.isArray(cmd) ? cmd.join(" ") : cmd;
 
   return new Promise((resolve, reject) => {
-    const proc = childProcess.exec(cmdStr, {timeout, maxBuffer}, (err, stdout) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(stdout.trim());
+    const proc = childProcess.exec(
+      cmdStr,
+      {timeout: timeoutMs ?? defaultTimeout, maxBuffer, env: {...process.env, ...options?.env}},
+      (err, stdout) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(stdout.trim());
+        }
       }
+    );
+
+    const logPrefixStream = new stream.Transform({
+      transform(chunk, _encoding, callback) {
+        callback(null, `${logPrefix} ${proc.pid}: ${Buffer.from(chunk).toString("utf8")}`);
+      },
     });
 
-    if (options?.pipeStdToParent) {
-      proc.stdout?.pipe(process.stdout);
-      proc.stderr?.pipe(process.stderr);
+    if (pipeStdioToParent) {
+      proc.stdout?.pipe(logPrefixStream).pipe(process.stdout);
+      proc.stderr?.pipe(logPrefixStream).pipe(process.stderr);
+    }
+
+    if (pipeStdioToFile) {
+      fs.mkdirSync(path.dirname(pipeStdioToFile), {recursive: true});
+      const stdoutFileStream = fs.createWriteStream(pipeStdioToFile);
+
+      proc.stdout?.pipe(logPrefixStream).pipe(stdoutFileStream);
+      proc.stderr?.pipe(logPrefixStream).pipe(stdoutFileStream);
+
+      proc.once("exit", (_code: number) => {
+        stdoutFileStream.close();
+      });
     }
 
     if (options?.signal) {
@@ -74,58 +98,41 @@ enum ChildProcessResolve {
   Healthy,
 }
 
-type StartChildProcessOptions = {
-  env: Record<string, string>;
-  pipeStdToFile: string | undefined;
-  pipeStdToParent: boolean;
-  logPrefix: string;
-  pipeOnlyError: boolean;
-  resolveOn: ChildProcessResolve;
-  healthTimeoutMs: number | undefined;
-  healthCheckIntervalMs: number;
-  logHealthChecksAfterMs: number;
-  signal: AbortSignal | undefined;
+export type SpawnChildProcessOptions = {
+  env?: Record<string, string>;
+  pipeStdioToFile?: string;
+  pipeStdioToParent?: boolean;
+  logPrefix?: string;
+  pipeOnlyError?: boolean;
+  resolveOn?: ChildProcessResolve;
+  healthTimeoutMs?: number;
+  healthCheckIntervalMs?: number;
+  logHealthChecksAfterMs?: number;
+  signal?: AbortSignal;
   // If health attribute defined we will consider resolveOn = ChildProcessResolve.Healthy
   health?: () => Promise<{healthy: boolean; error?: string}>;
 };
 
-const defaultStartOpts: StartChildProcessOptions = {
+const defaultStartOpts = {
   env: {},
   pipeStdToParent: false,
   pipeOnlyError: false,
   logPrefix: "",
-  healthTimeoutMs: undefined,
   healthCheckIntervalMs: 1000,
   logHealthChecksAfterMs: 2000,
   resolveOn: ChildProcessResolve.Immediate,
-  pipeStdToFile: undefined,
-  signal: undefined,
-  health: undefined,
 };
 
 export async function spawnChildProcess(
   command: string,
   args: string[],
-  opts?: Partial<StartChildProcessOptions>
-): Promise<childProcess.ChildProcess> {
-  const {
-    env,
-    pipeStdToFile,
-    pipeStdToParent,
-    logPrefix,
-    pipeOnlyError,
-    health,
-    resolveOn,
-    healthCheckIntervalMs,
-    logHealthChecksAfterMs,
-    healthTimeoutMs,
-    signal,
-  }: StartChildProcessOptions = {
-    ...defaultStartOpts,
-    ...opts,
-  };
+  opts?: Partial<SpawnChildProcessOptions>
+): Promise<childProcess.ChildProcessWithoutNullStreams> {
+  const options = {...defaultStartOpts, ...opts};
+  const {env, pipeStdioToFile, pipeStdioToParent, logPrefix, pipeOnlyError, signal} = options;
+  const {health, resolveOn, healthCheckIntervalMs, logHealthChecksAfterMs, healthTimeoutMs} = options;
 
-  return new Promise<childProcess.ChildProcess>((resolve, reject) => {
+  return new Promise<childProcess.ChildProcessWithoutNullStreams>((resolve, reject) => {
     void (async () => {
       const proc = childProcess.spawn(command, args, {
         env: {...process.env, ...env},
@@ -147,9 +154,9 @@ export async function spawnChildProcess(
         );
       }
 
-      if (pipeStdToFile) {
-        fs.mkdirSync(path.dirname(pipeStdToFile), {recursive: true});
-        const stdoutFileStream = fs.createWriteStream(pipeStdToFile);
+      if (pipeStdioToFile) {
+        fs.mkdirSync(path.dirname(pipeStdioToFile), {recursive: true});
+        const stdoutFileStream = fs.createWriteStream(pipeStdioToFile);
 
         proc.stdout.pipe(logPrefixStream).pipe(stdoutFileStream);
         proc.stderr.pipe(logPrefixStream).pipe(stdoutFileStream);
@@ -159,12 +166,12 @@ export async function spawnChildProcess(
         });
       }
 
-      if (pipeStdToParent) {
+      if (pipeStdioToParent) {
         proc.stdout.pipe(logPrefixStream).pipe(process.stdout);
         proc.stderr.pipe(logPrefixStream).pipe(process.stderr);
       }
 
-      if (!pipeStdToParent && pipeOnlyError) {
+      if (!pipeStdioToParent && pipeOnlyError) {
         // If want to see only errors then show it on the output stream of main process
         proc.stderr.pipe(logPrefixStream).pipe(process.stdout);
       }
@@ -231,4 +238,15 @@ export async function spawnChildProcess(
       }
     })();
   });
+}
+
+export function bufferStderr(proc: childProcess.ChildProcessWithoutNullStreams): {read: () => string} {
+  let data = "";
+  proc.stderr.on("data", (chunk) => {
+    data += Buffer.from(chunk).toString("utf8");
+  });
+
+  return {
+    read: () => data,
+  };
 }

@@ -83,7 +83,7 @@
     "yargs": "^17.7.1"
   },
   "devDependencies": {
-    "@lodestar/test-util": "^1.8.0",
+    "@lodestar/test-util": "^1.9.0",
     "@lodestar/logger": "^1.9.0",
     "@types/http-proxy": "^1.17.10",
     "@types/yargs": "^17.0.24",

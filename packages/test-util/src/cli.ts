@@ -2,7 +2,18 @@ import childProcess from "node:child_process";
 import yargs from "yargs";
 import {wrapTimeout} from "./timeout.js";
 import {nodeJsBinaryPath, repoRootPath, tsNodeBinaryPath} from "./path.js";
-import {execChildProcess, spawnChildProcess} from "./childProcess.js";
+import {
+  ExecChildProcessOptions,
+  SpawnChildProcessOptions,
+  execChildProcess,
+  spawnChildProcess,
+} from "./childProcess.js";
+
+// We need to make it easy for the user to pass the args for the CLI
+// yargs treat `["--preset minimal"] as a single arg, so we need to split it ["--preset", "minimal"]
+function parseArgs(args: string[]): string[] {
+  return args.map((a) => a.split(" ")).flat();
+}
 
 type CommandRunOptions = {
   timeoutMs: number;
@@ -19,7 +30,7 @@ export async function runCliCommand<T>(
   return wrapTimeout(
     // eslint-disable-next-line no-async-promise-executor
     new Promise(async (resolve, reject) => {
-      await cli.parseAsync(args, {}, (err, _argv, output) => {
+      await cli.parseAsync(parseArgs(args), {}, (err, _argv, output) => {
         if (err) return reject(err);
 
         resolve(output);
@@ -28,13 +39,6 @@ export async function runCliCommand<T>(
     opts.timeoutMs
   );
 }
-
-type CommandSpawnOptions = {
-  logPrefix?: string;
-  pipeStdToParent?: boolean;
-  pipeOnlyError?: boolean;
-  runWith?: "node" | "ts-node";
-};
 
 /**
  * Exec a command in bash script mode. Useful for short-running commands
@@ -47,7 +51,7 @@ type CommandSpawnOptions = {
 export function execCliCommand(
   command: string,
   args: string[],
-  opts: Pick<CommandSpawnOptions, "runWith" | "pipeStdToParent">
+  opts?: ExecChildProcessOptions & {runWith?: "node" | "ts-node"}
 ): Promise<string> {
   const commandPrefixed =
     opts?.runWith === "ts-node"
@@ -63,7 +67,7 @@ export function execCliCommand(
       : // node cli.js
         [repoRootPath(command), ...args];
 
-  return execChildProcess([...commandPrefixed, ...argsPrefixed], {pipeStdToParent: opts.pipeStdToParent});
+  return execChildProcess([commandPrefixed, ...parseArgs(argsPrefixed)], opts);
 }
 
 /**
@@ -77,10 +81,8 @@ export function execCliCommand(
 export async function spawnCliCommand(
   command: string,
   args: string[],
-  opts: CommandSpawnOptions
-): Promise<childProcess.ChildProcess> {
-  const logPrefix = opts?.logPrefix ?? "";
-
+  opts?: SpawnChildProcessOptions & {runWith?: "node" | "ts-node"}
+): Promise<childProcess.ChildProcessWithoutNullStreams> {
   const commandPrefixed =
     opts?.runWith === "ts-node"
       ? // ts-node --esm cli.ts
@@ -95,9 +97,5 @@ export async function spawnCliCommand(
       : // node cli.js
         [repoRootPath(command), ...args];
 
-  return spawnChildProcess(commandPrefixed, argsPrefixed, {
-    logPrefix,
-    pipeStdToParent: opts.pipeStdToParent,
-    pipeOnlyError: opts.pipeOnlyError,
-  });
+  return spawnChildProcess(commandPrefixed, parseArgs(argsPrefixed), opts);
 }

@@ -3,25 +3,17 @@ import fs from "node:fs";
 import path from "node:path";
 import {rimraf} from "rimraf";
 import {expect} from "chai";
-import sinon from "sinon";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {fromHex} from "@lodestar/utils";
+import {runCliCommand} from "@lodestar/test-util";
+import {stubLogger} from "@lodestar/test-util/sinon";
 import {testFilesDir} from "../utils.js";
-import {getCliInMemoryRunner} from "../utils/inMemoryRunner.js";
+import {getLodestarCli} from "../../src/cli.js";
 
 describe("cmds / validator", function () {
-  const lodestar = getCliInMemoryRunner();
-
+  stubLogger(this, console);
+  const lodestar = getLodestarCli();
   const dataDir = testFilesDir;
-
-  beforeEach(() => {
-    sinon.spy(console, "info");
-    sinon.spy(console, "log");
-  });
-
-  afterEach(() => {
-    sinon.restore();
-  });
 
   before("Clean dataDir", () => {
     rimraf.sync(dataDir);
@@ -41,7 +33,7 @@ describe("cmds / validator", function () {
     fs.writeFileSync(passphraseFilepath, passphrase);
     fs.writeFileSync(keystoreFilepath, keystore.stringify());
 
-    await lodestar([
+    await runCliCommand(lodestar, [
       "validator import",
       `--dataDir ${dataDir}`,
       `--keystore ${keystoreFilepath}`,
@@ -55,7 +47,7 @@ describe("cmds / validator", function () {
     fs.mkdirSync(path.join(dataDir, "keystores"), {recursive: true});
     fs.mkdirSync(path.join(dataDir, "secrets"), {recursive: true});
 
-    await lodestar(["validator list", `--dataDir ${dataDir}`]);
+    await runCliCommand(lodestar, ["validator list", `--dataDir ${dataDir}`], {timeoutMs: 5000});
 
     expect(console.info).calledWith("1 local keystores");
     expect(console.info).calledWith(pkHex);
