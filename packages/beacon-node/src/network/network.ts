@@ -266,7 +266,8 @@ export class Network implements INetwork {
     // Drop all the gossip validation queues
     this.networkProcessor.dropAllJobs();
 
-    return this.core.unsubscribeGossipCoreTopics();
+    await this.core.unsubscribeGossipCoreTopics();
+    this.subscribedToCoreTopics = false;
   }
 
   isSubscribedToGossipCoreTopics(): boolean {
