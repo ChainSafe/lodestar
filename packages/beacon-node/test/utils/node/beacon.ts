@@ -80,9 +80,9 @@ export async function getDevBeaconNode(
     await db.blockArchive.add(block);
 
     if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.deneb) {
-      const blobsSidecar = ssz.deneb.BlobsSidecar.defaultValue();
-      blobsSidecar.beaconBlockRoot = config.getForkTypes(GENESIS_SLOT).BeaconBlock.hashTreeRoot(block.message);
-      await db.blobsSidecar.add(blobsSidecar);
+      const blobSidecars = ssz.deneb.BlobSidecars.defaultValue();
+      const blockRoot = config.getForkTypes(GENESIS_SLOT).BeaconBlock.hashTreeRoot(block.message);
+      await db.blobSidecars.add({blobSidecars, slot: GENESIS_SLOT, blockRoot});
     }
   }
 

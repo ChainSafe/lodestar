@@ -4,6 +4,7 @@ import {BYTES_PER_FIELD_ELEMENT, BLOB_TX_TYPE} from "@lodestar/params";
 import {kzgCommitmentToVersionedHash} from "@lodestar/state-transition";
 import {loadEthereumTrustedSetup, initCKZG, ckzg, FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../../src/util/kzg.js";
 
+import {validateBlobSidecars, validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
 import {getMockBeaconChain} from "../../utils/mocks/chain.js";
 
 describe("C-KZG", async () => {
@@ -68,7 +69,12 @@ describe("C-KZG", async () => {
 
     expect(signedBlobSidecars.length).to.equal(2);
 
-    // TODO DENEB: add full validation
+    // Full validation
+    validateBlobSidecars(slot, blockRoot, kzgCommitments, blobSidecars);
+
+    signedBlobSidecars.forEach(async (signedBlobSidecar) => {
+      await validateGossipBlobSidecar(chain.config, chain, signedBlobSidecar, signedBlobSidecar.message.index);
+    });
   });
 });
 

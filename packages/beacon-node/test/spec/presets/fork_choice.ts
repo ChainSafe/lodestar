@@ -169,7 +169,7 @@ export const forkChoiceTest =
               try {
                 await chain.processBlock(blockImport, {
                   seenTimestampSec: tickTime,
-                  validBlobsSidecar: true,
+                  validBlobSidecars: true,
                   importAttestations: AttestationImportOpt.Force,
                 });
                 if (!isValid) throw Error("Expect error since this is a negative test");
