@@ -1,4 +1,3 @@
-import {DOMAIN_VOLUNTARY_EXIT, ForkName} from "@lodestar/params";
 import {allForks, phase0, ssz} from "@lodestar/types";
 import {
   computeSigningRoot,
@@ -25,13 +24,7 @@ export function getVoluntaryExitSignatureSet(
 ): ISignatureSet {
   const {epochCtx} = state;
   const slot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
-  const denebSlot = computeStartSlotAtEpoch(state.config.DENEB_FORK_EPOCH);
-
-  // Deneb onwards the domain fork is fixed to Capella version
-  const domain =
-    state.slot < denebSlot
-      ? state.config.getDomain(state.slot, DOMAIN_VOLUNTARY_EXIT, slot)
-      : state.config.getDomainAtFork(ForkName.capella, DOMAIN_VOLUNTARY_EXIT);
+  const domain = state.config.getDomainForVoluntaryExit(state.slot, slot);
 
   return {
     type: SignatureSetType.single,

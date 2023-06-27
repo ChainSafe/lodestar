@@ -9,7 +9,6 @@ import {
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
-  ForkName,
   DOMAIN_AGGREGATE_AND_PROOF,
   DOMAIN_BEACON_ATTESTER,
   DOMAIN_BEACON_PROPOSER,
@@ -18,7 +17,6 @@ import {
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
-  DOMAIN_VOLUNTARY_EXIT,
   DOMAIN_APPLICATION_BUILDER,
   DOMAIN_BLOB_SIDECAR,
 } from "@lodestar/params";
@@ -564,11 +562,7 @@ export class ValidatorStore {
     exitEpoch: Epoch
   ): Promise<phase0.SignedVoluntaryExit> {
     const signingSlot = computeStartSlotAtEpoch(exitEpoch);
-    // Deneb onwards the signature fork is fixed to Capella version
-    const domain =
-      exitEpoch < this.config.DENEB_FORK_EPOCH
-        ? this.config.getDomain(signingSlot, DOMAIN_VOLUNTARY_EXIT)
-        : this.config.getDomainAtFork(ForkName.capella, DOMAIN_VOLUNTARY_EXIT);
+    const domain = this.config.getDomainForVoluntaryExit(signingSlot);
 
     const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex};
     const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
