@@ -2,6 +2,7 @@ import path from "node:path";
 import {rimraf} from "rimraf";
 import {Interchange} from "@lodestar/validator";
 import {ApiError} from "@lodestar/api";
+import {getMochaContext} from "@lodestar/test-util/mocha";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";
@@ -10,6 +11,7 @@ import {getKeystoresStr} from "../utils/keystores.js";
 
 describe("import keystores from api, test DefaultProposerConfig", function () {
   this.timeout("30s");
+  const testContext = getMochaContext(this);
   const dataDir = path.join(testFilesDir, "proposer-config-test");
 
   const defaultOptions = {
@@ -44,8 +46,8 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
   };
   const slashingProtectionStr = JSON.stringify(slashingProtection);
 
-  it("1 . run 'validator' import keys from API, getdefaultfeeRecipient", async function () {
-    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager([], {dataDir});
+  it("1 . run 'validator' import keys from API, getdefaultfeeRecipient", async () => {
+    const {keymanagerClient} = await startValidatorWithKeyManager([], {dataDir, testContext});
     // Produce and encrypt keystores
     // Import test keys
     const keystoresStr = await getKeystoresStr(passphrase, secretKeys);
@@ -90,11 +92,10 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
       {pubkey: pubkeys[0], gasLimit: updatedOptions.gasLimit},
       "gasLimit Check updated"
     );
-    await stopValidator();
   });
 
-  it("2 . run 'validator' Check last feeRecipient and gasLimit persists", async function () {
-    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager([], {dataDir});
+  it("2 . run 'validator' Check last feeRecipient and gasLimit persists", async () => {
+    const {keymanagerClient} = await startValidatorWithKeyManager([], {dataDir, testContext});
 
     // next time check edited feeRecipient persists
     let feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
@@ -132,11 +133,10 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
       {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
       "gasLimit Check default after  delete"
     );
-    await stopValidator();
   });
 
-  it("3 . run 'validator' FeeRecipient and GasLimit should be default after delete", async function () {
-    const {keymanagerClient, stopValidator} = await startValidatorWithKeyManager([], {dataDir});
+  it("3 . run 'validator' FeeRecipient and GasLimit should be default after delete", async () => {
+    const {keymanagerClient} = await startValidatorWithKeyManager([], {dataDir, testContext});
 
     const feeRecipient0 = await keymanagerClient.listFeeRecipient(pubkeys[0]);
     ApiError.assert(feeRecipient0);
@@ -156,6 +156,5 @@ describe("import keystores from api, test DefaultProposerConfig", function () {
       {pubkey: pubkeys[0], gasLimit: defaultOptions.gasLimit},
       "gasLimit Check default after  delete"
     );
-    await stopValidator();
   });
 });

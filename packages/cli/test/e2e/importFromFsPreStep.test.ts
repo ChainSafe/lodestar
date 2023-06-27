@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {rimraf} from "rimraf";
 import {expect} from "chai";
+import {getMochaContext} from "@lodestar/test-util/mocha";
 import {execCliCommand} from "@lodestar/test-util";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
@@ -9,6 +10,7 @@ import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
 import {getKeystoresStr} from "../utils/keystores.js";
 
 describe("import from fs then validate", function () {
+  const testContext = getMochaContext(this);
   this.timeout("30s");
 
   const dataDir = path.join(testFilesDir, "import-then-validate-test");
@@ -59,9 +61,8 @@ describe("import from fs then validate", function () {
   });
 
   it("run 'validator' check keys are loaded", async function () {
-    const {stopValidator, keymanagerClient} = await startValidatorWithKeyManager([], {dataDir});
+    const {keymanagerClient} = await startValidatorWithKeyManager([], {dataDir, testContext});
 
     await expectKeys(keymanagerClient, pubkeys, "Wrong listKeys response data");
-    await stopValidator();
   });
 });

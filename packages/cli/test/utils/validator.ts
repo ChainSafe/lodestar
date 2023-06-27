@@ -4,6 +4,7 @@ import {Api, getClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
 import {ApiError} from "@lodestar/api";
 import {spawnCliCommand, stopChildProcess} from "@lodestar/test-util";
+import {TestContext} from "@lodestar/test-util/mocha";
 import {getMockBeaconApiServer} from "./mockBeaconApiServer.js";
 import {expectDeepEqualsUnordered, findApiToken} from "./runUtils.js";
 
@@ -12,8 +13,10 @@ export async function startValidatorWithKeyManager(
   {
     dataDir,
     logPrefix,
+    testContext,
   }: {
     dataDir: string;
+    testContext?: TestContext;
     logPrefix?: string;
   }
 ): Promise<{
@@ -59,21 +62,35 @@ export async function startValidatorWithKeyManager(
   );
 
   // Wrap in retry since the API may not be listening yet
-  await retry(() => keymanagerClient.listRemoteKeys(), {retryDelay: 500, retries: 10});
+  // Remote key endpoint takes a while to be ready
+  await retry(() => keymanagerClient.listRemoteKeys(), {retryDelay: 500, retries: 20});
 
   validatorProc.addListener("exit", () => {
     controller.abort();
   });
 
+  const stopValidator = async (): Promise<void> => {
+    console.log("%%%%%% Removing listeners...");
+    validatorProc.removeAllListeners("exit");
+    console.log("%%%%%% Aborting controller...");
+    controller.abort();
+    console.log("%%%%%% Closing beacon server...");
+    await beaconServer.close();
+    console.log("%%%%%% Killing validator...");
+    validatorProc.kill("SIGINT");
+    console.log("%%%%%% Waiting for validator to exit...");
+    await sleep(3000);
+    console.log("%%%%%% Stopping validator...");
+    await stopChildProcess(validatorProc, "SIGKILL");
+  };
+
+  if (testContext) {
+    testContext.afterEach(stopValidator);
+  }
+
   return {
     validator: validatorProc,
-    stopValidator: async (): Promise<void> => {
-      await beaconServer.close();
-      controller.abort();
-      validatorProc.kill("SIGINT");
-      await sleep(3000);
-      await stopChildProcess(validatorProc, "SIGKILL");
-    },
+    stopValidator,
     keymanagerClient,
   };
 }

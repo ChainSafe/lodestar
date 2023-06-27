@@ -3,6 +3,8 @@ import childProcess from "node:child_process";
 import stream from "node:stream";
 import fs from "node:fs";
 import path from "node:path";
+import {sleep} from "@lodestar/utils";
+import {TestContext} from "./interfaces.js";
 
 /**
  * If timeout is greater than 0, the parent will send the signal
@@ -110,6 +112,7 @@ export type SpawnChildProcessOptions = {
   healthTimeoutMs?: number;
   healthCheckIntervalMs?: number;
   logHealthChecksAfterMs?: number;
+  testContext?: TestContext;
   signal?: AbortSignal;
   // If health attribute defined we will consider resolveOn = ChildProcessResolve.Healthy
   health?: () => Promise<{healthy: boolean; error?: string}>;
@@ -132,7 +135,7 @@ export async function spawnChildProcess(
 ): Promise<childProcess.ChildProcessWithoutNullStreams> {
   const options = {...defaultStartOpts, ...opts};
   const {env, pipeStdioToFile, pipeStdioToParent, logPrefix, pipeOnlyError, signal} = options;
-  const {health, resolveOn, healthCheckIntervalMs, logHealthChecksAfterMs, healthTimeoutMs} = options;
+  const {health, resolveOn, healthCheckIntervalMs, logHealthChecksAfterMs, healthTimeoutMs, testContext} = options;
 
   return new Promise<childProcess.ChildProcessWithoutNullStreams>((resolve, reject) => {
     void (async () => {
@@ -142,9 +145,17 @@ export async function spawnChildProcess(
 
       const logPrefixStream = new stream.Transform({
         transform(chunk, _encoding, callback) {
-          callback(null, `${logPrefix} ${proc.pid}: ${Buffer.from(chunk).toString("utf8")}`);
+          callback(null, `[${logPrefix}] [${proc.pid}]: ${Buffer.from(chunk).toString("utf8")}`);
         },
       });
+
+      if (testContext) {
+        testContext.afterEach(async () => {
+          proc.kill("SIGINT");
+          await sleep(1000, signal);
+          await stopChildProcess(proc);
+        });
+      }
 
       if (signal) {
         signal.addEventListener(

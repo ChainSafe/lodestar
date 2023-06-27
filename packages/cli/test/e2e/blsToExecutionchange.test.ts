@@ -10,7 +10,7 @@ import {testFilesDir} from "../utils.js";
 describe("bLSToExecutionChange cmd", function () {
   this.timeout("60s");
 
-  it("Perform bLSToExecutionChange", async function () {
+  it("Perform bLSToExecutionChange", async () => {
     const restPort = 9596;
 
     const devBnProc = await spawnCliCommand(

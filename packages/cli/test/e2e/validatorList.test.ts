@@ -11,6 +11,7 @@ import {testFilesDir} from "../utils.js";
 import {getLodestarCli} from "../../src/cli.js";
 
 describe("cmds / validator", function () {
+  this.timeout("30s");
   stubLogger(this, console);
   const lodestar = getLodestarCli();
   const dataDir = testFilesDir;
