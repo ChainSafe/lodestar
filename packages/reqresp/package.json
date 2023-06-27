@@ -68,7 +68,8 @@
   },
   "devDependencies": {
     "@lodestar/logger": "^1.9.0",
-    "@lodestar/types": "^1.9.0"
+    "@lodestar/types": "^1.9.0",
+    "libp2p": "0.42.2"
   },
   "peerDependencies": {
     "libp2p": "~0.42.2"
