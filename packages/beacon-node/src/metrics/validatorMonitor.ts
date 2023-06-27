@@ -40,7 +40,7 @@ export type ValidatorMonitor = {
   registerLocalValidatorInSyncCommittee(index: number, untilEpoch: Epoch): void;
   registerValidatorStatuses(currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
-  registerBlobSideCar(src: OpSource, seenTimestampSec: Seconds, blob: deneb.BlobSidecar): void;
+  registerBlobSidecar(src: OpSource, seenTimestampSec: Seconds, blob: deneb.BlobSidecar): void;
   registerImportedBlock(block: allForks.BeaconBlock, data: {proposerBalanceDelta: number}): void;
   onPoolSubmitUnaggregatedAttestation(
     seenTimestampSec: number,
@@ -377,7 +377,7 @@ export function createValidatorMonitor(
       }
     },
 
-    registerBlobSideCar(_src, _seenTimestampSec, _blob) {
+    registerBlobSidecar(_src, _seenTimestampSec, _blob) {
       //TODO: freetheblobs
     },
 
