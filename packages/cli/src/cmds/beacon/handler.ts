@@ -130,6 +130,9 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
         try {
           await node.close();
           logger.debug("Beacon node closed");
+          // Explicitly exit until active handles issue is resolved
+          // See https://github.com/ChainSafe/lodestar/issues/5642
+          process.exit(0);
         } catch (e) {
           logger.error("Error closing beacon node", {}, e as Error);
           // Make sure db is always closed gracefully
