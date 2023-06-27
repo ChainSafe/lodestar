@@ -101,8 +101,7 @@ A young testnet should take a few hours to sync. If you see multiple or consiste
 
 ### Checkpoint Sync
 
-If you are starting your node from a blank db/genesis (or from last saved state in db) in a network which is now far ahead, your node is susceptible to "long range attacks" via something called weak subjectivity.
-[Read Vitalik's illuminating post on the same](https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/).
+If you are starting your node from a blank db, like starting from genesis, or from the last saved state in db and the network is now far ahead, your node will be susceptible to "long range attacks."  Ethereum's solution to this is via something called weak subjectivity. [Read Vitalik's illuminating post explaining weak subjectivity.](https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/).
 
 If you have a synced beacon node available (e.g., your friend's node or an infrastructure provider) and a trusted checkpoint you can rely on, you can start off your beacon node in under a minute! And at the same time kicking the "long range attack" in its butt!
 
@@ -182,4 +181,4 @@ Apr-20 15:16:17.017[]                 info: Synced - slot: 6264979 - head: 0xde9
 
 6. Peer info: Current total number of outbound or inbound peers, for e.g.: `peers: 27`
 
-For more insight into lodestar beacon functioning, you may setup lodestar metrics and use prepared Grafana dashboards that you may find in the repository.
+For more insight into how a Lodestar beacon node is functioning, you may setup lodestar metrics and use the prepared Grafana dashboards that are found in the repository. Check out our section on [Prometheus and Grafana](./prometheus-grafana.md) for more details.
