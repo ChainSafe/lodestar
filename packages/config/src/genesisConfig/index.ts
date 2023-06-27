@@ -77,11 +77,11 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
     },
 
     getDomainForVoluntaryExit(stateSlot: Slot, messageSlot?: Slot) {
-      // Deneb onwards the signature domain fork is fixed to Deneb
+      // Deneb onwards the signature domain fork is fixed to capella
       const domain =
         stateSlot < chainForkConfig.DENEB_FORK_EPOCH * SLOTS_PER_EPOCH
           ? this.getDomain(stateSlot, DOMAIN_VOLUNTARY_EXIT, messageSlot)
-          : this.getDomainAtFork(ForkName.deneb, DOMAIN_VOLUNTARY_EXIT);
+          : this.getDomainAtFork(ForkName.capella, DOMAIN_VOLUNTARY_EXIT);
 
       return domain;
     },
