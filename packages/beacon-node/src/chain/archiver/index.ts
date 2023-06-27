@@ -1,16 +1,11 @@
-import {Logger, LogLevel} from "@lodestar/utils";
-import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
-import {ValidatorIndex, Slot} from "@lodestar/types";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-
+import {Logger} from "@lodestar/utils";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconDb} from "../../db/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {IBeaconChain} from "../interface.js";
 import {ChainEvent} from "../emitter.js";
-import {CheckpointStateCache} from "../stateCache/index.js";
-import {Metrics} from "../../metrics/metrics.js";
 import {StatesArchiver, StatesArchiverOpts} from "./archiveStates.js";
-import {archiveBlocks, FinalizedData} from "./archiveBlocks.js";
+import {archiveBlocks} from "./archiveBlocks.js";
 
 const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 
@@ -48,10 +43,9 @@ export class Archiver {
     private readonly chain: IBeaconChain,
     private readonly logger: Logger,
     signal: AbortSignal,
-    opts: ArchiverOpts,
-    private readonly metrics: Metrics | null
+    opts: ArchiverOpts
   ) {
-    this.statesArchiver = new StatesArchiver(chain.checkpointStateCache, db, logger, opts);
+    this.statesArchiver = new StatesArchiver(chain.regen, db, logger, opts);
     this.prevFinalized = chain.forkChoice.getFinalizedCheckpoint();
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
       maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN,
@@ -84,18 +78,18 @@ export class Archiver {
 
   private onCheckpoint = (): void => {
     const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
-    this.chain.checkpointStateCache.prune(
+    this.chain.regen.pruneOnCheckpoint(
       this.chain.forkChoice.getFinalizedCheckpoint().epoch,
-      this.chain.forkChoice.getJustifiedCheckpoint().epoch
+      this.chain.forkChoice.getJustifiedCheckpoint().epoch,
+      headStateRoot
     );
-    this.chain.stateCache.prune(headStateRoot);
   };
 
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
     try {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
-      const finalizedData = await archiveBlocks(
+      await archiveBlocks(
         this.chain.config,
         this.db,
         this.chain.forkChoice,
@@ -104,21 +98,13 @@ export class Archiver {
         finalized,
         this.chain.clock.currentEpoch
       );
-      this.collectFinalizedProposalStats(
-        this.chain.checkpointStateCache,
-        this.chain.forkChoice,
-        this.chain.beaconProposerCache,
-        finalizedData,
-        finalized,
-        this.prevFinalized
-      );
       this.prevFinalized = finalized;
 
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiver.maybeArchiveState(finalized);
 
-      this.chain.checkpointStateCache.pruneFinalized(finalizedEpoch);
-      this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch);
+      this.chain.regen.pruneOnFinalized(finalizedEpoch);
+
       // tasks rely on extended fork choice
       this.chain.forkChoice.prune(finalized.rootHex);
       await this.updateBackfillRange(finalized);
@@ -174,170 +160,4 @@ export class Archiver {
       this.logger.error("Error updating backfilledRanges on finalization", {epoch: finalized.epoch}, e as Error);
     }
   };
-
-  private collectFinalizedProposalStats(
-    checkpointStateCache: CheckpointStateCache,
-    forkChoice: IForkChoice,
-    beaconProposerCache: IBeaconChain["beaconProposerCache"],
-    finalizedData: FinalizedData,
-    finalized: CheckpointWithHex,
-    lastFinalized: CheckpointWithHex
-  ): FinalizedStats {
-    const {finalizedCanonicalCheckpoints, finalizedCanonicalBlocks, finalizedNonCanonicalBlocks} = finalizedData;
-
-    // Range to consider is:
-    //   lastFinalized.epoch * SLOTS_PER_EPOCH + 1, .... finalized.epoch * SLOTS_PER_EPOCH
-    // So we need to check proposer of lastFinalized (index 1 onwards) as well as 0th index proposer
-    // of current finalized
-    const finalizedProposersCheckpoints: FinalizedData["finalizedCanonicalCheckpoints"] =
-      finalizedCanonicalCheckpoints.filter(
-        (hexCheck) => hexCheck.epoch < finalized.epoch && hexCheck.epoch > lastFinalized.epoch
-      );
-    finalizedProposersCheckpoints.push(lastFinalized);
-    finalizedProposersCheckpoints.push(finalized);
-
-    // Sort the data to in following structure to make inferences
-    const slotProposers = new Map<Slot, {canonicalVals: ValidatorIndex[]; nonCanonicalVals: ValidatorIndex[]}>();
-
-    //  1. Process canonical blocks
-    for (const block of finalizedCanonicalBlocks) {
-      // simply set to the single entry as no double proposal can be there for same slot in canonical
-      slotProposers.set(block.slot, {canonicalVals: [block.proposerIndex], nonCanonicalVals: []});
-    }
-
-    // 2. Process non canonical blocks
-    for (const block of finalizedNonCanonicalBlocks) {
-      const slotVals = slotProposers.get(block.slot) ?? {canonicalVals: [], nonCanonicalVals: []};
-      slotVals.nonCanonicalVals.push(block.proposerIndex);
-      slotProposers.set(block.slot, slotVals);
-    }
-
-    // Some simple calculatable stats for all validators
-    const finalizedCanonicalCheckpointsCount = finalizedCanonicalCheckpoints.length;
-    const expectedTotalProposalsCount = (finalized.epoch - lastFinalized.epoch) * SLOTS_PER_EPOCH;
-    const finalizedCanonicalBlocksCount = finalizedCanonicalBlocks.length;
-    const finalizedOrphanedProposalsCount = finalizedNonCanonicalBlocks.length;
-    const finalizedMissedProposalsCount = expectedTotalProposalsCount - slotProposers.size;
-
-    const allValidators: ProposalStats = {
-      total: expectedTotalProposalsCount,
-      finalized: finalizedCanonicalBlocksCount,
-      orphaned: finalizedOrphanedProposalsCount,
-      missed: finalizedMissedProposalsCount,
-    };
-
-    // Stats about the attached validators
-    const attachedProposers = beaconProposerCache
-      .getProposersSinceEpoch(finalized.epoch)
-      .map((indexString) => Number(indexString));
-    const finalizedAttachedValidatorsCount = attachedProposers.length;
-
-    // Calculate stats for attached validators, based on states in checkpointState cache
-    let finalizedFoundCheckpointsInStateCache = 0;
-
-    let expectedAttachedValidatorsProposalsCount = 0;
-    let finalizedAttachedValidatorsProposalsCount = 0;
-    let finalizedAttachedValidatorsOrphanCount = 0;
-    let finalizedAttachedValidatorsMissedCount = 0;
-
-    for (const checkpointHex of finalizedProposersCheckpoints) {
-      const checkpointState = checkpointStateCache.get(checkpointHex);
-
-      // Generate stats for attached validators if we have state info
-      if (checkpointState !== null) {
-        finalizedFoundCheckpointsInStateCache++;
-
-        const epochProposers = checkpointState.epochCtx.proposers;
-        const startSlot = checkpointState.epochCtx.epoch * SLOTS_PER_EPOCH;
-
-        for (let index = 0; index < epochProposers.length; index++) {
-          const slot = startSlot + index;
-
-          // Let skip processing the slots which are out of range
-          // Range to consider is:
-          //   lastFinalized.epoch * SLOTS_PER_EPOCH + 1, .... finalized.epoch * SLOTS_PER_EPOCH
-          if (slot <= lastFinalized.epoch * SLOTS_PER_EPOCH || slot > finalized.epoch * SLOTS_PER_EPOCH) {
-            continue;
-          }
-
-          const proposer = epochProposers[index];
-
-          // If this proposer was attached to this BN for this epoch
-          if (attachedProposers.includes(proposer)) {
-            expectedAttachedValidatorsProposalsCount++;
-
-            // Get what validators made canonical/non canonical proposals for this slot
-            const {canonicalVals, nonCanonicalVals} = slotProposers.get(slot) ?? {
-              canonicalVals: [],
-              nonCanonicalVals: [],
-            };
-            let wasFinalized = false;
-
-            if (canonicalVals.includes(proposer)) {
-              finalizedAttachedValidatorsProposalsCount++;
-              wasFinalized = true;
-            }
-            const attachedProposerNonCanSlotProposals = nonCanonicalVals.filter((nonCanVal) => nonCanVal === proposer);
-            finalizedAttachedValidatorsOrphanCount += attachedProposerNonCanSlotProposals.length;
-
-            // Check is this slot proposal was missed by this attached validator
-            if (!wasFinalized && attachedProposerNonCanSlotProposals.length === 0) {
-              finalizedAttachedValidatorsMissedCount++;
-            }
-          }
-        }
-      }
-    }
-
-    const attachedValidators: ProposalStats = {
-      total: expectedAttachedValidatorsProposalsCount,
-      finalized: finalizedAttachedValidatorsProposalsCount,
-      orphaned: finalizedAttachedValidatorsOrphanCount,
-      missed: finalizedAttachedValidatorsMissedCount,
-    };
-
-    this.logger.debug("All validators finalized proposal stats", {
-      ...allValidators,
-      finalizedCanonicalCheckpointsCount,
-      finalizedFoundCheckpointsInStateCache,
-    });
-
-    // Only log to info if there is some relevant data to show
-    //  - No need to explicitly track SYNCED state since no validators attached would be there to show
-    //  - debug log if validators attached but no proposals were scheduled
-    //  - info log if proposals were scheduled (canonical) or there were orphans (non canonical)
-    if (finalizedAttachedValidatorsCount !== 0) {
-      const logLevel =
-        attachedValidators.total !== 0 || attachedValidators.orphaned !== 0 ? LogLevel.info : LogLevel.debug;
-      this.logger[logLevel]("Attached validators finalized proposal stats", {
-        ...attachedValidators,
-        validators: finalizedAttachedValidatorsCount,
-      });
-    } else {
-      this.logger.debug("No proposers attached to beacon node", {finalizedEpoch: finalized.epoch});
-    }
-
-    this.metrics?.allValidators.total.set(allValidators.total);
-    this.metrics?.allValidators.finalized.set(allValidators.finalized);
-    this.metrics?.allValidators.orphaned.set(allValidators.orphaned);
-    this.metrics?.allValidators.missed.set(allValidators.missed);
-
-    this.metrics?.attachedValidators.total.set(attachedValidators.total);
-    this.metrics?.attachedValidators.finalized.set(attachedValidators.finalized);
-    this.metrics?.attachedValidators.orphaned.set(attachedValidators.orphaned);
-    this.metrics?.attachedValidators.missed.set(attachedValidators.missed);
-
-    this.metrics?.finalizedCanonicalCheckpointsCount.set(finalizedCanonicalCheckpointsCount);
-    this.metrics?.finalizedFoundCheckpointsInStateCache.set(finalizedFoundCheckpointsInStateCache);
-    this.metrics?.finalizedAttachedValidatorsCount.set(finalizedAttachedValidatorsCount);
-
-    // Return stats data for the ease of unit testing
-    return {
-      allValidators,
-      attachedValidators,
-      finalizedCanonicalCheckpointsCount,
-      finalizedFoundCheckpointsInStateCache,
-      finalizedAttachedValidatorsCount,
-    };
-  }
 }

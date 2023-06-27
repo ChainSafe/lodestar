@@ -94,7 +94,10 @@ export type LightClientStore = altair.LightClientStore | capella.LightClientStor
 
 export type SignedBeaconBlockAndBlobsSidecar = deneb.SignedBeaconBlockAndBlobsSidecar;
 
-export type SSEPayloadAttributes = bellatrix.SSEPayloadAttributes | capella.SSEPayloadAttributes;
+export type SSEPayloadAttributes =
+  | bellatrix.SSEPayloadAttributes
+  | capella.SSEPayloadAttributes
+  | deneb.SSEPayloadAttributes;
 /**
  * Types known to change between forks
  */
@@ -222,7 +225,9 @@ export type AllForksExecutionSSZTypes = {
     typeof bellatrixSsz.SignedBuilderBid | typeof capellaSsz.SignedBuilderBid | typeof denebSsz.SignedBuilderBid
   >;
   SSEPayloadAttributes: AllForksTypeOf<
-    typeof bellatrixSsz.SSEPayloadAttributes | typeof capellaSsz.SSEPayloadAttributes
+    | typeof bellatrixSsz.SSEPayloadAttributes
+    | typeof capellaSsz.SSEPayloadAttributes
+    | typeof denebSsz.SSEPayloadAttributes
   >;
 };
 

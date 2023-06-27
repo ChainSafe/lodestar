@@ -10,10 +10,10 @@
     },
     {
       "description": "",
-      "label": "Beacon node job name",
-      "name": "VAR_BEACON_JOB",
+      "label": "Validator client job name",
+      "name": "VAR_VALIDATOR_JOB",
       "type": "constant",
-      "value": "beacon"
+      "value": "validator"
     }
   ],
   "annotations": {
@@ -40,7 +40,7 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
   "links": [
     {

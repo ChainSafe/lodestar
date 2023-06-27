@@ -4,7 +4,7 @@ import {
   CachedBeaconStateCapella,
   CachedBeaconStateAltair,
   CachedBeaconStatePhase0,
-  EpochProcess,
+  EpochTransitionCache,
 } from "../types.js";
 import {processEffectiveBalanceUpdates} from "./processEffectiveBalanceUpdates.js";
 import {processEth1DataReset} from "./processEth1DataReset.js";
@@ -42,23 +42,23 @@ export {
 
 export {computeUnrealizedCheckpoints} from "./computeUnrealizedCheckpoints.js";
 
-export function processEpoch(fork: ForkSeq, state: CachedBeaconStateAllForks, epochProcess: EpochProcess): void {
-  processJustificationAndFinalization(state, epochProcess);
+export function processEpoch(fork: ForkSeq, state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
+  processJustificationAndFinalization(state, cache);
   if (fork >= ForkSeq.altair) {
-    processInactivityUpdates(state as CachedBeaconStateAltair, epochProcess);
+    processInactivityUpdates(state as CachedBeaconStateAltair, cache);
   }
-  processRewardsAndPenalties(state, epochProcess);
-  processRegistryUpdates(state, epochProcess);
-  processSlashings(state, epochProcess);
-  processEth1DataReset(state, epochProcess);
-  processEffectiveBalanceUpdates(state, epochProcess);
-  processSlashingsReset(state, epochProcess);
-  processRandaoMixesReset(state, epochProcess);
+  processRewardsAndPenalties(state, cache);
+  processRegistryUpdates(state, cache);
+  processSlashings(state, cache);
+  processEth1DataReset(state, cache);
+  processEffectiveBalanceUpdates(state, cache);
+  processSlashingsReset(state, cache);
+  processRandaoMixesReset(state, cache);
 
   if (fork >= ForkSeq.capella) {
-    processHistoricalSummariesUpdate(state as CachedBeaconStateCapella, epochProcess);
+    processHistoricalSummariesUpdate(state as CachedBeaconStateCapella, cache);
   } else {
-    processHistoricalRootsUpdate(state, epochProcess);
+    processHistoricalRootsUpdate(state, cache);
   }
 
   if (fork === ForkSeq.phase0) {

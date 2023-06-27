@@ -1,11 +1,13 @@
 import {phase0, ssz} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {bytesToInt} from "@lodestar/utils";
-import {Db, Bucket, Repository} from "@lodestar/db";
+import {Db, Repository} from "@lodestar/db";
+import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 export class Eth1DataRepository extends Repository<number, phase0.Eth1DataOrdered> {
   constructor(config: ChainForkConfig, db: Db) {
-    super(config, db, Bucket.phase0_eth1Data, ssz.phase0.Eth1DataOrdered);
+    const bucket = Bucket.phase0_eth1Data;
+    super(config, db, bucket, ssz.phase0.Eth1DataOrdered, getBucketNameByValue(bucket));
   }
 
   decodeKey(data: Buffer): number {

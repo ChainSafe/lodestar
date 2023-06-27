@@ -4,7 +4,7 @@ import {
   isStateValidatorsNodesPopulated,
   DataAvailableStatus,
 } from "@lodestar/state-transition";
-import {WithOptionalBytes, bellatrix} from "@lodestar/types";
+import {bellatrix} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
 import {ProtoBlock} from "@lodestar/fork-choice";
@@ -17,6 +17,7 @@ import type {BeaconChain} from "../chain.js";
 import {BlockInput, ImportBlockOpts} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
+import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
 import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExecutionPayloads.js";
@@ -36,7 +37,7 @@ import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
-  blocksInput: WithOptionalBytes<BlockInput>[],
+  blocksInput: BlockInput[],
   dataAvailabilityStatuses: DataAvailableStatus[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
@@ -119,10 +120,21 @@ export async function verifyBlocksInEpoch(
     const fromFork = this.config.getForkName(parentBlock.slot);
     const toFork = this.config.getForkName(blocks[blocks.length - 1].message.slot);
 
-    // If transition through capella, note won't happen if CAPELLA_EPOCH = 0, will log double on re-org
-    if (fromFork !== ForkName.capella && toFork === ForkName.capella) {
-      this.logger.info(CAPELLA_OWL_BANNER);
-      this.logger.info("Activating withdrawals", {epoch: this.config.CAPELLA_FORK_EPOCH});
+    // If transition through toFork, note won't happen if ${toFork}_EPOCH = 0, will log double on re-org
+    if (toFork !== fromFork) {
+      switch (toFork) {
+        case ForkName.capella:
+          this.logger.info(CAPELLA_OWL_BANNER);
+          this.logger.info("Activating withdrawals", {epoch: this.config.CAPELLA_FORK_EPOCH});
+          break;
+
+        case ForkName.deneb:
+          this.logger.info(DENEB_BLOWFISH_BANNER);
+          this.logger.info("Activating blobs", {epoch: this.config.DENEB_FORK_EPOCH});
+          break;
+
+        default:
+      }
     }
 
     return {postStates, proposerBalanceDeltas, segmentExecStatus};

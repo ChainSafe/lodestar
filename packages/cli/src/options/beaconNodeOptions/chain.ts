@@ -1,25 +1,27 @@
+import * as path from "node:path";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "../../util/index.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
-  "chain.blsVerifyAllMultiThread": boolean;
-  "chain.blsVerifyAllMainThread": boolean;
-  "chain.disableBlsBatchVerify": boolean;
-  "chain.persistInvalidSszObjects": boolean;
+  "chain.blsVerifyAllMultiThread"?: boolean;
+  "chain.blsVerifyAllMainThread"?: boolean;
+  "chain.disableBlsBatchVerify"?: boolean;
+  "chain.persistInvalidSszObjects"?: boolean;
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
   // as this is defined as part of BeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
-  "chain.proposerBoostEnabled": boolean;
-  "chain.disableImportExecutionFcU": boolean;
-  "chain.preaggregateSlotDistance": number;
-  "chain.attDataCacheSlotDistance": number;
-  "chain.computeUnrealized": boolean;
-  "chain.assertCorrectProgressiveBalances": boolean;
-  "chain.maxSkipSlots": number;
+  "chain.proposerBoostEnabled"?: boolean;
+  "chain.disableImportExecutionFcU"?: boolean;
+  "chain.preaggregateSlotDistance"?: number;
+  "chain.attDataCacheSlotDistance"?: number;
+  "chain.computeUnrealized"?: boolean;
+  "chain.assertCorrectProgressiveBalances"?: boolean;
+  "chain.maxSkipSlots"?: number;
+  "chain.trustedSetup"?: string;
   "safe-slots-to-import-optimistically": number;
   "chain.archiveStateEpochFrequency": number;
-  emitPayloadAttributes: boolean;
+  emitPayloadAttributes?: boolean;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -38,6 +40,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     computeUnrealized: args["chain.computeUnrealized"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
+    trustedSetup: args["chain.trustedSetup"],
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     emitPayloadAttributes: args["emitPayloadAttributes"],
@@ -48,15 +51,15 @@ export const options: CliCommandOptions<ChainArgs> = {
   suggestedFeeRecipient: {
     type: "string",
     description:
-      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling produceBlock.",
-    defaultDescription: defaultOptions.chain.suggestedFeeRecipient,
+      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling `produceBlock`.",
+    default: defaultOptions.chain.suggestedFeeRecipient,
     group: "chain",
   },
 
   emitPayloadAttributes: {
     type: "boolean",
     defaultDescription: String(defaultOptions.chain.emitPayloadAttributes),
-    description: "Flag to SSE emit execution payloadAttributes before every slot",
+    description: "Flag to SSE emit execution `payloadAttributes` before every slot",
     group: "chain",
   },
 
@@ -137,6 +140,14 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
+  "chain.trustedSetup": {
+    hidden: true,
+    type: "string",
+    description: "Use a customized trustedSetup to verify blobSidecars",
+    group: "chain",
+    coerce: (arg: string) => (arg ? path.resolve(arg) : undefined),
+  },
+
   "chain.assertCorrectProgressiveBalances": {
     hidden: true,
     description: "Enable asserting the progressive balances",
@@ -149,13 +160,14 @@ Will double processing times. Use only for debugging purposes.",
     type: "number",
     description:
       "Slots from current (clock) slot till which its safe to import a block optimistically if the merge is not justified yet.",
-    defaultDescription: String(defaultOptions.chain.safeSlotsToImportOptimistically),
+    default: defaultOptions.chain.safeSlotsToImportOptimistically,
     group: "chain",
   },
 
   "chain.archiveStateEpochFrequency": {
     hidden: true,
     description: "Minimum number of epochs between archived states",
+    default: defaultOptions.chain.archiveStateEpochFrequency,
     type: "number",
     group: "chain",
   },

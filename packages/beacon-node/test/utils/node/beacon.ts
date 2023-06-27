@@ -40,8 +40,7 @@ export async function getDevBeaconNode(
   const config = createChainForkConfig({...minimalConfig, ...params});
   logger = logger ?? testLogger();
 
-  const db = new BeaconDb({config, controller: new LevelDbController({name: tmpDir.name}, {logger})});
-  await db.start();
+  const db = new BeaconDb(config, await LevelDbController.create({name: tmpDir.name}, {logger}));
 
   options = deepmerge(
     // This deepmerge should NOT merge the array with the defaults but overwrite them
@@ -81,9 +80,9 @@ export async function getDevBeaconNode(
     await db.blockArchive.add(block);
 
     if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.deneb) {
-      const blobsSidecar = ssz.deneb.BlobsSidecar.defaultValue();
-      blobsSidecar.beaconBlockRoot = config.getForkTypes(GENESIS_SLOT).BeaconBlock.hashTreeRoot(block.message);
-      await db.blobsSidecar.add(blobsSidecar);
+      const blobSidecars = ssz.deneb.BlobSidecars.defaultValue();
+      const blockRoot = config.getForkTypes(GENESIS_SLOT).BeaconBlock.hashTreeRoot(block.message);
+      await db.blobSidecars.add({blobSidecars, slot: GENESIS_SLOT, blockRoot});
     }
   }
 

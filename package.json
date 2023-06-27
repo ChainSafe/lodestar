@@ -2,21 +2,27 @@
   "name": "root",
   "private": true,
   "engines": {
-    "node": ">=12.9.0"
+    "node": ">=18.15.0"
   },
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
     "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
+    "clean:nm": "rm -rf ./packages/*/node_modules ./node_modules",
     "build": "lerna run build",
     "build:docs": "lerna run build:refdocs && ./scripts/prepare-docs.sh",
     "build:watch": "lerna exec --parallel -- 'yarn run build:watch'",
     "build:ifchanged": "lerna exec -- ../../scripts/build_if_changed.sh",
     "lint": "eslint --color --ext .ts packages/*/src packages/*/test",
+    "lint:fix": "yarn lint --fix",
+    "lint-docs": "prettier '**/*.md' --check",
+    "lint-docs:fix": "prettier '**/*.md' --write",
     "check-build": "lerna run check-build",
+    "check-readme": "lerna run check-readme",
     "check-types": "lerna run check-types --no-bail",
     "coverage": "lerna run coverage --no-bail",
+    "test": "lerna run test --no-bail --concurrency 1",
     "test:unit": "lerna run test:unit --no-bail --concurrency 1",
     "test:browsers": "lerna run test:browsers",
     "test:e2e": "lerna run test:e2e --no-bail --concurrency 1",
@@ -27,8 +33,7 @@
     "release:create-rc": "node scripts/release/create_rc.mjs",
     "release:tag-rc": "node scripts/release/tag_rc.mjs",
     "release:tag-stable": "node scripts/release/tag_stable.mjs",
-    "release:publish": "lerna publish from-package --yes --no-verify-access",
-    "check-readme": "lerna run check-readme"
+    "release:publish": "lerna publish from-package --yes --no-verify-access"
   },
   "devDependencies": {
     "@chainsafe/eslint-plugin-node": "^11.2.3",
@@ -62,6 +67,7 @@
     "karma-spec-reporter": "^0.0.36",
     "karma-webpack": "^5.0.0",
     "lerna": "^6.6.1",
+    "libp2p": "0.42.2",
     "mocha": "^10.2.0",
     "node-gyp": "^9.3.1",
     "npm-run-all": "^4.1.5",
@@ -80,5 +86,8 @@
     "typescript": "^5.0.3",
     "typescript-docs-verifier": "^2.4.0",
     "webpack": "^5.77.0"
+  },
+  "resolutions": {
+    "dns-over-http-resolver": "^2.1.1"
   }
 }

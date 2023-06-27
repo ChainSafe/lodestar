@@ -2,14 +2,15 @@ import {Libp2p as ILibp2p} from "libp2p";
 import {Connection} from "@libp2p/interface-connection";
 import {Registrar} from "@libp2p/interface-registrar";
 import {ConnectionManager} from "@libp2p/interface-connection-manager";
-import {Slot, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
-import {BlockInput} from "../chain/blocks/types.js";
+import {Slot, SlotRootHex, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {INetworkEventBus} from "./events.js";
 import {INetworkCorePublic} from "./core/types.js";
 import {GossipType} from "./gossip/interface.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {PeerAction} from "./peers/index.js";
+
+export type WithBytes<T> = {data: T; bytes: Uint8Array};
 
 /**
  * The architecture of the network looks like so:
@@ -21,6 +22,7 @@ import {PeerAction} from "./peers/index.js";
  */
 
 export interface INetwork extends INetworkCorePublic {
+  readonly closed: boolean;
   events: INetworkEventBus;
 
   getConnectedPeers(): PeerIdStr[];
@@ -29,29 +31,22 @@ export interface INetwork extends INetworkCorePublic {
   reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): void;
   shouldAggregate(subnet: number, slot: Slot): boolean;
   reStatusPeers(peers: PeerIdStr[]): Promise<void>;
-
+  searchUnknownSlotRoot(slotRoot: SlotRootHex, peer?: PeerIdStr): void;
   // ReqResp
   sendBeaconBlocksByRange(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<allForks.SignedBeaconBlock[]>;
+  ): Promise<WithBytes<allForks.SignedBeaconBlock>[]>;
   sendBeaconBlocksByRoot(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRootRequest
-  ): Promise<allForks.SignedBeaconBlock[]>;
-  sendBlobsSidecarsByRange(
-    peerId: PeerIdStr,
-    request: deneb.BlobsSidecarsByRangeRequest
-  ): Promise<deneb.BlobsSidecar[]>;
-  sendBeaconBlockAndBlobsSidecarByRoot(
-    peerId: PeerIdStr,
-    request: deneb.BeaconBlockAndBlobsSidecarByRootRequest
-  ): Promise<deneb.SignedBeaconBlockAndBlobsSidecar[]>;
+  ): Promise<WithBytes<allForks.SignedBeaconBlock>[]>;
+  sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
+  sendBlobSidecarsByRoot(peerId: PeerIdStr, request: deneb.BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
 
   // Gossip
-  publishBeaconBlockMaybeBlobs(blockInput: BlockInput): Promise<number>;
   publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<number>;
-  publishSignedBeaconBlockAndBlobsSidecar(item: deneb.SignedBeaconBlockAndBlobsSidecar): Promise<number>;
+  publishBlobSidecar(signedBlobSidecar: deneb.SignedBlobSidecar): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number>;
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;
@@ -65,6 +60,7 @@ export interface INetwork extends INetworkCorePublic {
 
   // Debug
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;
+  writeNetworkThreadProfile(durationMs?: number, dirpath?: string): Promise<string>;
 }
 
 export type PeerDirection = Connection["stat"]["direction"];

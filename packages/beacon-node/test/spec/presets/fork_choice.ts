@@ -157,18 +157,19 @@ export const forkChoiceTest =
 
               const blockImport =
                 config.getForkSeq(slot) < ForkSeq.deneb
-                  ? getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip)
+                  ? getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, null)
                   : getBlockInput.postDeneb(
                       config,
                       signedBlock,
                       BlockSource.gossip,
-                      getEmptyBlobsSidecar(config, signedBlock as deneb.SignedBeaconBlock)
+                      getEmptyBlobsSidecar(config, signedBlock as deneb.SignedBeaconBlock),
+                      null
                     );
 
               try {
                 await chain.processBlock(blockImport, {
                   seenTimestampSec: tickTime,
-                  validBlobsSidecar: true,
+                  validBlobSidecars: true,
                   importAttestations: AttestationImportOpt.Force,
                 });
                 if (!isValid) throw Error("Expect error since this is a negative test");

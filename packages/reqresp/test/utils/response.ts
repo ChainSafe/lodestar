@@ -2,13 +2,17 @@ import {pipe} from "it-pipe";
 import {responseEncodeError, responseEncodeSuccess} from "../../src/encoders/responseEncode.js";
 import {RespStatus} from "../../src/interface.js";
 import {Protocol} from "../../src/types.js";
-import {ResponseChunk, SuccessResponseChunk} from "../fixtures/encoders.js";
+import {ResponseChunk} from "../fixtures/encoders.js";
 import {arrToSource} from "../utils/index.js";
 
 export async function* responseEncode(responseChunks: ResponseChunk[], protocol: Protocol): AsyncIterable<Buffer> {
   for (const chunk of responseChunks) {
     if (chunk.status === RespStatus.SUCCESS) {
-      yield* pipe(arrToSource([(chunk as SuccessResponseChunk).payload]), responseEncodeSuccess(protocol));
+      yield* pipe(
+        arrToSource([chunk.payload]),
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        responseEncodeSuccess(protocol, {onChunk: () => {}})
+      );
     } else {
       yield* responseEncodeError(protocol, chunk.status, chunk.errorMessage);
     }

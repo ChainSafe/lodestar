@@ -17,7 +17,7 @@ import {StubbedBeaconDb, StubbedChainMutable} from "../../../../../utils/stub/in
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 import {testLogger} from "../../../../../utils/logger.js";
 import {createCachedBeaconStateTest} from "../../../../../utils/cachedBeaconState.js";
-import {zeroProtoBlock} from "../../../../../utils/mocks/chain/chain.js";
+import {zeroProtoBlock} from "../../../../../utils/mocks/chain.js";
 
 use(chaiAsPromised);
 
@@ -39,7 +39,10 @@ describe.skip("get proposers api impl", function () {
     chainStub.clock = server.sandbox.createStubInstance(Clock);
     const forkChoice = server.sandbox.createStubInstance(ForkChoice);
     chainStub.forkChoice = forkChoice;
-    chainStub.getCanonicalBlockAtSlot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
+    chainStub.getCanonicalBlockAtSlot.resolves({
+      block: ssz.phase0.SignedBeaconBlock.defaultValue(),
+      executionOptimistic: false,
+    });
     dbStub = server.dbStub;
     modules = {
       chain: server.chainStub,

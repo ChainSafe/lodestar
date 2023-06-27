@@ -1,6 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {KZGCommitment, Blob, KZGProof} from "@lodestar/types/deneb";
-import {RootHex, allForks, capella, Wei} from "@lodestar/types";
+import {Root, RootHex, allForks, capella, Wei} from "@lodestar/types";
 
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
@@ -52,6 +52,7 @@ export type PayloadAttributes = {
   // avoid any conversions
   suggestedFeeRecipient: string;
   withdrawals?: capella.Withdrawal[];
+  parentBeaconBlockRoot?: Uint8Array;
 };
 
 export type TransitionConfigurationV1 = {
@@ -70,6 +71,8 @@ export type BlobsBundle = {
   proofs: KZGProof[];
 };
 
+export type VersionedHashes = Uint8Array[];
+
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
  * - JSON RPC over network
@@ -87,7 +90,12 @@ export interface IExecutionEngine {
    *
    * Should be called in advance before, after or in parallel to block processing
    */
-  notifyNewPayload(fork: ForkName, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse>;
+  notifyNewPayload(
+    fork: ForkName,
+    executionPayload: allForks.ExecutionPayload,
+    versionedHashes?: VersionedHashes,
+    parentBeaconBlockRoot?: Root
+  ): Promise<ExecutePayloadResponse>;
 
   /**
    * Signal fork choice updates

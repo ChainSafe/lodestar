@@ -1,9 +1,10 @@
 import all from "it-all";
 import {ChainForkConfig} from "@lodestar/config";
-import {Db, Repository, KeyValue, FilterOptions, Bucket} from "@lodestar/db";
+import {Db, Repository, KeyValue, FilterOptions} from "@lodestar/db";
 import {Slot, Root, allForks, ssz} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
+import {Bucket, getBucketNameByValue} from "../buckets.js";
 import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex.js";
 import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./blockArchiveIndex.js";
 
@@ -22,14 +23,15 @@ export type BlockArchiveBatchPutBinaryItem = KeyValue<Slot, Uint8Array> & {
  */
 export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeaconBlock> {
   constructor(config: ChainForkConfig, db: Db) {
+    const bucket = Bucket.allForks_blockArchive;
     const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used
-    super(config, db, Bucket.allForks_blockArchive, type);
+    super(config, db, bucket, type, getBucketNameByValue(bucket));
   }
 
   // Overrides for multi-fork
 
   encodeValue(value: allForks.SignedBeaconBlock): Uint8Array {
-    return this.config.getForkTypes(value.message.slot).SignedBeaconBlock.serialize(value) as Uint8Array;
+    return this.config.getForkTypes(value.message.slot).SignedBeaconBlock.serialize(value);
   }
 
   decodeValue(data: Uint8Array): allForks.SignedBeaconBlock {

@@ -31,8 +31,7 @@ export interface KeyValue<K, V> {
 export interface DatabaseController<K, V> {
   // service start / stop
 
-  start(): Promise<void>;
-  stop(): Promise<void>;
+  close(): Promise<void>;
 
   /** To inject metrics after CLI initialization */
   setMetrics(metrics: LevelDbControllerMetrics): void;

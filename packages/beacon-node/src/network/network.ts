@@ -4,19 +4,18 @@ import {BeaconConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
-import {phase0, allForks, deneb, altair, Root, capella} from "@lodestar/types";
+import {phase0, allForks, deneb, altair, Root, capella, SlotRootHex} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {ResponseIncoming} from "@lodestar/reqresp";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ForkName, ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {IBeaconDb} from "../db/interface.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {IClock} from "../util/clock.js";
-import {BlockInput, BlockInputType} from "../chain/blocks/types.js";
 import {NetworkOptions} from "./options.js";
-import {INetwork} from "./interface.js";
+import {WithBytes, INetwork} from "./interface.js";
 import {ReqRespMethod} from "./reqresp/index.js";
 import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
@@ -25,7 +24,11 @@ import {CommitteeSubscription} from "./subnets/index.js";
 import {isPublishToZeroPeersError} from "./util.js";
 import {NetworkProcessor, PendingGossipsubMessage} from "./processor/index.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
-import {collectExactOneTyped, collectMaxResponseTyped} from "./reqresp/utils/collect.js";
+import {
+  collectExactOneTyped,
+  collectMaxResponseTyped,
+  collectMaxResponseTypedWithBytes,
+} from "./reqresp/utils/collect.js";
 import {GetReqRespHandlerFn, Version, requestSszTypeByMethod, responseSszTypeByMethod} from "./reqresp/types.js";
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
@@ -37,7 +40,6 @@ type NetworkModules = {
   config: BeaconConfig;
   logger: LoggerNode;
   chain: IBeaconChain;
-  signal: AbortSignal;
   networkEventBus: NetworkEventBus;
   aggregatorTracker: AggregatorTracker;
   networkProcessor: NetworkProcessor;
@@ -54,7 +56,6 @@ export type NetworkInitModules = {
   chain: IBeaconChain;
   db: IBeaconDb;
   getReqRespHandler: GetReqRespHandlerFn;
-  signal: AbortSignal;
   // Optionally pass custom GossipHandlers, for testing
   gossipHandlers?: GossipHandlers;
 };
@@ -76,7 +77,8 @@ export class Network implements INetwork {
   private readonly config: BeaconConfig;
   private readonly clock: IClock;
   private readonly chain: IBeaconChain;
-  private readonly signal: AbortSignal;
+  // Used only for sleep() statements
+  private readonly controller: AbortController;
 
   // TODO: Review
   private readonly networkProcessor: NetworkProcessor;
@@ -86,7 +88,6 @@ export class Network implements INetwork {
   private subscribedToCoreTopics = false;
   private connectedPeers = new Set<PeerIdStr>();
   private regossipBlsChangesPromise: Promise<void> | null = null;
-  private closed = false;
 
   constructor(modules: NetworkModules) {
     this.peerId = modules.peerId;
@@ -94,7 +95,7 @@ export class Network implements INetwork {
     this.logger = modules.logger;
     this.chain = modules.chain;
     this.clock = modules.chain.clock;
-    this.signal = modules.signal;
+    this.controller = new AbortController();
     this.events = modules.networkEventBus;
     this.networkProcessor = modules.networkProcessor;
     this.core = modules.core;
@@ -105,7 +106,6 @@ export class Network implements INetwork {
     this.chain.emitter.on(routes.events.EventType.head, this.onHead);
     this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.on(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
-    modules.signal.addEventListener("abort", this.close.bind(this), {once: true});
   }
 
   static async init({
@@ -115,7 +115,6 @@ export class Network implements INetwork {
     metrics,
     chain,
     db,
-    signal,
     gossipHandlers,
     peerId,
     peerStoreDir,
@@ -136,7 +135,7 @@ export class Network implements INetwork {
           opts: {
             ...opts,
             peerStoreDir,
-            metrics: Boolean(metrics),
+            metricsEnabled: Boolean(metrics),
             activeValidatorCount,
             genesisTime: chain.genesisTime,
             initialStatus,
@@ -145,6 +144,7 @@ export class Network implements INetwork {
           peerId,
           logger,
           events,
+          metrics,
           getReqRespHandler,
         })
       : await NetworkCore.init({
@@ -175,7 +175,6 @@ export class Network implements INetwork {
       config,
       logger,
       chain,
-      signal,
       networkEventBus: events,
       aggregatorTracker,
       networkProcessor,
@@ -183,9 +182,15 @@ export class Network implements INetwork {
     });
   }
 
+  get closed(): boolean {
+    return this.controller.signal.aborted;
+  }
+
   /** Destroy this instance. Can only be called once. */
   async close(): Promise<void> {
     if (this.closed) return;
+    // Used only for sleep() statements
+    this.controller.abort();
 
     this.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
@@ -193,8 +198,7 @@ export class Network implements INetwork {
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
     await this.core.close();
-
-    this.closed = true;
+    this.logger.debug("network core closed");
   }
 
   async scrapeMetrics(): Promise<string> {
@@ -222,6 +226,10 @@ export class Network implements INetwork {
    */
   async reStatusPeers(peers: PeerIdStr[]): Promise<void> {
     return this.core.reStatusPeers(peers);
+  }
+
+  searchUnknownSlotRoot(slotRoot: SlotRootHex, peer?: PeerIdStr): void {
+    this.networkProcessor.searchUnknownSlotRoot(slotRoot, peer);
   }
 
   async reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
@@ -258,7 +266,8 @@ export class Network implements INetwork {
     // Drop all the gossip validation queues
     this.networkProcessor.dropAllJobs();
 
-    return this.core.unsubscribeGossipCoreTopics();
+    await this.core.unsubscribeGossipCoreTopics();
+    this.subscribedToCoreTopics = false;
   }
 
   isSubscribedToGossipCoreTopics(): boolean {
@@ -271,19 +280,6 @@ export class Network implements INetwork {
 
   // Gossip
 
-  async publishBeaconBlockMaybeBlobs(blockInput: BlockInput): Promise<number> {
-    switch (blockInput.type) {
-      case BlockInputType.preDeneb:
-        return this.publishBeaconBlock(blockInput.block);
-
-      case BlockInputType.postDeneb:
-        return this.publishSignedBeaconBlockAndBlobsSidecar({
-          beaconBlock: blockInput.block as deneb.SignedBeaconBlock,
-          blobsSidecar: blockInput.blobs,
-        });
-    }
-  }
-
   async publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<number> {
     const fork = this.config.getForkName(signedBlock.message.slot);
     return this.publishGossip<GossipType.beacon_block>({type: GossipType.beacon_block, fork}, signedBlock, {
@@ -291,11 +287,12 @@ export class Network implements INetwork {
     });
   }
 
-  async publishSignedBeaconBlockAndBlobsSidecar(item: deneb.SignedBeaconBlockAndBlobsSidecar): Promise<number> {
-    const fork = this.config.getForkName(item.beaconBlock.message.slot);
-    return this.publishGossip<GossipType.beacon_block_and_blobs_sidecar>(
-      {type: GossipType.beacon_block_and_blobs_sidecar, fork},
-      item,
+  async publishBlobSidecar(signedBlobSidecar: deneb.SignedBlobSidecar): Promise<number> {
+    const fork = this.config.getForkName(signedBlobSidecar.message.slot);
+    const index = signedBlobSidecar.message.index;
+    return this.publishGossip<GossipType.blob_sidecar>(
+      {type: GossipType.blob_sidecar, fork, index},
+      signedBlobSidecar,
       {ignoreDuplicatePublishError: true}
     );
   }
@@ -404,7 +401,7 @@ export class Network implements INetwork {
   async sendBeaconBlocksByRange(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRangeRequest
-  ): Promise<allForks.SignedBeaconBlock[]> {
+  ): Promise<WithBytes<allForks.SignedBeaconBlock>[]> {
     return collectSequentialBlocksInRange(
       this.sendReqRespRequest(
         peerId,
@@ -420,8 +417,8 @@ export class Network implements INetwork {
   async sendBeaconBlocksByRoot(
     peerId: PeerIdStr,
     request: phase0.BeaconBlocksByRootRequest
-  ): Promise<allForks.SignedBeaconBlock[]> {
-    return collectMaxResponseTyped(
+  ): Promise<WithBytes<allForks.SignedBeaconBlock>[]> {
+    return collectMaxResponseTypedWithBytes(
       this.sendReqRespRequest(
         peerId,
         ReqRespMethod.BeaconBlocksByRoot,
@@ -466,25 +463,26 @@ export class Network implements INetwork {
     );
   }
 
-  async sendBlobsSidecarsByRange(
+  async sendBlobSidecarsByRange(
     peerId: PeerIdStr,
-    request: deneb.BlobsSidecarsByRangeRequest
-  ): Promise<deneb.BlobsSidecar[]> {
+    request: deneb.BlobSidecarsByRangeRequest
+  ): Promise<deneb.BlobSidecar[]> {
     return collectMaxResponseTyped(
-      this.sendReqRespRequest(peerId, ReqRespMethod.BlobsSidecarsByRange, [Version.V1], request),
-      request.count,
-      responseSszTypeByMethod[ReqRespMethod.BlobsSidecarsByRange]
+      this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRange, [Version.V1], request),
+      // request's count represent the slots, so the actual max count received could be slots * blobs per slot
+      request.count * MAX_BLOBS_PER_BLOCK,
+      responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRange]
     );
   }
 
-  async sendBeaconBlockAndBlobsSidecarByRoot(
+  async sendBlobSidecarsByRoot(
     peerId: PeerIdStr,
-    request: deneb.BeaconBlockAndBlobsSidecarByRootRequest
-  ): Promise<deneb.SignedBeaconBlockAndBlobsSidecar[]> {
+    request: deneb.BlobSidecarsByRootRequest
+  ): Promise<deneb.BlobSidecar[]> {
     return collectMaxResponseTyped(
-      this.sendReqRespRequest(peerId, ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot, [Version.V1], request),
+      this.sendReqRespRequest(peerId, ReqRespMethod.BlobSidecarsByRoot, [Version.V1], request),
       request.length,
-      responseSszTypeByMethod[ReqRespMethod.BeaconBlockAndBlobsSidecarByRoot]
+      responseSszTypeByMethod[ReqRespMethod.BlobSidecarsByRoot]
     );
   }
 
@@ -539,6 +537,10 @@ export class Network implements INetwork {
     return this.networkProcessor.dumpGossipQueue(gossipType);
   }
 
+  async writeNetworkThreadProfile(durationMs?: number, dirpath?: string): Promise<string> {
+    return this.core.writeNetworkThreadProfile(durationMs, dirpath);
+  }
+
   private onLightClientFinalityUpdate = async (finalityUpdate: allForks.LightClientFinalityUpdate): Promise<void> => {
     // TODO: Review is OK to remove if (this.hasAttachedSyncCommitteeMember())
 
@@ -578,7 +580,7 @@ export class Network implements INetwork {
   private waitOneThirdOfSlot = async (slot: number): Promise<void> => {
     const secAtSlot = computeTimeAtSlot(this.config, slot + 1 / 3, this.chain.genesisTime);
     const msToSlot = secAtSlot * 1000 - Date.now();
-    await sleep(msToSlot, this.signal);
+    await sleep(msToSlot, this.controller.signal);
   };
 
   private onHead = async (): Promise<void> => {

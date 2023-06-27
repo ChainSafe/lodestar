@@ -61,6 +61,7 @@ export interface INetworkCore extends INetworkCorePublic {
 
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;
+  writeNetworkThreadProfile(durationMs?: number, dirpath?: string): Promise<string>;
 }
 
 /**
@@ -76,7 +77,7 @@ export type NetworkWorkerData = {
   initialStatus: phase0.Status;
   peerIdProto: Uint8Array;
   localMultiaddrs: string[];
-  metrics: boolean;
+  metricsEnabled: boolean;
   peerStoreDir?: string;
   loggerOpts: LoggerNodeOpts;
 };
@@ -99,6 +100,7 @@ export type NetworkWorkerApi = INetworkCorePublic & {
 
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;
+  writeProfile(durationMs?: number, dirpath?: string): Promise<string>;
 
   // TODO: ReqResp outgoing
   // TODO: ReqResp incoming

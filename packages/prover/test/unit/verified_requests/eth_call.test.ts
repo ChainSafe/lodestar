@@ -7,6 +7,7 @@ import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
 import {eth_call} from "../../../src/verified_requests/eth_call.js";
 import ethCallCase1 from "../../fixtures/mainnet/eth_call.json" assert {type: "json"};
 import {generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
+import {JsonRpcRequest, JsonRpcResponseWithResultPayload} from "../../../src/types.js";
 
 const testCases = [ethCallCase1];
 
@@ -34,9 +35,14 @@ describe("verified_requests / eth_call", () => {
         const testCase = deepmerge(t, {});
 
         // Temper the responses to make them invalid
-        for (const tx of testCase.dependentRequests) {
-          if (tx.payload.method === "eth_getCode") {
-            tx.response.result = `${tx.response.result}12`;
+        for (const {payload, response} of testCase.dependentRequests) {
+          if (!Array.isArray(payload) || !Array.isArray(response)) continue;
+
+          for (const [index, tx] of payload.entries()) {
+            if ((tx as JsonRpcRequest).method === "eth_getCode") {
+              const res = response[index] as JsonRpcResponseWithResultPayload<string>;
+              res.result = `${res.result as string}12`;
+            }
           }
         }
 

@@ -15,10 +15,10 @@ describe("network / gossip / topic", function () {
         topicStr: "/eth2/18ae4ccb/beacon_block/ssz_snappy",
       },
     ],
-    [GossipType.beacon_block_and_blobs_sidecar]: [
+    [GossipType.blob_sidecar]: [
       {
-        topic: {type: GossipType.beacon_block_and_blobs_sidecar, fork: ForkName.deneb, encoding},
-        topicStr: "/eth2/46acb19a/beacon_block_and_blobs_sidecar/ssz_snappy",
+        topic: {type: GossipType.blob_sidecar, index: 1, fork: ForkName.deneb, encoding},
+        topicStr: "/eth2/46acb19a/blob_sidecar_1/ssz_snappy",
       },
     ],
     [GossipType.beacon_aggregate_and_proof]: [

@@ -104,6 +104,13 @@ export function createLodestarMetrics(
       }),
     },
 
+    networkWorkerHandler: {
+      reqRespBridgeReqCallerPending: register.gauge({
+        name: "lodestar_network_worker_handler_reqresp_bridge_req_caller_pending_count",
+        help: "Current count of pending items in reqRespBridgeReqCaller data structure",
+      }),
+    },
+
     regenQueue: {
       length: register.gauge({
         name: "lodestar_regen_queue_length",
@@ -213,66 +220,6 @@ export function createLodestarMetrics(
         help: "REST API total count of bytes written on all sockets",
       }),
     },
-
-    // Finalized block and proposal stats
-    allValidators: {
-      total: register.gauge({
-        name: "lodestar_all_validators_total_count",
-        help: "Number of all blocks expected to be finalized",
-      }),
-
-      orphaned: register.gauge({
-        name: "lodestar_all_validators_orphaned_count",
-        help: "Number of blocks orphaned in the finalization",
-      }),
-
-      missed: register.gauge({
-        name: "lodestar_all_validators_missed_count",
-        help: "Number of blocks missed in the finalization",
-      }),
-
-      finalized: register.gauge({
-        name: "lodestar_all_validators_finalized_count",
-        help: "Number of blocks finalized",
-      }),
-    },
-
-    attachedValidators: {
-      total: register.gauge({
-        name: "lodestar_attached_validators_total_count",
-        help: "Number of blocks expected to be finalized from the attached validators",
-      }),
-
-      orphaned: register.gauge({
-        name: "lodestar_attached_validators_orphaned_count",
-        help: "Number of blocks orphaned and not finalized from the attached validators",
-      }),
-
-      missed: register.gauge({
-        name: "lodestar_attached_validators_missed_count",
-        help: "Number of blocks missed in the finalization from the attached validators",
-      }),
-
-      finalized: register.gauge({
-        name: "lodestar_attached_validators_finalized_count",
-        help: "Number of blocks finalized from the attached validators",
-      }),
-    },
-
-    finalizedCanonicalCheckpointsCount: register.gauge({
-      name: "lodestar_finalized_canonical_checkpoints_count",
-      help: "Number of checkpoints finalized",
-    }),
-
-    finalizedFoundCheckpointsInStateCache: register.gauge({
-      name: "lodestar_finalized_found_checkpoints_in_state_cache",
-      help: "Number of finalized checkpoints found in state cache including previous finalized",
-    }),
-
-    finalizedAttachedValidatorsCount: register.gauge({
-      name: "lodestar_finalized_attached_validators_count",
-      help: "Number of proposers attached to the beacon node in the finalization",
-    }),
 
     // Beacon state transition metrics
 
@@ -485,9 +432,15 @@ export function createLodestarMetrics(
     },
 
     syncUnknownBlock: {
-      requests: register.gauge({
+      switchNetworkSubscriptions: register.gauge<"action">({
+        name: "lodestar_sync_unknown_block_network_subscriptions_count",
+        help: "Switch network subscriptions on/off",
+        labelNames: ["action"],
+      }),
+      requests: register.gauge<"type">({
         name: "lodestar_sync_unknown_block_requests_total",
-        help: "Total number of unknownBlockParent events or requests",
+        help: "Total number of unknown block events or requests",
+        labelNames: ["type"],
       }),
       pendingBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_pending_blocks_size",
@@ -516,6 +469,11 @@ export function createLodestarMetrics(
       removedBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_removed_blocks_total",
         help: "Total number of removed bad blocks in UnknownBlockSync",
+      }),
+      elapsedTimeTillReceived: register.histogram({
+        name: "lodestar_sync_unknown_block_elapsed_time_till_received",
+        help: "Time elapsed between block slot time and the time block received via unknown block sync",
+        buckets: [0.5, 1, 2, 4, 6, 12],
       }),
     },
 
@@ -613,6 +571,10 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_block_elapsed_time_till_become_head",
         help: "Time elapsed between block slot time and the time block becomes head",
         buckets: [0.5, 1, 2, 4, 6, 12],
+      }),
+      setHeadAfterFirstInterval: register.gauge({
+        name: "lodestar_import_block_set_head_after_first_interval_total",
+        help: "Total times an imported block is set as head after the first slot interval",
       }),
       bySource: register.gauge<"source">({
         name: "lodestar_import_block_by_source_total",
@@ -824,6 +786,16 @@ export function createLodestarMetrics(
         name: "validator_monitor_prev_epoch_sync_signature_aggregate_inclusions",
         help: "The count of times a sync signature was seen inside an aggregate",
         buckets: [0, 1, 2, 3, 5, 10],
+      }),
+      prevEpochAttestationSummary: register.gauge<"summary">({
+        name: "validator_monitor_prev_epoch_attestation_summary",
+        help: "Best guess of the node of the result of previous epoch validators attestation actions and causality",
+        labelNames: ["summary"],
+      }),
+      prevEpochBlockProposalSummary: register.gauge<"summary">({
+        name: "validator_monitor_prev_epoch_block_proposal_summary",
+        help: "Best guess of the node of the result of previous epoch validators block proposal actions and causality",
+        labelNames: ["summary"],
       }),
 
       // Validator Monitor Metrics (real-time)

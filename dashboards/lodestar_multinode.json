@@ -7,13 +7,6 @@
       "pluginId": "prometheus",
       "pluginName": "Prometheus",
       "type": "datasource"
-    },
-    {
-      "description": "",
-      "label": "Beacon node job name",
-      "name": "VAR_BEACON_JOB",
-      "type": "constant",
-      "value": "beacon"
     }
   ],
   "annotations": {
@@ -37,7 +30,7 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
   "links": [
     {

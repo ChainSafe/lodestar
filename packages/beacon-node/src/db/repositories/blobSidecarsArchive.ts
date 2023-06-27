@@ -1,8 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Bucket, Db, Repository} from "@lodestar/db";
+import {Db, Repository} from "@lodestar/db";
 import {Slot} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
-
+import {Bucket, getBucketNameByValue} from "../buckets.js";
 import {blobSidecarsWrapperSsz, BlobSidecarsWrapper} from "./blobSidecars.js";
 
 /**
@@ -12,7 +12,8 @@ import {blobSidecarsWrapperSsz, BlobSidecarsWrapper} from "./blobSidecars.js";
  */
 export class BlobSidecarsArchiveRepository extends Repository<Slot, BlobSidecarsWrapper> {
   constructor(config: ChainForkConfig, db: Db) {
-    super(config, db, Bucket.allForks_blobSidecarsArchive, blobSidecarsWrapperSsz);
+    const bucket = Bucket.allForks_blobSidecarsArchive;
+    super(config, db, bucket, blobSidecarsWrapperSsz, getBucketNameByValue(bucket));
   }
 
   // Handle key as slot

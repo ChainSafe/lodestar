@@ -10,7 +10,11 @@ import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
 
 /* eslint-disable no-console */
 
-export const importCmd: CliCommand<IValidatorCliArgs, GlobalArgs> = {
+type ValidatorImportArgs = Pick<IValidatorCliArgs, "importKeystores" | "importKeystoresPassword">;
+
+const {importKeystores, importKeystoresPassword} = validatorOptions;
+
+export const importCmd: CliCommand<ValidatorImportArgs, IValidatorCliArgs & GlobalArgs> = {
   command: "import",
 
   describe:
@@ -29,12 +33,11 @@ Ethereum Foundation utility.",
   // Note: re-uses `--importKeystores` and `--importKeystoresPassword` from root validator command options
 
   options: {
-    ...validatorOptions,
-
     importKeystores: {
-      ...validatorOptions.importKeystores,
+      ...importKeystores,
       requiresArg: true,
     },
+    importKeystoresPassword,
   },
 
   handler: async (args) => {

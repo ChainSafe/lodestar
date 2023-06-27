@@ -1,8 +1,10 @@
 import {CachedBeaconStateAllForks, computeEpochAtSlot, DataAvailableStatus} from "@lodestar/state-transition";
 import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
-import {allForks, deneb, Slot, WithOptionalBytes} from "@lodestar/types";
+import {allForks, deneb, Slot} from "@lodestar/types";
 import {ForkSeq, MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
+
+import {ckzg} from "../../util/kzg.js";
 
 export enum BlockInputType {
   preDeneb = "preDeneb",
@@ -17,9 +19,10 @@ export enum BlockSource {
   byRoot = "req_resp_by_root",
 }
 
-export type BlockInput =
-  | {type: BlockInputType.preDeneb; block: allForks.SignedBeaconBlock; source: BlockSource}
-  | {type: BlockInputType.postDeneb; block: allForks.SignedBeaconBlock; source: BlockSource; blobs: deneb.BlobsSidecar};
+export type BlockInput = {block: allForks.SignedBeaconBlock; source: BlockSource; blockBytes: Uint8Array | null} & (
+  | {type: BlockInputType.preDeneb}
+  | {type: BlockInputType.postDeneb; blobs: deneb.BlobsSidecar}
+);
 
 export function blockRequiresBlobs(config: ChainForkConfig, blockSlot: Slot, clockSlot: Slot): boolean {
   return (
@@ -29,8 +32,32 @@ export function blockRequiresBlobs(config: ChainForkConfig, blockSlot: Slot, clo
   );
 }
 
+// TODO DENEB: a helper function to convert blobSidecars to blobsSidecar, to be cleanup on BlockInput
+// migration
+export function blobSidecarsToBlobsSidecar(
+  config: ChainForkConfig,
+  signedBlock: allForks.SignedBeaconBlock,
+  blobSidecars: deneb.BlobSidecars
+): deneb.BlobsSidecar {
+  const beaconBlockSlot = signedBlock.message.slot;
+  const beaconBlockRoot = config.getForkTypes(beaconBlockSlot).BeaconBlock.hashTreeRoot(signedBlock.message);
+  const blobs = blobSidecars.map(({blob}) => blob);
+  const blobsSidecar = {
+    beaconBlockRoot,
+    beaconBlockSlot,
+    blobs,
+    kzgAggregatedProof: ckzg.computeAggregateKzgProof(blobs),
+  };
+  return blobsSidecar;
+}
+
 export const getBlockInput = {
-  preDeneb(config: ChainForkConfig, block: allForks.SignedBeaconBlock, source: BlockSource): BlockInput {
+  preDeneb(
+    config: ChainForkConfig,
+    block: allForks.SignedBeaconBlock,
+    source: BlockSource,
+    blockBytes: Uint8Array | null
+  ): BlockInput {
     if (config.getForkSeq(block.message.slot) >= ForkSeq.deneb) {
       throw Error(`Post Deneb block slot ${block.message.slot}`);
     }
@@ -38,6 +65,7 @@ export const getBlockInput = {
       type: BlockInputType.preDeneb,
       block,
       source,
+      blockBytes,
     };
   },
 
@@ -45,7 +73,8 @@ export const getBlockInput = {
     config: ChainForkConfig,
     block: allForks.SignedBeaconBlock,
     source: BlockSource,
-    blobs: deneb.BlobsSidecar
+    blobs: deneb.BlobsSidecar,
+    blockBytes: Uint8Array | null
   ): BlockInput {
     if (config.getForkSeq(block.message.slot) < ForkSeq.deneb) {
       throw Error(`Pre Deneb block slot ${block.message.slot}`);
@@ -55,6 +84,7 @@ export const getBlockInput = {
       block,
       source,
       blobs,
+      blockBytes,
     };
   },
 };
@@ -98,7 +128,7 @@ export type ImportBlockOpts = {
    */
   validSignatures?: boolean;
   /** Set to true if already run `validateBlobsSidecar()` sucessfully on the blobs */
-  validBlobsSidecar?: boolean;
+  validBlobSidecars?: boolean;
   /** Seen timestamp seconds */
   seenTimestampSec?: number;
   /** Set to true if persist block right at verification time */
@@ -109,7 +139,7 @@ export type ImportBlockOpts = {
  * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import
  */
 export type FullyVerifiedBlock = {
-  blockInput: WithOptionalBytes<BlockInput>;
+  blockInput: BlockInput;
   postState: CachedBeaconStateAllForks;
   parentBlockSlot: Slot;
   proposerBalanceDelta: number;

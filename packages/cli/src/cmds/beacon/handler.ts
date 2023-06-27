@@ -11,12 +11,22 @@ import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {GlobalArgs, parseBeaconNodeArgs} from "../../options/index.js";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, getNetworkData, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
-import {onGracefulShutdown, mkdir, writeFile600Perm, cleanOldLogFiles, parseLoggerArgs} from "../../util/index.js";
+import {
+  onGracefulShutdown,
+  mkdir,
+  writeFile600Perm,
+  cleanOldLogFiles,
+  parseLoggerArgs,
+  pruneOldFilesInDir,
+} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {BeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
 import {initBeaconState} from "./initBeaconState.js";
 import {initPeerIdAndEnr} from "./initPeerIdAndEnr.js";
+
+const DEFAULT_RETENTION_SSZ_OBJECTS_HOURS = 15 * 24;
+const HOURS_TO_MS = 3600 * 1000;
 
 /**
  * Runs a beacon node.
@@ -48,12 +58,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     networkRegistry = new Registry();
     metricsRegistries.push(networkRegistry);
   }
-  const db = new BeaconDb({
-    config,
-    controller: new LevelDbController(options.db, {metrics: null, logger}),
-  });
-
-  await db.start();
+  const db = new BeaconDb(config, await LevelDbController.create(options.db, {metrics: null, logger}));
   logger.info("Connected to LevelDB database", {path: options.db.name});
 
   // BeaconNode setup
@@ -80,8 +85,28 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       metricsRegistries,
     });
 
-    if (args.attachToGlobalThis) (globalThis as unknown as {bn: BeaconNode}).bn = node;
+    // dev debug option to have access to the BN instance
+    if (args.attachToGlobalThis) {
+      (globalThis as unknown as {bn: BeaconNode}).bn = node;
+    }
 
+    // Prune invalid SSZ objects every interval
+    const {persistInvalidSszObjectsDir} = args;
+    const pruneInvalidSSZObjectsInterval = persistInvalidSszObjectsDir
+      ? setInterval(() => {
+          try {
+            pruneOldFilesInDir(
+              persistInvalidSszObjectsDir,
+              (args.persistInvalidSszObjectsRetentionHours ?? DEFAULT_RETENTION_SSZ_OBJECTS_HOURS) * HOURS_TO_MS
+            );
+          } catch (e) {
+            logger.warn("Error pruning invalid SSZ objects", {persistInvalidSszObjectsDir}, e as Error);
+          }
+          // Run every ~1 hour
+        }, HOURS_TO_MS)
+      : null;
+
+    // Intercept SIGINT signal, to perform final ops before exiting
     onGracefulShutdown(async () => {
       if (args.persistNetworkIdentity) {
         try {
@@ -93,6 +118,10 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
         }
       }
       abortController.abort();
+
+      if (pruneInvalidSSZObjectsInterval !== null) {
+        clearInterval(pruneInvalidSSZObjectsInterval);
+      }
     }, logger.info.bind(logger));
 
     abortController.signal.addEventListener(
@@ -101,10 +130,13 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
         try {
           await node.close();
           logger.debug("Beacon node closed");
+          // Explicitly exit until active handles issue is resolved
+          // See https://github.com/ChainSafe/lodestar/issues/5642
+          process.exit(0);
         } catch (e) {
           logger.error("Error closing beacon node", {}, e as Error);
           // Make sure db is always closed gracefully
-          await db.stop();
+          await db.close();
           // Must explicitly exit process due to potential active handles
           process.exit(1);
         }
@@ -112,7 +144,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       {once: true}
     );
   } catch (e) {
-    await db.stop();
+    await db.close();
 
     if (e instanceof ErrorAborted) {
       logger.info(e.message); // Let the user know the abort was received but don't print as error
@@ -156,8 +188,15 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   const {peerId, enr} = await initPeerIdAndEnr(args, beaconPaths.beaconDir, logger);
   // Inject ENR to beacon options
   beaconNodeOptions.set({network: {discv5: {enr: enr.encodeTxt(), config: {enrUpdate: !enr.ip && !enr.ip6}}}});
-  // Add simple version string for libp2p agent version
-  beaconNodeOptions.set({network: {version: version.split("/")[0]}});
+
+  if (args.private) {
+    beaconNodeOptions.set({network: {private: true}});
+  } else {
+    // Add simple version string for libp2p agent version
+    beaconNodeOptions.set({network: {version: version.split("/")[0]}});
+    // Add User-Agent header to all builder requests
+    beaconNodeOptions.set({executionBuilder: {userAgent: `Lodestar/${version}`}});
+  }
 
   // Render final options
   const options = beaconNodeOptions.getWithDefaults();

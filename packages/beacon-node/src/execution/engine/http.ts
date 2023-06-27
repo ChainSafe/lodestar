@@ -1,4 +1,4 @@
-import {RootHex, allForks, Wei} from "@lodestar/types";
+import {Root, RootHex, allForks, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 
 import {ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
@@ -15,6 +15,7 @@ import {
   PayloadAttributes,
   TransitionConfigurationV1,
   BlobsBundle,
+  VersionedHashes,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
@@ -22,7 +23,9 @@ import {
   EngineApiRpcReturnTypes,
   parseExecutionPayload,
   serializeExecutionPayload,
+  serializeVersionedHashes,
   serializePayloadAttributes,
+  serializeBeaconBlockRoot,
   ExecutionPayloadBody,
   assertReqSizeLimit,
   deserializeExecutionPayloadBody,
@@ -133,20 +136,50 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    *
    * If any of the above fails due to errors unrelated to the normal processing flow of the method, client software MUST respond with an error object.
    */
-  async notifyNewPayload(fork: ForkName, executionPayload: allForks.ExecutionPayload): Promise<ExecutePayloadResponse> {
+  async notifyNewPayload(
+    fork: ForkName,
+    executionPayload: allForks.ExecutionPayload,
+    versionedHashes?: VersionedHashes,
+    parentBlockRoot?: Root
+  ): Promise<ExecutePayloadResponse> {
     const method =
       ForkSeq[fork] >= ForkSeq.deneb
         ? "engine_newPayloadV3"
         : ForkSeq[fork] >= ForkSeq.capella
         ? "engine_newPayloadV2"
         : "engine_newPayloadV1";
+
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
-    const {status, latestValidHash, validationError} = await (
-      this.rpcFetchQueue.push({
+
+    let engingRequest: EngineRequest;
+    if (ForkSeq[fork] >= ForkSeq.deneb) {
+      if (versionedHashes === undefined) {
+        throw Error(`versionedHashes required in notifyNewPayload for fork=${fork}`);
+      }
+      if (parentBlockRoot === undefined) {
+        throw Error(`parentBlockRoot required in notifyNewPayload for fork=${fork}`);
+      }
+
+      const serializedVersionedHashes = serializeVersionedHashes(versionedHashes);
+      const parentBeaconBlockRoot = serializeBeaconBlockRoot(parentBlockRoot);
+
+      const method = "engine_newPayloadV3";
+      engingRequest = {
+        method,
+        params: [serializedExecutionPayload, serializedVersionedHashes, parentBeaconBlockRoot],
+        methodOpts: notifyNewPayloadOpts,
+      };
+    } else {
+      const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_newPayloadV2" : "engine_newPayloadV1";
+      engingRequest = {
         method,
         params: [serializedExecutionPayload],
         methodOpts: notifyNewPayloadOpts,
-      }) as Promise<EngineApiRpcReturnTypes[typeof method]>
+      };
+    }
+
+    const {status, latestValidHash, validationError} = await (
+      this.rpcFetchQueue.push(engingRequest) as Promise<EngineApiRpcReturnTypes[typeof method]>
     )
       // If there are errors by EL like connection refused, internal error, they need to be
       // treated separate from being INVALID. For now, just pass the error upstream.

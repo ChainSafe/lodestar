@@ -72,7 +72,7 @@ describe("request / sendRequest", () => {
 
       const responses = await pipe(
         sendRequest(
-          {logger, libp2p},
+          {logger, libp2p, metrics: null},
           peerId,
           protocols,
           protocols.map((p) => p.method),
@@ -144,7 +144,7 @@ describe("request / sendRequest", () => {
         await expectRejectedWithLodestarError(
           pipe(
             sendRequest(
-              {logger, libp2p},
+              {logger, libp2p, metrics: null},
               peerId,
               [emptyProtocol],
               [testMethod],

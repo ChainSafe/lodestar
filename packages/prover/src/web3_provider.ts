@@ -1,19 +1,17 @@
-import {NetworkName} from "@lodestar/config/networks";
 import {Logger} from "@lodestar/utils";
 import {getBrowserLogger} from "@lodestar/logger/browser";
 import {LogLevel} from "@lodestar/logger";
 import {
-  ConsensusNodeOptions,
   EIP1193Provider,
   EthersProvider,
-  LogOptions,
   RequestProvider,
   SendAsyncProvider,
   SendProvider,
+  VerifiedExecutionInitOptions,
   Web3Provider,
 } from "./interfaces.js";
 import {ProofProvider} from "./proof_provider/proof_provider.js";
-import {ELRequestPayload, ELResponse} from "./types.js";
+import {JsonRpcRequest, JsonRpcRequestOrBatch, JsonRpcResponseOrBatch} from "./types.js";
 import {
   isEIP1193Provider,
   isEthersProvider,
@@ -22,68 +20,49 @@ import {
   isSendProvider,
 } from "./utils/assertion.js";
 import {processAndVerifyRequest} from "./utils/process.js";
-import {logRequest, logResponse} from "./utils/json_rpc.js";
+import {isBatchRequest} from "./utils/json_rpc.js";
+import {ELRpc} from "./utils/rpc.js";
 
-type ProvableProviderInitOpts = {network?: NetworkName; wsCheckpoint?: string; signal?: AbortSignal} & LogOptions &
-  ConsensusNodeOptions;
-
-const defaultNetwork = "mainnet";
+export type Web3ProviderTypeHandler<T extends Web3Provider> = (
+  provider: T,
+  proofProvider: ProofProvider,
+  logger: Logger
+) => {provider: T; rpc: ELRpc};
 
 export function createVerifiedExecutionProvider<T extends Web3Provider>(
   provider: T,
-  opts: ProvableProviderInitOpts
+  opts: VerifiedExecutionInitOptions
 ): {provider: T; proofProvider: ProofProvider} {
   const signal = opts.signal ?? new AbortController().signal;
   const logger = opts.logger ?? getBrowserLogger({level: opts.logLevel ?? LogLevel.info});
-  const network = opts.network ?? defaultNetwork;
 
   const proofProvider = ProofProvider.init({
     ...opts,
-    network,
     signal,
     logger,
   });
 
-  if (isSendProvider(provider)) {
-    logger.debug("Creating a provider which is recognized as legacy provider with 'send' method.");
-    return {provider: handleSendProvider(provider, proofProvider, logger, network) as T, proofProvider};
-  }
+  const handler = getProviderTypeHandler(provider, logger);
+  const {provider: newInstance, rpc} = handler(provider, proofProvider, logger);
 
-  if (isEthersProvider(provider)) {
-    logger.debug("Creating a provider which is recognized as 'ethers' provider.");
-    return {provider: handleEthersProvider(provider, proofProvider, logger, network) as T, proofProvider};
-  }
+  rpc.verifyCompatibility().catch((err) => {
+    logger.error(err);
+    logger.error("Due to compatibility issues, verified execution may not work properly.");
+  });
 
-  if (isRequestProvider(provider)) {
-    logger.debug("Creating a provider which is recognized as legacy provider with 'request' method.");
-    return {provider: handleRequestProvider(provider, proofProvider, logger, network) as T, proofProvider};
-  }
-
-  if (isSendAsyncProvider(provider)) {
-    logger.debug("Creating a provider which is recognized as legacy provider with 'sendAsync' method.");
-    return {provider: handleSendAsyncProvider(provider, proofProvider, logger, network) as T, proofProvider};
-  }
-
-  if (isEIP1193Provider(provider)) {
-    logger.debug("Creating a provider which is recognized as 'EIP1193' provider.");
-    return {provider: handleEIP1193Provider(provider, proofProvider, logger, network) as T, proofProvider};
-  }
-
-  return {provider, proofProvider: proofProvider};
+  return {provider: newInstance, proofProvider: proofProvider};
 }
 
 function handleSendProvider(
   provider: SendProvider,
   proofProvider: ProofProvider,
-  logger: Logger,
-  network: NetworkName
-): SendProvider {
+  logger: Logger
+): {provider: SendProvider; rpc: ELRpc} {
   const send = provider.send.bind(provider);
-  const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> =>
+  const handler = (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> =>
     new Promise((resolve, reject) => {
-      logRequest(payload, logger);
-      send(payload, (err, response) => {
-        logResponse(response, logger);
+      // web3 providers supports batch requests but don't have valid types
+      send(payload as JsonRpcRequest, (err, response) => {
         if (err) {
           reject(err);
         } else {
@@ -91,28 +70,29 @@ function handleSendProvider(
         }
       });
     });
+  const rpc = new ELRpc(handler, logger);
 
-  function newSend(payload: ELRequestPayload, callback: (err?: Error | null, response?: ELResponse) => void): void {
-    processAndVerifyRequest({payload, handler, proofProvider, logger, network})
+  function newSend(
+    payload: JsonRpcRequestOrBatch,
+    callback: (err?: Error | null, response?: JsonRpcResponseOrBatch) => void
+  ): void {
+    processAndVerifyRequest({payload, rpc, proofProvider, logger})
       .then((response) => callback(undefined, response))
       .catch((err) => callback(err, undefined));
   }
 
-  return Object.assign(provider, {send: newSend});
+  return {provider: Object.assign(provider, {send: newSend}), rpc};
 }
 
 function handleRequestProvider(
   provider: RequestProvider,
   proofProvider: ProofProvider,
-  logger: Logger,
-  network: NetworkName
-): RequestProvider {
+  logger: Logger
+): {provider: RequestProvider; rpc: ELRpc} {
   const request = provider.request.bind(provider);
-  const handler = (payload: ELRequestPayload): Promise<ELResponse | undefined> =>
+  const handler = (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> =>
     new Promise((resolve, reject) => {
-      logRequest(payload, logger);
       request(payload, (err, response) => {
-        logResponse(response, logger);
         if (err) {
           reject(err);
         } else {
@@ -120,81 +100,119 @@ function handleRequestProvider(
         }
       });
     });
+  const rpc = new ELRpc(handler, logger);
 
-  function newRequest(payload: ELRequestPayload, callback: (err?: Error | null, response?: ELResponse) => void): void {
-    processAndVerifyRequest({payload, handler, proofProvider, logger, network})
+  function newRequest(
+    payload: JsonRpcRequestOrBatch,
+    callback: (err?: Error | null, response?: JsonRpcResponseOrBatch) => void
+  ): void {
+    processAndVerifyRequest({payload, rpc, proofProvider, logger})
       .then((response) => callback(undefined, response))
       .catch((err) => callback(err, undefined));
   }
 
-  return Object.assign(provider, {request: newRequest});
+  return {provider: Object.assign(provider, {request: newRequest}), rpc};
 }
 
 function handleSendAsyncProvider(
   provider: SendAsyncProvider,
   proofProvider: ProofProvider,
-  logger: Logger,
-  network: NetworkName
-): SendAsyncProvider {
+  logger: Logger
+): {provider: SendAsyncProvider; rpc: ELRpc} {
   const sendAsync = provider.sendAsync.bind(provider);
-  const handler = async (payload: ELRequestPayload): Promise<ELResponse | undefined> => {
-    logRequest(payload, logger);
+  const handler = async (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> => {
     const response = await sendAsync(payload);
-    logResponse(response, logger);
     return response;
   };
+  const rpc = new ELRpc(handler, logger);
 
-  async function newSendAsync(payload: ELRequestPayload): Promise<ELResponse | undefined> {
-    return processAndVerifyRequest({payload, handler, proofProvider, logger, network});
+  async function newSendAsync(payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> {
+    return processAndVerifyRequest({payload, rpc, proofProvider, logger});
   }
 
-  return Object.assign(provider, {sendAsync: newSendAsync});
+  return {provider: Object.assign(provider, {sendAsync: newSendAsync}), rpc};
 }
 
 function handleEIP1193Provider(
   provider: EIP1193Provider,
   proofProvider: ProofProvider,
-  logger: Logger,
-  network: NetworkName
-): EIP1193Provider {
+  logger: Logger
+): {provider: EIP1193Provider; rpc: ELRpc} {
   const request = provider.request.bind(provider);
-  const handler = async (payload: ELRequestPayload): Promise<ELResponse | undefined> => {
-    logRequest(payload, logger);
+  const handler = async (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> => {
     const response = await request(payload);
-    logResponse(response, logger);
     return response;
   };
+  const rpc = new ELRpc(handler, logger);
 
-  async function newRequest(payload: ELRequestPayload): Promise<ELResponse | undefined> {
-    return processAndVerifyRequest({payload, handler, proofProvider, logger, network});
+  async function newRequest(payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> {
+    return processAndVerifyRequest({payload, rpc, proofProvider, logger});
   }
 
-  return Object.assign(provider, {request: newRequest});
+  return {provider: Object.assign(provider, {request: newRequest}), rpc};
 }
 
 function handleEthersProvider(
   provider: EthersProvider,
   proofProvider: ProofProvider,
-  logger: Logger,
-  network: NetworkName
-): EthersProvider {
+  logger: Logger
+): {provider: EthersProvider; rpc: ELRpc} {
   const send = provider.send.bind(provider);
-  const handler = async (payload: ELRequestPayload): Promise<ELResponse | undefined> => {
-    logRequest(payload, logger);
-    const response = await send(payload.method, payload.params);
-    logResponse(response, logger);
-    return response;
-  };
+  const handler = async (payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch | undefined> => {
+    // Because ethers provider public interface does not support batch requests
+    // so we need to handle it manually
+    if (isBatchRequest(payload)) {
+      const responses = [];
+      for (const request of payload) {
+        responses.push(await send(request.method, request.params));
+      }
+      return responses;
+    }
 
-  async function newSend(method: string, params: Array<unknown>): Promise<ELResponse | undefined> {
+    return send(payload.method, payload.params);
+  };
+  const rpc = new ELRpc(handler, logger);
+
+  async function newSend(method: string, params: Array<unknown>): Promise<JsonRpcResponseOrBatch | undefined> {
     return processAndVerifyRequest({
       payload: {jsonrpc: "2.0", id: 0, method, params},
-      handler,
+      rpc,
       proofProvider,
       logger,
-      network,
     });
   }
 
-  return Object.assign(provider, {send: newSend});
+  return {provider: Object.assign(provider, {send: newSend}), rpc};
+}
+
+export function getProviderTypeHandler<T extends Web3Provider>(
+  provider: T,
+  logger: Logger
+): Web3ProviderTypeHandler<T> {
+  if (isSendProvider(provider)) {
+    logger.debug("Provider is recognized as legacy provider with 'send' method.");
+    return handleSendProvider as unknown as Web3ProviderTypeHandler<T>;
+  }
+
+  if (isEthersProvider(provider)) {
+    logger.debug("Provider is recognized as 'ethers' provider.");
+    return handleEthersProvider as unknown as Web3ProviderTypeHandler<T>;
+  }
+
+  if (isRequestProvider(provider)) {
+    logger.debug("Provider is recognized as legacy provider with 'request' method.");
+    return handleRequestProvider as unknown as Web3ProviderTypeHandler<T>;
+  }
+
+  if (isSendAsyncProvider(provider)) {
+    logger.debug("Provider is recognized as legacy provider with 'sendAsync' method.");
+    return handleSendAsyncProvider as unknown as Web3ProviderTypeHandler<T>;
+  }
+
+  if (isEIP1193Provider(provider)) {
+    logger.debug("Provider is recognized as 'EIP1193' provider.");
+    return handleEIP1193Provider as unknown as Web3ProviderTypeHandler<T>;
+  }
+
+  throw new Error("Unsupported provider type");
 }

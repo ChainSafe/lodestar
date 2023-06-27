@@ -34,12 +34,15 @@ type PendingItem<T> = {
 export class AsyncIterableBridgeCaller<Args, Item> {
   private nextRequestId = 0;
 
-  // TODO: Track count of pending with metrics to ensure no leaks
   // TODO: Consider expiring the requests after no reply for long enough, t
   private readonly pending = new Map<number, PendingItem<Item>>();
 
   constructor(private readonly events: Pick<AsyncIterableEventBus<Args, Item>, "onResponse" | "emitRequest">) {
     events.onResponse(this.onResponse.bind(this));
+  }
+
+  get pendingCount(): number {
+    return this.pending.size;
   }
 
   getAsyncIterable(callArgs: Args): AsyncIterable<Item> {

@@ -1,8 +1,9 @@
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger, prettyBytes} from "@lodestar/utils";
-import {Root, Slot, ssz, WithBytes} from "@lodestar/types";
+import {Root, Slot, ssz} from "@lodestar/types";
 import {ForkName, ForkSeq} from "@lodestar/params";
+import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
 import {OpSource} from "../../metrics/validatorMonitor.js";
 import {IBeaconChain} from "../../chain/index.js";
@@ -34,25 +35,18 @@ import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {PeerAction} from "../peers/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
-import {validateGossipBlobsSidecar} from "../../chain/validation/blobsSidecar.js";
 import {BlockInput, BlockSource, getBlockInput} from "../../chain/blocks/types.js";
 import {sszDeserialize} from "../gossip/topic.js";
 import {INetworkCore} from "../core/index.js";
+import {INetwork} from "../interface.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
 
 /**
  * Gossip handler options as part of network options
  */
 export type GossipHandlerOpts = {
-  dontSendGossipAttestationsToForkchoice: boolean;
-};
-
-/**
- * By default:
- * + pass gossip attestations to forkchoice
- */
-export const defaultGossipHandlerOpts = {
-  dontSendGossipAttestationsToForkchoice: false,
+  /** By default pass gossip attestations to forkchoice */
+  dontSendGossipAttestationsToForkchoice?: boolean;
 };
 
 export type ValidatorFnsModules = {
@@ -124,11 +118,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     }
   }
 
-  function handleValidBeaconBlock(
-    blockInput: WithBytes<BlockInput>,
-    peerIdStr: string,
-    seenTimestampSec: number
-  ): void {
+  function handleValidBeaconBlock(blockInput: BlockInput, peerIdStr: string, seenTimestampSec: number): void {
     const signedBlock = blockInput.block;
 
     // Handler - MUST NOT `await`, to allow validation result to be propagated
@@ -137,10 +127,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
     chain
       .processBlock(blockInput, {
+        // block may be downloaded and processed by UnknownBlockSync
+        ignoreIfKnown: true,
         // proposer signature already checked in validateBeaconBlock()
         validProposerSignature: true,
-        // blobsSidecar already checked in validateGossipBlobsSidecar()
-        validBlobsSidecar: true,
+        // blobSidecars already checked in validateGossipBlobSidecars()
+        validBlobSidecars: true,
         // It's critical to keep a good number of mesh peers.
         // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
         // Gossip Job Wait Time depends on the BLS Job Wait Time
@@ -161,6 +153,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       .catch((e) => {
         if (e instanceof BlockError) {
           switch (e.type.code) {
+            // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
+            // PARENT_UNKNOWN should not happen, we handled this in validateBeaconBlock() function above
             case BlockErrorCode.ALREADY_KNOWN:
             case BlockErrorCode.PARENT_UNKNOWN:
             case BlockErrorCode.PRESTATE_MISSING:
@@ -184,24 +178,15 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         throw new GossipActionError(GossipAction.REJECT, {code: "POST_DENEB_BLOCK"});
       }
 
-      const blockInput = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip);
+      const blockInput = getBlockInput.preDeneb(config, signedBlock, BlockSource.gossip, serializedData);
       await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
-      handleValidBeaconBlock({...blockInput, serializedData}, peerIdStr, seenTimestampSec);
+      handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
+
+      // Do not emit block on eventstream API, it will be emitted after successful import
     },
 
-    [GossipType.beacon_block_and_blobs_sidecar]: async ({serializedData}, topic, peerIdStr, seenTimestampSec) => {
-      const blockAndBlocks = sszDeserialize(topic, serializedData);
-      const {beaconBlock, blobsSidecar} = blockAndBlocks;
-      // TODO Deneb: Should throw for pre fork blocks?
-      if (config.getForkSeq(beaconBlock.message.slot) < ForkSeq.deneb) {
-        throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
-      }
-
-      // Validate block + blob. Then forward, then handle both
-      const blockInput = getBlockInput.postDeneb(config, beaconBlock, BlockSource.gossip, blobsSidecar);
-      await validateBeaconBlock(blockInput, topic.fork, peerIdStr, seenTimestampSec);
-      validateGossipBlobsSidecar(beaconBlock, blobsSidecar);
-      handleValidBeaconBlock({...blockInput, serializedData}, peerIdStr, seenTimestampSec);
+    [GossipType.blob_sidecar]: async (_data, _topic, _peerIdStr, _seenTimestampSec) => {
+      // TODO DENEB: impl to be added on migration of blockinput
     },
 
     [GossipType.beacon_aggregate_and_proof]: async ({serializedData}, topic, _peer, seenTimestampSec) => {
@@ -240,6 +225,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
           );
         }
       }
+
+      chain.emitter.emit(routes.events.EventType.attestation, signedAggregateAndProof.message.aggregate);
     },
 
     [GossipType.beacon_attestation]: async ({serializedData, msgSlot}, {subnet}, _peer, seenTimestampSec) => {
@@ -283,6 +270,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
           logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
         }
       }
+
+      chain.emitter.emit(routes.events.EventType.attestation, attestation);
     },
 
     [GossipType.attester_slashing]: async ({serializedData}, topic) => {
@@ -323,6 +312,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       } catch (e) {
         logger.error("Error adding voluntaryExit to pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
     },
 
     [GossipType.sync_committee_contribution_and_proof]: async ({serializedData}, topic) => {
@@ -345,6 +336,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       } catch (e) {
         logger.error("Error adding to contributionAndProof pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.contributionAndProof, contributionAndProof);
     },
 
     [GossipType.sync_committee]: async ({serializedData}, topic) => {
@@ -391,6 +384,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       } catch (e) {
         logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
       }
+
+      chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
     },
   };
 }
@@ -400,6 +395,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
  */
 export async function validateGossipFnRetryUnknownRoot<T>(
   fn: () => Promise<T>,
+  network: INetwork,
   chain: IBeaconChain,
   slot: Slot,
   blockRoot: Root
@@ -414,8 +410,13 @@ export async function validateGossipFnRetryUnknownRoot<T>(
         e instanceof AttestationError &&
         e.type.code === AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT
       ) {
-        if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {
+        if (unknownBlockRootRetries === 0) {
           // Trigger unknown block root search here
+          const rootHex = toHexString(blockRoot);
+          network.searchUnknownSlotRoot({slot, root: rootHex});
+        }
+
+        if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {
           const foundBlock = await chain.waitForBlock(slot, toHexString(blockRoot));
           // Returns true if the block was found on time. In that case, try to get it from the fork-choice again.
           // Otherwise, throw the error below.

@@ -1,10 +1,10 @@
 # Install with Docker
 
-The [`chainsafe/lodestar`](https://hub.docker.com/r/chainsafe/lodestar) Docker Hub repository is mantained actively. It contains the `lodestar` CLI preinstalled.
+The [`chainsafe/lodestar`](https://hub.docker.com/r/chainsafe/lodestar) Docker Hub repository is maintained actively. It contains the `lodestar` CLI preinstalled.
 
 <!-- prettier-ignore-start -->
 !!! info
-    The Docker Hub image tagged as `chainsafe/lodestar:next` is run on CI every dev commit on our `unstable` branch.
+    The Docker Hub image tagged as `chainsafe/lodestar:next` is run on CI every commit on our `unstable` branch.
     For `stable` releases, the image is tagged as `chainsafe/lodestar:latest`.
 <!-- prettier-ignore-end -->
 
@@ -22,6 +22,7 @@ Pull, run the image and Lodestar should now be ready to use
 docker pull chainsafe/lodestar
 docker run chainsafe/lodestar --help
 ```
+
 <!-- prettier-ignore-start -->
 !!! info
     Docker is the recommended setup for Lodestar. Use our [Lodestar Quickstart scripts](https://github.com/ChainSafe/lodestar-quickstart) with Docker for detailed instructions.

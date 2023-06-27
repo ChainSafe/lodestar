@@ -83,7 +83,7 @@ export const allForksExecution = {
     ExecutionPayloadHeader: deneb.ExecutionPayloadHeader,
     BuilderBid: deneb.BuilderBid,
     SignedBuilderBid: deneb.SignedBuilderBid,
-    SSEPayloadAttributes: capella.SSEPayloadAttributes,
+    SSEPayloadAttributes: deneb.SSEPayloadAttributes,
   },
 };
 

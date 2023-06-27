@@ -91,10 +91,7 @@ export function objectToExpectedCase<T extends Record<string, unknown> | Record<
         throw new Error(`object already has a ${newName} property`);
       }
 
-      newObj[newName] = objectToExpectedCase(
-        (obj as Record<string, unknown>)[name] as Record<string, unknown>,
-        expectedCase
-      );
+      newObj[newName] = objectToExpectedCase(obj[name] as Record<string, unknown>, expectedCase);
     }
     return newObj as T;
   }

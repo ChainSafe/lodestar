@@ -79,9 +79,11 @@ export function getValidatorApi({
         genesisBlockRoot = state.blockRoots.get(0);
       }
 
-      const genesisBlock = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
-      if (genesisBlock) {
-        genesisBlockRoot = config.getForkTypes(genesisBlock.message.slot).SignedBeaconBlock.hashTreeRoot(genesisBlock);
+      const blockRes = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
+      if (blockRes) {
+        genesisBlockRoot = config
+          .getForkTypes(blockRes.block.message.slot)
+          .SignedBeaconBlock.hashTreeRoot(blockRes.block);
       }
     }
 
@@ -360,9 +362,11 @@ export function getValidatorApi({
       // when a validator is configured with multiple beacon node urls, this beaconBlockRoot may come from another beacon node
       // and it hasn't been in our forkchoice since we haven't seen / processing that block
       // see https://github.com/ChainSafe/lodestar/issues/5063
-      if (!chain.forkChoice.getBlock(beaconBlockRoot)) {
+      if (!chain.forkChoice.hasBlock(beaconBlockRoot)) {
+        const rootHex = toHexString(beaconBlockRoot);
+        network.searchUnknownSlotRoot({slot, root: rootHex});
         // if result of this call is false, i.e. block hasn't seen after 1 slot then the below notOnOptimisticBlockRoot call will throw error
-        await chain.waitForBlock(slot, toHexString(beaconBlockRoot));
+        await chain.waitForBlock(slot, rootHex);
       }
 
       // Check the execution status as validator shouldn't contribute on an optimistic head
@@ -562,6 +566,7 @@ export function getValidatorApi({
             // see https://github.com/ChainSafe/lodestar/issues/5098
             const {indexedAttestation, committeeIndices, attDataRootHex} = await validateGossipFnRetryUnknownRoot(
               validateFn,
+              network,
               chain,
               slot,
               beaconBlockRoot
@@ -574,7 +579,7 @@ export function getValidatorApi({
               committeeIndices
             );
             const sentPeers = await network.publishBeaconAggregateAndProof(signedAggregateAndProof);
-            metrics?.submitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
+            metrics?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
           } catch (e) {
             if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
               logger.debug("Ignoring known signedAggregateAndProof");
@@ -726,23 +731,23 @@ export function getValidatorApi({
       throw new OnlySupportedByDVT();
     },
 
-    async getLiveness(indices: ValidatorIndex[], epoch: Epoch) {
-      if (indices.length === 0) {
+    async getLiveness(epoch, validatorIndices) {
+      if (validatorIndices.length === 0) {
         return {
           data: [],
         };
       }
       const currentEpoch = chain.clock.currentEpoch;
       if (epoch < currentEpoch - 1 || epoch > currentEpoch + 1) {
-        throw new Error(
+        throw new ApiError(
+          400,
           `Request epoch ${epoch} is more than one epoch before or after the current epoch ${currentEpoch}`
         );
       }
 
       return {
-        data: indices.map((index: ValidatorIndex) => ({
+        data: validatorIndices.map((index) => ({
           index,
-          epoch,
           isLive: chain.validatorSeenAtEpoch(index, epoch),
         })),
       };

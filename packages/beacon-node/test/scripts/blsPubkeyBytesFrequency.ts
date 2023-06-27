@@ -116,7 +116,7 @@ async function writePubkeys(): Promise<void> {
   ApiError.assert(res);
 
   const pubkeys = Array.from(res.response.data.validators).map((validator) =>
-    Buffer.from(validator.pubkey as Uint8Array).toString("hex")
+    Buffer.from(validator.pubkey).toString("hex")
   );
 
   fs.writeFileSync("mainnet_pubkeys.csv", pubkeys.join("\n"));

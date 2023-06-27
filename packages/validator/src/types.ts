@@ -21,7 +21,7 @@ export type PubkeyHex = string;
 
 export type LodestarValidatorDatabaseController = Pick<
   DatabaseController<Uint8Array, Uint8Array>,
-  "get" | "start" | "values" | "batchPut" | "keys" | "get" | "put"
+  "close" | "setMetrics" | "values" | "batchPut" | "keys" | "get" | "put"
 >;
 
 /**

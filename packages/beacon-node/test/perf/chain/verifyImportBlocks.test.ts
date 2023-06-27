@@ -62,12 +62,11 @@ describe.skip("verify+import blocks - range sync perf test", () => {
 
   let db: BeaconDb;
   before(async () => {
-    db = new BeaconDb({config, controller: new LevelDbController({name: ".tmpdb"}, {logger})});
-    await db.start();
+    db = new BeaconDb(config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
   });
   after(async () => {
     // If before blocks fail, db won't be declared
-    if (db !== undefined) await db.stop();
+    if (db !== undefined) await db.close();
   });
 
   itBench({
@@ -108,7 +107,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
     },
     fn: async (chain) => {
       const blocksImport = blocks.value.map((block) =>
-        getBlockInput.preDeneb(chain.config, block, BlockSource.byRange)
+        getBlockInput.preDeneb(chain.config, block, BlockSource.byRange, null)
       );
 
       await chain.processChainSegment(blocksImport, {

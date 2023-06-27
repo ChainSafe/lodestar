@@ -503,7 +503,7 @@ export class LightClientServer {
     }
 
     if (isFinalized) {
-      const finalizedCheckpointRoot = attestedData.finalizedCheckpoint.root as Uint8Array;
+      const finalizedCheckpointRoot = attestedData.finalizedCheckpoint.root;
       let finalizedHeader = await this.getFinalizedHeader(finalizedCheckpointRoot);
 
       if (
@@ -590,7 +590,7 @@ export class LightClientServer {
     }
     const nextSyncCommitteeBranch = getNextSyncCommitteeBranch(syncCommitteeWitness);
     const finalizedHeaderAttested = attestedData.isFinalized
-      ? await this.getFinalizedHeader(attestedData.finalizedCheckpoint.root as Uint8Array)
+      ? await this.getFinalizedHeader(attestedData.finalizedCheckpoint.root)
       : null;
 
     let isFinalized, finalityBranch, finalizedHeader;

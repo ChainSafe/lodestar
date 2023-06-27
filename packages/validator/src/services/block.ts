@@ -109,13 +109,19 @@ export class BlockProposingService {
 
       const debugLogCtx = {...logCtx, validator: pubkeyHex};
 
-      this.logger.debug("Producing block", debugLogCtx);
-      this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
-
       const strictFeeRecipientCheck = this.validatorStore.strictFeeRecipientCheck(pubkeyHex);
       const isBuilderEnabled = this.validatorStore.isBuilderEnabled(pubkeyHex);
       const builderSelection = this.validatorStore.getBuilderSelection(pubkeyHex);
       const expectedFeeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
+
+      this.logger.debug("Producing block", {
+        ...debugLogCtx,
+        isBuilderEnabled,
+        builderSelection,
+        expectedFeeRecipient,
+        strictFeeRecipientCheck,
+      });
+      this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
       const blockContents = await this.produceBlockWrapper(slot, randaoReveal, graffiti, {
         expectedFeeRecipient,
@@ -190,10 +196,20 @@ export class BlockProposingService {
   > => {
     // Start calls for building execution and builder blocks
     const blindedBlockPromise = isBuilderEnabled ? this.produceBlindedBlock(slot, randaoReveal, graffiti) : null;
-    const fullBlockPromise = this.produceBlock(slot, randaoReveal, graffiti);
+    const fullBlockPromise =
+      // At any point either the builder or execution or both flows should be active.
+      //
+      // Ideally such a scenario should be prevented on startup, but proposerSettingsFile or keymanager
+      // configurations could cause a validator pubkey to have builder disabled with builder selection builder only
+      // (TODO: independently make sure such an options update is not successful for a validator pubkey)
+      //
+      // So if builder is disabled ignore builder selection of builderonly if caused by user mistake
+      !isBuilderEnabled || builderSelection !== BuilderSelection.BuilderOnly
+        ? this.produceBlock(slot, randaoReveal, graffiti)
+        : null;
 
     let blindedBlock, fullBlock;
-    if (blindedBlockPromise !== null) {
+    if (blindedBlockPromise !== null && fullBlockPromise !== null) {
       // reference index of promises in the race
       const promisesOrder = [ProducedBlockSource.builder, ProducedBlockSource.engine];
       [blindedBlock, fullBlock] = await racePromisesWithCutoff<{
@@ -225,9 +241,16 @@ export class BlockProposingService {
         this.logger.error("Failed to produce execution block", {}, fullBlock);
         fullBlock = null;
       }
-    } else {
-      fullBlock = await fullBlockPromise;
+    } else if (blindedBlockPromise !== null && fullBlockPromise === null) {
+      blindedBlock = await blindedBlockPromise;
+      fullBlock = null;
+    } else if (blindedBlockPromise === null && fullBlockPromise !== null) {
       blindedBlock = null;
+      fullBlock = await fullBlockPromise;
+    } else {
+      throw Error(
+        `Internal Error: Neither builder nor execution proposal flow activated isBuilderEnabled=${isBuilderEnabled} builderSelection=${builderSelection}`
+      );
     }
 
     const builderBlockValue = blindedBlock?.blockValue ?? BigInt(0);
@@ -252,7 +275,7 @@ export class BlockProposingService {
           break;
         }
 
-        case BuilderSelection.BuilderAlways:
+        // For everything else just select the builder
         default: {
           selectedSource = ProducedBlockSource.builder;
           selectedBlock = blindedBlock;

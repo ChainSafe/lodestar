@@ -1,6 +1,6 @@
 import {Api, getClient} from "@lodestar/api/beacon";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
-import {networksChainConfig} from "@lodestar/config/networks";
+import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {Lightclient, LightclientEvent, RunStatusCode} from "@lodestar/light-client";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {isForkWithdrawals} from "@lodestar/params";
@@ -26,14 +26,21 @@ type RootProviderOptions = Omit<RootProviderInitOptions, "transport"> & {
 export class ProofProvider {
   private store: PayloadStore;
   private logger: Logger;
-
   // Make sure readyPromise doesn't throw unhandled exceptions
   private readyPromise?: Promise<void>;
+
+  readonly config: ChainForkConfig;
+  readonly network: NetworkName;
+  readonly api: Api;
+
   lightClient?: Lightclient;
 
-  constructor(private opts: RootProviderOptions) {
+  constructor(readonly opts: RootProviderOptions) {
     this.store = new PayloadStore({api: opts.api, logger: opts.logger});
     this.logger = opts.logger;
+    this.config = opts.config;
+    this.api = opts.api;
+    this.network = opts.config.PRESET_BASE as NetworkName;
   }
 
   async waitToBeReady(): Promise<void> {
@@ -48,7 +55,11 @@ export class ProofProvider {
       network: opts.network,
       urls: opts.urls.join(","),
     });
-    const config = createChainForkConfig(networksChainConfig[opts.network]);
+
+    const config = opts.network
+      ? createChainForkConfig(networksChainConfig[opts.network])
+      : createChainForkConfig(opts.config);
+
     const api = getClient({urls: opts.urls}, {config});
     const transport = new LightClientRestTransport(api);
 
@@ -60,10 +71,8 @@ export class ProofProvider {
     });
 
     provider.readyPromise = provider.sync(opts.wsCheckpoint).catch((e) => {
-      // TODO: will be replaced by logger in the next PR.
-      // eslint-disable-next-line no-console
-      console.error("Error while syncing", e);
-      return Promise.reject("Error while syncing");
+      opts.logger.error("Error while syncing", e);
+      return Promise.reject(e);
     });
 
     return provider;

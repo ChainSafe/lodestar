@@ -1,6 +1,7 @@
 import {Logger, MapDef, mapValues, sleep} from "@lodestar/utils";
-import {RootHex, Slot} from "@lodestar/types";
+import {RootHex, Slot, SlotRootHex} from "@lodestar/types";
 import {routes} from "@lodestar/api";
+import {pruneSetToMax} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/interface.js";
 import {GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -8,6 +9,7 @@ import {IBeaconDb} from "../../db/interface.js";
 import {ClockEvent} from "../../util/clock.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {GossipHandlers, GossipType, GossipValidatorFn} from "../gossip/interface.js";
+import {PeerIdStr} from "../peers/index.js";
 import {createGossipQueues} from "./gossipQueues.js";
 import {PendingGossipsubMessage} from "./types.js";
 import {ValidatorFnsModules, GossipHandlerOpts, getGossipHandlers} from "./gossipHandlers.js";
@@ -32,6 +34,11 @@ export type NetworkProcessorOpts = GossipHandlerOpts & {
 };
 
 /**
+ * Keep up to 3 slot of unknown roots, so we don't always emit to UnknownBlock sync.
+ */
+const MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE = 3;
+
+/**
  * This is respective to gossipsub seenTTL (which is 550 * 0.7 = 385s), also it's respective
  * to beacon_attestation ATTESTATION_PROPAGATION_SLOT_RANGE (32 slots).
  * If message slots are withint this window, it'll likely to be filtered by gossipsub seenCache.
@@ -49,7 +56,7 @@ type WorkOpts = {
  */
 const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
   [GossipType.beacon_block]: {bypassQueue: true},
-  [GossipType.beacon_block_and_blobs_sidecar]: {bypassQueue: true},
+  [GossipType.blob_sidecar]: {bypassQueue: true},
   [GossipType.beacon_aggregate_and_proof]: {},
   [GossipType.voluntary_exit]: {},
   [GossipType.bls_to_execution_change]: {},
@@ -143,6 +150,7 @@ export class NetworkProcessor {
   private readonly awaitingGossipsubMessagesByRootBySlot: MapDef<Slot, MapDef<RootHex, Set<PendingGossipsubMessage>>>;
   private unknownBlockGossipsubMessagesCount = 0;
   private isProcessingCurrentSlotBlock = false;
+  private unknownRootsBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
 
   constructor(modules: NetworkProcessorModules, private readonly opts: NetworkProcessorOpts) {
     const {chain, events, logger, metrics} = modules;
@@ -201,6 +209,14 @@ export class NetworkProcessor {
     return queue.getAll();
   }
 
+  searchUnknownSlotRoot({slot, root}: SlotRootHex, peer?: PeerIdStr): void {
+    // Search for the unknown block
+    if (!this.unknownRootsBySlot.getOrDefault(slot).has(root)) {
+      this.unknownRootsBySlot.getOrDefault(slot).add(root);
+      this.events.emit(NetworkEvent.unknownBlock, {rootHex: root, peer});
+    }
+  }
+
   private onPendingGossipsubMessage(message: PendingGossipsubMessage): void {
     const topicType = message.topic.type;
     const extractBlockSlotRootFn = this.extractBlockSlotRootFns[topicType];
@@ -222,13 +238,17 @@ export class NetworkProcessor {
         }
         if (
           slot === this.chain.clock.currentSlot &&
-          (topicType === GossipType.beacon_block || topicType === GossipType.beacon_block_and_blobs_sidecar)
+          (topicType === GossipType.beacon_block || topicType === GossipType.blob_sidecar)
         ) {
           // in the worse case if the current slot block is not valid, this will be reset in the next slot
           this.isProcessingCurrentSlotBlock = true;
         }
         message.msgSlot = slot;
-        if (root && !this.chain.forkChoice.hasBlockHex(root)) {
+        // check if we processed a block with this root
+        // no need to check if root is a descendant of the current finalized block, it will be checked once we validate the message if needed
+        if (root && !this.chain.forkChoice.hasBlockHexUnsafe(root)) {
+          this.searchUnknownSlotRoot({slot, root}, message.propagationSource.toString());
+
           if (this.unknownBlockGossipsubMessagesCount > MAX_QUEUED_UNKNOWN_BLOCK_GOSSIP_OBJECTS) {
             // TODO: Should report the dropped job to gossip? It will be eventually pruned from the mcache
             this.metrics?.reprocessGossipAttestations.reject.inc({reason: ReprocessRejectReason.reached_limit});
@@ -310,6 +330,7 @@ export class NetworkProcessor {
         this.awaitingGossipsubMessagesByRootBySlot.delete(slot);
       }
     }
+    pruneSetToMax(this.unknownRootsBySlot, MAX_UNKNOWN_ROOTS_SLOT_CACHE_SIZE);
     this.unknownBlockGossipsubMessagesCount = 0;
   }
 

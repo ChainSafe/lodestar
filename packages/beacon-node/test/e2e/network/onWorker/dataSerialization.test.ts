@@ -84,7 +84,12 @@ describe("data serialization through worker boundary", function () {
         type: BlockInputType.preDeneb,
         block: ssz.capella.SignedBeaconBlock.defaultValue(),
         source: BlockSource.gossip,
+        blockBytes: ZERO_HASH,
       },
+      peer,
+    },
+    [NetworkEvent.unknownBlock]: {
+      rootHex: ZERO_HASH_HEX,
       peer,
     },
     [NetworkEvent.pendingGossipsubMessage]: {
@@ -136,6 +141,7 @@ describe("data serialization through worker boundary", function () {
     publishGossip: ["test-topic", bytes, {allowPublishToZeroPeers: true, ignoreDuplicatePublishError: true}],
     close: [],
     scrapeMetrics: [],
+    writeProfile: [0, ""],
   };
 
   const lodestarPeer: routes.lodestar.LodestarNodePeer = {
@@ -197,6 +203,7 @@ describe("data serialization through worker boundary", function () {
     publishGossip: 1,
     close: null,
     scrapeMetrics: "test-metrics",
+    writeProfile: "",
   };
 
   type TestCase = {id: string; data: unknown; shouldFail?: boolean};
@@ -220,7 +227,7 @@ describe("data serialization through worker boundary", function () {
 
   for (const testCase of testCases) {
     it(testCase.id, async () => {
-      const dataPong = (await echoWorker.send(testCase.data)) as unknown;
+      const dataPong = await echoWorker.send(testCase.data);
       if (testCase.shouldFail) {
         expect(dataPong).not.deep.equals(testCase.data);
       } else {

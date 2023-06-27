@@ -18,6 +18,7 @@ export type SignedBlindedBlobSidecar = ValueOf<typeof ssz.SignedBlindedBlobSidec
 export type SignedBlindedBlobSidecars = ValueOf<typeof ssz.SignedBlindedBlobSidecars>;
 
 export type BlobKzgCommitments = ValueOf<typeof ssz.BlobKzgCommitments>;
+export type KZGProofs = ValueOf<typeof ssz.KZGProofs>;
 export type Polynomial = ValueOf<typeof ssz.Polynomial>;
 export type PolynomialAndCommitment = ValueOf<typeof ssz.PolynomialAndCommitment>;
 export type BLSFieldElement = ValueOf<typeof ssz.BLSFieldElement>;
@@ -48,6 +49,7 @@ export type FullOrBlindedExecutionPayload = ExecutionPayload | ExecutionPayloadH
 
 export type BuilderBid = ValueOf<typeof ssz.BuilderBid>;
 export type SignedBuilderBid = ValueOf<typeof ssz.SignedBuilderBid>;
+export type SSEPayloadAttributes = ValueOf<typeof ssz.SSEPayloadAttributes>;
 
 export type LightClientHeader = ValueOf<typeof ssz.LightClientHeader>;
 export type LightClientBootstrap = ValueOf<typeof ssz.LightClientBootstrap>;

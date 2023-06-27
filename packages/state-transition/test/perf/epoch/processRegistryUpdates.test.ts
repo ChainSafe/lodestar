@@ -1,5 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
-import {beforeProcessEpoch, CachedBeaconStateAllForks, EpochProcess} from "../../../src/index.js";
+import {beforeProcessEpoch, CachedBeaconStateAllForks, EpochTransitionCache} from "../../../src/index.js";
 import {processRegistryUpdates} from "../../../src/epoch/processRegistryUpdates.js";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../util.js";
 import {StateEpoch} from "../types.js";
@@ -48,7 +48,7 @@ describe("phase0 processRegistryUpdates", () => {
     },
   ];
 
-  // Provide flat `epochProcess.balances` + flat `epochProcess.validators`
+  // Provide flat `cache.balances` + flat `cache.validators`
   // which will it update validators tree
 
   for (const {id, notTrack, lengths} of testCases) {
@@ -61,8 +61,8 @@ describe("phase0 processRegistryUpdates", () => {
       minRuns: 5, // Worst case is very slow
       noThreshold: notTrack,
       before: () => getRegistryUpdatesTestData(vc, lengths),
-      beforeEach: async ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-      fn: ({state, epochProcess}) => processRegistryUpdates(state, epochProcess),
+      beforeEach: async ({state, cache}) => ({state: state.clone(), cache}),
+      fn: ({state, cache}) => processRegistryUpdates(state, cache),
     });
   }
 });
@@ -81,18 +81,18 @@ function getRegistryUpdatesTestData(
   lengths: IndicesLengths
 ): {
   state: CachedBeaconStateAllForks;
-  epochProcess: EpochProcess;
+  cache: EpochTransitionCache;
 } {
   const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
-  const epochProcess = beforeProcessEpoch(state);
+  const cache = beforeProcessEpoch(state);
 
-  epochProcess.indicesToEject = linspace(lengths.indicesToEject);
-  epochProcess.indicesEligibleForActivationQueue = linspace(lengths.indicesEligibleForActivationQueue);
-  epochProcess.indicesEligibleForActivation = linspace(lengths.indicesEligibleForActivation);
+  cache.indicesToEject = linspace(lengths.indicesToEject);
+  cache.indicesEligibleForActivationQueue = linspace(lengths.indicesEligibleForActivationQueue);
+  cache.indicesEligibleForActivation = linspace(lengths.indicesEligibleForActivation);
 
   return {
     state,
-    epochProcess,
+    cache,
   };
 }
 
