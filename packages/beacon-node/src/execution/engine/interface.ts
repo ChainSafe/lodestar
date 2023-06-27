@@ -1,6 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {KZGCommitment, Blob, KZGProof} from "@lodestar/types/deneb";
-import {RootHex, allForks, capella, Wei} from "@lodestar/types";
+import {Root, RootHex, allForks, capella, Wei} from "@lodestar/types";
 
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
@@ -52,6 +52,7 @@ export type PayloadAttributes = {
   // avoid any conversions
   suggestedFeeRecipient: string;
   withdrawals?: capella.Withdrawal[];
+  parentBeaconBlockRoot?: Uint8Array;
 };
 
 export type TransitionConfigurationV1 = {
@@ -92,7 +93,8 @@ export interface IExecutionEngine {
   notifyNewPayload(
     fork: ForkName,
     executionPayload: allForks.ExecutionPayload,
-    versionedHashes?: VersionedHashes
+    versionedHashes?: VersionedHashes,
+    parentBeaconBlockRoot?: Root
   ): Promise<ExecutePayloadResponse>;
 
   /**

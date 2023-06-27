@@ -147,6 +147,7 @@ export class PrepareNextSlotScheduler {
             this.chain,
             this.logger,
             fork as ForkExecution, // State is of execution type
+            fromHex(headRoot),
             safeBlockHash,
             finalizedBlockHash,
             prepareState,
