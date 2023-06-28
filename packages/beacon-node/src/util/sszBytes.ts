@@ -5,6 +5,9 @@ import {toHex} from "@lodestar/utils";
 export type BlockRootHex = RootHex;
 export type AttDataBase64 = string;
 
+export const DATABASE_SERIALIZED_FULL_BLOCK_BIT = 0x00;
+export const DATABASE_SERIALIZED_BLINDED_BLOCK_BIT = 0xff;
+
 // class Attestation(Container):
 //   aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE] - offset 4
 //   data: AttestationData - target data - 128
