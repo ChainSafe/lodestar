@@ -1,10 +1,12 @@
 import all from "it-all";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository, KeyValue, FilterOptions} from "@lodestar/db";
-import {Slot, Root, allForks, ssz} from "@lodestar/types";
+import {Slot, Root, allForks, ssz, Uint8, isBlindedSignedBeaconBlock, bellatrix} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
+import {DATABASE_SERIALIZED_BLINDED_BLOCK_BIT, DATABASE_SERIALIZED_FULL_BLOCK_BIT} from "../../util/sszBytes.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
+import {IExecutionEngine} from "../../execution/index.js";
 import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex.js";
 import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./blockArchiveIndex.js";
 
@@ -21,11 +23,16 @@ export type BlockArchiveBatchPutBinaryItem = KeyValue<Slot, Uint8Array> & {
 /**
  * Stores finalized blocks. Block slot is identifier.
  */
-export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeaconBlock> {
+export class BlockArchiveRepository extends Repository<Slot, allForks.FullOrBlindedSignedBeaconBlock> {
+  executionEngine?: IExecutionEngine;
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.allForks_blockArchive;
     const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used
     super(config, db, bucket, type, getBucketNameByValue(bucket));
+  }
+
+  setExecutionEngine(engine: IExecutionEngine): void {
+    this.executionEngine = engine;
   }
 
   // Overrides for multi-fork
@@ -34,13 +41,19 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     return this.config.getForkTypes(value.message.slot).SignedBeaconBlock.serialize(value);
   }
 
-  decodeValue(data: Uint8Array): allForks.SignedBeaconBlock {
-    return getSignedBlockTypeFromBytes(this.config, data).deserialize(data);
+  decodeValue(data: Uint8Array): allForks.FullOrBlindedSignedBeaconBlock {
+    let isBlinded = false;
+    if (data[0] === DATABASE_SERIALIZED_BLINDED_BLOCK_BIT) {
+      // reset first bit so deserialize works correctly
+      data[0] = DATABASE_SERIALIZED_FULL_BLOCK_BIT as Uint8;
+      isBlinded = true;
+    }
+    return getSignedBlockTypeFromBytes(this.config, data, isBlinded).deserialize(data);
   }
 
   // Handle key as slot
 
-  getId(value: allForks.SignedBeaconBlock): Slot {
+  getId(value: allForks.FullOrBlindedSignedBeaconBlock): Slot {
     return value.message.slot;
   }
 
@@ -49,6 +62,16 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
   }
 
   // Overrides to index
+
+  async get(key: Slot): Promise<allForks.SignedBeaconBlock | null> {
+    const value = await super.get(key);
+    if (!value) return null;
+    return this.fullBlockFromMaybeBlinded(value);
+  }
+
+  async getBinary(id: number): Promise<Uint8Array | null> {
+    // this is not great to deserialize and reserialize
+  }
 
   async put(key: Slot, value: allForks.SignedBeaconBlock): Promise<void> {
     const blockRoot = this.config.getForkTypes(value.message.slot).BeaconBlock.hashTreeRoot(value.message);
@@ -77,6 +100,8 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
   }
 
   async batchPutBinary(items: BlockArchiveBatchPutBinaryItem[]): Promise<void> {
+    // TODO: need to deserialize to swap out transactions for transactionRoot.  this was just changed
+    // in PR #5573.  Will research further.
     await Promise.all([
       super.batchPutBinary(items),
       Array.from(items).map((item) => storeRootIndex(this.db, item.slot, item.blockRoot)),
@@ -109,7 +134,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
 
     for await (const value of valuesStream) {
       if ((value.message.slot - firstSlot) % step === 0) {
-        yield value;
+        yield this.fullBlockFromMaybeBlinded(value);
       }
     }
   }
@@ -160,5 +185,29 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     if (firstSlot === null) throw Error("specify opts.gt or opts.gte");
 
     return firstSlot;
+  }
+
+  private async fullBlockFromMaybeBlinded(
+    maybeBlinded: allForks.FullOrBlindedSignedBeaconBlock
+  ): Promise<allForks.SignedBeaconBlock> {
+    if (!isBlindedSignedBeaconBlock(maybeBlinded)) {
+      return maybeBlinded;
+    }
+    if (!this.executionEngine) {
+      throw new Error("Execution engine not set");
+    }
+    const elBlockHash = (maybeBlinded as bellatrix.SignedBlindedBeaconBlock).message.body.executionPayloadHeader
+      .blockHash;
+    const engineRes = await this.executionEngine.getPayloadBodiesByHash([elBlockHash.toString()]);
+    if (!engineRes[0]) {
+      throw new Error(`Execution payload not found for slot ${maybeBlinded.message.slot}`);
+    }
+
+    const a = ssz[this.config.getForkName(value.message.slot)].SignedBeaconBlock.clone(value);
+    a.message.body.executionPayload = engineRes[0];
+    // (value as bellatrix.SignedBeaconBlock).message.body.executionPayload = engineRes[0];
+
+    blinded.message.body.executionPayload = elPayload;
+    return blinded;
   }
 }
