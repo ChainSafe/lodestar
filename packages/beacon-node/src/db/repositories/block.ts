@@ -28,6 +28,6 @@ export class BlockRepository extends Repository<Uint8Array, allForks.SignedBeaco
   }
 
   decodeValue(data: Buffer): allForks.SignedBeaconBlock {
-    return getSignedBlockTypeFromBytes(this.config, data).deserialize(data);
+    return getSignedBlockTypeFromBytes(this.config, data, false).deserialize(data);
   }
 }

@@ -20,15 +20,27 @@ const SLOT_BYTE_COUNT = 8;
  */
 const SLOT_BYTES_POSITION_IN_STATE = 40;
 
+export function getSignedBlockTypeFromBytes<T extends boolean>(
+  config: ChainForkConfig,
+  bytes: Buffer | Uint8Array,
+  isBlinded: T
+): T extends true
+  ? allForks.AllForksBlindedSSZTypes["SignedBeaconBlock"]
+  : allForks.AllForksSSZTypes["SignedBeaconBlock"];
 export function getSignedBlockTypeFromBytes(
   config: ChainForkConfig,
-  bytes: Buffer | Uint8Array
-): allForks.AllForksSSZTypes["SignedBeaconBlock"] {
+  bytes: Buffer | Uint8Array,
+  isBlinded: boolean
+): allForks.AllForksBlindedSSZTypes["SignedBeaconBlock"] | allForks.AllForksSSZTypes["SignedBeaconBlock"] {
+  // slot offset is same for blinded and full blocks
   const slot = getSlotFromSignedBeaconBlockSerialized(bytes);
   if (slot === null) {
     throw Error("getSignedBlockTypeFromBytes: invalid bytes");
   }
 
+  if (isBlinded) {
+    return config.getBlindedForkTypes(slot).SignedBeaconBlock;
+  }
   return config.getForkTypes(slot).SignedBeaconBlock;
 }
 
