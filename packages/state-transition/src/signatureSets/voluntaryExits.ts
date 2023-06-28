@@ -1,4 +1,3 @@
-import {DOMAIN_VOLUNTARY_EXIT} from "@lodestar/params";
 import {allForks, phase0, ssz} from "@lodestar/types";
 import {
   computeSigningRoot,
@@ -25,7 +24,7 @@ export function getVoluntaryExitSignatureSet(
 ): ISignatureSet {
   const {epochCtx} = state;
   const slot = computeStartSlotAtEpoch(signedVoluntaryExit.message.epoch);
-  const domain = state.config.getDomain(state.slot, DOMAIN_VOLUNTARY_EXIT, slot);
+  const domain = state.config.getDomainForVoluntaryExit(state.slot, slot);
 
   return {
     type: SignatureSetType.single,

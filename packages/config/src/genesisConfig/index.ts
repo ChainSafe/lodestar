@@ -1,4 +1,4 @@
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH, DOMAIN_VOLUNTARY_EXIT} from "@lodestar/params";
 import {DomainType, ForkDigest, phase0, Root, Slot, ssz, Version} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "../beaconConfig.js";
@@ -73,6 +73,16 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
         domain = computeDomain(domainType, forkInfo.version, genesisValidatorsRoot);
         domainByType.set(domainType, domain);
       }
+      return domain;
+    },
+
+    getDomainForVoluntaryExit(stateSlot: Slot, messageSlot?: Slot) {
+      // Deneb onwards the signature domain fork is fixed to capella
+      const domain =
+        stateSlot < chainForkConfig.DENEB_FORK_EPOCH * SLOTS_PER_EPOCH
+          ? this.getDomain(stateSlot, DOMAIN_VOLUNTARY_EXIT, messageSlot)
+          : this.getDomainAtFork(ForkName.capella, DOMAIN_VOLUNTARY_EXIT);
+
       return domain;
     },
 

@@ -5,7 +5,6 @@ import {
   computeStartSlotAtEpoch,
   getCurrentSlot,
 } from "@lodestar/state-transition";
-import {DOMAIN_VOLUNTARY_EXIT} from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
 import {ssz, phase0} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
@@ -97,7 +96,7 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
     }
 
     for (const [i, {index, signer, pubkey}] of validatorsToExit.entries()) {
-      const domain = config.getDomain(computeStartSlotAtEpoch(exitEpoch), DOMAIN_VOLUNTARY_EXIT);
+      const domain = config.getDomainForVoluntaryExit(computeStartSlotAtEpoch(exitEpoch));
       const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex: index};
       const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
 
