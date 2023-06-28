@@ -186,6 +186,7 @@ export class BeaconChain implements IBeaconChain {
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot;
     this.eth1 = eth1;
     this.executionEngine = executionEngine;
+    this.db.blockArchive.setExecutionEngine(executionEngine);
     this.executionBuilder = executionBuilder;
     // From https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#specification-3
     // > Consensus Layer client software SHOULD poll this endpoint every 60 seconds.
