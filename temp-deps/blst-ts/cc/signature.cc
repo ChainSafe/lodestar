@@ -38,7 +38,9 @@ void Signature::Init(
 Napi::Value Signature::Deserialize(const Napi::CallbackInfo &info) {
     BLST_TS_FUNCTION_PREAMBLE
     Napi::Value sig_bytes_value = info[0];
-    BLST_TS_UNWRAP_UINT_8_ARRAY(sig_bytes_value, sig_bytes, "sigBytes")
+
+    BLST_TS_UNWRAP_UINT_8_ARRAY(
+        sig_bytes_value, sig_bytes, "sigBytes", scope.Escape(env.Undefined()))
     std::string err_out{"sigBytes"};
     if (!is_valid_length(
             err_out,
@@ -49,7 +51,7 @@ Napi::Value Signature::Deserialize(const Napi::CallbackInfo &info) {
         return scope.Escape(env.Undefined());
     }
 
-    BLST_TS_CREAT_UNWRAPPED_OBJECT(signature, Signature, sig)
+    BLST_TS_CREATE_UNWRAPPED_OBJECT(signature, Signature, sig)
     // default to jacobian for now
     sig->_has_jacobian = true;
 
@@ -99,7 +101,7 @@ Signature::Signature(const Napi::CallbackInfo &info)
             .ThrowAsJavaScriptException();
         return;
     }
-};
+}
 
 Napi::Value Signature::Serialize(const Napi::CallbackInfo &info){
     BLST_TS_SERIALIZE_POINT(SIGNATURE, "Signature")}

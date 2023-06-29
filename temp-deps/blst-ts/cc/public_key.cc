@@ -38,7 +38,9 @@ void PublicKey::Init(
 Napi::Value PublicKey::Deserialize(const Napi::CallbackInfo &info) {
     BLST_TS_FUNCTION_PREAMBLE
     Napi::Value pk_bytes_value = info[0];
-    BLST_TS_UNWRAP_UINT_8_ARRAY(pk_bytes_value, pk_bytes, "pkBytes")
+
+    BLST_TS_UNWRAP_UINT_8_ARRAY(
+        pk_bytes_value, pk_bytes, "pkBytes", scope.Escape(env.Undefined()))
     std::string err_out{"pkBytes"};
     if (!is_valid_length(
             err_out,
@@ -49,7 +51,7 @@ Napi::Value PublicKey::Deserialize(const Napi::CallbackInfo &info) {
         return scope.Escape(env.Undefined());
     }
 
-    BLST_TS_CREAT_UNWRAPPED_OBJECT(public_key, PublicKey, pk)
+    BLST_TS_CREATE_UNWRAPPED_OBJECT(public_key, PublicKey, pk)
     // default to jacobian
     pk->_has_jacobian = true;
 
@@ -103,7 +105,7 @@ PublicKey::PublicKey(const Napi::CallbackInfo &info)
             .ThrowAsJavaScriptException();
         return;
     }
-};
+}
 
 Napi::Value PublicKey::Serialize(const Napi::CallbackInfo &info) {
     BLST_TS_SERIALIZE_POINT(PUBLIC_KEY, "PublicKey");
