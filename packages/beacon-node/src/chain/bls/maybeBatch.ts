@@ -51,7 +51,6 @@ export async function asyncVerifySignatureSetsMaybeBatch(
   sets: SignatureSetSerialized[]
 ): Promise<boolean> {
   if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
-    logger.debug(`Attempting batch verification of ${sets.length} signature sets`);
     return blstTs.asyncVerifyMultipleAggregateSignatures(
       sets.map((s) => ({
         publicKey: s.publicKey,

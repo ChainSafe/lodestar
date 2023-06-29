@@ -485,10 +485,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         }
         this.bufferedLibuvJobs.jobs.push(job);
         this.bufferedLibuvJobs.sigCount += job.workReq.sets.length;
-        this.logger.debug("BLS libuv job buffered", {
-          sigsAdded: job.workReq.sets.length,
-          totalSigs: this.bufferedLibuvJobs.sigCount,
-        });
         if (this.bufferedLibuvJobs.sigCount > MAX_BUFFERED_SIGS) {
           clearTimeout(this.bufferedLibuvJobs.timeout);
           this.runBufferedJobsLibuv();
@@ -532,7 +528,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       // If any code below throws: the job will reject never going stale.
       // Only downside is the the job promise may be resolved twice, but that's not an issue
 
-      this.logger.debug("Running BLS libuv job", {jobs: jobs.length});
       const workResult = await asyncVerifyManySignatureSets(
         this.logger,
         jobs.map((job) => job.workReq)
