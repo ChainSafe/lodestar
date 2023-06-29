@@ -3,6 +3,9 @@ import {SinonSpy, spy} from "sinon";
 type Callback = () => void;
 type Handler = (cb: Callback) => void;
 
+/**
+ * Stub the logger methods
+ */
 export function stubLogger(context: {beforeEach: Handler; afterEach: Handler}, logger = console): void {
   context.beforeEach(() => {
     spy(logger, "info");

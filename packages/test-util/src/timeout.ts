@@ -1,5 +1,8 @@
 import {sleep} from "@lodestar/utils";
 
+/**
+ * Wrap a promise with a timeout
+ */
 export function wrapTimeout<T>(
   p: Promise<T>,
   timeoutMs: number,

@@ -94,27 +94,101 @@ export const stopChildProcess = async (
   });
 };
 
+/**
+ * Gracefully stop child process by sending SIGINT signal
+ *
+ * @param childProcess - child process to gracefully stop
+ * @param timeoutMs - timeout to wait for child process to exit before killing
+ * @returns
+ */
+export const gracefullyStopChildProcess = async (
+  childProcess: childProcess.ChildProcess,
+  timeoutMs = 3000
+): Promise<void> => {
+  if (childProcess.killed || childProcess.exitCode !== null || childProcess.signalCode !== null) {
+    return;
+  }
+
+  // Send signal to child process to gracefully stop
+  childProcess.kill("SIGINT");
+
+  // Wait for process to exit or timeout
+  const result = await Promise.race([
+    new Promise((resolve) => childProcess.once("exit", resolve)).then(() => "exited"),
+    sleep(timeoutMs).then(() => "timeout"),
+  ]);
+
+  // If process is timeout kill it
+  if (result === "timeout") {
+    await stopChildProcess(childProcess, "SIGKILL");
+  }
+};
+
 export enum ChildProcessResolve {
+  /**
+   * Resolve immediately after spawning child process
+   */
   Immediate,
+  /**
+   * Resolve after child process exits
+   */
   Completion,
+  /**
+   * Resolve after child process is healthy. Only considered when `heath` attr is set
+   */
   Healthy,
 }
 
 export type ChildProcessHealthStatus = {healthy: boolean; error?: string};
 
 export type SpawnChildProcessOptions = {
+  /**
+   * Environment variables to pass to child process
+   */
   env?: Record<string, string>;
+  /**
+   * If true, pipe child process stdio to parent process
+   */
   pipeStdioToFile?: string;
+  /**
+   * If true, pipe child process stdio to parent process
+   */
   pipeStdioToParent?: boolean;
+  /**
+   * The prefix to add to child process stdio to identify it from logs
+   */
   logPrefix?: string;
+  /**
+   * Hide stdio from parent process and only show errors
+   */
   pipeOnlyError?: boolean;
+  /**
+   * Child process resolve behavior
+   */
   resolveOn?: ChildProcessResolve;
+  /**
+   * Timeout to wait for child process before considering it unhealthy
+   */
   healthTimeoutMs?: number;
+  /**
+   * Interval to check child process health
+   */
   healthCheckIntervalMs?: number;
+  /**
+   * Log health checks after this time
+   */
   logHealthChecksAfterMs?: number;
+  /**
+   * Test context to pass to child process. Useful for testing to close the process after test case
+   */
   testContext?: TestContext;
+  /**
+   * Abort signal to stop child process
+   */
   signal?: AbortSignal;
-  // If health attribute defined we will consider resolveOn = ChildProcessResolve.Healthy
+  /**
+   * If health attribute defined we will consider resolveOn = ChildProcessResolve.Healthy
+   */
   health?: () => Promise<{healthy: boolean; error?: string}>;
 };
 
@@ -128,6 +202,14 @@ const defaultStartOpts = {
   resolveOn: ChildProcessResolve.Immediate,
 };
 
+/**
+ * Spawn child process and return it
+ *
+ * @param command - command to run in child process relative to mono-repo root
+ * @param args - command arguments
+ * @param opts - options
+ * @returns
+ */
 export async function spawnChildProcess(
   command: string,
   args: string[],

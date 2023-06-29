@@ -2,6 +2,9 @@ import type {Suite} from "mocha";
 import {TestContext} from "./interfaces.js";
 export {TestContext} from "./interfaces.js";
 
+/**
+ * Create a Mocha context object that can be used to register callbacks that will be executed
+ */
 export function getMochaContext(suite: Suite): TestContext {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   const beforeEachCallbacks: (() => Promise<void> | void)[] = [];

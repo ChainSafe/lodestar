@@ -1,9 +1,9 @@
 import childProcess from "node:child_process";
-import {sleep, retry} from "@lodestar/utils";
+import {retry} from "@lodestar/utils";
 import {Api, getClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
 import {ApiError} from "@lodestar/api";
-import {spawnCliCommand, stopChildProcess} from "@lodestar/test-util";
+import {spawnCliCommand, gracefullyStopChildProcess} from "@lodestar/test-util";
 import {TestContext} from "@lodestar/test-util/mocha";
 import {getMockBeaconApiServer} from "./mockBeaconApiServer.js";
 import {expectDeepEqualsUnordered, findApiToken} from "./runUtils.js";
@@ -73,9 +73,7 @@ export async function startValidatorWithKeyManager(
     validatorProc.removeAllListeners("exit");
     controller.abort();
     await beaconServer.close();
-    validatorProc.kill("SIGINT");
-    await sleep(3000);
-    await stopChildProcess(validatorProc, "SIGKILL");
+    await gracefullyStopChildProcess(validatorProc, 3000);
   };
 
   if (testContext) {
