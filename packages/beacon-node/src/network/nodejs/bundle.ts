@@ -76,11 +76,8 @@ export async function createNodejsLibp2p(options: Libp2pOptions): Promise<Libp2p
       maxParallelDialsPerPeer: 2,
       dialTimeout: 30_000,
 
-      // DOCS: the maximum number of connections libp2p is willing to have before it starts disconnecting.
-      // If ConnectionManager.size > maxConnections calls _maybeDisconnectOne() which will sort peers disconnect
-      // the one with the least `_peerValues`. That's a custom peer generalized score that's not used, so it always
-      // has the same value in current Lodestar usage.
-      maxConnections: options.maxConnections,
+      // Rely entirely on lodestar's peer manager to prune connections
+      //maxConnections: options.maxConnections,
       // DOCS: There is no way to turn off autodial other than setting minConnections to 0
       minConnections: 0,
     },
