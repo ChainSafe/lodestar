@@ -1,5 +1,5 @@
 import path from "node:path";
-import {sleep, retry} from "@lodestar/utils";
+import {retry} from "@lodestar/utils";
 import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
