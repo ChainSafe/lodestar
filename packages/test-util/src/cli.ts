@@ -1,5 +1,5 @@
 import childProcess from "node:child_process";
-import yargs from "yargs";
+import type {Argv} from "yargs";
 import {wrapTimeout} from "./timeout.js";
 import {nodeJsBinaryPath, repoRootPath, tsNodeBinaryPath} from "./path.js";
 import {
@@ -23,7 +23,7 @@ type CommandRunOptions = {
  * Run the cli command inside the main process from the Yargs object
  */
 export async function runCliCommand<T>(
-  cli: yargs.Argv<T>,
+  cli: Argv<T>,
   args: string[],
   opts: CommandRunOptions = {timeoutMs: 1000}
 ): Promise<string> {
