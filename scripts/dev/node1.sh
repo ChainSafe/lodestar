@@ -2,7 +2,7 @@
 
 GENESIS_TIME=$(date +%s)
 
-packages/cli/bin/lodestar dev \
+./lodestar dev \
   --genesisValidators 8 \
   --startValidators 0..7 \
   --genesisTime $GENESIS_TIME \
@@ -13,7 +13,4 @@ packages/cli/bin/lodestar dev \
   --rest.namespace '*' \
   --metrics \
   --logLevel debug \
-  --eth1 false \
-  --network.requestCountPeerLimit 1000000 \
-  --network.blockCountTotalLimit 1000000 \
-  --network.blockCountPeerLimit 1000000
+  --eth1 false
