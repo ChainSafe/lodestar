@@ -70,17 +70,11 @@ export async function startValidatorWithKeyManager(
   });
 
   const stopValidator = async (): Promise<void> => {
-    console.log("%%%%%% Removing listeners...");
     validatorProc.removeAllListeners("exit");
-    console.log("%%%%%% Aborting controller...");
     controller.abort();
-    console.log("%%%%%% Closing beacon server...");
     await beaconServer.close();
-    console.log("%%%%%% Killing validator...");
     validatorProc.kill("SIGINT");
-    console.log("%%%%%% Waiting for validator to exit...");
     await sleep(3000);
-    console.log("%%%%%% Stopping validator...");
     await stopChildProcess(validatorProc, "SIGKILL");
   };
 

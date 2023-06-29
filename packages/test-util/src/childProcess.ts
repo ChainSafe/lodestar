@@ -143,11 +143,12 @@ export async function spawnChildProcess(
         env: {...process.env, ...env},
       });
 
-      const logPrefixStream = new stream.Transform({
-        transform(chunk, _encoding, callback) {
-          callback(null, `[${logPrefix}] [${proc.pid}]: ${Buffer.from(chunk).toString("utf8")}`);
-        },
-      });
+      const getLogPrefixStream = (): stream.Transform =>
+        new stream.Transform({
+          transform(chunk, _encoding, callback) {
+            callback(null, `[${logPrefix}] [${proc.pid}]: ${Buffer.from(chunk).toString("utf8")}`);
+          },
+        });
 
       if (testContext) {
         testContext.afterEach(async () => {
@@ -171,8 +172,8 @@ export async function spawnChildProcess(
         fs.mkdirSync(path.dirname(pipeStdioToFile), {recursive: true});
         const stdoutFileStream = fs.createWriteStream(pipeStdioToFile);
 
-        proc.stdout.pipe(logPrefixStream).pipe(stdoutFileStream);
-        proc.stderr.pipe(logPrefixStream).pipe(stdoutFileStream);
+        proc.stdout.pipe(getLogPrefixStream()).pipe(stdoutFileStream);
+        proc.stderr.pipe(getLogPrefixStream()).pipe(stdoutFileStream);
 
         proc.once("exit", (_code: number) => {
           stdoutFileStream.close();
@@ -180,13 +181,13 @@ export async function spawnChildProcess(
       }
 
       if (pipeStdioToParent) {
-        proc.stdout.pipe(logPrefixStream).pipe(process.stdout);
-        proc.stderr.pipe(logPrefixStream).pipe(process.stderr);
+        proc.stdout.pipe(getLogPrefixStream()).pipe(process.stdout);
+        proc.stderr.pipe(getLogPrefixStream()).pipe(process.stderr);
       }
 
       if (!pipeStdioToParent && pipeOnlyError) {
         // If want to see only errors then show it on the output stream of main process
-        proc.stderr.pipe(logPrefixStream).pipe(process.stdout);
+        proc.stderr.pipe(getLogPrefixStream()).pipe(process.stdout);
       }
 
       // If there is any error in running the child process, reject the promise

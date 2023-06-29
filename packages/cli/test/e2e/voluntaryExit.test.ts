@@ -3,10 +3,12 @@ import {sleep, retry} from "@lodestar/utils";
 import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
-import {spawnCliCommand, execCliCommand, stopChildProcess} from "@lodestar/test-util";
+import {spawnCliCommand, execCliCommand} from "@lodestar/test-util";
+import {getMochaContext} from "@lodestar/test-util/mocha";
 import {testFilesDir} from "../utils.js";
 
 describe("voluntaryExit cmd", function () {
+  const testContext = getMochaContext(this);
   this.timeout("60s");
 
   it("Perform a voluntary exit", async () => {
@@ -27,7 +29,7 @@ describe("voluntaryExit cmd", function () {
         // Allow voluntary exists to be valid immediately
         "--params.SHARD_COMMITTEE_PERIOD=0",
       ],
-      {pipeStdioToParent: false, logPrefix: "dev"}
+      {pipeStdioToParent: false, logPrefix: "dev", testContext}
     );
 
     // Exit early if process exits
@@ -93,9 +95,5 @@ describe("voluntaryExit cmd", function () {
 
     // Disconnect the event stream for the client
     httpClientController.abort();
-
-    devBnProc.kill("SIGINT");
-    await sleep(1000);
-    await stopChildProcess(devBnProc, "SIGKILL");
   });
 });

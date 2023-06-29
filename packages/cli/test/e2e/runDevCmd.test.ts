@@ -1,9 +1,11 @@
 import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {retry} from "@lodestar/utils";
-import {spawnCliCommand, stopChildProcess} from "@lodestar/test-util";
+import {spawnCliCommand} from "@lodestar/test-util";
+import {getMochaContext} from "@lodestar/test-util/mocha";
 
 describe("Run dev command", function () {
+  const testContext = getMochaContext(this);
   this.timeout("30s");
 
   it("Run dev command with no --dataDir until beacon api is listening", async () => {
@@ -12,7 +14,7 @@ describe("Run dev command", function () {
     const devProc = await spawnCliCommand(
       "packages/cli/bin/lodestar.js",
       ["dev", "--reset", "--startValidators=0..7", `--rest.port=${beaconPort}`],
-      {pipeStdioToParent: false, pipeOnlyError: true, logPrefix: "dev"}
+      {pipeStdioToParent: true, logPrefix: "dev", testContext}
     );
 
     // Exit early if process exits
@@ -29,9 +31,11 @@ describe("Run dev command", function () {
 
     // Wrap in retry since the API may not be listening yet
     await retry(() => client.node.getHealth().then((res) => ApiError.assert(res)), {retryDelay: 1000, retries: 60});
-
-    devProc.kill("SIGINT");
     httpClientController.abort();
-    await stopChildProcess(devProc, "SIGKILL");
+
+    // The process will exit when the test finishes
+    // Default behavior would be the abort signal will be passed to the child process
+    // The earlier registered callback will consider it as an error and throw
+    devProc.removeAllListeners("exit");
   });
 });
