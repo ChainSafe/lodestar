@@ -4,7 +4,7 @@ import {
   getBlockRootFromSignedAggregateAndProofSerialized,
   getSlotFromAttestationSerialized,
   getSlotFromSignedAggregateAndProofSerialized,
-  getSlotFromSignedBeaconBlockAndBlobsSidecarSerialized,
+  getSlotFromSignedBlobSidecarSerialized,
   getSlotFromSignedBeaconBlockSerialized,
 } from "../../util/sszBytes.js";
 import {GossipType} from "../gossip/index.js";
@@ -42,8 +42,8 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
       }
       return {slot};
     },
-    [GossipType.beacon_block_and_blobs_sidecar]: (data: Uint8Array): SlotOptionalRoot | null => {
-      const slot = getSlotFromSignedBeaconBlockAndBlobsSidecarSerialized(data);
+    [GossipType.blob_sidecar]: (data: Uint8Array): SlotOptionalRoot | null => {
+      const slot = getSlotFromSignedBlobSidecarSerialized(data);
 
       if (slot === null) {
         return null;

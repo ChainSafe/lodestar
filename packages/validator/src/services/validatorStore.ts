@@ -17,7 +17,6 @@ import {
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
-  DOMAIN_VOLUNTARY_EXIT,
   DOMAIN_APPLICATION_BUILDER,
   DOMAIN_BLOB_SIDECAR,
 } from "@lodestar/params";
@@ -563,7 +562,7 @@ export class ValidatorStore {
     exitEpoch: Epoch
   ): Promise<phase0.SignedVoluntaryExit> {
     const signingSlot = computeStartSlotAtEpoch(exitEpoch);
-    const domain = this.config.getDomain(signingSlot, DOMAIN_VOLUNTARY_EXIT);
+    const domain = this.config.getDomainForVoluntaryExit(signingSlot);
 
     const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex};
     const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);

@@ -54,6 +54,7 @@ export const BlindedBlob = Bytes32;
 export const BlindedBlobs = new ListCompositeType(BlindedBlob, MAX_BLOBS_PER_BLOCK);
 export const VersionedHash = Bytes32;
 export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK);
+export const KZGProofs = new ListCompositeType(KZGProof, MAX_BLOBS_PER_BLOCK);
 
 // Constants
 

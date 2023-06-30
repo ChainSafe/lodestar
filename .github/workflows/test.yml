@@ -53,6 +53,9 @@ jobs:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
+      - name: Assert yarn prints no warnings
+        run: scripts/assert_no_yarn_warnings.sh
+
       # Misc sanity checks
       - name: Lint Grafana dashboards
         run: scripts/validate-grafana-dashboards.sh

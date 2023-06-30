@@ -41,12 +41,6 @@ const gossipQueueOpts: {
     type: QueueType.FIFO,
     dropOpts: {type: DropType.count, count: 1},
   },
-  // TODO DENEB: What's a good queue max given that now blocks are much bigger?
-  [GossipType.beacon_block_and_blobs_sidecar]: {
-    maxLength: 32,
-    type: QueueType.FIFO,
-    dropOpts: {type: DropType.count, count: 1},
-  },
   // lighthoue has aggregate_queue 4096 and unknown_block_aggregate_queue 1024, we use single queue
   [GossipType.beacon_aggregate_and_proof]: {
     maxLength: 5120,
