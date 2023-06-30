@@ -138,6 +138,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
     chain
       .processBlock(blockInput, {
+        // block may be downloaded and processed by UnknownBlockSync
+        ignoreIfKnown: true,
         // proposer signature already checked in validateBeaconBlock()
         validProposerSignature: true,
         // blobsSidecar already checked in validateGossipBlobsSidecar()
@@ -162,6 +164,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       .catch((e) => {
         if (e instanceof BlockError) {
           switch (e.type.code) {
+            // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
+            // PARENT_UNKNOWN should not happen, we handled this in validateBeaconBlock() function above
             case BlockErrorCode.ALREADY_KNOWN:
             case BlockErrorCode.PARENT_UNKNOWN:
             case BlockErrorCode.PRESTATE_MISSING:

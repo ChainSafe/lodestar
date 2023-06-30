@@ -279,21 +279,30 @@ export class Eth2Gossipsub extends GossipSub {
     // Get seenTimestamp before adding the message to the queue or add async delays
     const seenTimestampSec = Date.now() / 1000;
 
-    // Emit message to network processor
-    this.events.emit(NetworkEvent.pendingGossipsubMessage, {
-      topic,
-      msg,
-      msgId,
-      // Hot path, use cached .toString() version
-      propagationSource: propagationSource.toString(),
-      seenTimestampSec,
-      startProcessUnixSec: null,
-    });
+    // Use setTimeout to yield to the macro queue
+    // Without this we'll have huge event loop lag
+    // See https://github.com/ChainSafe/lodestar/issues/5604
+    setTimeout(() => {
+      this.events.emit(NetworkEvent.pendingGossipsubMessage, {
+        topic,
+        msg,
+        msgId,
+        // Hot path, use cached .toString() version
+        propagationSource: propagationSource.toString(),
+        seenTimestampSec,
+        startProcessUnixSec: null,
+      });
+    }, 0);
   }
 
   private onValidationResult(data: NetworkEventData[NetworkEvent.gossipMessageValidationResult]): void {
-    // TODO: reportMessageValidationResult should take PeerIdStr since it only uses string version
-    this.reportMessageValidationResult(data.msgId, peerIdFromString(data.propagationSource), data.acceptance);
+    // Use setTimeout to yield to the macro queue
+    // Without this we'll have huge event loop lag
+    // See https://github.com/ChainSafe/lodestar/issues/5604
+    setTimeout(() => {
+      // TODO: reportMessageValidationResult should take PeerIdStr since it only uses string version
+      this.reportMessageValidationResult(data.msgId, peerIdFromString(data.propagationSource), data.acceptance);
+    }, 0);
   }
 }
 
