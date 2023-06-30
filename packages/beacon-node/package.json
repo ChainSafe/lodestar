@@ -139,7 +139,7 @@
     "datastore-core": "^8.0.1",
     "datastore-level": "^9.0.1",
     "deepmerge": "^4.3.1",
-    "fastify": "^4.15.0",
+    "fastify": "^4.19.0",
     "gc-stats": "^1.4.0",
     "interface-datastore": "^7.0.0",
     "it-all": "^3.0.1",
