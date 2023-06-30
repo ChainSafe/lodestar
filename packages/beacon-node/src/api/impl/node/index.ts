@@ -63,11 +63,11 @@ export function getNodeApi(
     },
 
     async getSyncingStatus() {
-      return {data: sync.getSyncStatus()};
+      return {data: await sync.getSyncStatus()};
     },
 
     async getHealth(_req, res) {
-      if (sync.getSyncStatus().isSyncing) {
+      if ((await sync.getSyncStatus()).isSyncing) {
         // 206: Node is syncing but can serve incomplete data
         res?.code(routes.node.NodeHealth.SYNCING);
       } else {

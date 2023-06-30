@@ -1,7 +1,6 @@
 import {Root, RootHex, allForks, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
-
-import {ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
+import {ErrorJsonRpcResponse, HttpRpcError, isFetchError} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
@@ -379,6 +378,18 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       params: [start, count],
     });
     return response.map(deserializeExecutionPayloadBody);
+  }
+
+  async isOffline(): Promise<boolean> {
+    try {
+      await this.rpc.fetch({method: "eth_chainId", params: []}, {});
+    } catch (error) {
+      // If it's a fetch error
+      if (isFetchError(error) && error.code === "ECONNREFUSED") {
+        return true;
+      }
+    }
+    return false;
   }
 }
 

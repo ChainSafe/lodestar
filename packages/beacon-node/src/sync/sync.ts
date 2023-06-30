@@ -78,8 +78,10 @@ export class BeaconSync implements IBeaconSync {
     this.unknownBlockSync.close();
   }
 
-  getSyncStatus(): SyncingStatus {
+  async getSyncStatus(): Promise<SyncingStatus> {
     const currentSlot = this.chain.clock.currentSlot;
+    const elOffline = await this.chain.executionEngine.isOffline();
+
     // If we are pre/at genesis, signal ready
     if (currentSlot <= GENESIS_SLOT) {
       return {
@@ -87,6 +89,7 @@ export class BeaconSync implements IBeaconSync {
         syncDistance: "0",
         isSyncing: false,
         isOptimistic: false,
+        elOffline,
       };
     } else {
       const head = this.chain.forkChoice.getHead();
@@ -100,6 +103,7 @@ export class BeaconSync implements IBeaconSync {
             syncDistance: String(currentSlot - head.slot),
             isSyncing: true,
             isOptimistic: isOptimisticBlock(head),
+            elOffline,
           };
         case SyncState.Synced:
           return {
@@ -107,6 +111,7 @@ export class BeaconSync implements IBeaconSync {
             syncDistance: "0",
             isSyncing: false,
             isOptimistic: isOptimisticBlock(head),
+            elOffline,
           };
         default:
           throw new Error("Node is stopped, cannot get sync status");
