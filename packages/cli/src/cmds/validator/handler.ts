@@ -16,6 +16,7 @@ import {
   MonitoringService,
 } from "@lodestar/beacon-node";
 import {getNodeLogger} from "@lodestar/logger/node";
+import {isErrorAborted} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
 import {YargsError, cleanOldLogFiles, getDefaultGraffiti, mkdir, parseLoggerArgs} from "../../util/index.js";
@@ -150,60 +151,63 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   // This promise resolves once genesis is available.
   // It will wait for genesis, so this promise can be potentially very long
-
-  const validator = await Validator.initializeFromBeaconNode(
-    {
-      db,
-      config,
-      slashingProtection,
-      api: args.beaconNodes,
-      logger,
-      processShutdownCallback,
-      signers,
-      abortController,
-      doppelgangerProtection,
-      afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
-      scAfterBlockDelaySlotFraction: args.scAfterBlockDelaySlotFraction,
-      disableAttestationGrouping: args.disableAttestationGrouping,
-      valProposerConfig,
-      distributed: args.distributed,
-    },
-    metrics
-  );
-
-  onGracefulShutdownCbs.push(() => validator.close());
-
-  // Start keymanager API backend
-  // Only if keymanagerEnabled flag is set to true
-  if (args["keymanager"]) {
-    // if proposerSettingsFile provided disable the key proposerConfigWrite in keymanager
-    const proposerConfigWriteDisabled = args.proposerSettingsFile !== undefined;
-    if (proposerConfigWriteDisabled) {
-      logger.warn(
-        "Proposer data updates (feeRecipient/gasLimit etc) will not be available via Keymanager API as proposerSettingsFile has been set"
-      );
-    }
-
-    const keymanagerApi = new KeymanagerApi(
-      validator,
-      persistedKeysBackend,
-      abortController.signal,
-      proposerConfigWriteDisabled
-    );
-    const keymanagerServer = new KeymanagerRestApiServer(
+  // During the wait time user can abort the process with Ctrl+C
+  // So we have to wrap this code with the try/catch
+  try {
+    const validator = await Validator.initializeFromBeaconNode(
       {
-        address: args["keymanager.address"],
-        port: args["keymanager.port"],
-        cors: args["keymanager.cors"],
-        isAuthEnabled: args["keymanager.authEnabled"],
-        headerLimit: args["keymanager.headerLimit"],
-        bodyLimit: args["keymanager.bodyLimit"],
-        tokenDir: dbPath,
+        db,
+        config,
+        slashingProtection,
+        api: args.beaconNodes,
+        logger,
+        processShutdownCallback,
+        signers,
+        abortController,
+        doppelgangerProtection,
+        afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
+        scAfterBlockDelaySlotFraction: args.scAfterBlockDelaySlotFraction,
+        disableAttestationGrouping: args.disableAttestationGrouping,
+        valProposerConfig,
+        distributed: args.distributed,
       },
-      {config, logger, api: keymanagerApi, metrics: metrics ? metrics.keymanagerApiRest : null}
+      metrics
     );
-    onGracefulShutdownCbs.push(() => keymanagerServer.close());
-    await keymanagerServer.listen();
+    onGracefulShutdownCbs.push(() => validator.close());
+    // Start keymanager API backend
+    // Only if keymanagerEnabled flag is set to true
+    if (args["keymanager"]) {
+      // if proposerSettingsFile provided disable the key proposerConfigWrite in keymanager
+      const proposerConfigWriteDisabled = args.proposerSettingsFile !== undefined;
+      if (proposerConfigWriteDisabled) {
+        logger.warn(
+          "Proposer data updates (feeRecipient/gasLimit etc) will not be available via Keymanager API as proposerSettingsFile has been set"
+        );
+      }
+
+      const keymanagerApi = new KeymanagerApi(
+        validator,
+        persistedKeysBackend,
+        abortController.signal,
+        proposerConfigWriteDisabled
+      );
+      const keymanagerServer = new KeymanagerRestApiServer(
+        {
+          address: args["keymanager.address"],
+          port: args["keymanager.port"],
+          cors: args["keymanager.cors"],
+          isAuthEnabled: args["keymanager.authEnabled"],
+          headerLimit: args["keymanager.headerLimit"],
+          bodyLimit: args["keymanager.bodyLimit"],
+          tokenDir: dbPath,
+        },
+        {config, logger, api: keymanagerApi, metrics: metrics ? metrics.keymanagerApiRest : null}
+      );
+      onGracefulShutdownCbs.push(() => keymanagerServer.close());
+      await keymanagerServer.listen();
+    }
+  } catch (err) {
+    if (!isErrorAborted(err)) throw err;
   }
 }
 

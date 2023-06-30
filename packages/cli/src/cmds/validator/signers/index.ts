@@ -86,7 +86,7 @@ export async function getSignersFromArgs(
     const needle = showProgress({
       total: keystoreDefinitions.length,
       frequencyMs: KEYSTORE_IMPORT_PROGRESS_MS,
-      signal: signal,
+      signal,
       progress: ({ratePerSec, percentage, current, total}) => {
         logger.info(
           `${percentage.toFixed(0)}% of keystores imported. current=${current} total=${total} rate=${(
@@ -119,7 +119,7 @@ export async function getSignersFromArgs(
     const needle = showProgress({
       total: keystoreDefinitions.length,
       frequencyMs: KEYSTORE_IMPORT_PROGRESS_MS,
-      signal: signal,
+      signal,
       progress: ({ratePerSec, percentage, current, total}) => {
         logger.info(
           `${percentage.toFixed(0)}% of local keystores imported. current=${current} total=${total} rate=${(
