@@ -19,10 +19,6 @@ export class ExecutionEngineDisabled implements IExecutionEngine {
     throw Error("Execution engine disabled");
   }
 
-  async exchangeTransitionConfigurationV1(): Promise<never> {
-    throw Error("Execution engine disabled");
-  }
-
   getPayloadBodiesByHash(): Promise<never> {
     throw Error("Execution engine disabled");
   }
