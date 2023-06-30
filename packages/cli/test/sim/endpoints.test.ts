@@ -125,6 +125,7 @@ await env.tracker.assert("BN Not Synced", async () => {
     syncDistance: "0",
     isSyncing: false,
     isOptimistic: false,
+    elOffline: false,
   };
 
   const res = await node.api.node.getSyncingStatus();
