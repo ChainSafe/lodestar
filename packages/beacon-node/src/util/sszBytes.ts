@@ -1,4 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
+import {BYTES_PER_LOGS_BLOOM, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {BLSSignature, RootHex, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 
@@ -164,23 +165,103 @@ export function getAttDataBase64FromSignedAggregateAndProofSerialized(data: Uint
  *   message: BeaconBlock [offset - 4 bytes]
  *   signature: BLSSignature [fixed - 96 bytes]
  *
- * class BeaconBlock(Container):
+ * class BeaconBlock(Container) or class BlindedBeaconBlock(Container):
  *   slot: Slot [fixed - 8 bytes]
- *   proposer_index: ValidatorIndex
- *   parent_root: Root
- *   state_root: Root
- *   body: BeaconBlockBody
+ *   proposer_index: ValidatorIndex [fixed - 8 bytes]
+ *   parent_root: Root [fixed - 32 bytes]
+ *   state_root: Root [fixed - 32 bytes]
+ *   body: BeaconBlockBody or BlindedBeaconBlockBody
  * ```
  */
-const SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE;
+const SLOT_BYTES_POSITION_IN_SIGNED_MAYBE_BLIND_BEACON_BLOCK = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE;
 
 export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot | null {
-  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK + SLOT_SIZE) {
+  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_MAYBE_BLIND_BEACON_BLOCK + SLOT_SIZE) {
     return null;
   }
 
-  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK);
+  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_MAYBE_BLIND_BEACON_BLOCK);
 }
+
+/**
+ * First byte of either BeaconBlockBody or BlindedBeaconBlockBody
+ */
+const BODY_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK = SLOT_BYTES_POSITION_IN_SIGNED_MAYBE_BLIND_BEACON_BLOCK + 8 + 32 + 32;
+
+/**
+ * Calculate the byte offset to the transactions variable offset or the fixed transactionsRoot
+ * 
+ * Phase 0:
+ *
+ * class BeaconBlockBody(Container) or class BlindedBeaconBlockBody(Container):
+ *   randaoReveal:                  [fixed -  96 bytes]
+ *   eth1Data:
+ *     depositRoot:                 [fixed -  32 bytes]
+ *     depositCount:                [fixed -   8 bytes]
+ *     blockHash:                   [fixed -  32 bytes]
+ *   graffiti:                      [fixed -  32 bytes]
+ *   proposerSlashings:             [offset -  4 bytes]
+ *   attesterSlashings:             [offset -  4 bytes]
+ *   attestations:                  [offset -  4 bytes]
+ *   deposits:                      [offset -  4 bytes]
+ *   voluntaryExits:                [offset -  4 bytes]
+ *
+ * Altair:
+ *   syncCommitteeBits:             [fixed -  4 or 64 bytes] (pull from params)
+ *   syncCommitteeSignature:        [fixed -  96 bytes]
+ *
+ * Bellatrix:
+ *   executionPayload:
+ *     parentHash:                  [fixed -  32 bytes]
+ *     feeRecipient:                [fixed -  20 bytes]
+ *     stateRoot:                   [fixed -  32 bytes]
+ *     receiptsRoot:                [fixed -  32 bytes]
+ *     logsBloom:                   [fixed - 256 bytes] (pull from params)
+ *     prevRandao:                  [fixed -  32 bytes]
+ *     blockNumber:                 [fixed -   8 bytes]
+ *     gasLimit:                    [fixed -   8 bytes]
+ *     gasUsed:                     [fixed -   8 bytes]
+ *     timestamp:                   [fixed -   8 bytes]
+ *     extraData:                   [offset -  4 bytes]
+ *     baseFeePerGas:               [fixed -  32 bytes]
+ *     blockHash:                   [fixed -  32 bytes]
+ *     ------------------------------------------------
+ *     transactions:                [offset -  4 bytes]
+ *     - or -
+ *     transactionsRoot:            [fixed -  32 bytes]
+ * 
+ * Capella:
+ *     withdrawals:                 [offset -  4 bytes]
+ *     - or -
+ *     withdrawalsRoot:             [fixed -  32 bytes]
+ */
+export const TRANSACTIONS_BYTES_POSITION_IN_MAYBE_BLINDED_BEACON_BLOCK_BODY =
+  BODY_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK +
+  96 +
+  32 +
+  8 +
+  32 +
+  32 +
+  4 +
+  4 +
+  4 +
+  4 +
+  4 +
+  SYNC_COMMITTEE_SIZE / 8 +
+  96 +
+  32 +
+  20 +
+  32 +
+  32 +
+  BYTES_PER_LOGS_BLOOM +
+  32 +
+  8 +
+  8 +
+  8 +
+  8 +
+  4 +
+  32 +
+  32;
 
 /**
  * 4 + 4 + SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK = 4 + 4 + (4 + 96) = 108
@@ -198,7 +279,7 @@ export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot |
  *   kzgAggregatedProof: KZGProof,
  */
 const SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK_AND_BLOBS_SIDECAR =
-  VARIABLE_FIELD_OFFSET + VARIABLE_FIELD_OFFSET + SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK;
+  VARIABLE_FIELD_OFFSET + VARIABLE_FIELD_OFFSET + SLOT_BYTES_POSITION_IN_SIGNED_MAYBE_BLIND_BEACON_BLOCK;
 
 export function getSlotFromSignedBeaconBlockAndBlobsSidecarSerialized(data: Uint8Array): Slot | null {
   if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK_AND_BLOBS_SIDECAR + SLOT_SIZE) {
