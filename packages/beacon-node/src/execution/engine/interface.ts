@@ -129,10 +129,6 @@ export interface IExecutionEngine {
     payloadId: PayloadId
   ): Promise<{executionPayload: allForks.ExecutionPayload; blockValue: Wei; blobsBundle?: BlobsBundle}>;
 
-  exchangeTransitionConfigurationV1(
-    transitionConfiguration: TransitionConfigurationV1
-  ): Promise<TransitionConfigurationV1>;
-
   getPayloadBodiesByHash(blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
 
   getPayloadBodiesByRange(start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;

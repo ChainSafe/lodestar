@@ -13,7 +13,6 @@ import {
   IExecutionEngine,
   PayloadId,
   PayloadAttributes,
-  TransitionConfigurationV1,
   BlobsBundle,
   VersionedHashes,
 } from "./interface.js";
@@ -72,7 +71,6 @@ const QUEUE_MAX_LENGTH = EPOCHS_PER_BATCH * SLOTS_PER_EPOCH * 2;
 const notifyNewPayloadOpts: ReqOpts = {routeId: "notifyNewPayload"};
 const forkchoiceUpdatedV1Opts: ReqOpts = {routeId: "forkchoiceUpdated"};
 const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
-const exchageTransitionConfigOpts: ReqOpts = {routeId: "exchangeTransitionConfiguration"};
 
 /**
  * based on Ethereum JSON-RPC API and inherits the following properties of this standard:
@@ -343,25 +341,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       getPayloadOpts
     );
     return parseExecutionPayload(fork, payloadResponse);
-  }
-
-  /**
-   * `engine_exchangeTransitionConfigurationV1`
-   *
-   * An api method for EL<>CL transition config matching and heartbeat
-   */
-
-  async exchangeTransitionConfigurationV1(
-    transitionConfiguration: TransitionConfigurationV1
-  ): Promise<TransitionConfigurationV1> {
-    const method = "engine_exchangeTransitionConfigurationV1";
-    return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
-      {
-        method,
-        params: [transitionConfiguration],
-      },
-      exchageTransitionConfigOpts
-    );
   }
 
   async prunePayloadIdCache(): Promise<void> {
