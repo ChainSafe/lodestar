@@ -1,6 +1,8 @@
+import {HttpErrorCodes} from "@lodestar/api";
+
 export class ApiError extends Error {
-  statusCode: number;
-  constructor(statusCode: number, message?: string) {
+  statusCode: HttpErrorCodes;
+  constructor(statusCode: HttpErrorCodes, message?: string) {
     super(message);
     this.statusCode = statusCode;
   }

@@ -16,13 +16,7 @@ import {
   QUANTITY,
   quantityToBigint,
 } from "../../eth1/provider/utils.js";
-import {
-  ExecutePayloadStatus,
-  TransitionConfigurationV1,
-  BlobsBundle,
-  PayloadAttributes,
-  VersionedHashes,
-} from "./interface.js";
+import {ExecutePayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -53,10 +47,6 @@ export type EngineApiRpcParamTypes = {
   engine_getPayloadV1: [QUANTITY];
   engine_getPayloadV2: [QUANTITY];
   engine_getPayloadV3: [QUANTITY];
-  /**
-   * 1. Object - Instance of TransitionConfigurationV1
-   */
-  engine_exchangeTransitionConfigurationV1: [TransitionConfigurationV1];
 
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
@@ -98,10 +88,6 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV1: ExecutionPayloadRpc;
   engine_getPayloadV2: ExecutionPayloadResponse;
   engine_getPayloadV3: ExecutionPayloadResponse;
-  /**
-   * Object - Instance of TransitionConfigurationV1
-   */
-  engine_exchangeTransitionConfigurationV1: TransitionConfigurationV1;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 
