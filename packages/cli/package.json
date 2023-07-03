@@ -100,6 +100,6 @@
     "@types/inquirer": "^9.0.3",
     "@types/lodash": "^4.14.192",
     "@types/yargs": "^17.0.24",
-    "@lodestar/test-util": "^1.9.1"
+    "@lodestar/test-utils": "^1.9.1"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@lodestar/test-util",
+  "name": "@lodestar/test-utils",
   "private": true,
   "version": "1.9.1",
   "description": "Test utilities reused across other packages",
