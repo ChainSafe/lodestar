@@ -1,26 +1,16 @@
 import path from "node:path";
 import {rimraf} from "rimraf";
 import {expect} from "chai";
-import {Api, DeleteRemoteKeyStatus, getClient, ImportRemoteKeyStatus} from "@lodestar/api/keymanager";
+import {DeleteRemoteKeyStatus, getClient, ImportRemoteKeyStatus} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
 import {ApiError, HttpStatusCode} from "@lodestar/api";
 import {getMochaContext} from "@lodestar/test-util/mocha";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";
-import {startValidatorWithKeyManager} from "../utils/validator.js";
+import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";
 
 const url = "https://remote.signer";
-
-async function expectKeys(keymanagerClient: Api, expectedPubkeys: string[], message: string): Promise<void> {
-  const remoteKeys = await keymanagerClient.listRemoteKeys();
-  ApiError.assert(remoteKeys);
-  expectDeepEquals(
-    remoteKeys.response.data,
-    expectedPubkeys.map((pubkey) => ({pubkey, url, readonly: false})),
-    message
-  );
-}
 
 describe("import remoteKeys from api", function () {
   const testContext = getMochaContext(this);
