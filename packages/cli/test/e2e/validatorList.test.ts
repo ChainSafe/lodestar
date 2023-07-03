@@ -6,7 +6,7 @@ import {expect} from "chai";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {fromHex} from "@lodestar/utils";
 import {runCliCommand} from "@lodestar/test-utils";
-import {stubLogger} from "@lodestar/test-util/sinon";
+import {stubLogger} from "@lodestar/test-utils/sinon";
 import {testFilesDir} from "../utils.js";
 import {getLodestarCli} from "../../src/cli.js";
 
