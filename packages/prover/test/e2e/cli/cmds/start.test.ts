@@ -38,7 +38,7 @@ describe("prover/start", () => {
     ).eventually.rejectedWith("Either --beaconUrls or --beaconBootnodes must be provided");
   });
 
-  describe.skip("when started", () => {
+  describe("when started", () => {
     let proc: childProcess.ChildProcess;
     const web3: Web3 = new Web3(proxyUrl);
 
