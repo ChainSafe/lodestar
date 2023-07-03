@@ -96,7 +96,7 @@ export async function expectKeys(keymanagerClient: Api, expectedPubkeys: string[
   // The order of keys isn't always deterministic so we can't use deep equal
   expectDeepEqualsUnordered(
     keys.response.data,
-    expectedPubkeys.map((pubkey) => ({validatingPubkey: pubkey, derivationPath: "", readonly: false})),
+    expectedPubkeys.map((pubkey) => ({validatingPubkey: pubkey, derivationPath: "", readonly: true})),
     message
   );
 }
