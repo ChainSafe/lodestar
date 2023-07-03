@@ -2,7 +2,7 @@ import path from "node:path";
 import {rimraf} from "rimraf";
 import {Interchange} from "@lodestar/validator";
 import {ApiError} from "@lodestar/api";
-import {getMochaContext} from "@lodestar/test-util/mocha";
+import {getMochaContext} from "@lodestar/test-utils/mocha";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";

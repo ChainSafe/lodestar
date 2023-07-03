@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {rimraf} from "rimraf";
-import {getMochaContext} from "@lodestar/test-util/mocha";
+import {getMochaContext} from "@lodestar/test-utils/mocha";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";

@@ -4,7 +4,7 @@ import {expect} from "chai";
 import {Api, DeleteRemoteKeyStatus, getClient, ImportRemoteKeyStatus} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
 import {ApiError, HttpStatusCode} from "@lodestar/api";
-import {getMochaContext} from "@lodestar/test-util/mocha";
+import {getMochaContext} from "@lodestar/test-utils/mocha";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex} from "../utils/cachedKeys.js";
 import {expectDeepEquals} from "../utils/runUtils.js";

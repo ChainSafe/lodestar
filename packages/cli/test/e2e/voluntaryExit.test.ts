@@ -4,7 +4,7 @@ import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {spawnCliCommand, execCliCommand} from "@lodestar/test-utils";
-import {getMochaContext} from "@lodestar/test-util/mocha";
+import {getMochaContext} from "@lodestar/test-utils/mocha";
 import {testFilesDir} from "../utils.js";
 
 describe("voluntaryExit cmd", function () {
