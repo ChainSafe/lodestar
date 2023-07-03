@@ -3,7 +3,7 @@ import path from "node:path";
 import {rimraf} from "rimraf";
 import {expect} from "chai";
 import {getMochaContext} from "@lodestar/test-util/mocha";
-import {execCliCommand} from "@lodestar/test-util";
+import {execCliCommand} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";
 import {expectKeys, startValidatorWithKeyManager} from "../utils/validator.js";

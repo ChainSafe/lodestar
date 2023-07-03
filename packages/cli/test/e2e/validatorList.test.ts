@@ -5,7 +5,7 @@ import {rimraf} from "rimraf";
 import {expect} from "chai";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {fromHex} from "@lodestar/utils";
-import {runCliCommand} from "@lodestar/test-util";
+import {runCliCommand} from "@lodestar/test-utils";
 import {stubLogger} from "@lodestar/test-util/sinon";
 import {testFilesDir} from "../utils.js";
 import {getLodestarCli} from "../../src/cli.js";

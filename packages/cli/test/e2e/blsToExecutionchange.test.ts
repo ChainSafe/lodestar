@@ -4,7 +4,7 @@ import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
-import {execCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-util";
+import {execCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {testFilesDir} from "../utils.js";
 
 describe("bLSToExecutionChange cmd", function () {

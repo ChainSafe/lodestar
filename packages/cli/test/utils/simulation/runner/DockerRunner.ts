@@ -8,7 +8,7 @@ import {
   spawnChildProcess,
   stopChildProcess,
   ChildProcessResolve,
-} from "@lodestar/test-util";
+} from "@lodestar/test-utils";
 import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
 
 const dockerNetworkIpRange = "192.168.0";

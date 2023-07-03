@@ -3,7 +3,7 @@ import {retry} from "@lodestar/utils";
 import {Api, getClient} from "@lodestar/api/keymanager";
 import {config} from "@lodestar/config/default";
 import {ApiError} from "@lodestar/api";
-import {spawnCliCommand, gracefullyStopChildProcess} from "@lodestar/test-util";
+import {spawnCliCommand, gracefullyStopChildProcess} from "@lodestar/test-utils";
 import {TestContext} from "@lodestar/test-util/mocha";
 import {getMockBeaconApiServer} from "./mockBeaconApiServer.js";
 import {expectDeepEqualsUnordered, findApiToken} from "./runUtils.js";

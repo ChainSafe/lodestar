@@ -5,7 +5,7 @@ import {DeletionStatus, getClient, ImportStatus} from "@lodestar/api/keymanager"
 import {config} from "@lodestar/config/default";
 import {Interchange} from "@lodestar/validator";
 import {ApiError, HttpStatusCode} from "@lodestar/api";
-import {bufferStderr, spawnCliCommand} from "@lodestar/test-util";
+import {bufferStderr, spawnCliCommand} from "@lodestar/test-utils";
 import {getMochaContext} from "@lodestar/test-util/mocha";
 import {testFilesDir} from "../utils.js";
 import {cachedPubkeysHex, cachedSeckeysHex} from "../utils/cachedKeys.js";

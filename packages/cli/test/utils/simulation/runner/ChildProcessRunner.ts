@@ -5,7 +5,7 @@ import {
   ChildProcessHealthStatus,
   SpawnChildProcessOptions,
   ChildProcessResolve,
-} from "@lodestar/test-util";
+} from "@lodestar/test-utils";
 import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
 
 export class ChildProcessRunner implements RunnerEnv<RunnerType.ChildProcess> {

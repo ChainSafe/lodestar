@@ -1,7 +1,7 @@
 import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {retry} from "@lodestar/utils";
-import {spawnCliCommand} from "@lodestar/test-util";
+import {spawnCliCommand} from "@lodestar/test-utils";
 import {getMochaContext} from "@lodestar/test-util/mocha";
 
 describe("Run dev command", function () {

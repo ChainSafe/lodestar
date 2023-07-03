@@ -1,7 +1,7 @@
 import childProcess from "node:child_process";
 import {expect} from "chai";
 import Web3 from "web3";
-import {runCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-util";
+import {runCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {getLodestarProverCli} from "../../../../src/cli/cli.js";
 import {rpcUrl, beaconUrl, proxyPort, proxyUrl, chainId, waitForCapellaFork} from "../../../utils/e2e_env.js";
 
