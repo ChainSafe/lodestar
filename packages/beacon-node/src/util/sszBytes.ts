@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
-import {BYTES_PER_LOGS_BLOOM, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {BLSSignature, RootHex, Slot} from "@lodestar/types";
+import {BYTES_PER_LOGS_BLOOM, ForkSeq, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {BLSSignature, RootHex, Slot, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 
 export type BlockRootHex = RootHex;
@@ -184,86 +184,6 @@ export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot |
 }
 
 /**
- * First byte of either BeaconBlockBody or BlindedBeaconBlockBody
- */
-const BODY_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK = SLOT_BYTES_POSITION_IN_SIGNED_MAYBE_BLIND_BEACON_BLOCK + 8 + 32 + 32;
-
-/**
- * Calculate the byte offset to the transactions variable offset or the fixed transactionsRoot
- * 
- * Phase 0:
- *
- * class BeaconBlockBody(Container) or class BlindedBeaconBlockBody(Container):
- *   randaoReveal:                  [fixed -  96 bytes]
- *   eth1Data:
- *     depositRoot:                 [fixed -  32 bytes]
- *     depositCount:                [fixed -   8 bytes]
- *     blockHash:                   [fixed -  32 bytes]
- *   graffiti:                      [fixed -  32 bytes]
- *   proposerSlashings:             [offset -  4 bytes]
- *   attesterSlashings:             [offset -  4 bytes]
- *   attestations:                  [offset -  4 bytes]
- *   deposits:                      [offset -  4 bytes]
- *   voluntaryExits:                [offset -  4 bytes]
- *
- * Altair:
- *   syncCommitteeBits:             [fixed -  4 or 64 bytes] (pull from params)
- *   syncCommitteeSignature:        [fixed -  96 bytes]
- *
- * Bellatrix:
- *   executionPayload:
- *     parentHash:                  [fixed -  32 bytes]
- *     feeRecipient:                [fixed -  20 bytes]
- *     stateRoot:                   [fixed -  32 bytes]
- *     receiptsRoot:                [fixed -  32 bytes]
- *     logsBloom:                   [fixed - 256 bytes] (pull from params)
- *     prevRandao:                  [fixed -  32 bytes]
- *     blockNumber:                 [fixed -   8 bytes]
- *     gasLimit:                    [fixed -   8 bytes]
- *     gasUsed:                     [fixed -   8 bytes]
- *     timestamp:                   [fixed -   8 bytes]
- *     extraData:                   [offset -  4 bytes]
- *     baseFeePerGas:               [fixed -  32 bytes]
- *     blockHash:                   [fixed -  32 bytes]
- *     ------------------------------------------------
- *     transactions:                [offset -  4 bytes]
- *     - or -
- *     transactionsRoot:            [fixed -  32 bytes]
- * 
- * Capella:
- *     withdrawals:                 [offset -  4 bytes]
- *     - or -
- *     withdrawalsRoot:             [fixed -  32 bytes]
- */
-export const TRANSACTIONS_BYTES_POSITION_IN_MAYBE_BLINDED_BEACON_BLOCK_BODY =
-  BODY_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK +
-  96 +
-  32 +
-  8 +
-  32 +
-  32 +
-  4 +
-  4 +
-  4 +
-  4 +
-  4 +
-  SYNC_COMMITTEE_SIZE / 8 +
-  96 +
-  32 +
-  20 +
-  32 +
-  32 +
-  BYTES_PER_LOGS_BLOOM +
-  32 +
-  8 +
-  8 +
-  8 +
-  8 +
-  4 +
-  32 +
-  32;
-
-/**
  * 4 + 4 + SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK = 4 + 4 + (4 + 96) = 108
  * class SignedBeaconBlockAndBlobsSidecar(Container):
  *  beaconBlock: SignedBeaconBlock [offset - 4 bytes]
@@ -331,3 +251,138 @@ function deserializeUint8ArrayBitListFromBytes(data: Uint8Array, start: number, 
   uint8Array[size - 1] &= mask;
   return {uint8Array, bitLen};
 }
+
+/**
+ * Convert serialized SignedBeaconBlock to SignedBlindedBeaconBlock
+ *
+ * Phase0:
+ * - return same data
+ * Altair:
+ * - return same data
+ * Bellatrix:
+ * - transactions are at the end. Slice off transactions and replace with transactionsRoot
+ * Capella:
+ * - blsToExecutionChanges is after transactions and withdrawals.  Get variable offset of blsToExecutionChanges
+ *   from BeaconBlockBody fixed data and splice transactionsRoot and withdrawlsRoot, starting from transactions
+ *   offset start byte to blsToExecutionChanges start byte
+ * Deneb:
+ * - executionPayload.dataGasUsed is after transactions and withdrawals but is fixed length and will be with
+ *   fixed length data. Blobs have no effect. Still follows same logic as Capella.
+ */
+export function blindedFromFullSerializedSignedBeaconBlock(
+  forkSeq: ForkSeq,
+  data: Uint8Array,
+  transactionsRoot?: Uint8Array,
+  withdrawalsRoot?: Uint8Array
+): Uint8Array {
+  if (forkSeq === ForkSeq.phase0 || forkSeq === ForkSeq.altair) {
+    return data;
+  }
+  if (!transactionsRoot) {
+    throw new Error("must supply transactionRoot");
+  }
+  // Bellatrix and after
+  const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const executionPayloadOffset = dv.getUint32(EXECUTION_PAYLOAD_FIXED_OFFSET_TO_PULL_VARIABLE_OFFSET, true);
+  const transactionsOffset =
+    executionPayloadOffset + TRANSACTIONS_FIXED_OFFSET_FROM_START_EXECUTION_PAYLOAD_TO_PULL_VARIABLE_OFFSET;
+  // TODO: is it possible to avoid copying data here and during reassembly?
+  const dataBefore = Uint8Array.prototype.slice.call(data, 0, transactionsOffset);
+  if (forkSeq === ForkSeq.bellatrix) {
+    return Uint8Array.from([...dataBefore, ...transactionsRoot]);
+  }
+  // Capella and after
+  if (!withdrawalsRoot) {
+    throw new Error("must supply withdrawalsRoot");
+  }
+  const blsToExecutionChangesOffset = dv.getUint32(BLS_TO_EXECUTION_CHANGE_FIXED_OFFSET_TO_PULL_VARIABLE_OFFSET, true);
+  const dataAfter = Uint8Array.prototype.slice.call(data, blsToExecutionChangesOffset);
+  return Uint8Array.from([...dataBefore, ...transactionsRoot, ...withdrawalsRoot, ...dataAfter]);
+}
+
+/**
+ *  * class SignedBeaconBlock(Container):
+ *   message: BeaconBlock [offset - 4 bytes]
+ *   signature: BLSSignature [fixed - 96 bytes]
+ *
+ * class BeaconBlock(Container) or class BlindedBeaconBlock(Container):
+ *   slot: Slot                      [fixed - 8 bytes]
+ *   proposer_index: ValidatorIndex  [fixed - 8 bytes]
+ *   parent_root: Root               [fixed - 32 bytes]
+ *   state_root: Root                [fixed - 32 bytes]
+ *   body: MaybeBlindBeaconBlockBody [offset - 4 bytes]
+ *
+ *
+ * class BeaconBlockBody(Container) or class BlindedBeaconBlockBody(Container):
+ *
+ * Phase 0:
+ *   randaoReveal:                  [fixed -  96 bytes]
+ *   eth1Data: [Container]
+ *     depositRoot:                 [fixed -  32 bytes]
+ *     depositCount:                [fixed -   8 bytes]
+ *     blockHash:                   [fixed -  32 bytes]
+ *   graffiti:                      [fixed -  32 bytes]
+ *   proposerSlashings:             [offset -  4 bytes]
+ *   attesterSlashings:             [offset -  4 bytes]
+ *   attestations:                  [offset -  4 bytes]
+ *   deposits:                      [offset -  4 bytes]
+ *   voluntaryExits:                [offset -  4 bytes]
+ *
+ * Altair:
+ *   syncCommitteeBits:             [fixed -  4 or 64 bytes] (pull from params)
+ *   syncCommitteeSignature:        [fixed -  96 bytes]
+ *
+ * Bellatrix:
+ *   executionPayload:              [offset -  4 bytes]
+ *
+ * Capella:
+ *   blsToExecutionChanges          [offset -  4 bytes]
+ */
+const EXECUTION_PAYLOAD_FIXED_OFFSET_TO_PULL_VARIABLE_OFFSET =
+  4 + 96 + 8 + 8 + 32 + 32 + 4 + 96 + 32 + 8 + 32 + 32 + 4 + 4 + 4 + 4 + 4 + SYNC_COMMITTEE_SIZE / 8 + 96;
+
+const BLS_TO_EXECUTION_CHANGE_FIXED_OFFSET_TO_PULL_VARIABLE_OFFSET =
+  EXECUTION_PAYLOAD_FIXED_OFFSET_TO_PULL_VARIABLE_OFFSET + VARIABLE_FIELD_OFFSET;
+
+/**
+ * class ExecutionPayload(Container) or class ExecutionPayloadHeader(Container)
+ *     parentHash:                  [fixed -  32 bytes]
+ *     feeRecipient:                [fixed -  20 bytes]
+ *     stateRoot:                   [fixed -  32 bytes]
+ *     receiptsRoot:                [fixed -  32 bytes]
+ *     logsBloom:                   [fixed - 256 bytes] (pull from params)
+ *     prevRandao:                  [fixed -  32 bytes]
+ *     blockNumber:                 [fixed -   8 bytes]
+ *     gasLimit:                    [fixed -   8 bytes]
+ *     gasUsed:                     [fixed -   8 bytes]
+ *     timestamp:                   [fixed -   8 bytes]
+ *     extraData:                   [offset -  4 bytes]
+ *     baseFeePerGas:               [fixed -  32 bytes]
+ *     blockHash:                   [fixed -  32 bytes]
+ *     ------------------------------------------------
+ *     transactions:                [offset -  4 bytes]
+ *     - or -
+ *     transactionsRoot:            [fixed -  32 bytes]
+ *
+ * Capella:
+ *     withdrawals:                 [offset -  4 bytes]
+ *     - or -
+ *     withdrawalsRoot:             [fixed -  32 bytes]
+ *     ------------------------------------------------
+ * Deneb:
+ *     dataGasUsed:                 [fixed -   8 bytes]
+ */
+const TRANSACTIONS_FIXED_OFFSET_FROM_START_EXECUTION_PAYLOAD_TO_PULL_VARIABLE_OFFSET =
+  32 + // parentHash
+  20 + // feeRecipient
+  32 + // stateRoot
+  32 + // receiptsRoot
+  256 + // logsBloom
+  32 + // prevRandao
+  8 + // blockNumber
+  8 + // gasLimit
+  8 + // gasUsed
+  8 + // timestamp
+  4 + // extraData
+  32 + // baseFeePerGas
+  32; // blockHash
