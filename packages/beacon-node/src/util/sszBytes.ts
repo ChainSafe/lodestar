@@ -1,6 +1,7 @@
+import {fork} from "node:child_process";
 import {BitArray} from "@chainsafe/ssz";
 import {BYTES_PER_LOGS_BLOOM, ForkSeq, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {BLSSignature, RootHex, Slot, ssz} from "@lodestar/types";
+import {BLSSignature, RootHex, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 
 export type BlockRootHex = RootHex;
@@ -253,54 +254,6 @@ function deserializeUint8ArrayBitListFromBytes(data: Uint8Array, start: number, 
 }
 
 /**
- * Convert serialized SignedBeaconBlock to SignedBlindedBeaconBlock
- *
- * Phase0:
- * - return same data
- * Altair:
- * - return same data
- * Bellatrix:
- * - transactions are at the end. Slice off transactions and replace with transactionsRoot
- * Capella:
- * - blsToExecutionChanges is after transactions and withdrawals.  Get variable offset of blsToExecutionChanges
- *   from BeaconBlockBody fixed data and splice transactionsRoot and withdrawlsRoot, starting from transactions
- *   offset start byte to blsToExecutionChanges start byte
- * Deneb:
- * - executionPayload.dataGasUsed is after transactions and withdrawals but is fixed length and will be with
- *   fixed length data. Blobs have no effect. Still follows same logic as Capella.
- */
-export function blindedFromFullSerializedSignedBeaconBlock(
-  forkSeq: ForkSeq,
-  data: Uint8Array,
-  transactionsRoot?: Uint8Array,
-  withdrawalsRoot?: Uint8Array
-): Uint8Array {
-  if (forkSeq === ForkSeq.phase0 || forkSeq === ForkSeq.altair) {
-    return data;
-  }
-  if (!transactionsRoot) {
-    throw new Error("must supply transactionRoot");
-  }
-  // Bellatrix and after
-  const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  const executionPayloadOffset = dv.getUint32(EXECUTION_PAYLOAD_FIXED_OFFSET_TO_PULL_VARIABLE_OFFSET, true);
-  const transactionsOffset =
-    executionPayloadOffset + TRANSACTIONS_FIXED_OFFSET_FROM_START_EXECUTION_PAYLOAD_TO_PULL_VARIABLE_OFFSET;
-  // TODO: is it possible to avoid copying data here and during reassembly?
-  const dataBefore = Uint8Array.prototype.slice.call(data, 0, transactionsOffset);
-  if (forkSeq === ForkSeq.bellatrix) {
-    return Uint8Array.from([...dataBefore, ...transactionsRoot]);
-  }
-  // Capella and after
-  if (!withdrawalsRoot) {
-    throw new Error("must supply withdrawalsRoot");
-  }
-  const blsToExecutionChangesOffset = dv.getUint32(BLS_TO_EXECUTION_CHANGE_FIXED_OFFSET_TO_PULL_VARIABLE_OFFSET, true);
-  const dataAfter = Uint8Array.prototype.slice.call(data, blsToExecutionChangesOffset);
-  return Uint8Array.from([...dataBefore, ...transactionsRoot, ...withdrawalsRoot, ...dataAfter]);
-}
-
-/**
  *  * class SignedBeaconBlock(Container):
  *   message: BeaconBlock [offset - 4 bytes]
  *   signature: BLSSignature [fixed - 96 bytes]
@@ -337,12 +290,18 @@ export function blindedFromFullSerializedSignedBeaconBlock(
  *
  * Capella:
  *   blsToExecutionChanges          [offset -  4 bytes]
+ *
+ * Deneb:
+ *   blobKzgCommitments             [offset -  4 bytes]
  */
-const EXECUTION_PAYLOAD_FIXED_OFFSET_TO_PULL_VARIABLE_OFFSET =
+const EXECUTION_PAYLOAD_FIXED_OFFSET_OF_VARIABLE_OFFSET =
   4 + 96 + 8 + 8 + 32 + 32 + 4 + 96 + 32 + 8 + 32 + 32 + 4 + 4 + 4 + 4 + 4 + SYNC_COMMITTEE_SIZE / 8 + 96;
 
-const BLS_TO_EXECUTION_CHANGE_FIXED_OFFSET_TO_PULL_VARIABLE_OFFSET =
-  EXECUTION_PAYLOAD_FIXED_OFFSET_TO_PULL_VARIABLE_OFFSET + VARIABLE_FIELD_OFFSET;
+const BLS_TO_EXECUTION_CHANGE_FIXED_OFFSET_OF_VARIABLE_OFFSET =
+  EXECUTION_PAYLOAD_FIXED_OFFSET_OF_VARIABLE_OFFSET + VARIABLE_FIELD_OFFSET;
+
+const BLOB_KZG_COMMITMENTS_FIXED_OFFSET_OF_VARIABLE_OFFSET =
+  BLS_TO_EXECUTION_CHANGE_FIXED_OFFSET_OF_VARIABLE_OFFSET + VARIABLE_FIELD_OFFSET;
 
 /**
  * class ExecutionPayload(Container) or class ExecutionPayloadHeader(Container)
@@ -371,18 +330,363 @@ const BLS_TO_EXECUTION_CHANGE_FIXED_OFFSET_TO_PULL_VARIABLE_OFFSET =
  *     ------------------------------------------------
  * Deneb:
  *     dataGasUsed:                 [fixed -   8 bytes]
+ *     excessDataGas:               [fixed -   8 bytes]
  */
-const TRANSACTIONS_FIXED_OFFSET_FROM_START_EXECUTION_PAYLOAD_TO_PULL_VARIABLE_OFFSET =
-  32 + // parentHash
-  20 + // feeRecipient
-  32 + // stateRoot
-  32 + // receiptsRoot
-  256 + // logsBloom
-  32 + // prevRandao
-  8 + // blockNumber
-  8 + // gasLimit
-  8 + // gasUsed
-  8 + // timestamp
-  4 + // extraData
-  32 + // baseFeePerGas
-  32; // blockHash
+const EXTRA_DATA_FIXED_OFFSET_FROM_START_EXECUTION_PAYLOAD =
+  32 + 20 + 32 + 32 + BYTES_PER_LOGS_BLOOM + 32 + 8 + 8 + 8 + 8;
+const TRANSACTIONS_FIXED_OFFSET_FROM_START_EXECUTION_PAYLOAD =
+  EXTRA_DATA_FIXED_OFFSET_FROM_START_EXECUTION_PAYLOAD + 4 + 32 + 32;
+
+/**
+ * Transform number variable offset to little endian Uint8Array
+ *
+ * @param {number} offset - variable offset
+ * @returns {Uint8Array} - Little endian variable offset
+ */
+function buildVariableOffset(offset: number): Uint8Array {
+  const newOffset = new Uint8Array(VARIABLE_FIELD_OFFSET);
+  for (let i = 0; i < VARIABLE_FIELD_OFFSET; i++) {
+    newOffset[i] = offset % 256;
+    offset = Math.floor(offset / 256);
+  }
+  return newOffset.reverse();
+}
+
+/**
+ * Updates the variable offset in-place for serialized data. Calcs newOffset and
+ * reverses it so its little endian. Then updates the data with the new offset
+ *
+ * @param data - serialized data
+ * @param fixedOffset - fixed offset of the variable offset
+ * @param variableOffset - new variable offset
+ */
+function updateVariableOffset(data: Uint8Array, fixedOffset: number, variableOffset: number): void {
+  const newOffset = buildVariableOffset(variableOffset);
+  for (let i = 0; i < VARIABLE_FIELD_OFFSET; i++) {
+    data[i + fixedOffset] = newOffset[i];
+  }
+}
+
+/**
+ * Convert serialized SignedBeaconBlock to SignedBlindedBeaconBlock
+ *
+ * @param {ForkSeq} forkSeq - fork sequence
+ * @param {Uint8Array} block - serialized SignedBeaconBlock
+ * @param {Uint8Array} transactionsRoot - transactions root
+ * @param {Uint8Array} withdrawalsRoot - withdrawals root
+ *
+ * @returns {Uint8Array} - serialized SignedBlindedBeaconBlock
+ */
+export function fullToBlindedSignedBeaconBlock(
+  forkSeq: ForkSeq,
+  block: Uint8Array,
+  transactionsRoot?: Uint8Array,
+  withdrawalsRoot?: Uint8Array
+): Uint8Array {
+  /**
+   * Phase0:
+   *   return same data
+   * Altair:
+   *   return same data
+   */
+  if (forkSeq === ForkSeq.phase0 || forkSeq === ForkSeq.altair) {
+    return block;
+  }
+
+  // fields that are common to forks after Bellatrix
+  if (!transactionsRoot) {
+    throw new Error("must supply transactionsRoot");
+  }
+  const dv = new DataView(block.buffer, block.byteOffset, block.byteLength);
+  const executionPayloadOffset = dv.getUint32(EXECUTION_PAYLOAD_FIXED_OFFSET_OF_VARIABLE_OFFSET, true);
+  const extraDataFixedOffset = executionPayloadOffset + EXTRA_DATA_FIXED_OFFSET_FROM_START_EXECUTION_PAYLOAD;
+  let extraDataVariableOffset = dv.getUint32(extraDataFixedOffset, true);
+  const transactionsFixedOffset = executionPayloadOffset + TRANSACTIONS_FIXED_OFFSET_FROM_START_EXECUTION_PAYLOAD;
+  const transactionsVariableOffset = dv.getUint32(transactionsFixedOffset, true);
+  const dataBefore = Uint8Array.prototype.slice.call(block, 0, transactionsFixedOffset);
+  const extraData = Uint8Array.prototype.slice.call(block, extraDataVariableOffset, transactionsVariableOffset);
+
+  /**
+   * Bellatrix:
+   *   transactions: Variable Offset
+   *   extraData: Variable Length Data
+   *   transactions: Variable Length Data
+   *   - to -
+   *   transactionsRoot: Root
+   *   extraData: Variable Length Data
+   */
+  if (forkSeq === ForkSeq.bellatrix) {
+    // update variable offsets
+    extraDataVariableOffset = transactionsFixedOffset + ROOT_SIZE;
+    updateVariableOffset(dataBefore, extraDataFixedOffset, extraDataVariableOffset);
+    // build new data
+    return Uint8Array.from([...dataBefore, ...transactionsRoot, ...extraData]);
+  }
+
+  // fields that are common to forks after Capella
+  if (!withdrawalsRoot) {
+    throw new Error("must supply withdrawalsRoot");
+  }
+  let blsToExecutionChangeVariableOffset = dv.getUint32(BLS_TO_EXECUTION_CHANGE_FIXED_OFFSET_OF_VARIABLE_OFFSET, true);
+  const blsChangeAndMaybeCommitmentsData = Uint8Array.prototype.slice.call(block, blsToExecutionChangeVariableOffset);
+
+  /**
+   * Capella:
+   *   transactions: Variable Offset
+   *   withdrawals: Variable Offset
+   *   extraData: Variable Length Data
+   *   transactions: Variable Length Data
+   *   withdrawals: Variable Length Data
+   *   blsToExecutionChanges: Variable Length Data
+   *   - to -
+   *   transactionsRoot: Root
+   *   withdrawalsRoot: Root
+   *   extraData: Variable Length Data
+   *   blsToExecutionChanges: Variable Length Data
+   */
+  if (forkSeq === ForkSeq.capella) {
+    // build variable offsets
+    extraDataVariableOffset = transactionsFixedOffset + 2 * ROOT_SIZE;
+    blsToExecutionChangeVariableOffset = extraDataVariableOffset + extraData.length;
+    // update variable offsets
+    updateVariableOffset(dataBefore, extraDataFixedOffset, extraDataVariableOffset);
+    updateVariableOffset(
+      dataBefore,
+      BLS_TO_EXECUTION_CHANGE_FIXED_OFFSET_OF_VARIABLE_OFFSET,
+      blsToExecutionChangeVariableOffset
+    );
+    // build new data
+    return Uint8Array.from([
+      ...dataBefore,
+      ...transactionsRoot,
+      ...withdrawalsRoot,
+      ...extraData,
+      ...blsChangeAndMaybeCommitmentsData,
+    ]);
+  }
+
+  // fields that are common to forks after Deneb
+  const startDataGasUsed = transactionsFixedOffset + 2 * VARIABLE_FIELD_OFFSET;
+  const dataGasUsedAndExcessDataGas = Uint8Array.prototype.slice.call(
+    block,
+    startDataGasUsed,
+    startDataGasUsed + 2 * 8
+  );
+
+  let blobCommitmentsVariableOffset = dv.getUint32(BLOB_KZG_COMMITMENTS_FIXED_OFFSET_OF_VARIABLE_OFFSET, true);
+  const blsToExecutionChangeLength = blobCommitmentsVariableOffset - blsToExecutionChangeVariableOffset;
+  /**
+   * Deneb:
+   *   transactions: Variable Offset
+   *   withdrawals: Variable Offset
+   *   dataGasUsed: UintBn64
+   *   excessDataGas: UintBn64
+   *   extraData: Variable Length Data
+   *   transactions: Variable Length Data
+   *   withdrawals: Variable Length Data
+   *   blsToExecutionChanges: Variable Length Data
+   *   blobKzgCommitments: Variable Length Data
+   *   - to -
+   *   transactionsRoot: Root
+   *   withdrawalsRoot: Root
+   *   dataGasUsed: UintBn64
+   *   excessDataGas: UintBn64
+   *   extraData: Variable Length Data
+   *   blsToExecutionChanges: Variable Length Data
+   *   blobKzgCommitments: Variable Length Data
+   */
+  if (forkSeq === ForkSeq.deneb) {
+    // build variable offsets
+    extraDataVariableOffset = transactionsFixedOffset + 2 * (ROOT_SIZE + 8);
+    blsToExecutionChangeVariableOffset = extraDataVariableOffset + extraData.length;
+    blobCommitmentsVariableOffset = blsToExecutionChangeVariableOffset + blsToExecutionChangeLength;
+    // update variable offsets
+    updateVariableOffset(dataBefore, extraDataFixedOffset, extraDataVariableOffset);
+    updateVariableOffset(
+      dataBefore,
+      BLS_TO_EXECUTION_CHANGE_FIXED_OFFSET_OF_VARIABLE_OFFSET,
+      blsToExecutionChangeVariableOffset
+    );
+    updateVariableOffset(
+      dataBefore,
+      BLOB_KZG_COMMITMENTS_FIXED_OFFSET_OF_VARIABLE_OFFSET,
+      blobCommitmentsVariableOffset
+    );
+    // build new data
+    return Uint8Array.from([
+      ...dataBefore,
+      ...transactionsRoot,
+      ...withdrawalsRoot,
+      ...dataGasUsedAndExcessDataGas,
+      ...extraData,
+      ...blsChangeAndMaybeCommitmentsData,
+    ]);
+  }
+
+  throw new Error("unknown forkSeq, cannot un-blind");
+}
+
+/**
+ * Convert serialized SignedBlindedBeaconBlock to SignedBeaconBlock
+ */
+export function blindedToFullSignedBeaconBlock(
+  forkSeq: ForkSeq,
+  block: Uint8Array,
+  transactions?: Uint8Array,
+  withdrawals?: Uint8Array
+): Uint8Array {
+  /**
+   * Phase0:
+   *   return same data
+   * Altair:
+   *   return same data
+   */
+  if (forkSeq === ForkSeq.phase0 || forkSeq === ForkSeq.altair) {
+    return block;
+  }
+
+  // fields that are common to forks after Bellatrix
+  if (!transactions) {
+    throw new Error("must supply transaction");
+  }
+  const dv = new DataView(block.buffer, block.byteOffset, block.byteLength);
+  const executionPayloadOffset = dv.getUint32(EXECUTION_PAYLOAD_FIXED_OFFSET_OF_VARIABLE_OFFSET, true);
+  const extraDataFixedOffset = executionPayloadOffset + EXTRA_DATA_FIXED_OFFSET_FROM_START_EXECUTION_PAYLOAD;
+  let extraDataVariableOffset = dv.getUint32(extraDataFixedOffset, true);
+  const transactionsFixedOffset = executionPayloadOffset + TRANSACTIONS_FIXED_OFFSET_FROM_START_EXECUTION_PAYLOAD;
+  const dataBefore = Uint8Array.prototype.slice.call(block, 0, transactionsFixedOffset);
+
+  /**
+   * Bellatrix:
+   *   transactionsRoot: Root
+   *   extraData: Variable Length Data
+   *   - to -
+   *   transactions: Variable Offset
+   *   extraData: Variable Length Data
+   *   transactions: Variable Length Data
+   */
+  if (forkSeq === ForkSeq.bellatrix) {
+    const extraData = Uint8Array.prototype.slice.call(block, extraDataVariableOffset);
+    // update variable offsets
+    extraDataVariableOffset = transactionsFixedOffset + VARIABLE_FIELD_OFFSET;
+    updateVariableOffset(dataBefore, extraDataFixedOffset, extraDataVariableOffset);
+    const transactionsVariableOffset = extraDataVariableOffset + extraData.length;
+    // build new data
+    return Uint8Array.from([
+      ...dataBefore,
+      ...buildVariableOffset(transactionsVariableOffset),
+      ...transactions,
+      ...extraData,
+    ]);
+  }
+
+  // fields that are common to forks after Capella
+  if (!withdrawals) {
+    throw new Error("must supply withdrawals");
+  }
+  let blsToExecutionChangeVariableOffset = dv.getUint32(BLS_TO_EXECUTION_CHANGE_FIXED_OFFSET_OF_VARIABLE_OFFSET, true);
+  const extraData = Uint8Array.prototype.slice.call(block, extraDataVariableOffset, blsToExecutionChangeVariableOffset);
+  const blsChangeAndMaybeCommitmentsData = Uint8Array.prototype.slice.call(block, blsToExecutionChangeVariableOffset);
+
+  /**
+   * Capella:
+   *   transactionsRoot: Root
+   *   withdrawalsRoot: Root
+   *   extraData: Variable Length Data
+   *   blsToExecutionChanges: Variable Length Data
+   *   - to -
+   *   transactions: Variable Offset
+   *   withdrawals: Variable Offset
+   *   extraData: Variable Length Data
+   *   transactions: Variable Length Data
+   *   withdrawals: Variable Length Data
+   *   blsToExecutionChanges: Variable Length Data
+   */
+  if (forkSeq === ForkSeq.capella) {
+    // build variable offsets
+    extraDataVariableOffset = transactionsFixedOffset + 2 * VARIABLE_FIELD_OFFSET;
+    const transactionsVariableOffset = extraDataVariableOffset + extraData.length;
+    const withdrawalsVariableOffset = transactionsVariableOffset + transactions.length;
+    blsToExecutionChangeVariableOffset = withdrawalsVariableOffset + withdrawals.length;
+    // update variable offsets
+    updateVariableOffset(dataBefore, extraDataFixedOffset, extraDataVariableOffset);
+    updateVariableOffset(
+      dataBefore,
+      BLS_TO_EXECUTION_CHANGE_FIXED_OFFSET_OF_VARIABLE_OFFSET,
+      blsToExecutionChangeVariableOffset
+    );
+    // build new data
+    return Uint8Array.from([
+      ...dataBefore,
+      ...buildVariableOffset(transactionsVariableOffset),
+      ...buildVariableOffset(withdrawalsVariableOffset),
+      ...extraData,
+      ...transactions,
+      ...withdrawals,
+      ...blsChangeAndMaybeCommitmentsData,
+    ]);
+  }
+
+  // fields that are common to forks after Deneb
+  let blobCommitmentsVariableOffset = dv.getUint32(BLOB_KZG_COMMITMENTS_FIXED_OFFSET_OF_VARIABLE_OFFSET, true);
+  const blsToExecutionChangeLength = blobCommitmentsVariableOffset - blsToExecutionChangeVariableOffset;
+  const startDataGasUsed = transactionsFixedOffset + 2 * ROOT_SIZE;
+  const dataGasUsedAndExcessDataGas = Uint8Array.prototype.slice.call(
+    block,
+    startDataGasUsed,
+    startDataGasUsed + 2 * 8
+  );
+  /**
+   * Deneb:
+   *   transactionsRoot: Root
+   *   withdrawalsRoot: Root
+   *   dataGasUsed: UintBn64
+   *   excessDataGas: UintBn64
+   *   extraData: Variable Length Data
+   *   blsToExecutionChanges: Variable Length Data
+   *   blobKzgCommitments: Variable Length Data
+   *   - to -
+   *   transactions: Variable Offset
+   *   withdrawals: Variable Offset
+   *   dataGasUsed: UintBn64
+   *   excessDataGas: UintBn64
+   *   extraData: Variable Length Data
+   *   transactions: Variable Length Data
+   *   withdrawals: Variable Length Data
+   *   blsToExecutionChanges: Variable Length Data
+   *   blobKzgCommitments: Variable Length Data
+   */
+  if (forkSeq === ForkSeq.deneb) {
+    // build variable offsets
+    extraDataVariableOffset = transactionsFixedOffset + 2 * (VARIABLE_FIELD_OFFSET + 8);
+    const transactionsVariableOffset = extraDataVariableOffset + extraData.length;
+    const withdrawalsVariableOffset = transactionsVariableOffset + transactions.length;
+    blsToExecutionChangeVariableOffset = withdrawalsVariableOffset + withdrawals.length;
+    blobCommitmentsVariableOffset = blsToExecutionChangeVariableOffset + blsToExecutionChangeLength;
+    // update variable offsets
+    updateVariableOffset(dataBefore, extraDataFixedOffset, extraDataVariableOffset);
+    updateVariableOffset(
+      dataBefore,
+      BLS_TO_EXECUTION_CHANGE_FIXED_OFFSET_OF_VARIABLE_OFFSET,
+      blsToExecutionChangeVariableOffset
+    );
+    updateVariableOffset(
+      dataBefore,
+      BLOB_KZG_COMMITMENTS_FIXED_OFFSET_OF_VARIABLE_OFFSET,
+      blobCommitmentsVariableOffset
+    );
+    // build new data
+    return Uint8Array.from([
+      ...dataBefore,
+      ...buildVariableOffset(transactionsVariableOffset),
+      ...buildVariableOffset(withdrawalsVariableOffset),
+      ...dataGasUsedAndExcessDataGas,
+      ...extraData,
+      ...transactions,
+      ...withdrawals,
+      ...blsChangeAndMaybeCommitmentsData,
+    ]);
+  }
+
+  throw new Error("unknown forkSeq, cannot un-blind");
+}
