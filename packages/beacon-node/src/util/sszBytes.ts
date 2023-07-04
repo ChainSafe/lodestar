@@ -161,22 +161,22 @@ export function getAttDataBase64FromSignedAggregateAndProofSerialized(data: Uint
  *   message: BeaconBlock [offset - 4 bytes]
  *   signature: BLSSignature [fixed - 96 bytes]
  *
- * class BeaconBlock(Container) or class BlindedBeaconBlock(Container):
+ * class BeaconBlock(Container):
  *   slot: Slot [fixed - 8 bytes]
- *   proposer_index: ValidatorIndex [fixed - 8 bytes]
- *   parent_root: Root [fixed - 32 bytes]
- *   state_root: Root [fixed - 32 bytes]
- *   body: BeaconBlockBody or BlindedBeaconBlockBody
+ *   proposer_index: ValidatorIndex
+ *   parent_root: Root
+ *   state_root: Root
+ *   body: BeaconBlockBody
  * ```
  */
-const SLOT_BYTES_POSITION_IN_SIGNED_MAYBE_BLIND_BEACON_BLOCK = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE;
+const SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK = VARIABLE_FIELD_OFFSET + SIGNATURE_SIZE;
 
 export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot | null {
-  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_MAYBE_BLIND_BEACON_BLOCK + SLOT_SIZE) {
+  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK + SLOT_SIZE) {
     return null;
   }
 
-  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_MAYBE_BLIND_BEACON_BLOCK);
+  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK);
 }
 
 /**
@@ -195,7 +195,7 @@ export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot |
  *   kzgAggregatedProof: KZGProof,
  */
 const SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK_AND_BLOBS_SIDECAR =
-  VARIABLE_FIELD_OFFSET + VARIABLE_FIELD_OFFSET + SLOT_BYTES_POSITION_IN_SIGNED_MAYBE_BLIND_BEACON_BLOCK;
+  VARIABLE_FIELD_OFFSET + VARIABLE_FIELD_OFFSET + SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK;
 
 export function getSlotFromSignedBeaconBlockAndBlobsSidecarSerialized(data: Uint8Array): Slot | null {
   if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK_AND_BLOBS_SIDECAR + SLOT_SIZE) {
