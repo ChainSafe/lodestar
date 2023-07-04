@@ -49,6 +49,7 @@ describe("prover/start", () => {
       proc = await spawnCliCommand(
         "packages/prover/bin/lodestar-prover.js",
         [
+          "start",
           "--port",
           String(proxyPort as number),
           "--executionRpcUrl",
