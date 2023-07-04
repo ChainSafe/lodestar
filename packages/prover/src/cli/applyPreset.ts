@@ -43,15 +43,6 @@ else if (network) {
   }
 }
 
-// If running dev top level command `$ lodestar dev`, apply minimal
-else if (process.argv[2] === "dev") {
-  process.env.LODESTAR_PRESET = "minimal";
-  process.env.LODESTAR_NETWORK = "dev";
-  // "c-kzg" has hardcoded the mainnet value, do not use presets
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  setActivePreset(PresetName.minimal, {FIELD_ELEMENTS_PER_BLOB: 4096});
-}
-
 if (presetFile) {
   // Override the active preset with custom values from file
   // Do not modify the preset to use as a base by passing null

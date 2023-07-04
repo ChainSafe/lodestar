@@ -19,7 +19,10 @@ export const globalOptions: CliCommandOptions<GlobalArgs> = {
   network: {
     description: "Specify the network to connect.",
     type: "string",
-    choices: Object.keys(networksChainConfig),
+    choices: [
+      ...Object.keys(networksChainConfig), // Leave always as last network. The order matters for the --help printout
+      "dev",
+    ],
   },
 
   logLevel: {
