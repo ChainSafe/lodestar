@@ -1,10 +1,13 @@
 import childProcess from "node:child_process";
+import {writeFile} from "node:fs/promises";
+import path from "node:path";
 import {expect} from "chai";
 import Web3 from "web3";
 import {runCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
 import {sleep} from "@lodestar/utils";
+import {ChainConfig, chainConfigToJson} from "@lodestar/config";
 import {getLodestarProverCli} from "../../../../src/cli/cli.js";
-import {rpcUrl, beaconUrl, proxyPort, proxyUrl, chainId, waitForCapellaFork} from "../../../utils/e2e_env.js";
+import {rpcUrl, beaconUrl, proxyPort, proxyUrl, chainId, waitForCapellaFork, config} from "../../../utils/e2e_env.js";
 
 const cli = getLodestarProverCli();
 
@@ -41,10 +44,12 @@ describe("prover/start", () => {
 
   describe("when started", () => {
     let proc: childProcess.ChildProcess;
+    const paramsFilePath = path.join("/tmp", "e2e-test-env", "params.json");
     const web3: Web3 = new Web3(proxyUrl);
 
     before(async () => {
       await waitForCapellaFork();
+      await writeFile(paramsFilePath, JSON.stringify(chainConfigToJson(config as ChainConfig)));
 
       proc = await spawnCliCommand(
         "packages/prover/bin/lodestar-prover.js",
@@ -58,6 +63,8 @@ describe("prover/start", () => {
           beaconUrl,
           "--network",
           "dev",
+          "--presetFile",
+          paramsFilePath,
         ],
         {runWith: "ts-node", pipeStdioToParent: true}
       );
