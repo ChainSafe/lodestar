@@ -4,7 +4,7 @@ import {allForks, ssz} from "@lodestar/types";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 import {IExecutionEngine} from "../../execution/index.js";
-import {isSignedBlindedBeaconBlock} from "./blockBlindingAndUnblinding.js";
+import {isSerializedBlinded} from "./blockBlindingAndUnblinding.js";
 
 /**
  * Blocks by root
@@ -36,6 +36,6 @@ export class BlockRepository extends Repository<Uint8Array, allForks.FullOrBlind
   }
 
   decodeValue(data: Buffer): allForks.SignedBeaconBlock {
-    return getSignedBlockTypeFromBytes(this.config, data, isSignedBlindedBeaconBlock(data)).deserialize(data);
+    return getSignedBlockTypeFromBytes(this.config, data, isSerializedBlinded(data)).deserialize(data);
   }
 }

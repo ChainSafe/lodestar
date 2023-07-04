@@ -6,7 +6,7 @@ const BLINDED_BYTE_LOCATION = 3;
 const DATABASE_SERIALIZED_FULL_BLOCK_BYTE = 0x00;
 const DATABASE_SERIALIZED_BLINDED_BLOCK_BYTE = 0x01;
 
-export function isSignedBlindedBeaconBlock(maybeBlind: Uint8Array): boolean {
+export function isSerializedBlinded(maybeBlind: Uint8Array): boolean {
   return maybeBlind[BLINDED_BYTE_LOCATION] === DATABASE_SERIALIZED_BLINDED_BLOCK_BYTE;
 }
 

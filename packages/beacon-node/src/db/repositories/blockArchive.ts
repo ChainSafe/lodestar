@@ -1,14 +1,14 @@
 import all from "it-all";
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository, KeyValue, FilterOptions} from "@lodestar/db";
-import {Slot, Root, allForks, ssz, Uint8, isBlindedSignedBeaconBlock, bellatrix} from "@lodestar/types";
+import {Slot, Root, allForks, ssz, bellatrix} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
-import {DATABASE_SERIALIZED_BLINDED_BLOCK_BIT, DATABASE_SERIALIZED_FULL_BLOCK_BIT} from "../../util/sszBytes.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 import {IExecutionEngine} from "../../execution/index.js";
 import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex.js";
 import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./blockArchiveIndex.js";
+import {isSerializedBlinded} from "./blockBlindingAndUnblinding.js";
 
 export interface BlockFilterOptions extends FilterOptions<Slot> {
   step?: number;
@@ -42,13 +42,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.FullOrBlin
   }
 
   decodeValue(data: Uint8Array): allForks.FullOrBlindedSignedBeaconBlock {
-    let isBlinded = false;
-    if (data[0] === DATABASE_SERIALIZED_BLINDED_BLOCK_BIT) {
-      // reset first bit so deserialize works correctly
-      data[0] = DATABASE_SERIALIZED_FULL_BLOCK_BIT as Uint8;
-      isBlinded = true;
-    }
-    return getSignedBlockTypeFromBytes(this.config, data, isBlinded).deserialize(data);
+    return getSignedBlockTypeFromBytes(this.config, data, isSerializedBlinded(data)).deserialize(data);
   }
 
   // Handle key as slot
