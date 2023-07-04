@@ -2,6 +2,7 @@ import childProcess from "node:child_process";
 import {expect} from "chai";
 import Web3 from "web3";
 import {runCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
+import {sleep} from "@lodestar/utils";
 import {getLodestarProverCli} from "../../../../src/cli/cli.js";
 import {rpcUrl, beaconUrl, proxyPort, proxyUrl, chainId, waitForCapellaFork} from "../../../utils/e2e_env.js";
 
@@ -59,6 +60,8 @@ describe("prover/start", () => {
         ],
         {runWith: "ts-node", pipeStdioToParent: true}
       );
+      // Give sometime to the prover to start proxy server
+      await sleep(3000);
     });
 
     after(async () => {
