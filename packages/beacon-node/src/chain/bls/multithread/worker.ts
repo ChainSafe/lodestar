@@ -21,6 +21,8 @@ const workerData = worker.workerData as WorkerData;
 if (!workerData) throw Error("workerData must be defined");
 const {workerId} = workerData || {};
 
+type IndexedSignatureSets = {idx: number; sets: SignatureSetDeserialized[]};
+
 expose({
   async verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
     return verifyManySignatureSets(workReqArr);
@@ -29,13 +31,9 @@ expose({
 
 function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const startNs = process.hrtime.bigint();
-  const results: WorkResult<boolean>[] = [];
-  let batchRetries = 0;
-  let batchSigsSuccess = 0;
-
   // If there are multiple batchable sets attempt batch verification with them
-  const batchableSets: {idx: number; sets: SignatureSetDeserialized[]}[] = [];
-  const nonBatchableSets: {idx: number; sets: SignatureSetDeserialized[]}[] = [];
+  const batchableSets: IndexedSignatureSets[] = [];
+  const nonBatchableSets: IndexedSignatureSets[] = [];
 
   // Split sets between batchable and non-batchable preserving their original index in the req array
   for (let i = 0; i < workReqArr.length; i++) {
@@ -48,6 +46,32 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
       nonBatchableSets.push({idx: i, sets});
     }
   }
+
+  const isSameMessage = false;
+  const {batchRetries, batchSigsSuccess, results} = doVerifyManySignatureSets(
+    batchableSets,
+    nonBatchableSets,
+    isSameMessage
+  );
+
+  return {
+    workerId,
+    batchRetries,
+    batchSigsSuccess,
+    workerStartNs: startNs,
+    workerEndNs: process.hrtime.bigint(),
+    results,
+  };
+}
+
+function doVerifyManySignatureSets(
+  batchableSets: IndexedSignatureSets[],
+  nonBatchableSets: IndexedSignatureSets[] = [],
+  isSameMessage: boolean,
+): {results: WorkResult<boolean>[]; batchRetries: number; batchSigsSuccess: number} {
+  const results: WorkResult<boolean>[] = [];
+  let batchRetries = 0;
+  let batchSigsSuccess = 0;
 
   if (batchableSets.length > 0) {
     // Split batchable into chunks of max size ~ 32 to minimize cost if a sig is wrong
@@ -88,21 +112,14 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
   for (const {idx, sets} of nonBatchableSets) {
     try {
-      const isValid = verifySignatureSetsMaybeBatch(sets);
+      const isValid = verifySignatureSetsMaybeBatch(sets, isSameMessage);
       results[idx] = {code: WorkResultCode.success, result: isValid};
     } catch (e) {
       results[idx] = {code: WorkResultCode.error, error: e as Error};
     }
   }
 
-  return {
-    workerId,
-    batchRetries,
-    batchSigsSuccess,
-    workerStartNs: startNs,
-    workerEndNs: process.hrtime.bigint(),
-    results,
-  };
+  return {results, batchRetries, batchSigsSuccess};
 }
 
 function deserializeSet(set: SerializedSet): SignatureSetDeserialized {

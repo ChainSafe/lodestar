@@ -13,8 +13,17 @@ export type SignatureSetDeserialized = {
  * Verify signatures sets with batch verification or regular core verify depending on the set count.
  * Abstracted in a separate file to be consumed by the threaded pool and the main thread implementation.
  */
-export function verifySignatureSetsMaybeBatch(sets: SignatureSetDeserialized[]): boolean {
+export function verifySignatureSetsMaybeBatch(sets: SignatureSetDeserialized[], isSameMessage = false): boolean {
   if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
+    if (isSameMessage) {
+      // TODO: return false if not same message or throw error?
+      const aggregatedPubkey = bls.PublicKey.aggregate(sets.map((set) => set.publicKey));
+      const aggregatedSignature = bls.Signature.aggregate(
+        sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, false))
+      );
+      return aggregatedSignature.verify(aggregatedPubkey, sets[0].message);
+    }
+
     return bls.Signature.verifyMultipleSignatures(
       sets.map((s) => ({
         publicKey: s.publicKey,
