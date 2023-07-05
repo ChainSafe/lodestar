@@ -8,7 +8,7 @@ import {getConnectionsMap} from "../../util.js";
  */
 export function getConnectedPeerIds(libp2p: Libp2p): PeerId[] {
   const peerIds: PeerId[] = [];
-  for (const connections of getConnectionsMap(libp2p.connectionManager).values()) {
+  for (const connections of getConnectionsMap(libp2p).values()) {
     const openConnection = connections.find(isConnectionOpen);
     if (openConnection) {
       peerIds.push(openConnection.remotePeer);
@@ -21,7 +21,7 @@ export function getConnectedPeerIds(libp2p: Libp2p): PeerId[] {
  * Efficiently check if there is at least one peer connected
  */
 export function hasSomeConnectedPeer(libp2p: Libp2p): boolean {
-  for (const connections of getConnectionsMap(libp2p.connectionManager).values()) {
+  for (const connections of getConnectionsMap(libp2p).values()) {
     if (connections.some(isConnectionOpen)) {
       return true;
     }

@@ -56,7 +56,7 @@ describe("response / handleRequest", () => {
 
   for (const {id, requestChunks, protocol, expectedResponseChunks, expectedError} of testCases) {
     it(id, async () => {
-      const stream = new MockLibP2pStream(requestChunks);
+      const stream = new MockLibP2pStream(requestChunks as any);
       const rateLimiter = new ReqRespRateLimiter({rateLimitMultiplier: 0});
 
       const resultPromise = handleRequest({

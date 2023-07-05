@@ -353,7 +353,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   getConnectionsByPeer(): Map<string, Connection[]> {
-    return getConnectionsMap(this.libp2p.connectionManager);
+    return getConnectionsMap(this.libp2p);
   }
 
   async getConnectedPeers(): Promise<PeerIdStr[]> {
@@ -368,7 +368,7 @@ export class NetworkCore implements INetworkCore {
 
   async connectToPeer(peerIdStr: PeerIdStr, multiaddrStrArr: MultiaddrStr[]): Promise<void> {
     const peer = peerIdFromString(peerIdStr);
-    await this.libp2p.peerStore.addressBook.add(peer, multiaddrStrArr.map(multiaddr));
+    await this.libp2p.peerStore.merge(peer, {multiaddrs: multiaddrStrArr.map(multiaddr)});
     await this.libp2p.dial(peer);
   }
 

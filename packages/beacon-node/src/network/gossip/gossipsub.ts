@@ -7,7 +7,6 @@ import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 
 import {RegistryMetricCreator} from "../../metrics/index.js";
-import {peerIdFromString} from "../../util/peerId.js";
 import {PeersData} from "../peers/peersData.js";
 import {ClientKind} from "../peers/client.js";
 import {GOSSIP_MAX_SIZE, GOSSIP_MAX_SIZE_BELLATRIX} from "../../constants/network.js";
@@ -89,7 +88,7 @@ export class Eth2Gossipsub extends GossipSub {
 
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
-    super(modules.libp2p, {
+    super(modules.libp2p.services.components, {
       globalSignaturePolicy: SignaturePolicy.StrictNoSign,
       allowPublishToZeroPeers: allowPublishToZeroPeers,
       D: gossipsubD ?? GOSSIP_D,
@@ -300,8 +299,7 @@ export class Eth2Gossipsub extends GossipSub {
     // Without this we'll have huge event loop lag
     // See https://github.com/ChainSafe/lodestar/issues/5604
     setTimeout(() => {
-      // TODO: reportMessageValidationResult should take PeerIdStr since it only uses string version
-      this.reportMessageValidationResult(data.msgId, peerIdFromString(data.propagationSource), data.acceptance);
+      this.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
     }, 0);
   }
 }

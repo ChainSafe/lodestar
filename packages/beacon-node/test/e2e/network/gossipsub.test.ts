@@ -18,7 +18,7 @@ describe("gossipsub / worker", function () {
 /* eslint-disable mocha/no-top-level-hooks */
 
 function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
-  if (this.timeout() < 15 * 1000) this.timeout(150 * 1000);
+  if (this.timeout() < 20 * 1000) this.timeout(150 * 1000);
   this.retries(0); // This test fail sometimes, with a 5% rate.
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
