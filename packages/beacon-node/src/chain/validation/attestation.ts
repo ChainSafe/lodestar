@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, Root, Slot, RootHex, ssz} from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   CachedBeaconStateAllForks,
@@ -56,12 +56,13 @@ const SHUFFLING_LOOK_AHEAD_EPOCHS = 1;
  * - do not prioritize bls signature set
  */
 export async function validateGossipAttestation(
+  fork: ForkName,
   chain: IBeaconChain,
   attestationOrBytes: GossipAttestation,
   /** Optional, to allow verifying attestations through API with unknown subnet */
   subnet: number
 ): Promise<AttestationValidationResult> {
-  return validateAttestation(chain, attestationOrBytes, subnet);
+  return validateAttestation(fork, chain, attestationOrBytes, subnet);
 }
 
 /**
@@ -71,11 +72,12 @@ export async function validateGossipAttestation(
  * - prioritize bls signature set
  */
 export async function validateApiAttestation(
+  fork: ForkName,
   chain: IBeaconChain,
   attestationOrBytes: ApiAttestation
 ): Promise<AttestationValidationResult> {
   const prioritizeBls = true;
-  return validateAttestation(chain, attestationOrBytes, null, prioritizeBls);
+  return validateAttestation(fork, chain, attestationOrBytes, null, prioritizeBls);
 }
 
 /**
@@ -83,6 +85,7 @@ export async function validateApiAttestation(
  * This is to avoid deserializing similar attestation multiple times which could help the gc
  */
 async function validateAttestation(
+  fork: ForkName,
   chain: IBeaconChain,
   attestationOrBytes: AttestationOrBytes,
   /** Optional, to allow verifying attestations through API with unknown subnet */
@@ -146,7 +149,7 @@ async function validateAttestation(
     // [IGNORE] attestation.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (within a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
     //  -- i.e. attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= attestation.data.slot
     // (a client MAY queue future attestations for processing at the appropriate slot).
-    verifyPropagationSlotRange(chain, attestationOrCache.attestation.data.slot);
+    verifyPropagationSlotRange(fork, chain, attestationOrCache.attestation.data.slot);
   }
 
   // [REJECT] The attestation is unaggregated -- that is, it has exactly one participating validator
@@ -343,28 +346,58 @@ async function validateAttestation(
  * Accounts for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
  * Note: We do not queue future attestations for later processing
  */
-export function verifyPropagationSlotRange(chain: IBeaconChain, attestationSlot: Slot): void {
+export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, attestationSlot: Slot): void {
   // slot with future tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
   const latestPermissibleSlot = chain.clock.slotWithFutureTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC);
-  const earliestPermissibleSlot = Math.max(
-    // slot with past tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
-    // ATTESTATION_PROPAGATION_SLOT_RANGE = SLOTS_PER_EPOCH
-    chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC) - SLOTS_PER_EPOCH,
-    0
-  );
-  if (attestationSlot < earliestPermissibleSlot) {
-    throw new AttestationError(GossipAction.IGNORE, {
-      code: AttestationErrorCode.PAST_SLOT,
-      earliestPermissibleSlot,
-      attestationSlot,
-    });
-  }
   if (attestationSlot > latestPermissibleSlot) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.FUTURE_SLOT,
       latestPermissibleSlot,
       attestationSlot,
     });
+  }
+
+  const earliestPermissibleSlot = Math.max(
+    // slot with past tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
+    // ATTESTATION_PROPAGATION_SLOT_RANGE = SLOTS_PER_EPOCH
+    chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC) - SLOTS_PER_EPOCH,
+    0
+  );
+
+  // Post deneb the attestations are valid for current as well as previous epoch
+  // while pre deneb they are valid for ATTESTATION_PROPAGATION_SLOT_RANGE
+  //
+  // see: https://github.com/ethereum/consensus-specs/pull/3360
+  if (ForkSeq[fork] < ForkSeq.deneb) {
+    if (attestationSlot < earliestPermissibleSlot) {
+      throw new AttestationError(GossipAction.IGNORE, {
+        code: AttestationErrorCode.PAST_SLOT,
+        earliestPermissibleSlot,
+        attestationSlot,
+      });
+    }
+  } else {
+    const attestationEpoch = computeEpochAtSlot(attestationSlot);
+
+    // upper bound for current epoch is same as epoch of latestPermissibleSlot
+    const latestPermissibleCurrentEpoch = computeEpochAtSlot(latestPermissibleSlot);
+    if (attestationEpoch > latestPermissibleCurrentEpoch) {
+      throw new AttestationError(GossipAction.IGNORE, {
+        code: AttestationErrorCode.FUTURE_EPOCH,
+        currentEpoch: latestPermissibleCurrentEpoch,
+        attestationEpoch,
+      });
+    }
+
+    // lower bound for previous epoch is same as epoch of earliestPermissibleSlot
+    const earliestPermissiblePreviousEpoch = computeEpochAtSlot(earliestPermissibleSlot);
+    if (attestationEpoch < earliestPermissiblePreviousEpoch) {
+      throw new AttestationError(GossipAction.IGNORE, {
+        code: AttestationErrorCode.PAST_EPOCH,
+        previousEpoch: earliestPermissiblePreviousEpoch,
+        attestationEpoch,
+      });
+    }
   }
 }
 

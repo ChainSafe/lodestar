@@ -556,13 +556,14 @@ export function getValidatorApi({
 
       const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
+      const fork = chain.config.getForkName(chain.clock.currentSlot);
 
       await Promise.all(
         signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
           try {
             // TODO: Validate in batch
             // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-            const validateFn = () => validateApiAggregateAndProof(chain, signedAggregateAndProof);
+            const validateFn = () => validateApiAggregateAndProof(fork, chain, signedAggregateAndProof);
             const {slot, beaconBlockRoot} = signedAggregateAndProof.message.aggregate.data;
             // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block

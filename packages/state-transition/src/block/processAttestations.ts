@@ -18,6 +18,6 @@ export function processAttestations(
       processAttestationPhase0(state as CachedBeaconStatePhase0, attestation, verifySignatures);
     }
   } else {
-    processAttestationsAltair(state as CachedBeaconStateAltair, attestations, verifySignatures);
+    processAttestationsAltair(fork, state as CachedBeaconStateAltair, attestations, verifySignatures);
   }
 }
