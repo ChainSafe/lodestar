@@ -1,5 +1,5 @@
 import childProcess from "node:child_process";
-import {writeFile} from "node:fs/promises";
+import {writeFile, mkdir} from "node:fs/promises";
 import path from "node:path";
 import {expect} from "chai";
 import Web3 from "web3";
@@ -49,6 +49,7 @@ describe("prover/start", () => {
 
     before(async () => {
       await waitForCapellaFork();
+      await mkdir(path.dirname(paramsFilePath), {recursive: true});
       await writeFile(paramsFilePath, JSON.stringify(chainConfigToJson(config as ChainConfig)));
 
       proc = await spawnCliCommand(
