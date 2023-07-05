@@ -24,10 +24,32 @@ const {workerId} = workerData || {};
 type IndexedSignatureSets = {idx: number; sets: SignatureSetDeserialized[]};
 
 expose({
+  async verifyManySignatureSetsSameMessage(sets: SerializedSet[]): Promise<BlsWorkResult> {
+    return verifyManySignatureSetsSameMessage(sets);
+  },
   async verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
     return verifyManySignatureSets(workReqArr);
   },
 });
+
+function verifyManySignatureSetsSameMessage(sets: SerializedSet[]): BlsWorkResult {
+  const startNs = process.hrtime.bigint();
+  // If there are multiple batchable sets attempt batch verification with them
+
+  // Split sets between batchable and non-batchable preserving their original index in the req array
+  const batchableSets = sets.map((set, idx) => ({idx, sets: [deserializeSet(set)]}));
+  const isSameMessage = true;
+  const {batchRetries, batchSigsSuccess, results} = doVerifyManySignatureSets(batchableSets, [], isSameMessage);
+
+  return {
+    workerId,
+    batchRetries,
+    batchSigsSuccess,
+    workerStartNs: startNs,
+    workerEndNs: process.hrtime.bigint(),
+    results,
+  };
+}
 
 function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const startNs = process.hrtime.bigint();
@@ -66,8 +88,8 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
 function doVerifyManySignatureSets(
   batchableSets: IndexedSignatureSets[],
-  nonBatchableSets: IndexedSignatureSets[] = [],
-  isSameMessage: boolean,
+  nonBatchableSets: IndexedSignatureSets[],
+  isSameMessage: boolean
 ): {results: WorkResult<boolean>[]; batchRetries: number; batchSigsSuccess: number} {
   const results: WorkResult<boolean>[] = [];
   let batchRetries = 0;
