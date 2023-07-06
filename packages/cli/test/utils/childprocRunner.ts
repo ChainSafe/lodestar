@@ -4,7 +4,6 @@ import {shell, ShellOpts} from "./shell.js";
 const {RUN_FROM_SRC} = process.env;
 
 const nodeJsBinaryPath = process.execPath;
-const tsNodeBinaryPath = esmRelativePathJoin("../../../../node_modules/.bin/ts-node");
 const cliSrcScriptPath = esmRelativePathJoin("../../src/index.ts");
 const cliLibScriptPath = esmRelativePathJoin("../../lib/index.js");
 
@@ -78,13 +77,13 @@ export function spawnCli(opts: SpawnCliOpts, lodestarArgs: string[]): child_proc
   const logPrefix = opts?.logPrefix ?? "";
 
   const command = RUN_FROM_SRC
-    ? // ts-node --esm cli.ts
-      tsNodeBinaryPath
+    ? // node --loader ts-node/esm cli.ts
+      nodeJsBinaryPath
     : // node cli.js
       nodeJsBinaryPath;
   const prefixArgs = RUN_FROM_SRC
-    ? // ts-node --esm cli.ts
-      ["--esm", cliSrcScriptPath, ...lodestarArgs]
+    ? // node --loader ts-node/esm cli.ts
+      ["--loader", "ts-node/esm", cliSrcScriptPath, ...lodestarArgs]
     : // node cli.js
       [cliLibScriptPath, ...lodestarArgs];
 
@@ -133,8 +132,8 @@ export function bufferStderr(proc: child_process.ChildProcessWithoutNullStreams)
 
 export function execCli(lodestarArgs: string[], opts?: ShellOpts): Promise<string> {
   const prefixArgs = RUN_FROM_SRC
-    ? // ts-node --esm cli.ts
-      [tsNodeBinaryPath, "--esm", cliSrcScriptPath]
+    ? // node --loader ts-node/esm cli.ts
+      [nodeJsBinaryPath, "--loader", "ts-node/esm", cliSrcScriptPath]
     : // node cli.js
       [nodeJsBinaryPath, cliLibScriptPath];
   return shell([...prefixArgs, ...lodestarArgs], {pipeToProcess: true, ...opts});
