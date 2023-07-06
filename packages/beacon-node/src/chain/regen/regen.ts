@@ -10,7 +10,6 @@ import {
 } from "@lodestar/state-transition";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {sleep} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {Metrics} from "../../metrics/index.js";
@@ -202,7 +201,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
         // Should those take a place in the cache?
 
         // this avoids keeping our node busy processing blocks
-        await sleep(0);
+        await new Promise((r) => setImmediate(r));
       } catch (e) {
         throw new RegenError({
           code: RegenErrorCode.STATE_TRANSITION_ERROR,
@@ -280,7 +279,7 @@ async function processSlotsToNearestCheckpoint(
     emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
 
     // this avoids keeping our node busy processing blocks
-    await sleep(0);
+    await new Promise((r) => setImmediate(r));
   }
   return postState;
 }

@@ -239,7 +239,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         .then((workerApi) => {
           workerDescriptor.status = {code: WorkerStatusCode.idle, workerApi};
           // Potentially run jobs that were queued before initialization of the first worker
-          setTimeout(this.runJob, 0);
+          setImmediate(this.runJob);
         })
         .catch((error: Error) => {
           workerDescriptor.status = {code: WorkerStatusCode.initializationError, error};
@@ -296,7 +296,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       // and to prevent large stacks since runJob may be called recursively.
       else {
         this.jobs.push(job);
-        setTimeout(this.runJob, 0);
+        setImmediate(this.runJob);
       }
     });
   }
@@ -396,7 +396,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.workersBusy--;
 
     // Potentially run a new job
-    setTimeout(this.runJob, 0);
+    setImmediate(this.runJob);
   };
 
   /**
@@ -426,7 +426,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     if (this.bufferedJobs) {
       this.jobs.push(...this.bufferedJobs.jobs);
       this.bufferedJobs = null;
-      setTimeout(this.runJob, 0);
+      setImmediate(this.runJob);
     }
   };
 

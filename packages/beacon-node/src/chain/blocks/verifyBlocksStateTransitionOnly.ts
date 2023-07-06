@@ -4,7 +4,7 @@ import {
   ExecutionPayloadStatus,
   DataAvailableStatus,
 } from "@lodestar/state-transition";
-import {ErrorAborted, Logger, sleep} from "@lodestar/utils";
+import {ErrorAborted, Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -86,7 +86,7 @@ export async function verifyBlocksStateTransitionOnly(
 
     // this avoids keeping our node busy processing blocks
     if (i < blocks.length - 1) {
-      await sleep(0);
+      await new Promise((r) => setImmediate(r));
     }
   }
 

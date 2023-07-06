@@ -269,7 +269,7 @@ export async function importBlock(
     // - Use block's syncAggregate
     if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
       // we want to import block asap so do this in the next event loop
-      setTimeout(() => {
+      setImmediate(() => {
         try {
           this.lightClientServer.onImportBlockHead(
             block.message as allForks.AllForksLightClient["BeaconBlock"],
@@ -279,7 +279,7 @@ export async function importBlock(
         } catch (e) {
           this.logger.verbose("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
         }
-      }, 0);
+      });
     }
   }
 
@@ -406,9 +406,9 @@ export async function importBlock(
 
   // Gossip blocks need to be imported as soon as possible, waiting attestations could be processed
   // in the next event loop. See https://github.com/ChainSafe/lodestar/issues/4789
-  setTimeout(() => {
+  setImmediate(() => {
     this.reprocessController.onBlockImported({slot: block.message.slot, root: blockRootHex}, advancedSlot);
-  }, 0);
+  });
 
   if (opts.seenTimestampSec !== undefined) {
     const recvToImportedBlock = Date.now() / 1000 - opts.seenTimestampSec;
