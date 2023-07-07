@@ -65,7 +65,10 @@ export const forkChoiceTest =
         });
 
         const controller = new AbortController();
-        const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {signal: controller.signal});
+        const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {
+          signal: controller.signal,
+          logger: testLogger("executionEngine"),
+        });
 
         const chain = new BeaconChain(
           {

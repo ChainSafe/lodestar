@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {fastify} from "fastify";
 import {ForkName} from "@lodestar/params";
+import {Logger} from "@lodestar/logger";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 import {IExecutionEngine, initializeExecutionEngine} from "../../../src/execution/index.js";
 import {
@@ -47,7 +48,7 @@ describe("ExecutionEngine / http", () => {
         retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
         retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
       },
-      {signal: controller.signal}
+      {signal: controller.signal, logger: console as unknown as Logger}
     );
   });
 
