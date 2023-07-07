@@ -1,5 +1,6 @@
 import {Root, RootHex, allForks, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
+import {Logger} from "@lodestar/logger";
 import {ErrorJsonRpcResponse, HttpRpcError, isFetchError} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {Metrics} from "../../metrics/index.js";
@@ -34,6 +35,7 @@ import {
 export type ExecutionEngineModules = {
   signal: AbortSignal;
   metrics?: Metrics | null;
+  logger: Logger;
 };
 
 export type ExecutionEngineHttpOpts = {
@@ -83,6 +85,7 @@ const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
  * https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/interop/specification.md
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
+  private logger: Logger;
   private state: ExecutionEngineState = ExecutionEngineState.OFFLINE;
   readonly payloadIdCache = new PayloadIdCache();
   /**
@@ -103,15 +106,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     );
   };
 
-  constructor(
-    private readonly rpc: IJsonRpcHttpClient,
-    {metrics, signal}: ExecutionEngineModules
-  ) {
+  constructor(private readonly rpc: IJsonRpcHttpClient, {metrics, signal, logger}: ExecutionEngineModules) {
     this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
       this.jobQueueProcessor,
       {maxLength: QUEUE_MAX_LENGTH, maxConcurrency: 1, noYieldIfOneItem: true, signal},
       metrics?.engineHttpProcessorQueue
     );
+    this.logger = logger;
   }
 
   /**
@@ -417,6 +418,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
   private async fetchAndUpdateEngineState(): Promise<void> {
     try {
+      const oldState = this.state;
       const response = await this.rpc.fetch<
         boolean | {startingBlock: string; currentBlock: string; highestBlock: string}
       >({
@@ -429,11 +431,17 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       } else {
         this.state = ExecutionEngineState.SYNCING;
       }
+
+      if (oldState === ExecutionEngineState.OFFLINE) {
+        this.logger.info("ExecutionEngine is back online");
+      }
     } catch (err) {
       if (isFetchError(err) && (err.code === "EACCES" || err.code === "ECONNRESET")) {
         this.state = ExecutionEngineState.AUTH_FAILED;
+        this.logger.error("ExecutionEngine authentication failed");
       } else if (isFetchError(err) && err.code === "ECONNREFUSED") {
         this.state = ExecutionEngineState.OFFLINE;
+        this.logger.error("ExecutionEngine went offline");
       } else {
         throw err;
       }
