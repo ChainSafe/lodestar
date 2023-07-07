@@ -154,7 +154,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
-    let engingRequest: EngineRequest;
+    let engineRequest: EngineRequest;
     if (ForkSeq[fork] >= ForkSeq.deneb) {
       if (versionedHashes === undefined) {
         throw Error(`versionedHashes required in notifyNewPayload for fork=${fork}`);
@@ -167,23 +167,23 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       const parentBeaconBlockRoot = serializeBeaconBlockRoot(parentBlockRoot);
 
       const method = "engine_newPayloadV3";
-      engingRequest = {
+      engineRequest = {
         method,
         params: [serializedExecutionPayload, serializedVersionedHashes, parentBeaconBlockRoot],
         methodOpts: notifyNewPayloadOpts,
       };
     } else {
       const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_newPayloadV2" : "engine_newPayloadV1";
-      engingRequest = {
+      engineRequest = {
         method,
         params: [serializedExecutionPayload],
         methodOpts: notifyNewPayloadOpts,
       };
     }
 
-    const {status, latestValidHash, validationError} = await (
-      this.rpcFetchQueue.push(engingRequest) as Promise<EngineApiRpcReturnTypes[typeof method]>
-    )
+    const {status, latestValidHash, validationError} = await this.queueRequestAndUpdateEngineState<
+      EngineApiRpcReturnTypes[typeof method]
+    >(engineRequest)
       // If there are errors by EL like connection refused, internal error, they need to be
       // treated separate from being INVALID. For now, just pass the error upstream.
       .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
@@ -273,11 +273,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const fcUReqOpts =
       payloadAttributes !== undefined ? forkchoiceUpdatedV1Opts : {...forkchoiceUpdatedV1Opts, retryAttempts: 1};
 
-    const request = this.rpcFetchQueue.push({
+    const request = this.queueRequestAndUpdateEngineState<EngineApiRpcReturnTypes[typeof method]>({
       method,
       params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, payloadAttributesRpc],
       methodOpts: fcUReqOpts,
-    }) as Promise<EngineApiRpcReturnTypes[typeof method]>;
+    });
 
     const response = await request;
     const {
@@ -335,7 +335,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         : ForkSeq[fork] >= ForkSeq.capella
         ? "engine_getPayloadV2"
         : "engine_getPayloadV1";
-    const payloadResponse = await this.requestAndUpdateState<
+    const payloadResponse = await this.requestAndUpdateEngineState<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >(
@@ -355,7 +355,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async getPayloadBodiesByHash(blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
     const method = "engine_getPayloadBodiesByHashV1";
     assertReqSizeLimit(blockHashes.length, 32);
-    const response = await this.requestAndUpdateState<
+    const response = await this.requestAndUpdateEngineState<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >({method, params: blockHashes});
@@ -370,7 +370,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     assertReqSizeLimit(blockCount, 32);
     const start = numToQuantity(startBlockNumber);
     const count = numToQuantity(blockCount);
-    const response = await this.requestAndUpdateState<
+    const response = await this.requestAndUpdateEngineState<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [start, count]});
@@ -381,22 +381,41 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return this.state;
   }
 
-  private async requestAndUpdateState<R, P>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
+  private queueRequestAndUpdateEngineState<R>(payload: EngineRequest): Promise<R> {
     try {
-      const response = await this.rpc.fetchWithRetries<R, P>(payload, opts);
-      if (this.state !== ExecutionEngineState.SYNCED) {
-        // Update the state of the execution engine in async to avoid blocking the request
-        void this.updateState();
-      }
-      return response;
+      return (this.rpcFetchQueue.push(payload) as Promise<R>).then((response) => {
+        if (this.state !== ExecutionEngineState.SYNCED) {
+          // Update the state of the execution engine in async to avoid blocking the request
+          void this.fetchAndUpdateEngineState();
+        }
+
+        return response;
+      });
     } catch (err) {
       // Update the state of the execution engine async to avoid blocking the request
-      void this.updateState();
+      void this.fetchAndUpdateEngineState();
       throw err;
     }
   }
 
-  private async updateState(): Promise<void> {
+  private async requestAndUpdateEngineState<R, P>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
+    try {
+      const response = await this.rpc.fetchWithRetries<R, P>(payload, opts);
+
+      if (this.state !== ExecutionEngineState.SYNCED) {
+        // Update the state of the execution engine in async to avoid blocking the request
+        void this.fetchAndUpdateEngineState();
+      }
+
+      return response;
+    } catch (err) {
+      // Update the state of the execution engine async to avoid blocking the request
+      void this.fetchAndUpdateEngineState();
+      throw err;
+    }
+  }
+
+  private async fetchAndUpdateEngineState(): Promise<void> {
     try {
       const response = await this.rpc.fetch<
         boolean | {startingBlock: string; currentBlock: string; highestBlock: string}
