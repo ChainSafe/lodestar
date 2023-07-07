@@ -5,6 +5,7 @@ import {Root, RootHex, allForks, capella, Wei} from "@lodestar/types";
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBody} from "./types.js";
+import {ExecutionEngineEventEmitter} from "./emitter.js";
 
 export {PayloadIdCache, PayloadId, WithdrawalV1};
 
@@ -87,6 +88,7 @@ export type VersionedHashes = Uint8Array[];
  * - Integrated code into the same binary
  */
 export interface IExecutionEngine {
+  emitter: ExecutionEngineEventEmitter;
   payloadIdCache: PayloadIdCache;
   /**
    * A state transition function which applies changes to the self.execution_state.

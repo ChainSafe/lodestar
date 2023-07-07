@@ -31,6 +31,7 @@ import {
   assertReqSizeLimit,
   deserializeExecutionPayloadBody,
 } from "./types.js";
+import {ExecutionEngineEvent, ExecutionEngineEventEmitter} from "./emitter.js";
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
@@ -85,6 +86,7 @@ const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
  * https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/interop/specification.md
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
+  readonly emitter = new ExecutionEngineEventEmitter();
   private logger: Logger;
   private state: ExecutionEngineState = ExecutionEngineState.OFFLINE;
   readonly payloadIdCache = new PayloadIdCache();
@@ -417,8 +419,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   private async fetchAndUpdateEngineState(): Promise<void> {
+    const oldState = this.state;
+
     try {
-      const oldState = this.state;
       const response = await this.rpc.fetch<
         boolean | {startingBlock: string; currentBlock: string; highestBlock: string}
       >({
@@ -441,10 +444,17 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         this.logger.error("ExecutionEngine authentication failed");
       } else if (isFetchError(err) && err.code === "ECONNREFUSED") {
         this.state = ExecutionEngineState.OFFLINE;
-        this.logger.error("ExecutionEngine went offline");
+
+        if (oldState !== ExecutionEngineState.OFFLINE) {
+          this.logger.error("ExecutionEngine went offline");
+        }
       } else {
         throw err;
       }
+    }
+
+    if (oldState !== this.state) {
+      this.emitter.emit(ExecutionEngineEvent.stateChange, oldState, this.state);
     }
   }
 }

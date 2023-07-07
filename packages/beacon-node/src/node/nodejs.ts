@@ -18,9 +18,11 @@ import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {createMetrics, Metrics, HttpMetricsServer, getHttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
-import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
+import {initializeExecutionEngine, initializeExecutionBuilder, ExecutionEngineState} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
 import {initCKZG, loadEthereumTrustedSetup, TrustedFileMode} from "../util/kzg.js";
+import {ExecutionEngineEvent} from "../execution/engine/emitter.js";
+import {ZERO_HASH_HEX} from "../constants/constants.js";
 import {IBeaconNodeOptions} from "./options.js";
 import {runNodeNotifier} from "./notifier.js";
 
@@ -196,6 +198,12 @@ export class BeaconNode {
         )
       : null;
 
+    const executionEngine = initializeExecutionEngine(opts.executionEngine, {
+      metrics,
+      signal,
+      logger: logger.child({module: LoggerModule.executionEngine}),
+    });
+
     const chain = new BeaconChain(opts.chain, {
       config,
       db,
@@ -210,14 +218,22 @@ export class BeaconNode {
         logger: logger.child({module: LoggerModule.eth1}),
         signal,
       }),
-      executionEngine: initializeExecutionEngine(opts.executionEngine, {
-        metrics,
-        signal,
-        logger: logger.child({module: LoggerModule.executionEngine}),
-      }),
+      executionEngine,
       executionBuilder: opts.executionBuilder.enabled
         ? initializeExecutionBuilder(opts.executionBuilder, config, metrics)
         : undefined,
+    });
+
+    executionEngine.emitter.addListener(ExecutionEngineEvent.stateChange, async (oldState, newState) => {
+      // When execution engine come online notify forkchoice of the current state
+      if (oldState === ExecutionEngineState.OFFLINE && newState !== ExecutionEngineState.AUTH_FAILED) {
+        const fork = config.getForkName(chain.forkChoice.getHead().slot);
+        const headBlockHash = chain.forkChoice.getHead().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+        const safeBlockHash = chain.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+        const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+
+        await executionEngine.notifyForkchoiceUpdate(fork, headBlockHash, safeBlockHash, finalizedBlockHash);
+      }
     });
 
     // Load persisted data from disk to in-memory caches
