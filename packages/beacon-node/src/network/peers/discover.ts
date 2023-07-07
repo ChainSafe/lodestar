@@ -51,6 +51,7 @@ enum DiscoveredPeerStatus {
   attempt_dial = "attempt_dial",
   cached = "cached",
   dropped = "dropped",
+  no_multiaddrs = "no_multiaddrs",
 }
 
 type UnixMs = number;
@@ -267,10 +268,17 @@ export class PeerDiscovery {
   }
 
   /**
-   * Progressively called by libp2p peer discovery as a result of any query.
+   * Progressively called by libp2p as a result of peer discovery or updates to its peer store
    */
   private onDiscoveredPeer = (evt: CustomEvent<PeerInfo>): void => {
     const {id, multiaddrs} = evt.detail;
+
+    // libp2p may send us PeerInfos without multiaddrs
+    if (multiaddrs.length === 0) {
+      this.metrics?.discovery.discoveredStatus.inc({status: DiscoveredPeerStatus.no_multiaddrs});
+      return;
+    }
+
     const attnets = zeroAttnets;
     const syncnets = zeroSyncnets;
     const status = this.handleDiscoveredPeer(id, multiaddrs[0], attnets, syncnets);
