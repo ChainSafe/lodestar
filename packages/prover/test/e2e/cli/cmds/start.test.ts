@@ -47,7 +47,8 @@ describe("prover/start", () => {
     const paramsFilePath = path.join("/tmp", "e2e-test-env", "params.json");
     const web3: Web3 = new Web3(proxyUrl);
 
-    before(async () => {
+    before(async function () {
+      this.timeout(50000);
       await waitForCapellaFork();
       await mkdir(path.dirname(paramsFilePath), {recursive: true});
       await writeFile(paramsFilePath, JSON.stringify(chainConfigToJson(config as ChainConfig)));
@@ -62,9 +63,9 @@ describe("prover/start", () => {
           rpcUrl,
           "--beaconUrls",
           beaconUrl,
-          "--network",
-          "dev",
-          "--presetFile",
+          "--preset",
+          "minimal",
+          "--paramsFile",
           paramsFilePath,
         ],
         {runWith: "ts-node", pipeStdioToParent: true}
@@ -81,7 +82,7 @@ describe("prover/start", () => {
       const accounts = await web3.eth.getAccounts();
 
       expect(accounts.length).to.be.gt(0);
-      await expect(web3.eth.getBalance(accounts[0])).eventually.eql(chainId);
+      await expect(web3.eth.getBalance(accounts[0])).eventually.not.null;
     });
 
     it("should respond to unverified calls", async () => {

@@ -8,12 +8,12 @@ export type GlobalArgs = {
   logLevel: string;
   presetFile?: string;
   preset: string;
+  paramsFile: string;
 };
 
 export type GlobalOptions = {
   logLevel: LogLevel;
-  network: NetworkName;
-};
+} & ({paramsFile: string; network?: never} | {network: NetworkName; paramsFile?: never});
 
 export const globalOptions: CliCommandOptions<GlobalArgs> = {
   network: {
@@ -23,6 +23,13 @@ export const globalOptions: CliCommandOptions<GlobalArgs> = {
       ...Object.keys(networksChainConfig), // Leave always as last network. The order matters for the --help printout
       "dev",
     ],
+    conflicts: ["paramsFile"],
+  },
+
+  paramsFile: {
+    description: "Network configuration file",
+    type: "string",
+    conflicts: ["network"],
   },
 
   logLevel: {
@@ -48,8 +55,15 @@ export const globalOptions: CliCommandOptions<GlobalArgs> = {
 
 export function parseGlobalArgs(args: GlobalArgs): GlobalOptions {
   // Remove undefined values to allow deepmerge to inject default values downstream
+  if (args.network) {
+    return {
+      network: args.network as NetworkName,
+      logLevel: args.logLevel as LogLevel,
+    };
+  }
+
   return {
-    network: args.network as NetworkName,
     logLevel: args.logLevel as LogLevel,
+    paramsFile: args.paramsFile,
   };
 }
