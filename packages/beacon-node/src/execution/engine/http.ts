@@ -389,14 +389,19 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       return (this.rpcFetchQueue.push(payload) as Promise<R>).then((response) => {
         if (this.state !== ExecutionEngineState.SYNCED) {
           // Update the state of the execution engine in async to avoid blocking the request
-          void this.fetchAndUpdateEngineState();
+          void this.fetchAndUpdateEngineState().catch((err) => {
+            this.logger.error("Error updating execution engine state", err);
+          });
         }
 
         return response;
       });
     } catch (err) {
       // Update the state of the execution engine async to avoid blocking the request
-      void this.fetchAndUpdateEngineState();
+      void this.fetchAndUpdateEngineState().catch((err) => {
+        this.logger.error("Error updating execution engine state", err);
+      });
+
       throw err;
     }
   }
