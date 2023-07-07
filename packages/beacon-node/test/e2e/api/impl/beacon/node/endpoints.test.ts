@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {Api, getClient} from "@lodestar/api/beacon";
+import {Api, getClient, routes} from "@lodestar/api/beacon";
 import {ApiError} from "@lodestar/api";
 import {LogLevel, testLogger} from "../../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
@@ -41,12 +41,18 @@ describe("beacon node api", function () {
     await bn.close();
   });
 
-  describe("getSyncingStatus", async () => {
+  describe.only("getSyncingStatus", () => {
     it("should return valid syncing status", async () => {
       const res = await client.node.getSyncingStatus();
       ApiError.assert(res);
 
-      expect(res.response.data).to.include.keys("headSlot", "syncDistance", "isSyncing", "isOptimistic", "elOffline");
+      expect(res.response.data).to.eql({
+        headSlot: "0",
+        syncDistance: "0",
+        isSyncing: false,
+        isOptimistic: false,
+        elOffline: true,
+      });
     });
 
     it("should return 'elOffline' as 'true' for default dev node", async () => {
@@ -64,7 +70,6 @@ describe("beacon node api", function () {
         options: {
           sync: {isSingleNode: true},
           network: {allowPublishToZeroPeers: true},
-          eth1: {enabled: true},
           executionEngine: {mode: "mock"},
           api: {
             rest: {
@@ -77,6 +82,16 @@ describe("beacon node api", function () {
         validatorCount,
         logger: testLogger("Node-A", {level: LogLevel.info}),
       });
+
+      // Wait for a block to be produced, so that node can have communication with execution engine
+      await new Promise((resolve) => {
+        bn.chain.emitter.on(routes.events.EventType.head, async (head) => {
+          if (head.slot > 0) {
+            resolve(head);
+          }
+        });
+      });
+
       const res = await client.node.getSyncingStatus();
       ApiError.assert(res);
 
