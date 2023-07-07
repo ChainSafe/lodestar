@@ -6,6 +6,7 @@ import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
+import {RpcPayload} from "../../eth1/interface.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -14,6 +15,7 @@ import {
   PayloadAttributes,
   BlobsBundle,
   VersionedHashes,
+  ExecutionEngineState,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
@@ -81,6 +83,7 @@ const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
  * https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/interop/specification.md
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
+  private state: ExecutionEngineState = ExecutionEngineState.OFFLINE;
   readonly payloadIdCache = new PayloadIdCache();
   /**
    * A queue to serialize the fcUs and newPayloads calls:
@@ -332,7 +335,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         : ForkSeq[fork] >= ForkSeq.capella
         ? "engine_getPayloadV2"
         : "engine_getPayloadV1";
-    const payloadResponse = await this.rpc.fetchWithRetries<
+    const payloadResponse = await this.requestAndUpdateState<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >(
@@ -352,13 +355,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async getPayloadBodiesByHash(blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
     const method = "engine_getPayloadBodiesByHashV1";
     assertReqSizeLimit(blockHashes.length, 32);
-    const response = await this.rpc.fetchWithRetries<
+    const response = await this.requestAndUpdateState<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({
-      method,
-      params: blockHashes,
-    });
+    >({method, params: blockHashes});
     return response.map(deserializeExecutionPayloadBody);
   }
 
@@ -370,26 +370,55 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     assertReqSizeLimit(blockCount, 32);
     const start = numToQuantity(startBlockNumber);
     const count = numToQuantity(blockCount);
-    const response = await this.rpc.fetchWithRetries<
+    const response = await this.requestAndUpdateState<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
-    >({
-      method,
-      params: [start, count],
-    });
+    >({method, params: [start, count]});
     return response.map(deserializeExecutionPayloadBody);
   }
 
-  async isOffline(): Promise<boolean> {
+  getState(): ExecutionEngineState {
+    return this.state;
+  }
+
+  private async requestAndUpdateState<R, P>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
     try {
-      await this.rpc.fetch({method: "eth_chainId", params: []}, {});
-    } catch (error) {
-      // If it's a fetch error
-      if (isFetchError(error) && error.code === "ECONNREFUSED") {
-        return true;
+      const response = await this.rpc.fetchWithRetries<R, P>(payload, opts);
+      if (this.state !== ExecutionEngineState.SYNCED) {
+        // Update the state of the execution engine in async to avoid blocking the request
+        void this.updateState();
+      }
+      return response;
+    } catch (err) {
+      // Update the state of the execution engine async to avoid blocking the request
+      void this.updateState();
+      throw err;
+    }
+  }
+
+  private async updateState(): Promise<void> {
+    try {
+      const response = await this.rpc.fetch<
+        boolean | {startingBlock: string; currentBlock: string; highestBlock: string}
+      >({
+        method: "eth_syncing",
+        params: [],
+      });
+
+      if (typeof response === "boolean" && response === false) {
+        this.state = ExecutionEngineState.SYNCED;
+      } else {
+        this.state = ExecutionEngineState.SYNCING;
+      }
+    } catch (err) {
+      if (isFetchError(err) && (err.code === "EACCES" || err.code === "ECONNRESET")) {
+        this.state = ExecutionEngineState.AUTH_FAILED;
+      } else if (isFetchError(err) && err.code === "ECONNREFUSED") {
+        this.state = ExecutionEngineState.OFFLINE;
+      } else {
+        throw err;
       }
     }
-    return false;
   }
 }
 

@@ -15,7 +15,7 @@ export type SyncingStatus = routes.node.SyncingStatus;
 export interface IBeaconSync {
   state: SyncState;
   close(): void;
-  getSyncStatus(): Promise<SyncingStatus>;
+  getSyncStatus(): SyncingStatus;
   isSynced(): boolean;
   isSyncing(): boolean;
   getSyncChainsDebugState(): SyncChainDebugState[];
