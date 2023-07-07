@@ -36,3 +36,28 @@ export type BlsWorkResult = {
   workerEndNs: bigint;
   results: WorkResult<boolean>[];
 };
+
+/**
+ * A job item we want to get a result for.
+ */
+export type JobItem<W = BlsWorkReq | SerializedSet, R = boolean> = {
+  resolve: (result: R | PromiseLike<R>) => void;
+  reject: (error?: Error) => void;
+  addedTimeMs: number;
+  workReq: W;
+};
+
+/**
+ * An item in the queue. Could be BlsWorkReq or SerializedSet[] of the same message.
+ */
+export type QueueItem = JobItem<BlsWorkReq> | JobItem<SerializedSet>[];
+
+export type Jobs =
+  | {
+      isSameMessageJobs: false;
+      jobs: JobItem<BlsWorkReq>[];
+    }
+  | {
+      isSameMessageJobs: true;
+      jobs: JobItem<SerializedSet>[];
+    };

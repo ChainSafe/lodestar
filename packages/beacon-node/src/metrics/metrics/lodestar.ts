@@ -303,6 +303,16 @@ export function createLodestarMetrics(
     },
 
     blsThreadPool: {
+      workerApiCalls: register.gauge<"api">({
+        name: "lodestar_bls_thread_pool_worker_api_calls_total",
+        help: "Total API calls to the BLS thread pool",
+        labelNames: ["api"],
+      }),
+      verifySignatureSetsSameSigningRootError: register.gauge<"error">({
+        name: "lodestar_bls_thread_pool_verify_signature_sets_same_signing_root_error_total",
+        help: "Total errors when verifying signature sets with the same signing root",
+        labelNames: ["error"],
+      }),
       jobsWorkerTime: register.gauge<"workerId">({
         name: "lodestar_bls_thread_pool_time_seconds_sum",
         help: "Total time spent verifying signature sets measured on the worker",

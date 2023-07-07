@@ -11,6 +11,32 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     this.metrics = metrics;
   }
 
+  async verifySignatureSetsSameSigningRoot(sets: ISignatureSet[]): Promise<boolean[]> {
+    // Count time after aggregating
+    const startNs = process.hrtime.bigint();
+    const isSameMessage = true;
+    const signatureSetsDeserialized = sets.map((set) => ({
+      publicKey: getAggregatedPubkey(set),
+      message: set.signingRoot.valueOf(),
+      signature: set.signature,
+    }));
+
+    const isAllValid = verifySignatureSetsMaybeBatch(signatureSetsDeserialized, isSameMessage);
+    let result: boolean[];
+    if (isAllValid) {
+      result = sets.map(() => true);
+    } else {
+      result = signatureSetsDeserialized.map((set) => verifySignatureSetsMaybeBatch([set]));
+    }
+
+    // Don't use a try/catch, only count run without exceptions
+    const endNs = process.hrtime.bigint();
+    const totalSec = Number(startNs - endNs) / 1e9;
+    this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.observe(totalSec);
+
+    return result;
+  }
+
   async verifySignatureSets(sets: ISignatureSet[]): Promise<boolean> {
     this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
 
@@ -29,7 +55,6 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     const endNs = process.hrtime.bigint();
     const totalSec = Number(startNs - endNs) / 1e9;
     this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.observe(totalSec);
-    this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.observe(totalSec / sets.length);
 
     return isValid;
   }

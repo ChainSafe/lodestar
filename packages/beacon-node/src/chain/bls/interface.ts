@@ -41,6 +41,17 @@ export interface IBlsVerifier {
    */
   verifySignatureSets(sets: ISignatureSet[], opts?: VerifySignatureOpts): Promise<boolean>;
 
+  /**
+   * Similar to verifySignatureSets but:
+   *   - all signatures have the same signing root
+   *   - return an array of boolean, each element indicates whether the corresponding signature set is valid
+   *   - only support `verifyOnMainThread` option.
+   */
+  verifySignatureSetsSameSigningRoot(
+    sets: ISignatureSet[],
+    opts?: Pick<VerifySignatureOpts, "verifyOnMainThread">
+  ): Promise<boolean[]>;
+
   /** For multithread pool awaits terminating all workers */
   close(): Promise<void>;
 
