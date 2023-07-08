@@ -40,9 +40,7 @@
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
-      "tags": [
-        "lodestar"
-      ],
+      "tags": ["lodestar"],
       "targetBlank": false,
       "title": "Lodestar dashboards",
       "tooltip": "",
@@ -1352,7 +1350,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (entrypoint) (\n  delta(lodestar_regen_fn_call_duration_sum[$rate_interval])\n)\n/\nsum by (entrypoint) (\n  delta(lodestar_regen_fn_call_duration_count[$rate_interval])\n)",
+          "expr": "sum by (entrypoint) (\n  rate(lodestar_regen_fn_call_duration_sum[$rate_interval])\n)\n/\nsum by (entrypoint) (\n  rate(lodestar_regen_fn_call_duration_count[$rate_interval])\n)",
           "interval": "",
           "legendFormat": "{{entrypoint}}",
           "refId": "A"
@@ -1425,7 +1423,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (caller) (\n  delta(lodestar_regen_fn_call_duration_sum[$rate_interval])\n)\n/\nsum by (caller) (\n  delta(lodestar_regen_fn_call_duration_count[$rate_interval])\n)",
+          "expr": "sum by (caller) (\n  rate(lodestar_regen_fn_call_duration_sum[$rate_interval])\n)\n/\nsum by (caller) (\n  rate(lodestar_regen_fn_call_duration_count[$rate_interval])\n)",
           "interval": "",
           "legendFormat": "{{caller}}",
           "refId": "A"
@@ -1500,7 +1498,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (entrypoint) (\n  delta(lodestar_regen_fn_queued_total[$rate_interval])\n)\n/\nsum by (entrypoint) (\n  delta(lodestar_regen_fn_call_total[$rate_interval])\n)",
+          "expr": "sum by (entrypoint) (\n  rate(lodestar_regen_fn_queued_total[$rate_interval])\n)\n/\nsum by (entrypoint) (\n  rate(lodestar_regen_fn_call_total[$rate_interval])\n)",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1650,7 +1648,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (caller) (\n  delta(lodestar_regen_fn_queued_total[$rate_interval])\n)\n/\nsum by (caller) (\n  delta(lodestar_regen_fn_call_total[$rate_interval])\n)",
+          "expr": "sum by (caller) (\n  rate(lodestar_regen_fn_queued_total[$rate_interval])\n)\n/\nsum by (caller) (\n  rate(lodestar_regen_fn_call_total[$rate_interval])\n)",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1956,7 +1954,7 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "delta(lodestar_regen_queue_dropped_jobs_total[$rate_interval])/(delta(lodestar_regen_queue_job_time_seconds_count[$rate_interval])+delta(lodestar_regen_queue_dropped_jobs_total[$rate_interval]))",
+          "expr": "rate(lodestar_regen_queue_dropped_jobs_total[$rate_interval])/(rate(lodestar_regen_queue_job_time_seconds_count[$rate_interval])+rate(lodestar_regen_queue_dropped_jobs_total[$rate_interval]))",
           "interval": "",
           "legendFormat": "regen_queue",
           "refId": "A"
@@ -2027,7 +2025,7 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "delta(lodestar_regen_queue_job_time_seconds_sum[$rate_interval])/delta(lodestar_regen_queue_job_time_seconds_count[$rate_interval])",
+          "expr": "rate(lodestar_regen_queue_job_time_seconds_sum[$rate_interval])/rate(lodestar_regen_queue_job_time_seconds_count[$rate_interval])",
           "interval": "",
           "legendFormat": "regen_queue",
           "refId": "A"
@@ -2098,7 +2096,7 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "delta(lodestar_regen_queue_job_wait_time_seconds_sum[$rate_interval])/delta(lodestar_regen_queue_job_wait_time_seconds_count[$rate_interval])",
+          "expr": "rate(lodestar_regen_queue_job_wait_time_seconds_sum[$rate_interval])/rate(lodestar_regen_queue_job_wait_time_seconds_count[$rate_interval])",
           "interval": "",
           "legendFormat": "regen_queue",
           "refId": "A"
@@ -2182,9 +2180,7 @@
   "refresh": "10s",
   "schemaVersion": 35,
   "style": "dark",
-  "tags": [
-    "lodestar"
-  ],
+  "tags": ["lodestar"],
   "templating": {
     "list": [
       {
@@ -2306,18 +2302,7 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "10s",
-      "30s",
-      "1m",
-      "5m",
-      "15m",
-      "30m",
-      "1h",
-      "2h",
-      "1d"
-    ]
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
   },
   "timezone": "utc",
   "title": "Lodestar - state cache + regen",

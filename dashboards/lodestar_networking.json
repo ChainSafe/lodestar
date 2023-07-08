@@ -41,9 +41,7 @@
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
-      "tags": [
-        "lodestar"
-      ],
+      "tags": ["lodestar"],
       "targetBlank": false,
       "title": "Lodestar dashboards",
       "tooltip": "",
@@ -527,9 +525,7 @@
         "minVizWidth": 0,
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
@@ -581,9 +577,7 @@
         "minVizWidth": 0,
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
@@ -868,7 +862,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "delta(lodestar_peer_goodbye_received_total[$rate_interval])>0",
+          "expr": "rate(lodestar_peer_goodbye_received_total[$rate_interval])>0",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1041,7 +1035,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "delta(lodestar_peer_goodbye_sent_total[$rate_interval])>0",
+          "expr": "rate(lodestar_peer_goodbye_sent_total[$rate_interval])>0",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1836,10 +1830,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "increase(lodestar_peers_requested_total_to_connect[$rate_interval])",
+          "expr": "60*rate(lodestar_peers_requested_total_to_connect[$rate_interval])",
           "interval": "",
           "legendFormat": "to connect",
+          "range": true,
           "refId": "A"
         },
         {
@@ -1847,17 +1843,19 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "increase(lodestar_peers_requested_total_to_disconnect[$rate_interval])",
+          "expr": "60*rate(lodestar_peers_requested_total_to_disconnect[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "to disconnect {{reason}}",
+          "range": true,
           "refId": "B"
         }
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Requested peers to connect and disconnect",
+      "title": "Requested peers to connect and disconnect (rate / minute)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1942,16 +1940,18 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "increase(lodestar_peers_requested_total_subnets_to_query[$rate_interval])",
+          "expr": "60*rate(lodestar_peers_requested_total_subnets_to_query[$rate_interval])",
           "interval": "",
           "legendFormat": "{{type}}",
+          "range": true,
           "refId": "A"
         }
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Requested subnets to query",
+      "title": "Requested subnets to query (rate / min)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2036,16 +2036,18 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "increase(lodestar_peers_requested_total_subnets_peers_count[$rate_interval])",
+          "expr": "60*rate(lodestar_peers_requested_total_subnets_peers_count[$rate_interval])",
           "interval": "",
           "legendFormat": "{{type}}",
+          "range": true,
           "refId": "A"
         }
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Requested total peers in subnets",
+      "title": "Requested total peers in subnets (rate / min)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2424,7 +2426,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "delta(lodestar_gossip_validation_queue_dropped_jobs_total[$rate_interval])/(delta(lodestar_gossip_validation_queue_job_time_seconds_count[$rate_interval])+delta(lodestar_gossip_validation_queue_dropped_jobs_total[$rate_interval]))",
+          "expr": "rate(lodestar_gossip_validation_queue_dropped_jobs_total[$rate_interval])/(rate(lodestar_gossip_validation_queue_job_time_seconds_count[$rate_interval])+rate(lodestar_gossip_validation_queue_dropped_jobs_total[$rate_interval]))",
           "interval": "",
           "legendFormat": "{{topic}}",
           "refId": "A"
@@ -2768,7 +2770,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "delta(lodestar_gossip_block_elapsed_time_till_received_sum[$rate_interval])\n/\ndelta(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval])",
+          "expr": "rate(lodestar_gossip_block_elapsed_time_till_received_sum[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval])",
           "interval": "",
           "legendFormat": "till received",
           "refId": "A"
@@ -2779,7 +2781,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "delta(lodestar_gossip_block_elapsed_time_till_processed_sum[$rate_interval])\n/\ndelta(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval])",
+          "expr": "rate(lodestar_gossip_block_elapsed_time_till_processed_sum[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "till processed",
@@ -2791,7 +2793,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "delta(lodestar_gossip_block_elapsed_time_till_become_head_sum[$rate_interval])\n/\ndelta(lodestar_gossip_block_elapsed_time_till_become_head_count[$rate_interval])",
+          "expr": "rate(lodestar_gossip_block_elapsed_time_till_become_head_sum[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_become_head_count[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "till become head",
@@ -2863,9 +2865,7 @@
               "id": "byNames",
               "options": {
                 "mode": "exclude",
-                "names": [
-                  "execute calls"
-                ],
+                "names": ["execute calls"],
                 "prefix": "All except:",
                 "readOnly": true
               }
@@ -3486,9 +3486,7 @@
               "id": "byNames",
               "options": {
                 "mode": "exclude",
-                "names": [
-                  "GOSSIP_ERROR_PAST_SLOT"
-                ],
+                "names": ["GOSSIP_ERROR_PAST_SLOT"],
                 "prefix": "All except:",
                 "readOnly": true
               }
@@ -4367,9 +4365,7 @@
               "id": "byNames",
               "options": {
                 "mode": "exclude",
-                "names": [
-                  "GOSSIP_ERROR_PAST_SLOT"
-                ],
+                "names": ["GOSSIP_ERROR_PAST_SLOT"],
                 "prefix": "All except:",
                 "readOnly": true
               }
@@ -4760,7 +4756,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "delta(beacon_reqresp_incoming_requests_error_total[$rate_interval])/(delta(beacon_reqresp_incoming_requests_total[$rate_interval])>0)",
+          "expr": "rate(beacon_reqresp_incoming_requests_error_total[$rate_interval])/(rate(beacon_reqresp_incoming_requests_total[$rate_interval])>0)",
           "interval": "",
           "legendFormat": "{{method}}",
           "refId": "A"
@@ -4841,7 +4837,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "delta(beacon_reqresp_outgoing_requests_error_total[$rate_interval])/(delta(beacon_reqresp_outgoing_requests_total[$rate_interval]) > 0)",
+          "expr": "rate(beacon_reqresp_outgoing_requests_error_total[$rate_interval])/(rate(beacon_reqresp_outgoing_requests_total[$rate_interval]) > 0)",
           "interval": "",
           "legendFormat": "{{method}}",
           "refId": "A"
@@ -5344,9 +5340,7 @@
   "refresh": "10s",
   "schemaVersion": 37,
   "style": "dark",
-  "tags": [
-    "lodestar"
-  ],
+  "tags": ["lodestar"],
   "templating": {
     "list": [
       {
@@ -5468,18 +5462,7 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "10s",
-      "30s",
-      "1m",
-      "5m",
-      "15m",
-      "30m",
-      "1h",
-      "2h",
-      "1d"
-    ]
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
   },
   "timezone": "utc",
   "title": "Lodestar - networking",

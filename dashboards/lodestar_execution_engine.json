@@ -41,9 +41,7 @@
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
-      "tags": [
-        "lodestar"
-      ],
+      "tags": ["lodestar"],
       "targetBlank": false,
       "title": "Lodestar dashboards",
       "tooltip": "",
@@ -319,7 +317,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "delta(lodestar_engine_http_processor_queue_job_time_seconds_sum[$rate_interval])/delta(lodestar_engine_http_processor_queue_job_time_seconds_count[$rate_interval])",
+          "expr": "rate(lodestar_engine_http_processor_queue_job_time_seconds_sum[$rate_interval])/rate(lodestar_engine_http_processor_queue_job_time_seconds_count[$rate_interval])",
           "instant": false,
           "interval": "",
           "legendFormat": "engine_processor",
@@ -403,7 +401,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "delta(lodestar_engine_http_processor_queue_dropped_jobs_total[$rate_interval])/(delta(lodestar_engine_http_processor_queue_job_time_seconds_count[$rate_interval])+delta(lodestar_engine_http_processor_queue_dropped_jobs_total[$rate_interval]))",
+          "expr": "rate(lodestar_engine_http_processor_queue_dropped_jobs_total[$rate_interval])/(rate(lodestar_engine_http_processor_queue_job_time_seconds_count[$rate_interval])+rate(lodestar_engine_http_processor_queue_dropped_jobs_total[$rate_interval]))",
           "instant": false,
           "interval": "",
           "legendFormat": "engine_processor",
@@ -487,7 +485,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "delta(lodestar_engine_http_processor_queue_job_wait_time_seconds_sum[$rate_interval])/delta(lodestar_engine_http_processor_queue_job_wait_time_seconds_count[$rate_interval])",
+          "expr": "rate(lodestar_engine_http_processor_queue_job_wait_time_seconds_sum[$rate_interval])/rate(lodestar_engine_http_processor_queue_job_wait_time_seconds_count[$rate_interval])",
           "instant": false,
           "interval": "",
           "legendFormat": "engine_processor",
@@ -716,9 +714,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1310,9 +1306,7 @@
               "id": "byNames",
               "options": {
                 "mode": "exclude",
-                "names": [
-                  "0.9999"
-                ],
+                "names": ["0.9999"],
                 "prefix": "All except:",
                 "readOnly": true
               }
@@ -1415,9 +1409,7 @@
               "id": "byNames",
               "options": {
                 "mode": "exclude",
-                "names": [
-                  "0.9999"
-                ],
+                "names": ["0.9999"],
                 "prefix": "All except:",
                 "readOnly": true
               }
@@ -1520,9 +1512,7 @@
               "id": "byNames",
               "options": {
                 "mode": "exclude",
-                "names": [
-                  "0.9999"
-                ],
+                "names": ["0.9999"],
                 "prefix": "All except:",
                 "readOnly": true
               }
@@ -1747,9 +1737,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1797,9 +1785,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1849,9 +1835,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1901,9 +1885,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "/^Time$/",
           "values": false
         },
@@ -2477,9 +2459,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
@@ -2531,9 +2511,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2587,9 +2565,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2642,9 +2618,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2694,9 +2668,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
@@ -2748,9 +2720,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2803,9 +2773,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2855,9 +2823,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
@@ -2906,9 +2872,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
@@ -2958,9 +2922,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
@@ -3009,9 +2971,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
@@ -3060,9 +3020,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
@@ -3114,9 +3072,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -3324,9 +3280,7 @@
   "refresh": "10s",
   "schemaVersion": 37,
   "style": "dark",
-  "tags": [
-    "lodestar"
-  ],
+  "tags": ["lodestar"],
   "templating": {
     "list": [
       {
@@ -3448,18 +3402,7 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "10s",
-      "30s",
-      "1m",
-      "5m",
-      "15m",
-      "30m",
-      "1h",
-      "2h",
-      "1d"
-    ]
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
   },
   "timezone": "utc",
   "title": "Lodestar - execution engine",

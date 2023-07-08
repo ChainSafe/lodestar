@@ -327,6 +327,14 @@ function assertPanels(panels) {
         // Force usage of interval variable
         if (target.expr) {
           target.expr.replace(/\$__rate_interval/g, `$${variableNameRateInterval}`);
+
+          // ban use of delta and increase functions
+          if (target.expr.includes("delta(")) {
+            throw Error(`promql function 'delta' is not allowed, use 'rate' instead: ${target.expr}`);
+          }
+          if (target.expr.includes("increase(")) {
+            throw Error(`promql function 'increase' is not allowed, use 'rate' instead: ${target.expr}`);
+          }
         }
       }
     }
