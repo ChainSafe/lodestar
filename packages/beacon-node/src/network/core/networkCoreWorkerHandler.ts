@@ -107,7 +107,10 @@ export class WorkerNetworkCore implements INetworkCore {
       loggerOpts: modules.logger.toOpts(),
     };
 
-    const worker = new Worker("./networkCoreWorker.js", {workerData, resourceLimits: {maxYoungGenerationSizeMb: 32}} as ConstructorParameters<typeof Worker>[1]);
+    const worker = new Worker("./networkCoreWorker.js", {
+      workerData,
+      resourceLimits: {maxYoungGenerationSizeMb: 64},
+    } as ConstructorParameters<typeof Worker>[1]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const workerApi = (await spawn<any>(worker, {
