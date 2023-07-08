@@ -44,8 +44,15 @@ no-console
  * @property {boolean} [collapsed]
  * @property {string} title
  * @property {Datasource} [datasource]
+ * @property {FieldConfig} [fieldConfig]
  * @property {Target[]} [targets]
  * @property {Panel[]} [panels]
+ *
+ * @typedef {Object} FieldConfig
+ * @property {FieldConfigDefaults} [defaults]
+ *
+ * @typedef {Object} FieldConfigDefaults
+ * @property {any} [thresholds]
  *
  * @typedef {Object} Target
  * @property {Datasource} [datasource]
@@ -322,6 +329,13 @@ function assertPanels(panels) {
           target.expr.replace(/\$__rate_interval/g, `$${variableNameRateInterval}`);
         }
       }
+    }
+
+    // Drop threshold defaults at `fieldConfig.defaults.thresholds`
+    // They are a source of diffs constant since consencutive exports assign null values
+    // while other don't. Since we do not plan to add default thresholds, drop for now
+    if (panel.fieldConfig?.defaults?.thresholds) {
+      delete panel.fieldConfig?.defaults?.thresholds;
     }
 
     // Recursively check nested panels
