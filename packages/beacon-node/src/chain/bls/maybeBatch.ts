@@ -19,9 +19,8 @@ export function verifySignatureSetsMaybeBatch(sets: SignatureSetDeserialized[], 
       // Consumers need to make sure that all sets have the same message
       const aggregatedPubkey = bls.PublicKey.aggregate(sets.map((set) => set.publicKey));
       const aggregatedSignature = bls.Signature.aggregate(
-        // As of Jul 2023 we could skip the signature validation here, no attack scenario found
-        // however this does not have the same security guarantee as the regular verify
-        sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, false))
+        // true = validate signature
+        sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, true))
       );
       return aggregatedSignature.verify(aggregatedPubkey, sets[0].message);
     }
