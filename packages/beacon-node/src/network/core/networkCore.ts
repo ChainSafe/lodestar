@@ -256,11 +256,13 @@ export class NetworkCore implements INetworkCore {
 
     this.clock.off(ClockEvent.epoch, this.onEpoch);
 
+    // Must close peer manager before disconnecting peers to
+    // prevent registering newly discovered peers afterwards
+    await this.peerManager.close();
+    this.logger.debug("network peerManager closed");
     // Must goodbye and disconnect before stopping libp2p
     await this.peerManager.goodbyeAndDisconnectAllPeers();
     this.logger.debug("network sent goodbye to all peers");
-    await this.peerManager.close();
-    this.logger.debug("network peerManager closed");
     await this.gossip.stop();
     this.logger.debug("network gossip closed");
     await this.reqResp.stop();
