@@ -1,4 +1,4 @@
-import {allForks} from "@lodestar/types";
+import {allForks, isBlindedSignedBeaconBlock} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {blockToHeader} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
@@ -9,11 +9,19 @@ import {rootHexRegex} from "../../../../eth1/provider/utils.js";
 
 export function toBeaconHeaderResponse(
   config: ChainForkConfig,
-  block: allForks.SignedBeaconBlock,
+  block: allForks.FullOrBlindedSignedBeaconBlock,
   canonical = false
 ): routes.beacon.BlockHeaderResponse {
+  const root = isBlindedSignedBeaconBlock(block)
+    ? config
+        .getBlindedForkTypes(block.message.slot)
+        .BeaconBlock.hashTreeRoot((block as allForks.SignedBlindedBeaconBlock).message)
+    : config
+        .getForkTypes((block as allForks.SignedBeaconBlock).message.slot)
+        .BeaconBlock.hashTreeRoot((block as allForks.SignedBeaconBlock).message);
+
   return {
-    root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
+    root,
     canonical,
     header: {
       message: blockToHeader(config, block.message),
