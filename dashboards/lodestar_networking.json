@@ -1861,7 +1861,7 @@
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Requested peers to connect and disconnect (rate / minute)",
+      "title": "Requested peers to connect and disconnect (rate / min)",
       "tooltip": {
         "shared": true,
         "sort": 0,
