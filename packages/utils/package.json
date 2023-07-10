@@ -42,8 +42,7 @@
     "bigint-buffer": "^1.1.5",
     "case": "^1.6.3",
     "chalk": "^5.2.0",
-    "js-yaml": "^4.1.0",
-    "winston": "^3.8.2"
+    "js-yaml": "^4.1.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.5",
