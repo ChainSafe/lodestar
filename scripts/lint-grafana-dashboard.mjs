@@ -330,8 +330,8 @@ function assertPanels(panels) {
           target.expr.replace(/\$__rate_interval/g, `$${variableNameRateInterval}`);
 
           // Ensure to always use variables to match job names
-          target.expr = target.expr.replace(/job="beacon"/g, 'job=~"$beacon_job|beacon"');
-          target.expr = target.expr.replace(/job="validator"/g, 'job=~"$validator_job|validator"');
+          target.expr.replace(/job="beacon"/g, 'job=~"$beacon_job|beacon"');
+          target.expr.replace(/job="validator"/g, 'job=~"$validator_job|validator"');
 
           // ban use of delta and increase functions
           if (target.expr.includes("delta(")) {
