@@ -7,9 +7,9 @@ import {Metrics} from "../metrics.js";
 
 /**
  * URLs have a limitation on size, adding an unbounded num of pubkeys will break the request.
- * For reasoning on the specific number see: https://github.com/ChainSafe/lodestar/pull/2730#issuecomment-866749083
+ * For reasoning on the specific number see: https://github.com/ethereum/beacon-APIs/pull/328
  */
-const PUBKEYS_PER_REQUEST = 10;
+const PUBKEYS_PER_REQUEST = 64;
 
 // To assist with readability
 type PubkeyHex = string;
