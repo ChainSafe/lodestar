@@ -1881,7 +1881,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "builder",
-          "expr": "rate(discv5_worker_nodejs_gc_duration_seconds_sum[$__rate_interval])",
+          "expr": "rate(discv5_worker_nodejs_gc_duration_seconds_sum[$rate_interval])",
           "legendFormat": "{{kind}}",
           "range": true,
           "refId": "A"

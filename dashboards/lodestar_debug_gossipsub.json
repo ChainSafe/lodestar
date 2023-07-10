@@ -5727,7 +5727,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "1 - sum(rate(gossipsub_iwant_promise_delivery_seconds_count[$__rate_interval])) / sum(rate(gossipsub_iwant_promise_sent_total[$__rate_interval]))",
+          "expr": "1 - sum(rate(gossipsub_iwant_promise_delivery_seconds_count[$rate_interval])) / sum(rate(gossipsub_iwant_promise_sent_total[$rate_interval]))",
           "hide": false,
           "interval": "",
           "legendFormat": "never delivered",

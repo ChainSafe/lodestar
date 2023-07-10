@@ -396,7 +396,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(process_cpu_seconds_total[$__rate_interval])",
+          "expr": "rate(process_cpu_seconds_total[$rate_interval])",
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
@@ -660,7 +660,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (job) (\n  rate(nodejs_gc_pause_seconds_total[$__rate_interval])\n)",
+          "expr": "sum by (job) (\n  rate(nodejs_gc_pause_seconds_total[$rate_interval])\n)",
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
