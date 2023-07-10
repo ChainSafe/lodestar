@@ -941,7 +941,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "nodejs_eventloop_lag_seconds{job=\"beacon\"}",
+          "expr": "nodejs_eventloop_lag_seconds{job=~\"$beacon_job|beacon\"}",
           "interval": "",
           "legendFormat": "main_thread",
           "range": true,
