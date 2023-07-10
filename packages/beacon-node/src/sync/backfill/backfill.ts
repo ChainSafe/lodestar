@@ -94,7 +94,7 @@ type BackfillSyncEmitter = StrictEventEmitter<EventEmitter, BackfillSyncEvents>;
  */
 type BackFillSyncAnchor =
   | {
-      anchorBlock: allForks.SignedBeaconBlock;
+      anchorBlock: allForks.FullOrBlindedSignedBeaconBlock;
       anchorBlockRoot: Root;
       anchorSlot: Slot;
       lastBackSyncedBlock: BackfillBlock;

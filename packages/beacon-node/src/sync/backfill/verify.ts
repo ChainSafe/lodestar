@@ -1,6 +1,6 @@
 import {CachedBeaconStateAllForks, ISignatureSet, getBlockProposerSignatureSet} from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
-import {allForks, Root, allForks as allForkTypes, ssz, Slot} from "@lodestar/types";
+import {allForks, Root, allForks as allForkTypes, ssz, Slot, isBlindedSignedBeaconBlock} from "@lodestar/types";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {IBlsVerifier} from "../../chain/bls/index.js";
 import {WithBytes} from "../../network/interface.js";
@@ -11,23 +11,29 @@ export type BackfillBlockHeader = {
   root: Root;
 };
 
-export type BackfillBlock = BackfillBlockHeader & {block: allForks.SignedBeaconBlock};
+export type BackfillBlock = BackfillBlockHeader & {block: allForks.FullOrBlindedSignedBeaconBlock};
 
 export function verifyBlockSequence(
   config: BeaconConfig,
-  blocks: WithBytes<allForkTypes.SignedBeaconBlock>[],
+  blocks: WithBytes<allForkTypes.FullOrBlindedSignedBeaconBlock>[],
   anchorRoot: Root
 ): {
   nextAnchor: BackfillBlock | null;
-  verifiedBlocks: WithBytes<allForkTypes.SignedBeaconBlock>[];
+  verifiedBlocks: WithBytes<allForkTypes.FullOrBlindedSignedBeaconBlock>[];
   error?: BackfillSyncErrorCode.NOT_LINEAR;
 } {
   let nextRoot: Root = anchorRoot;
   let nextAnchor: BackfillBlock | null = null;
 
-  const verifiedBlocks: WithBytes<allForkTypes.SignedBeaconBlock>[] = [];
+  const verifiedBlocks: WithBytes<allForkTypes.FullOrBlindedSignedBeaconBlock>[] = [];
   for (const block of blocks.reverse()) {
-    const blockRoot = config.getForkTypes(block.data.message.slot).BeaconBlock.hashTreeRoot(block.data.message);
+    const blockRoot = isBlindedSignedBeaconBlock(block.data)
+      ? config
+          .getBlindedForkTypes(block.data.message.slot)
+          .BeaconBlock.hashTreeRoot((block.data as allForks.SignedBlindedBeaconBlock).message)
+      : config
+          .getForkTypes((block.data as allForks.SignedBeaconBlock).message.slot)
+          .BeaconBlock.hashTreeRoot((block.data as allForks.SignedBeaconBlock).message);
     if (!ssz.Root.equals(blockRoot, nextRoot)) {
       if (ssz.Root.equals(nextRoot, anchorRoot)) {
         throw new BackfillSyncError({code: BackfillSyncErrorCode.NOT_ANCHORED});
@@ -44,7 +50,7 @@ export function verifyBlockSequence(
 export async function verifyBlockProposerSignature(
   bls: IBlsVerifier,
   state: CachedBeaconStateAllForks,
-  blocks: WithBytes<allForkTypes.SignedBeaconBlock>[]
+  blocks: WithBytes<allForkTypes.FullOrBlindedSignedBeaconBlock>[]
 ): Promise<void> {
   if (blocks.length === 1 && blocks[0].data.message.slot === GENESIS_SLOT) return;
   const signatures = blocks.reduce((sigs: ISignatureSet[], block) => {
