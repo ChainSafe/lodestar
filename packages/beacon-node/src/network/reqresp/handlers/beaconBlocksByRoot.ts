@@ -17,12 +17,12 @@ export async function* onBeaconBlocksByRoot(
 
     // finalized block has summary in forkchoice but it stays in blockArchive db
     if (summary) {
-      blockBytes = await db.block.getBinary(root);
+      blockBytes = await db.block.getFullBinary(root);
     }
 
     let slot: Slot | undefined = undefined;
     if (!blockBytes) {
-      const blockEntry = await db.blockArchive.getBinaryEntryByRoot(root);
+      const blockEntry = await db.blockArchive.getFullBinaryByRoot(root);
       if (blockEntry) {
         slot = blockEntry.key;
         blockBytes = blockEntry.value;

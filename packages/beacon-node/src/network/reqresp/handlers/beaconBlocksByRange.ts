@@ -12,19 +12,13 @@ export function onBeaconBlocksByRange(
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
-  return onBlocksOrBlobSidecarsByRange(request, chain, {
-    finalized: db.blockArchive,
-    unfinalized: db.block,
-  });
+  return onBlocksOrBlobSidecarsByRange(request, chain, db);
 }
 
 export async function* onBlocksOrBlobSidecarsByRange(
   request: phase0.BeaconBlocksByRangeRequest,
   chain: IBeaconChain,
-  db: {
-    finalized: Pick<IBeaconDb["blockArchive"], "binaryEntriesStream" | "decodeKey">;
-    unfinalized: Pick<IBeaconDb["block"], "getBinary">;
-  }
+  db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
   const {startSlot, count} = validateBeaconBlocksByRangeRequest(request);
   const endSlot = startSlot + count;
@@ -41,10 +35,10 @@ export async function* onBlocksOrBlobSidecarsByRange(
 
   if (startSlot <= finalizedSlot) {
     // Chain of blobs won't change
-    for await (const {key, value} of db.finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
+    for await (const {key, value} of db.blockArchive.binaryFullEntriesStream({gte: startSlot, lt: endSlot})) {
       yield {
         data: value,
-        fork: chain.config.getForkName(db.finalized.decodeKey(key)),
+        fork: chain.config.getForkName(db.blockArchive.decodeKey(key)),
       };
     }
   }
@@ -68,7 +62,7 @@ export async function* onBlocksOrBlobSidecarsByRange(
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
-        const blockBytes = await db.unfinalized.getBinary(fromHex(block.blockRoot));
+        const blockBytes = await db.block.getFullBinary(fromHex(block.blockRoot));
         if (!blockBytes) {
           // Handle the same to onBeaconBlocksByRange
           throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
