@@ -16,11 +16,6 @@ export function repoRootPath(fileDirPath: string): string {
 }
 
 /**
- * Path to the ts-node binary
- */
-export const tsNodeBinaryPath = repoRootPath("node_modules/.bin/ts-node");
-
-/**
  * Path to the node binary
  */
 export const nodeJsBinaryPath = "node";

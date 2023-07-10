@@ -1,7 +1,7 @@
 import childProcess from "node:child_process";
 import type {Argv} from "yargs";
 import {wrapTimeout} from "./timeout.js";
-import {nodeJsBinaryPath, repoRootPath, tsNodeBinaryPath} from "./path.js";
+import {nodeJsBinaryPath, repoRootPath} from "./path.js";
 import {
   ExecChildProcessOptions,
   SpawnChildProcessOptions,
@@ -53,17 +53,12 @@ export function execCliCommand(
   args: string[],
   opts?: ExecChildProcessOptions & {runWith?: "node" | "ts-node"}
 ): Promise<string> {
-  const commandPrefixed =
-    opts?.runWith === "ts-node"
-      ? // ts-node --esm cli.ts
-        tsNodeBinaryPath
-      : // node cli.js
-        nodeJsBinaryPath;
+  const commandPrefixed = nodeJsBinaryPath;
 
   const argsPrefixed =
     opts?.runWith === "ts-node"
-      ? // ts-node --esm cli.ts
-        ["--esm", repoRootPath(command), ...args]
+      ? // node --loader ts-node/esm cli.ts
+        ["--loader", "ts-node/esm", repoRootPath(command), ...args]
       : // node cli.js
         [repoRootPath(command), ...args];
 
@@ -83,17 +78,12 @@ export async function spawnCliCommand(
   args: string[],
   opts?: SpawnChildProcessOptions & {runWith?: "node" | "ts-node"}
 ): Promise<childProcess.ChildProcessWithoutNullStreams> {
-  const commandPrefixed =
-    opts?.runWith === "ts-node"
-      ? // ts-node --esm cli.ts
-        tsNodeBinaryPath
-      : // node cli.js
-        nodeJsBinaryPath;
+  const commandPrefixed = nodeJsBinaryPath;
 
   const argsPrefixed =
     opts?.runWith === "ts-node"
-      ? // ts-node --esm cli.ts
-        ["--esm", repoRootPath(command), ...args]
+      ? // node --loader ts-node/esm cli.ts
+        ["--loader", "ts-node/esm", repoRootPath(command), ...args]
       : // node cli.js
         [repoRootPath(command), ...args];
 
