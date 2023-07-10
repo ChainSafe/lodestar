@@ -430,14 +430,17 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getCanonicalBlockAtSlot(
-    slot: Slot
-  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null> {
+    slot: Slot,
+    fullBlock = false
+  ): Promise<{block: allForks.FullOrBlindedSignedBeaconBlock; executionOptimistic: boolean} | null> {
     const finalizedBlock = this.forkChoice.getFinalizedBlock();
     if (slot > finalizedBlock.slot) {
       // Unfinalized slot, attempt to find in fork-choice
       const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
       if (block) {
-        const data = await this.db.block.get(fromHexString(block.blockRoot));
+        const data = fullBlock
+          ? await this.db.block.getFull(fromHexString(block.blockRoot))
+          : await this.db.block.get(fromHexString(block.blockRoot));
         if (data) {
           return {block: data, executionOptimistic: isOptimisticBlock(block)};
         }
@@ -447,16 +450,19 @@ export class BeaconChain implements IBeaconChain {
       // TODO: Add a lock to the archiver to have determinstic behaviour on where are blocks
     }
 
-    const data = await this.db.blockArchive.get(slot);
+    const data = fullBlock ? await this.db.blockArchive.getFull(slot) : await this.db.blockArchive.get(slot);
     return data && {block: data, executionOptimistic: false};
   }
 
   async getBlockByRoot(
-    root: string
-  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null> {
+    root: string,
+    fullBlock = false
+  ): Promise<{block: allForks.FullOrBlindedSignedBeaconBlock; executionOptimistic: boolean} | null> {
     const block = this.forkChoice.getBlockHex(root);
     if (block) {
-      const data = await this.db.block.get(fromHexString(root));
+      const data = fullBlock
+        ? await this.db.block.getFull(fromHexString(block.blockRoot))
+        : await this.db.block.get(fromHexString(block.blockRoot));
       if (data) {
         return {block: data, executionOptimistic: isOptimisticBlock(block)};
       }
@@ -464,7 +470,9 @@ export class BeaconChain implements IBeaconChain {
       // TODO: Add a lock to the archiver to have determinstic behaviour on where are blocks
     }
 
-    const data = await this.db.blockArchive.getByRoot(fromHexString(root));
+    const data = fullBlock
+      ? await this.db.blockArchive.getFullByRoot(fromHexString(root))
+      : await this.db.blockArchive.getByRoot(fromHexString(root));
     return data && {block: data, executionOptimistic: false};
   }
 

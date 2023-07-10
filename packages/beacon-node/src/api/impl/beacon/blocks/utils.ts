@@ -32,9 +32,10 @@ export function toBeaconHeaderResponse(
 
 export async function resolveBlockId(
   chain: IBeaconChain,
-  blockId: routes.beacon.BlockId
-): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean}> {
-  const res = await resolveBlockIdOrNull(chain, blockId);
+  blockId: routes.beacon.BlockId,
+  full?: boolean
+): Promise<{block: allForks.FullOrBlindedSignedBeaconBlock; executionOptimistic: boolean}> {
+  const res = await resolveBlockIdOrNull(chain, blockId, full);
   if (!res) {
     throw new ApiError(404, `No block found for id '${blockId}'`);
   }
@@ -44,30 +45,31 @@ export async function resolveBlockId(
 
 async function resolveBlockIdOrNull(
   chain: IBeaconChain,
-  blockId: routes.beacon.BlockId
-): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null> {
+  blockId: routes.beacon.BlockId,
+  full?: boolean
+): Promise<{block: allForks.FullOrBlindedSignedBeaconBlock; executionOptimistic: boolean} | null> {
   blockId = String(blockId).toLowerCase();
   if (blockId === "head") {
-    return chain.getBlockByRoot(chain.forkChoice.getHead().blockRoot);
+    return chain.getBlockByRoot(chain.forkChoice.getHead().blockRoot, full);
   }
 
   if (blockId === "genesis") {
-    return chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
+    return chain.getCanonicalBlockAtSlot(GENESIS_SLOT, full);
   }
 
   if (blockId === "finalized") {
-    return chain.getCanonicalBlockAtSlot(chain.forkChoice.getFinalizedBlock().slot);
+    return chain.getCanonicalBlockAtSlot(chain.forkChoice.getFinalizedBlock().slot, full);
   }
 
   if (blockId === "justified") {
-    return chain.getBlockByRoot(chain.forkChoice.getJustifiedBlock().blockRoot);
+    return chain.getBlockByRoot(chain.forkChoice.getJustifiedBlock().blockRoot, full);
   }
 
   if (blockId.startsWith("0x")) {
     if (!rootHexRegex.test(blockId)) {
       throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
     }
-    return chain.getBlockByRoot(blockId);
+    return chain.getBlockByRoot(blockId, full);
   }
 
   // block id must be slot
@@ -75,5 +77,5 @@ async function resolveBlockIdOrNull(
   if (isNaN(blockSlot) && isNaN(blockSlot - 0)) {
     throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
   }
-  return chain.getCanonicalBlockAtSlot(blockSlot);
+  return chain.getCanonicalBlockAtSlot(blockSlot, full);
 }

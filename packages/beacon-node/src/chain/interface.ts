@@ -127,12 +127,16 @@ export interface IBeaconChain {
    * forkchoice. Works for finalized slots as well
    */
   getCanonicalBlockAtSlot(
-    slot: Slot
-  ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null>;
+    slot: Slot,
+    fullBlock?: boolean
+  ): Promise<{block: allForks.FullOrBlindedSignedBeaconBlock; executionOptimistic: boolean} | null>;
   /**
    * Get local block by root, does not fetch from the network
    */
-  getBlockByRoot(root: RootHex): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null>;
+  getBlockByRoot(
+    root: RootHex,
+    fullBlock?: boolean
+  ): Promise<{block: allForks.FullOrBlindedSignedBeaconBlock; executionOptimistic: boolean} | null>;
 
   getBlobSidecars(beaconBlock: deneb.BeaconBlock): deneb.BlobSidecars;
 

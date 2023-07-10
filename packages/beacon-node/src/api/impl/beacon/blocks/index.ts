@@ -2,7 +2,7 @@ import {routes, ServerApi, isSignedBlockContents, isSignedBlindedBlockContents} 
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
-import {allForks, deneb} from "@lodestar/types";
+import {allForks, deneb, isBlindedSignedBeaconBlock} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {
   BlockSource,
@@ -130,14 +130,14 @@ export function getBeaconBlockApi({
     },
 
     async getBlock(blockId) {
-      const {block} = await resolveBlockId(chain, blockId);
+      const {block} = await resolveBlockId(chain, blockId, true);
       return {
         data: block,
       };
     },
 
     async getBlockV2(blockId) {
-      const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
+      const {block, executionOptimistic} = await resolveBlockId(chain, blockId, true);
       return {
         executionOptimistic,
         data: block,
@@ -183,9 +183,16 @@ export function getBeaconBlockApi({
 
       // Slow path
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
+      const root = isBlindedSignedBeaconBlock(block)
+        ? config
+            .getBlindedForkTypes(block.message.slot)
+            .BeaconBlock.hashTreeRoot((block as allForks.SignedBlindedBeaconBlock).message)
+        : config
+            .getForkTypes((block as allForks.SignedBeaconBlock).message.slot)
+            .BeaconBlock.hashTreeRoot((block as allForks.SignedBeaconBlock).message);
       return {
         executionOptimistic,
-        data: {root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)},
+        data: {root},
       };
     },
 
@@ -261,7 +268,13 @@ export function getBeaconBlockApi({
 
     async getBlobSidecars(blockId) {
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
-      const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+      const blockRoot = isBlindedSignedBeaconBlock(block)
+        ? config
+            .getBlindedForkTypes(block.message.slot)
+            .BeaconBlock.hashTreeRoot((block as allForks.SignedBlindedBeaconBlock).message)
+        : config
+            .getForkTypes((block as allForks.SignedBeaconBlock).message.slot)
+            .BeaconBlock.hashTreeRoot((block as allForks.SignedBeaconBlock).message);
 
       let {blobSidecars} = (await db.blobSidecars.get(blockRoot)) ?? {};
       if (!blobSidecars) {

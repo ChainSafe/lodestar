@@ -36,7 +36,7 @@ export function getProofApi(
         throw new Error("Requested proof is too large.");
       }
 
-      const {block} = await resolveBlockId(chain, blockId);
+      const {block} = await resolveBlockId(chain, blockId, true);
 
       // Commit any changes before computing the state root. In normal cases the state should have no changes here
       const blockNode = config.getForkTypes(block.message.slot).BeaconBlock.toView(block.message).node;
