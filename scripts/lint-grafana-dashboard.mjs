@@ -333,7 +333,14 @@ function assertPanels(panels) {
           target.expr = target.expr.replace(/job="beacon"/g, 'job=~"$beacon_job|beacon"');
           target.expr = target.expr.replace(/job="validator"/g, 'job=~"$validator_job|validator"');
 
-          // ban use of delta and increase functions
+          // Ban use of delta and increase functions.
+          // Mixed use of delta / increase and rate make dashboards more difficult to reason about.
+          // - delta shows the value difference based on the selected time interval, which is variable
+          //   so if time interval is X or 2*X the displayed values double.
+          // - rate shows the per-second average rate regardless of time interval. The time interval just
+          //   controls how "smooth" that average is.
+          // Using rate results in an easier read of values. Sometimes the rate will be scaled up to
+          // rate / slot, rate / epoch, or rate / min; all of which are clearly indicated in the chart title
           if (target.expr.includes("delta(")) {
             throw Error(`promql function 'delta' is not allowed, use 'rate' instead: ${target.expr}`);
           }
