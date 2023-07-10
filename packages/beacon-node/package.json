@@ -124,7 +124,6 @@
     "@lodestar/db": "^1.9.1",
     "@lodestar/fork-choice": "^1.9.1",
     "@lodestar/light-client": "^1.9.1",
-    "@lodestar/logger": "^1.9.1",
     "@lodestar/params": "^1.9.1",
     "@lodestar/reqresp": "^1.9.1",
     "@lodestar/state-transition": "^1.9.1",
@@ -156,6 +155,7 @@
     "xxhash-wasm": "1.0.2"
   },
   "devDependencies": {
+    "@lodestar/logger": "^1.9.1",
     "@types/eventsource": "^1.1.11",
     "@types/leveldown": "^4.0.3",
     "@types/qs": "^6.9.7",
