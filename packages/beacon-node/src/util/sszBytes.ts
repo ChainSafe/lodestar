@@ -180,6 +180,26 @@ export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot |
 }
 
 /**
+ * ```
+ * class SignedBeaconBlock(Container):
+ *   message: BeaconBlock [offset - 4 bytes]
+ *   signature: BLSSignature [fixed - 96 bytes]
+ *
+ * class BeaconBlock(Container):
+ *   slot: Slot [fixed - 8 bytes]
+ *   proposer_index: ValidatorIndex [fixed - 8 bytes]
+ *   parent_root: Root [fixed - 32 bytes]
+ *   state_root: Root
+ *   body: BeaconBlockBody
+ * ```
+ * From byte: `4 + 96 + 8 + 8 = 116`
+ * To byte: `116 + 32 = 148`
+ */
+export function getParentRootFromSignedBlockSerialized(bytes: Uint8Array): Uint8Array {
+  return bytes.slice(116, 148);
+}
+
+/**
  * 4 + 4 + SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK = 4 + 4 + (4 + 96) = 108
  * class SignedBeaconBlockAndBlobsSidecar(Container):
  *  beaconBlock: SignedBeaconBlock [offset - 4 bytes]

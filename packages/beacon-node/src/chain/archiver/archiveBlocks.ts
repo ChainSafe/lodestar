@@ -9,6 +9,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {IBeaconDb} from "../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../db/repositories/index.js";
 import {LightClientServer} from "../lightClient/index.js";
+import {getParentRootFromSignedBlockSerialized} from "../../util/sszBytes.js";
 
 // Process in chunks to avoid OOM
 // this number of blocks per chunk is tested in e2e test blockArchive.test.ts
@@ -151,7 +152,7 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot
           slot: block.slot,
           blockRoot: block.root,
           // TODO: Benchmark if faster to slice Buffer or fromHexString()
-          parentRoot: getParentRootFromSignedBlock(blockBuffer),
+          parentRoot: getParentRootFromSignedBlockSerialized(blockBuffer),
         };
       })
     );
@@ -195,26 +196,6 @@ async function migrateBlobSidecarsFromHotToColdDb(
       db.blobSidecars.batchDelete(canonicalBlocks.map((block) => block.root)),
     ]);
   }
-}
-
-/**
- * ```
- * class SignedBeaconBlock(Container):
- *   message: BeaconBlock [offset - 4 bytes]
- *   signature: BLSSignature [fixed - 96 bytes]
- *
- * class BeaconBlock(Container):
- *   slot: Slot [fixed - 8 bytes]
- *   proposer_index: ValidatorIndex [fixed - 8 bytes]
- *   parent_root: Root [fixed - 32 bytes]
- *   state_root: Root
- *   body: BeaconBlockBody
- * ```
- * From byte: `4 + 96 + 8 + 8 = 116`
- * To byte: `116 + 32 = 148`
- */
-export function getParentRootFromSignedBlock(bytes: Uint8Array): Uint8Array {
-  return bytes.slice(116, 148);
 }
 
 /**
