@@ -15,6 +15,7 @@ import {Metrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
+import {LinkedList} from "../../../util/array.js";
 import {
   ApiName,
   BlsWorkReq,
@@ -537,6 +538,9 @@ export function prepareWork(jobs: QueueItem[], maxSignatureSet = MAX_SIGNATURE_S
   const jobItems: JobItem<BlsWorkReq>[] = [];
   let totalSigs = 0;
 
+  // there should not be a lot of same message QueueItem as we grouped them as an array already
+  // worse case there are 127 items
+  const sameMessageQueueItems = new LinkedList<QueueItem>();
   while (totalSigs < maxSignatureSet) {
     const job = jobs[0];
     if (!job) {
@@ -551,8 +555,10 @@ export function prepareWork(jobs: QueueItem[], maxSignatureSet = MAX_SIGNATURE_S
       }
     } else {
       // from 2nd item make sure all items are of the multi sigs type
-      if (!isMultiSigsQueueItem(job)) {
-        break;
+      if (isSameMessageQueueItem(job)) {
+        sameMessageQueueItems.push(job as QueueItem);
+        jobs.shift();
+        continue;
       }
     }
 
@@ -564,6 +570,14 @@ export function prepareWork(jobs: QueueItem[], maxSignatureSet = MAX_SIGNATURE_S
     jobs.shift();
     jobItems.push(job);
     totalSigs += job.workReq.sets.length;
+  }
+
+  while (sameMessageQueueItems.length > 0) {
+    const job = sameMessageQueueItems.pop();
+    if (job) {
+      // TODO: jobs should be a LinkedList to make shift/unshift cheap
+      jobs.unshift(job);
+    }
   }
 
   return {isSameMessageJobs: false, jobs: jobItems};
