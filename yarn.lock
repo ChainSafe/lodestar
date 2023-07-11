@@ -6078,6 +6078,13 @@ cross-fetch@^3.1.4:
   dependencies:
     node-fetch "2.6.7"
 
+cross-fetch@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/cross-fetch/-/cross-fetch-4.0.0.tgz#f037aef1580bb3a1a35164ea2a848ba81b445983"
+  integrity sha512-e4a5N8lVvuLgAWgnCrLr2PP0YyDOTHa9H/Rj54dirp61qXnNq46m82bRhNqIA5VccJtWBvPTFRV3TtvHUKPB1g==
+  dependencies:
+    node-fetch "^2.6.12"
+
 cross-spawn@^6.0.5:
   version "6.0.5"
   resolved "https://registry.npmjs.org/cross-spawn/-/cross-spawn-6.0.5.tgz"
@@ -11189,6 +11196,13 @@ node-fetch@2.6.7, node-fetch@^2.6.0, node-fetch@^2.6.1, node-fetch@^2.6.7:
   version "2.6.7"
   resolved "https://registry.npmjs.org/@achingbrain/node-fetch/-/node-fetch-2.6.7.tgz"
   integrity sha512-iTASGs+HTFK5E4ZqcMsHmeJ4zodyq8L38lZV33jwqcBJYoUt3HjN4+ot+O9/0b+ke8ddE7UgOtVuZN/OkV19/g==
+
+node-fetch@^2.6.12:
+  version "2.6.12"
+  resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.12.tgz#02eb8e22074018e3d5a83016649d04df0e348fba"
+  integrity sha512-C/fGU2E8ToujUivIO0H+tpQ6HWo4eEmchoPIoXtxCrVghxdKq+QOHqEZW7tuP3KlV3bC8FRMO5nMCC7Zm1VP6g==
+  dependencies:
+    whatwg-url "^5.0.0"
 
 node-fetch@^2.6.9:
   version "2.6.9"
