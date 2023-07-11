@@ -77,11 +77,11 @@ type WorkerApi = {
   verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult>;
 };
 
-function isMultiSigsJobItem(job: JobItem<BlsWorkReq> | JobItem<SerializedSet>): job is JobItem<BlsWorkReq> {
+function isMultiMessagesJobItem(job: JobItem<BlsWorkReq> | JobItem<SerializedSet>): job is JobItem<BlsWorkReq> {
   return (job as JobItem<BlsWorkReq>).workReq.sets != null;
 }
 
-function isMultiSigsQueueItem(queueItem: QueueItem): queueItem is JobItem<BlsWorkReq> {
+function isMultiMessagesQueueItem(queueItem: QueueItem): queueItem is JobItem<BlsWorkReq> {
   return !Array.isArray(queueItem);
 }
 
@@ -89,7 +89,7 @@ function isSameMessageQueueItem(queueItem: QueueItem): queueItem is JobItem<Seri
   return Array.isArray(queueItem);
 }
 
-function isMultiSigsJobs(jobs: Jobs): jobs is {isSameMessageJobs: false; jobs: JobItem<BlsWorkReq>[]} {
+function isMultiMessagesJobs(jobs: Jobs): jobs is {isSameMessageJobs: false; jobs: JobItem<BlsWorkReq>[]} {
   return !jobs.isSameMessageJobs;
 }
 
@@ -260,7 +260,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
     // Abort all jobs
     for (const job of this.jobs) {
-      if (isMultiSigsQueueItem(job)) {
+      if (isMultiMessagesQueueItem(job)) {
         job.reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
       } else {
         // this is an array of same message job items
@@ -432,13 +432,15 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     const workerApi = worker.status.workerApi;
     worker.status = {code: WorkerStatusCode.running, workerApi};
     this.workersBusy++;
-    const api = isMultiSigsJobs(typedJobs) ? ApiName.verifySignatureSets : ApiName.verifySignatureSetsSameSigningRoot;
+    const api = isMultiMessagesJobs(typedJobs)
+      ? ApiName.verifySignatureSets
+      : ApiName.verifySignatureSetsSameSigningRoot;
 
     try {
       let startedSigSets = 0;
       for (const job of jobs) {
         this.metrics?.blsThreadPool.jobWaitTime.observe({api}, (Date.now() - job.addedTimeMs) / 1000);
-        startedSigSets += isMultiSigsJobItem(job) ? job.workReq.sets.length : 1;
+        startedSigSets += isMultiMessagesJobItem(job) ? job.workReq.sets.length : 1;
       }
 
       this.metrics?.blsThreadPool.totalJobsGroupsStarted.inc(1);
@@ -451,7 +453,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
       const jobStartNs = process.hrtime.bigint();
       this.metrics?.blsThreadPool.workerApiCalls.inc({api});
-      const workResult = isMultiSigsJobs(typedJobs)
+      const workResult = isMultiMessagesJobs(typedJobs)
         ? await workerApi.verifyManySignatureSets(typedJobs.jobs.map((job) => job.workReq))
         : await workerApi.verifyManySignatureSetsSameMessage(typedJobs.jobs.map((job) => job.workReq));
       const jobEndNs = process.hrtime.bigint();
@@ -464,7 +466,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       for (let i = 0; i < jobs.length; i++) {
         const job = jobs[i];
         const jobResult = results[i];
-        const sigSetCount = isMultiSigsJobItem(job) ? job.workReq.sets.length : 1;
+        const sigSetCount = isMultiMessagesJobItem(job) ? job.workReq.sets.length : 1;
         if (!jobResult) {
           job.reject(Error(`No jobResult for index ${i}`));
           errorCount += sigSetCount;
@@ -554,7 +556,7 @@ export function prepareWork(jobs: QueueItem[], maxSignatureSet = MAX_SIGNATURE_S
         return {isSameMessageJobs: true, jobs: job};
       }
     } else {
-      // from 2nd item make sure all items are of the multi sigs type
+      // from 2nd item make sure all items are of the multi messages type
       if (isSameMessageQueueItem(job)) {
         sameMessageQueueItems.push(job as QueueItem);
         jobs.shift();
@@ -562,8 +564,8 @@ export function prepareWork(jobs: QueueItem[], maxSignatureSet = MAX_SIGNATURE_S
       }
     }
 
-    // should not happen, job should be multi sigs
-    if (!isMultiSigsJobItem(job)) {
+    // should not happen, job should be multi messages
+    if (!isMultiMessagesJobItem(job)) {
       throw Error("Unexpected job type");
     }
 
