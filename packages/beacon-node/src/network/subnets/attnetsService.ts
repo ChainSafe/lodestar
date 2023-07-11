@@ -23,6 +23,7 @@ import {
   RandBetweenFn,
   ShuffleFn,
   GossipSubscriber,
+  SubnetsServiceTestOpts,
 } from "./interface.js";
 
 /**
@@ -78,7 +79,7 @@ export class AttnetsService implements IAttnetsService {
     private readonly metadata: MetadataController,
     private readonly logger: Logger,
     private readonly metrics: NetworkCoreMetrics | null,
-    private readonly opts?: SubnetsServiceOpts
+    private readonly opts?: SubnetsServiceOpts & SubnetsServiceTestOpts
   ) {
     // if subscribeAllSubnets, we act like we have >= ATTESTATION_SUBNET_COUNT validators connecting to this node
     // so that we have enough subnet topic peers, see https://github.com/ChainSafe/lodestar/issues/4921
@@ -156,11 +157,6 @@ export class AttnetsService implements IAttnetsService {
       return false;
     }
     return this.aggregatorSlotSubnet.getOrDefault(slot).has(subnet);
-  }
-
-  /** Returns the latest Slot subscription is active, null if no subscription */
-  activeUpToSlot(subnet: number): Slot | null {
-    return this.subscriptionsCommittee.activeUpToSlot(subnet);
   }
 
   /** Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork  */
