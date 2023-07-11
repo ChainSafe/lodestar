@@ -66,7 +66,7 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
 } {
   const {executionRpcUrl, requestTimeout} = opts;
   const signal = opts.signal ?? new AbortController().signal;
-  const logger = opts.logger ?? getNodeLogger({level: opts.logLevel ?? LogLevel.info});
+  const logger = opts.logger ?? getNodeLogger({level: opts.logLevel ?? LogLevel.info, module: "prover"});
 
   const proofProvider = ProofProvider.init({
     ...opts,

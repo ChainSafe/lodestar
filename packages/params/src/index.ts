@@ -174,6 +174,10 @@ export const RANDOM_SUBNETS_PER_VALIDATOR = 1;
 export const EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION = 256;
 /** Rationale: https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#why-are-there-attestation_subnet_count-attestation-subnets */
 export const ATTESTATION_SUBNET_COUNT = 64;
+export const SUBNETS_PER_NODE = 2;
+export const NODE_ID_BITS = 256;
+export const ATTESTATION_SUBNET_PREFIX_BITS = Math.log2(ATTESTATION_SUBNET_COUNT);
+export const EPOCHS_PER_SUBNET_SUBSCRIPTION = 256;
 
 // altair validator
 

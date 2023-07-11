@@ -88,9 +88,6 @@
     "source-map-support": "^0.5.21",
     "uint8arrays": "^4.0.3",
     "uuidv4": "^6.2.13",
-    "winston": "^3.8.2",
-    "winston-daily-rotate-file": "^4.7.1",
-    "winston-transport": "^4.5.0",
     "yargs": "^17.7.1"
   },
   "devDependencies": {
@@ -99,6 +96,7 @@
     "@types/got": "^9.6.12",
     "@types/inquirer": "^9.0.3",
     "@types/lodash": "^4.14.192",
-    "@types/yargs": "^17.0.24"
+    "@types/yargs": "^17.0.24",
+    "@lodestar/test-utils": "^1.9.1"
   }
 }
