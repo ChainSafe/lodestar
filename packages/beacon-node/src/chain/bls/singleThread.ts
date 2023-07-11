@@ -3,6 +3,7 @@ import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier} from "./interface.js";
 import {verifySignatureSetsMaybeBatch} from "./maybeBatch.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "./utils.js";
+import {ApiName} from "./multithread/types.js";
 
 export class BlsSingleThreadVerifier implements IBlsVerifier {
   private readonly metrics: Metrics | null;
@@ -32,7 +33,10 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     // Don't use a try/catch, only count run without exceptions
     const endNs = process.hrtime.bigint();
     const totalSec = Number(startNs - endNs) / 1e9;
-    this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.observe(totalSec);
+    this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.observe(
+      {api: ApiName.verifySignatureSetsSameSigningRoot},
+      totalSec
+    );
 
     return result;
   }
@@ -54,7 +58,7 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     // Don't use a try/catch, only count run without exceptions
     const endNs = process.hrtime.bigint();
     const totalSec = Number(startNs - endNs) / 1e9;
-    this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.observe(totalSec);
+    this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.observe({api: ApiName.verifySignatureSets}, totalSec);
 
     return isValid;
   }

@@ -1,5 +1,10 @@
 import {VerifySignatureOpts} from "../interface.js";
 
+export enum ApiName {
+  verifySignatureSets = "verifySignatureSets",
+  verifySignatureSetsSameSigningRoot = "verifySignatureSetsSameSigningRoot",
+}
+
 export type WorkerData = {
   implementation: "herumi" | "blst-native";
   workerId: number;

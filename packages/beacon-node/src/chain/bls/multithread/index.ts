@@ -16,6 +16,7 @@ import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {
+  ApiName,
   BlsWorkReq,
   BlsWorkResult,
   JobItem,
@@ -182,7 +183,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
           }))
         );
       } finally {
-        if (timer) timer();
+        if (timer) timer({api: ApiName.verifySignatureSets});
       }
     }
 
@@ -215,14 +216,21 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   ): Promise<boolean[]> {
     if (opts?.verifyOnMainThread && !this.blsVerifyAllMultiThread) {
       const isSameMessage = true;
-      const isAllValid = verifySignatureSetsMaybeBatch(
-        sets.map((set) => ({
-          publicKey: getAggregatedPubkey(set),
-          message: set.signingRoot.valueOf(),
-          signature: set.signature,
-        })),
-        isSameMessage
-      );
+      let isAllValid = false;
+      const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
+      try {
+        isAllValid = verifySignatureSetsMaybeBatch(
+          sets.map((set) => ({
+            publicKey: getAggregatedPubkey(set),
+            message: set.signingRoot.valueOf(),
+            signature: set.signature,
+          })),
+          isSameMessage
+        );
+      } finally {
+        if (timer) timer({api: ApiName.verifySignatureSetsSameSigningRoot});
+      }
+
       if (isAllValid) {
         return sets.map(() => true);
       }
@@ -423,11 +431,12 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     const workerApi = worker.status.workerApi;
     worker.status = {code: WorkerStatusCode.running, workerApi};
     this.workersBusy++;
+    const api = isMultiSigsJobs(typedJobs) ? ApiName.verifySignatureSets : ApiName.verifySignatureSetsSameSigningRoot;
 
     try {
       let startedSigSets = 0;
       for (const job of jobs) {
-        this.metrics?.blsThreadPool.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
+        this.metrics?.blsThreadPool.jobWaitTime.observe({api}, (Date.now() - job.addedTimeMs) / 1000);
         startedSigSets += isMultiSigsJobItem(job) ? job.workReq.sets.length : 1;
       }
 
@@ -440,9 +449,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       // Only downside is the the job promise may be resolved twice, but that's not an issue
 
       const jobStartNs = process.hrtime.bigint();
-      this.metrics?.blsThreadPool.workerApiCalls.inc({
-        api: isMultiSigsJobs(typedJobs) ? "verifyManySignatureSets" : "verifyManySignatureSetsSameMessage",
-      });
+      this.metrics?.blsThreadPool.workerApiCalls.inc({api});
       const workResult = isMultiSigsJobs(typedJobs)
         ? await workerApi.verifyManySignatureSets(typedJobs.jobs.map((job) => job.workReq))
         : await workerApi.verifyManySignatureSetsSameMessage(typedJobs.jobs.map((job) => job.workReq));
@@ -475,14 +482,15 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       const latencyToWorkerSec = Number(workerStartNs - jobStartNs) / 1e9;
       const latencyFromWorkerSec = Number(jobEndNs - workerEndNs) / 1e9;
 
-      this.metrics?.blsThreadPool.timePerSigSet.observe(workerJobTimeSec / startedSigSets);
-      this.metrics?.blsThreadPool.jobsWorkerTime.inc({workerId}, workerJobTimeSec);
-      this.metrics?.blsThreadPool.latencyToWorker.observe(latencyToWorkerSec);
-      this.metrics?.blsThreadPool.latencyFromWorker.observe(latencyFromWorkerSec);
-      this.metrics?.blsThreadPool.successJobsSignatureSetsCount.inc(successCount);
-      this.metrics?.blsThreadPool.errorJobsSignatureSetsCount.inc(errorCount);
-      this.metrics?.blsThreadPool.batchRetries.inc(batchRetries);
-      this.metrics?.blsThreadPool.batchSigsSuccess.inc(batchSigsSuccess);
+      this.metrics?.blsThreadPool.timePerSigSet.observe({api}, workerJobTimeSec / startedSigSets);
+      this.metrics?.blsThreadPool.jobsWorkerTimeByWorkerId.inc({workerId}, workerJobTimeSec);
+      this.metrics?.blsThreadPool.jobsWorkerTimeByApi.inc({api}, workerJobTimeSec);
+      this.metrics?.blsThreadPool.latencyToWorker.observe({api}, latencyToWorkerSec);
+      this.metrics?.blsThreadPool.latencyFromWorker.observe({api}, latencyFromWorkerSec);
+      this.metrics?.blsThreadPool.successJobsSignatureSetsCount.inc({api}, successCount);
+      this.metrics?.blsThreadPool.errorJobsSignatureSetsCount.inc({api}, errorCount);
+      this.metrics?.blsThreadPool.batchRetries.inc({api}, batchRetries);
+      this.metrics?.blsThreadPool.batchSigsSuccess.inc({api}, batchSigsSuccess);
     } catch (e) {
       // Worker communications should never reject
       if (!this.closed) this.logger.error("BlsMultiThreadWorkerPool error", {}, e as Error);
