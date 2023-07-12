@@ -1,5 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
-import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test/perf/util.js";
+// eslint-disable-next-line import/no-relative-packages
+import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {validateGossipAttestation} from "../../../../src/chain/validation/index.js";
 import {getAttestationValidData} from "../../../utils/validationData/attestation.js";
 

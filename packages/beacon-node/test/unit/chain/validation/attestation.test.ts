@@ -6,7 +6,8 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch, processSlots} from "@lodest
 import {defaultChainConfig, createChainForkConfig, BeaconConfig} from "@lodestar/config";
 import {Slot, ssz} from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test/perf/util.js";
+// eslint-disable-next-line import/no-relative-packages
+import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {AttestationErrorCode, GossipErrorCode} from "../../../../src/chain/errors/index.js";
 import {

@@ -8,7 +8,8 @@ import {BeaconConfig} from "@lodestar/config";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
-} from "@lodestar/state-transition/test/perf/util.js";
+  // eslint-disable-next-line import/no-relative-packages
+} from "../../../../state-transition/test/perf/util.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {IStateRegenerator} from "../../../src/chain/regen/index.js";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
