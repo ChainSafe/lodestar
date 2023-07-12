@@ -529,12 +529,14 @@ export function createValidatorMonitor(
       const inclusionDistance = Math.max(parentSlot - data.slot, 0) + 1;
       const delay = inclusionDistance - MIN_ATTESTATION_INCLUSION_DELAY;
       const epoch = computeEpochAtSlot(data.slot);
+      const participants = indexedAttestation.attestingIndices.length;
 
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
           metrics.validatorMonitor.attestationInBlockTotal.inc();
           metrics.validatorMonitor.attestationInBlockDelaySlots.observe(delay);
+          metrics.validatorMonitor.attestationInBlockParticipants.observe(participants);
 
           const summary = getEpochSummary(validator, epoch);
           summary.attestationBlockInclusions += 1;
@@ -566,6 +568,7 @@ export function createValidatorMonitor(
             committeeIndex: data.index,
             inclusionDistance,
             correctHead,
+            participants,
           });
         }
       }
