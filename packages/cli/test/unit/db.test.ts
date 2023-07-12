@@ -1,5 +1,7 @@
-import {Bucket as BeaconBucket} from "@lodestar/beacon-node/src/db/buckets.js";
-import {Bucket as ValidatorBucket} from "@lodestar/validator/src/buckets.js";
+// eslint-disable-next-line import/no-relative-packages
+import {Bucket as BeaconBucket} from "../../../beacon-node/src/db/buckets.js";
+// eslint-disable-next-line import/no-relative-packages
+import {Bucket as ValidatorBucket} from "../../../validator/src/buckets.js";
 
 describe("no db bucket overlap", () => {
   it("beacon and validator dn buckets do not overlap", () => {
