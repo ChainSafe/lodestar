@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {BitArray} from "@chainsafe/ssz";
 import {intersectUint8Arrays} from "../../../src/util/bitArray.js";
@@ -40,6 +41,18 @@ describe("Intersect BitArray vs Array+Set", () => {
             }
           }
         }
+      },
+    });
+  }
+});
+
+describe("BitArray.trueBitCount", () => {
+  for (const bitLen of [128, 248, 512]) {
+    itBench({
+      id: `bitArray.getTrueBitIndexes() bitLen ${bitLen}`,
+      beforeEach: () => new BitArray(crypto.randomBytes(Math.ceil(bitLen / 8)), bitLen),
+      fn: (bitArray) => {
+        bitArray.getTrueBitIndexes().length;
       },
     });
   }
