@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
-import {PeerInfo} from "@libp2p/interface-peer-info";
+import type {PeerInfo} from "@libp2p/interface-peer-info";
 import {ENR} from "@chainsafe/discv5";
 import {BeaconConfig} from "@lodestar/config";
 import {pruneSetToMax, sleep} from "@lodestar/utils";

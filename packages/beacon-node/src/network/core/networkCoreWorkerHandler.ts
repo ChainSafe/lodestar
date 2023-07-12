@@ -8,7 +8,7 @@ import {routes} from "@lodestar/api";
 import {phase0} from "@lodestar/types";
 import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
-import {LoggerNode} from "@lodestar/logger/node";
+import type {LoggerNode} from "@lodestar/logger/node";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {wireEventsOnMainThread} from "../../util/workerEvents.js";
 import {Metrics} from "../../metrics/index.js";

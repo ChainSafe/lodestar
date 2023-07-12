@@ -5,7 +5,7 @@ import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {LoggerNode} from "@lodestar/logger/node";
+import type {LoggerNode} from "@lodestar/logger/node";
 import {Epoch, phase0} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";

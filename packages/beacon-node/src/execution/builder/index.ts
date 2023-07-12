@@ -4,7 +4,7 @@ import {IExecutionBuilder} from "./interface.js";
 
 import {ExecutionBuilderHttp, ExecutionBuilderHttpOpts, defaultExecutionBuilderHttpOpts} from "./http.js";
 
-export {IExecutionBuilder, ExecutionBuilderHttp, defaultExecutionBuilderHttpOpts};
+export {ExecutionBuilderHttp, defaultExecutionBuilderHttpOpts};
 
 export type ExecutionBuilderOpts = {mode?: "http"} & ExecutionBuilderHttpOpts;
 export const defaultExecutionBuilderOpts: ExecutionBuilderOpts = defaultExecutionBuilderHttpOpts;

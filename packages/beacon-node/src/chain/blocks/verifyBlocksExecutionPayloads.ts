@@ -21,7 +21,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {ForkSeq} from "@lodestar/params";
 
-import {IExecutionEngine} from "../../execution/engine/index.js";
+import {IExecutionEngine} from "../../execution/engine/interface.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IClock} from "../../util/clock.js";
 import {BlockProcessOpts} from "../options.js";

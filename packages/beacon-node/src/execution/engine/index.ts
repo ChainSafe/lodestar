@@ -11,7 +11,7 @@ import {
 import {ExecutionEngineMockOpts, ExecutionEngineMockBackend} from "./mock.js";
 import {ExecutionEngineMockJsonRpcClient, JsonRpcBackend} from "./utils.js";
 
-export {IExecutionEngine, ExecutionEngineHttp, ExecutionEngineDisabled, defaultExecutionEngineHttpOpts};
+export {ExecutionEngineHttp, ExecutionEngineDisabled, defaultExecutionEngineHttpOpts};
 
 export type ExecutionEngineOpts =
   | ({mode?: "http"} & ExecutionEngineHttpOpts)
