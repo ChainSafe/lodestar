@@ -244,33 +244,3 @@ function restrictImportDestructuring(...modules) {
     message: `Importing from '${module}' using destructuring is restricted.`,
   }));
 }
-
-function noExtraneousOverrides(packagesDir) {
-  return (
-    readdirSync(resolve(__dirname, packagesDir))
-      // filter for non-hidden dirs to get a list of packages
-      .filter(
-        (entry) => entry.substring(0, 1) !== "." && lstatSync(resolve(__dirname, packagesDir, entry)).isDirectory()
-      )
-      // map to override rules pointing to local and root package.json for rule
-      .map((entry) => {
-        console.log(join(packagesDir, entry, "src", "**", "*"));
-        console.log([resolve(__dirname, packagesDir, entry)]);
-        return {
-          files: [join(packagesDir, entry, "src", "**", "*")],
-          rules: {
-            "import/no-extraneous-dependencies": [
-              "error",
-              {
-                devDependencies: false,
-                optionalDependencies: false,
-                peerDependencies: false,
-                includeInternal: true,
-                packageDir: [resolve(__dirname, packagesDir, entry)],
-              },
-            ],
-          },
-        };
-      })
-  );
-}
