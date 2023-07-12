@@ -42,6 +42,7 @@ export enum Bucket {
   // can be ignored and safely deleted later on
   allForks_blobsSidecar = 29, // DENEB BeaconBlockRoot -> BlobsSidecar
 
+  // https://github.com/ChainSafe/lodestar/issues/5753
   // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
   allForks_blobsSidecarArchive = 30, // DENEB BeaconBlockSlot -> BlobsSidecar
 
