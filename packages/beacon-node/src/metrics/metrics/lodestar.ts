@@ -357,12 +357,18 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_job_groups_started_total",
         help: "Count of total jobs groups started in bls thread pool, job groups include +1 jobs",
       }),
-      totalJobsStarted: register.gauge({
+      totalJobsStarted: register.gauge<"type">({
         name: "lodestar_bls_thread_pool_jobs_started_total",
         help: "Count of total jobs started in bls thread pool, jobs include +1 signature sets",
+        labelNames: ["type"],
       }),
-      totalSigSetsStarted: register.gauge({
+      totalSigSetsStarted: register.gauge<"type">({
         name: "lodestar_bls_thread_pool_sig_sets_started_total",
+        help: "Count of total signature sets started in bls thread pool, sig sets include 1 pk, msg, sig",
+        labelNames: ["type"],
+      }),
+      totalSigSetsSameMessageStarted: register.gauge({
+        name: "lodestar_bls_thread_pool_sig_sets_same_message_started_total",
         help: "Count of total signature sets started in bls thread pool, sig sets include 1 pk, msg, sig",
       }),
       // Re-verifying a batch means doing double work. This number must be very low or it can be a waste of CPU resources
@@ -374,6 +380,14 @@ export function createLodestarMetrics(
       batchSigsSuccess: register.gauge({
         name: "lodestar_bls_thread_pool_batch_sigs_success_total",
         help: "Count of total batches that failed and had to be verified again.",
+      }),
+      sameMessageRetryJobs: register.gauge({
+        name: "lodestar_bls_thread_pool_same_message_jobs_retries_total",
+        help: "Count of total same message jobs that failed and had to be verified again.",
+      }),
+      sameMessageRetrySets: register.gauge({
+        name: "lodestar_bls_thread_pool_same_message_sets_retries_total",
+        help: "Count of total same message sets that failed and had to be verified again.",
       }),
       // To measure the time cost of main thread <-> worker message passing
       latencyToWorker: register.histogram({
