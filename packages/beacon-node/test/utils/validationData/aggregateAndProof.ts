@@ -1,8 +1,8 @@
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {DOMAIN_AGGREGATE_AND_PROOF, DOMAIN_SELECTION_PROOF} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
+import {getSecretKeyFromIndexCached} from "@lodestar/state-transition/test/perf/util.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
-import {getSecretKeyFromIndexCached} from "../../../../state-transition/test/perf/util.js";
 import {SeenAggregators} from "../../../src/chain/seenCache/index.js";
 import {signCached} from "../cache.js";
 import {getAttestationValidData, AttestationValidDataOpts} from "./attestation.js";

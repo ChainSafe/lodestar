@@ -1,6 +1,6 @@
+import {toHexString} from "@chainsafe/ssz";
 import {allForks, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-import {toHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
 import {QueueErrorCode} from "../../util/queue/index.js";

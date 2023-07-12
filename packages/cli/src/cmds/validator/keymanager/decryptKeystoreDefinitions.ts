@@ -1,7 +1,7 @@
 import path from "node:path";
+import bls from "@chainsafe/bls";
 import {SignerLocal, SignerType} from "@lodestar/validator";
 import {LogLevel, Logger} from "@lodestar/utils";
-import bls from "@chainsafe/bls";
 import {lockFilepath, unlockFilepath} from "../../../util/lockfile.js";
 import {LocalKeystoreDefinition} from "./interface.js";
 import {clearKeystoreCache, loadKeystoreCache, writeKeystoreCache} from "./keystoreCache.js";

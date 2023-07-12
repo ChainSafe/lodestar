@@ -1,5 +1,5 @@
-import {ssz} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
+import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 
 import {Api} from "../../../src/builder/routes.js";

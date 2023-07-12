@@ -1,7 +1,7 @@
 import {expect} from "chai";
+import {fromHexString} from "@chainsafe/ssz";
 import {ssz, allForks} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {fromHexString} from "@chainsafe/ssz";
 import {isValidLightClientHeader} from "../../src/spec/utils.js";
 
 describe("isValidLightClientHeader", function () {

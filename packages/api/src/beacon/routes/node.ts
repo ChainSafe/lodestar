@@ -1,5 +1,5 @@
-import {allForks, ssz, StringType} from "@lodestar/types";
 import {ContainerType} from "@chainsafe/ssz";
+import {allForks, ssz, StringType} from "@lodestar/types";
 import {
   ArrayOf,
   reqEmpty,

@@ -1,7 +1,7 @@
+import {fromHexString} from "@chainsafe/ssz";
 import {phase0} from "@lodestar/types";
 import {createChainForkConfig, ChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
-import {fromHexString} from "@chainsafe/ssz";
 
 /** Generic testnet data taken from the Medalla testnet  */
 export const medallaTestnetConfig = {

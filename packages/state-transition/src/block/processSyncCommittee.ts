@@ -1,6 +1,6 @@
+import {byteArrayEquals} from "@chainsafe/ssz";
 import {altair, ssz} from "@lodestar/types";
 import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
-import {byteArrayEquals} from "@chainsafe/ssz";
 import {computeSigningRoot, ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {G2_POINT_AT_INFINITY} from "../constants/index.js";

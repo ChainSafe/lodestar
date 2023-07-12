@@ -1,5 +1,7 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {digest} from "@chainsafe/as-sha256";
+import bls from "@chainsafe/bls";
+import {PointFormat} from "@chainsafe/bls/types";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {ForkChoice} from "@lodestar/fork-choice";
@@ -12,8 +14,6 @@ import {
   SLOTS_PER_EPOCH,
   ForkName,
 } from "@lodestar/params";
-import bls from "@chainsafe/bls";
-import {PointFormat} from "@chainsafe/bls/types";
 import {createBeaconConfig} from "@lodestar/config";
 
 import {BeaconChain} from "../../../../src/chain/index.js";

@@ -1,6 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
+import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test/perf/util.js";
 import {validateGossipAttestation} from "../../../../src/chain/validation/index.js";
-import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {getAttestationValidData} from "../../../utils/validationData/attestation.js";
 
 describe("validate gossip attestation", () => {

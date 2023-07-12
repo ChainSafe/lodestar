@@ -1,4 +1,5 @@
 import {expect} from "chai";
+import bls from "@chainsafe/bls";
 import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {ApiError, getClient, routes} from "@lodestar/api";
@@ -6,7 +7,6 @@ import {sleep} from "@lodestar/utils";
 import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {Validator} from "@lodestar/validator";
 import {phase0, ssz} from "@lodestar/types";
-import bls from "@chainsafe/bls";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../utils/node/validator.js";

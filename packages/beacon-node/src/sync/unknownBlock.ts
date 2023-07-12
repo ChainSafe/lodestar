@@ -1,7 +1,7 @@
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger, pruneSetToMax} from "@lodestar/utils";
 import {Root, RootHex} from "@lodestar/types";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";

@@ -2,11 +2,11 @@ import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
 import {processSlots} from "@lodestar/state-transition";
+import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test/perf/util.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
 import {validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {memoOnce} from "../../../utils/cache.js";
 import {
   getAggregateAndProofValidData,

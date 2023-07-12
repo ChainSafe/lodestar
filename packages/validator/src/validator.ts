@@ -1,9 +1,9 @@
+import {toHexString} from "@chainsafe/ssz";
 import {BLSPubkey, ssz} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
 import {Logger} from "@lodestar/utils";
 import {getClient, Api, routes, ApiError} from "@lodestar/api";
-import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Clock, IClock} from "./util/clock.js";
 import {waitForGenesis} from "./genesis.js";

@@ -1,7 +1,7 @@
+import {toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, Root, Slot, RootHex, ssz} from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {toHexString} from "@chainsafe/ssz";
 import {
   computeEpochAtSlot,
   CachedBeaconStateAllForks,

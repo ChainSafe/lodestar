@@ -1,7 +1,7 @@
+import {toHexString} from "@chainsafe/ssz";
 import {phase0, Slot, allForks, RootHex, Epoch} from "@lodestar/types";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
-import {toHexString} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {CheckpointHex, CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache/index.js";

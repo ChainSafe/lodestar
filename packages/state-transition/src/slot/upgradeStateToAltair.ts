@@ -1,5 +1,5 @@
-import {ssz} from "@lodestar/types";
 import {CompositeViewDU} from "@chainsafe/ssz";
+import {ssz} from "@lodestar/types";
 import {CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../types.js";
 import {newZeroedArray, RootCache} from "../util/index.js";
 import {getNextSyncCommittee} from "../util/syncCommittee.js";

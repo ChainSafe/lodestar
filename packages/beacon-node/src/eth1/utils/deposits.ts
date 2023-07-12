@@ -1,8 +1,8 @@
+import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
+import {toHexString} from "@chainsafe/ssz";
 import {MAX_DEPOSITS} from "@lodestar/params";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
-import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
-import {toHexString} from "@chainsafe/ssz";
 import {FilterOptions} from "@lodestar/db";
 import {Eth1Error, Eth1ErrorCode} from "../errors.js";
 import {DepositTree} from "../../db/repositories/depositDataRoot.js";

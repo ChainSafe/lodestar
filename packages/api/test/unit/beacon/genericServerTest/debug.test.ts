@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {ssz} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
+import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {Api, ReqTypes, routesData} from "../../../../src/beacon/routes/debug.js";
 import {getClient} from "../../../../src/beacon/client/debug.js";

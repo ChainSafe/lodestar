@@ -1,8 +1,8 @@
 import bls from "@chainsafe/bls/switchable";
 import type {PublicKey} from "@chainsafe/bls/types";
+import {BitArray} from "@chainsafe/ssz";
 import {altair, Root, ssz} from "@lodestar/types";
 import {BeaconBlockHeader} from "@lodestar/types/phase0";
-import {BitArray} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../types.js";
 
 export function sumBits(bits: BitArray): number {

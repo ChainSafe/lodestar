@@ -8,8 +8,8 @@ import {
   beforeValue,
   getNetworkCachedState,
   getNetworkCachedBlock,
-} from "../../../../state-transition/test/utils/index.js";
-import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
+} from "@lodestar/state-transition/test/utils/index.js";
+import {rangeSyncTest} from "@lodestar/state-transition/test/perf/params.js";
 import {BeaconChain} from "../../../src/chain/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";

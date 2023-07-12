@@ -1,6 +1,7 @@
 import sinon from "sinon";
 import {itBench} from "@dapplion/benchmark";
 import {expect} from "chai";
+import {BitArray, toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAltair,
   computeEpochAtSlot,
@@ -8,11 +9,10 @@ import {
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
 import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH, TIMELY_SOURCE_FLAG_INDEX} from "@lodestar/params";
-import {BitArray, toHexString} from "@chainsafe/ssz";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray} from "@lodestar/fork-choice";
 import {ssz} from "@lodestar/types";
+import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test/perf/util.js";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
-import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {computeAnchorCheckpoint} from "../../../../src/chain/initState.js";
 
 /** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */

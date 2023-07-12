@@ -1,3 +1,4 @@
+import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod, allForks} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {
@@ -15,7 +16,6 @@ import {
 } from "@lodestar/light-client/spec";
 import {Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
-import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {MIN_SYNC_COMMITTEE_PARTICIPANTS, SYNC_COMMITTEE_SIZE, ForkName, ForkSeq, ForkExecution} from "@lodestar/params";
 
 import {IBeaconDb} from "../../db/index.js";

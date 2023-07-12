@@ -1,6 +1,6 @@
+import {toHexString} from "@chainsafe/ssz";
 import {ForkName, SLOTS_PER_EPOCH, DOMAIN_VOLUNTARY_EXIT} from "@lodestar/params";
 import {DomainType, ForkDigest, phase0, Root, Slot, ssz, Version} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "../beaconConfig.js";
 import {ForkDigestHex, CachedGenesis} from "./types.js";
 export {ForkDigestContext} from "./types.js";

@@ -1,6 +1,6 @@
+import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {ssz, Slot, allForks} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
 import {Api, BlockHeaderResponse, ValidatorResponse} from "../../../../src/beacon/routes/beacon/index.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 

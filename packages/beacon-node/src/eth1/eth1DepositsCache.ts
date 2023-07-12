@@ -1,5 +1,5 @@
-import {phase0, ssz} from "@lodestar/types";
 import {byteArrayEquals} from "@chainsafe/ssz";
+import {phase0, ssz} from "@lodestar/types";
 import {FilterOptions} from "@lodestar/db";
 import {ChainForkConfig} from "@lodestar/config";
 

@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {fastify} from "fastify";
-import {ForkName} from "@lodestar/params";
 import {fromHexString} from "@chainsafe/ssz";
+import {ForkName} from "@lodestar/params";
 
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";

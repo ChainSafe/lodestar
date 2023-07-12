@@ -1,3 +1,4 @@
+import {toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAllForks,
   isExecutionStateType,
@@ -7,7 +8,6 @@ import {
   kzgCommitmentToVersionedHash,
 } from "@lodestar/state-transition";
 import {bellatrix, allForks, Slot, deneb} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
 import {
   IForkChoice,
   assertValidTerminalPowBlock,

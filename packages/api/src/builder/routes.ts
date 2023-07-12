@@ -1,5 +1,5 @@
-import {ssz, allForks, bellatrix, Slot, Root, BLSPubkey} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {ssz, allForks, bellatrix, Slot, Root, BLSPubkey} from "@lodestar/types";
 import {ForkName, isForkExecution} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 

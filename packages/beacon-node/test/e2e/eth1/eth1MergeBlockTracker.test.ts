@@ -1,7 +1,7 @@
 import {expect} from "chai";
+import {fromHexString} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
-import {fromHexString} from "@chainsafe/ssz";
 import {Eth1Provider, IEth1Provider} from "../../../src/index.js";
 import {Eth1MergeBlockTracker, StatusCode} from "../../../src/eth1/eth1MergeBlockTracker.js";
 import {Eth1Options} from "../../../src/eth1/options.js";
