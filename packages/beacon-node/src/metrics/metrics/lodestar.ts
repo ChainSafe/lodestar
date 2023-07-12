@@ -850,6 +850,11 @@ export function createLodestarMetrics(
         help: "The excess slots (beyond the minimum delay) between the attestation slot and the block slot",
         buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
       }),
+      attestationInBlockParticipants: register.histogram({
+        name: "validator_monitor_attestation_in_block_participants",
+        help: "The total participants in attestations of monitored validators included in blocks",
+        buckets: [1, 5, 20, 50, 100, 200],
+      }),
       syncSignatureInAggregateTotal: register.gauge({
         name: "validator_monitor_sync_signature_in_aggregate_total",
         help: "Number of times a sync signature has been seen in an aggregate",
