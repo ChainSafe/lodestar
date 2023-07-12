@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {shouldDeleteLogFile} from "@chainsafe/lodestar/src/util/logger.js";
+// eslint-disable-next-line import/no-relative-packages
+import {shouldDeleteLogFile} from "../../../cli/src/util/logger.js";
 
 describe("shouldDeleteLogFile", function () {
   const prefix = "beacon";

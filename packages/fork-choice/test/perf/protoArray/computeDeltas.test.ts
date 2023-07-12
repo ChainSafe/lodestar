@@ -7,7 +7,8 @@ import {
   getEffectiveBalanceIncrementsZeroed,
 } from "@lodestar/state-transition";
 import {TIMELY_SOURCE_FLAG_INDEX} from "@lodestar/params";
-import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test/perf/util.js";
+// eslint-disable-next-line import/no-relative-packages
+import {generatePerfTestCachedStateAltair} from "../../../../state-transition/test/perf/util.js";
 import {VoteTracker} from "../../../src/protoArray/interface.js";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
 import {computeProposerBoostScoreFromBalances} from "../../../src/forkChoice/forkChoice.js";
