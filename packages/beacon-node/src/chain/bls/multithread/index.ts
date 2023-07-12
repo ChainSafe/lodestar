@@ -390,8 +390,15 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
           workReq = jobItemWorkReq(job, this.format);
         } catch (e) {
           this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: job.type});
-          // TODO tuyennhv, do an early unwrap?
-          job.reject(e as Error);
+          if (job.type === JobQueueItemType.default) {
+            job.reject(e as Error);
+          } else {
+            // there could be an invalid pubkey/signature, retry each individually
+            // Create new jobs for each pubkey set, and Promise.all all the results
+            this.jobs.push(...jobItemSameMessageToMultiSet(job));
+            this.metrics?.blsThreadPool.sameMessageRetryJobs.inc(1);
+            this.metrics?.blsThreadPool.sameMessageRetrySets.inc(job.sets.length);
+          }
           continue;
         }
         // Re-push all jobs with matching workReq for easier accounting of results
