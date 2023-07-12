@@ -97,7 +97,11 @@ module.exports = {
     "import/no-duplicates": "off",
     "import/no-extraneous-dependencies": [
       "error",
-      {devDependencies: false, optionalDependencies: false, peerDependencies: false},
+      {
+        devDependencies: false,
+        optionalDependencies: false,
+        peerDependencies: false,
+      },
     ],
     "import/no-relative-packages": "error",
     // TEMP Disabled while eslint-plugin-import support ESM (Typescript does support it) https://github.com/import-js/eslint-plugin-import/issues/2170
@@ -152,7 +156,6 @@ module.exports = {
     semi: "off",
   },
   settings: {
-    "import/internal-regex": "^@chainsafe/",
     "import/core-modules": [
       "node:child_process",
       "node:crypto",
@@ -165,6 +168,11 @@ module.exports = {
       "node:util",
       "node:url",
     ],
+    "import/resolver": {
+      typescript: {
+        project: "packages/*/tsconfig.json",
+      },
+    },
   },
   overrides: [
     {
@@ -235,4 +243,34 @@ function restrictImportDestructuring(...modules) {
     selector: `ImportDeclaration[source.value='${module}'] ImportSpecifier`,
     message: `Importing from '${module}' using destructuring is restricted.`,
   }));
+}
+
+function noExtraneousOverrides(packagesDir) {
+  return (
+    readdirSync(resolve(__dirname, packagesDir))
+      // filter for non-hidden dirs to get a list of packages
+      .filter(
+        (entry) => entry.substring(0, 1) !== "." && lstatSync(resolve(__dirname, packagesDir, entry)).isDirectory()
+      )
+      // map to override rules pointing to local and root package.json for rule
+      .map((entry) => {
+        console.log(join(packagesDir, entry, "src", "**", "*"));
+        console.log([resolve(__dirname, packagesDir, entry)]);
+        return {
+          files: [join(packagesDir, entry, "src", "**", "*")],
+          rules: {
+            "import/no-extraneous-dependencies": [
+              "error",
+              {
+                devDependencies: false,
+                optionalDependencies: false,
+                peerDependencies: false,
+                includeInternal: true,
+                packageDir: [resolve(__dirname, packagesDir, entry)],
+              },
+            ],
+          },
+        };
+      })
+  );
 }
