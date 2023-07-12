@@ -202,25 +202,33 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     return results.every((isValid) => isValid === true);
   }
 
+  /**
+   * Verify signature sets of the same message, only supports worker verification.
+   */
   async verifySignatureSetsSameMessage(
     sets: {publicKey: PublicKey; signature: Uint8Array}[],
     message: Uint8Array,
-    opts: Pick<VerifySignatureOpts, "verifyOnMainThread"> = {}
+    opts: Pick<VerifySignatureOpts, "batchable"> = {}
   ): Promise<boolean[]> {
-    // TODO: Should chunkify?
-    // NOTE: verifySignatureSetsSameMessage only supports worker verification
+    // chunkify so that it reduce the risk of retrying when there is at least one invalid signature
+    const results = await Promise.all(
+      chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map(
+        (setsChunk) =>
+          new Promise<boolean[]>((resolve, reject) => {
+            this.queueBlsWork({
+              type: JobQueueItemType.sameMessage,
+              resolve,
+              reject,
+              addedTimeMs: Date.now(),
+              opts,
+              sets: setsChunk,
+              message,
+            });
+          })
+      )
+    );
 
-    return new Promise<boolean[]>((resolve, reject) => {
-      this.queueBlsWork({
-        type: JobQueueItemType.sameMessage,
-        resolve,
-        reject,
-        addedTimeMs: Date.now(),
-        opts,
-        sets,
-        message,
-      });
-    });
+    return results.flat();
   }
 
   async close(): Promise<void> {
@@ -381,7 +389,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
           // Pubkey and signature aggregation is defered here
           workReq = jobItemWorkReq(job, this.format);
         } catch (e) {
-          // TODO: Add metrics
+          this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: job.type});
+          // TODO tuyennhv, do an early unwrap?
           job.reject(e as Error);
           continue;
         }
@@ -432,15 +441,14 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
             successCount += sigSetCount;
           }
         }
-
-        //
+        // handle result of the verification of aggregated signature against aggregated pubkeys
         else if (job.type === JobQueueItemType.sameMessage) {
           if (!jobResult || jobResult.code !== WorkResultCode.success) {
             job.reject(getJobResultError(jobResult, i));
             errorCount += 1;
           } else {
             if (jobResult.result) {
-              // All are valid
+              // All are valid, most of the time it goes here
               job.resolve(job.sets.map(() => true));
             } else {
               // Retry each individually

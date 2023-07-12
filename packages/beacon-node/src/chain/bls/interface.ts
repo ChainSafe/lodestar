@@ -48,14 +48,14 @@ export interface IBlsVerifier {
 
   /**
    * Similar to verifySignatureSets but:
-   *   - all signatures have the same signing root
+   *   - all signatures have the same message
    *   - return an array of boolean, each element indicates whether the corresponding signature set is valid
-   *   - only support `verifyOnMainThread` option.
+   *   - only support `batchable` option
    */
   verifySignatureSetsSameMessage(
     sets: {publicKey: PublicKey; signature: Uint8Array}[],
     messsage: Uint8Array,
-    opts?: Pick<VerifySignatureOpts, "verifyOnMainThread">
+    opts?: Pick<VerifySignatureOpts, "batchable">
   ): Promise<boolean[]>;
 
   /** For multithread pool awaits terminating all workers */

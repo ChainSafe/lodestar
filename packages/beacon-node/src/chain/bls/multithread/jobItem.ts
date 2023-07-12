@@ -53,7 +53,7 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat): BlsWorkR
       return {
         opts: job.opts,
         sets: job.sets.map((set) => ({
-          // TODO: This can throw
+          // this can throw, handled in the consumer code
           publicKey: getAggregatedPubkey(set).toBytes(format),
           signature: set.signature,
           message: set.signingRoot,
@@ -66,7 +66,7 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat): BlsWorkR
           {
             publicKey: bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey)).toBytes(format),
             signature: bls.Signature.aggregate(
-              //                                                        validate signature = true
+              // validate signature = true
               job.sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, true))
             ).toBytes(format),
             message: job.message,

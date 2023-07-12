@@ -336,6 +336,11 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_success_jobs_signature_sets_count",
         help: "Count of total verified signature sets",
       }),
+      errorAggregateSignatureSetsCount: register.gauge<"type">({
+        name: "lodestar_bls_thread_pool_error_aggregate_signature_sets_count",
+        help: "Count of error when aggregating pubkeys or signatures",
+        labelNames: ["type"],
+      }),
       errorJobsSignatureSetsCount: register.gauge({
         name: "lodestar_bls_thread_pool_error_jobs_signature_sets_count",
         help: "Count of total error-ed signature sets",
