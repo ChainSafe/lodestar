@@ -1,5 +1,5 @@
-import {Epoch, phase0} from "@lodestar/types";
 import {byteArrayEquals} from "@chainsafe/ssz";
+import {Epoch, phase0} from "@lodestar/types";
 import {CachedBeaconStatePhase0} from "../types.js";
 import {computeStartSlotAtEpoch, getBlockRootAtSlot, AttesterStatus} from "../util/index.js";
 

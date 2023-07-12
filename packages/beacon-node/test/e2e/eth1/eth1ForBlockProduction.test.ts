@@ -2,10 +2,10 @@ import "mocha";
 import {promisify} from "node:util";
 import {expect} from "chai";
 import leveldown from "leveldown";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {sleep} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {Eth1ForBlockProduction} from "../../../src/eth1/index.js";
 import {Eth1Options} from "../../../src/eth1/options.js";

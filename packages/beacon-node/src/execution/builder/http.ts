@@ -1,7 +1,7 @@
+import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 import {allForks, bellatrix, Slot, Root, BLSPubkey, ssz, deneb, Wei} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {getClient, Api as BuilderApi} from "@lodestar/api/builder";
-import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {ApiError} from "@lodestar/api";

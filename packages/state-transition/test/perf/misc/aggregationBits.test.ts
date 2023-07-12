@@ -1,7 +1,7 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {BitArray} from "@chainsafe/ssz";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {BitArray} from "@chainsafe/ssz";
 
 describe("aggregationBits", () => {
   setBenchOpts({noThreshold: true});

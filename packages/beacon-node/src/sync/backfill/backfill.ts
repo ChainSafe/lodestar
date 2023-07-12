@@ -1,10 +1,10 @@
 import {EventEmitter} from "events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
+import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAllForks, blockToHeader} from "@lodestar/state-transition";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {phase0, Root, Slot, allForks, ssz} from "@lodestar/types";
 import {ErrorAborted, Logger, sleep, toHex} from "@lodestar/utils";
-import {toHexString} from "@chainsafe/ssz";
 
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {IBeaconChain} from "../../chain/index.js";
@@ -851,7 +851,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         backfilled: this.syncAnchor.lastBackSyncedBlock.slot,
       });
     }
-    if (error) throw new BackfillSyncError({code: error});
+    if (error != null) throw new BackfillSyncError({code: error});
   }
 }
 

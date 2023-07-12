@@ -11,7 +11,7 @@ import {TestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_ha
 
 const testCases = [eth_getBlock_with_no_accessList, eth_getBlock_with_contractCreation] as [
   TestFixture<ELBlock>,
-  TestFixture<ELBlock>
+  TestFixture<ELBlock>,
 ];
 
 describe("verified_requests / eth_getBlockByNumber", () => {

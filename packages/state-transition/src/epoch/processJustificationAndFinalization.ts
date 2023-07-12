@@ -1,5 +1,5 @@
-import {GENESIS_EPOCH} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
+import {GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {computeEpochAtSlot, getBlockRoot} from "../util/index.js";
 import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";

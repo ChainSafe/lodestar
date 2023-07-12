@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {EpochShuffling} from "@lodestar/state-transition";
 import {toHexString} from "@chainsafe/ssz";
+import {EpochShuffling} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Root} from "@lodestar/types";
 import {StateContextCache} from "../../../../src/chain/stateCache/index.js";

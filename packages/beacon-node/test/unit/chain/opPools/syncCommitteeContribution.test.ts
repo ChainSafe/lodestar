@@ -1,9 +1,9 @@
 import {expect} from "chai";
-import {ssz} from "@lodestar/types";
-import {newFilledArray} from "@lodestar/state-transition";
 import type {SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray} from "@chainsafe/ssz";
+import {newFilledArray} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {
   aggregate,

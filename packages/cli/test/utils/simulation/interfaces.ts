@@ -285,7 +285,7 @@ export type StoreTypes<T extends SimulationAssertion[], IDs extends string = Ext
 export interface SimulationAssertion<
   IdType extends string = string,
   ValueType = unknown,
-  Dependencies extends SimulationAssertion[] = SimulationAssertion<string, unknown, any[]>[]
+  Dependencies extends SimulationAssertion[] = SimulationAssertion<string, unknown, any[]>[],
 > {
   readonly id: IdType;
   capture?(

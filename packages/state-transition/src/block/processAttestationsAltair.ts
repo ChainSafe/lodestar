@@ -1,5 +1,5 @@
-import {Epoch, phase0} from "@lodestar/types";
 import {byteArrayEquals} from "@chainsafe/ssz";
+import {Epoch, phase0} from "@lodestar/types";
 import {intSqrt} from "@lodestar/utils";
 
 import {

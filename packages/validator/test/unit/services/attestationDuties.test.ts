@@ -1,9 +1,9 @@
 import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
-import {chainConfig} from "@lodestar/config/default";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
+import {chainConfig} from "@lodestar/config/default";
 import {HttpStatusCode, routes} from "@lodestar/api";
 import {ssz} from "@lodestar/types";
 import {computeEpochAtSlot} from "@lodestar/state-transition";

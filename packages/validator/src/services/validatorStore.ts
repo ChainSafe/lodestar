@@ -1,3 +1,5 @@
+import type {SecretKey} from "@chainsafe/bls/types";
+import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -20,7 +22,6 @@ import {
   DOMAIN_APPLICATION_BUILDER,
   DOMAIN_BLOB_SIDECAR,
 } from "@lodestar/params";
-import type {SecretKey} from "@chainsafe/bls/types";
 import {
   allForks,
   altair,
@@ -34,7 +35,6 @@ import {
   ssz,
   ValidatorIndex,
 } from "@lodestar/types";
-import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";

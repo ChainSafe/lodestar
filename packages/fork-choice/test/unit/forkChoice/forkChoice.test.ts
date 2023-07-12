@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {config} from "@lodestar/config/default";
 import {fromHexString} from "@chainsafe/ssz";
+import {config} from "@lodestar/config/default";
 import {RootHex, Slot} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
 import {computeEpochAtSlot} from "@lodestar/state-transition";

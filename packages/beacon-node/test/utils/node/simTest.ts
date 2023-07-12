@@ -1,3 +1,4 @@
+import {toHexString} from "@chainsafe/ssz";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -10,7 +11,6 @@ import {allForks, Epoch, Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Logger, mapValues} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
-import {toHexString} from "@chainsafe/ssz";
 import {BeaconNode} from "../../../src/index.js";
 import {ChainEvent, HeadEventData} from "../../../src/chain/index.js";
 import {linspace} from "../../../src/util/numpy.js";

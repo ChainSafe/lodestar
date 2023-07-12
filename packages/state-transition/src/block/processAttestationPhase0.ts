@@ -1,7 +1,7 @@
+import {toHexString} from "@chainsafe/ssz";
 import {phase0, ssz} from "@lodestar/types";
 
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot} from "../util/index.js";
 import {CachedBeaconStatePhase0, CachedBeaconStateAllForks} from "../types.js";
 import {isValidIndexedAttestation} from "./index.js";

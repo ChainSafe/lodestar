@@ -1,4 +1,5 @@
 import bls from "@chainsafe/bls";
+import {toHexString} from "@chainsafe/ssz";
 import {
   ForkName,
   MAX_ATTESTATIONS,
@@ -15,7 +16,6 @@ import {
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
-import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";
 import {toHex, MapDef} from "@lodestar/utils";
 import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
@@ -217,7 +217,10 @@ type AttestationNonParticipant = {
 export class MatchingDataAttestationGroup {
   private readonly attestations: AttestationWithIndex[] = [];
 
-  constructor(readonly committee: ValidatorIndex[], readonly data: phase0.AttestationData) {}
+  constructor(
+    readonly committee: ValidatorIndex[],
+    readonly data: phase0.AttestationData
+  ) {}
 
   getAttestationCount(): number {
     return this.attestations.length;

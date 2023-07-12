@@ -1,8 +1,8 @@
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
+import {fromHexString} from "@chainsafe/ssz";
 import {InputType} from "@lodestar/spec-test-util";
 import {toHexString} from "@lodestar/utils";
-import {fromHexString} from "@chainsafe/ssz";
 import {TestRunnerFn} from "../utils/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */

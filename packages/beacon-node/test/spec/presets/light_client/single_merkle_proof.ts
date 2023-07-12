@@ -1,9 +1,9 @@
 import {expect} from "chai";
+import {Tree} from "@chainsafe/persistent-merkle-tree";
+import {TreeViewDU, Type} from "@chainsafe/ssz";
 import {RootHex, ssz} from "@lodestar/types";
 import {InputType} from "@lodestar/spec-test-util";
 import {ForkName} from "@lodestar/params";
-import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {TreeViewDU, Type} from "@chainsafe/ssz";
 import {toHex} from "@lodestar/utils";
 import {TestRunnerFn} from "../../utils/types.js";
 

@@ -1,5 +1,5 @@
-import {Root, Slot} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
+import {Root, Slot} from "@lodestar/types";
 
 /**
  * Sync this up to this target. Uses slot instead of epoch to re-use logic for finalized sync

@@ -116,6 +116,7 @@
     "@libp2p/interface-registrar": "^2.0.12",
     "@libp2p/mdns": "^8.0.0",
     "@libp2p/mplex": "^8.0.3",
+    "@libp2p/peer-id": "^2.0.3",
     "@libp2p/peer-id-factory": "^2.0.3",
     "@libp2p/prometheus-metrics": "^1.1.4",
     "@libp2p/tcp": "7.0.1",
@@ -124,6 +125,7 @@
     "@lodestar/db": "^1.9.1",
     "@lodestar/fork-choice": "^1.9.1",
     "@lodestar/light-client": "^1.9.1",
+    "@lodestar/logger": "^1.9.1",
     "@lodestar/params": "^1.9.1",
     "@lodestar/reqresp": "^1.9.1",
     "@lodestar/state-transition": "^1.9.1",
@@ -144,6 +146,7 @@
     "it-pipe": "^3.0.1",
     "jwt-simple": "0.5.6",
     "libp2p": "0.45.9",
+    "multiformats": "^11.0.1",
     "prom-client": "^14.2.0",
     "qs": "^6.11.1",
     "snappyjs": "^0.7.0",
@@ -155,7 +158,6 @@
     "xxhash-wasm": "1.0.2"
   },
   "devDependencies": {
-    "@lodestar/logger": "^1.9.1",
     "@types/eventsource": "^1.1.11",
     "@types/leveldown": "^4.0.3",
     "@types/qs": "^6.9.7",

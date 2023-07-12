@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {ForkName} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
+import {ForkName} from "@lodestar/params";
 import {config, chainConfig} from "../../src/default.js";
 import {createForkConfig} from "../../src/index.js";
 

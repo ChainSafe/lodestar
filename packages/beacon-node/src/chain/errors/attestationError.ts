@@ -1,5 +1,5 @@
-import {CommitteeIndex, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
+import {CommitteeIndex, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum AttestationErrorCode {

@@ -1,9 +1,9 @@
 import {expect} from "chai";
+import {ProofType, SingleProof, Tree} from "@chainsafe/persistent-merkle-tree";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
-import {ProofType, SingleProof, Tree} from "@chainsafe/persistent-merkle-tree";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {verifyMerkleBranch} from "@lodestar/utils";
 import {TestRunnerFn} from "../utils/types.js";
 

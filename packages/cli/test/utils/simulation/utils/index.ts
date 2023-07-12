@@ -80,10 +80,13 @@ export const arrayGroupBy = <T>(
   array: T[],
   predicate: (value: T, index: number, array: T[]) => string
 ): Record<string, T[]> =>
-  array.reduce((acc, value, index, array) => {
-    (acc[predicate(value, index, array)] ||= []).push(value);
-    return acc;
-  }, {} as {[key: string]: T[]});
+  array.reduce(
+    (acc, value, index, array) => {
+      (acc[predicate(value, index, array)] ||= []).push(value);
+      return acc;
+    },
+    {} as {[key: string]: T[]}
+  );
 
 export function strFixedSize(str: string, width: number): string {
   return str.padEnd(width).slice(0, width);

@@ -86,7 +86,7 @@ describe("eth1 / util / deposits", function () {
         if (expectedReturnedIndexes) {
           const result = await resultPromise;
           expect(result.map((deposit) => deposit.index)).to.deep.equal(expectedReturnedIndexes);
-        } else if (error) {
+        } else if (error != null) {
           await expectRejectedWithLodestarError(resultPromise, error);
         } else {
           throw Error("Test case must have 'result' or 'error'");

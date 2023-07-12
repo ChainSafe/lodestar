@@ -1,5 +1,5 @@
-import {routes} from "@lodestar/api/beacon";
 import type {SecretKey} from "@chainsafe/bls/types";
+import {routes} from "@lodestar/api/beacon";
 import {ApiError} from "@lodestar/api";
 import {AssertionResult, CLClient, CLClientKeys, SimulationAssertion} from "../interfaces.js";
 import {arrayEquals} from "../utils/index.js";

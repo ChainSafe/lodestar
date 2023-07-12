@@ -1,7 +1,7 @@
+import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {FINALIZED_ROOT_GINDEX, BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX, ForkExecution} from "@lodestar/params";
 import {allForks, ssz} from "@lodestar/types";
-import {Tree} from "@chainsafe/persistent-merkle-tree";
 
 import {SyncCommitteeWitness} from "./types.js";
 

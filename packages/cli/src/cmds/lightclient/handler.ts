@@ -1,7 +1,7 @@
 import path from "node:path";
+import {fromHexString} from "@chainsafe/ssz";
 import {ApiError, getClient} from "@lodestar/api";
 import {Lightclient} from "@lodestar/light-client";
-import {fromHexString} from "@chainsafe/ssz";
 import {LightClientRestTransport} from "@lodestar/light-client/transport";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";

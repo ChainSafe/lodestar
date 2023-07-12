@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
+// eslint-disable-next-line import/no-relative-packages
 import {shouldDeleteLogFile} from "../../../cli/src/util/logger.js";
 
 describe("shouldDeleteLogFile", function () {

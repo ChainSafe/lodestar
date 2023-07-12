@@ -1,6 +1,6 @@
 import {pipe} from "it-pipe";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Libp2p} from "libp2p";
+import type {Libp2p} from "libp2p";
 import {Uint8ArrayList} from "uint8arraylist";
 import {ErrorAborted, Logger, withTimeout, TimeoutError} from "@lodestar/utils";
 import {MixedProtocol, ResponseIncoming} from "../types.js";

@@ -1,7 +1,7 @@
+import {toHexString} from "@chainsafe/ssz";
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
-import {toHexString} from "@chainsafe/ssz";
 import {BlockInput} from "../../chain/blocks/types.js";
 import {PeerAction} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";

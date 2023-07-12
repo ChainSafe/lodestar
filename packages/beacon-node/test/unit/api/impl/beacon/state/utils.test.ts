@@ -1,7 +1,7 @@
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {phase0} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
+import {phase0} from "@lodestar/types";
 import {getValidatorStatus, getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
 

@@ -26,7 +26,7 @@ export function enrRelevance(enr: ENR, config: BeaconConfig): ENRRelevance {
   const forkDigest = eth2.slice(0, 4);
   // Check if forkDigest matches any of our known forks.
   const forkName = config.forkDigest2ForkNameOption(forkDigest);
-  if (!forkName) {
+  if (forkName == null) {
     return ENRRelevance.unknown_forkDigest;
   }
 

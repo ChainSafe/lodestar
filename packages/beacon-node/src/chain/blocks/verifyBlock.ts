@@ -1,3 +1,4 @@
+import {toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
@@ -6,7 +7,6 @@ import {
 } from "@lodestar/state-transition";
 import {bellatrix} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {toHexString} from "@chainsafe/ssz";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";

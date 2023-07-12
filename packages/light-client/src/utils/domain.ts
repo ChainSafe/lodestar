@@ -1,7 +1,7 @@
 // Only used by processDeposit +  lightclient
 
-import {Epoch, Version, Root, DomainType, phase0, ssz, Domain} from "@lodestar/types";
 import {Type} from "@chainsafe/ssz";
+import {Epoch, Version, Root, DomainType, phase0, ssz, Domain} from "@lodestar/types";
 
 /**
  * Return the domain for the [[domainType]] and [[forkVersion]].

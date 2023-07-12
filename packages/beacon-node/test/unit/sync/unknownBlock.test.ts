@@ -1,11 +1,11 @@
 import {expect} from "chai";
 import sinon from "sinon";
+import {toHexString} from "@chainsafe/ssz";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {createChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ssz} from "@lodestar/types";
 import {notNullish, sleep} from "@lodestar/utils";
-import {toHexString} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
 import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
@@ -144,7 +144,7 @@ describe("sync / UnknownBlockSync", () => {
       const forkChoiceKnownRoots = new Set([blockRootHex0]);
       const forkChoice: Pick<IForkChoice, "hasBlock" | "getFinalizedBlock"> = {
         hasBlock: (root) => forkChoiceKnownRoots.has(toHexString(root)),
-        getFinalizedBlock: () => ({slot: finalizedSlot} as ProtoBlock),
+        getFinalizedBlock: () => ({slot: finalizedSlot}) as ProtoBlock,
       };
       const seenBlockProposers: Pick<SeenBlockProposers, "isKnown"> = {
         // only return seenBlock for blockC

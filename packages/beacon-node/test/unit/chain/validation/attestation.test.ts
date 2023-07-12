@@ -1,11 +1,13 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch, processSlots} from "@lodestar/state-transition";
 import {defaultChainConfig, createChainForkConfig, BeaconConfig} from "@lodestar/config";
 import {Slot, ssz} from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
+// eslint-disable-next-line import/no-relative-packages
+import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {AttestationErrorCode, GossipErrorCode} from "../../../../src/chain/errors/index.js";
 import {
@@ -14,7 +16,6 @@ import {
   validateGossipAttestation,
 } from "../../../../src/chain/validation/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {memoOnce} from "../../../utils/cache.js";
 import {getAttestationValidData, AttestationValidDataOpts} from "../../../utils/validationData/attestation.js";
 import {IStateRegenerator, RegenCaller} from "../../../../src/chain/regen/interface.js";

@@ -1,9 +1,9 @@
 import {expect} from "chai";
+import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api/beacon";
 import {BLSPubkey, Epoch, phase0, Slot, ssz} from "@lodestar/types";
 import {ChainConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {fromHexString} from "@chainsafe/ssz";
 import {Validator} from "@lodestar/validator";
 import {PubkeyHex} from "@lodestar/validator/src/types";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
