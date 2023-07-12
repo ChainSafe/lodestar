@@ -374,6 +374,11 @@ export function getValidatorApi({
 
       const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
       if (!contribution) throw new ApiError(500, "No contribution available");
+
+      metrics?.production.producedSyncContributionParticipants.observe(
+        contribution.aggregationBits.getTrueBitIndexes().length
+      );
+
       return {data: contribution};
     },
 
@@ -537,6 +542,9 @@ export function getValidatorApi({
       notWhileSyncing();
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
+
+      const aggregate = chain.attestationPool.getAggregate(slot, attestationDataRoot);
+      metrics?.production.producedAggregateParticipants.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
 
       return {
         data: chain.attestationPool.getAggregate(slot, attestationDataRoot),
