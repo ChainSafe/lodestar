@@ -169,7 +169,7 @@ export class OpPool {
     phase0.AttesterSlashing[],
     phase0.ProposerSlashing[],
     phase0.SignedVoluntaryExit[],
-    capella.SignedBLSToExecutionChange[]
+    capella.SignedBLSToExecutionChange[],
   ] {
     const {config} = state;
     const stateEpoch = computeEpochAtSlot(state.slot);

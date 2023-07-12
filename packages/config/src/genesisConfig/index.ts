@@ -89,7 +89,7 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
     forkDigest2ForkName(forkDigest: ForkDigest | ForkDigestHex): ForkName {
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
       const forkName = forkNameByForkDigest.get(forkDigestHex);
-      if (!forkName) {
+      if (forkName == null) {
         throw Error(`Unknown forkDigest ${forkDigestHex}`);
       }
       return forkName;
@@ -98,7 +98,7 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
     forkDigest2ForkNameOption(forkDigest: ForkDigest | ForkDigestHex): ForkName | null {
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
       const forkName = forkNameByForkDigest.get(forkDigestHex);
-      if (!forkName) {
+      if (forkName == null) {
         return null;
       }
       return forkName;

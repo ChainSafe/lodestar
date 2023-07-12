@@ -144,7 +144,7 @@ describe("sync / UnknownBlockSync", () => {
       const forkChoiceKnownRoots = new Set([blockRootHex0]);
       const forkChoice: Pick<IForkChoice, "hasBlock" | "getFinalizedBlock"> = {
         hasBlock: (root) => forkChoiceKnownRoots.has(toHexString(root)),
-        getFinalizedBlock: () => ({slot: finalizedSlot} as ProtoBlock),
+        getFinalizedBlock: () => ({slot: finalizedSlot}) as ProtoBlock,
       };
       const seenBlockProposers: Pick<SeenBlockProposers, "isKnown"> = {
         // only return seenBlock for blockC

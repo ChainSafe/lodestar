@@ -15,7 +15,7 @@ export type ApiClientSErrorResponse<S extends Exclude<HttpStatusCode, HttpSucces
 };
 export type ApiClientResponse<
   S extends Partial<{[K in HttpSuccessCodes]: unknown}> = {[K in HttpSuccessCodes]: unknown},
-  E extends Exclude<HttpStatusCode, HttpSuccessCodes> = Exclude<HttpStatusCode, HttpSuccessCodes>
+  E extends Exclude<HttpStatusCode, HttpSuccessCodes> = Exclude<HttpStatusCode, HttpSuccessCodes>,
 > =
   | {[K in keyof S]: ApiClientSuccessResponse<K, S[K]>}[keyof S]
   | {[K in E]: ApiClientSErrorResponse<K>}[E]

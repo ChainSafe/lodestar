@@ -67,7 +67,11 @@ export class Validator {
   private state: Status;
   private readonly controller: AbortController;
 
-  constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
+  constructor(
+    opts: ValidatorOptions,
+    readonly genesis: Genesis,
+    metrics: Metrics | null = null
+  ) {
     const {db, config: chainConfig, logger, slashingProtection, signers, valProposerConfig} = opts;
     const config = createBeaconConfig(chainConfig, genesis.genesisValidatorsRoot);
     this.controller = opts.abortController;

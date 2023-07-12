@@ -184,7 +184,10 @@ export class LightClientServer {
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
   private finalized: allForks.LightClientFinalityUpdate | null = null;
 
-  constructor(private readonly opts: LightClientServerOpts, modules: LightClientServerModules) {
+  constructor(
+    private readonly opts: LightClientServerOpts,
+    modules: LightClientServerModules
+  ) {
     const {config, db, metrics, emitter, logger} = modules;
     this.config = config;
     this.db = db;

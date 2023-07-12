@@ -14,7 +14,7 @@ const codeCase = "camel" as const;
 
 export type RouteGroupDefinition<
   Api extends Record<string, APIServerHandler>,
-  ReqTypes extends {[K in keyof Api]: ReqGeneric}
+  ReqTypes extends {[K in keyof Api]: ReqGeneric},
 > = {
   routesData: RoutesData<Api>;
   getReqSerializers: (config: ChainForkConfig) => ReqSerializers<Api, ReqTypes>;
@@ -54,7 +54,7 @@ export type ReqSerializer<Fn extends (...args: any) => any, ReqType extends ReqG
 
 export type ReqSerializers<
   Api extends Record<string, APIServerHandler>,
-  ReqTypes extends {[K in keyof Api]: ReqGeneric}
+  ReqTypes extends {[K in keyof Api]: ReqGeneric},
 > = {
   [K in keyof Api]: ReqSerializer<Api[K], ReqTypes[K]>;
 };

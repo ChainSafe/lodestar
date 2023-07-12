@@ -317,7 +317,10 @@ export class ErrorJsonRpcResponse extends Error {
 
 /** JSON RPC endpoint returned status code != 200 */
 export class HttpRpcError extends Error {
-  constructor(readonly status: number, message: string) {
+  constructor(
+    readonly status: number,
+    message: string
+  ) {
     super(message);
   }
 }

@@ -101,7 +101,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     );
   };
 
-  constructor(private readonly rpc: IJsonRpcHttpClient, {metrics, signal}: ExecutionEngineModules) {
+  constructor(
+    private readonly rpc: IJsonRpcHttpClient,
+    {metrics, signal}: ExecutionEngineModules
+  ) {
     this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
       this.jobQueueProcessor,
       {maxLength: QUEUE_MAX_LENGTH, maxConcurrency: 1, noYieldIfOneItem: true, signal},

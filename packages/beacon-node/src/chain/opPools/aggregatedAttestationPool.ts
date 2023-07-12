@@ -217,7 +217,10 @@ type AttestationNonParticipant = {
 export class MatchingDataAttestationGroup {
   private readonly attestations: AttestationWithIndex[] = [];
 
-  constructor(readonly committee: ValidatorIndex[], readonly data: phase0.AttestationData) {}
+  constructor(
+    readonly committee: ValidatorIndex[],
+    readonly data: phase0.AttestationData
+  ) {}
 
   getAttestationCount(): number {
     return this.attestations.length;

@@ -64,7 +64,10 @@ export class ReqResp {
   private readonly registeredProtocols = new Map<ProtocolID, MixedProtocol>();
   private readonly dialOnlyProtocols = new Map<ProtocolID, boolean>();
 
-  constructor(modules: ReqRespProtocolModules, private readonly opts: ReqRespOpts = {}) {
+  constructor(
+    modules: ReqRespProtocolModules,
+    private readonly opts: ReqRespOpts = {}
+  ) {
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
     this.metrics = modules.metricsRegister ? getMetrics(modules.metricsRegister) : null;

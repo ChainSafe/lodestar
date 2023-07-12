@@ -44,7 +44,10 @@ export class RestApiServer {
 
   private status = Status.Closed;
 
-  constructor(private readonly opts: RestApiServerOpts, modules: RestApiServerModules) {
+  constructor(
+    private readonly opts: RestApiServerOpts,
+    modules: RestApiServerModules
+  ) {
     // Apply opts defaults
     const {logger, metrics} = modules;
 

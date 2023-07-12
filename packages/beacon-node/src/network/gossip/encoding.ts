@@ -62,7 +62,10 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
 }
 
 export class DataTransformSnappy {
-  constructor(private readonly gossipTopicCache: GossipTopicCache, private readonly maxSizePerMessage: number) {}
+  constructor(
+    private readonly gossipTopicCache: GossipTopicCache,
+    private readonly maxSizePerMessage: number
+  ) {}
 
   /**
    * Takes the data published by peers on a topic and transforms the data.

@@ -26,7 +26,10 @@ class SpanDistanceRepository {
   private readonly bucketId: string;
   private readonly dbReqOpts: DbReqOpts;
 
-  constructor(protected db: LodestarValidatorDatabaseController, bucket: Bucket) {
+  constructor(
+    protected db: LodestarValidatorDatabaseController,
+    bucket: Bucket
+  ) {
     this.type = ssz.Epoch;
     this.bucket = bucket;
     this.bucketId = getBucketNameByValue(bucket);

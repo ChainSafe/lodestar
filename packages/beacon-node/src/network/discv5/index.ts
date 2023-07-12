@@ -29,7 +29,10 @@ export class Discv5Worker extends (EventEmitter as {new (): StrictEventEmitter<E
   private readonly subscription: {unsubscribe: () => void};
   private closed = false;
 
-  constructor(private readonly opts: Discv5Opts, private readonly workerApi: Discv5WorkerApi) {
+  constructor(
+    private readonly opts: Discv5Opts,
+    private readonly workerApi: Discv5WorkerApi
+  ) {
     super();
 
     this.keypair = createKeypairFromPeerId(this.opts.peerId);

@@ -35,11 +35,11 @@ export type EngineApiRpcParamTypes = {
    */
   engine_forkchoiceUpdatedV1: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
-    payloadAttributes?: PayloadAttributesRpc
+    payloadAttributes?: PayloadAttributesRpc,
   ];
   engine_forkchoiceUpdatedV2: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
-    payloadAttributes?: PayloadAttributesRpc
+    payloadAttributes?: PayloadAttributesRpc,
   ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process

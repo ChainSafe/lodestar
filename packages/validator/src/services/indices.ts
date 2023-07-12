@@ -46,7 +46,11 @@ export class IndicesService {
   // Request indices once
   private pollValidatorIndicesPromise: Promise<ValidatorIndex[]> | null = null;
 
-  constructor(private readonly logger: Logger, private readonly api: Api, private readonly metrics: Metrics | null) {
+  constructor(
+    private readonly logger: Logger,
+    private readonly api: Api,
+    private readonly metrics: Metrics | null
+  ) {
     if (metrics) {
       metrics.indices.addCollect(() => metrics.indices.set(this.index2pubkey.size));
     }

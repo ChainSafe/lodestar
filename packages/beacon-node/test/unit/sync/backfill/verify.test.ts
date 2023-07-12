@@ -46,7 +46,7 @@ describe("backfill sync - verify block sequence", function () {
         blocks.filter((b) => b.data.message.slot !== 2).slice(0, blocks.length - 2),
         blocks[blocks.length - 1].data.message.parentRoot
       );
-      if (error) throw new BackfillSyncError({code: error});
+      if (error != null) throw new BackfillSyncError({code: error});
     }).to.throw(BackfillSyncErrorCode.NOT_LINEAR);
   });
 

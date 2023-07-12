@@ -108,7 +108,10 @@ export type BlockErrorType =
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 
 export class BlockError extends LodestarError<BlockErrorType> {
-  constructor(readonly signedBlock: allForks.SignedBeaconBlock, type: BlockErrorType) {
+  constructor(
+    readonly signedBlock: allForks.SignedBeaconBlock,
+    type: BlockErrorType
+  ) {
     super(type);
   }
 

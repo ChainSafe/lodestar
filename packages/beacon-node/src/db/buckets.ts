@@ -41,6 +41,8 @@ export enum Bucket {
   // note: below buckets would not be in use till deneb hf so their number assignments
   // can be ignored and safely deleted later on
   allForks_blobsSidecar = 29, // DENEB BeaconBlockRoot -> BlobsSidecar
+
+  // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
   allForks_blobsSidecarArchive = 30, // DENEB BeaconBlockSlot -> BlobsSidecar
 
   // Lightclient server

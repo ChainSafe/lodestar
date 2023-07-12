@@ -851,7 +851,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         backfilled: this.syncAnchor.lastBackSyncedBlock.slot,
       });
     }
-    if (error) throw new BackfillSyncError({code: error});
+    if (error != null) throw new BackfillSyncError({code: error});
   }
 }
 
