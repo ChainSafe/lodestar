@@ -273,6 +273,18 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     return new Promise<boolean>((resolve, reject) => {
       const job = {resolve, reject, addedTimeMs: Date.now(), workReq};
 
+      // always prepend priority jobs
+      // priority + batchable: do not run job
+      // priority + !batchable: run job immediately
+      if (workReq.opts.priority) {
+        this.jobs.unshift(job);
+        if (!workReq.opts.batchable) {
+          setTimeout(this.runJob, 0);
+        }
+        return;
+      }
+
+      // below is for non-priority jobs
       // Append batchable sets to `bufferedJobs`, starting a timeout to push them into `jobs`.
       // Do not call `runJob()`, it is called from `runBufferedJobs()`
       if (workReq.opts.batchable) {
