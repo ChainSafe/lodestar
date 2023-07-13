@@ -33,7 +33,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
 
   examples: [
     {
-      command: "validator voluntary-exit --pubkeys 0xF00",
+      command: "validator voluntary-exit --network goerli --pubkeys 0xF00",
       description: "Perform a voluntary exit for the validator who has a public key 0xF00",
     },
   ],
@@ -78,6 +78,11 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
 
     // Select signers to exit
     const signers = await getSignersFromArgs(args, network, {logger: console, signal: new AbortController().signal});
+    if (signers.length === 0) {
+      throw new YargsError(`No local keystores found with current args.
+   Ensure --dataDir and --network match values used when importing keys via validator import
+   or alternatively, import keys by providing --importKeystores arg to voluntary-exit command.`);
+    }
     const signersToExit = selectSignersToExit(args, signers);
     const validatorsToExit = await resolveValidatorIndexes(client, signersToExit);
 
@@ -153,7 +158,8 @@ async function resolveValidatorIndexes(client: Api, signersToExit: SignerLocalPu
   return signersToExit.map(({signer, pubkey}) => {
     const item = dataByPubkey.get(pubkey);
     if (!item) {
-      throw Error(`beacon node did not return status for pubkey ${pubkey}`);
+      throw new YargsError(`Validator with pubkey ${pubkey} is unknown.
+   Re-check the pubkey submitted or wait until the validator is activated on the beacon chain to voluntary exit.`);
     }
 
     return {
