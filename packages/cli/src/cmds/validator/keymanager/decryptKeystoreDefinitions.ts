@@ -28,6 +28,10 @@ export async function decryptKeystoreDefinitions(
   keystoreDefinitions: LocalKeystoreDefinition[],
   opts: KeystoreDecryptOptions
 ): Promise<SignerLocal[]> {
+  if (keystoreDefinitions.length === 0) {
+    return [];
+  }
+
   if (opts.cacheFilePath) {
     try {
       const signers = await loadKeystoreCache(opts.cacheFilePath, keystoreDefinitions);
