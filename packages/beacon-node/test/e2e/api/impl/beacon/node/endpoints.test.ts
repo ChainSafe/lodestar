@@ -100,7 +100,7 @@ describe("beacon node api", function () {
       });
 
       // Give node sometime to communicate with EL
-      await sleep(chainConfigDef.SECONDS_PER_SLOT * 2 * 1000);
+      await sleep(chainConfigDef.SECONDS_PER_SLOT * 3 * 1000);
 
       const res = await client.node.getSyncingStatus();
       ApiError.assert(res);
