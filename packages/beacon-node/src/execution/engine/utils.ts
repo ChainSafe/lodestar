@@ -1,5 +1,6 @@
 import {IJson, RpcPayload} from "../../eth1/interface.js";
-import {IJsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
+import {IJsonRpcHttpClient, isFetchError} from "../../eth1/provider/jsonRpcHttpClient.js";
+import {ExecutePayloadStatus, ExecutionEngineState} from "./interface.js";
 
 export type JsonRpcBackend = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,4 +27,43 @@ export class ExecutionEngineMockJsonRpcClient implements IJsonRpcHttpClient {
   fetchBatch<R>(rpcPayloadArr: RpcPayload<IJson[]>[]): Promise<R[]> {
     return Promise.all(rpcPayloadArr.map((payload) => this.fetch<R>(payload)));
   }
+}
+
+export function getExecutionEngineState({
+  payloadError,
+  payloadStatus,
+}:
+  | {payloadStatus: ExecutePayloadStatus; payloadError?: never}
+  | {payloadStatus?: never; payloadError: unknown}): ExecutionEngineState {
+  switch (payloadStatus) {
+    case ExecutePayloadStatus.ACCEPTED:
+    case ExecutePayloadStatus.VALID:
+    case ExecutePayloadStatus.UNSAFE_OPTIMISTIC_STATUS:
+      return ExecutionEngineState.SYNCED;
+
+    case ExecutePayloadStatus.ELERROR:
+    case ExecutePayloadStatus.INVALID:
+    case ExecutePayloadStatus.SYNCING:
+    case ExecutePayloadStatus.INVALID_BLOCK_HASH:
+      return ExecutionEngineState.SYNCING;
+
+    case ExecutePayloadStatus.UNAVAILABLE:
+      return ExecutionEngineState.OFFLINE;
+  }
+
+  if (payloadError && isFetchError(payloadError) && payloadError.code === "ECONNREFUSED") {
+    return ExecutionEngineState.OFFLINE;
+  }
+
+  if (
+    payloadError &&
+    isFetchError(payloadError) &&
+    (payloadError.code === "ECONNRESET" || payloadError.code === "ECONNABORTED")
+  ) {
+    return ExecutionEngineState.AUTH_FAILED;
+  }
+
+  // In case we can't determine the state, we assume it's syncing
+  // This assumption is better than considering offline, because the offline state may trigger some notifications
+  return ExecutionEngineState.SYNCING;
 }

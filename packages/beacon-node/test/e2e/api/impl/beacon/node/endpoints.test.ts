@@ -6,6 +6,7 @@ import {ApiError} from "@lodestar/api";
 import {LogLevel, testLogger} from "../../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
 import {BeaconNode} from "../../../../../../src/node/nodejs.js";
+import {getAndInitDevValidators} from "../../../../../utils/node/validator.js";
 
 describe("beacon node api", function () {
   this.timeout("30s");
@@ -79,14 +80,20 @@ describe("beacon node api", function () {
           },
           chain: {blsVerifyAllMainThread: true},
         },
-        validatorCount,
+        validatorCount: 5,
         logger: testLogger("Node-A", {level: LogLevel.info}),
+      });
+      const {validators} = await getAndInitDevValidators({
+        node: bn,
+        validatorClientCount: 1,
+        validatorsPerClient: 5,
+        startIndex: 0,
       });
 
       // Wait for a block to be produced, so that node can have communication with execution engine
       await new Promise((resolve) => {
         bn.chain.emitter.on(routes.events.EventType.head, async (head) => {
-          if (head.slot > 0) {
+          if (head.slot > 2) {
             resolve(head);
           }
         });
@@ -96,6 +103,8 @@ describe("beacon node api", function () {
       ApiError.assert(res);
 
       expect(res.response.data.elOffline).to.eql(false);
+
+      await Promise.all(validators.map((v) => v.close()));
     });
   });
 });

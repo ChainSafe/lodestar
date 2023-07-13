@@ -1,13 +1,12 @@
 import {Root, RootHex, allForks, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
-import {ErrorJsonRpcResponse, HttpRpcError, isFetchError} from "../../eth1/provider/jsonRpcHttpClient.js";
+import {ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
-import {RpcPayload} from "../../eth1/interface.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -32,6 +31,7 @@ import {
   deserializeExecutionPayloadBody,
 } from "./types.js";
 import {ExecutionEngineEvent, ExecutionEngineEventEmitter} from "./emitter.js";
+import {getExecutionEngineState} from "./utils.js";
 
 export type ExecutionEngineModules = {
   signal: AbortSignal;
@@ -88,7 +88,12 @@ const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
 export class ExecutionEngineHttp implements IExecutionEngine {
   readonly emitter = new ExecutionEngineEventEmitter();
   private logger: Logger;
-  private state: ExecutionEngineState = ExecutionEngineState.OFFLINE;
+
+  // The default state is SYNCING, it will be updated to SYNCING once we receive the first payload
+  // This assumption is better than the OFFLINE state, since we can't be sure if the EL is offline and being offline may trigger some notifications
+  // It's safer to to avoid false positives and assume that the EL is syncing until we receive the first payload
+  private state: ExecutionEngineState = ExecutionEngineState.SYNCING;
+
   readonly payloadIdCache = new PayloadIdCache();
   /**
    * A queue to serialize the fcUs and newPayloads calls:
@@ -184,18 +189,20 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       };
     }
 
-    const {status, latestValidHash, validationError} = await this.queueRequestAndUpdateEngineState<
-      EngineApiRpcReturnTypes[typeof method]
-    >(engineRequest)
+    const {status, latestValidHash, validationError} = await (
+      this.rpcFetchQueue.push(engineRequest) as Promise<EngineApiRpcReturnTypes[typeof method]>
+    )
       // If there are errors by EL like connection refused, internal error, they need to be
       // treated separate from being INVALID. For now, just pass the error upstream.
       .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
+        this.updateEngineState(getExecutionEngineState({payloadError: e}));
         if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
           return {status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
         } else {
           return {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
         }
       });
+    this.updateEngineState(getExecutionEngineState({payloadStatus: status}));
 
     switch (status) {
       case ExecutePayloadStatus.VALID:
@@ -276,17 +283,19 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const fcUReqOpts =
       payloadAttributes !== undefined ? forkchoiceUpdatedV1Opts : {...forkchoiceUpdatedV1Opts, retryAttempts: 1};
 
-    const request = this.queueRequestAndUpdateEngineState<EngineApiRpcReturnTypes[typeof method]>({
+    const request = this.rpcFetchQueue.push({
       method,
       params: [{headBlockHash, safeBlockHash, finalizedBlockHash}, payloadAttributesRpc],
       methodOpts: fcUReqOpts,
-    });
+    }) as Promise<EngineApiRpcReturnTypes[typeof method]>;
 
     const response = await request;
     const {
       payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
       payloadId,
     } = response;
+
+    this.updateEngineState(getExecutionEngineState({payloadStatus: status}));
 
     switch (status) {
       case ExecutePayloadStatus.VALID:
@@ -338,7 +347,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         : ForkSeq[fork] >= ForkSeq.capella
         ? "engine_getPayloadV2"
         : "engine_getPayloadV1";
-    const payloadResponse = await this.requestAndUpdateEngineState<
+    const payloadResponse = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >(
@@ -358,7 +367,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async getPayloadBodiesByHash(blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
     const method = "engine_getPayloadBodiesByHashV1";
     assertReqSizeLimit(blockHashes.length, 32);
-    const response = await this.requestAndUpdateEngineState<
+    const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >({method, params: blockHashes});
@@ -373,7 +382,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     assertReqSizeLimit(blockCount, 32);
     const start = numToQuantity(startBlockNumber);
     const count = numToQuantity(blockCount);
-    const response = await this.requestAndUpdateEngineState<
+    const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [start, count]});
@@ -384,83 +393,28 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return this.state;
   }
 
-  private queueRequestAndUpdateEngineState<R>(payload: EngineRequest): Promise<R> {
-    try {
-      return (this.rpcFetchQueue.push(payload) as Promise<R>).then((response) => {
-        if (this.state !== ExecutionEngineState.SYNCED) {
-          // Update the state of the execution engine in async to avoid blocking the request
-          void this.fetchAndUpdateEngineState().catch((err) => {
-            this.logger.error("Error updating execution engine state", err);
-          });
-        }
-
-        return response;
-      });
-    } catch (err) {
-      // Update the state of the execution engine async to avoid blocking the request
-      void this.fetchAndUpdateEngineState().catch((err) => {
-        this.logger.error("Error updating execution engine state", err);
-      });
-
-      throw err;
-    }
-  }
-
-  private async requestAndUpdateEngineState<R, P>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
-    try {
-      const response = await this.rpc.fetchWithRetries<R, P>(payload, opts);
-
-      if (this.state !== ExecutionEngineState.SYNCED) {
-        // Update the state of the execution engine in async to avoid blocking the request
-        void this.fetchAndUpdateEngineState();
-      }
-
-      return response;
-    } catch (err) {
-      // Update the state of the execution engine async to avoid blocking the request
-      void this.fetchAndUpdateEngineState();
-      throw err;
-    }
-  }
-
-  private async fetchAndUpdateEngineState(): Promise<void> {
+  private updateEngineState(newState: ExecutionEngineState): void {
     const oldState = this.state;
 
-    try {
-      const response = await this.rpc.fetch<
-        boolean | {startingBlock: string; currentBlock: string; highestBlock: string}
-      >({
-        method: "eth_syncing",
-        params: [],
-      });
+    if (oldState === newState) return;
 
-      if (typeof response === "boolean" && response === false) {
-        this.state = ExecutionEngineState.SYNCED;
-      } else {
-        this.state = ExecutionEngineState.SYNCING;
-      }
-
-      if (oldState === ExecutionEngineState.OFFLINE) {
-        this.logger.info("ExecutionEngine is back online");
-      }
-    } catch (err) {
-      if (isFetchError(err) && (err.code === "EACCES" || err.code === "ECONNRESET")) {
-        this.state = ExecutionEngineState.AUTH_FAILED;
+    switch (newState) {
+      case ExecutionEngineState.SYNCED:
+        this.logger.info("ExecutionEngine online and synced");
+        break;
+      case ExecutionEngineState.SYNCING:
+        this.logger.info("ExecutionEngine is online and syncing");
+        break;
+      case ExecutionEngineState.OFFLINE:
+        this.logger.error("ExecutionEngine went offline");
+        break;
+      case ExecutionEngineState.AUTH_FAILED:
         this.logger.error("ExecutionEngine authentication failed");
-      } else if (isFetchError(err) && err.code === "ECONNREFUSED") {
-        this.state = ExecutionEngineState.OFFLINE;
-
-        if (oldState !== ExecutionEngineState.OFFLINE) {
-          this.logger.error("ExecutionEngine went offline");
-        }
-      } else {
-        throw err;
-      }
+        break;
     }
 
-    if (oldState !== this.state) {
-      this.emitter.emit(ExecutionEngineEvent.stateChange, oldState, this.state);
-    }
+    this.state = newState;
+    this.emitter.emit(ExecutionEngineEvent.StateChange, oldState, newState);
   }
 }
 
