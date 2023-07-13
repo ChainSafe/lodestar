@@ -51,7 +51,11 @@ export function getExecutionEngineState({
       return ExecutionEngineState.OFFLINE;
   }
 
-  if (payloadError && isFetchError(payloadError) && payloadError.code === "ECONNREFUSED") {
+  if (
+    payloadError &&
+    isFetchError(payloadError) &&
+    (payloadError.code === "ECONNREFUSED" || payloadError.code === "ENOTFOUND")
+  ) {
     return ExecutionEngineState.OFFLINE;
   }
 

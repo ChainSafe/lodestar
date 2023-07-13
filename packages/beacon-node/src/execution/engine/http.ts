@@ -113,7 +113,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     );
   };
 
-  constructor(private readonly rpc: IJsonRpcHttpClient, {metrics, signal, logger}: ExecutionEngineModules) {
+  constructor(
+    private readonly rpc: IJsonRpcHttpClient,
+    {metrics, signal, logger}: ExecutionEngineModules
+  ) {
     this.rpcFetchQueue = new JobItemQueue<[EngineRequest], EngineResponse>(
       this.jobQueueProcessor,
       {maxLength: QUEUE_MAX_LENGTH, maxConcurrency: 1, noYieldIfOneItem: true, signal},
@@ -289,7 +292,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       methodOpts: fcUReqOpts,
     }) as Promise<EngineApiRpcReturnTypes[typeof method]>;
 
-    const response = await request;
+    const response = await request
+      // If there are errors by EL like connection refused, internal error, they need to be
+      // treated separate from being INVALID. For now, just pass the error upstream.
+      .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
+        this.updateEngineState(getExecutionEngineState({payloadError: e}));
+        throw e;
+      });
+
     const {
       payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
       payloadId,
