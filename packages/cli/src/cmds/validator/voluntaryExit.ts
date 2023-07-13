@@ -159,7 +159,7 @@ async function resolveValidatorIndexes(client: Api, signersToExit: SignerLocalPu
     const item = dataByPubkey.get(pubkey);
     if (!item) {
       throw new YargsError(`Validator with pubkey ${pubkey} is unknown.
-   Re-check the pubkey submitted or wait until the validator activated on the beacon chain to voluntary exit.`);
+   Re-check the pubkey submitted or wait until the validator is activated on the beacon chain to voluntary exit.`);
     }
 
     return {
