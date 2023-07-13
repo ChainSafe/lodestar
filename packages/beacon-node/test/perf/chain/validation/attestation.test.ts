@@ -1,11 +1,11 @@
 import {itBench} from "@dapplion/benchmark";
-// eslint-disable-next-line import/no-relative-packages
 import {ssz} from "@lodestar/types";
-import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test/perf/util.js";
+// eslint-disable-next-line import/no-relative-packages
+import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {validateApiAttestation, validateGossipAttestation} from "../../../../src/chain/validation/index.js";
 import {getAttestationValidData} from "../../../utils/validationData/attestation.js";
 
-describe("validate gossip attestation", () => {
+describe("validate attestation", () => {
   const vc = 64;
   const stateSlot = 100;
 
