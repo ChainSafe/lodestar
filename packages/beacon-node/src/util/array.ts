@@ -100,6 +100,20 @@ export class LinkedList<T> {
     this._length = 0;
   }
 
+  [Symbol.iterator](): Iterator<T> {
+    let node = this.head;
+    return {
+      next(): IteratorResult<T> {
+        if (!node) {
+          return {done: true, value: undefined};
+        }
+        const value = node.data;
+        node = node.next;
+        return {done: false, value};
+      },
+    };
+  }
+
   toArray(): T[] {
     let node = this.head;
     if (!node) return [];

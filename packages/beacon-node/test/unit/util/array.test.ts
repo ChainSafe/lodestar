@@ -72,4 +72,25 @@ describe("LinkedList", () => {
     expect(list.toArray()).to.be.deep.equal([]);
     expect(list.length).to.be.equal(0);
   });
+
+  describe("iterator", () => {
+    const testCases: {count: number}[] = [{count: 0}, {count: 10}, {count: 100}];
+
+    for (const {count} of testCases) {
+      it(`should iterate over ${count} items`, () => {
+        for (let i = 0; i < count; i++) {
+          list.push(i);
+        }
+
+        let i = 0;
+        for (const item of list) {
+          expect(item).to.be.equal(i);
+          i++;
+        }
+
+        // make sure the list is the same
+        expect(list.toArray()).to.be.deep.equal(Array.from({length: count}, (_, i) => i));
+      });
+    }
+  });
 });
