@@ -71,16 +71,26 @@ export async function validateGossipSyncCommittee(
   return {indexInSubcommittee};
 }
 
-/**
- * Abstracted so it can be re-used in API validation.
- */
-export async function validateSyncCommitteeSigOnly(
+export async function validateApiSyncCommittee(
   chain: IBeaconChain,
   headState: CachedBeaconStateAllForks,
   syncCommittee: altair.SyncCommitteeMessage
 ): Promise<void> {
+  const prioritizeBls = true;
+  return validateSyncCommitteeSigOnly(chain, headState, syncCommittee, prioritizeBls);
+}
+
+/**
+ * Abstracted so it can be re-used in API validation.
+ */
+async function validateSyncCommitteeSigOnly(
+  chain: IBeaconChain,
+  headState: CachedBeaconStateAllForks,
+  syncCommittee: altair.SyncCommitteeMessage,
+  prioritizeBls = false
+): Promise<void> {
   const signatureSet = getSyncCommitteeSignatureSet(headState, syncCommittee);
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
     });
