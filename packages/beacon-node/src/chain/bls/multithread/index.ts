@@ -15,6 +15,7 @@ import {Metrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
+import {LinkedList} from "../../../util/array.js";
 import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 import {defaultPoolSize} from "./poolSize.js";
@@ -106,9 +107,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
   private readonly format: PointFormat;
   private readonly workers: WorkerDescriptor[];
-  private readonly jobs: JobQueueItem[] = [];
+  private readonly jobs = new LinkedList<JobQueueItem>();
   private bufferedJobs: {
-    jobs: JobQueueItem[];
+    jobs: LinkedList<JobQueueItem>;
     sigCount: number;
     firstPush: number;
     timeout: NodeJS.Timeout;
@@ -199,7 +200,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     for (const job of this.jobs) {
       job.reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
     }
-    this.jobs.splice(0, this.jobs.length);
+    this.jobs.clear();
 
     // Terminate all workers. await to ensure no workers are left hanging
     await Promise.all(
@@ -277,7 +278,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       if (workReq.opts.batchable) {
         if (!this.bufferedJobs) {
           this.bufferedJobs = {
-            jobs: [],
+            jobs: new LinkedList(),
             sigCount: 0,
             firstPush: Date.now(),
             timeout: setTimeout(this.runBufferedJobs, MAX_BUFFER_WAIT_MS),
@@ -424,7 +425,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
    */
   private runBufferedJobs = (): void => {
     if (this.bufferedJobs) {
-      this.jobs.push(...this.bufferedJobs.jobs);
+      for (const job of this.bufferedJobs.jobs) {
+        this.jobs.push(job);
+      }
       this.bufferedJobs = null;
       setTimeout(this.runJob, 0);
     }
