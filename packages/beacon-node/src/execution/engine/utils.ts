@@ -54,7 +54,7 @@ export function getExecutionEngineState({
   if (
     payloadError &&
     isFetchError(payloadError) &&
-    (payloadError.code === "ECONNREFUSED" || payloadError.code === "ENOTFOUND")
+    (payloadError.code === "ECONNREFUSED" || payloadError.code === "ENOTFOUND" || payloadError.code === "EAI_AGAIN")
   ) {
     return ExecutionEngineState.OFFLINE;
   }
