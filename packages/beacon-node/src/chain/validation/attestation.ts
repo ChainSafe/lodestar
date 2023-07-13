@@ -87,7 +87,7 @@ async function validateAttestation(
   attestationOrBytes: AttestationOrBytes,
   /** Optional, to allow verifying attestations through API with unknown subnet */
   subnet: number | null,
-  prioritizeBls: boolean = false
+  prioritizeBls = false
 ): Promise<AttestationValidationResult> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)

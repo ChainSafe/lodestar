@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
-// eslint-disable-next-line import/no-relative-packages
 import {ssz} from "@lodestar/types";
-import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test/perf/util.js";
+// eslint-disable-next-line import/no-relative-packages
+import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
 import {getAggregateAndProofValidData} from "../../../utils/validationData/aggregateAndProof.js";
 
