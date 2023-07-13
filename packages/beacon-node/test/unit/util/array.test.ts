@@ -53,6 +53,57 @@ describe("LinkedList", () => {
     expect(list.length).to.be.equal(0);
   });
 
+  describe("push", () => {
+    const count = 100;
+    beforeEach(() => {
+      list = new LinkedList<number>();
+      expect(list.length).to.be.equal(0);
+      for (let i = 0; i < count; i++) list.push(i);
+      expect(list.length).to.be.equal(count);
+      expect(list.toArray()).to.be.deep.equal(Array.from({length: count}, (_, i) => i));
+    });
+
+    it("push then pop", () => {
+      for (let i = 0; i < count; i++) {
+        expect(list.pop()).to.be.equal(count - i - 1);
+      }
+      expect(list.length).to.be.equal(0);
+    });
+
+    it("push then shift", () => {
+      for (let i = 0; i < count; i++) {
+        expect(list.shift()).to.be.equal(i);
+      }
+      expect(list.length).to.be.equal(0);
+    });
+  });
+
+  describe("unshift", () => {
+    const count = 100;
+    beforeEach(() => {
+      list = new LinkedList<number>();
+      expect(list.length).to.be.equal(0);
+      for (let i = 0; i < count; i++) list.unshift(i);
+      expect(list.length).to.be.equal(count);
+      expect(list.toArray()).to.be.deep.equal(Array.from({length: count}, (_, i) => count - i - 1));
+    });
+
+    it("unshift then pop", () => {
+      for (let i = 0; i < count; i++) {
+        expect(list.pop()).to.be.equal(i);
+      }
+      expect(list.length).to.be.equal(0);
+    });
+
+    it("unshift then shift", () => {
+      for (let i = 0; i < count; i++) {
+        expect(list.shift()).to.be.equal(count - i - 1);
+      }
+
+      expect(list.length).to.be.equal(0);
+    });
+  });
+
   it("toArray", () => {
     expect(list.toArray()).to.be.deep.equal([]);
 
