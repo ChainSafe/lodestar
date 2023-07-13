@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {Api, getClient, routes} from "@lodestar/api/beacon";
+import {Api, getClient} from "@lodestar/api/beacon";
 import {ApiError} from "@lodestar/api";
 import {sleep} from "@lodestar/utils";
 import {LogLevel, testLogger} from "../../../../../utils/logger.js";
