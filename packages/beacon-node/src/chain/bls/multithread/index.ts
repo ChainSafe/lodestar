@@ -15,6 +15,7 @@ import {Metrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
+import {LinkedList} from "../../../util/array.js";
 import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 import {defaultPoolSize} from "./poolSize.js";
@@ -106,9 +107,10 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
   private readonly format: PointFormat;
   private readonly workers: WorkerDescriptor[];
-  private readonly jobs: JobQueueItem[] = [];
+  private readonly jobs = new LinkedList<JobQueueItem>();
   private bufferedJobs: {
-    jobs: JobQueueItem[];
+    jobs: LinkedList<JobQueueItem>;
+    prioritizedJobs: LinkedList<JobQueueItem>;
     sigCount: number;
     firstPush: number;
     timeout: NodeJS.Timeout;
@@ -151,6 +153,13 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
     // Pubkeys are aggregated in the main thread regardless if verified in workers or in main thread
     this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
+    this.metrics?.blsThreadPool.totalSigSets.inc(sets.length);
+    if (opts.priority) {
+      this.metrics?.blsThreadPool.prioritizedSigSets.inc(sets.length);
+    }
+    if (opts.batchable) {
+      this.metrics?.blsThreadPool.batchableSigSets.inc(sets.length);
+    }
 
     if (opts.verifyOnMainThread && !this.blsVerifyAllMultiThread) {
       const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
@@ -199,7 +208,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     for (const job of this.jobs) {
       job.reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
     }
-    this.jobs.splice(0, this.jobs.length);
+    this.jobs.clear();
 
     // Terminate all workers. await to ensure no workers are left hanging
     await Promise.all(
@@ -272,18 +281,21 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     return new Promise<boolean>((resolve, reject) => {
       const job = {resolve, reject, addedTimeMs: Date.now(), workReq};
 
+      // below is for non-priority jobs
       // Append batchable sets to `bufferedJobs`, starting a timeout to push them into `jobs`.
       // Do not call `runJob()`, it is called from `runBufferedJobs()`
       if (workReq.opts.batchable) {
         if (!this.bufferedJobs) {
           this.bufferedJobs = {
-            jobs: [],
+            jobs: new LinkedList(),
+            prioritizedJobs: new LinkedList(),
             sigCount: 0,
             firstPush: Date.now(),
             timeout: setTimeout(this.runBufferedJobs, MAX_BUFFER_WAIT_MS),
           };
         }
-        this.bufferedJobs.jobs.push(job);
+        const jobs = workReq.opts.priority ? this.bufferedJobs.prioritizedJobs : this.bufferedJobs.jobs;
+        jobs.push(job);
         this.bufferedJobs.sigCount += job.workReq.sets.length;
         if (this.bufferedJobs.sigCount > MAX_BUFFERED_SIGS) {
           clearTimeout(this.bufferedJobs.timeout);
@@ -295,7 +307,11 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       // This is useful to allow batching job submitted from a synchronous for loop,
       // and to prevent large stacks since runJob may be called recursively.
       else {
-        this.jobs.push(job);
+        if (workReq.opts.priority) {
+          this.jobs.unshift(job);
+        } else {
+          this.jobs.push(job);
+        }
         setTimeout(this.runJob, 0);
       }
     });
@@ -424,7 +440,12 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
    */
   private runBufferedJobs = (): void => {
     if (this.bufferedJobs) {
-      this.jobs.push(...this.bufferedJobs.jobs);
+      for (const job of this.bufferedJobs.jobs) {
+        this.jobs.push(job);
+      }
+      for (const job of this.bufferedJobs.prioritizedJobs) {
+        this.jobs.unshift(job);
+      }
       this.bufferedJobs = null;
       setTimeout(this.runJob, 0);
     }

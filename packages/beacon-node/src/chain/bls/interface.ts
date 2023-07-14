@@ -15,6 +15,10 @@ export type VerifySignatureOpts = {
    * Ignore the batchable option if this is true.
    */
   verifyOnMainThread?: boolean;
+  /**
+   * Some signature sets are more important than others, and should be verified first.
+   */
+  priority?: boolean;
 };
 
 export interface IBlsVerifier {

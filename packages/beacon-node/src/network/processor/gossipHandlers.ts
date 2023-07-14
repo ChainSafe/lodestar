@@ -27,7 +27,7 @@ import {
   validateGossipSyncCommittee,
   validateSyncCommitteeGossipContributionAndProof,
   validateGossipVoluntaryExit,
-  validateBlsToExecutionChange,
+  validateGossipBlsToExecutionChange,
   AttestationValidationResult,
   AggregateAndProofValidationResult,
 } from "../../chain/validation/index.js";
@@ -194,7 +194,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       const signedAggregateAndProof = sszDeserialize(topic, serializedData);
 
       try {
-        validationResult = await validateGossipAggregateAndProof(chain, signedAggregateAndProof, false, serializedData);
+        validationResult = await validateGossipAggregateAndProof(chain, signedAggregateAndProof, serializedData);
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
           chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "gossip_reject");
@@ -376,7 +376,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     // blsToExecutionChange is to be generated and validated against GENESIS_FORK_VERSION
     [GossipType.bls_to_execution_change]: async ({serializedData}, topic) => {
       const blsToExecutionChange = sszDeserialize(topic, serializedData);
-      await validateBlsToExecutionChange(chain, blsToExecutionChange);
+      await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
 
       // Handler
       try {

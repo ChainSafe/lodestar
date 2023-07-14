@@ -11,8 +11,10 @@ import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {AttestationErrorCode, GossipErrorCode} from "../../../../src/chain/errors/index.js";
 import {
-  AttestationOrBytes,
+  ApiAttestation,
+  GossipAttestation,
   getStateForAttestationVerification,
+  validateApiAttestation,
   validateGossipAttestation,
 } from "../../../../src/chain/validation/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
@@ -48,14 +50,14 @@ describe("chain / validation / attestation", () => {
   }
 
   it("Valid", async () => {
-    const {chain, attestation, subnet} = getValidData();
+    const {chain, attestation} = getValidData();
 
-    await validateGossipAttestation(chain, {attestation, serializedData: null}, subnet);
+    await validateApiAttestation(chain, {attestation, serializedData: null});
   });
 
   it("INVALID_SERIALIZED_BYTES_ERROR_CODE", async () => {
     const {chain, subnet} = getValidData();
-    await expectError(
+    await expectGossipError(
       chain,
       {attestation: null, serializedData: Buffer.alloc(0), attSlot: 0},
       subnet,
@@ -70,8 +72,8 @@ describe("chain / validation / attestation", () => {
     attestation.data.target.epoch += 1;
     const serializedData = ssz.phase0.Attestation.serialize(attestation);
 
-    await expectError(chain, {attestation, serializedData: null}, subnet, AttestationErrorCode.BAD_TARGET_EPOCH);
-    await expectError(
+    await expectApiError(chain, {attestation, serializedData: null}, AttestationErrorCode.BAD_TARGET_EPOCH);
+    await expectGossipError(
       chain,
       {attestation: null, serializedData, attSlot: attestation.data.slot},
       subnet,
@@ -84,8 +86,8 @@ describe("chain / validation / attestation", () => {
     const {chain, attestation, subnet} = getValidData({attSlot: stateSlot - SLOTS_PER_EPOCH - 3});
     const serializedData = ssz.phase0.Attestation.serialize(attestation);
 
-    await expectError(chain, {attestation, serializedData: null}, subnet, AttestationErrorCode.PAST_SLOT);
-    await expectError(
+    await expectApiError(chain, {attestation, serializedData: null}, AttestationErrorCode.PAST_SLOT);
+    await expectGossipError(
       chain,
       {attestation: null, serializedData, attSlot: attestation.data.slot},
       subnet,
@@ -98,8 +100,8 @@ describe("chain / validation / attestation", () => {
     const {chain, attestation, subnet} = getValidData({attSlot: stateSlot + 2});
     const serializedData = ssz.phase0.Attestation.serialize(attestation);
 
-    await expectError(chain, {attestation, serializedData: null}, subnet, AttestationErrorCode.FUTURE_SLOT);
-    await expectError(
+    await expectApiError(chain, {attestation, serializedData: null}, AttestationErrorCode.FUTURE_SLOT);
+    await expectGossipError(
       chain,
       {attestation: null, serializedData, attSlot: attestation.data.slot},
       subnet,
@@ -114,13 +116,12 @@ describe("chain / validation / attestation", () => {
     attestation.aggregationBits.set(bitIndex, false);
     const serializedData = ssz.phase0.Attestation.serialize(attestation);
 
-    await expectError(
+    await expectApiError(
       chain,
       {attestation, serializedData: null},
-      subnet,
       AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET
     );
-    await expectError(
+    await expectGossipError(
       chain,
       {attestation: null, serializedData, attSlot: attestation.data.slot},
       subnet,
@@ -135,7 +136,7 @@ describe("chain / validation / attestation", () => {
     attestation.aggregationBits.set(bitIndex + 1, true);
     const serializedData = ssz.phase0.Attestation.serialize(attestation);
 
-    await expectError(
+    await expectGossipError(
       chain,
       {attestation: null, serializedData, attSlot: attestation.data.slot},
       subnet,
@@ -149,13 +150,12 @@ describe("chain / validation / attestation", () => {
     attestation.data.beaconBlockRoot = UNKNOWN_ROOT;
     const serializedData = ssz.phase0.Attestation.serialize(attestation);
 
-    await expectError(
+    await expectApiError(
       chain,
       {attestation, serializedData: null},
-      subnet,
       AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT
     );
-    await expectError(
+    await expectGossipError(
       chain,
       {attestation: null, serializedData, attSlot: attestation.data.slot},
       subnet,
@@ -169,8 +169,8 @@ describe("chain / validation / attestation", () => {
     attestation.data.target.root = UNKNOWN_ROOT;
     const serializedData = ssz.phase0.Attestation.serialize(attestation);
 
-    await expectError(chain, {attestation, serializedData: null}, subnet, AttestationErrorCode.INVALID_TARGET_ROOT);
-    await expectError(
+    await expectApiError(chain, {attestation, serializedData: null}, AttestationErrorCode.INVALID_TARGET_ROOT);
+    await expectGossipError(
       chain,
       {attestation: null, serializedData, attSlot: attestation.data.slot},
       subnet,
@@ -189,13 +189,12 @@ describe("chain / validation / attestation", () => {
     } as Partial<IStateRegenerator> as IStateRegenerator;
     const serializedData = ssz.phase0.Attestation.serialize(attestation);
 
-    await expectError(
+    await expectApiError(
       chain,
       {attestation, serializedData: null},
-      subnet,
       AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX
     );
-    await expectError(
+    await expectGossipError(
       chain,
       {attestation: null, serializedData, attSlot: attestation.data.slot},
       subnet,
@@ -212,13 +211,12 @@ describe("chain / validation / attestation", () => {
     );
     const serializedData = ssz.phase0.Attestation.serialize(attestation);
 
-    await expectError(
+    await expectApiError(
       chain,
       {attestation, serializedData: null},
-      subnet,
       AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS
     );
-    await expectError(
+    await expectGossipError(
       chain,
       {attestation: null, serializedData, attSlot: attestation.data.slot},
       subnet,
@@ -232,13 +230,7 @@ describe("chain / validation / attestation", () => {
     const invalidSubnet = subnet === 0 ? 1 : 0;
     const serializedData = ssz.phase0.Attestation.serialize(attestation);
 
-    await expectError(
-      chain,
-      {attestation, serializedData: null},
-      invalidSubnet,
-      AttestationErrorCode.INVALID_SUBNET_ID
-    );
-    await expectError(
+    await expectGossipError(
       chain,
       {attestation: null, serializedData, attSlot: attestation.data.slot},
       invalidSubnet,
@@ -252,13 +244,8 @@ describe("chain / validation / attestation", () => {
     chain.seenAttesters.add(attestation.data.target.epoch, validatorIndex);
     const serializedData = ssz.phase0.Attestation.serialize(attestation);
 
-    await expectError(
-      chain,
-      {attestation, serializedData: null},
-      subnet,
-      AttestationErrorCode.ATTESTATION_ALREADY_KNOWN
-    );
-    await expectError(
+    await expectApiError(chain, {attestation, serializedData: null}, AttestationErrorCode.ATTESTATION_ALREADY_KNOWN);
+    await expectGossipError(
       chain,
       {attestation: null, serializedData, attSlot: attestation.data.slot},
       subnet,
@@ -274,8 +261,8 @@ describe("chain / validation / attestation", () => {
     attestation.aggregationBits.set(bitIndex + 1, true);
     const serializedData = ssz.phase0.Attestation.serialize(attestation);
 
-    await expectError(chain, {attestation, serializedData: null}, subnet, AttestationErrorCode.INVALID_SIGNATURE);
-    await expectError(
+    await expectApiError(chain, {attestation, serializedData: null}, AttestationErrorCode.INVALID_SIGNATURE);
+    await expectGossipError(
       chain,
       {attestation: null, serializedData, attSlot: attestation.data.slot},
       subnet,
@@ -284,9 +271,17 @@ describe("chain / validation / attestation", () => {
   });
 
   /** Alias to reduce code duplication */
-  async function expectError(
+  async function expectApiError(
     chain: IBeaconChain,
-    attestationOrBytes: AttestationOrBytes,
+    attestationOrBytes: ApiAttestation,
+    errorCode: string
+  ): Promise<void> {
+    await expectRejectedWithLodestarError(validateApiAttestation(chain, attestationOrBytes), errorCode);
+  }
+
+  async function expectGossipError(
+    chain: IBeaconChain,
+    attestationOrBytes: GossipAttestation,
     subnet: number,
     errorCode: string
   ): Promise<void> {

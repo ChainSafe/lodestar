@@ -6,7 +6,7 @@ import {processSlots} from "@lodestar/state-transition";
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
-import {validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
+import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {memoOnce} from "../../../utils/cache.js";
 import {
@@ -42,7 +42,7 @@ describe("chain / validation / aggregateAndProof", () => {
   it("Valid", async () => {
     const {chain, signedAggregateAndProof} = getValidData({});
 
-    await validateGossipAggregateAndProof(chain, signedAggregateAndProof);
+    await validateApiAggregateAndProof(chain, signedAggregateAndProof);
   });
 
   it("BAD_TARGET_EPOCH", async () => {
@@ -188,6 +188,10 @@ describe("chain / validation / aggregateAndProof", () => {
     signedAggregateAndProof: phase0.SignedAggregateAndProof,
     errorCode: AttestationErrorCode
   ): Promise<void> {
-    await expectRejectedWithLodestarError(validateGossipAggregateAndProof(chain, signedAggregateAndProof), errorCode);
+    const serializedData = ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof);
+    await expectRejectedWithLodestarError(
+      validateGossipAggregateAndProof(chain, signedAggregateAndProof, serializedData),
+      errorCode
+    );
   }
 });

@@ -7,9 +7,25 @@ import {
 import {IBeaconChain} from "..";
 import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
 
+export async function validateApiAttesterSlashing(
+  chain: IBeaconChain,
+  attesterSlashing: phase0.AttesterSlashing
+): Promise<void> {
+  const prioritizeBls = true;
+  return validateAttesterSlashing(chain, attesterSlashing, prioritizeBls);
+}
+
 export async function validateGossipAttesterSlashing(
   chain: IBeaconChain,
   attesterSlashing: phase0.AttesterSlashing
+): Promise<void> {
+  return validateAttesterSlashing(chain, attesterSlashing);
+}
+
+export async function validateAttesterSlashing(
+  chain: IBeaconChain,
+  attesterSlashing: phase0.AttesterSlashing,
+  prioritizeBls = false
 ): Promise<void> {
   // [IGNORE] At least one index in the intersection of the attesting indices of each attestation has not yet been seen
   // in any prior attester_slashing (i.e.
@@ -36,7 +52,7 @@ export async function validateGossipAttesterSlashing(
   }
 
   const signatureSets = getAttesterSlashingSignatureSets(state, attesterSlashing);
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
+  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,
       error: Error("Invalid signature"),

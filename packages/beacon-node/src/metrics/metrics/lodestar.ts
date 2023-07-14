@@ -374,6 +374,18 @@ export function createLodestarMetrics(
         // Time per sig ~0.9ms on good machines
         buckets: [0.5e-3, 0.75e-3, 1e-3, 1.5e-3, 2e-3, 5e-3],
       }),
+      totalSigSets: register.gauge({
+        name: "lodestar_bls_thread_pool_sig_sets_total",
+        help: "Count of total signature sets",
+      }),
+      prioritizedSigSets: register.gauge({
+        name: "lodestar_bls_thread_pool_prioritized_sig_sets_total",
+        help: "Count of total prioritized signature sets",
+      }),
+      batchableSigSets: register.gauge({
+        name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
+        help: "Count of total batchable signature sets",
+      }),
     },
 
     // BLS time on single thread mode
