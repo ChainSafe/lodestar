@@ -73,7 +73,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   const {listenAddress, port, discoveryPort, listenAddress6, port6, discoveryPort6} = parseListenArgs(args);
   // validate ip, ip6, ports
   const muArgs = {
-    listenAddress: listenAddress ? `/ip/${listenAddress}` : undefined,
+    listenAddress: listenAddress ? `/ip4/${listenAddress}` : undefined,
     port: listenAddress ? `/tcp/${port}` : undefined,
     discoveryPort: listenAddress ? `/udp/${discoveryPort}` : undefined,
     listenAddress6: listenAddress6 ? `/ip6/${listenAddress6}` : undefined,
