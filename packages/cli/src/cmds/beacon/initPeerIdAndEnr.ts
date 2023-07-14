@@ -8,7 +8,7 @@ import {createKeypairFromPeerId, SignableENR} from "@chainsafe/discv5";
 import {Logger} from "@lodestar/utils";
 import {exportToJSON, readPeerId} from "../../config/index.js";
 import {writeFile600Perm} from "../../util/file.js";
-import {defaultP2pPort} from "../../options/beaconNodeOptions/network.js";
+import {parseListenArgs} from "../../options/beaconNodeOptions/network.js";
 import {BeaconArgs} from "./options.js";
 
 /**
@@ -53,27 +53,17 @@ export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
   return false;
 }
 
-export function clearMultiaddrUDP(enr: SignableENR): void {
-  // enr.multiaddrUDP = undefined in new version
-  enr.delete("ip");
-  enr.delete("udp");
-  enr.delete("ip6");
-  enr.delete("udp6");
-}
-
 export function overwriteEnrWithCliArgs(enr: SignableENR, args: BeaconArgs, logger: Logger): void {
-  // TODO: Not sure if we should propagate port/defaultP2pPort options to the ENR
-  enr.tcp = args["enr.tcp"] ?? args.port ?? defaultP2pPort;
-  const udpPort = args["enr.udp"] ?? args.discoveryPort ?? args.port ?? defaultP2pPort;
-  if (udpPort != null) enr.udp = udpPort;
-  if (args["enr.ip"] != null) enr.ip = args["enr.ip"];
-  if (args["enr.ip6"] != null) enr.ip6 = args["enr.ip6"];
-  if (args["enr.tcp6"] != null) enr.tcp6 = args["enr.tcp6"];
-  if (args["enr.udp6"] != null) enr.udp6 = args["enr.udp6"];
+  const {listenAddress, port, discoveryPort, listenAddress6, port6, discoveryPort6} = parseListenArgs(args);
+  enr.ip = args["enr.ip"] ?? listenAddress;
+  enr.tcp = args["enr.tcp"] ?? port;
+  enr.udp = args["enr.udp"] ?? discoveryPort;
+  enr.ip6 = args["enr.ip6"] ?? listenAddress6;
+  enr.tcp6 = args["enr.tcp6"] ?? port6;
+  enr.udp6 = args["enr.udp6"] ?? discoveryPort6;
 
-  const udpMultiaddr = enr.getLocationMultiaddr("udp");
-  if (udpMultiaddr) {
-    const isLocal = isLocalMultiAddr(udpMultiaddr);
+  function testMultiaddrForLocal(mu: Multiaddr, ip4: boolean): void {
+    const isLocal = isLocalMultiAddr(mu);
     if (args.nat) {
       if (isLocal) {
         logger.warn("--nat flag is set with no purpose");
@@ -81,11 +71,27 @@ export function overwriteEnrWithCliArgs(enr: SignableENR, args: BeaconArgs, logg
     } else {
       if (!isLocal) {
         logger.warn(
-          "Configured ENR IP address is not local, clearing ENR IP and UDP. Set the --nat flag to prevent this"
+          `Configured ENR ${ip4 ? "IPv4" : "IPv6"} address is not local, clearing ENR ${ip4 ? "ip" : "ip6"} and ${
+            ip4 ? "udp" : "udp6"
+          }. Set the --nat flag to prevent this`
         );
-        clearMultiaddrUDP(enr);
+        if (ip4) {
+          enr.delete("ip");
+          enr.delete("udp");
+        } else {
+          enr.delete("ip6");
+          enr.delete("udp6");
+        }
       }
     }
+  }
+  const udpMultiaddr4 = enr.getLocationMultiaddr("udp4");
+  if (udpMultiaddr4) {
+    testMultiaddrForLocal(udpMultiaddr4, true);
+  }
+  const udpMultiaddr6 = enr.getLocationMultiaddr("udp6");
+  if (udpMultiaddr6) {
+    testMultiaddrForLocal(udpMultiaddr6, false);
   }
 }
 

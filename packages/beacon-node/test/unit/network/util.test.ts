@@ -51,7 +51,9 @@ describe("createNodeJsLibp2p", () => {
         connectToDiscv5Bootnodes: true,
         discv5: {
           enr: SignableENR.createV4(keypair).encodeTxt(),
-          bindAddr: "/ip4/127.0.0.1/udp/0",
+          bindAddrs: {
+            ip4: "/ip4/127.0.0.1/udp/0",
+          },
           bootEnrs: enrWithTcp,
         },
         bootMultiaddrs,
@@ -81,7 +83,9 @@ describe("createNodeJsLibp2p", () => {
         connectToDiscv5Bootnodes: true,
         discv5: {
           enr: SignableENR.createV4(keypair).encodeTxt(),
-          bindAddr: "/ip4/127.0.0.1/udp/0",
+          bindAddrs: {
+            ip4: "/ip4/127.0.0.1/udp/0",
+          },
           bootEnrs: enrWithoutTcp,
         },
         bootMultiaddrs,
