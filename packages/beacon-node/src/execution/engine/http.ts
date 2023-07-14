@@ -30,7 +30,6 @@ import {
   assertReqSizeLimit,
   deserializeExecutionPayloadBody,
 } from "./types.js";
-import {ExecutionEngineEvent, ExecutionEngineEventEmitter} from "./emitter.js";
 import {getExecutionEngineState} from "./utils.js";
 
 export type ExecutionEngineModules = {
@@ -86,7 +85,6 @@ const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
  * https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/interop/specification.md
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
-  readonly emitter = new ExecutionEngineEventEmitter();
   private logger: Logger;
 
   // The default state is SYNCING, it will be updated to SYNCING once we receive the first payload
@@ -424,7 +422,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     }
 
     this.state = newState;
-    this.emitter.emit(ExecutionEngineEvent.StateChange, oldState, newState);
   }
 }
 

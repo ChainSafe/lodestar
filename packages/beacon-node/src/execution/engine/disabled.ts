@@ -1,8 +1,6 @@
-import {ExecutionEngineEventEmitter} from "./emitter.js";
 import {ExecutionEngineState, IExecutionEngine, PayloadIdCache} from "./interface.js";
 
 export class ExecutionEngineDisabled implements IExecutionEngine {
-  readonly emitter = new ExecutionEngineEventEmitter();
   readonly payloadIdCache = new PayloadIdCache();
 
   async notifyNewPayload(): Promise<never> {
