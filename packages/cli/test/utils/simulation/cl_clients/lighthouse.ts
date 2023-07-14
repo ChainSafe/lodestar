@@ -107,7 +107,7 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
         await got.get(`http://127.0.0.1:${httpPort}/eth/v1/node/health`);
         return {ok: true};
       } catch (err) {
-        if (err instanceof RequestError && err.code !== "ECONNREFUSED" && err.code !== "ECONNRESET") {
+        if (err instanceof RequestError && err.code !== "ECONNREFUSED") {
           return {ok: true};
         }
         return {ok: false, reason: (err as Error).message, checkId: "/eth/v1/node/health query"};
