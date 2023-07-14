@@ -16,7 +16,6 @@ import {
   MonitoringService,
 } from "@lodestar/beacon-node";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {isErrorAborted} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
 import {YargsError, cleanOldLogFiles, getDefaultGraffiti, mkdir, parseLoggerArgs} from "../../util/index.js";
@@ -151,8 +150,6 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   // This promise resolves once genesis is available.
   // It will wait for genesis, so this promise can be potentially very long
-  // During the wait time user can abort the process with Ctrl+C
-  // So we have to wrap this code with the try/catch
   const validator = await Validator.initializeFromBeaconNode(
     {
       db,
@@ -171,13 +168,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       distributed: args.distributed,
     },
     metrics
-  ).catch((err) => {
-    if (isErrorAborted(err)) {
-      throw new Error("Validator initialization aborted. Exiting.");
-    } else {
-      throw err;
-    }
-  });
+  );
 
   onGracefulShutdownCbs.push(() => validator.close());
   // Start keymanager API backend
