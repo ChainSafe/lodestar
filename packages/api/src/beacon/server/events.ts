@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {ErrorAborted} from "@lodestar/utils";
 import {Api, ReqTypes, routesData, getEventSerdes} from "../routes/events.js";
 import {ServerRoutes} from "../../utils/server/index.js";
 import {ServerApi} from "../../interfaces.js";
@@ -36,6 +37,9 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
           await new Promise<void>((resolve, reject) => {
             void api.eventstream(req.query.topics, controller.signal, (event) => {
               try {
+                // If the request is already aborted, we don't need to send any more events.
+                if (req.raw.destroyed) return;
+
                 const data = eventSerdes.toJson(event);
                 res.raw.write(serializeSSEEvent({event: event.type, data}));
               } catch (e) {
@@ -49,7 +53,12 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
             // The client may disconnect and we need to clean the subscriptions.
             req.raw.once("close", () => resolve());
             req.raw.once("end", () => resolve());
-            req.raw.once("error", (err) => reject(err));
+            req.raw.once("error", (err) => {
+              if ((err as unknown as {code: string}).code === "ECONNRESET") {
+                return reject(new ErrorAborted());
+              }
+              return reject(err);
+            });
           });
 
           // api.eventstream will never stop, so no need to ever call `res.raw.end();`
