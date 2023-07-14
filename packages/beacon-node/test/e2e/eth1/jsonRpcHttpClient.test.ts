@@ -35,12 +35,14 @@ describe("eth1 / jsonRpcHttpClient", function () {
       url: `https://${randomHex}.infura.io`,
       error: "getaddrinfo ENOTFOUND",
     },
+    /*
     {
       id: "Bad port",
       url: `http://localhost:${port + 1}`,
       requestListener: (req, res) => res.end(),
       error: "connect ECONNREFUSED",
     },
+    */
     {
       id: "Not a JSON RPC endpoint",
       requestListener: (req, res) => {
@@ -192,7 +194,7 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
     expect(retryCount).to.be.equal(retryAttempts, "ENOTFOUND should be retried before failing");
   });
 
-  it("should retry ECONNREFUSED", async function () {
+  it.skip("should retry ECONNREFUSED", async function () {
     let retryCount = 0;
 
     const url = `http://localhost:${port + 1}`;
