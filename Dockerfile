@@ -1,7 +1,7 @@
 
 # --platform=$BUILDPLATFORM is used build javascript source with host arch
 # Otherwise TS builds on emulated archs and can be extremely slow (+1h)
-FROM --platform=${BUILDPLATFORM:-amd64} node:20-alpine as build_src
+FROM --platform=${BUILDPLATFORM:-amd64} node:20.4-alpine as build_src
 ARG COMMIT
 WORKDIR /usr/app
 RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
