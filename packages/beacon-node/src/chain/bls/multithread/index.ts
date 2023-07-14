@@ -110,6 +110,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private readonly jobs = new LinkedList<JobQueueItem>();
   private bufferedJobs: {
     jobs: LinkedList<JobQueueItem>;
+    prioritizedJobs: LinkedList<JobQueueItem>;
     sigCount: number;
     firstPush: number;
     timeout: NodeJS.Timeout;
@@ -273,17 +274,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     return new Promise<boolean>((resolve, reject) => {
       const job = {resolve, reject, addedTimeMs: Date.now(), workReq};
 
-      // always prepend priority jobs
-      // priority + batchable: do not run job
-      // priority + !batchable: run job immediately
-      if (workReq.opts.priority) {
-        this.jobs.unshift(job);
-        if (!workReq.opts.batchable) {
-          setTimeout(this.runJob, 0);
-        }
-        return;
-      }
-
       // below is for non-priority jobs
       // Append batchable sets to `bufferedJobs`, starting a timeout to push them into `jobs`.
       // Do not call `runJob()`, it is called from `runBufferedJobs()`
@@ -291,12 +281,14 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         if (!this.bufferedJobs) {
           this.bufferedJobs = {
             jobs: new LinkedList(),
+            prioritizedJobs: new LinkedList(),
             sigCount: 0,
             firstPush: Date.now(),
             timeout: setTimeout(this.runBufferedJobs, MAX_BUFFER_WAIT_MS),
           };
         }
-        this.bufferedJobs.jobs.push(job);
+        const jobs = workReq.opts.priority ? this.bufferedJobs.prioritizedJobs : this.bufferedJobs.jobs;
+        jobs.push(job);
         this.bufferedJobs.sigCount += job.workReq.sets.length;
         if (this.bufferedJobs.sigCount > MAX_BUFFERED_SIGS) {
           clearTimeout(this.bufferedJobs.timeout);
@@ -308,7 +300,11 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       // This is useful to allow batching job submitted from a synchronous for loop,
       // and to prevent large stacks since runJob may be called recursively.
       else {
-        this.jobs.push(job);
+        if (workReq.opts.priority) {
+          this.jobs.unshift(job);
+        } else {
+          this.jobs.push(job);
+        }
         setTimeout(this.runJob, 0);
       }
     });
@@ -439,6 +435,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     if (this.bufferedJobs) {
       for (const job of this.bufferedJobs.jobs) {
         this.jobs.push(job);
+      }
+      for (const job of this.bufferedJobs.prioritizedJobs) {
+        this.jobs.unshift(job);
       }
       this.bufferedJobs = null;
       setTimeout(this.runJob, 0);
