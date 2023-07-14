@@ -38,8 +38,12 @@ const MAX_DECIMAL_FACTOR = BigInt("100000");
 /**
  * Cutoff time to wait for execution and builder block production apis to resolve
  * Post this time, race execution and builder to pick whatever resolves first
+ *
+ * Emprically the builder block resolves in ~1.5+ seconds, and executon should resolve <1 sec.
+ * So lowering the cutoff to 2 sec from 3 seconds to publish faster for successful proposal
+ * as proposals post 4 seconds into the slot seems to be not being included
  */
-const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 3_000;
+const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
 /** Overall timeout for execution and block production apis */
 const BLOCK_PRODUCTION_RACE_TIMEOUT_MS = 12_000;
 
