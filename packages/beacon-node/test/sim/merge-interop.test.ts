@@ -111,7 +111,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     //const controller = new AbortController();
     const executionEngine = initializeExecutionEngine(
       {mode: "http", urls: [engineRpcUrl], jwtSecretHex, retryAttempts, retryDelay},
-      {signal: controller.signal}
+      {signal: controller.signal, logger: testLogger("Node-A-Engine")}
     );
 
     // 1. Prepare a payload

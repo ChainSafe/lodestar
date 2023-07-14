@@ -60,6 +60,8 @@ export type SyncingStatus = {
   isSyncing: boolean;
   /** Set to true if the node is optimistically tracking head. */
   isOptimistic: boolean;
+  /** Set to true if the connected el client is offline */
+  elOffline: boolean;
 };
 
 export enum NodeHealth {
