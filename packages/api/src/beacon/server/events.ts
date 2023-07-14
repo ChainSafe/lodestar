@@ -54,7 +54,7 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
             req.raw.once("close", () => resolve());
             req.raw.once("end", () => resolve());
             req.raw.once("error", (err) => {
-              if ("code" in err && (err as unknown as {code: string}).code === "ECONNRESET") {
+              if ((err as unknown as {code: string}).code === "ECONNRESET") {
                 return reject(new ErrorAborted());
               }
               return reject(err);
