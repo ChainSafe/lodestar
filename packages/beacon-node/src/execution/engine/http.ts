@@ -1,4 +1,3 @@
-import {get} from "http";
 import {Root, RootHex, allForks, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
