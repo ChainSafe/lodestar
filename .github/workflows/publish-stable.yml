@@ -60,7 +60,7 @@ jobs:
           fetch-depth: 0 # Needs full depth for changelog generation
       - uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: 20.4
           check-latest: true
       - name: Node.js version
         id: node
