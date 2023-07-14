@@ -31,9 +31,10 @@ export enum ExecutePayloadStatus {
 }
 
 export enum ExecutionEngineState {
+  ONLINE = "ONLINE",
+  OFFLINE = "OFFLINE",
   SYNCING = "SYNCING",
   SYNCED = "SYNCED",
-  OFFLINE = "OFFLINE",
   AUTH_FAILED = "AUTH_FAILED",
 }
 

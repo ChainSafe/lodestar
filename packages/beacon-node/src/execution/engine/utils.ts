@@ -62,7 +62,7 @@ export function getExecutionEngineState({
     return ExecutionEngineState.AUTH_FAILED;
   }
 
-  // In case we can't determine the state, we assume it's syncing
+  // In case we can't determine the state, we assume it's online
   // This assumption is better than considering offline, because the offline state may trigger some notifications
-  return ExecutionEngineState.SYNCING;
+  return ExecutionEngineState.ONLINE;
 }

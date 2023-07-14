@@ -1,3 +1,4 @@
+import {get} from "http";
 import {Root, RootHex, allForks, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
@@ -7,6 +8,7 @@ import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
+import {IJson, RpcPayload} from "../../eth1/interface.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -87,10 +89,10 @@ const getPayloadOpts: ReqOpts = {routeId: "getPayload"};
 export class ExecutionEngineHttp implements IExecutionEngine {
   private logger: Logger;
 
-  // The default state is SYNCING, it will be updated to SYNCING once we receive the first payload
+  // The default state is ONLINE, it will be updated to SYNCING once we receive the first payload
   // This assumption is better than the OFFLINE state, since we can't be sure if the EL is offline and being offline may trigger some notifications
   // It's safer to to avoid false positives and assume that the EL is syncing until we receive the first payload
-  private state: ExecutionEngineState = ExecutionEngineState.SYNCING;
+  private state: ExecutionEngineState = ExecutionEngineState.ONLINE;
 
   readonly payloadIdCache = new PayloadIdCache();
   /**
@@ -105,7 +107,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   private readonly rpcFetchQueue: JobItemQueue<[EngineRequest], EngineResponse>;
 
   private jobQueueProcessor = async ({method, params, methodOpts}: EngineRequest): Promise<EngineResponse> => {
-    return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
+    return this.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
       {method, params},
       methodOpts
     );
@@ -121,6 +123,17 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       metrics?.engineHttpProcessorQueue
     );
     this.logger = logger;
+  }
+
+  protected async fetchWithRetries<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
+    try {
+      const res = await this.rpc.fetchWithRetries<R, P>(payload, opts);
+      this.updateEngineState(ExecutionEngineState.ONLINE);
+      return res;
+    } catch (err) {
+      this.updateEngineState(getExecutionEngineState({payloadError: err}));
+      throw err;
+    }
   }
 
   /**
@@ -355,7 +368,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         : ForkSeq[fork] >= ForkSeq.capella
         ? "engine_getPayloadV2"
         : "engine_getPayloadV1";
-    const payloadResponse = await this.rpc.fetchWithRetries<
+    const payloadResponse = await this.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >(
@@ -375,7 +388,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async getPayloadBodiesByHash(blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
     const method = "engine_getPayloadBodiesByHashV1";
     assertReqSizeLimit(blockHashes.length, 32);
-    const response = await this.rpc.fetchWithRetries<
+    const response = await this.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >({method, params: blockHashes});
@@ -390,7 +403,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     assertReqSizeLimit(blockCount, 32);
     const start = numToQuantity(startBlockNumber);
     const count = numToQuantity(blockCount);
-    const response = await this.rpc.fetchWithRetries<
+    const response = await this.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >({method, params: [start, count]});
@@ -406,15 +419,26 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     if (oldState === newState) return;
 
+    // The ONLINE is initial state and can reached from offline or auth failed error
+    if (
+      newState === ExecutionEngineState.ONLINE &&
+      !(oldState === ExecutionEngineState.OFFLINE || oldState === ExecutionEngineState.AUTH_FAILED)
+    ) {
+      return;
+    }
+
     switch (newState) {
-      case ExecutionEngineState.SYNCED:
-        this.logger.info("ExecutionEngine online and synced");
-        break;
-      case ExecutionEngineState.SYNCING:
-        this.logger.info("ExecutionEngine is online and syncing");
+      case ExecutionEngineState.ONLINE:
+        this.logger.info("ExecutionEngine became online");
         break;
       case ExecutionEngineState.OFFLINE:
         this.logger.error("ExecutionEngine went offline");
+        break;
+      case ExecutionEngineState.SYNCED:
+        this.logger.info("ExecutionEngine is synced");
+        break;
+      case ExecutionEngineState.SYNCING:
+        this.logger.info("ExecutionEngine is syncing");
         break;
       case ExecutionEngineState.AUTH_FAILED:
         this.logger.error("ExecutionEngine authentication failed");
