@@ -59,7 +59,7 @@
     "@chainsafe/blst": "^0.2.9",
     "@chainsafe/discv5": "^4.0.0",
     "@chainsafe/ssz": "^0.10.2",
-    "@chainsafe/threads": "^1.11.0",
+    "@chainsafe/threads": "^1.11.1",
     "@libp2p/crypto": "^1.0.0",
     "@libp2p/peer-id": "^2.0.3",
     "@libp2p/peer-id-factory": "^2.0.3",
