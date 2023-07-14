@@ -57,7 +57,7 @@ function validateMultiaddrArg<T extends Record<string, string | undefined>>(args
 export function parseListenArgs(args: NetworkArgs) {
   // If listenAddress is explicitly set, use it
   // If listenAddress6 is not set, use defaultListenAddress
-  const listenAddress = args.listenAddress ?? args.listenAddress6 ? undefined : defaultListenAddress;
+  const listenAddress = args.listenAddress ?? (args.listenAddress6 ? undefined : defaultListenAddress);
   const port = listenAddress ? args.port ?? defaultP2pPort : undefined;
   const discoveryPort = listenAddress ? args.discoveryPort ?? args.port ?? defaultP2pPort : undefined;
 
