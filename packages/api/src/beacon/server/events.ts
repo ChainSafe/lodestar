@@ -37,6 +37,9 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
           await new Promise<void>((resolve, reject) => {
             void api.eventstream(req.query.topics, controller.signal, (event) => {
               try {
+                // If the request is already aborted, we don't need to send any more events.
+                if (req.raw.destroyed) return;
+
                 const data = eventSerdes.toJson(event);
                 res.raw.write(serializeSSEEvent({event: event.type, data}));
               } catch (e) {
