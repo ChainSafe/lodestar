@@ -156,7 +156,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
   },
 
   port: {
-    description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discovery-port flag.",
+    description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discoveryPort flag.",
     type: "number",
     // TODO: Derive from BeaconNode defaults
     defaultDescription: String(defaultP2pPort),
@@ -177,7 +177,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
   },
 
   port6: {
-    description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discovery-port6 flag.",
+    description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discoveryPort6 flag.",
     type: "number",
     // TODO: Derive from BeaconNode defaults
     defaultDescription: String(defaultP2pPort6),
