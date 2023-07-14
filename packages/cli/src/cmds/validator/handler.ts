@@ -150,6 +150,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
 
   // This promise resolves once genesis is available.
   // It will wait for genesis, so this promise can be potentially very long
+
   const validator = await Validator.initializeFromBeaconNode(
     {
       db,
@@ -171,6 +172,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
   );
 
   onGracefulShutdownCbs.push(() => validator.close());
+
   // Start keymanager API backend
   // Only if keymanagerEnabled flag is set to true
   if (args["keymanager"]) {
