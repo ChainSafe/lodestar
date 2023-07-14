@@ -153,6 +153,13 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
     // Pubkeys are aggregated in the main thread regardless if verified in workers or in main thread
     this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
+    this.metrics?.blsThreadPool.totalSigSets.inc(sets.length);
+    if (opts.priority) {
+      this.metrics?.blsThreadPool.prioritizedSigSets.inc(sets.length);
+    }
+    if (opts.batchable) {
+      this.metrics?.blsThreadPool.batchableSigSets.inc(sets.length);
+    }
 
     if (opts.verifyOnMainThread && !this.blsVerifyAllMultiThread) {
       const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
