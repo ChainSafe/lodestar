@@ -221,6 +221,30 @@ export function createLodestarMetrics(
       }),
     },
 
+    production: {
+      producedAggregateParticipants: register.histogram({
+        name: "lodestar_produced_aggregate_participants",
+        help: "API impl produced aggregates histogram of participants",
+        // We care more about tracking low quality aggregates with low participation
+        // Max committee sizes are: 0.5e6 vc: 244, 1e6 vc: 488
+        buckets: [1, 5, 20, 50, 100, 200, 400],
+      }),
+      producedSyncContributionParticipants: register.histogram({
+        name: "lodestar_produced_sync_contribution_participants",
+        help: "API impl produced sync contribution histogram of participants",
+        // We care more about tracking low quality aggregates with low participation
+        // Max committee sizes fixed to 512/4 = 128
+        buckets: [1, 5, 20, 50, 128],
+      }),
+      producedSyncAggregateParticipants: register.histogram({
+        name: "lodestar_produced_sync_aggregate_participants",
+        help: "API impl produced sync aggregate histogram of participants",
+        // We care more about tracking low quality aggregates with low participation
+        // Max committee sizes fixed to 512
+        buckets: [1, 5, 20, 50, 100, 200, 512],
+      }),
+    },
+
     // Beacon state transition metrics
 
     epochTransitionTime: register.histogram({
@@ -373,6 +397,18 @@ export function createLodestarMetrics(
         help: "Time to verify each sigset with worker thread mode",
         // Time per sig ~0.9ms on good machines
         buckets: [0.5e-3, 0.75e-3, 1e-3, 1.5e-3, 2e-3, 5e-3],
+      }),
+      totalSigSets: register.gauge({
+        name: "lodestar_bls_thread_pool_sig_sets_total",
+        help: "Count of total signature sets",
+      }),
+      prioritizedSigSets: register.gauge({
+        name: "lodestar_bls_thread_pool_prioritized_sig_sets_total",
+        help: "Count of total prioritized signature sets",
+      }),
+      batchableSigSets: register.gauge({
+        name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
+        help: "Count of total batchable signature sets",
       }),
     },
 

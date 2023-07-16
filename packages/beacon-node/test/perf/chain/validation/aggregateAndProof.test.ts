@@ -1,7 +1,8 @@
 import {itBench} from "@dapplion/benchmark";
+import {ssz} from "@lodestar/types";
 // eslint-disable-next-line import/no-relative-packages
 import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
-import {validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
+import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
 import {getAggregateAndProofValidData} from "../../../utils/validationData/aggregateAndProof.js";
 
 describe("validate gossip signedAggregateAndProof", () => {
@@ -16,6 +17,19 @@ describe("validate gossip signedAggregateAndProof", () => {
   const aggStruct = signedAggregateAndProof;
 
   for (const [id, agg] of Object.entries({struct: aggStruct})) {
+    const serializedData = ssz.phase0.SignedAggregateAndProof.serialize(aggStruct);
+
+    itBench({
+      id: `validate api signedAggregateAndProof - ${id}`,
+      beforeEach: () => {
+        chain.seenAggregators["validatorIndexesByEpoch"].clear();
+        chain.seenAggregatedAttestations["aggregateRootsByEpoch"].clear();
+      },
+      fn: async () => {
+        await validateApiAggregateAndProof(chain, agg);
+      },
+    });
+
     itBench({
       id: `validate gossip signedAggregateAndProof - ${id}`,
       beforeEach: () => {
@@ -23,7 +37,7 @@ describe("validate gossip signedAggregateAndProof", () => {
         chain.seenAggregatedAttestations["aggregateRootsByEpoch"].clear();
       },
       fn: async () => {
-        await validateGossipAggregateAndProof(chain, agg);
+        await validateGossipAggregateAndProof(chain, agg, serializedData);
       },
     });
   }

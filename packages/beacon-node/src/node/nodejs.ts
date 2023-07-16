@@ -66,6 +66,7 @@ enum LoggerModule {
   backfill = "backfill",
   chain = "chain",
   eth1 = "eth1",
+  execution = "execution",
   metrics = "metrics",
   monitoring = "monitoring",
   network = "network",
@@ -209,7 +210,11 @@ export class BeaconNode {
         logger: logger.child({module: LoggerModule.eth1}),
         signal,
       }),
-      executionEngine: initializeExecutionEngine(opts.executionEngine, {metrics, signal}),
+      executionEngine: initializeExecutionEngine(opts.executionEngine, {
+        metrics,
+        signal,
+        logger: logger.child({module: LoggerModule.execution}),
+      }),
       executionBuilder: opts.executionBuilder.enabled
         ? initializeExecutionBuilder(opts.executionBuilder, config, metrics)
         : undefined,

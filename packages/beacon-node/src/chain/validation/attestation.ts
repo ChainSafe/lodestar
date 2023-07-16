@@ -29,16 +29,18 @@ export type AttestationValidationResult = {
   attDataRootHex: RootHex;
 };
 
-export type AttestationOrBytes =
-  // for api
-  | {attestation: phase0.Attestation; serializedData: null}
-  // for gossip
-  | {
-      attestation: null;
-      serializedData: Uint8Array;
-      // available in NetworkProcessor since we check for unknown block root attestations
-      attSlot: Slot;
-    };
+export type AttestationOrBytes = ApiAttestation | GossipAttestation;
+
+/** attestation from api */
+export type ApiAttestation = {attestation: phase0.Attestation; serializedData: null};
+
+/** attestation from gossip */
+export type GossipAttestation = {
+  attestation: null;
+  serializedData: Uint8Array;
+  // available in NetworkProcessor since we check for unknown block root attestations
+  attSlot: Slot;
+};
 
 /**
  * The beacon chain shufflings are designed to provide 1 epoch lookahead
@@ -47,14 +49,45 @@ export type AttestationOrBytes =
 const SHUFFLING_LOOK_AHEAD_EPOCHS = 1;
 
 /**
- * Only deserialize the attestation if needed, use the cached AttestationData instead
- * This is to avoid deserializing similar attestation multiple times which could help the gc
+ * Validate attestations from gossip
+ * - Only deserialize the attestation if needed, use the cached AttestationData instead
+ * - This is to avoid deserializing similar attestation multiple times which could help the gc
+ * - subnet is required
+ * - do not prioritize bls signature set
  */
 export async function validateGossipAttestation(
   chain: IBeaconChain,
+  attestationOrBytes: GossipAttestation,
+  /** Optional, to allow verifying attestations through API with unknown subnet */
+  subnet: number
+): Promise<AttestationValidationResult> {
+  return validateAttestation(chain, attestationOrBytes, subnet);
+}
+
+/**
+ * Validate attestations from api
+ * - no need to deserialize attestation
+ * - no subnet
+ * - prioritize bls signature set
+ */
+export async function validateApiAttestation(
+  chain: IBeaconChain,
+  attestationOrBytes: ApiAttestation
+): Promise<AttestationValidationResult> {
+  const prioritizeBls = true;
+  return validateAttestation(chain, attestationOrBytes, null, prioritizeBls);
+}
+
+/**
+ * Only deserialize the attestation if needed, use the cached AttestationData instead
+ * This is to avoid deserializing similar attestation multiple times which could help the gc
+ */
+async function validateAttestation(
+  chain: IBeaconChain,
   attestationOrBytes: AttestationOrBytes,
   /** Optional, to allow verifying attestations through API with unknown subnet */
-  subnet: number | null
+  subnet: number | null,
+  prioritizeBls = false
 ): Promise<AttestationValidationResult> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
@@ -268,7 +301,7 @@ export async function validateGossipAttestation(
     }
   }
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
   }
 

@@ -20,7 +20,7 @@ import {Root, Slot, ValidatorIndex, ssz, Epoch, ProducedBlockSource, bellatrix, 
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {toHex} from "@lodestar/utils";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
-import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
+import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {SyncState} from "../../../sync/index.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
@@ -374,6 +374,11 @@ export function getValidatorApi({
 
       const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
       if (!contribution) throw new ApiError(500, "No contribution available");
+
+      metrics?.production.producedSyncContributionParticipants.observe(
+        contribution.aggregationBits.getTrueBitIndexes().length
+      );
+
       return {data: contribution};
     },
 
@@ -538,6 +543,9 @@ export function getValidatorApi({
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
+      const aggregate = chain.attestationPool.getAggregate(slot, attestationDataRoot);
+      metrics?.production.producedAggregateParticipants.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
+
       return {
         data: chain.attestationPool.getAggregate(slot, attestationDataRoot),
       };
@@ -554,12 +562,7 @@ export function getValidatorApi({
           try {
             // TODO: Validate in batch
             // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-            const validateFn = () =>
-              validateGossipAggregateAndProof(
-                chain,
-                signedAggregateAndProof,
-                true // skip known attesters check
-              );
+            const validateFn = () => validateApiAggregateAndProof(chain, signedAggregateAndProof);
             const {slot, beaconBlockRoot} = signedAggregateAndProof.message.aggregate.data;
             // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
