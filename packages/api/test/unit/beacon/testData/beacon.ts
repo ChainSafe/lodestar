@@ -52,8 +52,16 @@ export const testData: GenericServerTestCases<Api> = {
     args: [ssz.phase0.SignedBeaconBlock.defaultValue()],
     res: undefined,
   },
+  publishBlockV2: {
+    args: [ssz.phase0.SignedBeaconBlock.defaultValue(), "consensus"],
+    res: undefined,
+  },
   publishBlindedBlock: {
     args: [getDefaultBlindedBlock(64)],
+    res: undefined,
+  },
+  publishBlindedBlockV2: {
+    args: [getDefaultBlindedBlock(64), "consensus"],
     res: undefined,
   },
   getBlobSidecars: {

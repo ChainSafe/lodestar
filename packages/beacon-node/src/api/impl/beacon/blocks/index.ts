@@ -19,6 +19,9 @@ import {NetworkEvent} from "../../../../network/index.js";
 import {ApiModules} from "../../types.js";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
 
+type PublishBlockOpts = ImportBlockOpts & {broadcastValidation?: routes.beacon.BroadcastValidation};
+const defaultPublishOpts = {broadcastValidation: routes.beacon.BroadcastValidation.consensus};
+
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
  * future slot, wait some time instead of rejecting the request because it's in the future
@@ -189,7 +192,11 @@ export function getBeaconBlockApi({
       };
     },
 
-    async publishBlindedBlock(signedBlindedBlockOrContents) {
+    async publishBlindedBlockV2(signedBlindedBlockOrContents, opts) {
+      await this.publishBlindedBlock(signedBlindedBlockOrContents, opts);
+    },
+
+    async publishBlindedBlock(signedBlindedBlockOrContents, opts: PublishBlockOpts = defaultPublishOpts) {
       const executionBuilder = chain.executionBuilder;
       if (!executionBuilder) throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
       // Mechanism for blobs & blocks on builder is not yet finalized
@@ -199,13 +206,22 @@ export function getBeaconBlockApi({
         const signedBlockOrContents = await executionBuilder.submitBlindedBlock(signedBlindedBlockOrContents);
         // the full block is published by relay and it's possible that the block is already known to us by gossip
         // see https://github.com/ChainSafe/lodestar/issues/5404
-        return this.publishBlock(signedBlockOrContents, {ignoreIfKnown: true});
+        return this.publishBlock(signedBlockOrContents, {...opts, ignoreIfKnown: true});
       }
     },
 
-    async publishBlock(signedBlockOrContents, opts: ImportBlockOpts = {}) {
+    async publishBlockV2(signedBlockOrContents, opts: PublishBlockOpts = defaultPublishOpts) {
+      await this.publishBlock(signedBlockOrContents, opts);
+    },
+
+    async publishBlock(signedBlockOrContents, opts: PublishBlockOpts = defaultPublishOpts) {
       const seenTimestampSec = Date.now() / 1000;
       let blockForImport: BlockInput, signedBlock: allForks.SignedBeaconBlock, signedBlobs: deneb.SignedBlobSidecars;
+
+      const {broadcastValidation} = opts;
+      if (broadcastValidation !== routes.beacon.BroadcastValidation.consensus) {
+        throw Error("Broadcast Validation of consensus type accepted only.");
+      }
 
       if (isSignedBlockContents(signedBlockOrContents)) {
         ({signedBlock, signedBlobSidecars: signedBlobs} = signedBlockOrContents);
