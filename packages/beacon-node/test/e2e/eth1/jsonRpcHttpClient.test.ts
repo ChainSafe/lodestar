@@ -153,16 +153,13 @@ describe("eth1 / jsonRpcHttpClient", function () {
       const controller = new AbortController();
       if (abort) setTimeout(() => controller.abort(), 50);
       const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
-
-      try {
-        await eth1JsonRpcClient.fetch(payload, {timeout});
-      } catch (error) {
+      await expect(eth1JsonRpcClient.fetch(payload, {timeout})).to.be.rejected.then((error) => {
         if (testCase.errorCode) {
-          expect((error as FetchError).code).to.eql(testCase.errorCode);
+          expect((error as FetchError).code).to.be.equal(testCase.errorCode);
         } else {
-          expect((error as Error).message).includes(testCase.error);
+          expect((error as Error).message).to.include(testCase.error);
         }
-      }
+      });
     });
   }
 });
@@ -215,19 +212,19 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
 
     const controller = new AbortController();
     const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
-    try {
-      await eth1JsonRpcClient.fetchWithRetries(payload, {
+    await expect(
+      eth1JsonRpcClient.fetchWithRetries(payload, {
         retryAttempts,
         shouldRetry: () => {
           // using the shouldRetry function to keep tab of the retried requests
           retryCount++;
           return true;
         },
-      });
-    } catch (error) {
-      expect((error as FetchError).code).eql("ECONNREFUSED");
-    }
-    expect(retryCount).to.be.equal(retryAttempts, "connect ECONNREFUSED should be retried before failing");
+      })
+    ).to.be.rejected.then((error) => {
+      expect((error as FetchError).code).to.be.equal("ECONNREFUSED");
+    });
+    expect(retryCount).to.be.equal(retryAttempts, "code ECONNREFUSED should be retried before failing");
   });
 
   it("should retry 404", async function () {
