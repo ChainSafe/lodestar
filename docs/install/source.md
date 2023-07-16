@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the LTS version (currently v18) of [NodeJS](https://nodejs.org/en/).
+Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use the LTS version (currently v20) of [NodeJS](https://nodejs.org/en/).
 
 <!-- prettier-ignore-start -->
 !!! info

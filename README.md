@@ -8,7 +8,7 @@
 [![Ethereum Consensus Spec v1.1.10](https://img.shields.io/badge/ETH%20consensus--spec-1.1.10-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.1.10)
 [![codecov](https://codecov.io/gh/ChainSafe/lodestar/branch/unstable/graph/badge.svg)](https://codecov.io/gh/ChainSafe/lodestar)
 ![ES Version](https://img.shields.io/badge/ES-2020-yellow)
-![Node Version](https://img.shields.io/badge/node-18.15.x-green)
+![Node Version](https://img.shields.io/badge/node-20.x-green)
 [![gitpoap badge](https://public-api.gitpoap.io/v1/repo/ChainSafe/lodestar/badge)](https://www.gitpoap.io/gh/ChainSafe/lodestar)
 
 [Lodestar](https://lodestar.chainsafe.io) is a TypeScript implementation of the [Ethereum Consensus specification](https://github.com/ethereum/consensus-specs) developed by [ChainSafe Systems](https://chainsafe.io).

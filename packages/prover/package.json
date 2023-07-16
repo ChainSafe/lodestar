@@ -55,7 +55,7 @@
     "test:browsers": "yarn karma start karma.config.cjs",
     "test:e2e": "LODESTAR_PRESET=minimal mocha 'test/e2e/**/*.test.ts'",
     "check-readme": "typescript-docs-verifier",
-    "generate-fixtures": "npx ts-node --esm scripts/generate_fixtures.ts"
+    "generate-fixtures": "node --loader ts-node/esm scripts/generate_fixtures.ts"
   },
   "dependencies": {
     "@ethereumjs/block": "^4.2.2",
