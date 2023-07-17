@@ -1,4 +1,4 @@
-import {PublicKey} from "@chainsafe/bls/types";
+import {PublicKey, Signature} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
@@ -43,16 +43,34 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
   ): Promise<boolean[]> {
     const startNs = process.hrtime.bigint();
     const pubkey = bls.PublicKey.aggregate(sets.map((set) => set.publicKey));
+    let isAllValid = true;
     // validate signature = true
-    const signatures = sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, true));
-    const signature = bls.Signature.aggregate(signatures);
-    const isAllValid = signature.verify(pubkey, message);
+    const signatures = sets.map((set) => {
+      try {
+        return bls.Signature.fromBytes(set.signature, CoordType.affine, true);
+      } catch (_) {
+        // at least one set has malformed signature
+        isAllValid = false;
+        return null;
+      }
+    });
+
+    if (isAllValid) {
+      const signature = bls.Signature.aggregate(signatures as Signature[]);
+      isAllValid = signature.verify(pubkey, message);
+    }
 
     let result: boolean[];
     if (isAllValid) {
       result = sets.map(() => true);
     } else {
-      result = sets.map((set, i) => signatures[i].verify(set.publicKey, message));
+      result = sets.map((set, i) => {
+        const sig = signatures[i];
+        if (sig === null) {
+          return false;
+        }
+        return sig.verify(set.publicKey, message);
+      });
     }
 
     const endNs = process.hrtime.bigint();
