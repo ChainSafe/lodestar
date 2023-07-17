@@ -1,14 +1,19 @@
+import {multiaddr} from "@multiformats/multiaddr";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions, YargsError} from "../../util/index.js";
 
 const defaultListenAddress = "0.0.0.0";
 export const defaultP2pPort = 9000;
+export const defaultP2pPort6 = 9090;
 
 export type NetworkArgs = {
   discv5?: boolean;
   listenAddress?: string;
   port?: number;
   discoveryPort?: number;
+  listenAddress6?: string;
+  port6?: number;
+  discoveryPort6?: number;
   bootnodes?: string[];
   targetPeers?: number;
   deterministicLongLivedAttnets?: boolean;
@@ -38,10 +43,59 @@ export type NetworkArgs = {
   "network.rateTrackerTimeoutMs"?: number;
 };
 
+function validateMultiaddrArg<T extends Record<string, string | undefined>>(args: T, key: keyof T): void {
+  if (args[key]) {
+    try {
+      multiaddr(args[key]);
+    } catch (e) {
+      throw new YargsError(`Invalid ${key as string}: ${(e as Error).message}`);
+    }
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export function parseListenArgs(args: NetworkArgs) {
+  // If listenAddress is explicitly set, use it
+  // If listenAddress6 is not set, use defaultListenAddress
+  const listenAddress = args.listenAddress ?? (args.listenAddress6 ? undefined : defaultListenAddress);
+  const port = listenAddress ? args.port ?? defaultP2pPort : undefined;
+  const discoveryPort = listenAddress ? args.discoveryPort ?? args.port ?? defaultP2pPort : undefined;
+
+  // Only use listenAddress6 if it is explicitly set
+  const listenAddress6 = args.listenAddress6;
+  const port6 = listenAddress6 ? args.port6 ?? defaultP2pPort6 : undefined;
+  const discoveryPort6 = listenAddress6 ? args.discoveryPort6 ?? args.port6 ?? defaultP2pPort6 : undefined;
+
+  return {listenAddress, port, discoveryPort, listenAddress6, port6, discoveryPort6};
+}
+
 export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
-  const listenAddress = args.listenAddress || defaultListenAddress;
-  const udpPort = args.discoveryPort ?? args.port ?? defaultP2pPort;
-  const tcpPort = args.port ?? defaultP2pPort;
+  const {listenAddress, port, discoveryPort, listenAddress6, port6, discoveryPort6} = parseListenArgs(args);
+  // validate ip, ip6, ports
+  const muArgs = {
+    listenAddress: listenAddress ? `/ip4/${listenAddress}` : undefined,
+    port: listenAddress ? `/tcp/${port}` : undefined,
+    discoveryPort: listenAddress ? `/udp/${discoveryPort}` : undefined,
+    listenAddress6: listenAddress6 ? `/ip6/${listenAddress6}` : undefined,
+    port6: listenAddress6 ? `/tcp/${port6}` : undefined,
+    discoveryPort6: listenAddress6 ? `/udp/${discoveryPort6}` : undefined,
+  };
+
+  for (const key of [
+    "listenAddress",
+    "port",
+    "discoveryPort",
+    "listenAddress6",
+    "port6",
+    "discoveryPort6",
+  ] as (keyof typeof muArgs)[]) {
+    validateMultiaddrArg(muArgs, key);
+  }
+
+  const bindMu = listenAddress ? `${muArgs.listenAddress}${muArgs.discoveryPort}` : undefined;
+  const localMu = listenAddress ? `${muArgs.listenAddress}${muArgs.port}` : undefined;
+  const bindMu6 = listenAddress6 ? `${muArgs.listenAddress6}${muArgs.discoveryPort6}` : undefined;
+  const localMu6 = listenAddress6 ? `${muArgs.listenAddress6}${muArgs.port6}` : undefined;
 
   const targetPeers = args["targetPeers"];
   const maxPeers = args["network.maxPeers"] ?? (targetPeers !== undefined ? Math.floor(targetPeers * 1.1) : undefined);
@@ -54,7 +108,10 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     discv5: enableDiscv5
       ? {
           config: {},
-          bindAddr: `/ip4/${listenAddress}/udp/${udpPort}`,
+          bindAddrs: {
+            ip4: bindMu as string,
+            ip6: bindMu6,
+          },
           // TODO: Okay to set to empty array?
           bootEnrs: args["bootnodes"] ?? [],
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
@@ -63,7 +120,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
       : null,
     maxPeers: maxPeers ?? defaultOptions.network.maxPeers,
     targetPeers: targetPeers ?? defaultOptions.network.targetPeers,
-    localMultiaddrs: [`/ip4/${listenAddress}/tcp/${tcpPort}`],
+    localMultiaddrs: [localMu, localMu6].filter(Boolean) as string[],
     deterministicLongLivedAttnets: args["deterministicLongLivedAttnets"],
     subscribeAllSubnets: args["subscribeAllSubnets"],
     disablePeerScoring: args["disablePeerScoring"],
@@ -93,13 +150,13 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   listenAddress: {
     type: "string",
-    description: "The address to listen for p2p UDP and TCP connections",
+    description: "The IPv4 address to listen for p2p UDP and TCP connections",
     defaultDescription: defaultListenAddress,
     group: "network",
   },
 
   port: {
-    description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discovery-port flag.",
+    description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discoveryPort flag.",
     type: "number",
     // TODO: Derive from BeaconNode defaults
     defaultDescription: String(defaultP2pPort),
@@ -110,6 +167,27 @@ export const options: CliCommandOptions<NetworkArgs> = {
     description: "The UDP port that discovery will listen on. Defaults to `port`",
     type: "number",
     defaultDescription: "`port`",
+    group: "network",
+  },
+
+  listenAddress6: {
+    type: "string",
+    description: "The IPv6 address to listen for p2p UDP and TCP connections",
+    group: "network",
+  },
+
+  port6: {
+    description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discoveryPort6 flag.",
+    type: "number",
+    // TODO: Derive from BeaconNode defaults
+    defaultDescription: String(defaultP2pPort6),
+    group: "network",
+  },
+
+  discoveryPort6: {
+    description: "The UDP port that discovery will listen on. Defaults to `port6`",
+    type: "number",
+    defaultDescription: "`port6`",
     group: "network",
   },
 

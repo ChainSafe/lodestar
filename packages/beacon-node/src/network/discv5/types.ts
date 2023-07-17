@@ -6,10 +6,24 @@ import {LoggerNodeOpts} from "@lodestar/logger/node";
 // TODO export IDiscv5Config so we don't need this convoluted type
 type Discv5Config = Parameters<(typeof Discv5)["create"]>[0]["config"];
 
+type BindAddrs =
+  | {
+      ip4: string;
+      ip6?: string;
+    }
+  | {
+      ip4?: string;
+      ip6: string;
+    }
+  | {
+      ip4: string;
+      ip6: string;
+    };
+
 export type LodestarDiscv5Opts = {
   config?: Discv5Config;
   enr: string;
-  bindAddr: string;
+  bindAddrs: BindAddrs;
   bootEnrs: string[];
 };
 
@@ -17,7 +31,7 @@ export type LodestarDiscv5Opts = {
 export interface Discv5WorkerData {
   enr: string;
   peerIdProto: Uint8Array;
-  bindAddr: string;
+  bindAddrs: BindAddrs;
   config: Discv5Config;
   bootEnrs: string[];
   metrics: boolean;

@@ -98,7 +98,7 @@
     "@chainsafe/as-sha256": "^0.3.1",
     "@chainsafe/bls": "7.1.1",
     "@chainsafe/blst": "^0.2.9",
-    "@chainsafe/discv5": "^4.0.0",
+    "@chainsafe/discv5": "^5.0.0",
     "@chainsafe/libp2p-gossipsub": "^9.1.0",
     "@chainsafe/libp2p-noise": "^12.0.1",
     "@chainsafe/persistent-merkle-tree": "^0.5.0",

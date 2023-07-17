@@ -57,7 +57,7 @@
     "@chainsafe/bls-keygen": "^0.3.0",
     "@chainsafe/bls-keystore": "^2.0.0",
     "@chainsafe/blst": "^0.2.9",
-    "@chainsafe/discv5": "^4.0.0",
+    "@chainsafe/discv5": "^5.0.0",
     "@chainsafe/ssz": "^0.10.2",
     "@chainsafe/threads": "^1.11.1",
     "@libp2p/crypto": "^1.0.0",
