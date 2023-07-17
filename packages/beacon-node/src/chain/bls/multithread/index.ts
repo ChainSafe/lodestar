@@ -395,7 +395,13 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
           } else {
             // there could be an invalid pubkey/signature, retry each individually
             // Create new jobs for each pubkey set, and Promise.all all the results
-            this.jobs.push(...jobItemSameMessageToMultiSet(job));
+            for (const j of jobItemSameMessageToMultiSet(job)) {
+              if (j.opts.priority) {
+                this.jobs.unshift(j);
+              } else {
+                this.jobs.push(j);
+              }
+            }
             this.metrics?.blsThreadPool.sameMessageRetryJobs.inc(1);
             this.metrics?.blsThreadPool.sameMessageRetrySets.inc(job.sets.length);
           }
@@ -460,7 +466,13 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
             } else {
               // Retry each individually
               // Create new jobs for each pubkey set, and Promise.all all the results
-              this.jobs.push(...jobItemSameMessageToMultiSet(job));
+              for (const j of jobItemSameMessageToMultiSet(job)) {
+                if (j.opts.priority) {
+                  this.jobs.unshift(j);
+                } else {
+                  this.jobs.push(j);
+                }
+              }
               this.metrics?.blsThreadPool.sameMessageRetryJobs.inc(1);
               this.metrics?.blsThreadPool.sameMessageRetrySets.inc(job.sets.length);
             }

@@ -3,6 +3,7 @@ import {CoordType, PointFormat, PublicKey} from "@chainsafe/bls/types";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey} from "../utils.js";
+import {LinkedList} from "../../../util/array.js";
 import {BlsWorkReq} from "./types.js";
 
 export type JobQueueItem = JobQueueItemDefault | JobQueueItemSameMessage;
@@ -79,11 +80,11 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat): BlsWorkR
 /**
  * Convert a JobQueueItemSameMessage into multiple JobQueueItemDefault linked to the original promise
  */
-export function jobItemSameMessageToMultiSet(job: JobQueueItemSameMessage): JobQueueItemDefault[] {
+export function jobItemSameMessageToMultiSet(job: JobQueueItemSameMessage): LinkedList<JobQueueItemDefault> {
   // Retry each individually
   // Create new jobs for each pubkey set, and Promise.all all the results
   const promises: Promise<boolean>[] = [];
-  const jobs: JobQueueItemDefault[] = [];
+  const jobs = new LinkedList<JobQueueItemDefault>();
 
   for (const set of job.sets) {
     promises.push(
@@ -93,7 +94,7 @@ export function jobItemSameMessageToMultiSet(job: JobQueueItemSameMessage): JobQ
           resolve,
           reject,
           addedTimeMs: job.addedTimeMs,
-          opts: {batchable: false},
+          opts: {batchable: false, priority: job.opts.priority},
           sets: [
             {
               type: SignatureSetType.single,
