@@ -1,12 +1,13 @@
+import EventEmitter from "node:events";
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {toHexString} from "@chainsafe/ssz";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {createChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ssz} from "@lodestar/types";
 import {notNullish, sleep} from "@lodestar/utils";
-import {IBeaconChain} from "../../../src/chain/index.js";
+import {BeaconChain, IBeaconChain} from "../../../src/chain/index.js";
 import {INetwork, NetworkEvent, NetworkEventBus, PeerAction} from "../../../src/network/index.js";
 import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
 import {testLogger} from "../../utils/logger.js";
@@ -18,7 +19,7 @@ import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.j
 import {defaultSyncOptions} from "../../../src/sync/options.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
 
-describe("sync / UnknownBlockSync", () => {
+describe("sync by UnknownBlockSync", () => {
   const logger = testLogger();
   const sandbox = sinon.createSandbox();
   const slotSec = 0.3;
@@ -229,4 +230,62 @@ describe("sync / UnknownBlockSync", () => {
       syncService.close();
     });
   }
+});
+
+describe("UnknownBlockSync", function () {
+  const sandbox = sinon.createSandbox();
+  let network: INetwork;
+  let chain: SinonStubbedInstance<BeaconChain> & IBeaconChain;
+  const logger = testLogger();
+  let service: UnknownBlockSync;
+
+  beforeEach(() => {
+    network = {
+      events: new NetworkEventBus(),
+    } as Partial<INetwork> as INetwork;
+    chain = sandbox.createStubInstance(BeaconChain);
+  });
+
+  afterEach(() => {
+    sandbox.restore();
+  });
+
+  const testCases: {actions: boolean[]; expected: boolean}[] = [
+    // true = subscribe, false = unsubscribe
+    // expected = isSubscribed
+    {actions: [false, true], expected: true},
+    {actions: [false, true, true], expected: true},
+    {actions: [true, false, true], expected: true},
+    {actions: [true, true, true], expected: true},
+    {actions: [true, false, false, true], expected: true},
+    {actions: [true, false], expected: false},
+    {actions: [true, false, false], expected: false},
+  ];
+
+  describe("subscribe and unsubscribe multiple times", () => {
+    for (const {actions, expected} of testCases) {
+      const testName = actions.map((action) => (action ? "subscribe" : "unsubscribe")).join(" - ");
+      it(testName, () => {
+        const events = network.events as EventEmitter;
+        service = new UnknownBlockSync(minimalConfig, network, chain, logger, null, defaultSyncOptions);
+        for (const action of actions) {
+          if (action) {
+            service.subscribeToNetwork();
+          } else {
+            service.unsubscribeFromNetwork();
+          }
+        }
+
+        if (expected) {
+          expect(events.listenerCount(NetworkEvent.unknownBlock)).to.be.equal(1);
+          expect(events.listenerCount(NetworkEvent.unknownBlockParent)).to.be.equal(1);
+          expect(service.isSubscribedToNetwork()).to.be.true;
+        } else {
+          expect(events.listenerCount(NetworkEvent.unknownBlock)).to.be.equal(0);
+          expect(events.listenerCount(NetworkEvent.unknownBlockParent)).to.be.equal(0);
+          expect(service.isSubscribedToNetwork()).to.be.false;
+        }
+      });
+    }
+  });
 });
