@@ -38,9 +38,9 @@ export function createLodestarMetrics(
         help: "Count of total gossip validation queue length",
         labelNames: ["topic"],
       }),
-      dropRatio: register.gauge<"topic">({
-        name: "lodestar_gossip_validation_queue_current_drop_ratio",
-        help: "Current drop ratio of gossip validation queue",
+      keySize: register.gauge<"topic">({
+        name: "lodestar_gossip_validation_queue_key_size",
+        help: "Count of total gossip validation queue key size",
         labelNames: ["topic"],
       }),
       droppedJobs: register.gauge<"topic">({
@@ -574,6 +574,22 @@ export function createLodestarMetrics(
         help: "Slot distance between clock slot and attestation slot",
         labelNames: ["caller"],
         buckets: [0, 1, 2, 4, 8, 16, 32, 64],
+      }),
+      attestationBatchCount: register.gauge({
+        name: "lodestar_gossip_attestation_verified_in_batch_count",
+        help: "Count of attestations verified in batch",
+      }),
+      attestationNonBatchCount: register.gauge({
+        name: "lodestar_gossip_attestation_verified_non_batch_count",
+        help: "Count of attestations NOT verified in batch",
+      }),
+      totalBatch: register.gauge({
+        name: "lodestar_gossip_attestation_total_batch_count",
+        help: "Total number of attestation batches",
+      }),
+      totalBatchFallbackBlsCheck: register.gauge({
+        name: "lodestar_gossip_attestation_total_batch_fallback_bls_check_count",
+        help: "Total number of attestation batches that fallback to checking each signature separately",
       }),
     },
 

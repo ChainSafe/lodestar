@@ -132,6 +132,8 @@ export enum AttestationErrorCode {
   INVALID_SERIALIZED_BYTES = "ATTESTATION_ERROR_INVALID_SERIALIZED_BYTES",
   /** Too many skipped slots. */
   TOO_MANY_SKIPPED_SLOTS = "ATTESTATION_ERROR_TOO_MANY_SKIPPED_SLOTS",
+  /** attDataBase64 is not available */
+  NO_INDEXED_DATA = "ATTESTATION_ERROR_NO_INDEXED_DATA",
 }
 
 export type AttestationErrorType =
@@ -166,7 +168,8 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.INVALID_AGGREGATOR}
   | {code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION}
   | {code: AttestationErrorCode.INVALID_SERIALIZED_BYTES}
-  | {code: AttestationErrorCode.TOO_MANY_SKIPPED_SLOTS; headBlockSlot: Slot; attestationSlot: Slot};
+  | {code: AttestationErrorCode.TOO_MANY_SKIPPED_SLOTS; headBlockSlot: Slot; attestationSlot: Slot}
+  | {code: AttestationErrorCode.NO_INDEXED_DATA};
 
 export class AttestationError extends GossipActionError<AttestationErrorType> {
   getMetadata(): Record<string, string | number | null> {
