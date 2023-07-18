@@ -437,7 +437,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         this.logger.info("Execution client is synced");
         break;
       case ExecutionEngineState.SYNCING:
-        this.logger.info("Execution client is syncing");
+        this.logger.warn("Execution client is syncing");
         break;
       case ExecutionEngineState.AUTH_FAILED:
         this.logger.error("Execution client authentication failed");
