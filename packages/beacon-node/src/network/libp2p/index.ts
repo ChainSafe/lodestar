@@ -21,6 +21,18 @@ export type NodeJsLibp2pOpts = {
   metricsRegistry?: Registry;
 };
 
+export async function getDiscv5Multiaddrs(bootEnrs: string[]): Promise<string[]> {
+  const bootMultiaddrs = [];
+  for (const enrStr of bootEnrs) {
+    const enr = ENR.decodeTxt(enrStr);
+    const multiaddrWithPeerId = (await enr.getFullMultiaddr("tcp"))?.toString();
+    if (multiaddrWithPeerId) {
+      bootMultiaddrs.push(multiaddrWithPeerId);
+    }
+  }
+  return bootMultiaddrs;
+}
+
 export async function createNodeJsLibp2p(
   peerId: PeerId,
   networkOpts: Partial<NetworkOptions> = {},
@@ -37,17 +49,12 @@ export async function createNodeJsLibp2p(
 
   const peerDiscovery = [];
   if (!disablePeerDiscovery) {
-    const bootMultiaddrs = networkOpts.bootMultiaddrs ?? defaultNetworkOptions.bootMultiaddrs ?? [];
-    // Append discv5.bootEnrs to bootMultiaddrs if requested
-    if (networkOpts.connectToDiscv5Bootnodes) {
-      for (const enrStr of networkOpts.discv5?.bootEnrs ?? []) {
-        const enr = ENR.decodeTxt(enrStr);
-        const multiaddrWithPeerId = (await enr.getFullMultiaddr("tcp"))?.toString();
-        if (multiaddrWithPeerId) {
-          bootMultiaddrs.push(multiaddrWithPeerId);
-        }
-      }
-    }
+    const bootMultiaddrs = [
+      ...(networkOpts.bootMultiaddrs ?? defaultNetworkOptions.bootMultiaddrs ?? []),
+      // Append discv5.bootEnrs to bootMultiaddrs if requested
+      ...(networkOpts.connectToDiscv5Bootnodes ? await getDiscv5Multiaddrs(networkOpts.discv5?.bootEnrs ?? []) : []),
+    ];
+
     if ((bootMultiaddrs.length ?? 0) > 0) {
       peerDiscovery.push(bootstrap({list: bootMultiaddrs}));
     }
