@@ -22,7 +22,7 @@ import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "../forks.js";
 import {NetworkOptions} from "../options.js";
 import {CommitteeSubscription, IAttnetsService} from "../subnets/interface.js";
 import {MetadataController} from "../metadata.js";
-import {createNodeJsLibp2p} from "../nodejs/util.js";
+import {createNodeJsLibp2p} from "../libp2p/index.js";
 import {PeersData} from "../peers/peersData.js";
 import {PeerAction, PeerRpcScoreStore, PeerScoreStats} from "../peers/index.js";
 import {getConnectionsMap} from "../util.js";

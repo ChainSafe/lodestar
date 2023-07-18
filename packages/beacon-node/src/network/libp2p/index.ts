@@ -1,72 +1,86 @@
-import {createLibp2p} from "libp2p";
+import {PeerId} from "@libp2p/interface-peer-id";
+import {Registry} from "prom-client";
+import {ENR} from "@chainsafe/discv5";
+import type {Components} from "libp2p/components";
 import {identifyService} from "libp2p/identify";
-import {tcp} from "@libp2p/tcp";
-import {mplex} from "@libp2p/mplex";
 import {bootstrap} from "@libp2p/bootstrap";
 import {mdns} from "@libp2p/mdns";
-import {PeerId} from "@libp2p/interface-peer-id";
-import {Datastore} from "interface-datastore";
-import type {PeerDiscovery} from "@libp2p/interface-peer-discovery";
-import type {Components} from "libp2p/components";
+import {createLibp2p} from "libp2p";
+import {mplex} from "@libp2p/mplex";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
-import {Registry} from "prom-client";
+import {tcp} from "@libp2p/tcp";
+import {defaultNetworkOptions, NetworkOptions} from "../options.js";
+import {Eth2PeerDataStore} from "../peers/datastore.js";
 import {Libp2p} from "../interface.js";
 import {createNoise} from "./noise.js";
 
-export type Libp2pOptions = {
-  peerId: PeerId;
-  addresses: {
-    listen: string[];
-    announce?: string[];
-  };
-  datastore?: Datastore;
-  peerDiscovery?: ((components: Components) => PeerDiscovery)[];
-  bootMultiaddrs?: string[];
-  maxConnections?: number;
-  minConnections?: number;
+export type NodeJsLibp2pOpts = {
+  peerStoreDir?: string;
+  disablePeerDiscovery?: boolean;
   metrics?: boolean;
   metricsRegistry?: Registry;
-  lodestarVersion?: string;
-  hideAgentVersion?: boolean;
-  mdns?: boolean;
 };
 
-export async function createNodejsLibp2p(options: Libp2pOptions): Promise<Libp2p> {
+export async function createNodeJsLibp2p(
+  peerId: PeerId,
+  networkOpts: Partial<NetworkOptions> = {},
+  nodeJsLibp2pOpts: NodeJsLibp2pOpts = {}
+): Promise<Libp2p> {
+  const localMultiaddrs = networkOpts.localMultiaddrs || defaultNetworkOptions.localMultiaddrs;
+  const {peerStoreDir, disablePeerDiscovery} = nodeJsLibp2pOpts;
+
+  let datastore: undefined | Eth2PeerDataStore = undefined;
+  if (peerStoreDir) {
+    datastore = new Eth2PeerDataStore(peerStoreDir);
+    await datastore.open();
+  }
+
   const peerDiscovery = [];
-  if (options.peerDiscovery) {
-    peerDiscovery.push(...options.peerDiscovery);
-  } else {
-    if ((options.bootMultiaddrs?.length ?? 0) > 0) {
-      peerDiscovery.push(bootstrap({list: options.bootMultiaddrs ?? []}));
+  if (!disablePeerDiscovery) {
+    const bootMultiaddrs = networkOpts.bootMultiaddrs ?? defaultNetworkOptions.bootMultiaddrs ?? [];
+    // Append discv5.bootEnrs to bootMultiaddrs if requested
+    if (networkOpts.connectToDiscv5Bootnodes) {
+      for (const enrStr of networkOpts.discv5?.bootEnrs ?? []) {
+        const enr = ENR.decodeTxt(enrStr);
+        const multiaddrWithPeerId = (await enr.getFullMultiaddr("tcp"))?.toString();
+        if (multiaddrWithPeerId) {
+          bootMultiaddrs.push(multiaddrWithPeerId);
+        }
+      }
     }
-    if (options.mdns) {
+    if ((bootMultiaddrs.length ?? 0) > 0) {
+      peerDiscovery.push(bootstrap({list: bootMultiaddrs}));
+    }
+
+    if (networkOpts.mdns) {
       peerDiscovery.push(mdns());
     }
   }
+
   return createLibp2p({
-    peerId: options.peerId,
+    peerId,
     addresses: {
-      listen: options.addresses.listen,
-      announce: options.addresses.announce || [],
+      listen: localMultiaddrs,
+      announce: [],
     },
     connectionEncryption: [createNoise()],
     // Reject connections when the server's connection count gets high
     transports: [
       tcp({
-        maxConnections: options.maxConnections,
+        maxConnections: networkOpts.maxPeers,
         closeServerOnMaxConnections: {
-          closeAbove: options.maxConnections ?? Infinity,
-          listenBelow: options.maxConnections ?? Infinity,
+          closeAbove: networkOpts.maxPeers ?? Infinity,
+          listenBelow: networkOpts.maxPeers ?? Infinity,
         },
       }),
     ],
     streamMuxers: [mplex({maxInboundStreams: 256})],
     peerDiscovery,
-    metrics: options.metrics
+    metrics: nodeJsLibp2pOpts.metrics
       ? prometheusMetrics({
           collectDefaultMetrics: false,
           preserveExistingMetrics: true,
-          registry: options.metricsRegistry,
+          registry: nodeJsLibp2pOpts.metricsRegistry,
         })
       : undefined,
     connectionManager: {
@@ -81,14 +95,10 @@ export async function createNodejsLibp2p(options: Libp2pOptions): Promise<Libp2p
       // DOCS: There is no way to turn off autodial other than setting minConnections to 0
       minConnections: 0,
     },
-    datastore: options.datastore,
+    datastore,
     services: {
       identify: identifyService({
-        agentVersion: options.hideAgentVersion
-          ? ""
-          : options.lodestarVersion
-          ? `lodestar/${options.lodestarVersion}`
-          : "lodestar",
+        agentVersion: networkOpts.private ? "" : networkOpts.version ? `lodestar/${networkOpts.version}` : "lodestar",
       }),
       // individual components are specified because the components object is a Proxy
       // and passing it here directly causes problems downstream, not to mention is slowwww
