@@ -55,7 +55,7 @@ export interface IBlsVerifier {
   verifySignatureSetsSameMessage(
     sets: {publicKey: PublicKey; signature: Uint8Array}[],
     messsage: Uint8Array,
-    opts?: Pick<VerifySignatureOpts, "batchable">
+    opts?: Omit<VerifySignatureOpts, "verifyOnMainThread">
   ): Promise<boolean[]>;
 
   /** For multithread pool awaits terminating all workers */

@@ -208,7 +208,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   async verifySignatureSetsSameMessage(
     sets: {publicKey: PublicKey; signature: Uint8Array}[],
     message: Uint8Array,
-    opts: Pick<VerifySignatureOpts, "batchable"> = {}
+    opts: Omit<VerifySignatureOpts, "verifyOnMainThread"> = {}
   ): Promise<boolean[]> {
     // chunkify so that it reduce the risk of retrying when there is at least one invalid signature
     const results = await Promise.all(
