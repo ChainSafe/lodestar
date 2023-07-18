@@ -3,6 +3,7 @@ import {RecursivePartial} from "@lodestar/utils";
 import {removeUndefinedRecursive} from "../../util/index.js";
 import * as api from "./api.js";
 import * as builder from "./builder.js";
+import * as db from "./db.js";
 import * as chain from "./chain.js";
 import * as eth1 from "./eth1.js";
 import * as execution from "./execution.js";
@@ -13,6 +14,7 @@ import * as sync from "./sync.js";
 
 export type BeaconNodeArgs = api.ApiArgs &
   chain.ChainArgs &
+  db.DbArgs &
   eth1.Eth1Args &
   execution.ExecutionEngineArgs &
   builder.ExecutionBuilderArgs &
@@ -26,7 +28,7 @@ export function parseBeaconNodeArgs(args: BeaconNodeArgs): RecursivePartial<IBea
   return removeUndefinedRecursive({
     api: api.parseArgs(args),
     chain: chain.parseArgs(args),
-    // db: {},
+    db: db.parseArgs(args),
     eth1: eth1.parseArgs(args),
     executionEngine: execution.parseArgs(args),
     executionBuilder: builder.parseArgs(args),

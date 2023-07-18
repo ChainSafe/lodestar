@@ -58,7 +58,8 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     networkRegistry = new Registry();
     metricsRegistries.push(networkRegistry);
   }
-  const db = new BeaconDb(config, await LevelDbController.create(options.db, {metrics: null, logger}));
+  const db = new BeaconDb(config, options.db, await LevelDbController.create(options.db, {metrics: null, logger}));
+
   logger.info("Connected to LevelDB database", {path: options.db.name});
 
   // BeaconNode setup

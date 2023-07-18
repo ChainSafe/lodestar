@@ -1,5 +1,6 @@
 import {Db, LevelDbControllerMetrics} from "@lodestar/db";
 import {ChainForkConfig} from "@lodestar/config";
+import {DatabaseOptions} from "./options.js";
 import {IBeaconDb} from "./interface.js";
 import {
   AttesterSlashingRepository,
@@ -60,10 +61,10 @@ export class BeaconDb implements IBeaconDb {
 
   backfilledRanges: BackfilledRanges;
 
-  constructor(config: ChainForkConfig, protected readonly db: Db) {
+  constructor(config: ChainForkConfig, protected readonly opts: DatabaseOptions, protected readonly db: Db) {
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/beacon-node/test/utils/stub/beaconDb.ts' -
-    this.block = new BlockRepository(config, db);
-    this.blockArchive = new BlockArchiveRepository(config, db);
+    this.block = new BlockRepository(config, opts, db);
+    this.blockArchive = new BlockArchiveRepository(config, opts, db);
 
     this.blobSidecars = new BlobSidecarsRepository(config, db);
     this.blobSidecarsArchive = new BlobSidecarsArchiveRepository(config, db);
