@@ -277,7 +277,8 @@ describe("chain / validation / attestation", () => {
     attestationOrBytes: ApiAttestation,
     errorCode: string
   ): Promise<void> {
-    await expectRejectedWithLodestarError(validateApiAttestation(chain, attestationOrBytes), errorCode);
+    const fork = chain.config.getForkName(stateSlot);
+    await expectRejectedWithLodestarError(validateApiAttestation(fork, chain, attestationOrBytes), errorCode);
   }
 
   async function expectGossipError(
