@@ -1,10 +1,11 @@
 import {Root, RootHex, allForks, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
+import {isErrorAborted} from "@lodestar/utils";
 import {ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {Metrics} from "../../metrics/index.js";
-import {JobItemQueue} from "../../util/queue/index.js";
+import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
 import {IJson, RpcPayload} from "../../eth1/interface.js";
@@ -130,7 +131,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       this.updateEngineState(ExecutionEngineState.ONLINE);
       return res;
     } catch (err) {
-      this.updateEngineState(getExecutionEngineState({payloadError: err}));
+      if (!isErrorAborted(err)) {
+        this.updateEngineState(getExecutionEngineState({payloadError: err}));
+      }
       throw err;
     }
   }
@@ -208,7 +211,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       // If there are errors by EL like connection refused, internal error, they need to be
       // treated separate from being INVALID. For now, just pass the error upstream.
       .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
-        this.updateEngineState(getExecutionEngineState({payloadError: e}));
+        if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+          this.updateEngineState(getExecutionEngineState({payloadError: e}));
+        }
         if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
           return {status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
         } else {
@@ -306,7 +311,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       // If there are errors by EL like connection refused, internal error, they need to be
       // treated separate from being INVALID. For now, just pass the error upstream.
       .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
-        this.updateEngineState(getExecutionEngineState({payloadError: e}));
+        if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+          this.updateEngineState(getExecutionEngineState({payloadError: e}));
+        }
         throw e;
       });
 
