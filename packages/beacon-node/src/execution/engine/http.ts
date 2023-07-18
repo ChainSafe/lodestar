@@ -428,19 +428,19 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     switch (newState) {
       case ExecutionEngineState.ONLINE:
-        this.logger.info("ExecutionEngine became online");
+        this.logger.info("Execution client became online");
         break;
       case ExecutionEngineState.OFFLINE:
-        this.logger.error("ExecutionEngine went offline");
+        this.logger.error("Execution client went offline");
         break;
       case ExecutionEngineState.SYNCED:
-        this.logger.info("ExecutionEngine is synced");
+        this.logger.info("Execution client is synced");
         break;
       case ExecutionEngineState.SYNCING:
-        this.logger.info("ExecutionEngine is syncing");
+        this.logger.info("Execution client is syncing");
         break;
       case ExecutionEngineState.AUTH_FAILED:
-        this.logger.error("ExecutionEngine authentication failed");
+        this.logger.error("Execution client authentication failed");
         break;
     }
 
