@@ -254,6 +254,8 @@ function parseBuilderSelection(builderSelection?: string): BuilderSelection | un
         break;
       case "builderalways":
         break;
+      case "builderonly":
+        break;
       default:
         throw Error("Invalid input for builder selection, check help.");
     }
