@@ -1,12 +1,13 @@
 import {expect} from "chai";
 import bls from "@chainsafe/bls";
+import {PublicKey} from "@chainsafe/bls/types";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 import {testLogger} from "../../../utils/logger.js";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 
 describe("chain / bls / multithread queue", function () {
-  this.timeout(30 * 1000);
+  this.timeout(60 * 1000);
   const logger = testLogger();
 
   let controller: AbortController;
@@ -22,6 +23,9 @@ describe("chain / bls / multithread queue", function () {
   });
 
   const sets: ISignatureSet[] = [];
+  const sameMessageSets: {publicKey: PublicKey; signature: Uint8Array}[] = [];
+  const sameMessage = Buffer.alloc(32, 100);
+
   before("generate test data", () => {
     for (let i = 0; i < 3; i++) {
       const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
@@ -33,6 +37,10 @@ describe("chain / bls / multithread queue", function () {
         pubkey: pk,
         signingRoot: msg,
         signature: sig.toBytes(),
+      });
+      sameMessageSets.push({
+        publicKey: pk,
+        signature: sk.sign(sameMessage).toBytes(),
       });
     }
   });
@@ -52,9 +60,10 @@ describe("chain / bls / multithread queue", function () {
   ): Promise<void> {
     const pool = await initializePool();
 
-    const isValidPromiseArr: Promise<boolean>[] = [];
+    const isValidPromiseArr: Promise<boolean | boolean[]>[] = [];
     for (let i = 0; i < 8; i++) {
       isValidPromiseArr.push(pool.verifySignatureSets(sets, verifySignatureOpts));
+      isValidPromiseArr.push(pool.verifySignatureSetsSameMessage(sameMessageSets, sameMessage, verifySignatureOpts));
       if (testOpts.sleep) {
         // Tick forward so the pool sends a job out
         await new Promise((r) => setTimeout(r, 5));
@@ -63,42 +72,56 @@ describe("chain / bls / multithread queue", function () {
 
     const isValidArr = await Promise.all(isValidPromiseArr);
     for (const [i, isValid] of isValidArr.entries()) {
-      expect(isValid).to.equal(true, `sig set ${i} returned invalid`);
+      if (i % 2 === 0) {
+        expect(isValid).to.equal(true, `sig set ${i} returned invalid`);
+      } else {
+        expect(isValid).to.deep.equal([true, true, true], `sig set ${i} returned invalid`);
+      }
     }
   }
 
-  it("Should verify multiple signatures submitted synchronously", async () => {
-    // Given the `setTimeout(this.runJob, 0);` all sets should be verified in a single job an worker
-    await testManyValidSignatures({sleep: false});
-  });
+  for (const priority of [true, false]) {
+    it(`Should verify multiple signatures submitted synchronously priority=${priority}`, async () => {
+      // Given the `setTimeout(this.runJob, 0);` all sets should be verified in a single job an worker
+      // when priority = true, jobs are executed in the reverse order
+      await testManyValidSignatures({sleep: false}, {priority});
+    });
+  }
 
-  it("Should verify multiple signatures submitted asynchronously", async () => {
-    // Because of the sleep, each sets submitted should be verified in a different job and worker
-    await testManyValidSignatures({sleep: true});
-  });
+  for (const priority of [true, false]) {
+    it(`Should verify multiple signatures submitted asynchronously priority=${priority}`, async () => {
+      // Because of the sleep, each sets submitted should be verified in a different job and worker
+      // when priority = true, jobs are executed in the reverse order
+      await testManyValidSignatures({sleep: true}, {priority});
+    });
+  }
 
-  it("Should verify multiple signatures batched", async () => {
-    // By setting batchable: true, 5*8 = 40 sig sets should be verified in one job, while 3*8=24 should
-    // be verified in another job
-    await testManyValidSignatures({sleep: true}, {batchable: true});
-  });
+  for (const priority of [true, false]) {
+    it(`Should verify multiple signatures batched pririty=${priority}`, async () => {
+      // By setting batchable: true, 5*8 = 40 sig sets should be verified in one job, while 3*8=24 should
+      // be verified in another job
+      await testManyValidSignatures({sleep: true}, {batchable: true, priority});
+    });
+  }
 
-  it("Should verify multiple signatures batched, first is invalid", async () => {
-    // If the first signature is invalid it should not make the rest throw
-    const pool = await initializePool();
+  for (const priority of [true, false]) {
+    it(`Should verify multiple signatures batched, first is invalid priority=${priority}`, async () => {
+      // If the first signature is invalid it should not make the rest throw
+      const pool = await initializePool();
 
-    const invalidSet: ISignatureSet = {...sets[0], signature: Buffer.alloc(32, 0)};
-    const isInvalidPromise = pool.verifySignatureSets([invalidSet], {batchable: true});
-    const isValidPromiseArr: Promise<boolean>[] = [];
-    for (let i = 0; i < 8; i++) {
-      isValidPromiseArr.push(pool.verifySignatureSets(sets, {batchable: true}));
-    }
+      const invalidSet: ISignatureSet = {...sets[0], signature: Buffer.alloc(32, 0)};
+      const isInvalidPromise = pool.verifySignatureSets([invalidSet], {batchable: true, priority});
+      const isValidPromiseArr: Promise<boolean>[] = [];
+      for (let i = 0; i < 8; i++) {
+        isValidPromiseArr.push(pool.verifySignatureSets(sets, {batchable: true}));
+      }
 
-    await expect(isInvalidPromise).to.rejectedWith("BLST_INVALID_SIZE");
+      expect(await isInvalidPromise).to.be.false;
 
-    const isValidArr = await Promise.all(isValidPromiseArr);
-    for (const [i, isValid] of isValidArr.entries()) {
-      expect(isValid).to.equal(true, `sig set ${i} returned invalid`);
-    }
-  });
+      const isValidArr = await Promise.all(isValidPromiseArr);
+      for (const [i, isValid] of isValidArr.entries()) {
+        expect(isValid).to.equal(true, `sig set ${i} returned invalid`);
+      }
+    });
+  }
 });
