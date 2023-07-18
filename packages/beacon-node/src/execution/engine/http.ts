@@ -294,7 +294,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   ): Promise<PayloadId | null> {
     // Once on capella, should this need to be permanently switched to v2 when payload attrs
     // not provided
-    const method = ForkSeq[fork] >= ForkSeq.capella ? "engine_forkchoiceUpdatedV2" : "engine_forkchoiceUpdatedV1";
+    const method =
+      ForkSeq[fork] >= ForkSeq.deneb
+        ? "engine_forkchoiceUpdatedV3"
+        : ForkSeq[fork] >= ForkSeq.capella
+        ? "engine_forkchoiceUpdatedV2"
+        : "engine_forkchoiceUpdatedV1";
     const payloadAttributesRpc = payloadAttributes ? serializePayloadAttributes(payloadAttributes) : undefined;
     // If we are just fcUing and not asking execution for payload, retry is not required
     // and we can move on, as the next fcU will be issued soon on the new slot
