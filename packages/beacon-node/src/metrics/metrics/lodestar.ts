@@ -372,10 +372,6 @@ export function createLodestarMetrics(
         help: "Count of total signature sets started in bls thread pool, sig sets include 1 pk, msg, sig",
         labelNames: ["type"],
       }),
-      totalSigSetsSameMessageStarted: register.gauge({
-        name: "lodestar_bls_thread_pool_sig_sets_same_message_started_total",
-        help: "Count of total signature sets started in bls thread pool, sig sets include 1 pk, msg, sig",
-      }),
       // Re-verifying a batch means doing double work. This number must be very low or it can be a waste of CPU resources
       batchRetries: register.gauge({
         name: "lodestar_bls_thread_pool_batch_retries_total",
