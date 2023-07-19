@@ -1,7 +1,8 @@
 import {BitVectorType, ValueOf} from "@chainsafe/ssz";
-import {ssz} from "@lodestar/types";
+import {allForks, ssz} from "@lodestar/types";
 import {
   BYTES_PER_LOGS_BLOOM,
+  ForkSeq,
   MAX_ATTESTATIONS,
   MAX_ATTESTER_SLASHINGS,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
@@ -15,8 +16,8 @@ import {
   MAX_WITHDRAWALS_PER_PAYLOAD,
   SYNC_COMMITTEE_SIZE,
 } from "@lodestar/params";
-import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {ForkInfo, createBeaconConfig, defaultChainConfig} from "@lodestar/config";
+import {computeStartSlotAtEpoch, executionPayloadToPayloadHeader} from "@lodestar/state-transition";
 import * as phase0 from "@lodestar/types/phase0/types.js";
 import * as altair from "@lodestar/types/altair/types.js";
 import * as bellatrix from "@lodestar/types/bellatrix/types.js";
@@ -24,7 +25,6 @@ import {CommonExecutionPayloadType} from "@lodestar/types/bellatrix/sszTypes.js"
 import * as capella from "@lodestar/types/capella/types.js";
 import * as deneb from "@lodestar/types/deneb/types.js";
 import {randBytesArray, randNumber, randNumberBigInt, randBetween, randBetweenBigInt} from "@lodestar/utils";
-import {CheckpointBigint, CommitteeBits, CommitteeIndices, DepositProof} from "@lodestar/types/lib/phase0/sszTypes";
 
 const config = createBeaconConfig(defaultChainConfig, randBytesArray(32));
 
@@ -52,7 +52,7 @@ export function getMockProposerSlashings(slot: number): phase0.ProposerSlashing[
   return slashings;
 }
 
-export function getMockCheckpointBigint(): ValueOf<typeof CheckpointBigint> {
+export function getMockCheckpointBigint(): ValueOf<typeof ssz.phase0.CheckpointBigint> {
   return {
     epoch: randNumberBigInt(1),
     root: randBytesArray(32),
@@ -71,7 +71,7 @@ export function getMockAttestationBigInt(slot: number): phase0.AttestationDataBi
 
 export function getMockIndexedAttestationBigint(slot: number): phase0.IndexedAttestationBigint {
   return {
-    attestingIndices: CommitteeIndices.defaultValue(),
+    attestingIndices: ssz.phase0.CommitteeIndices.defaultValue(),
     data: getMockAttestationBigInt(slot),
     signature: randBytesArray(96),
   };
@@ -109,7 +109,7 @@ export function getMockAttestations(slot: number): phase0.Attestation[] {
   const attestations: phase0.Attestation[] = [];
   for (let i = 1; i <= randBetween(1, MAX_ATTESTATIONS); i++) {
     attestations.push({
-      aggregationBits: CommitteeBits.defaultValue(),
+      aggregationBits: ssz.phase0.CommitteeBits.defaultValue(),
       data: getMockAttestation(slot),
       signature: randBytesArray(96),
     });
@@ -130,7 +130,7 @@ export function getMockDeposits(): phase0.Deposit[] {
   const deposits: phase0.Deposit[] = [];
   for (let i = 1; i <= randBetween(1, MAX_DEPOSITS); i++) {
     deposits.push({
-      proof: DepositProof.defaultValue(),
+      proof: ssz.phase0.DepositProof.defaultValue(),
       data: getMockDepositData(),
     });
   }
@@ -179,13 +179,21 @@ export function getMockPhase0Block(epochsAfterFork = 1000): phase0.SignedBeaconB
 }
 
 export function getMockAltairBlock(epochsAfterFork = 1000): altair.SignedBeaconBlock {
-  const block = ssz.altair.SignedBeaconBlock.clone(getMockPhase0Block());
-  block.message.slot = computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH + epochsAfterFork);
-  block.message.body.syncAggregate = {
-    syncCommitteeBits: new BitVectorType(SYNC_COMMITTEE_SIZE).defaultValue(),
-    syncCommitteeSignature: randBytesArray(96),
-  };
-  return block;
+  const block = getMockPhase0Block();
+  return ssz.altair.SignedBeaconBlock.clone({
+    signature: block.signature,
+    message: {
+      ...block.message,
+      slot: computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH + epochsAfterFork),
+      body: {
+        ...block.message.body,
+        syncAggregate: {
+          syncCommitteeBits: new BitVectorType(SYNC_COMMITTEE_SIZE).defaultValue(),
+          syncCommitteeSignature: randBytesArray(96),
+        },
+      },
+    },
+  });
 }
 
 function getMockCommonExecutionFields(): ValueOf<typeof CommonExecutionPayloadType> {
@@ -220,10 +228,18 @@ export function getMockBellatrixExecutionPayload(): bellatrix.ExecutionPayload {
 }
 
 export function getMockBellatrixBlock(epochsAfterFork = 1000): bellatrix.SignedBeaconBlock {
-  const block = ssz.bellatrix.SignedBeaconBlock.clone(getMockAltairBlock());
-  block.message.slot = computeStartSlotAtEpoch(config.BELLATRIX_FORK_EPOCH + epochsAfterFork);
-  block.message.body.executionPayload = getMockBellatrixExecutionPayload();
-  return block;
+  const block = getMockAltairBlock();
+  return ssz.bellatrix.SignedBeaconBlock.clone({
+    signature: block.signature,
+    message: {
+      ...block.message,
+      slot: computeStartSlotAtEpoch(config.BELLATRIX_FORK_EPOCH + epochsAfterFork),
+      body: {
+        ...block.message.body,
+        executionPayload: getMockBellatrixExecutionPayload(),
+      },
+    },
+  });
 }
 
 export function getMockCapellaExecutionPayload(): capella.ExecutionPayload {
@@ -259,11 +275,19 @@ export function getSignedBlsToExecutionChanges(): capella.SignedBLSToExecutionCh
 }
 
 export function getMockCapellaBlock(epochsAfterFork = 1000): capella.SignedBeaconBlock {
-  const block = ssz.capella.SignedBeaconBlock.clone(getMockBellatrixBlock());
-  block.message.slot = computeStartSlotAtEpoch(config.CAPELLA_FORK_EPOCH + epochsAfterFork);
-  block.message.body.executionPayload = getMockCapellaExecutionPayload();
-  block.message.body.blsToExecutionChanges = getSignedBlsToExecutionChanges();
-  return block;
+  const block = getMockBellatrixBlock();
+  return ssz.capella.SignedBeaconBlock.clone({
+    signature: block.signature,
+    message: {
+      ...block.message,
+      slot: computeStartSlotAtEpoch(config.CAPELLA_FORK_EPOCH + epochsAfterFork),
+      body: {
+        ...block.message.body,
+        executionPayload: getMockCapellaExecutionPayload(),
+        blsToExecutionChanges: getSignedBlsToExecutionChanges(),
+      },
+    },
+  });
 }
 
 export function getMockDenebExecutionPayload(): deneb.ExecutionPayload {
@@ -280,25 +304,57 @@ export function getMockDenebBlock(epochsAfterFork = 1000): deneb.SignedBeaconBlo
     blobKzgCommitments.push(randBytesArray(48));
   }
 
-  const block = ssz.deneb.SignedBeaconBlock.clone(getMockCapellaBlock());
-  block.message.slot = computeStartSlotAtEpoch(config.DENEB_FORK_EPOCH + epochsAfterFork);
-  block.message.body.executionPayload = getMockDenebExecutionPayload();
-  block.message.body.blsToExecutionChanges = getSignedBlsToExecutionChanges();
-  block.message.body.blobKzgCommitments = blobKzgCommitments;
-  return block;
-}
-
-export function getMockBellatrixExecutionPayloadHeader(): bellatrix.ExecutionPayloadHeader {
-  return ssz.bellatrix.ExecutionPayloadHeader.clone({
-    ...getMockCommonExecutionFields(),
-    blockHash: randBytesArray(32),
-    transactionsRoot: randBytesArray(32),
+  const block = getMockCapellaBlock();
+  return ssz.deneb.SignedBeaconBlock.clone({
+    signature: block.signature,
+    message: {
+      ...block.message,
+      slot: computeStartSlotAtEpoch(config.DENEB_FORK_EPOCH + epochsAfterFork),
+      body: {
+        ...block.message.body,
+        executionPayload: getMockDenebExecutionPayload(),
+        blsToExecutionChanges: getSignedBlsToExecutionChanges(),
+        blobKzgCommitments: blobKzgCommitments,
+      },
+    },
   });
 }
 
-export function getMockCapellaExecutionPayloadHeader(): capella.ExecutionPayloadHeader {
-  return ssz.capella.ExecutionPayloadHeader.clone({
-    ...getMockBellatrixExecutionPayloadHeader(),
-    withdrawalsRoot: randBytesArray(32),
+export function getMockSignedBeaconBlock(forkSeq: ForkSeq): allForks.SignedBeaconBlock {
+  switch (forkSeq) {
+    case ForkSeq.altair:
+      return getMockAltairBlock();
+    case ForkSeq.bellatrix:
+      return getMockBellatrixBlock();
+    case ForkSeq.capella:
+      return getMockCapellaBlock();
+    case ForkSeq.deneb:
+      return getMockDenebBlock();
+    case ForkSeq.phase0:
+    default:
+      return getMockPhase0Block();
+  }
+}
+
+export function convertFullToBlindedMock(
+  info: ForkInfo,
+  block: allForks.SignedBeaconBlock
+): allForks.SignedBlindedBeaconBlock {
+  if (info.seq < ForkSeq.bellatrix) {
+    return block;
+  }
+
+  return ssz[info.name as "bellatrix"].SignedBlindedBeaconBlock.clone({
+    signature: block.signature,
+    message: {
+      ...block.message,
+      body: {
+        ...(block.message.body as bellatrix.BeaconBlockBody),
+        executionPayloadHeader: executionPayloadToPayloadHeader(
+          info.seq,
+          (block.message.body as bellatrix.BeaconBlockBody).executionPayload
+        ),
+      },
+    },
   });
 }
