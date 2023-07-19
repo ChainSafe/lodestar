@@ -1,4 +1,5 @@
 import http from "node:http";
+import {AddressInfo} from "node:net";
 import {Registry} from "prom-client";
 import {Logger} from "@lodestar/utils";
 import {wrapError} from "../../util/wrapError.js";
@@ -72,12 +73,17 @@ export async function getHttpMetricsServer(
 
   const activeSockets = new HttpActiveSocketsTracker(server, socketsMetrics);
 
-  const {port, address} = opts;
-  logger.info("Starting metrics HTTP server", {port, address: address ?? "127.0.0.1"});
-
   await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(port, address, resolve);
+    server.once("error", (err) => {
+      logger.error("Error starting metrics HTTP server", opts, err);
+      reject(err);
+    });
+    server.listen(opts.port, opts.address, () => {
+      const {port, address: host, family} = server.address() as AddressInfo;
+      const address = `http://${family === "IPv6" ? `[${host}]` : host}:${port}`;
+      logger.info("Started metrics HTTP server", {address});
+      resolve();
+    });
   });
 
   return {
