@@ -53,3 +53,23 @@ export function randBetween(min: number, max: number): number {
 export function randBetweenBigInt(min: number, max: number): bigint {
   return BigInt(randBetween(min, max));
 }
+
+/**
+ * Generate a random number with a given number of significant digits.
+ *
+ * @param {number} digits - number of digits for the random number
+ * @return {number}
+ */
+export function randNumber(digits: number): number {
+  return randBetween(0, 10 ** digits);
+}
+
+/**
+ * Generate a random number with a given number of significant digits.
+ *
+ * @param {number} digits - number of digits for the random number
+ * @return {bigint}
+ */
+export function randNumberBigInt(digits: number): bigint {
+  return randBetweenBigInt(0, 10 ** digits);
+}

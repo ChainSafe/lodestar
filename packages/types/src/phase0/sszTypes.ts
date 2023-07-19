@@ -336,9 +336,11 @@ export const AttesterSlashing = new ContainerType(
   {typeName: "AttesterSlashing", jsonCase: "eth2"}
 );
 
+export const DepositProof = new VectorCompositeType(Bytes32, DEPOSIT_CONTRACT_TREE_DEPTH + 1);
+
 export const Deposit = new ContainerType(
   {
-    proof: new VectorCompositeType(Bytes32, DEPOSIT_CONTRACT_TREE_DEPTH + 1),
+    proof: DepositProof,
     data: DepositData,
   },
   {typeName: "Deposit", jsonCase: "eth2"}

@@ -1,3 +1,4 @@
+import {getRandomValues} from "node:crypto";
 import {toBufferLE, toBigIntLE, toBufferBE, toBigIntBE} from "bigint-buffer";
 
 type Endianness = "le" | "be";
@@ -59,4 +60,16 @@ export function toHex(buffer: Uint8Array | Parameters<typeof Buffer.from>[0]): s
 export function fromHex(hex: string): Uint8Array {
   const b = Buffer.from(hex.replace("0x", ""), "hex");
   return new Uint8Array(b.buffer, b.byteOffset, b.length);
+}
+
+/**
+ * Generate random Uint8Array of a given length.
+ *
+ * @param {number} length - length of the bytes array
+ * @return {Uint8Array}
+ */
+export function randBytesArray(length: number): Uint8Array {
+  const bytes = new Uint8Array(length);
+  getRandomValues(bytes);
+  return bytes;
 }
