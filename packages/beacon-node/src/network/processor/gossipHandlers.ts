@@ -192,9 +192,10 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     [GossipType.beacon_aggregate_and_proof]: async ({serializedData}, topic, _peer, seenTimestampSec) => {
       let validationResult: AggregateAndProofValidationResult;
       const signedAggregateAndProof = sszDeserialize(topic, serializedData);
+      const {fork} = topic;
 
       try {
-        validationResult = await validateGossipAggregateAndProof(chain, signedAggregateAndProof, serializedData);
+        validationResult = await validateGossipAggregateAndProof(fork, chain, signedAggregateAndProof, serializedData);
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
           chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "gossip_reject");
@@ -229,14 +230,17 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       chain.emitter.emit(routes.events.EventType.attestation, signedAggregateAndProof.message.aggregate);
     },
 
-    [GossipType.beacon_attestation]: async ({serializedData, msgSlot}, {subnet}, _peer, seenTimestampSec) => {
+    [GossipType.beacon_attestation]: async ({serializedData, msgSlot}, topic, _peer, seenTimestampSec) => {
       if (msgSlot == undefined) {
         throw Error("msgSlot is undefined for beacon_attestation topic");
       }
+      const {subnet, fork} = topic;
+
       // do not deserialize gossipSerializedData here, it's done in validateGossipAttestation only if needed
       let validationResult: AttestationValidationResult;
       try {
         validationResult = await validateGossipAttestation(
+          fork,
           chain,
           {attestation: null, serializedData, attSlot: msgSlot},
           subnet

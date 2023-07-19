@@ -1,5 +1,6 @@
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
+import {ForkSeq} from "@lodestar/params";
 import {CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../types.js";
 import {newZeroedArray, RootCache} from "../util/index.js";
 import {getNextSyncCommittee} from "../util/syncCommittee.js";
@@ -128,6 +129,7 @@ function translateParticipation(
   for (const attestation of pendingAttesations.getAllReadonly()) {
     const data = attestation.data;
     const attestationFlags = getAttestationParticipationStatus(
+      ForkSeq.altair,
       data,
       attestation.inclusionDelay,
       epochCtx.epoch,

@@ -52,7 +52,8 @@ describe("chain / validation / attestation", () => {
   it("Valid", async () => {
     const {chain, attestation} = getValidData();
 
-    await validateApiAttestation(chain, {attestation, serializedData: null});
+    const fork = chain.config.getForkName(stateSlot);
+    await validateApiAttestation(fork, chain, {attestation, serializedData: null});
   });
 
   it("INVALID_SERIALIZED_BYTES_ERROR_CODE", async () => {
@@ -276,7 +277,8 @@ describe("chain / validation / attestation", () => {
     attestationOrBytes: ApiAttestation,
     errorCode: string
   ): Promise<void> {
-    await expectRejectedWithLodestarError(validateApiAttestation(chain, attestationOrBytes), errorCode);
+    const fork = chain.config.getForkName(stateSlot);
+    await expectRejectedWithLodestarError(validateApiAttestation(fork, chain, attestationOrBytes), errorCode);
   }
 
   async function expectGossipError(
@@ -285,7 +287,11 @@ describe("chain / validation / attestation", () => {
     subnet: number,
     errorCode: string
   ): Promise<void> {
-    await expectRejectedWithLodestarError(validateGossipAttestation(chain, attestationOrBytes, subnet), errorCode);
+    const fork = chain.config.getForkName(stateSlot);
+    await expectRejectedWithLodestarError(
+      validateGossipAttestation(fork, chain, attestationOrBytes, subnet),
+      errorCode
+    );
   }
 });
 

@@ -13,12 +13,13 @@ import {
   TIMELY_TARGET_FLAG_INDEX,
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
+  ForkSeq,
 } from "@lodestar/params";
 import {increaseBalance, verifySignatureSet} from "../util/index.js";
 import {CachedBeaconStateAltair} from "../types.js";
 import {RootCache} from "../util/rootCache.js";
 import {getAttestationWithIndicesSignatureSet} from "../signatureSets/indexedAttestation.js";
-import {checkpointToStr, validateAttestation} from "./processAttestationPhase0.js";
+import {checkpointToStr, isTimelyTarget, validateAttestation} from "./processAttestationPhase0.js";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
 
@@ -29,6 +30,7 @@ const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
 const SLOTS_PER_EPOCH_SQRT = intSqrt(SLOTS_PER_EPOCH);
 
 export function processAttestationsAltair(
+  fork: ForkSeq,
   state: CachedBeaconStateAltair,
   attestations: phase0.Attestation[],
   verifySignature = true
@@ -44,7 +46,7 @@ export function processAttestationsAltair(
   for (const attestation of attestations) {
     const data = attestation.data;
 
-    validateAttestation(state, attestation);
+    validateAttestation(fork, state, attestation);
 
     // Retrieve the validator indices from the attestation participation bitfield
     const committeeIndices = epochCtx.getBeaconCommittee(data.slot, data.index);
@@ -63,7 +65,13 @@ export function processAttestationsAltair(
     const inCurrentEpoch = data.target.epoch === currentEpoch;
     const epochParticipation = inCurrentEpoch ? state.currentEpochParticipation : state.previousEpochParticipation;
 
-    const flagsAttestation = getAttestationParticipationStatus(data, stateSlot - data.slot, epochCtx.epoch, rootCache);
+    const flagsAttestation = getAttestationParticipationStatus(
+      fork,
+      data,
+      stateSlot - data.slot,
+      epochCtx.epoch,
+      rootCache
+    );
 
     // For each participant, update their participation
     // In epoch processing, this participation info is used to calculate balance updates
@@ -121,6 +129,7 @@ export function processAttestationsAltair(
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/beacon-chain.md#get_attestation_participation_flag_indices
  */
 export function getAttestationParticipationStatus(
+  fork: ForkSeq,
   data: phase0.AttestationData,
   inclusionDelay: number,
   currentEpoch: Epoch,
@@ -152,7 +161,7 @@ export function getAttestationParticipationStatus(
 
   let flags = 0;
   if (isMatchingSource && inclusionDelay <= SLOTS_PER_EPOCH_SQRT) flags |= TIMELY_SOURCE;
-  if (isMatchingTarget && inclusionDelay <= SLOTS_PER_EPOCH) flags |= TIMELY_TARGET;
+  if (isMatchingTarget && isTimelyTarget(fork, inclusionDelay)) flags |= TIMELY_TARGET;
   if (isMatchingHead && inclusionDelay === MIN_ATTESTATION_INCLUSION_DELAY) flags |= TIMELY_HEAD;
 
   return flags;

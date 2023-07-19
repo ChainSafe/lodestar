@@ -1,4 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
+import {ForkName} from "@lodestar/params";
 import {phase0, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
 import {
   computeEpochAtSlot,
@@ -26,23 +27,29 @@ export type AggregateAndProofValidationResult = {
 };
 
 export async function validateApiAggregateAndProof(
+  fork: ForkName,
   chain: IBeaconChain,
   signedAggregateAndProof: phase0.SignedAggregateAndProof
 ): Promise<AggregateAndProofValidationResult> {
   const skipValidationKnownAttesters = true;
   const prioritizeBls = true;
-  return validateAggregateAndProof(chain, signedAggregateAndProof, null, {skipValidationKnownAttesters, prioritizeBls});
+  return validateAggregateAndProof(fork, chain, signedAggregateAndProof, null, {
+    skipValidationKnownAttesters,
+    prioritizeBls,
+  });
 }
 
 export async function validateGossipAggregateAndProof(
+  fork: ForkName,
   chain: IBeaconChain,
   signedAggregateAndProof: phase0.SignedAggregateAndProof,
   serializedData: Uint8Array
 ): Promise<AggregateAndProofValidationResult> {
-  return validateAggregateAndProof(chain, signedAggregateAndProof, serializedData);
+  return validateAggregateAndProof(fork, chain, signedAggregateAndProof, serializedData);
 }
 
 async function validateAggregateAndProof(
+  fork: ForkName,
   chain: IBeaconChain,
   signedAggregateAndProof: phase0.SignedAggregateAndProof,
   serializedData: Uint8Array | null = null,
@@ -87,7 +94,7 @@ async function validateAggregateAndProof(
     // [IGNORE] aggregate.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
     // -- i.e. aggregate.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= aggregate.data.slot
     // (a client MAY queue future aggregates for processing at the appropriate slot).
-    verifyPropagationSlotRange(chain, attSlot);
+    verifyPropagationSlotRange(fork, chain, attSlot);
   }
 
   // [IGNORE] The aggregate is the first valid aggregate received for the aggregator with

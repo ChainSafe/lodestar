@@ -26,7 +26,8 @@ describe("validate gossip signedAggregateAndProof", () => {
         chain.seenAggregatedAttestations["aggregateRootsByEpoch"].clear();
       },
       fn: async () => {
-        await validateApiAggregateAndProof(chain, agg);
+        const fork = chain.config.getForkName(stateSlot);
+        await validateApiAggregateAndProof(fork, chain, agg);
       },
     });
 
@@ -37,7 +38,8 @@ describe("validate gossip signedAggregateAndProof", () => {
         chain.seenAggregatedAttestations["aggregateRootsByEpoch"].clear();
       },
       fn: async () => {
-        await validateGossipAggregateAndProof(chain, agg, serializedData);
+        const fork = chain.config.getForkName(stateSlot);
+        await validateGossipAggregateAndProof(fork, chain, agg, serializedData);
       },
     });
   }

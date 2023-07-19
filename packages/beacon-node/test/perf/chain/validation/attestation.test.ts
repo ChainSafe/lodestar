@@ -23,7 +23,8 @@ describe("validate attestation", () => {
       id: `validate api attestation - ${id}`,
       beforeEach: () => chain.seenAttesters["validatorIndexesByEpoch"].clear(),
       fn: async () => {
-        await validateApiAttestation(chain, {attestation: att, serializedData: null});
+        const fork = chain.config.getForkName(stateSlot);
+        await validateApiAttestation(fork, chain, {attestation: att, serializedData: null});
       },
     });
 
@@ -31,7 +32,8 @@ describe("validate attestation", () => {
       id: `validate gossip attestation - ${id}`,
       beforeEach: () => chain.seenAttesters["validatorIndexesByEpoch"].clear(),
       fn: async () => {
-        await validateGossipAttestation(chain, {attestation: null, serializedData, attSlot: slot}, subnet);
+        const fork = chain.config.getForkName(stateSlot);
+        await validateGossipAttestation(fork, chain, {attestation: null, serializedData, attSlot: slot}, subnet);
       },
     });
   }
