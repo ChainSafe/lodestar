@@ -21,6 +21,7 @@ import {chunkifyMaximizeChunkSize} from "./utils.js";
 import {defaultPoolSize} from "./poolSize.js";
 import {
   JobQueueItem,
+  JobQueueItemSameMessage,
   JobQueueItemType,
   jobItemSameMessageToMultiSet,
   jobItemSigSets,
@@ -394,16 +395,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
             job.reject(e as Error);
           } else {
             // there could be an invalid pubkey/signature, retry each individually
-            // Create new jobs for each pubkey set, and Promise.all all the results
-            for (const j of jobItemSameMessageToMultiSet(job)) {
-              if (j.opts.priority) {
-                this.jobs.unshift(j);
-              } else {
-                this.jobs.push(j);
-              }
-            }
-            this.metrics?.blsThreadPool.sameMessageRetryJobs.inc(1);
-            this.metrics?.blsThreadPool.sameMessageRetrySets.inc(job.sets.length);
+            this.retryJobItemSameMessage(job);
           }
           continue;
         }
@@ -465,16 +457,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
               job.resolve(job.sets.map(() => true));
             } else {
               // Retry each individually
-              // Create new jobs for each pubkey set, and Promise.all all the results
-              for (const j of jobItemSameMessageToMultiSet(job)) {
-                if (j.opts.priority) {
-                  this.jobs.unshift(j);
-                } else {
-                  this.jobs.push(j);
-                }
-              }
-              this.metrics?.blsThreadPool.sameMessageRetryJobs.inc(1);
-              this.metrics?.blsThreadPool.sameMessageRetrySets.inc(job.sets.length);
+              this.retryJobItemSameMessage(job);
             }
             successCount += 1;
           }
@@ -544,6 +527,19 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       setTimeout(this.runJob, 0);
     }
   };
+
+  private retryJobItemSameMessage(job: JobQueueItemSameMessage): void {
+    // Create new jobs for each pubkey set, and Promise.all all the results
+    for (const j of jobItemSameMessageToMultiSet(job)) {
+      if (j.opts.priority) {
+        this.jobs.unshift(j);
+      } else {
+        this.jobs.push(j);
+      }
+    }
+    this.metrics?.blsThreadPool.sameMessageRetryJobs.inc(1);
+    this.metrics?.blsThreadPool.sameMessageRetrySets.inc(job.sets.length);
+  }
 
   /** For testing */
   private async waitTillInitialized(): Promise<void> {
