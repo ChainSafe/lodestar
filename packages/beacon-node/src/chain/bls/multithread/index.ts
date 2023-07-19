@@ -128,10 +128,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     // TODO: Allow to customize implementation
     const implementation = bls.implementation;
 
-    // Use compressed for herumi for now.
-    // THe worker is not able to deserialize from uncompressed
-    // `Error: err _wrapDeserialize`
-    this.format = implementation === "blst-native" ? PointFormat.uncompressed : PointFormat.compressed;
+    this.format = PointFormat.compressed;
     this.workers = this.createWorkers(implementation, defaultPoolSize);
 
     if (metrics) {
