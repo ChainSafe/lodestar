@@ -18,4 +18,5 @@ export type MetricsOptions = HttpMetricsServerOpts & {
 export const defaultMetricsOptions: MetricsOptions = {
   enabled: false,
   port: 8008,
+  address: "127.0.0.1",
 };
