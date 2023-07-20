@@ -1,6 +1,7 @@
 name: Bug report
 description: Create a bug report to help us improve
 title: "[Descriptive title] "
+labels: [meta-bug]
 body:
   - type: textarea
     id: describe
