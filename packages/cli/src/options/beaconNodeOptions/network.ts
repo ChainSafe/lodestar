@@ -1,4 +1,5 @@
 import {multiaddr} from "@multiformats/multiaddr";
+import {ENR} from "@chainsafe/discv5";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions, YargsError} from "../../util/index.js";
 
@@ -104,6 +105,18 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   }
   // Set discv5 opts to null to disable only if explicitly disabled
   const enableDiscv5 = args["discv5"] ?? true;
+
+  // TODO: Okay to set to empty array?
+  const bootEnrs = args["bootnodes"] ?? [];
+  // throw if user-provided enrs are invalid
+  for (const enrStr of bootEnrs) {
+    try {
+      ENR.decodeTxt(enrStr);
+    } catch (e) {
+      throw new YargsError(`Provided ENR in bootnodes is invalid:\n    ${enrStr}`);
+    }
+  }
+
   return {
     discv5: enableDiscv5
       ? {
@@ -112,8 +125,7 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
             ip4: bindMu as string,
             ip6: bindMu6,
           },
-          // TODO: Okay to set to empty array?
-          bootEnrs: args["bootnodes"] ?? [],
+          bootEnrs,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
           enr: undefined as any,
         }
