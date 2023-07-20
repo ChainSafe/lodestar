@@ -391,12 +391,18 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
           workReq = jobItemWorkReq(job, this.format);
         } catch (e) {
           this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: job.type});
-          if (job.type === JobQueueItemType.default) {
-            job.reject(e as Error);
-          } else {
-            // there could be an invalid pubkey/signature, retry each individually
-            this.retryJobItemSameMessage(job);
+
+          switch (job.type) {
+            case JobQueueItemType.default:
+              job.reject(e as Error);
+              break;
+
+            case JobQueueItemType.sameMessage:
+              // there could be an invalid pubkey/signature, retry each individually
+              this.retryJobItemSameMessage(job);
+              break;
           }
+
           continue;
         }
         // Re-push all jobs with matching workReq for easier accounting of results
@@ -437,30 +443,34 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         const jobResult = results[i];
         const sigSetCount = jobItemSigSets(job);
 
-        if (job.type === JobQueueItemType.default) {
-          if (!jobResult || jobResult.code !== WorkResultCode.success) {
-            job.reject(getJobResultError(jobResult, i));
-            errorCount += sigSetCount;
-          } else {
-            job.resolve(jobResult.result);
-            successCount += sigSetCount;
-          }
-        }
-        // handle result of the verification of aggregated signature against aggregated pubkeys
-        else if (job.type === JobQueueItemType.sameMessage) {
-          if (!jobResult || jobResult.code !== WorkResultCode.success) {
-            job.reject(getJobResultError(jobResult, i));
-            errorCount += 1;
-          } else {
-            if (jobResult.result) {
-              // All are valid, most of the time it goes here
-              job.resolve(job.sets.map(() => true));
+        // TODO: enable exhaustive switch case checks lint rule
+        switch (job.type) {
+          case JobQueueItemType.default:
+            if (!jobResult || jobResult.code !== WorkResultCode.success) {
+              job.reject(getJobResultError(jobResult, i));
+              errorCount += sigSetCount;
             } else {
-              // Retry each individually
-              this.retryJobItemSameMessage(job);
+              job.resolve(jobResult.result);
+              successCount += sigSetCount;
             }
-            successCount += 1;
-          }
+            break;
+
+          // handle result of the verification of aggregated signature against aggregated pubkeys
+          case JobQueueItemType.sameMessage:
+            if (!jobResult || jobResult.code !== WorkResultCode.success) {
+              job.reject(getJobResultError(jobResult, i));
+              errorCount += 1;
+            } else {
+              if (jobResult.result) {
+                // All are valid, most of the time it goes here
+                job.resolve(job.sets.map(() => true));
+              } else {
+                // Retry each individually
+                this.retryJobItemSameMessage(job);
+              }
+              successCount += 1;
+            }
+            break;
         }
       }
 
@@ -478,7 +488,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       this.metrics?.blsThreadPool.batchSigsSuccess.inc(batchSigsSuccess);
     } catch (e) {
       // Worker communications should never reject
-      if (!this.closed) this.logger.error("BlsMultiThreadWorkerPool error", {}, e as Error);
+      if (!this.closed) {
+        this.logger.error("BlsMultiThreadWorkerPool error", {}, e as Error);
+      }
       // Reject all
       for (const job of jobsInput) {
         job.reject(e as Error);

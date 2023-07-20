@@ -32,7 +32,6 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     const endNs = process.hrtime.bigint();
     const totalSec = Number(startNs - endNs) / 1e9;
     this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.observe(totalSec);
-    this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.observe(totalSec / sets.length);
 
     return isValid;
   }
