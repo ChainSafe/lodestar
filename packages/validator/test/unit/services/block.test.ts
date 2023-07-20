@@ -6,7 +6,7 @@ import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {sleep} from "@lodestar/utils";
 import {ssz} from "@lodestar/types";
-import {HttpStatusCode} from "@lodestar/api";
+import {HttpStatusCode, routes} from "@lodestar/api";
 import {BlockProposingService} from "../../../src/services/block.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub} from "../../utils/apiStub.js";
@@ -58,7 +58,7 @@ describe("BlockDutiesService", function () {
       ok: true,
       status: HttpStatusCode.OK,
     });
-    api.beacon.publishBlock.resolves();
+    api.beacon.publishBlockV2.resolves();
 
     // Trigger block production for slot 1
     const notifyBlockProductionFn = blockService["dutiesService"]["notifyBlockProductionFn"];
@@ -68,7 +68,10 @@ describe("BlockDutiesService", function () {
     await sleep(20, controller.signal);
 
     // Must have submitted the block received on signBlock()
-    expect(api.beacon.publishBlock.callCount).to.equal(1, "publishBlock() must be called once");
-    expect(api.beacon.publishBlock.getCall(0).args).to.deep.equal([signedBlock], "wrong publishBlock() args");
+    expect(api.beacon.publishBlockV2.callCount).to.equal(1, "publishBlockV2() must be called once");
+    expect(api.beacon.publishBlockV2.getCall(0).args).to.deep.equal(
+      [signedBlock, {broadcastValidation: routes.beacon.BroadcastValidation.none}],
+      "wrong publishBlockV2() args"
+    );
   });
 });

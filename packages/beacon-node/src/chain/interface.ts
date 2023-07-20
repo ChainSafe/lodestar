@@ -95,6 +95,7 @@ export interface IBeaconChain {
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   readonly producedBlobSidecarsCache: Map<BlockHash, {blobSidecars: deneb.BlobSidecars; slot: Slot}>;
   readonly producedBlindedBlobSidecarsCache: Map<BlockHash, {blobSidecars: deneb.BlindedBlobSidecars; slot: Slot}>;
+  readonly producedBlockHash: Set<BlockHash>;
   readonly opts: IChainOptions;
 
   /** Stop beacon chain processing */

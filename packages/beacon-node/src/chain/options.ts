@@ -23,6 +23,7 @@ export type IChainOptions = BlockProcessOpts &
     maxCachedBlobSidecars?: number;
     /** Option to load a custom kzg trusted setup in txt format */
     trustedSetup?: string;
+    broadcastValidationStrickness?: string;
   };
 
 export type BlockProcessOpts = {
@@ -79,4 +80,5 @@ export const defaultChainOptions: IChainOptions = {
   // for gossip block validation, it's unlikely we see a reorg with 32 slots
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,
+  broadcastValidationStrickness: "warn",
 };

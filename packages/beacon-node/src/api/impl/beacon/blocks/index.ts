@@ -2,7 +2,7 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes, ServerApi, isSignedBlockContents, isSignedBlindedBlockContents} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {sleep} from "@lodestar/utils";
+import {sleep, toHex} from "@lodestar/utils";
 import {allForks, deneb} from "@lodestar/types";
 import {
   BlockSource,
@@ -20,7 +20,7 @@ import {ApiModules} from "../../types.js";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts & {broadcastValidation?: routes.beacon.BroadcastValidation};
-const defaultPublishOpts = {broadcastValidation: routes.beacon.BroadcastValidation.consensus};
+const defaultPublishOpts = {broadcastValidation: routes.beacon.BroadcastValidation.none};
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -218,11 +218,6 @@ export function getBeaconBlockApi({
       const seenTimestampSec = Date.now() / 1000;
       let blockForImport: BlockInput, signedBlock: allForks.SignedBeaconBlock, signedBlobs: deneb.SignedBlobSidecars;
 
-      const {broadcastValidation} = opts;
-      if (broadcastValidation !== routes.beacon.BroadcastValidation.consensus) {
-        throw Error("Broadcast Validation of consensus type accepted only.");
-      }
-
       if (isSignedBlockContents(signedBlockOrContents)) {
         ({signedBlock, signedBlobSidecars: signedBlobs} = signedBlockOrContents);
         blockForImport = getBlockInput.postDeneb(
@@ -242,6 +237,29 @@ export function getBeaconBlockApi({
         signedBlobs = [];
         // TODO: Once API supports submitting data as SSZ, replace null with blockBytes
         blockForImport = getBlockInput.preDeneb(config, signedBlock, BlockSource.api, null);
+      }
+
+      // check what validations have been requested before broadcasting and publishing the block
+      // TODO: add validation time to metrics
+      const broadcastValidation = opts.broadcastValidation ?? defaultPublishOpts.broadcastValidation;
+      switch (broadcastValidation) {
+        case routes.beacon.BroadcastValidation.none:
+          break;
+        case routes.beacon.BroadcastValidation.consensus: {
+          // check if this beacon node produced the block else log warning for now
+          const blockHash = toHex(
+            chain.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
+          );
+          if (!chain.producedBlockHash.has(blockHash)) chain.logger.warn("Block is not produced by this beacon node.");
+          break;
+        }
+        default:
+          // log warning we do not support this validation
+          if (chain.opts.broadcastValidationStrickness === "error") {
+            throw Error("Broadcast Validation of consensus type accepted only");
+          } else {
+            chain.logger.warn("Broadcast Validation of consensus type accepted only");
+          }
       }
 
       // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the

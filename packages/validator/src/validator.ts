@@ -38,6 +38,7 @@ export type ValidatorOptions = {
   closed?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
   distributed?: boolean;
+  broadcastValidation?: routes.beacon.BroadcastValidation;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -121,7 +122,15 @@ export class Validator {
 
     const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
 
-    this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics);
+    this.blockProposingService = new BlockProposingService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      metrics,
+      opts.broadcastValidation
+    );
 
     this.attestationService = new AttestationService(
       loggerVc,

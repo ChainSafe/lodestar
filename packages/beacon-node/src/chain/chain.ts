@@ -135,6 +135,7 @@ export class BeaconChain implements IBeaconChain {
     BlockHash,
     {blobSidecars: deneb.BlindedBlobSidecars; slot: Slot}
   >();
+  readonly producedBlockHash = new Set<BlockHash>();
   readonly opts: IChainOptions;
 
   protected readonly blockProcessor: BlockProcessor;
@@ -522,6 +523,7 @@ export class BeaconChain implements IBeaconChain {
         this.producedBlobSidecarsCache,
         this.opts.maxCachedBlobSidecars ?? DEFAULT_MAX_CACHED_BLOB_SIDECARS
       );
+      this.producedBlockHash.add(blockHash);
     }
 
     return {block, blockValue};

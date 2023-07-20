@@ -22,6 +22,7 @@ export type ChainArgs = {
   "safe-slots-to-import-optimistically": number;
   "chain.archiveStateEpochFrequency": number;
   emitPayloadAttributes?: boolean;
+  broadcastValidationStrickness?: string;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -44,6 +45,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     emitPayloadAttributes: args["emitPayloadAttributes"],
+    broadcastValidationStrickness: args["broadcastValidationStrickness"],
   };
 }
 
@@ -170,5 +172,10 @@ Will double processing times. Use only for debugging purposes.",
     default: defaultOptions.chain.archiveStateEpochFrequency,
     type: "number",
     group: "chain",
+  },
+  broadcastValidationStrickness: {
+    description: "'warn' or 'error' - the two options for broadcastValidation - to throw error or to log warning",
+    type: "string",
+    default: "warn",
   },
 };
