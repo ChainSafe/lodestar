@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.9.1",
+  "version": "1.9.2",
   "type": "module",
   "exports": {
     ".": {
@@ -67,13 +67,13 @@
     "@ethereumjs/tx": "^4.1.2",
     "@ethereumjs/util": "^8.0.6",
     "@ethereumjs/vm": "^6.4.2",
-    "@lodestar/api": "^1.9.1",
-    "@lodestar/config": "^1.9.1",
-    "@lodestar/params": "^1.9.1",
-    "@lodestar/logger": "^1.9.1",
-    "@lodestar/light-client": "^1.9.1",
-    "@lodestar/types": "^1.9.1",
-    "@lodestar/utils": "^1.9.1",
+    "@lodestar/api": "^1.9.2",
+    "@lodestar/config": "^1.9.2",
+    "@lodestar/params": "^1.9.2",
+    "@lodestar/logger": "^1.9.2",
+    "@lodestar/light-client": "^1.9.2",
+    "@lodestar/types": "^1.9.2",
+    "@lodestar/utils": "^1.9.2",
     "ethereum-cryptography": "^1.2.0",
     "find-up": "^6.3.0",
     "http-proxy": "^1.18.1",

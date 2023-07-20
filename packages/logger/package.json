@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.9.1",
+  "version": "1.9.2",
   "type": "module",
   "exports": {
     ".": {
@@ -61,7 +61,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@lodestar/utils": "^1.9.1",
+    "@lodestar/utils": "^1.9.2",
     "winston": "^3.8.2",
     "winston-daily-rotate-file": "^4.7.1",
     "winston-transport": "^4.5.0"
