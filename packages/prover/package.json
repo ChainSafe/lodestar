@@ -82,7 +82,7 @@
     "yargs": "^17.7.1"
   },
   "devDependencies": {
-    "@lodestar/test-utils": "^1.9.1",
+    "@lodestar/test-utils": "^1.9.2",
     "@types/http-proxy": "^1.17.10",
     "@types/yargs": "^17.0.24",
     "axios": "^1.3.4",
