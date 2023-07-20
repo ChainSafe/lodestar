@@ -32,7 +32,9 @@ describe("cmds / beacon / args handler", () => {
       bootnodesFile,
     });
 
-    expect(options.network.discv5?.bootEnrs?.sort().slice(0, 2)).to.deep.equal([enr1, enr2]);
+    const bootEnrs = options.network.discv5?.bootEnrs ?? [];
+    expect(bootEnrs.includes(enr1)).to.be.true;
+    expect(bootEnrs.includes(enr2)).to.be.true;
   });
 
   it("Over-write ENR fields", async () => {
