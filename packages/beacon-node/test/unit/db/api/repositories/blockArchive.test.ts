@@ -17,7 +17,7 @@ describe("block archive repository", function () {
 
   beforeEach(async function () {
     db = await LevelDbController.create({name: testDir}, {logger: testLogger()});
-    blockArchive = new BlockArchiveRepository(config, db);
+    blockArchive = new BlockArchiveRepository(config, {}, db);
   });
   afterEach(async function () {
     await db.close();

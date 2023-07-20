@@ -1,6 +1,6 @@
 export type DatabaseOptions = {
-  name: string;
-  saveBlindedBlocks: boolean;
+  name?: string;
+  saveBlindedBlocks?: boolean;
 };
 
 export const defaultDbOptions: DatabaseOptions = {
