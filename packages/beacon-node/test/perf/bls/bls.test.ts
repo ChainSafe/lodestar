@@ -1,6 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
 import bls from "@chainsafe/bls";
-import type {PublicKey, SecretKey, Signature} from "@chainsafe/bls/types";
+import {PointFormat, PublicKey, SecretKey, Signature} from "@chainsafe/bls/types";
 import {linspace} from "../../../src/util/numpy.js";
 
 describe("BLS ops", function () {
@@ -60,6 +60,20 @@ describe("BLS ops", function () {
       fn: (pubkeys) => {
         bls.PublicKey.aggregate(pubkeys);
       },
+    });
+  }
+
+  for (const pointFormat of [PointFormat.compressed, PointFormat.uncompressed]) {
+    itBench({
+      id: `Serialize and deserialize public key, point format ${pointFormat}`,
+      beforeEach: () => getKeypair(0).publicKey,
+      fn: (publicKey) => {
+        for (let i = 0; i < 1000; i++) {
+          const bytes = publicKey.toBytes(pointFormat);
+          bls.PublicKey.fromBytes(bytes);
+        }
+      },
+      runsFactor: 1000,
     });
   }
 });
