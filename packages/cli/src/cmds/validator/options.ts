@@ -129,7 +129,10 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   ...keymanagerOptions,
 
   broadcastValidation: {
-    description: "BroadcastValidation options for publishBlock",
+    // TODO: flag hidden till validations fully implemented
+    hidden: true,
+    description: "Broadcast validation to be requested before publishing the block",
+    defaultDescription: defaultOptions.broadcastValidation,
     type: "string",
   },
 

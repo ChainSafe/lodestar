@@ -245,21 +245,33 @@ export function getBeaconBlockApi({
       switch (broadcastValidation) {
         case routes.beacon.BroadcastValidation.none:
           break;
+
         case routes.beacon.BroadcastValidation.consensus: {
           // check if this beacon node produced the block else log warning for now
           const blockHash = toHex(
             chain.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
           );
-          if (!chain.producedBlockHash.has(blockHash)) chain.logger.warn("Block is not produced by this beacon node.");
+          if (!chain.producedBlockHash.has(blockHash)) {
+            // error or log warning that we support consensus val on blocks produced via this beacon node
+            const message = "Consensus validation not implemented yet for block not produced by this beacon node";
+            if (chain.opts.broadcastValidationStrictness === "error") {
+              throw Error(message);
+            } else {
+              chain.logger.warn(message);
+            }
+          }
           break;
         }
-        default:
-          // log warning we do not support this validation
-          if (chain.opts.broadcastValidationStrickness === "error") {
-            throw Error("Broadcast Validation of consensus type accepted only");
+
+        default: {
+          // error or log warning we do not support this validation
+          const message = `Broadcast validation of ${broadcastValidation} type implemented yet`;
+          if (chain.opts.broadcastValidationStrictness === "error") {
+            throw Error(message);
           } else {
-            chain.logger.warn("Broadcast Validation of consensus type accepted only");
+            chain.logger.warn(message);
           }
+        }
       }
 
       // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the

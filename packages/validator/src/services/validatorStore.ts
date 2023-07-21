@@ -124,6 +124,7 @@ export const defaultOptions = {
   suggestedFeeRecipient: "0x0000000000000000000000000000000000000000",
   defaultGasLimit: 30_000_000,
   builderSelection: BuilderSelection.MaxProfit,
+  broadcastValidation: routes.beacon.BroadcastValidation.none,
 };
 
 /**
