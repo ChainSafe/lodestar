@@ -69,7 +69,9 @@ describe("options / beaconNodeOptions", () => {
       listenAddress: "127.0.0.1",
       port: 9001,
       discoveryPort: 9002,
-      bootnodes: ["enr:-somedata"],
+      bootnodes: [
+        "enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA",
+      ],
       targetPeers: 25,
       deterministicLongLivedAttnets: true,
       subscribeAllSubnets: true,
@@ -169,7 +171,9 @@ describe("options / beaconNodeOptions", () => {
           bindAddrs: {
             ip4: "/ip4/127.0.0.1/udp/9002",
           },
-          bootEnrs: ["enr:-somedata"],
+          bootEnrs: [
+            "enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA",
+          ],
         },
         maxPeers: 30,
         targetPeers: 25,

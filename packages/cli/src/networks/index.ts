@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import got from "got";
+import {ENR} from "@chainsafe/discv5";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ApiError, getClient} from "@lodestar/api";
 import {getStateTypeFromBytes} from "@lodestar/beacon-node";
@@ -118,6 +119,13 @@ export function readBootnodes(bootnodesFilePath: string): string[] {
   const bootnodesFile = fs.readFileSync(bootnodesFilePath, "utf8");
 
   const bootnodes = parseBootnodesFile(bootnodesFile);
+  for (const enrStr of bootnodes) {
+    try {
+      ENR.decodeTxt(enrStr);
+    } catch (e) {
+      throw new Error(`Invalid ENR found in ${bootnodesFilePath}:\n    ${enrStr}`);
+    }
+  }
 
   if (bootnodes.length === 0) {
     throw new Error(`No bootnodes found on file ${bootnodesFilePath}`);

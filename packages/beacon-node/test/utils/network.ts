@@ -12,7 +12,7 @@ import {
   NetworkInitModules,
   getReqRespHandlers,
 } from "../../src/network/index.js";
-import {createNodejsLibp2p, Libp2pOptions} from "../../src/network/nodejs/index.js";
+import {createNodeJsLibp2p} from "../../src/network/libp2p/index.js";
 import {Libp2p} from "../../src/network/interface.js";
 import {GetReqRespHandlerFn} from "../../src/network/reqresp/types.js";
 import {Eth1ForBlockProductionDisabled} from "../../src/eth1/index.js";
@@ -26,13 +26,9 @@ import {getStubbedBeaconDb} from "./mocks/db.js";
 import {ClockStatic} from "./clock.js";
 import {createCachedBeaconStateTest} from "./cachedBeaconState.js";
 
-export async function createNode(multiaddr: string, inPeerId?: PeerId, opts?: Partial<Libp2pOptions>): Promise<Libp2p> {
+export async function createNode(multiaddr: string, inPeerId?: PeerId): Promise<Libp2p> {
   const peerId = inPeerId || (await createSecp256k1PeerId());
-  return createNodejsLibp2p({
-    peerId,
-    addresses: {listen: [multiaddr]},
-    ...opts,
-  });
+  return createNodeJsLibp2p(peerId, {localMultiaddrs: [multiaddr]});
 }
 
 export async function createNetworkModules(
