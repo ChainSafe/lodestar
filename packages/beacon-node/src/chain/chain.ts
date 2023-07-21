@@ -29,7 +29,7 @@ import {
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -80,8 +80,10 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
  * Arbitrary constants, blobs should be consumed immediately in the same slot they are produced.
  * A value of 1 would probably be sufficient. However it's sensible to allow some margin if the node overloads.
  */
-const DEFAULT_MAX_CACHED_BLOB_SIDECARS = 8;
+const DEFAULT_MAX_CACHED_BLOB_SIDECARS = MAX_BLOBS_PER_BLOCK * 2;
 const MAX_RETAINED_SLOTS_CACHED_BLOBS_SIDECAR = 8;
+// we have seen two attempts in a single slot so we factor for four
+const DEFAULT_MAX_CACHED_PRODUCED_ROOTS = 4;
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -135,7 +137,10 @@ export class BeaconChain implements IBeaconChain {
     BlockHash,
     {blobSidecars: deneb.BlindedBlobSidecars; slot: Slot}
   >();
-  readonly producedBlockHash = new Set<BlockHash>();
+
+  readonly producedBlockRoot = new Set<RootHex>();
+  readonly producedBlindedBlockRoot = new Set<RootHex>();
+
   readonly opts: IChainOptions;
 
   protected readonly blockProcessor: BlockProcessor;
@@ -502,12 +507,18 @@ export class BeaconChain implements IBeaconChain {
 
     block.stateRoot = computeNewStateRoot(this.metrics, state, block);
 
+    // track the produced block for consensus broadcast validations
+    const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
+    const blockRootHex = toHex(blockRoot);
+    const producedRootTracker = blockType === BlockType.Full ? this.producedBlockRoot : this.producedBlindedBlockRoot;
+    producedRootTracker.add(blockRootHex);
+    pruneSetToMax(producedRootTracker, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_ROOTS);
+
     // Cache for latter broadcasting
     //
     // blinded blobs will be fetched and added to this cache later before finally
     // publishing the blinded block's full version
     if (blobs.type === BlobsResultType.produced) {
-      const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
       // body is of full type here
       const blockHash = toHex((block as bellatrix.BeaconBlock).body.executionPayload.blockHash);
       const blobSidecars = blobs.blobSidecars.map((blobSidecar) => ({
@@ -523,7 +534,6 @@ export class BeaconChain implements IBeaconChain {
         this.producedBlobSidecarsCache,
         this.opts.maxCachedBlobSidecars ?? DEFAULT_MAX_CACHED_BLOB_SIDECARS
       );
-      this.producedBlockHash.add(blockHash);
     }
 
     return {block, blockValue};

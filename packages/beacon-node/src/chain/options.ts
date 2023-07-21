@@ -21,6 +21,8 @@ export type IChainOptions = BlockProcessOpts &
     sanityCheckExecutionEngineBlobs?: boolean;
     /** Max number of produced blobs by local validators to cache */
     maxCachedBlobSidecars?: number;
+    /** Max number of produced block roots (blinded or full) cached for broadcast validations */
+    maxCachedProducedRoots?: number;
     /** Option to load a custom kzg trusted setup in txt format */
     trustedSetup?: string;
     broadcastValidationStrictness?: string;
