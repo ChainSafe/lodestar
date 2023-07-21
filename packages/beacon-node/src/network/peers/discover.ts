@@ -150,6 +150,7 @@ export class PeerDiscovery {
             0
           );
           metrics.discovery.subnetPeersToConnect.set({type}, subnetPeersToConnect);
+          metrics.discovery.subnetsToConnect.set({type}, this.subnetRequests[type].size);
         }
       });
     }
@@ -394,25 +395,29 @@ export class PeerDiscovery {
   }
 
   private shouldDialPeer(peer: CachedENR): boolean {
-    // ideadlly we may want to leave this cheap condition last to allow a chance to update subnet peersToConnect
-    // however at each heart beat peer manager already count it for us so no need to do so
-    if (this.peersToConnect > 0) {
-      return true;
-    }
     for (const type of [SubnetType.attnets, SubnetType.syncnets]) {
       for (const [subnet, {toUnixMs, peersToConnect}] of this.subnetRequests[type].entries()) {
-        if (toUnixMs < Date.now()) {
-          // Prune all requests
+        if (toUnixMs < Date.now() || peersToConnect === 0) {
+          // Prune all requests so that we don't have to loop again
+          // if we have low subnet peers then PeerManager will update us again with subnet + toUnixMs + peersToConnect
           this.subnetRequests[type].delete(subnet);
         } else {
+          // not expired and peersToConnect > 0
           // if we have enough subnet peers, no need to dial more or we may have performance issues
           // see https://github.com/ChainSafe/lodestar/issues/5741#issuecomment-1643113577
-          if (peersToConnect > 0 && peer.subnets[type][subnet]) {
-            this.subnetRequests[type].set(subnet, {toUnixMs, peersToConnect: peersToConnect - 1});
+          if (peer.subnets[type][subnet]) {
+            this.subnetRequests[type].set(subnet, {toUnixMs, peersToConnect: Math.max(peersToConnect - 1, 0)});
             return true;
           }
         }
       }
+    }
+
+    // ideally we may want to leave this cheap condition at the top of the function
+    // however we want to also update peersToConnect in this.subnetRequests
+    // the this.subnetRequests[type] gradually has 0 subnet so this function should be cheap enough
+    if (this.peersToConnect > 0) {
+      return true;
     }
 
     return false;

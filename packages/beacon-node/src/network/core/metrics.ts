@@ -120,6 +120,11 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         help: "Current peers to connect count from discoverPeers requests",
         labelNames: ["type"],
       }),
+      subnetsToConnect: register.gauge<"type">({
+        name: "lodestar_discovery_subnets_to_connect",
+        help: "Current subnets to connect count from discoverPeers requests",
+        labelNames: ["type"],
+      }),
       cachedENRsSize: register.gauge({
         name: "lodestar_discovery_cached_enrs_size",
         help: "Current size of the cachedENRs Set",
