@@ -153,12 +153,14 @@ export class RestApiServer {
 
     // In NodeJS land calling close() only causes new connections to be rejected.
     // Existing connections can prevent .close() from resolving for potentially forever.
-    // In Lodestar case when the BeaconNode wants to close we will just abruptly terminate
-    // all existing connections for a fast shutdown.
+    // In Lodestar case when the BeaconNode wants to close we will attempt to gracefully
+    // close all existing connections but forcefully terminate after timeout for a fast shutdown.
     // Inspired by https://github.com/gajus/http-terminator/
-    this.activeSockets.destroyAll();
+    await this.activeSockets.terminate();
 
     await this.server.close();
+
+    this.logger.debug("REST API server closed");
   }
 
   /** For child classes to override */

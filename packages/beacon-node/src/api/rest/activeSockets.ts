@@ -1,5 +1,6 @@
 import http, {Server} from "node:http";
 import {Socket} from "node:net";
+import {waitFor} from "@lodestar/utils";
 import {IGauge} from "../../metrics/index.js";
 
 export type SocketMetrics = {
@@ -8,15 +9,21 @@ export type SocketMetrics = {
   socketsBytesWritten: IGauge;
 };
 
+// Use relatively short timeout to speed up shutdown
+const GRACEFUL_TERMINATION_TIMEOUT = 1_000;
+
 /**
  * From https://github.com/nodejs/node/blob/57bd715d527aba8dae56b975056961b0e429e91e/lib/_http_client.js#L363-L413
- * But exposes the count of sockets, and does not have a graceful period
+ * But exposes the count of sockets, and waits for connections to drain until timeout
  */
 export class HttpActiveSocketsTracker {
   private sockets = new Set<Socket>();
   private terminated = false;
 
-  constructor(server: Server, metrics: SocketMetrics | null) {
+  constructor(
+    private readonly server: Server,
+    metrics: SocketMetrics | null
+  ) {
     server.on("connection", (socket) => {
       if (this.terminated) {
         socket.destroy(Error("Closing"));
@@ -39,8 +46,23 @@ export class HttpActiveSocketsTracker {
     }
   }
 
-  destroyAll(): void {
+  /**
+   * Wait for all connections to drain, forcefully terminate any open connections after timeout
+   *
+   * From https://github.com/gajus/http-terminator/blob/aabca4751552e983f8a59ba896b7fb58ce3b4087/src/factories/createInternalHttpTerminator.ts#L78-L165
+   * But only handles HTTP sockets and does not close server, immediately terminates api.eventstream connections
+   */
+  async terminate(): Promise<void> {
+    if (this.terminated) return;
     this.terminated = true;
+
+    // Inform new incoming requests (and keep-alive connections) that
+    // the connection will be closed after the current response
+    this.server.on("request", (_req, res) => {
+      if (!res.headersSent) {
+        res.setHeader("Connection", "close");
+      }
+    });
 
     for (const socket of this.sockets) {
       // This is the HTTP CONNECT request socket.
@@ -49,8 +71,37 @@ export class HttpActiveSocketsTracker {
         continue;
       }
 
-      socket.destroy(Error("Closing"));
-      this.sockets.delete(socket);
+      // @ts-expect-error Unclear if I am using wrong type or how else this should be handled.
+      const serverResponse = socket._httpMessage as http.ServerResponse | undefined;
+
+      if (serverResponse == null) {
+        // Immediately destroy sockets without an attached HTTP request
+        this.destroySocket(socket);
+      } else if (serverResponse.getHeader("Content-Type") === "text/event-stream") {
+        // api.eventstream will never stop and must be forcefully terminated
+        this.destroySocket(socket);
+      } else if (!serverResponse.headersSent) {
+        // Inform existing keep-alive connections that they will be closed after the current response
+        serverResponse.setHeader("Connection", "close");
+      }
     }
+
+    // Wait for all connections to drain, forcefully terminate after timeout
+    try {
+      await waitFor(() => this.sockets.size === 0, {
+        timeout: GRACEFUL_TERMINATION_TIMEOUT,
+      });
+    } catch {
+      // Ignore timeout errors
+    } finally {
+      for (const socket of this.sockets) {
+        this.destroySocket(socket);
+      }
+    }
+  }
+
+  private destroySocket(socket: Socket): void {
+    socket.destroy(Error("Closing"));
+    this.sockets.delete(socket);
   }
 }
