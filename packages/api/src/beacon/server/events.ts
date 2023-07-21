@@ -18,7 +18,13 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
         const controller = new AbortController();
 
         try {
-          // Add injected headers from other pluggins. This is required for fastify-cors for example
+          // Prevent Fastify from sending the response, this is recommended before writing to the `.raw` stream
+          // and avoids "Cannot set headers after they are sent to the client" errors during shutdown or client aborts.
+          // See https://github.com/fastify/fastify/issues/3979, https://github.com/ChainSafe/lodestar/issues/5783
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          res.hijack();
+
+          // Add injected headers from other plugins. This is required for fastify-cors for example
           // From: https://github.com/NodeFactoryIo/fastify-sse-v2/blob/b1686a979fbf655fb9936c0560294a0c094734d4/src/plugin.ts
           Object.entries(res.getHeaders()).forEach(([key, value]) => {
             if (value !== undefined) res.raw.setHeader(key, value);
@@ -37,9 +43,6 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
           await new Promise<void>((resolve, reject) => {
             void api.eventstream(req.query.topics, controller.signal, (event) => {
               try {
-                // If the request is already aborted, we don't need to send any more events.
-                if (req.raw.destroyed) return;
-
                 const data = eventSerdes.toJson(event);
                 res.raw.write(serializeSSEEvent({event: event.type, data}));
               } catch (e) {
