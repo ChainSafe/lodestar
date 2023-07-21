@@ -84,8 +84,19 @@ export async function getVMWithState({
 
   const batchRequests = [];
   for (const [address, storageKeys] of Object.entries(storageKeysMap)) {
-    batchRequests.push({jsonrpc: "2.0", method: "eth_getProof", params: [address, storageKeys, blockHashHex]});
-    batchRequests.push({jsonrpc: "2.0", method: "eth_getCode", params: [address, blockHashHex]});
+    batchRequests.push({
+      jsonrpc: "2.0",
+      id: rpc.getRequestId(),
+      method: "eth_getProof",
+      params: [address, storageKeys, blockHashHex],
+    });
+
+    batchRequests.push({
+      jsonrpc: "2.0",
+      id: rpc.getRequestId(),
+      method: "eth_getCode",
+      params: [address, blockHashHex],
+    });
   }
 
   // If all responses are valid then we will have even number of responses

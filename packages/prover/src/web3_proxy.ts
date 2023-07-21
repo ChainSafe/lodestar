@@ -1,4 +1,5 @@
 import http from "node:http";
+import https from "node:https";
 import url from "node:url";
 import httpProxy from "http-proxy";
 import {getNodeLogger} from "@lodestar/logger/node";
@@ -78,7 +79,7 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
   const proxy = httpProxy.createProxy({
     target: executionRpcUrl,
     ws: executionRpcUrl.startsWith("ws"),
-    agent: http.globalAgent,
+    agent: https.globalAgent,
     xfwd: true,
     ignorePath: true,
     changeOrigin: true,

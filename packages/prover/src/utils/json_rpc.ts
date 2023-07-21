@@ -1,5 +1,5 @@
 import {Logger} from "@lodestar/logger";
-import {UNVERIFIED_RESPONSE_CODE} from "../constants.js";
+import {VERIFICATION_FAILED_RESPONSE_CODE} from "../constants.js";
 import {
   JsonRpcErrorPayload,
   JsonRpcNotificationPayload,
@@ -44,18 +44,26 @@ export function getResponseForRequest<P, R, E = unknown>(
   throw new Error("Either result or error must be defined.");
 }
 
-export function getErrorResponseForUnverifiedRequest<P, D = unknown>(
+export function getVerificationFailedMessage(method: string): string {
+  return `verification for '${method}' request failed.`;
+}
+
+export function isVerificationFailedError<P>(payload: JsonRpcResponseWithErrorPayload<P>): boolean {
+  return !isValidResponsePayload(payload) && payload.error.code === VERIFICATION_FAILED_RESPONSE_CODE;
+}
+
+export function getErrorResponseForRequestWithFailedVerification<P, D = unknown>(
   payload: JsonRpcRequest<P>,
   message: string,
   data?: D
 ): JsonRpcResponseWithErrorPayload<D> {
   return isNullish(data)
     ? (getResponseForRequest(payload, undefined, {
-        code: UNVERIFIED_RESPONSE_CODE,
+        code: VERIFICATION_FAILED_RESPONSE_CODE,
         message,
       }) as JsonRpcResponseWithErrorPayload<D>)
     : (getResponseForRequest(payload, undefined, {
-        code: UNVERIFIED_RESPONSE_CODE,
+        code: VERIFICATION_FAILED_RESPONSE_CODE,
         message,
         data,
       }) as JsonRpcResponseWithErrorPayload<D>);
