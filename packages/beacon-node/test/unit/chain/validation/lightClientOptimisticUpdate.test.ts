@@ -1,14 +1,14 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {altair, ssz} from "@lodestar/types";
 
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {MockBeaconChain} from "../../../utils/mocks/chain/chain.js";
-import {generateState} from "../../../utils/state.js";
+import {getMockBeaconChain} from "../../../utils/mocks/chain.js";
 import {validateLightClientOptimisticUpdate} from "../../../../src/chain/validation/lightClientOptimisticUpdate.js";
 import {LightClientErrorCode} from "../../../../src/chain/errors/lightClientError.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
+import {LightClientServer} from "../../../../src/chain/lightClient/index.js";
 
 describe("Light Client Optimistic Update validation", function () {
   let fakeClock: sinon.SinonFakeTimers;
@@ -34,32 +34,15 @@ describe("Light Client Optimistic Update validation", function () {
   });
 
   function mockChain(): IBeaconChain {
-    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
-    const state = generateState({
-      finalizedCheckpoint: {
-        epoch: 0,
-        root: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
-      },
-    });
-
-    const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
-    const chain = new MockBeaconChain({
-      genesisTime: 0,
-      chainId: 0,
-      networkId: BigInt(0),
-      state,
-      config: beaconConfig,
-    });
-
-    afterEachCallbacks.push(async () => {
-      await chain.close();
-    });
-
+    const chain = getMockBeaconChain<"lightClientServer" | "config" | "genesisTime">();
+    chain.lightClientServer = sinon.createStubInstance(LightClientServer);
+    chain.genesisTime = 0;
     return chain;
   }
 
   it("should return invalid - optimistic update already forwarded", async () => {
-    const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+    const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate =
+      ssz.altair.LightClientOptimisticUpdate.defaultValue();
 
     lightclientOptimisticUpdate.attestedHeader.beacon.slot = 2;
 
@@ -80,7 +63,8 @@ describe("Light Client Optimistic Update validation", function () {
   });
 
   it("should return invalid - optimistic update received too early", async () => {
-    const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+    const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate =
+      ssz.altair.LightClientOptimisticUpdate.defaultValue();
     lightclientOptimisticUpdate.attestedHeader.beacon.slot = 2;
     lightclientOptimisticUpdate.signatureSlot = 4;
 
@@ -100,7 +84,8 @@ describe("Light Client Optimistic Update validation", function () {
   });
 
   it("should return invalid - optimistic update not matching local", async () => {
-    const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+    const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate =
+      ssz.altair.LightClientOptimisticUpdate.defaultValue();
     lightclientOptimisticUpdate.attestedHeader.beacon.slot = 42;
 
     const chain = mockChain();
@@ -125,10 +110,12 @@ describe("Light Client Optimistic Update validation", function () {
   });
 
   it("should return invalid - not matching local when no local optimistic update yet", async () => {
-    const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+    const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate =
+      ssz.altair.LightClientOptimisticUpdate.defaultValue();
     lightclientOptimisticUpdate.attestedHeader.beacon.slot = 42;
 
     const chain = mockChain();
+    chain.lightClientServer.getOptimisticUpdate = () => ssz.altair.LightClientOptimisticUpdate.defaultValue();
 
     const timeAtSignatureSlot =
       computeTimeAtSlot(config, lightclientOptimisticUpdate.signatureSlot, chain.genesisTime) * 1000;
@@ -146,7 +133,8 @@ describe("Light Client Optimistic Update validation", function () {
   });
 
   it("should not throw for valid update", async () => {
-    const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate = ssz.altair.LightClientOptimisticUpdate.defaultValue();
+    const lightclientOptimisticUpdate: altair.LightClientOptimisticUpdate =
+      ssz.altair.LightClientOptimisticUpdate.defaultValue();
     const chain = mockChain();
 
     // satisfy:

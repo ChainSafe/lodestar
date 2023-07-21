@@ -1,14 +1,15 @@
 import {expect} from "chai";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {phase0, ssz} from "@lodestar/types";
+import {allForks, phase0, ssz} from "@lodestar/types";
+import {ResponseIncoming} from "@lodestar/reqresp";
+import {ForkName} from "@lodestar/params";
 import {
   BlocksByRangeError,
   BlocksByRangeErrorCode,
   collectSequentialBlocksInRange,
 } from "../../../../src/network/reqresp/utils/collectSequentialBlocksInRange.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
-import {arrToSource} from "./utils.js";
 
 chai.use(chaiAsPromised);
 
@@ -80,5 +81,11 @@ describe("beacon-node / network / reqresp / utils / collectSequentialBlocksInRan
         await expect(collectSequentialBlocksInRange(arrToSource(blocks), request)).to.eventually.fulfilled;
       }
     });
+  }
+
+  async function* arrToSource(arr: allForks.SignedBeaconBlock[]): AsyncGenerator<ResponseIncoming> {
+    for (const item of arr) {
+      yield {data: ssz.phase0.SignedBeaconBlock.serialize(item), fork: ForkName.phase0, protocolVersion: 1};
+    }
   }
 });

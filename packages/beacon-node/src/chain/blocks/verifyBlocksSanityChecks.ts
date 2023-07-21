@@ -1,11 +1,14 @@
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {computeStartSlotAtEpoch, DataAvailableStatus} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {Slot} from "@lodestar/types";
+import {Slot, deneb} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
-import {BeaconClock} from "../clock/interface.js";
+import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {BlockInput, ImportBlockOpts} from "./types.js";
+// TODO freetheblobs: disable the following exception once blockinput changes
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import {validateBlobSidecars} from "../validation/blobSidecar.js";
+import {BlockInput, BlockInputType, ImportBlockOpts} from "./types.js";
 
 /**
  * Verifies some early cheap sanity checks on the block before running the full state transition.
@@ -20,15 +23,21 @@ import {BlockInput, ImportBlockOpts} from "./types.js";
  *   - Not already known
  */
 export function verifyBlocksSanityChecks(
-  chain: {forkChoice: IForkChoice; clock: BeaconClock; config: ChainForkConfig},
+  chain: {forkChoice: IForkChoice; clock: IClock; config: ChainForkConfig},
   blocks: BlockInput[],
   opts: ImportBlockOpts
-): {relevantBlocks: BlockInput[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
+): {
+  relevantBlocks: BlockInput[];
+  dataAvailabilityStatuses: DataAvailableStatus[];
+  parentSlots: Slot[];
+  parentBlock: ProtoBlock | null;
+} {
   if (blocks.length === 0) {
     throw Error("Empty partiallyVerifiedBlocks");
   }
 
   const relevantBlocks: BlockInput[] = [];
+  const dataAvailabilityStatuses: DataAvailableStatus[] = [];
   const parentSlots: Slot[] = [];
   let parentBlock: ProtoBlock | null = null;
 
@@ -56,6 +65,10 @@ export function verifyBlocksSanityChecks(
         throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
       }
     }
+
+    // Validate status of only not yet finalized blocks, we don't need yet to propogate the status
+    // as it is not used upstream anywhere
+    const dataAvailabilityStatus = maybeValidateBlobs(chain.config, blockInput, opts);
 
     let parentBlockSlot: Slot;
 
@@ -94,6 +107,7 @@ export function verifyBlocksSanityChecks(
 
     // Block is relevant
     relevantBlocks.push(blockInput);
+    dataAvailabilityStatuses.push(dataAvailabilityStatus);
     parentSlots.push(parentBlockSlot);
   }
 
@@ -103,5 +117,33 @@ export function verifyBlocksSanityChecks(
     throw Error(`Internal error, parentBlock should not be null for relevantBlocks=${relevantBlocks.length}`);
   }
 
-  return {relevantBlocks, parentSlots, parentBlock};
+  return {relevantBlocks, dataAvailabilityStatuses, parentSlots, parentBlock};
+}
+
+function maybeValidateBlobs(
+  config: ChainForkConfig,
+  blockInput: BlockInput,
+  opts: ImportBlockOpts
+): DataAvailableStatus {
+  // TODO Deneb: Make switch verify it's exhaustive
+  switch (blockInput.type) {
+    case BlockInputType.postDeneb: {
+      if (opts.validBlobSidecars) {
+        return DataAvailableStatus.available;
+      }
+
+      const {block, blobs} = blockInput;
+      const blockSlot = block.message.slot;
+      const {blobKzgCommitments} = (block as deneb.SignedBeaconBlock).message.body;
+      const beaconBlockRoot = config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
+      // TODO Deneb: This function throws un-typed errors
+      // TODO freetheblobs: enable the following validation once blockinput is migrated
+      // validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs);
+
+      return DataAvailableStatus.available;
+    }
+
+    case BlockInputType.preDeneb:
+      return DataAvailableStatus.preDeneb;
+  }
 }

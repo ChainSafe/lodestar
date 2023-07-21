@@ -1,6 +1,6 @@
 import inquirer from "inquirer";
 import {readPassphraseFile, recursiveLookup} from "../../../util/index.js";
-import {LocalKeystoreDefinition} from "../keymanager/persistedKeys.js";
+import {LocalKeystoreDefinition} from "../keymanager/interface.js";
 
 /**
  * Imports keystores from un-controlled directories provided by the user.
@@ -36,9 +36,6 @@ export async function readPassphraseOrPrompt(args: {importKeystoresPassword?: st
         message: "Enter the keystore(s) password",
       },
     ]);
-
-    // eslint-disable-next-line no-console
-    console.log("Password is correct");
 
     return answers.password;
   }

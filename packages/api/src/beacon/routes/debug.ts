@@ -1,6 +1,6 @@
+import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {allForks, Slot, RootHex, ssz, StringType} from "@lodestar/types";
-import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {
   ArrayOf,
   ReturnTypes,
@@ -29,6 +29,7 @@ const stringType = new StringType();
 const protoNodeSszType = new ContainerType(
   {
     executionPayloadBlockHash: stringType,
+    executionPayloadNumber: ssz.UintNum64,
     executionStatus: stringType,
     slot: ssz.Slot,
     blockRoot: stringType,

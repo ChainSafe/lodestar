@@ -1,7 +1,7 @@
 import {expect} from "chai";
+import {toHexString} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
-import {toHexString} from "@chainsafe/ssz";
 import {IEth1Provider} from "../../../src/index.js";
 import {ZERO_HASH} from "../../../src/constants/index.js";
 import {Eth1MergeBlockTracker, StatusCode, toPowBlock} from "../../../src/eth1/eth1MergeBlockTracker.js";
@@ -19,14 +19,14 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
   beforeEach(() => (controller = new AbortController()));
   afterEach(() => controller.abort());
   beforeEach(() => {
-    config = ({
+    config = {
       // Set time units to 0 to make the test as fast as possible
       SECONDS_PER_ETH1_BLOCK: 0,
       SECONDS_PER_SLOT: 0,
       // Hardcode TTD to a low value
       TERMINAL_TOTAL_DIFFICULTY: BigInt(terminalTotalDifficulty),
       TERMINAL_BLOCK_HASH: ZERO_HASH,
-    } as Partial<ChainConfig>) as ChainConfig;
+    } as Partial<ChainConfig> as ChainConfig;
   });
 
   it("Should find terminal pow block through TERMINAL_BLOCK_HASH", async () => {
@@ -66,7 +66,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
         signal: controller.signal,
         metrics: null,
       },
-      eth1Provider as IEth1Provider
+      eth1Provider
     );
     eth1MergeBlockTracker.startPollingMergeBlock();
 
@@ -230,7 +230,7 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
         signal: controller.signal,
         metrics: null,
       },
-      eth1Provider as IEth1Provider
+      eth1Provider
     );
     eth1MergeBlockTracker.startPollingMergeBlock();
 

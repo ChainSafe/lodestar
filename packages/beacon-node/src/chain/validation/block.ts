@@ -1,3 +1,4 @@
+import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {allForks} from "@lodestar/types";
 import {
@@ -6,11 +7,10 @@ import {
   isExecutionBlockBodyType,
   isExecutionStateType,
   isExecutionEnabled,
-  getProposerSignatureSet,
+  getBlockProposerSignatureSet,
 } from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
-import {toHexString} from "@chainsafe/ssz";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
 import {IBeaconChain} from "../interface.js";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors/index.js";
@@ -141,7 +141,7 @@ export async function validateGossipBlock(
   }
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
-  const signatureSet = getProposerSignatureSet(blockState, signedBlock);
+  const signatureSet = getBlockProposerSignatureSet(blockState, signedBlock);
   // Don't batch so verification is not delayed
   if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new BlockGossipError(GossipAction.REJECT, {

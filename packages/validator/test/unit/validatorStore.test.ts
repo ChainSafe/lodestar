@@ -1,9 +1,9 @@
 import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
-import {chainConfig} from "@lodestar/config/default";
 import bls from "@chainsafe/bls";
 import {toHexString, fromHexString} from "@chainsafe/ssz";
+import {chainConfig} from "@lodestar/config/default";
 import {bellatrix} from "@lodestar/types";
 
 import {ValidatorStore} from "../../src/services/validatorStore.js";

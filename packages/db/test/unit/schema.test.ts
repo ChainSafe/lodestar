@@ -1,21 +1,15 @@
 import {assert} from "chai";
 import {intToBytes} from "@lodestar/utils";
-import {Bucket, encodeKey} from "../../src/schema.js";
-import {BUCKET_LENGTH} from "../../src/index.js";
+import {BUCKET_LENGTH, encodeKey} from "../../src/index.js";
 
 describe("encodeKey", () => {
+  const bucket = 1;
   const testCases = [
-    {
-      input: {bucket: Bucket.allForks_block, key: Buffer.from([0, 0, 0, 1])},
-      type: "Buffer",
-    },
-    {
-      input: {bucket: Bucket.allForks_block, key: Buffer.from([0, 1, 0, 1])},
-      type: "Buffer",
-    },
-    {input: {bucket: Bucket.allForks_block, key: 5}, type: "number"},
-    {input: {bucket: Bucket.allForks_block, key: BigInt(5)}, type: "number"},
-    {input: {bucket: Bucket.allForks_block, key: "test"}, type: "string"},
+    {input: {bucket, key: Buffer.from([0, 0, 0, 1])}, type: "Buffer"},
+    {input: {bucket, key: Buffer.from([0, 1, 0, 1])}, type: "Buffer"},
+    {input: {bucket, key: 5}, type: "number"},
+    {input: {bucket, key: BigInt(5)}, type: "number"},
+    {input: {bucket, key: "test"}, type: "string"},
   ];
   for (const {
     input: {bucket, key},

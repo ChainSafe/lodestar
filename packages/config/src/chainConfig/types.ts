@@ -38,8 +38,8 @@ export type ChainConfig = {
   CAPELLA_FORK_VERSION: Uint8Array;
   CAPELLA_FORK_EPOCH: number;
   // DENEB
-  EIP4844_FORK_VERSION: Uint8Array;
-  EIP4844_FORK_EPOCH: number;
+  DENEB_FORK_VERSION: Uint8Array;
+  DENEB_FORK_EPOCH: number;
 
   // Time parameters
   SECONDS_PER_SLOT: number;
@@ -62,12 +62,6 @@ export type ChainConfig = {
   DEPOSIT_CHAIN_ID: number;
   DEPOSIT_NETWORK_ID: number;
   DEPOSIT_CONTRACT_ADDRESS: Uint8Array;
-
-  // DENEB
-  // https://github.com/ethereum/consensus-specs/blob/11a037fd9227e29ee809c9397b09f8cc3383a8c0/specs/eip4844/p2p-interface.md#configuration
-  MAX_REQUEST_BLOBS_SIDECARS: number;
-  /** The minimum epoch range over which a node must serve blobs sidecars */
-  MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -96,8 +90,8 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   CAPELLA_FORK_VERSION: "bytes",
   CAPELLA_FORK_EPOCH: "number",
   // DENEB
-  EIP4844_FORK_VERSION: "bytes",
-  EIP4844_FORK_EPOCH: "number",
+  DENEB_FORK_VERSION: "bytes",
+  DENEB_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",
@@ -120,10 +114,6 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   DEPOSIT_CHAIN_ID: "number",
   DEPOSIT_NETWORK_ID: "number",
   DEPOSIT_CONTRACT_ADDRESS: "bytes",
-
-  // Blobs
-  MAX_REQUEST_BLOBS_SIDECARS: "number",
-  MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS: "number",
 };
 
 /** Allows values in a Spec file */

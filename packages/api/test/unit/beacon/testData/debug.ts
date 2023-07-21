@@ -1,6 +1,6 @@
+import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
 import {Api} from "../../../../src/beacon/routes/debug.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
@@ -21,6 +21,7 @@ export const testData: GenericServerTestCases<Api> = {
       data: [
         {
           executionPayloadBlockHash: rootHex,
+          executionPayloadNumber: 1,
           executionStatus: "Valid",
           slot: 1,
           blockRoot: rootHex,

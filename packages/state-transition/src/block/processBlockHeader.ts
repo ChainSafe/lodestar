@@ -36,7 +36,7 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: allF
     );
   }
 
-  const blockHeader = blindedOrFullBlockToHeader(state.config, block as allForks.FullOrBlindedBeaconBlock);
+  const blockHeader = blindedOrFullBlockToHeader(state.config, block);
   // cache current block as the new latest block
   state.latestBlockHeader = ssz.phase0.BeaconBlockHeader.toViewDU({
     slot,

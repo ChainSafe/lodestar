@@ -1,14 +1,13 @@
 import {expect} from "chai";
+import {fromHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api/beacon";
 import {BLSPubkey, Epoch, phase0, Slot, ssz} from "@lodestar/types";
 import {ChainConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {fromHexString} from "@chainsafe/ssz";
 import {Validator} from "@lodestar/validator";
 import {PubkeyHex} from "@lodestar/validator/src/types";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
-import {ChainEvent} from "../../../src/chain/index.js";
-import {Network} from "../../../src/network/index.js";
+import {ClockEvent} from "../../../src/util/clock.js";
 import {connect} from "../../utils/network.js";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
 import {getDevBeaconNode} from "../../utils/node/beacon.js";
@@ -42,11 +41,11 @@ describe.skip("doppelganger / doppelganger test", function () {
 
   type TestConfig = {
     genesisTime?: number;
-    doppelgangerProtectionEnabled?: boolean;
+    doppelgangerProtection?: boolean;
   };
 
   async function createBNAndVC(config?: TestConfig): Promise<{beaconNode: BeaconNode; validators: Validator[]}> {
-    const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+    const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
     const bn = await getDevBeaconNode({
@@ -70,7 +69,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       startIndex: 0,
       useRestApi: false,
       testLoggerOpts,
-      doppelgangerProtectionEnabled: config?.doppelgangerProtectionEnabled,
+      doppelgangerProtection: config?.doppelgangerProtection,
     });
     afterEachCallbacks.push(() => Promise.all(validatorsWithDoppelganger.map((v) => v.close())));
 
@@ -84,7 +83,7 @@ describe.skip("doppelganger / doppelganger test", function () {
     const validatorIndex = 0;
 
     const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
-      doppelgangerProtectionEnabled: true,
+      doppelgangerProtection: true,
     });
 
     const validatorUnderTest = validatorsWithDoppelganger[0];
@@ -119,21 +118,21 @@ describe.skip("doppelganger / doppelganger test", function () {
 
     const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
       genesisTime,
-      doppelgangerProtectionEnabled: true,
+      doppelgangerProtection: true,
     });
 
     const {beaconNode: bn2, validators: validators} = await createBNAndVC({
       genesisTime: bn.chain.getHeadState().genesisTime,
     });
 
-    await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
+    await connect(bn2.network, bn.network);
 
     expect(validators[0].isRunning).to.be.equal(true, "validator without doppelganger protection should be running");
     expect(validatorsWithDoppelganger[0].isRunning).to.be.equal(
       true,
       "validator with doppelganger protection should be running before first epoch"
     );
-    await waitForEvent<phase0.Checkpoint>(bn2.chain.emitter, ChainEvent.clockEpoch, timeout);
+    await waitForEvent<phase0.Checkpoint>(bn2.chain.clock, ClockEvent.epoch, timeout);
     // After first epoch doppelganger protection should have stopped the validatorsWithDoppelganger
     expect(validators[0].isRunning).to.be.equal(
       true,
@@ -149,15 +148,15 @@ describe.skip("doppelganger / doppelganger test", function () {
   it("should shut down validator if same key is active with same BN and started after genesis", async function () {
     this.timeout("10 min");
 
-    const doppelgangerProtectionEnabled = true;
-    const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+    const doppelgangerProtection = true;
+    const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
 
     // set genesis time to allow at least an epoch
     const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * beaconParams.SECONDS_PER_SLOT;
 
     const {beaconNode: bn, validators: validator0WithDoppelganger} = await createBNAndVC({
       genesisTime,
-      doppelgangerProtectionEnabled,
+      doppelgangerProtection,
     });
 
     const {validators: validator0WithoutDoppelganger} = await getAndInitDevValidators({
@@ -167,7 +166,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       startIndex: 0,
       useRestApi: false,
       testLoggerOpts,
-      doppelgangerProtectionEnabled: false,
+      doppelgangerProtection: false,
     });
     afterEachCallbacks.push(() => Promise.all(validator0WithoutDoppelganger.map((v) => v.close())));
 
@@ -179,7 +178,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       true,
       "validator without doppelganger protection should be running before first epoch"
     );
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout);
+    await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout);
     //After first epoch doppelganger protection should have stopped the validator0WithDoppelganger
     expect(validator0WithoutDoppelganger[0].isRunning).to.be.equal(
       true,
@@ -195,25 +194,25 @@ describe.skip("doppelganger / doppelganger test", function () {
   it("should not shut down validator if key is different", async function () {
     this.timeout("10 min");
 
-    const doppelgangerProtectionEnabled = true;
+    const doppelgangerProtection = true;
 
     const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
-      doppelgangerProtectionEnabled,
+      doppelgangerProtection,
     });
 
     const {beaconNode: bn2, validators: validators} = await createBNAndVC({
       genesisTime: bn.chain.getHeadState().genesisTime,
-      doppelgangerProtectionEnabled: false,
+      doppelgangerProtection: false,
     });
 
-    await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
+    await connect(bn2.network, bn.network);
 
     expect(validators[0].isRunning).to.be.equal(true, "validator without doppelganger protection should be running");
     expect(validatorsWithDoppelganger[0].isRunning).to.be.equal(
       true,
       "validator with doppelganger protection should be running before first epoch"
     );
-    await waitForEvent<phase0.Checkpoint>(bn2.chain.emitter, ChainEvent.clockEpoch, timeout);
+    await waitForEvent<phase0.Checkpoint>(bn2.chain.clock, ClockEvent.epoch, timeout);
     expect(validators[0].isRunning).to.be.equal(
       true,
       "validator without doppelganger protection should still be running after first epoch"
@@ -227,14 +226,14 @@ describe.skip("doppelganger / doppelganger test", function () {
   it("should not sign block if doppelganger period has not passed and not started at genesis", async function () {
     this.timeout("10 min");
 
-    const doppelgangerProtectionEnabled = true;
+    const doppelgangerProtection = true;
 
     // set genesis time to allow at least an epoch
     const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * beaconParams.SECONDS_PER_SLOT;
 
     const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
       genesisTime,
-      doppelgangerProtectionEnabled,
+      doppelgangerProtection,
     });
 
     const validatorUnderTest = validatorsWithDoppelganger[0];
@@ -249,7 +248,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
     ).to.eventually.be.rejectedWith(`Doppelganger state for key ${pubKey} is not safe`);
 
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout);
+    await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout);
 
     await expect(
       validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot),
@@ -260,14 +259,14 @@ describe.skip("doppelganger / doppelganger test", function () {
   it("should not sign attestations if doppelganger period has not passed and started after genesis", async function () {
     this.timeout("10 min");
 
-    const doppelgangerProtectionEnabled = true;
+    const doppelgangerProtection = true;
 
     // set genesis time to allow at least an epoch
     const genesisTime = Math.floor(Date.now() / 1000) - SLOTS_PER_EPOCH * beaconParams.SECONDS_PER_SLOT;
 
     const {beaconNode: bn, validators: validatorsWithDoppelganger} = await createBNAndVC({
       genesisTime,
-      doppelgangerProtectionEnabled,
+      doppelgangerProtection,
     });
 
     const validatorUnderTest = validatorsWithDoppelganger[0];
@@ -296,7 +295,7 @@ describe.skip("doppelganger / doppelganger test", function () {
       )
     ).to.eventually.be.rejectedWith(`Doppelganger state for key ${pubKey} is not safe`);
 
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout);
+    await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout);
 
     await expect(
       validatorUnderTest.validatorStore.signAttestation(

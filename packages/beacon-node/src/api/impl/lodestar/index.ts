@@ -1,10 +1,8 @@
-import {peerIdFromString} from "@libp2p/peer-id";
-import {multiaddr} from "@multiformats/multiaddr";
+import {toHexString} from "@chainsafe/ssz";
 import {routes, ServerApi} from "@lodestar/api";
-import {Bucket, Repository} from "@lodestar/db";
+import {Repository} from "@lodestar/db";
 import {toHex} from "@lodestar/utils";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "@lodestar/state-transition";
-import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
 import {BeaconChain} from "../../../chain/index.js";
@@ -21,6 +19,7 @@ export function getLodestarApi({
   sync,
 }: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): ServerApi<routes.lodestar.Api> {
   let writingHeapdump = false;
+  let writingNetworkProfile = false;
 
   return {
     async writeHeapdump(dirpath = ".") {
@@ -46,6 +45,19 @@ export function getLodestarApi({
         return {data: {filepath}};
       } finally {
         writingHeapdump = false;
+      }
+    },
+
+    async writeNetworkThreadProfile(durationMs?: number, dirpath?: string) {
+      if (writingNetworkProfile) {
+        throw Error("Already writing network profile");
+      }
+
+      try {
+        const filepath = await network.writeNetworkThreadProfile(durationMs, dirpath);
+        return {data: {filepath}};
+      } finally {
+        writingNetworkProfile = false;
       }
     },
 
@@ -88,11 +100,7 @@ export function getLodestarApi({
     },
 
     async getStateCacheItems() {
-      return {data: (chain as BeaconChain)["stateCache"].dumpSummary()};
-    },
-
-    async getCheckpointStateCacheItems() {
-      return {data: (chain as BeaconChain)["checkpointStateCache"].dumpSummary()};
+      return {data: chain.regen.dumpCacheSummary()};
     },
 
     async getGossipPeerScoreStats() {
@@ -111,19 +119,15 @@ export function getLodestarApi({
     },
 
     async dropStateCache() {
-      chain.stateCache.clear();
-      chain.checkpointStateCache.clear();
+      chain.regen.dropCache();
     },
 
     async connectPeer(peerIdStr, multiaddrStrs) {
-      const peerId = peerIdFromString(peerIdStr);
-      const multiaddrs = multiaddrStrs.map((multiaddrStr) => multiaddr(multiaddrStr));
-      await network.connectToPeer(peerId, multiaddrs);
+      await network.connectToPeer(peerIdStr, multiaddrStrs);
     },
 
     async disconnectPeer(peerIdStr) {
-      const peerId = peerIdFromString(peerIdStr);
-      await network.disconnectPeer(peerId);
+      await network.disconnectPeer(peerIdStr);
     },
 
     async getPeers(filters) {
@@ -149,14 +153,13 @@ export function getLodestarApi({
     async dumpDbBucketKeys(bucketReq) {
       for (const repo of Object.values(db) as IBeaconDb[keyof IBeaconDb][]) {
         if (repo instanceof Repository) {
-          const bucket = (repo as RepositoryAny)["bucket"];
-          if (bucket === bucket || Bucket[bucket] === bucketReq) {
+          if (String(repo["bucket"]) === bucketReq || repo["bucketId"] === bucketReq) {
             return {data: stringifyKeys(await repo.keys())};
           }
         }
       }
 
-      throw Error(`Unknown Bucket '${bucketReq}' available: ${Object.keys(Bucket).join(", ")}`);
+      throw Error(`Unknown Bucket '${bucketReq}'`);
     },
 
     async dumpDbStateIndex() {
@@ -190,9 +193,6 @@ function regenRequestToJson(config: ChainForkConfig, regenRequest: RegenRequest)
       };
   }
 }
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type RepositoryAny = Repository<any, any>;
 
 function stringifyKeys(keys: (Uint8Array | number | string)[]): string[] {
   return keys.map((key) => {

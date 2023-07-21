@@ -9,7 +9,9 @@ import {RegistryMetricCreator} from "./utils/registryMetricCreator.js";
 import {createValidatorMonitor, ValidatorMonitor} from "./validatorMonitor.js";
 import {collectNodeJSMetrics} from "./nodeJsMetrics.js";
 
-export type Metrics = BeaconMetrics & LodestarMetrics & ValidatorMonitor & {register: RegistryMetricCreator};
+export type Metrics = BeaconMetrics &
+  LodestarMetrics &
+  ValidatorMonitor & {register: RegistryMetricCreator; close: () => void};
 
 export function createMetrics(
   opts: MetricsOptions,
@@ -33,12 +35,12 @@ export function createMetrics(
     lodestar.unhandledPromiseRejections.inc();
   });
 
-  collectNodeJSMetrics(register);
+  const close = collectNodeJSMetrics(register);
 
   // Merge external registries
   for (const externalRegister of externalRegistries) {
     for (const metric of externalRegister.getMetricsAsArray()) {
-      register.registerMetric((metric as unknown) as Metric<string>);
+      register.registerMetric(metric as unknown as Metric<string>);
     }
   }
 
@@ -47,5 +49,6 @@ export function createMetrics(
     ...lodestar,
     ...validatorMonitor,
     register,
+    close,
   };
 }

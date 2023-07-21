@@ -3,7 +3,7 @@ import {SinonStubbedInstance} from "sinon";
 import sinon from "sinon";
 import type {SecretKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
-import {BitArray, fromHexString} from "@chainsafe/ssz";
+import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz, phase0} from "@lodestar/types";
@@ -37,6 +37,7 @@ describe("AggregatedAttestationPool", function () {
   const attestation = ssz.phase0.Attestation.defaultValue();
   attestation.data.slot = currentSlot;
   attestation.data.target.epoch = currentEpoch;
+  const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data));
 
   const committee = [0, 1, 2, 3];
   let forkchoiceStub: SinonStubbedInstance<IForkChoice>;
@@ -71,7 +72,12 @@ describe("AggregatedAttestationPool", function () {
   for (const {name, attestingBits, isReturned} of testCases) {
     it(name, function () {
       const aggregationBits = new BitArray(new Uint8Array(attestingBits), 8);
-      pool.add({...attestation, aggregationBits}, aggregationBits.getTrueBitIndexes().length, committee);
+      pool.add(
+        {...attestation, aggregationBits},
+        attDataRootHex,
+        aggregationBits.getTrueBitIndexes().length,
+        committee
+      );
       forkchoiceStub.getBlockHex.returns(generateProtoBlock());
       forkchoiceStub.getDependentRoot.returns(ZERO_HASH_HEX);
       if (isReturned) {
@@ -90,7 +96,7 @@ describe("AggregatedAttestationPool", function () {
     altairState.currentJustifiedCheckpoint.epoch = 1000;
     // all attesters are not seen
     const attestingIndices = [2, 3];
-    pool.add(attestation, attestingIndices.length, committee);
+    pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
     expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).to.be.deep.equal(
       [],
       "no attestation since incorrect source"
@@ -101,7 +107,7 @@ describe("AggregatedAttestationPool", function () {
   it("incompatible shuffling - incorrect pivot block root", function () {
     // all attesters are not seen
     const attestingIndices = [2, 3];
-    pool.add(attestation, attestingIndices.length, committee);
+    pool.add(attestation, attDataRootHex, attestingIndices.length, committee);
     forkchoiceStub.getBlockHex.returns(generateProtoBlock());
     forkchoiceStub.getDependentRoot.returns("0xWeird");
     expect(pool.getAttestationsForBlock(forkchoiceStub, altairState)).to.be.deep.equal(

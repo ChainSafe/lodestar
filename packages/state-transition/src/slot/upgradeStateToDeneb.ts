@@ -16,18 +16,25 @@ export function upgradeStateToDeneb(stateCapella: CachedBeaconStateCapella): Cac
 
   stateDeneb.fork = ssz.phase0.Fork.toViewDU({
     previousVersion: stateCapella.fork.currentVersion,
-    currentVersion: config.EIP4844_FORK_VERSION,
+    currentVersion: config.DENEB_FORK_VERSION,
     epoch: stateCapella.epochCtx.epoch,
   });
 
-  // The field order of deneb latestExecutionPayloadHeader is not the same to capella
-  // all fields after excessDataGas need to explicitly set
-  stateDeneb.latestExecutionPayloadHeader.excessDataGas = ssz.UintBn256.defaultValue();
-  stateDeneb.latestExecutionPayloadHeader.blockHash = stateCapella.latestExecutionPayloadHeader.blockHash;
-  stateDeneb.latestExecutionPayloadHeader.transactionsRoot = stateCapella.latestExecutionPayloadHeader.transactionsRoot;
-  stateDeneb.latestExecutionPayloadHeader.withdrawalsRoot = stateCapella.latestExecutionPayloadHeader.withdrawalsRoot;
+  // Since excessDataGas and dataGasUsed are appened in the end to latestExecutionPayloadHeader so they should
+  // be set to defaults and need no assigning, but right now any access to latestExecutionPayloadHeader fails
+  // with LeafNode has no left node. Weirdly its beacuse of addition of the second field as with one field
+  // it seems to work.
+  //
+  // TODO DENEB: Debug and remove the following cloning
+  stateDeneb.latestExecutionPayloadHeader = ssz.deneb.BeaconState.fields.latestExecutionPayloadHeader.toViewDU({
+    ...stateCapella.latestExecutionPayloadHeader.toValue(),
+    excessDataGas: BigInt(0),
+    dataGasUsed: BigInt(0),
+  });
 
   stateDeneb.commit();
+  // Clear cache to ensure the cache of capella fields is not used by new deneb fields
+  stateDeneb["clearCache"]();
 
   return stateDeneb;
 }

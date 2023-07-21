@@ -1,9 +1,15 @@
+import EventEmitter from "node:events";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot, Epoch} from "@lodestar/types";
-import {BeaconClock} from "../../src/chain/clock/index.js";
+import {IClock} from "../../src/util/clock.js";
 
-export class ClockStatic implements BeaconClock {
-  constructor(readonly currentSlot: Slot) {}
+export class ClockStatic extends EventEmitter implements IClock {
+  constructor(
+    readonly currentSlot: Slot,
+    public genesisTime = 0
+  ) {
+    super();
+  }
 
   get currentEpoch(): Epoch {
     return computeEpochAtSlot(this.currentSlot);

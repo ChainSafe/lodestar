@@ -1,10 +1,9 @@
-import {ChainForkConfig} from "@lodestar/config";
 import {Type} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {BUCKET_LENGTH} from "./const.js";
 import {FilterOptions, KeyValue} from "./controller/index.js";
 import {Db, DbReqOpts} from "./controller/interface.js";
-import {Bucket, encodeKey as _encodeKey} from "./schema.js";
-import {getBucketNameByValue} from "./util.js";
+import {encodeKey as _encodeKey} from "./util.js";
 
 export type Id = Uint8Array | string | number | bigint;
 
@@ -17,26 +16,19 @@ export type Id = Uint8Array | string | number | bigint;
  * indexed by root
  */
 export abstract class Repository<I extends Id, T> {
-  protected config: ChainForkConfig;
-
-  protected db: Db;
-
-  protected bucket: Bucket;
-  private readonly bucketId: string;
   private readonly dbReqOpts: DbReqOpts;
 
   private readonly minKey: Uint8Array;
   private readonly maxKey: Uint8Array;
 
-  protected type: Type<T>;
-
-  protected constructor(config: ChainForkConfig, db: Db, bucket: Bucket, type: Type<T>) {
-    this.config = config;
-    this.db = db;
-    this.bucket = bucket;
-    this.bucketId = getBucketNameByValue(bucket);
+  protected constructor(
+    protected config: ChainForkConfig,
+    protected db: Db,
+    protected bucket: number,
+    protected type: Type<T>,
+    private readonly bucketId: string
+  ) {
     this.dbReqOpts = {bucketId: this.bucketId};
-    this.type = type;
     this.minKey = _encodeKey(bucket, Buffer.alloc(0));
     this.maxKey = _encodeKey(bucket + 1, Buffer.alloc(0));
   }
@@ -99,6 +91,10 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async batchPut(items: KeyValue<I, T>[]): Promise<void> {
+    if (items.length === 1) {
+      return this.put(items[0].key, items[0].value);
+    }
+
     await this.db.batchPut(
       Array.from({length: items.length}, (_, i) => ({
         key: this.encodeKey(items[i].key),
@@ -110,6 +106,10 @@ export abstract class Repository<I extends Id, T> {
 
   // Similar to batchPut but we support value as Uint8Array
   async batchPutBinary(items: KeyValue<I, Uint8Array>[]): Promise<void> {
+    if (items.length === 1) {
+      return this.db.put(this.encodeKey(items[0].key), items[0].value, this.dbReqOpts);
+    }
+
     await this.db.batchPut(
       Array.from({length: items.length}, (_, i) => ({
         key: this.encodeKey(items[i].key),
@@ -120,6 +120,10 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async batchDelete(ids: I[]): Promise<void> {
+    if (ids.length === 1) {
+      return this.delete(ids[0]);
+    }
+
     await this.db.batchDelete(
       Array.from({length: ids.length}, (_, i) => this.encodeKey(ids[i])),
       this.dbReqOpts
@@ -127,6 +131,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async batchAdd(values: T[]): Promise<void> {
+    // handle single value in batchPut
     await this.batchPut(
       Array.from({length: values.length}, (_, i) => ({
         key: this.getId(values[i]),
@@ -136,6 +141,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   async batchRemove(values: T[]): Promise<void> {
+    // handle single value in batchDelete
     await this.batchDelete(Array.from({length: values.length}, (ignored, i) => this.getId(values[i])));
   }
 

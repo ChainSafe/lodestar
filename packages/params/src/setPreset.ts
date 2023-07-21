@@ -1,8 +1,9 @@
 import {PresetName} from "./presetName.js";
 import {presetStatus} from "./presetStatus.js";
-import {BeaconPreset} from "./interface.js";
+import {BeaconPreset} from "./types.js";
+import {presetFromJson} from "./json.js";
 
-export {PresetName};
+export {PresetName, presetFromJson};
 
 /**
  * The preset name currently exported by this library
@@ -26,14 +27,14 @@ export let userOverrides: Partial<BeaconPreset> | undefined = undefined;
  * @param presetName - the preset to use as a base
  * @param overrides - customized fields
  */
-export function setActivePreset(presetName: PresetName, overrides?: Partial<BeaconPreset>): void {
+export function setActivePreset(presetName: PresetName | null, overrides?: Partial<BeaconPreset>): void {
   if (presetStatus.frozen) {
     throw Error(`Lodestar preset is already frozen. You must call setActivePreset() at the top of your
 application entry point, before importing @lodestar/params, or any library that may import it.
 
 \`\`\`
 // index.ts
-import {setActivePreset, PresetName} from "@lodestar/params/preset"
+import {setActivePreset, PresetName} from "@lodestar/params/setPreset"
 setActivePreset(PresetName.minimal)
 // Now you can safely import from other paths and consume params
 import {SLOTS_PER_EPOCH} from "@lodestar/params"

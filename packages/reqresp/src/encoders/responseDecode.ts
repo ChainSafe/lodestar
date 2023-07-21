@@ -7,8 +7,8 @@ import {
   ContextBytesType,
   CONTEXT_BYTES_FORK_DIGEST_LENGTH,
   ContextBytesFactory,
-  ProtocolDefinition,
-  TypeSerializer,
+  MixedProtocol,
+  ResponseIncoming,
 } from "../types.js";
 import {RespStatus} from "../interface.js";
 
@@ -27,13 +27,13 @@ enum StreamStatus {
  * result          ::= "0" | "1" | "2" | ["128" ... "255"]
  * ```
  */
-export function responseDecode<Resp>(
-  protocol: ProtocolDefinition,
+export function responseDecode(
+  protocol: MixedProtocol,
   cbs: {
     onFirstHeader: () => void;
     onFirstResponseChunk: () => void;
   }
-): (source: AsyncIterable<Uint8Array | Uint8ArrayList>) => AsyncIterable<Resp> {
+): (source: AsyncIterable<Uint8Array | Uint8ArrayList>) => AsyncIterable<ResponseIncoming> {
   return async function* responseDecodeSink(source) {
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Uint8ArrayList>);
 
@@ -62,10 +62,15 @@ export function responseDecode<Resp>(
         throw new ResponseError(status, errorMessage);
       }
 
-      const forkName = await readContextBytes<Resp>(protocol.contextBytes, bufferedSource);
-      const type = protocol.responseType(forkName) as TypeSerializer<Resp>;
+      const forkName = await readContextBytes(protocol.contextBytes, bufferedSource);
+      const typeSizes = protocol.responseSizes(forkName);
+      const chunkData = await readEncodedPayload(bufferedSource, protocol.encoding, typeSizes);
 
-      yield await readEncodedPayload<Resp>(bufferedSource, protocol.encoding, type);
+      yield {
+        data: chunkData,
+        fork: forkName,
+        protocolVersion: protocol.version,
+      };
 
       if (!readFirstResponseChunk) {
         cbs.onFirstResponseChunk();
@@ -132,8 +137,8 @@ export async function readErrorMessage(bufferedSource: BufferedSource): Promise<
  * While `<context-bytes>` has a single type of `ForkDigest`, this function only parses the `ForkName`
  * of the `ForkDigest` or defaults to `phase0`
  */
-export async function readContextBytes<Resp>(
-  contextBytes: ContextBytesFactory<Resp>,
+export async function readContextBytes(
+  contextBytes: ContextBytesFactory,
   bufferedSource: BufferedSource
 ): Promise<ForkName> {
   switch (contextBytes.type) {

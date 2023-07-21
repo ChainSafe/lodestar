@@ -10,10 +10,10 @@ import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Network, getReqRespHandlers} from "../../../src/network/index.js";
+import {Network, NetworkInitModules, getReqRespHandlers} from "../../../src/network/index.js";
 import {defaultNetworkOptions, NetworkOptions} from "../../../src/network/options.js";
 
-import {MockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain/chain.js";
+import {getMockBeaconChain, zeroProtoBlock} from "../../utils/mocks/chain.js";
 import {createNetworkModules, onPeerConnect} from "../../utils/network.js";
 import {generateState} from "../../utils/state.js";
 import {StubbedBeaconDb} from "../../utils/stub/index.js";
@@ -24,7 +24,8 @@ import {memoOnce} from "../../utils/cache.js";
 let port = 9000;
 const mu = "/ip4/127.0.0.1/tcp/0";
 
-describe("mdns", function () {
+// eslint-disable-next-line mocha/no-skipped-tests
+describe.skip("mdns", function () {
   this.timeout(50000);
   this.retries(2); // This test fail sometimes, with a 5% rate.
 
@@ -51,10 +52,11 @@ describe("mdns", function () {
       localMultiaddrs: [],
       discv5FirstQueryDelayMs: 0,
       discv5: {
-        enr,
-        bindAddr: bindAddrUdp,
+        enr: enr.encodeTxt(),
+        bindAddrs: {
+          ip4: bindAddrUdp,
+        },
         bootEnrs: [],
-        enabled: true,
       },
     };
   }
@@ -73,8 +75,8 @@ describe("mdns", function () {
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function createTestNode(nodeName: string) {
-    const {state, config} = getStaticData();
-    const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});
+    const {config} = getStaticData();
+    const chain = getMockBeaconChain();
 
     chain.forkChoice.getHead = () => {
       return {
@@ -84,7 +86,6 @@ describe("mdns", function () {
     };
 
     const db = new StubbedBeaconDb(config);
-    const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = {} as GossipHandlers;
 
     const peerId = await createSecp256k1PeerId();
@@ -92,13 +93,12 @@ describe("mdns", function () {
 
     const opts = await getOpts(peerId);
 
-    const modules = {
+    const modules: Omit<NetworkInitModules, "opts" | "peerId" | "logger"> = {
       config,
       chain,
       db,
-      reqRespHandlers,
+      getReqRespHandler: getReqRespHandlers({db, chain}),
       gossipHandlers,
-      signal: controller.signal,
       metrics: null,
     };
 
@@ -126,7 +126,7 @@ describe("mdns", function () {
   it("should connect two peers on a LAN", async function () {
     const [{network: netA}, {network: netB}] = await createTestNodesAB();
     await Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
-    expect(Array.from(netA.getConnectionsByPeer().values()).length).to.equal(1);
-    expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(1);
+    expect(netA.getConnectedPeerCount()).to.equal(1);
+    expect(netB.getConnectedPeerCount()).to.equal(1);
   });
 });

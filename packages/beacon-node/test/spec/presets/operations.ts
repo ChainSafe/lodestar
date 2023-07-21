@@ -66,23 +66,15 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     blockFns.processVoluntaryExit(state, testCase.voluntary_exit);
   },
 
-  execution_payload: (
-    state,
-    testCase: {execution_payload: bellatrix.ExecutionPayload; execution: {execution_valid: boolean}}
-  ) => {
+  execution_payload: (state, testCase: {body: bellatrix.BeaconBlockBody; execution: {execution_valid: boolean}}) => {
     const fork = state.config.getForkSeq(state.slot);
-    blockFns.processExecutionPayload(
-      fork,
-      (state as CachedBeaconStateAllForks) as CachedBeaconStateBellatrix,
-      testCase.execution_payload,
-      {
-        executionPayloadStatus: testCase.execution.execution_valid
-          ? ExecutionPayloadStatus.valid
-          : ExecutionPayloadStatus.invalid,
-        // TODO Deneb: Make this value dynamic on fork Deneb
-        dataAvailableStatus: DataAvailableStatus.preDeneb,
-      }
-    );
+    blockFns.processExecutionPayload(fork, state as CachedBeaconStateBellatrix, testCase.body, {
+      executionPayloadStatus: testCase.execution.execution_valid
+        ? ExecutionPayloadStatus.valid
+        : ExecutionPayloadStatus.invalid,
+      // TODO Deneb: Make this value dynamic on fork Deneb
+      dataAvailableStatus: DataAvailableStatus.preDeneb,
+    });
   },
 
   bls_to_execution_change: (state, testCase: {address_change: capella.SignedBLSToExecutionChange}) => {
@@ -127,6 +119,7 @@ export const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> =
         attestation: ssz.phase0.Attestation,
         attester_slashing: ssz.phase0.AttesterSlashing,
         block: ssz[fork].BeaconBlock,
+        body: ssz[fork].BeaconBlockBody,
         deposit: ssz.phase0.Deposit,
         proposer_slashing: ssz.phase0.ProposerSlashing,
         voluntary_exit: ssz.phase0.SignedVoluntaryExit,

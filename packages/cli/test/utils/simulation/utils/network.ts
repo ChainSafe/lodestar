@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import {ApiError} from "@lodestar/api";
-import {Slot} from "@lodestar/types";
+import {Slot, allForks} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {CLClient, CLNode, ELClient, ELNode, NodePair} from "../interfaces.js";
 import {SimulationEnvironment} from "../SimulationEnvironment.js";
@@ -150,4 +150,21 @@ export async function waitForSlot(
         })
     )
   );
+}
+
+export async function fetchBlock(
+  node: NodePair,
+  {tries, delay, slot, signal}: {slot: number; tries: number; delay: number; signal?: AbortSignal}
+): Promise<allForks.SignedBeaconBlock | undefined> {
+  for (let i = 0; i < tries; i++) {
+    const res = await node.cl.api.beacon.getBlockV2(slot);
+    if (!res.ok) {
+      await sleep(delay, signal);
+      continue;
+    }
+
+    return res.response.data;
+  }
+
+  return;
 }

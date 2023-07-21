@@ -1,3 +1,4 @@
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {allForks, phase0, Slot, RootHex} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -8,7 +9,6 @@ import {
   processSlots,
   stateTransition,
 } from "@lodestar/state-transition";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {sleep} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -18,7 +18,7 @@ import {IBeaconDb} from "../../db/index.js";
 import {CheckpointStateCache, StateContextCache} from "../stateCache/index.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
-import {IStateRegenerator, RegenCaller, StateCloneOpts} from "./interface.js";
+import {IStateRegeneratorInternal, RegenCaller, StateCloneOpts} from "./interface.js";
 import {RegenError, RegenErrorCode} from "./errors.js";
 
 export type RegenModules = {
@@ -34,7 +34,7 @@ export type RegenModules = {
 /**
  * Regenerates states that have already been processed by the fork choice
  */
-export class StateRegenerator implements IStateRegenerator {
+export class StateRegenerator implements IStateRegeneratorInternal {
   constructor(private readonly modules: RegenModules) {}
 
   /**

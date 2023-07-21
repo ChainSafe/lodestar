@@ -2,12 +2,14 @@ import {computeEpochAtSlot, isExecutionStateType, computeTimeAtSlot} from "@lode
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH, ForkExecution} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {Logger, sleep} from "@lodestar/utils";
+import {Logger, sleep, fromHex, isErrorAborted} from "@lodestar/utils";
+import {routes} from "@lodestar/api";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {Metrics} from "../metrics/index.js";
 import {TransitionConfigurationV1} from "../execution/engine/interface.js";
-import {ChainEvent} from "./emitter.js";
-import {prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
+import {ClockEvent} from "../util/clock.js";
+import {isQueueErrorAborted} from "../util/queue/index.js";
+import {prepareExecutionPayload, getPayloadAttributesForSSE} from "./produceBlock/produceBlockBody.js";
 import {IBeaconChain} from "./interface.js";
 import {RegenCaller} from "./regen/index.js";
 
@@ -37,11 +39,11 @@ export class PrepareNextSlotScheduler {
     private readonly logger: Logger,
     private readonly signal: AbortSignal
   ) {
-    this.chain.emitter.on(ChainEvent.clockSlot, this.prepareForNextSlot);
+    this.chain.clock.on(ClockEvent.slot, this.prepareForNextSlot);
     this.signal.addEventListener(
       "abort",
       () => {
-        this.chain.emitter.off(ChainEvent.clockSlot, this.prepareForNextSlot);
+        this.chain.clock.off(ClockEvent.slot, this.prepareForNextSlot);
       },
       {once: true}
     );
@@ -107,7 +109,7 @@ export class PrepareNextSlotScheduler {
       //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
       if (isEpochTransition) {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
-        const previousHits = this.chain.checkpointStateCache.updatePreComputedCheckpoint(headRoot, nextEpoch);
+        const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch);
         if (previousHits === 0) {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
         }
@@ -143,7 +145,9 @@ export class PrepareNextSlotScheduler {
           // try/catch wrapper here.
           await prepareExecutionPayload(
             this.chain,
+            this.logger,
             fork as ForkExecution, // State is of execution type
+            fromHex(headRoot),
             safeBlockHash,
             finalizedBlockHash,
             prepareState,
@@ -155,10 +159,25 @@ export class PrepareNextSlotScheduler {
             feeRecipient,
           });
         }
+
+        // If emitPayloadAttributes is true emit a SSE payloadAttributes event
+        if (this.chain.opts.emitPayloadAttributes === true) {
+          const data = await getPayloadAttributesForSSE(fork as ForkExecution, this.chain, {
+            prepareState,
+            prepareSlot,
+            parentBlockRoot: fromHex(headRoot),
+            // The likely consumers of this API are builders and will anyway ignore the
+            // feeRecipient, so just pass zero hash for now till a real use case arises
+            feeRecipient: "0x0000000000000000000000000000000000000000000000000000000000000000",
+          });
+          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
+        }
       }
     } catch (e) {
-      this.metrics?.precomputeNextEpochTransition.count.inc({result: "error"}, 1);
-      this.logger.error("Failed to run prepareForNextSlot", {nextEpoch, isEpochTransition, prepareSlot}, e as Error);
+      if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+        this.metrics?.precomputeNextEpochTransition.count.inc({result: "error"}, 1);
+        this.logger.error("Failed to run prepareForNextSlot", {nextEpoch, isEpochTransition, prepareSlot}, e as Error);
+      }
     }
   };
 }

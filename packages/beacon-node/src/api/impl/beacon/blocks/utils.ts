@@ -2,12 +2,10 @@ import {allForks} from "@lodestar/types";
 import {routes} from "@lodestar/api";
 import {blockToHeader} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
-import {IForkChoice} from "@lodestar/fork-choice";
-import {fromHexString} from "@chainsafe/ssz";
-import {IBeaconDb} from "../../../../db/index.js";
 import {GENESIS_SLOT} from "../../../../constants/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
-import {isOptimisticBlock} from "../../../../util/forkChoice.js";
+import {IBeaconChain} from "../../../../chain/interface.js";
+import {rootHexRegex} from "../../../../eth1/provider/utils.js";
 
 export function toBeaconHeaderResponse(
   config: ChainForkConfig,
@@ -25,83 +23,49 @@ export function toBeaconHeaderResponse(
 }
 
 export async function resolveBlockId(
-  forkChoice: IForkChoice,
-  db: IBeaconDb,
+  chain: IBeaconChain,
   blockId: routes.beacon.BlockId
 ): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean}> {
-  const {block, executionOptimistic} = await resolveBlockIdOrNull(forkChoice, db, blockId);
-  if (!block) {
+  const res = await resolveBlockIdOrNull(chain, blockId);
+  if (!res) {
     throw new ApiError(404, `No block found for id '${blockId}'`);
   }
 
-  return {block, executionOptimistic};
+  return res;
 }
 
 async function resolveBlockIdOrNull(
-  forkChoice: IForkChoice,
-  db: IBeaconDb,
+  chain: IBeaconChain,
   blockId: routes.beacon.BlockId
-): Promise<{block: allForks.SignedBeaconBlock | null; executionOptimistic: boolean}> {
+): Promise<{block: allForks.SignedBeaconBlock; executionOptimistic: boolean} | null> {
   blockId = String(blockId).toLowerCase();
   if (blockId === "head") {
-    const head = forkChoice.getHead();
-    return {
-      block: await db.block.get(fromHexString(head.blockRoot)),
-      executionOptimistic: isOptimisticBlock(head),
-    };
+    return chain.getBlockByRoot(chain.forkChoice.getHead().blockRoot);
   }
 
   if (blockId === "genesis") {
-    return {
-      block: await db.blockArchive.get(GENESIS_SLOT),
-      executionOptimistic: false,
-    };
+    return chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
   }
 
   if (blockId === "finalized") {
-    return {
-      block: await db.blockArchive.get(forkChoice.getFinalizedBlock().slot),
-      executionOptimistic: false,
-    };
+    return chain.getCanonicalBlockAtSlot(chain.forkChoice.getFinalizedBlock().slot);
   }
 
-  let blockSummary;
-  let getBlockByBlockArchive;
+  if (blockId === "justified") {
+    return chain.getBlockByRoot(chain.forkChoice.getJustifiedBlock().blockRoot);
+  }
 
   if (blockId.startsWith("0x")) {
-    const blockHash = fromHexString(blockId);
-    blockSummary = forkChoice.getBlock(blockHash);
-    getBlockByBlockArchive = async () => db.blockArchive.getByRoot(blockHash);
-  } else {
-    // block id must be slot
-    const blockSlot = parseInt(blockId, 10);
-    if (isNaN(blockSlot) && isNaN(blockSlot - 0)) {
+    if (!rootHexRegex.test(blockId)) {
       throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
     }
-    blockSummary = forkChoice.getCanonicalBlockAtSlot(blockSlot);
-    getBlockByBlockArchive = async () => db.blockArchive.get(blockSlot);
+    return chain.getBlockByRoot(blockId);
   }
 
-  if (blockSummary) {
-    // All unfinalized blocks **and the finalized block** are tracked by the fork choice.
-    // Unfinalized blocks are stored in the block repository, but the finalized block is in the block archive
-    const finalized = forkChoice.getFinalizedBlock();
-    if (blockSummary.slot === finalized.slot) {
-      return {
-        block: await db.blockArchive.get(finalized.slot),
-        executionOptimistic: isOptimisticBlock(blockSummary),
-      };
-    } else {
-      return {
-        block: await db.block.get(fromHexString(blockSummary.blockRoot)),
-        executionOptimistic: false,
-      };
-    }
-  } else {
-    // Blocks not in the fork choice are in the block archive
-    return {
-      block: await getBlockByBlockArchive(),
-      executionOptimistic: false,
-    };
+  // block id must be slot
+  const blockSlot = parseInt(blockId, 10);
+  if (isNaN(blockSlot) && isNaN(blockSlot - 0)) {
+    throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
   }
+  return chain.getCanonicalBlockAtSlot(blockSlot);
 }

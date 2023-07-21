@@ -35,7 +35,7 @@ export function showProgress({
       current,
       total,
       ratePerSec: processTime === 0 ? 0 : ((current - last) / processTime) * 1000,
-      percentage: current && total ? (current / total) * 100 : 100,
+      percentage: total ? (current / total) * 100 : 100,
     });
 
     last = current;

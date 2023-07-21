@@ -10,13 +10,13 @@ import {getEstimatedTimeInSecForRun, logFilesDir} from "../utils/simulation/util
 import {waitForSlot} from "../utils/simulation/utils/network.js";
 import {SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 
-const genesisSlotsDelay = 10;
+const genesisDelaySeconds = 10 * SIM_TESTS_SECONDS_PER_SLOT;
 const altairForkEpoch = 2;
 const bellatrixForkEpoch = 4;
 const validatorCount = 2;
 const runTimeoutMs =
   getEstimatedTimeInSecForRun({
-    genesisSlotDelay: genesisSlotsDelay,
+    genesisDelaySeconds,
     secondsPerSlot: SIM_TESTS_SECONDS_PER_SLOT,
     runTill: 2,
     // After adding Nethermind its took longer to complete
@@ -30,7 +30,7 @@ const env = await SimulationEnvironment.initWithDefaults(
     chainConfig: {
       ALTAIR_FORK_EPOCH: altairForkEpoch,
       BELLATRIX_FORK_EPOCH: bellatrixForkEpoch,
-      GENESIS_DELAY: genesisSlotsDelay,
+      GENESIS_DELAY: genesisDelaySeconds,
     },
   },
   [
@@ -125,6 +125,7 @@ await env.tracker.assert("BN Not Synced", async () => {
     syncDistance: "0",
     isSyncing: false,
     isOptimistic: false,
+    elOffline: false,
   };
 
   const res = await node.api.node.getSyncingStatus();

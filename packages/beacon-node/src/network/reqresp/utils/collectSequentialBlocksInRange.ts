@@ -1,17 +1,24 @@
+import {ResponseIncoming} from "@lodestar/reqresp";
 import {allForks, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
+import {WithBytes} from "../../interface.js";
+import {ReqRespMethod, responseSszTypeByMethod} from "../types.js";
+import {sszDeserializeResponse} from "./collect.js";
 
 /**
  * Asserts a response from BeaconBlocksByRange respects the request and is sequential
  * Note: MUST allow missing block for skipped slots.
  */
 export async function collectSequentialBlocksInRange(
-  blockStream: AsyncIterable<allForks.SignedBeaconBlock>,
+  blockStream: AsyncIterable<ResponseIncoming>,
   {count, startSlot}: Pick<phase0.BeaconBlocksByRangeRequest, "count" | "startSlot">
-): Promise<allForks.SignedBeaconBlock[]> {
-  const blocks: allForks.SignedBeaconBlock[] = [];
+): Promise<WithBytes<allForks.SignedBeaconBlock>[]> {
+  const blocks: WithBytes<allForks.SignedBeaconBlock>[] = [];
 
-  for await (const block of blockStream) {
+  for await (const chunk of blockStream) {
+    const blockType = responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRange](chunk.fork, chunk.protocolVersion);
+    const block = sszDeserializeResponse(blockType, chunk.data);
+
     const blockSlot = block.message.slot;
 
     // Note: step is deprecated and assumed to be 1
@@ -25,12 +32,12 @@ export async function collectSequentialBlocksInRange(
 
     const prevBlock = blocks.length === 0 ? null : blocks[blocks.length - 1];
     if (prevBlock) {
-      if (prevBlock.message.slot >= blockSlot) {
+      if (prevBlock.data.message.slot >= blockSlot) {
         throw new BlocksByRangeError({code: BlocksByRangeErrorCode.BAD_SEQUENCE});
       }
     }
 
-    blocks.push(block);
+    blocks.push({data: block, bytes: chunk.data});
     if (blocks.length >= count) {
       break; // Done, collected all blocks
     }

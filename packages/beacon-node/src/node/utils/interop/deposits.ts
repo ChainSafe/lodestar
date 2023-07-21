@@ -1,6 +1,6 @@
 import {digest} from "@chainsafe/as-sha256";
-import {phase0, ssz} from "@lodestar/types";
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
+import {phase0, ssz} from "@lodestar/types";
 import {ChainConfig} from "@lodestar/config";
 import {computeDomain, computeSigningRoot, interopSecretKeys, ZERO_HASH} from "@lodestar/state-transition";
 import {

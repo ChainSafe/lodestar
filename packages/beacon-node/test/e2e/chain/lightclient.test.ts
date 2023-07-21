@@ -1,9 +1,9 @@
 import {expect} from "chai";
-import {ChainConfig} from "@lodestar/config";
-import {ssz, altair} from "@lodestar/types";
 import {JsonPath, toHexString, fromHexString} from "@chainsafe/ssz";
 import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
-import {TimestampFormatCode} from "@lodestar/utils";
+import {ChainConfig} from "@lodestar/config";
+import {ssz, altair} from "@lodestar/types";
+import {TimestampFormatCode} from "@lodestar/logger";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Lightclient} from "@lodestar/light-client";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -57,7 +57,7 @@ describe("chain / lightclient", function () {
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
     const testLoggerOpts: TestLoggerOpts = {
-      logLevel: LogLevel.info,
+      level: LogLevel.info,
       timestampFormat: {
         format: TimestampFormatCode.EpochSlot,
         genesisTime,
@@ -67,7 +67,7 @@ describe("chain / lightclient", function () {
     };
 
     const loggerNodeA = testLogger("Node", testLoggerOpts);
-    const loggerLC = testLogger("LC", {...testLoggerOpts, logLevel: LogLevel.debug});
+    const loggerLC = testLogger("LC", {...testLoggerOpts, level: LogLevel.debug});
 
     const bn = await getDevBeaconNode({
       params: testParams,
@@ -92,7 +92,7 @@ describe("chain / lightclient", function () {
       validatorClientCount,
       startIndex: 0,
       useRestApi: false,
-      testLoggerOpts: {...testLoggerOpts, logLevel: LogLevel.error},
+      testLoggerOpts: {...testLoggerOpts, level: LogLevel.error},
     });
 
     afterEachCallbacks.push(async () => {
@@ -123,7 +123,7 @@ describe("chain / lightclient", function () {
         transport: new LightClientRestTransport(api),
         genesisData: {
           genesisTime: bn.chain.genesisTime,
-          genesisValidatorsRoot: bn.chain.genesisValidatorsRoot as Uint8Array,
+          genesisValidatorsRoot: bn.chain.genesisValidatorsRoot,
         },
         checkpointRoot: fromHexString(head.block),
       });
@@ -141,15 +141,12 @@ describe("chain / lightclient", function () {
             // Test fetching proofs
             const {proof, header} = await getHeadStateProof(lightclient, api, [["latestBlockHeader", "bodyRoot"]]);
             const stateRootHex = toHexString(header.beacon.stateRoot);
-            const lcHeadState = bn.chain.stateCache.get(stateRootHex);
+            const lcHeadState = bn.chain.regen.getStateSync(stateRootHex);
             if (!lcHeadState) {
               throw Error(`LC head state not in cache ${stateRootHex}`);
             }
 
-            const stateLcFromProof = ssz.altair.BeaconState.createFromProof(
-              proof,
-              header.beacon.stateRoot as Uint8Array
-            );
+            const stateLcFromProof = ssz.altair.BeaconState.createFromProof(proof, header.beacon.stateRoot);
             expect(toHexString(stateLcFromProof.latestBlockHeader.bodyRoot)).to.equal(
               toHexString(lcHeadState.latestBlockHeader.bodyRoot),
               `Recovered 'latestBlockHeader.bodyRoot' from state ${stateRootHex} not correct`

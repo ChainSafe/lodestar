@@ -1,9 +1,8 @@
 import path from "node:path";
 import {expect} from "chai";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import {fromHexString} from "@chainsafe/ssz";
 import {LevelDbController} from "@lodestar/db";
-import {config} from "@lodestar/config/default";
 import {ZERO_HASH} from "@lodestar/state-transition";
 import {
   SlashingProtection,
@@ -20,25 +19,29 @@ import {SPEC_TEST_LOCATION} from "./params.js";
 describe("slashing-protection-interchange-tests", () => {
   const testCases = loadTestCases(path.join(SPEC_TEST_LOCATION, "/tests/generated"));
   const dbLocation = "./.__testdb";
-  const controller = new LevelDbController({name: dbLocation}, {logger: testLogger()});
+  let db: LevelDbController;
+  let slashingProtection: SlashingProtection;
 
-  after(() => {
+  before(async () => {
+    db = await LevelDbController.create({name: dbLocation}, {logger: testLogger()});
+    slashingProtection = new SlashingProtection(db);
+  });
+
+  after(async () => {
+    await db.close();
     rimraf.sync(dbLocation);
   });
 
   for (const testCase of testCases) {
     describe(testCase.name, () => {
-      const slashingProtection = new SlashingProtection({config, controller});
-
       for (const step of testCase.steps) {
         beforeEach(async () => {
-          await controller.start();
-          await controller.clear();
+          await db.clear();
         });
 
         // Import
         beforeEach("Import interchange", async () => {
-          expect(await controller.keys()).lengthOf(0, "DB is not empty");
+          expect(await db.keys()).lengthOf(0, "DB is not empty");
 
           const genesisValidatorsRoot = fromHexString(testCase.genesis_validators_root);
           if (step.should_succeed) {
@@ -56,10 +59,6 @@ describe("slashing-protection-interchange-tests", () => {
               slashingProtection.importInterchange(step.interchange, genesisValidatorsRoot)
             ).to.not.be.rejectedWith(InterchangeError);
           }
-        });
-
-        afterEach(async () => {
-          await controller.stop();
         });
 
         if (!step.contains_slashable_data) {

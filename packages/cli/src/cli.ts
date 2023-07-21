@@ -1,6 +1,5 @@
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs from "yargs";
-// @ts-expect-error no type
 import {hideBin} from "yargs/helpers";
 import {cmds} from "./cmds/index.js";
 import {globalOptions, rcConfigOption} from "./options/index.js";
@@ -10,7 +9,7 @@ import {getVersionData} from "./util/version.js";
 const {version} = getVersionData();
 const topBanner = `🌟 Lodestar: TypeScript Implementation of the Ethereum Consensus Beacon Chain.
   * Version: ${version}
-  * by ChainSafe Systems, 2018-2022`;
+  * by ChainSafe Systems, 2018-${new Date().getFullYear()}`;
 const bottomBanner = `📖 For more information, check the CLI reference:
   * https://chainsafe.github.io/lodestar/reference/cli
 

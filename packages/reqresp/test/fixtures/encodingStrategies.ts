@@ -2,10 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import varint from "varint";
-import {LodestarError} from "@lodestar/utils";
-import {bellatrix, ssz} from "@lodestar/types";
-import {SszSnappyError, SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/errors.js";
-import {ContextBytesType, EncodedPayload, EncodedPayloadType, TypeSerializer} from "../../src/types.js";
+import {ssz} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
+import {SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/errors.js";
+import {ResponseOutgoing, TypeSizes} from "../../src/types.js";
 import {
   sszSnappyPing,
   sszSnappySignedBeaconBlockAltair,
@@ -18,10 +18,10 @@ import {
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-type SszSnappyTestBlockData<T> = {
+type SszSnappyTestBlockData = {
   id: string;
-  type: TypeSerializer<T>;
-  payload: EncodedPayload<T>;
+  type: TypeSizes;
+  payload: ResponseOutgoing;
   streamedBody: Uint8Array;
 };
 
@@ -30,13 +30,12 @@ type SszSnappyTestBlockData<T> = {
  * encoded in multiple chunks.
  */
 
-export const goerliShadowForkBlock13249: SszSnappyTestBlockData<bellatrix.SignedBeaconBlock> = {
+export const goerliShadowForkBlock13249: SszSnappyTestBlockData = {
   id: "goerli-shadow-fork-block-13249",
   type: ssz.bellatrix.SignedBeaconBlock,
   payload: {
-    type: EncodedPayloadType.bytes,
-    bytes: fs.readFileSync(path.join(__dirname, "/goerliShadowForkBlock.13249/serialized.ssz")),
-    contextBytes: {type: ContextBytesType.ForkDigest, forkSlot: 13249},
+    data: fs.readFileSync(path.join(__dirname, "/goerliShadowForkBlock.13249/serialized.ssz")),
+    fork: ForkName.altair,
   },
   streamedBody: fs.readFileSync(path.join(__dirname, "/goerliShadowForkBlock.13249/streamed.snappy")),
 };
@@ -50,29 +49,9 @@ export const encodingStrategiesTestCases = [
   {id: "altair SignedBeaconBlock type", ...sszSnappySignedBeaconBlockAltair},
 ];
 
-export const encodingStrategiesEncodingErrorCases: {
-  id: string;
-  type: TypeSerializer<unknown>;
-  payload: EncodedPayload<unknown>;
-  error: LodestarError<any>;
-}[] = [
-  {
-    id: "Bad body",
-    type: ssz.phase0.Status,
-    payload: {
-      type: EncodedPayloadType.ssz,
-      data: BigInt(1),
-    },
-    error: new SszSnappyError({
-      code: SszSnappyErrorCode.SERIALIZE_ERROR,
-      serializeError: new TypeError("Cannot convert undefined or null to object"),
-    }),
-  },
-];
-
 export const encodingStrategiesDecodingErrorCases: {
   id: string;
-  type: TypeSerializer<unknown>;
+  type: TypeSizes;
   error: SszSnappyErrorCode;
   chunks: Buffer[];
 }[] = [

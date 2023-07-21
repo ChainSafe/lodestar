@@ -1,74 +1,65 @@
-import {routes} from "@lodestar/api";
-import {FAR_FUTURE_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
-// this will need async once we wan't to resolve archive slot
-import {
-  CachedBeaconStateAllForks,
-  BeaconStateAllForks,
-  createCachedBeaconState,
-  createEmptyEpochContextImmutableData,
-  PubkeyIndexMap,
-  ExecutionPayloadStatus,
-  DataAvailableStatus,
-} from "@lodestar/state-transition";
-import {BLSPubkey, phase0} from "@lodestar/types";
-import {stateTransition, processSlots} from "@lodestar/state-transition";
-import {ChainForkConfig} from "@lodestar/config";
-import {IForkChoice} from "@lodestar/fork-choice";
-import {Epoch, ValidatorIndex, Slot} from "@lodestar/types";
 import {fromHexString} from "@chainsafe/ssz";
-import {sleep, assert} from "@lodestar/utils";
-import {IBeaconChain} from "../../../../chain/index.js";
-import {StateContextCache} from "../../../../chain/stateCache/index.js";
-import {IBeaconDb} from "../../../../db/index.js";
+import {routes} from "@lodestar/api";
+import {FAR_FUTURE_EPOCH, GENESIS_SLOT} from "@lodestar/params";
+import {BeaconStateAllForks, PubkeyIndexMap} from "@lodestar/state-transition";
+import {BLSPubkey, phase0} from "@lodestar/types";
+import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {IBeaconChain, StateGetOpts} from "../../../../chain/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 
-type ResolveStateIdOpts = {
-  /**
-   * triggers a fetch of the nearest finalized state from the archive if the state at the desired
-   * stateId is not in the archive and run the state transition up to the desired slot
-   * NOTE: this is not related to chain.regen, which handles regenerating un-finalized states
-   */
-  regenFinalizedState?: boolean;
-};
-
 export async function resolveStateId(
-  config: ChainForkConfig,
   chain: IBeaconChain,
-  db: IBeaconDb,
   stateId: routes.beacon.StateId,
-  opts?: ResolveStateIdOpts
+  opts?: StateGetOpts
 ): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean}> {
-  const {state, executionOptimistic} = await resolveStateIdOrNull(config, chain, db, stateId, opts);
-  if (!state) {
+  const stateRes = await resolveStateIdOrNull(chain, stateId, opts);
+  if (!stateRes) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
   }
 
-  return {state, executionOptimistic};
+  return stateRes;
 }
 
 async function resolveStateIdOrNull(
-  config: ChainForkConfig,
   chain: IBeaconChain,
-  db: IBeaconDb,
   stateId: routes.beacon.StateId,
-  opts?: ResolveStateIdOpts
-): Promise<{state: BeaconStateAllForks | null; executionOptimistic: boolean}> {
-  stateId = String(stateId).toLowerCase();
-  if (stateId === "head" || stateId === "genesis" || stateId === "finalized" || stateId === "justified") {
-    return stateByName(db, chain.stateCache, chain.forkChoice, stateId);
+  opts?: StateGetOpts
+): Promise<{state: BeaconStateAllForks; executionOptimistic: boolean} | null> {
+  if (stateId === "head") {
+    // TODO: This is not OK, head and headState must be fetched atomically
+    const head = chain.forkChoice.getHead();
+    const headState = chain.getHeadState();
+    return {state: headState, executionOptimistic: isOptimisticBlock(head)};
   }
 
-  if (stateId.startsWith("0x")) {
-    return stateByRoot(db, chain.stateCache, chain.forkChoice, stateId);
+  if (stateId === "genesis") {
+    return chain.getStateBySlot(GENESIS_SLOT, opts);
   }
 
-  // state id must be slot
-  const slot = parseInt(stateId, 10);
-  if (isNaN(slot) && isNaN(slot - 0)) {
-    throw new ValidationError(`Invalid state id '${stateId}'`, "stateId");
+  if (stateId === "finalized") {
+    const block = chain.forkChoice.getFinalizedBlock();
+    const state = await chain.getStateByStateRoot(block.stateRoot, opts);
+    return state && {state: state.state, executionOptimistic: isOptimisticBlock(block)};
   }
-  return stateBySlot(config, db, chain.stateCache, chain.forkChoice, slot, opts);
+
+  if (stateId === "justified") {
+    const block = chain.forkChoice.getJustifiedBlock();
+    const state = await chain.getStateByStateRoot(block.stateRoot, opts);
+    return state && {state: state.state, executionOptimistic: isOptimisticBlock(block)};
+  }
+
+  if (typeof stateId === "string" && stateId.startsWith("0x")) {
+    return chain.getStateByStateRoot(stateId, opts);
+  }
+
+  // id must be slot
+  const blockSlot = parseInt(String(stateId), 10);
+  if (isNaN(blockSlot) && isNaN(blockSlot - 0)) {
+    throw new ValidationError(`Invalid block id '${stateId}'`, "blockId");
+  }
+
+  return chain.getStateBySlot(blockSlot, opts);
 }
 
 /**
@@ -117,91 +108,6 @@ export function toValidatorResponse(
   };
 }
 
-async function stateByName(
-  db: IBeaconDb,
-  stateCache: StateContextCache,
-  forkChoice: IForkChoice,
-  stateId: routes.beacon.StateId
-): Promise<{state: BeaconStateAllForks | null; executionOptimistic: boolean}> {
-  switch (stateId) {
-    case "head": {
-      const head = forkChoice.getHead();
-      const state = stateCache.get(head.stateRoot) ?? null;
-      if (state) {
-        return {state, executionOptimistic: isOptimisticBlock(head)};
-      }
-      return {state: null, executionOptimistic: false};
-    }
-    case "genesis":
-      return {
-        state: await db.stateArchive.get(GENESIS_SLOT),
-        executionOptimistic: false,
-      };
-    case "finalized": {
-      const state = stateCache.get(forkChoice.getFinalizedBlock().stateRoot) ?? null;
-      return {
-        state,
-        executionOptimistic: false,
-      };
-    }
-    case "justified": {
-      const justifiedBlock = forkChoice.getJustifiedBlock();
-      const state = stateCache.get(justifiedBlock.stateRoot) ?? null;
-      return state
-        ? {state, executionOptimistic: isOptimisticBlock(justifiedBlock)}
-        : {state: null, executionOptimistic: false};
-    }
-    default:
-      throw new Error("not a named state id");
-  }
-}
-
-async function stateByRoot(
-  db: IBeaconDb,
-  stateCache: StateContextCache,
-  forkChoice: IForkChoice,
-  stateId: routes.beacon.StateId
-): Promise<{state: BeaconStateAllForks | null; executionOptimistic: boolean}> {
-  if (typeof stateId === "string" && stateId.startsWith("0x")) {
-    const stateRoot = stateId;
-    const cachedStateCtx = stateCache.get(stateRoot);
-    if (cachedStateCtx) {
-      const blockRoot = cachedStateCtx.latestBlockHeader.hashTreeRoot();
-      const block = forkChoice.getBlock(blockRoot);
-      return {state: cachedStateCtx, executionOptimistic: block != null && isOptimisticBlock(block)};
-    }
-    return {
-      state: await db.stateArchive.getByRoot(fromHexString(stateRoot)),
-      executionOptimistic: false,
-    };
-  } else {
-    throw new Error("not a root state id");
-  }
-}
-
-async function stateBySlot(
-  config: ChainForkConfig,
-  db: IBeaconDb,
-  stateCache: StateContextCache,
-  forkChoice: IForkChoice,
-  slot: Slot,
-  opts?: ResolveStateIdOpts
-): Promise<{state: BeaconStateAllForks | null; executionOptimistic: boolean}> {
-  const blockSummary = forkChoice.getCanonicalBlockAtSlot(slot);
-  if (blockSummary) {
-    const state = stateCache.get(blockSummary.stateRoot);
-    if (state) {
-      return {state, executionOptimistic: isOptimisticBlock(blockSummary)};
-    }
-  }
-
-  if (opts?.regenFinalizedState) {
-    return {state: await getFinalizedState(config, db, forkChoice, slot), executionOptimistic: false};
-  }
-
-  return {state: await db.stateArchive.get(slot), executionOptimistic: false};
-}
-
 export function filterStateValidatorsByStatus(
   statuses: string[],
   state: BeaconStateAllForks,
@@ -223,50 +129,6 @@ export function filterStateValidatorsByStatus(
     }
   }
   return responses;
-}
-
-/**
- * Get the archived state nearest to `slot`.
- */
-async function getNearestArchivedState(
-  config: ChainForkConfig,
-  db: IBeaconDb,
-  slot: Slot
-): Promise<CachedBeaconStateAllForks> {
-  const states = db.stateArchive.valuesStream({lte: slot, reverse: true});
-  const state = (await states[Symbol.asyncIterator]().next()).value as BeaconStateAllForks;
-  // TODO - PENDING: Don't create new immutable caches here
-  // see https://github.com/ChainSafe/lodestar/issues/3683
-  return createCachedBeaconState(state, createEmptyEpochContextImmutableData(config, state));
-}
-
-async function getFinalizedState(
-  config: ChainForkConfig,
-  db: IBeaconDb,
-  forkChoice: IForkChoice,
-  slot: Slot
-): Promise<CachedBeaconStateAllForks> {
-  assert.lte(slot, forkChoice.getFinalizedCheckpoint().epoch * SLOTS_PER_EPOCH);
-  let state = await getNearestArchivedState(config, db, slot);
-
-  // process blocks up to the requested slot
-  for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
-    state = stateTransition(state, block, {
-      // Replaying finalized blocks, all data is considered valid
-      executionPayloadStatus: ExecutionPayloadStatus.valid,
-      dataAvailableStatus: DataAvailableStatus.available,
-      verifyStateRoot: false,
-      verifyProposer: false,
-      verifySignatures: false,
-    });
-    // yield to the event loop
-    await sleep(0);
-  }
-  // due to skip slots, may need to process empty slots to reach the requested slot
-  if (state.slot < slot) {
-    state = processSlots(state, slot);
-  }
-  return state;
 }
 
 type StateValidatorIndexResponse = {valid: true; validatorIndex: number} | {valid: false; code: number; reason: string};

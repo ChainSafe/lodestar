@@ -1,33 +1,12 @@
 {
   "__inputs": [
     {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
       "description": "",
-      "type": "datasource",
+      "label": "Prometheus",
+      "name": "DS_PROMETHEUS",
       "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__elements": [],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "8.4.2"
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
+      "pluginName": "Prometheus",
+      "type": "datasource"
     }
   ],
   "annotations": {
@@ -52,7 +31,7 @@
   "description": "",
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
   "iteration": 1661328981106,
   "links": [
@@ -120,20 +99,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": [
           {
@@ -234,20 +200,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": [
           {
@@ -348,20 +301,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -429,20 +369,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -518,20 +445,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -603,20 +517,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -689,20 +590,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": [
           {
@@ -845,20 +733,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": [
           {
@@ -1002,19 +877,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": [
@@ -1159,19 +1021,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": [
@@ -1329,20 +1178,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -1414,20 +1250,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -1500,19 +1323,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -1542,7 +1352,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (entrypoint) (\n  delta(lodestar_regen_fn_call_duration_sum[$rate_interval])\n)\n/\nsum by (entrypoint) (\n  delta(lodestar_regen_fn_call_duration_count[$rate_interval])\n)",
+          "expr": "sum by (entrypoint) (\n  rate(lodestar_regen_fn_call_duration_sum[$rate_interval])\n)\n/\nsum by (entrypoint) (\n  rate(lodestar_regen_fn_call_duration_count[$rate_interval])\n)",
           "interval": "",
           "legendFormat": "{{entrypoint}}",
           "refId": "A"
@@ -1586,19 +1396,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -1628,7 +1425,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (caller) (\n  delta(lodestar_regen_fn_call_duration_sum[$rate_interval])\n)\n/\nsum by (caller) (\n  delta(lodestar_regen_fn_call_duration_count[$rate_interval])\n)",
+          "expr": "sum by (caller) (\n  rate(lodestar_regen_fn_call_duration_sum[$rate_interval])\n)\n/\nsum by (caller) (\n  rate(lodestar_regen_fn_call_duration_count[$rate_interval])\n)",
           "interval": "",
           "legendFormat": "{{caller}}",
           "refId": "A"
@@ -1674,19 +1471,6 @@
           "mappings": [],
           "max": 1,
           "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": []
@@ -1716,7 +1500,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (entrypoint) (\n  delta(lodestar_regen_fn_queued_total[$rate_interval])\n)\n/\nsum by (entrypoint) (\n  delta(lodestar_regen_fn_call_total[$rate_interval])\n)",
+          "expr": "sum by (entrypoint) (\n  rate(lodestar_regen_fn_queued_total[$rate_interval])\n)\n/\nsum by (entrypoint) (\n  rate(lodestar_regen_fn_call_total[$rate_interval])\n)",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1762,19 +1546,6 @@
           "mappings": [],
           "max": 1,
           "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": []
@@ -1850,19 +1621,6 @@
           "mappings": [],
           "max": 1,
           "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": []
@@ -1892,7 +1650,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "sum by (caller) (\n  delta(lodestar_regen_fn_queued_total[$rate_interval])\n)\n/\nsum by (caller) (\n  delta(lodestar_regen_fn_call_total[$rate_interval])\n)",
+          "expr": "sum by (caller) (\n  rate(lodestar_regen_fn_queued_total[$rate_interval])\n)\n/\nsum by (caller) (\n  rate(lodestar_regen_fn_call_total[$rate_interval])\n)",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1938,19 +1696,6 @@
           "mappings": [],
           "max": 1,
           "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": []
@@ -2038,19 +1783,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": []
@@ -2127,19 +1859,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -2211,19 +1930,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": []
@@ -2250,7 +1956,7 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "delta(lodestar_regen_queue_dropped_jobs_total[$rate_interval])/(delta(lodestar_regen_queue_job_time_seconds_count[$rate_interval])+delta(lodestar_regen_queue_dropped_jobs_total[$rate_interval]))",
+          "expr": "rate(lodestar_regen_queue_dropped_jobs_total[$rate_interval])/(rate(lodestar_regen_queue_job_time_seconds_count[$rate_interval])+rate(lodestar_regen_queue_dropped_jobs_total[$rate_interval]))",
           "interval": "",
           "legendFormat": "regen_queue",
           "refId": "A"
@@ -2295,19 +2001,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -2334,7 +2027,7 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "delta(lodestar_regen_queue_job_time_seconds_sum[$rate_interval])/delta(lodestar_regen_queue_job_time_seconds_count[$rate_interval])",
+          "expr": "rate(lodestar_regen_queue_job_time_seconds_sum[$rate_interval])/rate(lodestar_regen_queue_job_time_seconds_count[$rate_interval])",
           "interval": "",
           "legendFormat": "regen_queue",
           "refId": "A"
@@ -2379,19 +2072,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -2418,7 +2098,7 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "delta(lodestar_regen_queue_job_wait_time_seconds_sum[$rate_interval])/delta(lodestar_regen_queue_job_wait_time_seconds_count[$rate_interval])",
+          "expr": "rate(lodestar_regen_queue_job_wait_time_seconds_sum[$rate_interval])/rate(lodestar_regen_queue_job_wait_time_seconds_count[$rate_interval])",
           "interval": "",
           "legendFormat": "regen_queue",
           "refId": "A"
@@ -2463,19 +2143,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "short"
         },
         "overrides": []

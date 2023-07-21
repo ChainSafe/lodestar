@@ -2,10 +2,10 @@ import "mocha";
 import {promisify} from "node:util";
 import {expect} from "chai";
 import leveldown from "leveldown";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {sleep} from "@lodestar/utils";
 import {LevelDbController} from "@lodestar/db";
 
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {Eth1ForBlockProduction} from "../../../src/eth1/index.js";
 import {Eth1Options} from "../../../src/eth1/options.js";
@@ -36,26 +36,19 @@ describe.skip("eth1 / Eth1Provider", function () {
   const logger = testLogger();
 
   let db: BeaconDb;
-  let dbController: LevelDbController;
   let interval: NodeJS.Timeout;
 
   before(async () => {
     // Nuke DB to make sure it's empty
     await promisify<string>(leveldown.destroy)(dbLocation);
 
-    dbController = new LevelDbController({name: dbLocation}, {logger});
-    db = new BeaconDb({
-      config,
-      controller: dbController,
-    });
-
-    await db.start();
+    db = new BeaconDb(config, await LevelDbController.create({name: dbLocation}, {logger}));
   });
 
   after(async () => {
     clearInterval(interval);
     controller.abort();
-    await db.stop();
+    await db.close();
     await promisify<string>(leveldown.destroy)(dbLocation);
   });
 

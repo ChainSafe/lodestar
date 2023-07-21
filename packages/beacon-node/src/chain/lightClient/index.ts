@@ -1,3 +1,4 @@
+import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod, allForks} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {
@@ -15,7 +16,6 @@ import {
 } from "@lodestar/light-client/spec";
 import {Logger, MapDef, pruneSetToMax} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
-import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {MIN_SYNC_COMMITTEE_PARTICIPANTS, SYNC_COMMITTEE_SIZE, ForkName, ForkSeq, ForkExecution} from "@lodestar/params";
 
 import {IBeaconDb} from "../../db/index.js";
@@ -184,7 +184,10 @@ export class LightClientServer {
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
   private finalized: allForks.LightClientFinalityUpdate | null = null;
 
-  constructor(private readonly opts: LightClientServerOpts, modules: LightClientServerModules) {
+  constructor(
+    private readonly opts: LightClientServerOpts,
+    modules: LightClientServerModules
+  ) {
     const {config, db, metrics, emitter, logger} = modules;
     this.config = config;
     this.db = db;
@@ -485,6 +488,7 @@ export class LightClientServer {
       this.logger.debug("sync committee below required MIN_SYNC_COMMITTEE_PARTICIPANTS", {
         syncPeriod,
         attestedPeriod,
+        syncAggregateParticipation,
       });
       this.metrics?.lightclientServer.onSyncAggregate.inc({event: "ignore_sync_committee_low"});
       return;
@@ -502,7 +506,7 @@ export class LightClientServer {
     }
 
     if (isFinalized) {
-      const finalizedCheckpointRoot = attestedData.finalizedCheckpoint.root as Uint8Array;
+      const finalizedCheckpointRoot = attestedData.finalizedCheckpoint.root;
       let finalizedHeader = await this.getFinalizedHeader(finalizedCheckpointRoot);
 
       if (
@@ -589,7 +593,7 @@ export class LightClientServer {
     }
     const nextSyncCommitteeBranch = getNextSyncCommitteeBranch(syncCommitteeWitness);
     const finalizedHeaderAttested = attestedData.isFinalized
-      ? await this.getFinalizedHeader(attestedData.finalizedCheckpoint.root as Uint8Array)
+      ? await this.getFinalizedHeader(attestedData.finalizedCheckpoint.root)
       : null;
 
     let isFinalized, finalityBranch, finalizedHeader;

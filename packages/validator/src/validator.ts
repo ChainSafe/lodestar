@@ -1,10 +1,9 @@
-import {DatabaseApiOptions} from "@lodestar/db";
+import {toHexString} from "@chainsafe/ssz";
 import {BLSPubkey, ssz} from "@lodestar/types";
-import {createBeaconConfig, BeaconConfig} from "@lodestar/config";
+import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
 import {Logger} from "@lodestar/utils";
 import {getClient, Api, routes, ApiError} from "@lodestar/api";
-import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Clock, IClock} from "./util/clock.js";
 import {waitForGenesis} from "./genesis.js";
@@ -18,14 +17,15 @@ import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util/index.
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ValidatorStore, Signer, ValidatorProposerConfig} from "./services/validatorStore.js";
-import {ProcessShutdownCallback, PubkeyHex} from "./types.js";
+import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
 import {BeaconHealth, Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
-  dbOps: DatabaseApiOptions;
+  db: LodestarValidatorDatabaseController;
+  config: ChainForkConfig;
   api: Api | string | string[];
   signers: Signer[];
   logger: Logger;
@@ -33,9 +33,11 @@ export type ValidatorOptions = {
   abortController: AbortController;
   afterBlockDelaySlotFraction?: number;
   scAfterBlockDelaySlotFraction?: number;
-  doppelgangerProtectionEnabled?: boolean;
+  disableAttestationGrouping?: boolean;
+  doppelgangerProtection?: boolean;
   closed?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
+  distributed?: boolean;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -61,12 +63,17 @@ export class Validator {
   private readonly clock: IClock;
   private readonly chainHeaderTracker: ChainHeaderTracker;
   private readonly logger: Logger;
+  private readonly db: LodestarValidatorDatabaseController;
   private state: Status;
   private readonly controller: AbortController;
 
-  constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
-    const {dbOps, logger, slashingProtection, signers, valProposerConfig} = opts;
-    const config = createBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
+  constructor(
+    opts: ValidatorOptions,
+    readonly genesis: Genesis,
+    metrics: Metrics | null = null
+  ) {
+    const {db, config: chainConfig, logger, slashingProtection, signers, valProposerConfig} = opts;
+    const config = createBeaconConfig(chainConfig, genesis.genesisValidatorsRoot);
     this.controller = opts.abortController;
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const loggerVc = getLoggerVc(logger, clock);
@@ -79,6 +86,7 @@ export class Validator {
         {
           urls: typeof opts.api === "string" ? [opts.api] : opts.api,
           // Validator would need the beacon to respond within the slot
+          // See https://github.com/ChainSafe/lodestar/issues/5315 for rationale
           timeoutMs: config.SECONDS_PER_SLOT * 1000,
           getAbortSignal: () => this.controller.signal,
         },
@@ -89,7 +97,7 @@ export class Validator {
     }
 
     const indicesService = new IndicesService(logger, api, metrics);
-    const doppelgangerService = opts.doppelgangerProtectionEnabled
+    const doppelgangerService = opts.doppelgangerProtection
       ? new DoppelgangerService(logger, clock, api, indicesService, opts.processShutdownCallback, metrics)
       : null;
 
@@ -123,7 +131,11 @@ export class Validator {
       emitter,
       chainHeaderTracker,
       metrics,
-      {afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction}
+      {
+        afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
+        disableAttestationGrouping: opts.disableAttestationGrouping || opts.distributed,
+        distributedAggregationSelection: opts.distributed,
+      }
     );
 
     this.syncCommitteeService = new SyncCommitteeService(
@@ -135,19 +147,23 @@ export class Validator {
       emitter,
       chainHeaderTracker,
       metrics,
-      {scAfterBlockDelaySlotFraction: opts.scAfterBlockDelaySlotFraction}
+      {
+        scAfterBlockDelaySlotFraction: opts.scAfterBlockDelaySlotFraction,
+        distributedAggregationSelection: opts.distributed,
+      }
     );
 
     this.config = config;
     this.logger = logger;
     this.api = api;
+    this.db = db;
     this.clock = clock;
     this.validatorStore = validatorStore;
     this.chainHeaderTracker = chainHeaderTracker;
     this.slashingProtection = slashingProtection;
 
     if (metrics) {
-      opts.dbOps.controller.setMetrics(metrics.db);
+      db.setMetrics(metrics.db);
     }
 
     if (opts.closed) {
@@ -175,8 +191,7 @@ export class Validator {
 
   /** Waits for genesis and genesis time */
   static async initializeFromBeaconNode(opts: ValidatorOptions, metrics?: Metrics | null): Promise<Validator> {
-    const {config} = opts.dbOps;
-    const {logger} = opts;
+    const {logger, config} = opts;
 
     let api: Api;
     if (typeof opts.api === "string" || Array.isArray(opts.api)) {
@@ -214,6 +229,7 @@ export class Validator {
   async close(): Promise<void> {
     if (this.state === Status.closed) return;
     this.controller.abort();
+    await this.db.close();
     this.state = Status.closed;
   }
 
@@ -253,11 +269,10 @@ export class Validator {
       const {status: healthCode} = await this.api.node.getHealth();
       // API always returns http status codes
       // Need to find a way to return a custom enum type
-      if (((healthCode as unknown) as routes.node.NodeHealth) === routes.node.NodeHealth.READY)
-        return BeaconHealth.READY;
-      if (((healthCode as unknown) as routes.node.NodeHealth) === routes.node.NodeHealth.SYNCING)
+      if ((healthCode as unknown as routes.node.NodeHealth) === routes.node.NodeHealth.READY) return BeaconHealth.READY;
+      if ((healthCode as unknown as routes.node.NodeHealth) === routes.node.NodeHealth.SYNCING)
         return BeaconHealth.SYNCING;
-      if (((healthCode as unknown) as routes.node.NodeHealth) === routes.node.NodeHealth.NOT_INITIALIZED_OR_ISSUES)
+      if ((healthCode as unknown as routes.node.NodeHealth) === routes.node.NodeHealth.NOT_INITIALIZED_OR_ISSUES)
         return BeaconHealth.NOT_INITIALIZED_OR_ISSUES;
       else return BeaconHealth.UNKNOWN;
     } catch (e) {
@@ -270,7 +285,7 @@ export class Validator {
 /** Assert the same genesisValidatorRoot and genesisTime */
 async function assertEqualGenesis(opts: ValidatorOptions, genesis: Genesis): Promise<void> {
   const nodeGenesisValidatorRoot = genesis.genesisValidatorsRoot;
-  const metaDataRepository = new MetaDataRepository(opts.dbOps);
+  const metaDataRepository = new MetaDataRepository(opts.db);
   const genesisValidatorsRoot = await metaDataRepository.getGenesisValidatorsRoot();
   if (genesisValidatorsRoot) {
     if (!ssz.Root.equals(genesisValidatorsRoot, nodeGenesisValidatorRoot)) {

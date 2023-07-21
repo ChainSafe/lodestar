@@ -11,7 +11,9 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   "PARTICIPATION_FLAG_WEIGHTS",
   // TODO DENEB: This constant was added then removed on a spec re-write.
   // When developing DENEB branch the tracked version still doesn't have released the removal
-  "DOMAIN_BLOBS_SIDECAR",
+  "DOMAIN_BLOB_SIDECAR",
+  // TODO DENEB: Configure the blob subnets in a followup PR
+  "BLOB_SIDECAR_SUBNET_COUNT",
 ]);
 
 describe("api / impl / config", function () {
@@ -52,9 +54,9 @@ async function downloadRemoteConstants(commit: string): Promise<string[]> {
     // If some future fork does not specify one of this docs, refactor to fetch some docs only on some forks
     for (const docName of ["beacon-chain.md", "validator.md"]) {
       downloadedSpecs.push(
-        fetch(
-          `https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/specs/${forkName}/${docName}`
-        ).then((res) => res.text())
+        fetch(`https://raw.githubusercontent.com/ethereum/consensus-specs/${commit}/specs/${forkName}/${docName}`).then(
+          (res) => res.text()
+        )
       );
     }
   }

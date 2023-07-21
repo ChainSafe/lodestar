@@ -5,7 +5,6 @@ import {
   computeStartSlotAtEpoch,
   getCurrentSlot,
 } from "@lodestar/state-transition";
-import {DOMAIN_VOLUNTARY_EXIT} from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
 import {ssz, phase0} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
@@ -34,7 +33,7 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
 
   examples: [
     {
-      command: "validator voluntary-exit --pubkeys 0xF00",
+      command: "validator voluntary-exit --network goerli --pubkeys 0xF00",
       description: "Perform a voluntary exit for the validator who has a public key 0xF00",
     },
   ],
@@ -42,13 +41,12 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
   options: {
     exitEpoch: {
       description:
-        "The epoch upon which to submit the voluntary exit.  If no value is provided, then we default to the currentEpoch.",
+        "The epoch upon which to submit the voluntary exit.  If no value is provided, then we default to the current epoch.",
       type: "number",
     },
 
     pubkeys: {
-      description:
-        "Pubkeys to exit, must be available as local signers. Multiple keys have to be provided as comma-separated values.",
+      description: "Public keys to exit, must be available as local signers",
       type: "array",
       string: true, // Ensures the pubkey string is not automatically converted to numbers
       coerce: (pubkeys: string[]): string[] =>
@@ -80,6 +78,11 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
 
     // Select signers to exit
     const signers = await getSignersFromArgs(args, network, {logger: console, signal: new AbortController().signal});
+    if (signers.length === 0) {
+      throw new YargsError(`No local keystores found with current args.
+   Ensure --dataDir and --network match values used when importing keys via validator import
+   or alternatively, import keys by providing --importKeystores arg to voluntary-exit command.`);
+    }
     const signersToExit = selectSignersToExit(args, signers);
     const validatorsToExit = await resolveValidatorIndexes(client, signersToExit);
 
@@ -98,7 +101,7 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
     }
 
     for (const [i, {index, signer, pubkey}] of validatorsToExit.entries()) {
-      const domain = config.getDomain(computeStartSlotAtEpoch(exitEpoch), DOMAIN_VOLUNTARY_EXIT);
+      const domain = config.getDomainForVoluntaryExit(computeStartSlotAtEpoch(exitEpoch));
       const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex: index};
       const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
 
@@ -155,7 +158,8 @@ async function resolveValidatorIndexes(client: Api, signersToExit: SignerLocalPu
   return signersToExit.map(({signer, pubkey}) => {
     const item = dataByPubkey.get(pubkey);
     if (!item) {
-      throw Error(`beacon node did not return status for pubkey ${pubkey}`);
+      throw new YargsError(`Validator with pubkey ${pubkey} is unknown.
+   Re-check the pubkey submitted or wait until the validator is activated on the beacon chain to voluntary exit.`);
     }
 
     return {

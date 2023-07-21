@@ -1,0 +1,29 @@
+name: Feature request
+description: Suggest an idea for this project
+title: "[Descriptive title] "
+labels: [meta-feature-request]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem description
+      description: A clear and concise description of what the problem is. 
+      placeholder: Ex. I'm always frustrated when...
+    validations:
+      required: true    
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solution description
+      description: A clear and concise description of what you want to happen.
+      placeholder: This is what should happen.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: A clear and concise description of alternatives you've considered and add any additional context for the feature request.
+      placeholder: I've considered alternative solutions and here are links and screenshots about the feature request.
+    validations:
+      required: false

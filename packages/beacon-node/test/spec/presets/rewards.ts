@@ -1,7 +1,7 @@
 import {expect} from "chai";
+import {VectorCompositeType} from "@chainsafe/ssz";
 import {BeaconStateAllForks, beforeProcessEpoch} from "@lodestar/state-transition";
 import {getRewardsAndPenalties} from "@lodestar/state-transition/epoch";
-import {VectorCompositeType} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
@@ -18,7 +18,7 @@ export const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
     testFunction: (testcase) => {
       const config = getConfig(fork);
       const wrappedState = createCachedBeaconStateTest(testcase.pre, config);
-      const epochProcess = beforeProcessEpoch(wrappedState, {assertCorrectProgressiveBalances});
+      const epochTransitionCache = beforeProcessEpoch(wrappedState, {assertCorrectProgressiveBalances});
 
       // To debug this test and get granular results you can tweak inputs to get more granular results
       //
@@ -32,7 +32,7 @@ export const rewards: TestRunnerFn<RewardTestCase, Deltas> = (fork) => {
       //   + set all inactivityScores to zero
       // - To get inactivity_penalty_deltas set TIMELY_HEAD_FLAG_INDEX | TIMELY_SOURCE_FLAG_INDEX to false
       //   + set PARTICIPATION_FLAG_WEIGHTS[TIMELY_TARGET_FLAG_INDEX] to zero
-      return getRewardsAndPenalties(wrappedState, epochProcess);
+      return getRewardsAndPenalties(wrappedState, epochTransitionCache);
     },
     options: {
       inputTypes: inputTypeSszTreeViewDU,

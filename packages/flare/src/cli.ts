@@ -1,6 +1,5 @@
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs from "yargs";
-// @ts-expect-error no type
 import {hideBin} from "yargs/helpers";
 import {cmds} from "./cmds/index.js";
 import {registerCommandToYargs} from "./util/command.js";
@@ -11,7 +10,7 @@ Flare is a sudden brief burst of bright flame or light.
 In the wrong hands, can lead people astray.
 Use with care.
 
-  * by ChainSafe Systems, 2018-2022`;
+  * by ChainSafe Systems, 2018-${new Date().getFullYear()}`;
 const bottomBanner = `
 ✍️ Give feedback and report issues on GitHub:
   * https://github.com/ChainSafe/lodestar`;

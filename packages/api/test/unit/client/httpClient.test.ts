@@ -5,6 +5,8 @@ import {ErrorAborted, TimeoutError} from "@lodestar/utils";
 import {HttpClient, HttpError} from "../../../src/utils/client/index.js";
 import {HttpStatusCode} from "../../../src/utils/client/httpStatusCode.js";
 
+/* eslint-disable @typescript-eslint/return-await */
+
 type User = {
   id?: number;
   name: string;
@@ -32,7 +34,7 @@ describe("httpClient json client", () => {
       await server.close();
     });
 
-    return {baseUrl: await server.listen(0)};
+    return {baseUrl: await server.listen({port: 0})};
   }
 
   async function getServerWithClient(opts: RouteOptions): Promise<HttpClient> {

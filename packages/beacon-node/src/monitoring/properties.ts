@@ -1,24 +1,24 @@
-import {Registry} from "prom-client";
-import {JsonRecord, JsonType, MetricObject, MetricValue, MetricWithGetter, RecordValue} from "./types.js";
+import {MetricObjectWithValues, MetricValue as MetricValueObject, Registry} from "prom-client";
+import {JsonRecord, JsonType, MetricValue, RecordValue} from "./types.js";
 
-interface PropertyDefinition {
+type PropertyDefinition = {
   /** Key of value to be sent to remote service */
   jsonKey: string;
   /** Description of the property */
   description?: string;
-}
+};
 
-interface StaticPropertyDefinition<T extends RecordValue> extends PropertyDefinition {
+type StaticPropertyDefinition<T extends RecordValue> = PropertyDefinition & {
   /** Static value */
   value: T;
-}
+};
 
-interface DynamicPropertyDefinition<T extends RecordValue> extends PropertyDefinition {
+type DynamicPropertyDefinition<T extends RecordValue> = PropertyDefinition & {
   /** Value provider function */
   provider: () => T;
-}
+};
 
-interface MetricPropertyDefinition<T extends RecordValue> extends PropertyDefinition {
+type MetricPropertyDefinition<T extends RecordValue> = PropertyDefinition & {
   /** Type of value to be sent to remote service */
   jsonType: JsonType;
   /** Name of the metric */
@@ -37,7 +37,7 @@ interface MetricPropertyDefinition<T extends RecordValue> extends PropertyDefini
   cacheResult?: boolean;
   /** Default value if metric does not exist */
   defaultValue: T;
-}
+};
 
 /**
  * Interface to be implemented by client stats properties
@@ -86,7 +86,7 @@ export class MetricProperty<T extends RecordValue> implements ClientStatsPropert
     const metric = register.getSingleMetric(this.definition.metricName);
 
     if (metric) {
-      const metricObject = await (metric as MetricWithGetter).get();
+      const metricObject = await metric.get();
 
       const metricValue = this.extractMetricValue(metricObject);
 
@@ -106,7 +106,7 @@ export class MetricProperty<T extends RecordValue> implements ClientStatsPropert
     return {key: this.definition.jsonKey, value: this.definition.defaultValue};
   }
 
-  private extractMetricValue(metricObject: MetricObject): MetricValue | undefined {
+  private extractMetricValue(metricObject: MetricObjectWithValues<MetricValueObject<string>>): MetricValue | undefined {
     const {withLabel, fromLabel} = this.definition;
 
     if (withLabel) {

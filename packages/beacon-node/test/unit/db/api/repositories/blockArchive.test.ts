@@ -1,26 +1,26 @@
 import {expect} from "chai";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import sinon from "sinon";
 import {ssz} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
 import {intToBytes} from "@lodestar/utils";
-import {LevelDbController, Bucket, encodeKey} from "@lodestar/db";
+import {LevelDbController, encodeKey} from "@lodestar/db";
 
 import {BlockArchiveRepository} from "../../../../../src/db/repositories/index.js";
 import {testLogger} from "../../../../utils/logger.js";
+import {Bucket} from "../../../../../src/db/buckets.js";
 
 describe("block archive repository", function () {
   const testDir = "./.tmp";
   let blockArchive: BlockArchiveRepository;
-  let controller: LevelDbController;
+  let db: LevelDbController;
 
   beforeEach(async function () {
-    controller = new LevelDbController({name: testDir}, {logger: testLogger()});
-    blockArchive = new BlockArchiveRepository(config, controller);
-    await controller.start();
+    db = await LevelDbController.create({name: testDir}, {logger: testLogger()});
+    blockArchive = new BlockArchiveRepository(config, db);
   });
   afterEach(async function () {
-    await controller.stop();
+    await db.close();
     rimraf.sync(testDir);
   });
 
@@ -108,7 +108,7 @@ describe("block archive repository", function () {
   });
 
   it("should store indexes when adding single block", async function () {
-    const spy = sinon.spy(controller, "put");
+    const spy = sinon.spy(db, "put");
     const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     await blockArchive.add(block);
     expect(
@@ -126,7 +126,7 @@ describe("block archive repository", function () {
   });
 
   it("should store indexes when block batch", async function () {
-    const spy = sinon.spy(controller, "put");
+    const spy = sinon.spy(db, "put");
     const blocks = [ssz.phase0.SignedBeaconBlock.defaultValue(), ssz.phase0.SignedBeaconBlock.defaultValue()];
     await blockArchive.batchAdd(blocks);
     expect(

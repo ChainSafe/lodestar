@@ -1,14 +1,14 @@
 export type Eth1Options = {
-  enabled: boolean;
+  enabled?: boolean;
   disableEth1DepositDataTracker?: boolean;
-  providerUrls: string[];
+  providerUrls?: string[];
   /**
    * jwtSecretHex is the jwt secret if the eth1 modules should ping the jwt auth
    * protected engine endpoints.
    */
   jwtSecretHex?: string;
   depositContractDeployBlock?: number;
-  unsafeAllowDepositDataOverwrite: boolean;
+  unsafeAllowDepositDataOverwrite?: boolean;
   /**
    * Vote for a specific eth1_data regardless of validity and existing votes.
    * hex encoded ssz serialized Eth1Data type.
@@ -16,9 +16,11 @@ export type Eth1Options = {
   forcedEth1DataVote?: string;
 };
 
+export const DEFAULT_PROVIDER_URLS = ["http://localhost:8545"];
+
 export const defaultEth1Options: Eth1Options = {
   enabled: true,
-  providerUrls: ["http://localhost:8545"],
+  providerUrls: DEFAULT_PROVIDER_URLS,
   depositContractDeployBlock: 0,
   unsafeAllowDepositDataOverwrite: false,
 };

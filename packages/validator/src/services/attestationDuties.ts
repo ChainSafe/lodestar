@@ -1,9 +1,9 @@
+import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@lodestar/state-transition";
 import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
 import {Api, ApiError, routes} from "@lodestar/api";
-import {toHexString} from "@chainsafe/ssz";
 import {batchItems, IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
 import {Metrics} from "../metrics.js";
@@ -26,10 +26,16 @@ export type AttDutyAndProof = {
   duty: routes.validator.AttesterDuty;
   /** This value is only set to not null if the proof indicates that the validator is an aggregator. */
   selectionProof: BLSSignature | null;
+  /** This value will only be set if validator is part of distributed cluster and only has a key share */
+  partialSelectionProof?: BLSSignature;
 };
 
 // To assist with readability
 type AttDutiesAtEpoch = {dependentRoot: RootHex; dutiesByIndex: Map<ValidatorIndex, AttDutyAndProof>};
+
+type AttestationDutiesServiceOpts = {
+  distributedAggregationSelection?: boolean;
+};
 
 export class AttestationDutiesService {
   /** Maps a validator public key to their duties for each epoch */
@@ -46,7 +52,8 @@ export class AttestationDutiesService {
     private clock: IClock,
     private readonly validatorStore: ValidatorStore,
     chainHeadTracker: ChainHeaderTracker,
-    private readonly metrics: Metrics | null
+    private readonly metrics: Metrics | null,
+    private readonly opts?: AttestationDutiesServiceOpts
   ) {
     // Running this task every epoch is safe since a re-org of two epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
@@ -101,14 +108,14 @@ export class AttestationDutiesService {
    * If a reorg dependent root comes at a slot other than last slot of epoch
    * just update this.pendingDependentRootByEpoch() and process here
    */
-  private prepareForNextEpoch = async (slot: Slot): Promise<void> => {
+  private prepareForNextEpoch = async (slot: Slot, signal: AbortSignal): Promise<void> => {
     // only interested in last slot of epoch
     if ((slot + 1) % SLOTS_PER_EPOCH !== 0) {
       return;
     }
 
     // during the 1 / 3 of epoch, last block of epoch may come
-    await sleep(this.clock.msToSlot(slot + 1 / 3));
+    await sleep(this.clock.msToSlot(slot + 1 / 3), signal);
 
     const nextEpoch = computeEpochAtSlot(slot) + 1;
     const dependentRoot = this.dutiesByIndexByEpoch.get(nextEpoch)?.dependentRoot;
@@ -326,6 +333,15 @@ export class AttestationDutiesService {
 
   private async getDutyAndProof(duty: routes.validator.AttesterDuty): Promise<AttDutyAndProof> {
     const selectionProof = await this.validatorStore.signAttestationSelectionProof(duty.pubkey, duty.slot);
+
+    if (this.opts?.distributedAggregationSelection) {
+      // Validator in distributed cluster only has a key share, not the full private key.
+      // Passing a partial selection proof to `is_aggregator` would produce incorrect result.
+      // AttestationService will exchange partial for combined selection proofs retrieved from
+      // distributed validator middleware client and determine aggregators at beginning of every slot.
+      return {duty, selectionProof: null, partialSelectionProof: selectionProof};
+    }
+
     const isAggregator = isAggregatorFromCommitteeLength(duty.committeeLength, selectionProof);
 
     return {

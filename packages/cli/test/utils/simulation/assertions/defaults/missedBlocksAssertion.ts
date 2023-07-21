@@ -1,43 +1,48 @@
-import {SimulationAssertion} from "../../interfaces.js";
-import {everyEpochMatcher} from "../matchers.js";
+import {isNullish} from "../../../../utils.js";
+import {AssertionMatch, AssertionResult, SimulationAssertion} from "../../interfaces.js";
+import {arrayEquals} from "../../utils/index.js";
 import {headAssertion} from "./headAssertion.js";
 
 export const missedBlocksAssertion: SimulationAssertion<"missedBlocks", number[], [typeof headAssertion]> = {
   id: "missedBlocks",
-  match: everyEpochMatcher,
+  match: ({clock, slot}) => {
+    return clock.isLastSlotOfEpoch(slot) ? AssertionMatch.Capture | AssertionMatch.Assert : AssertionMatch.None;
+  },
   dependencies: [headAssertion],
-
-  async capture({node, slot, epoch, clock, dependantStores}) {
-    if (!clock.isLastSlotOfEpoch(slot)) return null;
-
+  async capture({node, epoch, slot, dependantStores, clock}) {
     // We need to start from the first slot as we don't store data for genesis
     const startSlot = epoch === 0 ? 1 : clock.getFirstSlotOfEpoch(epoch);
     const endSlot = slot;
-
-    const missedSlots: number[] = [];
+    const missedBlocks: number[] = [];
 
     for (let slot = startSlot; slot < endSlot; slot++) {
-      if (!dependantStores["head"][node.cl.id][slot].slot) {
-        missedSlots.push(slot);
+      // If some value of head is present for that slot then it was not missed
+      if (isNullish(dependantStores[headAssertion.id][node.cl.id][slot])) {
+        missedBlocks.push(slot);
       }
     }
-    return missedSlots;
+
+    return missedBlocks;
   },
 
-  async assert({nodes, store, slot}) {
-    const errors: string[] = [];
-    const missedBlocksOnFirstNode = store[nodes[0].cl.id][slot];
+  async assert({nodes, node, slot, store, dependantStores}) {
+    const errors: AssertionResult[] = [];
 
-    for (let i = 1; i < nodes.length; i++) {
-      const missedBlocksOnNode = store[nodes[i].cl.id][slot];
+    // For first node we don't need to match
+    if (node.id === nodes[0].id) return errors;
 
-      if (missedBlocksOnNode !== missedBlocksOnFirstNode) {
-        `node has different missed blocks than node 0. ${JSON.stringify({
-          id: nodes[i].cl.id,
-          missedBlocksOnNode,
+    const missedBlocksOnFirstNode = dependantStores["missedBlocks" as const][nodes[0].cl.id][slot];
+
+    const missedBlocks = store[slot];
+
+    if (!arrayEquals(missedBlocks, missedBlocksOnFirstNode)) {
+      errors.push([
+        "node has different missed blocks than first node",
+        {
+          missedBlocks,
           missedBlocksOnFirstNode,
-        })}`;
-      }
+        },
+      ]);
     }
 
     return errors;

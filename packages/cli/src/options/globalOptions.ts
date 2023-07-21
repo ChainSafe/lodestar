@@ -6,8 +6,9 @@ import {paramsOptions, IParamsArgs} from "./paramsOptions.js";
 type GlobalSingleArgs = {
   dataDir?: string;
   network?: NetworkName;
-  paramsFile: string;
+  paramsFile?: string;
   preset: string;
+  presetFile?: string;
 };
 
 export const defaultNetwork: NetworkName = "mainnet";
@@ -35,6 +36,12 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
     hidden: true,
     type: "string",
     default: ACTIVE_PRESET,
+  },
+
+  presetFile: {
+    hidden: true,
+    description: "Preset configuration file to override the active preset with custom values",
+    type: "string",
   },
 };
 

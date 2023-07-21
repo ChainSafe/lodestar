@@ -1,6 +1,6 @@
+import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {ssz, Slot, allForks} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
 import {Api, BlockHeaderResponse, ValidatorResponse} from "../../../../src/beacon/routes/beacon/index.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
@@ -56,9 +56,9 @@ export const testData: GenericServerTestCases<Api> = {
     args: [getDefaultBlindedBlock(64)],
     res: undefined,
   },
-  getBlobsSidecar: {
+  getBlobSidecars: {
     args: ["head"],
-    res: {executionOptimistic: true, data: ssz.deneb.BlobsSidecar.defaultValue()},
+    res: {executionOptimistic: true, data: ssz.deneb.BlobSidecars.defaultValue()},
   },
 
   // pool

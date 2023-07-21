@@ -21,7 +21,8 @@ export enum WorkResultCode {
   error = "error",
 }
 
-export type WorkResult<R> = {code: WorkResultCode.success; result: R} | {code: WorkResultCode.error; error: Error};
+export type WorkResultError = {code: WorkResultCode.error; error: Error};
+export type WorkResult<R> = {code: WorkResultCode.success; result: R} | WorkResultError;
 
 export type BlsWorkResult = {
   /** Ascending integer identifying the worker for metrics */

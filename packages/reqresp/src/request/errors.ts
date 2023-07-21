@@ -1,5 +1,4 @@
-import {LodestarError} from "@lodestar/utils";
-import {Encoding} from "../types.js";
+import {LodestarError, LodestarErrorObject} from "@lodestar/utils";
 import {ResponseError} from "../response/index.js";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
 
@@ -7,6 +6,7 @@ export enum RequestErrorCode {
   // Declaring specific values of RpcResponseStatusError for error clarity downstream
   /** `<response_chunk>` had `<result>` === INVALID_REQUEST */
   INVALID_REQUEST = "REQUEST_ERROR_INVALID_REQUEST",
+  INVALID_RESPONSE_SSZ = "REQUEST_ERROR_INVALID_RESPONSE_SSZ",
   /** `<response_chunk>` had `<result>` === SERVER_ERROR */
   SERVER_ERROR = "REQUEST_ERROR_SERVER_ERROR",
   /** `<response_chunk>` had `<result>` === RESOURCE_UNAVAILABLE */
@@ -35,6 +35,7 @@ export enum RequestErrorCode {
 
 type RequestErrorType =
   | {code: RequestErrorCode.INVALID_REQUEST; errorMessage: string}
+  | {code: RequestErrorCode.INVALID_RESPONSE_SSZ; errorMessage: string}
   | {code: RequestErrorCode.SERVER_ERROR; errorMessage: string}
   | {code: RequestErrorCode.RESOURCE_UNAVAILABLE; errorMessage: string}
   | {code: RequestErrorCode.UNKNOWN_ERROR_STATUS; status: RpcResponseStatusError; errorMessage: string}
@@ -48,26 +49,19 @@ type RequestErrorType =
   | {code: RequestErrorCode.RESP_TIMEOUT}
   | {code: RequestErrorCode.REQUEST_RATE_LIMITED};
 
-export type RequestErrorMetadata = {
-  method: string;
-  encoding: Encoding;
-  peer: string;
-  // Do not include requestId in error metadata to make the errors deterministic for tests
-};
+export const REQUEST_ERROR_CLASS_NAME = "RequestError";
 
-/**
- * Same error types as RequestError but without metadata.
- * Top level function sendRequest() must rethrow RequestInternalError with metadata
- */
-export class RequestInternalError extends LodestarError<RequestErrorType> {
-  constructor(type: RequestErrorType) {
-    super(type);
+export class RequestError extends LodestarError<RequestErrorType> {
+  constructor(type: RequestErrorType, message?: string, stack?: string) {
+    super(type, message ?? renderErrorMessage(type), stack);
   }
-}
 
-export class RequestError extends LodestarError<RequestErrorType & RequestErrorMetadata> {
-  constructor(type: RequestErrorType, metadata: RequestErrorMetadata) {
-    super({...metadata, ...type}, renderErrorMessage(type));
+  static fromObject(obj: LodestarErrorObject): RequestError {
+    if (obj.className !== "RequestError") {
+      throw new Error(`Expected className to be RequestError, but got ${obj.className}`);
+    }
+
+    return new RequestError(obj.type as RequestErrorType, obj.message, obj.stack);
   }
 }
 

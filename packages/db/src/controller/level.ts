@@ -6,7 +6,7 @@ import {LevelDbControllerMetrics} from "./metrics.js";
 
 enum Status {
   started = "started",
-  stopped = "stopped",
+  closed = "closed",
 }
 
 type LevelNodeJS = ClassicLevel<Uint8Array, Uint8Array>;
@@ -29,35 +29,40 @@ const DB_SIZE_METRIC_INTERVAL_MS = 5 * 60 * 1000;
  * The LevelDB implementation of DB
  */
 export class LevelDbController implements DatabaseController<Uint8Array, Uint8Array> {
-  private status = Status.stopped;
-  private db: Level<Uint8Array, Uint8Array>;
+  private status = Status.started;
 
-  private readonly opts: LevelDBOptions;
-  private readonly logger: Logger;
-  private metrics: LevelDbControllerMetrics | null;
   private dbSizeMetricInterval?: NodeJS.Timer;
 
-  constructor(opts: LevelDBOptions, {metrics, logger}: LevelDbControllerModules) {
-    this.opts = opts;
-    this.logger = logger;
+  constructor(
+    private readonly logger: Logger,
+    private readonly db: Level<Uint8Array, Uint8Array>,
+    private metrics: LevelDbControllerMetrics | null
+  ) {
     this.metrics = metrics ?? null;
-    this.db = opts.db || new Level(opts.name || "beaconchain", {keyEncoding: "binary", valueEncoding: "binary"});
-  }
-
-  async start(): Promise<void> {
-    if (this.status === Status.started) return;
-    this.status = Status.started;
-
-    await this.db.open();
 
     if (this.metrics) {
       this.collectDbSizeMetric();
     }
   }
 
-  async stop(): Promise<void> {
-    if (this.status === Status.stopped) return;
-    this.status = Status.stopped;
+  static async create(opts: LevelDBOptions, {metrics, logger}: LevelDbControllerModules): Promise<LevelDbController> {
+    const db = opts.db || new Level(opts.name || "beaconchain", {keyEncoding: "binary", valueEncoding: "binary"});
+
+    try {
+      await db.open();
+    } catch (e) {
+      if ((e as LevelDbError).cause?.code === "LEVEL_LOCKED") {
+        throw new Error("Database is already in use by another Lodestar instance");
+      }
+      throw e;
+    }
+
+    return new LevelDbController(logger, db, metrics ?? null);
+  }
+
+  async close(): Promise<void> {
+    if (this.status === Status.closed) return;
+    this.status = Status.closed;
 
     if (this.dbSizeMetricInterval) {
       clearInterval(this.dbSizeMetricInterval);
@@ -219,4 +224,4 @@ export class LevelDbController implements DatabaseController<Uint8Array, Uint8Ar
 }
 
 /** From https://www.npmjs.com/package/level */
-type LevelDbError = {code: "LEVEL_NOT_FOUND"};
+type LevelDbError = {code: "LEVEL_NOT_FOUND"; cause?: {code: "LEVEL_LOCKED"}};

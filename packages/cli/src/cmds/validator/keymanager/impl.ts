@@ -1,5 +1,6 @@
 import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
+import {fromHexString} from "@chainsafe/ssz";
 import {
   Api as KeyManagerClientApi,
   DeleteRemoteKeyStatus,
@@ -12,11 +13,11 @@ import {
   SignerDefinition,
   ImportRemoteKeyStatus,
 } from "@lodestar/api/keymanager";
-import {fromHexString} from "@chainsafe/ssz";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";
 import {ServerApi} from "@lodestar/api";
 import {getPubkeyHexFromKeystore, isValidatePubkeyHex, isValidHttpUrl} from "../../../util/format.js";
 import {parseFeeRecipient} from "../../../util/index.js";
+import {DecryptKeystoresThreadPool} from "./decryptKeystores/index.js";
 import {IPersistedKeysBackend} from "./interface.js";
 
 type Api = ServerApi<KeyManagerClientApi>;
@@ -25,6 +26,7 @@ export class KeymanagerApi implements Api {
   constructor(
     private readonly validator: Validator,
     private readonly persistedKeysBackend: IPersistedKeysBackend,
+    private readonly signal: AbortSignal,
     private readonly proposerConfigWriteDisabled?: boolean
   ) {}
 
@@ -124,6 +126,7 @@ export class KeymanagerApi implements Api {
     }
 
     const statuses: {status: ImportStatus; message?: string}[] = [];
+    const decryptKeystores = new DecryptKeystoresThreadPool(keystoresStr.length, this.signal);
 
     for (let i = 0; i < keystoresStr.length; i++) {
       try {
@@ -142,29 +145,38 @@ export class KeymanagerApi implements Api {
           continue;
         }
 
-        // Attempt to decrypt before writing to disk
-        const secretKey = bls.SecretKey.fromBytes(await keystore.decrypt(password));
+        decryptKeystores.queue(
+          {keystoreStr, password},
+          (secretKeyBytes: Uint8Array) => {
+            const secretKey = bls.SecretKey.fromBytes(secretKeyBytes);
 
-        // Persist the key to disk for restarts, before adding to in-memory store
-        // If the keystore exist and has a lock it will throw
-        this.persistedKeysBackend.writeKeystore({
-          keystoreStr,
-          password,
-          // Lock immediately since it's gonna be used
-          lockBeforeWrite: true,
-          // Always write, even if it's already persisted for consistency.
-          // The in-memory validatorStore is the ground truth to decide duplicates
-          persistIfDuplicate: true,
-        });
+            // Persist the key to disk for restarts, before adding to in-memory store
+            // If the keystore exist and has a lock it will throw
+            this.persistedKeysBackend.writeKeystore({
+              keystoreStr,
+              password,
+              // Lock immediately since it's gonna be used
+              lockBeforeWrite: true,
+              // Always write, even if it's already persisted for consistency.
+              // The in-memory validatorStore is the ground truth to decide duplicates
+              persistIfDuplicate: true,
+            });
 
-        // Add to in-memory store to start validating immediately
-        this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
+            // Add to in-memory store to start validating immediately
+            this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
-        statuses[i] = {status: ImportStatus.imported};
+            statuses[i] = {status: ImportStatus.imported};
+          },
+          (e: Error) => {
+            statuses[i] = {status: ImportStatus.error, message: e.message};
+          }
+        );
       } catch (e) {
         statuses[i] = {status: ImportStatus.error, message: (e as Error).message};
       }
     }
+
+    await decryptKeystores.completed();
 
     return {data: statuses};
   }
@@ -278,39 +290,37 @@ export class KeymanagerApi implements Api {
   async importRemoteKeys(
     remoteSigners: Pick<SignerDefinition, "pubkey" | "url">[]
   ): ReturnType<Api["importRemoteKeys"]> {
-    const results = remoteSigners.map(
-      ({pubkey, url}): ResponseStatus<ImportRemoteKeyStatus> => {
-        try {
-          if (!isValidatePubkeyHex(pubkey)) {
-            throw Error(`Invalid pubkey ${pubkey}`);
-          }
-          if (!isValidHttpUrl(url)) {
-            throw Error(`Invalid URL ${url}`);
-          }
-
-          // Check if key exists
-          if (this.validator.validatorStore.hasVotingPubkey(pubkey)) {
-            return {status: ImportRemoteKeyStatus.duplicate};
-          }
-
-          // Else try to add it
-
-          this.validator.validatorStore.addSigner({type: SignerType.Remote, pubkey, url});
-
-          this.persistedKeysBackend.writeRemoteKey({
-            pubkey,
-            url,
-            // Always write, even if it's already persisted for consistency.
-            // The in-memory validatorStore is the ground truth to decide duplicates
-            persistIfDuplicate: true,
-          });
-
-          return {status: ImportRemoteKeyStatus.imported};
-        } catch (e) {
-          return {status: ImportRemoteKeyStatus.error, message: (e as Error).message};
+    const results = remoteSigners.map(({pubkey, url}): ResponseStatus<ImportRemoteKeyStatus> => {
+      try {
+        if (!isValidatePubkeyHex(pubkey)) {
+          throw Error(`Invalid pubkey ${pubkey}`);
         }
+        if (!isValidHttpUrl(url)) {
+          throw Error(`Invalid URL ${url}`);
+        }
+
+        // Check if key exists
+        if (this.validator.validatorStore.hasVotingPubkey(pubkey)) {
+          return {status: ImportRemoteKeyStatus.duplicate};
+        }
+
+        // Else try to add it
+
+        this.validator.validatorStore.addSigner({type: SignerType.Remote, pubkey, url});
+
+        this.persistedKeysBackend.writeRemoteKey({
+          pubkey,
+          url,
+          // Always write, even if it's already persisted for consistency.
+          // The in-memory validatorStore is the ground truth to decide duplicates
+          persistIfDuplicate: true,
+        });
+
+        return {status: ImportRemoteKeyStatus.imported};
+      } catch (e) {
+        return {status: ImportRemoteKeyStatus.error, message: (e as Error).message};
       }
-    );
+    });
 
     return {
       data: results,
@@ -323,34 +333,30 @@ export class KeymanagerApi implements Api {
    * DELETE should never return a 404 response, even if all pubkeys from request.pubkeys have no existing keystores.
    */
   async deleteRemoteKeys(pubkeys: PubkeyHex[]): ReturnType<Api["deleteRemoteKeys"]> {
-    const results = pubkeys.map(
-      (pubkeyHex): ResponseStatus<DeleteRemoteKeyStatus> => {
-        try {
-          if (!isValidatePubkeyHex(pubkeyHex)) {
-            throw Error(`Invalid pubkey ${pubkeyHex}`);
-          }
-
-          const signer = this.validator.validatorStore.getSigner(pubkeyHex);
-
-          // Remove key from live local signer
-          const deletedFromMemory =
-            signer && signer?.type === SignerType.Remote
-              ? this.validator.validatorStore.removeSigner(pubkeyHex)
-              : false;
-
-          // TODO: Remove duties
-
-          const deletedFromDisk = this.persistedKeysBackend.deleteRemoteKey(pubkeyHex);
-
-          return {
-            status:
-              deletedFromMemory || deletedFromDisk ? DeleteRemoteKeyStatus.deleted : DeleteRemoteKeyStatus.not_found,
-          };
-        } catch (e) {
-          return {status: DeleteRemoteKeyStatus.error, message: (e as Error).message};
+    const results = pubkeys.map((pubkeyHex): ResponseStatus<DeleteRemoteKeyStatus> => {
+      try {
+        if (!isValidatePubkeyHex(pubkeyHex)) {
+          throw Error(`Invalid pubkey ${pubkeyHex}`);
         }
+
+        const signer = this.validator.validatorStore.getSigner(pubkeyHex);
+
+        // Remove key from live local signer
+        const deletedFromMemory =
+          signer && signer?.type === SignerType.Remote ? this.validator.validatorStore.removeSigner(pubkeyHex) : false;
+
+        // TODO: Remove duties
+
+        const deletedFromDisk = this.persistedKeysBackend.deleteRemoteKey(pubkeyHex);
+
+        return {
+          status:
+            deletedFromMemory || deletedFromDisk ? DeleteRemoteKeyStatus.deleted : DeleteRemoteKeyStatus.not_found,
+        };
+      } catch (e) {
+        return {status: DeleteRemoteKeyStatus.error, message: (e as Error).message};
       }
-    );
+    });
 
     return {
       data: results,

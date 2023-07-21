@@ -9,8 +9,11 @@ export type ProposerPreparationData = routes.validator.ProposerPreparationData;
 
 export class BeaconProposerCache {
   private readonly feeRecipientByValidatorIndex: MapDef<string, {epoch: Epoch; feeRecipient: string}>;
-  constructor(opts: {suggestedFeeRecipient: string}, private readonly metrics?: Metrics | null) {
-    this.feeRecipientByValidatorIndex = new MapDef<string, {epoch: Epoch; feeRecipient: string}>(() => ({
+  constructor(
+    opts: {suggestedFeeRecipient: string},
+    private readonly metrics?: Metrics | null
+  ) {
+    this.feeRecipientByValidatorIndex = new MapDef(() => ({
       epoch: 0,
       feeRecipient: opts.suggestedFeeRecipient,
     }));

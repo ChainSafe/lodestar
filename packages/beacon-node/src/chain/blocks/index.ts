@@ -1,8 +1,8 @@
 import {allForks} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
-import {JobItemQueue} from "../../util/queue/index.js";
+import {toHex, isErrorAborted} from "@lodestar/utils";
+import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {BlockError, BlockErrorCode} from "../errors/index.js";
+import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import type {BeaconChain} from "../chain.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
@@ -10,6 +10,7 @@ import {importBlock} from "./importBlock.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {BlockInput, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
+import {removeEagerlyPersistedBlockInputs} from "./writeBlockInputToDb.js";
 export {ImportBlockOpts, AttestationImportOpt} from "./types.js";
 
 const QUEUE_MAX_LENGTH = 256;
@@ -57,7 +58,11 @@ export async function processBlocks(
   }
 
   try {
-    const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksSanityChecks(this, blocks, opts);
+    const {relevantBlocks, dataAvailabilityStatuses, parentSlots, parentBlock} = verifyBlocksSanityChecks(
+      this,
+      blocks,
+      opts
+    );
 
     // No relevant blocks, skip verifyBlocksInEpoch()
     if (relevantBlocks.length === 0 || parentBlock === null) {
@@ -71,6 +76,7 @@ export async function processBlocks(
       this,
       parentBlock,
       relevantBlocks,
+      dataAvailabilityStatuses,
       opts
     );
 
@@ -90,6 +96,9 @@ export async function processBlocks(
         postState: postStates[i],
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
+        // Currently dataAvailableStatus is not used upstream but that can change if we
+        // start supporting optimistic syncing/processing
+        dataAvailableStatus: dataAvailabilityStatuses[i],
         proposerBalanceDelta: proposerBalanceDeltas[i],
         // TODO: Make this param mandatory and capture in gossip
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
@@ -102,15 +111,19 @@ export async function processBlocks(
       await importBlock.call(this, fullyVerifiedBlock, opts);
     }
   } catch (e) {
+    if (isErrorAborted(e) || isQueueErrorAborted(e) || isBlockErrorAborted(e)) {
+      return; // Ignore
+    }
+
     // above functions should only throw BlockError
     const err = getBlockError(e, blocks[0].block);
 
     // TODO: De-duplicate with logic above
     // ChainEvent.errorBlock
     if (!(err instanceof BlockError)) {
-      this.logger.error("Non BlockError received", {}, err);
+      this.logger.debug("Non BlockError received", {}, err);
     } else if (!opts.disableOnBlockError) {
-      this.logger.error("Block error", {slot: err.signedBlock.message.slot}, err);
+      this.logger.debug("Block error", {slot: err.signedBlock.message.slot}, err);
 
       if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
         const {signedBlock} = err;
@@ -133,6 +146,24 @@ export async function processBlocks(
       }
     }
 
+    // Clean db if we don't have blocks in forkchoice but already persisted them to db
+    //
+    // NOTE: this function is awaited to ensure that DB size remains constant, otherwise an attacker may bloat the
+    // disk with big malicious payloads. Our sequential block importer will wait for this promise before importing
+    // another block. The removal call error is not propagated since that would halt the chain.
+    //
+    // LOG: Because the error is not propagated and there's a risk of db bloat, the error is logged at warn level
+    // to alert the user of potential db bloat. This error _should_ never happen user must act and report to us
+    if (opts.eagerPersistBlock) {
+      await removeEagerlyPersistedBlockInputs.call(this, blocks).catch((e) => {
+        this.logger.warn(
+          "Error pruning eagerly imported block inputs, DB may grow in size if this error happens frequently",
+          {slot: blocks.map((block) => block.block.message.slot).join(",")},
+          e
+        );
+      });
+    }
+
     throw err;
   }
 }
@@ -141,7 +172,7 @@ function getBlockError(e: unknown, block: allForks.SignedBeaconBlock): BlockErro
   if (e instanceof BlockError) {
     return e;
   } else if (e instanceof Error) {
-    const blockError = new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e as Error});
+    const blockError = new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e});
     blockError.stack = e.stack;
     return blockError;
   } else {

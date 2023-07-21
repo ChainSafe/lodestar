@@ -14,6 +14,32 @@ export class MapDef<K, V> extends Map<K, V> {
 }
 
 /**
+ * Extends MapDef but ensures that there always a max of `maxKeys` keys
+ */
+export class MapDefMax<K, V> {
+  private readonly map = new Map<K, V>();
+
+  constructor(
+    private readonly getDefault: () => V,
+    private readonly maxKeys: number
+  ) {}
+
+  getOrDefault(key: K): V {
+    let value = this.map.get(key);
+    if (value === undefined) {
+      value = this.getDefault();
+      this.map.set(key, value);
+      pruneSetToMax(this.map, this.maxKeys);
+    }
+    return value;
+  }
+
+  get(key: K): V | undefined {
+    return this.map.get(key);
+  }
+}
+
+/**
  * 2 dimensions Es6 Map
  */
 export class Map2d<K1, K2, V> {

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import {ssz} from "@lodestar/types";
 import {Type} from "@chainsafe/ssz";
+import {ssz} from "@lodestar/types";
 import {ACTIVE_PRESET, ForkName, ForkLightClient} from "@lodestar/params";
 import {replaceUintTypeWithUintBigintType} from "../utils/replaceUintTypeWithUintBigintType.js";
 import {parseSszStaticTestcase} from "../utils/sszTestCaseParser.js";
@@ -26,43 +26,40 @@ type Types = Record<string, Type<any>>;
 // tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
 //
 
-export const sszStatic = (skippedTypes?: string[]) => (
-  fork: ForkName,
-  typeName: string,
-  testSuite: string,
-  testSuiteDirpath: string
-): void => {
-  // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-  if (skippedTypes?.includes(typeName)) {
-    return;
-  }
-
-  /* eslint-disable @typescript-eslint/strict-boolean-expressions */
-  const sszType =
-    // Since lightclient types are not updated/declared at all forks, this allForksLightClient
-    // will help us get the right type for lightclient objects
-    ((ssz.allForksLightClient[fork as ForkLightClient] || {}) as Types)[typeName] ||
-    (ssz[fork] as Types)[typeName] ||
-    (ssz.capella as Types)[typeName] ||
-    (ssz.bellatrix as Types)[typeName] ||
-    (ssz.altair as Types)[typeName] ||
-    (ssz.phase0 as Types)[typeName];
-  if (!sszType) {
-    throw Error(`No type for ${typeName}`);
-  }
-
-  const sszTypeNoUint = replaceUintTypeWithUintBigintType(sszType);
-
-  for (const testCase of fs.readdirSync(testSuiteDirpath)) {
+export const sszStatic =
+  (skippedTypes?: string[]) =>
+  (fork: ForkName, typeName: string, testSuite: string, testSuiteDirpath: string): void => {
     // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
-    it(testCase, function () {
-      // Mainnet must deal with big full states and hash each one multiple times
-      if (ACTIVE_PRESET === "mainnet") {
-        this.timeout(30 * 1000);
-      }
+    if (skippedTypes?.includes(typeName)) {
+      return;
+    }
 
-      const testData = parseSszStaticTestcase(path.join(testSuiteDirpath, testCase));
-      runValidSszTest(sszTypeNoUint, testData);
-    });
-  }
-};
+    /* eslint-disable @typescript-eslint/strict-boolean-expressions */
+    const sszType =
+      // Since lightclient types are not updated/declared at all forks, this allForksLightClient
+      // will help us get the right type for lightclient objects
+      ((ssz.allForksLightClient[fork as ForkLightClient] || {}) as Types)[typeName] ||
+      (ssz[fork] as Types)[typeName] ||
+      (ssz.capella as Types)[typeName] ||
+      (ssz.bellatrix as Types)[typeName] ||
+      (ssz.altair as Types)[typeName] ||
+      (ssz.phase0 as Types)[typeName];
+    if (!sszType) {
+      throw Error(`No type for ${typeName}`);
+    }
+
+    const sszTypeNoUint = replaceUintTypeWithUintBigintType(sszType);
+
+    for (const testCase of fs.readdirSync(testSuiteDirpath)) {
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+      it(testCase, function () {
+        // Mainnet must deal with big full states and hash each one multiple times
+        if (ACTIVE_PRESET === "mainnet") {
+          this.timeout(30 * 1000);
+        }
+
+        const testData = parseSszStaticTestcase(path.join(testSuiteDirpath, testCase));
+        runValidSszTest(sszTypeNoUint, testData);
+      });
+    }
+  };

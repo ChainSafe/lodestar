@@ -1,19 +1,16 @@
-import {EventEmitter} from "events";
 import {Libp2p} from "libp2p";
 import {Message, TopicValidatorResult} from "@libp2p/interface-pubsub";
-import StrictEventEmitter from "strict-event-emitter-types";
 import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
 import {ForkName} from "@lodestar/params";
-import {allForks, altair, capella, deneb, phase0} from "@lodestar/types";
+import {allForks, altair, capella, deneb, phase0, Slot} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
-import {NetworkEvent} from "../events.js";
 import {JobItemQueue} from "../../util/queue/index.js";
 
 export enum GossipType {
   beacon_block = "beacon_block",
-  beacon_block_and_blobs_sidecar = "beacon_block_and_blobs_sidecar",
+  blob_sidecar = "blob_sidecar",
   beacon_aggregate_and_proof = "beacon_aggregate_and_proof",
   beacon_attestation = "beacon_attestation",
   voluntary_exit = "voluntary_exit",
@@ -41,7 +38,7 @@ export interface IGossipTopic {
 
 export type GossipTopicTypeMap = {
   [GossipType.beacon_block]: {type: GossipType.beacon_block};
-  [GossipType.beacon_block_and_blobs_sidecar]: {type: GossipType.beacon_block_and_blobs_sidecar};
+  [GossipType.blob_sidecar]: {type: GossipType.blob_sidecar; index: number};
   [GossipType.beacon_aggregate_and_proof]: {type: GossipType.beacon_aggregate_and_proof};
   [GossipType.beacon_attestation]: {type: GossipType.beacon_attestation; subnet: number};
   [GossipType.voluntary_exit]: {type: GossipType.voluntary_exit};
@@ -65,9 +62,13 @@ export type GossipTopicMap = {
  */
 export type GossipTopic = GossipTopicMap[keyof GossipTopicMap];
 
+export type SSZTypeOfGossipTopic<T extends GossipTopic> = T extends {type: infer K extends GossipType}
+  ? GossipTypeMap[K]
+  : never;
+
 export type GossipTypeMap = {
   [GossipType.beacon_block]: allForks.SignedBeaconBlock;
-  [GossipType.beacon_block_and_blobs_sidecar]: deneb.SignedBeaconBlockAndBlobsSidecar;
+  [GossipType.blob_sidecar]: deneb.SignedBlobSidecar;
   [GossipType.beacon_aggregate_and_proof]: phase0.SignedAggregateAndProof;
   [GossipType.beacon_attestation]: phase0.Attestation;
   [GossipType.voluntary_exit]: phase0.SignedVoluntaryExit;
@@ -82,9 +83,7 @@ export type GossipTypeMap = {
 
 export type GossipFnByType = {
   [GossipType.beacon_block]: (signedBlock: allForks.SignedBeaconBlock) => Promise<void> | void;
-  [GossipType.beacon_block_and_blobs_sidecar]: (
-    signedBeaconBlockAndBlobsSidecar: deneb.SignedBeaconBlockAndBlobsSidecar
-  ) => Promise<void> | void;
+  [GossipType.blob_sidecar]: (signedBlobSidecar: deneb.SignedBlobSidecar) => Promise<void> | void;
   [GossipType.beacon_aggregate_and_proof]: (aggregateAndProof: phase0.SignedAggregateAndProof) => Promise<void> | void;
   [GossipType.beacon_attestation]: (attestation: phase0.Attestation) => Promise<void> | void;
   [GossipType.voluntary_exit]: (voluntaryExit: phase0.SignedVoluntaryExit) => Promise<void> | void;
@@ -107,34 +106,11 @@ export type GossipFnByType = {
 
 export type GossipFn = GossipFnByType[keyof GossipFnByType];
 
-export type GossipEvents = {
-  [topicStr: string]: GossipFn;
-  [NetworkEvent.gossipHeartbeat]: () => void;
-  [NetworkEvent.gossipStart]: () => void;
-  [NetworkEvent.gossipStop]: () => void;
-};
-export type GossipEventEmitter = StrictEventEmitter<EventEmitter, GossipEvents>;
-
 export type GossipModules = {
   config: BeaconConfig;
   libp2p: Libp2p;
   logger: Logger;
   chain: IBeaconChain;
-};
-
-export type GossipBeaconNode = {
-  publishBeaconBlock(signedBlock: allForks.SignedBeaconBlock): Promise<void>;
-  publishSignedBeaconBlockAndBlobsSidecar(item: deneb.SignedBeaconBlockAndBlobsSidecar): Promise<void>;
-  publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number>;
-  publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number>;
-  publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void>;
-  publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<void>;
-  publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void>;
-  publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<void>;
-  publishSyncCommitteeSignature(signature: altair.SyncCommitteeMessage, subnet: number): Promise<void>;
-  publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<void>;
-  publishLightClientFinalityUpdate(lightClientFinalityUpdate: allForks.LightClientFinalityUpdate): Promise<void>;
-  publishLightClientOptimisticUpdate(lightClientOptimisitcUpdate: allForks.LightClientOptimisticUpdate): Promise<void>;
 };
 
 /**
@@ -152,7 +128,8 @@ export type GossipValidatorFn = (
   topic: GossipTopic,
   msg: Message,
   propagationSource: PeerIdStr,
-  seenTimestampSec: number
+  seenTimestampSec: number,
+  msgSlot: Slot | null
 ) => Promise<TopicValidatorResult>;
 
 export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
@@ -161,15 +138,21 @@ export type GossipJobQueues = {
   [K in GossipType]: JobItemQueue<Parameters<GossipValidatorFn>, ResolvedType<GossipValidatorFn>>;
 };
 
+export type GossipData = {
+  serializedData: Uint8Array;
+  msgSlot?: Slot | null;
+};
+
 export type GossipHandlerFn = (
-  object: GossipTypeMap[GossipType],
+  gossipData: GossipData,
   topic: GossipTopicMap[GossipType],
   peerIdStr: string,
   seenTimestampSec: number
 ) => Promise<void>;
+
 export type GossipHandlers = {
   [K in GossipType]: (
-    object: GossipTypeMap[K],
+    gossipData: GossipData,
     topic: GossipTopicMap[K],
     peerIdStr: string,
     seenTimestampSec: number

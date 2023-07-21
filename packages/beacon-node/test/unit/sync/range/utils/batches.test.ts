@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {config} from "@lodestar/config/default";
 import {Epoch, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {getValidPeerId} from "../../../../utils/peer.js";
+import {validPeerIdStr} from "../../../../utils/peer.js";
 import {Batch, BatchStatus} from "../../../../../src/sync/range/batch.js";
 import {
   validateBatchesStatus,
@@ -12,7 +12,7 @@ import {
 } from "../../../../../src/sync/range/utils/batches.js";
 
 describe("sync / range / batches", () => {
-  const peer = getValidPeerId();
+  const peer = validPeerIdStr;
 
   describe("validateBatchesStatus", () => {
     const testCases: {

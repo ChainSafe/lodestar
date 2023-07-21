@@ -6,7 +6,7 @@ import {BEACON_NODE_STATS_SCHEMA, ClientStatsSchema, SYSTEM_STATS_SCHEMA, VALIDA
 
 /* eslint-disable no-console */
 
-type ReceivedData = Record<string, unknown>;
+type ReceivedData = Record<string, unknown> & {process: ProcessType};
 
 export const remoteServiceRoutes = {
   success: "/success",

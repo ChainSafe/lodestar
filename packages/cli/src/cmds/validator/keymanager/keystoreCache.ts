@@ -2,9 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
+import {PointFormat} from "@chainsafe/bls/types";
 import {SignerLocal, SignerType} from "@lodestar/validator";
 import {fromHex, toHex} from "@lodestar/utils";
-import {PointFormat} from "@chainsafe/bls/types";
+import {writeFile600Perm} from "../../../util/file.js";
 import {lockFilepath, unlockFilepath} from "../../../util/lockfile.js";
 import {LocalKeystoreDefinition} from "./interface.js";
 
@@ -79,7 +80,7 @@ export async function writeKeystoreCache(
   const keystore = await Keystore.create(password, secretKeyConcatenatedBytes, publicConcatenatedBytes, cacheFilepath);
   if (!fs.existsSync(path.dirname(cacheFilepath))) fs.mkdirSync(path.dirname(cacheFilepath), {recursive: true});
   lockFilepath(cacheFilepath);
-  fs.writeFileSync(cacheFilepath, keystore.stringify());
+  writeFile600Perm(cacheFilepath, keystore.stringify());
   unlockFilepath(cacheFilepath);
 }
 

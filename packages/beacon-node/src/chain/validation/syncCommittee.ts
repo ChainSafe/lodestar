@@ -1,3 +1,4 @@
+import {toHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {SYNC_COMMITTEE_SUBNET_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {altair} from "@lodestar/types";
@@ -15,7 +16,8 @@ export async function validateGossipSyncCommittee(
   syncCommittee: altair.SyncCommitteeMessage,
   subnet: number
 ): Promise<{indexInSubcommittee: IndexInSubcommittee}> {
-  const {slot, validatorIndex} = syncCommittee;
+  const {slot, validatorIndex, beaconBlockRoot} = syncCommittee;
+  const messageRoot = toHexString(beaconBlockRoot);
 
   const headState = chain.getHeadState();
   const indexInSubcommittee = validateGossipSyncCommitteeExceptSig(chain, headState, subnet, syncCommittee);
@@ -30,10 +32,30 @@ export async function validateGossipSyncCommittee(
 
   // [IGNORE] There has been no other valid sync committee signature for the declared slot for the validator referenced
   // by sync_committee_signature.validator_index.
-  if (chain.seenSyncCommitteeMessages.isKnown(slot, subnet, validatorIndex)) {
-    throw new SyncCommitteeError(GossipAction.IGNORE, {
-      code: SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN,
-    });
+  const prevRoot = chain.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex);
+  if (prevRoot) {
+    let shouldIgnore = false;
+    if (prevRoot === messageRoot) {
+      shouldIgnore = true;
+    } else {
+      const headRoot = chain.forkChoice.getHeadRoot();
+      chain.metrics?.gossipSyncCommittee.equivocationCount.inc();
+      if (messageRoot === headRoot) {
+        chain.metrics?.gossipSyncCommittee.equivocationToHeadCount.inc();
+      } else {
+        shouldIgnore = true;
+      }
+    }
+
+    if (shouldIgnore) {
+      throw new SyncCommitteeError(GossipAction.IGNORE, {
+        code: SyncCommitteeErrorCode.SYNC_COMMITTEE_MESSAGE_KNOWN,
+        validatorIndex,
+        slot,
+        prevRoot,
+        newRoot: messageRoot,
+      });
+    }
   }
 
   // [REJECT] The subnet_id is valid for the given validator, i.e. subnet_id in compute_subnets_for_sync_committee(state, sync_committee_signature.validator_index).
@@ -44,21 +66,31 @@ export async function validateGossipSyncCommittee(
   await validateSyncCommitteeSigOnly(chain, headState, syncCommittee);
 
   // Register this valid item as seen
-  chain.seenSyncCommitteeMessages.add(slot, subnet, validatorIndex);
+  chain.seenSyncCommitteeMessages.add(slot, subnet, validatorIndex, messageRoot);
 
   return {indexInSubcommittee};
+}
+
+export async function validateApiSyncCommittee(
+  chain: IBeaconChain,
+  headState: CachedBeaconStateAllForks,
+  syncCommittee: altair.SyncCommitteeMessage
+): Promise<void> {
+  const prioritizeBls = true;
+  return validateSyncCommitteeSigOnly(chain, headState, syncCommittee, prioritizeBls);
 }
 
 /**
  * Abstracted so it can be re-used in API validation.
  */
-export async function validateSyncCommitteeSigOnly(
+async function validateSyncCommitteeSigOnly(
   chain: IBeaconChain,
   headState: CachedBeaconStateAllForks,
-  syncCommittee: altair.SyncCommitteeMessage
+  syncCommittee: altair.SyncCommitteeMessage,
+  prioritizeBls = false
 ): Promise<void> {
   const signatureSet = getSyncCommitteeSignatureSet(headState, syncCommittee);
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
     });

@@ -12,6 +12,16 @@ import {encodeJwtToken} from "./jwt.js";
 const maxStringLengthToPrint = 500;
 const REQUEST_TIMEOUT = 30 * 1000;
 
+// As we are using `cross-fetch` which does not support for types for errors
+// We can't use `node-fetch` for browser compatibility
+export type FetchError = {
+  errno: string;
+  code: string;
+};
+
+export const isFetchError = (error: unknown): error is FetchError =>
+  (error as FetchError) !== undefined && "code" in (error as FetchError) && "errno" in (error as FetchError);
+
 interface RpcResponse<R> extends RpcResponseError {
   result?: R;
 }
@@ -37,6 +47,7 @@ export type ReqOpts = {
 
 export type JsonRpcHttpClientMetrics = {
   requestTime: IHistogram<"routeId">;
+  streamTime: IHistogram<"routeId">;
   requestErrors: IGauge<"routeId">;
   requestUsedFallbackUrl: IGauge<"routeId">;
   activeRequests: IGauge<"routeId">;
@@ -230,14 +241,18 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         signal: controller.signal,
       });
 
-      const body = await res.text();
+      const streamTimer = this.metrics?.streamTime.startTimer({routeId});
+      const bodyText = await res.text();
       if (!res.ok) {
         // Infura errors:
         // - No project ID: Forbidden: {"jsonrpc":"2.0","id":0,"error":{"code":-32600,"message":"project ID is required","data":{"reason":"project ID not provided","see":"https://infura.io/dashboard"}}}
-        throw new HttpRpcError(res.status, `${res.statusText}: ${body.slice(0, maxStringLengthToPrint)}`);
+        throw new HttpRpcError(res.status, `${res.statusText}: ${bodyText.slice(0, maxStringLengthToPrint)}`);
       }
 
-      return parseJson(body);
+      const bodyJson = parseJson<R>(bodyText);
+      streamTimer?.();
+
+      return bodyJson;
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
 
@@ -312,7 +327,10 @@ export class ErrorJsonRpcResponse extends Error {
 
 /** JSON RPC endpoint returned status code != 200 */
 export class HttpRpcError extends Error {
-  constructor(readonly status: number, message: string) {
+  constructor(
+    readonly status: number,
+    message: string
+  ) {
     super(message);
   }
 }

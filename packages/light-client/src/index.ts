@@ -1,10 +1,10 @@
 import mitt from "mitt";
 import {init as initBls} from "@chainsafe/bls/switchable";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@lodestar/params";
 import {phase0, RootHex, Slot, SyncPeriod, allForks} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {isErrorAborted, sleep} from "@lodestar/utils";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
 import {isNode} from "./utils/utils.js";
 import {chunkifyInclusiveRange} from "./utils/chunkify.js";
@@ -19,6 +19,7 @@ import {LightClientTransport} from "./transport/interface.js";
 // Re-export types
 export {LightclientEvent} from "./events.js";
 export {SyncCommitteeFast} from "./types.js";
+export {upgradeLightClientFinalityUpdate, upgradeLightClientOptimisticUpdate} from "./spec/utils.js";
 
 export type GenesisData = {
   genesisTime: number;
@@ -48,12 +49,14 @@ const ON_ERROR_RETRY_MS = 1000;
 // TODO: Customize with option
 const ALLOW_FORCED_UPDATES = true;
 
-enum RunStatusCode {
+export enum RunStatusCode {
+  uninitialized,
   started,
   syncing,
   stopped,
 }
 type RunStatus =
+  | {code: RunStatusCode.uninitialized}
   | {code: RunStatusCode.started; controller: AbortController}
   | {code: RunStatusCode.syncing}
   | {code: RunStatusCode.stopped};
@@ -103,7 +106,7 @@ export class Lightclient {
 
   private readonly lightclientSpec: LightclientSpec;
 
-  private status: RunStatus = {code: RunStatusCode.stopped};
+  private runStatus: RunStatus = {code: RunStatusCode.stopped};
 
   constructor({config, logger, genesisData, bootstrap, transport}: LightclientInitArgs) {
     this.genesisTime = genesisData.genesisTime;
@@ -115,22 +118,27 @@ export class Lightclient {
     this.config = createBeaconConfig(config, this.genesisValidatorsRoot);
     this.logger = logger ?? getLcLoggerConsole();
     this.transport = transport;
+    this.runStatus = {code: RunStatusCode.uninitialized};
 
     this.lightclientSpec = new LightclientSpec(
       this.config,
       {
         allowForcedUpdates: ALLOW_FORCED_UPDATES,
         onSetFinalizedHeader: (header) => {
-          this.emitter.emit(LightclientEvent.lightClientFinalityUpdate, header);
+          this.emitter.emit(LightclientEvent.lightClientFinalityHeader, header);
           this.logger.debug("Updated state.finalizedHeader", {slot: header.beacon.slot});
         },
         onSetOptimisticHeader: (header) => {
-          this.emitter.emit(LightclientEvent.lightClientOptimisticUpdate, header);
+          this.emitter.emit(LightclientEvent.lightClientOptimisticHeader, header);
           this.logger.debug("Updated state.optimisticHeader", {slot: header.beacon.slot});
         },
       },
       bootstrap
     );
+  }
+
+  get status(): RunStatusCode {
+    return this.runStatus.code;
   }
 
   // Embed lightweight clock. The epoch cycles are handled with `this.runLoop()`
@@ -154,7 +162,7 @@ export class Lightclient {
     // Fetch bootstrap state with proof at the trusted block root
     const {data: bootstrap} = await transport.getBootstrap(toHexString(checkpointRoot));
 
-    validateLightClientBootstrap(checkpointRoot, bootstrap);
+    validateLightClientBootstrap(args.config, checkpointRoot, bootstrap);
 
     return new Lightclient({...args, bootstrap});
   }
@@ -166,14 +174,18 @@ export class Lightclient {
   }
 
   stop(): void {
-    if (this.status.code !== RunStatusCode.started) return;
+    if (this.runStatus.code !== RunStatusCode.started) return;
 
-    this.status.controller.abort();
-    this.status = {code: RunStatusCode.stopped};
+    this.runStatus.controller.abort();
+    this.updateRunStatus({code: RunStatusCode.stopped});
   }
 
   getHead(): allForks.LightClientHeader {
     return this.lightclientSpec.store.optimisticHeader;
+  }
+
+  getFinalized(): allForks.LightClientHeader {
+    return this.lightclientSpec.store.finalizedHeader;
   }
 
   async sync(fromPeriod: SyncPeriod, toPeriod: SyncPeriod): Promise<void> {
@@ -211,12 +223,12 @@ export class Lightclient {
       // Check if we have a sync committee for the current clock period
       if (!this.lightclientSpec.store.syncCommittees.has(currentPeriod)) {
         // Stop head tracking
-        if (this.status.code === RunStatusCode.started) {
-          this.status.controller.abort();
+        if (this.runStatus.code === RunStatusCode.started) {
+          this.runStatus.controller.abort();
         }
 
         // Go into sync mode
-        this.status = {code: RunStatusCode.syncing};
+        this.updateRunStatus({code: RunStatusCode.syncing});
         const headPeriod = computeSyncPeriodAtSlot(this.getHead().beacon.slot);
         this.logger.debug("Syncing", {lastPeriod: headPeriod, currentPeriod});
 
@@ -242,9 +254,9 @@ export class Lightclient {
       }
 
       // After successfully syncing, track head if not already
-      if (this.status.code !== RunStatusCode.started) {
+      if (this.runStatus.code !== RunStatusCode.started) {
         const controller = new AbortController();
-        this.status = {code: RunStatusCode.started, controller};
+        this.updateRunStatus({code: RunStatusCode.started, controller});
         this.logger.debug("Started tracking the head");
 
         this.transport.onOptimisticUpdate(this.processOptimisticUpdate.bind(this));
@@ -267,11 +279,11 @@ export class Lightclient {
       }
 
       // Wait for the next epoch
-      if (this.status.code !== RunStatusCode.started) {
+      if (this.runStatus.code !== RunStatusCode.started) {
         return;
       } else {
         try {
-          await sleep(timeUntilNextEpoch(this.config, this.genesisTime), this.status.controller.signal);
+          await sleep(timeUntilNextEpoch(this.config, this.genesisTime), this.runStatus.controller.signal);
         } catch (e) {
           if (isErrorAborted(e)) {
             return;
@@ -304,5 +316,10 @@ export class Lightclient {
 
   private currentSlotWithTolerance(): Slot {
     return slotWithFutureTolerance(this.config, this.genesisTime, MAX_CLOCK_DISPARITY_SEC);
+  }
+
+  private updateRunStatus(runStatus: RunStatus): void {
+    this.runStatus = runStatus;
+    this.emitter.emit(LightclientEvent.statusChange, this.runStatus.code);
   }
 }

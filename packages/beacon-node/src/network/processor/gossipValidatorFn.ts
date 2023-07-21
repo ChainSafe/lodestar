@@ -2,7 +2,6 @@ import {TopicValidatorResult} from "@libp2p/interface-pubsub";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
-import {getGossipSSZType} from "../gossip/topic.js";
 import {GossipValidatorFn, GossipHandlers, GossipHandlerFn} from "../gossip/interface.js";
 import {GossipActionError, GossipAction} from "../../chain/errors/index.js";
 
@@ -29,24 +28,18 @@ export type ValidatorFnModules = {
 export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: ValidatorFnModules): GossipValidatorFn {
   const {logger, metrics} = modules;
 
-  return async function gossipValidatorFn(topic, msg, propagationSource, seenTimestampSec) {
+  return async function gossipValidatorFn(topic, msg, propagationSource, seenTimestampSec, msgSlot) {
     const type = topic.type;
 
-    // Define in scope above try {} to be used in catch {} if object was parsed
-    let gossipObject;
     try {
-      // Deserialize object from bytes ONLY after being picked up from the validation queue
-      try {
-        const sszType = getGossipSSZType(topic);
-        gossipObject = sszType.deserialize(msg.data);
-      } catch (e) {
-        // TODO: Log the error or do something better with it
-        return TopicValidatorResult.Reject;
-      }
+      await (gossipHandlers[type] as GossipHandlerFn)(
+        {serializedData: msg.data, msgSlot},
+        topic,
+        propagationSource,
+        seenTimestampSec
+      );
 
-      await (gossipHandlers[topic.type] as GossipHandlerFn)(gossipObject, topic, propagationSource, seenTimestampSec);
-
-      metrics?.gossipValidationAccept.inc({topic: type});
+      metrics?.networkProcessor.gossipValidationAccept.inc({topic: type});
 
       return TopicValidatorResult.Accept;
     } catch (e) {
@@ -58,15 +51,19 @@ export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: Va
 
       // Metrics on specific error reason
       // Note: LodestarError.code are bounded pre-declared error messages, not from arbitrary error.message
-      metrics?.gossipValidationError.inc({topic: type, error: (e as GossipActionError<{code: string}>).type.code});
+      metrics?.networkProcessor.gossipValidationError.inc({
+        topic: type,
+        error: (e as GossipActionError<{code: string}>).type.code,
+      });
 
       switch (e.action) {
         case GossipAction.IGNORE:
-          metrics?.gossipValidationIgnore.inc({topic: type});
+          metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
           return TopicValidatorResult.Ignore;
 
         case GossipAction.REJECT:
-          metrics?.gossipValidationReject.inc({topic: type});
+          metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
+          logger.debug(`Gossip validation ${type} rejected`, {}, e);
           return TopicValidatorResult.Reject;
       }
     }

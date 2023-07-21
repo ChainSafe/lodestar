@@ -1,7 +1,6 @@
 import {expect} from "chai";
-import rimraf from "rimraf";
+import {rimraf} from "rimraf";
 import {LevelDbController} from "@lodestar/db";
-import {config} from "@lodestar/config/default";
 import {
   SlashingProtection,
   SlashingProtectionBlock,
@@ -13,21 +12,21 @@ import {testLogger} from "../utils/logger.js";
 
 describe("slashing-protection custom tests", () => {
   const dbLocation = "./.__testdb_2";
-  const controller = new LevelDbController({name: dbLocation}, {logger: testLogger()});
   const pubkey = Buffer.alloc(96, 1);
+  let db: LevelDbController;
 
   before(async () => {
-    await controller.start();
+    db = await LevelDbController.create({name: dbLocation}, {logger: testLogger()});
   });
 
   after(async () => {
-    await controller.clear();
-    await controller.stop();
+    await db.clear();
+    await db.close();
     rimraf.sync(dbLocation);
   });
 
   it("Should reject same block", async () => {
-    const slashingProtection = new SlashingProtection({config, controller});
+    const slashingProtection = new SlashingProtection(db);
     const block1: SlashingProtectionBlock = {slot: 10001, signingRoot: Buffer.alloc(32, 1)};
     const block2: SlashingProtectionBlock = {slot: block1.slot, signingRoot: Buffer.alloc(32, 2)};
 
@@ -36,7 +35,7 @@ describe("slashing-protection custom tests", () => {
   });
 
   it("Should reject same attestation", async () => {
-    const slashingProtection = new SlashingProtection({config, controller});
+    const slashingProtection = new SlashingProtection(db);
     const attestation1: SlashingProtectionAttestation = {
       targetEpoch: 1001,
       sourceEpoch: 999,

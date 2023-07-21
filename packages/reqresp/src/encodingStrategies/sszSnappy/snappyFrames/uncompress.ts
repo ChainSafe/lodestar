@@ -1,7 +1,6 @@
 import {uncompress} from "snappyjs";
 import {Uint8ArrayList} from "uint8arraylist";
-
-const IDENTIFIER = Buffer.from([0x73, 0x4e, 0x61, 0x50, 0x70, 0x59]);
+import {ChunkType, IDENTIFIER} from "./common.js";
 
 export class SnappyFramesUncompress {
   private buffer = new Uint8ArrayList();
@@ -69,13 +68,6 @@ export class SnappyFramesUncompress {
 type UncompressState = {
   foundIdentifier: boolean;
 };
-
-enum ChunkType {
-  IDENTIFIER = 0xff,
-  COMPRESSED = 0x00,
-  UNCOMPRESSED = 0x01,
-  PADDING = 0xfe,
-}
 
 function getFrameSize(buffer: Uint8ArrayList, offset: number): number {
   return buffer.get(offset) + (buffer.get(offset + 1) << 8) + (buffer.get(offset + 2) << 16);

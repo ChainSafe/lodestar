@@ -1,4 +1,5 @@
-import {DatabaseService, DatabaseApiOptions} from "@lodestar/db";
+import {Db, LevelDbControllerMetrics} from "@lodestar/db";
+import {ChainForkConfig} from "@lodestar/config";
 import {IBeaconDb} from "./interface.js";
 import {
   AttesterSlashingRepository,
@@ -15,17 +16,29 @@ import {
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
   BackfilledRanges,
+  BlobSidecarsRepository,
+  BlobSidecarsArchiveRepository,
   BlobsSidecarRepository,
   BlobsSidecarArchiveRepository,
   BLSToExecutionChangeRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
 
-export class BeaconDb extends DatabaseService implements IBeaconDb {
+export type BeaconDbModules = {
+  config: ChainForkConfig;
+  db: Db;
+};
+
+export class BeaconDb implements IBeaconDb {
   block: BlockRepository;
-  blobsSidecar: BlobsSidecarRepository;
   blockArchive: BlockArchiveRepository;
+
+  blobSidecars: BlobSidecarsRepository;
+  blobSidecarsArchive: BlobSidecarsArchiveRepository;
+  // TODO DENEB: cleanup post full migration
+  blobsSidecar: BlobsSidecarRepository;
   blobsSidecarArchive: BlobsSidecarArchiveRepository;
+
   stateArchive: StateArchiveRepository;
 
   voluntaryExit: VoluntaryExitRepository;
@@ -47,36 +60,46 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   backfilledRanges: BackfilledRanges;
 
-  constructor(opts: DatabaseApiOptions) {
-    super(opts);
-
+  constructor(
+    config: ChainForkConfig,
+    protected readonly db: Db
+  ) {
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/beacon-node/test/utils/stub/beaconDb.ts' -
-    this.block = new BlockRepository(this.config, this.db);
-    this.blobsSidecar = new BlobsSidecarRepository(this.config, this.db);
-    this.blockArchive = new BlockArchiveRepository(this.config, this.db);
-    this.blobsSidecarArchive = new BlobsSidecarArchiveRepository(this.config, this.db);
-    this.stateArchive = new StateArchiveRepository(this.config, this.db);
-    this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
-    this.blsToExecutionChange = new BLSToExecutionChangeRepository(this.config, this.db);
-    this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db);
-    this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db);
-    this.depositEvent = new DepositEventRepository(this.config, this.db);
-    this.depositDataRoot = new DepositDataRootRepository(this.config, this.db);
-    this.eth1Data = new Eth1DataRepository(this.config, this.db);
-    this.preGenesisState = new PreGenesisState(this.config, this.db);
-    this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(this.config, this.db);
+    this.block = new BlockRepository(config, db);
+    this.blockArchive = new BlockArchiveRepository(config, db);
+
+    this.blobSidecars = new BlobSidecarsRepository(config, db);
+    this.blobSidecarsArchive = new BlobSidecarsArchiveRepository(config, db);
+    // TODO DENEB: cleanup post full migration
+    this.blobsSidecar = new BlobsSidecarRepository(config, db);
+    this.blobsSidecarArchive = new BlobsSidecarArchiveRepository(config, db);
+
+    this.stateArchive = new StateArchiveRepository(config, db);
+    this.voluntaryExit = new VoluntaryExitRepository(config, db);
+    this.blsToExecutionChange = new BLSToExecutionChangeRepository(config, db);
+    this.proposerSlashing = new ProposerSlashingRepository(config, db);
+    this.attesterSlashing = new AttesterSlashingRepository(config, db);
+    this.depositEvent = new DepositEventRepository(config, db);
+    this.depositDataRoot = new DepositDataRootRepository(config, db);
+    this.eth1Data = new Eth1DataRepository(config, db);
+    this.preGenesisState = new PreGenesisState(config, db);
+    this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(config, db);
 
     // lightclient
-    this.bestLightClientUpdate = new BestLightClientUpdateRepository(this.config, this.db);
-    this.checkpointHeader = new CheckpointHeaderRepository(this.config, this.db);
-    this.syncCommittee = new SyncCommitteeRepository(this.config, this.db);
-    this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(this.config, this.db);
+    this.bestLightClientUpdate = new BestLightClientUpdateRepository(config, db);
+    this.checkpointHeader = new CheckpointHeaderRepository(config, db);
+    this.syncCommittee = new SyncCommitteeRepository(config, db);
+    this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(config, db);
 
-    this.backfilledRanges = new BackfilledRanges(this.config, this.db);
+    this.backfilledRanges = new BackfilledRanges(config, db);
   }
 
-  async stop(): Promise<void> {
-    await super.stop();
+  close(): Promise<void> {
+    return this.db.close();
+  }
+
+  setMetrics(metrics: LevelDbControllerMetrics): void {
+    this.db.setMetrics(metrics);
   }
 
   async pruneHotDb(): Promise<void> {

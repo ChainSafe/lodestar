@@ -1,7 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Slot, ssz} from "@lodestar/types";
-import {DatabaseController, Bucket, Repository} from "@lodestar/db";
+import {DatabaseController, Repository} from "@lodestar/db";
 import {bytesToInt} from "@lodestar/utils";
+import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**
  * Slot to slot ranges that ensure that block range is fully backfilled
@@ -14,11 +15,12 @@ import {bytesToInt} from "@lodestar/utils";
  */
 export class BackfilledRanges extends Repository<Slot, Slot> {
   constructor(config: ChainForkConfig, db: DatabaseController<Uint8Array, Uint8Array>) {
-    super(config, db, Bucket.backfilled_ranges, ssz.Slot);
+    const bucket = Bucket.backfilled_ranges;
+    super(config, db, bucket, ssz.Slot, getBucketNameByValue(bucket));
   }
 
   decodeKey(data: Buffer): number {
-    return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
+    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

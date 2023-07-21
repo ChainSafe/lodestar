@@ -6,7 +6,7 @@ import {HistogramExtra} from "../metrics/utils/histogram.js";
 import {defaultMonitoringOptions, MonitoringOptions} from "./options.js";
 import {createClientStats} from "./clientStats.js";
 import {ClientStats} from "./types.js";
-import {collectSystemData} from "./system.js";
+import system from "./system.js";
 
 type MonitoringData = Record<string, string | number | boolean>;
 
@@ -16,13 +16,13 @@ export type RemoteServiceError = {
 };
 
 enum FetchAbortReason {
-  Stop = "stop",
+  Close = "close",
   Timeout = "timeout",
 }
 
 enum Status {
   Started = "started",
-  Stopped = "stopped",
+  Closed = "closed",
 }
 
 export type Client = "beacon" | "validator";
@@ -41,7 +41,7 @@ export class MonitoringService {
   private readonly collectDataMetric: HistogramExtra<string>;
   private readonly sendDataMetric: HistogramExtra<"status">;
 
-  private status = Status.Stopped;
+  private status = Status.Started;
   private initialDelayTimeout?: NodeJS.Timeout;
   private monitoringInterval?: NodeJS.Timeout;
   private fetchAbortController?: AbortController;
@@ -49,7 +49,7 @@ export class MonitoringService {
 
   constructor(
     client: Client,
-    options: MonitoringOptions,
+    options: Required<Pick<MonitoringOptions, "endpoint">> & MonitoringOptions,
     {register, logger}: {register: RegistryMetricCreator; logger: Logger}
   ) {
     this.options = {...defaultMonitoringOptions, ...options};
@@ -71,36 +71,26 @@ export class MonitoringService {
       labelNames: ["status"],
       buckets: [0.3, 0.5, 1, Math.floor(this.options.requestTimeout / 1000)],
     });
-  }
-
-  /**
-   * Start sending client stats based on configured interval
-   */
-  start(): void {
-    if (this.status === Status.Started) return;
-    this.status = Status.Started;
-
-    const {interval, initialDelay} = this.options;
 
     this.initialDelayTimeout = setTimeout(async () => {
       await this.send();
       this.nextMonitoringInterval();
-    }, initialDelay);
+    }, this.options.initialDelay);
 
     this.logger.info("Started monitoring service", {
       // do not log full URL as it may contain secrets
       remote: this.remoteServiceHost,
       machine: this.remoteServiceUrl.searchParams.get("machine"),
-      interval,
+      interval: this.options.interval,
     });
   }
 
   /**
    * Stop sending client stats
    */
-  stop(): void {
-    if (this.status === Status.Stopped) return;
-    this.status = Status.Stopped;
+  close(): void {
+    if (this.status === Status.Closed) return;
+    this.status = Status.Closed;
 
     if (this.initialDelayTimeout) {
       clearTimeout(this.initialDelayTimeout);
@@ -109,7 +99,7 @@ export class MonitoringService {
       clearTimeout(this.monitoringInterval);
     }
     if (this.pendingRequest) {
-      this.fetchAbortController?.abort(FetchAbortReason.Stop);
+      this.fetchAbortController?.abort(FetchAbortReason.Close);
     }
   }
 
@@ -131,7 +121,7 @@ export class MonitoringService {
 
           this.logger.debug(`Sent client stats to ${this.remoteServiceHost}`, {data: JSON.stringify(data)});
         } catch (e) {
-          this.logger.error(`Failed to send client stats to ${this.remoteServiceHost}`, {}, e as Error);
+          this.logger.warn(`Failed to send client stats to ${this.remoteServiceHost}`, {reason: (e as Error).message});
         } finally {
           this.pendingRequest = undefined;
         }
@@ -147,7 +137,7 @@ export class MonitoringService {
     const recordPromises = [];
 
     if (this.options.collectSystemStats) {
-      await collectSystemData(this.logger);
+      await system.collectData(this.logger);
     }
 
     for (const [i, s] of this.clientStats.entries()) {
@@ -195,7 +185,7 @@ export class MonitoringService {
       }
 
       // error was thrown by abort signal
-      if (signal.reason === FetchAbortReason.Stop) {
+      if (signal.reason === FetchAbortReason.Close) {
         throw new ErrorAborted(`request to ${this.remoteServiceHost}`);
       } else if (signal.reason === FetchAbortReason.Timeout) {
         throw new TimeoutError(`reached for request to ${this.remoteServiceHost}`);
@@ -209,7 +199,7 @@ export class MonitoringService {
   }
 
   private nextMonitoringInterval(): void {
-    if (this.status === Status.Stopped) return;
+    if (this.status === Status.Closed) return;
     // ensure next interval only starts after previous request has finished
     // else we might send next request too early and run into rate limit errors
     this.monitoringInterval = setTimeout(async () => {

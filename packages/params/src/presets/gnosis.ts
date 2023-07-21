@@ -1,4 +1,4 @@
-import {BeaconPreset} from "../interface.js";
+import {BeaconPreset} from "../types.js";
 import {mainnetPreset} from "./mainnet.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -13,4 +13,8 @@ export const gnosisPreset: BeaconPreset = {
 
   // altair
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD: 512,
+
+  // capella
+  MAX_WITHDRAWALS_PER_PAYLOAD: 8,
+  MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP: 8192,
 };

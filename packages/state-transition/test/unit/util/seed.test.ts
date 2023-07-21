@@ -1,7 +1,7 @@
 import {expect} from "chai";
 
-import {GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
+import {GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {getRandaoMix} from "../../../src/util/index.js";
 
 import {generateState} from "../../utils/state.js";

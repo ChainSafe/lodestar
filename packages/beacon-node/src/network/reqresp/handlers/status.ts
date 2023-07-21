@@ -1,7 +1,13 @@
-import {EncodedPayload, EncodedPayloadType} from "@lodestar/reqresp";
-import {phase0} from "@lodestar/types";
+import {ResponseOutgoing} from "@lodestar/reqresp";
+import {ssz} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 import {IBeaconChain} from "../../../chain/index.js";
 
-export async function* onStatus(chain: IBeaconChain): AsyncIterable<EncodedPayload<phase0.Status>> {
-  yield {type: EncodedPayloadType.ssz, data: chain.getStatus()};
+export async function* onStatus(chain: IBeaconChain): AsyncIterable<ResponseOutgoing> {
+  const status = chain.getStatus();
+  yield {
+    data: ssz.phase0.Status.serialize(status),
+    // Status topic is fork-agnostic
+    fork: ForkName.phase0,
+  };
 }

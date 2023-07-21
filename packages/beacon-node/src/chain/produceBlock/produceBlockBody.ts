@@ -28,7 +28,7 @@ import {
 } from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, ForkExecution, isForkExecution} from "@lodestar/params";
-import {toHex, sleep} from "@lodestar/utils";
+import {toHex, sleep, Logger} from "@lodestar/utils";
 
 import type {BeaconChain} from "../chain.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from "../../execution/index.js";
@@ -70,7 +70,7 @@ export enum BlobsResultType {
 
 export type BlobsResult =
   | {type: BlobsResultType.preDeneb | BlobsResultType.blinded}
-  | {type: BlobsResultType.produced; blobs: deneb.Blobs; blockHash: RootHex};
+  | {type: BlobsResultType.produced; blobSidecars: deneb.BlobSidecars; blockHash: RootHex};
 
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
@@ -109,12 +109,8 @@ export async function produceBlockBody<T extends BlockType>(
   //   }
   // }
 
-  const [
-    attesterSlashings,
-    proposerSlashings,
-    voluntaryExits,
-    blsToExecutionChanges,
-  ] = this.opPool.getSlashingsAndExits(currentState);
+  const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] =
+    this.opPool.getSlashingsAndExits(currentState);
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(this.forkChoice, currentState);
   const {eth1Data, deposits} = await this.eth1.getEth1DataAndDeposits(currentState);
 
@@ -129,13 +125,16 @@ export async function produceBlockBody<T extends BlockType>(
     voluntaryExits,
   };
 
+  this.logger.verbose("Produced phase0 beacon block body", {slot: blockSlot, numAttestations: attestations.length});
+
   const blockEpoch = computeEpochAtSlot(blockSlot);
 
   if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
-    (blockBody as altair.BeaconBlockBody).syncAggregate = this.syncContributionAndProofPool.getAggregate(
-      parentSlot,
-      parentBlockRoot
+    const syncAggregate = this.syncContributionAndProofPool.getAggregate(parentSlot, parentBlockRoot);
+    this.metrics?.production.producedSyncAggregateParticipants.observe(
+      syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
     );
+    (blockBody as altair.BeaconBlockBody).syncAggregate = syncAggregate;
   }
 
   const fork = currentState.config.getForkName(blockSlot);
@@ -151,14 +150,16 @@ export async function produceBlockBody<T extends BlockType>(
       // This path will not be used in the production, but is here just for merge mock
       // tests because merge-mock requires an fcU to be issued prior to fetch payload
       // header.
-      if (this.executionBuilder.issueLocalFcUForBlockProduction) {
+      if (this.executionBuilder.issueLocalFcUWithFeeRecipient !== undefined) {
         await prepareExecutionPayload(
           this,
+          this.logger,
           fork,
+          parentBlockRoot,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
           currentState as CachedBeaconStateBellatrix,
-          feeRecipient
+          this.executionBuilder.issueLocalFcUWithFeeRecipient
         );
       }
 
@@ -173,6 +174,7 @@ export async function produceBlockBody<T extends BlockType>(
       );
       (blockBody as allForks.BlindedBeaconBlockBody).executionPayloadHeader = builderRes.header;
       blockValue = builderRes.blockValue;
+      this.logger.verbose("Fetched execution payload header from builder", {slot: blockSlot, blockValue});
       if (ForkSeq[fork] >= ForkSeq.deneb) {
         const {blobKzgCommitments} = builderRes;
         if (blobKzgCommitments === undefined) {
@@ -194,7 +196,9 @@ export async function produceBlockBody<T extends BlockType>(
         // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#constructing-the-beaconblockbody
         const prepareRes = await prepareExecutionPayload(
           this,
+          this.logger,
           fork,
+          parentBlockRoot,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
           currentState as CachedBeaconStateExecutions,
@@ -202,9 +206,8 @@ export async function produceBlockBody<T extends BlockType>(
         );
 
         if (prepareRes.isPremerge) {
-          (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
-            fork
-          ].ExecutionPayload.defaultValue();
+          (blockBody as allForks.ExecutionBlockBody).executionPayload =
+            ssz.allForksExecution[fork].ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
           blockValue = BigInt(0);
         } else {
@@ -219,27 +222,26 @@ export async function produceBlockBody<T extends BlockType>(
           }
 
           const engineRes = await this.executionEngine.getPayload(fork, payloadId);
-          const {executionPayload} = engineRes;
+          const {executionPayload, blobsBundle} = engineRes;
           (blockBody as allForks.ExecutionBlockBody).executionPayload = executionPayload;
           blockValue = engineRes.blockValue;
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
           this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
+          this.logger.verbose("Fetched execution payload from engine", {
+            slot: blockSlot,
+            blockValue,
+            prepType,
+            payloadId,
+            fetchedTime,
+          });
           if (executionPayload.transactions.length === 0) {
             this.metrics?.blockPayload.emptyPayloads.inc({prepType});
           }
 
           if (ForkSeq[fork] >= ForkSeq.deneb) {
-            // SPEC: https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/validator.md#blob-kzg-commitments
-            // After retrieving the execution payload from the execution engine as specified in Bellatrix, use the
-            // payload_id to retrieve blobs and blob_kzg_commitments via get_blobs_and_kzg_commitments(payload_id)
-            // TODO Deneb: getBlobsBundle and getPayload must be either coupled or called in parallel to save time.
-            const blobsBundle = await this.executionEngine.getBlobsBundle(payloadId);
-
-            // Sanity check consistency between getPayload() and getBlobsBundle()
-            const blockHash = toHex(executionPayload.blockHash);
-            if (blobsBundle.blockHash !== blockHash) {
-              throw Error(`blobsBundle incorrect blockHash ${blobsBundle.blockHash} != ${blockHash}`);
+            if (blobsBundle === undefined) {
+              throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
             }
 
             // Optionally sanity-check that the KZG commitments match the versioned hashes in the transactions
@@ -247,8 +249,22 @@ export async function produceBlockBody<T extends BlockType>(
               validateBlobsAndKzgCommitments(executionPayload, blobsBundle);
             }
 
-            (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.kzgs;
-            blobsResult = {type: BlobsResultType.produced, blobs: blobsBundle.blobs, blockHash};
+            (blockBody as deneb.BeaconBlockBody).blobKzgCommitments = blobsBundle.commitments;
+            const blockHash = toHex(executionPayload.blockHash);
+
+            const blobSidecars = Array.from({length: blobsBundle.blobs.length}, (_v, index) => {
+              const blob = blobsBundle.blobs[index];
+              const commitment = blobsBundle.commitments[index];
+              const proof = blobsBundle.proofs[index];
+              const blobSidecar = {
+                index,
+                blob,
+                kzgProof: proof,
+                kzgCommitment: commitment,
+              };
+              return blobSidecar;
+            }) as deneb.BlobSidecars;
+            blobsResult = {type: BlobsResultType.produced, blobSidecars, blockHash};
           } else {
             blobsResult = {type: BlobsResultType.preDeneb};
           }
@@ -264,9 +280,8 @@ export async function produceBlockBody<T extends BlockType>(
             {},
             e as Error
           );
-          (blockBody as allForks.ExecutionBlockBody).executionPayload = ssz.allForksExecution[
-            fork
-          ].ExecutionPayload.defaultValue();
+          (blockBody as allForks.ExecutionBlockBody).executionPayload =
+            ssz.allForksExecution[fork].ExecutionPayload.defaultValue();
           blobsResult = {type: BlobsResultType.preDeneb};
           blockValue = BigInt(0);
         } else {
@@ -302,7 +317,9 @@ export async function prepareExecutionPayload(
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
   },
+  logger: Logger,
   fork: ForkExecution,
+  parentBlockRoot: Root,
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
   state: CachedBeaconStateExecutions,
@@ -344,15 +361,12 @@ export async function prepareExecutionPayload(
       prepType = PayloadPreparationType.Fresh;
     }
 
-    const attributes: PayloadAttributes = {
-      timestamp,
-      prevRandao,
-      suggestedFeeRecipient,
-    };
-
-    if (ForkSeq[fork] >= ForkSeq.capella) {
-      attributes.withdrawals = getExpectedWithdrawals(state as CachedBeaconStateCapella).withdrawals;
-    }
+    const attributes: PayloadAttributes = preparePayloadAttributes(fork, chain, {
+      prepareState: state,
+      prepareSlot: state.slot,
+      parentBlockRoot,
+      feeRecipient: suggestedFeeRecipient,
+    });
 
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
@@ -361,6 +375,7 @@ export async function prepareExecutionPayload(
       finalizedBlockHash,
       attributes
     );
+    logger.verbose("Prepared payload id from execution engine", {payloadId});
   }
 
   // Should never happen, notifyForkchoiceUpdate() with payload attributes always
@@ -404,7 +419,7 @@ async function prepareExecutionPayloadHeader(
   return chain.executionBuilder.getHeader(state.slot, parentHash, proposerPubKey);
 }
 
-async function getExecutionPayloadParentHash(
+export async function getExecutionPayloadParentHash(
   chain: {
     eth1: IEth1ForBlockProduction;
     config: ChainForkConfig;
@@ -436,6 +451,82 @@ async function getExecutionPayloadParentHash(
       return {isPremerge: false, parentHash: terminalPowBlockHash};
     }
   }
+}
+
+export async function getPayloadAttributesForSSE(
+  fork: ForkExecution,
+  chain: {
+    eth1: IEth1ForBlockProduction;
+    config: ChainForkConfig;
+  },
+  {
+    prepareState,
+    prepareSlot,
+    parentBlockRoot,
+    feeRecipient,
+  }: {prepareState: CachedBeaconStateExecutions; prepareSlot: Slot; parentBlockRoot: Root; feeRecipient: string}
+): Promise<allForks.SSEPayloadAttributes> {
+  const parentHashRes = await getExecutionPayloadParentHash(chain, prepareState);
+
+  if (!parentHashRes.isPremerge) {
+    const {parentHash} = parentHashRes;
+    const payloadAttributes = preparePayloadAttributes(fork, chain, {
+      prepareState,
+      prepareSlot,
+      parentBlockRoot,
+      feeRecipient,
+    });
+
+    const ssePayloadAttributes: allForks.SSEPayloadAttributes = {
+      proposerIndex: prepareState.epochCtx.getBeaconProposer(prepareSlot),
+      proposalSlot: prepareSlot,
+      proposalBlockNumber: prepareState.latestExecutionPayloadHeader.blockNumber + 1,
+      parentBlockRoot,
+      parentBlockHash: parentHash,
+      payloadAttributes,
+    };
+    return ssePayloadAttributes;
+  } else {
+    throw Error("The execution is still pre-merge");
+  }
+}
+
+function preparePayloadAttributes(
+  fork: ForkExecution,
+  chain: {
+    config: ChainForkConfig;
+  },
+  {
+    prepareState,
+    prepareSlot,
+    parentBlockRoot,
+    feeRecipient,
+  }: {
+    prepareState: CachedBeaconStateExecutions;
+    prepareSlot: Slot;
+    parentBlockRoot: Root;
+    feeRecipient: string;
+  }
+): allForks.SSEPayloadAttributes["payloadAttributes"] {
+  const timestamp = computeTimeAtSlot(chain.config, prepareSlot, prepareState.genesisTime);
+  const prevRandao = getRandaoMix(prepareState, prepareState.epochCtx.epoch);
+  const payloadAttributes = {
+    timestamp,
+    prevRandao,
+    suggestedFeeRecipient: feeRecipient,
+  };
+
+  if (ForkSeq[fork] >= ForkSeq.capella) {
+    (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = getExpectedWithdrawals(
+      prepareState as CachedBeaconStateCapella
+    ).withdrawals;
+  }
+
+  if (ForkSeq[fork] >= ForkSeq.deneb) {
+    (payloadAttributes as deneb.SSEPayloadAttributes["payloadAttributes"]).parentBeaconBlockRoot = parentBlockRoot;
+  }
+
+  return payloadAttributes;
 }
 
 /** process_sync_committee_contributions is implemented in syncCommitteeContribution.getSyncAggregate */

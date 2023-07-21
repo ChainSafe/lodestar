@@ -1,12 +1,17 @@
+import EventEmitter from "node:events";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
-import {BeaconClock} from "../../../src/chain/index.js";
+import {IClock} from "../../../src/util/clock.js";
 
 /**
  * Mock clock that does not progress time unless calling setSlot()
  */
-export class ClockStopped implements BeaconClock {
-  constructor(private slot: Slot) {}
+export class ClockStopped extends EventEmitter implements IClock {
+  genesisTime = 0;
+
+  constructor(private slot: Slot) {
+    super();
+  }
 
   get currentSlot(): Slot {
     return this.slot;

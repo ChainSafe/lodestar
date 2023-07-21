@@ -1,8 +1,6 @@
 import {expect} from "chai";
 import {phase0} from "@lodestar/types";
-import {MockBeaconChain} from "../../../../utils/mocks/chain/chain.js";
 import {assertPeerRelevance, IrrelevantPeerCode} from "../../../../../src/network/peers/utils/assertPeerRelevance.js";
-import {BeaconClock} from "../../../../../src/chain/clock/index.js";
 
 describe("network / peers / utils / assertPeerRelevance", () => {
   const correctForkDigest = Buffer.alloc(4, 0);
@@ -81,21 +79,15 @@ describe("network / peers / utils / assertPeerRelevance", () => {
 
   for (const {id, remote, currentSlot, irrelevantType} of testCases) {
     it(id, async () => {
-      // Partial instance with only the methods needed for the test
-      const chain = ({
-        getStatus: () => ({
-          forkDigest: correctForkDigest,
-          finalizedRoot: ZERO_HASH,
-          finalizedEpoch: 0,
-          headRoot: ZERO_HASH,
-          headSlot: 0,
-        }),
-        clock: {
-          currentSlot: currentSlot ?? 0,
-        } as Partial<BeaconClock>,
-      } as Partial<MockBeaconChain>) as MockBeaconChain;
+      const local = {
+        forkDigest: correctForkDigest,
+        finalizedRoot: ZERO_HASH,
+        finalizedEpoch: 0,
+        headRoot: ZERO_HASH,
+        headSlot: 0,
+      };
 
-      expect(assertPeerRelevance(remote, chain)).to.deep.equal(irrelevantType);
+      expect(assertPeerRelevance(remote, local, currentSlot ?? 0)).to.deep.equal(irrelevantType);
     });
   }
 });

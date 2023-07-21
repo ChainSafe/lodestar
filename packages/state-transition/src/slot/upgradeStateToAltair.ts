@@ -1,5 +1,6 @@
-import {ssz} from "@lodestar/types";
 import {CompositeViewDU} from "@chainsafe/ssz";
+import {ssz} from "@lodestar/types";
+import {ForkSeq} from "@lodestar/params";
 import {CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../types.js";
 import {newZeroedArray, RootCache} from "../util/index.js";
 import {getNextSyncCommittee} from "../util/syncCommittee.js";
@@ -94,11 +95,11 @@ export function upgradeStateToAltair(statePhase0: CachedBeaconStatePhase0): Cach
 
   // TODO: describe issue. Compute progressive target balances
   //
-  // Note: in EpochContext.afterProcessEpoch previousTargetUnslashedBalanceIncrements is overwritten,
+  // Note: in EpochCache.afterProcessEpoch previousTargetUnslashedBalanceIncrements is overwritten,
   //       currentTargetUnslashedBalanceIncrements is rotated to previousTargetUnslashedBalanceIncrements
   //
   // Here target balance is computed in full, which is slightly less performant than doing so in the loop
-  // above but gurantees consistency with EpochContext.createFromState(). Note execution order below:
+  // above but gurantees consistency with EpochCache.createFromState(). Note execution order below:
   // ```
   // processEpoch()
   // epochCtx.afterProcessEpoch()
@@ -128,6 +129,7 @@ function translateParticipation(
   for (const attestation of pendingAttesations.getAllReadonly()) {
     const data = attestation.data;
     const attestationFlags = getAttestationParticipationStatus(
+      ForkSeq.altair,
       data,
       attestation.inclusionDelay,
       epochCtx.epoch,

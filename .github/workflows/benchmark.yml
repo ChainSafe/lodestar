@@ -1,8 +1,11 @@
 name: Benchmark
 
-# only one can tun at a time.
 # Actions access a common cache entry and may corrupt it.
-concurrency: cd-benchmark-${{ github.ref }}
+concurrency:
+  # If PR, cancel prev commits. head_ref = source branch name on pull_request, null if push
+  # if push, default to github.run_id so retries of the same commit do not overwrite each other
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 on:
   push:
@@ -29,7 +32,8 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
+          check-latest: true
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
@@ -43,7 +47,7 @@ jobs:
           key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile --ignore-optional && yarn build
+        run: yarn install --frozen-lockfile && yarn build
       - name: Build
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'

@@ -1,8 +1,8 @@
 import tmp from "tmp";
+import type {SecretKey} from "@chainsafe/bls/types";
 import {LevelDbController} from "@lodestar/db";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {SlashingProtection, Validator, Signer, SignerType, ValidatorProposerConfig} from "@lodestar/validator";
-import type {SecretKey} from "@chainsafe/bls/types";
 import {ServerApi, Api, HttpStatusCode, APIServerHandler} from "@lodestar/api";
 import {mapValues} from "@lodestar/utils";
 import {BeaconNode} from "../../../src/index.js";
@@ -16,7 +16,7 @@ export async function getAndInitDevValidators({
   useRestApi,
   testLoggerOpts,
   externalSignerUrl,
-  doppelgangerProtectionEnabled = false,
+  doppelgangerProtection = false,
   valProposerConfig,
 }: {
   node: BeaconNode;
@@ -26,7 +26,7 @@ export async function getAndInitDevValidators({
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
   externalSignerUrl?: string;
-  doppelgangerProtectionEnabled?: boolean;
+  doppelgangerProtection?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
@@ -38,11 +38,8 @@ export async function getAndInitDevValidators({
     const endIndex = startIndexVc + validatorsPerClient - 1;
     const logger = testLogger(`Vali ${startIndexVc}-${endIndex}`, testLoggerOpts);
     const tmpDir = tmp.dirSync({unsafeCleanup: true});
-    const dbOps = {
-      config: node.config,
-      controller: new LevelDbController({name: tmpDir.name}, {logger}),
-    };
-    const slashingProtection = new SlashingProtection(dbOps);
+    const db = await LevelDbController.create({name: tmpDir.name}, {logger});
+    const slashingProtection = new SlashingProtection(db);
 
     const secretKeysValidator = Array.from({length: validatorsPerClient}, (_, i) => interopSecretKey(i + startIndexVc));
     secretKeys.push(...secretKeysValidator);
@@ -64,7 +61,8 @@ export async function getAndInitDevValidators({
 
     validators.push(
       Validator.initializeFromBeaconNode({
-        dbOps,
+        db,
+        config: node.config,
         api: useRestApi ? getNodeApiUrl(node) : getApiFromServerHandlers(node.api),
         slashingProtection,
         logger,
@@ -72,7 +70,7 @@ export async function getAndInitDevValidators({
         processShutdownCallback: () => {},
         abortController,
         signers,
-        doppelgangerProtectionEnabled,
+        doppelgangerProtection,
         valProposerConfig,
       })
     );
@@ -86,8 +84,8 @@ export async function getAndInitDevValidators({
 }
 
 export function getApiFromServerHandlers(api: {[K in keyof Api]: ServerApi<Api[K]>}): Api {
-  return mapValues(api, (module) =>
-    mapValues(module, (api: APIServerHandler) => {
+  return mapValues(api, (apiModule) =>
+    mapValues(apiModule, (api: APIServerHandler) => {
       return async (...args: any) => {
         let code: HttpStatusCode = HttpStatusCode.OK;
         try {
@@ -110,7 +108,7 @@ export function getApiFromServerHandlers(api: {[K in keyof Api]: ServerApi<Api[K
             error: {
               code: code ?? HttpStatusCode.INTERNAL_SERVER_ERROR,
               message: (err as Error).message,
-              operationId: `${module}.${api.name}`,
+              operationId: api.name,
             },
           };
         }

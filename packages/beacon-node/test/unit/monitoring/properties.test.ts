@@ -38,12 +38,12 @@ describe("monitoring / properties", () => {
     });
 
     it("should return a json record with the configured key and metric value", async () => {
-      const peerCount = 50;
-      metrics.peers.set(peerCount);
+      const headSlot = 50;
+      metrics.headSlot.set(headSlot);
 
       const metricProperty = new MetricProperty({
         jsonKey,
-        metricName: "libp2p_peers",
+        metricName: "beacon_head_slot",
         jsonType: JsonType.Number,
         defaultValue: 0,
       });
@@ -51,7 +51,7 @@ describe("monitoring / properties", () => {
       const jsonRecord = await metricProperty.getRecord(metrics.register);
 
       expect(jsonRecord.key).to.equal(jsonKey);
-      expect(jsonRecord.value).to.equal(peerCount);
+      expect(jsonRecord.value).to.equal(headSlot);
     });
 
     it("should return the default value if metric with name does not exist", async () => {

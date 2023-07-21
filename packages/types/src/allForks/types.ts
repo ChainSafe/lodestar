@@ -68,6 +68,11 @@ export type FullOrBlindedBeaconBlockBody = BeaconBlockBody | BlindedBeaconBlockB
 export type FullOrBlindedBeaconBlock = BeaconBlock | BlindedBeaconBlock;
 export type FullOrBlindedSignedBeaconBlock = SignedBeaconBlock | SignedBlindedBeaconBlock;
 
+export type FullOrBlindedBlobSidecar = deneb.BlobSidecar | deneb.BlindedBlobSidecar;
+export type FullOrBlindedSignedBlobSidecar = deneb.SignedBlobSidecar | deneb.SignedBlindedBlobSidecar;
+
+export type FullOrBlindedBlobSidecars = deneb.BlobSidecars | deneb.BlindedBlobSidecars;
+
 export type BuilderBid = bellatrix.BuilderBid | capella.BuilderBid | deneb.BuilderBid;
 export type SignedBuilderBid = bellatrix.SignedBuilderBid | capella.SignedBuilderBid | deneb.SignedBuilderBid;
 
@@ -88,6 +93,11 @@ export type LightClientOptimisticUpdate =
 export type LightClientStore = altair.LightClientStore | capella.LightClientStore | deneb.LightClientStore;
 
 export type SignedBeaconBlockAndBlobsSidecar = deneb.SignedBeaconBlockAndBlobsSidecar;
+
+export type SSEPayloadAttributes =
+  | bellatrix.SSEPayloadAttributes
+  | capella.SSEPayloadAttributes
+  | deneb.SSEPayloadAttributes;
 /**
  * Types known to change between forks
  */
@@ -214,6 +224,11 @@ export type AllForksExecutionSSZTypes = {
   SignedBuilderBid: AllForksTypeOf<
     typeof bellatrixSsz.SignedBuilderBid | typeof capellaSsz.SignedBuilderBid | typeof denebSsz.SignedBuilderBid
   >;
+  SSEPayloadAttributes: AllForksTypeOf<
+    | typeof bellatrixSsz.SSEPayloadAttributes
+    | typeof capellaSsz.SSEPayloadAttributes
+    | typeof denebSsz.SSEPayloadAttributes
+  >;
 };
 
 export type AllForksBlindedSSZTypes = {
@@ -273,4 +288,6 @@ export type AllForksLightClientSSZTypes = {
 
 export type AllForksBlobsSSZTypes = {
   SignedBeaconBlockAndBlobsSidecar: AllForksTypeOf<typeof denebSsz.SignedBeaconBlockAndBlobsSidecar>;
+  BlobSidecar: AllForksTypeOf<typeof denebSsz.BlobSidecar>;
+  BlindedBlobSidecar: AllForksTypeOf<typeof denebSsz.BlindedBlobSidecar>;
 };

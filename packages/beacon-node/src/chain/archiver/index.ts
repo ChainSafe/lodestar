@@ -1,5 +1,4 @@
 import {Logger} from "@lodestar/utils";
-
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconDb} from "../../db/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
@@ -14,6 +13,21 @@ export type ArchiverOpts = StatesArchiverOpts & {
   disableArchiveOnCheckpoint?: boolean;
 };
 
+type ProposalStats = {
+  total: number;
+  finalized: number;
+  orphaned: number;
+  missed: number;
+};
+
+export type FinalizedStats = {
+  allValidators: ProposalStats;
+  attachedValidators: ProposalStats;
+  finalizedCanonicalCheckpointsCount: number;
+  finalizedFoundCheckpointsInStateCache: number;
+  finalizedAttachedValidatorsCount: number;
+};
+
 /**
  * Used for running tasks that depends on some events or are executed
  * periodically.
@@ -21,6 +35,7 @@ export type ArchiverOpts = StatesArchiverOpts & {
 export class Archiver {
   private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
+  private prevFinalized: CheckpointWithHex;
   private readonly statesArchiver: StatesArchiver;
 
   constructor(
@@ -30,7 +45,8 @@ export class Archiver {
     signal: AbortSignal,
     opts: ArchiverOpts
   ) {
-    this.statesArchiver = new StatesArchiver(chain.checkpointStateCache, db, logger, opts);
+    this.statesArchiver = new StatesArchiver(chain.regen, db, logger, opts);
+    this.prevFinalized = chain.forkChoice.getFinalizedCheckpoint();
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
       maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN,
       signal,
@@ -62,11 +78,11 @@ export class Archiver {
 
   private onCheckpoint = (): void => {
     const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
-    this.chain.checkpointStateCache.prune(
+    this.chain.regen.pruneOnCheckpoint(
       this.chain.forkChoice.getFinalizedCheckpoint().epoch,
-      this.chain.forkChoice.getJustifiedCheckpoint().epoch
+      this.chain.forkChoice.getJustifiedCheckpoint().epoch,
+      headStateRoot
     );
-    this.chain.stateCache.prune(headStateRoot);
   };
 
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
@@ -82,12 +98,13 @@ export class Archiver {
         finalized,
         this.chain.clock.currentEpoch
       );
+      this.prevFinalized = finalized;
 
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiver.maybeArchiveState(finalized);
 
-      this.chain.checkpointStateCache.pruneFinalized(finalizedEpoch);
-      this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch);
+      this.chain.regen.pruneOnFinalized(finalizedEpoch);
+
       // tasks rely on extended fork choice
       this.chain.forkChoice.prune(finalized.rootHex);
       await this.updateBackfillRange(finalized);

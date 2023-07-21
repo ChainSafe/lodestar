@@ -22,5 +22,7 @@ export interface CachedGenesis extends ForkDigestContext {
    */
   getDomainAtFork(forkName: ForkName, domainType: DomainType): Uint8Array;
 
+  getDomainForVoluntaryExit(stateSlot: Slot, messageSlot?: Slot): Uint8Array;
+
   readonly genesisValidatorsRoot: Root;
 }

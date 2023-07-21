@@ -14,7 +14,7 @@ import {CLClient, CLClientGenerator, CLClientGeneratorOptions, JobOptions, Runne
 import {getNodePorts} from "../utils/ports.js";
 
 export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = (opts, runner) => {
-  const {address, id, config, keys, genesisTime, engineUrls, engineMock, clientOptions, nodeIndex} = opts;
+  const {address, id, config, keys, genesisTime, engineUrls, engineMock, clientOptions, nodeIndex, metrics} = opts;
   const {
     paths: {jwtsecretFilePath, rootDir, genesisFilePath, logFilePath},
   } = opts;
@@ -23,7 +23,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
   const rcConfigPath = path.join(rootDir, "rc_config.json");
   const paramsPath = path.join(rootDir, "params.json");
 
-  const rcConfig = ({
+  const rcConfig = {
     network: "dev",
     preset: "minimal",
     dataDir: rootDir,
@@ -39,7 +39,6 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     "network.rateLimitMultiplier": 0,
     listenAddress: "0.0.0.0",
     port: ports.cl.port,
-    metrics: false,
     bootnodes: [],
     logPrefix: id,
     logFormatGenesisTime: `${genesisTime}`,
@@ -49,7 +48,7 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     "jwt-secret": jwtsecretFilePath,
     paramsFile: paramsPath,
     ...clientOptions,
-  } as unknown) as BeaconArgs & GlobalArgs;
+  } as unknown as BeaconArgs & GlobalArgs;
 
   if (engineMock) {
     rcConfig["eth1"] = false;
@@ -59,6 +58,14 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     rcConfig["eth1"] = true;
     rcConfig["execution.engineMock"] = false;
     rcConfig["execution.urls"] = [...engineUrls];
+  }
+
+  if (metrics) {
+    rcConfig.metrics = true;
+    rcConfig["metrics.port"] = metrics.port;
+    rcConfig["metrics.address"] = metrics.host;
+  } else {
+    rcConfig.metrics = false;
   }
 
   const validatorClientsJobs: JobOptions[] = [];
@@ -125,7 +132,7 @@ export const generateLodestarValidatorJobs = (opts: CLClientGeneratorOptions): J
     throw Error("Attempting to run a vc with keys.type == 'no-keys'");
   }
 
-  const rcConfig = ({
+  const rcConfig = {
     network: "dev",
     preset: "minimal",
     dataDir: rootDir,
@@ -140,7 +147,7 @@ export const generateLodestarValidatorJobs = (opts: CLClientGeneratorOptions): J
     logFile: "none",
     importKeystores: keystoresDir,
     importKeystoresPassword: keystoresSecretFilePath,
-  } as unknown) as IValidatorCliArgs & GlobalArgs;
+  } as unknown as IValidatorCliArgs & GlobalArgs;
 
   return {
     id,

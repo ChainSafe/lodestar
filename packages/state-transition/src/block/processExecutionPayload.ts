@@ -1,17 +1,18 @@
-import {ssz, allForks, capella, deneb} from "@lodestar/types";
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
-import {ForkSeq} from "@lodestar/params";
+import {ssz, allForks, capella, deneb} from "@lodestar/types";
+import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getRandaoMix} from "../util/index.js";
-import {isExecutionPayload, isMergeTransitionComplete} from "../util/execution.js";
+import {isExecutionPayload, isMergeTransitionComplete, getFullOrBlindedPayloadFromBody} from "../util/execution.js";
 import {BlockExternalData, ExecutionPayloadStatus} from "./externalData.js";
 
 export function processExecutionPayload(
   fork: ForkSeq,
   state: CachedBeaconStateBellatrix | CachedBeaconStateCapella,
-  payload: allForks.FullOrBlindedExecutionPayload,
+  body: allForks.FullOrBlindedBeaconBlockBody,
   externalData: BlockExternalData
 ): void {
+  const payload = getFullOrBlindedPayloadFromBody(body);
   // Verify consistency of the parent hash, block number, base fee per gas and gas limit
   // with respect to the previous execution payload header
   if (isMergeTransitionComplete(state)) {
@@ -41,6 +42,13 @@ export function processExecutionPayload(
   //   return uint64(state.genesis_time + slots_since_genesis * SECONDS_PER_SLOT)
   if (payload.timestamp !== state.genesisTime + state.slot * state.config.SECONDS_PER_SLOT) {
     throw Error(`Invalid timestamp ${payload.timestamp} genesisTime=${state.genesisTime} slot=${state.slot}`);
+  }
+
+  if (fork >= ForkSeq.deneb) {
+    const blobKzgCommitmentsLen = (body as deneb.BeaconBlockBody).blobKzgCommitments?.length ?? 0;
+    if (blobKzgCommitmentsLen > MAX_BLOBS_PER_BLOCK) {
+      throw Error(`blobKzgCommitmentsLen exceeds limit=${MAX_BLOBS_PER_BLOCK}`);
+    }
   }
 
   // Verify the execution payload is valid
@@ -101,9 +109,12 @@ export function executionPayloadToPayloadHeader(
 
   if (fork >= ForkSeq.deneb) {
     // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
-    (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).excessDataGas = (payload as
-      | deneb.ExecutionPayloadHeader
-      | deneb.ExecutionPayload).excessDataGas;
+    (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).dataGasUsed = (
+      payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
+    ).dataGasUsed;
+    (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).excessDataGas = (
+      payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
+    ).excessDataGas;
   }
 
   return bellatrixPayloadFields;

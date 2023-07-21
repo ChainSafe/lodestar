@@ -4,19 +4,21 @@ import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/pa
 import {LevelDbController} from "@lodestar/db";
 import {sleep} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
+// eslint-disable-next-line import/no-relative-packages
+import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
 import {
   beforeValue,
   getNetworkCachedState,
   getNetworkCachedBlock,
+  // eslint-disable-next-line import/no-relative-packages
 } from "../../../../state-transition/test/utils/index.js";
-import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
 import {BeaconChain} from "../../../src/chain/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {testLogger} from "../../utils/logger.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {BeaconDb} from "../../../src/index.js";
-import {getBlockInput, AttestationImportOpt} from "../../../src/chain/blocks/types.js";
+import {getBlockInput, AttestationImportOpt, BlockSource} from "../../../src/chain/blocks/types.js";
 
 // Define this params in `packages/state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
@@ -62,12 +64,11 @@ describe.skip("verify+import blocks - range sync perf test", () => {
 
   let db: BeaconDb;
   before(async () => {
-    db = new BeaconDb({config, controller: new LevelDbController({name: ".tmpdb"}, {logger})});
-    await db.start();
+    db = new BeaconDb(config, await LevelDbController.create({name: ".tmpdb"}, {logger}));
   });
   after(async () => {
     // If before blocks fail, db won't be declared
-    if (db !== undefined) await db.stop();
+    if (db !== undefined) await db.close();
   });
 
   itBench({
@@ -107,7 +108,9 @@ describe.skip("verify+import blocks - range sync perf test", () => {
       return chain;
     },
     fn: async (chain) => {
-      const blocksImport = blocks.value.map((block) => getBlockInput.preDeneb(chain.config, block));
+      const blocksImport = blocks.value.map((block) =>
+        getBlockInput.preDeneb(chain.config, block, BlockSource.byRange, null)
+      );
 
       await chain.processChainSegment(blocksImport, {
         // Only skip importing attestations for finalized sync. For head sync attestation are valuable.

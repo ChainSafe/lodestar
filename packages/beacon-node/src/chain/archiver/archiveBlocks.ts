@@ -1,8 +1,8 @@
 import {fromHexString} from "@chainsafe/ssz";
-import {Epoch, Slot} from "@lodestar/types";
+import {Epoch, Slot, RootHex} from "@lodestar/types";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {Logger, toHex} from "@lodestar/utils";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH, MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {KeyValue} from "@lodestar/db";
 import {ChainForkConfig} from "@lodestar/config";
@@ -17,6 +17,7 @@ const BLOCK_BATCH_SIZE = 256;
 const BLOB_SIDECAR_BATCH_SIZE = 32;
 
 type BlockRootSlot = {slot: Slot; root: Uint8Array};
+type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 
 /**
  * Archives finalized blocks from active bucket to archive bucket.
@@ -33,15 +34,16 @@ export async function archiveBlocks(
   forkChoice: IForkChoice,
   lightclientServer: LightClientServer,
   logger: Logger,
-  finalizedCheckpoint: {rootHex: string; epoch: Epoch},
+  finalizedCheckpoint: CheckpointHex,
   currentEpoch: Epoch
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete
+  // getAllAncestorBlocks response includes the finalized block, so it's also moved to the cold db
   const finalizedCanonicalBlocks = forkChoice.getAllAncestorBlocks(finalizedCheckpoint.rootHex);
   const finalizedNonCanonicalBlocks = forkChoice.getAllNonAncestorBlocks(finalizedCheckpoint.rootHex);
 
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous
-  const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.EIP4844_FORK_EPOCH;
+  const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.DENEB_FORK_EPOCH;
 
   const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
@@ -57,8 +59,8 @@ export async function archiveBlocks(
     });
 
     if (finalizedPostDeneb) {
-      await migrateBlobsSidecarFromHotToColdDb(config, db, finalizedCanonicalBlockRoots);
-      logger.verbose("Migrated blobsSidecar from hot DB to cold DB");
+      await migrateBlobSidecarsFromHotToColdDb(config, db, finalizedCanonicalBlockRoots);
+      logger.verbose("Migrated blobSidecars from hot DB to cold DB");
     }
   }
 
@@ -73,24 +75,24 @@ export async function archiveBlocks(
     });
 
     if (finalizedPostDeneb) {
-      await db.blobsSidecar.batchDelete(nonCanonicalBlockRoots);
+      await db.blobSidecars.batchDelete(nonCanonicalBlockRoots);
       logger.verbose("Deleted non canonical blobsSider from hot DB");
     }
   }
 
   // Delete expired blobs
-  // Keep only `[max(GENESIS_EPOCH, current_epoch - MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS), current_epoch]`
+  // Keep only `[max(GENESIS_EPOCH, current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS), current_epoch]`
   if (finalizedPostDeneb) {
-    const blobsSidecarMinEpoch = currentEpoch - config.MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS;
-    if (blobsSidecarMinEpoch >= config.EIP4844_FORK_EPOCH) {
-      const slotsToDelete = await db.blobsSidecarArchive.keys({lt: computeStartSlotAtEpoch(blobsSidecarMinEpoch)});
+    const blobSidecarsMinEpoch = currentEpoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS;
+    if (blobSidecarsMinEpoch >= config.DENEB_FORK_EPOCH) {
+      const slotsToDelete = await db.blobSidecarsArchive.keys({lt: computeStartSlotAtEpoch(blobSidecarsMinEpoch)});
       if (slotsToDelete.length > 0) {
-        await db.blobsSidecarArchive.batchDelete(slotsToDelete);
+        await db.blobSidecarsArchive.batchDelete(slotsToDelete);
         logger.verbose(
-          `blobsSidecar prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete[slotsToDelete.length - 1]}`
+          `blobSidecars prune: batchDelete range ${slotsToDelete[0]}..${slotsToDelete[slotsToDelete.length - 1]}`
         );
       } else {
-        logger.verbose(`blobsSidecar prune: no entries before epoch ${blobsSidecarMinEpoch}`);
+        logger.verbose(`blobSidecars prune: no entries before epoch ${blobSidecarsMinEpoch}`);
       }
     }
   }
@@ -147,7 +149,7 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, blocks: BlockRootSlot
   }
 }
 
-async function migrateBlobsSidecarFromHotToColdDb(
+async function migrateBlobSidecarsFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
   blocks: BlockRootSlot[]
@@ -160,13 +162,13 @@ async function migrateBlobsSidecarFromHotToColdDb(
     if (canonicalBlocks.length === 0) return;
 
     // load Buffer instead of ssz deserialized to improve performance
-    const canonicalBlobsSidecarEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
+    const canonicalBlobSidecarsEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
       canonicalBlocks
         .filter((block) => config.getForkSeq(block.slot) >= ForkSeq.deneb)
         .map(async (block) => {
-          const bytes = await db.blobsSidecar.getBinary(block.root);
+          const bytes = await db.blobSidecars.getBinary(block.root);
           if (!bytes) {
-            throw Error(`No blobsSidecar found for slot ${block.slot} root ${toHex(block.root)}`);
+            throw Error(`No blobSidecars found for slot ${block.slot} root ${toHex(block.root)}`);
           }
           return {key: block.slot, value: bytes};
         })
@@ -174,8 +176,8 @@ async function migrateBlobsSidecarFromHotToColdDb(
 
     // put to blockArchive db and delete block db
     await Promise.all([
-      db.blobsSidecarArchive.batchPutBinary(canonicalBlobsSidecarEntries),
-      db.blobsSidecar.batchDelete(canonicalBlocks.map((block) => block.root)),
+      db.blobSidecarsArchive.batchPutBinary(canonicalBlobSidecarsEntries),
+      db.blobSidecars.batchDelete(canonicalBlocks.map((block) => block.root)),
     ]);
   }
 }
@@ -202,8 +204,8 @@ export function getParentRootFromSignedBlock(bytes: Uint8Array): Uint8Array {
 
 /**
  *
- * @param blocks sequence of linear blocks, from ancestor to child.
- * In ProtoArray.getAllAncestorNodes child nodes are pushed to the returned array.
+ * @param blocks sequence of linear blocks, from child to ancestor.
+ * In ProtoArray.getAllAncestorNodes child nodes are pushed first to the returned array.
  */
 export function getNonCheckpointBlocks<T extends {slot: Slot}>(blocks: T[]): T[] {
   // Iterate from lowest child to highest ancestor
@@ -223,9 +225,8 @@ export function getNonCheckpointBlocks<T extends {slot: Slot}>(blocks: T[]): T[]
   // This function must return only blocks that are guaranteed to never become checkpoints.
   let epochPtrHasFirstSlot = false;
 
-  // blocks order: from ancestor to child, increasing slot
-  // Iterate in reverse: from child to ancestor, decreasing slot
-  for (let i = blocks.length - 1; i >= 0; i--) {
+  // blocks order: from child to ancestor, decreasing slot
+  for (let i = 0; i < blocks.length; i++) {
     let isCheckpoint = false;
     const block = blocks[i];
     const blockEpoch = computeEpochAtSlot(block.slot);

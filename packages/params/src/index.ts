@@ -5,7 +5,7 @@ import {gnosisPreset} from "./presets/gnosis.js";
 import {presetStatus} from "./presetStatus.js";
 import {userSelectedPreset, userOverrides} from "./setPreset.js";
 
-export {BeaconPreset} from "./interface.js";
+export {BeaconPreset} from "./types.js";
 export {
   ForkName,
   ForkSeq,
@@ -13,6 +13,7 @@ export {
   ForkExecution,
   ForkBlobs,
   isForkExecution,
+  isForkWithdrawals,
   isForkBlobs,
   isForkLightClient,
 } from "./forkName.js";
@@ -37,8 +38,8 @@ presetStatus.frozen = true;
  * The active preset can be manually overridden with `setActivePreset`
  */
 export const ACTIVE_PRESET =
-  userSelectedPreset || PresetName[process?.env?.LODESTAR_PRESET as PresetName] || PresetName.mainnet;
-export const activePreset = presets[ACTIVE_PRESET];
+  userSelectedPreset ?? PresetName[process?.env?.LODESTAR_PRESET as PresetName] ?? PresetName.mainnet;
+export const activePreset = {...presets[ACTIVE_PRESET], ...userOverrides};
 
 // These variables must be exported individually and explicitly
 // in order to be accessible as top-level exports
@@ -50,7 +51,6 @@ export const {
   HYSTERESIS_QUOTIENT,
   HYSTERESIS_DOWNWARD_MULTIPLIER,
   HYSTERESIS_UPWARD_MULTIPLIER,
-  SAFE_SLOTS_TO_UPDATE_JUSTIFIED,
   MIN_DEPOSIT_AMOUNT,
   MAX_EFFECTIVE_BALANCE,
   EFFECTIVE_BALANCE_INCREMENT,
@@ -98,8 +98,9 @@ export const {
   MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
 
   FIELD_ELEMENTS_PER_BLOB,
+  MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_BLOBS_PER_BLOCK,
-} = {...presets[ACTIVE_PRESET], ...userOverrides};
+} = activePreset;
 
 ////////////
 // Constants
@@ -134,6 +135,7 @@ export const DOMAIN_SYNC_COMMITTEE = Uint8Array.from([7, 0, 0, 0]);
 export const DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF = Uint8Array.from([8, 0, 0, 0]);
 export const DOMAIN_CONTRIBUTION_AND_PROOF = Uint8Array.from([9, 0, 0, 0]);
 export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
+export const DOMAIN_BLOB_SIDECAR = Uint8Array.from([11, 0, 0, 0]);
 
 // Application specific domains
 
@@ -172,6 +174,10 @@ export const RANDOM_SUBNETS_PER_VALIDATOR = 1;
 export const EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION = 256;
 /** Rationale: https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#why-are-there-attestation_subnet_count-attestation-subnets */
 export const ATTESTATION_SUBNET_COUNT = 64;
+export const SUBNETS_PER_NODE = 2;
+export const NODE_ID_BITS = 256;
+export const ATTESTATION_SUBNET_PREFIX_BITS = Math.log2(ATTESTATION_SUBNET_COUNT);
+export const EPOCHS_PER_SUBNET_SUBSCRIPTION = 256;
 
 // altair validator
 
@@ -180,6 +186,9 @@ export const SYNC_COMMITTEE_SUBNET_COUNT = 4;
 export const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
 
 export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
+export const MAX_REQUEST_BLOCKS_DENEB = 2 ** 7; // 128
+export const MAX_REQUEST_BLOB_SIDECARS = MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK;
+export const MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS = 2 ** 12; // 4096 epochs, ~18 days
 
 // Lightclient pre-computed
 /**
@@ -234,5 +243,5 @@ export const INTERVALS_PER_SLOT = 3;
 
 // EIP-4844: Crypto const
 export const BYTES_PER_FIELD_ELEMENT = 32;
-export const BLOB_TX_TYPE = 0x05;
+export const BLOB_TX_TYPE = 0x03;
 export const VERSIONED_HASH_VERSION_KZG = 0x01;

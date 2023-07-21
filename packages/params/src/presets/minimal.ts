@@ -1,4 +1,4 @@
-import {BeaconPreset} from "../interface.js";
+import {BeaconPreset} from "../types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export const minimalPreset: BeaconPreset = {
@@ -18,11 +18,6 @@ export const minimalPreset: BeaconPreset = {
   HYSTERESIS_DOWNWARD_MULTIPLIER: 1,
   // 5 (plus 1.25)
   HYSTERESIS_UPWARD_MULTIPLIER: 5,
-
-  // Fork Choice
-  // ---------------------------------------------------------------
-  // 2**1 (= 1)
-  SAFE_SLOTS_TO_UPDATE_JUSTIFIED: 2,
 
   // Gwei values
   // ---------------------------------------------------------------
@@ -125,5 +120,6 @@ export const minimalPreset: BeaconPreset = {
   ///////////
   // https://github.com/ethereum/consensus-specs/blob/dev/presets/minimal/eip4844.yaml
   FIELD_ELEMENTS_PER_BLOB: 4,
-  MAX_BLOBS_PER_BLOCK: 4,
+  MAX_BLOB_COMMITMENTS_PER_BLOCK: 16,
+  MAX_BLOBS_PER_BLOCK: 6,
 };

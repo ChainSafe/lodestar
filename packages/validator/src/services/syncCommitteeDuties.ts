@@ -1,8 +1,8 @@
+import {toHexString} from "@chainsafe/ssz";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, isSyncCommitteeAggregator} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {BLSSignature, Epoch, Slot, SyncPeriod, ValidatorIndex} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
 import {Api, ApiError, routes} from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
@@ -42,6 +42,8 @@ export type SyncDutySubnet = {
 export type SyncSelectionProof = {
   /** This value is only set to not null if the proof indicates that the validator is an aggregator. */
   selectionProof: BLSSignature | null;
+  /** This value will only be set if validator is part of distributed cluster and only has a key share */
+  partialSelectionProof?: BLSSignature;
   subcommitteeIndex: number;
 };
 
@@ -60,6 +62,10 @@ export type SyncDutyAndProofs = {
 // To assist with readability
 type DutyAtPeriod = {duty: SyncDutySubnet};
 
+type SyncCommitteeDutiesServiceOpts = {
+  distributedAggregationSelection?: boolean;
+};
+
 /**
  * Validators are part of a static long (~27h) sync committee, and part of static subnets.
  * However, the isAggregator role changes per slot.
@@ -74,7 +80,8 @@ export class SyncCommitteeDutiesService {
     private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    metrics: Metrics | null
+    metrics: Metrics | null,
+    private readonly opts?: SyncCommitteeDutiesServiceOpts
   ) {
     // Running this task every epoch is safe since a re-org of many epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
@@ -285,11 +292,23 @@ export class SyncCommitteeDutiesService {
     const dutiesAndProofs: SyncSelectionProof[] = [];
     for (const subnet of duty.subnets) {
       const selectionProof = await this.validatorStore.signSyncCommitteeSelectionProof(duty.pubkey, slot, subnet);
-      dutiesAndProofs.push({
-        // selectionProof === null is used to check if is aggregator
-        selectionProof: isSyncCommitteeAggregator(selectionProof) ? selectionProof : null,
-        subcommitteeIndex: subnet,
-      });
+      if (this.opts?.distributedAggregationSelection) {
+        // Validator in distributed cluster only has a key share, not the full private key.
+        // Passing a partial selection proof to `is_sync_committee_aggregator` would produce incorrect result.
+        // SyncCommitteeService will exchange partial for combined selection proofs retrieved from
+        // distributed validator middleware client and determine aggregators at beginning of every slot.
+        dutiesAndProofs.push({
+          selectionProof: null,
+          partialSelectionProof: selectionProof,
+          subcommitteeIndex: subnet,
+        });
+      } else {
+        dutiesAndProofs.push({
+          // selectionProof === null is used to check if is aggregator
+          selectionProof: isSyncCommitteeAggregator(selectionProof) ? selectionProof : null,
+          subcommitteeIndex: subnet,
+        });
+      }
     }
     return dutiesAndProofs;
   }

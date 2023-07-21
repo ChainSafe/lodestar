@@ -1,4 +1,5 @@
 import bls from "@chainsafe/bls";
+import {toHexString} from "@chainsafe/ssz";
 import {
   ForkName,
   MAX_ATTESTATIONS,
@@ -6,7 +7,7 @@ import {
   SLOTS_PER_EPOCH,
   TIMELY_SOURCE_FLAG_INDEX,
 } from "@lodestar/params";
-import {phase0, Epoch, Slot, ssz, ValidatorIndex} from "@lodestar/types";
+import {phase0, Epoch, Slot, ssz, ValidatorIndex, RootHex} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStatePhase0,
@@ -15,7 +16,6 @@ import {
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@lodestar/state-transition";
-import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice, EpochDifference} from "@lodestar/fork-choice";
 import {toHex, MapDef} from "@lodestar/utils";
 import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray.js";
@@ -70,7 +70,12 @@ export class AggregatedAttestationPool {
     return {attestationCount, attestationDataCount};
   }
 
-  add(attestation: phase0.Attestation, attestingIndicesCount: number, committee: ValidatorIndex[]): InsertOutcome {
+  add(
+    attestation: phase0.Attestation,
+    dataRootHex: RootHex,
+    attestingIndicesCount: number,
+    committee: ValidatorIndex[]
+  ): InsertOutcome {
     const slot = attestation.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
@@ -80,9 +85,6 @@ export class AggregatedAttestationPool {
     }
 
     const attestationGroupByDataHash = this.attestationGroupByDataHashBySlot.getOrDefault(slot);
-    const dataRoot = ssz.phase0.AttestationData.hashTreeRoot(attestation.data);
-    const dataRootHex = toHexString(dataRoot);
-
     let attestationGroup = attestationGroupByDataHash.get(dataRootHex);
     if (!attestationGroup) {
       attestationGroup = new MatchingDataAttestationGroup(committee, attestation.data);
@@ -215,7 +217,10 @@ type AttestationNonParticipant = {
 export class MatchingDataAttestationGroup {
   private readonly attestations: AttestationWithIndex[] = [];
 
-  constructor(readonly committee: ValidatorIndex[], readonly data: phase0.AttestationData) {}
+  constructor(
+    readonly committee: ValidatorIndex[],
+    readonly data: phase0.AttestationData
+  ) {}
 
   getAttestationCount(): number {
     return this.attestations.length;

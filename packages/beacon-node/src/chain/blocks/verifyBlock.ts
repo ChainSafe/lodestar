@@ -1,11 +1,12 @@
+import {toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
   isStateValidatorsNodesPopulated,
+  DataAvailableStatus,
 } from "@lodestar/state-transition";
 import {bellatrix} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {toHexString} from "@chainsafe/ssz";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
@@ -16,9 +17,11 @@ import type {BeaconChain} from "../chain.js";
 import {BlockInput, ImportBlockOpts} from "./types.js";
 import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
+import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
 import {verifyBlocksExecutionPayload, SegmentExecStatus} from "./verifyBlocksExecutionPayloads.js";
+import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
 
 /**
  * Verifies 1 or more blocks are fully valid; from a linear sequence of blocks.
@@ -35,6 +38,7 @@ export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
   blocksInput: BlockInput[],
+  dataAvailabilityStatuses: DataAvailableStatus[],
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
   postStates: CachedBeaconStateAllForks[];
@@ -82,15 +86,29 @@ export async function verifyBlocksInEpoch(
   const abortController = new AbortController();
 
   try {
+    // batch all I/O operations to reduce overhead
     const [segmentExecStatus, {postStates, proposerBalanceDeltas}] = await Promise.all([
       // Execution payloads
       verifyBlocksExecutionPayload(this, parentBlock, blocks, preState0, abortController.signal, opts),
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
-      verifyBlocksStateTransitionOnly(preState0, blocksInput, this.logger, this.metrics, abortController.signal, opts),
+      verifyBlocksStateTransitionOnly(
+        preState0,
+        blocksInput,
+        dataAvailabilityStatuses,
+        this.logger,
+        this.metrics,
+        abortController.signal,
+        opts
+      ),
 
       // All signatures at once
       verifyBlocksSignatures(this.bls, this.logger, this.metrics, preState0, blocks, opts),
+
+      // ideally we want to only persist blocks after verifying them however the reality is there are
+      // rarely invalid blocks we'll batch all I/O operation here to reduce the overhead if there's
+      // an error, we'll remove blocks not in forkchoice
+      opts.eagerPersistBlock ? writeBlockInputToDb.call(this, blocksInput) : Promise.resolve(),
     ]);
 
     if (segmentExecStatus.execAborted === null && segmentExecStatus.mergeBlockFound !== null) {
@@ -102,10 +120,21 @@ export async function verifyBlocksInEpoch(
     const fromFork = this.config.getForkName(parentBlock.slot);
     const toFork = this.config.getForkName(blocks[blocks.length - 1].message.slot);
 
-    // If transition through capella, note won't happen if CAPELLA_EPOCH = 0, will log double on re-org
-    if (fromFork !== ForkName.capella && toFork === ForkName.capella) {
-      this.logger.info(CAPELLA_OWL_BANNER);
-      this.logger.info("Activating withdrawals", {epoch: this.config.CAPELLA_FORK_EPOCH});
+    // If transition through toFork, note won't happen if ${toFork}_EPOCH = 0, will log double on re-org
+    if (toFork !== fromFork) {
+      switch (toFork) {
+        case ForkName.capella:
+          this.logger.info(CAPELLA_OWL_BANNER);
+          this.logger.info("Activating withdrawals", {epoch: this.config.CAPELLA_FORK_EPOCH});
+          break;
+
+        case ForkName.deneb:
+          this.logger.info(DENEB_BLOWFISH_BANNER);
+          this.logger.info("Activating blobs", {epoch: this.config.DENEB_FORK_EPOCH});
+          break;
+
+        default:
+      }
     }
 
     return {postStates, proposerBalanceDeltas, segmentExecStatus};

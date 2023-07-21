@@ -1,18 +1,24 @@
-import {logFormats, LogLevels} from "@lodestar/utils";
+import {LogLevels} from "@lodestar/utils";
+import {LogLevel, logFormats} from "@lodestar/logger";
 import {CliCommandOptions} from "../util/command.js";
-import {
-  LogArgs,
-  LOG_DAILY_ROTATE_DEFAULT,
-  LOG_FILE_DISABLE_KEYWORD,
-  LOG_FILE_LEVEL_DEFAULT,
-  LOG_LEVEL_DEFAULT,
-} from "../util/logger.js";
+import {LOG_FILE_DISABLE_KEYWORD} from "../util/logger.js";
+
+export type LogArgs = {
+  logLevel: LogLevel;
+  logFile?: string;
+  logFileLevel: LogLevel;
+  logFileDailyRotate: number;
+  logFormatGenesisTime?: number;
+  logPrefix?: string;
+  logFormat?: string;
+  logLevelModule?: string[];
+};
 
 export const logOptions: CliCommandOptions<LogArgs> = {
   logLevel: {
     choices: LogLevels,
-    description: "Logging verbosity level for emittings logs to terminal",
-    default: LOG_LEVEL_DEFAULT,
+    description: "Logging verbosity level for emitting logs to terminal",
+    default: LogLevel.info,
     type: "string",
   },
 
@@ -23,15 +29,15 @@ export const logOptions: CliCommandOptions<LogArgs> = {
 
   logFileLevel: {
     choices: LogLevels,
-    description: "Logging verbosity level for emittings logs to file",
-    default: LOG_FILE_LEVEL_DEFAULT,
+    description: "Logging verbosity level for emitting logs to file",
+    default: LogLevel.debug,
     type: "string",
   },
 
   logFileDailyRotate: {
     description:
-      "Daily rotate log files, set to an integer to limit the file count, set to 0(zero) to disable rotation",
-    default: LOG_DAILY_ROTATE_DEFAULT,
+      "Daily rotate log files, set to an integer to limit the file count, set to 0 (zero) to disable rotation",
+    default: 5,
     type: "number",
   },
 

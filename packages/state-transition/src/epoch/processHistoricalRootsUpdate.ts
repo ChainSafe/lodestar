@@ -1,15 +1,15 @@
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {intDiv} from "@lodestar/utils";
-import {EpochProcess, CachedBeaconStateAllForks} from "../types.js";
+import {EpochTransitionCache, CachedBeaconStateAllForks} from "../types.js";
 
 /**
  * Persist blockRoots and stateRoots to historicalRoots.
  *
  * PERF: Very low (constant) cost. Most of the HistoricalBatch should already be hashed.
  */
-export function processHistoricalRootsUpdate(state: CachedBeaconStateAllForks, epochProcess: EpochProcess): void {
-  const nextEpoch = epochProcess.currentEpoch + 1;
+export function processHistoricalRootsUpdate(state: CachedBeaconStateAllForks, cache: EpochTransitionCache): void {
+  const nextEpoch = cache.currentEpoch + 1;
 
   // set historical root accumulator
   if (nextEpoch % intDiv(SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH) === 0) {

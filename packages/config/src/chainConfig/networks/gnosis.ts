@@ -38,4 +38,7 @@ export const gnosisChainConfig: ChainConfig = {
   // Bellatrix
   BELLATRIX_FORK_VERSION: b("0x02000064"),
   BELLATRIX_FORK_EPOCH: 385536,
+  // Capella
+  CAPELLA_FORK_VERSION: b("0x03000064"),
+  CAPELLA_FORK_EPOCH: 648704, // 2023-08-01T11:34:20.000Z
 };

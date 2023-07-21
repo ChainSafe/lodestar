@@ -12,7 +12,7 @@ describe("builder", () => {
       /* eslint-disable @typescript-eslint/naming-convention */
       ALTAIR_FORK_EPOCH: 0,
       BELLATRIX_FORK_EPOCH: 0,
-      EIP4844_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
     }),
     getClient,
     getRoutes,

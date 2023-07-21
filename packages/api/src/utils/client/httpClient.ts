@@ -54,6 +54,7 @@ export interface URLOpts {
   baseUrl: string;
   timeoutMs?: number;
   bearerToken?: string;
+  extraHeaders?: Record<string, string>;
 }
 
 export type FetchOpts = {
@@ -77,6 +78,7 @@ export interface IHttpClient {
 export type HttpClientOptions = ({baseUrl: string} | {urls: (string | URLOpts)[]}) & {
   timeoutMs?: number;
   bearerToken?: string;
+  extraHeaders?: Record<string, string>;
   /** Return an AbortSignal to be attached to all requests */
   getAbortSignal?: () => AbortSignal | undefined;
   /** Override fetch function */
@@ -88,9 +90,12 @@ export type HttpClientModules = {
   metrics?: Metrics;
 };
 
+export {Metrics};
+
 export class HttpClient implements IHttpClient {
   private readonly globalTimeoutMs: number;
   private readonly globalBearerToken: string | null;
+  private readonly globalExtraHeaders: Record<string, string> | null;
   private readonly getAbortSignal?: () => AbortSignal | undefined;
   private readonly fetch: typeof fetch;
   private readonly metrics: null | Metrics;
@@ -114,6 +119,7 @@ export class HttpClient implements IHttpClient {
     const allUrlOpts: Partial<URLOpts> = {};
     if (opts.bearerToken) allUrlOpts.bearerToken = opts.bearerToken;
     if (opts.timeoutMs !== undefined) allUrlOpts.timeoutMs = opts.timeoutMs;
+    if (opts.extraHeaders) allUrlOpts.extraHeaders = opts.extraHeaders;
 
     // opts.baseUrl is equivalent to `urls: [{baseUrl}]`
     // unshift opts.baseUrl to urls, without mutating opts.urls
@@ -134,6 +140,7 @@ export class HttpClient implements IHttpClient {
 
     this.globalTimeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.globalBearerToken = opts.bearerToken ?? null;
+    this.globalExtraHeaders = opts.extraHeaders ?? null;
     this.getAbortSignal = opts.getAbortSignal;
     this.fetch = opts.fetch ?? fetch;
     this.metrics = metrics ?? null;
@@ -246,6 +253,7 @@ export class HttpClient implements IHttpClient {
   ): Promise<{status: HttpStatusCode; body: T}> {
     const baseUrl = urlOpts.baseUrl;
     const bearerToken = urlOpts.bearerToken ?? this.globalBearerToken;
+    const extraHeaders = urlOpts.extraHeaders ?? this.globalExtraHeaders;
     const timeoutMs = opts.timeoutMs ?? urlOpts.timeoutMs ?? this.globalTimeoutMs;
 
     // Implement fetch timeout
@@ -263,7 +271,8 @@ export class HttpClient implements IHttpClient {
     try {
       const url = urlJoin(baseUrl, opts.url) + (opts.query ? "?" + stringifyQuery(opts.query) : "");
 
-      const headers = opts.headers || {};
+      const headers =
+        extraHeaders && opts.headers ? {...extraHeaders, ...opts.headers} : opts.headers || extraHeaders || {};
       if (opts.body && headers["Content-Type"] === undefined) {
         headers["Content-Type"] = "application/json";
       }
@@ -285,9 +294,11 @@ export class HttpClient implements IHttpClient {
         throw new HttpError(`${res.statusText}: ${getErrorMessage(errBody)}`, res.status, url);
       }
 
+      const streamTimer = this.metrics?.streamTime.startTimer({routeId});
+      const body = await getBody(res);
+      streamTimer?.();
       this.logger?.debug("HttpClient response", {routeId});
-
-      return {status: res.status, body: await getBody(res)};
+      return {status: res.status, body};
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
 

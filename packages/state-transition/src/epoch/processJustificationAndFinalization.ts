@@ -1,8 +1,8 @@
-import {GENESIS_EPOCH} from "@lodestar/params";
 import {BitArray} from "@chainsafe/ssz";
+import {GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {computeEpochAtSlot, getBlockRoot} from "../util/index.js";
-import {CachedBeaconStateAllForks, EpochProcess} from "../types.js";
+import {CachedBeaconStateAllForks, EpochTransitionCache} from "../types.js";
 
 /**
  * Update justified and finalized checkpoints depending on network participation.
@@ -11,18 +11,18 @@ import {CachedBeaconStateAllForks, EpochProcess} from "../types.js";
  */
 export function processJustificationAndFinalization(
   state: CachedBeaconStateAllForks,
-  epochProcess: EpochProcess
+  cache: EpochTransitionCache
 ): void {
   // Initial FFG checkpoint values have a `0x00` stub for `root`.
   // Skip FFG updates in the first two epochs to avoid corner cases that might result in modifying this stub.
-  if (epochProcess.currentEpoch <= GENESIS_EPOCH + 1) {
+  if (cache.currentEpoch <= GENESIS_EPOCH + 1) {
     return;
   }
   weighJustificationAndFinalization(
     state,
-    epochProcess.totalActiveStakeByIncrement,
-    epochProcess.prevEpochUnslashedStake.targetStakeByIncrement,
-    epochProcess.currEpochUnslashedTargetStakeByIncrement
+    cache.totalActiveStakeByIncrement,
+    cache.prevEpochUnslashedStake.targetStakeByIncrement,
+    cache.currEpochUnslashedTargetStakeByIncrement
   );
 }
 

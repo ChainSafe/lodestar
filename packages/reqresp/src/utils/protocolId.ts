@@ -1,4 +1,4 @@
-import {Encoding, Protocol} from "../types.js";
+import {Encoding, ProtocolAttributes} from "../types.js";
 
 /**
  * https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#protocol-identification
@@ -10,7 +10,7 @@ export function formatProtocolID(protocolPrefix: string, method: string, version
 /**
  * https://github.com/ethereum/consensus-specs/blob/v1.2.0/specs/phase0/p2p-interface.md#protocol-identification
  */
-export function parseProtocolID(protocolId: string): Protocol {
+export function parseProtocolID(protocolId: string): ProtocolAttributes {
   const result = protocolId.split("/");
   if (result.length < 4) {
     throw new Error(`Invalid protocol id: ${protocolId}`);

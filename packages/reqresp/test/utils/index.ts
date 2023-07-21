@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {Uint8ArrayList} from "uint8arraylist";
 import {toHexString} from "@chainsafe/ssz";
 import {fromHex} from "@lodestar/utils";
-import {EncodedPayload, RespStatus} from "../../src/index.js";
+import {ResponseIncoming, RespStatus} from "../../src/index.js";
 import {ResponseChunk} from "../fixtures/index.js";
 
 /**
@@ -20,7 +20,10 @@ export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
  * Wrapper for type-safety to ensure and array of Buffers is equal with a diff in hex
  */
 export function expectEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[], message?: string): void {
-  expect(chunks.map(toHexString)).to.deep.equal(expectedChunks.map(toHexString), message);
+  expect(chunks.map(toHexString).join("").replace(/0x/g, "")).to.deep.equal(
+    expectedChunks.map(toHexString).join("").replace(/0x/g, ""),
+    message
+  );
 }
 
 export function expectInEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[], message?: string): void {
@@ -44,7 +47,9 @@ export class MockLibP2pStream implements Stream {
   resultChunks: Uint8Array[] = [];
 
   constructor(requestChunks: Uint8ArrayList[] | AsyncIterable<any> | AsyncGenerator<any>, protocol?: string) {
-    this.source = Array.isArray(requestChunks) ? arrToSource(requestChunks) : requestChunks;
+    this.source = Array.isArray(requestChunks)
+      ? arrToSource(requestChunks)
+      : (requestChunks as AsyncGenerator<Uint8ArrayList>);
     this.stat.protocol = protocol ?? "mock";
   }
 
@@ -70,6 +75,5 @@ export function fromHexBuf(hex: string): Buffer {
 
 export const ZERO_HASH = Buffer.alloc(32, 0);
 
-export const onlySuccessResp = (
-  resp: ResponseChunk
-): resp is {status: RespStatus.SUCCESS; payload: EncodedPayload<unknown>} => resp.status === RespStatus.SUCCESS;
+export const onlySuccessResp = (resp: ResponseChunk): resp is {status: RespStatus.SUCCESS; payload: ResponseIncoming} =>
+  resp.status === RespStatus.SUCCESS;

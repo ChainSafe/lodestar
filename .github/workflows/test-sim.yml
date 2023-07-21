@@ -1,16 +1,26 @@
 name: Sim tests
 
+concurrency:
+  # If PR, cancel prev commits. head_ref = source branch name on pull_request, null if push
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 on:
   push:
     # We intentionally don't run push on feature branches. See PR for rational.
     branches: [unstable, stable]
   pull_request:
   workflow_dispatch:
+    inputs:
+      debug:
+        description: Runtime DEBUG value
+        required: false
+        default: ''
 
 env:
-  GETH_DOCKER_IMAGE: ethereum/client-go:v1.10.25
+  GETH_DOCKER_IMAGE: ethereum/client-go:v1.11.6
   LIGHTHOUSE_DOCKER_IMAGE: sigp/lighthouse:latest-amd64-unstable-dev
-  NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.14.5
+  NETHERMIND_DOCKER_IMAGE: nethermind/nethermind:1.18.0
 
 jobs:
   tests-sim:
@@ -22,6 +32,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 18
+          check-latest: true
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
@@ -35,14 +46,14 @@ jobs:
           key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile --ignore-optional && yarn build
+        run: yarn install --frozen-lockfile && yarn build
       - name: Build
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
       - name: Sim tests multifork
-        run: yarn test:sim:multifork
+        run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:multifork
         working-directory: packages/cli
 
       - name: Sim tests endpoints

@@ -1,8 +1,8 @@
 import fs from "node:fs";
+import {digest} from "@chainsafe/as-sha256";
 import {ApiError, getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {newZeroedArray} from "@lodestar/state-transition";
-import {digest} from "@chainsafe/as-sha256";
 
 // Script to analyze if a raw BLS pubkey bytes are sufficiently even distributed.
 // If so, a shorter slice of the pubkey bytes can be used as key for the pubkey to index map.
@@ -116,7 +116,7 @@ async function writePubkeys(): Promise<void> {
   ApiError.assert(res);
 
   const pubkeys = Array.from(res.response.data.validators).map((validator) =>
-    Buffer.from(validator.pubkey as Uint8Array).toString("hex")
+    Buffer.from(validator.pubkey).toString("hex")
   );
 
   fs.writeFileSync("mainnet_pubkeys.csv", pubkeys.join("\n"));

@@ -1,4 +1,4 @@
-import {allForks, capella, deneb, Wei, bellatrix} from "@lodestar/types";
+import {allForks, capella, deneb, Wei, bellatrix, Root} from "@lodestar/types";
 import {
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
@@ -15,9 +15,8 @@ import {
   DATA,
   QUANTITY,
   quantityToBigint,
-  dataToRootHex,
 } from "../../eth1/provider/utils.js";
-import {ExecutePayloadStatus, TransitionConfigurationV1, BlobsBundle, PayloadAttributes} from "./interface.js";
+import {ExecutePayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -28,7 +27,7 @@ export type EngineApiRpcParamTypes = {
    */
   engine_newPayloadV1: [ExecutionPayloadRpc];
   engine_newPayloadV2: [ExecutionPayloadRpc];
-  engine_newPayloadV3: [ExecutionPayloadRpc];
+  engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -36,11 +35,15 @@ export type EngineApiRpcParamTypes = {
    */
   engine_forkchoiceUpdatedV1: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
-    payloadAttributes?: PayloadAttributesRpc
+    payloadAttributes?: PayloadAttributesRpc,
   ];
   engine_forkchoiceUpdatedV2: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
-    payloadAttributes?: PayloadAttributesRpc
+    payloadAttributes?: PayloadAttributesRpc,
+  ];
+  engine_forkchoiceUpdatedV3: [
+    forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
+    payloadAttributes?: PayloadAttributesRpc,
   ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
@@ -48,14 +51,6 @@ export type EngineApiRpcParamTypes = {
   engine_getPayloadV1: [QUANTITY];
   engine_getPayloadV2: [QUANTITY];
   engine_getPayloadV3: [QUANTITY];
-  /**
-   * 1. Object - Instance of TransitionConfigurationV1
-   */
-  engine_exchangeTransitionConfigurationV1: [TransitionConfigurationV1];
-  /**
-   * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
-   */
-  engine_getBlobsBundleV1: [QUANTITY];
 
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
@@ -91,26 +86,28 @@ export type EngineApiRpcReturnTypes = {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
   };
+  engine_forkchoiceUpdatedV3: {
+    payloadStatus: PayloadStatus;
+    payloadId: QUANTITY | null;
+  };
   /**
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
   engine_getPayloadV1: ExecutionPayloadRpc;
-  engine_getPayloadV2: ExecutionPayloadResponseV2;
-  engine_getPayloadV3: ExecutionPayloadResponseV2;
-  /**
-   * Object - Instance of TransitionConfigurationV1
-   */
-  engine_exchangeTransitionConfigurationV1: TransitionConfigurationV1;
-
-  engine_getBlobsBundleV1: BlobsBundleRpc;
+  engine_getPayloadV2: ExecutionPayloadResponse;
+  engine_getPayloadV3: ExecutionPayloadResponse;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
 };
 
-type ExecutionPayloadRpcWithBlockValue = {executionPayload: ExecutionPayloadRpc; blockValue: QUANTITY};
-type ExecutionPayloadResponseV2 = ExecutionPayloadRpc | ExecutionPayloadRpcWithBlockValue;
+type ExecutionPayloadRpcWithBlockValue = {
+  executionPayload: ExecutionPayloadRpc;
+  blockValue: QUANTITY;
+  blobsBundle?: BlobsBundleRpc;
+};
+type ExecutionPayloadResponse = ExecutionPayloadRpc | ExecutionPayloadRpcWithBlockValue;
 
 export type ExecutionPayloadBodyRpc = {transactions: DATA[]; withdrawals: WithdrawalV1[] | null};
 
@@ -132,7 +129,9 @@ export type ExecutionPayloadRpc = {
   blockHash: DATA; // 32 bytes
   transactions: DATA[];
   withdrawals?: WithdrawalRpc[]; // Capella hardfork
+  dataGasUsed?: QUANTITY; // DENEB
   excessDataGas?: QUANTITY; // DENEB
+  parentBeaconBlockRoot?: QUANTITY; // DENEB
 };
 
 export type WithdrawalRpc = {
@@ -142,6 +141,8 @@ export type WithdrawalRpc = {
   amount: QUANTITY;
 };
 
+export type VersionedHashesRpc = DATA[];
+
 export type PayloadAttributesRpc = {
   /** QUANTITY, 64 Bits - value for the timestamp field of the new payload */
   timestamp: QUANTITY;
@@ -150,12 +151,14 @@ export type PayloadAttributesRpc = {
   /** DATA, 20 Bytes - suggested value for the coinbase field of the new payload */
   suggestedFeeRecipient: DATA;
   withdrawals?: WithdrawalRpc[];
+  /** DATA, 32 Bytes - value for the parentBeaconBlockRoot to be used for building block */
+  parentBeaconBlockRoot?: DATA;
 };
 
 export interface BlobsBundleRpc {
-  blockHash: DATA; // 32 Bytes
-  kzgs: DATA[]; // each 48 bytes
+  commitments: DATA[]; // each 48 bytes
   blobs: DATA[]; // each 4096 * 32 = 131072 bytes
+  proofs: DATA[]; // some ELs could also provide proofs, each 48 bytes
 }
 
 export function serializeExecutionPayload(fork: ForkName, data: allForks.ExecutionPayload): ExecutionPayloadRpc {
@@ -182,31 +185,40 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
     payload.withdrawals = withdrawals.map(serializeWithdrawal);
   }
 
-  // DENEB adds excessDataGas to the ExecutionPayload
-  if ((data as deneb.ExecutionPayload).excessDataGas !== undefined) {
-    payload.excessDataGas = numToQuantity((data as deneb.ExecutionPayload).excessDataGas);
+  // DENEB adds dataGasUsed & excessDataGas to the ExecutionPayload
+  if (ForkSeq[fork] >= ForkSeq.deneb) {
+    const {dataGasUsed, excessDataGas} = data as deneb.ExecutionPayload;
+    payload.dataGasUsed = numToQuantity(dataGasUsed);
+    payload.excessDataGas = numToQuantity(excessDataGas);
   }
 
   return payload;
 }
 
-export function hasBlockValue(response: ExecutionPayloadResponseV2): response is ExecutionPayloadRpcWithBlockValue {
+export function serializeVersionedHashes(vHashes: VersionedHashes): VersionedHashesRpc {
+  return vHashes.map(bytesToData);
+}
+
+export function hasBlockValue(response: ExecutionPayloadResponse): response is ExecutionPayloadRpcWithBlockValue {
   return (response as ExecutionPayloadRpcWithBlockValue).blockValue !== undefined;
 }
 
 export function parseExecutionPayload(
   fork: ForkName,
-  response: ExecutionPayloadResponseV2
-): {executionPayload: allForks.ExecutionPayload; blockValue: Wei} {
+  response: ExecutionPayloadResponse
+): {executionPayload: allForks.ExecutionPayload; blockValue: Wei; blobsBundle?: BlobsBundle} {
   let data: ExecutionPayloadRpc;
   let blockValue: Wei;
+  let blobsBundle: BlobsBundle | undefined;
   if (hasBlockValue(response)) {
     blockValue = quantityToBigint(response.blockValue);
     data = response.executionPayload;
+    blobsBundle = response.blobsBundle ? parseBlobsBundle(response.blobsBundle) : undefined;
   } else {
     data = response;
     // Just set it to zero as default
     blockValue = BigInt(0);
+    blobsBundle = undefined;
   }
 
   const executionPayload = {
@@ -239,15 +251,24 @@ export function parseExecutionPayload(
 
   // DENEB adds excessDataGas to the ExecutionPayload
   if (ForkSeq[fork] >= ForkSeq.deneb) {
-    if (data.excessDataGas == null) {
+    const {dataGasUsed, excessDataGas} = data;
+
+    if (dataGasUsed == null) {
+      throw Error(
+        `dataGasUsed missing for ${fork} >= deneb executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+      );
+    }
+    if (excessDataGas == null) {
       throw Error(
         `excessDataGas missing for ${fork} >= deneb executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    (executionPayload as deneb.ExecutionPayload).excessDataGas = quantityToBigint(data.excessDataGas);
+
+    (executionPayload as deneb.ExecutionPayload).dataGasUsed = quantityToBigint(dataGasUsed);
+    (executionPayload as deneb.ExecutionPayload).excessDataGas = quantityToBigint(excessDataGas);
   }
 
-  return {executionPayload, blockValue};
+  return {executionPayload, blockValue, blobsBundle};
 }
 
 export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttributesRpc {
@@ -256,7 +277,12 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     prevRandao: bytesToData(data.prevRandao),
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map(serializeWithdrawal),
+    parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
   };
+}
+
+export function serializeBeaconBlockRoot(data: Root): DATA {
+  return bytesToData(data);
 }
 
 export function deserializePayloadAttributes(data: PayloadAttributesRpc): PayloadAttributes {
@@ -267,24 +293,24 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     // avoid any conversions
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map((withdrawal) => deserializeWithdrawal(withdrawal)),
+    parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
   };
 }
 
 export function parseBlobsBundle(data: BlobsBundleRpc): BlobsBundle {
   return {
-    // NOTE: Keep as hex, since it's only used for equality downstream
-    blockHash: dataToRootHex(data.blockHash),
     // As of Nov 17th 2022 according to Dan's tests Geth returns null if no blobs in block
-    kzgs: (data.kzgs ?? []).map((kzg) => dataToBytes(kzg, 48)),
+    commitments: (data.commitments ?? []).map((kzg) => dataToBytes(kzg, 48)),
     blobs: (data.blobs ?? []).map((blob) => dataToBytes(blob, BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_PER_BLOB)),
+    proofs: (data.proofs ?? []).map((kzg) => dataToBytes(kzg, 48)),
   };
 }
 
 export function serializeBlobsBundle(data: BlobsBundle): BlobsBundleRpc {
   return {
-    blockHash: dataToRootHex(data.blockHash),
-    kzgs: data.kzgs.map((kzg) => bytesToData(kzg)),
+    commitments: data.commitments.map((kzg) => bytesToData(kzg)),
     blobs: data.blobs.map((blob) => bytesToData(blob)),
+    proofs: data.blobs.map((proof) => bytesToData(proof)),
   };
 }
 

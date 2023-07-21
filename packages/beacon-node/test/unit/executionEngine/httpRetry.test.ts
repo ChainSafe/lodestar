@@ -1,8 +1,9 @@
 import {expect} from "chai";
 import {fastify} from "fastify";
-import {ForkName} from "@lodestar/params";
 import {fromHexString} from "@chainsafe/ssz";
+import {ForkName} from "@lodestar/params";
 
+import {Logger} from "@lodestar/logger";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
 import {bytesToData, numToQuantity} from "../../../src/eth1/provider/utils.js";
 import {IExecutionEngine, initializeExecutionEngine, PayloadAttributes} from "../../../src/execution/index.js";
@@ -43,7 +44,7 @@ describe("ExecutionEngine / http ", () => {
       await server.close();
     });
 
-    baseUrl = await server.listen(0);
+    baseUrl = await server.listen({port: 0});
 
     executionEngine = initializeExecutionEngine(
       {
@@ -52,7 +53,7 @@ describe("ExecutionEngine / http ", () => {
         retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
         retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
       },
-      {signal: controller.signal}
+      {signal: controller.signal, logger: console as unknown as Logger}
     );
   });
 

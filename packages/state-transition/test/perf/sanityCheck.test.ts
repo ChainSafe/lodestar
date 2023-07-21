@@ -30,14 +30,13 @@ describe("Perf test sanity check", function () {
 
   it("targetStake is in the same range", () => {
     const phase0State = generatePerfTestCachedStatePhase0();
-    const epochProcess = beforeProcessEpoch(phase0State);
+    const cache = beforeProcessEpoch(phase0State);
     expect(
       // Chai does not support bigint comparisons
       // eslint-disable-next-line chai-expect/no-inner-compare
-      BigInt(epochProcess.prevEpochUnslashedStake.targetStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT) >
-        targetStake,
+      BigInt(cache.prevEpochUnslashedStake.targetStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT) > targetStake,
       `targetStake too low: ${
-        BigInt(epochProcess.prevEpochUnslashedStake.targetStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT)
+        BigInt(cache.prevEpochUnslashedStake.targetStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT)
       } > ${targetStake}`
     ).to.be.true;
   });

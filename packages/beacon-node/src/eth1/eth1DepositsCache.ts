@@ -1,5 +1,5 @@
-import {phase0, ssz} from "@lodestar/types";
 import {byteArrayEquals} from "@chainsafe/ssz";
+import {phase0, ssz} from "@lodestar/types";
 import {FilterOptions} from "@lodestar/db";
 import {ChainForkConfig} from "@lodestar/config";
 
@@ -15,10 +15,10 @@ export class Eth1DepositsCache {
   db: IBeaconDb;
   config: ChainForkConfig;
 
-  constructor(opts: {unsafeAllowDepositDataOverwrite: boolean}, config: ChainForkConfig, db: IBeaconDb) {
+  constructor(opts: {unsafeAllowDepositDataOverwrite?: boolean}, config: ChainForkConfig, db: IBeaconDb) {
     this.config = config;
     this.db = db;
-    this.unsafeAllowDepositDataOverwrite = opts.unsafeAllowDepositDataOverwrite;
+    this.unsafeAllowDepositDataOverwrite = opts.unsafeAllowDepositDataOverwrite ?? false;
   }
 
   /**

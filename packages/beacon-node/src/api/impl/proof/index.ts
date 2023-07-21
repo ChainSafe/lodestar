@@ -1,5 +1,5 @@
-import {routes, ServerApi} from "@lodestar/api";
 import {createProof, ProofType} from "@chainsafe/persistent-merkle-tree";
+import {routes, ServerApi} from "@lodestar/api";
 import {ApiModules} from "../types.js";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {resolveBlockId} from "../beacon/blocks/utils.js";
@@ -7,7 +7,7 @@ import {ApiOptions} from "../../options.js";
 
 export function getProofApi(
   opts: ApiOptions,
-  {chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">
+  {chain, config}: Pick<ApiModules, "chain" | "config" | "db">
 ): ServerApi<routes.proof.Api> {
   // It's currently possible to request gigantic proofs (eg: a proof of the entire beacon state)
   // We want some some sort of resistance against this DoS vector.
@@ -20,7 +20,7 @@ export function getProofApi(
         throw new Error("Requested proof is too large.");
       }
 
-      const {state} = await resolveStateId(config, chain, db, stateId);
+      const {state} = await resolveStateId(chain, stateId);
 
       // Commit any changes before computing the state root. In normal cases the state should have no changes here
       state.commit();
@@ -36,7 +36,7 @@ export function getProofApi(
         throw new Error("Requested proof is too large.");
       }
 
-      const {block} = await resolveBlockId(chain.forkChoice, db, blockId);
+      const {block} = await resolveBlockId(chain, blockId);
 
       // Commit any changes before computing the state root. In normal cases the state should have no changes here
       const blockNode = config.getForkTypes(block.message.slot).BeaconBlock.toView(block.message).node;

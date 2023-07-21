@@ -1,27 +1,21 @@
 import {expect} from "chai";
-import sinon, {SinonStubbedInstance} from "sinon";
+import sinon from "sinon";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
 import {BeaconChain, ChainEventEmitter, HeadEventData} from "../../../../../src/chain/index.js";
 import {getEventsApi} from "../../../../../src/api/impl/events/index.js";
-import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
-import {generateCachedState} from "../../../../utils/state.js";
-import {StateContextCache} from "../../../../../src/chain/stateCache/index.js";
 import {StubbedChainMutable} from "../../../../utils/stub/index.js";
 import {ZERO_HASH_HEX} from "../../../../../src/constants/constants.js";
 
 describe("Events api impl", function () {
   describe("beacon event stream", function () {
-    let chainStub: StubbedChainMutable<"stateCache" | "emitter">;
-    let stateCacheStub: SinonStubbedInstance<StateContextCache>;
+    let chainStub: StubbedChainMutable<"regen" | "emitter">;
     let chainEventEmmitter: ChainEventEmitter;
     let api: ReturnType<typeof getEventsApi>;
 
     beforeEach(function () {
-      chainStub = sinon.createStubInstance(BeaconChain);
-      stateCacheStub = sinon.createStubInstance(StateContextCache);
-      chainStub.stateCache = (stateCacheStub as unknown) as StateContextCache;
+      chainStub = sinon.createStubInstance(BeaconChain) as typeof chainStub;
       chainEventEmmitter = new ChainEventEmitter();
       chainStub.emitter = chainEventEmmitter;
       api = getEventsApi({config, chain: chainStub});
@@ -52,8 +46,6 @@ describe("Events api impl", function () {
     it("should ignore not sent topics", async function () {
       const events = getEvents([routes.events.EventType.head]);
 
-      const headBlock = generateProtoBlock();
-      stateCacheStub.get.withArgs(headBlock.stateRoot).returns(generateCachedState({slot: 1000}));
       chainEventEmmitter.emit(routes.events.EventType.attestation, ssz.phase0.Attestation.defaultValue());
       chainEventEmmitter.emit(routes.events.EventType.head, headEventData);
 

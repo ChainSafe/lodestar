@@ -55,16 +55,51 @@ export interface SyncModules {
   wsCheckpoint?: phase0.Checkpoint;
 }
 
-export type PendingBlock = {
+export type UnknownAndAncestorBlocks = {
+  unknowns: UnknownBlock[];
+  ancestors: DownloadedBlock[];
+};
+
+/**
+ * onUnknownBlock: store 1 record with undefined parentBlockRootHex & blockInput, blockRootHex as key, status pending
+ * onUnknownBlockParent:
+ *   - store 1 record with known parentBlockRootHex & blockInput, blockRootHex as key, status downloaded
+ *   - store 1 record with undefined parentBlockRootHex & blockInput, parentBlockRootHex as key, status pending
+ */
+export type PendingBlock = UnknownBlock | DownloadedBlock;
+
+type PendingBlockCommon = {
   blockRootHex: RootHex;
-  parentBlockRootHex: RootHex;
-  blockInput: BlockInput;
   peerIdStrs: Set<string>;
-  status: PendingBlockStatus;
   downloadAttempts: number;
 };
+
+export type UnknownBlock = PendingBlockCommon & {
+  status: PendingBlockStatus.pending | PendingBlockStatus.fetching;
+  parentBlockRootHex: null;
+  blockInput: null;
+};
+
+export type DownloadedBlock = PendingBlockCommon & {
+  status: PendingBlockStatus.downloaded | PendingBlockStatus.processing;
+  parentBlockRootHex: RootHex;
+  blockInput: BlockInput;
+};
+
 export enum PendingBlockStatus {
   pending = "pending",
   fetching = "fetching",
+  downloaded = "downloaded",
   processing = "processing",
+}
+
+export enum PendingBlockType {
+  /**
+   * We got a block root (from a gossip attestation, for exxample) but we don't have the block in forkchoice.
+   */
+  UNKNOWN_BLOCK = "unknown_block",
+  /**
+   * During gossip time, we may get a block but the parent root is unknown (not in forkchoice).
+   */
+  UNKNOWN_PARENT = "unknown_parent",
 }

@@ -39,11 +39,11 @@ export const chainConfig: ChainConfig = {
 
   // Capella
   CAPELLA_FORK_VERSION: b("0x03000000"),
-  CAPELLA_FORK_EPOCH: Infinity,
+  CAPELLA_FORK_EPOCH: 194048, // April 12 (epoch: 194048    slot: 6209536    UTC: 4/12/2023, 10:27:35 PM)
 
   // DENEB
-  EIP4844_FORK_VERSION: b("0x04000000"),
-  EIP4844_FORK_EPOCH: Infinity,
+  DENEB_FORK_VERSION: b("0x04000000"),
+  DENEB_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------
@@ -78,10 +78,4 @@ export const chainConfig: ChainConfig = {
   DEPOSIT_CHAIN_ID: 1,
   DEPOSIT_NETWORK_ID: 1,
   DEPOSIT_CONTRACT_ADDRESS: b("0x00000000219ab540356cBB839Cbe05303d7705Fa"),
-
-  // Blobs
-  // ---------------------------------------------------------------
-  // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/p2p-interface.md#configuration
-  MAX_REQUEST_BLOBS_SIDECARS: 128,
-  MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUESTS: 4096,
 };

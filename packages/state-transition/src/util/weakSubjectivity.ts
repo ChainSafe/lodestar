@@ -1,9 +1,9 @@
+import {toHexString} from "@chainsafe/ssz";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {EFFECTIVE_BALANCE_INCREMENT, MAX_DEPOSITS, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Root} from "@lodestar/types";
 import {ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
-import {toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH} from "../constants/constants.js";
 import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types.js";
 import {computeEpochAtSlot, getCurrentEpoch, computeCheckpointEpochAtStateSlot} from "./epoch.js";

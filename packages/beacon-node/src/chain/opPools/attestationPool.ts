@@ -1,8 +1,9 @@
-import {phase0, Slot, Root, ssz} from "@lodestar/types";
 import {PointFormat, Signature} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
 import {BitArray, toHexString} from "@chainsafe/ssz";
+import {phase0, Slot, Root, RootHex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
+import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot, signatureFromBytesNoCheck} from "./utils.js";
 
@@ -60,6 +61,12 @@ export class AttestationPool {
   );
   private lowestPermissibleSlot = 0;
 
+  constructor(
+    private readonly clock: IClock,
+    private readonly cutOffSecFromSlot: number,
+    private readonly preaggregateSlotDistance = 0
+  ) {}
+
   /** Returns current count of pre-aggregated attestations with unique data */
   getAttestationCount(): number {
     let attestationCount = 0;
@@ -77,7 +84,8 @@ export class AttestationPool {
    * `SignedAggregateAndProof`.
    *
    * If the attestation is too old (low slot) to be included in the pool it is simply dropped
-   * and no error is returned.
+   * and no error is returned. Also if it's at clock slot but come to the pool later than 2/3
+   * of slot time, it's dropped too since it's not helpful for the validator anymore
    *
    * Expects the attestation to be fully validated:
    * - Valid signature
@@ -85,7 +93,7 @@ export class AttestationPool {
    * - Valid committeeIndex
    * - Valid data
    */
-  add(attestation: phase0.Attestation): InsertOutcome {
+  add(attestation: phase0.Attestation, attDataRootHex: RootHex): InsertOutcome {
     const slot = attestation.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
@@ -94,23 +102,25 @@ export class AttestationPool {
       return InsertOutcome.Old;
     }
 
+    // Reject attestations in the current slot but come to this pool very late
+    if (this.clock.secFromSlot(slot) > this.cutOffSecFromSlot) {
+      return InsertOutcome.Late;
+    }
+
     // Limit object per slot
     const aggregateByRoot = this.attestationByRootBySlot.getOrDefault(slot);
     if (aggregateByRoot.size >= MAX_ATTESTATIONS_PER_SLOT) {
       throw new OpPoolError({code: OpPoolErrorCode.REACHED_MAX_PER_SLOT});
     }
 
-    const dataRoot = ssz.phase0.AttestationData.hashTreeRoot(attestation.data);
-    const dataRootHex = toHexString(dataRoot);
-
     // Pre-aggregate the contribution with existing items
-    const aggregate = aggregateByRoot.get(dataRootHex);
+    const aggregate = aggregateByRoot.get(attDataRootHex);
     if (aggregate) {
       // Aggregate mutating
       return aggregateAttestationInto(aggregate, attestation);
     } else {
       // Create new aggregate
-      aggregateByRoot.set(dataRootHex, attestationToAggregate(attestation));
+      aggregateByRoot.set(attDataRootHex, attestationToAggregate(attestation));
       return InsertOutcome.NewData;
     }
   }
@@ -130,12 +140,13 @@ export class AttestationPool {
   }
 
   /**
-   * Removes any attestations with a slot lower than `current_slot` and bars any future
-   * attestations with a slot lower than `current_slot - SLOTS_RETAINED`.
+   * Removes any attestations with a slot lower than `current_slot - preaggregateSlotDistance`.
+   * By default, not interested in attestations in old slots, we only preaggregate attestations for the current slot.
    */
   prune(clockSlot: Slot): void {
     pruneBySlot(this.attestationByRootBySlot, clockSlot, SLOTS_RETAINED);
-    this.lowestPermissibleSlot = Math.max(clockSlot - SLOTS_RETAINED, 0);
+    // by default preaggregateSlotDistance is 0, i.e only accept attestations in the same clock slot.
+    this.lowestPermissibleSlot = Math.max(clockSlot - this.preaggregateSlotDistance, 0);
   }
 
   /**

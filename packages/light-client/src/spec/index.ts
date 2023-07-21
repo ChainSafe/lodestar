@@ -11,6 +11,7 @@ export {upgradeLightClientHeader} from "./utils.js";
 
 export class LightclientSpec {
   readonly store: ILightClientStore;
+  readonly config: BeaconConfig;
 
   constructor(
     config: BeaconConfig,
@@ -18,10 +19,11 @@ export class LightclientSpec {
     bootstrap: allForks.LightClientBootstrap
   ) {
     this.store = new LightClientStore(config, bootstrap, opts);
+    this.config = config;
   }
 
   onUpdate(currentSlot: Slot, update: allForks.LightClientUpdate): void {
-    processLightClientUpdate(this.store, currentSlot, this.opts, update);
+    processLightClientUpdate(this.config, this.store, currentSlot, this.opts, update);
   }
 
   onFinalityUpdate(currentSlot: Slot, finalityUpdate: allForks.LightClientFinalityUpdate): void {

@@ -10,14 +10,14 @@ import {allForks, Slot, ssz} from "@lodestar/types";
 import {verifyBlocksSanityChecks as verifyBlocksImportSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
-import {BeaconClock} from "../../../../src/chain/index.js";
+import {IClock} from "../../../../src/util/clock.js";
 import {ClockStopped} from "../../../utils/mocks/clock.js";
-import {getBlockInput} from "../../../../src/chain/blocks/types.js";
+import {BlockSource, getBlockInput} from "../../../../src/chain/blocks/types.js";
 
 describe("chain / blocks / verifyBlocksSanityChecks", function () {
   let forkChoice: SinonStubbedInstance<ForkChoice>;
   let clock: ClockStopped;
-  let modules: {forkChoice: IForkChoice; clock: BeaconClock; config: ChainForkConfig};
+  let modules: {forkChoice: IForkChoice; clock: IClock; config: ChainForkConfig};
   let block: allForks.SignedBeaconBlock;
   const currentSlot = 1;
 
@@ -28,7 +28,7 @@ describe("chain / blocks / verifyBlocksSanityChecks", function () {
     forkChoice = sinon.createStubInstance(ForkChoice);
     forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32), rootHex: ""});
     clock = new ClockStopped(currentSlot);
-    modules = {config, forkChoice, clock} as {forkChoice: IForkChoice; clock: BeaconClock; config: ChainForkConfig};
+    modules = {config, forkChoice, clock} as {forkChoice: IForkChoice; clock: IClock; config: ChainForkConfig};
     // On first call, parentRoot is known
     forkChoice.getBlockHex.returns({} as ProtoBlock);
   });
@@ -127,7 +127,7 @@ function verifyBlocksSanityChecks(
 ): {relevantBlocks: allForks.SignedBeaconBlock[]; parentSlots: Slot[]; parentBlock: ProtoBlock | null} {
   const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksImportSanityChecks(
     modules,
-    blocks.map((block) => getBlockInput.preDeneb(config, block)),
+    blocks.map((block) => getBlockInput.preDeneb(config, block, BlockSource.byRange, null)),
     opts
   );
   return {
@@ -162,7 +162,7 @@ function getForkChoice(knownBlocks: allForks.SignedBeaconBlock[], finalizedEpoch
     blocks.set(protoBlock.blockRoot, protoBlock);
   }
 
-  return ({
+  return {
     getBlockHex(blockRoot) {
       return blocks.get(blockRoot) ?? null;
     },
@@ -172,16 +172,16 @@ function getForkChoice(knownBlocks: allForks.SignedBeaconBlock[], finalizedEpoch
     getFinalizedCheckpoint() {
       return {epoch: finalizedEpoch, root: Buffer.alloc(32), rootHex: ""};
     },
-  } as Partial<IForkChoice>) as IForkChoice;
+  } as Partial<IForkChoice> as IForkChoice;
 }
 
 function toProtoBlock(block: allForks.SignedBeaconBlock): ProtoBlock {
-  return ({
+  return {
     slot: block.message.slot,
-    blockRoot: toHex(ssz.phase0.BeaconBlock.hashTreeRoot((block as allForks.SignedBeaconBlock).message)),
+    blockRoot: toHex(ssz.phase0.BeaconBlock.hashTreeRoot(block.message)),
     parentRoot: toHex(block.message.parentRoot),
     stateRoot: toHex(block.message.stateRoot),
-  } as Partial<ProtoBlock>) as ProtoBlock;
+  } as Partial<ProtoBlock> as ProtoBlock;
 }
 
 function slots(blocks: allForks.SignedBeaconBlock[]): Slot[] {

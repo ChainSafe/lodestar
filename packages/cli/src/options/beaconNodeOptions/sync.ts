@@ -2,17 +2,17 @@ import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "../../util/index.js";
 
 export type SyncArgs = {
-  "sync.isSingleNode": boolean;
-  "sync.disableProcessAsChainSegment": boolean;
-  "sync.disableRangeSync": boolean;
-  "sync.backfillBatchSize": number;
+  "sync.isSingleNode"?: boolean;
+  "sync.disableProcessAsChainSegment"?: boolean;
+  "sync.disableRangeSync"?: boolean;
+  "sync.backfillBatchSize"?: number;
 };
 
 export function parseArgs(args: SyncArgs): IBeaconNodeOptions["sync"] {
   return {
     isSingleNode: args["sync.isSingleNode"],
     disableProcessAsChainSegment: args["sync.disableProcessAsChainSegment"],
-    backfillBatchSize: args["sync.backfillBatchSize"],
+    backfillBatchSize: args["sync.backfillBatchSize"] ?? defaultOptions.sync.backfillBatchSize,
     disableRangeSync: args["sync.disableRangeSync"],
   };
 }

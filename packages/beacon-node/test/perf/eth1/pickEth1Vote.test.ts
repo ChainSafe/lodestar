@@ -1,6 +1,6 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {phase0, ssz} from "@lodestar/types";
 import {ContainerType, ListCompositeType} from "@chainsafe/ssz";
+import {phase0, ssz} from "@lodestar/types";
 import {newFilledArray, BeaconStateAllForks} from "@lodestar/state-transition";
 import {fastSerializeEth1Data, pickEth1Vote} from "../../../src/eth1/utils/eth1Vote.js";
 
@@ -39,11 +39,11 @@ describe("eth1 / pickEth1Vote", () => {
   }));
 
   itBench("pickEth1Vote - no votes", () => {
-    pickEth1Vote((stateNoVotes as unknown) as BeaconStateAllForks, votesToConsider);
+    pickEth1Vote(stateNoVotes as unknown as BeaconStateAllForks, votesToConsider);
   });
 
   itBench("pickEth1Vote - max votes", () => {
-    pickEth1Vote((stateMaxVotes as unknown) as BeaconStateAllForks, votesToConsider);
+    pickEth1Vote(stateMaxVotes as unknown as BeaconStateAllForks, votesToConsider);
   });
 });
 

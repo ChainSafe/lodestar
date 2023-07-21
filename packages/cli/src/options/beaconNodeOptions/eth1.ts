@@ -4,12 +4,12 @@ import {CliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
 import {ExecutionEngineArgs} from "./execution.js";
 
 export type Eth1Args = {
-  eth1: boolean;
-  "eth1.providerUrls": string[];
-  "eth1.depositContractDeployBlock": number;
-  "eth1.disableEth1DepositDataTracker": boolean;
-  "eth1.unsafeAllowDepositDataOverwrite": boolean;
-  "eth1.forcedEth1DataVote": string;
+  eth1?: boolean;
+  "eth1.providerUrls"?: string[];
+  "eth1.depositContractDeployBlock"?: number;
+  "eth1.disableEth1DepositDataTracker"?: boolean;
+  "eth1.unsafeAllowDepositDataOverwrite"?: boolean;
+  "eth1.forcedEth1DataVote"?: string;
 };
 
 export function parseArgs(args: Eth1Args & Partial<ExecutionEngineArgs>): IBeaconNodeOptions["eth1"] {
@@ -48,9 +48,13 @@ export const options: CliCommandOptions<Eth1Args> = {
 
   "eth1.providerUrls": {
     description:
-      "Urls to Eth1 node with enabled rpc. If not explicity provided and execution endpoint provided via execution.urls, it will use execution.urls. Otherwise will try connecting on the specified default(s)",
+      "Urls to Eth1 node with enabled rpc. If not explicitly provided and execution endpoint provided via execution.urls, it will use execution.urls. Otherwise will try connecting on the specified default(s)",
+    defaultDescription: defaultOptions.eth1.providerUrls?.join(","),
     type: "array",
-    defaultDescription: defaultOptions.eth1.providerUrls.join(" "),
+    string: true,
+    coerce: (urls: string[]): string[] =>
+      // Parse ["url1,url2"] to ["url1", "url2"]
+      urls.map((item) => item.split(",")).flat(1),
     group: "eth1",
   },
 

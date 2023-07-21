@@ -30,12 +30,18 @@ import {transition} from "./transition.js";
 // ],
 // ```
 const skipOpts: SkipOpts = {
+  skippedForks: ["eip6110"],
   // TODO: capella
   // BeaconBlockBody proof in lightclient is the new addition in v1.3.0-rc.2-hotfix
   // Skip them for now to enable subsequently
   skippedPrefixes: [
     "capella/light_client/single_merkle_proof/BeaconBlockBody",
     "deneb/light_client/single_merkle_proof/BeaconBlockBody",
+    // TODO: deneb
+    // Deneb signed voluntary exits will not be valid so skipping this
+    // To be cleaned up with the spec version update
+    "deneb/operations/voluntary_exit/",
+    "deneb/random/random",
   ],
 };
 

@@ -1,39 +1,12 @@
 {
   "__inputs": [
     {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
       "description": "",
-      "type": "datasource",
+      "label": "Prometheus",
+      "name": "DS_PROMETHEUS",
       "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__elements": [],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "8.4.2"
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "text",
-      "name": "Text",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
+      "pluginName": "Prometheus",
+      "type": "datasource"
     }
   ],
   "annotations": {
@@ -57,7 +30,7 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
   "iteration": 1661342107287,
   "links": [
@@ -151,19 +124,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": []
@@ -232,20 +192,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -320,19 +267,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -362,7 +296,7 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "sum(delta(lodestar_bls_thread_pool_time_seconds_sum[$rate_interval]))/sum(delta(lodestar_bls_thread_pool_success_jobs_signature_sets_count[$rate_interval]))",
+          "expr": "sum(rate(lodestar_bls_thread_pool_time_seconds_sum[$rate_interval]))/sum(rate(lodestar_bls_thread_pool_success_jobs_signature_sets_count[$rate_interval]))",
           "interval": "",
           "legendFormat": "pool",
           "refId": "A"
@@ -408,19 +342,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -496,19 +417,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -584,19 +492,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -626,7 +521,7 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "delta(lodestar_bls_thread_pool_queue_job_wait_time_seconds_sum[$rate_interval])/delta(lodestar_bls_thread_pool_queue_job_wait_time_seconds_count[$rate_interval])",
+          "expr": "rate(lodestar_bls_thread_pool_queue_job_wait_time_seconds_sum[$rate_interval])/rate(lodestar_bls_thread_pool_queue_job_wait_time_seconds_count[$rate_interval])",
           "interval": "",
           "legendFormat": "pool",
           "refId": "A"
@@ -673,19 +568,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -717,7 +599,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "delta(lodestar_bls_thread_pool_latency_to_worker_sum[6m])/delta(lodestar_bls_thread_pool_latency_to_worker_count[6m])",
+          "expr": "rate(lodestar_bls_thread_pool_latency_to_worker_sum[6m])/rate(lodestar_bls_thread_pool_latency_to_worker_count[6m])",
           "interval": "",
           "legendFormat": "to worker",
           "refId": "to worker"
@@ -728,7 +610,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "delta(lodestar_bls_thread_pool_latency_from_worker_sum[6m])/delta(lodestar_bls_thread_pool_latency_from_worker_count[6m])",
+          "expr": "rate(lodestar_bls_thread_pool_latency_from_worker_sum[6m])/rate(lodestar_bls_thread_pool_latency_from_worker_count[6m])",
           "hide": false,
           "interval": "",
           "legendFormat": "from worker",
@@ -775,19 +657,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": []
@@ -817,7 +686,7 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "delta(lodestar_bls_thread_pool_batch_sigs_success_total[$rate_interval])/delta(lodestar_bls_thread_pool_success_jobs_signature_sets_count[$rate_interval])",
+          "expr": "rate(lodestar_bls_thread_pool_batch_sigs_success_total[$rate_interval])/rate(lodestar_bls_thread_pool_success_jobs_signature_sets_count[$rate_interval])",
           "interval": "",
           "legendFormat": "pool",
           "refId": "A"
@@ -863,19 +732,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -902,7 +758,7 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "delta(lodestar_bls_thread_pool_sig_sets_started_total[$rate_interval])/(delta(lodestar_bls_thread_pool_jobs_started_total[$rate_interval])>0)",
+          "expr": "rate(lodestar_bls_thread_pool_sig_sets_started_total[$rate_interval])/(rate(lodestar_bls_thread_pool_jobs_started_total[$rate_interval])>0)",
           "interval": "",
           "legendFormat": "pool",
           "refId": "A"
@@ -947,19 +803,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": [
@@ -1006,7 +849,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "delta(lodestar_bls_thread_pool_error_jobs_signature_sets_count[$rate_interval])\n/\n(\n    delta(lodestar_bls_thread_pool_success_jobs_signature_sets_count[$rate_interval])\n    + delta(lodestar_bls_thread_pool_error_jobs_signature_sets_count[$rate_interval])\n)",
+          "expr": "rate(lodestar_bls_thread_pool_error_jobs_signature_sets_count[$rate_interval])\n/\n(\n    rate(lodestar_bls_thread_pool_success_jobs_signature_sets_count[$rate_interval])\n    + rate(lodestar_bls_thread_pool_error_jobs_signature_sets_count[$rate_interval])\n)",
           "interval": "",
           "legendFormat": "sig_error_rate",
           "refId": "A"
@@ -1064,19 +907,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "none"
         },
         "overrides": []
@@ -1103,7 +933,7 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "delta(lodestar_bls_thread_pool_jobs_started_total[$rate_interval])/delta(lodestar_bls_thread_pool_job_groups_started_total[$rate_interval])",
+          "expr": "rate(lodestar_bls_thread_pool_jobs_started_total[$rate_interval])/rate(lodestar_bls_thread_pool_job_groups_started_total[$rate_interval])",
           "interval": "",
           "legendFormat": "pool",
           "refId": "A"

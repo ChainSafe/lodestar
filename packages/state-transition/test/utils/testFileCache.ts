@@ -113,7 +113,7 @@ async function tryEach<T>(promises: (() => Promise<T>)[]): Promise<T> {
 
   for (let i = 0; i < promises.length; i++) {
     try {
-      return promises[i]();
+      return await promises[i]();
     } catch (e) {
       errors.push(e as Error);
     }

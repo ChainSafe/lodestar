@@ -13,7 +13,10 @@ describe("misc / throw vs return", () => {
   }
 
   class ErrorStatus extends Error implements Status {
-    constructor(readonly code: string, readonly value: number) {
+    constructor(
+      readonly code: string,
+      readonly value: number
+    ) {
       super(code);
     }
   }

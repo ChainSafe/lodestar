@@ -1,3 +1,5 @@
+import type {SecretKey} from "@chainsafe/bls/types";
+import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -5,6 +7,7 @@ import {
   computeDomain,
   ZERO_HASH,
   blindedOrFullBlockHashTreeRoot,
+  blindedOrFullBlobSidecarHashTreeRoot,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -16,10 +19,9 @@ import {
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
-  DOMAIN_VOLUNTARY_EXIT,
   DOMAIN_APPLICATION_BUILDER,
+  DOMAIN_BLOB_SIDECAR,
 } from "@lodestar/params";
-import type {SecretKey} from "@chainsafe/bls/types";
 import {
   allForks,
   altair,
@@ -33,7 +35,6 @@ import {
   ssz,
   ValidatorIndex,
 } from "@lodestar/types";
-import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
@@ -65,6 +66,8 @@ export type SignerRemote = {
 export enum BuilderSelection {
   BuilderAlways = "builderalways",
   MaxProfit = "maxprofit",
+  /** Only activate builder flow for DVT block proposal protocols */
+  BuilderOnly = "builderonly",
 }
 
 type DefaultProposerConfig = {
@@ -354,6 +357,37 @@ export class ValidatorStore {
     } as allForks.FullOrBlindedSignedBeaconBlock;
   }
 
+  async signBlob(
+    pubkey: BLSPubkey,
+    blindedOrFull: allForks.FullOrBlindedBlobSidecar,
+    currentSlot: Slot
+  ): Promise<allForks.FullOrBlindedSignedBlobSidecar> {
+    // Make sure the block slot is not higher than the current slot to avoid potential attacks.
+    if (blindedOrFull.slot > currentSlot) {
+      throw Error(`Not signing block with slot ${blindedOrFull.slot} greater than current slot ${currentSlot}`);
+    }
+
+    // Duties are filtered before-hard by doppelganger-safe, this assert should never throw
+    this.assertDoppelgangerSafe(pubkey);
+
+    const signingSlot = blindedOrFull.slot;
+    const domain = this.config.getDomain(signingSlot, DOMAIN_BLOB_SIDECAR);
+    const blobRoot = blindedOrFullBlobSidecarHashTreeRoot(this.config, blindedOrFull);
+    // Don't use `computeSigningRoot()` here to compute the objectRoot in typesafe function blindedOrFullBlockHashTreeRoot()
+    const signingRoot = ssz.phase0.SigningData.hashTreeRoot({objectRoot: blobRoot, domain});
+
+    // Slashing protection is not required as blobs are binded to blocks which are already protected
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.BLOB,
+      data: blindedOrFull,
+    };
+
+    return {
+      message: blindedOrFull,
+      signature: await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage),
+    } as allForks.FullOrBlindedSignedBlobSidecar;
+  }
+
   async signRandao(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
     const signingSlot = slot;
     const domain = this.config.getDomain(slot, DOMAIN_RANDAO);
@@ -528,7 +562,7 @@ export class ValidatorStore {
     exitEpoch: Epoch
   ): Promise<phase0.SignedVoluntaryExit> {
     const signingSlot = computeStartSlotAtEpoch(exitEpoch);
-    const domain = this.config.getDomain(signingSlot, DOMAIN_VOLUNTARY_EXIT);
+    const domain = this.config.getDomainForVoluntaryExit(signingSlot);
 
     const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex};
     const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);

@@ -1,3 +1,4 @@
+import {toHexString} from "@chainsafe/ssz";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -10,7 +11,6 @@ import {allForks, Epoch, Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Logger, mapValues} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
-import {toHexString} from "@chainsafe/ssz";
 import {BeaconNode} from "../../../src/index.js";
 import {ChainEvent, HeadEventData} from "../../../src/chain/index.js";
 import {linspace} from "../../../src/util/numpy.js";
@@ -33,8 +33,8 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
     // Check if there was a proposed block and how many attestations it includes
     const block = await bn.chain.getCanonicalBlockAtSlot(head.slot);
     if (block) {
-      const bits = sumAttestationBits(block.message);
-      const inclDelay = avgInclusionDelay(block.message);
+      const bits = sumAttestationBits(block.block.message);
+      const inclDelay = avgInclusionDelay(block.block.message);
       attestationsPerBlock.set(slot, bits);
       inclusionDelayPerBlock.set(slot, inclDelay);
       logger.info("> Block attestations", {slot, bits, inclDelay});
@@ -44,13 +44,14 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
   function logParticipation(state: CachedBeaconStateAllForks): void {
     // Compute participation (takes 5ms with 64 validators)
     // Need a CachedBeaconStateAllForks where (state.slot + 1) % SLOTS_EPOCH == 0
-    const epochProcess = beforeProcessEpoch(state);
+    const epochTransitionCache = beforeProcessEpoch(state);
     const epoch = computeEpochAtSlot(state.slot);
 
     const prevParticipation =
-      epochProcess.prevEpochUnslashedStake.targetStakeByIncrement / epochProcess.totalActiveStakeByIncrement;
+      epochTransitionCache.prevEpochUnslashedStake.targetStakeByIncrement /
+      epochTransitionCache.totalActiveStakeByIncrement;
     const currParticipation =
-      epochProcess.currEpochUnslashedTargetStakeByIncrement / epochProcess.totalActiveStakeByIncrement;
+      epochTransitionCache.currEpochUnslashedTargetStakeByIncrement / epochTransitionCache.totalActiveStakeByIncrement;
     prevParticipationPerEpoch.set(epoch - 1, prevParticipation);
     currParticipationPerEpoch.set(epoch, currParticipation);
     logger.info("> Participation", {

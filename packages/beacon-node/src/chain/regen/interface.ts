@@ -1,17 +1,23 @@
-import {allForks, phase0, Slot, RootHex} from "@lodestar/types";
+import {allForks, phase0, Slot, RootHex, Epoch} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {routes} from "@lodestar/api";
+import {ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointHex} from "../stateCache/index.js";
 
 export enum RegenCaller {
   getDuties = "getDuties",
   processBlock = "processBlock",
   produceBlock = "produceBlock",
   validateGossipBlock = "validateGossipBlock",
+  validateGossipBlob = "validateGossipBlob",
   precomputeEpoch = "precomputeEpoch",
   produceAttestationData = "produceAttestationData",
   processBlocksInEpoch = "processBlocksInEpoch",
   validateGossipAggregateAndProof = "validateGossipAggregateAndProof",
   validateGossipAttestation = "validateGossipAttestation",
+  validateGossipVoluntaryExit = "validateGossipVoluntaryExit",
   onForkChoiceFinalized = "onForkChoiceFinalized",
+  restApi = "restApi",
 }
 
 export enum RegenFnName {
@@ -25,10 +31,24 @@ export type StateCloneOpts = {
   dontTransferCache: boolean;
 };
 
+export interface IStateRegenerator extends IStateRegeneratorInternal {
+  dropCache(): void;
+  dumpCacheSummary(): routes.lodestar.StateCacheItem[];
+  getStateSync(stateRoot: RootHex): CachedBeaconStateAllForks | null;
+  getCheckpointStateSync(cp: CheckpointHex): CachedBeaconStateAllForks | null;
+  getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null;
+  pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
+  pruneOnFinalized(finalizedEpoch: Epoch): void;
+  addPostState(postState: CachedBeaconStateAllForks): void;
+  addCheckpointState(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void;
+  updateHeadState(newHeadStateRoot: RootHex, maybeHeadState: CachedBeaconStateAllForks): void;
+  updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
+}
+
 /**
  * Regenerates states that have already been processed by the fork choice
  */
-export interface IStateRegenerator {
+export interface IStateRegeneratorInternal {
   /**
    * Return a valid pre-state for a beacon block
    * This will always return a state in the latest viable epoch

@@ -6,6 +6,7 @@ import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 const ZERO_HASH = Buffer.alloc(32, 0);
 const ZERO_HASH_HEX = "0x" + ZERO_HASH.toString("hex");
 const randaoReveal = Buffer.alloc(96, 1);
+const selectionProof = Buffer.alloc(96, 1);
 const graffiti = "a".repeat(32);
 
 export const testData: GenericServerTestCases<Api> = {
@@ -90,8 +91,16 @@ export const testData: GenericServerTestCases<Api> = {
     args: [[{validatorIndex: "1", feeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"}]],
     res: undefined,
   },
+  submitBeaconCommitteeSelections: {
+    args: [[]],
+    res: {data: [{validatorIndex: 1, slot: 2, selectionProof}]},
+  },
+  submitSyncCommitteeSelections: {
+    args: [[]],
+    res: {data: [{validatorIndex: 1, slot: 2, subcommitteeIndex: 3, selectionProof}]},
+  },
   getLiveness: {
-    args: [[0], 0],
+    args: [0, [0]],
     res: {data: []},
   },
   registerValidator: {

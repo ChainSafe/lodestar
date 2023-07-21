@@ -1,8 +1,9 @@
+import {toHexString} from "@chainsafe/ssz";
 import {allForks, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-import {toHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
+import {QueueErrorCode} from "../../util/queue/index.js";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum BlockErrorCode {
@@ -107,13 +108,24 @@ export type BlockErrorType =
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 
 export class BlockError extends LodestarError<BlockErrorType> {
-  constructor(readonly signedBlock: allForks.SignedBeaconBlock, type: BlockErrorType) {
+  constructor(
+    readonly signedBlock: allForks.SignedBeaconBlock,
+    type: BlockErrorType
+  ) {
     super(type);
   }
 
   getMetadata(): Record<string, string | number | null> {
     return renderBlockErrorType(this.type);
   }
+}
+
+export function isBlockErrorAborted(e: unknown): e is BlockError {
+  return (
+    e instanceof BlockError &&
+    e.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR &&
+    e.type.errorMessage === QueueErrorCode.QUEUE_ABORTED
+  );
 }
 
 export function renderBlockErrorType(type: BlockErrorType): Record<string, string | number | null> {

@@ -1,7 +1,7 @@
-import {phase0, ssz} from "@lodestar/types";
-
-import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {toHexString} from "@chainsafe/ssz";
+import {Slot, phase0, ssz} from "@lodestar/types";
+
+import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH, ForkSeq} from "@lodestar/params";
 import {computeEpochAtSlot} from "../util/index.js";
 import {CachedBeaconStatePhase0, CachedBeaconStateAllForks} from "../types.js";
 import {isValidIndexedAttestation} from "./index.js";
@@ -22,7 +22,7 @@ export function processAttestationPhase0(
   const slot = state.slot;
   const data = attestation.data;
 
-  validateAttestation(state, attestation);
+  validateAttestation(ForkSeq.phase0, state, attestation);
 
   const pendingAttestation = ssz.phase0.PendingAttestation.toViewDU({
     data: data,
@@ -56,7 +56,11 @@ export function processAttestationPhase0(
   }
 }
 
-export function validateAttestation(state: CachedBeaconStateAllForks, attestation: phase0.Attestation): void {
+export function validateAttestation(
+  fork: ForkSeq,
+  state: CachedBeaconStateAllForks,
+  attestation: phase0.Attestation
+): void {
   const {epochCtx} = state;
   const slot = state.slot;
   const data = attestation.data;
@@ -80,7 +84,9 @@ export function validateAttestation(state: CachedBeaconStateAllForks, attestatio
         `targetEpoch=${data.target.epoch} computedEpoch=${computedEpoch}`
     );
   }
-  if (!(data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= slot && slot <= data.slot + SLOTS_PER_EPOCH)) {
+
+  // post deneb, the attestations are valid till end of next epoch
+  if (!(data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= slot && isTimelyTarget(fork, slot - data.slot))) {
     throw new Error(
       "Attestation slot not within inclusion window: " +
         `slot=${data.slot} window=${data.slot + MIN_ATTESTATION_INCLUSION_DELAY}..${data.slot + SLOTS_PER_EPOCH}`
@@ -93,6 +99,16 @@ export function validateAttestation(state: CachedBeaconStateAllForks, attestatio
       "Attestation aggregation bits length does not match committee length: " +
         `aggregationBitsLength=${attestation.aggregationBits.bitLen} committeeLength=${committee.length}`
     );
+  }
+}
+
+// Modified https://github.com/ethereum/consensus-specs/pull/3360
+export function isTimelyTarget(fork: ForkSeq, inclusionDistance: Slot): boolean {
+  // post deneb attestation is valid till end of next epoch for target
+  if (fork >= ForkSeq.deneb) {
+    return true;
+  } else {
+    return inclusionDistance <= SLOTS_PER_EPOCH;
   }
 }
 

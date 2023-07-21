@@ -4,22 +4,23 @@ import {Registry} from "prom-client";
 import {PeerId} from "@libp2p/interface-peer-id";
 import {BeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {sleep} from "@lodestar/utils";
+import type {LoggerNode} from "@lodestar/logger/node";
 import {Api, ServerApi} from "@lodestar/api";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 
 import {IBeaconDb} from "../db/index.js";
-import {INetwork, Network, getReqRespHandlers} from "../network/index.js";
+import {Network, getReqRespHandlers} from "../network/index.js";
 import {BeaconSync, IBeaconSync} from "../sync/index.js";
 import {BackfillSync} from "../sync/backfill/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
-import {createMetrics, Metrics, HttpMetricsServer} from "../metrics/index.js";
+import {createMetrics, Metrics, HttpMetricsServer, getHttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
 import {getApi, BeaconRestApiServer} from "../api/index.js";
 import {initializeExecutionEngine, initializeExecutionBuilder} from "../execution/index.js";
 import {initializeEth1ForBlockProduction} from "../eth1/index.js";
-import {initCKZG, loadEthereumTrustedSetup} from "../util/kzg.js";
+import {initCKZG, loadEthereumTrustedSetup, TrustedFileMode} from "../util/kzg.js";
 import {IBeaconNodeOptions} from "./options.js";
 import {runNodeNotifier} from "./notifier.js";
 
@@ -30,12 +31,12 @@ export type BeaconNodeModules = {
   config: BeaconConfig;
   db: IBeaconDb;
   metrics: Metrics | null;
-  network: INetwork;
+  network: Network;
   chain: IBeaconChain;
   api: {[K in keyof Api]: ServerApi<Api[K]>};
   sync: IBeaconSync;
   backfillSync: BackfillSync | null;
-  metricsServer?: HttpMetricsServer;
+  metricsServer: HttpMetricsServer | null;
   monitoring: MonitoringService | null;
   restApi?: BeaconRestApiServer;
   controller?: AbortController;
@@ -45,7 +46,7 @@ export type BeaconNodeInitModules = {
   opts: IBeaconNodeOptions;
   config: BeaconConfig;
   db: IBeaconDb;
-  logger: Logger;
+  logger: LoggerNode;
   processShutdownCallback: ProcessShutdownCallback;
   peerId: PeerId;
   peerStoreDir?: string;
@@ -65,6 +66,7 @@ enum LoggerModule {
   backfill = "backfill",
   chain = "chain",
   eth1 = "eth1",
+  execution = "execution",
   metrics = "metrics",
   monitoring = "monitoring",
   network = "network",
@@ -75,6 +77,12 @@ enum LoggerModule {
 }
 
 /**
+ * Short delay before closing db to give async operations sufficient time to complete
+ * and prevent "Database is not open" errors when shutting down beacon node.
+ */
+const DELAY_BEFORE_CLOSING_DB_MS = 500;
+
+/**
  * The main Beacon Node class.  Contains various components for getting and processing data from the
  * Ethereum Consensus ecosystem as well as systems for getting beacon node metadata.
  */
@@ -83,9 +91,9 @@ export class BeaconNode {
   config: BeaconConfig;
   db: IBeaconDb;
   metrics: Metrics | null;
-  metricsServer?: HttpMetricsServer;
+  metricsServer: HttpMetricsServer | null;
   monitoring: MonitoringService | null;
-  network: INetwork;
+  network: Network;
   chain: IBeaconChain;
   api: {[K in keyof Api]: ServerApi<Api[K]>};
   restApi?: BeaconRestApiServer;
@@ -150,21 +158,23 @@ export class BeaconNode {
     const signal = controller.signal;
 
     // TODO DENEB, where is the best place to do this?
-    if (config.EIP4844_FORK_EPOCH < Infinity) {
+    if (config.DENEB_FORK_EPOCH < Infinity) {
       // TODO DENEB: "c-kzg" is not installed by default, so if the library is not installed this will throw
       // See "Not able to build lodestar from source" https://github.com/ChainSafe/lodestar/issues/4886
       await initCKZG();
-      loadEthereumTrustedSetup();
+      loadEthereumTrustedSetup(TrustedFileMode.Txt, opts.chain.trustedSetup);
     }
 
-    // start db if not already started
-    await db.start();
     // Prune hot db repos
     // TODO: Should this call be awaited?
     await db.pruneHotDb();
 
     let metrics = null;
-    if (opts.metrics.enabled) {
+    if (
+      opts.metrics.enabled ||
+      // monitoring relies on metrics data
+      opts.monitoring.endpoint
+    ) {
       metrics = createMetrics(
         opts.metrics,
         config,
@@ -175,19 +185,16 @@ export class BeaconNode {
       initBeaconMetrics(metrics, anchorState);
       // Since the db is instantiated before this, metrics must be injected manually afterwards
       db.setMetrics(metrics.db);
+      signal.addEventListener("abort", metrics.close, {once: true});
     }
 
-    let monitoring = null;
-    if (opts.monitoring.endpoint) {
-      if (metrics == null) {
-        throw new Error("Metrics must be enabled to use monitoring");
-      }
-      monitoring = new MonitoringService("beacon", opts.monitoring, {
-        register: metrics.register,
-        logger: logger.child({module: LoggerModule.monitoring}),
-      });
-      monitoring.start();
-    }
+    const monitoring = opts.monitoring.endpoint
+      ? new MonitoringService(
+          "beacon",
+          {...opts.monitoring, endpoint: opts.monitoring.endpoint},
+          {register: (metrics as Metrics).register, logger: logger.child({module: LoggerModule.monitoring})}
+        )
+      : null;
 
     const chain = new BeaconChain(opts.chain, {
       config,
@@ -203,9 +210,13 @@ export class BeaconNode {
         logger: logger.child({module: LoggerModule.eth1}),
         signal,
       }),
-      executionEngine: initializeExecutionEngine(opts.executionEngine, {metrics, signal}),
+      executionEngine: initializeExecutionEngine(opts.executionEngine, {
+        metrics,
+        signal,
+        logger: logger.child({module: LoggerModule.execution}),
+      }),
       executionBuilder: opts.executionBuilder.enabled
-        ? initializeExecutionBuilder(opts.executionBuilder, config)
+        ? initializeExecutionBuilder(opts.executionBuilder, config, metrics)
         : undefined,
     });
 
@@ -220,10 +231,10 @@ export class BeaconNode {
       logger: logger.child({module: LoggerModule.network}),
       metrics,
       chain,
+      db,
       peerId,
       peerStoreDir,
-      reqRespHandlers: getReqRespHandlers({db, chain}),
-      signal,
+      getReqRespHandler: getReqRespHandlers({db, chain}),
     });
 
     const sync = new BeaconSync(opts.sync, {
@@ -261,18 +272,14 @@ export class BeaconNode {
       metrics,
     });
 
-    const metricsServer = metrics
-      ? new HttpMetricsServer(opts.metrics, {
-          register: metrics.register,
-          getOtherMetrics: async (): Promise<string> => {
-            return network.metrics();
-          },
+    // only start server if metrics are explicitly enabled
+    const metricsServer = opts.metrics.enabled
+      ? await getHttpMetricsServer(opts.metrics, {
+          register: (metrics as Metrics).register,
+          getOtherMetrics: () => network.scrapeMetrics(),
           logger: logger.child({module: LoggerModule.metrics}),
         })
-      : undefined;
-    if (metricsServer) {
-      await metricsServer.start();
-    }
+      : null;
 
     const restApi = new BeaconRestApiServer(opts.api.rest, {
       config,
@@ -312,14 +319,14 @@ export class BeaconNode {
       this.sync.close();
       this.backfillSync?.close();
       await this.network.close();
-      if (this.metricsServer) await this.metricsServer.stop();
-      if (this.monitoring) this.monitoring.stop();
+      if (this.metricsServer) await this.metricsServer.close();
+      if (this.monitoring) this.monitoring.close();
       if (this.restApi) await this.restApi.close();
-
       await this.chain.persistToDisk();
       await this.chain.close();
-      await this.db.stop();
       if (this.controller) this.controller.abort();
+      await sleep(DELAY_BEFORE_CLOSING_DB_MS);
+      await this.db.close();
       this.status = BeaconNodeStatus.closed;
     }
   }

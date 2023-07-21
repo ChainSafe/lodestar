@@ -13,7 +13,7 @@ describe("Proxy cost", () => {
       if (p === "length") {
         return target.length;
       } else {
-        return target[(p as unknown) as number];
+        return target[p as unknown as number];
       }
     },
   });

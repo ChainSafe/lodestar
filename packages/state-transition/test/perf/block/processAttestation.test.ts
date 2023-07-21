@@ -60,7 +60,7 @@ describe("altair processAttestation", () => {
       id: `altair processAttestation - ${perfStateId} ${id}`,
       before: () => {
         const state = generatePerfTestCachedStateAltair();
-        const block = getBlockAltair(state as CachedBeaconStateAltair, opts);
+        const block = getBlockAltair(state, opts);
         return {state, attestations: block.message.body.attestations as phase0.Attestation[]};
       },
       beforeEach: ({state, attestations}) => {
@@ -72,7 +72,12 @@ describe("altair processAttestation", () => {
         return {state: stateCloned, attestations};
       },
       fn: ({state, attestations}) => {
-        processAttestationsAltair(state as CachedBeaconStateAltair, attestations, false);
+        processAttestationsAltair(
+          state.config.getForkSeq(state.slot),
+          state as CachedBeaconStateAltair,
+          attestations,
+          false
+        );
         state.commit();
         // After processAttestations normal case vc 250_000 it has to do 6802 hash64 ops
         // state.hashTreeRoot();

@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {expect} from "chai";
 import type {SecretKey, PublicKey} from "@chainsafe/bls/types";
+import {toHexString} from "@chainsafe/ssz";
 import {DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
 import {computeDomain, computeSigningRoot, interopSecretKey, ZERO_HASH} from "@lodestar/state-transition";
 import {ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {ErrorAborted} from "@lodestar/utils";
-import {toHexString} from "@chainsafe/ssz";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis.js";
 import {testLogger} from "../../../utils/logger.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";

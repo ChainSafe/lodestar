@@ -94,15 +94,8 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
   ];
 
   for (const testCase of testCases) {
-    const {
-      id,
-      blocks,
-      deposits,
-      depositRootTree,
-      lastProcessedDepositBlockNumber,
-      expectedEth1Data,
-      error,
-    } = testCase();
+    const {id, blocks, deposits, depositRootTree, lastProcessedDepositBlockNumber, expectedEth1Data, error} =
+      testCase();
     it(id, async function () {
       const eth1DatasPromise = getEth1DataForBlocks(
         blocks,
@@ -116,7 +109,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
         const eth1Datas = await eth1DatasPromise;
         const eth1DatasPartial = eth1Datas.map((eth1Data) => pick(eth1Data, Object.keys(expectedEth1Data[0])));
         expect(eth1DatasPartial).to.deep.equal(expectedEth1Data);
-      } else if (error) {
+      } else if (error != null) {
         await expectRejectedWithLodestarError(eth1DatasPromise, error);
       } else {
         throw Error("Test case must have 'expectedEth1Data' or 'error'");

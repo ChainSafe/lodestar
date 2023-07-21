@@ -23,7 +23,7 @@ export type SlashingProtectionInterchangeTest = {
         target_epoch: string;
         signing_root?: string;
       }[];
-    }
+    },
   ];
 };
 

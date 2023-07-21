@@ -9,7 +9,7 @@ import {
   WEIGHT_DENOMINATOR,
   ForkSeq,
 } from "@lodestar/params";
-import {CachedBeaconStateAltair, EpochProcess} from "../types.js";
+import {CachedBeaconStateAltair, EpochTransitionCache} from "../types.js";
 import {
   FLAG_ELIGIBLE_ATTESTER,
   FLAG_PREV_HEAD_ATTESTER_UNSLASHED,
@@ -43,11 +43,11 @@ type RewardPenaltyItem = {
  */
 export function getRewardsAndPenaltiesAltair(
   state: CachedBeaconStateAltair,
-  process: EpochProcess
+  cache: EpochTransitionCache
 ): [number[], number[]] {
   // TODO: Is there a cheaper way to measure length that going to `state.validators`?
   const validatorCount = state.validators.length;
-  const activeIncrements = process.totalActiveStakeByIncrement;
+  const activeIncrements = cache.totalActiveStakeByIncrement;
   const rewards = newZeroedArray(validatorCount);
   const penalties = newZeroedArray(validatorCount);
 
@@ -62,7 +62,7 @@ export function getRewardsAndPenaltiesAltair(
     fork === ForkSeq.altair ? INACTIVITY_PENALTY_QUOTIENT_ALTAIR : INACTIVITY_PENALTY_QUOTIENT_BELLATRIX;
   const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenalityMultiplier;
 
-  const {statuses} = process;
+  const {statuses} = cache;
   for (let i = 0; i < statuses.length; i++) {
     const status = statuses[i];
     if (!hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
@@ -73,13 +73,13 @@ export function getRewardsAndPenaltiesAltair(
 
     let rewardPenaltyItem = rewardPenaltyItemCache.get(effectiveBalanceIncrement);
     if (!rewardPenaltyItem) {
-      const baseReward = effectiveBalanceIncrement * process.baseRewardPerIncrement;
+      const baseReward = effectiveBalanceIncrement * cache.baseRewardPerIncrement;
       const tsWeigh = PARTICIPATION_FLAG_WEIGHTS[TIMELY_SOURCE_FLAG_INDEX];
       const ttWeigh = PARTICIPATION_FLAG_WEIGHTS[TIMELY_TARGET_FLAG_INDEX];
       const thWeigh = PARTICIPATION_FLAG_WEIGHTS[TIMELY_HEAD_FLAG_INDEX];
-      const tsUnslashedParticipatingIncrements = process.prevEpochUnslashedStake.sourceStakeByIncrement;
-      const ttUnslashedParticipatingIncrements = process.prevEpochUnslashedStake.targetStakeByIncrement;
-      const thUnslashedParticipatingIncrements = process.prevEpochUnslashedStake.headStakeByIncrement;
+      const tsUnslashedParticipatingIncrements = cache.prevEpochUnslashedStake.sourceStakeByIncrement;
+      const ttUnslashedParticipatingIncrements = cache.prevEpochUnslashedStake.targetStakeByIncrement;
+      const thUnslashedParticipatingIncrements = cache.prevEpochUnslashedStake.headStakeByIncrement;
       const tsRewardNumerator = baseReward * tsWeigh * tsUnslashedParticipatingIncrements;
       const ttRewardNumerator = baseReward * ttWeigh * ttUnslashedParticipatingIncrements;
       const thRewardNumerator = baseReward * thWeigh * thUnslashedParticipatingIncrements;
@@ -94,13 +94,8 @@ export function getRewardsAndPenaltiesAltair(
       rewardPenaltyItemCache.set(effectiveBalanceIncrement, rewardPenaltyItem);
     }
 
-    const {
-      timelySourceReward,
-      timelySourcePenalty,
-      timelyTargetReward,
-      timelyTargetPenalty,
-      timelyHeadReward,
-    } = rewardPenaltyItem;
+    const {timelySourceReward, timelySourcePenalty, timelyTargetReward, timelyTargetPenalty, timelyHeadReward} =
+      rewardPenaltyItem;
 
     // same logic to getFlagIndexDeltas
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {

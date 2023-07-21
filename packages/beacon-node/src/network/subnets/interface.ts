@@ -1,6 +1,7 @@
 import {ForkName} from "@lodestar/params";
-import {Slot, ValidatorIndex} from "@lodestar/types";
+import {Bytes32, Slot, ValidatorIndex} from "@lodestar/types";
 import {RequestedSubnet} from "../peers/utils/index.js";
+import {GossipTopic} from "../gossip/interface.js";
 
 /** Generic CommitteeSubscription for both beacon attnets subs and syncnets subs */
 export type CommitteeSubscription = {
@@ -11,8 +12,7 @@ export type CommitteeSubscription = {
 };
 
 export type SubnetsService = {
-  start(): void;
-  stop(): void;
+  close(): void;
   addCommitteeSubscriptions(subscriptions: CommitteeSubscription[]): void;
   getActiveSubnets(): RequestedSubnet[];
   subscribeSubnetsToNextFork(nextFork: ForkName): void;
@@ -27,8 +27,20 @@ export type RandBetweenFn = (min: number, max: number) => number;
 export type ShuffleFn = <T>(arr: T[]) => T[];
 
 export type SubnetsServiceOpts = {
+  deterministicLongLivedAttnets?: boolean;
   subscribeAllSubnets?: boolean;
+};
+
+export type SubnetsServiceTestOpts = {
   // For deterministic randomness in unit test after ESM prevents simple import mocking
   randBetweenFn?: RandBetweenFn;
   shuffleFn?: ShuffleFn;
 };
+
+export type GossipSubscriber = {
+  subscribeTopic(topic: GossipTopic): void;
+  unsubscribeTopic(topic: GossipTopic): void;
+};
+
+// uint256 in the spec
+export type NodeId = Bytes32;

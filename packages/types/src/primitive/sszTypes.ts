@@ -52,6 +52,7 @@ export const WithdrawalIndex = UintNum64;
 export const Gwei = UintBn64;
 export const Wei = UintBn256;
 export const Root = new ByteVectorType(32);
+export const BlobIndex = UintNum64;
 
 export const Version = Bytes4;
 export const DomainType = Bytes4;

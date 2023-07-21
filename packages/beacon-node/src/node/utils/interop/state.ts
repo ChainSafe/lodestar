@@ -1,7 +1,7 @@
 import {Bytes32, phase0, ssz, TimeSeconds} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {BeaconStateAllForks, initializeBeaconStateFromEth1} from "@lodestar/state-transition";
-import {createEmptyEpochContextImmutableData} from "@lodestar/state-transition";
+import {createEmptyEpochCacheImmutableData} from "@lodestar/state-transition";
 import {ForkName, GENESIS_SLOT} from "@lodestar/params";
 
 import {DepositTree} from "../../../db/repositories/depositDataRoot.js";
@@ -45,7 +45,7 @@ export function getInteropState(
   latestPayloadHeader.baseFeePerGas = GENESIS_BASE_FEE_PER_GAS;
   const state = initializeBeaconStateFromEth1(
     config,
-    createEmptyEpochContextImmutableData(config, {genesisValidatorsRoot: Buffer.alloc(32, 0)}),
+    createEmptyEpochCacheImmutableData(config, {genesisValidatorsRoot: Buffer.alloc(32, 0)}),
     eth1BlockHash,
     eth1Timestamp,
     deposits,
