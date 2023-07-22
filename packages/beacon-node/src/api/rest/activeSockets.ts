@@ -13,8 +13,8 @@ export type SocketMetrics = {
 const GRACEFUL_TERMINATION_TIMEOUT = 1_000;
 
 /**
- * From https://github.com/nodejs/node/blob/57bd715d527aba8dae56b975056961b0e429e91e/lib/_http_client.js#L363-L413
- * But exposes the count of sockets, and waits for connections to drain until timeout
+ * From https://github.com/gajus/http-terminator/blob/aabca4751552e983f8a59ba896b7fb58ce3b4087/src/factories/createInternalHttpTerminator.ts#L24-L61
+ * But only handles HTTP sockets, exposes the count of sockets as metrics
  */
 export class HttpActiveSocketsTracker {
   private sockets = new Set<Socket>();
@@ -50,13 +50,13 @@ export class HttpActiveSocketsTracker {
    * Wait for all connections to drain, forcefully terminate any open connections after timeout
    *
    * From https://github.com/gajus/http-terminator/blob/aabca4751552e983f8a59ba896b7fb58ce3b4087/src/factories/createInternalHttpTerminator.ts#L78-L165
-   * But only handles HTTP sockets and does not close server, immediately terminates api.eventstream connections
+   * But only handles HTTP sockets and does not close server, immediately terminates eventstream API connections
    */
   async terminate(): Promise<void> {
     if (this.terminated) return;
     this.terminated = true;
 
-    // Inform new incoming requests (and keep-alive connections) that
+    // Inform new incoming requests on keep-alive connections that
     // the connection will be closed after the current response
     this.server.on("request", (_req, res) => {
       if (!res.headersSent) {
@@ -78,7 +78,7 @@ export class HttpActiveSocketsTracker {
         // Immediately destroy sockets without an attached HTTP request
         this.destroySocket(socket);
       } else if (serverResponse.getHeader("Content-Type") === "text/event-stream") {
-        // api.eventstream will never stop and must be forcefully terminated
+        // eventstream API will never stop and must be forcefully terminated
         this.destroySocket(socket);
       } else if (!serverResponse.headersSent) {
         // Inform existing keep-alive connections that they will be closed after the current response
