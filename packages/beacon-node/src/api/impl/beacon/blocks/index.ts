@@ -247,10 +247,11 @@ export function getBeaconBlockApi({
           break;
 
         case routes.beacon.BroadcastValidation.consensus: {
-          // check if this beacon node produced the block else log warning for now
+          // check if this beacon node produced the block else run validations
           const blockRoot = toHex(
             chain.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
           );
+
           if (!chain.producedBlockRoot.has(blockRoot) && !chain.producedBlindedBlockRoot.has(blockRoot)) {
             // error or log warning that we support consensus val on blocks produced via this beacon node
             const message = "Consensus validation not implemented yet for block not produced by this beacon node";
@@ -265,7 +266,7 @@ export function getBeaconBlockApi({
 
         default: {
           // error or log warning we do not support this validation
-          const message = `Broadcast validation of ${broadcastValidation} type implemented yet`;
+          const message = `Broadcast validation of ${broadcastValidation} type not implemented yet`;
           if (chain.opts.broadcastValidationStrictness === "error") {
             throw Error(message);
           } else {
