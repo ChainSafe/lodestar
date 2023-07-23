@@ -5,20 +5,18 @@ export type WaitForOpts = {
   interval?: number;
   /** Time in milliseconds to wait before throwing TimeoutError */
   timeout?: number;
-  /** Signal to abort waiting for condition by throwing ErrorAborted */
+  /** Abort signal to stop waiting for condition by throwing ErrorAborted */
   signal?: AbortSignal;
 };
 
 /**
  * Wait for a condition to be true
- *
- * Simplified and abortable implementation of https://github.com/sindresorhus/p-wait-for
  */
 export function waitFor(condition: () => boolean, opts: WaitForOpts = {}): Promise<void> {
   return new Promise((resolve, reject) => {
     const {interval = 10, timeout = Infinity, signal} = opts;
 
-    if (signal && signal.aborted) {
+    if (signal?.aborted) {
       return reject(new ErrorAborted());
     }
 

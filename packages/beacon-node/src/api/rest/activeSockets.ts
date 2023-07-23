@@ -18,14 +18,14 @@ const GRACEFUL_TERMINATION_TIMEOUT = 1_000;
  */
 export class HttpActiveSocketsTracker {
   private sockets = new Set<Socket>();
-  private terminated = false;
+  private terminating = false;
 
   constructor(
     private readonly server: Server,
     metrics: SocketMetrics | null
   ) {
     server.on("connection", (socket) => {
-      if (this.terminated) {
+      if (this.terminating) {
         socket.destroy(Error("Closing"));
       } else {
         this.sockets.add(socket);
@@ -50,11 +50,11 @@ export class HttpActiveSocketsTracker {
    * Wait for all connections to drain, forcefully terminate any open connections after timeout
    *
    * From https://github.com/gajus/http-terminator/blob/aabca4751552e983f8a59ba896b7fb58ce3b4087/src/factories/createInternalHttpTerminator.ts#L78-L165
-   * But only handles HTTP sockets and does not close server, immediately terminates eventstream API connections
+   * But only handles HTTP sockets and does not close server, immediately closes eventstream API connections
    */
   async terminate(): Promise<void> {
-    if (this.terminated) return;
-    this.terminated = true;
+    if (this.terminating) return;
+    this.terminating = true;
 
     // Inform new incoming requests on keep-alive connections that
     // the connection will be closed after the current response
@@ -72,17 +72,17 @@ export class HttpActiveSocketsTracker {
       }
 
       // @ts-expect-error Unclear if I am using wrong type or how else this should be handled.
-      const serverResponse = socket._httpMessage as http.ServerResponse | undefined;
+      const res = socket._httpMessage as http.ServerResponse | undefined;
 
-      if (serverResponse == null) {
+      if (res == null) {
         // Immediately destroy sockets without an attached HTTP request
         this.destroySocket(socket);
-      } else if (serverResponse.getHeader("Content-Type") === "text/event-stream") {
+      } else if (res.getHeader("Content-Type") === "text/event-stream") {
         // eventstream API will never stop and must be forcefully closed
         socket.end();
-      } else if (!serverResponse.headersSent) {
+      } else if (!res.headersSent) {
         // Inform existing keep-alive connections that they will be closed after the current response
-        serverResponse.setHeader("Connection", "close");
+        res.setHeader("Connection", "close");
       }
     }
 
@@ -92,7 +92,7 @@ export class HttpActiveSocketsTracker {
         timeout: GRACEFUL_TERMINATION_TIMEOUT,
       });
     } catch {
-      // Ignore timeout errors
+      // Ignore timeout error
     } finally {
       for (const socket of this.sockets) {
         this.destroySocket(socket);
