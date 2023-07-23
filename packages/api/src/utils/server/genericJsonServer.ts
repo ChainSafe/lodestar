@@ -42,7 +42,7 @@ export function getGenericJsonServer<
 
       handler: async function handler(this: FastifyInstance, req, resp): Promise<unknown | void> {
         const args: any[] = routeSerdes.parseReq(req as ReqGeneric as ReqTypes[keyof Api]);
-        const data = (await api[routeId](...args)) as Resolves<Api[keyof Api]>;
+        const data = (await api[routeId](...args, req, resp)) as Resolves<Api[keyof Api]>;
 
         if (routeDef.statusOk !== undefined) {
           resp.statusCode = routeDef.statusOk;

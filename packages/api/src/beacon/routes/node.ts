@@ -70,6 +70,10 @@ export enum NodeHealth {
   NOT_INITIALIZED_OR_ISSUES = HttpStatusCode.SERVICE_UNAVAILABLE,
 }
 
+export type NodeHealthOptions = {
+  syncingStatus?: number;
+};
+
 /**
  * Read information about the beacon node.
  */
@@ -120,10 +124,10 @@ export type Api = {
   /**
    * Get health check
    * Returns node health status in http status codes. Useful for load balancers.
-   *
-   * NOTE: This route does not return any value
    */
-  getHealth(): Promise<
+  getHealth(
+    options?: NodeHealthOptions
+  ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: void; [HttpStatusCode.PARTIAL_CONTENT]: void},
       HttpStatusCode.SERVICE_UNAVAILABLE
@@ -150,7 +154,7 @@ export type ReqTypes = {
   getPeerCount: ReqEmpty;
   getNodeVersion: ReqEmpty;
   getSyncingStatus: ReqEmpty;
-  getHealth: ReqEmpty;
+  getHealth: {query: {syncing_status?: number}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -171,7 +175,11 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getPeerCount: reqEmpty,
     getNodeVersion: reqEmpty,
     getSyncingStatus: reqEmpty,
-    getHealth: reqEmpty,
+    getHealth: {
+      writeReq: (options) => ({query: {syncing_status: options?.syncingStatus}}),
+      parseReq: ({query}) => [{syncingStatus: query.syncing_status}],
+      schema: {query: {syncing_status: Schema.Uint}},
+    },
   };
 }
 

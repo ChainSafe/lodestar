@@ -34,7 +34,7 @@ describe("beacon node api", function () {
         chain: {blsVerifyAllMainThread: true},
       },
       validatorCount,
-      logger: testLogger("Node-A", {level: LogLevel.info}),
+      logger: testLogger("Node-Synced", {level: LogLevel.info}),
     });
     client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
   });
@@ -65,9 +65,8 @@ describe("beacon node api", function () {
     });
 
     it("should return 'el_offline' as 'true' when EL not available", async () => {
-      // Close first instance
-      await bn.close();
-      bn = await getDevBeaconNode({
+      const portElOffline = 9597;
+      const bnElOffline = await getDevBeaconNode({
         params: {
           ...chainConfigDef,
           // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -82,18 +81,19 @@ describe("beacon node api", function () {
           api: {
             rest: {
               enabled: true,
-              port: restPort,
+              port: portElOffline,
             },
           },
           chain: {blsVerifyAllMainThread: true},
         },
         validatorCount: 5,
-        logger: testLogger("Node-A", {level: LogLevel.info}),
+        logger: testLogger("Node-EL-Offline", {level: LogLevel.info}),
       });
+      const clientElOffline = getClient({baseUrl: `http://127.0.0.1:${portElOffline}`}, {config});
 
       // To make BN communicate with EL, it needs to produce some blocks and for that need validators
       const {validators} = await getAndInitDevValidators({
-        node: bn,
+        node: bnElOffline,
         validatorClientCount: 1,
         validatorsPerClient: validatorCount,
         startIndex: 0,
@@ -102,12 +102,74 @@ describe("beacon node api", function () {
       // Give node sometime to communicate with EL
       await sleep(chainConfigDef.SECONDS_PER_SLOT * 2 * 1000);
 
-      const res = await client.node.getSyncingStatus();
+      const res = await clientElOffline.node.getSyncingStatus();
       ApiError.assert(res);
 
       expect(res.response.data.elOffline).to.eql(true);
 
       await Promise.all(validators.map((v) => v.close()));
+      await bnElOffline.close();
+    });
+  });
+
+  describe("getHealth", () => {
+    const portSyncing = 9598;
+
+    let bnSyncing: BeaconNode;
+    let clientSyncing: Api;
+
+    before(async () => {
+      bnSyncing = await getDevBeaconNode({
+        params: chainConfigDef,
+        options: {
+          // Node won't consider itself synced without peers
+          sync: {isSingleNode: false},
+          api: {
+            rest: {
+              enabled: true,
+              port: portSyncing,
+            },
+          },
+          chain: {blsVerifyAllMainThread: true},
+        },
+        validatorCount,
+        logger: testLogger("Node-Syncing", {level: LogLevel.info}),
+      });
+      clientSyncing = getClient({baseUrl: `http://127.0.0.1:${portSyncing}`}, {config});
+      // Must at least wait for one slot else node considers itself synced pre/at genesis
+      await sleep(chainConfigDef.SECONDS_PER_SLOT * 1000);
+    });
+
+    after(async () => {
+      await bnSyncing.close();
+    });
+
+    it("should return 200 status code if node is ready", async () => {
+      const res = await client.node.getHealth();
+      expect(res.status).to.equal(200);
+
+      // Status code should only be customizable if node is syncing
+      const resp = await client.node.getHealth({syncingStatus: 204});
+      expect(resp.status).to.equal(200);
+    });
+
+    it("should return 206 status code if node is syncing", async () => {
+      const res = await clientSyncing.node.getHealth();
+      expect(res.status).to.equal(206);
+    });
+
+    it("should return custom status code from 'syncing_status' query parameter if node is syncing", async () => {
+      const statusCode = 204;
+      const res = await clientSyncing.node.getHealth({syncingStatus: statusCode});
+      expect(res.status).to.equal(statusCode);
+    });
+
+    it("should return 400 status code if value in 'syncing_status' query parameter is invalid", async () => {
+      const res = await clientSyncing.node.getHealth({syncingStatus: 1});
+      expect(res.error?.code).to.equal(400);
+
+      const resp = await clientSyncing.node.getHealth({syncingStatus: 600});
+      expect(resp.error?.code).to.equal(400);
     });
   });
 });
