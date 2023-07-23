@@ -56,6 +56,9 @@ export class HttpActiveSocketsTracker {
     if (this.terminating) return;
     this.terminating = true;
 
+    // Can speed up shutdown by a few milliseconds
+    this.server.closeIdleConnections();
+
     // Inform new incoming requests on keep-alive connections that
     // the connection will be closed after the current response
     this.server.on("request", (_req, res) => {
