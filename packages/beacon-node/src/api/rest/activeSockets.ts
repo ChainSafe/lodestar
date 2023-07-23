@@ -78,8 +78,8 @@ export class HttpActiveSocketsTracker {
         // Immediately destroy sockets without an attached HTTP request
         this.destroySocket(socket);
       } else if (serverResponse.getHeader("Content-Type") === "text/event-stream") {
-        // eventstream API will never stop and must be forcefully terminated
-        this.destroySocket(socket);
+        // eventstream API will never stop and must be forcefully closed
+        socket.end();
       } else if (!serverResponse.headersSent) {
         // Inform existing keep-alive connections that they will be closed after the current response
         serverResponse.setHeader("Connection", "close");
