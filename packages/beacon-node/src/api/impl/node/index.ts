@@ -67,19 +67,17 @@ export function getNodeApi(
     },
 
     async getHealth(options, _req, res) {
+      // Custom value passed via `syncing_status` query parameter
+      const syncingStatus = options?.syncingStatus;
+
+      // Syncing status must be a valid HTTP status code within range 100-599
+      if (syncingStatus != null && (syncingStatus < 100 || syncingStatus > 599)) {
+        throw new ApiError(400, `Invalid syncing status code: ${syncingStatus}`);
+      }
+
       if (sync.getSyncStatus().isSyncing) {
-        if (options?.syncingStatus != null) {
-          // Custom value passed via `syncing_status` query parameter
-          const {syncingStatus} = options;
-          // Must be a valid HTTP status code within range 100-599
-          if (syncingStatus < 100 || syncingStatus > 599) {
-            throw new ApiError(400, `Invalid syncing status code: ${syncingStatus}`);
-          }
-          res?.code(syncingStatus);
-        } else {
-          // 206: Node is syncing but can serve incomplete data
-          res?.code(routes.node.NodeHealth.SYNCING);
-        }
+        // 206: Node is syncing but can serve incomplete data
+        res?.code(syncingStatus ?? routes.node.NodeHealth.SYNCING);
       } else {
         // 200: Node is ready
         res?.code(routes.node.NodeHealth.READY);
