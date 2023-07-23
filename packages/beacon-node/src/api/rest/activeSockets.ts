@@ -69,12 +69,12 @@ export class HttpActiveSocketsTracker {
 
     for (const socket of this.sockets) {
       // This is the HTTP CONNECT request socket.
-      // @ts-expect-error Unclear if I am using wrong type or how else this should be handled.
+      // @ts-expect-error HTTP sockets have reference to server
       if (!(socket.server instanceof http.Server)) {
         continue;
       }
 
-      // @ts-expect-error Unclear if I am using wrong type or how else this should be handled.
+      // @ts-expect-error Internal property but only way to access response of socket
       const res = socket._httpMessage as http.ServerResponse | undefined;
 
       if (res == null) {
