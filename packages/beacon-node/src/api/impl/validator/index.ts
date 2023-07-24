@@ -119,8 +119,8 @@ export function getValidatorApi({
    * Prevents a validator from not being able to get the attestater duties correctly if the beacon and validator clocks are off
    */
   async function waitForNextClosestEpoch(): Promise<void> {
-    const msToNextEpoch = timeToNextEpochInMs();
-    if (msToNextEpoch > 0 && msToNextEpoch < MAX_API_CLOCK_DISPARITY_MS) {
+    const toNextEpochMs = msToNextEpoch();
+    if (toNextEpochMs > 0 && toNextEpochMs < MAX_API_CLOCK_DISPARITY_MS) {
       const nextEpoch = chain.clock.currentEpoch + 1;
       await chain.clock.waitForSlot(computeStartSlotAtEpoch(nextEpoch));
     }
@@ -129,7 +129,7 @@ export function getValidatorApi({
   /**
    * Compute ms to the next epoch.
    */
-  function timeToNextEpochInMs(): number {
+  function msToNextEpoch(): number {
     const nextEpoch = chain.clock.currentEpoch + 1;
     const secPerEpoch = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT;
     const nextEpochStartSec = chain.genesisTime + nextEpoch * secPerEpoch;
@@ -405,9 +405,10 @@ export function getValidatorApi({
       let state: CachedBeaconStateAllForks | undefined = undefined;
       const prepareNextSlotLookAheadMs = (config.SECONDS_PER_SLOT * 1000) / SCHEDULER_LOOKAHEAD_FACTOR;
       const cpState = chain.regen.getCheckpointStateSync({rootHex: head.blockRoot, epoch});
+      const toNextEpochMs = msToNextEpoch();
       // validators may request next epoch's duties when it's close to next epoch
       // return that asap if PrepareNextSlot already compute beacon proposers for next epoch
-      if (epoch === nextEpoch && timeToNextEpochInMs() < prepareNextSlotLookAheadMs) {
+      if (epoch === nextEpoch && toNextEpochMs < prepareNextSlotLookAheadMs) {
         if (cpState) {
           state = cpState;
           metrics?.duties.requestNextEpochProposalDutiesHit.inc();
