@@ -130,7 +130,7 @@ export type Api = {
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: void; [HttpStatusCode.PARTIAL_CONTENT]: void},
-      HttpStatusCode.SERVICE_UNAVAILABLE
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
 };
