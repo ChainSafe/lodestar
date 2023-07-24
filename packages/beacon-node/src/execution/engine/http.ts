@@ -1,11 +1,9 @@
 import {Root, RootHex, allForks, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
-import {isErrorAborted} from "@lodestar/utils";
-import {ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {Metrics} from "../../metrics/index.js";
-import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
+import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
 import {IJson, RpcPayload} from "../../eth1/interface.js";
@@ -131,9 +129,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       this.updateEngineState(ExecutionEngineState.ONLINE);
       return res;
     } catch (err) {
-      if (!isErrorAborted(err)) {
-        this.updateEngineState(getExecutionEngineState({payloadError: err}));
+      const newState = getExecutionEngineState({payloadError: err, oldState: this.state});
+      if (newState !== undefined) {
+        this.updateEngineState(newState);
       }
+
+      // TODO: This is case where we can't determine the nature of error.
+      // We should throw only for such cases not for the which we knew the status
       throw err;
     }
   }
@@ -205,22 +207,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       };
     }
 
-    const {status, latestValidHash, validationError} = await (
-      this.rpcFetchQueue.push(engineRequest) as Promise<EngineApiRpcReturnTypes[typeof method]>
-    )
-      // If there are errors by EL like connection refused, internal error, they need to be
-      // treated separate from being INVALID. For now, just pass the error upstream.
-      .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
-        if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-          this.updateEngineState(getExecutionEngineState({payloadError: e}));
-        }
-        if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
-          return {status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
-        } else {
-          return {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
-        }
-      });
-    this.updateEngineState(getExecutionEngineState({payloadStatus: status}));
+    const {status, latestValidHash, validationError} = await (this.rpcFetchQueue.push(engineRequest) as Promise<
+      EngineApiRpcReturnTypes[typeof method]
+    >);
+
+    this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
 
     switch (status) {
       case ExecutePayloadStatus.VALID:
@@ -312,22 +303,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       methodOpts: fcUReqOpts,
     }) as Promise<EngineApiRpcReturnTypes[typeof method]>;
 
-    const response = await request
-      // If there are errors by EL like connection refused, internal error, they need to be
-      // treated separate from being INVALID. For now, just pass the error upstream.
-      .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
-        if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-          this.updateEngineState(getExecutionEngineState({payloadError: e}));
-        }
-        throw e;
-      });
-
     const {
       payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
       payloadId,
-    } = response;
+    } = await request;
 
-    this.updateEngineState(getExecutionEngineState({payloadStatus: status}));
+    this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
 
     switch (status) {
       case ExecutePayloadStatus.VALID:
@@ -429,14 +410,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const oldState = this.state;
 
     if (oldState === newState) return;
-
-    // The ONLINE is initial state and can reached from offline or auth failed error
-    if (
-      newState === ExecutionEngineState.ONLINE &&
-      !(oldState === ExecutionEngineState.OFFLINE || oldState === ExecutionEngineState.AUTH_FAILED)
-    ) {
-      return;
-    }
 
     switch (newState) {
       case ExecutionEngineState.ONLINE:

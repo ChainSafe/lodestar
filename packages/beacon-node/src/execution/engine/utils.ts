@@ -1,6 +1,8 @@
 import {isFetchError} from "@lodestar/api";
+import {isErrorAborted} from "@lodestar/utils";
 import {IJson, RpcPayload} from "../../eth1/interface.js";
-import {IJsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
+import {IJsonRpcHttpClient, ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
+import {isQueueErrorAborted} from "../../util/queue/errors.js";
 import {ExecutePayloadStatus, ExecutionEngineState} from "./interface.js";
 
 export type JsonRpcBackend = {
@@ -33,12 +35,7 @@ export class ExecutionEngineMockJsonRpcClient implements IJsonRpcHttpClient {
 const fatalErrorCodes = ["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN"];
 const connectionErrorCodes = ["ECONNRESET", "ECONNABORTED"];
 
-export function getExecutionEngineState({
-  payloadError,
-  payloadStatus,
-}:
-  | {payloadStatus: ExecutePayloadStatus; payloadError?: never}
-  | {payloadStatus?: never; payloadError: unknown}): ExecutionEngineState {
+function getExecutionEngineStateForPayloadStatus(payloadStatus: ExecutePayloadStatus): ExecutionEngineState {
   switch (payloadStatus) {
     case ExecutePayloadStatus.ACCEPTED:
     case ExecutePayloadStatus.VALID:
@@ -53,6 +50,25 @@ export function getExecutionEngineState({
 
     case ExecutePayloadStatus.UNAVAILABLE:
       return ExecutionEngineState.OFFLINE;
+
+    // In case we can't determine the state, we assume it's online
+    // This assumption is better than considering offline, because the offline state may trigger some notifications
+    default:
+      return ExecutionEngineState.ONLINE;
+  }
+}
+
+function getExecutionEngineStateForPayloadError(
+  payloadError: unknown,
+  oldState: ExecutionEngineState
+): ExecutionEngineState | undefined {
+  if (isErrorAborted(payloadError) || isQueueErrorAborted(payloadError)) {
+    return oldState;
+  }
+
+  // Originally this case was handled with {status: ExecutePayloadStatus.ELERROR}
+  if (payloadError instanceof HttpRpcError || payloadError instanceof ErrorJsonRpcResponse) {
+    return ExecutionEngineState.SYNCING;
   }
 
   if (payloadError && isFetchError(payloadError) && fatalErrorCodes.includes(payloadError.code)) {
@@ -63,7 +79,35 @@ export function getExecutionEngineState({
     return ExecutionEngineState.AUTH_FAILED;
   }
 
-  // In case we can't determine the state, we assume it's online
-  // This assumption is better than considering offline, because the offline state may trigger some notifications
-  return ExecutionEngineState.ONLINE;
+  return undefined;
+}
+
+export function getExecutionEngineState<
+  S extends ExecutePayloadStatus | undefined,
+  E extends unknown | undefined,
+  R = S extends undefined ? ExecutionEngineState | undefined : ExecutionEngineState,
+>({
+  payloadError,
+  payloadStatus,
+  oldState,
+}:
+  | {payloadStatus: S; payloadError?: never; oldState: ExecutionEngineState}
+  | {payloadStatus?: never; payloadError: E; oldState: ExecutionEngineState}): R {
+  const newState =
+    payloadStatus === undefined
+      ? getExecutionEngineStateForPayloadError(payloadError, oldState)
+      : getExecutionEngineStateForPayloadStatus(payloadStatus);
+
+  // The `payloadError` is something based on which we can't determine the state of execution engine
+  if (newState === undefined) return undefined as R;
+
+  // The ONLINE is initial state and can reached from offline or auth failed error
+  if (
+    newState === ExecutionEngineState.ONLINE &&
+    !(oldState === ExecutionEngineState.OFFLINE || oldState === ExecutionEngineState.AUTH_FAILED)
+  ) {
+    return oldState as R;
+  }
+
+  return newState as R;
 }
