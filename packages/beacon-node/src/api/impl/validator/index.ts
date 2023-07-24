@@ -32,6 +32,7 @@ import {ApiModules} from "../types.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {getValidatorStatus} from "../beacon/state/utils.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
+import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
 
 /**
@@ -118,13 +119,21 @@ export function getValidatorApi({
    * Prevents a validator from not being able to get the attestater duties correctly if the beacon and validator clocks are off
    */
   async function waitForNextClosestEpoch(): Promise<void> {
+    const msToNextEpoch = timeToNextEpochInMs();
+    if (msToNextEpoch > 0 && msToNextEpoch < MAX_API_CLOCK_DISPARITY_MS) {
+      const nextEpoch = chain.clock.currentEpoch + 1;
+      await chain.clock.waitForSlot(computeStartSlotAtEpoch(nextEpoch));
+    }
+  }
+
+  /**
+   * Compute ms to the next epoch.
+   */
+  function timeToNextEpochInMs(): number {
     const nextEpoch = chain.clock.currentEpoch + 1;
     const secPerEpoch = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT;
     const nextEpochStartSec = chain.genesisTime + nextEpoch * secPerEpoch;
-    const msToNextEpoch = nextEpochStartSec * 1000 - Date.now();
-    if (msToNextEpoch > 0 && msToNextEpoch < MAX_API_CLOCK_DISPARITY_MS) {
-      await chain.clock.waitForSlot(computeStartSlotAtEpoch(nextEpoch));
-    }
+    return nextEpochStartSec * 1000 - Date.now();
   }
 
   function currentEpochWithDisparity(): Epoch {
@@ -387,15 +396,29 @@ export function getValidatorApi({
 
       // Early check that epoch is within [current_epoch, current_epoch + 1], or allow for pre-genesis
       const currentEpoch = currentEpochWithDisparity();
-      if (currentEpoch >= 0 && epoch !== currentEpoch && epoch !== currentEpoch + 1) {
-        throw Error(`Requested epoch ${epoch} must equal current ${currentEpoch} or next epoch ${currentEpoch + 1}`);
+      const nextEpoch = currentEpoch + 1;
+      if (currentEpoch >= 0 && epoch !== currentEpoch && epoch !== nextEpoch) {
+        throw Error(`Requested epoch ${epoch} must equal current ${currentEpoch} or next epoch ${nextEpoch}`);
       }
 
-      // May request for an epoch that's in the future, for getBeaconProposersNextEpoch()
-      await waitForNextClosestEpoch();
-
       const head = chain.forkChoice.getHead();
-      const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+      let state: CachedBeaconStateAllForks | undefined = undefined;
+      const prepareNextSlotLookAheadMs = (config.SECONDS_PER_SLOT * 1000) / SCHEDULER_LOOKAHEAD_FACTOR;
+      const cpState = chain.regen.getCheckpointStateSync({rootHex: head.blockRoot, epoch});
+      // validators may request next epoch's duties when it's close to next epoch
+      // return that asap if PrepareNextSlot already compute beacon proposers for next epoch
+      if (epoch === nextEpoch && timeToNextEpochInMs() < prepareNextSlotLookAheadMs) {
+        if (cpState) {
+          state = cpState;
+          metrics?.duties.requestNextEpochProposalDutiesHit.inc();
+        } else {
+          metrics?.duties.requestNextEpochProposalDutiesMiss.inc();
+        }
+      }
+
+      if (!state) {
+        state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+      }
 
       const stateEpoch = state.epochCtx.epoch;
       let indexes: ValidatorIndex[] = [];
