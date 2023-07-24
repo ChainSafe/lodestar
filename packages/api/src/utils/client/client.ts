@@ -80,14 +80,17 @@ export function generateGenericJsonClient<
         }
       } catch (err) {
         if (err instanceof HttpError) {
-          return {ok: false, error: {code: err.status, message: err.message, operationId: routeId}} as ReturnType<
-            Api[keyof Api]
-          >;
+          return {
+            ok: false,
+            status: err.status,
+            error: {code: err.status, message: err.message, operationId: routeId},
+          } as ReturnType<Api[keyof Api]>;
         }
 
         if (err instanceof TimeoutError) {
           return {
             ok: false,
+            status: HttpStatusCode.INTERNAL_SERVER_ERROR,
             error: {code: HttpStatusCode.INTERNAL_SERVER_ERROR, message: err.message, operationId: routeId},
           } as ReturnType<Api[keyof Api]>;
         }
