@@ -1,5 +1,4 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ErrorAborted} from "@lodestar/utils";
 import {Api, ReqTypes, routesData, getEventSerdes, eventTypes} from "../routes/events.js";
 import {ApiError, ServerRoutes} from "../../utils/server/index.js";
 import {ServerApi} from "../../interfaces.js";
@@ -57,12 +56,6 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
             // The client may disconnect and we need to clean the subscriptions.
             req.socket.once("close", () => resolve());
             req.socket.once("end", () => resolve());
-            req.raw.once("error", (err) => {
-              if ((err as unknown as {code: string}).code === "ECONNRESET") {
-                return reject(new ErrorAborted());
-              }
-              return reject(err);
-            });
           });
 
           // api.eventstream will never stop, so no need to ever call `res.raw.end();`
