@@ -26,7 +26,7 @@ export function getFetchOptsSerializer<Fn extends (...args: any) => any, ReqType
     return {
       url: urlFormater(req.params ?? {}),
       method: routeDef.method,
-      query: req.query,
+      query: Object.keys(req.query ?? {}).length ? req.query : undefined,
       body: req.body as unknown,
       headers: req.headers,
       routeId,

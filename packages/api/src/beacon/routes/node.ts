@@ -176,7 +176,9 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getNodeVersion: reqEmpty,
     getSyncingStatus: reqEmpty,
     getHealth: {
-      writeReq: (options) => ({query: {syncing_status: options?.syncingStatus}}),
+      writeReq: (options) => ({
+        query: options?.syncingStatus !== undefined ? {syncing_status: options.syncingStatus} : {},
+      }),
       parseReq: ({query}) => [{syncingStatus: query.syncing_status}],
       schema: {query: {syncing_status: Schema.Uint}},
     },
