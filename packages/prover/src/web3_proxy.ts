@@ -79,7 +79,7 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
   const proxy = httpProxy.createProxy({
     target: executionRpcUrl,
     ws: executionRpcUrl.startsWith("ws"),
-    agent: https.globalAgent,
+    agent: executionRpcUrl.startsWith("https") ? https.globalAgent : http.globalAgent,
     xfwd: true,
     ignorePath: true,
     changeOrigin: true,
