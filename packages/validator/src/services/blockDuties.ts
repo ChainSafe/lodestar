@@ -129,6 +129,13 @@ export class BlockDutiesService {
    * some time (< 1/3 slot) before the next epoch
    */
   private async pollBeaconProposersAndNotify(currentSlot: Slot, signal: AbortSignal): Promise<void> {
+    const nextEpoch = computeEpochAtSlot(currentSlot) + 1;
+    const isLastSlotEpoch = computeStartSlotAtEpoch(nextEpoch) === currentSlot + 1;
+    if (isLastSlotEpoch) {
+      // do this at the end of the function would be too late
+      void this.pollBeaconProposersNextEpoch(currentSlot, nextEpoch, signal);
+    }
+
     // Notify the block proposal service for any proposals that we have in our cache.
     const initialBlockProposers = this.getblockProposersAtSlot(currentSlot);
     if (initialBlockProposers.length > 0) {
@@ -153,17 +160,15 @@ export class BlockDutiesService {
       this.logger.debug("Detected new block proposer", {currentSlot});
       this.metrics?.proposerDutiesReorg.inc();
     }
+  }
 
-    const nextEpoch = computeEpochAtSlot(currentSlot) + 1;
-    const isLastSlotEpoch = computeStartSlotAtEpoch(nextEpoch) === currentSlot + 1;
-    if (isLastSlotEpoch) {
-      const nextSlot = currentSlot + 1;
-      const lookAheadMs = (this.config.SECONDS_PER_SLOT * 1000) / BLOCK_DUTIES_LOOKAHEAD_FACTOR;
-      await sleep(this.clock.msToSlot(nextSlot) - lookAheadMs, signal);
-      this.logger.debug("Polling proposers for next epoch", {nextEpoch, nextSlot});
-      // Poll proposers for the next epoch
-      await this.pollBeaconProposers(nextEpoch);
-    }
+  private async pollBeaconProposersNextEpoch(currentSlot: Slot, nextEpoch: Epoch, signal: AbortSignal): Promise<void> {
+    const nextSlot = currentSlot + 1;
+    const lookAheadMs = (this.config.SECONDS_PER_SLOT * 1000) / BLOCK_DUTIES_LOOKAHEAD_FACTOR;
+    await sleep(this.clock.msToSlot(nextSlot) - lookAheadMs, signal);
+    this.logger.debug("Polling proposers for next epoch", {nextEpoch, nextSlot});
+    // Poll proposers for the next epoch
+    await this.pollBeaconProposers(nextEpoch);
   }
 
   private async pollBeaconProposers(epoch: Epoch): Promise<void> {
