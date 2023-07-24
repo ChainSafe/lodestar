@@ -2,10 +2,11 @@ import {expect} from "chai";
 import deepmerge from "deepmerge";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
-import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
+import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {eth_getCode} from "../../../src/verified_requests/eth_getCode.js";
 import ethGetCodeCase1 from "../../fixtures/sepolia/eth_getCode.json" assert {type: "json"};
 import {generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
+import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";
 
 const testCases = [ethGetCodeCase1];
 
@@ -44,7 +45,7 @@ describe("verified_requests / eth_getCode", () => {
         expect(response).to.eql({
           jsonrpc: "2.0",
           id: testCase.request.id,
-          error: {code: UNVERIFIED_RESPONSE_CODE, message: "eth_getCode request can not be verified."},
+          error: {code: VERIFICATION_FAILED_RESPONSE_CODE, message: getVerificationFailedMessage("eth_getCode")},
         });
       });
     });

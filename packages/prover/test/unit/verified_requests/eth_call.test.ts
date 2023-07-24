@@ -3,11 +3,12 @@ import deepmerge from "deepmerge";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {ELTransaction} from "../../../lib/types.js";
-import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
+import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {eth_call} from "../../../src/verified_requests/eth_call.js";
 import ethCallCase1 from "../../fixtures/mainnet/eth_call.json" assert {type: "json"};
 import {generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 import {JsonRpcRequest, JsonRpcResponseWithResultPayload} from "../../../src/types.js";
+import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";
 
 const testCases = [ethCallCase1];
 
@@ -60,7 +61,7 @@ describe("verified_requests / eth_call", () => {
         expect(response).to.eql({
           jsonrpc: "2.0",
           id: testCase.request.id,
-          error: {code: UNVERIFIED_RESPONSE_CODE, message: "eth_call request can not be verified."},
+          error: {code: VERIFICATION_FAILED_RESPONSE_CODE, message: getVerificationFailedMessage("eth_call")},
         });
       });
     });

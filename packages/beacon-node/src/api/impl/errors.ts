@@ -1,12 +1,6 @@
-import {HttpErrorCodes} from "@lodestar/api";
+import {ApiError} from "@lodestar/api/beacon/server";
 
-export class ApiError extends Error {
-  statusCode: HttpErrorCodes;
-  constructor(statusCode: HttpErrorCodes, message?: string) {
-    super(message);
-    this.statusCode = statusCode;
-  }
-}
+export {ApiError};
 
 export class StateNotFound extends ApiError {
   constructor() {

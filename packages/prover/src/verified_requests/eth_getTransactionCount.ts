@@ -1,6 +1,10 @@
 import {ELVerifiedRequestHandler} from "../interfaces.js";
 import {verifyAccount} from "../utils/verification.js";
-import {getResponseForRequest, getErrorResponseForUnverifiedRequest} from "../utils/json_rpc.js";
+import {
+  getResponseForRequest,
+  getErrorResponseForRequestWithFailedVerification,
+  getVerificationFailedMessage,
+} from "../utils/json_rpc.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const eth_getTransactionCount: ELVerifiedRequestHandler<
@@ -17,5 +21,8 @@ export const eth_getTransactionCount: ELVerifiedRequestHandler<
   }
 
   logger.error("Request could not be verified.", {method: payload.method, params: JSON.stringify(payload.params)});
-  return getErrorResponseForUnverifiedRequest(payload, "eth_getTransactionCount request can not be verified.");
+  return getErrorResponseForRequestWithFailedVerification(
+    payload,
+    getVerificationFailedMessage("eth_getTransactionCount")
+  );
 };

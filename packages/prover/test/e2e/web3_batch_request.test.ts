@@ -4,6 +4,7 @@ import Web3 from "web3";
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
 import {rpcUrl, beaconUrl, config} from "../utils/e2e_env.js";
+import {getVerificationFailedMessage} from "../../src/utils/json_rpc.js";
 
 describe("web3_batch_requests", function () {
   // Give some margin to sync light client
@@ -94,7 +95,7 @@ describe("web3_batch_requests", function () {
       batch.execute();
 
       await expect(successRequest).to.be.fulfilled;
-      await expect(errorRequest).to.be.rejectedWith("eth_getBlockByHash request can not be verified");
+      await expect(errorRequest).to.be.rejectedWith(getVerificationFailedMessage("eth_getBlockByHash"));
     });
   });
 });
