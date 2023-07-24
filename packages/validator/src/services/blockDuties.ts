@@ -132,7 +132,7 @@ export class BlockDutiesService {
     const nextEpoch = computeEpochAtSlot(currentSlot) + 1;
     const isLastSlotEpoch = computeStartSlotAtEpoch(nextEpoch) === currentSlot + 1;
     if (isLastSlotEpoch) {
-      // do this at the end of the function would be too late
+      // no need to await for other steps, just poll proposers for next epoch
       void this.pollBeaconProposersNextEpoch(currentSlot, nextEpoch, signal);
     }
 
