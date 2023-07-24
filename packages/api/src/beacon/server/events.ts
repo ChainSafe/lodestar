@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ErrorAborted} from "@lodestar/utils";
-import {Api, ReqTypes, routesData, getEventSerdes} from "../routes/events.js";
-import {ServerRoutes} from "../../utils/server/index.js";
+import {Api, ReqTypes, routesData, getEventSerdes, eventTypes} from "../routes/events.js";
+import {ApiError, ServerRoutes} from "../../utils/server/index.js";
 import {ServerApi} from "../../interfaces.js";
 
 export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
@@ -15,6 +15,13 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
       id: "eventstream",
 
       handler: async (req, res) => {
+        const validTopics = new Set(Object.values(eventTypes));
+        for (const topic of req.query.topics) {
+          if (!validTopics.has(topic)) {
+            throw new ApiError(400, `Invalid topic: ${topic}`);
+          }
+        }
+
         const controller = new AbortController();
 
         try {
