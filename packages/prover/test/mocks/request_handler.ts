@@ -117,6 +117,7 @@ export function generateReqHandlerOptionsMock(
     rpc: {
       request: sinon.stub(),
       batchRequest: sinon.stub(),
+      getRequestId: () => (Math.random() * 10000).toFixed(0),
     },
   };
 

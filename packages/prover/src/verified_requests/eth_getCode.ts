@@ -1,6 +1,10 @@
 import {ELVerifiedRequestHandler} from "../interfaces.js";
 import {verifyAccount, verifyCode} from "../utils/verification.js";
-import {getErrorResponseForUnverifiedRequest, getResponseForRequest} from "../utils/json_rpc.js";
+import {
+  getErrorResponseForRequestWithFailedVerification,
+  getResponseForRequest,
+  getVerificationFailedMessage,
+} from "../utils/json_rpc.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const eth_getCode: ELVerifiedRequestHandler<[address: string, block?: number | string], string> = async ({
@@ -23,7 +27,10 @@ export const eth_getCode: ELVerifiedRequestHandler<[address: string, block?: num
 
   if (!accountProof.valid) {
     logger.error("Request could not be verified.", {method: payload.method, params: JSON.stringify(payload.params)});
-    return getErrorResponseForUnverifiedRequest(payload, "account for eth_getCode request can not be verified.");
+    return getErrorResponseForRequestWithFailedVerification(
+      payload,
+      "account for eth_getCode request can not be verified."
+    );
   }
 
   const codeProof = await verifyCode({
@@ -40,5 +47,5 @@ export const eth_getCode: ELVerifiedRequestHandler<[address: string, block?: num
   }
 
   logger.error("Request could not be verified.", {method: payload.method, params: JSON.stringify(payload.params)});
-  return getErrorResponseForUnverifiedRequest(payload, "eth_getCode request can not be verified.");
+  return getErrorResponseForRequestWithFailedVerification(payload, getVerificationFailedMessage("eth_getCode"));
 };

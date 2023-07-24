@@ -2,9 +2,7 @@ import {expect} from "chai";
 import Web3 from "web3";
 import {ethers} from "ethers";
 import sinon from "sinon";
-import {LCTransport} from "../../src/interfaces.js";
-import {ProofProvider} from "../../src/proof_provider/proof_provider.js";
-import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
+import {createVerifiedExecutionProvider, ProofProvider, LCTransport} from "@lodestar/prover/browser";
 import {ELRpc} from "../../src/utils/rpc.js";
 
 describe("web3_provider", () => {
