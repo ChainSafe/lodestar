@@ -15,16 +15,10 @@
   "type": "module",
   "exports": {
     ".": {
-      "node": {
-        "import": "./lib/index.js"
-      },
-      "browser": {
-        "import": "./lib/index.web.js"
-      },
-      "default": "./lib/index.js"
+      "import": "./lib/index.js"
     },
     "./browser": {
-      "import": "./lib/index.web.js"
+      "import": "./lib/browser/index.js"
     }
   },
   "bin": {
