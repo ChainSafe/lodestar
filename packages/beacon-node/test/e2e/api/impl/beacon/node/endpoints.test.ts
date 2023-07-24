@@ -147,10 +147,6 @@ describe("beacon node api", function () {
     it("should return 200 status code if node is ready", async () => {
       const res = await client.node.getHealth();
       expect(res.status).to.equal(200);
-
-      // Status code should only be customizable if node is syncing
-      const resp = await client.node.getHealth({syncingStatus: 204});
-      expect(resp.status).to.equal(200);
     });
 
     it("should return 206 status code if node is syncing", async () => {
@@ -164,12 +160,17 @@ describe("beacon node api", function () {
       expect(res.status).to.equal(statusCode);
     });
 
-    it("should return 400 status code if value in 'syncing_status' query parameter is invalid", async () => {
-      const res = await clientSyncing.node.getHealth({syncingStatus: 1});
-      expect(res.error?.code).to.equal(400);
+    it("should only use status code from 'syncing_status' query parameter if node is syncing", async () => {
+      const res = await client.node.getHealth({syncingStatus: 204});
+      expect(res.status).to.equal(200);
+    });
+
+    it("should return 400 status code if value of 'syncing_status' query parameter is invalid", async () => {
+      const res = await clientSyncing.node.getHealth({syncingStatus: 99});
+      expect(res.status).to.equal(400);
 
       const resp = await clientSyncing.node.getHealth({syncingStatus: 600});
-      expect(resp.error?.code).to.equal(400);
+      expect(resp.status).to.equal(400);
     });
   });
 });
