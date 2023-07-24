@@ -18,12 +18,6 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
         const controller = new AbortController();
 
         try {
-          // Prevent Fastify from sending the response, this is recommended before writing to the `.raw` stream
-          // and avoids "Cannot set headers after they are sent to the client" errors during shutdown or client aborts.
-          // See https://github.com/fastify/fastify/issues/3979, https://github.com/ChainSafe/lodestar/issues/5783
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          res.hijack();
-
           // Add injected headers from other plugins. This is required for fastify-cors for example
           // From: https://github.com/NodeFactoryIo/fastify-sse-v2/blob/b1686a979fbf655fb9936c0560294a0c094734d4/src/plugin.ts
           Object.entries(res.getHeaders()).forEach(([key, value]) => {
