@@ -48,8 +48,8 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
             // In that case the BeaconNode class will call server.close() and end this connection.
 
             // The client may disconnect and we need to clean the subscriptions.
-            req.raw.once("close", () => resolve());
-            req.raw.once("end", () => resolve());
+            req.socket.once("close", () => resolve());
+            req.socket.once("end", () => resolve());
             req.raw.once("error", (err) => {
               if ((err as unknown as {code: string}).code === "ECONNRESET") {
                 return reject(new ErrorAborted());
