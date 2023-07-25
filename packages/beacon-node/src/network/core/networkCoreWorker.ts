@@ -13,6 +13,9 @@ import {peerIdToString} from "../../util/peerId.js";
 import {profileNodeJS} from "../../util/profile.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
+import {NetworkCoreWorkerMetrics, getNetworkCoreWorkerMetrics} from "./metrics.js";
+import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
+import {NetworkCore} from "./networkCore.js";
 import {
   NetworkWorkerThreadEventType,
   ReqRespBridgeEventBus,
@@ -21,9 +24,6 @@ import {
   getReqRespBridgeRespEvents,
   reqRespBridgeEventDirection,
 } from "./events.js";
-import {getNetworkCoreWorkerMetrics} from "./metrics.js";
-import {NetworkCore} from "./networkCore.js";
-import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 
 // Cloned data from instantiation
 const workerData = worker.workerData as NetworkWorkerData;
@@ -83,11 +83,12 @@ new AsyncIterableBridgeHandler(getReqRespBridgeReqEvents(reqRespBridgeEventBus),
 );
 const reqRespBridgeRespCaller = new AsyncIterableBridgeCaller(getReqRespBridgeRespEvents(reqRespBridgeEventBus));
 
+let networkCoreWorkerMetrics: NetworkCoreWorkerMetrics | null = null;
 // respBridgeCaller metrics
 if (metricsRegister) {
-  const networkCoreWorkerMetrics = getNetworkCoreWorkerMetrics(metricsRegister);
+  networkCoreWorkerMetrics = getNetworkCoreWorkerMetrics(metricsRegister);
   networkCoreWorkerMetrics.reqRespBridgeRespCallerPending.addCollect(() => {
-    networkCoreWorkerMetrics.reqRespBridgeRespCallerPending.set(reqRespBridgeRespCaller.pendingCount);
+    networkCoreWorkerMetrics?.reqRespBridgeRespCallerPending.set(reqRespBridgeRespCaller.pendingCount);
   });
 }
 
@@ -110,12 +111,14 @@ wireEventsOnWorkerThread<NetworkEventData>(
   NetworkWorkerThreadEventType.networkEvent,
   events,
   parentPort,
+  networkCoreWorkerMetrics,
   networkEventDirection
 );
 wireEventsOnWorkerThread<ReqRespBridgeEventData>(
   NetworkWorkerThreadEventType.reqRespBridgeEvents,
   reqRespBridgeEventBus,
   parentPort,
+  networkCoreWorkerMetrics,
   reqRespBridgeEventDirection
 );
 

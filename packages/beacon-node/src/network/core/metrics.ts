@@ -333,6 +333,8 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
   };
 }
 
+export type NetworkCoreWorkerMetrics = ReturnType<typeof getNetworkCoreWorkerMetrics>;
+
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getNetworkCoreWorkerMetrics(register: RegistryMetricCreator) {
   return {
