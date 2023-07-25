@@ -339,8 +339,18 @@ export type NetworkCoreWorkerMetrics = ReturnType<typeof getNetworkCoreWorkerMet
 export function getNetworkCoreWorkerMetrics(register: RegistryMetricCreator) {
   return {
     reqRespBridgeRespCallerPending: register.gauge({
-      name: "lodestar_network_worker_reqresp_bridge_caller_pending_count",
+      name: "network_worker_reqresp_bridge_caller_pending_count",
       help: "Current count of pending elements in respBridgeCaller",
+    }),
+    networkWorkerWireEventsOnWorkerThreadEventLatency: register.histogram({
+      name: "network_worker_wire_events_on_worker_thread_event_latency",
+      help: "Latency to re-emit network events on worker thread event bus",
+      buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
+    }),
+    networkWorkerWireEventsOnWorkerThreadPortLatency: register.histogram({
+      name: "network_worker_wire_events_on_worker_thread_port_latency",
+      help: "Latency to transmit network events to worker thread across parent port",
+      buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
     }),
   };
 }
