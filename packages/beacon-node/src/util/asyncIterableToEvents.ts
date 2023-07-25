@@ -1,7 +1,8 @@
 import {LinkedList} from "./array.js";
 import {ThreadBoundaryError, fromThreadBoundaryError, toThreadBoundaryError} from "./error.js";
+import {EmittedAt} from "./types.js";
 
-export type RequestEvent<T> = {
+export type RequestEvent<T> = EmittedAt & {
   callArgs: T;
   id: number;
 };
@@ -13,9 +14,9 @@ export enum IteratorEventType {
 }
 
 export type IteratorEvent<V> =
-  | {type: IteratorEventType.next; id: number; item: V}
-  | {type: IteratorEventType.done; id: number}
-  | {type: IteratorEventType.error; id: number; error: ThreadBoundaryError};
+  | (EmittedAt & {type: IteratorEventType.next; id: number; item: V})
+  | (EmittedAt & {type: IteratorEventType.done; id: number})
+  | (EmittedAt & {type: IteratorEventType.error; id: number; error: ThreadBoundaryError});
 
 export type AsyncIterableEventBus<Args, Item> = {
   emitRequest(data: RequestEvent<Args>): void;

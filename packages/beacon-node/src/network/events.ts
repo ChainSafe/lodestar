@@ -6,6 +6,7 @@ import {BlockInput} from "../chain/blocks/types.js";
 import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {EventDirection} from "../util/workerEvents.js";
+import {EmittedAt} from "../util/types.js";
 import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 
@@ -27,13 +28,13 @@ export enum NetworkEvent {
 }
 
 export type NetworkEventData = {
-  [NetworkEvent.peerConnected]: {peer: PeerIdStr; status: phase0.Status};
-  [NetworkEvent.peerDisconnected]: {peer: PeerIdStr};
-  [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId};
-  [NetworkEvent.unknownBlockParent]: {blockInput: BlockInput; peer: PeerIdStr};
-  [NetworkEvent.unknownBlock]: {rootHex: RootHex; peer?: PeerIdStr};
-  [NetworkEvent.pendingGossipsubMessage]: PendingGossipsubMessage;
-  [NetworkEvent.gossipMessageValidationResult]: {
+  [NetworkEvent.peerConnected]: EmittedAt & {peer: PeerIdStr; status: phase0.Status};
+  [NetworkEvent.peerDisconnected]: EmittedAt & {peer: PeerIdStr};
+  [NetworkEvent.reqRespRequest]: EmittedAt & {request: RequestTypedContainer; peer: PeerId};
+  [NetworkEvent.unknownBlockParent]: EmittedAt & {blockInput: BlockInput; peer: PeerIdStr};
+  [NetworkEvent.unknownBlock]: EmittedAt & {rootHex: RootHex; peer?: PeerIdStr};
+  [NetworkEvent.pendingGossipsubMessage]: EmittedAt & PendingGossipsubMessage;
+  [NetworkEvent.gossipMessageValidationResult]: EmittedAt & {
     msgId: string;
     propagationSource: PeerIdStr;
     acceptance: TopicValidatorResult;
