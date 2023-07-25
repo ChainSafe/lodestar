@@ -44,24 +44,14 @@ describe("data serialization through worker boundary", function () {
 
   // Defining tests in this notation ensures that any event data is tested and probably safe to send
   const reqRespBridgeEventData: ReqRespBridgeEventData = {
-    [ReqRespBridgeEvent.outgoingRequest]: {
-      emittedAt: Date.now(),
-      id: 0,
-      callArgs: {peerId, method, versions: [1, 2], requestData: bytes},
-    },
+    [ReqRespBridgeEvent.outgoingRequest]: {id: 0, callArgs: {peerId, method, versions: [1, 2], requestData: bytes}},
     [ReqRespBridgeEvent.outgoingResponse]: {
-      emittedAt: Date.now(),
       type: IteratorEventType.next,
       id: 0,
       item: {data: bytes, fork: ForkName.altair},
     },
-    [ReqRespBridgeEvent.incomingRequest]: {
-      emittedAt: Date.now(),
-      id: 0,
-      callArgs: {method, req: {data: bytes, version: 1}, peerId},
-    },
+    [ReqRespBridgeEvent.incomingRequest]: {id: 0, callArgs: {method, req: {data: bytes, version: 1}, peerId}},
     [ReqRespBridgeEvent.incomingResponse]: {
-      emittedAt: Date.now(),
       type: IteratorEventType.next,
       id: 0,
       item: {data: bytes, fork: ForkName.altair, protocolVersion: 1},
@@ -83,15 +73,13 @@ describe("data serialization through worker boundary", function () {
 
   // Defining tests in this notation ensures that any event data is tested and probably safe to send
   const networkEventData = filterByUsedEvents<NetworkEventData>(networkEventDirection, {
-    [NetworkEvent.peerConnected]: {emittedAt: Date.now(), peer, status: statusZero},
-    [NetworkEvent.peerDisconnected]: {emittedAt: Date.now(), peer},
+    [NetworkEvent.peerConnected]: {peer, status: statusZero},
+    [NetworkEvent.peerDisconnected]: {peer},
     [NetworkEvent.reqRespRequest]: {
-      emittedAt: Date.now(),
       request: {method: ReqRespMethod.Status, body: statusZero},
       peer: getValidPeerId(),
     },
     [NetworkEvent.unknownBlockParent]: {
-      emittedAt: Date.now(),
       blockInput: {
         type: BlockInputType.preDeneb,
         block: ssz.capella.SignedBeaconBlock.defaultValue(),
@@ -100,9 +88,11 @@ describe("data serialization through worker boundary", function () {
       },
       peer,
     },
-    [NetworkEvent.unknownBlock]: {emittedAt: Date.now(), rootHex: ZERO_HASH_HEX, peer},
+    [NetworkEvent.unknownBlock]: {
+      rootHex: ZERO_HASH_HEX,
+      peer,
+    },
     [NetworkEvent.pendingGossipsubMessage]: {
-      emittedAt: Date.now(),
       topic: {type: GossipType.beacon_block, fork: ForkName.altair},
       msg: {
         type: "unsigned",
@@ -116,7 +106,6 @@ describe("data serialization through worker boundary", function () {
       startProcessUnixSec: 1600000000,
     },
     [NetworkEvent.gossipMessageValidationResult]: {
-      emittedAt: Date.now(),
       msgId: ZERO_HASH_HEX,
       propagationSource: peerId,
       acceptance: TopicValidatorResult.Accept,
