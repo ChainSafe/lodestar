@@ -70,23 +70,29 @@ export function getBeaconBlockApi({
     // check what validations have been requested before broadcasting and publishing the block
     // TODO: add validation time to metrics
     const broadcastValidation = opts.broadcastValidation ?? routes.beacon.BroadcastValidation.none;
-    switch (broadcastValidation) {
-      case routes.beacon.BroadcastValidation.none:
-        break;
+    // if block is locally produced, full or blinded, it already is 'consensus' validated as it went through
+    // state transition to produce the stateRoot
+    const slot = signedBlock.message.slot;
+    const blockRoot = toHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+    const blockLocallyProduced =
+      chain.producedBlockRoot.has(blockRoot) || chain.producedBlindedBlockRoot.has(blockRoot);
+    const valLogMeta = {broadcastValidation, blockRoot, blockLocallyProduced, slot};
 
+    switch (broadcastValidation) {
+      case routes.beacon.BroadcastValidation.none: {
+        const logFn = blockLocallyProduced ? chain.logger.debug : chain.logger.warn;
+        logFn("No broadcast validation requested for the block", valLogMeta);
+        break;
+      }
       case routes.beacon.BroadcastValidation.consensus: {
         // check if this beacon node produced the block else run validations
-        const blockRoot = toHex(
-          chain.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
-        );
-
-        if (!chain.producedBlockRoot.has(blockRoot) && !chain.producedBlindedBlockRoot.has(blockRoot)) {
+        if (!blockLocallyProduced) {
           // error or log warning that we support consensus val on blocks produced via this beacon node
           const message = "Consensus validation not implemented yet for block not produced by this beacon node";
           if (chain.opts.broadcastValidationStrictness === "error") {
             throw Error(message);
           } else {
-            chain.logger.warn(message);
+            chain.logger.warn(message, valLogMeta);
           }
         }
         break;
