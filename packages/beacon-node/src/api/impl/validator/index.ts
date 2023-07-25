@@ -33,6 +33,7 @@ import {RegenCaller} from "../../../chain/regen/index.js";
 import {getValidatorStatus} from "../beacon/state/utils.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
+import {ChainEvent, CheckpointHex} from "../../../chain/index.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
 
 /**
@@ -139,6 +140,34 @@ export function getValidatorApi({
 
   function currentEpochWithDisparity(): Epoch {
     return computeEpochAtSlot(getCurrentSlot(config, chain.genesisTime - MAX_API_CLOCK_DISPARITY_SEC));
+  }
+
+  /**
+   * This function is called 1s before next epoch, usually at that time PrepareNextSlotScheduler finishes
+   * so we should have checkpoint state, otherwise wait for up to `timeoutMs`.
+   */
+  async function waitForCheckpointState(
+    cpHex: CheckpointHex,
+    timeoutMs: number
+  ): Promise<CachedBeaconStateAllForks | null> {
+    const cpState = chain.regen.getCheckpointStateSync(cpHex);
+    if (cpState) {
+      return cpState;
+    }
+    const cp = {
+      epoch: cpHex.epoch,
+      root: fromHexString(cpHex.rootHex),
+    };
+    // if not, wait for ChainEvent.checkpoint event until timeoutMs
+    return new Promise<CachedBeaconStateAllForks | null>((resolve) => {
+      const timer = setTimeout(() => resolve(null), timeoutMs);
+      chain.emitter.on(ChainEvent.checkpoint, (eventCp, cpState) => {
+        if (ssz.phase0.Checkpoint.equals(eventCp, cp)) {
+          clearTimeout(timer);
+          resolve(cpState);
+        }
+      });
+    });
   }
 
   /**
@@ -404,12 +433,14 @@ export function getValidatorApi({
 
       const head = chain.forkChoice.getHead();
       let state: CachedBeaconStateAllForks | undefined = undefined;
-      const prepareNextSlotLookAheadMs = (config.SECONDS_PER_SLOT * 1000) / SCHEDULER_LOOKAHEAD_FACTOR;
+      const slotMs = config.SECONDS_PER_SLOT * 1000;
+      const prepareNextSlotLookAheadMs = slotMs / SCHEDULER_LOOKAHEAD_FACTOR;
       const toNextEpochMs = msToNextEpoch();
       // validators may request next epoch's duties when it's close to next epoch
       // this is to avoid missed block proposal due to 0 epoch look ahead
       if (epoch === nextEpoch && toNextEpochMs < prepareNextSlotLookAheadMs) {
-        const cpState = chain.regen.getCheckpointStateSync({rootHex: head.blockRoot, epoch});
+        // wait for maximum 1 slot for cp state which is the timeout of validator api
+        const cpState = await waitForCheckpointState({rootHex: head.blockRoot, epoch}, slotMs);
         if (cpState) {
           state = cpState;
           metrics?.duties.requestNextEpochProposalDutiesHit.inc();
