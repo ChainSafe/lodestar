@@ -125,6 +125,7 @@ describe("sync / unknown block sync", function () {
             if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
               // Expected
               bn2.network.events.emit(NetworkEvent.unknownBlockParent, {
+                emittedAt: Date.now(),
                 blockInput: headInput,
                 peer: bn2.network.peerId.toString(),
               });
@@ -135,6 +136,7 @@ describe("sync / unknown block sync", function () {
           break;
         case NetworkEvent.unknownBlock:
           bn2.network.events.emit(NetworkEvent.unknownBlock, {
+            emittedAt: Date.now(),
             rootHex: headSummary.blockRoot,
             peer: bn2.network.peerId.toString(),
           });

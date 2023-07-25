@@ -283,6 +283,7 @@ export class Eth2Gossipsub extends GossipSub {
     // See https://github.com/ChainSafe/lodestar/issues/5604
     setTimeout(() => {
       this.events.emit(NetworkEvent.pendingGossipsubMessage, {
+        emittedAt: Date.now(),
         topic,
         msg,
         msgId,

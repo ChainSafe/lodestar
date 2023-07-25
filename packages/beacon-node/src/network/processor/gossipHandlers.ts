@@ -150,7 +150,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
         // Don't trigger this yet if full block and blobs haven't arrived yet
         if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput !== null) {
           logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
-          events.emit(NetworkEvent.unknownBlockParent, {blockInput, peer: peerIdStr});
+          events.emit(NetworkEvent.unknownBlockParent, {emittedAt: Date.now(), blockInput, peer: peerIdStr});
         }
       }
 
