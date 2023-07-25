@@ -83,12 +83,11 @@ new AsyncIterableBridgeHandler(getReqRespBridgeReqEvents(reqRespBridgeEventBus),
 );
 const reqRespBridgeRespCaller = new AsyncIterableBridgeCaller(getReqRespBridgeRespEvents(reqRespBridgeEventBus));
 
-let networkCoreWorkerMetrics: NetworkCoreWorkerMetrics | null = null;
+const networkCoreWorkerMetrics = metricsRegister ? getNetworkCoreWorkerMetrics(metricsRegister) : null;
 // respBridgeCaller metrics
-if (metricsRegister) {
-  networkCoreWorkerMetrics = getNetworkCoreWorkerMetrics(metricsRegister);
+if (networkCoreWorkerMetrics) {
   networkCoreWorkerMetrics.reqRespBridgeRespCallerPending.addCollect(() => {
-    networkCoreWorkerMetrics?.reqRespBridgeRespCallerPending.set(reqRespBridgeRespCaller.pendingCount);
+    networkCoreWorkerMetrics.reqRespBridgeRespCallerPending.set(reqRespBridgeRespCaller.pendingCount);
   });
 }
 
