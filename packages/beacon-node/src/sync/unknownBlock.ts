@@ -101,7 +101,7 @@ export class UnknownBlockSync {
   /**
    * Process an unknownBlockParent event and register the block in `pendingBlocks` Map.
    */
-  private onUnknownParent = (data: NetworkEventData[NetworkEvent.unknownBlockParent]): void => {
+  private onUnknownParent = (data: Omit<NetworkEventData[NetworkEvent.unknownBlockParent], "emittedAt">): void => {
     try {
       this.addUnknownParent(data.blockInput, data.peer);
       this.triggerUnknownBlockSearch();
