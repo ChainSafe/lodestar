@@ -12,5 +12,3 @@ export const signedBLSToExecutionChangeVersionedType = new ContainerType(
   {jsonCase: "eth2", typeName: "SignedBLSToExecutionChangeVersionedType"}
 );
 export type SignedBLSToExecutionChangeVersioned = ValueOf<typeof signedBLSToExecutionChangeVersionedType>;
-
-export type EmittedAt = {emittedAt: number};
