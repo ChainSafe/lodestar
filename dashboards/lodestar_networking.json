@@ -969,7 +969,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(network_worker_wire_events_on_worker_thread_event_latency[6m])",
+          "expr": "rate(lodestar_network_worker_wire_events_on_worker_thread_event_latency[6m])",
           "interval": "",
           "legendFormat": "to worker thread",
           "refId": "to worker thread"
@@ -1075,7 +1075,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(network_worker_wire_events_on_worker_thread_port_latency[6m])",
+          "expr": "rate(lodestar_network_worker_wire_events_on_worker_thread_port_latency[6m])",
           "interval": "",
           "legendFormat": "to worker thread",
           "refId": "to worker thread"
