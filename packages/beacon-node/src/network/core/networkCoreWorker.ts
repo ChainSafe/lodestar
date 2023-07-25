@@ -13,7 +13,7 @@ import {peerIdToString} from "../../util/peerId.js";
 import {profileNodeJS} from "../../util/profile.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
-import {NetworkCoreWorkerMetrics, getNetworkCoreWorkerMetrics} from "./metrics.js";
+import {getNetworkCoreWorkerMetrics} from "./metrics.js";
 import {NetworkWorkerApi, NetworkWorkerData} from "./types.js";
 import {NetworkCore} from "./networkCore.js";
 import {
