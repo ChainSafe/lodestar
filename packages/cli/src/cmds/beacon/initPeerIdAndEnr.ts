@@ -54,13 +54,13 @@ export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
 }
 
 export function overwriteEnrWithCliArgs(enr: SignableENR, args: BeaconArgs, logger: Logger): void {
-  const {listenAddress, port, discoveryPort, listenAddress6, port6, discoveryPort6} = parseListenArgs(args);
-  enr.ip = args["enr.ip"] ?? listenAddress;
-  enr.tcp = args["enr.tcp"] ?? port;
-  enr.udp = args["enr.udp"] ?? discoveryPort;
-  enr.ip6 = args["enr.ip6"] ?? listenAddress6;
-  enr.tcp6 = args["enr.tcp6"] ?? port6;
-  enr.udp6 = args["enr.udp6"] ?? discoveryPort6;
+  const {port, discoveryPort, port6, discoveryPort6} = parseListenArgs(args);
+  enr.ip = args["enr.ip"] ?? enr.ip;
+  enr.tcp = args["enr.tcp"] ?? port ?? enr.tcp;
+  enr.udp = args["enr.udp"] ?? discoveryPort ?? enr.udp;
+  enr.ip6 = args["enr.ip6"] ?? enr.ip6;
+  enr.tcp6 = args["enr.tcp6"] ?? port6 ?? enr.tcp6;
+  enr.udp6 = args["enr.udp6"] ?? discoveryPort6 ?? enr.udp6;
 
   function testMultiaddrForLocal(mu: Multiaddr, ip4: boolean): void {
     const isLocal = isLocalMultiAddr(mu);
