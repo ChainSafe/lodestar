@@ -126,7 +126,6 @@ describe("network / peers / PeerManager", function () {
 
     // We get a ping by peer1, don't have it's metadata so it gets requested
     networkEventBus.emit(NetworkEvent.reqRespRequest, {
-      emittedAt: Date.now(),
       request: {method: ReqRespMethod.Ping, body: seqNumber},
       peer: peerId1,
     });
@@ -140,7 +139,6 @@ describe("network / peers / PeerManager", function () {
     // We get another ping by peer1, but with an already known seqNumber
     reqResp.sendMetadata.reset();
     networkEventBus.emit(NetworkEvent.reqRespRequest, {
-      emittedAt: Date.now(),
       request: {method: ReqRespMethod.Ping, body: seqNumber},
       peer: peerId1,
     });
@@ -166,7 +164,6 @@ describe("network / peers / PeerManager", function () {
     // Send the local status and remote status, which always passes the assertPeerRelevance function
     const remoteStatus = statusCache.get();
     networkEventBus.emit(NetworkEvent.reqRespRequest, {
-      emittedAt: Date.now(),
       request: {method: ReqRespMethod.Status, body: remoteStatus},
       peer: peerId1,
     });

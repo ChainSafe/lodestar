@@ -377,7 +377,7 @@ export class PeerManager {
       peerData.relevantStatus = RelevantPeerStatus.relevant;
     }
     if (getConnection(this.libp2p, peer.toString())) {
-      this.networkEventBus.emit(NetworkEvent.peerConnected, {emittedAt: Date.now(), peer: peer.toString(), status});
+      this.networkEventBus.emit(NetworkEvent.peerConnected, {peer: peer.toString(), status});
     }
   }
 

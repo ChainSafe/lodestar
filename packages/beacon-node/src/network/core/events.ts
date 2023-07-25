@@ -35,8 +35,8 @@ export function getReqRespBridgeReqEvents(
   events: IReqRespBridgeEventBus
 ): AsyncIterableEventBus<OutgoingRequestArgs, ResponseIncoming> {
   return {
-    emitRequest: (data) => events.emit(ReqRespBridgeEvent.outgoingRequest, {...data, emittedAt: Date.now()}),
-    emitResponse: (data) => events.emit(ReqRespBridgeEvent.incomingResponse, {...data, emittedAt: Date.now()}),
+    emitRequest: (data) => events.emit(ReqRespBridgeEvent.outgoingRequest, data),
+    emitResponse: (data) => events.emit(ReqRespBridgeEvent.incomingResponse, data),
     onRequest: (cb) => events.on(ReqRespBridgeEvent.outgoingRequest, cb),
     onResponse: (cb) => events.on(ReqRespBridgeEvent.incomingResponse, cb),
   };
@@ -46,8 +46,8 @@ export function getReqRespBridgeRespEvents(
   events: IReqRespBridgeEventBus
 ): AsyncIterableEventBus<IncomingRequestArgs, ResponseOutgoing> {
   return {
-    emitRequest: (data) => events.emit(ReqRespBridgeEvent.incomingRequest, {...data, emittedAt: Date.now()}),
-    emitResponse: (data) => events.emit(ReqRespBridgeEvent.outgoingResponse, {...data, emittedAt: Date.now()}),
+    emitRequest: (data) => events.emit(ReqRespBridgeEvent.incomingRequest, data),
+    emitResponse: (data) => events.emit(ReqRespBridgeEvent.outgoingResponse, data),
     onRequest: (cb) => events.on(ReqRespBridgeEvent.incomingRequest, cb),
     onResponse: (cb) => events.on(ReqRespBridgeEvent.outgoingResponse, cb),
   };

@@ -185,12 +185,11 @@ describe("sync by UnknownBlockSync", () => {
       syncService.subscribeToNetwork();
       if (event === NetworkEvent.unknownBlockParent) {
         network.events?.emit(NetworkEvent.unknownBlockParent, {
-          emittedAt: Date.now(),
           blockInput: getBlockInput.preDeneb(config, blockC, BlockSource.gossip, null),
           peer,
         });
       } else {
-        network.events?.emit(NetworkEvent.unknownBlock, {emittedAt: Date.now(), rootHex: blockRootHexC, peer});
+        network.events?.emit(NetworkEvent.unknownBlock, {rootHex: blockRootHexC, peer});
       }
 
       if (wrongBlockRoot) {
