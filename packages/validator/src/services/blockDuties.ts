@@ -12,7 +12,7 @@ import {ValidatorStore} from "./validatorStore.js";
 /** This polls block duties 1s before the next epoch */
 // TODO: change to 6 to do it 2s before the next epoch
 // once we have some improvement on epoch transition time
-// see https://github.com/ChainSafe/lodestar/issues/5409
+// see https://github.com/ChainSafe/lodestar/issues/5792#issuecomment-1647457442
 const BLOCK_DUTIES_LOOKAHEAD_FACTOR = 12;
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -125,8 +125,8 @@ export class BlockDutiesService {
    * through the slow path every time. I.e., the proposal will only happen after we've been able to
    * download and process the duties from the BN. This means it is very important to ensure this
    * function is as fast as possible.
-   *   - Starting from Jul 2023, if PrepareNextSlotScheduler runs well in bn we already have proposers of next epoch
-   * some time (< 1/3 slot) before the next epoch
+   *   - Starting from Jul 2023, we poll proposers 1s before the next epoch thanks to PrepareNextSlotScheduler
+   * usually finishes in 3s.
    */
   private async pollBeaconProposersAndNotify(currentSlot: Slot, signal: AbortSignal): Promise<void> {
     const nextEpoch = computeEpochAtSlot(currentSlot) + 1;
@@ -162,6 +162,10 @@ export class BlockDutiesService {
     }
   }
 
+  /**
+   * This is to avoid some delay on the first slot of the opoch when validators has proposal duties.
+   * See https://github.com/ChainSafe/lodestar/issues/5792
+   */
   private async pollBeaconProposersNextEpoch(currentSlot: Slot, nextEpoch: Epoch, signal: AbortSignal): Promise<void> {
     const nextSlot = currentSlot + 1;
     const lookAheadMs = (this.config.SECONDS_PER_SLOT * 1000) / BLOCK_DUTIES_LOOKAHEAD_FACTOR;

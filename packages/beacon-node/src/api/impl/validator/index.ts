@@ -405,11 +405,11 @@ export function getValidatorApi({
       const head = chain.forkChoice.getHead();
       let state: CachedBeaconStateAllForks | undefined = undefined;
       const prepareNextSlotLookAheadMs = (config.SECONDS_PER_SLOT * 1000) / SCHEDULER_LOOKAHEAD_FACTOR;
-      const cpState = chain.regen.getCheckpointStateSync({rootHex: head.blockRoot, epoch});
       const toNextEpochMs = msToNextEpoch();
       // validators may request next epoch's duties when it's close to next epoch
-      // return that asap if PrepareNextSlot already compute beacon proposers for next epoch
+      // this is to avoid missed block proposal due to 0 epoch look ahead
       if (epoch === nextEpoch && toNextEpochMs < prepareNextSlotLookAheadMs) {
+        const cpState = chain.regen.getCheckpointStateSync({rootHex: head.blockRoot, epoch});
         if (cpState) {
           state = cpState;
           metrics?.duties.requestNextEpochProposalDutiesHit.inc();
