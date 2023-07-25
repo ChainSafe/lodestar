@@ -80,8 +80,11 @@ export function getBeaconBlockApi({
 
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.none: {
-        const logFn = blockLocallyProduced ? chain.logger.debug : chain.logger.warn;
-        logFn("No broadcast validation requested for the block", valLogMeta);
+        if (blockLocallyProduced) {
+          chain.logger.debug("No broadcast validation requested for the block", valLogMeta);
+        } else {
+          chain.logger.warn("No broadcast validation requested for the block", valLogMeta);
+        }
         break;
       }
       case routes.beacon.BroadcastValidation.consensus: {
