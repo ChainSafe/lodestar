@@ -60,7 +60,7 @@ type ProduceBlockOpts = {
  */
 export class BlockProposingService {
   private readonly dutiesService: BlockDutiesService;
-  private readonly broadcastValidation: routes.beacon.BroadcastValidation;
+  private readonly broadcastValidation?: routes.beacon.BroadcastValidation;
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -80,7 +80,7 @@ export class BlockProposingService {
       this.notifyBlockProductionFn
     );
 
-    this.broadcastValidation = broadcastValidation ?? routes.beacon.BroadcastValidation.none;
+    this.broadcastValidation = broadcastValidation;
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {

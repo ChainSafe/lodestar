@@ -177,7 +177,7 @@ export type Api = {
 
   publishBlockV2(
     blockOrContents: allForks.SignedBeaconBlock | SignedBlockContents,
-    opts: {broadcastValidation: BroadcastValidation}
+    opts: {broadcastValidation?: BroadcastValidation}
   ): Promise<
     ApiClientResponse<
       {
@@ -204,7 +204,7 @@ export type Api = {
 
   publishBlindedBlockV2(
     blindedBlockOrContents: allForks.SignedBlindedBeaconBlock | SignedBlindedBlockContents,
-    opts: {broadcastValidation: BroadcastValidation}
+    opts: {broadcastValidation?: BroadcastValidation}
   ): Promise<
     ApiClientResponse<
       {
@@ -256,9 +256,9 @@ export type ReqTypes = {
   getBlockHeaders: {query: {slot?: number; parent_root?: string}};
   getBlockRoot: BlockIdOnlyReq;
   publishBlock: {body: unknown};
-  publishBlockV2: {body: unknown; query: {broadcast_validation: string}};
+  publishBlockV2: {body: unknown; query: {broadcast_validation?: string}};
   publishBlindedBlock: {body: unknown};
-  publishBlindedBlockV2: {body: unknown; query: {broadcast_validation: string}};
+  publishBlindedBlockV2: {body: unknown; query: {broadcast_validation?: string}};
   getBlobSidecars: BlockIdOnlyReq;
 };
 

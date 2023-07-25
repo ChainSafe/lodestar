@@ -20,7 +20,6 @@ import {ApiModules} from "../../types.js";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts & {broadcastValidation?: routes.beacon.BroadcastValidation};
-const defaultPublishOpts = {broadcastValidation: routes.beacon.BroadcastValidation.none};
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -42,7 +41,7 @@ export function getBeaconBlockApi({
 }: Pick<ApiModules, "chain" | "config" | "metrics" | "network" | "db">): ServerApi<routes.beacon.block.Api> {
   const publishBlock: ServerApi<routes.beacon.block.Api>["publishBlock"] = async (
     signedBlockOrContents,
-    opts: PublishBlockOpts = defaultPublishOpts
+    opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
     let blockForImport: BlockInput, signedBlock: allForks.SignedBeaconBlock, signedBlobs: deneb.SignedBlobSidecars;
@@ -70,7 +69,7 @@ export function getBeaconBlockApi({
 
     // check what validations have been requested before broadcasting and publishing the block
     // TODO: add validation time to metrics
-    const broadcastValidation = opts.broadcastValidation ?? defaultPublishOpts.broadcastValidation;
+    const broadcastValidation = opts.broadcastValidation ?? routes.beacon.BroadcastValidation.none;
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.none:
         break;
@@ -137,7 +136,7 @@ export function getBeaconBlockApi({
 
   const publishBlindedBlock: ServerApi<routes.beacon.block.Api>["publishBlindedBlock"] = async (
     signedBlindedBlockOrContents,
-    opts: PublishBlockOpts = defaultPublishOpts
+    opts: PublishBlockOpts = {}
   ) => {
     const executionBuilder = chain.executionBuilder;
     if (!executionBuilder) throw Error("exeutionBuilder required to publish SignedBlindedBeaconBlock");
@@ -311,7 +310,7 @@ export function getBeaconBlockApi({
       await publishBlindedBlock(signedBlindedBlockOrContents, opts);
     },
 
-    async publishBlockV2(signedBlockOrContents, opts: PublishBlockOpts = defaultPublishOpts) {
+    async publishBlockV2(signedBlockOrContents, opts) {
       await publishBlock(signedBlockOrContents, opts);
     },
 
