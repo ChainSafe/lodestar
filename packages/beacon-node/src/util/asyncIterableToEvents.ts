@@ -61,7 +61,6 @@ export class AsyncIterableBridgeCaller<Args, Item> {
         self.pending.set(id, req);
 
         self.events.emitRequest({
-          emittedAt: Date.now(),
           callArgs,
           id,
         });
@@ -147,7 +146,6 @@ export class AsyncIterableBridgeHandler<Args, Item> {
       for await (const item of this.handler(data.callArgs)) {
         this.events.emitResponse({
           type: IteratorEventType.next,
-          emittedAt: Date.now(),
           id: data.id,
           item,
         });
@@ -155,13 +153,11 @@ export class AsyncIterableBridgeHandler<Args, Item> {
 
       this.events.emitResponse({
         type: IteratorEventType.done,
-        emittedAt: Date.now(),
         id: data.id,
       });
     } catch (e) {
       this.events.emitResponse({
         type: IteratorEventType.error,
-        emittedAt: Date.now(),
         id: data.id,
         error: toThreadBoundaryError(e as Error),
       });
