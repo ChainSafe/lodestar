@@ -104,7 +104,10 @@ async function downloadTestFile(fileId: string): Promise<Buffer> {
   // eslint-disable-next-line no-console
   console.log(`Downloading file ${fileUrl}`);
 
-  const res = await got(fileUrl, {responseType: "buffer"});
+  const res = await got(fileUrl, {responseType: "buffer"}).catch((e: Error) => {
+    e.message = `Error downloading ${fileUrl}: ${e.message}`;
+    throw e;
+  });
   return res.body;
 }
 
