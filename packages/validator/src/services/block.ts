@@ -69,6 +69,7 @@ export class BlockProposingService {
     private readonly metrics: Metrics | null
   ) {
     this.dutiesService = new BlockDutiesService(
+      config,
       logger,
       api,
       clock,
