@@ -39,6 +39,9 @@ enum SubnetSource {
   random = "random",
 }
 
+/** As monitored on goerli, we only need to subscribe 2 slots before aggregator dutied slot to get stable mesh peers */
+const SLOTS_TO_SUBSCRIBE_IN_ADVANCE = 2;
+
 /**
  * Manage random (long lived) subnets and committee (short lived) subnets.
  * - PeerManager uses attnetsService to know which peers are requried for duties
@@ -118,7 +121,6 @@ export class AttnetsService implements IAttnetsService {
   addCommitteeSubscriptions(subscriptions: CommitteeSubscription[]): void {
     const currentSlot = this.clock.currentSlot;
     let addedknownValidators = false;
-    const subnetsToSubscribe: RequestedSubnet[] = [];
 
     for (const {validatorIndex, subnet, slot, isAggregator} of subscriptions) {
       // Add known validator
@@ -129,21 +131,8 @@ export class AttnetsService implements IAttnetsService {
       this.committeeSubnets.request({subnet, toSlot: slot + 1});
       if (isAggregator) {
         // need exact slot here
-        subnetsToSubscribe.push({subnet, toSlot: slot});
         this.aggregatorSlotSubnet.getOrDefault(slot).add(subnet);
       }
-    }
-
-    // Trigger gossip subscription first, in batch
-    if (subnetsToSubscribe.length > 0) {
-      this.subscribeToSubnets(
-        subnetsToSubscribe.map((sub) => sub.subnet),
-        SubnetSource.committee
-      );
-    }
-    // Then, register the subscriptions
-    for (const subscription of subnetsToSubscribe) {
-      this.subscriptionsCommittee.request(subscription);
     }
 
     if (addedknownValidators) this.rebalanceRandomSubnets();
@@ -179,16 +168,29 @@ export class AttnetsService implements IAttnetsService {
 
   /**
    * Run per slot.
+   * - Subscribe to gossip subnets `${SLOTS_TO_SUBSCRIBE_IN_ADVANCE}` slots in advance
+   * - Unsubscribe from expired subnets
    */
-  private onSlot = (slot: Slot): void => {
+  private onSlot = (clockSlot: Slot): void => {
     try {
+      for (const [dutiedSlot, subnets] of this.aggregatorSlotSubnet.entries()) {
+        if (dutiedSlot === clockSlot + SLOTS_TO_SUBSCRIBE_IN_ADVANCE) {
+          // Trigger gossip subscription first, in batch
+          if (subnets.size > 0) {
+            this.subscribeToSubnets(Array.from(subnets), SubnetSource.committee);
+          }
+          // Then, register the subscriptions
+          Array.from(subnets).map((subnet) => this.subscriptionsCommittee.request({subnet, toSlot: dutiedSlot}));
+        }
+      }
+
       // For node >= 64 validators, we should consistently subscribe to all subnets
       // it's important to check random subnets first
       // See https://github.com/ChainSafe/lodestar/issues/4929
-      this.unsubscribeExpiredRandomSubnets(slot);
-      this.unsubscribeExpiredCommitteeSubnets(slot);
+      this.unsubscribeExpiredRandomSubnets(clockSlot);
+      this.unsubscribeExpiredCommitteeSubnets(clockSlot);
     } catch (e) {
-      this.logger.error("Error on AttnetsService.onSlot", {slot}, e as Error);
+      this.logger.error("Error on AttnetsService.onSlot", {slot: clockSlot}, e as Error);
     }
   };
 

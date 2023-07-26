@@ -24,6 +24,9 @@ enum SubnetSource {
   longLived = "long_lived",
 }
 
+/** As monitored on goerli, we only need to subscribe 2 slots before aggregator dutied slot to get stable mesh peers */
+const SLOTS_TO_SUBSCRIBE_IN_ADVANCE = 2;
+
 /**
  * Manage deleterministic long lived (DLL) subnets and short lived subnets.
  * - PeerManager uses attnetsService to know which peers are required for duties and long lived subscriptions
@@ -103,28 +106,13 @@ export class DLLAttnetsService implements IAttnetsService {
    * Called from the API when validator is a part of a committee.
    */
   addCommitteeSubscriptions(subscriptions: CommitteeSubscription[]): void {
-    const subnetsToSubscribe: RequestedSubnet[] = [];
-
     for (const {subnet, slot, isAggregator} of subscriptions) {
       // the peer-manager heartbeat will help find the subnet
       this.committeeSubnets.request({subnet, toSlot: slot + 1});
       if (isAggregator) {
         // need exact slot here
-        subnetsToSubscribe.push({subnet, toSlot: slot});
         this.aggregatorSlotSubnet.getOrDefault(slot).add(subnet);
       }
-    }
-
-    // Trigger gossip subscription first, in batch
-    if (subnetsToSubscribe.length > 0) {
-      this.subscribeToSubnets(
-        subnetsToSubscribe.map((sub) => sub.subnet),
-        SubnetSource.committee
-      );
-    }
-    // Then, register the subscriptions
-    for (const subscription of subnetsToSubscribe) {
-      this.shortLivedSubscriptions.request(subscription);
     }
   }
 
@@ -167,12 +155,25 @@ export class DLLAttnetsService implements IAttnetsService {
 
   /**
    * Run per slot.
+   * - Subscribe to gossip subnets `${SLOTS_TO_SUBSCRIBE_IN_ADVANCE}` slots in advance
+   * - Unsubscribe from expired subnets
    */
-  private onSlot = (slot: Slot): void => {
+  private onSlot = (clockSlot: Slot): void => {
     try {
-      this.unsubscribeExpiredCommitteeSubnets(slot);
+      for (const [dutiedSlot, subnets] of this.aggregatorSlotSubnet.entries()) {
+        if (dutiedSlot === clockSlot + SLOTS_TO_SUBSCRIBE_IN_ADVANCE) {
+          // Trigger gossip subscription first, in batch
+          if (subnets.size > 0) {
+            this.subscribeToSubnets(Array.from(subnets), SubnetSource.committee);
+          }
+          // Then, register the subscriptions
+          Array.from(subnets).map((subnet) => this.shortLivedSubscriptions.request({subnet, toSlot: dutiedSlot}));
+        }
+      }
+
+      this.unsubscribeExpiredCommitteeSubnets(clockSlot);
     } catch (e) {
-      this.logger.error("Error on AttnetsService.onSlot", {slot}, e as Error);
+      this.logger.error("Error on AttnetsService.onSlot", {slot: clockSlot}, e as Error);
     }
   };
 
