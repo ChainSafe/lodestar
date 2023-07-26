@@ -53,6 +53,68 @@ describe("LinkedList", () => {
     expect(list.length).to.be.equal(0);
   });
 
+  it("deleteFirst", () => {
+    expect(list.deleteFirst(0)).to.be.false;
+    expect(list.length).to.be.equal(0);
+    const count = 100;
+    for (let i = 0; i < count; i++) list.push(i);
+
+    // delete first item of the list
+    expect(list.deleteFirst(0)).to.be.true;
+    expect(list.length).to.be.equal(count - 1);
+    expect(list.first()).to.be.equal(1);
+    expect(list.last()).to.be.equal(count - 1);
+
+    // delete middle item of the list
+    expect(list.deleteFirst(50)).to.be.true;
+    expect(list.length).to.be.equal(count - 2);
+    expect(list.first()).to.be.equal(1);
+    expect(list.last()).to.be.equal(count - 1);
+
+    // delete last item of the list
+    expect(list.deleteFirst(99)).to.be.true;
+    expect(list.length).to.be.equal(count - 3);
+    expect(list.first()).to.be.equal(1);
+    expect(list.last()).to.be.equal(98);
+  });
+
+  it("deleteLast", () => {
+    expect(list.deleteLast(0)).to.be.false;
+    expect(list.length).to.be.equal(0);
+    const count = 100;
+    for (let i = 0; i < count; i++) list.push(i);
+
+    // delete last item of the list
+    expect(list.deleteLast(99)).to.be.true;
+    expect(list.length).to.be.equal(count - 1);
+    expect(list.first()).to.be.equal(0);
+    expect(list.last()).to.be.equal(98);
+
+    // delete middle item of the list
+    expect(list.deleteLast(50)).to.be.true;
+    expect(list.length).to.be.equal(count - 2);
+    expect(list.first()).to.be.equal(0);
+    expect(list.last()).to.be.equal(98);
+
+    // delete first item of the list
+    expect(list.deleteLast(0)).to.be.true;
+    expect(list.length).to.be.equal(count - 3);
+    expect(list.first()).to.be.equal(1);
+    expect(list.last()).to.be.equal(98);
+  });
+
+  it("values", () => {
+    expect(Array.from(list.values())).to.be.deep.equal([]);
+    const count = 100;
+    for (let i = 0; i < count; i++) list.push(i);
+    const valuesArr = Array.from(list.values());
+    expect(valuesArr).to.be.deep.equal(Array.from({length: count}, (_, i) => i));
+    const values = list.values();
+    for (let i = 0; i < count; i++) {
+      expect(values.next().value).to.be.equal(i);
+    }
+  });
+
   describe("push", () => {
     const count = 100;
     beforeEach(() => {
