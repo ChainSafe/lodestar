@@ -85,7 +85,6 @@ type GossipQueueOpts = {
   dropOpts: DropOpts;
 };
 
-
 /**
  * Wraps a GossipValidatorFn with a queue, to limit the processing of gossip objects by type.
  *
