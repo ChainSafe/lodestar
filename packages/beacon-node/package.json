@@ -136,7 +136,7 @@
     "@types/datastore-level": "^3.0.0",
     "buffer-xor": "^2.0.2",
     "c-kzg": "^2.1.0",
-    "cross-fetch": "^4.0.0",
+    "cross-fetch": "^3.1.8",
     "datastore-core": "^9.1.1",
     "datastore-level": "^10.1.1",
     "deepmerge": "^4.3.1",
