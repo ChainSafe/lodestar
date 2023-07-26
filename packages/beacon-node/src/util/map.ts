@@ -22,9 +22,9 @@ export class OrderedMap<K, V> {
     return this;
   }
 
-  delete(key: K): boolean {
+  delete(key: K, searchFromHead: boolean): boolean {
     if (this.map.has(key)) {
-      this._set.delete(key);
+      this._set.delete(key, searchFromHead);
       return this.map.delete(key);
     }
     return false;
@@ -69,7 +69,7 @@ export class OrderedMap<K, V> {
   }
 
   size(): number {
-    return this._set.size();
+    return this._set.size;
   }
 
   has(key: K): boolean {

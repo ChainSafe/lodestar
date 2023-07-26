@@ -12,14 +12,14 @@ describe("OrderedSet", () => {
     orderedSet.add(1);
     orderedSet.add(2);
     orderedSet.add(3);
-    expect(orderedSet.size()).to.be.equal(3);
+    expect(orderedSet.size).to.be.equal(3);
     expect(orderedSet.toArray()).to.be.deep.equal([1, 2, 3]);
   });
 
   it("should not add duplicate items", () => {
     orderedSet.add(1);
     orderedSet.add(1);
-    expect(orderedSet.size()).to.be.equal(1);
+    expect(orderedSet.size).to.be.equal(1);
     expect(orderedSet.toArray()).to.be.deep.equal([1]);
   });
 
@@ -27,8 +27,8 @@ describe("OrderedSet", () => {
     orderedSet.add(1);
     orderedSet.add(2);
     orderedSet.add(3);
-    orderedSet.delete(2);
-    expect(orderedSet.size()).to.be.equal(2);
+    orderedSet.delete(2, true);
+    expect(orderedSet.size).to.be.equal(2);
     expect(orderedSet.toArray()).to.be.deep.equal([1, 3]);
   });
 
@@ -56,12 +56,12 @@ describe("OrderedSet", () => {
   });
 
   it("should return correct size", () => {
-    expect(orderedSet.size()).to.be.equal(0);
+    expect(orderedSet.size).to.be.equal(0);
     orderedSet.add(1);
-    expect(orderedSet.size()).to.be.equal(1);
+    expect(orderedSet.size).to.be.equal(1);
     orderedSet.add(2);
-    expect(orderedSet.size()).to.be.equal(2);
-    orderedSet.delete(1);
-    expect(orderedSet.size()).to.be.equal(1);
+    expect(orderedSet.size).to.be.equal(2);
+    orderedSet.delete(1, true);
+    expect(orderedSet.size).to.be.equal(1);
   });
 });

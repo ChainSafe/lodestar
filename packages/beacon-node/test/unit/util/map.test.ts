@@ -15,7 +15,7 @@ describe("OrderedMap", () => {
 
   it("should delete a key-value pair", () => {
     orderedMap.set("test", 1);
-    orderedMap.delete("test");
+    orderedMap.delete("test", true);
     expect(orderedMap.get("test")).to.be.undefined;
   });
 

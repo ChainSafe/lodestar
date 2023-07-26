@@ -85,10 +85,12 @@ export class IndexedGossipQueue<T extends {indexed?: string}> implements GossipQ
     if (deletedItem != null) {
       this._length--;
       if (firstList.length === 0) {
-        this.indexedItems.delete(firstKey);
+        // it's faster to search for deleted item from the head in this case
+        this.indexedItems.delete(firstKey, true);
       }
       if (firstList.length < this.opts.minChunkSize) {
-        this.minChunkSizeKeys.delete(firstKey);
+        // it's faster to search for deleted item from the head in this case
+        this.minChunkSizeKeys.delete(firstKey, true);
       }
       return 1;
     } else {
@@ -125,10 +127,12 @@ export class IndexedGossipQueue<T extends {indexed?: string}> implements GossipQ
     }
 
     if (list.length === 0) {
-      this.indexedItems.delete(key);
+      // it's faster to search for deleted item from the tail in this case
+      this.indexedItems.delete(key, false);
     }
     if (list.length < this.opts.minChunkSize) {
-      this.minChunkSizeKeys.delete(key);
+      // it's faster to search for deleted item from the tail in this case
+      this.minChunkSizeKeys.delete(key, false);
     }
     this._length = Math.max(0, this._length - result.length);
 

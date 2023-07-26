@@ -124,7 +124,7 @@ export class LinkedList<T> {
   }
 
   /**
-   * Delete the first item thats equal to item
+   * Delete the first item thats search from head
    */
   deleteFirst(item: T): boolean {
     if (item === this.head?.data) {
@@ -148,6 +148,9 @@ export class LinkedList<T> {
     return false;
   }
 
+  /**
+   * Delete the first item search from tail.
+   */
   deleteLast(item: T): boolean {
     if (item === this.tail?.data) {
       this.pop();

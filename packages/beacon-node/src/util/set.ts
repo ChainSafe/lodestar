@@ -1,13 +1,15 @@
+import {LinkedList} from "./array.js";
+
 /**
  * An implementation of Set that support first() and last() method.
  */
 export class OrderedSet<T> {
   private set: Set<T>;
-  private array: T[];
+  private array: LinkedList<T>;
 
   constructor() {
     this.set = new Set<T>();
-    this.array = [];
+    this.array = new LinkedList<T>();
   }
 
   add(item: T): void {
@@ -17,10 +19,14 @@ export class OrderedSet<T> {
     }
   }
 
-  delete(item: T): void {
+  delete(item: T, searchFromHead: boolean): void {
     if (this.set.has(item)) {
       this.set.delete(item);
-      this.array.splice(this.array.indexOf(item), 1);
+      if (searchFromHead) {
+        this.array.deleteFirst(item);
+      } else {
+        this.array.deleteLast(item);
+      }
     }
   }
 
@@ -28,29 +34,29 @@ export class OrderedSet<T> {
     if (this.array.length === 0) {
       return null;
     }
-    return this.array[0];
+    return this.array.first();
   }
 
   last(): T | null {
     if (this.array.length === 0) {
       return null;
     }
-    return this.array[this.array.length - 1];
+    return this.array.last();
   }
 
   toArray(): T[] {
-    return this.array.slice(); // Return a shallow copy of the array
+    return this.array.toArray();
   }
 
   values(): IterableIterator<T> {
-    return this.array.values();
+    return this.array;
   }
 
   has(item: T): boolean {
     return this.set.has(item);
   }
 
-  size(): number {
+  get size(): number {
     return this.set.size;
   }
 }
