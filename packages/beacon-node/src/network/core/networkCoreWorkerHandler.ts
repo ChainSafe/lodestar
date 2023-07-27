@@ -76,6 +76,7 @@ export class WorkerNetworkCore implements INetworkCore {
       modules.events,
       modules.worker as unknown as worker_threads.Worker,
       modules.metrics,
+      modules.logger,
       networkEventDirection
     );
     wireEventsOnMainThread<ReqRespBridgeEventData>(
@@ -83,6 +84,7 @@ export class WorkerNetworkCore implements INetworkCore {
       this.reqRespBridgeEventBus,
       modules.worker as unknown as worker_threads.Worker,
       modules.metrics,
+      modules.logger,
       reqRespBridgeEventDirection
     );
 
