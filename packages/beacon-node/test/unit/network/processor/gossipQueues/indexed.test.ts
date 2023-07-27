@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {IndexedGossipQueue} from "../../../../../src/network/processor/gossipQueues/indexed.js";
+import {IndexedGossipQueueMinSize} from "../../../../../src/network/processor/gossipQueues/indexed.js";
 
 type Item = {
   key: string;
@@ -15,7 +15,7 @@ function toIndexedItem(key: string): Item {
 }
 
 describe("IndexedGossipQueues", () => {
-  const gossipQueue = new IndexedGossipQueue<Item>({
+  const gossipQueue = new IndexedGossipQueueMinSize<Item>({
     maxLength: 12,
     indexFn: (item: Item) => item.key.substring(0, 1),
     minChunkSize: 2,

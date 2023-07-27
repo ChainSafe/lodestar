@@ -1,7 +1,7 @@
 import {LinkedList} from "../../../util/array.js";
 import {OrderedSet} from "../../../util/set.js";
 import {OrderedMap} from "../../../util/map.js";
-import {GossipQueue, IndexedGossipQueueOpts} from "./types.js";
+import {GossipQueue, IndexedGossipQueueMinSizeOpts} from "./types.js";
 
 /**
  * This implementation tries to get the most items with same key:
@@ -16,13 +16,13 @@ import {GossipQueue, IndexedGossipQueueOpts} from "./types.js";
  *
  * This is a special gossip queue for beacon_attestation topic
  */
-export class IndexedGossipQueue<T extends {indexed?: string}> implements GossipQueue<T> {
+export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements GossipQueue<T> {
   private _length = 0;
   private indexedItems: OrderedMap<string, LinkedList<T>>;
   // keys with at least minChunkSize items
   // we want to process the last key with minChunkSize first, similar to LIFO
   private minChunkSizeKeys = new OrderedSet<string>();
-  constructor(private readonly opts: IndexedGossipQueueOpts<T>) {
+  constructor(private readonly opts: IndexedGossipQueueMinSizeOpts<T>) {
     const {minChunkSize, maxChunkSize} = opts;
     if (minChunkSize < 0 || maxChunkSize < 0 || minChunkSize > maxChunkSize) {
       throw Error(`Unexpected min chunk size ${minChunkSize}, max chunk size ${maxChunkSize}}`);
