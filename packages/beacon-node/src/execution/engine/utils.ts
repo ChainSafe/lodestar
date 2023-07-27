@@ -1,5 +1,6 @@
+import {isFetchError} from "@lodestar/utils";
 import {IJson, RpcPayload} from "../../eth1/interface.js";
-import {IJsonRpcHttpClient, isFetchError} from "../../eth1/provider/jsonRpcHttpClient.js";
+import {IJsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {ExecutePayloadStatus, ExecutionEngineState} from "./interface.js";
 
 export type JsonRpcBackend = {
@@ -54,11 +55,11 @@ export function getExecutionEngineState({
       return ExecutionEngineState.OFFLINE;
   }
 
-  if (payloadError && isFetchError(payloadError) && fatalErrorCodes.includes(payloadError.code)) {
+  if (payloadError && isFetchError(payloadError) && fatalErrorCodes.includes(payloadError.cause.code)) {
     return ExecutionEngineState.OFFLINE;
   }
 
-  if (payloadError && isFetchError(payloadError) && connectionErrorCodes.includes(payloadError.code)) {
+  if (payloadError && isFetchError(payloadError) && connectionErrorCodes.includes(payloadError.cause.code)) {
     return ExecutionEngineState.AUTH_FAILED;
   }
 

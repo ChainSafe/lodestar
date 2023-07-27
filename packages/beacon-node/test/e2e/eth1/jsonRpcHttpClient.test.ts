@@ -6,10 +6,6 @@ import {JsonRpcHttpClient} from "../../../src/eth1/provider/jsonRpcHttpClient.js
 import {getGoerliRpcUrl} from "../../testParams.js";
 import {RpcPayload} from "../../../src/eth1/interface.js";
 
-type FetchError = {
-  code: string;
-};
-
 describe("eth1 / jsonRpcHttpClient", function () {
   this.timeout("10 seconds");
 
@@ -26,7 +22,6 @@ describe("eth1 / jsonRpcHttpClient", function () {
     abort?: true;
     timeout?: number;
     error: any;
-    errorCode?: string;
   }[] = [
     // // NOTE: This DNS query is very expensive, all cache miss. So it can timeout the tests and cause false positives
     // {
@@ -44,8 +39,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
       id: "Bad port",
       url: `http://localhost:${port + 1}`,
       requestListener: (req, res) => res.end(),
-      error: "",
-      errorCode: "ECONNREFUSED",
+      error: "connect ECONNREFUSED",
     },
     {
       id: "Not a JSON RPC endpoint",
@@ -128,6 +122,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
 
   for (const testCase of testCases) {
     const {id, requestListener, abort, timeout} = testCase;
+    const error = testCase.error as Error;
     let {url, payload} = testCase;
 
     it(id, async function () {
@@ -153,13 +148,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
       const controller = new AbortController();
       if (abort) setTimeout(() => controller.abort(), 50);
       const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
-      await expect(eth1JsonRpcClient.fetch(payload, {timeout})).to.be.rejected.then((error) => {
-        if (testCase.errorCode) {
-          expect((error as FetchError).code).to.be.equal(testCase.errorCode);
-        } else {
-          expect((error as Error).message).to.include(testCase.error);
-        }
-      });
+      await expect(eth1JsonRpcClient.fetch(payload, {timeout})).to.be.rejectedWith(error);
     });
   }
 });
@@ -221,10 +210,8 @@ describe("eth1 / jsonRpcHttpClient - with retries", function () {
           return true;
         },
       })
-    ).to.be.rejected.then((error) => {
-      expect((error as FetchError).code).to.be.equal("ECONNREFUSED");
-    });
-    expect(retryCount).to.be.equal(retryAttempts, "code ECONNREFUSED should be retried before failing");
+    ).to.be.rejectedWith("connect ECONNREFUSED");
+    expect(retryCount).to.be.equal(retryAttempts, "connect ECONNREFUSED should be retried before failing");
   });
 
   it("should retry 404", async function () {

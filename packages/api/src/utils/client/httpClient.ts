@@ -1,5 +1,4 @@
-import {fetch} from "cross-fetch";
-import {ErrorAborted, Logger, TimeoutError} from "@lodestar/utils";
+import {ErrorAborted, Logger, TimeoutError, enhanceFetchErrors} from "@lodestar/utils";
 import {ReqGeneric, RouteDef} from "../index.js";
 import {ApiClientResponse, ApiClientSuccessResponse} from "../../interfaces.js";
 import {stringifyQuery, urlJoin} from "./format.js";
@@ -261,7 +260,7 @@ export class HttpClient implements IHttpClient {
     const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? timeoutMs ?? this.globalTimeoutMs);
 
     // Attach global signal to this request's controller
-    const onGlobalSignalAbort = controller.abort.bind(controller);
+    const onGlobalSignalAbort = (): void => controller.abort();
     const signalGlobal = this.getAbortSignal?.();
     signalGlobal?.addEventListener("abort", onGlobalSignalAbort);
 
@@ -311,6 +310,7 @@ export class HttpClient implements IHttpClient {
           throw Error("Unknown aborted error");
         }
       } else {
+        enhanceFetchErrors(e);
         throw e;
       }
     } finally {
@@ -323,7 +323,7 @@ export class HttpClient implements IHttpClient {
 }
 
 function isAbortedError(e: Error): boolean {
-  return e.name === "AbortError" || e.message === "The user aborted a request";
+  return e.name === "AbortError";
 }
 
 function getErrorMessage(errBody: string): string {

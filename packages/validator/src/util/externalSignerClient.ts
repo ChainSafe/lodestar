@@ -1,4 +1,3 @@
-import fetch from "cross-fetch";
 import {ContainerType, toHexString, ValueOf} from "@chainsafe/ssz";
 import {phase0, altair, capella} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
