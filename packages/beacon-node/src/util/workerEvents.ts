@@ -46,7 +46,10 @@ export function wireEventsOnWorkerThread<EventData>(
       const [sec, nanoSec] = process.hrtime(data.posted);
       const networkWorkerLatency = sec + nanoSec / 1e9;
       metrics?.networkWorkerWireEventsOnWorkerThreadLatencySec.observe(
-        {eventName: data.event as string},
+        {
+          eventName: data.event as string,
+          eventDirection: EventDirection.mainToWorker,
+        },
         networkWorkerLatency
       );
       // logger.trace("network worker message latency", networkWorkerLatency);
@@ -89,7 +92,10 @@ export function wireEventsOnMainThread<EventData>(
       const [sec, nanoSec] = process.hrtime(data.posted);
       const networkWorkerLatency = sec + nanoSec / 1e9;
       metrics?.networkWorkerWireEventsOnMainThreadLatencySec.observe(
-        {eventName: data.event as string},
+        {
+          eventName: data.event as string,
+          eventDirection: EventDirection.workerToMain,
+        },
         networkWorkerLatency
       );
       // logger.trace("network worker message latency", networkWorkerLatency);

@@ -928,8 +928,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -944,7 +943,7 @@
       "gridPos": {
         "h": 6,
         "w": 12,
-        "x": 12,
+        "x": 0,
         "y": 2
       },
       "id": 148,
@@ -969,9 +968,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(lodestar_network_worker_wire_events_on_worker_thread_latency[6m])",
+          "expr": "rate(lodestar_network_worker_wire_events_on_worker_thread_latency_sum[6m])/rate(lodestar_network_worker_wire_events_on_worker_thread_latency_count[6m])",
           "interval": "",
-          "legendFormat": "to worker thread",
+          "legendFormat": "{{eventName}}",
           "refId": "to worker thread"
         },
         {
@@ -983,7 +982,112 @@
           "expr": "rate(lodestar_network_worker_wire_events_on_main_thread_latency[6m])",
           "hide": false,
           "interval": "",
-          "legendFormat": "to main thread",
+          "legendFormat": "{{eventName}}",
+          "refId": "to main thread"
+        }
+      ],
+      "title": "Network worker - to/from worker port latency",
+      "type": "timeseries"
+    },
+    {
+      "description": "Async time to send a message across the worker/parent port",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 23,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "log": 2,
+              "type": "log"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 2
+      },
+      "id": 609,
+      "options": {
+        "graph": {},
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "rate(lodestar_network_worker_wire_events_on_worker_thread_latency_sum[6m])/rate(lodestar_network_worker_wire_events_on_worker_thread_latency_count[6m])",
+          "interval": "",
+          "legendFormat": "{{eventDirection}}",
+          "refId": "to worker thread"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "rate(lodestar_network_worker_wire_events_on_main_thread_latency_sum[6m])/rate(lodestar_network_worker_wire_events_on_main_thread_latency_count[6m])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "{{eventDirection}}",
           "refId": "to main thread"
         }
       ],
@@ -6693,6 +6797,6 @@
   "timezone": "utc",
   "title": "Lodestar - networking",
   "uid": "lodestar_networking",
-  "version": 38,
+  "version": 43,
   "weekStart": "monday"
 }
