@@ -11,6 +11,15 @@ export const logLevelNum: {[K in LogLevel]: number} = {
   [LogLevel.trace]: 5,
 };
 
+export const logLevelColors: {[K in LogLevel]: string} = {
+  [LogLevel.error]: "red",
+  [LogLevel.warn]: "magenta",
+  [LogLevel.info]: "green",
+  [LogLevel.verbose]: "cyan",
+  [LogLevel.debug]: "black",
+  [LogLevel.trace]: "grey",
+};
+
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const LogLevels = Object.values(LogLevel);
 

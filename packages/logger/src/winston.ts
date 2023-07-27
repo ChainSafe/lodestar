@@ -1,6 +1,6 @@
-import winston from "winston";
+import winston, {createLogger, addColors} from "winston";
 import type {Logger as Winston} from "winston";
-import {Logger, LoggerOptions, LogLevel, logLevelNum} from "./interface.js";
+import {Logger, LoggerOptions, LogLevel, logLevelColors, logLevelNum} from "./interface.js";
 import {getFormat} from "./utils/format.js";
 import {LogData} from "./utils/json.js";
 
@@ -46,7 +46,7 @@ export class WinstonLogger implements Logger {
   static createWinstonInstance(options: Partial<LoggerOptions> = {}, transports?: winston.transport[]): Winston {
     const defaultMeta: DefaultMeta = {module: options?.module || ""};
 
-    return winston.createLogger({
+    const logger = createLogger({
       // Do not set level at the logger level. Always control by Transport, unless for testLogger
       level: options.level,
       defaultMeta,
@@ -55,6 +55,9 @@ export class WinstonLogger implements Logger {
       exitOnError: false,
       levels: logLevelNum,
     });
+    addColors(logLevelColors);
+
+    return logger;
   }
 
   error(message: string, context?: LogData, error?: Error): void {
