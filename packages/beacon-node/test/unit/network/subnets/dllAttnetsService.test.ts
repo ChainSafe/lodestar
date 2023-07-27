@@ -124,6 +124,10 @@ describe("DLLAttnetsService", () => {
       isAggregator: true,
     };
     service.addCommitteeSubscriptions([subscription]);
+    // it does not subscribe immediately
+    expect(gossipStub.subscribeTopic.callCount).to.be.equal(SUBNETS_PER_NODE);
+    sandbox.clock.tick(config.SECONDS_PER_SLOT * (subscription.slot - 2) * 1000);
+    // then subscribe 2 slots before dutied slot
     expect(gossipStub.subscribeTopic.callCount).to.be.equal(SUBNETS_PER_NODE + 1);
     // then unsubscribe after the expiration
     sandbox.clock.tick(config.SECONDS_PER_SLOT * (subscription.slot + 1) * 1000);
