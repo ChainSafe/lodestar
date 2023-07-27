@@ -603,7 +603,7 @@ export function getValidatorApi({
       metrics?.production.producedAggregateParticipants.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
 
       return {
-        data: chain.attestationPool.getAggregate(slot, attestationDataRoot),
+        data: aggregate,
       };
     },
 
