@@ -1,3 +1,4 @@
+import {fetch} from "@lodestar/utils";
 import {getHttpMetricsServer, HttpMetricsServer} from "../../../../src/metrics/index.js";
 import {testLogger} from "../../../utils/logger.js";
 import {createMetricsTest} from "../utils.js";

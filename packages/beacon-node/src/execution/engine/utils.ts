@@ -55,11 +55,11 @@ export function getExecutionEngineState({
       return ExecutionEngineState.OFFLINE;
   }
 
-  if (payloadError && isFetchError(payloadError) && fatalErrorCodes.includes(payloadError.cause.code)) {
+  if (payloadError && isFetchError(payloadError) && fatalErrorCodes.includes(payloadError.code)) {
     return ExecutionEngineState.OFFLINE;
   }
 
-  if (payloadError && isFetchError(payloadError) && connectionErrorCodes.includes(payloadError.cause.code)) {
+  if (payloadError && isFetchError(payloadError) && connectionErrorCodes.includes(payloadError.code)) {
     return ExecutionEngineState.AUTH_FAILED;
   }
 

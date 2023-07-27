@@ -1,5 +1,5 @@
 import {Registry} from "prom-client";
-import {ErrorAborted, Logger, TimeoutError, enhanceFetchErrors} from "@lodestar/utils";
+import {ErrorAborted, Logger, TimeoutError, fetch} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../metrics/index.js";
 import {HistogramExtra} from "../metrics/utils/histogram.js";
 import {defaultMonitoringOptions, MonitoringOptions} from "./options.js";
@@ -180,7 +180,6 @@ export class MonitoringService {
 
       if (!signal.aborted) {
         // error was thrown by fetch
-        enhanceFetchErrors(e);
         throw e;
       }
 

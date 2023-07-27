@@ -1,4 +1,4 @@
-import {ErrorAborted, TimeoutError, enhanceFetchErrors, retry} from "@lodestar/utils";
+import {ErrorAborted, TimeoutError, retry, fetch} from "@lodestar/utils";
 import {IGauge, IHistogram} from "../../metrics/interface.js";
 import {IJson, RpcPayload} from "../interface.js";
 import {encodeJwtToken} from "./jwt.js";
@@ -187,12 +187,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    * Fetches JSON and throws detailed errors in case the HTTP request is not ok
    */
   private async fetchJsonOneUrl<R, T = unknown>(url: string, json: T, opts?: ReqOpts): Promise<R> {
-    // If url is undefined fetch throws with `TypeError: Failed to parse URL from undefined`
-    // Throw a better error instead
     if (!url) throw Error(`Empty or undefined JSON RPC HTTP client url: ${url}`);
-
-    // fetch() throws for network errors:
-    // - cause: Error: getaddrinfo ENOTFOUND missing-url.com
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), opts?.timeout ?? this.opts?.timeout ?? REQUEST_TIMEOUT);
@@ -250,7 +245,6 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
           throw new TimeoutError("request");
         }
       } else {
-        enhanceFetchErrors(e);
         throw e;
       }
     } finally {
