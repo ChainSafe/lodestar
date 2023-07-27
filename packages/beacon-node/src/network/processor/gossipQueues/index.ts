@@ -1,33 +1,28 @@
 import {mapValues} from "@lodestar/utils";
 import {GossipType} from "../../gossip/interface.js";
+import {PendingGossipsubMessage} from "../types.js";
+import {getAttDataBase64FromAttestationSerialized} from "../../../util/sszBytes.js";
 import {LinearGossipQueue} from "./linear.js";
+import {DropType, GossipQueue, GossipQueueOpts, QueueType, isIndexedGossipQueueOpts} from "./types.js";
+import {IndexedGossipQueue} from "./indexed.js";
 
-export enum QueueType {
-  FIFO = "FIFO",
-  LIFO = "LIFO",
-}
+/**
+ * In normal condition, the higher this value the more efficient the signature verification.
+ * However, if at least 1 signature is invalid, we need to verify each signature separately.
+ */
+const MAX_GOSSIP_ATTESTATION_BATCH_SIZE = 128;
 
-export enum DropType {
-  count = "count",
-  ratio = "ratio",
-}
-
-type DropOpts =
-  | {
-      type: DropType.count;
-      count: number;
-    }
-  | {
-      type: DropType.ratio;
-      start: number;
-      step: number;
-    };
+/**
+ * Batching too few signatures and verifying them on main thread is not worth it,
+ * we should only batch verify when there are at least 32 signatures.
+ */
+export const MIN_SIGNATURE_SETS_TO_BATCH_VERIFY = 32;
 
 /**
  * Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
  */
 const gossipQueueOpts: {
-  [K in GossipType]: GossipQueueOpts;
+  [K in GossipType]: GossipQueueOpts<PendingGossipsubMessage>;
 } = {
   // validation gossip block asap
   [GossipType.beacon_block]: {maxLength: 1024, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
@@ -49,8 +44,9 @@ const gossipQueueOpts: {
   // start with dropping 1% of the queue, then increase 1% more each time. Reset when queue is empty
   [GossipType.beacon_attestation]: {
     maxLength: 24576,
-    type: QueueType.LIFO,
-    dropOpts: {type: DropType.ratio, start: 0.01, step: 0.01},
+    indexFn: (item: PendingGossipsubMessage) => getAttDataBase64FromAttestationSerialized(item.msg.data),
+    minChunkSize: MIN_SIGNATURE_SETS_TO_BATCH_VERIFY,
+    maxChunkSize: MAX_GOSSIP_ATTESTATION_BATCH_SIZE,
   },
   [GossipType.voluntary_exit]: {maxLength: 4096, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
   [GossipType.proposer_slashing]: {maxLength: 4096, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
@@ -79,12 +75,6 @@ const gossipQueueOpts: {
   },
 };
 
-type GossipQueueOpts = {
-  type: QueueType;
-  maxLength: number;
-  dropOpts: DropOpts;
-};
-
 /**
  * Wraps a GossipValidatorFn with a queue, to limit the processing of gossip objects by type.
  *
@@ -101,8 +91,12 @@ type GossipQueueOpts = {
  * By topic is too specific, so by type groups all similar objects in the same queue. All in the same won't allow
  * to customize different queue behaviours per object type (see `gossipQueueOpts`).
  */
-export function createGossipQueues<T>(): {[K in GossipType]: LinearGossipQueue<T>} {
+export function createGossipQueues(): {[K in GossipType]: GossipQueue<PendingGossipsubMessage>} {
   return mapValues(gossipQueueOpts, (opts) => {
-    return new LinearGossipQueue<T>(opts);
+    if (isIndexedGossipQueueOpts(opts)) {
+      return new IndexedGossipQueue(opts);
+    } else {
+      return new LinearGossipQueue<PendingGossipsubMessage>(opts);
+    }
   });
 }

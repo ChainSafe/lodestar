@@ -424,9 +424,13 @@ export function generateTestCachedBeaconStateOnlyValidators({
     throw Error(`Wrong number of validators in the state: ${state.validators.length} !== ${vc}`);
   }
 
-  return createCachedBeaconState(state, {
-    config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    pubkey2index,
-    index2pubkey,
-  });
+  return createCachedBeaconState(
+    state,
+    {
+      config: createBeaconConfig(config, state.genesisValidatorsRoot),
+      pubkey2index,
+      index2pubkey,
+    },
+    {skipSyncPubkeys: true}
+  );
 }

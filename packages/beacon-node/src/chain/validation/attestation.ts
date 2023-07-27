@@ -5,9 +5,9 @@ import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lod
 import {
   computeEpochAtSlot,
   CachedBeaconStateAllForks,
-  ISignatureSet,
   getAttestationDataSigningRoot,
   createSingleSignatureSetFromComponents,
+  SingleSignatureSet,
 } from "@lodestar/state-transition";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
@@ -16,11 +16,15 @@ import {RegenCaller} from "../regen/index.js";
 import {
   AttDataBase64,
   getAggregationBitsFromAttestationSerialized,
-  getAttDataBase64FromAttestationSerialized,
   getSignatureFromAttestationSerialized,
 } from "../../util/sszBytes.js";
 import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
 import {sszDeserializeAttestation} from "../../network/gossip/topic.js";
+import {Result, wrapError} from "../../util/wrapError.js";
+
+export type BatchResult = {
+  results: Result<AttestationValidationResult>[];
+};
 
 export type AttestationValidationResult = {
   attestation: phase0.Attestation;
@@ -40,6 +44,12 @@ export type GossipAttestation = {
   serializedData: Uint8Array;
   // available in NetworkProcessor since we check for unknown block root attestations
   attSlot: Slot;
+  attDataBase64?: string | null;
+};
+
+export type Phase0Result = AttestationValidationResult & {
+  signatureSet: SingleSignatureSet;
+  validatorIndex: number;
 };
 
 /**
@@ -49,20 +59,98 @@ export type GossipAttestation = {
 const SHUFFLING_LOOK_AHEAD_EPOCHS = 1;
 
 /**
- * Validate attestations from gossip
- * - Only deserialize the attestation if needed, use the cached AttestationData instead
- * - This is to avoid deserializing similar attestation multiple times which could help the gc
- * - subnet is required
- * - do not prioritize bls signature set
+ * Verify gossip attestations of the same attestation data.
+ *   - If there are less than 32 signatures, verify each signature individually with batchable = true
+ *   - If there are not less than 32 signatures
+ *     - do a quick verify by aggregate all signatures and pubkeys, this takes 4.6ms for 32 signatures and 7.6ms for 64 signatures
+ *     - if one of the signature is invalid, do a fallback verify by verify each signature individually with batchable = false
+ *   - subnet is required
+ *   - do not prioritize bls signature set
  */
-export async function validateGossipAttestation(
+export async function validateGossipAttestationsSameAttData(
   fork: ForkName,
   chain: IBeaconChain,
-  attestationOrBytes: GossipAttestation,
-  /** Optional, to allow verifying attestations through API with unknown subnet */
-  subnet: number
-): Promise<AttestationValidationResult> {
-  return validateAttestation(fork, chain, attestationOrBytes, subnet);
+  attestationOrBytesArr: AttestationOrBytes[],
+  subnet: number,
+  // for unit test, consumers do not need to pass this
+  phase0ValidationFn = validateGossipAttestationNoSignatureCheck
+): Promise<BatchResult> {
+  if (attestationOrBytesArr.length === 0) {
+    return {results: []};
+  }
+
+  // phase0: do all verifications except for signature verification
+  const phase0ResultOrErrors = await Promise.all(
+    attestationOrBytesArr.map((attestationOrBytes) =>
+      wrapError(phase0ValidationFn(fork, chain, attestationOrBytes, subnet))
+    )
+  );
+
+  // phase1: verify signatures of all valid attestations
+  // map new index to index in resultOrErrors
+  const newIndexToOldIndex = new Map<number, number>();
+  const signatureSets: SingleSignatureSet[] = [];
+  let newIndex = 0;
+  const phase0Results: Phase0Result[] = [];
+  for (const [i, resultOrError] of phase0ResultOrErrors.entries()) {
+    if (resultOrError.err) {
+      continue;
+    }
+    phase0Results.push(resultOrError.result);
+    newIndexToOldIndex.set(newIndex, i);
+    signatureSets.push(resultOrError.result.signatureSet);
+    newIndex++;
+  }
+
+  const signatureValids = await chain.bls.verifySignatureSetsSameMessage(
+    signatureSets.map((set) => ({
+      publicKey: set.pubkey,
+      signature: set.signature,
+    })),
+    signatureSets[0].signingRoot,
+    {batchable: true}
+  );
+
+  // phase0 post validation
+  for (const [i, isValid] of signatureValids.entries()) {
+    const oldIndex = newIndexToOldIndex.get(i);
+    if (oldIndex == null) {
+      // should not happen
+      throw Error(`Cannot get old index for index ${i}`);
+    }
+
+    const {validatorIndex, attestation} = phase0Results[i];
+    const targetEpoch = attestation.data.target.epoch;
+    if (isValid) {
+      // Now that the attestation has been fully verified, store that we have received a valid attestation from this validator.
+      //
+      // It's important to double check that the attestation still hasn't been observed, since
+      // there can be a race-condition if we receive two attestations at the same time and
+      // process them in different threads.
+      if (chain.seenAttesters.isKnown(targetEpoch, validatorIndex)) {
+        phase0ResultOrErrors[oldIndex] = {
+          err: new AttestationError(GossipAction.IGNORE, {
+            code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN,
+            targetEpoch,
+            validatorIndex,
+          }),
+        };
+      }
+
+      // valid
+      chain.seenAttesters.add(targetEpoch, validatorIndex);
+    } else {
+      phase0ResultOrErrors[oldIndex] = {
+        err: new AttestationError(GossipAction.IGNORE, {
+          code: AttestationErrorCode.INVALID_SIGNATURE,
+        }),
+      };
+    }
+  }
+
+  return {
+    results: phase0ResultOrErrors,
+  };
 }
 
 /**
@@ -81,17 +169,42 @@ export async function validateApiAttestation(
 }
 
 /**
+ * Validate a single unaggregated attestation
+ * subnet is null for api attestations
+ */
+export async function validateAttestation(
+  fork: ForkName,
+  chain: IBeaconChain,
+  attestationOrBytes: AttestationOrBytes,
+  subnet: number | null,
+  prioritizeBls = false
+): Promise<AttestationValidationResult> {
+  const phase0Result = await validateGossipAttestationNoSignatureCheck(fork, chain, attestationOrBytes, subnet);
+  const {attestation, signatureSet, validatorIndex} = phase0Result;
+  const isValid = await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls});
+
+  if (isValid) {
+    const targetEpoch = attestation.data.target.epoch;
+    chain.seenAttesters.add(targetEpoch, validatorIndex);
+    return phase0Result;
+  } else {
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.INVALID_SIGNATURE,
+    });
+  }
+}
+
+/**
  * Only deserialize the attestation if needed, use the cached AttestationData instead
  * This is to avoid deserializing similar attestation multiple times which could help the gc
  */
-async function validateAttestation(
+async function validateGossipAttestationNoSignatureCheck(
   fork: ForkName,
   chain: IBeaconChain,
   attestationOrBytes: AttestationOrBytes,
   /** Optional, to allow verifying attestations through API with unknown subnet */
-  subnet: number | null,
-  prioritizeBls = false
-): Promise<AttestationValidationResult> {
+  subnet: number | null
+): Promise<Phase0Result> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot
@@ -108,8 +221,13 @@ async function validateAttestation(
   let attDataBase64: AttDataBase64 | null;
   if (attestationOrBytes.serializedData) {
     // gossip
-    attDataBase64 = getAttDataBase64FromAttestationSerialized(attestationOrBytes.serializedData);
     const attSlot = attestationOrBytes.attSlot;
+    if (!attestationOrBytes.attDataBase64) {
+      throw new AttestationError(GossipAction.IGNORE, {
+        code: AttestationErrorCode.NO_INDEXED_DATA,
+      });
+    }
+    attDataBase64 = attestationOrBytes.attDataBase64;
     const cachedAttData = attDataBase64 !== null ? chain.seenAttestationDatas.get(attSlot, attDataBase64) : null;
     if (cachedAttData === null) {
       const attestation = sszDeserializeAttestation(attestationOrBytes.serializedData);
@@ -263,7 +381,7 @@ async function validateAttestation(
 
   // [REJECT] The signature of attestation is valid.
   const attestingIndices = [validatorIndex];
-  let signatureSet: ISignatureSet;
+  let signatureSet: SingleSignatureSet;
   let attDataRootHex: RootHex;
   const signature = attestationOrCache.attestation
     ? attestationOrCache.attestation.signature
@@ -304,24 +422,7 @@ async function validateAttestation(
     }
   }
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
-    throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
-  }
-
-  // Now that the attestation has been fully verified, store that we have received a valid attestation from this validator.
-  //
-  // It's important to double check that the attestation still hasn't been observed, since
-  // there can be a race-condition if we receive two attestations at the same time and
-  // process them in different threads.
-  if (chain.seenAttesters.isKnown(targetEpoch, validatorIndex)) {
-    throw new AttestationError(GossipAction.IGNORE, {
-      code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN,
-      targetEpoch,
-      validatorIndex,
-    });
-  }
-
-  chain.seenAttesters.add(targetEpoch, validatorIndex);
+  // no signature check, leave that for phase1
 
   const indexedAttestation: phase0.IndexedAttestation = {
     attestingIndices,
@@ -336,7 +437,7 @@ async function validateAttestation(
         data: attData,
         signature,
       };
-  return {attestation, indexedAttestation, subnet: expectedSubnet, attDataRootHex};
+  return {attestation, indexedAttestation, subnet: expectedSubnet, attDataRootHex, signatureSet, validatorIndex};
 }
 
 /**

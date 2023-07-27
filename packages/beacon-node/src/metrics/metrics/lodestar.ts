@@ -38,9 +38,9 @@ export function createLodestarMetrics(
         help: "Count of total gossip validation queue length",
         labelNames: ["topic"],
       }),
-      dropRatio: register.gauge<"topic">({
-        name: "lodestar_gossip_validation_queue_current_drop_ratio",
-        help: "Current drop ratio of gossip validation queue",
+      keySize: register.gauge<"topic">({
+        name: "lodestar_gossip_validation_queue_key_size",
+        help: "Count of total gossip validation queue key size",
         labelNames: ["topic"],
       }),
       droppedJobs: register.gauge<"topic">({
@@ -563,6 +563,11 @@ export function createLodestarMetrics(
         help: "Slot distance between clock slot and attestation slot",
         labelNames: ["caller"],
         buckets: [0, 1, 2, 4, 8, 16, 32, 64],
+      }),
+      attestationBatchCount: register.histogram({
+        name: "lodestar_gossip_attestation_verified_in_batch_count",
+        help: "Count of attestations verified in batch",
+        buckets: [1, 8, 16, 32, 64, 128],
       }),
     },
 

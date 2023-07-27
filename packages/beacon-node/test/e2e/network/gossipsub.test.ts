@@ -4,7 +4,7 @@ import {sleep} from "@lodestar/utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {Network} from "../../../src/network/index.js";
-import {GossipType, GossipHandlers} from "../../../src/network/gossip/index.js";
+import {GossipType, GossipHandlers, GossipHandlerParamGeneric} from "../../../src/network/gossip/index.js";
 import {connect, onPeerConnect, getNetworkForTest} from "../../utils/network.js";
 
 describe("gossipsub / main thread", function () {
@@ -57,8 +57,8 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     const onVoluntaryExitPromise = new Promise<Uint8Array>((resolve) => (onVoluntaryExit = resolve));
 
     const {netA, netB} = await mockModules({
-      [GossipType.voluntary_exit]: async ({serializedData}) => {
-        onVoluntaryExit(serializedData);
+      [GossipType.voluntary_exit]: async ({gossipData}: GossipHandlerParamGeneric<GossipType.voluntary_exit>) => {
+        onVoluntaryExit(gossipData.serializedData);
       },
     });
 
@@ -90,8 +90,10 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     const onBlsToExecutionChangePromise = new Promise<Uint8Array>((resolve) => (onBlsToExecutionChange = resolve));
 
     const {netA, netB} = await mockModules({
-      [GossipType.bls_to_execution_change]: async ({serializedData}) => {
-        onBlsToExecutionChange(serializedData);
+      [GossipType.bls_to_execution_change]: async ({
+        gossipData,
+      }: GossipHandlerParamGeneric<GossipType.bls_to_execution_change>) => {
+        onBlsToExecutionChange(gossipData.serializedData);
       },
     });
 
@@ -124,8 +126,10 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     );
 
     const {netA, netB} = await mockModules({
-      [GossipType.light_client_optimistic_update]: async ({serializedData}) => {
-        onLightClientOptimisticUpdate(serializedData);
+      [GossipType.light_client_optimistic_update]: async ({
+        gossipData,
+      }: GossipHandlerParamGeneric<GossipType.light_client_optimistic_update>) => {
+        onLightClientOptimisticUpdate(gossipData.serializedData);
       },
     });
 
@@ -161,8 +165,10 @@ function runTests(this: Mocha.Suite, {useWorker}: {useWorker: boolean}): void {
     );
 
     const {netA, netB} = await mockModules({
-      [GossipType.light_client_finality_update]: async ({serializedData}) => {
-        onLightClientFinalityUpdate(serializedData);
+      [GossipType.light_client_finality_update]: async ({
+        gossipData,
+      }: GossipHandlerParamGeneric<GossipType.light_client_finality_update>) => {
+        onLightClientFinalityUpdate(gossipData.serializedData);
       },
     });
 
