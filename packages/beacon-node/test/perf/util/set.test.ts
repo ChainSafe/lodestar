@@ -31,10 +31,11 @@ describe("OrderedSet vs Set", () => {
     };
     for (const deleteType of [DeleteType.First, DeleteType.Last, DeleteType.Middle]) {
       for (const className of ["Set", "OrderedSet"]) {
+        const runsFactor = 1000;
         itBench({
           id: `${className} add up to ${length} items then delete ${deleteType}`,
           fn: () => {
-            for (let i = 0; i < 1000; i++) {
+            for (let i = 0; i < runsFactor; i++) {
               const set = className === "Set" ? new Set<number>() : new OrderedSet<number>();
               for (let j = 0; j < length; j++) {
                 set.add(j);
@@ -54,7 +55,7 @@ describe("OrderedSet vs Set", () => {
               }
             }
           },
-          runsFactor: 1000,
+          runsFactor,
         });
       }
     }
