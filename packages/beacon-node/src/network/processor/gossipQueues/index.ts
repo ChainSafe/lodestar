@@ -3,8 +3,16 @@ import {GossipType} from "../../gossip/interface.js";
 import {PendingGossipsubMessage} from "../types.js";
 import {getAttDataBase64FromAttestationSerialized} from "../../../util/sszBytes.js";
 import {LinearGossipQueue} from "./linear.js";
-import {DropType, GossipQueue, GossipQueueOpts, QueueType, isIndexedGossipQueueOpts} from "./types.js";
-import {IndexedGossipQueue} from "./indexed.js";
+import {
+  DropType,
+  GossipQueue,
+  GossipQueueOpts,
+  QueueType,
+  isIndexedGossipQueueMinSizeOpts,
+  isIndexedGossipQueueAvgTimeOpts,
+} from "./types.js";
+import {IndexedGossipQueueAvgTime} from "./indexedAvgTime.js";
+import { IndexedGossipQueueMinSize } from "./indexed.js";
 
 /**
  * In normal condition, the higher this value the more efficient the signature verification.
@@ -45,8 +53,6 @@ const gossipQueueOpts: {
   [GossipType.beacon_attestation]: {
     maxLength: 24576,
     indexFn: (item: PendingGossipsubMessage) => getAttDataBase64FromAttestationSerialized(item.msg.data),
-    minChunkSize: MIN_SIGNATURE_SETS_TO_BATCH_VERIFY,
-    maxChunkSize: MAX_GOSSIP_ATTESTATION_BATCH_SIZE,
   },
   [GossipType.voluntary_exit]: {maxLength: 4096, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
   [GossipType.proposer_slashing]: {maxLength: 4096, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
@@ -93,8 +99,10 @@ const gossipQueueOpts: {
  */
 export function createGossipQueues(): {[K in GossipType]: GossipQueue<PendingGossipsubMessage>} {
   return mapValues(gossipQueueOpts, (opts) => {
-    if (isIndexedGossipQueueOpts(opts)) {
-      return new IndexedGossipQueue(opts);
+    if (isIndexedGossipQueueAvgTimeOpts(opts)) {
+      return new IndexedGossipQueueAvgTime<PendingGossipsubMessage>(opts);
+    } else if (isIndexedGossipQueueMinSizeOpts(opts)) {
+      return new IndexedGossipQueueMinSize<PendingGossipsubMessage>(opts);
     } else {
       return new LinearGossipQueue<PendingGossipsubMessage>(opts);
     }
