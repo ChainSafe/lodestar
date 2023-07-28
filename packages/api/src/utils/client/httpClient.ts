@@ -1,4 +1,4 @@
-import {ErrorAborted, Logger, TimeoutError, fetch, isFetchAbortError} from "@lodestar/utils";
+import {ErrorAborted, Logger, TimeoutError, fetch, FetchError} from "@lodestar/utils";
 import {ReqGeneric, RouteDef} from "../index.js";
 import {ApiClientResponse, ApiClientSuccessResponse} from "../../interfaces.js";
 import {stringifyQuery, urlJoin} from "./format.js";
@@ -301,7 +301,7 @@ export class HttpClient implements IHttpClient {
     } catch (e) {
       this.metrics?.requestErrors.inc({routeId});
 
-      if (isFetchAbortError(e)) {
+      if (isAbortedError(e as Error)) {
         if (signalGlobal?.aborted) {
           throw new ErrorAborted("REST client");
         } else if (controller.signal.aborted) {
@@ -319,6 +319,10 @@ export class HttpClient implements IHttpClient {
       signalGlobal?.removeEventListener("abort", onGlobalSignalAbort);
     }
   }
+}
+
+function isAbortedError(e: Error): boolean {
+  return e instanceof FetchError && e.type === "aborted";
 }
 
 function getErrorMessage(errBody: string): string {

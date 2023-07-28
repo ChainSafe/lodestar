@@ -11,22 +11,12 @@ async function wrappedFetch(url: string | URL, init?: RequestInit): Promise<Resp
 
 export {wrappedFetch as fetch};
 
-export function isFetchError(e: unknown): e is FetchError {
-  return e instanceof FetchError;
-}
-
-export function isFetchAbortError(e: unknown): e is FetchError {
-  return e instanceof FetchError && e.type === "aborted";
-}
-
 export type FetchErrorType = "failed" | "input" | "aborted" | "unknown";
-
-export type FetchErrorCause = NativeFetchError["cause"];
 
 export class FetchError extends Error {
   type: FetchErrorType;
   code: string;
-  cause?: FetchErrorCause;
+  cause?: Error;
 
   constructor(url: string | URL, e: unknown) {
     if (isNativeFetchFailedError(e)) {
