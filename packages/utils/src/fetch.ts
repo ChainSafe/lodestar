@@ -87,6 +87,10 @@ type NativeFetchError = TypeError & {
  *   cause: SocketError: other side closed
  *     code: 'UND_ERR_SOCKET',
  *     socket: {}
+ * ---------------------------
+ * TypeError: fetch failed
+ *   cause: Error: unknown scheme
+ *     [cause]: undefined
  * ```
  */
 type NativeFetchFailedError = NativeFetchError & {
