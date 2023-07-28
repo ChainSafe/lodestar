@@ -32,12 +32,12 @@ export class FetchError extends Error {
     if (isNativeFetchFailedError(e)) {
       super(`Request to ${url.toString()} failed, reason: ${e.cause.message}`);
       this.type = "failed";
-      this.code = e.cause.code;
+      this.code = e.cause.code || "ERR_FETCH_FAILED";
       this.cause = e.cause;
     } else if (isNativeFetchInputError(e)) {
       super(e.message);
       this.type = "input";
-      this.code = e.cause.code;
+      this.code = e.cause.code || "ERR_INVALID_INPUT";
       this.cause = e.cause;
     } else if (isNativeFetchAbortError(e)) {
       super(`Request to ${url.toString()} was aborted`);
@@ -61,7 +61,7 @@ export class FetchError extends Error {
  */
 type NativeFetchError = Error & {
   cause: Error & {
-    code: string;
+    code?: string;
   };
 };
 
@@ -125,11 +125,7 @@ type NativeFetchAbortError = DOMException & {
 };
 
 function isNativeFetchError(e: unknown): e is NativeFetchError {
-  return (
-    e instanceof Error &&
-    (e as NativeFetchError).cause instanceof Error &&
-    (e as NativeFetchError).cause.code !== undefined
-  );
+  return e instanceof Error && (e as NativeFetchError).cause instanceof Error;
 }
 
 function isNativeFetchFailedError(e: unknown): e is NativeFetchFailedError {
