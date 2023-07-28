@@ -13,10 +13,12 @@ export {wrappedFetch as fetch};
 
 export type FetchErrorType = "failed" | "input" | "aborted" | "unknown";
 
+type FetchErrorCause = NativeFetchFailedError["cause"] | NativeFetchInputError["cause"];
+
 export class FetchError extends Error {
   type: FetchErrorType;
   code: string;
-  cause?: Error;
+  cause?: FetchErrorCause;
 
   constructor(url: string | URL, e: unknown) {
     if (isNativeFetchFailedError(e)) {
