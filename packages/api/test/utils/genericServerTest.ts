@@ -7,23 +7,20 @@ import {FetchOpts, HttpClient, IHttpClient} from "../../src/utils/client/index.j
 import {ServerRoutes} from "../../src/utils/server/genericJsonServer.js";
 import {registerRoute} from "../../src/utils/server/registerRoute.js";
 import {HttpStatusCode} from "../../src/utils/client/httpStatusCode.js";
-import {APIClientHandler, ApiClientResponseData, ServerApi} from "../../src/interfaces.js";
+import {APIClientHandler, ApiServerResponse, ServerApi} from "../../src/interfaces.js";
 import {getMockApi, getTestServer} from "./utils.js";
 
 type IgnoreVoid<T> = T extends void ? undefined : T;
 
-export type GenericServerTestCases<Api extends Record<string, APIClientHandler>> = {
+export type GenericServerTestCases<Api extends ClientApi> = {
   [K in keyof Api]: {
     args: Parameters<Api[K]>;
-    res: IgnoreVoid<ApiClientResponseData<Resolves<Api[K]>>>;
+    res: IgnoreVoid<ApiServerResponse<Resolves<Api[K]>>>;
     query?: FetchOpts["query"];
   };
 };
 
-export function runGenericServerTest<
-  Api extends Record<string, APIClientHandler>,
-  ReqTypes extends {[K in keyof Api]: ReqGeneric},
->(
+export function runGenericServerTest<Api extends ClientApi, ReqTypes extends {[K in keyof Api]: ReqGeneric}>(
   config: ChainForkConfig,
   getClient: (config: ChainForkConfig, https: IHttpClient) => Api,
   getRoutes: (config: ChainForkConfig, api: ServerApi<Api>) => ServerRoutes<ServerApi<Api>, ReqTypes>,

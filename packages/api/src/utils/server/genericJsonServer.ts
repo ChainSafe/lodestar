@@ -1,10 +1,11 @@
 import type {FastifyInstance} from "fastify";
 import {mapValues} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
-import {ReqGeneric, TypeJson, Resolves, RouteGroupDefinition} from "../types.js";
+import {ReqGeneric, TypeJson, RouteGroupDefinition} from "../types.js";
 import {getFastifySchema} from "../schema.js";
 import {toColonNotationPath} from "../urlFormat.js";
 import {APIServerHandler} from "../../interfaces.js";
+import {HttpStatusCode} from "../client/httpStatusCode.js";
 import {ServerRoute} from "./types.js";
 
 // See /packages/api/src/routes/index.ts for reasoning
@@ -42,14 +43,27 @@ export function getGenericJsonServer<
 
       handler: async function handler(this: FastifyInstance, req, resp): Promise<unknown | void> {
         const args: any[] = routeSerdes.parseReq(req as ReqGeneric as ReqTypes[keyof Api]);
-        const data = (await api[routeId](...args, req, resp)) as Resolves<Api[keyof Api]>;
 
-        if (routeDef.statusOk !== undefined) {
-          resp.statusCode = routeDef.statusOk;
-        }
+        // The type resolves here is `unknown | void | {status: number; response: unknown | void}`
+        // which end up being just `unknown` in the end because of the `unknown | void` part
+        const data = await api[routeId](...args, req, resp);
+
+        const status =
+          "status" in (data as {status: number; response: unknown})
+            ? (data as {status: number; response: unknown}).status
+            : routeDef.statusOk !== undefined
+            ? routeDef.statusOk
+            : HttpStatusCode.OK;
+
+        const response =
+          "status" in (data as {status: number; response: unknown})
+            ? (data as {status: number; response: unknown}).response
+            : data;
+
+        resp.statusCode = status;
 
         if (returnType) {
-          return returnType.toJson(data);
+          return returnType.toJson(response);
         } else {
           return {};
         }

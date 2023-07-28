@@ -287,7 +287,9 @@ export function getValidatorApi({
     randaoReveal,
     graffiti
   ) {
-    const {data, version, blockValue} = await produceBlockV2(slot, randaoReveal, graffiti);
+    const produceBlockV2Resp = await produceBlockV2(slot, randaoReveal, graffiti);
+    const {data, version, blockValue} =
+      "status" in produceBlockV2Resp ? produceBlockV2Resp.response : produceBlockV2Resp;
     if ((data as BlockContents).block !== undefined) {
       throw Error(`Invalid block contents for produceBlock at fork=${version}`);
     } else {

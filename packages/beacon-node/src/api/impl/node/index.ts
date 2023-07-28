@@ -66,7 +66,7 @@ export function getNodeApi(
       return {data: sync.getSyncStatus()};
     },
 
-    async getHealth(options, _req, res) {
+    async getHealth(options) {
       // Custom value passed via `syncing_status` query parameter
       const syncingStatus = options?.syncingStatus;
 
@@ -77,10 +77,10 @@ export function getNodeApi(
 
       if (sync.getSyncStatus().isSyncing) {
         // 206: Node is syncing but can serve incomplete data
-        res?.code(syncingStatus ?? routes.node.NodeHealth.SYNCING);
+        return {status: syncingStatus ?? routes.node.NodeHealth.SYNCING, response: undefined};
       } else {
         // 200: Node is ready
-        res?.code(routes.node.NodeHealth.READY);
+        return {status: routes.node.NodeHealth.READY, response: undefined};
       }
       // else {
       //   503: Node not initialized or having issues

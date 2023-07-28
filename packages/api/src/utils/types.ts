@@ -2,7 +2,8 @@ import {isBasicType, ListBasicType, Type, isCompositeType, ListCompositeType, Ar
 import {ForkName} from "@lodestar/params";
 import {ChainForkConfig} from "@lodestar/config";
 import {objectToExpectedCase} from "@lodestar/utils";
-import {APIClientHandler, ApiClientResponseData, APIServerHandler, ClientApi} from "../interfaces.js";
+import {APIClientHandler, ApiClientResolvesData, ApiServerResponse} from "../interfaces.js";
+import {APIServerHandler, ClientApi} from "../interfaces.js";
 import {Schema, SchemaDefinition} from "./schema.js";
 
 // See /packages/api/src/routes/index.ts for reasoning
@@ -219,11 +220,11 @@ export function sameType<T>(): TypeJson<T> {
 // RETURN
 //
 export type KeysOfNonVoidResolveValues<Api extends Record<string, APIClientHandler>> = {
-  [K in keyof Api]: ApiClientResponseData<Resolves<Api[K]>> extends void ? never : K;
+  [K in keyof Api]: ApiClientResolvesData<Resolves<Api[K]>> extends void ? never : K;
 }[keyof Api];
 
 export type ReturnTypes<Api extends Record<string, APIClientHandler>> = {
-  [K in keyof Pick<Api, KeysOfNonVoidResolveValues<Api>>]: TypeJson<ApiClientResponseData<Resolves<Api[K]>>>;
+  [K in keyof Pick<Api, KeysOfNonVoidResolveValues<Api>>]: TypeJson<ApiServerResponse<Resolves<Api[K]>>>;
 };
 
 export type RoutesData<Api extends Record<string, APIServerHandler>> = {[K in keyof Api]: RouteDef};
