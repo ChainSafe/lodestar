@@ -51,13 +51,6 @@ export class FetchError extends Error {
   }
 }
 
-/**
- * ```
- * TypeError: opaque message
- *   cause: Error: more detailed message
- *     code: 'ERROR_CODE'
- * ```
- */
 type NativeFetchError = TypeError & {
   cause: Error & {
     code?: string;
