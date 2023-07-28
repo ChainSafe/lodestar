@@ -19,9 +19,9 @@ export function isFetchAbortError(e: unknown): e is FetchError {
   return e instanceof FetchError && e.type === "aborted";
 }
 
-export type FetchErrorType = "system" | "input" | "aborted" | "unknown";
+export type FetchErrorType = "system" | "input" | "aborted" | "other" | "unknown";
 
-export type FetchErrorCause = NativeFetchSystemError["cause"] | NativeFetchInputError["cause"];
+export type FetchErrorCause = NativeFetchError["cause"];
 
 export class FetchError extends Error {
   type: FetchErrorType;
@@ -43,6 +43,11 @@ export class FetchError extends Error {
       super(`Request to ${url.toString()} was aborted`);
       this.type = "aborted";
       this.code = "ERR_ABORTED";
+    } else if (isNativeFetchError(e)) {
+      super(`Request to ${url.toString()} failed, reason: ${e.cause.message}`);
+      this.type = "other";
+      this.code = e.cause.code;
+      this.cause = e.cause;
     } else {
       super((e as Error).message);
       this.type = "unknown";
@@ -51,6 +56,19 @@ export class FetchError extends Error {
     this.name = this.constructor.name;
   }
 }
+
+/**
+ * ```
+ * TypeError: fetch failed
+ *   cause: Error: more detailed message
+ *     code: 'ERROR_CODE'
+ * ```
+ */
+type NativeFetchError = Error & {
+  cause: Error & {
+    code: string;
+  };
+};
 
 /**
  * ```
@@ -70,10 +88,9 @@ export class FetchError extends Error {
  *     hostname: 'non-existent-domain'
  * ```
  */
-type NativeFetchSystemError = Error & {
-  cause: Error & {
+type NativeFetchSystemError = NativeFetchError & {
+  cause: {
     errno: string;
-    code: string;
     syscall: string;
     address?: string;
     port?: string;
@@ -89,10 +106,9 @@ type NativeFetchSystemError = Error & {
  *     code: 'ERR_INVALID_URL'
  * ```
  */
-type NativeFetchInputError = Error & {
-  cause: Error & {
+type NativeFetchInputError = NativeFetchError & {
+  cause: {
     input: unknown;
-    code: string;
   };
 };
 
@@ -105,22 +121,20 @@ type NativeFetchAbortError = DOMException & {
   name: "AbortError";
 };
 
-function isNativeSystemFetchError(e: unknown): e is NativeFetchSystemError {
+function isNativeFetchError(e: unknown): e is NativeFetchError {
   return (
     e instanceof Error &&
-    (e as NativeFetchSystemError).cause instanceof Error &&
-    (e as NativeFetchSystemError).cause.code !== undefined &&
-    (e as NativeFetchSystemError).cause.syscall !== undefined
+    (e as NativeFetchError).cause instanceof Error &&
+    (e as NativeFetchError).cause.code !== undefined
   );
 }
 
+function isNativeSystemFetchError(e: unknown): e is NativeFetchSystemError {
+  return isNativeFetchError(e) && (e as NativeFetchSystemError).cause.syscall !== undefined;
+}
+
 function isNativeFetchInputError(e: unknown): e is NativeFetchInputError {
-  return (
-    e instanceof Error &&
-    (e as NativeFetchInputError).cause instanceof Error &&
-    (e as NativeFetchInputError).cause.code !== undefined &&
-    (e as NativeFetchInputError).cause.input !== undefined
-  );
+  return isNativeFetchError(e) && (e as NativeFetchInputError).cause.input !== undefined;
 }
 
 function isNativeFetchAbortError(e: unknown): e is NativeFetchAbortError {
