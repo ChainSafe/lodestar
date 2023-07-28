@@ -5,7 +5,7 @@ async function wrappedFetch(url: string | URL, init?: RequestInit): Promise<Resp
   try {
     return await fetch(url, init);
   } catch (e) {
-    throw new FetchError(e, url);
+    throw new FetchError(url, e);
   }
 }
 
@@ -19,7 +19,7 @@ export function isFetchAbortError(e: unknown): e is FetchError {
   return e instanceof FetchError && e.type === "aborted";
 }
 
-export type FetchErrorType = "system" | "input" | "aborted" | "other" | "unknown";
+export type FetchErrorType = "failed" | "input" | "aborted" | "unknown";
 
 export type FetchErrorCause = NativeFetchError["cause"];
 
@@ -28,10 +28,10 @@ export class FetchError extends Error {
   code: string;
   cause?: FetchErrorCause;
 
-  constructor(e: unknown, url: string | URL) {
-    if (isNativeSystemFetchError(e)) {
+  constructor(url: string | URL, e: unknown) {
+    if (isNativeFetchFailedError(e)) {
       super(`Request to ${url.toString()} failed, reason: ${e.cause.message}`);
-      this.type = "system";
+      this.type = "failed";
       this.code = e.cause.code;
       this.cause = e.cause;
     } else if (isNativeFetchInputError(e)) {
@@ -43,11 +43,6 @@ export class FetchError extends Error {
       super(`Request to ${url.toString()} was aborted`);
       this.type = "aborted";
       this.code = "ERR_ABORTED";
-    } else if (isNativeFetchError(e)) {
-      super(`Request to ${url.toString()} failed, reason: ${e.cause.message}`);
-      this.type = "other";
-      this.code = e.cause.code;
-      this.cause = e.cause;
     } else {
       super((e as Error).message);
       this.type = "unknown";
@@ -60,7 +55,7 @@ export class FetchError extends Error {
 /**
  * ```
  * TypeError: fetch failed
- *   cause: Error: more detailed message
+ *   cause: Error: detailed error message
  *     code: 'ERROR_CODE'
  * ```
  */
@@ -79,22 +74,30 @@ type NativeFetchError = Error & {
  *     syscall: 'connect',
  *     address: '127.0.0.1',
  *     port: 9596
- *
+ * ---------------------------
  * TypeError: fetch failed
  *   cause: Error: getaddrinfo ENOTFOUND non-existent-domain
  *     errno: -3008,
  *     code: 'ENOTFOUND',
  *     syscall: 'getaddrinfo',
  *     hostname: 'non-existent-domain'
+ * ---------------------------
+ * TypeError: fetch failed
+ *   cause: SocketError: other side closed
+ *     code: 'UND_ERR_SOCKET',
+ *     socket: {}
  * ```
  */
-type NativeFetchSystemError = NativeFetchError & {
+type NativeFetchFailedError = NativeFetchError & {
+  message: "fetch failed";
   cause: {
-    errno: string;
-    syscall: string;
+    errno?: string;
+    syscall?: string;
     address?: string;
     port?: string;
     hostname?: string;
+    socket?: object;
+    [prop: string]: unknown;
   };
 };
 
@@ -129,8 +132,8 @@ function isNativeFetchError(e: unknown): e is NativeFetchError {
   );
 }
 
-function isNativeSystemFetchError(e: unknown): e is NativeFetchSystemError {
-  return isNativeFetchError(e) && (e as NativeFetchSystemError).cause.syscall !== undefined;
+function isNativeFetchFailedError(e: unknown): e is NativeFetchFailedError {
+  return isNativeFetchError(e) && (e as NativeFetchFailedError).message === "fetch failed";
 }
 
 function isNativeFetchInputError(e: unknown): e is NativeFetchInputError {
