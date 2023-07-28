@@ -35,6 +35,7 @@ export class FetchError extends Error {
       this.code = e.cause.code || "ERR_FETCH_FAILED";
       this.cause = e.cause;
     } else if (isNativeFetchInputError(e)) {
+      // For input errors the e.message is more detailed
       super(e.message);
       this.type = "input";
       this.code = e.cause.code || "ERR_INVALID_INPUT";
@@ -54,12 +55,12 @@ export class FetchError extends Error {
 
 /**
  * ```
- * TypeError: fetch failed
- *   cause: Error: detailed error message
+ * TypeError: opaque message
+ *   cause: Error: more detailed message
  *     code: 'ERROR_CODE'
  * ```
  */
-type NativeFetchError = Error & {
+type NativeFetchError = TypeError & {
   cause: Error & {
     code?: string;
   };
@@ -125,7 +126,7 @@ type NativeFetchAbortError = DOMException & {
 };
 
 function isNativeFetchError(e: unknown): e is NativeFetchError {
-  return e instanceof Error && (e as NativeFetchError).cause instanceof Error;
+  return e instanceof TypeError && (e as NativeFetchError).cause instanceof Error;
 }
 
 function isNativeFetchFailedError(e: unknown): e is NativeFetchFailedError {
