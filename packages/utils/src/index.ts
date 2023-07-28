@@ -3,7 +3,6 @@ export * from "./assert.js";
 export * from "./bytes.js";
 export * from "./err.js";
 export * from "./errors.js";
-export * from "./fetch.js";
 export * from "./format.js";
 export * from "./logger.js";
 export * from "./map.js";

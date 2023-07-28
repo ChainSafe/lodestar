@@ -1,4 +1,5 @@
-import {ErrorAborted, TimeoutError, retry, fetch} from "@lodestar/utils";
+import {fetch} from "@lodestar/api";
+import {ErrorAborted, TimeoutError, retry} from "@lodestar/utils";
 import {IGauge, IHistogram} from "../../metrics/interface.js";
 import {IJson, RpcPayload} from "../interface.js";
 import {encodeJwtToken} from "./jwt.js";

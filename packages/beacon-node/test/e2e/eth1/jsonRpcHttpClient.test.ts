@@ -2,7 +2,7 @@ import "mocha";
 import crypto from "node:crypto";
 import http from "node:http";
 import {expect} from "chai";
-import {FetchError} from "@lodestar/utils";
+import {FetchError} from "@lodestar/api";
 import {JsonRpcHttpClient} from "../../../src/eth1/provider/jsonRpcHttpClient.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
 import {RpcPayload} from "../../../src/eth1/interface.js";

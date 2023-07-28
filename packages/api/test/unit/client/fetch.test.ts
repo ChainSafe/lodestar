@@ -1,8 +1,7 @@
-import "../setup.js";
 import crypto from "node:crypto";
 import http from "node:http";
 import {expect} from "chai";
-import {FetchError, FetchErrorType, fetch} from "../../src/fetch.js";
+import {FetchError, FetchErrorType, fetch} from "../../../src/utils/client/fetch.js";
 
 describe("FetchError", function () {
   const port = 37421;

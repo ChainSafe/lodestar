@@ -1,5 +1,7 @@
 /**
- * Wrapper around native fetch to improve error handling
+ * Native fetch with transparent and consistent error handling
+ *
+ * [MDN Reference](https://developer.mozilla.org/docs/Web/API/fetch)
  */
 async function wrappedFetch(url: string | URL, init?: RequestInit): Promise<Response> {
   try {
@@ -10,6 +12,10 @@ async function wrappedFetch(url: string | URL, init?: RequestInit): Promise<Resp
 }
 
 export {wrappedFetch as fetch};
+
+export function isFetchError(e: unknown): e is FetchError {
+  return e instanceof FetchError;
+}
 
 export type FetchErrorType = "failed" | "input" | "aborted" | "unknown";
 

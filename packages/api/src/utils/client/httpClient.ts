@@ -1,6 +1,7 @@
-import {ErrorAborted, Logger, TimeoutError, fetch, FetchError} from "@lodestar/utils";
+import {ErrorAborted, Logger, TimeoutError} from "@lodestar/utils";
 import {ReqGeneric, RouteDef} from "../index.js";
 import {ApiClientResponse, ApiClientSuccessResponse} from "../../interfaces.js";
+import {fetch, isFetchError} from "./fetch.js";
 import {stringifyQuery, urlJoin} from "./format.js";
 import {Metrics} from "./metrics.js";
 import {HttpStatusCode} from "./httpStatusCode.js";
@@ -322,7 +323,7 @@ export class HttpClient implements IHttpClient {
 }
 
 function isAbortedError(e: Error): boolean {
-  return e instanceof FetchError && e.type === "aborted";
+  return isFetchError(e) && e.type === "aborted";
 }
 
 function getErrorMessage(errBody: string): string {
