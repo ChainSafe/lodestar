@@ -23,12 +23,11 @@ export type ApiClientResponse<
 
 export type ApiClientResponseData<T extends ApiClientResponse> = T extends {ok: true; response: infer R} ? R : never;
 
-export type GenericRequestObject = Record<string, unknown>;
-export type GenericResponseObject = {code: (code: number) => void};
+export type GenericOptions = Record<string, unknown>;
 
 export type ServerApi<T extends Record<string, APIClientHandler>> = {
   [K in keyof T]: (
-    ...args: [...args: Parameters<T[K]>, req?: GenericRequestObject, res?: GenericResponseObject]
+    ...args: [...args: Parameters<T[K]>, opts?: GenericOptions]
   ) => Promise<ApiClientResponseData<Resolves<T[K]>>>;
 };
 
