@@ -41,6 +41,16 @@ describe("FetchError", function () {
       expectCause: true,
     },
     {
+      id: "Headers overflow",
+      requestListener: (_req, res) => {
+        res.setHeader("Large-Header", "a".repeat(1e6));
+        res.end();
+      },
+      errorType: "failed",
+      errorCode: "UND_ERR_HEADERS_OVERFLOW",
+      expectCause: true,
+    },
+    {
       id: "Unknown scheme",
       url: `httsp://localhost:${port}`,
       errorType: "failed",
