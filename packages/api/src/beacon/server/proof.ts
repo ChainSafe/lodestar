@@ -18,8 +18,7 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
       ...serverRoutes.getStateProof,
       handler: async (req) => {
         const args = reqSerializers.getStateProof.parseReq(req);
-        const apiRes = await api.getStateProof(...args);
-        const data = "status" in apiRes ? apiRes.response?.data : apiRes.data;
+        const {data} = await api.getStateProof(...args);
         const leaves = (data as CompactMultiProof).leaves;
         const response = new Uint8Array(32 * leaves.length);
         for (let i = 0; i < leaves.length; i++) {
@@ -33,8 +32,7 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
       ...serverRoutes.getBlockProof,
       handler: async (req) => {
         const args = reqSerializers.getBlockProof.parseReq(req);
-        const apiRes = await api.getBlockProof(...args);
-        const data = "status" in apiRes ? apiRes.response?.data : apiRes.data;
+        const {data} = await api.getBlockProof(...args);
         const leaves = (data as CompactMultiProof).leaves;
         const response = new Uint8Array(32 * leaves.length);
         for (let i = 0; i < leaves.length; i++) {

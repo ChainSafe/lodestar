@@ -12,7 +12,7 @@ import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../r
 // Re-export for convenience
 export {RouteConfig};
 
-export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerRoutes<ServerApi<Api>, ReqTypes> {
+export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
   // All routes return JSON, use a server auto-generator
   return getGenericJsonServer<ServerApi<Api>, ReqTypes>({routesData, getReturnTypes, getReqSerializers}, config, api);
 }

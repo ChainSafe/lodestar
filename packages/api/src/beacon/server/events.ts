@@ -4,7 +4,7 @@ import {Api, ReqTypes, routesData, getEventSerdes} from "../routes/events.js";
 import {ServerRoutes} from "../../utils/server/index.js";
 import {ServerApi} from "../../interfaces.js";
 
-export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerRoutes<ServerApi<Api>, ReqTypes> {
+export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
   const eventSerdes = getEventSerdes(config);
 
   return {

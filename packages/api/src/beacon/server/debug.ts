@@ -3,7 +3,7 @@ import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../r
 import {ServerRoutes, getGenericJsonServer} from "../../utils/server/index.js";
 import {ServerApi} from "../../interfaces.js";
 
-export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerRoutes<ServerApi<Api>, ReqTypes> {
+export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerRoutes<Api, ReqTypes> {
   const reqSerializers = getReqSerializers();
   const returnTypes = getReturnTypes();
 
@@ -21,12 +21,11 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
       ...serverRoutes.getState,
       handler: async (req) => {
         const response = await api.getState(...reqSerializers.getState.parseReq(req));
-        const res = "status" in response ? response.response : response;
-        if (res instanceof Uint8Array) {
+        if (response instanceof Uint8Array) {
           // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
-          return Buffer.from(res);
+          return Buffer.from(response);
         } else {
-          return returnTypes.getState.toJson(res);
+          return returnTypes.getState.toJson(response);
         }
       },
     },
@@ -34,12 +33,11 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
       ...serverRoutes.getStateV2,
       handler: async (req) => {
         const response = await api.getStateV2(...reqSerializers.getStateV2.parseReq(req));
-        const res = "status" in response ? response.response : response;
-        if (res instanceof Uint8Array) {
+        if (response instanceof Uint8Array) {
           // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
-          return Buffer.from(res);
+          return Buffer.from(response);
         } else {
-          return returnTypes.getStateV2.toJson(res);
+          return returnTypes.getStateV2.toJson(response);
         }
       },
     },
