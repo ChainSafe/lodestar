@@ -1,5 +1,3 @@
-import {ServerResponse} from "node:http";
-import {FastifyReply} from "fastify";
 import {expect} from "chai";
 import {ChainForkConfig} from "@lodestar/config";
 import {ReqGeneric, Resolves} from "../../src/utils/index.js";
@@ -60,15 +58,7 @@ export function runGenericServerTest<
 
       // Assert server handler called with correct args
       expect(mockApi[routeId].callCount).to.equal(1, `mockApi[${routeId as string}] must be called once`);
-      let {args} = mockApi[routeId].getCall(0);
-      // Default handler injects request and response as last two args
-      const lastArg = args[args.length - 1];
-      // Detect if last arg is response as custom handlers might not inject it
-      if (typeof lastArg === "object" && (lastArg as FastifyReply).raw instanceof ServerResponse) {
-        // Remove request and response before assertion
-        args = args.slice(0, -2) as typeof args;
-      }
-      expect(args).to.deep.equal(testCase.args, `mockApi[${routeId as string}] wrong args`);
+      expect(mockApi[routeId].getCall(0).args).to.deep.equal(testCase.args, `mockApi[${routeId as string}] wrong args`);
 
       // Assert returned value is correct
       expect(res.response).to.deep.equal(testCase.res, "Wrong returned value");
