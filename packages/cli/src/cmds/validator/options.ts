@@ -42,7 +42,6 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     strictFeeRecipientCheck?: boolean;
     doppelgangerProtection?: boolean;
     defaultGasLimit?: number;
-    broadcastValidation?: string;
 
     builder?: boolean;
     "builder.selection"?: string;
@@ -127,14 +126,6 @@ export const keymanagerOptions: CliCommandOptions<KeymanagerArgs> = {
 export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   ...logOptions,
   ...keymanagerOptions,
-
-  broadcastValidation: {
-    // TODO: flag hidden till validations fully implemented
-    hidden: true,
-    description: "Broadcast validation to be requested before publishing the block",
-    defaultDescription: defaultOptions.broadcastValidation,
-    type: "string",
-  },
 
   keystoresDir: {
     hidden: true,

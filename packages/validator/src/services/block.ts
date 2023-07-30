@@ -23,7 +23,6 @@ import {
   SignedBlockContents,
   BlockContents,
   BlindedBlockContents,
-  routes,
 } from "@lodestar/api";
 import {IClock, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";
@@ -60,7 +59,6 @@ type ProduceBlockOpts = {
  */
 export class BlockProposingService {
   private readonly dutiesService: BlockDutiesService;
-  private readonly broadcastValidation?: routes.beacon.BroadcastValidation;
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -68,8 +66,7 @@ export class BlockProposingService {
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly metrics: Metrics | null,
-    broadcastValidation?: routes.beacon.BroadcastValidation
+    private readonly metrics: Metrics | null
   ) {
     this.dutiesService = new BlockDutiesService(
       logger,
@@ -79,8 +76,6 @@ export class BlockProposingService {
       metrics,
       this.notifyBlockProductionFn
     );
-
-    this.broadcastValidation = broadcastValidation;
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
@@ -178,26 +173,17 @@ export class BlockProposingService {
     if (signedBlobSidecars === undefined) {
       ApiError.assert(
         isBlindedBeaconBlock(signedBlock.message)
-          ? await this.api.beacon.publishBlindedBlockV2(signedBlock as allForks.SignedBlindedBeaconBlock, {
-              broadcastValidation: this.broadcastValidation,
-            })
-          : await this.api.beacon.publishBlockV2(signedBlock as allForks.SignedBeaconBlock, {
-              broadcastValidation: this.broadcastValidation,
-            })
+          ? await this.api.beacon.publishBlindedBlock(signedBlock as allForks.SignedBlindedBeaconBlock)
+          : await this.api.beacon.publishBlock(signedBlock as allForks.SignedBeaconBlock)
       );
     } else {
       ApiError.assert(
         isBlindedBeaconBlock(signedBlock.message)
-          ? await this.api.beacon.publishBlindedBlockV2(
-              {
-                signedBlindedBlock: signedBlock,
-                signedBlindedBlobSidecars: signedBlobSidecars,
-              } as SignedBlindedBlockContents,
-              {broadcastValidation: this.broadcastValidation}
-            )
-          : await this.api.beacon.publishBlockV2({signedBlock, signedBlobSidecars} as SignedBlockContents, {
-              broadcastValidation: this.broadcastValidation,
-            })
+          ? await this.api.beacon.publishBlindedBlock({
+              signedBlindedBlock: signedBlock,
+              signedBlindedBlobSidecars: signedBlobSidecars,
+            } as SignedBlindedBlockContents)
+          : await this.api.beacon.publishBlock({signedBlock, signedBlobSidecars} as SignedBlockContents)
       );
     }
   };

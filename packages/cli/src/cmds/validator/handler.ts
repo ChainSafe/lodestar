@@ -15,7 +15,6 @@ import {
   getHttpMetricsServer,
   MonitoringService,
 } from "@lodestar/beacon-node";
-import {routes} from "@lodestar/api";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {GlobalArgs} from "../../options/index.js";
@@ -168,8 +167,6 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       disableAttestationGrouping: args.disableAttestationGrouping,
       valProposerConfig,
       distributed: args.distributed,
-      broadcastValidation:
-        routes.beacon.BroadcastValidation[args.broadcastValidation as keyof typeof routes.beacon.BroadcastValidation],
     },
     metrics
   );
