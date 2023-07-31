@@ -80,7 +80,7 @@ export async function isValidStorageKeys({
 
       const isStorageValid =
         (!expectedStorageRLP && sp.value === "0x0") ||
-        (!!expectedStorageRLP && expectedStorageRLP.equals(RLP.encode(sp.value)));
+        (!!expectedStorageRLP && expectedStorageRLP.equals(Buffer.from(RLP.encode(sp.value))));
       if (!isStorageValid) return false;
     } catch (err) {
       logger.error("Error verifying storage keys", undefined, err as Error);

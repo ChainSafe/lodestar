@@ -56,6 +56,7 @@ export async function getExecutionPayloads({
   let slot = endSlot;
   let block = await fetchNearestBlock(api, slot, "down");
   payloads[block.message.slot] = block.message.body.executionPayload;
+  slot = block.message.slot - 1;
 
   while (slot >= startSlot) {
     const previousBlock = await fetchNearestBlock(api, block.message.slot - 1, "down");
@@ -84,6 +85,7 @@ export async function getExecutionPayloadForBlockNumber(
   while (payloads[block.message.slot].blockNumber !== blockNumber) {
     const previousBlock = await fetchNearestBlock(api, block.message.slot - 1, "down");
     block = previousBlock;
+    payloads[block.message.slot] = block.message.body.executionPayload;
   }
 
   return payloads;
