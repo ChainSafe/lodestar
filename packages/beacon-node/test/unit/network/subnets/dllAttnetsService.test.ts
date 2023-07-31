@@ -48,7 +48,9 @@ describe("DLLAttnetsService", () => {
     // load getCurrentSlot first, vscode not able to debug without this
     getCurrentSlot(config, Math.floor(Date.now() / 1000));
     metadata = new MetadataController({}, {config, onSetValue: () => null});
-    service = new DLLAttnetsService(config, clock, gossipStub, metadata, logger, null, nodeId);
+    service = new DLLAttnetsService(config, clock, gossipStub, metadata, logger, null, nodeId, {
+      slotsToSubscribeBeforeAggregatorDuty: 2,
+    });
   });
 
   afterEach(() => {

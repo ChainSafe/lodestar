@@ -19,6 +19,7 @@ export type NetworkArgs = {
   targetPeers?: number;
   deterministicLongLivedAttnets?: boolean;
   subscribeAllSubnets?: boolean;
+  slotsToSubscribeBeforeAggregatorDuty?: number;
   disablePeerScoring?: boolean;
   mdns?: boolean;
   "network.maxPeers"?: number;
@@ -135,6 +136,8 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     localMultiaddrs: [localMu, localMu6].filter(Boolean) as string[],
     deterministicLongLivedAttnets: args["deterministicLongLivedAttnets"],
     subscribeAllSubnets: args["subscribeAllSubnets"],
+    slotsToSubscribeBeforeAggregatorDuty:
+      args["slotsToSubscribeBeforeAggregatorDuty"] ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
     disablePeerScoring: args["disablePeerScoring"],
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
@@ -232,6 +235,14 @@ export const options: CliCommandOptions<NetworkArgs> = {
     type: "boolean",
     description: "Subscribe to all subnets regardless of validator count",
     defaultDescription: String(defaultOptions.network.subscribeAllSubnets === true),
+    group: "network",
+  },
+
+  slotsToSubscribeBeforeAggregatorDuty: {
+    hidden: true,
+    type: "number",
+    description: "Number of slots before an aggregator duty to subscribe to subnets",
+    defaultDescription: String(defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty),
     group: "network",
   },
 
