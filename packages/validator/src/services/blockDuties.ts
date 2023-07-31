@@ -158,7 +158,7 @@ export class BlockDutiesService {
     if (additionalBlockProducers.length > 0) {
       this.notifyBlockProductionFn(currentSlot, additionalBlockProducers);
       this.logger.debug("Detected new block proposer", {currentSlot});
-      this.metrics?.proposerDutiesReorg.inc();
+      this.metrics?.newProposalDutiesDetected.inc();
     }
   }
 

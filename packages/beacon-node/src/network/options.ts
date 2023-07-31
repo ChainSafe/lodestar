@@ -36,4 +36,6 @@ export const defaultNetworkOptions: NetworkOptions = {
   gossipsubDHigh: 9,
   // TODO set to false in order to release 1.9.0 in a timely manner
   useWorker: false,
+  // subscribe 2 slots before aggregator dutied slot to get stable mesh peers as monitored on goerli
+  slotsToSubscribeBeforeAggregatorDuty: 2,
 };
