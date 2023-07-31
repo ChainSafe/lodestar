@@ -1,5 +1,6 @@
+import {isFetchError} from "@lodestar/api";
 import {IJson, RpcPayload} from "../../eth1/interface.js";
-import {IJsonRpcHttpClient, isFetchError} from "../../eth1/provider/jsonRpcHttpClient.js";
+import {IJsonRpcHttpClient} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {ExecutePayloadStatus, ExecutionEngineState} from "./interface.js";
 
 export type JsonRpcBackend = {
