@@ -32,8 +32,8 @@ export class ExecutionEngineMockJsonRpcClient implements IJsonRpcHttpClient {
   }
 }
 
-const fatalErrorCodes = ["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN"];
-const connectionErrorCodes = ["ECONNRESET", "ECONNABORTED"];
+export const HTTP_FATAL_ERROR_CODES = ["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN"];
+export const HTTP_CONNECTION_ERROR_CODES = ["ECONNRESET", "ECONNABORTED"];
 
 function getExecutionEngineStateForPayloadStatus(payloadStatus: ExecutePayloadStatus): ExecutionEngineState {
   switch (payloadStatus) {
@@ -71,11 +71,11 @@ function getExecutionEngineStateForPayloadError(
     return ExecutionEngineState.SYNCING;
   }
 
-  if (payloadError && isFetchError(payloadError) && fatalErrorCodes.includes(payloadError.code)) {
+  if (payloadError && isFetchError(payloadError) && HTTP_FATAL_ERROR_CODES.includes(payloadError.code)) {
     return ExecutionEngineState.OFFLINE;
   }
 
-  if (payloadError && isFetchError(payloadError) && connectionErrorCodes.includes(payloadError.code)) {
+  if (payloadError && isFetchError(payloadError) && HTTP_CONNECTION_ERROR_CODES.includes(payloadError.code)) {
     return ExecutionEngineState.AUTH_FAILED;
   }
 
