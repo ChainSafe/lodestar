@@ -1,6 +1,7 @@
-import {randomBytes} from "node:crypto";
 import {expect} from "chai";
+import chai from "chai";
 import sinon from "sinon";
+import sinonChai from "sinon-chai";
 import {Api} from "@lodestar/api";
 import {hash} from "@lodestar/utils";
 import {Logger} from "@lodestar/logger";
@@ -8,6 +9,8 @@ import {allForks, capella} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {PayloadStore} from "../../../src/proof_provider/payload_store.js";
 import {MAX_PAYLOAD_HISTORY} from "../../../src/constants.js";
+
+chai.use(sinonChai);
 
 const createHash = (input: string): Uint8Array => hash(Buffer.from(input, "utf8"));
 
@@ -131,8 +134,9 @@ describe("proof_provider/payload_store", function () {
     it("should return undefined for non existing block hash", async () => {
       const payload1 = buildPayload({blockNumber: 10});
       store.set(payload1, false);
+      const nonExistingBlockHash = createHash("non-existing-block-hash");
 
-      await expect(store.get(toHexString(randomBytes(32)))).to.eventually.undefined;
+      await expect(store.get(toHexString(nonExistingBlockHash))).to.eventually.undefined;
     });
 
     describe("block hash as blockId", () => {
