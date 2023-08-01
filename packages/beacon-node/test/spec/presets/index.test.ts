@@ -37,11 +37,6 @@ const skipOpts: SkipOpts = {
   skippedPrefixes: [
     "capella/light_client/single_merkle_proof/BeaconBlockBody",
     "deneb/light_client/single_merkle_proof/BeaconBlockBody",
-    // TODO: deneb
-    // Deneb signed voluntary exits will not be valid so skipping this
-    // To be cleaned up with the spec version update
-    "deneb/operations/voluntary_exit/",
-    "deneb/random/random",
   ],
 };
 

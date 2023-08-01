@@ -98,7 +98,7 @@ export class ELRpc {
     }
   }
 
-  private getRequestId(): string {
+  getRequestId(): string {
     // TODO: Find better way to generate random id
     return (Math.random() * 10000).toFixed(0);
   }

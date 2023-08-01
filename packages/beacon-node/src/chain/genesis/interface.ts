@@ -1,6 +1,6 @@
+import {CompositeViewDU, VectorCompositeType} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {CompositeViewDU, VectorCompositeType} from "@chainsafe/ssz";
 import {Eth1Block} from "../../eth1/interface.js";
 
 export type GenesisResult = {

@@ -1,9 +1,10 @@
-import {waitForEndpoint} from "./network.js";
+import {waitForEndpoint} from "@lodestar/test-utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
-export const rpcURL = "http://0.0.0.0:8001";
+export const rpcUrl = "http://0.0.0.0:8001";
 export const beaconUrl = "http://0.0.0.0:5001";
 export const proxyPort = 8888;
+export const chainId = 1234;
 export const proxyUrl = `http://localhost:${proxyPort}`;
 
 // Wait for at least teh capella fork to be started

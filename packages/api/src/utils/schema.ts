@@ -86,7 +86,7 @@ function isRequired(schema: Schema): boolean {
 export function getFastifySchema(schemaDef: SchemaDefinition<ReqGeneric>): JsonSchema {
   const schema: {params?: JsonSchemaObj; querystring?: JsonSchemaObj; body?: JsonSchema} = {};
 
-  if (schemaDef.body) {
+  if (schemaDef.body != null) {
     schema.body = getJsonSchemaItem(schemaDef.body);
   }
 

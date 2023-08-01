@@ -3,9 +3,9 @@ import fs from "node:fs";
 import {expect} from "chai";
 import {createFromJSON, createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {multiaddr} from "@multiformats/multiaddr";
+import {createKeypairFromPeerId, ENR, SignableENR} from "@chainsafe/discv5";
 import {chainConfig} from "@lodestar/config/default";
 import {chainConfigToJson} from "@lodestar/config";
-import {createKeypairFromPeerId, ENR, SignableENR} from "@chainsafe/discv5";
 import {LogLevel} from "@lodestar/utils";
 import {exportToJSON} from "../../../src/config/peerId.js";
 import {beaconHandlerInit} from "../../../src/cmds/beacon/handler.js";
@@ -19,8 +19,10 @@ describe("cmds / beacon / args handler", () => {
   process.env.SKIP_FETCH_NETWORK_BOOTNODES = "true";
 
   it("Merge bootnodes from file and CLI arg", async () => {
-    const enr1 = "enr:-AAKG4QOWkRj";
-    const enr2 = "enr:-BBBBBBW4gMj";
+    const enr1 =
+      "enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA";
+    const enr2 =
+      "enr:-KG4QDyytgmE4f7AnvW-ZaUOIi9i79qX4JwjRAiXBZCU65wOfBu-3Nb5I7b_Rmg3KCOcZM_C3y5pg7EBU5XGrcLTduQEhGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQ2_DUbiXNlY3AyNTZrMaEDKnz_-ps3UUOfHWVYaskI5kWYO_vtYMGYCQRAR3gHDouDdGNwgiMog3VkcIIjKA";
 
     const bootnodesFile = path.join(testFilesDir, "bootnodesFile.txt");
     fs.writeFileSync(bootnodesFile, enr1);
@@ -30,7 +32,9 @@ describe("cmds / beacon / args handler", () => {
       bootnodesFile,
     });
 
-    expect(options.network.discv5?.bootEnrs?.sort().slice(0, 2)).to.deep.equal([enr1, enr2]);
+    const bootEnrs = options.network.discv5?.bootEnrs ?? [];
+    expect(bootEnrs.includes(enr1)).to.be.true;
+    expect(bootEnrs.includes(enr2)).to.be.true;
   });
 
   it("Over-write ENR fields", async () => {

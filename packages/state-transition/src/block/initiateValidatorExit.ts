@@ -1,5 +1,5 @@
-import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {CompositeViewDU} from "@chainsafe/ssz";
+import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {CachedBeaconStateAllForks} from "../types.js";
 

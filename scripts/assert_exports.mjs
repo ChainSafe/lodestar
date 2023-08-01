@@ -5,7 +5,32 @@ import path from "node:path";
 // This script ensure that the referenced files exist
 
 const pkgsDirpath = path.resolve("./packages");
-const exportPaths = [];
+
+function getExportPaths(pkgDirPath, pkgExports) {
+  // {
+  //   "exports": "./lib/index.js",
+  // }
+  if (typeof pkgExports === "string") {
+    return [pkgExports];
+  }
+
+  // {
+  //   "exports": {
+  //     ".": {
+  //       "import": "./lib/index.js"
+  //     },
+  // }
+  const exportPaths = [];
+  for (const [exportPath, nestedExportObj] of Object.entries(pkgExports)) {
+    if (typeof nestedExportObj === "object") {
+      exportPaths.push(...getExportPaths(pkgDirPath, nestedExportObj));
+    } else if (typeof nestedExportObj === "string") {
+      exportPaths.push(nestedExportObj);
+    }
+  }
+
+  return exportPaths;
+}
 
 for (const pkgDirname of fs.readdirSync(pkgsDirpath)) {
   const pkgDirpath = path.join(pkgsDirpath, pkgDirname);
@@ -15,32 +40,10 @@ for (const pkgDirname of fs.readdirSync(pkgsDirpath)) {
   }
 
   const packageJSON = JSON.parse(fs.readFileSync(packageJSONPath, "utf8"));
+  const exportPaths = getExportPaths(pkgDirpath, packageJSON.exports);
+  const missingExportPaths = exportPaths.filter((exportPath) => !fs.existsSync(path.join(pkgDirpath, exportPath)));
 
-  // {
-  //   "exports": "./lib/index.js",
-  // }
-  if (typeof packageJSON.exports === "string") {
-    exportPaths.push(path.join(pkgDirpath, packageJSON.exports));
+  if (missingExportPaths.length > 0) {
+    throw Error(`export paths file(s) not found\n${missingExportPaths.join("\n")}`);
   }
-
-  // {
-  //   "exports": {
-  //     ".": {
-  //       "import": "./lib/index.js"
-  //     },
-  // }
-  else if (typeof packageJSON.exports === "object") {
-    for (const [exportPath, exportObj] of Object.entries(packageJSON.exports)) {
-      if (!exportObj.import) {
-        throw Error(`package.json ${packageJSONPath} export ${exportPath} has not import`);
-      }
-
-      exportPaths.push(path.join(pkgDirpath, exportObj.import));
-    }
-  }
-}
-
-const missingExportPaths = exportPaths.filter((exportPath) => !fs.existsSync(exportPath));
-if (missingExportPaths.length > 0) {
-  throw Error(`export paths file(s) not found\n${missingExportPaths.join("\n")}`);
 }

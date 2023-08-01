@@ -1,4 +1,5 @@
 import {execSync} from "node:child_process";
+import os from "node:os";
 import {expect} from "chai";
 import leveldown from "leveldown";
 import all from "it-all";
@@ -135,9 +136,23 @@ describe("LevelDB controller", () => {
     expect(approxSize).gt(0, "approximateSize return not > 0");
   });
 
+  function getDuCommand(): string {
+    if (os.platform() === "darwin") {
+      try {
+        const res = execSync("gdu --help", {encoding: "utf8"});
+        if (res?.startsWith("Usage: gdu ")) {
+          return "gdu";
+        }
+      } catch {
+        /* no-op */
+      }
+    }
+    return "du";
+  }
+
   function getDbSize(): number {
     // 116	./.__testdb
-    const res = execSync(`du -bs ${dbLocation}`, {encoding: "utf8"});
+    const res = execSync(`${getDuCommand()} -bs ${dbLocation}`, {encoding: "utf8"});
     const match = res.match(/^(\d+)/);
     if (!match) throw Error(`Unknown du response \n${res}`);
     return parseInt(match[1]);

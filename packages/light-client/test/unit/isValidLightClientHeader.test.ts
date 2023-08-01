@@ -1,7 +1,7 @@
 import {expect} from "chai";
+import {fromHexString} from "@chainsafe/ssz";
 import {ssz, allForks} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {fromHexString} from "@chainsafe/ssz";
 import {isValidLightClientHeader} from "../../src/spec/utils.js";
 
 describe("isValidLightClientHeader", function () {
@@ -76,7 +76,7 @@ describe("isValidLightClientHeader", function () {
 
   const capellaUpgradedDenebHeader = {
     beacon: capellaLCHeader.beacon,
-    execution: {...capellaLCHeader.execution, dataGasUsed: 0, excessDataGas: 0},
+    execution: {...capellaLCHeader.execution, blobGasUsed: 0, excessBlobGas: 0},
     executionBranch: capellaLCHeader.executionBranch,
   };
 

@@ -1,4 +1,5 @@
 import path from "node:path";
+import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -28,7 +29,6 @@ import {
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
-import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";

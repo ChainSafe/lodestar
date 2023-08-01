@@ -5,6 +5,7 @@ import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {RootHex} from "@lodestar/types";
 import {HttpStatusCode, routes} from "@lodestar/api";
+import {chainConfig} from "@lodestar/config/default";
 import {toHex} from "@lodestar/utils";
 import {BlockDutiesService} from "../../../src/services/blockDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
@@ -49,7 +50,15 @@ describe("BlockDutiesService", function () {
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 
     const clock = new ClockMock();
-    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, null, notifyBlockProductionFn);
+    const dutiesService = new BlockDutiesService(
+      chainConfig,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      null,
+      notifyBlockProductionFn
+    );
 
     // Trigger clock onSlot for slot 0
     await clock.tickSlotFns(0, controller.signal);
@@ -84,7 +93,15 @@ describe("BlockDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
-    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, null, notifyBlockProductionFn);
+    const dutiesService = new BlockDutiesService(
+      chainConfig,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      null,
+      notifyBlockProductionFn
+    );
 
     // Trigger clock onSlot for slot 0
     api.validator.getProposerDuties.resolves({
@@ -151,7 +168,15 @@ describe("BlockDutiesService", function () {
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 
     const clock = new ClockMock();
-    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, null, notifyBlockProductionFn);
+    const dutiesService = new BlockDutiesService(
+      chainConfig,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      null,
+      notifyBlockProductionFn
+    );
 
     // Trigger clock onSlot for slot 0
     await clock.tickSlotFns(0, controller.signal);

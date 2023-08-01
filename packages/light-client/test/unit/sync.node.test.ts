@@ -1,13 +1,13 @@
 import {expect} from "chai";
 import {init} from "@chainsafe/bls/switchable";
+import {JsonPath, toHexString} from "@chainsafe/ssz";
+import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateAllForks, BeaconStateAltair} from "@lodestar/state-transition";
 import {altair, ssz} from "@lodestar/types";
 import {routes, Api, getClient, ServerApi, ApiError} from "@lodestar/api";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {createBeaconConfig, ChainConfig} from "@lodestar/config";
-import {JsonPath, toHexString} from "@chainsafe/ssz";
-import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {Lightclient, LightclientEvent} from "../../src/index.js";
 import {LightclientServerApiMock, ProofServerApiMock} from "../mocks/LightclientServerApiMock.js";
 import {EventsServerApiMock} from "../mocks/EventsServerApiMock.js";

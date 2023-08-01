@@ -1,7 +1,7 @@
-import {altair, phase0, ssz} from "@lodestar/types";
 import bls from "@chainsafe/bls";
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
 import {BitArray} from "@chainsafe/ssz";
+import {altair, phase0, ssz} from "@lodestar/types";
 import {DOMAIN_DEPOSIT, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
 import {

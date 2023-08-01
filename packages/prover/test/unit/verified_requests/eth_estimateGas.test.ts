@@ -3,12 +3,13 @@ import deepmerge from "deepmerge";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {ELTransaction} from "../../../lib/types.js";
-import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
+import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {eth_estimateGas} from "../../../src/verified_requests/eth_estimateGas.js";
 import ethEstimateGasCase1 from "../../fixtures/mainnet/eth_estimateGas_simple_transfer.json" assert {type: "json"};
 import ethEstimateGasCase2 from "../../fixtures/mainnet/eth_estimateGas_contract_call.json" assert {type: "json"};
 import {TestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 import {JsonRpcRequest, JsonRpcResponseWithResultPayload} from "../../../src/types.js";
+import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";
 
 const testCases = [ethEstimateGasCase1, ethEstimateGasCase2] as TestFixture[];
 
@@ -62,7 +63,7 @@ describe("verified_requests / eth_estimateGas", () => {
         expect(response).to.eql({
           jsonrpc: "2.0",
           id: testCase.request.id,
-          error: {code: UNVERIFIED_RESPONSE_CODE, message: "eth_estimateGas request can not be verified."},
+          error: {code: VERIFICATION_FAILED_RESPONSE_CODE, message: getVerificationFailedMessage("eth_estimateGas")},
         });
       });
     });

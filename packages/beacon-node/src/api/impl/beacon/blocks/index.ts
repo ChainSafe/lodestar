@@ -1,9 +1,9 @@
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes, ServerApi, isSignedBlockContents, isSignedBlindedBlockContents} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {allForks, deneb} from "@lodestar/types";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {
   BlockSource,
   getBlockInput,

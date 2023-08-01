@@ -2,16 +2,17 @@ import {expect} from "chai";
 import deepmerge from "deepmerge";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
-import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
+import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {eth_getBlockByHash} from "../../../src/verified_requests/eth_getBlockByHash.js";
 import eth_getBlock_with_contractCreation from "../../fixtures/sepolia/eth_getBlock_with_contractCreation.json" assert {type: "json"};
 import eth_getBlock_with_no_accessList from "../../fixtures/sepolia/eth_getBlock_with_no_accessList.json" assert {type: "json"};
 import {TestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 import {ELBlock} from "../../../src/types.js";
+import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";
 
 const testCases = [eth_getBlock_with_no_accessList, eth_getBlock_with_contractCreation] as [
   TestFixture<ELBlock>,
-  TestFixture<ELBlock>
+  TestFixture<ELBlock>,
 ];
 
 describe("verified_requests / eth_getBlockByHash", () => {
@@ -51,7 +52,7 @@ describe("verified_requests / eth_getBlockByHash", () => {
         expect(response).to.eql({
           jsonrpc: "2.0",
           id: testCase.request.id,
-          error: {code: UNVERIFIED_RESPONSE_CODE, message: "eth_getBlockByHash request can not be verified."},
+          error: {code: VERIFICATION_FAILED_RESPONSE_CODE, message: getVerificationFailedMessage("eth_getBlockByHash")},
         });
       });
 
@@ -74,7 +75,7 @@ describe("verified_requests / eth_getBlockByHash", () => {
         expect(response).to.eql({
           jsonrpc: "2.0",
           id: testCase.request.id,
-          error: {code: UNVERIFIED_RESPONSE_CODE, message: "eth_getBlockByHash request can not be verified."},
+          error: {code: VERIFICATION_FAILED_RESPONSE_CODE, message: getVerificationFailedMessage("eth_getBlockByHash")},
         });
       });
 
@@ -97,7 +98,7 @@ describe("verified_requests / eth_getBlockByHash", () => {
         expect(response).to.eql({
           jsonrpc: "2.0",
           id: testCase.request.id,
-          error: {code: UNVERIFIED_RESPONSE_CODE, message: "eth_getBlockByHash request can not be verified."},
+          error: {code: VERIFICATION_FAILED_RESPONSE_CODE, message: getVerificationFailedMessage("eth_getBlockByHash")},
         });
       });
     });

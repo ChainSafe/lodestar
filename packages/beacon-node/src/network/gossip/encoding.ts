@@ -2,9 +2,9 @@ import {compress, uncompress} from "snappyjs";
 import xxhashFactory from "xxhash-wasm";
 import {Message} from "@libp2p/interface-pubsub";
 import {digest} from "@chainsafe/as-sha256";
+import {RPC} from "@chainsafe/libp2p-gossipsub/message";
 import {intToBytes, toHex} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
-import {RPC} from "@chainsafe/libp2p-gossipsub/message";
 import {MESSAGE_DOMAIN_VALID_SNAPPY} from "./constants.js";
 import {getGossipSSZType, GossipTopicCache} from "./topic.js";
 
@@ -62,7 +62,10 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: Message): Uint8
 }
 
 export class DataTransformSnappy {
-  constructor(private readonly gossipTopicCache: GossipTopicCache, private readonly maxSizePerMessage: number) {}
+  constructor(
+    private readonly gossipTopicCache: GossipTopicCache,
+    private readonly maxSizePerMessage: number
+  ) {}
 
   /**
    * Takes the data published by peers on a topic and transforms the data.

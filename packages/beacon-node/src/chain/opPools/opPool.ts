@@ -1,3 +1,4 @@
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
@@ -13,7 +14,6 @@ import {
   BLS_WITHDRAWAL_PREFIX,
 } from "@lodestar/params";
 import {Epoch, phase0, capella, ssz, ValidatorIndex} from "@lodestar/types";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../db/index.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {isValidBlsToExecutionChangeForBlockInclusion} from "./utils.js";
@@ -169,7 +169,7 @@ export class OpPool {
     phase0.AttesterSlashing[],
     phase0.ProposerSlashing[],
     phase0.SignedVoluntaryExit[],
-    capella.SignedBLSToExecutionChange[]
+    capella.SignedBLSToExecutionChange[],
   ] {
     const {config} = state;
     const stateEpoch = computeEpochAtSlot(state.slot);

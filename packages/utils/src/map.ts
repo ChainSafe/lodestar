@@ -19,7 +19,10 @@ export class MapDef<K, V> extends Map<K, V> {
 export class MapDefMax<K, V> {
   private readonly map = new Map<K, V>();
 
-  constructor(private readonly getDefault: () => V, private readonly maxKeys: number) {}
+  constructor(
+    private readonly getDefault: () => V,
+    private readonly maxKeys: number
+  ) {}
 
   getOrDefault(key: K): V {
     let value = this.map.get(key);

@@ -1,4 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
+import {ForkName} from "@lodestar/params";
 import {phase0, RootHex, ssz, ValidatorIndex} from "@lodestar/types";
 import {
   computeEpochAtSlot,
@@ -25,12 +26,39 @@ export type AggregateAndProofValidationResult = {
   attDataRootHex: RootHex;
 };
 
+export async function validateApiAggregateAndProof(
+  fork: ForkName,
+  chain: IBeaconChain,
+  signedAggregateAndProof: phase0.SignedAggregateAndProof
+): Promise<AggregateAndProofValidationResult> {
+  const skipValidationKnownAttesters = true;
+  const prioritizeBls = true;
+  return validateAggregateAndProof(fork, chain, signedAggregateAndProof, null, {
+    skipValidationKnownAttesters,
+    prioritizeBls,
+  });
+}
+
 export async function validateGossipAggregateAndProof(
+  fork: ForkName,
   chain: IBeaconChain,
   signedAggregateAndProof: phase0.SignedAggregateAndProof,
-  skipValidationKnownAttesters = false,
-  serializedData: Uint8Array | null = null
+  serializedData: Uint8Array
 ): Promise<AggregateAndProofValidationResult> {
+  return validateAggregateAndProof(fork, chain, signedAggregateAndProof, serializedData);
+}
+
+async function validateAggregateAndProof(
+  fork: ForkName,
+  chain: IBeaconChain,
+  signedAggregateAndProof: phase0.SignedAggregateAndProof,
+  serializedData: Uint8Array | null = null,
+  opts: {skipValidationKnownAttesters: boolean; prioritizeBls: boolean} = {
+    skipValidationKnownAttesters: false,
+    prioritizeBls: false,
+  }
+): Promise<AggregateAndProofValidationResult> {
+  const {skipValidationKnownAttesters, prioritizeBls} = opts;
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot
@@ -66,7 +94,7 @@ export async function validateGossipAggregateAndProof(
     // [IGNORE] aggregate.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
     // -- i.e. aggregate.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= aggregate.data.slot
     // (a client MAY queue future aggregates for processing at the appropriate slot).
-    verifyPropagationSlotRange(chain, attSlot);
+    verifyPropagationSlotRange(fork, chain, attSlot);
   }
 
   // [IGNORE] The aggregate is the first valid aggregate received for the aggregator with
@@ -176,7 +204,7 @@ export async function validateGossipAggregateAndProof(
   ];
   // no need to write to SeenAttestationDatas
 
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
+  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
   }
 

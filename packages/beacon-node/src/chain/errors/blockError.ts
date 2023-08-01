@@ -1,6 +1,6 @@
+import {toHexString} from "@chainsafe/ssz";
 import {allForks, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
-import {toHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
 import {QueueErrorCode} from "../../util/queue/index.js";
@@ -108,7 +108,10 @@ export type BlockErrorType =
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 
 export class BlockError extends LodestarError<BlockErrorType> {
-  constructor(readonly signedBlock: allForks.SignedBeaconBlock, type: BlockErrorType) {
+  constructor(
+    readonly signedBlock: allForks.SignedBeaconBlock,
+    type: BlockErrorType
+  ) {
     super(type);
   }
 

@@ -1,3 +1,4 @@
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {allForks, phase0, Slot, RootHex} from "@lodestar/types";
 import {
   CachedBeaconStateAllForks,
@@ -8,7 +9,6 @@ import {
   processSlots,
   stateTransition,
 } from "@lodestar/state-transition";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {sleep} from "@lodestar/utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";

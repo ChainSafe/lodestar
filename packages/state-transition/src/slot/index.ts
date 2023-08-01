@@ -1,5 +1,5 @@
-import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {byteArrayEquals} from "@chainsafe/ssz";
+import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {ZERO_HASH} from "../constants/index.js";
 

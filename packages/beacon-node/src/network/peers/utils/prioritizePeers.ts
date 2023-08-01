@@ -1,7 +1,7 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {Direction} from "@libp2p/interface-connection";
-import {altair, phase0} from "@lodestar/types";
 import {BitArray} from "@chainsafe/ssz";
+import {altair, phase0} from "@lodestar/types";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {MapDef} from "@lodestar/utils";
 import {shuffle} from "../../../util/shuffle.js";

@@ -1,8 +1,8 @@
+import bls from "@chainsafe/bls";
+import {CoordType} from "@chainsafe/bls/types";
 import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {capella, ssz} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
 
 import {computeSigningRoot, ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";

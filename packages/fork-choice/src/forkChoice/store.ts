@@ -1,6 +1,6 @@
+import {toHexString} from "@chainsafe/ssz";
 import {EffectiveBalanceIncrements, CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {phase0, Slot, RootHex, ValidatorIndex} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
 import {CheckpointHexWithBalance} from "./interface.js";
 
 /**

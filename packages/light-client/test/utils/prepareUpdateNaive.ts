@@ -1,7 +1,7 @@
-import {altair, Root, ssz} from "@lodestar/types";
 import {CompositeViewDU} from "@chainsafe/ssz";
-import {FINALIZED_ROOT_GINDEX, NEXT_SYNC_COMMITTEE_GINDEX, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
+import {altair, Root, ssz} from "@lodestar/types";
+import {FINALIZED_ROOT_GINDEX, NEXT_SYNC_COMMITTEE_GINDEX, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 
 export interface IBeaconChainLc {
   getBlockHeaderByRoot(blockRoot: Root): Promise<altair.LightClientHeader>;

@@ -152,7 +152,10 @@ export class NetworkProcessor {
   private isProcessingCurrentSlotBlock = false;
   private unknownRootsBySlot = new MapDef<Slot, Set<RootHex>>(() => new Set());
 
-  constructor(modules: NetworkProcessorModules, private readonly opts: NetworkProcessorOpts) {
+  constructor(
+    modules: NetworkProcessorModules,
+    private readonly opts: NetworkProcessorOpts
+  ) {
     const {chain, events, logger, metrics} = modules;
     this.chain = chain;
     this.events = events;

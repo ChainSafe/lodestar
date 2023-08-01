@@ -1,5 +1,5 @@
-import {ChainForkConfig} from "@lodestar/config";
 import {Type} from "@chainsafe/ssz";
+import {ChainForkConfig} from "@lodestar/config";
 import {BUCKET_LENGTH} from "./const.js";
 import {FilterOptions, KeyValue} from "./controller/index.js";
 import {Db, DbReqOpts} from "./controller/interface.js";

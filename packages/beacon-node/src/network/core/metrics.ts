@@ -115,6 +115,16 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         name: "lodestar_discovery_peers_to_connect",
         help: "Current peers to connect count from discoverPeers requests",
       }),
+      subnetPeersToConnect: register.gauge<"type">({
+        name: "lodestar_discovery_subnet_peers_to_connect",
+        help: "Current peers to connect count from discoverPeers requests",
+        labelNames: ["type"],
+      }),
+      subnetsToConnect: register.gauge<"type">({
+        name: "lodestar_discovery_subnets_to_connect",
+        help: "Current subnets to connect count from discoverPeers requests",
+        labelNames: ["type"],
+      }),
       cachedENRsSize: register.gauge({
         name: "lodestar_discovery_cached_enrs_size",
         help: "Current size of the cachedENRs Set",
@@ -230,6 +240,10 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
       subscriptionsRandom: register.gauge({
         name: "lodestar_attnets_service_random_subscriptions_total",
         help: "Count of random subscriptions",
+      }),
+      longLivedSubscriptions: register.gauge({
+        name: "lodestar_attnets_service_long_lived_subscriptions_total",
+        help: "Count of long lived subscriptions",
       }),
       subscribeSubnets: register.gauge<"subnet" | "src">({
         name: "lodestar_attnets_service_subscribe_subnets_total",

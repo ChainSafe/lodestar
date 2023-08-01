@@ -1,7 +1,7 @@
 import {expect} from "chai";
+import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAllForks, isExecutionStateType} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
-import {toHexString} from "@chainsafe/ssz";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
 import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
@@ -65,7 +65,10 @@ export const forkChoiceTest =
         });
 
         const controller = new AbortController();
-        const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {signal: controller.signal});
+        const executionEngine = getExecutionEngineFromBackend(executionEngineBackend, {
+          signal: controller.signal,
+          logger: testLogger("executionEngine"),
+        });
 
         const chain = new BeaconChain(
           {

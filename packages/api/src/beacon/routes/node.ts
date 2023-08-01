@@ -1,5 +1,5 @@
-import {allForks, ssz, StringType} from "@lodestar/types";
 import {ContainerType} from "@chainsafe/ssz";
+import {allForks, ssz, StringType} from "@lodestar/types";
 import {
   ArrayOf,
   reqEmpty,
@@ -60,6 +60,8 @@ export type SyncingStatus = {
   isSyncing: boolean;
   /** Set to true if the node is optimistically tracking head. */
   isOptimistic: boolean;
+  /** Set to true if the connected el client is offline */
+  elOffline: boolean;
 };
 
 export enum NodeHealth {

@@ -5,7 +5,7 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {BeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {LoggerNode} from "@lodestar/logger/node";
+import type {LoggerNode} from "@lodestar/logger/node";
 import {Api, ServerApi} from "@lodestar/api";
 import {BeaconStateAllForks} from "@lodestar/state-transition";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -66,6 +66,7 @@ enum LoggerModule {
   backfill = "backfill",
   chain = "chain",
   eth1 = "eth1",
+  execution = "execution",
   metrics = "metrics",
   monitoring = "monitoring",
   network = "network",
@@ -209,7 +210,11 @@ export class BeaconNode {
         logger: logger.child({module: LoggerModule.eth1}),
         signal,
       }),
-      executionEngine: initializeExecutionEngine(opts.executionEngine, {metrics, signal}),
+      executionEngine: initializeExecutionEngine(opts.executionEngine, {
+        metrics,
+        signal,
+        logger: logger.child({module: LoggerModule.execution}),
+      }),
       executionBuilder: opts.executionBuilder.enabled
         ? initializeExecutionBuilder(opts.executionBuilder, config, metrics)
         : undefined,

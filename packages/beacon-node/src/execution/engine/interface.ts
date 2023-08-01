@@ -30,6 +30,14 @@ export enum ExecutePayloadStatus {
   UNSAFE_OPTIMISTIC_STATUS = "UNSAFE_OPTIMISTIC_STATUS",
 }
 
+export enum ExecutionEngineState {
+  ONLINE = "ONLINE",
+  OFFLINE = "OFFLINE",
+  SYNCING = "SYNCING",
+  SYNCED = "SYNCED",
+  AUTH_FAILED = "AUTH_FAILED",
+}
+
 export type ExecutePayloadResponse =
   | {status: ExecutePayloadStatus.SYNCING | ExecutePayloadStatus.ACCEPTED; latestValidHash: null; validationError: null}
   | {status: ExecutePayloadStatus.VALID; latestValidHash: RootHex; validationError: null}
@@ -132,4 +140,6 @@ export interface IExecutionEngine {
   getPayloadBodiesByHash(blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
 
   getPayloadBodiesByRange(start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
+
+  getState(): ExecutionEngineState;
 }

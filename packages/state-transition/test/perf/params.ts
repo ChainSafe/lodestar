@@ -11,6 +11,11 @@ export const altairState = {
   epoch: 81889, // Post altair fork
 };
 
+export const capellaState = {
+  network: "mainnet" as const,
+  epoch: 217614, // Post capella fork
+};
+
 export const rangeSyncTest = {
   network: "mainnet" as const,
   startSlot: 3766816, // Post altair, first slot in epoch 117713

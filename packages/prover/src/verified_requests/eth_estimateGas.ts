@@ -2,7 +2,11 @@ import {ELVerifiedRequestHandler} from "../interfaces.js";
 import {ELApiParams, ELApiReturn} from "../types.js";
 import {bigIntToHex} from "../utils/conversion.js";
 import {createVM, executeVMTx, getVMWithState} from "../utils/evm.js";
-import {getErrorResponseForUnverifiedRequest, getResponseForRequest} from "../utils/json_rpc.js";
+import {
+  getErrorResponseForRequestWithFailedVerification,
+  getResponseForRequest,
+  getVerificationFailedMessage,
+} from "../utils/json_rpc.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const eth_estimateGas: ELVerifiedRequestHandler<
@@ -41,6 +45,6 @@ export const eth_estimateGas: ELVerifiedRequestHandler<
       {method: payload.method, params: JSON.stringify(payload.params)},
       err as Error
     );
-    return getErrorResponseForUnverifiedRequest(payload, "eth_estimateGas request can not be verified.");
+    return getErrorResponseForRequestWithFailedVerification(payload, getVerificationFailedMessage("eth_estimateGas"));
   }
 };

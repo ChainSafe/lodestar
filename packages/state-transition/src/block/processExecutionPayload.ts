@@ -1,5 +1,5 @@
-import {ssz, allForks, capella, deneb} from "@lodestar/types";
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
+import {ssz, allForks, capella, deneb} from "@lodestar/types";
 import {ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
 import {CachedBeaconStateBellatrix, CachedBeaconStateCapella} from "../types.js";
 import {getRandaoMix} from "../util/index.js";
@@ -109,12 +109,12 @@ export function executionPayloadToPayloadHeader(
 
   if (fork >= ForkSeq.deneb) {
     // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
-    (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).dataGasUsed = (
+    (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).blobGasUsed = (
       payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
-    ).dataGasUsed;
-    (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).excessDataGas = (
+    ).blobGasUsed;
+    (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).excessBlobGas = (
       payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
-    ).excessDataGas;
+    ).excessBlobGas;
   }
 
   return bellatrixPayloadFields;

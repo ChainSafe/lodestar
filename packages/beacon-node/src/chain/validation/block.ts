@@ -1,3 +1,4 @@
+import {toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {allForks} from "@lodestar/types";
 import {
@@ -10,7 +11,6 @@ import {
 } from "@lodestar/state-transition";
 import {sleep} from "@lodestar/utils";
 import {ForkName} from "@lodestar/params";
-import {toHexString} from "@chainsafe/ssz";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants/index.js";
 import {IBeaconChain} from "../interface.js";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors/index.js";

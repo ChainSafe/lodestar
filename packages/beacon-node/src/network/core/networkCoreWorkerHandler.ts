@@ -1,14 +1,14 @@
 import worker_threads from "node:worker_threads";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {routes} from "@lodestar/api";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
-import {phase0} from "@lodestar/types";
-import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
 import {spawn, Thread, Worker} from "@chainsafe/threads";
+import {routes} from "@lodestar/api";
+import {phase0} from "@lodestar/types";
+import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
-import {LoggerNode} from "@lodestar/logger/node";
+import type {LoggerNode} from "@lodestar/logger/node";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {wireEventsOnMainThread} from "../../util/workerEvents.js";
 import {Metrics} from "../../metrics/index.js";

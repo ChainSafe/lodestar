@@ -53,7 +53,9 @@ describe.skip("mdns", function () {
       discv5FirstQueryDelayMs: 0,
       discv5: {
         enr: enr.encodeTxt(),
-        bindAddr: bindAddrUdp,
+        bindAddrs: {
+          ip4: bindAddrUdp,
+        },
         bootEnrs: [],
       },
     };

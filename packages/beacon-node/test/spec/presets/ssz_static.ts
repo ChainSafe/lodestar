@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import {ssz} from "@lodestar/types";
 import {Type} from "@chainsafe/ssz";
+import {ssz} from "@lodestar/types";
 import {ACTIVE_PRESET, ForkName, ForkLightClient} from "@lodestar/params";
 import {replaceUintTypeWithUintBigintType} from "../utils/replaceUintTypeWithUintBigintType.js";
 import {parseSszStaticTestcase} from "../utils/sszTestCaseParser.js";

@@ -1,3 +1,4 @@
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes, ServerApi, BlockContents} from "@lodestar/api";
 import {
   CachedBeaconStateAllForks,
@@ -18,9 +19,8 @@ import {
 import {Root, Slot, ValidatorIndex, ssz, Epoch, ProducedBlockSource, bellatrix, allForks} from "@lodestar/types";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {toHex} from "@lodestar/utils";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
-import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
+import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {SyncState} from "../../../sync/index.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
@@ -32,6 +32,8 @@ import {ApiModules} from "../types.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {getValidatorStatus} from "../beacon/state/utils.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
+import {SCHEDULER_LOOKAHEAD_FACTOR} from "../../../chain/prepareNextSlot.js";
+import {ChainEvent, CheckpointHex} from "../../../chain/index.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils.js";
 
 /**
@@ -66,9 +68,10 @@ export function getValidatorApi({
   /**
    * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
    * future slot, wait some time instead of rejecting the request because it's in the future.
+   * This value is the same to MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC.
    * For very fast networks, reduce clock disparity to half a slot.
    */
-  const MAX_API_CLOCK_DISPARITY_SEC = Math.min(1, config.SECONDS_PER_SLOT / 2);
+  const MAX_API_CLOCK_DISPARITY_SEC = Math.min(0.5, config.SECONDS_PER_SLOT / 2);
   const MAX_API_CLOCK_DISPARITY_MS = MAX_API_CLOCK_DISPARITY_SEC * 1000;
 
   /** Compute and cache the genesis block root */
@@ -118,17 +121,53 @@ export function getValidatorApi({
    * Prevents a validator from not being able to get the attestater duties correctly if the beacon and validator clocks are off
    */
   async function waitForNextClosestEpoch(): Promise<void> {
-    const nextEpoch = chain.clock.currentEpoch + 1;
-    const secPerEpoch = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT;
-    const nextEpochStartSec = chain.genesisTime + nextEpoch * secPerEpoch;
-    const msToNextEpoch = nextEpochStartSec * 1000 - Date.now();
-    if (msToNextEpoch > 0 && msToNextEpoch < MAX_API_CLOCK_DISPARITY_MS) {
+    const toNextEpochMs = msToNextEpoch();
+    if (toNextEpochMs > 0 && toNextEpochMs < MAX_API_CLOCK_DISPARITY_MS) {
+      const nextEpoch = chain.clock.currentEpoch + 1;
       await chain.clock.waitForSlot(computeStartSlotAtEpoch(nextEpoch));
     }
   }
 
+  /**
+   * Compute ms to the next epoch.
+   */
+  function msToNextEpoch(): number {
+    const nextEpoch = chain.clock.currentEpoch + 1;
+    const secPerEpoch = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT;
+    const nextEpochStartSec = chain.genesisTime + nextEpoch * secPerEpoch;
+    return nextEpochStartSec * 1000 - Date.now();
+  }
+
   function currentEpochWithDisparity(): Epoch {
     return computeEpochAtSlot(getCurrentSlot(config, chain.genesisTime - MAX_API_CLOCK_DISPARITY_SEC));
+  }
+
+  /**
+   * This function is called 1s before next epoch, usually at that time PrepareNextSlotScheduler finishes
+   * so we should have checkpoint state, otherwise wait for up to `timeoutMs`.
+   */
+  async function waitForCheckpointState(
+    cpHex: CheckpointHex,
+    timeoutMs: number
+  ): Promise<CachedBeaconStateAllForks | null> {
+    const cpState = chain.regen.getCheckpointStateSync(cpHex);
+    if (cpState) {
+      return cpState;
+    }
+    const cp = {
+      epoch: cpHex.epoch,
+      root: fromHexString(cpHex.rootHex),
+    };
+    // if not, wait for ChainEvent.checkpoint event until timeoutMs
+    return new Promise<CachedBeaconStateAllForks | null>((resolve) => {
+      const timer = setTimeout(() => resolve(null), timeoutMs);
+      chain.emitter.on(ChainEvent.checkpoint, (eventCp, cpState) => {
+        if (ssz.phase0.Checkpoint.equals(eventCp, cp)) {
+          clearTimeout(timer);
+          resolve(cpState);
+        }
+      });
+    });
   }
 
   /**
@@ -374,6 +413,11 @@ export function getValidatorApi({
 
       const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
       if (!contribution) throw new ApiError(500, "No contribution available");
+
+      metrics?.production.producedSyncContributionParticipants.observe(
+        contribution.aggregationBits.getTrueBitIndexes().length
+      );
+
       return {data: contribution};
     },
 
@@ -382,15 +426,32 @@ export function getValidatorApi({
 
       // Early check that epoch is within [current_epoch, current_epoch + 1], or allow for pre-genesis
       const currentEpoch = currentEpochWithDisparity();
-      if (currentEpoch >= 0 && epoch !== currentEpoch && epoch !== currentEpoch + 1) {
-        throw Error(`Requested epoch ${epoch} must equal current ${currentEpoch} or next epoch ${currentEpoch + 1}`);
+      const nextEpoch = currentEpoch + 1;
+      if (currentEpoch >= 0 && epoch !== currentEpoch && epoch !== nextEpoch) {
+        throw Error(`Requested epoch ${epoch} must equal current ${currentEpoch} or next epoch ${nextEpoch}`);
       }
 
-      // May request for an epoch that's in the future, for getBeaconProposersNextEpoch()
-      await waitForNextClosestEpoch();
-
       const head = chain.forkChoice.getHead();
-      const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+      let state: CachedBeaconStateAllForks | undefined = undefined;
+      const slotMs = config.SECONDS_PER_SLOT * 1000;
+      const prepareNextSlotLookAheadMs = slotMs / SCHEDULER_LOOKAHEAD_FACTOR;
+      const toNextEpochMs = msToNextEpoch();
+      // validators may request next epoch's duties when it's close to next epoch
+      // this is to avoid missed block proposal due to 0 epoch look ahead
+      if (epoch === nextEpoch && toNextEpochMs < prepareNextSlotLookAheadMs) {
+        // wait for maximum 1 slot for cp state which is the timeout of validator api
+        const cpState = await waitForCheckpointState({rootHex: head.blockRoot, epoch}, slotMs);
+        if (cpState) {
+          state = cpState;
+          metrics?.duties.requestNextEpochProposalDutiesHit.inc();
+        } else {
+          metrics?.duties.requestNextEpochProposalDutiesMiss.inc();
+        }
+      }
+
+      if (!state) {
+        state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+      }
 
       const stateEpoch = state.epochCtx.epoch;
       let indexes: ValidatorIndex[] = [];
@@ -538,8 +599,11 @@ export function getValidatorApi({
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
+      const aggregate = chain.attestationPool.getAggregate(slot, attestationDataRoot);
+      metrics?.production.producedAggregateParticipants.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
+
       return {
-        data: chain.attestationPool.getAggregate(slot, attestationDataRoot),
+        data: aggregate,
       };
     },
 
@@ -548,18 +612,14 @@ export function getValidatorApi({
 
       const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
+      const fork = chain.config.getForkName(chain.clock.currentSlot);
 
       await Promise.all(
         signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
           try {
             // TODO: Validate in batch
             // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-            const validateFn = () =>
-              validateGossipAggregateAndProof(
-                chain,
-                signedAggregateAndProof,
-                true // skip known attesters check
-              );
+            const validateFn = () => validateApiAggregateAndProof(fork, chain, signedAggregateAndProof);
             const {slot, beaconBlockRoot} = signedAggregateAndProof.message.aggregate.data;
             // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
