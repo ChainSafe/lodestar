@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import {ErrorAborted} from "@lodestar/utils";
+import {FetchError} from "@lodestar/api";
 import {ExecutePayloadStatus, ExecutionEngineState} from "../../../../src/execution/index.js";
 import {
   HTTP_CONNECTION_ERROR_CODES,
@@ -130,34 +131,38 @@ describe("execution/engine/utils", () => {
           [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
         ],
       ],
-      ...HTTP_FATAL_ERROR_CODES.map(
-        (code) =>
+      ...HTTP_FATAL_ERROR_CODES.map((code) => {
+        const error = new FetchError("http://localhost:1234", new TypeError("error"));
+        error.code = code;
+
+        return [
+          `http error with code '${code}'`,
+          error,
           [
-            `http error with code '${code}'`,
-            {code: code, errno: "error"} as unknown as Error,
-            [
-              [ExecutionEngineState.ONLINE, ExecutionEngineState.OFFLINE],
-              [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.OFFLINE],
-              [ExecutionEngineState.OFFLINE, ExecutionEngineState.OFFLINE],
-              [ExecutionEngineState.SYNCED, ExecutionEngineState.OFFLINE],
-              [ExecutionEngineState.SYNCING, ExecutionEngineState.OFFLINE],
-            ],
-          ] as ErrorTestCase
-      ),
-      ...HTTP_CONNECTION_ERROR_CODES.map(
-        (code) =>
+            [ExecutionEngineState.ONLINE, ExecutionEngineState.OFFLINE],
+            [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.OFFLINE],
+            [ExecutionEngineState.OFFLINE, ExecutionEngineState.OFFLINE],
+            [ExecutionEngineState.SYNCED, ExecutionEngineState.OFFLINE],
+            [ExecutionEngineState.SYNCING, ExecutionEngineState.OFFLINE],
+          ],
+        ] as ErrorTestCase;
+      }),
+      ...HTTP_CONNECTION_ERROR_CODES.map((code) => {
+        const error = new FetchError("http://localhost:1234", new TypeError("error"));
+        error.code = code;
+
+        return [
+          `http error with code '${code}'`,
+          error,
           [
-            `http error with code '${code}'`,
-            {code: code, errno: "error"} as unknown as Error,
-            [
-              [ExecutionEngineState.ONLINE, ExecutionEngineState.AUTH_FAILED],
-              [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.AUTH_FAILED],
-              [ExecutionEngineState.OFFLINE, ExecutionEngineState.AUTH_FAILED],
-              [ExecutionEngineState.SYNCED, ExecutionEngineState.AUTH_FAILED],
-              [ExecutionEngineState.SYNCING, ExecutionEngineState.AUTH_FAILED],
-            ],
-          ] as ErrorTestCase
-      ),
+            [ExecutionEngineState.ONLINE, ExecutionEngineState.AUTH_FAILED],
+            [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.AUTH_FAILED],
+            [ExecutionEngineState.OFFLINE, ExecutionEngineState.AUTH_FAILED],
+            [ExecutionEngineState.SYNCED, ExecutionEngineState.AUTH_FAILED],
+            [ExecutionEngineState.SYNCING, ExecutionEngineState.AUTH_FAILED],
+          ],
+        ] as ErrorTestCase;
+      }),
       [
         "unknown error",
         new Error("unknown error"),
