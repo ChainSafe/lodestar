@@ -78,6 +78,8 @@ export async function isValidStorageKeys({
         sp.proof.map(hexToBuffer)
       );
 
+      // buffer.equals is not compatible with Uint8Array for browser
+      // so we need to convert the output of RLP.encode to Buffer first
       const isStorageValid =
         (!expectedStorageRLP && sp.value === "0x0") ||
         (!!expectedStorageRLP && expectedStorageRLP.equals(Buffer.from(RLP.encode(sp.value))));
