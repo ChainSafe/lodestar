@@ -98,12 +98,12 @@ export function lintGrafanaDashboard(json) {
   // Always add Prometheus to __inputs
   const inputs = [
     {
-      name: variableNameDatasource,
-      type: "datasource",
-      label: "Prometheus",
       description: "",
+      label: "Prometheus",
+      name: variableNameDatasource,
       pluginId: "prometheus",
       pluginName: "Prometheus",
+      type: "datasource",
     },
   ];
 
@@ -112,19 +112,19 @@ export function lintGrafanaDashboard(json) {
     for (const item of json.templating.list) {
       if (item.query === "${VAR_BEACON_JOB}") {
         inputs.push({
+          description: "",
+          label: "Beacon node job name",
           name: "VAR_BEACON_JOB",
           type: "constant",
-          label: "Beacon node job name",
           value: "beacon",
-          description: "",
         });
       } else if (item.query === "${VAR_VALIDATOR_JOB}") {
         inputs.push({
+          description: "",
+          label: "Validator client job name",
           name: "VAR_VALIDATOR_JOB",
           type: "constant",
-          label: "Validator client job name",
           value: "validator",
-          description: "",
         });
       }
     }
