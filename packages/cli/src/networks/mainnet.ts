@@ -2,9 +2,9 @@ export {mainnetChainConfig as chainConfig} from "@lodestar/config/networks";
 
 export const depositContractDeployBlock = 11052984;
 export const genesisFileUrl =
-  "https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/mainnet/genesis.ssz";
+  "https://raw.githubusercontent.com/eth-clients/eth2-networks/f94c4d9499e55bec0fd21d31203350080633c60a/shared/mainnet/genesis.ssz";
 export const bootnodesFileUrl =
-  "https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/mainnet/bootstrap_nodes.txt";
+  "https://raw.githubusercontent.com/eth-clients/eth2-networks/f94c4d9499e55bec0fd21d31203350080633c60a/shared/mainnet/bootstrap_nodes.txt";
 
 export const bootEnrs = [
   // # Teku team's bootnodes",

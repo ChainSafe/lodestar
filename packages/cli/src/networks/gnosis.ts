@@ -2,8 +2,10 @@ export {gnosisChainConfig as chainConfig} from "@lodestar/config/networks";
 
 // eth1.providerUrls suggestion: https://rpc.gnosischain.com
 export const depositContractDeployBlock = 19469077;
-export const genesisFileUrl = "https://raw.githubusercontent.com/gnosischain/configs/main/mainnet/genesis.ssz";
-export const bootnodesFileUrl = "https://raw.githubusercontent.com/gnosischain/configs/main/mainnet/bootnodes.yaml";
+export const genesisFileUrl =
+  "https://raw.githubusercontent.com/gnosischain/configs/b90374a1c63703db8235fcdb65aff2e909bc42b5/mainnet/genesis.ssz";
+export const bootnodesFileUrl =
+  "https://raw.githubusercontent.com/gnosischain/configs/b90374a1c63703db8235fcdb65aff2e909bc42b5/mainnet/bootnodes.yaml";
 
 export const bootEnrs = [
   "enr:-Ly4QMU1y81COwm1VZgxGF4_eZ21ub9-GHF6dXZ29aEJ0oZpcV2Rysw-viaEKfpcpu9ZarILJLxFZjcKOjE0Sybs3MQBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpCCS-QxAgAAZP__________gmlkgnY0gmlwhANLnx-Jc2VjcDI1NmsxoQKoaYT8I-wf2I_f_ii6EgoSSXj5T3bhiDyW-7ZLsY3T64hzeW5jbmV0cwCDdGNwgiMog3VkcIIjKA",
