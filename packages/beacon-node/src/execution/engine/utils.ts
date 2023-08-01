@@ -53,6 +53,7 @@ function getExecutionEngineStateForPayloadStatus(payloadStatus: ExecutePayloadSt
 
     default:
       // In case we can't determine the state, we assume it stays in old state
+      // This assumption is better than considering offline, because the offline state may trigger some notifications
       return ExecutionEngineState.ONLINE;
   }
 }

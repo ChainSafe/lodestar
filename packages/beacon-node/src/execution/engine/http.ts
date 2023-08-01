@@ -131,8 +131,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     } catch (err) {
       this.updateEngineState(getExecutionEngineState({payloadError: err, oldState: this.state}));
 
-      // TODO: This is case where we can't determine the nature of error.
-      // We should throw only for such cases not for the which we knew the status
+      /*
+       * TODO: For some error cases as abort, we may not want to escalate the error to the caller
+       * But for now the higher level code handles such cases so we can just rethrow the error
+       */
       throw err;
     }
   }
