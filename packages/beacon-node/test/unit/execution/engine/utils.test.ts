@@ -10,7 +10,7 @@ import {
 import {QueueError, QueueErrorCode} from "../../../../src/util/queue/errors.js";
 import {ErrorJsonRpcResponse, HttpRpcError} from "../../../../src/eth1/provider/jsonRpcHttpClient.js";
 
-describe("execution/engine/utils", () => {
+describe("execution / engine / utils", () => {
   describe("getExecutionEngineState", () => {
     const testCasesPayload: Record<
       ExecutePayloadStatus,
@@ -81,11 +81,7 @@ describe("execution/engine/utils", () => {
       ],
     };
 
-    type ErrorTestCase = [
-      string,
-      Error,
-      [oldState: ExecutionEngineState, newState: ExecutionEngineState | undefined][],
-    ];
+    type ErrorTestCase = [string, Error, [oldState: ExecutionEngineState, newState: ExecutionEngineState][]];
     const testCasesError: ErrorTestCase[] = [
       [
         "abort error",
@@ -167,11 +163,11 @@ describe("execution/engine/utils", () => {
         "unknown error",
         new Error("unknown error"),
         [
-          [ExecutionEngineState.ONLINE, undefined],
-          [ExecutionEngineState.AUTH_FAILED, undefined],
-          [ExecutionEngineState.OFFLINE, undefined],
-          [ExecutionEngineState.SYNCED, undefined],
-          [ExecutionEngineState.SYNCING, undefined],
+          [ExecutionEngineState.ONLINE, ExecutionEngineState.ONLINE],
+          [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.AUTH_FAILED],
+          [ExecutionEngineState.OFFLINE, ExecutionEngineState.OFFLINE],
+          [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCED],
+          [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
         ],
       ],
     ];

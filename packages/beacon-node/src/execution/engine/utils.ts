@@ -51,9 +51,8 @@ function getExecutionEngineStateForPayloadStatus(payloadStatus: ExecutePayloadSt
     case ExecutePayloadStatus.UNAVAILABLE:
       return ExecutionEngineState.OFFLINE;
 
-    // In case we can't determine the state, we assume it's online
-    // This assumption is better than considering offline, because the offline state may trigger some notifications
     default:
+      // In case we can't determine the state, we assume it stays in old state
       return ExecutionEngineState.ONLINE;
   }
 }
@@ -61,7 +60,7 @@ function getExecutionEngineStateForPayloadStatus(payloadStatus: ExecutePayloadSt
 function getExecutionEngineStateForPayloadError(
   payloadError: unknown,
   oldState: ExecutionEngineState
-): ExecutionEngineState | undefined {
+): ExecutionEngineState {
   if (isErrorAborted(payloadError) || isQueueErrorAborted(payloadError)) {
     return oldState;
   }
@@ -79,35 +78,30 @@ function getExecutionEngineStateForPayloadError(
     return ExecutionEngineState.AUTH_FAILED;
   }
 
-  return undefined;
+  return oldState;
 }
 
-export function getExecutionEngineState<
-  S extends ExecutePayloadStatus | undefined,
-  E extends unknown | undefined,
-  R = S extends undefined ? ExecutionEngineState | undefined : ExecutionEngineState,
->({
+export function getExecutionEngineState<S extends ExecutePayloadStatus | undefined, E extends unknown | undefined>({
   payloadError,
   payloadStatus,
   oldState,
 }:
   | {payloadStatus: S; payloadError?: never; oldState: ExecutionEngineState}
-  | {payloadStatus?: never; payloadError: E; oldState: ExecutionEngineState}): R {
+  | {payloadStatus?: never; payloadError: E; oldState: ExecutionEngineState}): ExecutionEngineState {
   const newState =
     payloadStatus === undefined
       ? getExecutionEngineStateForPayloadError(payloadError, oldState)
       : getExecutionEngineStateForPayloadStatus(payloadStatus);
 
-  // The `payloadError` is something based on which we can't determine the state of execution engine
-  if (newState === undefined) return undefined as R;
+  if (newState === oldState) return oldState;
 
   // The ONLINE is initial state and can reached from offline or auth failed error
   if (
     newState === ExecutionEngineState.ONLINE &&
     !(oldState === ExecutionEngineState.OFFLINE || oldState === ExecutionEngineState.AUTH_FAILED)
   ) {
-    return oldState as R;
+    return oldState;
   }
 
-  return newState as R;
+  return newState;
 }

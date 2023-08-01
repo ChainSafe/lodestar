@@ -129,10 +129,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       this.updateEngineState(ExecutionEngineState.ONLINE);
       return res;
     } catch (err) {
-      const newState = getExecutionEngineState({payloadError: err, oldState: this.state});
-      if (newState !== undefined) {
-        this.updateEngineState(newState);
-      }
+      this.updateEngineState(getExecutionEngineState({payloadError: err, oldState: this.state}));
 
       // TODO: This is case where we can't determine the nature of error.
       // We should throw only for such cases not for the which we knew the status
