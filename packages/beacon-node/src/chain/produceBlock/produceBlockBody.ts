@@ -49,6 +49,7 @@ export type BlockAttributes = {
   randaoReveal: BLSSignature;
   graffiti: Bytes32;
   slot: Slot;
+  feeRecipient?: string;
 };
 
 export enum BlockType {
@@ -80,6 +81,7 @@ export async function produceBlockBody<T extends BlockType>(
     randaoReveal,
     graffiti,
     slot: blockSlot,
+    feeRecipient: requestedFeeRecipient,
     parentSlot,
     parentBlockRoot,
     proposerIndex,
@@ -142,7 +144,7 @@ export async function produceBlockBody<T extends BlockType>(
   if (isForkExecution(fork)) {
     const safeBlockHash = this.forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-    const feeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
+    const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
 
     if (blockType === BlockType.Blinded) {
       if (!this.executionBuilder) throw Error("Execution Builder not available");

@@ -468,7 +468,7 @@ export class BeaconChain implements IBeaconChain {
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
-    {randaoReveal, graffiti, slot}: BlockAttributes
+    {randaoReveal, graffiti, slot, feeRecipient}: BlockAttributes
   ): Promise<{block: AssembledBlockType<T>; blockValue: Wei}> {
     const head = this.forkChoice.getHead();
     const state = await this.regen.getBlockSlotState(
@@ -485,6 +485,7 @@ export class BeaconChain implements IBeaconChain {
       randaoReveal,
       graffiti,
       slot,
+      feeRecipient,
       parentSlot: slot - 1,
       parentBlockRoot,
       proposerIndex,
