@@ -9,18 +9,18 @@
       "type": "datasource"
     },
     {
+      "description": "",
+      "label": "Beacon node job name",
       "name": "VAR_BEACON_JOB",
       "type": "constant",
-      "label": "Beacon node job name",
-      "value": "beacon",
-      "description": ""
+      "value": "beacon"
     },
     {
+      "description": "",
+      "label": "Validator client job name",
       "name": "VAR_VALIDATOR_JOB",
       "type": "constant",
-      "label": "Validator client job name",
-      "value": "validator",
-      "description": ""
+      "value": "validator"
     }
   ],
   "annotations": {
