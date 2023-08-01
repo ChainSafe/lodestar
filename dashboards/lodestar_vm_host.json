@@ -41,7 +41,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 35,
+  "id": null,
   "links": [
     {
       "asDropdown": true,
@@ -115,19 +115,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "decbytes"
         },
         "overrides": []
@@ -270,19 +257,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "decbytes"
         },
         "overrides": []
@@ -329,7 +303,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "nodejs_external_memory_bytes{job=\"beacon\"} + network_worker_nodejs_external_memory_bytes{job=\"beacon\"} + discv5_worker_nodejs_external_memory_bytes{job=\"beacon\"}",
+          "expr": "nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + network_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + discv5_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "external_memory",
@@ -427,7 +401,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "nodejs_heap_space_size_used_bytes{job=\"beacon\"}",
+          "expr": "nodejs_heap_space_size_used_bytes{job=~\"$beacon_job|beacon\"}",
           "interval": "",
           "legendFormat": "{{space}}",
           "range": true,
@@ -440,7 +414,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "nodejs_external_memory_bytes{job=\"beacon\"}",
+          "expr": "nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "external_memory",
@@ -544,7 +518,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(nodejs_gc_pause_seconds_total{job=\"beacon\"}[$rate_interval])",
+          "expr": "rate(nodejs_gc_pause_seconds_total{job=~\"$beacon_job|beacon\"}[$rate_interval])",
           "hide": false,
           "legendFormat": "{{gctype}}",
           "range": true,
@@ -556,7 +530,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(nodejs_gc_reclaimed_bytes_total{job=\"beacon\"}[$rate_interval])",
+          "expr": "rate(nodejs_gc_reclaimed_bytes_total{job=~\"$beacon_job|beacon\"}[$rate_interval])",
           "format": "time_series",
           "hide": false,
           "legendFormat": "{{gctype}}",
@@ -609,19 +583,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "decbytes"
         },
         "overrides": []
@@ -719,15 +680,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": [
@@ -845,19 +797,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "decbytes"
         },
         "overrides": []
@@ -955,15 +894,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": [
@@ -1081,19 +1011,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "decbytes"
         },
         "overrides": []
@@ -1126,7 +1043,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "nodejs_heap_space_size_used_bytes{job=\"validator\"}",
+          "expr": "nodejs_heap_space_size_used_bytes{job=~\"$validator_job|validator\"}",
           "interval": "",
           "legendFormat": "{{space}}",
           "range": true,
@@ -1139,7 +1056,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "nodejs_external_memory_bytes{job=\"validator\"}",
+          "expr": "nodejs_external_memory_bytes{job=~\"$validator_job|validator\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "external_memory",
@@ -1191,15 +1108,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": [
@@ -1252,7 +1160,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(nodejs_gc_pause_seconds_total{job=\"validator\"}[$rate_interval])",
+          "expr": "rate(nodejs_gc_pause_seconds_total{job=~\"$validator_job|validator\"}[$rate_interval])",
           "hide": false,
           "legendFormat": "{{gctype}}",
           "range": true,
@@ -1264,7 +1172,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(nodejs_gc_reclaimed_bytes_total{job=\"validator\"}[$rate_interval])",
+          "expr": "rate(nodejs_gc_reclaimed_bytes_total{job=~\"$validator_job|validator\"}[$rate_interval])",
           "format": "time_series",
           "hide": false,
           "legendFormat": "{{gctype}}",
@@ -1521,7 +1429,6 @@
             }
           },
           "mappings": [],
-
           "unit": "short"
         },
         "overrides": []
@@ -1631,7 +1538,6 @@
             }
           },
           "mappings": [],
-
           "unit": "s"
         },
         "overrides": [
@@ -1836,7 +1742,6 @@
             }
           },
           "mappings": [],
-
           "unit": "s"
         },
         "overrides": [
@@ -1987,7 +1892,6 @@
             }
           },
           "mappings": [],
-
           "unit": "short"
         },
         "overrides": []
@@ -2097,7 +2001,6 @@
           ],
           "max": 3,
           "min": 0,
-
           "unit": "none"
         },
         "overrides": []
@@ -2183,7 +2086,6 @@
             }
           },
           "mappings": [],
-
           "unit": "short"
         },
         "overrides": []
@@ -2334,7 +2236,6 @@
             }
           },
           "mappings": [],
-
           "unit": "percentunit"
         },
         "overrides": []
@@ -2416,7 +2317,6 @@
             }
           },
           "mappings": [],
-
           "unit": "percentunit"
         },
         "overrides": []
@@ -2497,7 +2397,6 @@
             }
           },
           "mappings": [],
-
           "unit": "Bps"
         },
         "overrides": []
@@ -2593,7 +2492,6 @@
           "links": [],
           "mappings": [],
           "min": 0,
-
           "unit": "bytes"
         },
         "overrides": [
@@ -3105,7 +3003,6 @@
             }
           },
           "mappings": [],
-
           "unit": "Bps"
         },
         "overrides": []
@@ -3198,7 +3095,6 @@
             }
           },
           "mappings": [],
-
           "unit": "percentunit"
         },
         "overrides": [
@@ -3308,7 +3204,6 @@
             }
           },
           "mappings": [],
-
           "unit": "cps"
         },
         "overrides": []
@@ -3428,7 +3323,6 @@
             }
           },
           "mappings": [],
-
           "unit": "s"
         },
         "overrides": []
@@ -3540,7 +3434,6 @@
           ],
           "max": 1,
           "min": 0,
-
           "unit": "none"
         },
         "overrides": [
@@ -3666,7 +3559,6 @@
             }
           },
           "mappings": [],
-
           "unit": "s"
         },
         "overrides": []
@@ -3751,7 +3643,6 @@
             }
           },
           "mappings": [],
-
           "unit": "s"
         },
         "overrides": [
@@ -3922,7 +3813,6 @@
             }
           },
           "mappings": [],
-
           "unit": "s"
         },
         "overrides": []
@@ -4006,7 +3896,6 @@
             }
           },
           "mappings": [],
-
           "unit": "none"
         },
         "overrides": []
@@ -4088,7 +3977,6 @@
             }
           },
           "mappings": [],
-
           "unit": "Bps"
         },
         "overrides": []
@@ -4445,7 +4333,6 @@
             }
           },
           "mappings": [],
-
           "unit": "short"
         },
         "overrides": []
@@ -4530,7 +4417,6 @@
             }
           },
           "mappings": [],
-
           "unit": "short"
         },
         "overrides": []
@@ -4615,7 +4501,6 @@
             }
           },
           "mappings": [],
-
           "unit": "short"
         },
         "overrides": []
@@ -4700,7 +4585,6 @@
             }
           },
           "mappings": [],
-
           "unit": "short"
         },
         "overrides": []
@@ -4783,7 +4667,6 @@
             }
           },
           "mappings": [],
-
           "unit": "bytes"
         },
         "overrides": [
@@ -4889,7 +4772,6 @@
             }
           },
           "mappings": [],
-
           "unit": "bytes"
         },
         "overrides": [
@@ -4996,7 +4878,6 @@
             }
           },
           "mappings": [],
-
           "unit": "s"
         },
         "overrides": []
@@ -5167,7 +5048,7 @@
             "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "feat1-lg1k-hzax41"
+            "value": "unstable-lg1k-hzax41"
           }
         ],
         "hide": 0,
