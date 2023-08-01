@@ -342,7 +342,7 @@ export function getNetworkCoreWorkerMetrics(register: RegistryMetricCreator) {
       name: "lodestar_network_worker_reqresp_bridge_caller_pending_count",
       help: "Current count of pending elements in respBridgeCaller",
     }),
-    networkWorkerWireEventsOnWorkerThreadLatency: register.histogram<"eventName">({
+    networkWorkerWireEventsOnWorkerThreadLatencySec: register.histogram<"eventName">({
       name: "lodestar_network_worker_wire_events_on_worker_thread_latency_seconds",
       help: "Latency in seconds to transmit network events to worker thread across parent port",
       labelNames: ["eventName"],
