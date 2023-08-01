@@ -990,50 +990,61 @@
       "type": "timeseries"
     },
     {
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 2
+      },
+      "id": 609,
+      "type": "timeseries",
+      "title": "Network Worker Message  Latency - Worker to Main",
+      "pluginVersion": "7.4.5",
       "description": "Async time to send a message across the worker/parent port",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
           "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
             "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "barAlignment": 0,
+            "lineWidth": 1,
             "fillOpacity": 23,
             "gradientMode": "opacity",
-            "hideFrom": {
-              "graph": false,
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "log": 2,
-              "type": "log"
-            },
-            "showPoints": "never",
             "spanNulls": false,
+            "showPoints": "never",
+            "pointSize": 5,
             "stacking": {
-              "group": "A",
-              "mode": "none"
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "axisColorMode": "text",
+            "scaleDistribution": {
+              "type": "log",
+              "log": 2
+            },
+            "axisCenteredZero": false,
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false,
+              "graph": false
             },
             "thresholdsStyle": {
               "mode": "off"
             }
+          },
+          "color": {
+            "mode": "palette-classic"
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1045,27 +1056,19 @@
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
-        "y": 2
-      },
-      "id": 609,
       "options": {
-        "graph": {},
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
         "tooltip": {
           "mode": "multi",
           "sort": "none"
-        }
+        },
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "graph": {}
       },
-      "pluginVersion": "7.4.5",
       "targets": [
         {
           "datasource": {
@@ -1073,10 +1076,13 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(lodestar_network_worker_wire_events_on_worker_thread_latency_sum[6m])/rate(lodestar_network_worker_wire_events_on_worker_thread_latency_count[6m])",
+          "expr": "avg(rate(lodestar_network_worker_wire_events_on_main_thread_latency_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_main_thread_latency_count[$rate_interval]))",
+          "hide": true,
           "interval": "",
-          "legendFormat": "{{eventDirection}}",
-          "refId": "to worker thread"
+          "legendFormat": "Average to Main",
+          "refId": "average",
+          "editorMode": "code",
+          "range": true
         },
         {
           "datasource": {
@@ -1084,15 +1090,30 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(lodestar_network_worker_wire_events_on_main_thread_latency_sum[6m])/rate(lodestar_network_worker_wire_events_on_main_thread_latency_count[6m])",
-          "hide": false,
+          "expr": "rate(lodestar_network_worker_wire_events_on_main_thread_latency_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_main_thread_latency_count[$rate_interval])",
           "interval": "",
-          "legendFormat": "{{eventDirection}}",
-          "refId": "to main thread"
+          "legendFormat": "{{eventName}}",
+          "refId": "by eventName",
+          "editorMode": "code",
+          "range": true
+        },
+        {
+          "datasource": {
+            "uid": "prometheus_local",
+            "type": "prometheus"
+          },
+          "refId": "A",
+          "hide": false,
+          "editorMode": "code",
+          "expr": "rate(lodestar_network_worker_wire_events_on_worker_thread_latency_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_worker_thread_latency_count[$rate_interval])",
+          "legendFormat": "{{eventName}}",
+          "range": true
         }
       ],
-      "title": "Network worker - to/from worker port latency",
-      "type": "timeseries"
+      "datasource": {
+        "uid": "prometheus_local",
+        "type": "prometheus"
+      }
     },
     {
       "datasource": {
