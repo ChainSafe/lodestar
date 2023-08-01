@@ -66,18 +66,29 @@ export function getNodeApi(
       return {data: sync.getSyncStatus()};
     },
 
-    async getHealth(_req, res) {
+    async getHealth(options) {
+      const syncingStatus = options?.syncingStatus;
+
+      if (syncingStatus != null && (syncingStatus < 100 || syncingStatus > 599)) {
+        throw new ApiError(400, `Invalid syncing status code: ${syncingStatus}`);
+      }
+
+      let healthStatus: number;
+
       if (sync.getSyncStatus().isSyncing) {
         // 206: Node is syncing but can serve incomplete data
-        res?.code(routes.node.NodeHealth.SYNCING);
+        healthStatus = syncingStatus ?? routes.node.NodeHealth.SYNCING;
       } else {
         // 200: Node is ready
-        res?.code(routes.node.NodeHealth.READY);
+        healthStatus = routes.node.NodeHealth.READY;
       }
       // else {
       //   503: Node not initialized or having issues
       //   NOTE: Lodestar does not start its API until fully initialized, so this status can never be served
       // }
+
+      // Health status is returned to allow route handler to set it as HTTP status code
+      return healthStatus as unknown as void;
     },
   };
 }
