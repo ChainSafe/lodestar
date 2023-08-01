@@ -41,7 +41,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 35,
+  "id": null,
   "links": [
     {
       "asDropdown": true,
@@ -527,7 +527,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(nodejs_gc_pause_seconds_total{job=\"beacon\"}[$rate_interval])",
+          "expr": "rate(nodejs_gc_pause_seconds_total{job=~\"$beacon_job|beacon\"}[$rate_interval])",
           "hide": false,
           "legendFormat": "{{gctype}}",
           "range": true,
@@ -539,7 +539,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(nodejs_gc_reclaimed_bytes_total{job=\"beacon\"}[$rate_interval])",
+          "expr": "rate(nodejs_gc_reclaimed_bytes_total{job=~\"$beacon_job|beacon\"}[$rate_interval])",
           "format": "time_series",
           "hide": false,
           "legendFormat": "{{gctype}}",
@@ -592,19 +592,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "decbytes"
         },
         "overrides": []
@@ -702,15 +689,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": [
@@ -828,19 +806,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "decbytes"
         },
         "overrides": []
@@ -938,15 +903,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": [
@@ -1064,19 +1020,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "decbytes"
         },
         "overrides": []
@@ -1109,7 +1052,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "nodejs_heap_space_size_used_bytes{job=\"validator\"}",
+          "expr": "nodejs_heap_space_size_used_bytes{job=~\"$validator_job|validator\"}",
           "interval": "",
           "legendFormat": "{{space}}",
           "range": true,
@@ -1122,7 +1065,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "nodejs_external_memory_bytes{job=\"validator\"}",
+          "expr": "nodejs_external_memory_bytes{job=~\"$validator_job|validator\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "external_memory",
@@ -1174,15 +1117,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": [
@@ -1235,7 +1169,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(nodejs_gc_pause_seconds_total{job=\"validator\"}[$rate_interval])",
+          "expr": "rate(nodejs_gc_pause_seconds_total{job=~\"$validator_job|validator\"}[$rate_interval])",
           "hide": false,
           "legendFormat": "{{gctype}}",
           "range": true,
@@ -1247,7 +1181,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(nodejs_gc_reclaimed_bytes_total{job=\"validator\"}[$rate_interval])",
+          "expr": "rate(nodejs_gc_reclaimed_bytes_total{job=~\"$validator_job|validator\"}[$rate_interval])",
           "format": "time_series",
           "hide": false,
           "legendFormat": "{{gctype}}",
@@ -2579,18 +2513,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": [
@@ -6202,7 +6124,7 @@
             "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "feat1-lg1k-hzax41"
+            "value": "unstable-lg1k-hzax41"
           }
         ],
         "hide": 0,
