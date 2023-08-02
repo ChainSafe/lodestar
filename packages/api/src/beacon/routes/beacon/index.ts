@@ -15,7 +15,7 @@ import * as state from "./state.js";
 export * as block from "./block.js";
 export * as pool from "./pool.js";
 export * as state from "./state.js";
-export {BlockId, BlockHeaderResponse} from "./block.js";
+export {BlockId, BlockHeaderResponse, BroadcastValidation} from "./block.js";
 export {AttestationFilters} from "./pool.js";
 // TODO: Review if re-exporting all these types is necessary
 export {
