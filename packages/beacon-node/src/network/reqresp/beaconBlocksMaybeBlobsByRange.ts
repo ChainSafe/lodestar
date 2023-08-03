@@ -5,7 +5,7 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 
 import {BlockInput, BlockSource, getBlockInput, blobSidecarsToBlobsSidecar} from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
-import {INetwork} from "../interface.js";
+import {INetwork, WithBytes} from "../interface.js";
 
 export async function beaconBlocksMaybeBlobsByRange(
   config: ChainForkConfig,
@@ -33,7 +33,7 @@ export async function beaconBlocksMaybeBlobsByRange(
   // Note: Assumes all blocks in the same epoch
   if (config.getForkSeq(startSlot) < ForkSeq.deneb) {
     const blocks = await network.sendBeaconBlocksByRange(peerId, request);
-    return blocks.map((block) => getBlockInput.preDeneb(config, block, BlockSource.byRange));
+    return blocks.map((block) => getBlockInput.preDeneb(config, block.data, BlockSource.byRange, block.bytes));
   }
 
   // Only request blobs if they are recent enough
@@ -55,7 +55,7 @@ export async function beaconBlocksMaybeBlobsByRange(
 // Assumes that the blobs are in the same sequence as blocks, doesn't require block to be sorted
 export function matchBlockWithBlobs(
   config: ChainForkConfig,
-  allBlocks: allForks.SignedBeaconBlock[],
+  allBlocks: WithBytes<allForks.SignedBeaconBlock>[],
   allBlobSidecars: deneb.BlobSidecar[],
   endSlot: Slot,
   blockSource: BlockSource
@@ -72,29 +72,30 @@ export function matchBlockWithBlobs(
   // Assuming that the blocks and blobs will come in same sorted order
   for (let i = 0; i < allBlocks.length; i++) {
     const block = allBlocks[i];
-    if (config.getForkSeq(block.message.slot) < ForkSeq.deneb) {
-      blockInputs.push(getBlockInput.preDeneb(config, block, blockSource));
+    if (config.getForkSeq(block.data.message.slot) < ForkSeq.deneb) {
+      blockInputs.push(getBlockInput.preDeneb(config, block.data, blockSource, block.bytes));
     } else {
       const blobSidecars: deneb.BlobSidecar[] = [];
 
       let blobSidecar: deneb.BlobSidecar;
-      while ((blobSidecar = allBlobSidecars[blobSideCarIndex])?.slot === block.message.slot) {
+      while ((blobSidecar = allBlobSidecars[blobSideCarIndex])?.slot === block.data.message.slot) {
         blobSidecars.push(blobSidecar);
-        lastMatchedSlot = block.message.slot;
+        lastMatchedSlot = block.data.message.slot;
         blobSideCarIndex++;
       }
 
       // Quick inspect how many blobSidecars was expected
-      const blobKzgCommitmentsLen = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
+      const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments.length;
       if (blobKzgCommitmentsLen !== blobSidecars.length) {
         throw Error(
-          `Missing blobSidecars for blockSlot=${block.message.slot} with blobKzgCommitmentsLen=${blobKzgCommitmentsLen} blobSidecars=${blobSidecars.length}`
+          `Missing blobSidecars for blockSlot=${block.data.message.slot} with blobKzgCommitmentsLen=${blobKzgCommitmentsLen} blobSidecars=${blobSidecars.length}`
         );
       }
 
       // TODO DENEB: cleanup blobSidecars to blobsSidecar conversion on migration of blockInput
-      const blobsSidecar = blobSidecarsToBlobsSidecar(config, block, blobSidecars);
-      blockInputs.push(getBlockInput.postDeneb(config, block, blockSource, blobsSidecar));
+      const blobsSidecar = blobSidecarsToBlobsSidecar(config, block.data, blobSidecars);
+      // TODO DENEB: instead of null, pass payload in bytes
+      blockInputs.push(getBlockInput.postDeneb(config, block.data, blockSource, blobsSidecar, null));
     }
   }
 

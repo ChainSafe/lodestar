@@ -4,10 +4,9 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Eth Consensus Spec v1.1.10](https://img.shields.io/badge/ETH%20consensus--spec-1.1.10-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.1.10)
 ![ES Version](https://img.shields.io/badge/ES-2020-yellow)
-![Node Version](https://img.shields.io/badge/node-18.x-green)
+![Node Version](https://img.shields.io/badge/node-20.x-green)
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
-
 
 Lodestar defines all constants and presets defined in the [Ethereum Consensus spec](https://github.com/ethereum/consensus-specs). This can be used in conjunction with other Lodestar libraries to interact with the Ethereum consensus.
 
@@ -53,7 +52,7 @@ import {GENESIS_SLOT} from "@lodestar/params";
 
 ### Presets
 
-Presets are "constants"-ish defined in the spec that can only be configured at build-time. These are meant to be treated as constants, and indeed are treated as constants by all downstream Lodestar libraries. The default preset is `mainnet`. The only other preset defined is `minimal`, used only in testing environments.
+Presets are defined in the spec as "constantish" and can only be configured at build-time. These are meant to be treated as constants, and indeed are treated as constants by all downstream Lodestar libraries. The default preset is `mainnet`. The only other preset defined is `minimal`, used only in testing environments.
 
 The active preset is exported under the `ACTIVE_PRESET` named export.
 
@@ -68,7 +67,7 @@ The preset may be set in one of two ways:
 
 Important Notes:
 
-- Interacting with and understanding the active preset is only necessary in very limited testing environments, eg: for ephemeral testnets
+- Interacting with and understanding the active preset is only necessary in very limited testing environments, like for ephemeral testnets
 - The `minimal` preset is NOT compatible with the `mainnet` preset.
 - using `setActivePreset` may be dangerous, and only should be run once before loading any other libraries. All downstream Lodestar libraries expect the active preset to never change.
 - Preset values can be overriden by executing `setActivePreset(presetName: PresetName, overrides?: Partial<BeaconPreset>)` and supplying values to override.

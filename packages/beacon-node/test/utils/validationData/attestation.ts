@@ -1,17 +1,18 @@
+import {BitArray, toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, computeSigningRoot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ProtoBlock, IForkChoice, ExecutionStatus} from "@lodestar/fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {phase0, Slot, ssz} from "@lodestar/types";
-import {BitArray, toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {BeaconConfig} from "@lodestar/config";
-import {IBeaconChain} from "../../../src/chain/index.js";
-import {IStateRegenerator} from "../../../src/chain/regen/index.js";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
+  // eslint-disable-next-line import/no-relative-packages
 } from "../../../../state-transition/test/perf/util.js";
+import {IBeaconChain} from "../../../src/chain/index.js";
+import {IStateRegenerator} from "../../../src/chain/regen/index.js";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants/index.js";
 import {SeenAttesters} from "../../../src/chain/seenCache/index.js";
 import {BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
 import {signCached} from "../cache.js";
@@ -53,7 +54,6 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
   // Add block to forkChoice
   const headBlock: ProtoBlock = {
     slot: attSlot,
-    proposerIndex: 0,
     blockRoot: toHexString(beaconBlockRoot),
     parentRoot: ZERO_HASH_HEX,
     stateRoot: ZERO_HASH_HEX,

@@ -1,7 +1,7 @@
 import {expect} from "chai";
+import {VectorCompositeType} from "@chainsafe/ssz";
 import {BeaconStateAllForks, beforeProcessEpoch} from "@lodestar/state-transition";
 import {getRewardsAndPenalties} from "@lodestar/state-transition/epoch";
-import {VectorCompositeType} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";

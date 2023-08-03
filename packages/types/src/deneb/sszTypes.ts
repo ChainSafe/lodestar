@@ -14,6 +14,7 @@ import {
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
+import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 
 const {
@@ -53,6 +54,7 @@ export const BlindedBlob = Bytes32;
 export const BlindedBlobs = new ListCompositeType(BlindedBlob, MAX_BLOBS_PER_BLOCK);
 export const VersionedHash = Bytes32;
 export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK);
+export const KZGProofs = new ListCompositeType(KZGProof, MAX_BLOBS_PER_BLOCK);
 
 // Constants
 
@@ -123,8 +125,8 @@ export const BeaconBlockAndBlobsSidecarByRootRequest = new ListCompositeType(Roo
 export const ExecutionPayload = new ContainerType(
   {
     ...capellaSsz.ExecutionPayload.fields,
-    dataGasUsed: UintBn64, // New in DENEB
-    excessDataGas: UintBn64, // New in DENEB
+    blobGasUsed: UintBn64, // New in DENEB
+    excessBlobGas: UintBn64, // New in DENEB
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
@@ -132,8 +134,8 @@ export const ExecutionPayload = new ContainerType(
 export const ExecutionPayloadHeader = new ContainerType(
   {
     ...capellaSsz.ExecutionPayloadHeader.fields,
-    dataGasUsed: UintBn64, // New in DENEB
-    excessDataGas: UintBn64, // New in DENEB
+    blobGasUsed: UintBn64, // New in DENEB
+    excessBlobGas: UintBn64, // New in DENEB
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
@@ -384,4 +386,21 @@ export const LightClientStore = new ContainerType(
     validUpdates: new ListCompositeType(LightClientUpdate, EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH),
   },
   {typeName: "LightClientStore", jsonCase: "eth2"}
+);
+
+// PayloadAttributes primarily for SSE event
+export const PayloadAttributes = new ContainerType(
+  {
+    ...capellaSsz.PayloadAttributes.fields,
+    parentBeaconBlockRoot: Root,
+  },
+  {typeName: "PayloadAttributes", jsonCase: "eth2"}
+);
+
+export const SSEPayloadAttributes = new ContainerType(
+  {
+    ...bellatrixSsz.SSEPayloadAttributesCommon.fields,
+    payloadAttributes: PayloadAttributes,
+  },
+  {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
 );

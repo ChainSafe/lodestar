@@ -1,4 +1,5 @@
 import http from "node:http";
+import {AddressInfo} from "node:net";
 import {Registry} from "prom-client";
 import {Logger} from "@lodestar/utils";
 import {wrapError} from "../../util/wrapError.js";
@@ -72,22 +73,27 @@ export async function getHttpMetricsServer(
 
   const activeSockets = new HttpActiveSocketsTracker(server, socketsMetrics);
 
-  const {port, address} = opts;
-  logger.info("Starting metrics HTTP server", {port, address: address ?? "127.0.0.1"});
-
   await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(port, address, resolve);
+    server.once("error", (err) => {
+      logger.error("Error starting metrics HTTP server", opts, err);
+      reject(err);
+    });
+    server.listen(opts.port, opts.address, () => {
+      const {port, address: host, family} = server.address() as AddressInfo;
+      const address = `http://${family === "IPv6" ? `[${host}]` : host}:${port}`;
+      logger.info("Started metrics HTTP server", {address});
+      resolve();
+    });
   });
 
   return {
     async close(): Promise<void> {
       // In NodeJS land calling close() only causes new connections to be rejected.
       // Existing connections can prevent .close() from resolving for potentially forever.
-      // In Lodestar case when the BeaconNode wants to close we will just abruptly terminate
-      // all existing connections for a fast shutdown.
+      // In Lodestar case when the BeaconNode wants to close we will attempt to gracefully
+      // close all existing connections but forcefully terminate after timeout for a fast shutdown.
       // Inspired by https://github.com/gajus/http-terminator/
-      activeSockets.destroyAll();
+      await activeSockets.terminate();
 
       await new Promise<void>((resolve, reject) => {
         server.close((err) => {
@@ -95,6 +101,8 @@ export async function getHttpMetricsServer(
           else resolve();
         });
       });
+
+      logger.debug("Metrics HTTP server closed");
     },
   };
 }

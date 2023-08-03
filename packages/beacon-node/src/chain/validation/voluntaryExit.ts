@@ -4,9 +4,25 @@ import {IBeaconChain} from "..";
 import {VoluntaryExitError, VoluntaryExitErrorCode, GossipAction} from "../errors/index.js";
 import {RegenCaller} from "../regen/index.js";
 
+export async function validateApiVoluntaryExit(
+  chain: IBeaconChain,
+  voluntaryExit: phase0.SignedVoluntaryExit
+): Promise<void> {
+  const prioritizeBls = true;
+  return validateVoluntaryExit(chain, voluntaryExit, prioritizeBls);
+}
+
 export async function validateGossipVoluntaryExit(
   chain: IBeaconChain,
   voluntaryExit: phase0.SignedVoluntaryExit
+): Promise<void> {
+  return validateVoluntaryExit(chain, voluntaryExit);
+}
+
+async function validateVoluntaryExit(
+  chain: IBeaconChain,
+  voluntaryExit: phase0.SignedVoluntaryExit,
+  prioritizeBls = false
 ): Promise<void> {
   // [IGNORE] The voluntary exit is the first valid voluntary exit received for the validator with index
   // signed_voluntary_exit.message.validator_index.
@@ -34,7 +50,7 @@ export async function validateGossipVoluntaryExit(
   }
 
   const signatureSet = getVoluntaryExitSignatureSet(state, voluntaryExit);
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
       code: VoluntaryExitErrorCode.INVALID_SIGNATURE,
     });

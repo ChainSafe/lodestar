@@ -1,16 +1,5 @@
-import {
-  allForks,
-  UintNum64,
-  Root,
-  phase0,
-  Slot,
-  RootHex,
-  Epoch,
-  ValidatorIndex,
-  deneb,
-  Wei,
-  WithOptionalBytes,
-} from "@lodestar/types";
+import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex, Epoch, ValidatorIndex, deneb, Wei} from "@lodestar/types";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -18,7 +7,6 @@ import {
   PubkeyIndexMap,
 } from "@lodestar/state-transition";
 import {BeaconConfig} from "@lodestar/config";
-import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/utils";
 
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
@@ -152,9 +140,9 @@ export interface IBeaconChain {
   produceBlindedBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BlindedBeaconBlock; blockValue: Wei}>;
 
   /** Process a block until complete */
-  processBlock(block: WithOptionalBytes<BlockInput>, opts?: ImportBlockOpts): Promise<void>;
+  processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(blocks: WithOptionalBytes<BlockInput>[], opts?: ImportBlockOpts): Promise<void>;
+  processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void>;
 
   getStatus(): phase0.Status;
 

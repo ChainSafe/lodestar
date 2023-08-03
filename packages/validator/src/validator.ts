@@ -1,9 +1,9 @@
+import {toHexString} from "@chainsafe/ssz";
 import {BLSPubkey, ssz} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
 import {Logger} from "@lodestar/utils";
 import {getClient, Api, routes, ApiError} from "@lodestar/api";
-import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Clock, IClock} from "./util/clock.js";
 import {waitForGenesis} from "./genesis.js";
@@ -34,7 +34,7 @@ export type ValidatorOptions = {
   afterBlockDelaySlotFraction?: number;
   scAfterBlockDelaySlotFraction?: number;
   disableAttestationGrouping?: boolean;
-  doppelgangerProtectionEnabled?: boolean;
+  doppelgangerProtection?: boolean;
   closed?: boolean;
   valProposerConfig?: ValidatorProposerConfig;
   distributed?: boolean;
@@ -67,7 +67,11 @@ export class Validator {
   private state: Status;
   private readonly controller: AbortController;
 
-  constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
+  constructor(
+    opts: ValidatorOptions,
+    readonly genesis: Genesis,
+    metrics: Metrics | null = null
+  ) {
     const {db, config: chainConfig, logger, slashingProtection, signers, valProposerConfig} = opts;
     const config = createBeaconConfig(chainConfig, genesis.genesisValidatorsRoot);
     this.controller = opts.abortController;
@@ -93,7 +97,7 @@ export class Validator {
     }
 
     const indicesService = new IndicesService(logger, api, metrics);
-    const doppelgangerService = opts.doppelgangerProtectionEnabled
+    const doppelgangerService = opts.doppelgangerProtection
       ? new DoppelgangerService(logger, clock, api, indicesService, opts.processShutdownCallback, metrics)
       : null;
 

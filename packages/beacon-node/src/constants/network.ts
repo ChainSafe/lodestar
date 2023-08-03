@@ -43,8 +43,8 @@ export const GOODBYE_KNOWN_CODES: Record<string, string> = {
   251: "Peer banned this node",
 };
 
-/** Until js-libp2p types its events */
+/** Until js-libp2p exports an enum for its events */
 export enum Libp2pEvent {
-  peerConnect = "peer:connect",
-  peerDisconnect = "peer:disconnect",
+  connectionOpen = "connection:open",
+  connectionClose = "connection:close",
 }

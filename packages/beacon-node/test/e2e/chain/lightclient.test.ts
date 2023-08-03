@@ -1,8 +1,8 @@
 import {expect} from "chai";
-import {ChainConfig} from "@lodestar/config";
-import {ssz, altair} from "@lodestar/types";
 import {JsonPath, toHexString, fromHexString} from "@chainsafe/ssz";
 import {computeDescriptor, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
+import {ChainConfig} from "@lodestar/config";
+import {ssz, altair} from "@lodestar/types";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Lightclient} from "@lodestar/light-client";

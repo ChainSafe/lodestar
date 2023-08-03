@@ -1,10 +1,10 @@
+import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 import {ssz, capella} from "@lodestar/types";
 import {
   MAX_EFFECTIVE_BALANCE,
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP,
 } from "@lodestar/params";
-import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 
 import {CachedBeaconStateCapella} from "../types.js";
 import {decreaseBalance, hasEth1WithdrawalCredential, isCapellaPayloadHeader} from "../util/index.js";

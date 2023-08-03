@@ -1,6 +1,6 @@
-import {altair, Root, Slot, ssz, allForks} from "@lodestar/types";
 import bls from "@chainsafe/bls/switchable";
 import type {PublicKey, Signature} from "@chainsafe/bls/types";
+import {altair, Root, Slot, ssz, allForks} from "@lodestar/types";
 import {
   FINALIZED_ROOT_INDEX,
   FINALIZED_ROOT_DEPTH,

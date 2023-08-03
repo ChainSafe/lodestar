@@ -1,8 +1,8 @@
+import {fromHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@lodestar/api";
 import {Logger} from "@lodestar/utils";
 import {Slot, Root, RootHex} from "@lodestar/types";
 import {GENESIS_SLOT} from "@lodestar/params";
-import {fromHexString} from "@chainsafe/ssz";
 import {ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
 
 const {EventType} = routes.events;

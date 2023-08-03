@@ -23,6 +23,7 @@ import {
   RandBetweenFn,
   ShuffleFn,
   GossipSubscriber,
+  SubnetsServiceTestOpts,
 } from "./interface.js";
 
 /**
@@ -78,18 +79,18 @@ export class AttnetsService implements IAttnetsService {
     private readonly metadata: MetadataController,
     private readonly logger: Logger,
     private readonly metrics: NetworkCoreMetrics | null,
-    private readonly opts?: SubnetsServiceOpts
+    private readonly opts: SubnetsServiceOpts & SubnetsServiceTestOpts
   ) {
     // if subscribeAllSubnets, we act like we have >= ATTESTATION_SUBNET_COUNT validators connecting to this node
     // so that we have enough subnet topic peers, see https://github.com/ChainSafe/lodestar/issues/4921
-    if (this.opts?.subscribeAllSubnets) {
+    if (this.opts.subscribeAllSubnets) {
       for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
         this.committeeSubnets.request({subnet, toSlot: Infinity});
       }
     }
 
-    this.randBetweenFn = this.opts?.randBetweenFn ?? randBetween;
-    this.shuffleFn = this.opts?.shuffleFn ?? shuffle;
+    this.randBetweenFn = this.opts.randBetweenFn ?? randBetween;
+    this.shuffleFn = this.opts.shuffleFn ?? shuffle;
     if (metrics) {
       metrics.attnetsService.subscriptionsRandom.addCollect(() => this.onScrapeLodestarMetrics(metrics));
     }
@@ -117,7 +118,6 @@ export class AttnetsService implements IAttnetsService {
   addCommitteeSubscriptions(subscriptions: CommitteeSubscription[]): void {
     const currentSlot = this.clock.currentSlot;
     let addedknownValidators = false;
-    const subnetsToSubscribe: RequestedSubnet[] = [];
 
     for (const {validatorIndex, subnet, slot, isAggregator} of subscriptions) {
       // Add known validator
@@ -128,21 +128,8 @@ export class AttnetsService implements IAttnetsService {
       this.committeeSubnets.request({subnet, toSlot: slot + 1});
       if (isAggregator) {
         // need exact slot here
-        subnetsToSubscribe.push({subnet, toSlot: slot});
         this.aggregatorSlotSubnet.getOrDefault(slot).add(subnet);
       }
-    }
-
-    // Trigger gossip subscription first, in batch
-    if (subnetsToSubscribe.length > 0) {
-      this.subscribeToSubnets(
-        subnetsToSubscribe.map((sub) => sub.subnet),
-        SubnetSource.committee
-      );
-    }
-    // Then, register the subscriptions
-    for (const subscription of subnetsToSubscribe) {
-      this.subscriptionsCommittee.request(subscription);
     }
 
     if (addedknownValidators) this.rebalanceRandomSubnets();
@@ -158,11 +145,6 @@ export class AttnetsService implements IAttnetsService {
     return this.aggregatorSlotSubnet.getOrDefault(slot).has(subnet);
   }
 
-  /** Returns the latest Slot subscription is active, null if no subscription */
-  activeUpToSlot(subnet: number): Slot | null {
-    return this.subscriptionsCommittee.activeUpToSlot(subnet);
-  }
-
   /** Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork  */
   subscribeSubnetsToNextFork(nextFork: ForkName): void {
     this.logger.info("Suscribing to random attnets to next fork", {nextFork});
@@ -175,7 +157,7 @@ export class AttnetsService implements IAttnetsService {
   unsubscribeSubnetsFromPrevFork(prevFork: ForkName): void {
     this.logger.info("Unsuscribing to random attnets from prev fork", {prevFork});
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-      if (!this.opts?.subscribeAllSubnets) {
+      if (!this.opts.subscribeAllSubnets) {
         this.gossip.unsubscribeTopic({type: gossipType, fork: prevFork, subnet});
       }
     }
@@ -183,16 +165,29 @@ export class AttnetsService implements IAttnetsService {
 
   /**
    * Run per slot.
+   * - Subscribe to gossip subnets 2 slots in advance
+   * - Unsubscribe from expired subnets
    */
-  private onSlot = (slot: Slot): void => {
+  private onSlot = (clockSlot: Slot): void => {
     try {
+      for (const [dutiedSlot, subnets] of this.aggregatorSlotSubnet.entries()) {
+        if (dutiedSlot === clockSlot + this.opts.slotsToSubscribeBeforeAggregatorDuty) {
+          // Trigger gossip subscription first, in batch
+          if (subnets.size > 0) {
+            this.subscribeToSubnets(Array.from(subnets), SubnetSource.committee);
+          }
+          // Then, register the subscriptions
+          Array.from(subnets).map((subnet) => this.subscriptionsCommittee.request({subnet, toSlot: dutiedSlot}));
+        }
+      }
+
       // For node >= 64 validators, we should consistently subscribe to all subnets
       // it's important to check random subnets first
       // See https://github.com/ChainSafe/lodestar/issues/4929
-      this.unsubscribeExpiredRandomSubnets(slot);
-      this.unsubscribeExpiredCommitteeSubnets(slot);
+      this.unsubscribeExpiredRandomSubnets(clockSlot);
+      this.unsubscribeExpiredCommitteeSubnets(clockSlot);
     } catch (e) {
-      this.logger.error("Error on AttnetsService.onSlot", {slot}, e as Error);
+      this.logger.error("Error on AttnetsService.onSlot", {slot: clockSlot}, e as Error);
     }
   };
 
@@ -355,7 +350,7 @@ export class AttnetsService implements IAttnetsService {
   /** Trigger a gossip un-subscrition only if no-one is still subscribed */
   private unsubscribeSubnets(subnets: number[], slot: Slot, src: SubnetSource): void {
     // No need to unsubscribeTopic(). Return early to prevent repetitive extra work
-    if (this.opts?.subscribeAllSubnets) return;
+    if (this.opts.subscribeAllSubnets) return;
 
     const forks = getActiveForks(this.config, this.clock.currentEpoch);
     for (const subnet of subnets) {

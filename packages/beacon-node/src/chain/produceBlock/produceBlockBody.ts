@@ -28,7 +28,7 @@ import {
 } from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, ForkExecution, isForkExecution} from "@lodestar/params";
-import {toHex, sleep, Logger, fromHex} from "@lodestar/utils";
+import {toHex, sleep, Logger} from "@lodestar/utils";
 
 import type {BeaconChain} from "../chain.js";
 import {PayloadId, IExecutionEngine, IExecutionBuilder, PayloadAttributes} from "../../execution/index.js";
@@ -130,10 +130,11 @@ export async function produceBlockBody<T extends BlockType>(
   const blockEpoch = computeEpochAtSlot(blockSlot);
 
   if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
-    (blockBody as altair.BeaconBlockBody).syncAggregate = this.syncContributionAndProofPool.getAggregate(
-      parentSlot,
-      parentBlockRoot
+    const syncAggregate = this.syncContributionAndProofPool.getAggregate(parentSlot, parentBlockRoot);
+    this.metrics?.production.producedSyncAggregateParticipants.observe(
+      syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
     );
+    (blockBody as altair.BeaconBlockBody).syncAggregate = syncAggregate;
   }
 
   const fork = currentState.config.getForkName(blockSlot);
@@ -154,6 +155,7 @@ export async function produceBlockBody<T extends BlockType>(
           this,
           this.logger,
           fork,
+          parentBlockRoot,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
           currentState as CachedBeaconStateBellatrix,
@@ -196,6 +198,7 @@ export async function produceBlockBody<T extends BlockType>(
           this,
           this.logger,
           fork,
+          parentBlockRoot,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
           currentState as CachedBeaconStateExecutions,
@@ -316,6 +319,7 @@ export async function prepareExecutionPayload(
   },
   logger: Logger,
   fork: ForkExecution,
+  parentBlockRoot: Root,
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
   state: CachedBeaconStateExecutions,
@@ -357,15 +361,12 @@ export async function prepareExecutionPayload(
       prepType = PayloadPreparationType.Fresh;
     }
 
-    const attributes: PayloadAttributes = {
-      timestamp,
-      prevRandao,
-      suggestedFeeRecipient,
-    };
-
-    if (ForkSeq[fork] >= ForkSeq.capella) {
-      attributes.withdrawals = getExpectedWithdrawals(state as CachedBeaconStateCapella).withdrawals;
-    }
+    const attributes: PayloadAttributes = preparePayloadAttributes(fork, chain, {
+      prepareState: state,
+      prepareSlot: state.slot,
+      parentBlockRoot,
+      feeRecipient: suggestedFeeRecipient,
+    });
 
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
@@ -469,19 +470,12 @@ export async function getPayloadAttributesForSSE(
 
   if (!parentHashRes.isPremerge) {
     const {parentHash} = parentHashRes;
-    const timestamp = computeTimeAtSlot(chain.config, prepareSlot, prepareState.genesisTime);
-    const prevRandao = getRandaoMix(prepareState, prepareState.epochCtx.epoch);
-    const payloadAttributes = {
-      timestamp,
-      prevRandao,
-      suggestedFeeRecipient: fromHex(feeRecipient),
-    };
-
-    if (ForkSeq[fork] >= ForkSeq.capella) {
-      (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = getExpectedWithdrawals(
-        prepareState as CachedBeaconStateCapella
-      ).withdrawals;
-    }
+    const payloadAttributes = preparePayloadAttributes(fork, chain, {
+      prepareState,
+      prepareSlot,
+      parentBlockRoot,
+      feeRecipient,
+    });
 
     const ssePayloadAttributes: allForks.SSEPayloadAttributes = {
       proposerIndex: prepareState.epochCtx.getBeaconProposer(prepareSlot),
@@ -495,6 +489,44 @@ export async function getPayloadAttributesForSSE(
   } else {
     throw Error("The execution is still pre-merge");
   }
+}
+
+function preparePayloadAttributes(
+  fork: ForkExecution,
+  chain: {
+    config: ChainForkConfig;
+  },
+  {
+    prepareState,
+    prepareSlot,
+    parentBlockRoot,
+    feeRecipient,
+  }: {
+    prepareState: CachedBeaconStateExecutions;
+    prepareSlot: Slot;
+    parentBlockRoot: Root;
+    feeRecipient: string;
+  }
+): allForks.SSEPayloadAttributes["payloadAttributes"] {
+  const timestamp = computeTimeAtSlot(chain.config, prepareSlot, prepareState.genesisTime);
+  const prevRandao = getRandaoMix(prepareState, prepareState.epochCtx.epoch);
+  const payloadAttributes = {
+    timestamp,
+    prevRandao,
+    suggestedFeeRecipient: feeRecipient,
+  };
+
+  if (ForkSeq[fork] >= ForkSeq.capella) {
+    (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals = getExpectedWithdrawals(
+      prepareState as CachedBeaconStateCapella
+    ).withdrawals;
+  }
+
+  if (ForkSeq[fork] >= ForkSeq.deneb) {
+    (payloadAttributes as deneb.SSEPayloadAttributes["payloadAttributes"]).parentBeaconBlockRoot = parentBlockRoot;
+  }
+
+  return payloadAttributes;
 }
 
 /** process_sync_committee_contributions is implemented in syncCommitteeContribution.getSyncAggregate */

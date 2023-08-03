@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {ssz} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
+import {ssz} from "@lodestar/types";
 import {generateProtoBlock, generateSignedBlockAtSlot} from "../../../../../utils/typeGenerator.js";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test.js";
 

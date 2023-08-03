@@ -1,6 +1,6 @@
 import worker from "node:worker_threads";
 import {createFromProtobuf} from "@libp2p/peer-id-factory";
-import {multiaddr} from "@multiformats/multiaddr";
+import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {Gauge} from "prom-client";
 import {expose} from "@chainsafe/threads/worker";
 import {Observable, Subject} from "@chainsafe/threads/observable";
@@ -26,9 +26,10 @@ const logger = getNodeLogger(workerData.loggerOpts);
 // Set up metrics, nodejs and discv5-specific
 let metricsRegistry: RegistryMetricCreator | undefined;
 let enrRelevanceMetric: Gauge<"status"> | undefined;
+let closeMetrics: () => void | undefined;
 if (workerData.metrics) {
   metricsRegistry = new RegistryMetricCreator();
-  collectNodeJSMetrics(metricsRegistry, "discv5_worker_");
+  closeMetrics = collectNodeJSMetrics(metricsRegistry, "discv5_worker_");
 
   // add enr relevance metric
   enrRelevanceMetric = metricsRegistry.gauge<"status">({
@@ -47,7 +48,10 @@ const config = createBeaconConfig(workerData.chainConfig, workerData.genesisVali
 const discv5 = Discv5.create({
   enr: SignableENR.decodeTxt(workerData.enr, keypair),
   peerId,
-  multiaddr: multiaddr(workerData.bindAddr),
+  bindAddrs: {
+    ip4: (workerData.bindAddrs.ip4 ? multiaddr(workerData.bindAddrs.ip4) : undefined) as Multiaddr,
+    ip6: workerData.bindAddrs.ip6 ? multiaddr(workerData.bindAddrs.ip6) : undefined,
+  },
   config: workerData.config,
   metricsRegistry,
 });
@@ -95,6 +99,7 @@ const module: Discv5WorkerApi = {
     return (await metricsRegistry?.metrics()) ?? "";
   },
   async close() {
+    closeMetrics?.();
     discv5.removeListener("discovered", onDiscovered);
     subject.complete();
     await discv5.stop();
@@ -103,8 +108,12 @@ const module: Discv5WorkerApi = {
 
 expose(module);
 
-logger.info("discv5 worker started", {
+const logData: Record<string, string> = {
   peerId: peerId.toString(),
-  listenAddr: workerData.bindAddr,
   initialENR: workerData.enr,
-});
+};
+
+if (workerData.bindAddrs.ip4) logData.bindAddr4 = workerData.bindAddrs.ip4;
+if (workerData.bindAddrs.ip6) logData.bindAddr6 = workerData.bindAddrs.ip6;
+
+logger.info("discv5 worker started", logData);

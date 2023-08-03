@@ -36,7 +36,7 @@ import {KeymanagerRestApiServer} from "./keymanager/server.js";
 export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Promise<void> {
   const {config, network} = getBeaconConfigFromArgs(args);
 
-  const doppelgangerProtectionEnabled = args.doppelgangerProtectionEnabled;
+  const {doppelgangerProtection} = args;
 
   const validatorPaths = getValidatorPaths(args, network);
   const accountPaths = getAccountPaths(args, network);
@@ -117,7 +117,8 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
   // Collect NodeJS metrics defined in the Lodestar repo
 
   if (metrics) {
-    collectNodeJSMetrics(register);
+    const closeMetrics = collectNodeJSMetrics(register);
+    onGracefulShutdownCbs.push(() => closeMetrics());
 
     // only start server if metrics are explicitly enabled
     if (args["metrics"]) {
@@ -160,7 +161,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       processShutdownCallback,
       signers,
       abortController,
-      doppelgangerProtectionEnabled,
+      doppelgangerProtection,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
       scAfterBlockDelaySlotFraction: args.scAfterBlockDelaySlotFraction,
       disableAttestationGrouping: args.disableAttestationGrouping,

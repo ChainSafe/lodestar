@@ -29,7 +29,7 @@ Hardware specifications minimum / recommended, to run the Lodestar client.
 
 ## About these docs
 
-This documentation is open source, contribute at [github.com/chainsafe/lodestar/docs](https://github.com/ChainSafe/lodestar/tree/unstable/docs).
+This documentation is open source, contribute at [Github Lodestar repository /docs](https://github.com/ChainSafe/lodestar/tree/unstable/docs).
 
 ## Need assistance?
 

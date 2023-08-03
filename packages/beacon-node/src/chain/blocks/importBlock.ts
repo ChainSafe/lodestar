@@ -1,6 +1,6 @@
+import {toHexString} from "@chainsafe/ssz";
 import {capella, ssz, allForks, altair} from "@lodestar/types";
 import {ForkSeq, INTERVALS_PER_SLOT, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAltair,
   computeEpochAtSlot,
@@ -26,6 +26,10 @@ import {writeBlockInputToDb} from "./writeBlockInputToDb.js";
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.
  */
 const FORK_CHOICE_ATT_EPOCH_LIMIT = 1;
+/**
+ * Emit eventstream events for block contents events only for blocks that are recent enough to clock
+ */
+const EVENTSTREAM_EMIT_RECENT_BLOCK_SLOTS = 64;
 
 /**
  * Imports a fully verified block into the chain state. Produces multiple permanent side-effects.
@@ -149,11 +153,6 @@ export async function importBlock(
           blockRootHex,
           block.message.slot
         );
-
-        // don't want to log the processed attestations here as there are so many attestations and it takes too much disc space,
-        // users may want to keep more log files instead of unnecessary processed attestations log
-        // see https://github.com/ChainSafe/lodestar/pull/4032
-        this.emitter.emit(routes.events.EventType.attestation, attestation);
       } catch (e) {
         // a block has a lot of attestations and it may has same error, we don't want to log all of them
         if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
@@ -370,14 +369,25 @@ export async function importBlock(
     }
   }
 
-  // Send block events
+  // Send block events, only for recent enough blocks
 
-  for (const voluntaryExit of block.message.body.voluntaryExits) {
-    this.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
-  }
-
-  for (const blsToExecutionChange of (block.message.body as capella.BeaconBlockBody).blsToExecutionChanges ?? []) {
-    this.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
+  if (this.clock.currentSlot - block.message.slot < EVENTSTREAM_EMIT_RECENT_BLOCK_SLOTS) {
+    // NOTE: Skip looping if there are no listeners from the API
+    if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {
+      for (const voluntaryExit of block.message.body.voluntaryExits) {
+        this.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
+      }
+    }
+    if (this.emitter.listenerCount(routes.events.EventType.blsToExecutionChange)) {
+      for (const blsToExecutionChange of (block.message.body as capella.BeaconBlockBody).blsToExecutionChanges ?? []) {
+        this.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
+      }
+    }
+    if (this.emitter.listenerCount(routes.events.EventType.attestation)) {
+      for (const attestation of block.message.body.attestations) {
+        this.emitter.emit(routes.events.EventType.attestation, attestation);
+      }
+    }
   }
 
   // Register stat metrics about the block after importing it

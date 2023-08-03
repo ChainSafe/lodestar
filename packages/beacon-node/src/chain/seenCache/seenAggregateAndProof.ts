@@ -1,5 +1,5 @@
-import {Epoch, RootHex} from "@lodestar/types";
 import {BitArray} from "@chainsafe/ssz";
+import {Epoch, RootHex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {isSuperSetOrEqual} from "../../util/bitArray.js";

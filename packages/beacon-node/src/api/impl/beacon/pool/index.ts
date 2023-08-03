@@ -1,12 +1,12 @@
 import {routes, ServerApi} from "@lodestar/api";
 import {Epoch, ssz} from "@lodestar/types";
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {validateGossipAttestation} from "../../../../chain/validation/index.js";
-import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
-import {validateGossipProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
-import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
-import {validateBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
-import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCommittee.js";
+import {validateApiAttestation} from "../../../../chain/validation/index.js";
+import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
+import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
+import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
+import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
+import {validateApiSyncCommittee} from "../../../../chain/validation/syncCommittee.js";
 import {ApiModules} from "../../types.js";
 import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors/index.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
@@ -52,8 +52,9 @@ export function getBeaconPoolApi({
       await Promise.all(
         attestations.map(async (attestation, i) => {
           try {
+            const fork = chain.config.getForkName(chain.clock.currentSlot);
             // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-            const validateFn = () => validateGossipAttestation(chain, {attestation, serializedData: null}, null);
+            const validateFn = () => validateApiAttestation(fork, chain, {attestation, serializedData: null});
             const {slot, beaconBlockRoot} = attestation.data;
             // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
@@ -70,6 +71,9 @@ export function getBeaconPoolApi({
               const insertOutcome = chain.attestationPool.add(attestation, attDataRootHex);
               metrics?.opPool.attestationPoolInsertOutcome.inc({insertOutcome});
             }
+
+            chain.emitter.emit(routes.events.EventType.attestation, attestation);
+
             const sentPeers = await network.publishBeaconAttestation(attestation, subnet);
             metrics?.onPoolSubmitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
           } catch (e) {
@@ -94,20 +98,21 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttesterSlashings(attesterSlashing) {
-      await validateGossipAttesterSlashing(chain, attesterSlashing);
+      await validateApiAttesterSlashing(chain, attesterSlashing);
       chain.opPool.insertAttesterSlashing(attesterSlashing);
       await network.publishAttesterSlashing(attesterSlashing);
     },
 
     async submitPoolProposerSlashings(proposerSlashing) {
-      await validateGossipProposerSlashing(chain, proposerSlashing);
+      await validateApiProposerSlashing(chain, proposerSlashing);
       chain.opPool.insertProposerSlashing(proposerSlashing);
       await network.publishProposerSlashing(proposerSlashing);
     },
 
     async submitPoolVoluntaryExit(voluntaryExit) {
-      await validateGossipVoluntaryExit(chain, voluntaryExit);
+      await validateApiVoluntaryExit(chain, voluntaryExit);
       chain.opPool.insertVoluntaryExit(voluntaryExit);
+      chain.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
       await network.publishVoluntaryExit(voluntaryExit);
     },
 
@@ -118,9 +123,12 @@ export function getBeaconPoolApi({
         blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
           try {
             // Ignore even if the change exists and reprocess
-            await validateBlsToExecutionChange(chain, blsToExecutionChange, true);
+            await validateApiBlsToExecutionChange(chain, blsToExecutionChange);
             const preCapella = chain.clock.currentEpoch < chain.config.CAPELLA_FORK_EPOCH;
             chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, preCapella);
+
+            chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
+
             if (!preCapella) {
               await network.publishBlsToExecutionChange(blsToExecutionChange);
             }
@@ -175,7 +183,7 @@ export function getBeaconPoolApi({
 
             // Verify signature only, all other data is very likely to be correct, since the `signature` object is created by this node.
             // Worst case if `signature` is not valid, gossip peers will drop it and slightly downscore us.
-            await validateSyncCommitteeSigOnly(chain, state, signature);
+            await validateApiSyncCommittee(chain, state, signature);
 
             // The same validator can appear multiple times in the sync committee. It can appear multiple times per
             // subnet even. First compute on which subnet the signature must be broadcasted to.

@@ -10,7 +10,7 @@ import {
   ParticipationFlags,
 } from "@lodestar/state-transition";
 import {Logger, MapDef, MapDefMax, toHex} from "@lodestar/utils";
-import {RootHex, allForks, altair} from "@lodestar/types";
+import {RootHex, allForks, altair, deneb} from "@lodestar/types";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, INTERVALS_PER_SLOT, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
@@ -25,6 +25,7 @@ const MAX_CACHED_EPOCHS = 4;
 const MAX_CACHED_DISTINCT_TARGETS = 4;
 
 const INTERVALS_LATE_ATTESTATION_SUBMISSION = 1.5;
+const INTERVALS_LATE_BLOCK_SUBMISSION = 0.75;
 
 const RETAIN_REGISTERED_VALIDATORS_MS = 12 * 3600 * 1000; // 12 hours
 
@@ -39,6 +40,7 @@ export type ValidatorMonitor = {
   registerLocalValidatorInSyncCommittee(index: number, untilEpoch: Epoch): void;
   registerValidatorStatuses(currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
+  registerBlobSidecar(src: OpSource, seenTimestampSec: Seconds, blob: deneb.BlobSidecar): void;
   registerImportedBlock(block: allForks.BeaconBlock, data: {proposerBalanceDelta: number}): void;
   onPoolSubmitUnaggregatedAttestation(
     seenTimestampSec: number,
@@ -157,6 +159,15 @@ type EpochSummary = {
   syncCommitteeMisses: number;
   /** Number of times a validator's sync signature was seen in an aggregate */
   syncSignatureAggregateInclusions: number;
+  /** Submitted proposals from this validator at this epoch */
+  blockProposals: BlockProposals[];
+};
+
+type BlockProposals = {
+  blockRoot: RootHex;
+  blockSlot: Slot;
+  poolSubmitDelaySec: number | null;
+  successfullyImported: boolean;
 };
 
 function getEpochSummary(validator: MonitoredValidator, epoch: Epoch): EpochSummary {
@@ -176,6 +187,7 @@ function getEpochSummary(validator: MonitoredValidator, epoch: Epoch): EpochSumm
       syncCommitteeHits: 0,
       syncCommitteeMisses: 0,
       syncSignatureAggregateInclusions: 0,
+      blockProposals: [],
     };
     validator.summaries.set(epoch, summary);
   }
@@ -347,20 +359,46 @@ export function createValidatorMonitor(
     },
 
     registerBeaconBlock(src, seenTimestampSec, block) {
-      const index = block.proposerIndex;
-      const validator = validators.get(index);
+      const validator = validators.get(block.proposerIndex);
       // Returns the delay between the start of `block.slot` and `seenTimestamp`.
       const delaySec = seenTimestampSec - (genesisTime + block.slot * config.SECONDS_PER_SLOT);
       metrics.gossipBlock.elapsedTimeTillReceived.observe(delaySec);
       if (validator) {
         metrics.validatorMonitor.beaconBlockTotal.inc({src});
         metrics.validatorMonitor.beaconBlockDelaySeconds.observe({src}, delaySec);
+
+        const summary = getEpochSummary(validator, computeEpochAtSlot(block.slot));
+        summary.blockProposals.push({
+          blockRoot: toHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
+          blockSlot: block.slot,
+          poolSubmitDelaySec: delaySec,
+          successfullyImported: false,
+        });
       }
     },
 
+    registerBlobSidecar(_src, _seenTimestampSec, _blob) {
+      //TODO: freetheblobs
+    },
+
     registerImportedBlock(block, {proposerBalanceDelta}) {
-      if (validators.has(block.proposerIndex)) {
+      const validator = validators.get(block.proposerIndex);
+      if (validator) {
         metrics.validatorMonitor.proposerBalanceDeltaKnown.observe(proposerBalanceDelta);
+
+        // There should be alredy a summary for the block. Could be missing when using one VC multiple BNs
+        const summary = getEpochSummary(validator, computeEpochAtSlot(block.slot));
+        const proposal = summary.blockProposals.find((p) => p.blockSlot === block.slot);
+        if (proposal) {
+          proposal.successfullyImported = true;
+        } else {
+          summary.blockProposals.push({
+            blockRoot: toHex(config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block)),
+            blockSlot: block.slot,
+            poolSubmitDelaySec: null,
+            successfullyImported: true,
+          });
+        }
       }
     },
 
@@ -491,12 +529,14 @@ export function createValidatorMonitor(
       const inclusionDistance = Math.max(parentSlot - data.slot, 0) + 1;
       const delay = inclusionDistance - MIN_ATTESTATION_INCLUSION_DELAY;
       const epoch = computeEpochAtSlot(data.slot);
+      const participants = indexedAttestation.attestingIndices.length;
 
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
           metrics.validatorMonitor.attestationInBlockTotal.inc();
           metrics.validatorMonitor.attestationInBlockDelaySlots.observe(delay);
+          metrics.validatorMonitor.attestationInBlockParticipants.observe(participants);
 
           const summary = getEpochSummary(validator, epoch);
           summary.attestationBlockInclusions += 1;
@@ -528,6 +568,7 @@ export function createValidatorMonitor(
             committeeIndex: data.index,
             inclusionDistance,
             correctHead,
+            participants,
           });
         }
       }
@@ -575,12 +616,12 @@ export function createValidatorMonitor(
 
       // Compute summaries of previous epoch attestation performance
       const prevEpoch = Math.max(0, computeEpochAtSlot(headState.slot) - 1);
+      const rootCache = new RootHexCache(headState);
 
       if (config.getForkSeq(headState.slot) >= ForkSeq.altair) {
         const {previousEpochParticipation} = headState as CachedBeaconStateAltair;
         const prevEpochStartSlot = computeStartSlotAtEpoch(prevEpoch);
         const prevEpochTargetRoot = toHex(getBlockRootAtSlot(headState, prevEpochStartSlot));
-        const rootCache = new RootHexCache(headState);
 
         // Check attestation performance
         for (const [index, validator] of validators.entries()) {
@@ -589,6 +630,20 @@ export function createValidatorMonitor(
           metrics.validatorMonitor.prevEpochAttestationSummary.inc({
             summary: renderAttestationSummary(config, rootCache, attestationSummary, flags),
           });
+        }
+      }
+
+      if (headState.epochCtx.proposersPrevEpoch !== null) {
+        // proposersPrevEpoch is null on the first epoch of `headState` being generated
+        for (const [slotIndex, validatorIndex] of headState.epochCtx.proposersPrevEpoch.entries()) {
+          const validator = validators.get(validatorIndex);
+          if (validator) {
+            // If expected proposer is a tracked validator
+            const summary = validator.summaries.get(prevEpoch);
+            metrics.validatorMonitor.prevEpochBlockProposalSummary.inc({
+              summary: renderBlockProposalSummary(config, rootCache, summary, SLOTS_PER_EPOCH * prevEpoch + slotIndex),
+            });
+          }
         }
       }
     },
@@ -899,6 +954,38 @@ function isCanonical(rootCache: RootHexCache, block: AttestationBlockInclusion):
 /** Returns true if root at slot is the same at slot - 1 == there was no new block at slot */
 function isMissedSlot(rootCache: RootHexCache, slot: Slot): boolean {
   return slot > 0 && rootCache.getBlockRootAtSlot(slot) === rootCache.getBlockRootAtSlot(slot - 1);
+}
+
+function renderBlockProposalSummary(
+  config: ChainConfig,
+  rootCache: RootHexCache,
+  summary: EpochSummary | undefined,
+  proposalSlot: Slot
+): string {
+  const proposal = summary?.blockProposals.find((proposal) => proposal.blockSlot === proposalSlot);
+  if (!proposal) {
+    return "not_submitted";
+  }
+
+  if (rootCache.getBlockRootAtSlot(proposalSlot) === proposal.blockRoot) {
+    // Cannonical state includes our block
+    return "cannonical";
+  }
+
+  let out = "orphaned";
+
+  if (isMissedSlot(rootCache, proposalSlot)) {
+    out += "_missed";
+  }
+
+  if (
+    proposal.poolSubmitDelaySec !== null &&
+    proposal.poolSubmitDelaySec > (INTERVALS_LATE_BLOCK_SUBMISSION * config.SECONDS_PER_SLOT) / INTERVALS_PER_SLOT
+  ) {
+    out += "_late";
+  }
+
+  return out;
 }
 
 /**

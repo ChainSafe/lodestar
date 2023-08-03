@@ -13,10 +13,14 @@ type BlockCLRoot = string;
  * The in-memory store for the execution payloads to be used to verify the proofs
  */
 export class PayloadStore {
-  // We store the block numbers only for finalized blocks
+  // We store the block root from execution for finalized blocks
+  // As these blocks are finalized, so not to be worried about conflicting roots
   private finalizedRoots = new OrderedMap<BlockELRoot>();
 
-  // Unfinalized blocks are stored by the roots of the beacon chain
+  // Unfinalized blocks may change over time and may have conflicting roots
+  // We can receive multiple light-client headers for the same block of execution
+  // So we why store unfinalized payloads by their CL root, which is only used
+  // in processing the light-client headers
   private unfinalizedRoots = new Map<BlockCLRoot, BlockELRoot>();
 
   // Payloads store with BlockELRoot as key
@@ -27,7 +31,13 @@ export class PayloadStore {
   constructor(private opts: {api: Api; logger: Logger}) {}
 
   get finalized(): allForks.ExecutionPayload | undefined {
-    const finalizedMaxRoot = this.finalizedRoots.get(this.finalizedRoots.max);
+    const maxBlockNumberForFinalized = this.finalizedRoots.max;
+
+    if (maxBlockNumberForFinalized === undefined) {
+      return;
+    }
+
+    const finalizedMaxRoot = this.finalizedRoots.get(maxBlockNumberForFinalized);
     if (finalizedMaxRoot) {
       return this.payloads.get(finalizedMaxRoot);
     }
@@ -67,8 +77,15 @@ export class PayloadStore {
     return undefined;
   }
 
-  async getOrFetchFinalizedPayload(blockNumber: number): Promise<allForks.ExecutionPayload | undefined> {
-    if (blockNumber > this.finalizedRoots.max) {
+  protected async getOrFetchFinalizedPayload(blockNumber: number): Promise<allForks.ExecutionPayload | undefined> {
+    const maxBlockNumberForFinalized = this.finalizedRoots.max;
+    const minBlockNumberForFinalized = this.finalizedRoots.min;
+
+    if (maxBlockNumberForFinalized === undefined || minBlockNumberForFinalized === undefined) {
+      return;
+    }
+
+    if (blockNumber > maxBlockNumberForFinalized) {
       throw new Error(
         `Block number ${blockNumber} is higher than the latest finalized block number. We recommend to use block hash for unfinalized blocks.`
       );
@@ -77,7 +94,7 @@ export class PayloadStore {
     let blockELRoot = this.finalizedRoots.get(blockNumber);
     // check if we have payload cached locally else fetch from api
     if (!blockELRoot) {
-      const payloads = await getExecutionPayloadForBlockNumber(this.opts.api, this.finalizedRoots.min, blockNumber);
+      const payloads = await getExecutionPayloadForBlockNumber(this.opts.api, minBlockNumberForFinalized, blockNumber);
       for (const payload of Object.values(payloads)) {
         this.set(payload, true);
       }
@@ -129,7 +146,7 @@ export class PayloadStore {
 
       // If the block is finalized and we do not have the payload
       // We need to fetch and set the payload
-      else if (finalized && !existingELRoot) {
+      else {
         this.payloads.set(
           bufferToHex(header.execution.blockHash),
           (
@@ -155,8 +172,10 @@ export class PayloadStore {
     // Re-org happened, we need to update the payload
     if (existingELRoot && existingELRoot !== blockELRoot) {
       this.payloads.delete(existingELRoot);
-      this.unfinalizedRoots.set(blockCLRoot, blockELRoot);
     }
+
+    // This is unfinalized header we need to store it's root related to cl root
+    this.unfinalizedRoots.set(blockCLRoot, blockELRoot);
 
     // We do not have the payload for this block, we need to fetch it
     const payload = (
@@ -171,12 +190,14 @@ export class PayloadStore {
     this.prune();
   }
 
-  private prune(): void {
+  prune(): void {
     if (this.finalizedRoots.size <= MAX_PAYLOAD_HISTORY) return;
+    // Store doe not have any finalized blocks means it's recently initialized
+    if (this.finalizedRoots.max === undefined || this.finalizedRoots.min === undefined) return;
 
     for (
       let blockNumber = this.finalizedRoots.max - MAX_PAYLOAD_HISTORY;
-      blockNumber > this.finalizedRoots.min;
+      blockNumber >= this.finalizedRoots.min;
       blockNumber--
     ) {
       const blockELRoot = this.finalizedRoots.get(blockNumber);

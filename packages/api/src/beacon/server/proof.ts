@@ -1,5 +1,5 @@
-import {ChainForkConfig} from "@lodestar/config";
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
+import {ChainForkConfig} from "@lodestar/config";
 import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/proof.js";
 import {ServerRoutes, getGenericJsonServer} from "../../utils/server/index.js";
 import {ServerApi} from "../../interfaces.js";

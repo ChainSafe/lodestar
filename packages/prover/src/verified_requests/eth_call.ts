@@ -2,7 +2,11 @@ import {ELVerifiedRequestHandler} from "../interfaces.js";
 import {ELApiParams, ELApiReturn} from "../types.js";
 import {bufferToHex} from "../utils/conversion.js";
 import {createVM, executeVMCall, getVMWithState} from "../utils/evm.js";
-import {getResponseForRequest, getErrorResponseForUnverifiedRequest} from "../utils/json_rpc.js";
+import {
+  getResponseForRequest,
+  getErrorResponseForRequestWithFailedVerification,
+  getVerificationFailedMessage,
+} from "../utils/json_rpc.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const eth_call: ELVerifiedRequestHandler<ELApiParams["eth_call"], ELApiReturn["eth_call"]> = async ({
@@ -42,6 +46,6 @@ export const eth_call: ELVerifiedRequestHandler<ELApiParams["eth_call"], ELApiRe
       {method: payload.method, params: JSON.stringify(payload.params)},
       err as Error
     );
-    return getErrorResponseForUnverifiedRequest(payload, "eth_call request can not be verified.");
+    return getErrorResponseForRequestWithFailedVerification(payload, getVerificationFailedMessage("eth_call"));
   }
 };

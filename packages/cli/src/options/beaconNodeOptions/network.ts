@@ -1,46 +1,103 @@
+import {multiaddr} from "@multiformats/multiaddr";
+import {ENR} from "@chainsafe/discv5";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions, YargsError} from "../../util/index.js";
 
 const defaultListenAddress = "0.0.0.0";
 export const defaultP2pPort = 9000;
+export const defaultP2pPort6 = 9090;
 
 export type NetworkArgs = {
   discv5?: boolean;
   listenAddress?: string;
   port?: number;
   discoveryPort?: number;
+  listenAddress6?: string;
+  port6?: number;
+  discoveryPort6?: number;
   bootnodes?: string[];
-  targetPeers: number;
-  subscribeAllSubnets: boolean;
-  disablePeerScoring: boolean;
-  mdns: boolean;
-  "network.maxPeers": number;
-  "network.connectToDiscv5Bootnodes": boolean;
-  "network.discv5FirstQueryDelayMs": number;
-  "network.dontSendGossipAttestationsToForkchoice": boolean;
-  "network.allowPublishToZeroPeers": boolean;
-  "network.gossipsubD": number;
-  "network.gossipsubDLow": number;
-  "network.gossipsubDHigh": number;
-  "network.gossipsubAwaitHandler": boolean;
-  "network.rateLimitMultiplier": number;
+  targetPeers?: number;
+  deterministicLongLivedAttnets?: boolean;
+  subscribeAllSubnets?: boolean;
+  slotsToSubscribeBeforeAggregatorDuty?: number;
+  disablePeerScoring?: boolean;
+  mdns?: boolean;
+  "network.maxPeers"?: number;
+  "network.connectToDiscv5Bootnodes"?: boolean;
+  "network.discv5FirstQueryDelayMs"?: number;
+  "network.dontSendGossipAttestationsToForkchoice"?: boolean;
+  "network.allowPublishToZeroPeers"?: boolean;
+  "network.gossipsubD"?: number;
+  "network.gossipsubDLow"?: number;
+  "network.gossipsubDHigh"?: number;
+  "network.gossipsubAwaitHandler"?: boolean;
+  "network.rateLimitMultiplier"?: number;
   "network.maxGossipTopicConcurrency"?: number;
-  "network.useWorker": boolean;
+  "network.useWorker"?: boolean;
 
   /** @deprecated This option is deprecated and should be removed in next major release. */
-  "network.requestCountPeerLimit": number;
+  "network.requestCountPeerLimit"?: number;
   /** @deprecated This option is deprecated and should be removed in next major release. */
-  "network.blockCountTotalLimit": number;
+  "network.blockCountTotalLimit"?: number;
   /** @deprecated This option is deprecated and should be removed in next major release. */
-  "network.blockCountPeerLimit": number;
+  "network.blockCountPeerLimit"?: number;
   /** @deprecated This option is deprecated and should be removed in next major release. */
-  "network.rateTrackerTimeoutMs": number;
+  "network.rateTrackerTimeoutMs"?: number;
 };
 
+function validateMultiaddrArg<T extends Record<string, string | undefined>>(args: T, key: keyof T): void {
+  if (args[key]) {
+    try {
+      multiaddr(args[key]);
+    } catch (e) {
+      throw new YargsError(`Invalid ${key as string}: ${(e as Error).message}`);
+    }
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export function parseListenArgs(args: NetworkArgs) {
+  // If listenAddress is explicitly set, use it
+  // If listenAddress6 is not set, use defaultListenAddress
+  const listenAddress = args.listenAddress ?? (args.listenAddress6 ? undefined : defaultListenAddress);
+  const port = listenAddress ? args.port ?? defaultP2pPort : undefined;
+  const discoveryPort = listenAddress ? args.discoveryPort ?? args.port ?? defaultP2pPort : undefined;
+
+  // Only use listenAddress6 if it is explicitly set
+  const listenAddress6 = args.listenAddress6;
+  const port6 = listenAddress6 ? args.port6 ?? defaultP2pPort6 : undefined;
+  const discoveryPort6 = listenAddress6 ? args.discoveryPort6 ?? args.port6 ?? defaultP2pPort6 : undefined;
+
+  return {listenAddress, port, discoveryPort, listenAddress6, port6, discoveryPort6};
+}
+
 export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
-  const listenAddress = args.listenAddress || defaultListenAddress;
-  const udpPort = args.discoveryPort ?? args.port ?? defaultP2pPort;
-  const tcpPort = args.port ?? defaultP2pPort;
+  const {listenAddress, port, discoveryPort, listenAddress6, port6, discoveryPort6} = parseListenArgs(args);
+  // validate ip, ip6, ports
+  const muArgs = {
+    listenAddress: listenAddress ? `/ip4/${listenAddress}` : undefined,
+    port: listenAddress ? `/tcp/${port}` : undefined,
+    discoveryPort: listenAddress ? `/udp/${discoveryPort}` : undefined,
+    listenAddress6: listenAddress6 ? `/ip6/${listenAddress6}` : undefined,
+    port6: listenAddress6 ? `/tcp/${port6}` : undefined,
+    discoveryPort6: listenAddress6 ? `/udp/${discoveryPort6}` : undefined,
+  };
+
+  for (const key of [
+    "listenAddress",
+    "port",
+    "discoveryPort",
+    "listenAddress6",
+    "port6",
+    "discoveryPort6",
+  ] as (keyof typeof muArgs)[]) {
+    validateMultiaddrArg(muArgs, key);
+  }
+
+  const bindMu = listenAddress ? `${muArgs.listenAddress}${muArgs.discoveryPort}` : undefined;
+  const localMu = listenAddress ? `${muArgs.listenAddress}${muArgs.port}` : undefined;
+  const bindMu6 = listenAddress6 ? `${muArgs.listenAddress6}${muArgs.discoveryPort6}` : undefined;
+  const localMu6 = listenAddress6 ? `${muArgs.listenAddress6}${muArgs.port6}` : undefined;
 
   const targetPeers = args["targetPeers"];
   const maxPeers = args["network.maxPeers"] ?? (targetPeers !== undefined ? Math.floor(targetPeers * 1.1) : undefined);
@@ -49,21 +106,38 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
   }
   // Set discv5 opts to null to disable only if explicitly disabled
   const enableDiscv5 = args["discv5"] ?? true;
+
+  // TODO: Okay to set to empty array?
+  const bootEnrs = args["bootnodes"] ?? [];
+  // throw if user-provided enrs are invalid
+  for (const enrStr of bootEnrs) {
+    try {
+      ENR.decodeTxt(enrStr);
+    } catch (e) {
+      throw new YargsError(`Provided ENR in bootnodes is invalid:\n    ${enrStr}`);
+    }
+  }
+
   return {
     discv5: enableDiscv5
       ? {
           config: {},
-          bindAddr: `/ip4/${listenAddress}/udp/${udpPort}`,
-          // TODO: Okay to set to empty array?
-          bootEnrs: args["bootnodes"] ?? [],
+          bindAddrs: {
+            ip4: bindMu as string,
+            ip6: bindMu6,
+          },
+          bootEnrs,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
           enr: undefined as any,
         }
       : null,
-    maxPeers,
-    targetPeers,
-    localMultiaddrs: [`/ip4/${listenAddress}/tcp/${tcpPort}`],
+    maxPeers: maxPeers ?? defaultOptions.network.maxPeers,
+    targetPeers: targetPeers ?? defaultOptions.network.targetPeers,
+    localMultiaddrs: [localMu, localMu6].filter(Boolean) as string[],
+    deterministicLongLivedAttnets: args["deterministicLongLivedAttnets"],
     subscribeAllSubnets: args["subscribeAllSubnets"],
+    slotsToSubscribeBeforeAggregatorDuty:
+      args["slotsToSubscribeBeforeAggregatorDuty"] ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
     disablePeerScoring: args["disablePeerScoring"],
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
@@ -91,13 +165,13 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   listenAddress: {
     type: "string",
-    description: "The address to listen for p2p UDP and TCP connections",
+    description: "The IPv4 address to listen for p2p UDP and TCP connections",
     defaultDescription: defaultListenAddress,
     group: "network",
   },
 
   port: {
-    description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discovery-port flag.",
+    description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discoveryPort flag.",
     type: "number",
     // TODO: Derive from BeaconNode defaults
     defaultDescription: String(defaultP2pPort),
@@ -108,6 +182,27 @@ export const options: CliCommandOptions<NetworkArgs> = {
     description: "The UDP port that discovery will listen on. Defaults to `port`",
     type: "number",
     defaultDescription: "`port`",
+    group: "network",
+  },
+
+  listenAddress6: {
+    type: "string",
+    description: "The IPv6 address to listen for p2p UDP and TCP connections",
+    group: "network",
+  },
+
+  port6: {
+    description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discoveryPort6 flag.",
+    type: "number",
+    // TODO: Derive from BeaconNode defaults
+    defaultDescription: String(defaultP2pPort6),
+    group: "network",
+  },
+
+  discoveryPort6: {
+    description: "The UDP port that discovery will listen on. Defaults to `port6`",
+    type: "number",
+    defaultDescription: "`port6`",
     group: "network",
   },
 
@@ -129,10 +224,25 @@ export const options: CliCommandOptions<NetworkArgs> = {
     group: "network",
   },
 
+  deterministicLongLivedAttnets: {
+    type: "boolean",
+    description: "Use deterministic subnet selection for long-lived subnet subscriptions",
+    defaultDescription: String(defaultOptions.network.deterministicLongLivedAttnets === true),
+    group: "network",
+  },
+
   subscribeAllSubnets: {
     type: "boolean",
     description: "Subscribe to all subnets regardless of validator count",
     defaultDescription: String(defaultOptions.network.subscribeAllSubnets === true),
+    group: "network",
+  },
+
+  slotsToSubscribeBeforeAggregatorDuty: {
+    hidden: true,
+    type: "number",
+    description: "Number of slots before an aggregator duty to subscribe to subnets",
+    defaultDescription: String(defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty),
     group: "network",
   },
 
@@ -160,7 +270,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   "network.connectToDiscv5Bootnodes": {
     type: "boolean",
-    description: "Attempt direct connection to discv5 bootnodes from network.discv5.bootEnrs option",
+    description: "Attempt direct connection to discv5 bootnodes",
     hidden: true,
     defaultDescription: String(defaultOptions.network.connectToDiscv5Bootnodes === true),
     group: "network",
@@ -200,7 +310,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   "network.rateTrackerTimeoutMs": {
     type: "number",
-    description: "Time window to track rate limit in milli seconds",
+    description: "Time window to track rate limit in milliseconds",
     hidden: true,
     group: "network",
     deprecated: true,

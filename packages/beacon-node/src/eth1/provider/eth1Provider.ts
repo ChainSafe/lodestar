@@ -6,7 +6,7 @@ import {fromHex} from "@lodestar/utils";
 import {linspace} from "../../util/numpy.js";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract.js";
 import {Eth1Block, IEth1Provider} from "../interface.js";
-import {Eth1Options} from "../options.js";
+import {DEFAULT_PROVIDER_URLS, Eth1Options} from "../options.js";
 import {isValidAddress} from "../../util/address.js";
 import {EthJsonRpcBlockRaw} from "../interface.js";
 import {JsonRpcHttpClient, JsonRpcHttpClientMetrics, ReqOpts} from "./jsonRpcHttpClient.js";
@@ -55,7 +55,7 @@ export class Eth1Provider implements IEth1Provider {
   ) {
     this.deployBlock = opts.depositContractDeployBlock ?? 0;
     this.depositContractAddress = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
-    this.rpc = new JsonRpcHttpClient(opts.providerUrls, {
+    this.rpc = new JsonRpcHttpClient(opts.providerUrls ?? DEFAULT_PROVIDER_URLS, {
       signal,
       // Don't fallback with is truncated error. Throw early and let the retry on this class handle it
       shouldNotFallback: isJsonRpcTruncatedError,

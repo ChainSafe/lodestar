@@ -6,6 +6,8 @@ import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";
 import {verifyBlockSequence} from "../../../../src/sync/backfill/verify.js";
+import {WithBytes} from "../../../../src/network/interface.js";
+import {ZERO_HASH} from "../../../../src/constants/constants.js";
 import {BackfillSyncErrorCode, BackfillSyncError} from "./../../../../src/sync/backfill/errors.js";
 
 // Global variable __dirname no longer available in ES6 modules.
@@ -23,7 +25,7 @@ describe("backfill sync - verify block sequence", function () {
   it("should verify valid chain of blocks", function () {
     const blocks = getBlocks();
 
-    expect(() => verifyBlockSequence(beaconConfig, blocks.slice(0, 2), blocks[2].message.parentRoot)).to.not.throw;
+    expect(() => verifyBlockSequence(beaconConfig, blocks.slice(0, 2), blocks[2].data.message.parentRoot)).to.not.throw;
   });
 
   it("should fail with sequence not anchored", function () {
@@ -41,18 +43,18 @@ describe("backfill sync - verify block sequence", function () {
       const {error} = verifyBlockSequence(
         beaconConfig,
         // remove middle block
-        blocks.filter((b) => b.message.slot !== 2).slice(0, blocks.length - 2),
-        blocks[blocks.length - 1].message.parentRoot
+        blocks.filter((b) => b.data.message.slot !== 2).slice(0, blocks.length - 2),
+        blocks[blocks.length - 1].data.message.parentRoot
       );
-      if (error) throw new BackfillSyncError({code: error});
+      if (error != null) throw new BackfillSyncError({code: error});
     }).to.throw(BackfillSyncErrorCode.NOT_LINEAR);
   });
 
   //first 4 mainnet blocks
-  function getBlocks(): phase0.SignedBeaconBlock[] {
+  function getBlocks(): WithBytes<phase0.SignedBeaconBlock>[] {
     const json = JSON.parse(fs.readFileSync(path.join(__dirname, "./blocks.json"), "utf-8")) as unknown[];
     return json.map((b) => {
-      return ssz.phase0.SignedBeaconBlock.fromJson(b);
+      return {data: ssz.phase0.SignedBeaconBlock.fromJson(b), bytes: ZERO_HASH};
     });
   }
 });

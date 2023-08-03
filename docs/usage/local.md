@@ -19,15 +19,15 @@ Run a beacon node as a **bootnode**, with 8 validators with the following comman
 
 `--genesisValidators` and `--genesisTime` define the genesis state of the beacon chain. `--dataDir` defines a path where
 lodestar should store the beacon state.
-`--enr.ip` sets the enr ip entry for the node (essential for second node to connect via `enr`) and `--enr.udp` exposes the `discv5` discovery service (if you want to connect more than 1 node and enable discovery amongst them via *bootnode*).
+`--enr.ip` sets the ENR IP entry for the node (essential for second node to connect via `enr`) and `--enr.udp` exposes the `discv5` discovery service (if you want to connect more than 1 node and enable discovery amongst them via _bootnode_).
 Lastly the `--reset` flag ensures the state is cleared on each restart - which is useful when testing locally.
 
 Once the node has started, make a request to `curl http://localhost:9596/eth/v1/node/identity` and copy the `enr` value.
 
 This would be used to connect from the second node.
 
-> ENR stands for ethereum node records, which is a format for conveying p2p connectivity information for ethereum nodes.
-> For more info see [eip-778](https://eips.ethereum.org/EIPS/eip-778).
+> ENR stands for Ethereum node records, which is a format for conveying p2p connectivity information for Ethereum nodes.
+> For more info see [EIP-778](https://eips.ethereum.org/EIPS/eip-778).
 
 **Terminal 2**
 
@@ -53,8 +53,8 @@ to have the same beacon chain.
 
 Also `--port` and `--rest.port` are supplied since the default values will already be in use by the first node.
 
-The `--network.connectToDiscv5Bootnodes` flags needs to be set to true as this is needed to allow connection to boot enrs on local devnet.
-The exact enr of node to connect to is then supplied via the `--network.discv5.bootEnrs` flag.
+The `--network.connectToDiscv5Bootnodes` flags needs to be set to true as this is needed to allow connection to boot ENRs on local devnet.
+The exact ENR of node to connect to is then supplied via the `--bootnodes` flag.
 
 Once the second node starts, you should see an output similar to the following in either of the terminals:
 
@@ -71,7 +71,6 @@ For example, making the request on the first node via the following command:
 will give a result similar to the following:
 
 ```
-
 {
   "data": [
     {

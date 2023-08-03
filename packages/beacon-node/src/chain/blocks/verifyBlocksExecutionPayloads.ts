@@ -1,3 +1,4 @@
+import {toHexString} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAllForks,
   isExecutionStateType,
@@ -7,7 +8,6 @@ import {
   kzgCommitmentToVersionedHash,
 } from "@lodestar/state-transition";
 import {bellatrix, allForks, Slot, deneb} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
 import {
   IForkChoice,
   assertValidTerminalPowBlock,
@@ -21,7 +21,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {ForkSeq} from "@lodestar/params";
 
-import {IExecutionEngine} from "../../execution/engine/index.js";
+import {IExecutionEngine} from "../../execution/engine/interface.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IClock} from "../../util/clock.js";
 import {BlockProcessOpts} from "../options.js";
@@ -293,7 +293,13 @@ export async function verifyBlockExecutionPayload(
     ForkSeq[fork] >= ForkSeq.deneb
       ? (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments.map(kzgCommitmentToVersionedHash)
       : undefined;
-  const execResult = await chain.executionEngine.notifyNewPayload(fork, executionPayloadEnabled, versionedHashes);
+  const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
+  const execResult = await chain.executionEngine.notifyNewPayload(
+    fork,
+    executionPayloadEnabled,
+    versionedHashes,
+    parentBlockRoot
+  );
 
   chain.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
 

@@ -10,7 +10,10 @@ export class DecryptKeystoresThreadPool {
   private tasks: QueuedTask<ModuleThread<DecryptKeystoreWorkerAPI>, Uint8Array>[] = [];
   private terminatePoolHandler: () => void;
 
-  constructor(keystoreCount: number, private readonly signal: AbortSignal) {
+  constructor(
+    keystoreCount: number,
+    private readonly signal: AbortSignal
+  ) {
     this.pool = Pool(
       () =>
         spawn<DecryptKeystoreWorkerAPI>(new Worker("./worker.js"), {

@@ -1,21 +1,21 @@
 export class OrderedMap<T> extends Map<number, T> {
-  private _min = 0;
-  private _max = 0;
+  private _min?: number;
+  private _max?: number;
 
-  get min(): number {
+  get min(): number | undefined {
     return this._min;
   }
 
-  get max(): number {
+  get max(): number | undefined {
     return this._max;
   }
 
   set(key: number, value: T): this {
-    if (key < this._min) {
+    if (this._min === undefined || key < this._min) {
       this._min = key;
     }
 
-    if (key > this._max) {
+    if (this._max === undefined || key > this._max) {
       this._max = key;
     }
 

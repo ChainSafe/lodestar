@@ -18,8 +18,8 @@ export async function beaconBlocksMaybeBlobsByRoot(
   const blobIdentifiers: deneb.BlobIdentifier[] = [];
 
   for (const block of allBlocks) {
-    const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
-    const blobKzgCommitmentsLen = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments?.length ?? 0;
+    const blockRoot = config.getForkTypes(block.data.message.slot).BeaconBlock.hashTreeRoot(block.data.message);
+    const blobKzgCommitmentsLen = (block.data.message.body as deneb.BeaconBlockBody).blobKzgCommitments?.length ?? 0;
     for (let index = 0; index < blobKzgCommitmentsLen; index++) {
       blobIdentifiers.push({blockRoot, index});
     }

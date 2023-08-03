@@ -1,4 +1,4 @@
-import {allForks, capella, deneb, Wei, bellatrix} from "@lodestar/types";
+import {allForks, capella, deneb, Wei, bellatrix, Root} from "@lodestar/types";
 import {
   BYTES_PER_LOGS_BLOOM,
   FIELD_ELEMENTS_PER_BLOB,
@@ -16,13 +16,7 @@ import {
   QUANTITY,
   quantityToBigint,
 } from "../../eth1/provider/utils.js";
-import {
-  ExecutePayloadStatus,
-  TransitionConfigurationV1,
-  BlobsBundle,
-  PayloadAttributes,
-  VersionedHashes,
-} from "./interface.js";
+import {ExecutePayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -33,7 +27,7 @@ export type EngineApiRpcParamTypes = {
    */
   engine_newPayloadV1: [ExecutionPayloadRpc];
   engine_newPayloadV2: [ExecutionPayloadRpc];
-  engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc];
+  engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -41,11 +35,15 @@ export type EngineApiRpcParamTypes = {
    */
   engine_forkchoiceUpdatedV1: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
-    payloadAttributes?: PayloadAttributesRpc
+    payloadAttributes?: PayloadAttributesRpc,
   ];
   engine_forkchoiceUpdatedV2: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
-    payloadAttributes?: PayloadAttributesRpc
+    payloadAttributes?: PayloadAttributesRpc,
+  ];
+  engine_forkchoiceUpdatedV3: [
+    forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
+    payloadAttributes?: PayloadAttributesRpc,
   ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
@@ -53,10 +51,6 @@ export type EngineApiRpcParamTypes = {
   engine_getPayloadV1: [QUANTITY];
   engine_getPayloadV2: [QUANTITY];
   engine_getPayloadV3: [QUANTITY];
-  /**
-   * 1. Object - Instance of TransitionConfigurationV1
-   */
-  engine_exchangeTransitionConfigurationV1: [TransitionConfigurationV1];
 
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
@@ -92,16 +86,16 @@ export type EngineApiRpcReturnTypes = {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
   };
+  engine_forkchoiceUpdatedV3: {
+    payloadStatus: PayloadStatus;
+    payloadId: QUANTITY | null;
+  };
   /**
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
   engine_getPayloadV1: ExecutionPayloadRpc;
   engine_getPayloadV2: ExecutionPayloadResponse;
   engine_getPayloadV3: ExecutionPayloadResponse;
-  /**
-   * Object - Instance of TransitionConfigurationV1
-   */
-  engine_exchangeTransitionConfigurationV1: TransitionConfigurationV1;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 
@@ -135,8 +129,9 @@ export type ExecutionPayloadRpc = {
   blockHash: DATA; // 32 bytes
   transactions: DATA[];
   withdrawals?: WithdrawalRpc[]; // Capella hardfork
-  dataGasUsed?: QUANTITY; // DENEB
-  excessDataGas?: QUANTITY; // DENEB
+  blobGasUsed?: QUANTITY; // DENEB
+  excessBlobGas?: QUANTITY; // DENEB
+  parentBeaconBlockRoot?: QUANTITY; // DENEB
 };
 
 export type WithdrawalRpc = {
@@ -156,6 +151,8 @@ export type PayloadAttributesRpc = {
   /** DATA, 20 Bytes - suggested value for the coinbase field of the new payload */
   suggestedFeeRecipient: DATA;
   withdrawals?: WithdrawalRpc[];
+  /** DATA, 32 Bytes - value for the parentBeaconBlockRoot to be used for building block */
+  parentBeaconBlockRoot?: DATA;
 };
 
 export interface BlobsBundleRpc {
@@ -188,11 +185,11 @@ export function serializeExecutionPayload(fork: ForkName, data: allForks.Executi
     payload.withdrawals = withdrawals.map(serializeWithdrawal);
   }
 
-  // DENEB adds dataGasUsed & excessDataGas to the ExecutionPayload
+  // DENEB adds blobGasUsed & excessBlobGas to the ExecutionPayload
   if (ForkSeq[fork] >= ForkSeq.deneb) {
-    const {dataGasUsed, excessDataGas} = data as deneb.ExecutionPayload;
-    payload.dataGasUsed = numToQuantity(dataGasUsed);
-    payload.excessDataGas = numToQuantity(excessDataGas);
+    const {blobGasUsed, excessBlobGas} = data as deneb.ExecutionPayload;
+    payload.blobGasUsed = numToQuantity(blobGasUsed);
+    payload.excessBlobGas = numToQuantity(excessBlobGas);
   }
 
   return payload;
@@ -252,23 +249,23 @@ export function parseExecutionPayload(
     (executionPayload as capella.ExecutionPayload).withdrawals = withdrawals.map((w) => deserializeWithdrawal(w));
   }
 
-  // DENEB adds excessDataGas to the ExecutionPayload
+  // DENEB adds excessBlobGas to the ExecutionPayload
   if (ForkSeq[fork] >= ForkSeq.deneb) {
-    const {dataGasUsed, excessDataGas} = data;
+    const {blobGasUsed, excessBlobGas} = data;
 
-    if (dataGasUsed == null) {
+    if (blobGasUsed == null) {
       throw Error(
-        `dataGasUsed missing for ${fork} >= deneb executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+        `blobGasUsed missing for ${fork} >= deneb executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
-    if (excessDataGas == null) {
+    if (excessBlobGas == null) {
       throw Error(
-        `excessDataGas missing for ${fork} >= deneb executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+        `excessBlobGas missing for ${fork} >= deneb executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
       );
     }
 
-    (executionPayload as deneb.ExecutionPayload).dataGasUsed = quantityToBigint(dataGasUsed);
-    (executionPayload as deneb.ExecutionPayload).excessDataGas = quantityToBigint(excessDataGas);
+    (executionPayload as deneb.ExecutionPayload).blobGasUsed = quantityToBigint(blobGasUsed);
+    (executionPayload as deneb.ExecutionPayload).excessBlobGas = quantityToBigint(excessBlobGas);
   }
 
   return {executionPayload, blockValue, blobsBundle};
@@ -280,7 +277,12 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     prevRandao: bytesToData(data.prevRandao),
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map(serializeWithdrawal),
+    parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
   };
+}
+
+export function serializeBeaconBlockRoot(data: Root): DATA {
+  return bytesToData(data);
 }
 
 export function deserializePayloadAttributes(data: PayloadAttributesRpc): PayloadAttributes {
@@ -291,6 +293,7 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     // avoid any conversions
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map((withdrawal) => deserializeWithdrawal(withdrawal)),
+    parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
   };
 }
 

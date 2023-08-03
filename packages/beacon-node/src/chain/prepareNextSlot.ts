@@ -14,7 +14,7 @@ import {IBeaconChain} from "./interface.js";
 import {RegenCaller} from "./regen/index.js";
 
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 / 3 = 4`). */
-const SCHEDULER_LOOKAHEAD_FACTOR = 3;
+export const SCHEDULER_LOOKAHEAD_FACTOR = 3;
 
 /* We don't want to do more epoch transition than this */
 const PREPARE_EPOCH_LIMIT = 1;
@@ -147,6 +147,7 @@ export class PrepareNextSlotScheduler {
             this.chain,
             this.logger,
             fork as ForkExecution, // State is of execution type
+            fromHex(headRoot),
             safeBlockHash,
             finalizedBlockHash,
             prepareState,

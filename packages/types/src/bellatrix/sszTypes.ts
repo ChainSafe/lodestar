@@ -9,6 +9,7 @@ import {
 import {ssz as primitiveSsz} from "../primitive/index.js";
 import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as altairSsz} from "../altair/index.js";
+import {stringType} from "../utils/StringType.js";
 
 const {
   Bytes32,
@@ -218,7 +219,7 @@ export const SignedBuilderBid = new ContainerType(
 
 // PayloadAttributes primarily for SSE event
 export const PayloadAttributes = new ContainerType(
-  {timestamp: UintNum64, prevRandao: Bytes32, suggestedFeeRecipient: ExecutionAddress},
+  {timestamp: UintNum64, prevRandao: Bytes32, suggestedFeeRecipient: stringType},
   {typeName: "PayloadAttributes", jsonCase: "eth2"}
 );
 

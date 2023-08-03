@@ -2,7 +2,7 @@
   "name": "root",
   "private": true,
   "engines": {
-    "node": ">=12.9.0"
+    "node": ">=18.15.0"
   },
   "workspaces": [
     "packages/*"
@@ -16,7 +16,10 @@
     "build:ifchanged": "lerna exec -- ../../scripts/build_if_changed.sh",
     "lint": "eslint --color --ext .ts packages/*/src packages/*/test",
     "lint:fix": "yarn lint --fix",
+    "lint-docs": "prettier '**/*.md' --check",
+    "lint-docs:fix": "prettier '**/*.md' --write",
     "check-build": "lerna run check-build",
+    "check-readme": "lerna run check-readme",
     "check-types": "lerna run check-types --no-bail",
     "coverage": "lerna run coverage --no-bail",
     "test": "lerna run test --no-bail --concurrency 1",
@@ -25,13 +28,17 @@
     "test:e2e": "lerna run test:e2e --no-bail --concurrency 1",
     "test:e2e:sim": "lerna run test:e2e:sim --no-bail",
     "test:spec": "lerna run test:spec --no-bail",
+    "test-coverage:unit": "c8 --config .c8rc.json --report-dir coverage/unit/ --all npm run test:unit",
+    "test-coverage:browsers": "c8 --config .c8rc.json --report-dir coverage/browsers/ --all npm run test:browsers",
+    "test-coverage:e2e": "c8 --config .c8rc.json --report-dir coverage/e2e/ --all npm run test:e2e",
+    "test-coverage:e2e-sim": "c8 --config .c8rc.json --report-dir coverage/e2e-sim/ --all npm run test:e2e:sim",
+    "test-coverage:spec": "c8 --config .c8rc.json --report-dir coverage/spec/ --all npm run test:spec",
     "benchmark": "yarn benchmark:files 'packages/*/test/perf/**/*.test.ts'",
     "benchmark:files": "LODESTAR_PRESET=mainnet NODE_OPTIONS='--max-old-space-size=4096 --loader=ts-node/esm' benchmark --config .benchrc.yaml --defaultBranch unstable",
     "release:create-rc": "node scripts/release/create_rc.mjs",
     "release:tag-rc": "node scripts/release/tag_rc.mjs",
     "release:tag-stable": "node scripts/release/tag_stable.mjs",
-    "release:publish": "lerna publish from-package --yes --no-verify-access",
-    "check-readme": "lerna run check-readme"
+    "release:publish": "lerna publish from-package --yes --no-verify-access"
   },
   "devDependencies": {
     "@chainsafe/eslint-plugin-node": "^11.2.3",
@@ -39,21 +46,23 @@
     "@types/chai": "^4.3.4",
     "@types/chai-as-promised": "^7.1.5",
     "@types/mocha": "^10.0.1",
-    "@types/node": "^18.15.11",
+    "@types/node": "^20.4.2",
     "@types/sinon": "^10.0.13",
     "@types/sinon-chai": "^3.2.9",
-    "@typescript-eslint/eslint-plugin": "5.57.1",
-    "@typescript-eslint/parser": "5.57.1",
+    "@typescript-eslint/eslint-plugin": "6.0.0",
+    "@typescript-eslint/parser": "6.0.0",
+    "c8": "^7.13.0",
     "chai": "^4.3.7",
     "chai-as-promised": "^7.1.1",
     "codecov": "^3.8.3",
     "crypto-browserify": "^3.12.0",
     "electron": "^21.0.1",
-    "eslint": "^8.37.0",
+    "eslint": "^8.44.0",
     "eslint-plugin-import": "^2.27.5",
-    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-prettier": "^5.0.0",
     "eslint-plugin-chai-expect": "^3.0.0",
     "eslint-plugin-mocha": "^10.1.0",
+    "eslint-import-resolver-typescript": "^3.5.5",
     "https-browserify": "^1.0.0",
     "karma": "^6.4.1",
     "karma-chai": "^0.1.0",
@@ -65,12 +74,13 @@
     "karma-spec-reporter": "^0.0.36",
     "karma-webpack": "^5.0.0",
     "lerna": "^6.6.1",
+    "libp2p": "0.45.9",
     "mocha": "^10.2.0",
     "node-gyp": "^9.3.1",
     "npm-run-all": "^4.1.5",
     "nyc": "^15.1.0",
     "path-browserify": "^1.0.1",
-    "prettier": "^2.8.7",
+    "prettier": "^3.0.0",
     "process": "^0.11.10",
     "resolve-typescript-plugin": "^2.0.1",
     "sinon": "^15.0.3",
@@ -78,10 +88,13 @@
     "stream-browserify": "^3.0.0",
     "stream-http": "^3.2.0",
     "supertest": "^6.3.3",
-    "ts-loader": "^9.4.2",
+    "ts-loader": "^9.4.4",
     "ts-node": "^10.9.1",
-    "typescript": "^5.0.3",
-    "typescript-docs-verifier": "^2.4.0",
-    "webpack": "^5.77.0"
+    "typescript": "^5.1.6",
+    "typescript-docs-verifier": "^2.5.0",
+    "webpack": "^5.88.1"
+  },
+  "resolutions": {
+    "dns-over-http-resolver": "^2.1.1"
   }
 }

@@ -1,7 +1,7 @@
+import {fromHexString} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {config} from "@lodestar/config/default";
-import {fromHexString} from "@chainsafe/ssz";
 import {TimestampFormatCode} from "@lodestar/logger";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {routes} from "@lodestar/api";
@@ -117,7 +117,7 @@ describe("sync / unknown block sync", function () {
       );
 
       await connect(bn2.network, bn.network);
-      const headInput = getBlockInput.preDeneb(config, head, BlockSource.gossip);
+      const headInput = getBlockInput.preDeneb(config, head, BlockSource.gossip, null);
 
       switch (event) {
         case NetworkEvent.unknownBlockParent:

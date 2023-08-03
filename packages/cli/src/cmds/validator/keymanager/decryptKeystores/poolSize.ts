@@ -4,8 +4,7 @@ try {
   if (typeof navigator !== "undefined") {
     maxPoolSize = navigator.hardwareConcurrency ?? 4;
   } else {
-    // TODO change this line to use os.availableParallelism() once we upgrade to node v20
-    maxPoolSize = (await import("node:os")).cpus().length;
+    maxPoolSize = (await import("node:os")).availableParallelism();
   }
 } catch (e) {
   maxPoolSize = 8;

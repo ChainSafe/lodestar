@@ -1,3 +1,4 @@
+import {toHexString} from "@chainsafe/ssz";
 import {
   BLSPubkey,
   Slot,
@@ -13,7 +14,6 @@ import {
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName} from "@lodestar/params";
 import {extendError, prettyBytes, racePromisesWithCutoff, RaceEvent} from "@lodestar/utils";
-import {toHexString} from "@chainsafe/ssz";
 import {
   Api,
   ApiError,
@@ -69,6 +69,7 @@ export class BlockProposingService {
     private readonly metrics: Metrics | null
   ) {
     this.dutiesService = new BlockDutiesService(
+      config,
       logger,
       api,
       clock,

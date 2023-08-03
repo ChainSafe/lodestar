@@ -1,7 +1,7 @@
+import {toHexString} from "@chainsafe/ssz";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {GENESIS_EPOCH} from "@lodestar/params";
-import {toHexString} from "@chainsafe/ssz";
 
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
 import {ProtoBlock, ProtoNode, HEX_ZERO_HASH, ExecutionStatus, LVHExecResponse} from "./interface.js";

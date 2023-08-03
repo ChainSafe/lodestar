@@ -1,5 +1,5 @@
-import fetch from "cross-fetch";
 import {Registry} from "prom-client";
+import {fetch} from "@lodestar/api";
 import {ErrorAborted, Logger, TimeoutError} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../metrics/index.js";
 import {HistogramExtra} from "../metrics/utils/histogram.js";
@@ -49,7 +49,7 @@ export class MonitoringService {
 
   constructor(
     client: Client,
-    options: MonitoringOptions,
+    options: Required<Pick<MonitoringOptions, "endpoint">> & MonitoringOptions,
     {register, logger}: {register: RegistryMetricCreator; logger: Logger}
   ) {
     this.options = {...defaultMonitoringOptions, ...options};

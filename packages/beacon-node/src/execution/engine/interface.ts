@@ -1,6 +1,6 @@
 import {ForkName} from "@lodestar/params";
 import {KZGCommitment, Blob, KZGProof} from "@lodestar/types/deneb";
-import {RootHex, allForks, capella, Wei} from "@lodestar/types";
+import {Root, RootHex, allForks, capella, Wei} from "@lodestar/types";
 
 import {DATA, QUANTITY} from "../../eth1/provider/utils.js";
 import {PayloadIdCache, PayloadId, WithdrawalV1} from "./payloadIdCache.js";
@@ -30,6 +30,14 @@ export enum ExecutePayloadStatus {
   UNSAFE_OPTIMISTIC_STATUS = "UNSAFE_OPTIMISTIC_STATUS",
 }
 
+export enum ExecutionEngineState {
+  ONLINE = "ONLINE",
+  OFFLINE = "OFFLINE",
+  SYNCING = "SYNCING",
+  SYNCED = "SYNCED",
+  AUTH_FAILED = "AUTH_FAILED",
+}
+
 export type ExecutePayloadResponse =
   | {status: ExecutePayloadStatus.SYNCING | ExecutePayloadStatus.ACCEPTED; latestValidHash: null; validationError: null}
   | {status: ExecutePayloadStatus.VALID; latestValidHash: RootHex; validationError: null}
@@ -52,6 +60,7 @@ export type PayloadAttributes = {
   // avoid any conversions
   suggestedFeeRecipient: string;
   withdrawals?: capella.Withdrawal[];
+  parentBeaconBlockRoot?: Uint8Array;
 };
 
 export type TransitionConfigurationV1 = {
@@ -92,7 +101,8 @@ export interface IExecutionEngine {
   notifyNewPayload(
     fork: ForkName,
     executionPayload: allForks.ExecutionPayload,
-    versionedHashes?: VersionedHashes
+    versionedHashes?: VersionedHashes,
+    parentBeaconBlockRoot?: Root
   ): Promise<ExecutePayloadResponse>;
 
   /**
@@ -127,11 +137,9 @@ export interface IExecutionEngine {
     payloadId: PayloadId
   ): Promise<{executionPayload: allForks.ExecutionPayload; blockValue: Wei; blobsBundle?: BlobsBundle}>;
 
-  exchangeTransitionConfigurationV1(
-    transitionConfiguration: TransitionConfigurationV1
-  ): Promise<TransitionConfigurationV1>;
-
   getPayloadBodiesByHash(blockHash: DATA[]): Promise<(ExecutionPayloadBody | null)[]>;
 
   getPayloadBodiesByRange(start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
+
+  getState(): ExecutionEngineState;
 }

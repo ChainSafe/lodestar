@@ -1,0 +1,50 @@
+name: Check docs
+
+on:
+  push:
+    # We intentionally don't run push on feature branches. See PR for rational.
+    branches: [unstable, stable]
+  pull_request:
+
+jobs:
+  build:
+    name: Docs spellcheck
+    runs-on: ubuntu-latest
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - name: Node.js version
+        id: node
+        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
+      - name: Install & build
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile && yarn build
+      - name: Build
+        run: yarn build
+        if: steps.cache-deps.outputs.cache-hit == 'true'
+
+      - name: Check wordlist is sorted
+        run: scripts/wordlist_sort_check.sh
+
+      - name: Build and collect docs
+        run: yarn build:docs
+
+      # Run prettier check with fix after generating the docs. The CLI reference is formatted with prettier for
+      # deployed version so this will fail if not "fixable"
+      - name: Check docs format
+        run: yarn lint-docs:fix
+
+      # Run spellcheck AFTER building docs, in case the CLI reference has issues
+      - name: Spellcheck
+        uses: rojopolis/spellcheck-github-actions@0.32.0

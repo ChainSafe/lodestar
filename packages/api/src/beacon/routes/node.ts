@@ -1,5 +1,5 @@
-import {allForks, ssz, StringType} from "@lodestar/types";
 import {ContainerType} from "@chainsafe/ssz";
+import {allForks, ssz, StringType} from "@lodestar/types";
 import {
   ArrayOf,
   reqEmpty,
@@ -60,6 +60,8 @@ export type SyncingStatus = {
   isSyncing: boolean;
   /** Set to true if the node is optimistically tracking head. */
   isOptimistic: boolean;
+  /** Set to true if the connected el client is offline */
+  elOffline: boolean;
 };
 
 export enum NodeHealth {
@@ -67,6 +69,10 @@ export enum NodeHealth {
   SYNCING = HttpStatusCode.PARTIAL_CONTENT,
   NOT_INITIALIZED_OR_ISSUES = HttpStatusCode.SERVICE_UNAVAILABLE,
 }
+
+export type NodeHealthOptions = {
+  syncingStatus?: number;
+};
 
 /**
  * Read information about the beacon node.
@@ -118,13 +124,13 @@ export type Api = {
   /**
    * Get health check
    * Returns node health status in http status codes. Useful for load balancers.
-   *
-   * NOTE: This route does not return any value
    */
-  getHealth(): Promise<
+  getHealth(
+    options?: NodeHealthOptions
+  ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: void; [HttpStatusCode.PARTIAL_CONTENT]: void},
-      HttpStatusCode.SERVICE_UNAVAILABLE
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
 };
@@ -148,7 +154,7 @@ export type ReqTypes = {
   getPeerCount: ReqEmpty;
   getNodeVersion: ReqEmpty;
   getSyncingStatus: ReqEmpty;
-  getHealth: ReqEmpty;
+  getHealth: {query: {syncing_status?: number}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -169,7 +175,13 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getPeerCount: reqEmpty,
     getNodeVersion: reqEmpty,
     getSyncingStatus: reqEmpty,
-    getHealth: reqEmpty,
+    getHealth: {
+      writeReq: (options) => ({
+        query: options?.syncingStatus !== undefined ? {syncing_status: options.syncingStatus} : {},
+      }),
+      parseReq: ({query}) => [{syncingStatus: query.syncing_status}],
+      schema: {query: {syncing_status: Schema.Uint}},
+    },
   };
 }
 

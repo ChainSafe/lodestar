@@ -29,11 +29,6 @@ export type RestApiServerMetrics = SocketMetrics & {
   errors: IGauge<"operationId">;
 };
 
-enum Status {
-  Listening = "listening",
-  Closed = "closed",
-}
-
 /**
  * REST API powered by `fastify` server.
  */
@@ -42,9 +37,10 @@ export class RestApiServer {
   protected readonly logger: Logger;
   private readonly activeSockets: HttpActiveSocketsTracker;
 
-  private status = Status.Closed;
-
-  constructor(private readonly opts: RestApiServerOpts, modules: RestApiServerModules) {
+  constructor(
+    private readonly opts: RestApiServerOpts,
+    modules: RestApiServerModules
+  ) {
     // Apply opts defaults
     const {logger, metrics} = modules;
 
@@ -103,8 +99,7 @@ export class RestApiServer {
     server.addHook("onError", async (req, _res, err) => {
       // Don't log ErrorAborted errors, they happen on node shutdown and are not useful
       // Don't log NodeISSyncing errors, they happen very frequently while syncing and the validator polls duties
-      // Don't log eventstream aborted errors if server instance is being closed on node shutdown
-      if (err instanceof ErrorAborted || err instanceof NodeIsSyncing || this.status === Status.Closed) return;
+      if (err instanceof ErrorAborted || err instanceof NodeIsSyncing) return;
 
       const {operationId} = req.routeConfig as RouteConfig;
 
@@ -124,9 +119,6 @@ export class RestApiServer {
    * Start the REST API server.
    */
   async listen(): Promise<void> {
-    if (this.status === Status.Listening) return;
-    this.status = Status.Listening;
-
     try {
       const host = this.opts.address;
       const address = await this.server.listen({port: this.opts.port, host});
@@ -136,7 +128,6 @@ export class RestApiServer {
       }
     } catch (e) {
       this.logger.error("Error starting REST api server", this.opts, e as Error);
-      this.status = Status.Closed;
       throw e;
     }
   }
@@ -145,17 +136,16 @@ export class RestApiServer {
    * Close the server instance and terminate all existing connections.
    */
   async close(): Promise<void> {
-    if (this.status === Status.Closed) return;
-    this.status = Status.Closed;
-
     // In NodeJS land calling close() only causes new connections to be rejected.
     // Existing connections can prevent .close() from resolving for potentially forever.
-    // In Lodestar case when the BeaconNode wants to close we will just abruptly terminate
-    // all existing connections for a fast shutdown.
+    // In Lodestar case when the BeaconNode wants to close we will attempt to gracefully
+    // close all existing connections but forcefully terminate after timeout for a fast shutdown.
     // Inspired by https://github.com/gajus/http-terminator/
-    this.activeSockets.destroyAll();
+    await this.activeSockets.terminate();
 
     await this.server.close();
+
+    this.logger.debug("REST API server closed");
   }
 
   /** For child classes to override */

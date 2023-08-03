@@ -4,11 +4,11 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Eth Consensus Spec v1.1.10](https://img.shields.io/badge/ETH%20consensus--spec-1.1.10-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.1.10)
 ![ES Version](https://img.shields.io/badge/ES-2020-yellow)
-![Node Version](https://img.shields.io/badge/node-18.x-green)
+![Node Version](https://img.shields.io/badge/node-20.x-green)
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-Lodestar defines all datatypes defined in the [Ethereum Consensus spec](https://github.com/ethereum/consensus-specs). This tooling can be used for any Typescript project looking to operate on these types. Both Typescript interfaces _and_ Simple Serialize (SSZ) methods are exported for consumers.
+Lodestar defines all data types defined in the [Ethereum Consensus spec](https://github.com/ethereum/consensus-specs). This tooling can be used for any Typescript project looking to operate on these types. Both Typescript interfaces _and_ Simple Serialize (SSZ) methods are exported for consumers.
 
 ## Installation
 
@@ -18,14 +18,14 @@ npm install @lodestar/types
 
 ## Usage
 
-The lodestar types library organizes datatypes on several dimensions:
+The lodestar types library organizes data types on several dimensions:
 
 - Typescript interfaces vs SSZ objects
 - By fork
 
 ### Typescript interfaces
 
-Lodestar types are all defined as typescript interfaces. These interfaces can be used independently, and are used throughout downstream Lodestar packages (eg: in the beacon node).
+Lodestar types are all defined as typescript interfaces. These interfaces can be used independently, and are used throughout downstream Lodestar packages (in the beacon node).
 
 These interfaces are accessible via named exports.
 
@@ -67,7 +67,7 @@ import {Epoch, ssz} from "@lodestar/types";
 const epoch: Epoch = ssz.Epoch.defaultValue();
 ```
 
-In some cases, we need interfaces that accept types across all forks, eg: when the fork is not known ahead of time. Typescript interfaces for this purpose are exported under the `allForks` namespace. SSZ Types typed to these interfaces are also provided under an `allForks` namespace, but keyed by `ForkName`.
+In some cases, we need interfaces that accept types across all forks, like when the fork is not known ahead of time. Typescript interfaces for this purpose are exported under the `allForks` namespace. SSZ Types typed to these interfaces are also provided under an `allForks` namespace, but keyed by `ForkName`.
 
 ```typescript
 import {ForkName} from "@lodestar/params";

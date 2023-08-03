@@ -1,10 +1,10 @@
 import fs from "node:fs";
-import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {defaultExecutionEngineHttpOpts, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions, extractJwtHexSecret} from "../../util/index.js";
 
 export type ExecutionEngineArgs = {
   "execution.urls": string[];
-  "execution.timeout": number;
+  "execution.timeout"?: number;
   "execution.retryAttempts": number;
   "execution.retryDelay": number;
   "execution.engineMock"?: boolean;
@@ -37,8 +37,7 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
 export const options: CliCommandOptions<ExecutionEngineArgs> = {
   "execution.urls": {
     description: "Urls to execution client engine API",
-    defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? defaultOptions.executionEngine.urls.join(" ") : "",
+    default: defaultExecutionEngineHttpOpts.urls.join(","),
     type: "array",
     string: true,
     coerce: (urls: string[]): string[] =>
@@ -50,24 +49,21 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
   "execution.timeout": {
     description: "Timeout in milliseconds for execution engine API HTTP client",
     type: "number",
-    defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.timeout) : "",
+    defaultDescription: String(defaultExecutionEngineHttpOpts.timeout),
     group: "execution",
   },
 
   "execution.retryAttempts": {
     description: "Number of retry attempts when calling execution engine API",
     type: "number",
-    defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryAttempts) : "1",
+    default: defaultExecutionEngineHttpOpts.retryAttempts,
     group: "execution",
   },
 
   "execution.retryDelay": {
     description: "Delay time in milliseconds between retries when retrying calls to the execution engine API",
     type: "number",
-    defaultDescription:
-      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.retryDelay) : "0",
+    default: defaultExecutionEngineHttpOpts.retryDelay,
     group: "execution",
   },
 

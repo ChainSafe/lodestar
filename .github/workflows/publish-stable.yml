@@ -60,7 +60,8 @@ jobs:
           fetch-depth: 0 # Needs full depth for changelog generation
       - uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
+          check-latest: true
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT

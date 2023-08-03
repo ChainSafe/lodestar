@@ -19,13 +19,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [18]
+        node: [20]
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: ${{matrix.node}}
+          check-latest: true
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
@@ -52,6 +53,9 @@ jobs:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
+      - name: Assert yarn prints no warnings
+        run: scripts/assert_no_yarn_warnings.sh
+
       # Misc sanity checks
       - name: Lint Grafana dashboards
         run: scripts/validate-grafana-dashboards.sh
@@ -67,13 +71,10 @@ jobs:
         run: scripts/assert_eslintrc_sorted.mjs
 
       - name: Check Types
-        run: yarn run check-types
-      # Test docs generation, even if not published
-      - name: Build docs
-        run: yarn build:docs
+        run: yarn check-types
 
       - name: README check
-        run: yarn run check-readme
+        run: yarn check-readme
 
       - name: Lint
         run: yarn lint

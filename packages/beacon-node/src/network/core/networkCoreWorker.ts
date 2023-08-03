@@ -3,9 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {expose} from "@chainsafe/threads/worker";
+import type {WorkerModule} from "@chainsafe/threads/dist/types/worker.js";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
-import type {WorkerModule} from "@chainsafe/threads/dist/types/worker.js";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {collectNodeJSMetrics, RegistryMetricCreator} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
@@ -50,7 +50,8 @@ const abortController = new AbortController();
 // Set up metrics, nodejs and discv5-specific
 const metricsRegister = workerData.metricsEnabled ? new RegistryMetricCreator() : null;
 if (metricsRegister) {
-  collectNodeJSMetrics(metricsRegister, "network_worker_");
+  const closeMetrics = collectNodeJSMetrics(metricsRegister, "network_worker_");
+  abortController.signal.addEventListener("abort", closeMetrics, {once: true});
 }
 
 // Main event bus shared across the stack

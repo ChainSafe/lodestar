@@ -1,7 +1,7 @@
 import bls from "@chainsafe/bls";
 import {CoordType} from "@chainsafe/bls/types";
-import {toHexString} from "@lodestar/utils";
 import {fromHexString} from "@chainsafe/ssz";
+import {toHexString} from "@lodestar/utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

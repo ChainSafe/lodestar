@@ -1,4 +1,5 @@
 import path from "node:path";
+import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {
   BeaconStateAllForks,
   CachedBeaconStateAllForks,
@@ -23,22 +24,18 @@ import {
   ValidatorIndex,
   deneb,
   Wei,
-  WithOptionalBytes,
   bellatrix,
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
-import {CompositeTypeAny, fromHexString, TreeView, Type} from "@chainsafe/ssz";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {Metrics} from "../metrics/index.js";
-import {bytesToData, numToQuantity} from "../eth1/provider/utils.js";
-import {wrapError} from "../util/wrapError.js";
 import {IEth1ForBlockProduction} from "../eth1/index.js";
-import {IExecutionEngine, IExecutionBuilder, TransitionConfigurationV1} from "../execution/index.js";
+import {IExecutionEngine, IExecutionBuilder} from "../execution/index.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
@@ -144,9 +141,6 @@ export class BeaconChain implements IBeaconChain {
   protected readonly db: IBeaconDb;
   private readonly archiver: Archiver;
   private abortController = new AbortController();
-  private successfulExchangeTransition = false;
-  private readonly exchangeTransitionConfigurationEverySlots: number;
-
   private processShutdownCallback: ProcessShutdownCallback;
 
   constructor(
@@ -188,11 +182,6 @@ export class BeaconChain implements IBeaconChain {
     this.eth1 = eth1;
     this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
-    // From https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#specification-3
-    // > Consensus Layer client software SHOULD poll this endpoint every 60 seconds.
-    // Align to a multiple of SECONDS_PER_SLOT for nicer logs
-    this.exchangeTransitionConfigurationEverySlots = Math.floor(60 / this.config.SECONDS_PER_SLOT);
-
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
@@ -276,7 +265,7 @@ export class BeaconChain implements IBeaconChain {
     this.emitter = emitter;
     this.lightClientServer = lightClientServer;
 
-    this.archiver = new Archiver(db, this, logger, signal, opts, metrics);
+    this.archiver = new Archiver(db, this, logger, signal, opts);
     // always run PrepareNextSlotScheduler except for fork_choice spec tests
     if (!opts?.disablePrepareNextSlot) {
       new PrepareNextSlotScheduler(this, this.config, metrics, this.logger, signal);
@@ -558,11 +547,11 @@ export class BeaconChain implements IBeaconChain {
     return blobSidecars;
   }
 
-  async processBlock(block: WithOptionalBytes<BlockInput>, opts?: ImportBlockOpts): Promise<void> {
+  async processBlock(block: BlockInput, opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob([block], opts);
   }
 
-  async processChainSegment(blocks: WithOptionalBytes<BlockInput>[], opts?: ImportBlockOpts): Promise<void> {
+  async processChainSegment(blocks: BlockInput[], opts?: ImportBlockOpts): Promise<void> {
     return this.blockProcessor.processBlocksJob(blocks, opts);
   }
 
@@ -779,13 +768,6 @@ export class BeaconChain implements IBeaconChain {
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);
 
-    if (isFinite(this.config.BELLATRIX_FORK_EPOCH) && slot % this.exchangeTransitionConfigurationEverySlots === 0) {
-      this.exchangeTransitionConfiguration().catch((e) => {
-        // Should never throw
-        this.logger.error("Error on exchangeTransitionConfiguration", {}, e as Error);
-      });
-    }
-
     // Prune old blobSidecars for block production, those are only useful on their slot
     if (this.config.getForkSeq(slot) >= ForkSeq.deneb) {
       if (this.producedBlobSidecarsCache.size > 0) {
@@ -855,52 +837,6 @@ export class BeaconChain implements IBeaconChain {
     const finalizedState = this.regen.getCheckpointStateSync(cp);
     if (headState) {
       this.opPool.pruneAll(headState, finalizedState);
-    }
-  }
-
-  /**
-   * perform heart beat for EL lest it logs warning that CL is not connected
-   */
-  private async exchangeTransitionConfiguration(): Promise<void> {
-    const clConfig: TransitionConfigurationV1 = {
-      terminalTotalDifficulty: numToQuantity(this.config.TERMINAL_TOTAL_DIFFICULTY),
-      terminalBlockHash: bytesToData(this.config.TERMINAL_BLOCK_HASH),
-      /** terminalBlockNumber has to be set to zero for now as per specs */
-      terminalBlockNumber: numToQuantity(0),
-    };
-
-    const elConfigRes = await wrapError(this.executionEngine.exchangeTransitionConfigurationV1(clConfig));
-
-    if (elConfigRes.err) {
-      // Note: Will throw an error if:
-      // - EL endpoint is offline, unreachable, port not exposed, etc
-      // - JWT secret is not properly configured
-      // - If there is a missmatch in configuration with Geth, see https://github.com/ethereum/go-ethereum/blob/0016eb7eeeb42568c8c20d0cb560ddfc9a938fad/eth/catalyst/api.go#L301
-      this.successfulExchangeTransition = false;
-
-      this.logger.warn("Could not validate transition configuration with execution client", {}, elConfigRes.err);
-    } else {
-      // Note: This code is useless when connected to Geth. If there's a configuration mismatch Geth returns an
-      // error instead of its own transition configuration, so we can't do this comparision.
-      const elConfig = elConfigRes.result;
-      const keysToCheck: (keyof TransitionConfigurationV1)[] = ["terminalTotalDifficulty", "terminalBlockHash"];
-      const errors: string[] = [];
-
-      for (const key of keysToCheck) {
-        if (elConfig[key] !== clConfig[key]) {
-          errors.push(`different ${key} (cl ${clConfig[key]} el ${elConfig[key]})`);
-        }
-      }
-
-      if (errors.length > 0) {
-        this.logger.warn(`Transition configuration mismatch: ${errors.join(", ")}`);
-      } else {
-        // Only log once per successful call
-        if (!this.successfulExchangeTransition) {
-          this.logger.info("Validated transition configuration with execution client", clConfig);
-          this.successfulExchangeTransition = true;
-        }
-      }
     }
   }
 

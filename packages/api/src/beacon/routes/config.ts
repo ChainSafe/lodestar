@@ -1,8 +1,8 @@
+import {ByteVectorType, ContainerType} from "@chainsafe/ssz";
 import {BeaconPreset} from "@lodestar/params";
 import {ChainConfig} from "@lodestar/config";
 import {Bytes32, UintNum64, phase0, ssz} from "@lodestar/types";
 import {mapValues} from "@lodestar/utils";
-import {ByteVectorType, ContainerType} from "@chainsafe/ssz";
 import {
   ArrayOf,
   ReqEmpty,

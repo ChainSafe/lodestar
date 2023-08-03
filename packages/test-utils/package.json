@@ -1,0 +1,79 @@
+{
+  "name": "@lodestar/test-utils",
+  "private": true,
+  "version": "1.10.0",
+  "description": "Test utilities reused across other packages",
+  "author": "ChainSafe Systems",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar/issues"
+  },
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./lib/index.js"
+    },
+    "./sinon": {
+      "import": "./lib/sinon.js"
+    },
+    "./mocha": {
+      "import": "./lib/mocha.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "*",
+        "lib/*",
+        "lib/*/index"
+      ]
+    }
+  },
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "lib/**/*.d.ts",
+    "*.d.ts",
+    "*.js"
+  ],
+  "scripts": {
+    "clean": "rm -rf lib && rm -f *.tsbuildinfo",
+    "build": "tsc -p tsconfig.build.json",
+    "build:release": "yarn clean && yarn build",
+    "build:watch": "yarn run build --watch",
+    "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
+    "check-types": "tsc",
+    "lint": "eslint --color --ext .ts src/",
+    "lint:fix": "yarn run lint --fix",
+    "pretest": "yarn run check-types",
+    "check-readme": "typescript-docs-verifier"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com:ChainSafe/lodestar.git"
+  },
+  "keywords": [
+    "ethereum",
+    "eth-consensus",
+    "beacon",
+    "blockchain"
+  ],
+  "dependencies": {
+    "@lodestar/utils": "^1.10.0",
+    "axios": "^1.3.4",
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "sinon": "^15.0.3"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.1",
+    "@types/yargs": "^17.0.24",
+    "yargs": "^17.7.1"
+  },
+  "peerDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0"
+  }
+}

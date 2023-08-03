@@ -1,7 +1,7 @@
+import {Type} from "@chainsafe/ssz";
 import {encodeKey, DbReqOpts} from "@lodestar/db";
 import {BLSPubkey, Epoch, ssz} from "@lodestar/types";
 import {intToBytes} from "@lodestar/utils";
-import {Type} from "@chainsafe/ssz";
 import {Bucket, getBucketNameByValue} from "../../buckets.js";
 import {LodestarValidatorDatabaseController} from "../../types.js";
 import {DistanceEntry, IDistanceStore} from "./interface.js";
@@ -26,7 +26,10 @@ class SpanDistanceRepository {
   private readonly bucketId: string;
   private readonly dbReqOpts: DbReqOpts;
 
-  constructor(protected db: LodestarValidatorDatabaseController, bucket: Bucket) {
+  constructor(
+    protected db: LodestarValidatorDatabaseController,
+    bucket: Bucket
+  ) {
     this.type = ssz.Epoch;
     this.bucket = bucket;
     this.bucketId = getBucketNameByValue(bucket);

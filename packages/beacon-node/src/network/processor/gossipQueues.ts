@@ -35,9 +35,9 @@ const gossipQueueOpts: {
 } = {
   // validation gossip block asap
   [GossipType.beacon_block]: {maxLength: 1024, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
-  // TODO DENEB: What's a good queue max given that now blocks are much bigger?
-  [GossipType.beacon_block_and_blobs_sidecar]: {
-    maxLength: 32,
+  // gossip length for blob is beacon block length * max blobs per block = 4096
+  [GossipType.blob_sidecar]: {
+    maxLength: 4096,
     type: QueueType.FIFO,
     dropOpts: {type: DropType.count, count: 1},
   },

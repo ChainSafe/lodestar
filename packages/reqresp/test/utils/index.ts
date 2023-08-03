@@ -1,5 +1,6 @@
 import {Stream, StreamStat} from "@libp2p/interface-connection";
 import {expect} from "chai";
+import {Uint8ArrayList} from "uint8arraylist";
 import {toHexString} from "@chainsafe/ssz";
 import {fromHex} from "@lodestar/utils";
 import {ResponseIncoming, RespStatus} from "../../src/index.js";
@@ -19,7 +20,10 @@ export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
  * Wrapper for type-safety to ensure and array of Buffers is equal with a diff in hex
  */
 export function expectEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[], message?: string): void {
-  expect(chunks.map(toHexString)).to.deep.equal(expectedChunks.map(toHexString), message);
+  expect(chunks.map(toHexString).join("").replace(/0x/g, "")).to.deep.equal(
+    expectedChunks.map(toHexString).join("").replace(/0x/g, ""),
+    message
+  );
 }
 
 export function expectInEqualByteChunks(chunks: Uint8Array[], expectedChunks: Uint8Array[], message?: string): void {
@@ -42,8 +46,10 @@ export class MockLibP2pStream implements Stream {
   source: Stream["source"];
   resultChunks: Uint8Array[] = [];
 
-  constructor(requestChunks: Uint8Array[] | AsyncIterable<any> | AsyncGenerator<any>, protocol?: string) {
-    this.source = Array.isArray(requestChunks) ? arrToSource(requestChunks) : requestChunks;
+  constructor(requestChunks: Uint8ArrayList[] | AsyncIterable<any> | AsyncGenerator<any>, protocol?: string) {
+    this.source = Array.isArray(requestChunks)
+      ? arrToSource(requestChunks)
+      : (requestChunks as AsyncGenerator<Uint8ArrayList>);
     this.stat.protocol = protocol ?? "mock";
   }
 

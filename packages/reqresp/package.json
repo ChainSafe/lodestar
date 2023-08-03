@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.9.2",
+  "version": "1.10.0",
   "type": "module",
   "exports": {
     ".": {
@@ -54,24 +54,26 @@
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {
-    "@chainsafe/snappy-stream": "^5.1.2",
-    "@libp2p/interface-connection": "^3.0.2",
-    "@libp2p/interface-peer-id": "^2.0.1",
-    "@lodestar/config": "^1.9.2",
-    "@lodestar/params": "^1.9.2",
-    "@lodestar/utils": "^1.9.2",
-    "it-all": "^3.0.1",
+    "@chainsafe/fast-crc32c": "^4.1.1",
+    "@libp2p/interface-connection": "^5.1.0",
+    "@libp2p/interface-peer-id": "^2.0.2",
+    "@lodestar/config": "^1.10.0",
+    "@lodestar/params": "^1.10.0",
+    "@lodestar/utils": "^1.10.0",
+    "it-all": "^3.0.2",
+    "it-pipe": "^3.0.1",
+    "snappy": "^7.2.2",
     "snappyjs": "^0.7.0",
-    "stream-to-it": "^0.2.4",
     "uint8arraylist": "^2.4.3",
     "varint": "^6.0.0"
   },
   "devDependencies": {
-    "@lodestar/logger": "^1.9.2",
-    "@lodestar/types": "^1.9.2"
+    "@lodestar/logger": "^1.10.0",
+    "@lodestar/types": "^1.10.0",
+    "libp2p": "0.45.9"
   },
   "peerDependencies": {
-    "libp2p": "~0.42.2"
+    "libp2p": "~0.45.0"
   },
   "keywords": [
     "ethereum",

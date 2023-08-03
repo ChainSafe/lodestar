@@ -1,5 +1,5 @@
-import {routes, ServerApi} from "@lodestar/api";
 import {createProof, ProofType} from "@chainsafe/persistent-merkle-tree";
+import {routes, ServerApi} from "@lodestar/api";
 import {ApiModules} from "../types.js";
 import {resolveStateId} from "../beacon/state/utils.js";
 import {resolveBlockId} from "../beacon/blocks/utils.js";
