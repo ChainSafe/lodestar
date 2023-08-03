@@ -1,12 +1,12 @@
 {
   "__inputs": [
     {
-      "description": "",
-      "label": "Prometheus",
       "name": "DS_PROMETHEUS",
+      "type": "datasource",
+      "label": "Prometheus",
+      "description": "",
       "pluginId": "prometheus",
-      "pluginName": "Prometheus",
-      "type": "datasource"
+      "pluginName": "Prometheus"
     }
   ],
   "annotations": {
@@ -6343,5 +6343,4 @@
   "uid": "lodestar_networking",
   "version": 14,
   "weekStart": "monday"
-
 }
