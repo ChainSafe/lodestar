@@ -19,7 +19,7 @@
         <link rel="next" href="../mev-integration/">
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.19">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.1.21">
     
     
       
@@ -689,13 +689,13 @@
 <p>Prometheus is an open-source monitoring system with efficient time series database and a modern alerting approach. Together with Grafana it's the recommended way to make sure that your node and validator(s) are performing correctly.</p>
 <h2 id="prometheus">Prometheus<a class="headerlink" href="#prometheus" title="Permanent link">&para;</a></h2>
 <p>To start, download Prometheus from https://prometheus.io/download/.
-Unzip the downloaded .zip file and run Prometheus from its installed location with the lodestar prometheus.yml passed in as the config file</p>
+Unzip the downloaded .zip file and run Prometheus from its installed location with the lodestar <code>prometheus.yml</code> passed in as the configuration file</p>
 <div class="highlight"><pre><span></span><code>./prometheus --config.file=$dataDir/prometheus.yml
 </code></pre></div>
 <!-- prettier-ignore-start -->
 <div class="admonition info">
 <p class="admonition-title">Info</p>
-<p>8008 is also the default port specified in the prometheus.yml in the lodestar repo</p>
+<p>8008 is also the default port specified in the <code>prometheus.yml</code> in the lodestar repository</p>
 </div>
 <!-- prettier-ignore-end -->
 

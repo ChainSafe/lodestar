@@ -19,7 +19,7 @@
         <link rel="next" href="../prometheus-grafana/">
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.19">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.1.21">
     
     
       
@@ -855,7 +855,7 @@
 
 <h3 id="create-a-wallet">Create a wallet<a class="headerlink" href="#create-a-wallet" title="Permanent link">&para;</a></h3>
 <p>Lodestar is deprecating its functionality to create wallets.</p>
-<p>To create a wallet, we recommend using the official <a href="https://github.com/ethereum/staking-deposit-cli/releases">staking-deposit-cli</a> from the Ethereum Foundation for users comfortable with command line interfaces.</p>
+<p>To create a wallet, we recommend using the official <a href="https://github.com/ethereum/staking-deposit-cli/releases"><code>staking-deposit-cli</code></a> from the Ethereum Foundation for users comfortable with command line interfaces.</p>
 <p>Alternatively, for a graphical user interface, you can use the <a href="https://wagyu.gg/">Stakehouse Wagyu Key Generator</a> developed by members of the EthStaker community.</p>
 <!-- prettier-ignore-start -->
 <div class="admonition info">
@@ -867,17 +867,17 @@
 <h2 id="setup-your-validator">Setup your validator<a class="headerlink" href="#setup-your-validator" title="Permanent link">&para;</a></h2>
 <p>Validators are represented by a BLS keypair. Use your generated mnemonic from one of the tools above to generate the keystore files required for validator duties on Lodestar.</p>
 <h3 id="import-a-validator-keystore-from-your-wallet-to-lodestar">Import a validator keystore from your wallet to Lodestar<a class="headerlink" href="#import-a-validator-keystore-from-your-wallet-to-lodestar" title="Permanent link">&para;</a></h3>
-<p>To import a validator keystore that was created via one of the methods described above, you must locate the validator keystore JSONs exported by those tools (ex. <code>keystore-m_12381_3600_0_0_0-1654128694.json</code>).</p>
-<p>Inside the keystore JSON file, you should have an <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2335.md#json-schema">EIP-2335 conformant keystore file</a>.</p>
+<p>To import a validator keystore that was created via one of the methods described above, you must locate the validator JSON keystores exported by those tools (ex. <code>keystore-m_12381_3600_0_0_0-1654128694.json</code>).</p>
+<p>Inside the keystore JSON file, you should have an <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2335.md#json-schema">EIP-2335 keystore file</a>.</p>
 <p>You will also need the passphrase used the encrypt the keystore. This can be specified interactively, or provided in a plaintext file.</p>
 <h4 id="option-1-import-keys-to-lodestars-keystores-folder">Option 1: Import Keys To Lodestar's Keystores Folder<a class="headerlink" href="#option-1-import-keys-to-lodestars-keystores-folder" title="Permanent link">&para;</a></h4>
-<p>You can load the keys into the keystore folder using the <code>validator import</code> command. There are two methods for importing keystores:
-<div class="highlight"><pre><span></span><code><span class="c1"># Interactive passphrase import</span>
-./lodestar<span class="w"> </span>validator<span class="w"> </span>import<span class="w"> </span>--importKeystores<span class="w"> </span>./validator_keys
-
-<span class="c1"># Plaintext passphrase file import</span>
-./lodestar<span class="w"> </span>validator<span class="w"> </span>import<span class="w"> </span>--importKeystores<span class="w"> </span>./validator_keys<span class="w"> </span>--importKeystoresPassword<span class="w"> </span>./password.txt
-</code></pre></div></p>
+<p>You can load the keys into the keystore folder using the <code>validator import</code> command. There are two methods for importing keystores:</p>
+<p><em>Interactive passphrase import</em></p>
+<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>validator<span class="w"> </span>import<span class="w"> </span>--importKeystores<span class="w"> </span>./validator_keys
+</code></pre></div>
+<p><em>Plaintext passphrase file import</em></p>
+<div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>validator<span class="w"> </span>import<span class="w"> </span>--importKeystores<span class="w"> </span>./validator_keys<span class="w"> </span>--importKeystoresPassword<span class="w"> </span>./password.txt
+</code></pre></div>
 <!-- prettier-ignore-start -->
 <div class="admonition info">
 <p class="admonition-title">Info</p>
@@ -904,9 +904,11 @@
 <p>Configure your validator client's fee recipient address by using the <code>--suggestedFeeRecipient</code> flag. Ensure you specify an Ethereum address you control. An example of a fee recipient set with the address <code>0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d</code> would add the following flag to their configuration: <code>--suggestedFeeRecipient 0xB7576e9d314Df41EC5506494293Afb1bd5D3f65d</code>.</p>
 <p>You may choose to use the <code>--strictFeeRecipientCheck</code> flag to enable a strict check of the fee recipient address with the one returned by the beacon node for added reassurance.</p>
 <h3 id="submit-a-validator-deposit">Submit a validator deposit<a class="headerlink" href="#submit-a-validator-deposit" title="Permanent link">&para;</a></h3>
-<p>Please use the official tools to perform your deposits
-- <code>staking-deposit-cli</code>: <a href="https://github.com/ethereum/staking-deposit-cli">https://github.com/ethereum/staking-deposit-cli</a>
-- Ethereum Foundation launchpad: <a href="https://launchpad.ethereum.org">https://launchpad.ethereum.org</a></p>
+<p>Please use the official tools to perform your deposits</p>
+<ul>
+<li><code>staking-deposit-cli</code>: <a href="https://github.com/ethereum/staking-deposit-cli">https://github.com/ethereum/staking-deposit-cli</a></li>
+<li>Ethereum Foundation launchpad: <a href="https://launchpad.ethereum.org">https://launchpad.ethereum.org</a></li>
+</ul>
 <h2 id="run-the-validator">Run the validator<a class="headerlink" href="#run-the-validator" title="Permanent link">&para;</a></h2>
 <p>To start a Lodestar validator run the command:</p>
 <div class="highlight"><pre><span></span><code>./lodestar<span class="w"> </span>validator<span class="w"> </span>--network<span class="w"> </span><span class="nv">$NETWORK_NAME</span>

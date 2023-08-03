@@ -19,7 +19,7 @@
         <link rel="next" href="../validator-management/">
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.19">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.1.21">
     
     
       
@@ -686,13 +686,13 @@
 </code></pre></div>
 <p><code>--genesisValidators</code> and <code>--genesisTime</code> define the genesis state of the beacon chain. <code>--dataDir</code> defines a path where
 lodestar should store the beacon state.
-<code>--enr.ip</code> sets the enr ip entry for the node (essential for second node to connect via <code>enr</code>) and <code>--enr.udp</code> exposes the <code>discv5</code> discovery service (if you want to connect more than 1 node and enable discovery amongst them via <em>bootnode</em>).
+<code>--enr.ip</code> sets the ENR IP entry for the node (essential for second node to connect via <code>enr</code>) and <code>--enr.udp</code> exposes the <code>discv5</code> discovery service (if you want to connect more than 1 node and enable discovery amongst them via <em>bootnode</em>).
 Lastly the <code>--reset</code> flag ensures the state is cleared on each restart - which is useful when testing locally.</p>
 <p>Once the node has started, make a request to <code>curl http://localhost:9596/eth/v1/node/identity</code> and copy the <code>enr</code> value.</p>
 <p>This would be used to connect from the second node.</p>
 <blockquote>
-<p>ENR stands for ethereum node records, which is a format for conveying p2p connectivity information for ethereum nodes.
-For more info see <a href="https://eips.ethereum.org/EIPS/eip-778">eip-778</a>.</p>
+<p>ENR stands for Ethereum node records, which is a format for conveying p2p connectivity information for Ethereum nodes.
+For more info see <a href="https://eips.ethereum.org/EIPS/eip-778">EIP-778</a>.</p>
 </blockquote>
 <p><strong>Terminal 2</strong></p>
 <p>Start the second node without starting any validators and connect to the first node by supplying the copied <code>enr</code> value:</p>
@@ -711,8 +711,8 @@ the <code>--startValidators</code> option. Passing a value of <code>0..0</code> 
 <p>Also, take note that the values of <code>--genesisValidators</code> and <code>--genesisTime</code> must be the same as the ones passed to the first node in order for the two nodes
 to have the same beacon chain.</p>
 <p>Also <code>--port</code> and <code>--rest.port</code> are supplied since the default values will already be in use by the first node.</p>
-<p>The <code>--network.connectToDiscv5Bootnodes</code> flags needs to be set to true as this is needed to allow connection to boot enrs on local devnet.
-The exact enr of node to connect to is then supplied via the <code>--network.discv5.bootEnrs</code> flag.</p>
+<p>The <code>--network.connectToDiscv5Bootnodes</code> flags needs to be set to true as this is needed to allow connection to boot ENRs on local devnet.
+The exact ENR of node to connect to is then supplied via the <code>--bootnodes</code> flag.</p>
 <p>Once the second node starts, you should see an output similar to the following in either of the terminals:</p>
 <div class="highlight"><pre><span></span><code>Eph 167991/6 6.007 []  info: Searching peers - peers: 1 - slot: 5375718 (skipped 5375718) - head: 0 0xcc67…3345 - finalized: 0x0000…0000:0
 </code></pre></div>

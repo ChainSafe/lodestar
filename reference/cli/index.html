@@ -19,7 +19,7 @@
         <link rel="next" href="../../libraries/">
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.19">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.1.21">
     
     
       
@@ -932,7 +932,7 @@
 <tr>
 <td><code>--wssCheckpoint</code></td>
 <td>string</td>
-<td>Start beacon node off a state at the provided weak subjectivity checkpoint, to be supplied in <blockRoot>:<epoch> format. For example, 0x1234:100 will sync and start off from the weakSubjectivity state at checkpoint of epoch 100 with block root 0x1234.</td>
+<td>Start beacon node off a state at the provided weak subjectivity checkpoint, to be supplied in <blockRoot>:<epoch> format. For example, 0x1234:100 will sync and start off from the weak subjectivity state at checkpoint of epoch 100 with block root 0x1234.</td>
 <td></td>
 </tr>
 <tr>
@@ -950,7 +950,7 @@
 <tr>
 <td><code>--logLevel</code></td>
 <td>string</td>
-<td>Logging verbosity level for emittings logs to terminal</td>
+<td>Logging verbosity level for emitting logs to terminal</td>
 <td>info</td>
 </tr>
 <tr>
@@ -962,7 +962,7 @@
 <tr>
 <td><code>--logFileLevel</code></td>
 <td>string</td>
-<td>Logging verbosity level for emittings logs to file</td>
+<td>Logging verbosity level for emitting logs to file</td>
 <td>debug</td>
 </tr>
 <tr>
@@ -1004,13 +1004,13 @@
 <tr>
 <td><code>--suggestedFeeRecipient</code></td>
 <td>string</td>
-<td>Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling produceBlock.</td>
+<td>Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$) in case validator fails to update for a validator index before calling <code>produceBlock</code>.</td>
 <td>0x0000000000000000000000000000000000000000</td>
 </tr>
 <tr>
 <td><code>--emitPayloadAttributes</code></td>
 <td>boolean</td>
-<td>Flag to SSE emit execution payloadAttributes before every slot</td>
+<td>Flag to SSE emit execution <code>payloadAttributes</code> before every slot</td>
 <td>false</td>
 </tr>
 <tr>
@@ -1022,32 +1022,32 @@
 <tr>
 <td><code>--eth1.providerUrls</code></td>
 <td>array</td>
-<td>Urls to Eth1 node with enabled rpc. If not explicity provided and execution endpoint provided via execution.urls, it will use execution.urls. Otherwise will try connecting on the specified default(s)</td>
+<td>Urls to Eth1 node with enabled rpc. If not explicitly provided and execution endpoint provided via execution.urls, it will use execution.urls. Otherwise will try connecting on the specified default(s)</td>
 <td>http://localhost:8545</td>
 </tr>
 <tr>
 <td><code>--execution.urls</code></td>
 <td>array</td>
 <td>Urls to execution client engine API</td>
-<td></td>
+<td>http://localhost:8551</td>
 </tr>
 <tr>
 <td><code>--execution.timeout</code></td>
 <td>number</td>
 <td>Timeout in milliseconds for execution engine API HTTP client</td>
-<td></td>
+<td>12000</td>
 </tr>
 <tr>
 <td><code>--execution.retryAttempts</code></td>
 <td>number</td>
 <td>Number of retry attempts when calling execution engine API</td>
-<td>1</td>
+<td>3</td>
 </tr>
 <tr>
 <td><code>--execution.retryDelay</code></td>
 <td>number</td>
 <td>Delay time in milliseconds between retries when retrying calls to the execution engine API</td>
-<td>0</td>
+<td>2000</td>
 </tr>
 <tr>
 <td><code>--jwt-secret</code></td>
@@ -1059,19 +1059,19 @@
 <td><code>--builder</code></td>
 <td>boolean</td>
 <td>Enable builder interface</td>
-<td>false</td>
+<td></td>
 </tr>
 <tr>
 <td><code>--builder.urls</code></td>
 <td>array</td>
 <td>Urls hosting the builder API</td>
-<td></td>
+<td>http://localhost:8661</td>
 </tr>
 <tr>
 <td><code>--builder.timeout</code></td>
 <td>number</td>
 <td>Timeout in milliseconds for builder API HTTP client</td>
-<td></td>
+<td>12000</td>
 </tr>
 <tr>
 <td><code>--builder.faultInspectionWindow</code></td>
@@ -1082,14 +1082,14 @@
 <tr>
 <td><code>--builder.allowedFaults</code></td>
 <td>number</td>
-<td>Number of missed slots allowed in the faultInspectionWindow for builder circuit</td>
+<td>Number of missed slots allowed in the <code>faultInspectionWindow</code> for builder circuit</td>
 <td></td>
 </tr>
 <tr>
 <td><code>--metrics</code></td>
 <td>boolean</td>
 <td>Enable the Prometheus metrics HTTP server</td>
-<td>false</td>
+<td></td>
 </tr>
 <tr>
 <td><code>--metrics.port</code></td>
@@ -1101,7 +1101,7 @@
 <td><code>--metrics.address</code></td>
 <td>string</td>
 <td>Listen address for the Prometheus metrics HTTP server</td>
-<td>undefined</td>
+<td>127.0.0.1</td>
 </tr>
 <tr>
 <td><code>--monitoring.endpoint</code></td>
@@ -1124,13 +1124,13 @@
 <tr>
 <td><code>--listenAddress</code></td>
 <td>string</td>
-<td>The address to listen for p2p UDP and TCP connections</td>
+<td>The IPv4 address to listen for p2p UDP and TCP connections</td>
 <td>0.0.0.0</td>
 </tr>
 <tr>
 <td><code>--port</code></td>
 <td>number</td>
-<td>The TCP/UDP port to listen on. The UDP port can be modified by the --discovery-port flag.</td>
+<td>The TCP/UDP port to listen on. The UDP port can be modified by the --discoveryPort flag.</td>
 <td>9000</td>
 </tr>
 <tr>
@@ -1138,6 +1138,24 @@
 <td>number</td>
 <td>The UDP port that discovery will listen on. Defaults to <code>port</code></td>
 <td><code>port</code></td>
+</tr>
+<tr>
+<td><code>--listenAddress6</code></td>
+<td>string</td>
+<td>The IPv6 address to listen for p2p UDP and TCP connections</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--port6</code></td>
+<td>number</td>
+<td>The TCP/UDP port to listen on. The UDP port can be modified by the --discoveryPort6 flag.</td>
+<td>9090</td>
+</tr>
+<tr>
+<td><code>--discoveryPort6</code></td>
+<td>number</td>
+<td>The UDP port that discovery will listen on. Defaults to <code>port6</code></td>
+<td><code>port6</code></td>
 </tr>
 <tr>
 <td><code>--bootnodes</code></td>
@@ -1150,6 +1168,12 @@
 <td>number</td>
 <td>The target connected peers. Above this number peers will be disconnected</td>
 <td>50</td>
+</tr>
+<tr>
+<td><code>--deterministicLongLivedAttnets</code></td>
+<td>boolean</td>
+<td>Use deterministic subnet selection for long-lived subnet subscriptions</td>
+<td>true</td>
 </tr>
 <tr>
 <td><code>--subscribeAllSubnets</code></td>
@@ -1238,7 +1262,7 @@
 <div class="highlight"><pre><span></span><code>validator --network goerli
 </code></pre></div>
 <p><strong>Options</strong></p>
-<p>The options below apply to all subcommands.</p>
+<p>The options below apply to all sub-commands.</p>
 <table>
 <thead>
 <tr>
@@ -1252,7 +1276,7 @@
 <tr>
 <td><code>--logLevel</code></td>
 <td>string</td>
-<td>Logging verbosity level for emittings logs to terminal</td>
+<td>Logging verbosity level for emitting logs to terminal</td>
 <td>info</td>
 </tr>
 <tr>
@@ -1264,7 +1288,7 @@
 <tr>
 <td><code>--logFileLevel</code></td>
 <td>string</td>
-<td>Logging verbosity level for emittings logs to file</td>
+<td>Logging verbosity level for emitting logs to file</td>
 <td>debug</td>
 </tr>
 <tr>
@@ -1276,31 +1300,31 @@
 <tr>
 <td><code>--keymanager</code></td>
 <td>boolean</td>
-<td>Enable keymanager API server</td>
+<td>Enable key manager API server</td>
 <td></td>
 </tr>
 <tr>
 <td><code>--keymanager.authEnabled</code></td>
 <td>boolean</td>
-<td>Enable token bearer authentication for keymanager API server</td>
+<td>Enable token bearer authentication for key manager API server</td>
 <td>true</td>
 </tr>
 <tr>
 <td><code>--keymanager.port</code></td>
 <td>number</td>
-<td>Set port for keymanager API</td>
+<td>Set port for key manager API</td>
 <td>5062</td>
 </tr>
 <tr>
 <td><code>--keymanager.address</code></td>
 <td>string</td>
-<td>Set host for keymanager API</td>
+<td>Set host for key manager API</td>
 <td>127.0.0.1</td>
 </tr>
 <tr>
 <td><code>--keymanager.cors</code></td>
 <td>string</td>
-<td>Configures the Access-Control-Allow-Origin CORS header for keymanager API</td>
+<td>Configures the Access-Control-Allow-Origin CORS header for key manager API</td>
 <td>*</td>
 </tr>
 <tr>
@@ -1324,25 +1348,25 @@
 <tr>
 <td><code>--proposerSettingsFile</code></td>
 <td>string</td>
-<td>A yaml file to specify detailed default and per validator pubkey customized proposer configs. PS: This feature and its format is in alpha and subject to change</td>
+<td>A yaml file to specify detailed default and per validator public key customized proposer configs. PS: This feature and its format is in alpha and subject to change</td>
 <td></td>
 </tr>
 <tr>
 <td><code>--suggestedFeeRecipient</code></td>
 <td>string</td>
-<td>Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or keymanager API. Only used post merge.</td>
+<td>Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or key manager API. Only used post merge.</td>
 <td>0x0000000000000000000000000000000000000000</td>
 </tr>
 <tr>
 <td><code>--strictFeeRecipientCheck</code></td>
 <td>boolean</td>
-<td>Enable strict checking of the validator's feeRecipient with the one returned by engine</td>
+<td>Enable strict checking of the validator's <code>feeRecipient</code> with the one returned by engine</td>
 <td></td>
 </tr>
 <tr>
 <td><code>--defaultGasLimit</code></td>
 <td>number</td>
-<td>Suggested gasLimit to the engine/builder for building execution payloads. Only used post merge.</td>
+<td>Suggested gas limit to the engine/builder for building execution payloads. Only used post merge.</td>
 <td>30000000</td>
 </tr>
 <tr>
@@ -1354,23 +1378,23 @@
 <tr>
 <td><code>--builder.selection</code></td>
 <td>string</td>
-<td>Default builder block selection strategy: maxprofit, builderalways, or builderonly</td>
-<td>maxprofit</td>
+<td>Default builder block selection strategy: <code>maxprofit</code>, <code>builderalways</code>, or <code>builderonly</code></td>
+<td><code>maxprofit</code></td>
 </tr>
 <tr>
 <td><code>--importKeystores</code></td>
 <td>array</td>
-<td>Path(s) to a directory or single filepath to validator keystores, i.e. Launchpad validators</td>
+<td>Path(s) to a directory or single file path to validator keystores, i.e. Launchpad validators</td>
 <td>./keystores/*.json</td>
 </tr>
 <tr>
 <td><code>--importKeystoresPassword</code></td>
 <td>string</td>
-<td>Path to a file with password to decrypt all keystores from importKeystores option</td>
-<td>./password.txt</td>
+<td>Path to a file with password to decrypt all keystores from <code>importKeystores</code> option</td>
+<td><code>./password.txt</code></td>
 </tr>
 <tr>
-<td><code>--doppelgangerProtectionEnabled</code></td>
+<td><code>--doppelgangerProtection</code></td>
 <td>boolean</td>
 <td>Enables Doppelganger protection</td>
 <td></td>
@@ -1390,7 +1414,7 @@
 <tr>
 <td><code>--externalSigner.fetch</code></td>
 <td>boolean</td>
-<td>Fetch then list of pubkeys to validate from an external signer</td>
+<td>Fetch then list of public keys to validate from an external signer</td>
 <td></td>
 </tr>
 <tr>
@@ -1434,7 +1458,7 @@
 <h3 id="validator-slashing-protection"><code>validator slashing-protection</code><a class="headerlink" href="#validator-slashing-protection" title="Permanent link">&para;</a></h3>
 <p>Import or export slashing protection data to or from another client.</p>
 <p><strong>Options</strong></p>
-<p>The options below apply to all subcommands.</p>
+<p>The options below apply to all sub-commands.</p>
 <table>
 <thead>
 <tr>
@@ -1454,7 +1478,7 @@
 <tr>
 <td><code>--force</code></td>
 <td>boolean</td>
-<td>If genesisValidatorsRoot can't be fetched from the Beacon node, use a zero hash</td>
+<td>If <code>genesisValidatorsRoot</code> can't be fetched from the Beacon node, use a zero hash</td>
 <td></td>
 </tr>
 </tbody>
@@ -1510,7 +1534,7 @@
 <tr>
 <td><code>--pubkeys</code></td>
 <td>array</td>
-<td>Export slashing protection data only for a given subset of pubkeys</td>
+<td>Export slashing protection data only for a given subset of public keys</td>
 <td></td>
 </tr>
 </tbody>
@@ -1533,198 +1557,30 @@
 </thead>
 <tbody>
 <tr>
-<td><code>--logLevel</code></td>
-<td>string</td>
-<td>Logging verbosity level for emittings logs to terminal</td>
-<td>info</td>
-</tr>
-<tr>
-<td><code>--logFile</code></td>
-<td>string</td>
-<td>Path to output all logs to a persistent log file, use 'none' to disable</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--logFileLevel</code></td>
-<td>string</td>
-<td>Logging verbosity level for emittings logs to file</td>
-<td>debug</td>
-</tr>
-<tr>
-<td><code>--logFileDailyRotate</code></td>
-<td>number</td>
-<td>Daily rotate log files, set to an integer to limit the file count, set to 0 (zero) to disable rotation</td>
-<td>5</td>
-</tr>
-<tr>
-<td><code>--keymanager</code></td>
-<td>boolean</td>
-<td>Enable keymanager API server</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--keymanager.authEnabled</code></td>
-<td>boolean</td>
-<td>Enable token bearer authentication for keymanager API server</td>
-<td>true</td>
-</tr>
-<tr>
-<td><code>--keymanager.port</code></td>
-<td>number</td>
-<td>Set port for keymanager API</td>
-<td>5062</td>
-</tr>
-<tr>
-<td><code>--keymanager.address</code></td>
-<td>string</td>
-<td>Set host for keymanager API</td>
-<td>127.0.0.1</td>
-</tr>
-<tr>
-<td><code>--keymanager.cors</code></td>
-<td>string</td>
-<td>Configures the Access-Control-Allow-Origin CORS header for keymanager API</td>
-<td>*</td>
-</tr>
-<tr>
-<td><code>--beaconNodes</code></td>
-<td>array</td>
-<td>Addresses to connect to BeaconNode</td>
-<td>http://127.0.0.1:9596</td>
-</tr>
-<tr>
-<td><code>--force</code></td>
-<td>boolean</td>
-<td>Open validators even if there's a lockfile. Use with caution</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--graffiti</code></td>
-<td>string</td>
-<td>Specify your custom graffiti to be included in blocks (plain UTF8 text, 32 characters max)</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--proposerSettingsFile</code></td>
-<td>string</td>
-<td>A yaml file to specify detailed default and per validator pubkey customized proposer configs. PS: This feature and its format is in alpha and subject to change</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--suggestedFeeRecipient</code></td>
-<td>string</td>
-<td>Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or keymanager API. Only used post merge.</td>
-<td>0x0000000000000000000000000000000000000000</td>
-</tr>
-<tr>
-<td><code>--strictFeeRecipientCheck</code></td>
-<td>boolean</td>
-<td>Enable strict checking of the validator's feeRecipient with the one returned by engine</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--defaultGasLimit</code></td>
-<td>number</td>
-<td>Suggested gasLimit to the engine/builder for building execution payloads. Only used post merge.</td>
-<td>30000000</td>
-</tr>
-<tr>
-<td><code>--builder</code></td>
-<td>boolean</td>
-<td>Enable execution payload production via a builder for better rewards</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--builder.selection</code></td>
-<td>string</td>
-<td>Default builder block selection strategy: maxprofit, builderalways, or builderonly</td>
-<td>maxprofit</td>
-</tr>
-<tr>
 <td><code>--importKeystores</code></td>
 <td>array</td>
-<td>Path(s) to a directory or single filepath to validator keystores, i.e. Launchpad validators</td>
+<td>Path(s) to a directory or single file path to validator keystores, i.e. Launchpad validators</td>
 <td>./keystores/*.json</td>
 </tr>
 <tr>
 <td><code>--importKeystoresPassword</code></td>
 <td>string</td>
-<td>Path to a file with password to decrypt all keystores from importKeystores option</td>
-<td>./password.txt</td>
-</tr>
-<tr>
-<td><code>--doppelgangerProtectionEnabled</code></td>
-<td>boolean</td>
-<td>Enables Doppelganger protection</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--externalSigner.url</code></td>
-<td>string</td>
-<td>URL to connect to an external signing server</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--externalSigner.pubkeys</code></td>
-<td>array</td>
-<td>List of validator public keys used by an external signer. May also provide a single string a comma separated public keys</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--externalSigner.fetch</code></td>
-<td>boolean</td>
-<td>Fetch then list of pubkeys to validate from an external signer</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--distributed</code></td>
-<td>boolean</td>
-<td>Enables specific features required to run as part of a distributed validator cluster</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--metrics</code></td>
-<td>boolean</td>
-<td>Enable the Prometheus metrics HTTP server</td>
-<td>false</td>
-</tr>
-<tr>
-<td><code>--metrics.port</code></td>
-<td>number</td>
-<td>Listen TCP port for the Prometheus metrics HTTP server</td>
-<td>5064</td>
-</tr>
-<tr>
-<td><code>--metrics.address</code></td>
-<td>string</td>
-<td>Listen address for the Prometheus metrics HTTP server</td>
-<td>127.0.0.1</td>
-</tr>
-<tr>
-<td><code>--monitoring.endpoint</code></td>
-<td>string</td>
-<td>Enables monitoring service for sending clients stats to the specified endpoint of a remote service (e.g. beaconcha.in)</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--monitoring.interval</code></td>
-<td>number</td>
-<td>Interval in milliseconds between sending client stats to the remote service</td>
-<td>60000</td>
+<td>Path to a file with password to decrypt all keystores from <code>importKeystores</code> option</td>
+<td><code>./password.txt</code></td>
 </tr>
 </tbody>
 </table>
 <h3 id="validator-list"><code>validator list</code><a class="headerlink" href="#validator-list" title="Permanent link">&para;</a></h3>
 <p>Lists the public keys of all validators</p>
 <p><strong>Examples</strong></p>
-<p>List all validator pubkeys previously imported</p>
+<p>List all validator public keys previously imported</p>
 <div class="highlight"><pre><span></span><code>validator list
 </code></pre></div>
 <h3 id="validator-voluntary-exit"><code>validator voluntary-exit</code><a class="headerlink" href="#validator-voluntary-exit" title="Permanent link">&para;</a></h3>
 <p>Performs a voluntary exit for a given set of validators as identified via <code>pubkeys</code>. If no <code>pubkeys</code> are provided, it will exit all validators that have been imported.</p>
 <p><strong>Examples</strong></p>
 <p>Perform a voluntary exit for the validator who has a public key 0xF00</p>
-<div class="highlight"><pre><span></span><code>validator voluntary-exit --pubkeys 0xF00
+<div class="highlight"><pre><span></span><code>validator voluntary-exit --network goerli --pubkeys 0xF00
 </code></pre></div>
 <p><strong>Options</strong></p>
 <table>
@@ -1740,13 +1596,13 @@
 <tr>
 <td><code>--exitEpoch</code></td>
 <td>number</td>
-<td>The epoch upon which to submit the voluntary exit.  If no value is provided, then we default to the currentEpoch.</td>
+<td>The epoch upon which to submit the voluntary exit.  If no value is provided, then we default to the current epoch.</td>
 <td></td>
 </tr>
 <tr>
 <td><code>--pubkeys</code></td>
 <td>array</td>
-<td>Pubkeys to exit, must be available as local signers</td>
+<td>Public keys to exit, must be available as local signers</td>
 <td></td>
 </tr>
 <tr>
@@ -1777,7 +1633,7 @@
 <tr>
 <td><code>--publicKey</code></td>
 <td>string</td>
-<td>Validator pubkey for which to set withdrawal address hence enabling withdrawals</td>
+<td>Validator public key for which to set withdrawal address hence enabling withdrawals</td>
 <td></td>
 </tr>
 <tr>
@@ -1814,7 +1670,7 @@
 <tr>
 <td><code>--logLevel</code></td>
 <td>string</td>
-<td>Logging verbosity level for emittings logs to terminal</td>
+<td>Logging verbosity level for emitting logs to terminal</td>
 <td>info</td>
 </tr>
 <tr>
@@ -1826,7 +1682,7 @@
 <tr>
 <td><code>--logFileLevel</code></td>
 <td>string</td>
-<td>Logging verbosity level for emittings logs to file</td>
+<td>Logging verbosity level for emitting logs to file</td>
 <td>debug</td>
 </tr>
 <tr>
@@ -1870,31 +1726,31 @@
 <tr>
 <td><code>--keymanager</code></td>
 <td>boolean</td>
-<td>Enable keymanager API server</td>
+<td>Enable key manager API server</td>
 <td></td>
 </tr>
 <tr>
 <td><code>--keymanager.authEnabled</code></td>
 <td>boolean</td>
-<td>Enable token bearer authentication for keymanager API server</td>
+<td>Enable token bearer authentication for key manager API server</td>
 <td>true</td>
 </tr>
 <tr>
 <td><code>--keymanager.port</code></td>
 <td>number</td>
-<td>Set port for keymanager API</td>
+<td>Set port for key manager API</td>
 <td>5062</td>
 </tr>
 <tr>
 <td><code>--keymanager.address</code></td>
 <td>string</td>
-<td>Set host for keymanager API</td>
+<td>Set host for key manager API</td>
 <td>127.0.0.1</td>
 </tr>
 <tr>
 <td><code>--keymanager.cors</code></td>
 <td>string</td>
-<td>Configures the Access-Control-Allow-Origin CORS header for keymanager API</td>
+<td>Configures the Access-Control-Allow-Origin CORS header for key manager API</td>
 <td>*</td>
 </tr>
 <tr>
@@ -1918,41 +1774,41 @@
 <tr>
 <td><code>--proposerSettingsFile</code></td>
 <td>string</td>
-<td>A yaml file to specify detailed default and per validator pubkey customized proposer configs. PS: This feature and its format is in alpha and subject to change</td>
+<td>A yaml file to specify detailed default and per validator public key customized proposer configs. PS: This feature and its format is in alpha and subject to change</td>
 <td></td>
 </tr>
 <tr>
 <td><code>--strictFeeRecipientCheck</code></td>
 <td>boolean</td>
-<td>Enable strict checking of the validator's feeRecipient with the one returned by engine</td>
+<td>Enable strict checking of the validator's <code>feeRecipient</code> with the one returned by engine</td>
 <td></td>
 </tr>
 <tr>
 <td><code>--defaultGasLimit</code></td>
 <td>number</td>
-<td>Suggested gasLimit to the engine/builder for building execution payloads. Only used post merge.</td>
+<td>Suggested gas limit to the engine/builder for building execution payloads. Only used post merge.</td>
 <td>30000000</td>
 </tr>
 <tr>
 <td><code>--builder.selection</code></td>
 <td>string</td>
-<td>Default builder block selection strategy: maxprofit, builderalways, or builderonly</td>
-<td>maxprofit</td>
+<td>Default builder block selection strategy: <code>maxprofit</code>, <code>builderalways</code>, or <code>builderonly</code></td>
+<td><code>maxprofit</code></td>
 </tr>
 <tr>
 <td><code>--importKeystores</code></td>
 <td>array</td>
-<td>Path(s) to a directory or single filepath to validator keystores, i.e. Launchpad validators</td>
+<td>Path(s) to a directory or single file path to validator keystores, i.e. Launchpad validators</td>
 <td>./keystores/*.json</td>
 </tr>
 <tr>
 <td><code>--importKeystoresPassword</code></td>
 <td>string</td>
-<td>Path to a file with password to decrypt all keystores from importKeystores option</td>
-<td>./password.txt</td>
+<td>Path to a file with password to decrypt all keystores from <code>importKeystores</code> option</td>
+<td><code>./password.txt</code></td>
 </tr>
 <tr>
-<td><code>--doppelgangerProtectionEnabled</code></td>
+<td><code>--doppelgangerProtection</code></td>
 <td>boolean</td>
 <td>Enables Doppelganger protection</td>
 <td></td>
@@ -1972,7 +1828,7 @@
 <tr>
 <td><code>--externalSigner.fetch</code></td>
 <td>boolean</td>
-<td>Fetch then list of pubkeys to validate from an external signer</td>
+<td>Fetch then list of public keys to validate from an external signer</td>
 <td></td>
 </tr>
 <tr>

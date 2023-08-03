@@ -15,7 +15,7 @@
       
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.19">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.1.21">
     
     
       
@@ -734,26 +734,22 @@
 
 
 <h1 id="generating-flamegraphs-for-a-running-node-service-on-linux">Generating Flamegraphs for a Running Node Service on Linux<a class="headerlink" href="#generating-flamegraphs-for-a-running-node-service-on-linux" title="Permanent link">&para;</a></h1>
-<p>This guide assumes a running instance of Lodestar and will walk through how to generate a flamegraph for the process while running on Linux. While it is possible to run Lodestar in a number of ways, for performance profiling it is recommended to not use Dockerized implementations.  It is best to run Lodestar as a service on a Linux machine. Follow the Lodestar docs to get the service installed and running. Then come back here when you are ready to generate the flamegraph.</p>
+<p>This guide assumes a running instance of Lodestar and will walk through how to generate a flamegraph for the process while running on Linux. While it is possible to run Lodestar in a number of ways, for performance profiling it is recommended to not use Dockerized implementations. It is best to run Lodestar as a service on a Linux machine. Follow the Lodestar docs to get the service installed and running. Then come back here when you are ready to generate the flamegraph.</p>
 <h2 id="modifying-linux-and-lodestar">Modifying Linux and Lodestar<a class="headerlink" href="#modifying-linux-and-lodestar" title="Permanent link">&para;</a></h2>
-<p>Use the following two commands to install <code>perf</code> for generating the stack traces.  You may get a warning about needing to restart the VM due to kernel updates. This is nothing to be concerned with and if so, cancel out of the restart dialog.</p>
+<p>Use the following two commands to install <code>perf</code> for generating the stack traces. You may get a warning about needing to restart the VM due to kernel updates. This is nothing to be concerned with and if so, cancel out of the restart dialog.</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>linux-tools-common<span class="w"> </span>linux-tools-generic
 sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>linux-tools-<span class="sb">`</span>uname<span class="w"> </span>-r<span class="sb">`</span><span class="w">  </span><span class="c1"># empirically this throws if run on the same line above</span>
 </code></pre></div>
-<p>Next we need to update the Lodestar service by modifying the start script.  We need to add a necessary flag <code>--perf-basic-prof</code> to allow the stack traces to be useful.  Node is a virtual machine and <code>perf</code> is designed to capture host stack traces. In order to allow the JS functions to be captured meaningfully, <code>v8</code> can provide some help.  Generally Lodestar is started with a script like the following:</p>
+<p>Next we need to update the Lodestar service by modifying the start script. We need to add a necessary flag <code>--perf-basic-prof</code> to allow the stack traces to be useful. Node is a virtual machine and <code>perf</code> is designed to capture host stack traces. In order to allow the JavaScript functions to be captured meaningfully, <code>v8</code> can provide some help. Generally Lodestar is started with a script like the following:</p>
 <h3 id="example-start_lodestarsh">Example start_lodestar.sh<a class="headerlink" href="#example-start_lodestarsh" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
-
-<span class="c1"># Add the --perf-basic-prof flag to the node process</span>
-
-node<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--perf-basic-prof<span class="w"> </span><span class="se">\ </span>
+<div class="highlight"><pre><span></span><code>node<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--perf-basic-prof<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--max-old-space-size<span class="o">=</span><span class="m">4096</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>/usr/src/lodestar/packages/cli/bin/lodestar<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>beacon<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--rcConfig<span class="w"> </span>/home/devops/beacon/rcconfig.yml
 </code></pre></div>
-<p>After updating the start script, restart the node process running the beacon service.  Note in the command below, that the <code>beacon</code> service may have a different name or restart command, depending on your setup.</p>
+<p>After updating the start script, restart the node process running the beacon service. Note in the command below, that the <code>beacon</code> service may have a different name or restart command, depending on your setup.</p>
 <div class="highlight"><pre><span></span><code>admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>beacon
 </code></pre></div>
 <p>The flag that was added notifies <code>V8</code> to output a map of functions and their addresses. This is necessary for <code>perf</code> to generate the stack traces for the virtual machine in addition to the traditional host stack traces. There is a very small, performance overhead to output the maps. After a short while, once the process runs for a bit the functions will no longer be moving in memory and the overhead will be significantly reduced. The VM will still be moving objects around but this flag is generally safe to run in production. After a few minutes of running, listing the directory with the start script (<code>process.cwd()</code>) will look similar:</p>
@@ -780,23 +776,22 @@ drwxr-xr-x<span class="w">  </span><span class="m">2</span><span class="w"> </sp
 <p>The <code>isolate-*-v8.log</code> files are the maps that <code>v8</code> outputs for the <code>perf</code> command to reference. You are now ready to collect the stack traces.</p>
 <h3 id="capturing-stack-traces">Capturing Stack Traces<a class="headerlink" href="#capturing-stack-traces" title="Permanent link">&para;</a></h3>
 <p>The first command below will run <code>perf</code> for 60 seconds, and then save the output to a file named <code>perf.out</code>. The second one will merge the exported, unknown, tokens with the isolate maps and output full stack traces for the render. Running both <code>perf</code> commands in the folder with the <code>isolate</code> maps will allow the data to be seamlessly spliced. Once the output is saved, update the permissions so the file can be copied to your local machine via <code>scp</code>.</p>
-<p>You can modify the frequency of capture by changing <code>-F 99</code> to a different number. Try to stay away from whole numbers as they are more likely to cause interference with periodically scheduled tasks. As an example use <code>99Hz</code> or <code>997Hz</code> instead of <code>100Hz</code> or <code>1000Hz</code>.  In testing neither seemed to have an appreciable affect on cpu usage when run for a short period of time.</p>
+<p>You can modify the frequency of capture by changing <code>-F 99</code> to a different number. Try to stay away from whole numbers as they are more likely to cause interference with periodically scheduled tasks. As an example use <code>99Hz</code> or <code>997Hz</code> instead of <code>100Hz</code> or <code>1000Hz</code>. In testing neither seemed to have an appreciable affect on CPU usage when run for a short period of time.</p>
 <p>To change the period of capture adjust the sleep duration (which is in seconds).</p>
 <p>The <code>pgrep</code> command is used to find the process id to capture against. Feel free to pass a number to the <code>-p</code> flag if you know the process id, or adjust the file path if the executable is in a different location.</p>
 <div class="highlight"><pre><span></span><code>admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>perf<span class="w"> </span>record<span class="w"> </span>-F<span class="w"> </span><span class="m">99</span><span class="w"> </span>-p<span class="w"> </span><span class="k">$(</span>pgrep<span class="w"> </span>-f<span class="w"> </span><span class="s1">&#39;/usr/src/lodestar/packages/cli/bin/lodestar beacon&#39;</span><span class="k">)</span><span class="w"> </span>-g<span class="w"> </span>--<span class="w"> </span>sleep<span class="w"> </span><span class="m">60</span>
 admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>perf<span class="w"> </span>script<span class="w"> </span>-f<span class="w"> </span>&gt;<span class="w"> </span>perf.out
 admin@12.34.56.78:<span class="w"> </span>sudo<span class="w"> </span>chmod<span class="w"> </span><span class="m">777</span><span class="w"> </span>~/beacon/perf.out
 </code></pre></div>
-<p>And then copy the <code>perf.out</code> file to your local machine to render the flamegraph. Running at <code>99Hz</code> for 180 seconds results in a file size of about 3.5mb and <code>997Hz</code> for 60 seconds is roughly 4.4mb.</p>
+<p>And then copy the <code>perf.out</code> file to your local machine to render the flamegraph. Running at <code>99Hz</code> for 180 seconds results in a file size of about 3.5MB and <code>997Hz</code> for 60 seconds is roughly 4.4MB.</p>
 <div class="highlight"><pre><span></span><code>scp<span class="w"> </span>admin@12.34.56.78:/home/devops/beacon/out.perf<span class="w"> </span>/some_temp_dir/perf.out
 </code></pre></div>
 <h2 id="rendering-a-flamegraph">Rendering a Flamegraph<a class="headerlink" href="#rendering-a-flamegraph" title="Permanent link">&para;</a></h2>
-<p>By far the best tool to render flamegraphs is <a href="https://github.com/Netflix/flamescope"><code>flamescope</code></a> from Netflix.  It allows for easy analysis and zooming into specific time periods.  It also give a holistic view of how the process is performing over time.</p>
+<p>By far the best tool to render flamegraphs is <a href="https://github.com/Netflix/flamescope"><code>flamescope</code></a> from Netflix. It allows for easy analysis and zooming into specific time periods. It also give a holistic view of how the process is performing over time.</p>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <p>Python3 is required. Clone the repository and install the dependencies:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># The original is no longer maintained and had a configuration bug</span>
-<span class="c1"># This is a fork that fixes the issue.</span>
-git<span class="w"> </span>clone<span class="w"> </span>https://github.com/matthewkeil/flamescope
+<p><em>The original is no longer maintained and had a configuration bug. This is a fork that fixes the issue.</em></p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/matthewkeil/flamescope
 <span class="nb">cd</span><span class="w"> </span>flamescope
 pip3<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
 yarn
@@ -812,7 +807,7 @@ yarn<span class="w"> </span>dev
 <img src="../images/flamescope/unfiltered-flamegraph.png" alt="flamescope home screen" width="1024"/>
 <img src="../images/flamescope/zoom-in.png" alt="flamescope home screen" width="1024"/></p>
 <h2 id="filtering-results">Filtering Results<a class="headerlink" href="#filtering-results" title="Permanent link">&para;</a></h2>
-<p>There can be a lot of "noise" in the stack traces with <code>libc</code>, <code>v8</code> and <code>libuv</code> calls.  It is possible to filter the results to make it more useful, but note this will skew the results. Looking at the graph both filtered and unfiltered can be beneficial. The following <code>sed</code> command will remove the noise from the stack traces.  You can also use the bottom script programmatically to add/remove filters.</p>
+<p>There can be a lot of "noise" in the stack traces with <code>libc</code>, <code>v8</code> and <code>libuv</code> calls. It is possible to filter the results to make it more useful, but note this will skew the results. Looking at the graph both filtered and unfiltered can be beneficial. The following <code>sed</code> command will remove the noise from the stack traces.</p>
 <div class="highlight"><pre><span></span><code>sed<span class="w"> </span>-r<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;/( __libc_start| uv_| LazyCompile | v8::internal::| node::| Builtins_| Builtin:| Stub:| LoadIC:| \\[unknown\\]| LoadPolymorphicIC:)/d&quot;</span><span class="w"> </span>-e<span class="w"> </span><span class="s1">&#39;s/ LazyCompile:[*~]?/ /&#39;</span>
 </code></pre></div>
 <h3 id="unfiltered">Unfiltered<a class="headerlink" href="#unfiltered" title="Permanent link">&para;</a></h3>
@@ -825,7 +820,7 @@ yarn<span class="w"> </span>dev
 <li><a href="https://www.brendangregg.com/flamegraphs.html">https://www.brendangregg.com/flamegraphs.html</a></li>
 <li><a href="https://nodejs.org/en/docs/guides/diagnostics-flamegraph">https://nodejs.org/en/docs/guides/diagnostics-flamegraph</a></li>
 <li><a href="https://netflixtechblog.com/netflix-flamescope-a57ca19d47bb">https://netflixtechblog.com/netflix-flamescope-a57ca19d47bb</a></li>
-<li><a href="https://jaanhio.me/blog/nodejs-flamegraph-analysis/">https://jaanhio.me/blog/nodejs-flamegraph-analysis/</a>  (this was a great one about filtering methodology)</li>
+<li><a href="https://jaanhio.me/blog/nodejs-flamegraph-analysis/">https://jaanhio.me/blog/nodejs-flamegraph-analysis/</a> (this was a great one about filtering methodology)</li>
 <li><a href="https://medium.com/voodoo-engineering/node-js-and-cpu-profiling-on-production-in-real-time-without-downtime-d6e62af173e2">https://medium.com/voodoo-engineering/node-js-and-cpu-profiling-on-production-in-real-time-without-downtime-d6e62af173e2</a></li>
 </ul>
 <h3 id="visualization-tools">Visualization Tools<a class="headerlink" href="#visualization-tools" title="Permanent link">&para;</a></h3>

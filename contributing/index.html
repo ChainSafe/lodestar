@@ -17,7 +17,7 @@
       
       
       <link rel="icon" href="../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.19">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.1.21">
     
     
       
@@ -645,21 +645,21 @@
         
           <li class="md-nav__item">
   <a href="#beacon-node-only" class="md-nav__link">
-    Beacon node only:
+    Beacon node only
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#beacon-node-and-validator" class="md-nav__link">
-    Beacon node and validator:
+    Beacon node and validator
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#dockerized-metrics-local-beacon-node" class="md-nav__link">
-    Dockerized metrics + local beacon node:
+    Dockerized metrics + local beacon node
   </a>
   
 </li>
@@ -797,13 +797,6 @@
           <li class="md-nav__item">
   <a href="#spec-ethereum-consensus-spec-version-target" class="md-nav__link">
     spec.* Ethereum Consensus Spec Version Target
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#meta-meta-labels-to-organize-miscellaneous-issues" class="md-nav__link">
-    meta.* Meta Labels to organize Miscellaneous Issues
   </a>
   
 </li>
@@ -898,21 +891,21 @@
         
           <li class="md-nav__item">
   <a href="#beacon-node-only" class="md-nav__link">
-    Beacon node only:
+    Beacon node only
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#beacon-node-and-validator" class="md-nav__link">
-    Beacon node and validator:
+    Beacon node and validator
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#dockerized-metrics-local-beacon-node" class="md-nav__link">
-    Dockerized metrics + local beacon node:
+    Dockerized metrics + local beacon node
   </a>
   
 </li>
@@ -1054,13 +1047,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#meta-meta-labels-to-organize-miscellaneous-issues" class="md-nav__link">
-    meta.* Meta Labels to organize Miscellaneous Issues
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -1115,6 +1101,13 @@
 <li>:test_tube: Run <code>yarn check-types</code> to check TypeScript types.</li>
 <li>:test_tube: Run <code>yarn lint</code> to run the linter (ESLint).</li>
 </ul>
+<p>Contributing to tests:</p>
+<ul>
+<li>Test must not depend on external live resources, such that running tests for a commit must be deterministic:</li>
+<li>Do not pull data from external APIs like execution JSON RPC (instead run a local node).</li>
+<li>Do not pull unpinned versions from DockerHub (use deterministic tag) or Github (checkout commit not branch).</li>
+<li>Carefully design tests that depend on timing sensitive events like p2p network e2e tests. Consider that Github runners are significantly less powerful than your development environment.</li>
+</ul>
 <h3 id="debugging-spec-tests">Debugging Spec Tests<a class="headerlink" href="#debugging-spec-tests" title="Permanent link">&para;</a></h3>
 <ul>
 <li>To fix errors always focus on passing all minimal tests first without running mainnet tests.</li>
@@ -1122,20 +1115,20 @@
 <li>A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use mocha's option <code>--bail</code> to stop at the first failed test</li>
 <li>To then run only that failed test you can run against a specific file as use mocha's option <code>--grep</code> to run only one case</li>
 </ul>
-<div class="highlight"><pre><span></span><code>LODESTAR_PRESET=minimal ../../node_modules/.bin/mocha --config .mocharc.spec.yml test/spec/phase0/sanity.test.ts --inline-diffs --bail --grep &quot;attestation&quot;
+<div class="highlight"><pre><span></span><code><span class="nv">LODESTAR_PRESET</span><span class="o">=</span>minimal<span class="w"> </span>../../node_modules/.bin/mocha<span class="w"> </span>--config<span class="w"> </span>.mocharc.spec.yml<span class="w"> </span>test/spec/phase0/sanity.test.ts<span class="w"> </span>--inline-diffs<span class="w"> </span>--bail<span class="w"> </span>--grep<span class="w"> </span><span class="s2">&quot;attestation&quot;</span>
 </code></pre></div>
 <h2 id="docker">Docker<a class="headerlink" href="#docker" title="Permanent link">&para;</a></h2>
 <p>The docker-compose file requires that a <code>.env</code> file be present in this directory. The <code>default.env</code> file provides a template and can be copied <code>.env</code>:</p>
-<div class="highlight"><pre><span></span><code>cp default.env .env
+<div class="highlight"><pre><span></span><code>cp<span class="w"> </span>default.env<span class="w"> </span>.env
 </code></pre></div>
-<h6 id="beacon-node-only">Beacon node only:<a class="headerlink" href="#beacon-node-only" title="Permanent link">&para;</a></h6>
-<div class="highlight"><pre><span></span><code>docker-compose up -d
+<h6 id="beacon-node-only">Beacon node only<a class="headerlink" href="#beacon-node-only" title="Permanent link">&para;</a></h6>
+<div class="highlight"><pre><span></span><code>docker-compose<span class="w"> </span>up<span class="w"> </span>-d
 </code></pre></div>
-<h6 id="beacon-node-and-validator">Beacon node and validator:<a class="headerlink" href="#beacon-node-and-validator" title="Permanent link">&para;</a></h6>
-<p>First, you must have keystores and their secrets available locally at <code>./keystores</code> and your password.txt in <code>./secrets</code></p>
-<div class="highlight"><pre><span></span><code>docker-compose -f docker-compose.yml -f docker-compose.validator.yml up -d
+<h6 id="beacon-node-and-validator">Beacon node and validator<a class="headerlink" href="#beacon-node-and-validator" title="Permanent link">&para;</a></h6>
+<p>First, you must have keystores and their secrets available locally at <code>./keystores</code> and your <code>password.txt</code> in <code>./secrets</code></p>
+<div class="highlight"><pre><span></span><code>docker-compose<span class="w"> </span>-f<span class="w"> </span>docker-compose.yml<span class="w"> </span>-f<span class="w"> </span>docker-compose.validator.yml<span class="w"> </span>up<span class="w"> </span>-d
 </code></pre></div>
-<h6 id="dockerized-metrics-local-beacon-node">Dockerized metrics + local beacon node:<a class="headerlink" href="#dockerized-metrics-local-beacon-node" title="Permanent link">&para;</a></h6>
+<h6 id="dockerized-metrics-local-beacon-node">Dockerized metrics + local beacon node<a class="headerlink" href="#dockerized-metrics-local-beacon-node" title="Permanent link">&para;</a></h6>
 <p>Run a local beacon with <code>--metrics</code> enabled. Then start Prometheus + Grafana with all dashboards in <code>./dashboards</code> automatically loaded running:</p>
 <div class="highlight"><pre><span></span><code>./docker/docker-compose.local_dev.sh
 </code></pre></div>
@@ -1162,7 +1155,7 @@
 </ol>
 <h2 id="github-style-guide">Github Style Guide<a class="headerlink" href="#github-style-guide" title="Permanent link">&para;</a></h2>
 <p><strong>Branch Naming</strong></p>
-<p>If you are contributing from this repo prefix the branch name with your Github username (i.e. <code>myusername/short-description</code>)</p>
+<p>If you are contributing from this repository prefix the branch name with your Github username (i.e. <code>myusername/short-description</code>)</p>
 <p><strong>Pull Request Naming</strong></p>
 <p>Pull request titles must be:</p>
 <ul>
@@ -1185,7 +1178,7 @@
 <li>Otherwise, close your pull request and <a href="https://github.com/ChainSafe/lodestar/issues/new/choose">create a new issue instead.</a></li>
 </ul>
 <h2 id="lodestar-monorepo">Lodestar Monorepo<a class="headerlink" href="#lodestar-monorepo" title="Permanent link">&para;</a></h2>
-<p>We're currently experimenting with hosting the majority of lodestar packages and support packages in this repository as a <a href="https://en.wikipedia.org/wiki/Monorepo">monorepo</a>. We're using <a href="https://lerna.js.org/">Lerna</a> to manage the packages. See <a href="https://github.com/ChainSafe/lodestar/tree/unstable/packages">packages/</a> for a list of packages hosted in this repo.</p>
+<p>We're currently experimenting with hosting the majority of lodestar packages and support packages in this repository as a <a href="https://en.wikipedia.org/wiki/Monorepo">monorepo</a>. We're using <a href="https://lerna.js.org/">Lerna</a> to manage the packages. See <a href="https://github.com/ChainSafe/lodestar/tree/unstable/packages">packages/</a> for a list of packages hosted in this repository.</p>
 <h2 id="style-guide">Style Guide<a class="headerlink" href="#style-guide" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Lodestar has migrated to using ES modules.</li>
@@ -1200,7 +1193,7 @@
 <li>Functions and variables should be <a href="https://en.wikipedia.org/wiki/Camel_case"><code>camelCase</code></a>, classes should be <a href="http://wiki.c2.com/?PascalCase"><code>PascalCase</code></a>, constants should be <code>UPPERCASE_WITH_UNDERSCORES</code>.</li>
 <li>Use <code>"</code> instead of <code>'</code></li>
 <li>All functions should have types declared for all parameters and return value</li>
-<li>You shouldn't be using TypeScript's <code>any</code></li>
+<li>You shouldn't be using TypeScript type <code>any</code></li>
 <li>Private class properties should not be prefixed with a <code>_</code></li>
 <li>e.g.: <code>private dirty;</code>, not <code>private _dirty;</code></li>
 </ul>
@@ -1213,7 +1206,7 @@
 <li>Commenting: If your code does something that is not obvious or deviates from standards, leave a comment for other developers to explain your logic and reasoning.</li>
 <li>Use <code>//</code> commenting format unless it's a comment you want people to see in their IDE.</li>
 <li>Use <code>/** **/</code> commenting format for documenting a function/variable.</li>
-<li>Code whitespace can be helpful for reading complex code, please add some.</li>
+<li>Code white space can be helpful for reading complex code, please add some.</li>
 <li>For unit tests, we forbid import stubbing when other approaches are feasible.</li>
 </ul>
 <h2 id="tests-style-guide">Tests style guide<a class="headerlink" href="#tests-style-guide" title="Permanent link">&para;</a></h2>
@@ -1248,11 +1241,11 @@
 <h2 id="contributing-to-grafana-dashboards">Contributing to Grafana dashboards<a class="headerlink" href="#contributing-to-grafana-dashboards" title="Permanent link">&para;</a></h2>
 <p>To edit or extend an existing Grafana dashboard with minimal diff:</p>
 <ol>
-<li>Grab the .json dashboard file from current unstable</li>
-<li>Import file to Grafana via the web UI at <code>/dashboard/import</code>. Give it some temporal name relevant to your work (i.e. the branch name)</li>
+<li>Grab the <code>.json</code> dashboard file from current unstable</li>
+<li>Import the file to Grafana via the web UI at <code>/dashboard/import</code> without modifying the UID of the dashboard</li>
 <li>Visually edit the dashboard</li>
-<li>Once done make sure to leave the exact same visual aspect as before: same refresh interval, collapsed rows, etc.</li>
-<li>Save the dashboard (CTRL + S)</li>
+<li>Once done make sure to leave the exact same visual aspect as before: same refresh interval, time range, etc.</li>
+<li>Save the dashboard (CTRL+S)</li>
 <li>Run download script, see <a href="#using-download-script">below</a> on how to use it</li>
 <li>Check git diff of updated dashboards, commit, push and open your PR</li>
 </ol>
@@ -1268,59 +1261,18 @@
 <p>Issues and pull requests are subject to the following labeling guidelines.</p>
 <ul>
 <li>PRs may have a status label to indicate deviation from the normal process such as <code>status-blocked</code> or <code>status-do-not-merge</code></li>
-<li>Issues and PRs will be tagged with a <code>scope</code> and <code>prio</code> to indicate type and priority for triaging.</li>
+<li>Issues and PRs will be tagged with a <code>scope</code> and <code>prio</code> to indicate type and priority for triage.</li>
 <li>All other labels allow for further evaluation and organization.</li>
 </ul>
 <p>Label descriptions can be found below.</p>
 <h6 id="status-issues-and-pull-request-status"><code>status.*</code> Issues and Pull Request Status<a class="headerlink" href="#status-issues-and-pull-request-status" title="Permanent link">&para;</a></h6>
 <p>Status labels apply to issues and pull requests which deviate from normal processes.</p>
-<ul>
-<li><code>status-blocked</code>: This is blocked by another issue that requires resolving first.</li>
-<li><code>status-do-not-merge</code>: Merging this issue will break the build. Do not merge!</li>
-</ul>
 <h6 id="scope-scope-indicator"><code>scope.*</code> Scope Indicator<a class="headerlink" href="#scope-scope-indicator" title="Permanent link">&para;</a></h6>
 <p>Scope is comparable to Module labels but less strict with the definition of components. It applies to both, issues and pull requests.</p>
-<ul>
-<li><code>scope-cpu-performance</code>: Performance issue and ideas to improve performance.</li>
-<li><code>scope-documentation</code>: All issues related to the Lodestar documentation.</li>
-<li><code>scope-interop</code>: Issues that fix interop issues between Lodestar and CL, EL or tooling.</li>
-<li><code>scope-light-clients</code>: All issues regarding light client development.</li>
-<li><code>scope-logging</code>: Issue about logs: hygiene, format issues, improvements.</li>
-<li><code>scope-memory</code>: Issues to reduce and improve memory usage.</li>
-<li><code>scope-metrics</code>: All issues with regards to the exposed metrics.</li>
-<li><code>scope-networking</code>: All issues related to networking, gossip, and libp2p.</li>
-<li><code>scope-profitability</code>: Issues to directly improve validator performance and its profitability.</li>
-<li><code>scope-security</code>: Issues that fix security issues: DOS, key leak, CVEs.</li>
-<li><code>scope-testing</code>: Issues for adding test coverage, fixing existing tests or testing strategies</li>
-<li><code>scope-testnet-debugging</code>: Issues uncovered through running a node on a public testnet.</li>
-<li><code>scope-ux</code>: Issues for CLI UX or general consumer UX.</li>
-</ul>
 <h6 id="prio-prioritization-indicator"><code>prio.*</code> Prioritization Indicator<a class="headerlink" href="#prio-prioritization-indicator" title="Permanent link">&para;</a></h6>
 <p>A simple indicator of issue prioritization. It mainly applies to issues.</p>
-<ul>
-<li><code>prio0-critical</code>: Drop everything to resolve this immediately.</li>
-<li><code>prio1-high</code>: Resolve issues as soon as possible.</li>
-<li><code>prio2-medium</code>: Resolve this some time soon (tm).</li>
-<li><code>prio3-low</code>: This is nice to have.</li>
-</ul>
 <h6 id="spec-ethereum-consensus-spec-version-target"><code>spec.*</code> Ethereum Consensus Spec Version Target<a class="headerlink" href="#spec-ethereum-consensus-spec-version-target" title="Permanent link">&para;</a></h6>
 <p>Issues that target a specific version of the Ethereum consensus spec, shall be tagged accordingly.</p>
-<ul>
-<li><code>spec-phase0</code>: Issues targeting the initial Ethereum consensus spec version.</li>
-<li><code>spec-altair</code>: Issues targeting the Altair Ethereum consensus spec version.</li>
-<li><code>spec-bellatrix</code>: Issues targeting the Bellatrix Ethereum consensus spec version.</li>
-</ul>
-<h6 id="meta-meta-labels-to-organize-miscellaneous-issues"><code>meta.*</code> Meta Labels to organize Miscellaneous Issues<a class="headerlink" href="#meta-meta-labels-to-organize-miscellaneous-issues" title="Permanent link">&para;</a></h6>
-<ul>
-<li><code>meta-breaking-change</code>: Introduces breaking changes to DB, Validator, Beacon Node, or CLI interfaces. Handle with care!</li>
-<li><code>meta-dependencies</code>: Pull requests that update a dependency.</li>
-<li><code>meta-discussion</code>: Indicates a topic that requires input from various developers.</li>
-<li><code>meta-good-first-issue</code>: Good first issues for newcomers and first-time contributors.</li>
-<li><code>meta-help-wanted</code>: The author indicates that additional help is wanted.</li>
-<li><code>meta-pm</code>: Issues relating to Project Management tasks.</li>
-<li><code>meta-stale</code>: Label for stale issues applied by the stale bot.</li>
-<li><code>meta-technicaldebt</code>: Issues introducing or resolving technical debts.</li>
-</ul>
 <h2 id="community">Community<a class="headerlink" href="#community" title="Permanent link">&para;</a></h2>
 <p>Come chat with us on <a href="https://discord.gg/aMxzVcr">Discord</a> and join our public weekly planning meetings!</p>
 
