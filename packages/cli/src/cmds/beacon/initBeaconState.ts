@@ -1,7 +1,11 @@
 import {ssz} from "@lodestar/types";
 import {createBeaconConfig, BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
-import {isWithinWeakSubjectivityPeriod, BeaconStateAllForks} from "@lodestar/state-transition";
+import {
+  isWithinWeakSubjectivityPeriod,
+  ensureWithinWeakSubjectivityPeriod,
+  BeaconStateAllForks,
+} from "@lodestar/state-transition";
 import {
   IBeaconDb,
   IBeaconNodeOptions,
@@ -54,9 +58,7 @@ async function initAndVerifyWeakSubjectivityState(
 
   // Instead of warning user of wss check failure, we throw because user explicity wants to use
   // the checkpoint sync
-  if (!isWithinWeakSubjectivityPeriod(config, anchorState, anchorCheckpoint)) {
-    throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
-  }
+  ensureWithinWeakSubjectivityPeriod(config, anchorState, anchorCheckpoint);
 
   anchorState = await initStateFromAnchorState(config, db, logger, anchorState, {
     isWithinWeakSubjectivityPeriod: true,
