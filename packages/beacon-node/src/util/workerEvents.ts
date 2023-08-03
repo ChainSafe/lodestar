@@ -6,10 +6,12 @@ import {Metrics} from "../metrics/metrics.js";
 import {NetworkCoreWorkerMetrics} from "../network/core/metrics.js";
 import {StrictEventEmitterSingleArg} from "./strictEvents.js";
 
+const nanoToSecondConversion = 1e9;
+
 export type WorkerBridgeEvent<EventData> = {
   type: string;
   event: keyof EventData;
-  posted: [number, number];
+  posted: bigint;
   data: EventData[keyof EventData];
 };
 
@@ -41,11 +43,9 @@ export function wireEventsOnWorkerThread<EventData>(
       // This check is not necessary but added for safety in case of improper implemented events
       isWorkerToMain[data.event] === EventDirection.mainToWorker
     ) {
-      const [sec, nanoSec] = process.hrtime(data.posted);
-      const networkWorkerLatency = sec + nanoSec / 1e9;
       metrics?.networkWorkerWireEventsOnWorkerThreadLatencySec.observe(
         {eventName: data.event as string},
-        networkWorkerLatency
+        Number(process.hrtime.bigint() - data.posted) / nanoToSecondConversion
       );
       events.emit(data.event, data.data);
     }
@@ -58,7 +58,7 @@ export function wireEventsOnWorkerThread<EventData>(
         const workerEvent: WorkerBridgeEvent<EventData> = {
           type: mainEventName,
           event: eventName,
-          posted: process.hrtime(),
+          posted: process.hrtime.bigint(),
           data,
         };
         parentPort.postMessage(workerEvent);
@@ -82,11 +82,9 @@ export function wireEventsOnMainThread<EventData>(
       // This check is not necessary but added for safety in case of improper implemented events
       isWorkerToMain[data.event] === EventDirection.workerToMain
     ) {
-      const [sec, nanoSec] = process.hrtime(data.posted);
-      const networkWorkerLatency = sec + nanoSec / 1e9;
       metrics?.networkWorkerWireEventsOnMainThreadLatencySec.observe(
         {eventName: data.event as string},
-        networkWorkerLatency
+        Number(process.hrtime.bigint() - data.posted) / nanoToSecondConversion
       );
       events.emit(data.event, data.data);
     }
@@ -99,7 +97,7 @@ export function wireEventsOnMainThread<EventData>(
         const workerEvent: WorkerBridgeEvent<EventData> = {
           type: mainEventName,
           event: eventName,
-          posted: process.hrtime(),
+          posted: process.hrtime.bigint(),
           data,
         };
         worker.postMessage(workerEvent);
