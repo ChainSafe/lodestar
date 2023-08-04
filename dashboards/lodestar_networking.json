@@ -4481,12 +4481,103 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 179
+      },
+      "id": 615,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_attestation_use_head_block_state_count{caller=\"validateGossipAttestation\"}[$rate_interval])",
+          "legendFormat": "head_state",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_attestation_use_head_block_state_dialed_to_target_epoch_count{caller=\"validateGossipAttestation\"}[$rate_interval])",
+          "hide": false,
+          "legendFormat": "head_state_dialed_to_target_epoch",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Used States",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 179
+        "y": 187
       },
       "id": 600,
       "panels": [],
@@ -4542,7 +4633,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 180
+        "y": 188
       },
       "id": 602,
       "options": {
@@ -4670,7 +4761,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 180
+        "y": 188
       },
       "id": 604,
       "options": {
@@ -4822,7 +4913,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 188
+        "y": 196
       },
       "id": 603,
       "options": {
@@ -4901,7 +4992,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 188
+        "y": 196
       },
       "id": 601,
       "options": {
@@ -4942,7 +5033,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 196
+        "y": 204
       },
       "id": 188,
       "panels": [],
@@ -5007,7 +5098,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 197
+        "y": 205
       },
       "id": 180,
       "options": {
@@ -5088,7 +5179,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 197
+        "y": 205
       },
       "id": 176,
       "options": {
@@ -5169,7 +5260,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 205
+        "y": 213
       },
       "id": 182,
       "options": {
@@ -5250,7 +5341,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 205
+        "y": 213
       },
       "id": 178,
       "options": {
@@ -5331,7 +5422,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 213
+        "y": 221
       },
       "id": 605,
       "options": {
@@ -5414,7 +5505,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 213
+        "y": 221
       },
       "id": 606,
       "options": {
@@ -5497,7 +5588,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 221
+        "y": 229
       },
       "id": 498,
       "options": {
@@ -5578,7 +5669,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 221
+        "y": 229
       },
       "id": 500,
       "options": {
@@ -5659,7 +5750,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 229
+        "y": 237
       },
       "id": 184,
       "options": {
@@ -5740,7 +5831,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 229
+        "y": 237
       },
       "id": 501,
       "options": {
