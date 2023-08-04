@@ -19,9 +19,7 @@ export enum Bucket {
   // eth1 processing
   phase0_eth1Data = 8, // timestamp -> Eth1Data
   index_depositDataRoot = 9, // depositIndex -> Root<DepositData>
-  phase0_depositEvent = 19, // depositIndex -> DepositEvent
-  phase0_preGenesisState = 30, // Single = phase0.BeaconState
-  phase0_preGenesisStateLastProcessedBlock = 31, // Single = Uint8
+
   // op pool
   // phase0_attestation = 10, // DEPRECATED on v0.25.0
   // phase0_aggregateAndProof = 11, // Root -> AggregateAndProof, DEPRECATED on v.27.0
@@ -30,7 +28,9 @@ export enum Bucket {
   phase0_proposerSlashing = 14, // ValidatorIndex -> ProposerSlashing
   phase0_attesterSlashing = 15, // Root -> AttesterSlashing
   capella_blsToExecutionChange = 16, // ValidatorIndex -> SignedBLSToExecutionChange
+
   // allForks_pendingBlock = 25, // Root -> SignedBeaconBlock // DEPRECATED on v0.30.0
+  phase0_depositEvent = 19, // depositIndex -> DepositEvent
 
   index_stateArchiveRootIndex = 26, // State Root -> slot
 
@@ -42,9 +42,13 @@ export enum Bucket {
   // can be ignored and safely deleted later on
   allForks_blobsSidecar = 29, // DENEB BeaconBlockRoot -> BlobsSidecar
 
-  // https://github.com/ChainSafe/lodestar/issues/5753
-  // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
-  allForks_blobsSidecarArchive = 30, // DENEB BeaconBlockSlot -> BlobsSidecar
+  phase0_preGenesisState = 30, // Single = phase0.BeaconState
+  phase0_preGenesisStateLastProcessedBlock = 31, // Single = Uint8
+
+  // TODO DENEB: cleanup the below buckets once BlobsSidecar fully migrated to BlobSidecars
+  // note: below buckets would not be in use till deneb hf so their number assignments
+  // can be ignored and safely deleted later on
+  allForks_blobsSidecarArchive = 32, // DENEB BeaconBlockSlot -> BlobsSidecar
 
   // Lightclient server
   // altair_bestUpdatePerCommitteePeriod = 30, // DEPRECATED on v0.32.0
@@ -55,6 +59,8 @@ export enum Bucket {
   // altair_lightClientSyncCommitteeProof = 35, // DEPRECATED on v0.32.0
   // index_lightClientInitProof = 36, // DEPRECATED on v0.32.0
 
+  backfilled_ranges = 42, // Backfilled From to To, inclusive of both From, To
+
   // Buckets to support LightClient server v2
   lightClient_syncCommitteeWitness = 51, // BlockRoot -> SyncCommitteeWitness
   lightClient_syncCommittee = 52, // Root(altair.SyncCommittee) -> altair.SyncCommittee
@@ -63,8 +69,6 @@ export enum Bucket {
   // 54 was for bestPartialLightClientUpdate, allocate a fresh one
   // lightClient_bestLightClientUpdate = 55, // SyncPeriod -> LightClientUpdate // DEPRECATED on v1.5.0
   lightClient_bestLightClientUpdate = 56, // SyncPeriod -> [Slot, LightClientUpdate]
-
-  backfilled_ranges = 42, // Backfilled From to To, inclusive of both From, To
 }
 
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {
