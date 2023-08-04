@@ -4,6 +4,8 @@ import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {MapDef} from "@lodestar/utils";
 import {routes} from "@lodestar/api";
 import {Metrics} from "../../metrics/index.js";
+import {ZERO_HASH} from "../../constants/constants.js";
+import {byteArrayEquals} from "../../util/bytes.js";
 import {MapTracker} from "./mapMetrics.js";
 
 export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
@@ -53,6 +55,10 @@ export class CheckpointStateCache {
   }
 
   add(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void {
+    if (byteArrayEquals(item.latestBlockHeader.stateRoot, ZERO_HASH)) {
+      throw Error("nonono, no a checkpoint state :)");
+    }
+
     const cpHex = toCheckpointHex(cp);
     const key = toCheckpointKey(cpHex);
     if (this.cache.has(key)) {
