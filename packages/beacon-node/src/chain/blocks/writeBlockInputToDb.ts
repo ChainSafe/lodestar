@@ -19,10 +19,12 @@ export async function writeBlockInputToDb(this: BeaconChain, blocksInput: BlockI
     if (blockBytes) {
       // skip serializing data if we already have it
       this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
-      fnPromises.push(this.db.block.putBinary(this.db.block.getId(block), blockBytes));
+      fnPromises.push(
+        this.db.block.putBinary(this.db.block.getId(block), blindedOrFullSignedBlockToBlindedBytes(block, blockBytes))
+      );
     } else {
       this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
-      fnPromises.push(this.db.block.add(block));
+      fnPromises.push(this.db.block.add(blindedOrFullSignedBlockToBlinded(block)));
     }
     this.logger.debug("Persist block to hot DB", {
       slot: block.message.slot,

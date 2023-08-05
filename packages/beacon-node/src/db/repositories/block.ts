@@ -1,7 +1,11 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, Repository} from "@lodestar/db";
 import {allForks, ssz} from "@lodestar/types";
-import {getSignedBlockTypeFromBytes} from "../../util/multifork.js";
+import {blindedOrFullBlockHashTreeRoot} from "@lodestar/state-transition";
+import {
+  deserializeFullOrBlindedSignedBeaconBlock,
+  serializeFullOrBlindedSignedBeaconBlock,
+} from "../../util/multifork.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**
@@ -9,7 +13,7 @@ import {Bucket, getBucketNameByValue} from "../buckets.js";
  *
  * Used to store unfinalized blocks
  */
-export class BlockRepository extends Repository<Uint8Array, allForks.SignedBeaconBlock> {
+export class BlockRepository extends Repository<Uint8Array, allForks.FullOrBlindedSignedBeaconBlock> {
   constructor(config: ChainForkConfig, db: Db) {
     const bucket = Bucket.allForks_block;
     const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used
@@ -19,15 +23,15 @@ export class BlockRepository extends Repository<Uint8Array, allForks.SignedBeaco
   /**
    * Id is hashTreeRoot of unsigned BeaconBlock
    */
-  getId(value: allForks.SignedBeaconBlock): Uint8Array {
-    return this.config.getForkTypes(value.message.slot).BeaconBlock.hashTreeRoot(value.message);
+  getId(value: allForks.FullOrBlindedSignedBeaconBlock): Uint8Array {
+    return blindedOrFullBlockHashTreeRoot(this.config, value.message);
   }
 
-  encodeValue(value: allForks.SignedBeaconBlock): Buffer {
-    return this.config.getForkTypes(value.message.slot).SignedBeaconBlock.serialize(value) as Buffer;
+  encodeValue(value: allForks.FullOrBlindedSignedBeaconBlock): Buffer {
+    return serializeFullOrBlindedSignedBeaconBlock(this.config, value) as Buffer;
   }
 
-  decodeValue(data: Buffer): allForks.SignedBeaconBlock {
-    return getSignedBlockTypeFromBytes(this.config, data).deserialize(data);
+  decodeValue(data: Buffer): allForks.FullOrBlindedSignedBeaconBlock {
+    return deserializeFullOrBlindedSignedBeaconBlock(this.config, data);
   }
 }

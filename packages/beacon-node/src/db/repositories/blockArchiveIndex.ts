@@ -1,5 +1,5 @@
 import {Db, encodeKey} from "@lodestar/db";
-import {Slot, Root, allForks, ssz} from "@lodestar/types";
+import {Slot, Root, allForks} from "@lodestar/types";
 import {intToBytes} from "@lodestar/utils";
 import {Bucket} from "../buckets.js";
 
@@ -13,10 +13,9 @@ export async function storeParentRootIndex(db: Db, slot: Slot, parentRoot: Root)
 
 export async function deleteRootIndex(
   db: Db,
-  signedBeaconBlockType: allForks.AllForksSSZTypes["SignedBeaconBlock"],
+  beaconBlockType: allForks.AllForksSSZTypes["BeaconBlock"],
   block: allForks.SignedBeaconBlock
 ): Promise<void> {
-  const beaconBlockType = (signedBeaconBlockType as typeof ssz.phase0.SignedBeaconBlock).fields["message"];
   return db.delete(getRootIndexKey(beaconBlockType.hashTreeRoot(block.message)));
 }
 
