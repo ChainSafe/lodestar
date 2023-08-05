@@ -47,7 +47,7 @@ export type SegmentExecStatus =
       executionStatuses: MaybeValidExecutionStatus[];
       mergeBlockFound: bellatrix.BeaconBlock | null;
     }
-  | {execAborted: ExecAbortType; invalidSegmentLHV?: LVHInvalidResponse; mergeBlockFound: null};
+  | {execAborted: ExecAbortType; invalidSegmentLVH?: LVHInvalidResponse; mergeBlockFound: null};
 
 type VerifyExecutionErrorResponse =
   | {executionStatus: ExecutionStatus.Invalid; lvhResponse: LVHInvalidResponse; execError: BlockError}
@@ -379,7 +379,7 @@ function getSegmentErrorResponse(
   blocks: allForks.SignedBeaconBlock[]
 ): SegmentExecStatus {
   const {executionStatus, lvhResponse, execError} = verifyResponse;
-  let invalidSegmentLHV: LVHInvalidResponse | undefined = undefined;
+  let invalidSegmentLVH: LVHInvalidResponse | undefined = undefined;
 
   if (
     executionStatus === ExecutionStatus.Invalid &&
@@ -407,7 +407,7 @@ function getSegmentErrorResponse(
       parentBlock.executionStatus !== ExecutionStatus.PreMerge &&
       parentBlock.executionPayloadBlockHash !== lvhResponse.latestValidExecHash
     ) {
-      invalidSegmentLHV = {
+      invalidSegmentLVH = {
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: lvhResponse.latestValidExecHash,
         invalidateFromBlockHash: parentBlock.blockRoot,
@@ -415,5 +415,5 @@ function getSegmentErrorResponse(
     }
   }
   const execAborted = {blockIndex, execError};
-  return {execAborted, invalidSegmentLHV} as SegmentExecStatus;
+  return {execAborted, invalidSegmentLVH} as SegmentExecStatus;
 }

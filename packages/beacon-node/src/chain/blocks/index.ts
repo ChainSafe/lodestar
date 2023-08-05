@@ -83,8 +83,8 @@ export async function processBlocks(
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
     // and we need to further propagate
     if (segmentExecStatus.execAborted !== null) {
-      if (segmentExecStatus.invalidSegmentLHV !== undefined) {
-        this.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLHV);
+      if (segmentExecStatus.invalidSegmentLVH !== undefined) {
+        this.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLVH);
       }
       throw segmentExecStatus.execAborted.execError;
     }
