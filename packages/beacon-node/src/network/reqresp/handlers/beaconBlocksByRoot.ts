@@ -39,19 +39,9 @@ export async function* onBeaconBlocksByRoot(
         slot = slotFromBytes;
       }
 
-      // isAfterMerge can check that timestamp is != 0
-      if (
-        chain.config.getForkSeq(slot) > ForkSeq.bellatrix &&
-        isAfterMerge(blockBytes) &&
-        isPayloadHeader(blockBytes)
-      ) {
-        // Retrieve payload identifier to ask JSON RPC node
-        const hashOrNumber = getHashOrNumber(blockBytes);
-        // eth_getBlockByNumber or eth_getBlockByHash
-        // capella adds the block hash in the payload, pre-capella only block number
-        const executionPayload = eth1.getBlockByNumber(hashOrNumber);
-        blockBytes = payloadHeaderBytesToFull(blockBytes, executionPayload);
-      }
+      // It's a bis sus that deleting this line will still let the code compile..
+      // This code MUST include tests to ensure ReqResp works with full or blinded blocks
+      blockBytes = await chain.blindedBlockToFullBytes(blockBytes);
 
       yield {
         data: blockBytes,
