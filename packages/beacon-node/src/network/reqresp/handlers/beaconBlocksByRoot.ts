@@ -1,6 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ResponseOutgoing} from "@lodestar/reqresp";
 import {Slot, phase0} from "@lodestar/types";
+import {ForkSeq} from "@lodestar/params";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
@@ -36,6 +37,20 @@ export async function* onBeaconBlocksByRoot(
           throw Error(`Invalid block bytes for block root ${toHexString(root)}`);
         }
         slot = slotFromBytes;
+      }
+
+      // isAfterMerge can check that timestamp is != 0
+      if (
+        chain.config.getForkSeq(slot) > ForkSeq.bellatrix &&
+        isAfterMerge(blockBytes) &&
+        isPayloadHeader(blockBytes)
+      ) {
+        // Retrieve payload identifier to ask JSON RPC node
+        const hashOrNumber = getHashOrNumber(blockBytes);
+        // eth_getBlockByNumber or eth_getBlockByHash
+        // capella adds the block hash in the payload, pre-capella only block number
+        const executionPayload = eth1.getBlockByNumber(hashOrNumber);
+        blockBytes = payloadHeaderBytesToFull(blockBytes, executionPayload);
       }
 
       yield {

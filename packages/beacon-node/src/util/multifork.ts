@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {allForks} from "@lodestar/types";
+import {allForks, isBlindedSignedBeaconBlock} from "@lodestar/types";
 import {bytesToInt} from "@lodestar/utils";
 import {getSlotFromSignedBeaconBlockSerialized} from "./sszBytes.js";
 
@@ -61,4 +61,22 @@ export function getLightClientHeaderTypeFromBytes(
     bytes.subarray(SLOT_BYTES_POSITION_IN_LIGHTCLIENTHEADER, SLOT_BYTES_POSITION_IN_LIGHTCLIENTHEADER + SLOT_BYTE_COUNT)
   );
   return config.getLightClientForkTypes(slot).LightClientHeader;
+}
+
+export function serializeFullOrBlindedSignedBeaconBlock(
+  config: ChainForkConfig,
+  value: allForks.FullOrBlindedSignedBeaconBlock
+): Uint8Array {
+  return isBlindedSignedBeaconBlock(value)
+    ? // Blinded
+      config.getBlindedForkTypes(value.message.slot).SignedBeaconBlock.serialize(value)
+    : // Full
+      config.getForkTypes((value as allForks.SignedBeaconBlock).message.slot).SignedBeaconBlock.serialize(value);
+}
+
+export function deserializeFullOrBlindedSignedBeaconBlock(
+  config: ChainForkConfig,
+  bytes: Buffer | Uint8Array
+): allForks.FullOrBlindedSignedBeaconBlock {
+  TODO;
 }
