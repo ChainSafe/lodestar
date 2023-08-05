@@ -42,8 +42,10 @@ export async function* onBlocksOrBlobSidecarsByRange(
   if (startSlot <= finalizedSlot) {
     // Chain of blobs won't change
     for await (const {key, value} of db.finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
+      // It's a bis sus that deleting this line will still let the code compile..
+      // This code MUST include tests to ensure ReqResp works with full or blinded blocks
       yield {
-        data: value,
+        data: await this.blindedBlockToFullBytes(value),
         fork: chain.config.getForkName(db.finalized.decodeKey(key)),
       };
     }
@@ -74,8 +76,10 @@ export async function* onBlocksOrBlobSidecarsByRange(
           throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
         }
 
+        // It's a bis sus that deleting this line will still let the code compile..
+        // This code MUST include tests to ensure ReqResp works with full or blinded blocks
         yield {
-          data: blockBytes,
+          data: await chain.blindedBlockToFullBytes(blockBytes),
           fork: chain.config.getForkName(block.slot),
         };
       }

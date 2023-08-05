@@ -25,11 +25,12 @@ import {
   deneb,
   Wei,
   bellatrix,
+  isBlindedBeaconBlock,
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
-import {ForkSeq, SLOTS_PER_EPOCH, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH, MAX_BLOBS_PER_BLOCK, ForkName} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -433,7 +434,7 @@ export class BeaconChain implements IBeaconChain {
       if (block) {
         const data = await this.db.block.get(fromHexString(block.blockRoot));
         if (data) {
-          return {block: data, executionOptimistic: isOptimisticBlock(block)};
+          return {block: await this.blindedBlockToFull(data), executionOptimistic: isOptimisticBlock(block)};
         }
       }
       // A non-finalized slot expected to be found in the hot db, could be archived during
@@ -442,7 +443,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const data = await this.db.blockArchive.get(slot);
-    return data && {block: data, executionOptimistic: false};
+    return data && {block: await this.blindedBlockToFull(data), executionOptimistic: false};
   }
 
   async getBlockByRoot(
@@ -452,7 +453,7 @@ export class BeaconChain implements IBeaconChain {
     if (block) {
       const data = await this.db.block.get(fromHexString(root));
       if (data) {
-        return {block: data, executionOptimistic: isOptimisticBlock(block)};
+        return {block: await this.blindedBlockToFull(data), executionOptimistic: isOptimisticBlock(block)};
       }
       // If block is not found in hot db, try cold db since there could be an archive cycle happening
       // TODO: Add a lock to the archiver to have determinstic behaviour on where are blocks
@@ -460,6 +461,49 @@ export class BeaconChain implements IBeaconChain {
 
     const data = await this.db.blockArchive.getByRoot(fromHexString(root));
     return data && {block: data, executionOptimistic: false};
+  }
+
+  async blindedBlockToFull(block: allForks.FullOrBlindedSignedBeaconBlock): Promise<allForks.SignedBeaconBlock> {
+    // Figure out fork
+    // Figure out merge or not
+    // Figure out
+    switch (this.config.getForkName(block.message.slot)) {
+      // Before bellatrix blocks have no execution payload
+      case ForkName.phase0:
+      case ForkName.altair:
+        return block;
+
+      case ForkName.bellatrix: {
+        // On bellatrix fork, handle pre-merge and post-merge
+        if ((block.message as bellatrix.BeaconBlock).body.executionPayload.timestamp === 0) {
+          // pre-merge
+          return block;
+        }
+        if (isBlindedBeaconBlock(block.message)) {
+          // Use `eth_getBlockByNumber`, bellatrix should always be finalized and the payload does not include hash
+          return await injectBellatrixPayload(block);
+        } else {
+          return block;
+        }
+      }
+
+      case ForkName.capella:
+      // Deneb adds new fixed fiels but not blinded lists
+      case ForkName.deneb: {
+        if (isBlindedBeaconBlock(block.message)) {
+          // Use `eth_getBlockByHash`, capella payload includes hash
+          return await injectCapellaPayload(block);
+        } else {
+          return block;
+        }
+      }
+    }
+  }
+
+  async blindedBlockToFullBytes(block: Uint8Array): Uint8Array {
+    // TODO: Same code as `blindedBlockToFull`, but without de-serializing block.. looks really annoying..
+    // We should review if the optimization to stream only bytes on ReqResp is worth the complexity, an alternative
+    // is to implement more restrictive rate-limiting overall such that the load of serdes is acceptable.
   }
 
   produceBlock(blockAttributes: BlockAttributes): Promise<{block: allForks.BeaconBlock; blockValue: Wei}> {
