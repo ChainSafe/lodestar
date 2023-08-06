@@ -99,9 +99,14 @@ export const getBlockInput = {
 
     if (signedBlock !== undefined) {
       // block is available, check if all blobs have shown up
-      const {blobKzgCommitments} = (signedBlock as deneb.SignedBeaconBlock).message.body;
+      const {slot, body} = signedBlock.message;
+      const {blobKzgCommitments} = body as deneb.BeaconBlockBody;
+      const blockInfo = `blockHex=${blockHex}, slot=${slot}`;
+
       if (blobKzgCommitments.length < blockCache.blobs.size) {
-        throw Error(`Received more blobs=${blockCache.blobs.size} than commitments=${blobKzgCommitments.length}`);
+        throw Error(
+          `Received more blobs=${blockCache.blobs.size} than commitments=${blobKzgCommitments.length} for ${blockInfo}`
+        );
       }
       if (blobKzgCommitments.length === blockCache.blobs.size) {
         const blobSidecars = [];
@@ -110,7 +115,7 @@ export const getBlockInput = {
         for (let index = 0; index < blobKzgCommitments.length; index++) {
           const blobSidecar = blockCache.blobs.get(index);
           if (blobSidecar === undefined) {
-            throw Error("Missing blobSidecar");
+            throw Error(`Missing blobSidecar at index=${index} for ${blockInfo}`);
           }
           blobSidecars.push(blobSidecar);
           blobsBytes.push(blockCache.blobsBytes.get(index) ?? null);
