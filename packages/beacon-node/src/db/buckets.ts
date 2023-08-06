@@ -37,6 +37,9 @@ export enum Bucket {
   allForks_blobSidecars = 27, // DENEB BeaconBlockRoot -> BlobSidecars
   allForks_blobSidecarsArchive = 28, // DENEB BeaconBlockSlot -> BlobSidecars
 
+  phase0_preGenesisState = 30, // Single = phase0.BeaconState
+  phase0_preGenesisStateLastProcessedBlock = 31, // Single = Uint8
+
   // Lightclient server
   // altair_bestUpdatePerCommitteePeriod = 30, // DEPRECATED on v0.32.0
   // altair_latestFinalizedUpdate = 31, // DEPRECATED on v0.32.0
