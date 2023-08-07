@@ -1,5 +1,5 @@
 import {routes} from "@lodestar/api/beacon";
-import type {SecretKey} from "@chainsafe/bls/types";
+import type {SecretKey} from "@chainsafe/blst-ts";
 import {ApiError} from "@lodestar/api";
 import {AssertionResult, CLClient, CLClientKeys, SimulationAssertion} from "../interfaces.js";
 import {arrayEquals} from "../utils/index.js";
@@ -36,7 +36,7 @@ export const nodeAssertion: SimulationAssertion<"node", {health: number; keyMana
       errors.push(["node health is neither READY or SYNCING", {node: node.cl.id}]);
     }
 
-    const expectedPublicKeys = getAllKeys(node.cl.keys).map((k) => k.toPublicKey().toHex());
+    const expectedPublicKeys = getAllKeys(node.cl.keys).map((k) => k.toPublicKey().serialize().toString("hex"));
 
     if (!arrayEquals(keyManagerKeys.sort(), expectedPublicKeys.sort())) {
       errors.push([

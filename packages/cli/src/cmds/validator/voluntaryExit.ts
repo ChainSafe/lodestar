@@ -104,7 +104,7 @@ ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`
       ApiError.assert(
         await client.beacon.submitPoolVoluntaryExit({
           message: voluntaryExit,
-          signature: signer.secretKey.sign(signingRoot).toBytes(),
+          signature: signer.secretKey.sign(signingRoot).serialize(),
         })
       );
 
@@ -169,7 +169,7 @@ async function resolveValidatorIndexes(client: Api, signersToExit: SignerLocalPu
 function getSignerPubkeyHex(signer: Signer): string {
   switch (signer.type) {
     case SignerType.Local:
-      return signer.secretKey.toPublicKey().toHex();
+      return signer.secretKey.toPublicKey().serialize().toString("hex");
 
     case SignerType.Remote:
       return signer.pubkey;

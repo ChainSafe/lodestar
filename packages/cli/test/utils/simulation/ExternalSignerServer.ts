@@ -1,6 +1,6 @@
 import fastify from "fastify";
 import {fromHexString} from "@chainsafe/ssz";
-import type {SecretKey} from "@chainsafe/bls/types";
+import type {SecretKey} from "@chainsafe/blst-ts";
 import {EXTERNAL_SIGNER_BASE_PORT} from "./constants.js";
 
 /* eslint-disable no-console */
@@ -49,13 +49,13 @@ export class ExternalSignerServer {
         throw Error(`pubkey not known ${pubkeyHex}`);
       }
 
-      return {signature: secretKey.sign(fromHexString(signingRootHex)).toHex()};
+      return {signature: secretKey.sign(fromHexString(signingRootHex)).serialize().toString("hex")};
     });
   }
 
   addKeys(secretKeys: SecretKey[]): void {
     for (const secretKey of secretKeys) {
-      const pubkeyHex = secretKey.toPublicKey().toHex();
+      const pubkeyHex = secretKey.toPublicKey().serialize().toString("hex");
       this.secretKeyMap.set(pubkeyHex, secretKey);
     }
   }

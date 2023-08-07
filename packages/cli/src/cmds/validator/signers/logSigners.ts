@@ -22,7 +22,7 @@ export function logSigners(logger: Pick<Logger, LogLevel.info>, signers: Signer[
   if (localSigners.length > 0) {
     logger.info(`${localSigners.length} local keystores`);
     for (const signer of localSigners) {
-      logger.info(signer.secretKey.toPublicKey().toHex());
+      logger.info(signer.secretKey.toPublicKey().serialize().toString("hex"));
     }
   }
 
