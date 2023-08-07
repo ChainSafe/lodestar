@@ -3,7 +3,7 @@
   "compilerOptions": {
     "noEmit": true,
     "target": "ESNext",
-    "module": "CommonJS", 
+    "module": "ESNext", 
     "lib": ["ESNext"],
 
     "strict": true,
