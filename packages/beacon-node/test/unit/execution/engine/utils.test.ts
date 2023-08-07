@@ -12,10 +12,7 @@ import {ErrorJsonRpcResponse, HttpRpcError} from "../../../../src/eth1/provider/
 
 describe("execution / engine / utils", () => {
   describe("getExecutionEngineState", () => {
-    const testCasesPayload: Record<
-      ExecutionPayloadStatus,
-      [oldState: ExecutionState, newState: ExecutionState][]
-    > = {
+    const testCasesPayload: Record<ExecutionPayloadStatus, [oldState: ExecutionState, newState: ExecutionState][]> = {
       [ExecutionPayloadStatus.ACCEPTED]: [
         [ExecutionState.ONLINE, ExecutionState.SYNCED],
         [ExecutionState.AUTH_FAILED, ExecutionState.SYNCED],
