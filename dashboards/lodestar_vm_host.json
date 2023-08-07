@@ -1208,7 +1208,7 @@
       ],
       "title": "VM Stats",
       "type": "row"
-    },    
+    },
     {
       "datasource": {
         "type": "prometheus",
