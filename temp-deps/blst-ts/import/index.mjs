@@ -19,6 +19,18 @@ const {
   asyncVerifyMultipleAggregateSignatures,
 } = bindings;
 
+SecretKey.prototype.toHex = function() {
+  return `0x${this.serialize().toString("hex")}`;
+}
+
+PublicKey.prototype.toHex = function(compress) {
+  return `0x${this.serialize(compress).toString("hex")}`;
+}
+
+Signature.prototype.toHex = function(compress) {
+  return `0x${this.serialize(compress).toString("hex")}`;
+}
+
 export {
   BLST_CONSTANTS,
   SecretKey,
