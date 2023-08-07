@@ -35,6 +35,10 @@ export interface EIP1193Provider {
   request: (payload: JsonRpcRequestOrBatch) => Promise<JsonRpcResponseOrBatch>;
 }
 
+export interface Web3jsProvider {
+  request: (payload: JsonRpcRequest) => Promise<JsonRpcResponse>;
+}
+
 // Some providers uses `request` instead of the `send`. e.g. Ganache
 export interface RequestProvider {
   request(
@@ -59,7 +63,13 @@ export interface SendAsyncProvider {
   sendAsync(payload: JsonRpcRequestOrBatch): Promise<JsonRpcResponseOrBatch>;
 }
 
-export type Web3Provider = SendProvider | EthersProvider | SendAsyncProvider | RequestProvider | EIP1193Provider;
+export type Web3Provider =
+  | SendProvider
+  | EthersProvider
+  | SendAsyncProvider
+  | RequestProvider
+  | EIP1193Provider
+  | Web3jsProvider;
 
 export type ELVerifiedRequestHandlerOpts<Params = unknown[]> = {
   payload: JsonRpcRequest<Params>;

@@ -2,7 +2,7 @@ import {expect} from "chai";
 import Web3 from "web3";
 import {ethers} from "ethers";
 import sinon from "sinon";
-import {createVerifiedExecutionProvider, ProofProvider, LCTransport} from "@lodestar/prover/browser";
+import {createVerifiedExecutionProvider, ProofProvider, LCTransport, Web3Provider} from "@lodestar/prover/browser";
 import {ELRpc} from "../../src/utils/rpc.js";
 
 describe("web3_provider", () => {
@@ -19,7 +19,7 @@ describe("web3_provider", () => {
         sandbox.stub(ELRpc.prototype, "verifyCompatibility").resolves();
 
         const {provider, proofProvider} = createVerifiedExecutionProvider(
-          new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io"),
+          new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io") as Web3Provider,
           {
             transport: LCTransport.Rest,
             urls: ["https://lodestar-sepolia.chainsafe.io"],
