@@ -11,24 +11,22 @@
     "src"
   ],
   "type": "module",
-  "main": "./import/index.js",
-  "module": "./import/index.js",
+  "main": "./import/index.mjs",
+  "module": "./import/index.mjs",
   "types": "./import/index.d.ts",
   "exports": {
-    ".": "./import/index.js"
+    ".": "./import/index.mjs"
   },
   "typesVersions": {
     "*": {
       "*": [
-        "*",
-        "import/*",
-        "import/*/index"
+        "./import/index.d.ts"
       ]
     }
   },
   "publishConfig": {
     "exports": {
-      ".": "./import/index.js"
+      ".": "./import/index.mjs"
     },
     "types": "./import/index.d.ts"
   },
