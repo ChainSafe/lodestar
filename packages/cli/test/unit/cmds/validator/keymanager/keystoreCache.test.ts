@@ -33,7 +33,7 @@ describe("keystoreCache", () => {
     for (let i = 0; i < numberOfSigners; i++) {
       const secretKey = SecretKey.deserialize(interopSecretKey(i).serialize());
       const keystorePath = tmp.tmpNameSync({postfix: ".json"});
-      const password = secretKey.serialize().toString("hex");
+      const password = secretKey.toHex();
       const keystore = await Keystore.create(
         password,
         secretKey.serialize(),
@@ -51,7 +51,7 @@ describe("keystoreCache", () => {
       signers.push({type: SignerType.Local, secretKey});
 
       // Use secretkey hex as password
-      definitions.push({password: secretKey.serialize().toString("hex"), keystorePath});
+      definitions.push({password: secretKey.toHex(), keystorePath});
       passwords.push(password);
       secretKeys.push(secretKey.serialize());
     }

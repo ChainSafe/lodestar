@@ -49,13 +49,13 @@ export class ExternalSignerServer {
         throw Error(`pubkey not known ${pubkeyHex}`);
       }
 
-      return {signature: secretKey.sign(fromHexString(signingRootHex)).serialize().toString("hex")};
+      return {signature: secretKey.sign(fromHexString(signingRootHex)).toHex()};
     });
   }
 
   addKeys(secretKeys: SecretKey[]): void {
     for (const secretKey of secretKeys) {
-      const pubkeyHex = secretKey.toPublicKey().serialize().toString("hex");
+      const pubkeyHex = secretKey.toPublicKey().toHex();
       this.secretKeyMap.set(pubkeyHex, secretKey);
     }
   }

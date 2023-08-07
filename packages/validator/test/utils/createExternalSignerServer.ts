@@ -43,7 +43,7 @@ export function createExternalSignerServer(secretKeys: SecretKey[]): ReturnType<
       throw Error(`pubkey not known ${pubkeyHex}`);
     }
 
-    return {signature: secretKey.sign(fromHexString(signingRootHex)).serialize().toString("hex")};
+    return {signature: secretKey.sign(fromHexString(signingRootHex)).toHex()};
   });
 
   return server;

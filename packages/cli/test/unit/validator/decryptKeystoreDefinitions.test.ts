@@ -63,7 +63,7 @@ describe("decryptKeystoreDefinitions", function () {
       const signers = await decryptKeystoreDefinitions(definitions, {logger: console, signal, cacheFilePath});
       expect(signers.length).to.equal(secretKeys.length);
       for (const signer of signers) {
-        const hexSecret = `0x${signer.secretKey.serialize().toString("hex")}`;
+        const hexSecret = signer.secretKey.toHex();
         expect(secretKeys.includes(hexSecret), `secretKeys doesn't include ${hexSecret}`).to.be.true;
       }
     });

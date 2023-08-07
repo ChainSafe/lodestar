@@ -4,8 +4,8 @@
 // const pks: string[] = [];
 // for (let i = 0; i < 4; i++) {
 //   const sk = SecretKey.fromKeygen(Buffer.alloc(32, 0xaa + i));
-//   sks.push(sk.serialize().toString("hex"));
-//   pks.push(sk.toPublicKey().serialize().toString("hex"));
+//   sks.push(sk.toHex());
+//   pks.push(sk.toPublicKey().toHex());
 // }
 // console.log(`
 // export const cachedPubkeysHex = ${JSON.stringify(pks)}

@@ -36,7 +36,7 @@ export const nodeAssertion: SimulationAssertion<"node", {health: number; keyMana
       errors.push(["node health is neither READY or SYNCING", {node: node.cl.id}]);
     }
 
-    const expectedPublicKeys = getAllKeys(node.cl.keys).map((k) => k.toPublicKey().serialize().toString("hex"));
+    const expectedPublicKeys = getAllKeys(node.cl.keys).map((k) => k.toPublicKey().toHex());
 
     if (!arrayEquals(keyManagerKeys.sort(), expectedPublicKeys.sort())) {
       errors.push([

@@ -169,7 +169,7 @@ async function resolveValidatorIndexes(client: Api, signersToExit: SignerLocalPu
 function getSignerPubkeyHex(signer: Signer): string {
   switch (signer.type) {
     case SignerType.Local:
-      return signer.secretKey.toPublicKey().serialize().toString("hex");
+      return signer.secretKey.toPublicKey().toHex();
 
     case SignerType.Remote:
       return signer.pubkey;
