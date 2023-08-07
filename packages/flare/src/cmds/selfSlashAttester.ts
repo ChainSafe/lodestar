@@ -1,5 +1,4 @@
-import bls from "@chainsafe/bls";
-import type {SecretKey} from "@chainsafe/bls/types";
+import {SecretKey, aggregateSignatures} from "@chainsafe/blst-ts";
 import {ApiError, getClient} from "@lodestar/api";
 import {phase0, ssz} from "@lodestar/types";
 import {config as chainConfig} from "@lodestar/config/default";
@@ -153,5 +152,5 @@ function signAttestationDataBigint(
   const signingRoot = computeSigningRoot(ssz.phase0.AttestationDataBigint, data, proposerDomain);
 
   const sigs = sks.map((sk) => sk.sign(signingRoot));
-  return bls.Signature.aggregate(sigs).toBytes();
+  return aggregateSignatures(sigs).serialize();
 }
