@@ -148,7 +148,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(process_resident_memory_bytes{job=~\"beacon|validator\"})",
+          "expr": "sum(process_resident_memory_bytes{job=~\"$beacon_job|beacon|$validator_job|validator\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "rss",
@@ -162,7 +162,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(process_heap_bytes{job=~\"validator|beacon\"})",
+          "expr": "sum(process_heap_bytes{job=~\"$beacon_job|beacon|$validator_job|validator\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "process_heap_bytes",
@@ -176,7 +176,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(nodejs_heap_size_total_bytes) + sum(network_worker_nodejs_heap_size_total_bytes) + sum(discv5_worker_nodejs_heap_size_total_bytes)",
+          "expr": "(sum(nodejs_heap_size_total_bytes) + sum(discv5_worker_nodejs_heap_size_total_bytes) + sum(network_worker_nodejs_heap_size_total_bytes))\nor\n(sum(nodejs_heap_size_total_bytes) + sum(discv5_worker_nodejs_heap_size_total_bytes))",
           "hide": false,
           "interval": "",
           "legendFormat": "node allocated heap",
@@ -190,7 +190,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(nodejs_heap_size_used_bytes) + sum(network_worker_nodejs_heap_size_used_bytes) + sum(discv5_worker_nodejs_heap_size_used_bytes)",
+          "expr": "(sum(nodejs_heap_size_used_bytes) + sum(discv5_worker_nodejs_heap_size_used_bytes) + sum(network_worker_nodejs_heap_size_used_bytes)) \nor\n(sum(nodejs_heap_size_used_bytes) + sum(discv5_worker_nodejs_heap_size_used_bytes)) ",
           "hide": false,
           "interval": "",
           "legendFormat": "node used heap",
@@ -204,7 +204,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(nodejs_external_memory_bytes) + sum(network_worker_nodejs_external_memory_bytes) + sum(discv5_worker_nodejs_external_memory_bytes)",
+          "expr": "(sum(nodejs_external_memory_bytes) + sum(discv5_worker_nodejs_external_memory_bytes) + sum(network_worker_nodejs_external_memory_bytes))\nor\n(sum(nodejs_external_memory_bytes) + sum(discv5_worker_nodejs_external_memory_bytes))",
           "hide": false,
           "interval": "",
           "legendFormat": "node external memory",
@@ -303,7 +303,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + network_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + discv5_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"}",
+          "expr": "(nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + discv5_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + network_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"})\nor\n(nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + discv5_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "external_memory",
@@ -422,7 +422,7 @@
           "refId": "B"
         }
       ],
-      "title": "Heap Allocations - Main Thread",
+      "title": "Main Thread - Heap Allocations",
       "type": "timeseries"
     },
     {
@@ -538,7 +538,7 @@
           "refId": "C"
         }
       ],
-      "title": "GC pause time rate + reclaimed bytes - Main Thread",
+      "title": "Main Thread - GC pause time rate + reclaimed bytes",
       "type": "timeseries"
     },
     {
@@ -636,7 +636,7 @@
           "refId": "B"
         }
       ],
-      "title": "Heap Allocations - Network Worker Thread",
+      "title": "Network Worker Thread - Heap Allocations",
       "type": "timeseries"
     },
     {
@@ -752,7 +752,7 @@
           "refId": "C"
         }
       ],
-      "title": "GC pause time rate + reclaimed bytes - Network Worker Thread",
+      "title": "Network Worker Thread - GC pause time rate + reclaimed bytes",
       "type": "timeseries"
     },
     {
@@ -850,7 +850,7 @@
           "refId": "B"
         }
       ],
-      "title": "Heap Allocations - Discv5 Worker Thread",
+      "title": "Discv5 Worker Thread - Heap Allocations",
       "type": "timeseries"
     },
     {
@@ -966,7 +966,7 @@
           "refId": "C"
         }
       ],
-      "title": "GC pause time rate + reclaimed bytes - Discv5 Worker Thread",
+      "title": "Discv5 Worker Thread - GC pause time rate + reclaimed bytes",
       "type": "timeseries"
     },
     {
@@ -1042,8 +1042,8 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "editorMode": "code",
           "expr": "nodejs_heap_space_size_used_bytes{job=~\"$validator_job|validator\"}",
+          "editorMode": "code",
           "interval": "",
           "legendFormat": "{{space}}",
           "range": true,
@@ -1064,7 +1064,7 @@
           "refId": "B"
         }
       ],
-      "title": "Heap Allocations - Validator",
+      "title": "Validator - Heap Allocations",
       "type": "timeseries"
     },
     {
@@ -1180,7 +1180,7 @@
           "refId": "C"
         }
       ],
-      "title": "GC pause time rate + reclaimed bytes - Validator",
+      "title": "Validator - GC pause time rate + reclaimed bytes",
       "type": "timeseries"
     },
     {
