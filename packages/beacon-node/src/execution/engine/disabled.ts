@@ -1,4 +1,4 @@
-import {ExecutionState, IExecutionEngine, PayloadIdCache} from "./interface.js";
+import {ExecutionEngineState, IExecutionEngine, PayloadIdCache} from "./interface.js";
 
 export class ExecutionEngineDisabled implements IExecutionEngine {
   readonly payloadIdCache = new PayloadIdCache();
@@ -27,7 +27,7 @@ export class ExecutionEngineDisabled implements IExecutionEngine {
     throw Error("Execution engine disabled");
   }
 
-  getState(): ExecutionState {
+  getState(): ExecutionEngineState {
     throw Error("Execution engine disabled");
   }
 }
