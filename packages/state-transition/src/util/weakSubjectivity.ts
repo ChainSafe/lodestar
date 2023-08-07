@@ -138,7 +138,7 @@ export function ensureWithinWeakSubjectivityPeriod(
   const clockEpoch = computeEpochAtSlot(getCurrentSlot(config, wsState.genesisTime));
   if (clockEpoch > wsStateEpoch + wsPeriod) {
     throw new Error(
-      `The downloaded state with epoch ${wsStateEpoch} is not within subjectivity period of ${wsPeriod} from the current epoch ${clockEpoch}. Please verify your checkpoint source`
+      `The downloaded state with epoch ${wsStateEpoch} is not within weak subjectivity period of ${wsPeriod} from the current epoch ${clockEpoch}. Please verify your checkpoint source`
     );
   }
 }
