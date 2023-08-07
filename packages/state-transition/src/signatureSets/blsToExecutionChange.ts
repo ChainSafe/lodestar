@@ -1,8 +1,7 @@
 import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {capella, ssz} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
+import {PublicKey, CoordType} from "@chainsafe/blst-ts";
 
 import {computeSigningRoot, ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";
@@ -29,7 +28,7 @@ export function getBlsToExecutionChangeSignatureSet(
     type: SignatureSetType.single,
     // The withdrawal pubkey is the same as signedBLSToExecutionChange's fromBlsPubkey as it should
     // be validated against the withdrawal credentials digest
-    pubkey: bls.PublicKey.fromBytes(signedBLSToExecutionChange.message.fromBlsPubkey, CoordType.affine, true),
+    pubkey: PublicKey.deserialize(signedBLSToExecutionChange.message.fromBlsPubkey, CoordType.affine),
     signingRoot: computeSigningRoot(ssz.capella.BLSToExecutionChange, signedBLSToExecutionChange.message, domain),
     signature: signedBLSToExecutionChange.signature,
   };

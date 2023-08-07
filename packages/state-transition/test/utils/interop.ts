@@ -18,7 +18,7 @@ export function interopPubkeysCached(validatorCount: number): Uint8Array[] {
   if (cachedKeysHex.length < validatorCount) {
     for (let i = cachedKeysHex.length; i < validatorCount; i++) {
       const sk = interopSecretKey(i);
-      const pk = sk.toPublicKey().toBytes();
+      const pk = sk.toPublicKey().serialize();
       keys.push(pk);
     }
     const keysHex = keys.map((pk) => toHexString(pk));
