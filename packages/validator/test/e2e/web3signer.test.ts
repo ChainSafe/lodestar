@@ -10,7 +10,7 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {createBeaconConfig} from "@lodestar/config";
 import {genesisData} from "@lodestar/config/networks";
 import {getClient, routes} from "@lodestar/api";
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst-ts";
 import {ssz} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {Interchange, ISlashingProtection, Signer, SignerType, ValidatorStore} from "../../src/index.js";
@@ -77,7 +77,7 @@ describe("web3signer signature test", function () {
     fs.writeFileSync(path.join(configDirPathHost, "keystore.json"), keystoreStr);
     fs.writeFileSync(path.join(configDirPathHost, passwordFilename), password);
 
-    const secretKey = bls.SecretKey.fromBytes(await Keystore.parse(keystoreStr).decrypt(password));
+    const secretKey = SecretKey.deserialize(await Keystore.parse(keystoreStr).decrypt(password));
 
     const port = 9000;
 

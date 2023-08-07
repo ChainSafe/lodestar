@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {toBufferBE} from "bigint-buffer";
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst-ts";
 import {toHexString} from "@chainsafe/ssz";
 import {RootHex} from "@lodestar/types";
 import {HttpStatusCode, routes} from "@lodestar/api";
@@ -24,8 +24,8 @@ describe("BlockDutiesService", function () {
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   before(() => {
-    const secretKeys = Array.from({length: 3}, (_, i) => bls.SecretKey.fromBytes(toBufferBE(BigInt(i + 1), 32)));
-    pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
+    const secretKeys = Array.from({length: 3}, (_, i) => SecretKey.deserialize(toBufferBE(BigInt(i + 1), 32)));
+    pubkeys = secretKeys.map((sk) => sk.toPublicKey().serialize());
     validatorStore = initValidatorStore(secretKeys, api);
   });
 

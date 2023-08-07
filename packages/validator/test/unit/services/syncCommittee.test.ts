@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst-ts";
 import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
@@ -37,8 +37,8 @@ describe("SyncCommitteeService", function () {
   });
 
   before(() => {
-    const secretKeys = Array.from({length: 1}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
-    pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
+    const secretKeys = Array.from({length: 1}, (_, i) => SecretKey.deserialize(Buffer.alloc(32, i + 1)));
+    pubkeys = secretKeys.map((sk) => sk.toPublicKey().serialize());
     validatorStore.votingPubkeys.returns(pubkeys.map(toHexString));
     validatorStore.hasVotingPubkey.returns(true);
     validatorStore.hasSomeValidators.returns(true);

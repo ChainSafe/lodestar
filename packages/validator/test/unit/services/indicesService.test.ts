@@ -1,7 +1,7 @@
 import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst-ts";
 import {toHexString} from "@chainsafe/ssz";
 import {getApiClientStub} from "../../utils/apiStub.js";
 import {testLogger} from "../../utils/logger.js";
@@ -16,10 +16,10 @@ describe("IndicesService", function () {
 
   before(() => {
     const secretKeys = [
-      bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32)),
-      bls.SecretKey.fromBytes(toBufferBE(BigInt(99), 32)),
+      SecretKey.deserialize(toBufferBE(BigInt(98), 32)),
+      SecretKey.deserialize(toBufferBE(BigInt(99), 32)),
     ];
-    pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
+    pubkeys = secretKeys.map((sk) => sk.toPublicKey().serialize());
   });
 
   it("Should remove pubkey", async function () {
