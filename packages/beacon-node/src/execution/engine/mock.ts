@@ -24,7 +24,7 @@ import {
   BlobsBundleRpc,
   ExecutionPayloadBodyRpc,
 } from "./types.js";
-import {ExecutePayloadStatus, PayloadIdCache} from "./interface.js";
+import {ExecutionPayloadStatus, PayloadIdCache} from "./interface.js";
 import {JsonRpcBackend} from "./utils.js";
 
 const INTEROP_GAS_LIMIT = 30e6;
@@ -171,7 +171,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     if (!this.validBlocks.has(parentHash)) {
       // if requisite data for the payload's acceptance or validation is missing
       // return {status: SYNCING, latestValidHash: null, validationError: null}
-      return {status: ExecutePayloadStatus.SYNCING, latestValidHash: null, validationError: null};
+      return {status: ExecutionPayloadStatus.SYNCING, latestValidHash: null, validationError: null};
     }
 
     // 4. Client software MAY NOT validate the payload if the payload doesn't belong to the canonical chain.
@@ -190,7 +190,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     // IF the payload has been fully validated while processing the call
     // RETURN payload status from the Payload validation process
     // If validation succeeds, the response MUST contain {status: VALID, latestValidHash: payload.blockHash}
-    return {status: ExecutePayloadStatus.VALID, latestValidHash: blockHash, validationError: null};
+    return {status: ExecutionPayloadStatus.VALID, latestValidHash: blockHash, validationError: null};
   }
 
   /**
@@ -246,7 +246,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       //
       // > TODO: Implement
       return {
-        payloadStatus: {status: ExecutePayloadStatus.SYNCING, latestValidHash: null, validationError: null},
+        payloadStatus: {status: ExecutionPayloadStatus.SYNCING, latestValidHash: null, validationError: null},
         payloadId: null,
       };
     }
@@ -337,7 +337,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       // IF the payload is deemed VALID and the build process has begun
       // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: buildProcessId}
       return {
-        payloadStatus: {status: ExecutePayloadStatus.VALID, latestValidHash: null, validationError: null},
+        payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
         payloadId: String(payloadId as number),
       };
     }
@@ -347,7 +347,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       // IF the payload is deemed VALID and a build process hasn't been started
       // {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash, validationError: null}, payloadId: null}
       return {
-        payloadStatus: {status: ExecutePayloadStatus.VALID, latestValidHash: null, validationError: null},
+        payloadStatus: {status: ExecutionPayloadStatus.VALID, latestValidHash: null, validationError: null},
         payloadId: null,
       };
     }

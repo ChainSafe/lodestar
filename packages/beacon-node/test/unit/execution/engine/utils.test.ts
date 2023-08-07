@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {ErrorAborted} from "@lodestar/utils";
 import {FetchError} from "@lodestar/api";
-import {ExecutePayloadStatus, ExecutionEngineState} from "../../../../src/execution/index.js";
+import {ExecutionPayloadStatus, ExecutionEngineState} from "../../../../src/execution/index.js";
 import {
   HTTP_CONNECTION_ERROR_CODES,
   HTTP_FATAL_ERROR_CODES,
@@ -13,66 +13,66 @@ import {ErrorJsonRpcResponse, HttpRpcError} from "../../../../src/eth1/provider/
 describe("execution / engine / utils", () => {
   describe("getExecutionEngineState", () => {
     const testCasesPayload: Record<
-      ExecutePayloadStatus,
+      ExecutionPayloadStatus,
       [oldState: ExecutionEngineState, newState: ExecutionEngineState][]
     > = {
-      [ExecutePayloadStatus.ACCEPTED]: [
+      [ExecutionPayloadStatus.ACCEPTED]: [
         [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.OFFLINE, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCED],
       ],
-      [ExecutePayloadStatus.VALID]: [
+      [ExecutionPayloadStatus.VALID]: [
         [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.OFFLINE, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCED],
       ],
-      [ExecutePayloadStatus.UNSAFE_OPTIMISTIC_STATUS]: [
+      [ExecutionPayloadStatus.UNSAFE_OPTIMISTIC_STATUS]: [
         [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.OFFLINE, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCED],
         [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCED],
       ],
-      [ExecutePayloadStatus.ELERROR]: [
+      [ExecutionPayloadStatus.ELERROR]: [
         [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.OFFLINE, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
       ],
-      [ExecutePayloadStatus.INVALID]: [
+      [ExecutionPayloadStatus.INVALID]: [
         [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.OFFLINE, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
       ],
-      [ExecutePayloadStatus.SYNCING]: [
+      [ExecutionPayloadStatus.SYNCING]: [
         [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.OFFLINE, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
       ],
-      [ExecutePayloadStatus.INVALID_BLOCK_HASH]: [
+      [ExecutionPayloadStatus.INVALID_BLOCK_HASH]: [
         [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.OFFLINE, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCING],
         [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
       ],
-      [ExecutePayloadStatus.UNAVAILABLE]: [
+      [ExecutionPayloadStatus.UNAVAILABLE]: [
         [ExecutionEngineState.ONLINE, ExecutionEngineState.OFFLINE],
         [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.OFFLINE],
         [ExecutionEngineState.OFFLINE, ExecutionEngineState.OFFLINE],
         [ExecutionEngineState.SYNCED, ExecutionEngineState.OFFLINE],
         [ExecutionEngineState.SYNCING, ExecutionEngineState.OFFLINE],
       ],
-      ["unknown" as ExecutePayloadStatus]: [
+      ["unknown" as ExecutionPayloadStatus]: [
         [ExecutionEngineState.ONLINE, ExecutionEngineState.ONLINE],
         [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.ONLINE],
         [ExecutionEngineState.OFFLINE, ExecutionEngineState.ONLINE],
@@ -172,7 +172,7 @@ describe("execution / engine / utils", () => {
       ],
     ];
 
-    for (const payloadStatus of Object.keys(testCasesPayload) as ExecutePayloadStatus[]) {
+    for (const payloadStatus of Object.keys(testCasesPayload) as ExecutionPayloadStatus[]) {
       for (const [oldState, newState] of testCasesPayload[payloadStatus]) {
         it(`should transition from "${oldState}" to "${newState}" on payload status "${payloadStatus}"`, () => {
           expect(getExecutionEngineState({payloadStatus, oldState})).to.equal(newState);
