@@ -30,7 +30,7 @@ export enum ExecutionPayloadStatus {
   UNSAFE_OPTIMISTIC_STATUS = "UNSAFE_OPTIMISTIC_STATUS",
 }
 
-export enum ExecutionEngineState {
+export enum ExecutionState {
   ONLINE = "ONLINE",
   OFFLINE = "OFFLINE",
   SYNCING = "SYNCING",
@@ -148,5 +148,5 @@ export interface IExecutionEngine {
 
   getPayloadBodiesByRange(start: number, count: number): Promise<(ExecutionPayloadBody | null)[]>;
 
-  getState(): ExecutionEngineState;
+  getState(): ExecutionState;
 }

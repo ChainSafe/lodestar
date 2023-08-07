@@ -20,7 +20,7 @@ import {
   PayloadAttributes,
   BlobsBundle,
   VersionedHashes,
-  ExecutionEngineState,
+  ExecutionState,
 } from "./interface.js";
 import {PayloadIdCache} from "./payloadIdCache.js";
 import {
@@ -95,7 +95,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   // The default state is ONLINE, it will be updated to SYNCING once we receive the first payload
   // This assumption is better than the OFFLINE state, since we can't be sure if the EL is offline and being offline may trigger some notifications
   // It's safer to to avoid false positives and assume that the EL is syncing until we receive the first payload
-  private state: ExecutionEngineState = ExecutionEngineState.ONLINE;
+  private state: ExecutionState = ExecutionState.ONLINE;
 
   readonly payloadIdCache = new PayloadIdCache();
   /**
@@ -131,7 +131,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   protected async fetchWithRetries<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
     try {
       const res = await this.rpc.fetchWithRetries<R, P>(payload, opts);
-      this.updateEngineState(ExecutionEngineState.ONLINE);
+      this.updateEngineState(ExecutionState.ONLINE);
       return res;
     } catch (err) {
       this.updateEngineState(getExecutionEngineState({payloadError: err, oldState: this.state}));
@@ -412,29 +412,29 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     return response.map(deserializeExecutionPayloadBody);
   }
 
-  getState(): ExecutionEngineState {
+  getState(): ExecutionState {
     return this.state;
   }
 
-  private updateEngineState(newState: ExecutionEngineState): void {
+  private updateEngineState(newState: ExecutionState): void {
     const oldState = this.state;
 
     if (oldState === newState) return;
 
     switch (newState) {
-      case ExecutionEngineState.ONLINE:
+      case ExecutionState.ONLINE:
         this.logger.info("Execution client became online", {oldState, newState});
         break;
-      case ExecutionEngineState.OFFLINE:
+      case ExecutionState.OFFLINE:
         this.logger.error("Execution client went offline", {oldState, newState});
         break;
-      case ExecutionEngineState.SYNCED:
+      case ExecutionState.SYNCED:
         this.logger.info("Execution client is synced", {oldState, newState});
         break;
-      case ExecutionEngineState.SYNCING:
+      case ExecutionState.SYNCING:
         this.logger.warn("Execution client is syncing", {oldState, newState});
         break;
-      case ExecutionEngineState.AUTH_FAILED:
+      case ExecutionState.AUTH_FAILED:
         this.logger.error("Execution client authentication failed", {oldState, newState});
         break;
     }

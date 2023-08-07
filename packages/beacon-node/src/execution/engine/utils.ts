@@ -3,7 +3,7 @@ import {isErrorAborted} from "@lodestar/utils";
 import {IJson, RpcPayload} from "../../eth1/interface.js";
 import {IJsonRpcHttpClient, ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {isQueueErrorAborted} from "../../util/queue/errors.js";
-import {ExecutionPayloadStatus, ExecutionEngineState as ExecutionState} from "./interface.js";
+import {ExecutionPayloadStatus, ExecutionState} from "./interface.js";
 
 export type JsonRpcBackend = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

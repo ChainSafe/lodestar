@@ -7,7 +7,7 @@ import {Metrics} from "../metrics/index.js";
 import {IBeaconChain} from "../chain/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {GENESIS_SLOT} from "../constants/constants.js";
-import {ExecutionEngineState} from "../execution/index.js";
+import {ExecutionState} from "../execution/index.js";
 import {IBeaconSync, SyncModules, SyncingStatus} from "./interface.js";
 import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range.js";
 import {getPeerSyncType, PeerSyncType, peerSyncTypes} from "./utils/remoteSyncType.js";
@@ -81,7 +81,7 @@ export class BeaconSync implements IBeaconSync {
 
   getSyncStatus(): SyncingStatus {
     const currentSlot = this.chain.clock.currentSlot;
-    const elOffline = this.chain.executionEngine.getState() === ExecutionEngineState.OFFLINE;
+    const elOffline = this.chain.executionEngine.getState() === ExecutionState.OFFLINE;
 
     // If we are pre/at genesis, signal ready
     if (currentSlot <= GENESIS_SLOT) {
