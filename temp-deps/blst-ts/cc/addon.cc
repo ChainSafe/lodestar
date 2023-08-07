@@ -37,13 +37,13 @@ BlstTsAddon::BlstTsAddon(Napi::Env env, Napi::Object exports)
     : _dst{"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"},
       _blst_error_strings{
           "BLST_SUCCESS",
-          "BLST_BAD_ENCODING",
-          "BLST_POINT_NOT_ON_CURVE",
-          "BLST_POINT_NOT_IN_GROUP",
-          "BLST_AGGR_TYPE_MISMATCH",
-          "BLST_VERIFY_FAIL",
-          "BLST_PK_IS_INFINITY",
-          "BLST_BAD_SCALAR",
+          "BLST_ERROR::BLST_BAD_ENCODING",
+          "BLST_ERROR::BLST_POINT_NOT_ON_CURVE",
+          "BLST_ERROR::BLST_POINT_NOT_IN_GROUP",
+          "BLST_ERROR::BLST_AGGR_TYPE_MISMATCH",
+          "BLST_ERROR::BLST_VERIFY_FAIL",
+          "BLST_ERROR::BLST_PK_IS_INFINITY",
+          "BLST_ERROR::BLST_BAD_SCALAR",
       } {
     Napi::Object js_constants = Napi::Object::New(env);
     js_constants.Set(
@@ -58,6 +58,13 @@ BlstTsAddon::BlstTsAddon(Napi::Env env, Napi::Object exports)
     Signature::Init(env, exports, this);
     Functions::Init(env, exports);
     env.SetInstanceData(this);
+
+    // Check that openssl PRNG is seeded
+    blst::byte seed{0};
+    if (!this->GetRandomBytes(&seed, 0)) {
+        Napi::Error::New(env, "BLST_ERROR: Error seeding pseudo-random number generator")
+            .ThrowAsJavaScriptException();
+    }
 }
 
 std::string BlstTsAddon::GetBlstErrorString(const blst::BLST_ERROR &err) {

@@ -89,21 +89,148 @@ export class Signature implements Serializable {
   sigValidate(): void;
 }
 
+/**
+ * Aggregates an array of PublicKeyArgs.  Can pass mixed deserialized PublicKey
+ * objects and serialized Uint8Array in the `keys` array. Passing serialized
+ * objects requires deserialization of the blst::P1
+ *
+ * @param {PublicKeyArg} keys - Array of public keys to aggregate
+ *
+ * @return {PublicKey} - Aggregated jacobian public key
+ *
+ * @throw {TypeError} - Invalid input
+ * @throw {Error} - Invalid aggregation
+ */
 export function aggregatePublicKeys(keys: PublicKeyArg[]): PublicKey;
+
+/**
+ * Aggregates an array of SignatureArgs.  Can pass mixed deserialized Signature
+ * objects and serialized Uint8Array in the `signatures` array. Passing serialized
+ * objects requires deserialization of the blst::P2
+ *
+ * @param {SignatureArg} signatures - Array of signatures to aggregate
+ *
+ * @return {Signature} - Aggregated jacobian signature
+ *
+ * @throw {TypeError} - Invalid input
+ * @throw {Error} - Invalid aggregation
+ */
 export function aggregateSignatures(signatures: SignatureArg[]): Signature;
+
+/**
+ * Bls verification of a message against a public key and signature.
+ *
+ * @param {BlstBuffer} msg - Message to verify
+ * @param {PublicKeyArg} publicKey - Public key to verify against
+ * @param {SignatureArg} signature - Signature of the message
+ *
+ * @return {boolean} - True if the signature is valid, false otherwise
+ *
+ * @throw {TypeError} - Invalid input
+ */
 export function verify(msg: BlstBuffer, publicKey: PublicKeyArg, signature: SignatureArg): boolean;
+
+/**
+ * Bls verification of a message against a set of public keys and an aggregated signature.
+ *
+ * @param {BlstBuffer} msg - Message to verify
+ * @param {PublicKeyArg} publicKeys - Public keys to aggregate and verify against
+ * @param {SignatureArg} signature - Aggregated signature of the message
+ *
+ * @return {boolean} - True if the signature is valid, false otherwise
+ *
+ * @throw {TypeError} - Invalid input
+ * @throw {Error} - Invalid aggregation
+ */
+export function fastAggregateVerify(msg: BlstBuffer, publicKeys: PublicKeyArg[], signature: SignatureArg): boolean;
+
+/**
+ * Bls verification of a set of messages, with corresponding public keys, and a single
+ * aggregated signature.
+ *
+ * @param {BlstBuffer} msgs - Messages to verify
+ * @param {PublicKeyArg} publicKeys - Corresponding public keys to verify against
+ * @param {SignatureArg} signature - Aggregated signature of the message
+ *
+ * @return {boolean} - True if the signature is valid, false otherwise
+ *
+ * @throw {TypeError} - Invalid input
+ * @throw {Error} - Invalid aggregation
+ */
+export function aggregateVerify(msgs: BlstBuffer[], publicKeys: PublicKeyArg[], signature: SignatureArg): boolean;
+
+/**
+ * Bls batch verification for groups with a message and corresponding public key
+ * and signature. Only returns true if all signatures are valid.
+ *
+ * @param {SignatureSet} signatureSets - Array of SignatureSet objects to batch verify
+ *
+ * @return {boolean} - True if all signatures are valid, false otherwise
+ *
+ * @throw {TypeError} - Invalid input
+ * @throw {Error} - Invalid aggregation
+ */
+export function verifyMultipleAggregateSignatures(signatureSets: SignatureSet[]): boolean;
+
+/**
+ * Bls verification of a message against a public key and signature.
+ *
+ * @param {BlstBuffer} msg - Message to verify
+ * @param {PublicKeyArg} publicKey - Public key to verify against
+ * @param {SignatureArg} signature - Signature of the message
+ *
+ * @return {Promise<boolean>} - True if the signature is valid, false otherwise
+ *
+ * @throw {TypeError} - Invalid input
+ */
 export function asyncVerify(msg: BlstBuffer, publicKey: PublicKeyArg, signature: SignatureArg): Promise<boolean>;
-export function fastAggregateVerify(msg: BlstBuffer, publicKey: PublicKeyArg[], signature: SignatureArg): boolean;
+
+/**
+ * Bls verification of a message against a set of public keys and an aggregated signature.
+ *
+ * @param {BlstBuffer} msg - Message to verify
+ * @param {PublicKeyArg} publicKeys - Public keys to aggregate and verify against
+ * @param {SignatureArg} signature - Aggregated signature of the message
+ *
+ * @return {Promise<boolean>} - True if the signature is valid, false otherwise
+ *
+ * @throw {TypeError} - Invalid input
+ * @throw {Error} - Invalid aggregation
+ */
 export function asyncFastAggregateVerify(
   msg: BlstBuffer,
   publicKey: PublicKeyArg[],
   signature: SignatureArg
 ): Promise<boolean>;
-export function aggregateVerify(msg: BlstBuffer[], publicKey: PublicKeyArg[], signature: SignatureArg): boolean;
+
+/**
+ * Bls verification of a set of messages, with corresponding public keys, and a single
+ * aggregated signature.
+ *
+ * @param {BlstBuffer} msgs - Messages to verify
+ * @param {PublicKeyArg} publicKeys - Corresponding public keys to verify against
+ * @param {SignatureArg} signature - Aggregated signature of the message
+ *
+ * @return {Promise<boolean>} - True if the signature is valid, false otherwise
+ *
+ * @throw {TypeError} - Invalid input
+ * @throw {Error} - Invalid aggregation
+ */
 export function asyncAggregateVerify(
   msg: BlstBuffer[],
   publicKey: PublicKeyArg[],
   signature: SignatureArg
 ): Promise<boolean>;
-export function verifyMultipleAggregateSignatures(signatureSets: SignatureSet[]): boolean;
+
+/**
+ * Bls batch verification for groups with a message and corresponding public key
+ * and signature. Only returns true if all signatures are valid.
+ *
+ * @param {SignatureSet} signatureSets - Array of SignatureSet objects to batch verify
+ *
+ * @return {Promise<boolean>} - True if all signatures are valid, false otherwise
+ *
+ * @throw {TypeError} - Invalid input
+ * @throw {Error} - Invalid aggregation
+ */
 export function asyncVerifyMultipleAggregateSignatures(signatureSets: SignatureSet[]): Promise<boolean>;

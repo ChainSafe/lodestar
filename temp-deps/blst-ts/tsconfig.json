@@ -2,8 +2,8 @@
   "include": ["import", "test", "tools"],
   "compilerOptions": {
     "noEmit": true,
-    "target": "esnext",
-    "module": "commonjs",
+    "target": "ESNext",
+    "module": "CommonJS", 
     "lib": ["ESNext"],
 
     "strict": true,

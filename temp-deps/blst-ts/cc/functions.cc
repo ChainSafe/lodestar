@@ -2,47 +2,46 @@
 
 namespace {
 Napi::Value AggregatePublicKeys(const Napi::CallbackInfo &info) {
-    BLST_TS_FUNCTION_PREAMBLE
+    BLST_TS_FUNCTION_PREAMBLE(info, env, module)
     if (!info[0].IsArray()) {
-        Napi::TypeError::New(env, "publicKeys must be of type PublicKeyArg[]")
+        Napi::TypeError::New(env, "BLST_ERROR: publicKeys must be of type PublicKeyArg[]")
             .ThrowAsJavaScriptException();
         return scope.Escape(env.Undefined());
     }
     Napi::Array arr = info[0].As<Napi::Array>();
     uint32_t length = arr.Length();
     if (length == 0) {
-        Napi::TypeError::New(env, "PublicKeyArg[] must have length > 0")
+        Napi::TypeError::New(env, "BLST_ERROR: PublicKeyArg[] must have length > 0")
             .ThrowAsJavaScriptException();
         return scope.Escape(env.Undefined());
     }
 
-    BLST_TS_CREATE_UNWRAPPED_OBJECT(public_key, PublicKey, result)
+    BLST_TS_CREATE_JHEAP_OBJECT(wrapped, public_key, PublicKey, result)
     result->_has_jacobian = true;
     result->_jacobian.reset(new blst::P1);
 
+    bool has_error = false;
     for (uint32_t i = 0; i < length; i++) {
         Napi::Value val = arr[i];
         PointerGroup<blst::P1> ptr_group;
         try {
-            if (unwrap_point_arg(
-                    ptr_group,
-                    env,
-                    module,
-                    val,
-                    "PublicKeyArg",
-                    CoordType::Jacobian)) {
+            BLST_TS_UNWRAP_POINT_ARG(
+                env,
+                module,
+                val,
+                ptr_group,
+                has_error,
+                public_key,
+                PublicKey,
+                PUBLIC_KEY,
+                "PublicKey",
+                blst::P1,
+                1,
+                CoordType::Jacobian,
+                _jacobian)
+            if (has_error) {
                 return scope.Escape(env.Undefined());
             }
-            // TODO: Do we still need to check for 0x40 key?
-            // if (key_bytes[0] & 0x40 &&
-            //     this->IsZeroBytes(
-            //         key_bytes,
-            //         1,
-            //         _public_keys[_public_keys.GetBadIndex()]
-            //             .GetBytesLength())) {
-            //     _is_valid = false;
-            //     return;
-            // }
             result->_jacobian->add(*ptr_group.raw_pointer);
         } catch (const blst::BLST_ERROR &err) {
             std::ostringstream msg;
@@ -57,35 +56,44 @@ Napi::Value AggregatePublicKeys(const Napi::CallbackInfo &info) {
 }
 
 Napi::Value AggregateSignatures(const Napi::CallbackInfo &info) {
-    BLST_TS_FUNCTION_PREAMBLE
+    BLST_TS_FUNCTION_PREAMBLE(info, env, module)
     if (!info[0].IsArray()) {
-        Napi::TypeError::New(env, "signatures must be of type SignatureArg[]")
+        Napi::TypeError::New(env, "BLST_ERROR: signatures must be of type SignatureArg[]")
             .ThrowAsJavaScriptException();
         return scope.Escape(env.Undefined());
     }
     Napi::Array arr = info[0].As<Napi::Array>();
     uint32_t length = arr.Length();
     if (length == 0) {
-        Napi::TypeError::New(env, "SignatureArg[] must have length > 0")
+        Napi::TypeError::New(env, "BLST_ERROR: SignatureArg[] must have length > 0")
             .ThrowAsJavaScriptException();
         return scope.Escape(env.Undefined());
     }
 
-    BLST_TS_CREATE_UNWRAPPED_OBJECT(signature, Signature, result)
+    BLST_TS_CREATE_JHEAP_OBJECT(wrapped, signature, Signature, result)
     result->_has_jacobian = true;
     result->_jacobian.reset(new blst::P2);
 
+    bool has_error = false;
     for (uint32_t i = 0; i < arr.Length(); i++) {
         Napi::Value val = arr[i];
         PointerGroup<blst::P2> ptr_group;
         try {
-            if (unwrap_point_arg(
-                    ptr_group,
-                    env,
-                    module,
-                    val,
-                    "SignatureArg",
-                    CoordType::Jacobian)) {
+            BLST_TS_UNWRAP_POINT_ARG(
+                env,
+                module,
+                val,
+                ptr_group,
+                has_error,
+                signature,
+                Signature,
+                SIGNATURE,
+                "Signature",
+                blst::P2,
+                2,
+                CoordType::Jacobian,
+                _jacobian)
+            if (has_error) {
                 return scope.Escape(env.Undefined());
             }
             result->_jacobian->add(*ptr_group.raw_pointer);
@@ -106,9 +114,10 @@ Napi::Value AggregateVerify(const Napi::CallbackInfo &info) {
     Napi::EscapableHandleScope scope(env);
     try {
         BlstTsAddon *module = env.GetInstanceData<BlstTsAddon>();
+        bool has_error = false;
 
         if (!info[0].IsArray()) {
-            Napi::TypeError::New(env, "msgs must be of type BlstBuffer[]")
+            Napi::TypeError::New(env, "BLST_ERROR: msgs must be of type BlstBuffer[]")
                 .ThrowAsJavaScriptException();
             return scope.Escape(env.Undefined());
         }
@@ -124,14 +133,23 @@ Napi::Value AggregateVerify(const Napi::CallbackInfo &info) {
         Napi::Array pk_array = info[1].As<Napi::Array>();
         uint32_t pk_array_length = pk_array.Length();
 
+        Napi::Value sig_val = info[2];
         PointerGroup<blst::P2_Affine> sig_ptr_group;
-        if (unwrap_point_arg(
-                sig_ptr_group,
-                env,
-                module,
-                info[2],
-                "SignatureArg",
-                CoordType::Affine)) {
+        BLST_TS_UNWRAP_POINT_ARG(
+            env,
+            module,
+            sig_val,
+            sig_ptr_group,
+            has_error,
+            signature,
+            Signature,
+            SIGNATURE,
+            "Signature",
+            blst::P2_Affine,
+            2,
+            CoordType::Affine,
+            _affine)
+        if (has_error) {
             return scope.Escape(env.Undefined());
         }
 
@@ -139,18 +157,18 @@ Napi::Value AggregateVerify(const Napi::CallbackInfo &info) {
             if (sig_ptr_group.raw_pointer->is_inf()) {
                 return scope.Escape(Napi::Boolean::New(env, false));
             }
-            Napi::TypeError::New(env, "publicKeys must have length > 0")
+            Napi::TypeError::New(env, "BLST_ERROR: publicKeys must have length > 0")
                 .ThrowAsJavaScriptException();
             return scope.Escape(env.Undefined());
         }
         if (msgs_array_length == 0) {
-            Napi::TypeError::New(env, "msgs must have length > 0")
+            Napi::TypeError::New(env, "BLST_ERROR: msgs must have length > 0")
                 .ThrowAsJavaScriptException();
             return scope.Escape(env.Undefined());
         }
         if (msgs_array_length != pk_array_length) {
             Napi::TypeError::New(
-                env, "msgs and publicKeys must be the same length")
+                env, "BLST_ERROR: msgs and publicKeys must be the same length")
                 .ThrowAsJavaScriptException();
             return scope.Escape(env.Undefined());
         }
@@ -160,15 +178,26 @@ Napi::Value AggregateVerify(const Napi::CallbackInfo &info) {
 
         for (uint32_t i = 0; i < pk_array_length; i++) {
             Napi::Value msg_value = msgs_array[i];
-            BLST_TS_UNWRAP_UINT_8_ARRAY(msg_value, msg, "msg", scope.Escape(env.Undefined()))
+            BLST_TS_UNWRAP_UINT_8_ARRAY(
+                msg_value, msg, "msg", scope.Escape(env.Undefined()))
+
+            Napi::Value val = pk_array[i];
             PointerGroup<blst::P1_Affine> pk_ptr_group;
-            if (unwrap_point_arg(
-                    pk_ptr_group,
-                    env,
-                    module,
-                    pk_array[i],
-                    "PublicKeyArg",
-                    CoordType::Affine)) {
+            BLST_TS_UNWRAP_POINT_ARG(
+                env,
+                module,
+                val,
+                pk_ptr_group,
+                has_error,
+                public_key,
+                PublicKey,
+                PUBLIC_KEY,
+                "PublicKey",
+                blst::P1_Affine,
+                1,
+                CoordType::Affine,
+                _affine)
+            if (has_error) {
                 return scope.Escape(env.Undefined());
             }
 
@@ -199,10 +228,11 @@ Napi::Value VerifyMultipleAggregateSignatures(const Napi::CallbackInfo &info) {
     Napi::EscapableHandleScope scope(env);
     try {
         BlstTsAddon *module = env.GetInstanceData<BlstTsAddon>();
+        bool has_error = false;
 
         if (!info[0].IsArray()) {
             Napi::TypeError::New(
-                env, "signatureSets must be of type SignatureSet[]")
+                env, "BLST_ERROR: signatureSets must be of type SignatureSet[]")
                 .ThrowAsJavaScriptException();
             return scope.Escape(env.Undefined());
         }
@@ -213,38 +243,61 @@ Napi::Value VerifyMultipleAggregateSignatures(const Napi::CallbackInfo &info) {
 
         for (uint32_t i = 0; i < sets_array_length; i++) {
             blst::byte rand[BLST_TS_RANDOM_BYTES_LENGTH];
-            module->GetRandomBytes(rand, BLST_TS_RANDOM_BYTES_LENGTH);
+            if (!module->GetRandomBytes(rand, BLST_TS_RANDOM_BYTES_LENGTH)) {
+                Napi::Error::New(env, "BLST_ERROR: Failed to generate random bytes")
+                    .ThrowAsJavaScriptException();
+                return scope.Escape(env.Undefined());
+            }
 
             Napi::Value set_value = sets_array[i];
             if (!set_value.IsObject()) {
-                Napi::TypeError::New(env, "signatureSet must be an object")
+                Napi::TypeError::New(env, "BLST_ERROR: signatureSet must be an object")
                     .ThrowAsJavaScriptException();
                 return scope.Escape(env.Undefined());
             }
             Napi::Object set = set_value.As<Napi::Object>();
 
             Napi::Value msg_value = set.Get("msg");
-            BLST_TS_UNWRAP_UINT_8_ARRAY(msg_value, msg, "msg", scope.Escape(env.Undefined()))
+            BLST_TS_UNWRAP_UINT_8_ARRAY(
+                msg_value, msg, "msg", scope.Escape(env.Undefined()))
 
+            Napi::Value pk_val = set.Get("publicKey");
             PointerGroup<blst::P1_Affine> pk_ptr_group;
-            if (unwrap_point_arg(
-                    pk_ptr_group,
-                    env,
-                    module,
-                    set.Get("publicKey"),
-                    "PublicKeyArg",
-                    CoordType::Affine)) {
+            BLST_TS_UNWRAP_POINT_ARG(
+                env,
+                module,
+                pk_val,
+                pk_ptr_group,
+                has_error,
+                public_key,
+                PublicKey,
+                PUBLIC_KEY,
+                "PublicKey",
+                blst::P1_Affine,
+                1,
+                CoordType::Affine,
+                _affine)
+            if (has_error) {
                 return scope.Escape(env.Undefined());
             }
 
+            Napi::Value sig_val = set.Get("signature");
             PointerGroup<blst::P2_Affine> sig_ptr_group;
-            if (unwrap_point_arg(
-                    sig_ptr_group,
-                    env,
-                    module,
-                    set.Get("signature"),
-                    "SignatureArg",
-                    CoordType::Affine)) {
+            BLST_TS_UNWRAP_POINT_ARG(
+                env,
+                module,
+                sig_val,
+                sig_ptr_group,
+                has_error,
+                signature,
+                Signature,
+                SIGNATURE,
+                "Signature",
+                blst::P2_Affine,
+                2,
+                CoordType::Affine,
+                _affine)
+            if (has_error) {
                 return scope.Escape(env.Undefined());
             }
 
@@ -291,7 +344,7 @@ class VerifyMultipleAggregateSignaturesWorker : public Napi::AsyncWorker {
         Napi::Env env = Env();
         if (!info[0].IsArray()) {
             Napi::Error::New(
-                env, "signatureSets must be of type SignatureSet[]")
+                env, "BLST_ERROR: signatureSets must be of type SignatureSet[]")
                 .ThrowAsJavaScriptException();
             m_has_error = true;
             return;
@@ -304,7 +357,7 @@ class VerifyMultipleAggregateSignaturesWorker : public Napi::AsyncWorker {
             for (uint32_t i = 0; i < sets_array_length; i++) {
                 Napi::Value set_value = sets_array[i];
                 if (!set_value.IsObject()) {
-                    Napi::Error::New(env, "signatureSet must be an object")
+                    Napi::Error::New(env, "BLST_ERROR: signatureSet must be an object")
                         .ThrowAsJavaScriptException();
                     m_has_error = true;
                     return;
@@ -320,25 +373,41 @@ class VerifyMultipleAggregateSignaturesWorker : public Napi::AsyncWorker {
                      msg.Data(),
                      msg.ByteLength()});
 
-                if (unwrap_point_arg(
-                        m_sets[i].pk_ptr_group,
-                        env,
-                        m_module,
-                        set.Get("publicKey"),
-                        "PublicKeyArg",
-                        CoordType::Affine)) {
-                    m_has_error = true;
+                Napi::Value pk_val = set.Get("publicKey");
+                BLST_TS_UNWRAP_POINT_ARG(
+                    env,
+                    m_module,
+                    pk_val,
+                    m_sets[i].pk_ptr_group,
+                    m_has_error,
+                    public_key,
+                    PublicKey,
+                    PUBLIC_KEY,
+                    "PublicKey",
+                    blst::P1_Affine,
+                    1,
+                    CoordType::Affine,
+                    _affine)
+                if (m_has_error) {
                     return;
                 }
 
-                if (unwrap_point_arg(
-                        m_sets[i].sig_ptr_group,
-                        env,
-                        m_module,
-                        set.Get("signature"),
-                        "SignatureArg",
-                        CoordType::Affine)) {
-                    m_has_error = true;
+                Napi::Value sig_val = set.Get("signature");
+                BLST_TS_UNWRAP_POINT_ARG(
+                    env,
+                    m_module,
+                    sig_val,
+                    m_sets[i].sig_ptr_group,
+                    m_has_error,
+                    signature,
+                    Signature,
+                    SIGNATURE,
+                    "Signature",
+                    blst::P2_Affine,
+                    2,
+                    CoordType::Affine,
+                    _affine)
+                if (m_has_error) {
                     return;
                 }
             }
@@ -358,7 +427,11 @@ class VerifyMultipleAggregateSignaturesWorker : public Napi::AsyncWorker {
     void Execute() {
         for (uint32_t i = 0; i < m_sets.size(); i++) {
             blst::byte rand[BLST_TS_RANDOM_BYTES_LENGTH];
-            m_module->GetRandomBytes(rand, BLST_TS_RANDOM_BYTES_LENGTH);
+            if (!m_module->GetRandomBytes(rand, BLST_TS_RANDOM_BYTES_LENGTH)) {
+                SetError("BLST_ERROR: Failed to generate random bytes");
+                return;
+            }
+
             blst::BLST_ERROR err = m_ctx->mul_n_aggregate(
                 m_sets[i].pk_ptr_group.raw_pointer,
                 m_sets[i].sig_ptr_group.raw_pointer,
@@ -396,6 +469,7 @@ Napi::Value AsyncVerifyMultipleAggregateSignatures(
     VerifyMultipleAggregateSignaturesWorker *worker =
         new VerifyMultipleAggregateSignaturesWorker(info);
     if (worker->m_has_error) {
+        delete worker;
         return info.Env().Undefined();
     }
     worker->Queue();
@@ -423,7 +497,7 @@ class AggregateVerifyWorker : public Napi::AsyncWorker {
         Napi::Env env = Env();
         try {
             if (!info[0].IsArray()) {
-                Napi::TypeError::New(env, "msgs must be of type BlstBuffer[]")
+                Napi::TypeError::New(env, "BLST_ERROR: msgs must be of type BlstBuffer[]")
                     .ThrowAsJavaScriptException();
                 m_has_error = true;
                 return;
@@ -433,7 +507,7 @@ class AggregateVerifyWorker : public Napi::AsyncWorker {
 
             if (!info[1].IsArray()) {
                 Napi::TypeError::New(
-                    env, "publicKeys must be of type PublicKeyArg[]")
+                    env, "BLST_ERROR: publicKeys must be of type PublicKeyArg[]")
                     .ThrowAsJavaScriptException();
                 m_has_error = true;
                 return;
@@ -441,14 +515,22 @@ class AggregateVerifyWorker : public Napi::AsyncWorker {
             Napi::Array pk_array = info[1].As<Napi::Array>();
             uint32_t pk_array_length = pk_array.Length();
 
-            if (unwrap_point_arg(
-                    m_sig_ptr_group,
-                    env,
-                    m_module,
-                    info[2],
-                    "SignatureArg",
-                    CoordType::Affine)) {
-                m_has_error = true;
+            Napi::Value sig_val = info[2];
+            BLST_TS_UNWRAP_POINT_ARG(
+                env,
+                m_module,
+                sig_val,
+                m_sig_ptr_group,
+                m_has_error,
+                signature,
+                Signature,
+                SIGNATURE,
+                "Signature",
+                blst::P2_Affine,
+                2,
+                CoordType::Affine,
+                _affine)
+            if (m_has_error) {
                 return;
             }
 
@@ -457,20 +539,20 @@ class AggregateVerifyWorker : public Napi::AsyncWorker {
                     m_is_invalid = true;
                     return;
                 }
-                Napi::TypeError::New(env, "publicKeys must have length > 0")
+                Napi::TypeError::New(env, "BLST_ERROR: publicKeys must have length > 0")
                     .ThrowAsJavaScriptException();
                 m_has_error = true;
                 return;
             }
             if (msgs_array_length == 0) {
-                Napi::TypeError::New(env, "msgs must have length > 0")
+                Napi::TypeError::New(env, "BLST_ERROR: msgs must have length > 0")
                     .ThrowAsJavaScriptException();
                 m_has_error = true;
                 return;
             }
             if (msgs_array_length != pk_array_length) {
                 Napi::TypeError::New(
-                    env, "msgs and publicKeys must be the same length")
+                    env, "BLST_ERROR: msgs and publicKeys must be the same length")
                     .ThrowAsJavaScriptException();
                 m_has_error = true;
                 return;
@@ -485,14 +567,22 @@ class AggregateVerifyWorker : public Napi::AsyncWorker {
                 m_sets[i].msg = msg.Data();
                 m_sets[i].msg_len = msg.ByteLength();
 
-                if (unwrap_point_arg(
-                        m_sets[i].pk_ptr_group,
-                        env,
-                        m_module,
-                        pk_array[i],
-                        "PublicKeyArg",
-                        CoordType::Affine)) {
-                    m_has_error = true;
+                Napi::Value pk_val = pk_array[i];
+                BLST_TS_UNWRAP_POINT_ARG(
+                    env,
+                    m_module,
+                    pk_val,
+                    m_sets[i].pk_ptr_group,
+                    m_has_error,
+                    public_key,
+                    PublicKey,
+                    PUBLIC_KEY,
+                    "PublicKey",
+                    blst::P1_Affine,
+                    1,
+                    CoordType::Affine,
+                    _affine)
+                if (m_has_error) {
                     return;
                 }
             }
@@ -548,6 +638,7 @@ class AggregateVerifyWorker : public Napi::AsyncWorker {
 Napi::Value AsyncAggregateVerify(const Napi::CallbackInfo &info) {
     AggregateVerifyWorker *worker = new AggregateVerifyWorker(info);
     if (worker->m_has_error) {
+        delete worker;
         return info.Env().Undefined();
     }
     worker->Queue();

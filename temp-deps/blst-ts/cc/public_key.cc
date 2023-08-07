@@ -36,12 +36,12 @@ void PublicKey::Init(
 }
 
 Napi::Value PublicKey::Deserialize(const Napi::CallbackInfo &info) {
-    BLST_TS_FUNCTION_PREAMBLE
+    BLST_TS_FUNCTION_PREAMBLE(info, env, module)
     Napi::Value pk_bytes_value = info[0];
 
     BLST_TS_UNWRAP_UINT_8_ARRAY(
         pk_bytes_value, pk_bytes, "pkBytes", scope.Escape(env.Undefined()))
-    std::string err_out{"pkBytes"};
+    std::string err_out{"BLST_ERROR: pkBytes"};
     if (!is_valid_length(
             err_out,
             pk_bytes.ByteLength(),
@@ -51,7 +51,7 @@ Napi::Value PublicKey::Deserialize(const Napi::CallbackInfo &info) {
         return scope.Escape(env.Undefined());
     }
 
-    BLST_TS_CREATE_UNWRAPPED_OBJECT(public_key, PublicKey, pk)
+    BLST_TS_CREATE_JHEAP_OBJECT(wrapped, public_key, PublicKey, pk)
     // default to jacobian
     pk->_has_jacobian = true;
 
@@ -59,7 +59,7 @@ Napi::Value PublicKey::Deserialize(const Napi::CallbackInfo &info) {
     if (!info[1].IsUndefined()) {
         Napi::Value type_val = info[1].As<Napi::Value>();
         if (!type_val.IsNumber()) {
-            Napi::TypeError::New(env, "type must be of enum CoordType (number)")
+            Napi::TypeError::New(env, "BLST_ERROR: type must be of enum CoordType (number)")
                 .ThrowAsJavaScriptException();
             return scope.Escape(env.Undefined());
         }
@@ -117,22 +117,22 @@ Napi::Value PublicKey::KeyValidate(const Napi::CallbackInfo &info) {
 
     if (_has_jacobian) {
         if (_jacobian->is_inf()) {
-            Napi::Error::New(env, "blst::BLST_PK_IS_INFINITY")
+            Napi::Error::New(env, "BLST_ERROR::BLST_PK_IS_INFINITY")
                 .ThrowAsJavaScriptException();
         } else if (!_jacobian->in_group()) {
-            Napi::Error::New(env, "blst::BLST_POINT_NOT_IN_GROUP")
+            Napi::Error::New(env, "BLST_ERROR::BLST_POINT_NOT_IN_GROUP")
                 .ThrowAsJavaScriptException();
         }
     } else if (_has_affine) {
         if (_affine->is_inf()) {
-            Napi::Error::New(env, "blst::BLST_PK_IS_INFINITY")
+            Napi::Error::New(env, "BLST_ERROR::BLST_PK_IS_INFINITY")
                 .ThrowAsJavaScriptException();
         } else if (!_affine->in_group()) {
-            Napi::Error::New(env, "blst::BLST_POINT_NOT_IN_GROUP")
+            Napi::Error::New(env, "BLST_ERROR::BLST_POINT_NOT_IN_GROUP")
                 .ThrowAsJavaScriptException();
         }
     } else {
-        Napi::Error::New(env, "blst::BLST_PK_IS_INFINITY")
+        Napi::Error::New(env, "BLST_ERROR::BLST_PK_IS_INFINITY")
             .ThrowAsJavaScriptException();
     }
 
