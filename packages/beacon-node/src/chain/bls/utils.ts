@@ -1,5 +1,4 @@
-import type {PublicKey} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import {type PublicKey, aggregatePublicKeys} from "@chainsafe/blst-ts";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 
 export function getAggregatedPubkey(signatureSet: ISignatureSet): PublicKey {
@@ -8,7 +7,7 @@ export function getAggregatedPubkey(signatureSet: ISignatureSet): PublicKey {
       return signatureSet.pubkey;
 
     case SignatureSetType.aggregate:
-      return bls.PublicKey.aggregate(signatureSet.pubkeys);
+      return aggregatePublicKeys(signatureSet.pubkeys);
 
     default:
       throw Error("Unknown signature set type");

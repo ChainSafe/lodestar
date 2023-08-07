@@ -1,8 +1,7 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
+import {CoordType} from "@chainsafe/blst-ts";
 import {Logger} from "@lodestar/utils";
 import {
-  verifySignatureSetsMaybeBatch,
+  // verifySignatureSetsMaybeBatch,
   SignatureSetDeserialized,
   SignatureSetSerialized,
   asyncVerifySignatureSetsMaybeBatch,
@@ -195,10 +194,10 @@ export async function asyncVerifyManySignatureSets(logger: Logger, workReqArr: B
   };
 }
 
-function deserializeSwigSet(set: SerializedSet): SignatureSetDeserialized {
-  return {
-    publicKey: bls.PublicKey.fromBytes(set.publicKey, CoordType.affine),
-    message: set.message,
-    signature: set.signature,
-  };
-}
+// function deserializeSwigSet(set: SerializedSet): SignatureSetDeserialized {
+//   return {
+//     publicKey: PublicKey.fromBytes(set.publicKey, CoordType.affine),
+//     message: set.message,
+//     signature: set.signature,
+//   };
+// }

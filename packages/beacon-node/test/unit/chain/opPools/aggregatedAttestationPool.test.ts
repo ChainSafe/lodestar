@@ -1,8 +1,7 @@
 import {expect} from "chai";
 import {SinonStubbedInstance} from "sinon";
 import sinon from "sinon";
-import type {SecretKey} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import {SecretKey, Signature, fastAggregateVerify} from "@chainsafe/blst-ts";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -266,10 +265,10 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
   let sk2: SecretKey;
 
   before("Init BLS", async () => {
-    sk1 = bls.SecretKey.fromBytes(Buffer.alloc(32, 1));
-    sk2 = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
-    attestation1.signature = sk1.sign(attestationDataRoot).toBytes();
-    attestation2.signature = sk2.sign(attestationDataRoot).toBytes();
+    sk1 = SecretKey.deserialize(Buffer.alloc(32, 1));
+    sk2 = SecretKey.deserialize(Buffer.alloc(32, 2));
+    attestation1.signature = sk1.sign(attestationDataRoot).serialize();
+    attestation2.signature = sk2.sign(attestationDataRoot).serialize();
   });
 
   it("should aggregate 2 attestations", () => {
@@ -281,9 +280,10 @@ describe("MatchingDataAttestationGroup aggregateInto", function () {
       renderBitArray(mergedBitArray),
       "invalid aggregationBits"
     );
-    const aggregatedSignature = bls.Signature.fromBytes(attWithIndex1.attestation.signature, undefined, true);
+    const aggregatedSignature = Signature.deserialize(attWithIndex1.attestation.signature);
+    aggregatedSignature.sigValidate();
     expect(
-      aggregatedSignature.verifyAggregate([sk1.toPublicKey(), sk2.toPublicKey()], attestationDataRoot)
+      fastAggregateVerify(attestationDataRoot, [sk1.toPublicKey(), sk2.toPublicKey()], aggregatedSignature)
     ).to.be.equal(true, "invalid aggregated signature");
   });
 });

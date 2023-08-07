@@ -1,8 +1,7 @@
 import {expect} from "chai";
 import {ssz} from "@lodestar/types";
 import {newFilledArray} from "@lodestar/state-transition";
-import type {SecretKey} from "@chainsafe/bls/types";
-import bls from "@chainsafe/bls";
+import {SecretKey, fastAggregateVerify} from "@chainsafe/blst-ts";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {
@@ -95,7 +94,7 @@ describe("aggregate", function () {
   let bestContributionBySubnet: Map<number, SyncContributionFast>;
   before(async () => {
     for (let i = 0; i < SYNC_COMMITTEE_SUBNET_COUNT; i++) {
-      sks.push(bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
+      sks.push(SecretKey.deserialize(Buffer.alloc(32, i + 1)));
     }
     bestContributionBySubnet = new Map<number, SyncContributionFast>();
   });
@@ -110,7 +109,7 @@ describe("aggregate", function () {
           // first participation of each subnet is true
           syncSubcommitteeBits: BitArray.fromBoolArray([true, false, false, false, false, false, false, false]),
           numParticipants: 1,
-          syncSubcommitteeSignature: sks[subnet].sign(blockRoot).toBytes(),
+          syncSubcommitteeSignature: sks[subnet].sign(blockRoot).serialize(),
         });
         testSks.push(sks[subnet]);
       }
@@ -125,9 +124,9 @@ describe("aggregate", function () {
         "incorrect sync committees"
       );
       expect(
-        bls.verifyAggregate(
-          testSks.map((sk) => sk.toPublicKey().toBytes()),
+        fastAggregateVerify(
           blockRoot,
+          testSks.map((sk) => sk.toPublicKey()),
           syncAggregate.syncCommitteeSignature
         )
       ).to.be.equal(true, "invalid aggregated signature");

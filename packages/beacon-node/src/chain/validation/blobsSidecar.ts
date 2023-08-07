@@ -1,5 +1,4 @@
-import bls from "@chainsafe/bls";
-import {CoordType} from "@chainsafe/bls/types";
+import {PublicKey, CoordType} from "@chainsafe/blst-ts";
 import {deneb, Root, ssz} from "@lodestar/types";
 import {bytesToBigInt, toHex} from "@lodestar/utils";
 import {BYTES_PER_FIELD_ELEMENT, FIELD_ELEMENTS_PER_BLOB} from "@lodestar/params";
@@ -117,9 +116,10 @@ export function validateBlobsSidecar(
  */
 function blsKeyValidate(g1Point: Uint8Array): boolean {
   try {
-    bls.PublicKey.fromBytes(g1Point, CoordType.jacobian, true);
+    const pk = PublicKey.deserialize(g1Point, CoordType.jacobian);
+    pk.keyValidate();
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 }

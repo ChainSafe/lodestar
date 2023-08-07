@@ -6,7 +6,7 @@ import {sleep} from "@lodestar/utils";
 import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {Validator} from "@lodestar/validator";
 import {phase0, ssz} from "@lodestar/types";
-import bls from "@chainsafe/bls";
+import {aggregatePublicKeys} from "@chainsafe/blst-ts";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
@@ -132,7 +132,7 @@ describe("lightclient api", function () {
     const committeePubkeys = Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) =>
       i % 2 === 0 ? pubkeys[0] : pubkeys[1]
     );
-    const aggregatePubkey = bls.aggregatePublicKeys(committeePubkeys);
+    const aggregatePubkey = aggregatePublicKeys(committeePubkeys).serialize();
     // single committe hash since we requested for the first period
     expect(committeeRes.response.data).to.be.deep.equal([
       ssz.altair.SyncCommittee.hashTreeRoot({

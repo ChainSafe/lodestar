@@ -11,8 +11,7 @@ import {ForkChoice} from "@lodestar/fork-choice";
 import {phase0, ssz} from "@lodestar/types";
 
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
-import bls from "@chainsafe/bls";
-import {PointFormat} from "@chainsafe/bls/types";
+import {SecretKey} from "@chainsafe/blst-ts";
 import {createBeaconConfig} from "@lodestar/config";
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {StubbedChainMutable} from "../../../utils/stub/index.js";
@@ -34,7 +33,7 @@ describe("validate voluntary exit", () => {
   let opPool: OpPool & SinonStubbedInstance<OpPool>;
 
   before(() => {
-    const sk = bls.SecretKey.fromKeygen();
+    const sk = SecretKey.fromKeygen(Buffer.alloc(32, "*"));
 
     const stateEmpty = ssz.phase0.BeaconState.defaultValue();
 
@@ -43,7 +42,7 @@ describe("validate voluntary exit", () => {
 
     // Add a validator that's active since genesis and ready to exit
     const validator = ssz.phase0.Validator.toViewDU({
-      pubkey: sk.toPublicKey().toBytes(PointFormat.compressed),
+      pubkey: sk.toPublicKey().serialize(true),
       withdrawalCredentials: Buffer.alloc(32, 0),
       effectiveBalance: 32e9,
       slashed: false,
@@ -64,7 +63,7 @@ describe("validate voluntary exit", () => {
       stateEmpty.genesisValidatorsRoot
     );
     const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
-    signedVoluntaryExit = {message: voluntaryExit, signature: sk.sign(signingRoot).toBytes()};
+    signedVoluntaryExit = {message: voluntaryExit, signature: sk.sign(signingRoot).serialize()};
     const _state = generateState(stateEmpty, config);
 
     state = createCachedBeaconStateTest(_state, createBeaconConfig(config, _state.genesisValidatorsRoot));

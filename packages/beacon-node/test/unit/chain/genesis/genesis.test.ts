@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {expect} from "chai";
-import type {SecretKey, PublicKey} from "@chainsafe/bls/types";
+import type {SecretKey, PublicKey} from "@chainsafe/blst-ts";
 import {DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {config} from "@lodestar/config/default";
 import {computeDomain, computeSigningRoot, interopSecretKey, ZERO_HASH} from "@lodestar/state-transition";
@@ -110,11 +110,11 @@ describe("genesis builder", function () {
 function generateDeposit(index: ValidatorIndex, secretKey: SecretKey, publicKey: PublicKey): phase0.DepositData {
   const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
   const depositMessage = {
-    pubkey: publicKey.toBytes(),
+    pubkey: publicKey.serialize(),
     withdrawalCredentials: Buffer.alloc(32, index),
     amount: MAX_EFFECTIVE_BALANCE,
   };
   const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
   const signature = secretKey.sign(signingRoot);
-  return {...depositMessage, signature: signature.toBytes()};
+  return {...depositMessage, signature: signature.serialize()};
 }

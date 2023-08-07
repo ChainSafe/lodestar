@@ -11,7 +11,7 @@ import {allForks, altair, bellatrix, ssz} from "@lodestar/types";
 import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 
-import bls from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/blst-ts";
 import {generateValidator, generateValidators} from "./validator.js";
 import {getConfig} from "./config.js";
 
@@ -53,10 +53,10 @@ export function generateState(
     opts.validators ??
     (withPubkey
       ? Array.from({length: numValidators}, (_, i) => {
-          const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
+          const sk = SecretKey.deserialize(Buffer.alloc(32, i + 1));
           return generateValidator({
             ...validatorOpts,
-            pubkey: sk.toPublicKey().toBytes(),
+            pubkey: sk.toPublicKey().serialize(),
           });
         })
       : generateValidators(numValidators, validatorOpts));
