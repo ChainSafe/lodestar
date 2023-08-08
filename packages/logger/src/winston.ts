@@ -77,8 +77,8 @@ export class WinstonLogger implements Logger {
     this.createLogEntry(LogLevel.debug, message, context, error);
   }
 
-  trace(message: string, context?: LogData, error?: Error): void {
-    this.createLogEntry(LogLevel.trace, message, context, error);
+  trace(): void {
+    throw new Error("Trace it not supported by Lodestar");
   }
 
   private createLogEntry(level: LogLevel, message: string, context?: LogData, error?: Error): void {
