@@ -1,5 +1,5 @@
-import {Epoch, Root, ssz} from "@lodestar/types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {Epoch, Root, ssz} from "@lodestar/types";
 
 export const blsPubkeyLen = 48;
 export const ZERO_ROOT = ssz.Root.defaultValue();

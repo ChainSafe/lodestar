@@ -1,5 +1,5 @@
-import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64, allForks} from "@lodestar/types";
 import {ContainerType} from "@chainsafe/ssz";
+import {Epoch, phase0, capella, Slot, ssz, StringType, RootHex, altair, UintNum64, allForks} from "@lodestar/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkExecution, ForkName} from "@lodestar/params";
 

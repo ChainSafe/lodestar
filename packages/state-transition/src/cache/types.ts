@@ -1,5 +1,5 @@
-import {ssz} from "@lodestar/types";
 import {CompositeViewDU} from "@chainsafe/ssz";
+import {ssz} from "@lodestar/types";
 
 export type BeaconStatePhase0 = CompositeViewDU<typeof ssz.phase0.BeaconState>;
 export type BeaconStateAltair = CompositeViewDU<typeof ssz.altair.BeaconState>;

@@ -1,7 +1,7 @@
 import {expect} from "chai";
+import {init} from "@chainsafe/bls/switchable";
 import {isForkLightClient} from "@lodestar/params";
 import {altair, phase0, RootHex, Slot, ssz} from "@lodestar/types";
-import {init} from "@chainsafe/bls/switchable";
 import {InputType} from "@lodestar/spec-test-util";
 import {createBeaconConfig, ChainConfig} from "@lodestar/config";
 import {fromHex, toHex} from "@lodestar/utils";

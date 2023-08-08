@@ -1,8 +1,8 @@
 import {expect} from "chai";
 import {Stream, StreamStat} from "@libp2p/interface-connection";
 import {Uint8ArrayList} from "uint8arraylist";
-import {Root} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
+import {Root} from "@lodestar/types";
 
 export function generateRoots(count: number, offset = 0): Root[] {
   const roots: Root[] = [];

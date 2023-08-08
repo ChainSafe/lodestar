@@ -221,6 +221,30 @@ export function createLodestarMetrics(
       }),
     },
 
+    production: {
+      producedAggregateParticipants: register.histogram({
+        name: "lodestar_produced_aggregate_participants",
+        help: "API impl produced aggregates histogram of participants",
+        // We care more about tracking low quality aggregates with low participation
+        // Max committee sizes are: 0.5e6 vc: 244, 1e6 vc: 488
+        buckets: [1, 5, 20, 50, 100, 200, 400],
+      }),
+      producedSyncContributionParticipants: register.histogram({
+        name: "lodestar_produced_sync_contribution_participants",
+        help: "API impl produced sync contribution histogram of participants",
+        // We care more about tracking low quality aggregates with low participation
+        // Max committee sizes fixed to 512/4 = 128
+        buckets: [1, 5, 20, 50, 128],
+      }),
+      producedSyncAggregateParticipants: register.histogram({
+        name: "lodestar_produced_sync_aggregate_participants",
+        help: "API impl produced sync aggregate histogram of participants",
+        // We care more about tracking low quality aggregates with low participation
+        // Max committee sizes fixed to 512
+        buckets: [1, 5, 20, 50, 100, 200, 512],
+      }),
+    },
+
     // Beacon state transition metrics
 
     epochTransitionTime: register.histogram({
@@ -300,6 +324,18 @@ export function createLodestarMetrics(
         name: "lodestar_bls_aggregated_pubkeys_total",
         help: "Total aggregated pubkeys for BLS validation",
       }),
+      totalSigSets: register.gauge({
+        name: "lodestar_bls_thread_pool_sig_sets_total",
+        help: "Count of total signature sets",
+      }),
+      prioritizedSigSets: register.gauge({
+        name: "lodestar_bls_thread_pool_prioritized_sig_sets_total",
+        help: "Count of total prioritized signature sets",
+      }),
+      batchableSigSets: register.gauge({
+        name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
+        help: "Count of total batchable signature sets",
+      }),
       mainThread: {
         durationOnThread: register.histogram({
           name: "lodestar_bls_thread_pool_main_thread_time_seconds",
@@ -361,6 +397,19 @@ export function createLodestarMetrics(
         }),
       },
       workerThreadPool: {
+        errorAggregateSignatureSetsCount: register.gauge<"type">({
+          name: "lodestar_bls_thread_pool_error_aggregate_signature_sets_count",
+          help: "Count of error when aggregating pubkeys or signatures",
+          labelNames: ["type"],
+        }),
+        sameMessageRetryJobs: register.gauge({
+          name: "lodestar_bls_thread_pool_same_message_jobs_retries_total",
+          help: "Count of total same message jobs that failed and had to be verified again.",
+        }),
+        sameMessageRetrySets: register.gauge({
+          name: "lodestar_bls_thread_pool_same_message_sets_retries_total",
+          help: "Count of total same message sets that failed and had to be verified again.",
+        }),
         jobsWorkerTime: register.gauge<"workerId">({
           name: "lodestar_bls_thread_pool_time_seconds_sum",
           help: "Total time spent verifying signature sets measured on the worker",
@@ -902,6 +951,11 @@ export function createLodestarMetrics(
         name: "validator_monitor_attestation_in_block_delay_slots",
         help: "The excess slots (beyond the minimum delay) between the attestation slot and the block slot",
         buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10],
+      }),
+      attestationInBlockParticipants: register.histogram({
+        name: "validator_monitor_attestation_in_block_participants",
+        help: "The total participants in attestations of monitored validators included in blocks",
+        buckets: [1, 5, 20, 50, 100, 200],
       }),
       syncSignatureInAggregateTotal: register.gauge({
         name: "validator_monitor_sync_signature_in_aggregate_total",

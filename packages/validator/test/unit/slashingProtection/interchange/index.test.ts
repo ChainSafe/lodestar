@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {expect} from "chai";
-import {Root, ssz} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
+import {Root, ssz} from "@lodestar/types";
 import {
   Interchange,
   parseInterchange,

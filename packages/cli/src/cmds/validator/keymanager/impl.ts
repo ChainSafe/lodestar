@@ -1,5 +1,6 @@
 import {SecretKey} from "@chainsafe/blst-ts";
 import {Keystore} from "@chainsafe/bls-keystore";
+import {fromHexString} from "@chainsafe/ssz";
 import {
   Api as KeyManagerClientApi,
   DeleteRemoteKeyStatus,
@@ -12,7 +13,6 @@ import {
   SignerDefinition,
   ImportRemoteKeyStatus,
 } from "@lodestar/api/keymanager";
-import {fromHexString} from "@chainsafe/ssz";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";
 import {ServerApi} from "@lodestar/api";
 import {getPubkeyHexFromKeystore, isValidatePubkeyHex, isValidHttpUrl} from "../../../util/format.js";

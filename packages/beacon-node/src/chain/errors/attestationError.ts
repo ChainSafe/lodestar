@@ -1,5 +1,5 @@
-import {CommitteeIndex, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
+import {CommitteeIndex, Epoch, Slot, ValidatorIndex, RootHex} from "@lodestar/types";
 import {GossipActionError} from "./gossipValidation.js";
 
 export enum AttestationErrorCode {
@@ -154,7 +154,7 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET}
   | {code: AttestationErrorCode.PRIOR_ATTESTATION_KNOWN; validatorIndex: ValidatorIndex; epoch: Epoch}
   | {code: AttestationErrorCode.FUTURE_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
-  | {code: AttestationErrorCode.PAST_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
+  | {code: AttestationErrorCode.PAST_EPOCH; attestationEpoch: Epoch; previousEpoch: Epoch}
   | {code: AttestationErrorCode.ATTESTS_TO_FUTURE_BLOCK; block: Slot; attestation: Slot}
   | {code: AttestationErrorCode.INVALID_SUBNET_ID; received: number; expected: number}
   | {code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS}

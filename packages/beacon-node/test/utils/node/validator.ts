@@ -1,8 +1,8 @@
 import tmp from "tmp";
+import type {SecretKey} from "@chainsafe/blst-ts";
 import {LevelDbController} from "@lodestar/db";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {SlashingProtection, Validator, Signer, SignerType, ValidatorProposerConfig} from "@lodestar/validator";
-import type {SecretKey} from "@chainsafe/blst-ts";
 import {ServerApi, Api, HttpStatusCode, APIServerHandler} from "@lodestar/api";
 import {mapValues} from "@lodestar/utils";
 import {BeaconNode} from "../../../src/index.js";

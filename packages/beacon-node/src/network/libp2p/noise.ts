@@ -1,6 +1,6 @@
 import type {ConnectionEncrypter} from "@libp2p/interface-connection-encrypter";
 import {newInstance, ChaCha20Poly1305} from "@chainsafe/as-chacha20poly1305";
-import {ICryptoInterface, noise, stablelib} from "@chainsafe/libp2p-noise";
+import {ICryptoInterface, noise, pureJsCrypto} from "@chainsafe/libp2p-noise";
 import {digest} from "@chainsafe/as-sha256";
 
 type Bytes = Uint8Array;
@@ -11,7 +11,7 @@ const asImpl = new ChaCha20Poly1305(ctx);
 
 // same to stablelib but we use as-chacha20poly1305 and as-sha256
 const lodestarCrypto: ICryptoInterface = {
-  ...stablelib,
+  ...pureJsCrypto,
   hashSHA256(data: Uint8Array): Uint8Array {
     return digest(data);
   },

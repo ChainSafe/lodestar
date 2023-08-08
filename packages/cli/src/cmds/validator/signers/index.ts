@@ -1,9 +1,9 @@
 import path from "node:path";
 import {SecretKey} from "@chainsafe/blst-ts";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
+import {toHexString} from "@chainsafe/ssz";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {externalSignerGetKeys, Signer, SignerType} from "@lodestar/validator";
-import {toHexString} from "@chainsafe/ssz";
 import {LogLevel, Logger} from "@lodestar/utils";
 import {defaultNetwork, GlobalArgs} from "../../../options/index.js";
 import {assertValidPubkeysHex, isValidHttpUrl, parseRange, YargsError} from "../../../util/index.js";
@@ -86,7 +86,7 @@ export async function getSignersFromArgs(
     const needle = showProgress({
       total: keystoreDefinitions.length,
       frequencyMs: KEYSTORE_IMPORT_PROGRESS_MS,
-      signal: signal,
+      signal,
       progress: ({ratePerSec, percentage, current, total}) => {
         logger.info(
           `${percentage.toFixed(0)}% of keystores imported. current=${current} total=${total} rate=${(
@@ -119,7 +119,7 @@ export async function getSignersFromArgs(
     const needle = showProgress({
       total: keystoreDefinitions.length,
       frequencyMs: KEYSTORE_IMPORT_PROGRESS_MS,
-      signal: signal,
+      signal,
       progress: ({ratePerSec, percentage, current, total}) => {
         logger.info(
           `${percentage.toFixed(0)}% of local keystores imported. current=${current} total=${total} rate=${(

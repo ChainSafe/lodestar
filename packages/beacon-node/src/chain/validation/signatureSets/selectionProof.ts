@@ -1,6 +1,6 @@
+import type {PublicKey} from "@chainsafe/blst-ts";
 import {DOMAIN_SELECTION_PROOF} from "@lodestar/params";
 import {phase0, Slot, ssz} from "@lodestar/types";
-import type {PublicKey} from "@chainsafe/blst-ts";
 import {
   CachedBeaconStateAllForks,
   computeSigningRoot,

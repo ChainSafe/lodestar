@@ -1,5 +1,5 @@
-import {config} from "@lodestar/config/default";
 import {fromHexString} from "@chainsafe/ssz";
+import {config} from "@lodestar/config/default";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoBlock, ProtoArray} from "../../../src/index.js";
 
 const genesisSlot = 0;

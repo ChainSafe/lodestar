@@ -101,20 +101,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -144,7 +131,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "12 * rate(vc_published_sync_committee_message_total[$__rate_interval])",
+          "expr": "12 * rate(vc_published_sync_committee_message_total[$rate_interval])",
           "interval": "",
           "legendFormat": "sync_committee_message",
           "refId": "A"
@@ -200,11 +187,7 @@
             "fixedColor": "green",
             "mode": "fixed"
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": []
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -260,20 +243,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -327,20 +297,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -395,20 +352,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -461,19 +405,6 @@
             "mode": "thresholds"
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "decbytes"
         },
         "overrides": []
@@ -527,19 +458,6 @@
             "mode": "thresholds"
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "decbytes"
         },
         "overrides": []
@@ -656,19 +574,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -833,19 +738,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -876,7 +768,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "deriv(vc_proposer_step_call_produce_block_seconds_sum[$__rate_interval])\n/\nrate(vc_proposer_step_call_produce_block_seconds_count[$__rate_interval])",
+          "expr": "deriv(vc_proposer_step_call_produce_block_seconds_sum[$rate_interval])\n/\nrate(vc_proposer_step_call_produce_block_seconds_count[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "call_produce_block",
@@ -888,7 +780,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "deriv(vc_proposer_step_call_publish_block_seconds_sum[$__rate_interval])\n/\nrate(vc_proposer_step_call_publish_block_seconds_count[$__rate_interval])",
+          "expr": "deriv(vc_proposer_step_call_publish_block_seconds_sum[$rate_interval])\n/\nrate(vc_proposer_step_call_publish_block_seconds_count[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "call_publish_block",
@@ -987,7 +879,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "1000*rate(vc_attester_step_call_publish_attestation_seconds_bucket[$__rate_interval])",
+          "expr": "1000*rate(vc_attester_step_call_publish_attestation_seconds_bucket[$rate_interval])",
           "format": "heatmap",
           "interval": "",
           "intervalFactor": 10,
@@ -1101,7 +993,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "1000*rate(vc_attester_step_call_publish_aggregate_seconds_bucket[$__rate_interval])",
+          "expr": "1000*rate(vc_attester_step_call_publish_aggregate_seconds_bucket[$rate_interval])",
           "format": "heatmap",
           "interval": "",
           "intervalFactor": 10,
@@ -1214,7 +1106,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(vc_sync_committee_step_call_publish_message_seconds_bucket[$__rate_interval])",
+          "expr": "rate(vc_sync_committee_step_call_publish_message_seconds_bucket[$rate_interval])",
           "format": "heatmap",
           "interval": "",
           "intervalFactor": 10,
@@ -1326,7 +1218,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(vc_proposer_step_call_publish_block_seconds_bucket[$__rate_interval])",
+          "expr": "rate(vc_proposer_step_call_publish_block_seconds_bucket[$rate_interval])",
           "format": "heatmap",
           "interval": "",
           "intervalFactor": 10,
@@ -1391,19 +1283,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -1484,19 +1363,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -1579,20 +1445,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -1622,7 +1475,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "delta(vc_block_produced_total[$__rate_interval])",
+          "expr": "rate(vc_block_produced_total[$rate_interval])",
           "interval": "",
           "legendFormat": "block produced",
           "refId": "A"
@@ -1633,7 +1486,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "delta(vc_block_published_total[$__rate_interval])",
+          "expr": "rate(vc_block_published_total[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "block published",
@@ -1645,7 +1498,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(vc_block_proposing_errors_total[$__rate_interval])",
+          "expr": "rate(vc_block_proposing_errors_total[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "block proposing errors {{error}}",
@@ -1696,19 +1549,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "percentunit"
         },
         "overrides": []
@@ -1789,19 +1629,6 @@
             }
           },
           "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
           "unit": "s"
         },
         "overrides": []
@@ -1929,7 +1756,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(vc_local_sign_time_seconds_bucket[$__rate_interval])",
+          "expr": "rate(vc_local_sign_time_seconds_bucket[$rate_interval])",
           "format": "heatmap",
           "interval": "",
           "legendFormat": "{{le}}",
@@ -1992,20 +1819,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": [
           {
@@ -2134,20 +1948,7 @@
               "mode": "off"
             }
           },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
+          "mappings": []
         },
         "overrides": []
       },
@@ -2177,7 +1978,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(vc_proposer_duties_reorg_total[$__rate_interval])",
+          "expr": "rate(vc_proposer_duties_reorg_total[$rate_interval])",
           "interval": "",
           "legendFormat": "proposer duties",
           "refId": "A"
@@ -2188,7 +1989,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(vc_attestation_duties_reorg_total[$__rate_interval])",
+          "expr": "rate(vc_attestation_duties_reorg_total[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "attestation duties",
@@ -2200,7 +2001,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "rate(vc_sync_committee_duties_reorg_total[$__rate_interval])",
+          "expr": "rate(vc_sync_committee_duties_reorg_total[$rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "sync committee duties",

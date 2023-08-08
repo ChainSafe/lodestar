@@ -180,29 +180,28 @@ export function getSlotFromSignedBeaconBlockSerialized(data: Uint8Array): Slot |
 }
 
 /**
- * 4 + 4 + SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK = 4 + 4 + (4 + 96) = 108
- * class SignedBeaconBlockAndBlobsSidecar(Container):
- *  beaconBlock: SignedBeaconBlock [offset - 4 bytes]
- *  blobsSidecar: BlobsSidecar,
+ * 4 + 96 = 100
+ * ```
+ * class SignedBlobSidecar(Container):
+ *   message: BlobSidecar [fixed]
+ *   signature: BLSSignature [fixed]
+ *
+ * class BlobSidecar(Container):
+ *   blockRoot: Root [fixed - 32 bytes ],
+ *   index: BlobIndex [fixed - 8 bytes ],
+ *   slot: Slot [fixed - 8 bytes]
+ *   ...
+ * ```
  */
 
-/**
- * Variable size.
- * class BlobsSidecar(Container):
- *   beaconBlockRoot: Root,
- *   beaconBlockSlot: Slot,
- *   blobs: Blobs,
- *   kzgAggregatedProof: KZGProof,
- */
-const SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK_AND_BLOBS_SIDECAR =
-  VARIABLE_FIELD_OFFSET + VARIABLE_FIELD_OFFSET + SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK;
+const SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR = 32 + 8;
 
-export function getSlotFromSignedBeaconBlockAndBlobsSidecarSerialized(data: Uint8Array): Slot | null {
-  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK_AND_BLOBS_SIDECAR + SLOT_SIZE) {
+export function getSlotFromSignedBlobSidecarSerialized(data: Uint8Array): Slot | null {
+  if (data.length < SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR + SLOT_SIZE) {
     return null;
   }
 
-  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_BEACON_BLOCK_AND_BLOBS_SIDECAR);
+  return getSlotFromOffset(data, SLOT_BYTES_POSITION_IN_SIGNED_BLOB_SIDECAR);
 }
 
 function getSlotFromOffset(data: Uint8Array, offset: number): Slot {

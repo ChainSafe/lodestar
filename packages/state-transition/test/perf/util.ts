@@ -1,7 +1,7 @@
-import {config} from "@lodestar/config/default";
-import {allForks, phase0, ssz, Slot, altair} from "@lodestar/types";
 import {CoordType, PublicKey, SecretKey} from "@chainsafe/blst-ts";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
+import {config} from "@lodestar/config/default";
+import {allForks, phase0, ssz, Slot, altair} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {
   EPOCHS_PER_ETH1_VOTING_PERIOD,

@@ -1,7 +1,7 @@
+import {toHexString} from "@chainsafe/ssz";
 import {Slot, ValidatorIndex} from "@lodestar/types";
 import {ContributionAndProof, SyncCommitteeContribution} from "@lodestar/types/altair";
 import {MapDef} from "@lodestar/utils";
-import {toHexString} from "@chainsafe/ssz";
 import {Metrics} from "../../metrics/index.js";
 import {isSuperSetOrEqual} from "../../util/bitArray.js";
 import {AggregationInfo, insertDesc} from "./seenAggregateAndProof.js";

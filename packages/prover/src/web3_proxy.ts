@@ -1,4 +1,5 @@
 import http from "node:http";
+import https from "node:https";
 import url from "node:url";
 import httpProxy from "http-proxy";
 import {getNodeLogger} from "@lodestar/logger/node";
@@ -66,7 +67,7 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
 } {
   const {executionRpcUrl, requestTimeout} = opts;
   const signal = opts.signal ?? new AbortController().signal;
-  const logger = opts.logger ?? getNodeLogger({level: opts.logLevel ?? LogLevel.info});
+  const logger = opts.logger ?? getNodeLogger({level: opts.logLevel ?? LogLevel.info, module: "prover"});
 
   const proofProvider = ProofProvider.init({
     ...opts,
@@ -78,7 +79,7 @@ export function createVerifiedExecutionProxy(opts: VerifiedProxyOptions): {
   const proxy = httpProxy.createProxy({
     target: executionRpcUrl,
     ws: executionRpcUrl.startsWith("ws"),
-    agent: http.globalAgent,
+    agent: executionRpcUrl.startsWith("https") ? https.globalAgent : http.globalAgent,
     xfwd: true,
     ignorePath: true,
     changeOrigin: true,

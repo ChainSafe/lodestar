@@ -1,7 +1,7 @@
+import {toHexString} from "@chainsafe/ssz";
 import {ChainConfig} from "@lodestar/config";
 import {RootHex} from "@lodestar/types";
 import {Logger, pruneSetToMax} from "@lodestar/utils";
-import {toHexString} from "@chainsafe/ssz";
 import {Metrics} from "../metrics/index.js";
 import {ZERO_HASH_HEX} from "../constants/index.js";
 import {enumToIndexMap} from "../util/enum.js";

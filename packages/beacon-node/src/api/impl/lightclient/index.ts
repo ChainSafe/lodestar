@@ -1,5 +1,5 @@
-import {routes, ServerApi} from "@lodestar/api";
 import {fromHexString} from "@chainsafe/ssz";
+import {routes, ServerApi} from "@lodestar/api";
 import {SyncPeriod} from "@lodestar/types";
 import {MAX_REQUEST_LIGHT_CLIENT_UPDATES, MAX_REQUEST_LIGHT_CLIENT_COMMITTEE_HASHES} from "@lodestar/params";
 import {ApiModules} from "../types.js";

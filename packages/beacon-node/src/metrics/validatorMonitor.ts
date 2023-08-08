@@ -10,7 +10,7 @@ import {
   ParticipationFlags,
 } from "@lodestar/state-transition";
 import {Logger, MapDef, MapDefMax, toHex} from "@lodestar/utils";
-import {RootHex, allForks, altair} from "@lodestar/types";
+import {RootHex, allForks, altair, deneb} from "@lodestar/types";
 import {ChainConfig, ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, INTERVALS_PER_SLOT, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
@@ -40,6 +40,7 @@ export type ValidatorMonitor = {
   registerLocalValidatorInSyncCommittee(index: number, untilEpoch: Epoch): void;
   registerValidatorStatuses(currentEpoch: Epoch, statuses: AttesterStatus[], balances?: number[]): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
+  registerBlobSidecar(src: OpSource, seenTimestampSec: Seconds, blob: deneb.BlobSidecar): void;
   registerImportedBlock(block: allForks.BeaconBlock, data: {proposerBalanceDelta: number}): void;
   onPoolSubmitUnaggregatedAttestation(
     seenTimestampSec: number,
@@ -376,6 +377,10 @@ export function createValidatorMonitor(
       }
     },
 
+    registerBlobSidecar(_src, _seenTimestampSec, _blob) {
+      //TODO: freetheblobs
+    },
+
     registerImportedBlock(block, {proposerBalanceDelta}) {
       const validator = validators.get(block.proposerIndex);
       if (validator) {
@@ -524,12 +529,14 @@ export function createValidatorMonitor(
       const inclusionDistance = Math.max(parentSlot - data.slot, 0) + 1;
       const delay = inclusionDistance - MIN_ATTESTATION_INCLUSION_DELAY;
       const epoch = computeEpochAtSlot(data.slot);
+      const participants = indexedAttestation.attestingIndices.length;
 
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
           metrics.validatorMonitor.attestationInBlockTotal.inc();
           metrics.validatorMonitor.attestationInBlockDelaySlots.observe(delay);
+          metrics.validatorMonitor.attestationInBlockParticipants.observe(participants);
 
           const summary = getEpochSummary(validator, epoch);
           summary.attestationBlockInclusions += 1;
@@ -561,6 +568,7 @@ export function createValidatorMonitor(
             committeeIndex: data.index,
             inclusionDistance,
             correctHead,
+            participants,
           });
         }
       }

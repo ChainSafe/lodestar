@@ -14,17 +14,24 @@ const MIN_SET_COUNT_TO_BATCH = 2;
  * Abstracted in a separate file to be consumed by the threaded pool and the main thread implementation.
  */
 export function verifySignatureSetsMaybeBatch(sets: SerializedSignatureSet[]): boolean {
-  if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
-    return verifyMultipleAggregateSignatures(sets);
-  }
+  try {
+    if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
+      return verifyMultipleAggregateSignatures(sets);
+    }
 
-  // .every on an empty array returns true
-  if (sets.length === 0) {
-    throw Error("Empty signature set");
-  }
+    // .every on an empty array returns true
+    if (sets.length === 0) {
+      throw Error("Empty signature set");
+    }
 
-  // If too few signature sets verify them without batching
-  return sets.every((set) => verify(set.message, set.publicKey, set.signature));
+    // If too few signature sets verify them without batching
+    return sets.every((set) => verify(set.message, set.publicKey, set.signature));
+  } catch (_) {
+    // A signature could be malformed, in that case fromBytes throws error
+    // blst-ts `verifyMultipleSignatures` is also a fallible operation if mul_n_aggregate fails
+    // see https://github.com/ChainSafe/blst-ts/blob/b1ba6333f664b08e5c50b2b0d18c4f079203962b/src/lib.ts#L291
+    return false;
+  }
 }
 
 export async function asyncVerifySignatureSetsMaybeBatch(

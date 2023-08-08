@@ -4,7 +4,7 @@ import Web3 from "web3";
 import {ethers} from "ethers";
 import {LCTransport} from "../../src/interfaces.js";
 import {createVerifiedExecutionProvider} from "../../src/web3_provider.js";
-import {waitForCapellaFork, testTimeout, rpcURL, beaconUrl, config} from "../utils/e2e_env.js";
+import {waitForCapellaFork, testTimeout, rpcUrl, beaconUrl, config} from "../utils/e2e_env.js";
 
 describe("web3_provider", function () {
   this.timeout(testTimeout);
@@ -16,7 +16,7 @@ describe("web3_provider", function () {
   describe("createVerifiedExecutionProvider", () => {
     describe("web3", () => {
       it("should connect to the network and call a non-verified method", async () => {
-        const {provider} = createVerifiedExecutionProvider(new Web3.providers.HttpProvider(rpcURL), {
+        const {provider} = createVerifiedExecutionProvider(new Web3.providers.HttpProvider(rpcUrl), {
           transport: LCTransport.Rest,
           urls: [beaconUrl],
           config,
@@ -33,7 +33,7 @@ describe("web3_provider", function () {
 
     describe("ethers", () => {
       it("should connect to the network and call a non-verified method", async () => {
-        const {provider} = createVerifiedExecutionProvider(new ethers.JsonRpcProvider(rpcURL), {
+        const {provider} = createVerifiedExecutionProvider(new ethers.JsonRpcProvider(rpcUrl), {
           transport: LCTransport.Rest,
           urls: [beaconUrl],
           config,

@@ -1,7 +1,7 @@
+import {PublicKey, CoordType} from "@chainsafe/blst-ts";
 import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {capella, ssz} from "@lodestar/types";
 import {BeaconConfig} from "@lodestar/config";
-import {PublicKey, CoordType} from "@chainsafe/blst-ts";
 
 import {computeSigningRoot, ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/index.js";
 import {CachedBeaconStateAllForks} from "../types.js";

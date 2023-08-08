@@ -97,7 +97,11 @@ module.exports = {
     "import/no-duplicates": "off",
     "import/no-extraneous-dependencies": [
       "error",
-      {devDependencies: false, optionalDependencies: false, peerDependencies: false},
+      {
+        devDependencies: false,
+        optionalDependencies: false,
+        peerDependencies: false,
+      },
     ],
     "import/no-relative-packages": "error",
     // TEMP Disabled while eslint-plugin-import support ESM (Typescript does support it) https://github.com/import-js/eslint-plugin-import/issues/2170
@@ -152,7 +156,6 @@ module.exports = {
     semi: "off",
   },
   settings: {
-    "import/internal-regex": "^@chainsafe/",
     "import/core-modules": [
       "node:child_process",
       "node:crypto",
@@ -165,6 +168,11 @@ module.exports = {
       "node:util",
       "node:url",
     ],
+    "import/resolver": {
+      typescript: {
+        project: "packages/*/tsconfig.json",
+      },
+    },
   },
   overrides: [
     {

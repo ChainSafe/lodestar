@@ -1,6 +1,6 @@
+import {ContainerType, UintNumberType, ListBasicType, ValueOf} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
-import {ContainerType, UintNumberType, ListBasicType, ValueOf} from "@chainsafe/ssz";
 import {ContextBytesType, DialOnlyProtocol, Encoding, ProtocolHandler, Protocol} from "../../src/types.js";
 import {getEmptyHandler} from "./messages.js";
 import {beaconConfig} from "./messages.js";

@@ -1,7 +1,7 @@
 import {expect} from "chai";
+import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {Root, phase0} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import {
   getPeerSyncType,

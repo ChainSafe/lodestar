@@ -1,8 +1,15 @@
 /* eslint-disable no-console */
 import {ChildProcess} from "node:child_process";
 import {sleep} from "@lodestar/utils";
+import {
+  ChildProcessHealthStatus,
+  SpawnChildProcessOptions,
+  execChildProcess,
+  spawnChildProcess,
+  stopChildProcess,
+  ChildProcessResolve,
+} from "@lodestar/test-utils";
 import {Job, JobOptions, RunnerEnv, RunnerType} from "../interfaces.js";
-import {startChildProcess, stopChildProcess} from "../utils/child_process.js";
 
 const dockerNetworkIpRange = "192.168.0";
 const dockerNetworkName = "sim-env-net";
@@ -19,15 +26,9 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
 
   async start(): Promise<void> {
     try {
-      await startChildProcess({
-        id: `create docker network '${dockerNetworkName}'`,
-        cli: {
-          command: "docker",
-          args: ["network", "create", "--subnet", `${dockerNetworkIpRange}.0/24`, dockerNetworkName],
-        },
-        logs: {
-          stdoutFilePath: this.logFilePath,
-        },
+      await execChildProcess(`docker network create --subnet ${dockerNetworkIpRange}.0/24 ${dockerNetworkName}`, {
+        logPrefix: "docker-runner",
+        pipeStdioToFile: this.logFilePath,
       });
     } catch {
       // During multiple sim tests files the network might already exist
@@ -38,15 +39,9 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
     // Wait for couple of seconds to allow docker to cleanup containers to network connections
     for (let i = 0; i < 5; i++) {
       try {
-        await startChildProcess({
-          id: `docker network rm '${dockerNetworkName}'`,
-          cli: {
-            command: "docker",
-            args: ["network", "rm", dockerNetworkName],
-          },
-          logs: {
-            stdoutFilePath: this.logFilePath,
-          },
+        await execChildProcess(`docker network rm ${dockerNetworkName}`, {
+          logPrefix: "docker-runner",
+          pipeStdioToFile: this.logFilePath,
         });
         return;
       } catch {
@@ -94,15 +89,32 @@ export class DockerRunner implements RunnerEnv<RunnerType.Docker> {
 
     let childProcess: ChildProcess;
 
+    const spawnOpts: SpawnChildProcessOptions = {
+      env: jobOption.cli.env,
+      pipeStdioToFile: jobOption.logs.stdoutFilePath,
+      logPrefix: jobOption.id,
+    };
+
+    const health = jobOption.health;
+
+    if (health) {
+      spawnOpts.healthTimeoutMs = 30000;
+      spawnOpts.health = async (): Promise<ChildProcessHealthStatus> =>
+        health()
+          .then((status) => {
+            return status.ok ? {healthy: true} : {healthy: false};
+          })
+          .catch((error) => {
+            return {healthy: false, message: (error as Error).message};
+          });
+    } else {
+      spawnOpts.resolveOn = ChildProcessResolve.Completion;
+    }
+
     return {
       id: jobOption.id,
       start: async () => {
-        childProcess = await startChildProcess({
-          id: jobOption.id,
-          logs: jobOption.logs,
-          cli: {...jobOption.cli, command: "docker", args: jobArgs},
-          health: jobOption.health,
-        });
+        childProcess = await spawnChildProcess("docker", jobArgs, spawnOpts);
       },
       stop: async () => {
         if (childProcess === undefined) {

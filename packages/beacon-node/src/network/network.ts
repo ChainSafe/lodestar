@@ -1,12 +1,12 @@
 import {PeerId} from "@libp2p/interface-peer-id";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
+import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {BeaconConfig} from "@lodestar/config";
 import {sleep} from "@lodestar/utils";
 import {LoggerNode} from "@lodestar/logger/node";
 import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@lodestar/state-transition";
 import {phase0, allForks, deneb, altair, Root, capella, SlotRootHex} from "@lodestar/types";
 import {routes} from "@lodestar/api";
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {ForkName, ForkSeq, MAX_BLOBS_PER_BLOCK} from "@lodestar/params";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
@@ -266,7 +266,8 @@ export class Network implements INetwork {
     // Drop all the gossip validation queues
     this.networkProcessor.dropAllJobs();
 
-    return this.core.unsubscribeGossipCoreTopics();
+    await this.core.unsubscribeGossipCoreTopics();
+    this.subscribedToCoreTopics = false;
   }
 
   isSubscribedToGossipCoreTopics(): boolean {

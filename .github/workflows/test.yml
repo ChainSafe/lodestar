@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [18]
+        node: [20]
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v3
@@ -52,6 +52,9 @@ jobs:
         with:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
+
+      - name: Assert yarn prints no warnings
+        run: scripts/assert_no_yarn_warnings.sh
 
       # Misc sanity checks
       - name: Lint Grafana dashboards

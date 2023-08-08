@@ -63,6 +63,25 @@ export class LinkedList<T> {
     this._length++;
   }
 
+  unshift(data: T): void {
+    if (this._length === 0) {
+      this.tail = this.head = new Node(data);
+      this._length++;
+      return;
+    }
+
+    if (!this.head || !this.tail) {
+      // should not happen
+      throw Error("No head or tail");
+    }
+
+    const newHead = new Node(data);
+    newHead.next = this.head;
+    this.head.prev = newHead;
+    this.head = newHead;
+    this._length++;
+  }
+
   pop(): T | null {
     const oldTail = this.tail;
     if (!oldTail) return null;
@@ -98,6 +117,20 @@ export class LinkedList<T> {
   clear(): void {
     this.head = this.tail = null;
     this._length = 0;
+  }
+
+  [Symbol.iterator](): Iterator<T> {
+    let node = this.head;
+    return {
+      next(): IteratorResult<T> {
+        if (!node) {
+          return {done: true, value: undefined};
+        }
+        const value = node.data;
+        node = node.next;
+        return {done: false, value};
+      },
+    };
   }
 
   toArray(): T[] {

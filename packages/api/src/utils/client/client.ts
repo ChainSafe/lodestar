@@ -40,7 +40,7 @@ export function getFetchOptsSerializer<Fn extends (...args: any) => any, ReqType
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function getFetchOptsSerializers<
   Api extends Record<string, APIClientHandler>,
-  ReqTypes extends {[K in keyof Api]: ReqGeneric}
+  ReqTypes extends {[K in keyof Api]: ReqGeneric},
 >(routesData: RoutesData<Api>, reqSerializers: ReqSerializers<Api, ReqTypes>) {
   return mapValues(routesData, (routeDef, routeId) =>
     getFetchOptsSerializer(routeDef, reqSerializers[routeId], routeId as string)
@@ -52,7 +52,7 @@ export function getFetchOptsSerializers<
  */
 export function generateGenericJsonClient<
   Api extends Record<string, APIClientHandler>,
-  ReqTypes extends {[K in keyof Api]: ReqGeneric}
+  ReqTypes extends {[K in keyof Api]: ReqGeneric},
 >(
   routesData: RoutesData<Api>,
   reqSerializers: ReqSerializers<Api, ReqTypes>,

@@ -1,6 +1,6 @@
+import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot} from "@lodestar/types";
-import {toHexString} from "@chainsafe/ssz";
 import {Api, ApiError, routes} from "@lodestar/api";
 import {IClock, differenceHex, LoggerVc} from "../util/index.js";
 import {PubkeyHex} from "../types.js";

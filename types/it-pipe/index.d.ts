@@ -7,10 +7,10 @@
 
 declare module "it-pipe" {
   type Source<T> = AsyncIterable<T>;
-  type Sink<TSource, TReturn = void> = (source: Source<TSource>) => TReturn;
-  type Duplex<TSource = unknown, TReturn = unknown> = {
-    sink: Sink<TSource, TReturn>;
-    source: Source<TSource>;
+  type Sink<TSource, TReturn = void> = (source: TSource) => TReturn;
+  type Duplex<TSource = unknown, TSink = TSource, TReturn = unknown> = {
+    sink: Sink<TSink, TReturn>;
+    source: TSource;
   };
 
   export function pipe<A, B>(f1: A | (() => A), f2: (source: A) => B): B;

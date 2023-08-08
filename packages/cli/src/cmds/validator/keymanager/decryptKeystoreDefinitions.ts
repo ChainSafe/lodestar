@@ -1,7 +1,7 @@
 import path from "node:path";
+import {SecretKey} from "@chainsafe/blst-ts";
 import {SignerLocal, SignerType} from "@lodestar/validator";
 import {LogLevel, Logger} from "@lodestar/utils";
-import {SecretKey} from "@chainsafe/blst-ts";
 import {lockFilepath, unlockFilepath} from "../../../util/lockfile.js";
 import {LocalKeystoreDefinition} from "./interface.js";
 import {clearKeystoreCache, loadKeystoreCache, writeKeystoreCache} from "./keystoreCache.js";
@@ -28,6 +28,10 @@ export async function decryptKeystoreDefinitions(
   keystoreDefinitions: LocalKeystoreDefinition[],
   opts: KeystoreDecryptOptions
 ): Promise<SignerLocal[]> {
+  if (keystoreDefinitions.length === 0) {
+    return [];
+  }
+
   if (opts.cacheFilePath) {
     try {
       const signers = await loadKeystoreCache(opts.cacheFilePath, keystoreDefinitions);

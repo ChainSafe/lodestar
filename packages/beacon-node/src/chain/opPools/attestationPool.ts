@@ -1,6 +1,6 @@
-import {phase0, Slot, Root, RootHex} from "@lodestar/types";
 import {type Signature, aggregateSignatures} from "@chainsafe/blst-ts";
 import {BitArray, toHexString} from "@chainsafe/ssz";
+import {phase0, Slot, Root, RootHex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types.js";

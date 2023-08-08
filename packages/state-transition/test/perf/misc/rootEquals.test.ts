@@ -1,6 +1,6 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {ssz} from "@lodestar/types";
 import {byteArrayEquals, fromHexString} from "@chainsafe/ssz";
+import {ssz} from "@lodestar/types";
 
 // As of Jun 17 2021
 // Compare state root

@@ -1,7 +1,7 @@
 import {setMaxListeners} from "node:events";
 import {Connection, Stream} from "@libp2p/interface-connection";
 import {PeerId} from "@libp2p/interface-peer-id";
-import {Libp2p} from "libp2p";
+import type {Libp2p} from "libp2p";
 import {Logger} from "@lodestar/utils";
 import {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
 import {RequestError, RequestErrorCode, sendRequest, SendRequestOpts} from "./request/index.js";
@@ -64,7 +64,10 @@ export class ReqResp {
   private readonly registeredProtocols = new Map<ProtocolID, MixedProtocol>();
   private readonly dialOnlyProtocols = new Map<ProtocolID, boolean>();
 
-  constructor(modules: ReqRespProtocolModules, private readonly opts: ReqRespOpts = {}) {
+  constructor(
+    modules: ReqRespProtocolModules,
+    private readonly opts: ReqRespOpts = {}
+  ) {
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
     this.metrics = modules.metricsRegister ? getMetrics(modules.metricsRegister) : null;

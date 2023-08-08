@@ -13,14 +13,14 @@ import {ServerRoute} from "./types.js";
 
 export type ServerRoutes<
   Api extends Record<string, APIServerHandler>,
-  ReqTypes extends {[K in keyof Api]: ReqGeneric}
+  ReqTypes extends {[K in keyof Api]: ReqGeneric},
 > = {
   [K in keyof Api]: ServerRoute<ReqTypes[K]>;
 };
 
 export function getGenericJsonServer<
   Api extends Record<string, APIServerHandler>,
-  ReqTypes extends {[K in keyof Api]: ReqGeneric}
+  ReqTypes extends {[K in keyof Api]: ReqGeneric},
 >(
   {routesData, getReqSerializers, getReturnTypes}: RouteGroupDefinition<Api, ReqTypes>,
   config: ChainForkConfig,

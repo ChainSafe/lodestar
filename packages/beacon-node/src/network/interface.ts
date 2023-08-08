@@ -1,7 +1,6 @@
 import {Libp2p as ILibp2p} from "libp2p";
 import {Connection} from "@libp2p/interface-connection";
-import {Registrar} from "@libp2p/interface-registrar";
-import {ConnectionManager} from "@libp2p/interface-connection-manager";
+import {Components} from "libp2p/components";
 import {Slot, SlotRootHex, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {INetworkEventBus} from "./events.js";
@@ -66,4 +65,21 @@ export interface INetwork extends INetworkCorePublic {
 export type PeerDirection = Connection["stat"]["direction"];
 export type PeerStatus = Connection["stat"]["status"];
 
-export type Libp2p = ILibp2p & {connectionManager: ConnectionManager; registrar: Registrar};
+export type LodestarComponents = Pick<
+  Components,
+  | "peerId"
+  | "events"
+  | "addressManager"
+  | "peerStore"
+  | "upgrader"
+  | "registrar"
+  | "connectionManager"
+  | "transportManager"
+  | "connectionGater"
+  | "contentRouting"
+  | "peerRouting"
+  | "datastore"
+  | "connectionProtector"
+  | "metrics"
+>;
+export type Libp2p = ILibp2p<{components: LodestarComponents}>;

@@ -1,11 +1,11 @@
 import fetch from "cross-fetch";
+import {ContainerType, toHexString, ValueOf} from "@chainsafe/ssz";
 import {phase0, altair, capella} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";
 import {BeaconConfig} from "@lodestar/config";
 import {computeEpochAtSlot, blindedOrFullBlockToHeader} from "@lodestar/state-transition";
 import {allForks, Epoch, Root, RootHex, Slot, ssz} from "@lodestar/types";
-import {ContainerType, toHexString, ValueOf} from "@chainsafe/ssz";
 import {PubkeyHex} from "../types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */

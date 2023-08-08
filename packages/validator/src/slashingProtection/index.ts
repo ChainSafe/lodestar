@@ -1,5 +1,5 @@
-import {BLSPubkey, Root} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
+import {BLSPubkey, Root} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {LodestarValidatorDatabaseController} from "../types.js";
 import {uniqueVectorArr} from "../slashingProtection/utils.js";

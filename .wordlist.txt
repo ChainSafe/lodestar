@@ -115,6 +115,7 @@ runtime
 sharding
 ssz
 stakers
+subnet
 subnets
 tcp
 testnet

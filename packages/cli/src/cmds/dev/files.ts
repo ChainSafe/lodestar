@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import {Keystore} from "@chainsafe/bls-keystore";
 import {nodeUtils} from "@lodestar/beacon-node";
 import {chainConfigToJson, ChainForkConfig} from "@lodestar/config";
 import {dumpYaml} from "@lodestar/utils";
 import {interopSecretKey} from "@lodestar/state-transition";
-import {Keystore} from "@chainsafe/bls-keystore";
 import {PersistedKeysBackend} from "../validator/keymanager/persistedKeys.js";
 
 /* eslint-disable no-console */

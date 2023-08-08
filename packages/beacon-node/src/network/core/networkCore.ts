@@ -2,10 +2,12 @@ import {PeerId} from "@libp2p/interface-peer-id";
 import {multiaddr} from "@multiformats/multiaddr";
 import {Connection} from "@libp2p/interface-connection";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
-import {routes} from "@lodestar/api";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
+import {fromHexString} from "@chainsafe/ssz";
+import {ENR} from "@chainsafe/discv5";
+import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {LoggerNode} from "@lodestar/logger/node";
+import type {LoggerNode} from "@lodestar/logger/node";
 import {Epoch, phase0} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
@@ -18,9 +20,9 @@ import {AttnetsService} from "../subnets/attnetsService.js";
 import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {FORK_EPOCH_LOOKAHEAD, getActiveForks} from "../forks.js";
 import {NetworkOptions} from "../options.js";
-import {CommitteeSubscription} from "../subnets/interface.js";
+import {CommitteeSubscription, IAttnetsService} from "../subnets/interface.js";
 import {MetadataController} from "../metadata.js";
-import {createNodeJsLibp2p} from "../nodejs/util.js";
+import {createNodeJsLibp2p} from "../libp2p/index.js";
 import {PeersData} from "../peers/peersData.js";
 import {PeerAction, PeerRpcScoreStore, PeerScoreStats} from "../peers/index.js";
 import {getConnectionsMap} from "../util.js";
@@ -31,6 +33,7 @@ import {Discv5Worker} from "../discv5/index.js";
 import {LocalStatusCache} from "../statusCache.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {peerIdFromString, peerIdToString} from "../../util/peerId.js";
+import {DLLAttnetsService} from "../subnets/dllAttnetsService.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
 import {INetworkCore, MultiaddrStr, PeerIdStr} from "./types.js";
 
@@ -38,7 +41,7 @@ type Mods = {
   libp2p: Libp2p;
   gossip: Eth2Gossipsub;
   reqResp: ReqRespBeaconNode;
-  attnetsService: AttnetsService;
+  attnetsService: IAttnetsService;
   syncnetsService: SyncnetsService;
   peerManager: PeerManager;
   peersData: PeersData;
@@ -84,7 +87,7 @@ export type BaseNetworkInit = {
 export class NetworkCore implements INetworkCore {
   // Internal modules
   private readonly libp2p: Libp2p;
-  private readonly attnetsService: AttnetsService;
+  private readonly attnetsService: IAttnetsService;
   private readonly syncnetsService: SyncnetsService;
   private readonly peerManager: PeerManager;
   private readonly peersData: PeersData;
@@ -185,7 +188,18 @@ export class NetworkCore implements INetworkCore {
       events,
     });
 
-    const attnetsService = new AttnetsService(config, clock, gossip, metadata, logger, metrics, opts);
+    // Note: should not be necessary, already called in createNodeJsLibp2p()
+    await libp2p.start();
+
+    await reqResp.start();
+    // should be called before DLLAttnetsService constructor so that node subscribe to deterministic attnet topics
+    await gossip.start();
+
+    const enr = opts.discv5?.enr;
+    const nodeId = enr ? fromHexString(ENR.decodeTxt(enr).nodeId) : null;
+    const attnetsService = opts.deterministicLongLivedAttnets
+      ? new DLLAttnetsService(config, clock, gossip, metadata, logger, metrics, nodeId, opts)
+      : new AttnetsService(config, clock, gossip, metadata, logger, metrics, opts);
     const syncnetsService = new SyncnetsService(config, clock, gossip, metadata, logger, metrics, opts);
 
     const peerManager = await PeerManager.init(
@@ -206,13 +220,6 @@ export class NetworkCore implements INetworkCore {
       },
       opts
     );
-
-    // Note: should not be necessary, already called in createNodeJsLibp2p()
-    await libp2p.start();
-
-    await reqResp.start();
-
-    await gossip.start();
 
     // Network spec decides version changes based on clock fork, not head fork
     const forkCurrentSlot = config.getForkName(clock.currentSlot);
@@ -353,7 +360,7 @@ export class NetworkCore implements INetworkCore {
   }
 
   getConnectionsByPeer(): Map<string, Connection[]> {
-    return getConnectionsMap(this.libp2p.connectionManager);
+    return getConnectionsMap(this.libp2p);
   }
 
   async getConnectedPeers(): Promise<PeerIdStr[]> {
@@ -368,7 +375,7 @@ export class NetworkCore implements INetworkCore {
 
   async connectToPeer(peerIdStr: PeerIdStr, multiaddrStrArr: MultiaddrStr[]): Promise<void> {
     const peer = peerIdFromString(peerIdStr);
-    await this.libp2p.peerStore.addressBook.add(peer, multiaddrStrArr.map(multiaddr));
+    await this.libp2p.peerStore.merge(peer, {multiaddrs: multiaddrStrArr.map(multiaddr)});
     await this.libp2p.dial(peer);
   }
 

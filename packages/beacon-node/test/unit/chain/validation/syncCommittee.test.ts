@@ -1,10 +1,10 @@
 import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
+import {toHexString} from "@chainsafe/ssz";
 import {altair, Epoch, Slot} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {toHexString} from "@chainsafe/ssz";
 import {ForkChoice, IForkChoice} from "@lodestar/fork-choice";
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {Clock} from "../../../../src/util/clock.js";

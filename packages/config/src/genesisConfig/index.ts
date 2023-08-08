@@ -1,6 +1,6 @@
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {DomainType, ForkDigest, phase0, Root, Slot, ssz, Version} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
+import {ForkName, SLOTS_PER_EPOCH, DOMAIN_VOLUNTARY_EXIT} from "@lodestar/params";
+import {DomainType, ForkDigest, phase0, Root, Slot, ssz, Version} from "@lodestar/types";
 import {ChainForkConfig} from "../beaconConfig.js";
 import {ForkDigestHex, CachedGenesis} from "./types.js";
 export {ForkDigestContext} from "./types.js";
@@ -76,10 +76,20 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
       return domain;
     },
 
+    getDomainForVoluntaryExit(stateSlot: Slot, messageSlot?: Slot) {
+      // Deneb onwards the signature domain fork is fixed to capella
+      const domain =
+        stateSlot < chainForkConfig.DENEB_FORK_EPOCH * SLOTS_PER_EPOCH
+          ? this.getDomain(stateSlot, DOMAIN_VOLUNTARY_EXIT, messageSlot)
+          : this.getDomainAtFork(ForkName.capella, DOMAIN_VOLUNTARY_EXIT);
+
+      return domain;
+    },
+
     forkDigest2ForkName(forkDigest: ForkDigest | ForkDigestHex): ForkName {
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
       const forkName = forkNameByForkDigest.get(forkDigestHex);
-      if (!forkName) {
+      if (forkName == null) {
         throw Error(`Unknown forkDigest ${forkDigestHex}`);
       }
       return forkName;
@@ -88,7 +98,7 @@ export function createCachedGenesis(chainForkConfig: ChainForkConfig, genesisVal
     forkDigest2ForkNameOption(forkDigest: ForkDigest | ForkDigestHex): ForkName | null {
       const forkDigestHex = toHexStringNoPrefix(forkDigest);
       const forkName = forkNameByForkDigest.get(forkDigestHex);
-      if (!forkName) {
+      if (forkName == null) {
         return null;
       }
       return forkName;

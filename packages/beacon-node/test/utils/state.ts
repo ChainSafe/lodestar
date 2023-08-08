@@ -1,3 +1,4 @@
+import {SecretKey} from "@chainsafe/blst-ts";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {
   BeaconStateAllForks,
@@ -11,7 +12,6 @@ import {allForks, altair, bellatrix, ssz} from "@lodestar/types";
 import {createBeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 
-import {SecretKey} from "@chainsafe/blst-ts";
 import {generateValidator, generateValidators} from "./validator.js";
 import {getConfig} from "./config.js";
 

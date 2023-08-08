@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {ErrorAborted} from "@lodestar/utils";
 import {Api, ReqTypes, routesData, getEventSerdes} from "../routes/events.js";
 import {ServerRoutes} from "../../utils/server/index.js";
 import {ServerApi} from "../../interfaces.js";
@@ -17,7 +18,7 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
         const controller = new AbortController();
 
         try {
-          // Add injected headers from other pluggins. This is required for fastify-cors for example
+          // Add injected headers from other plugins. This is required for fastify-cors for example
           // From: https://github.com/NodeFactoryIo/fastify-sse-v2/blob/b1686a979fbf655fb9936c0560294a0c094734d4/src/plugin.ts
           Object.entries(res.getHeaders()).forEach(([key, value]) => {
             if (value !== undefined) res.raw.setHeader(key, value);
@@ -47,9 +48,14 @@ export function getRoutes(config: ChainForkConfig, api: ServerApi<Api>): ServerR
             // In that case the BeaconNode class will call server.close() and end this connection.
 
             // The client may disconnect and we need to clean the subscriptions.
-            req.raw.once("close", () => resolve());
-            req.raw.once("end", () => resolve());
-            req.raw.once("error", (err) => reject(err));
+            req.socket.once("close", () => resolve());
+            req.socket.once("end", () => resolve());
+            req.raw.once("error", (err) => {
+              if ((err as unknown as {code: string}).code === "ECONNRESET") {
+                return reject(new ErrorAborted());
+              }
+              return reject(err);
+            });
           });
 
           // api.eventstream will never stop, so no need to ever call `res.raw.end();`

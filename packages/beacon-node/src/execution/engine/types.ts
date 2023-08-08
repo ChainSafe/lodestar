@@ -16,13 +16,7 @@ import {
   QUANTITY,
   quantityToBigint,
 } from "../../eth1/provider/utils.js";
-import {
-  ExecutePayloadStatus,
-  TransitionConfigurationV1,
-  BlobsBundle,
-  PayloadAttributes,
-  VersionedHashes,
-} from "./interface.js";
+import {ExecutePayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -41,11 +35,15 @@ export type EngineApiRpcParamTypes = {
    */
   engine_forkchoiceUpdatedV1: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
-    payloadAttributes?: PayloadAttributesRpc
+    payloadAttributes?: PayloadAttributesRpc,
   ];
   engine_forkchoiceUpdatedV2: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
-    payloadAttributes?: PayloadAttributesRpc
+    payloadAttributes?: PayloadAttributesRpc,
+  ];
+  engine_forkchoiceUpdatedV3: [
+    forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
+    payloadAttributes?: PayloadAttributesRpc,
   ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
@@ -53,10 +51,6 @@ export type EngineApiRpcParamTypes = {
   engine_getPayloadV1: [QUANTITY];
   engine_getPayloadV2: [QUANTITY];
   engine_getPayloadV3: [QUANTITY];
-  /**
-   * 1. Object - Instance of TransitionConfigurationV1
-   */
-  engine_exchangeTransitionConfigurationV1: [TransitionConfigurationV1];
 
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
@@ -92,16 +86,16 @@ export type EngineApiRpcReturnTypes = {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
   };
+  engine_forkchoiceUpdatedV3: {
+    payloadStatus: PayloadStatus;
+    payloadId: QUANTITY | null;
+  };
   /**
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
   engine_getPayloadV1: ExecutionPayloadRpc;
   engine_getPayloadV2: ExecutionPayloadResponse;
   engine_getPayloadV3: ExecutionPayloadResponse;
-  /**
-   * Object - Instance of TransitionConfigurationV1
-   */
-  engine_exchangeTransitionConfigurationV1: TransitionConfigurationV1;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 
@@ -137,6 +131,7 @@ export type ExecutionPayloadRpc = {
   withdrawals?: WithdrawalRpc[]; // Capella hardfork
   dataGasUsed?: QUANTITY; // DENEB
   excessDataGas?: QUANTITY; // DENEB
+  parentBeaconBlockRoot?: QUANTITY; // DENEB
 };
 
 export type WithdrawalRpc = {
@@ -156,6 +151,8 @@ export type PayloadAttributesRpc = {
   /** DATA, 20 Bytes - suggested value for the coinbase field of the new payload */
   suggestedFeeRecipient: DATA;
   withdrawals?: WithdrawalRpc[];
+  /** DATA, 32 Bytes - value for the parentBeaconBlockRoot to be used for building block */
+  parentBeaconBlockRoot?: DATA;
 };
 
 export interface BlobsBundleRpc {
@@ -280,6 +277,7 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     prevRandao: bytesToData(data.prevRandao),
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map(serializeWithdrawal),
+    parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
   };
 }
 
@@ -295,6 +293,7 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     // avoid any conversions
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map((withdrawal) => deserializeWithdrawal(withdrawal)),
+    parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
   };
 }
 

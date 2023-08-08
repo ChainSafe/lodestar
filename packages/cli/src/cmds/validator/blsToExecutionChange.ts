@@ -1,10 +1,10 @@
+import {fromHexString} from "@chainsafe/ssz";
+import {SecretKey} from "@chainsafe/blst-ts";
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {createBeaconConfig} from "@lodestar/config";
 import {ssz, capella} from "@lodestar/types";
 import {ApiError, getClient} from "@lodestar/api";
-import {fromHexString} from "@chainsafe/ssz";
-import {SecretKey} from "@chainsafe/blst-ts";
 
 import {CliCommand, YargsError} from "../../util/index.js";
 import {GlobalArgs} from "../../options/index.js";

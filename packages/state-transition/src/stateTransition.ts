@@ -1,6 +1,6 @@
+import {toHexString} from "@chainsafe/ssz";
 import {allForks, Slot, ssz} from "@lodestar/types";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
 import {beforeProcessEpoch, EpochTransitionCacheOpts} from "./cache/epochTransitionCache.js";
 import {

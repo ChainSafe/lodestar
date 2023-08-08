@@ -1,3 +1,4 @@
+import {CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -9,7 +10,6 @@ import {
 } from "@lodestar/params";
 import {Bytes32, phase0, Root, ssz, TimeSeconds} from "@lodestar/types";
 
-import {CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {EpochCacheImmutableData} from "../cache/epochCache.js";

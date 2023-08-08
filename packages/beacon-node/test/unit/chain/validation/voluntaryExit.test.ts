@@ -1,5 +1,5 @@
 import sinon, {SinonStubbedInstance} from "sinon";
-
+import {SecretKey} from "@chainsafe/blst-ts";
 import {config} from "@lodestar/config/default";
 import {
   CachedBeaconStateAllForks,
@@ -11,7 +11,6 @@ import {ForkChoice} from "@lodestar/fork-choice";
 import {phase0, ssz} from "@lodestar/types";
 
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {SecretKey} from "@chainsafe/blst-ts";
 import {createBeaconConfig} from "@lodestar/config";
 import {BeaconChain} from "../../../../src/chain/index.js";
 import {StubbedChainMutable} from "../../../utils/stub/index.js";

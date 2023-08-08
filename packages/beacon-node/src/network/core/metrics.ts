@@ -231,6 +231,10 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         name: "lodestar_attnets_service_random_subscriptions_total",
         help: "Count of random subscriptions",
       }),
+      longLivedSubscriptions: register.gauge({
+        name: "lodestar_attnets_service_long_lived_subscriptions_total",
+        help: "Count of long lived subscriptions",
+      }),
       subscribeSubnets: register.gauge<"subnet" | "src">({
         name: "lodestar_attnets_service_subscribe_subnets_total",
         help: "Count of subscribe_subnets calls",

@@ -11,7 +11,7 @@ import {
   getSlotFromSignedAggregateAndProofSerialized,
   getSignatureFromAttestationSerialized,
   getSlotFromSignedBeaconBlockSerialized,
-  getSlotFromSignedBeaconBlockAndBlobsSidecarSerialized,
+  getSlotFromSignedBlobSidecarSerialized,
 } from "../../../src/util/sszBytes.js";
 
 describe("attestation SSZ serialized picking", () => {
@@ -148,25 +148,20 @@ describe("signedBeaconBlock SSZ serialized picking", () => {
   });
 });
 
-describe("signedBeaconBlockAndBlobsSidecar SSZ serialized picking", () => {
-  const testCases = [
-    ssz.deneb.SignedBeaconBlockAndBlobsSidecar.defaultValue(),
-    signedBeaconBlockAndBlobsSidecarFromValues(1_000_000),
-  ];
+describe("signedBlobSidecar SSZ serialized picking", () => {
+  const testCases = [ssz.deneb.SignedBlobSidecar.defaultValue(), signedBlobSidecarFromValues(1_000_000)];
 
-  for (const [i, signedBeaconBlockAndBlobsSidecar] of testCases.entries()) {
-    const bytes = ssz.deneb.SignedBeaconBlockAndBlobsSidecar.serialize(signedBeaconBlockAndBlobsSidecar);
-    it(`signedBeaconBlockAndBlobsSidecar ${i}`, () => {
-      expect(getSlotFromSignedBeaconBlockAndBlobsSidecarSerialized(bytes)).equals(
-        signedBeaconBlockAndBlobsSidecar.beaconBlock.message.slot
-      );
+  for (const [i, signedBlobSidecar] of testCases.entries()) {
+    const bytes = ssz.deneb.SignedBlobSidecar.serialize(signedBlobSidecar);
+    it(`signedBlobSidecar ${i}`, () => {
+      expect(getSlotFromSignedBlobSidecarSerialized(bytes)).equals(signedBlobSidecar.message.slot);
     });
   }
 
-  it("getSlotFromSignedBeaconBlockAndBlobsSidecarSerialized - invalid data", () => {
-    const invalidSlotDataSizes = [0, 50, 112];
+  it("signedBlobSidecar - invalid data", () => {
+    const invalidSlotDataSizes = [0, 20, 38];
     for (const size of invalidSlotDataSizes) {
-      expect(getSlotFromSignedBeaconBlockAndBlobsSidecarSerialized(Buffer.alloc(size))).to.be.null;
+      expect(getSlotFromSignedBlobSidecarSerialized(Buffer.alloc(size))).to.be.null;
     }
   });
 });
@@ -205,8 +200,8 @@ function signedBeaconBlockFromValues(slot: Slot): phase0.SignedBeaconBlock {
   return signedBeaconBlock;
 }
 
-function signedBeaconBlockAndBlobsSidecarFromValues(slot: Slot): deneb.SignedBeaconBlockAndBlobsSidecar {
-  const signedBeaconBlockAndBlobsSidecar = ssz.deneb.SignedBeaconBlockAndBlobsSidecar.defaultValue();
-  signedBeaconBlockAndBlobsSidecar.beaconBlock.message.slot = slot;
-  return signedBeaconBlockAndBlobsSidecar;
+function signedBlobSidecarFromValues(slot: Slot): deneb.SignedBlobSidecar {
+  const signedBlobSidecar = ssz.deneb.SignedBlobSidecar.defaultValue();
+  signedBlobSidecar.message.slot = slot;
+  return signedBlobSidecar;
 }

@@ -1,5 +1,5 @@
-import {Root} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
+import {Root} from "@lodestar/types";
 
 /**
  * Return items included in `next` but not in `prev`

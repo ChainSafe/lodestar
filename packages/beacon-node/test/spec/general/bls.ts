@@ -9,8 +9,8 @@ import {
   fastAggregateVerify,
   aggregatePublicKeys,
 } from "@chainsafe/blst-ts";
-import {InputType} from "@lodestar/spec-test-util";
 import {fromHexString} from "@chainsafe/ssz";
+import {InputType} from "@lodestar/spec-test-util";
 import {TestRunnerFn} from "../utils/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */

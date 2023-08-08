@@ -1,3 +1,4 @@
+import {CoordType, PublicKey, Signature, aggregatePublicKeys, aggregateSignatures, verify} from "@chainsafe/blst-ts";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier} from "./interface.js";
@@ -30,9 +31,51 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     const endNs = process.hrtime.bigint();
     const totalSec = Number(startNs - endNs) / 1e9;
     this.metrics?.bls.mainThread.durationOnThread.observe(totalSec);
-    this.metrics?.bls.mainThread.durationOnThread.observe(totalSec / sets.length);
 
     return isValid;
+  }
+
+  async verifySignatureSetsSameMessage(
+    sets: {publicKey: PublicKey; signature: Uint8Array}[],
+    message: Uint8Array
+  ): Promise<boolean[]> {
+    const startNs = process.hrtime.bigint();
+    const pubkey = aggregatePublicKeys(sets.map((set) => set.publicKey));
+    let isAllValid = true;
+    // validate signature = true
+    const signatures = sets.map((set) => {
+      try {
+        return Signature.deserialize(set.signature, CoordType.affine);
+      } catch (_) {
+        // at least one set has malformed signature
+        isAllValid = false;
+        return null;
+      }
+    });
+
+    if (isAllValid) {
+      const signature = aggregateSignatures(signatures as Signature[]);
+      isAllValid = verify(message, pubkey, signature);
+    }
+
+    let result: boolean[];
+    if (isAllValid) {
+      result = sets.map(() => true);
+    } else {
+      result = sets.map((set, i) => {
+        const sig = signatures[i];
+        if (sig === null) {
+          return false;
+        }
+        return verify(message, set.publicKey, sig);
+      });
+    }
+
+    const endNs = process.hrtime.bigint();
+    const totalSec = Number(startNs - endNs) / 1e9;
+    this.metrics?.bls.mainThread.durationOnThread.observe(totalSec);
+
+    return result;
   }
 
   async close(): Promise<void> {

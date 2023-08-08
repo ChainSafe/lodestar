@@ -118,7 +118,10 @@ interface DefaultMeta {
 }
 
 export class WinstonLoggerNode extends WinstonLogger implements LoggerNode {
-  constructor(protected readonly winston: Winston, private readonly opts: LoggerNodeOpts) {
+  constructor(
+    protected readonly winston: Winston,
+    private readonly opts: LoggerNodeOpts
+  ) {
     super(winston);
   }
 

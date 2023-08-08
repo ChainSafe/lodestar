@@ -2,10 +2,11 @@ import {expect} from "chai";
 import deepmerge from "deepmerge";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
-import {UNVERIFIED_RESPONSE_CODE} from "../../../src/constants.js";
+import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {eth_getTransactionCount} from "../../../src/verified_requests/eth_getTransactionCount.js";
 import getTransactionCountCase1 from "../../fixtures/sepolia/eth_getTransactionCount.json" assert {type: "json"};
 import {generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
+import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";
 
 const testCases = [getTransactionCountCase1];
 
@@ -46,7 +47,10 @@ describe("verified_requests / eth_getTransactionCount", () => {
         expect(response).to.eql({
           jsonrpc: "2.0",
           id: testCase.request.id,
-          error: {code: UNVERIFIED_RESPONSE_CODE, message: "eth_getTransactionCount request can not be verified."},
+          error: {
+            code: VERIFICATION_FAILED_RESPONSE_CODE,
+            message: getVerificationFailedMessage("eth_getTransactionCount"),
+          },
         });
       });
     });

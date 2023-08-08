@@ -1,8 +1,8 @@
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {SecretKey} from "@chainsafe/blst-ts";
-import {altair} from "@lodestar/types";
 import {toHexString} from "@chainsafe/ssz";
+import {altair} from "@lodestar/types";
 import {SyncCommitteeMessagePool} from "../../../../src/chain/opPools/index.js";
 import {Clock} from "../../../../src/util/clock.js";
 

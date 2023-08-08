@@ -1,7 +1,7 @@
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger, pruneSetToMax} from "@lodestar/utils";
 import {Root, RootHex} from "@lodestar/types";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {INTERVALS_PER_SLOT} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../network/index.js";
@@ -57,21 +57,23 @@ export class UnknownBlockSync {
     if (!this.opts?.disableUnknownBlockSync) {
       // cannot chain to the above if or the log will be incorrect
       if (!this.subscribedToNetworkEvents) {
-        this.logger.debug("UnknownBlockSync enabled.");
+        this.logger.verbose("UnknownBlockSync enabled.");
         this.network.events.on(NetworkEvent.unknownBlock, this.onUnknownBlock);
         this.network.events.on(NetworkEvent.unknownBlockParent, this.onUnknownParent);
         this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
         this.subscribedToNetworkEvents = true;
       }
     } else {
-      this.logger.debug("UnknownBlockSync disabled.");
+      this.logger.verbose("UnknownBlockSync disabled by disableUnknownBlockSync option.");
     }
   }
 
   unsubscribeFromNetwork(): void {
+    this.logger.verbose("UnknownBlockSync disabled.");
     this.network.events.off(NetworkEvent.unknownBlock, this.onUnknownBlock);
     this.network.events.off(NetworkEvent.unknownBlockParent, this.onUnknownParent);
     this.network.events.off(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
+    this.subscribedToNetworkEvents = false;
   }
 
   close(): void {

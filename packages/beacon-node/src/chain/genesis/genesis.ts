@@ -1,7 +1,7 @@
+import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
 import {GENESIS_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {phase0, ssz} from "@lodestar/types";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
-import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
 import {
   getTemporaryBlockHeader,
   getGenesisBeaconState,

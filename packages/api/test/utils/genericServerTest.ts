@@ -20,7 +20,7 @@ export type GenericServerTestCases<Api extends Record<string, APIClientHandler>>
 
 export function runGenericServerTest<
   Api extends Record<string, APIClientHandler>,
-  ReqTypes extends {[K in keyof Api]: ReqGeneric}
+  ReqTypes extends {[K in keyof Api]: ReqGeneric},
 >(
   config: ChainForkConfig,
   getClient: (config: ChainForkConfig, https: IHttpClient) => Api,
