@@ -4,7 +4,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {ssz, capella} from "@lodestar/types";
 import {ApiError, getClient} from "@lodestar/api";
 import {fromHexString} from "@chainsafe/ssz";
-import bls from "@chainsafe/blst-ts";
+import {SecretKey} from "@chainsafe/blst-ts";
 
 import {CliCommand, YargsError} from "../../util/index.js";
 import {GlobalArgs} from "../../options/index.js";
@@ -75,7 +75,7 @@ like to choose for BLS To Execution Change.",
       throw new Error(`Validator pubkey ${publicKey} not found in state`);
     }
 
-    const blsPrivkey = bls.SecretKey.deserialize(fromHexString(fromBlsPrivkey));
+    const blsPrivkey = SecretKey.deserialize(fromHexString(fromBlsPrivkey));
     const fromBlsPubkey = blsPrivkey.toPublicKey().serialize(true);
 
     const blsToExecutionChange: capella.BLSToExecutionChange = {
