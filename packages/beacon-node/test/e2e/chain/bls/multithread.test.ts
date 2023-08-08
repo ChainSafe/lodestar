@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import bls from "@chainsafe/bls";
+import bls from "@chainsafe/blst-ts";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 import {testLogger} from "../../../utils/logger.js";
@@ -24,7 +24,7 @@ describe("chain / bls / multithread queue", function () {
   const sets: ISignatureSet[] = [];
   before("generate test data", () => {
     for (let i = 0; i < 3; i++) {
-      const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
+      const sk = bls.SecretKey.deserialize(Buffer.alloc(32, i + 1));
       const msg = Buffer.alloc(32, i + 1);
       const pk = sk.toPublicKey();
       const sig = sk.sign(msg);
@@ -32,7 +32,7 @@ describe("chain / bls / multithread queue", function () {
         type: SignatureSetType.single,
         pubkey: pk,
         signingRoot: msg,
-        signature: sig.toBytes(),
+        signature: sig.serialize(),
       });
     }
   });

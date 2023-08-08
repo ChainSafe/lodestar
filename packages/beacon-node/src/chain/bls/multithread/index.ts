@@ -6,16 +6,21 @@ import {spawn, Worker} from "@chainsafe/threads";
 // @ts-ignore
 // eslint-disable-next-line
 self = undefined;
-import bls from "@chainsafe/bls";
-import {Implementation, PointFormat} from "@chainsafe/bls/types";
 import {Logger} from "@lodestar/utils";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
 import {Metrics} from "../../../metrics/index.js";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
-import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
-import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types.js";
+import {asyncVerifySignatureSetsMaybeBatch, verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
+import {
+  BlsWorkReq,
+  BlsWorkResult,
+  DeserializedBlsWorkReq,
+  SerializedBlsWorkReq,
+  WorkerData,
+  WorkResultCode,
+} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 import {defaultPoolSize} from "./poolSize.js";
 import {asyncVerifyManySignatureSets} from "./verifyManySignatureSets.js";
@@ -27,6 +32,7 @@ export type BlsMultiThreadWorkerPoolModules = {
 
 export type BlsMultiThreadWorkerPoolOptions = {
   blsVerifyAllMultiThread?: boolean;
+  blsVerifyAllLibuv?: boolean;
 };
 
 /**
@@ -104,7 +110,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private readonly logger: Logger;
   private readonly metrics: Metrics | null;
 
-  private readonly format: PointFormat;
   private readonly workers: WorkerDescriptor[];
   private readonly workerJobs: JobQueueItem<boolean>[] = [];
   private bufferedWorkerJobs: {
@@ -123,6 +128,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   } | null = null;
 
   private blsVerifyAllMultiThread: boolean;
+  private blsVerifyAllLibuv: boolean;
   private closed = false;
   private workersBusy = 0;
 
@@ -131,15 +137,12 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.logger = logger;
     this.metrics = metrics;
     this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
-
-    // TODO: Allow to customize implementation
-    const implementation = bls.implementation;
+    this.blsVerifyAllLibuv = options.blsVerifyAllLibuv ?? false;
 
     // Use compressed for herumi for now.
     // The worker is not able to deserialize from uncompressed
     // `Error: err _wrapDeserialize`
-    this.format = implementation === "blst-native" ? PointFormat.uncompressed : PointFormat.compressed;
-    this.workers = this.createWorkers(implementation, defaultPoolSize);
+    this.workers = this.createWorkers(defaultPoolSize);
 
     if (metrics) {
       metrics.bls.workerThreadPool.queueLength.addCollect(() => {
@@ -173,6 +176,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   }
 
   canAcceptWork(): boolean {
+    if (this.blsVerifyAllLibuv) return true;
+
     return (
       this.workersBusy < defaultPoolSize &&
       // TODO: Should also bound the jobs queue?
@@ -187,13 +192,22 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     if (opts.verifyOnMainThread && !this.blsVerifyAllMultiThread) {
       const timer = this.metrics?.bls.mainThread.durationOnThread.startTimer();
       try {
-        return verifySignatureSetsMaybeBatch(
-          sets.map((set) => ({
-            publicKey: getAggregatedPubkey(set),
-            message: set.signingRoot.valueOf(),
-            signature: set.signature,
-          }))
-        );
+        return this.blsVerifyAllLibuv
+          ? await asyncVerifySignatureSetsMaybeBatch(
+              this.logger,
+              sets.map((set) => ({
+                publicKey: getAggregatedPubkey(set),
+                message: set.signingRoot.valueOf(),
+                signature: set.signature,
+              }))
+            )
+          : verifySignatureSetsMaybeBatch(
+              sets.map((set) => ({
+                publicKey: getAggregatedPubkey(set).serialize(false),
+                message: set.signingRoot.valueOf(),
+                signature: set.signature,
+              }))
+            );
       } finally {
         if (timer) timer();
       }
@@ -204,28 +218,27 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     //
     // Split large array of sets into smaller.
     // Very helpful when syncing finalized, sync may submit +1000 sets so chunkify allows to distribute to many workers
-    if (opts.verifyWithLibuvPool && !this.blsVerifyAllMultiThread) {
-      const timer = this.metrics?.bls.libuvThreadPool.durationInThreadPool.startTimer();
+    const timer = this.metrics?.bls.libuvThreadPool.durationInThreadPool.startTimer();
+    if (opts.verifyWithLibuvPool || this.blsVerifyAllLibuv || !this.blsVerifyAllMultiThread) {
       results = await Promise.all(
         chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map((chunk) =>
           this.queWorkLibuv({
             opts,
             sets: chunk.map((s) => ({
-              publicKey: getAggregatedPubkey(s).toBytes(this.format),
+              publicKey: getAggregatedPubkey(s),
               message: s.signingRoot,
               signature: s.signature,
             })),
           })
         )
       );
-      if (timer) timer();
     } else {
       results = await Promise.all(
-        chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map((setsWorker) =>
+        chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map((chunk) =>
           this.queueWorkWorkerPool({
             opts,
-            sets: setsWorker.map((s) => ({
-              publicKey: getAggregatedPubkey(s).toBytes(this.format),
+            sets: chunk.map((s) => ({
+              publicKey: getAggregatedPubkey(s).serialize(true),
               message: s.signingRoot,
               signature: s.signature,
             })),
@@ -233,6 +246,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         )
       );
     }
+    if (timer) timer();
 
     // .every on an empty array returns true
     if (results.length === 0) {
@@ -245,37 +259,39 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   /**
    * Creates a worker pool with the given implementation and size
    */
-  private createWorkers(implementation: Implementation, poolSize: number): WorkerDescriptor[] {
+  private createWorkers(poolSize: number): WorkerDescriptor[] {
     const workers: WorkerDescriptor[] = [];
 
-    for (let i = 0; i < poolSize; i++) {
-      const workerData: WorkerData = {implementation, workerId: i};
-      const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
+    if (!this.blsVerifyAllLibuv) {
+      for (let i = 0; i < poolSize; i++) {
+        const workerData: WorkerData = {workerId: i};
+        const worker = new Worker("./worker.js", {workerData} as ConstructorParameters<typeof Worker>[1]);
 
-      const workerDescriptor: WorkerDescriptor = {
-        worker,
-        status: {code: WorkerStatusCode.notInitialized},
-      };
-      workers.push(workerDescriptor);
+        const workerDescriptor: WorkerDescriptor = {
+          worker,
+          status: {code: WorkerStatusCode.notInitialized},
+        };
+        workers.push(workerDescriptor);
 
-      // TODO: Consider initializing only when necessary
-      const initPromise = spawn<WorkerApi>(worker, {
-        // A Lodestar Node may do very expensive task at start blocking the event loop and causing
-        // the initialization to timeout. The number below is big enough to almost disable the timeout
-        timeout: 5 * 60 * 1000,
-      });
-
-      workerDescriptor.status = {code: WorkerStatusCode.initializing, initPromise};
-
-      initPromise
-        .then((workerApi) => {
-          workerDescriptor.status = {code: WorkerStatusCode.idle, workerApi};
-          // Potentially run jobs that were queued before initialization of the first worker
-          setTimeout(this.runJobWorkerPool, 0);
-        })
-        .catch((error: Error) => {
-          workerDescriptor.status = {code: WorkerStatusCode.initializationError, error};
+        // TODO: Consider initializing only when necessary
+        const initPromise = spawn<WorkerApi>(worker, {
+          // A Lodestar Node may do very expensive task at start blocking the event loop and causing
+          // the initialization to timeout. The number below is big enough to almost disable the timeout
+          timeout: 5 * 60 * 1000,
         });
+
+        workerDescriptor.status = {code: WorkerStatusCode.initializing, initPromise};
+
+        initPromise
+          .then((workerApi) => {
+            workerDescriptor.status = {code: WorkerStatusCode.idle, workerApi};
+            // Potentially run jobs that were queued before initialization of the first worker
+            setTimeout(this.runJobWorkerPool, 0);
+          })
+          .catch((error: Error) => {
+            workerDescriptor.status = {code: WorkerStatusCode.initializationError, error};
+          });
+      }
     }
 
     return workers;
@@ -284,7 +300,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   /**
    * Register BLS work to be done eventually in a worker
    */
-  private async queueWorkWorkerPool(workReq: BlsWorkReq): Promise<boolean> {
+  private async queueWorkWorkerPool(workReq: SerializedBlsWorkReq): Promise<boolean> {
     if (this.closed) {
       throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
     }
@@ -469,7 +485,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   /**
    * Register BLS work to be done by the libuv worker pool
    */
-  private queWorkLibuv(workReq: BlsWorkReq): Promise<boolean> {
+  private queWorkLibuv(workReq: DeserializedBlsWorkReq): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
       const job = {resolve, reject, addedTimeMs: Date.now(), workReq};
       // Append batchable sets to `bufferedLibuvJobs`, starting a timeout to push them into `jobs`.
@@ -530,7 +546,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
       const workResult = await asyncVerifyManySignatureSets(
         this.logger,
-        jobs.map((job) => job.workReq)
+        jobs.map((job) => job.workReq as DeserializedBlsWorkReq)
       );
       const {batchRetries, batchSigsSuccess, workStartNs, workEndNs, results} = workResult;
 

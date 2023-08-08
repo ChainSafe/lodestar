@@ -1,20 +1,33 @@
+import type {PublicKey} from "@chainsafe/blst-ts";
 import {VerifySignatureOpts} from "../interface.js";
 
 export type WorkerData = {
-  implementation: "herumi" | "blst-native";
   workerId: number;
 };
 
-export type SerializedSet = {
+export type SerializedSignatureSet = {
   publicKey: Uint8Array;
   message: Uint8Array;
   signature: Uint8Array;
 };
 
-export type BlsWorkReq = {
-  opts: VerifySignatureOpts;
-  sets: SerializedSet[];
+export type DeserializedSignatureSet = {
+  publicKey: PublicKey;
+  message: Uint8Array;
+  signature: Uint8Array;
 };
+
+export type SerializedBlsWorkReq = {
+  opts: VerifySignatureOpts;
+  sets: SerializedSignatureSet[];
+};
+
+export type DeserializedBlsWorkReq = {
+  opts: VerifySignatureOpts;
+  sets: DeserializedSignatureSet[];
+};
+
+export type BlsWorkReq = SerializedBlsWorkReq | DeserializedBlsWorkReq;
 
 export enum WorkResultCode {
   success = "success",

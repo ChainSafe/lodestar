@@ -3,6 +3,7 @@ import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier} from "./interface.js";
 import {verifySignatureSetsMaybeBatch} from "./maybeBatch.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "./utils.js";
+import {SerializedSignatureSet} from "./multithread/types.js";
 
 export class BlsSingleThreadVerifier implements IBlsVerifier {
   private readonly metrics: Metrics | null;
@@ -14,8 +15,8 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
   async verifySignatureSets(sets: ISignatureSet[]): Promise<boolean> {
     this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
 
-    const setsAggregated = sets.map((set) => ({
-      publicKey: getAggregatedPubkey(set),
+    const setsAggregated: SerializedSignatureSet[] = sets.map((set) => ({
+      publicKey: getAggregatedPubkey(set).serialize(false),
       message: set.signingRoot,
       signature: set.signature,
     }));

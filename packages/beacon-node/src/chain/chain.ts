@@ -489,7 +489,7 @@ export class BeaconChain implements IBeaconChain {
     );
     const parentBlockRoot = fromHexString(head.blockRoot);
     const proposerIndex = state.epochCtx.getBeaconProposer(slot);
-    const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].toBytes();
+    const proposerPubKey = state.epochCtx.index2pubkey[proposerIndex].serialize();
 
     const {body, blobs, blockValue} = await produceBlockBody.call(this, blockType, state, {
       randaoReveal,

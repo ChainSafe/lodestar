@@ -1,61 +1,39 @@
-import {CoordType, PublicKey, asyncVerifyMultipleAggregateSignatures, asyncVerify} from "@chainsafe/blst-ts";
+import {
+  asyncVerifyMultipleAggregateSignatures,
+  asyncVerify,
+  verifyMultipleAggregateSignatures,
+  verify,
+} from "@chainsafe/blst-ts";
 import {Logger} from "@lodestar/utils";
+import {DeserializedSignatureSet, SerializedSignatureSet} from "./multithread/types.js";
 
 const MIN_SET_COUNT_TO_BATCH = 2;
-
-export type SignatureSetDeserialized = {
-  publicKey: PublicKey;
-  message: Uint8Array;
-  signature: Uint8Array;
-};
-
-export type SignatureSetSerialized = {
-  publicKey: Uint8Array;
-  message: Uint8Array;
-  signature: Uint8Array;
-};
 
 /**
  * Verify signatures sets with batch verification or regular core verify depending on the set count.
  * Abstracted in a separate file to be consumed by the threaded pool and the main thread implementation.
  */
-// export function verifySignatureSetsMaybeBatch(sets: SignatureSetDeserialized[]): boolean {
-//   if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
-//     return bls.Signature.verifyMultipleSignatures(
-//       sets.map((s) => ({
-//         publicKey: s.publicKey,
-//         message: s.message,
-//         // true = validate signature
-//         signature: bls.Signature.fromBytes(s.signature, CoordType.affine, true),
-//       }))
-//     );
-//   }
+export function verifySignatureSetsMaybeBatch(sets: SerializedSignatureSet[]): boolean {
+  if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
+    return verifyMultipleAggregateSignatures(sets);
+  }
 
-//   // .every on an empty array returns true
-//   if (sets.length === 0) {
-//     throw Error("Empty signature set");
-//   }
+  // .every on an empty array returns true
+  if (sets.length === 0) {
+    throw Error("Empty signature set");
+  }
 
-//   // If too few signature sets verify them without batching
-//   return sets.every((set) => {
-//     // true = validate signature
-//     const sig = bls.Signature.fromBytes(set.signature, CoordType.affine, true);
-//     return sig.verify(set.publicKey, set.message);
-//   });
-// }
+  // If too few signature sets verify them without batching
+  return sets.every((set) => verify(set.message, set.publicKey, set.signature));
+}
 
 export async function asyncVerifySignatureSetsMaybeBatch(
   logger: Logger,
-  sets: SignatureSetSerialized[]
+  sets: DeserializedSignatureSet[]
 ): Promise<boolean> {
   if (sets.length >= MIN_SET_COUNT_TO_BATCH) {
-    return asyncVerifyMultipleAggregateSignatures(
-      sets.map((s) => ({
-        publicKey: s.publicKey,
-        msg: s.message,
-        signature: s.signature,
-      }))
-    );
+    logger.debug(`Attempting batch verification of ${sets.length} signature sets`);
+    return asyncVerifyMultipleAggregateSignatures(sets);
   }
 
   // .every on an empty array returns true
@@ -68,5 +46,6 @@ export async function asyncVerifySignatureSetsMaybeBatch(
   const verifications = await Promise.all(
     sets.map((set) => asyncVerify(set.message, set.publicKey, set.signature).catch(() => false))
   );
+
   return verifications.every((v) => v);
 }
