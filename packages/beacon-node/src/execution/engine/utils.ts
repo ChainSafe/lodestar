@@ -85,14 +85,33 @@ function getExecutionEngineStateForPayloadError(
 export function getExecutionEngineState<S extends ExecutionPayloadStatus | undefined, E extends unknown | undefined>({
   payloadError,
   payloadStatus,
+  targetState,
   oldState,
 }:
-  | {payloadStatus: S; payloadError?: never; oldState: ExecutionEngineState}
-  | {payloadStatus?: never; payloadError: E; oldState: ExecutionEngineState}): ExecutionEngineState {
+  | {payloadStatus: S; payloadError?: never; targetState?: never; oldState: ExecutionEngineState}
+  | {payloadStatus?: never; payloadError: E; targetState?: never; oldState: ExecutionEngineState}
+  | {
+      payloadStatus?: never;
+      payloadError?: never;
+      targetState: ExecutionEngineState;
+      oldState: ExecutionEngineState;
+    }): ExecutionEngineState {
   const newState =
-    payloadStatus === undefined
+    targetState !== undefined
+      ? targetState
+      : payloadStatus === undefined
       ? getExecutionEngineStateForPayloadError(payloadError, oldState)
       : getExecutionEngineStateForPayloadStatus(payloadStatus);
+
+  if (newState === oldState) return oldState;
+
+  // The ONLINE is initial state and can reached from offline or auth failed error
+  if (
+    newState === ExecutionEngineState.ONLINE &&
+    !(oldState === ExecutionEngineState.OFFLINE || oldState === ExecutionEngineState.AUTH_FAILED)
+  ) {
+    return oldState;
+  }
 
   return newState;
 }
