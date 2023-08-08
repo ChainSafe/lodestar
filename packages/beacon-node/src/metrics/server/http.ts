@@ -90,10 +90,10 @@ export async function getHttpMetricsServer(
     async close(): Promise<void> {
       // In NodeJS land calling close() only causes new connections to be rejected.
       // Existing connections can prevent .close() from resolving for potentially forever.
-      // In Lodestar case when the BeaconNode wants to close we will just abruptly terminate
-      // all existing connections for a fast shutdown.
+      // In Lodestar case when the BeaconNode wants to close we will attempt to gracefully
+      // close all existing connections but forcefully terminate after timeout for a fast shutdown.
       // Inspired by https://github.com/gajus/http-terminator/
-      activeSockets.destroyAll();
+      await activeSockets.terminate();
 
       await new Promise<void>((resolve, reject) => {
         server.close((err) => {
@@ -101,6 +101,8 @@ export async function getHttpMetricsServer(
           else resolve();
         });
       });
+
+      logger.debug("Metrics HTTP server closed");
     },
   };
 }

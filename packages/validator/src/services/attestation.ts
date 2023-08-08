@@ -322,9 +322,7 @@ export class AttestationService {
     this.logger.debug("Submitting partial beacon committee selection proofs", {slot, count: partialSelections.length});
 
     const res = await Promise.race([
-      this.api.validator
-        .submitBeaconCommitteeSelections(partialSelections)
-        .catch((e) => this.logger.error("Error on submitBeaconCommitteeSelections", {slot}, e)),
+      this.api.validator.submitBeaconCommitteeSelections(partialSelections),
       // Exit attestation aggregation flow if there is no response after 1/3 of slot as
       // beacon node would likely not have enough time to prepare an aggregate attestation.
       // Note that the aggregations flow is not explicitly exited but rather will be skipped
@@ -334,7 +332,7 @@ export class AttestationService {
     ]);
 
     if (!res) {
-      throw new Error("submitBeaconCommitteeSelections did not resolve after 1/3 of slot");
+      throw new Error("Failed to receive combined selection proofs before 1/3 of slot");
     }
     ApiError.assert(res, "Error receiving combined selection proofs");
 

@@ -19,6 +19,7 @@ export type NetworkArgs = {
   targetPeers?: number;
   deterministicLongLivedAttnets?: boolean;
   subscribeAllSubnets?: boolean;
+  slotsToSubscribeBeforeAggregatorDuty?: number;
   disablePeerScoring?: boolean;
   mdns?: boolean;
   "network.maxPeers"?: number;
@@ -135,6 +136,8 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     localMultiaddrs: [localMu, localMu6].filter(Boolean) as string[],
     deterministicLongLivedAttnets: args["deterministicLongLivedAttnets"],
     subscribeAllSubnets: args["subscribeAllSubnets"],
+    slotsToSubscribeBeforeAggregatorDuty:
+      args["slotsToSubscribeBeforeAggregatorDuty"] ?? defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty,
     disablePeerScoring: args["disablePeerScoring"],
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
@@ -235,6 +238,14 @@ export const options: CliCommandOptions<NetworkArgs> = {
     group: "network",
   },
 
+  slotsToSubscribeBeforeAggregatorDuty: {
+    hidden: true,
+    type: "number",
+    description: "Number of slots before an aggregator duty to subscribe to subnets",
+    defaultDescription: String(defaultOptions.network.slotsToSubscribeBeforeAggregatorDuty),
+    group: "network",
+  },
+
   disablePeerScoring: {
     type: "boolean",
     description: "Disable peer scoring, used for testing on devnets",
@@ -259,7 +270,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   "network.connectToDiscv5Bootnodes": {
     type: "boolean",
-    description: "Attempt direct connection to discv5 bootnodes from network.discv5.bootEnrs option",
+    description: "Attempt direct connection to discv5 bootnodes",
     hidden: true,
     defaultDescription: String(defaultOptions.network.connectToDiscv5Bootnodes === true),
     group: "network",
@@ -299,7 +310,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   "network.rateTrackerTimeoutMs": {
     type: "number",
-    description: "Time window to track rate limit in milli seconds",
+    description: "Time window to track rate limit in milliseconds",
     hidden: true,
     group: "network",
     deprecated: true,

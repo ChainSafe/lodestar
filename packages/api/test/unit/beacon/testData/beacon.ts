@@ -1,7 +1,12 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {ssz, Slot, allForks} from "@lodestar/types";
-import {Api, BlockHeaderResponse, ValidatorResponse} from "../../../../src/beacon/routes/beacon/index.js";
+import {
+  Api,
+  BlockHeaderResponse,
+  BroadcastValidation,
+  ValidatorResponse,
+} from "../../../../src/beacon/routes/beacon/index.js";
 import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const root = Buffer.alloc(32, 1);
@@ -52,8 +57,16 @@ export const testData: GenericServerTestCases<Api> = {
     args: [ssz.phase0.SignedBeaconBlock.defaultValue()],
     res: undefined,
   },
+  publishBlockV2: {
+    args: [ssz.phase0.SignedBeaconBlock.defaultValue(), {broadcastValidation: BroadcastValidation.none}],
+    res: undefined,
+  },
   publishBlindedBlock: {
     args: [getDefaultBlindedBlock(64)],
+    res: undefined,
+  },
+  publishBlindedBlockV2: {
+    args: [getDefaultBlindedBlock(64), {broadcastValidation: BroadcastValidation.none}],
     res: undefined,
   },
   getBlobSidecars: {

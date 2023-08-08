@@ -125,8 +125,8 @@ export const BeaconBlockAndBlobsSidecarByRootRequest = new ListCompositeType(Roo
 export const ExecutionPayload = new ContainerType(
   {
     ...capellaSsz.ExecutionPayload.fields,
-    dataGasUsed: UintBn64, // New in DENEB
-    excessDataGas: UintBn64, // New in DENEB
+    blobGasUsed: UintBn64, // New in DENEB
+    excessBlobGas: UintBn64, // New in DENEB
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
@@ -134,8 +134,8 @@ export const ExecutionPayload = new ContainerType(
 export const ExecutionPayloadHeader = new ContainerType(
   {
     ...capellaSsz.ExecutionPayloadHeader.fields,
-    dataGasUsed: UintBn64, // New in DENEB
-    excessDataGas: UintBn64, // New in DENEB
+    blobGasUsed: UintBn64, // New in DENEB
+    excessBlobGas: UintBn64, // New in DENEB
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );

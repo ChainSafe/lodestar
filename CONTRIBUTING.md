@@ -195,10 +195,10 @@ Contributors must choose the log level carefully to ensure a consistent experien
 To edit or extend an existing Grafana dashboard with minimal diff:
 
 1. Grab the `.json` dashboard file from current unstable
-2. Import file to Grafana via the web UI at `/dashboard/import`. Give it some temporal name relevant to your work (i.e. the branch name)
+2. Import the file to Grafana via the web UI at `/dashboard/import` without modifying the UID of the dashboard
 3. Visually edit the dashboard
-4. Once done make sure to leave the exact same visual aspect as before: same refresh interval, collapsed rows, etc.
-5. Save the dashboard (CTRL + S)
+4. Once done make sure to leave the exact same visual aspect as before: same refresh interval, time range, etc.
+5. Save the dashboard (CTRL+S)
 6. Run download script, see [below](#using-download-script) on how to use it
 7. Check git diff of updated dashboards, commit, push and open your PR
 

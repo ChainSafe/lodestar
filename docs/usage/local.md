@@ -54,7 +54,7 @@ to have the same beacon chain.
 Also `--port` and `--rest.port` are supplied since the default values will already be in use by the first node.
 
 The `--network.connectToDiscv5Bootnodes` flags needs to be set to true as this is needed to allow connection to boot ENRs on local devnet.
-The exact ENR of node to connect to is then supplied via the `--network.discv5.bootEnrs` flag.
+The exact ENR of node to connect to is then supplied via the `--bootnodes` flag.
 
 Once the second node starts, you should see an output similar to the following in either of the terminals:
 

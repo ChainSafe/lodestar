@@ -70,6 +70,7 @@ describe("AttnetsService", function () {
     getCurrentSlot(config, Math.floor(Date.now() / 1000));
     metadata = new MetadataController({}, {config, onSetValue: () => null});
     service = new AttnetsService(config, clock, gossipStub, metadata, logger, null, {
+      slotsToSubscribeBeforeAggregatorDuty: 2,
       randBetweenFn,
       shuffleFn: shuffleFn as ShuffleFn,
     });

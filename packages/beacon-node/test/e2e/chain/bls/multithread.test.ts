@@ -41,6 +41,10 @@ describe("chain / bls / multithread queue", function () {
         publicKey: pk,
         signature: sk.sign(sameMessage).serialize(),
       });
+      sameMessageSets.push({
+        publicKey: pk,
+        signature: sk.sign(sameMessage).toBytes(),
+      });
     }
   });
 

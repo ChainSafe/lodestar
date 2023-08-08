@@ -245,6 +245,17 @@ export function createLodestarMetrics(
       }),
     },
 
+    duties: {
+      requestNextEpochProposalDutiesHit: register.gauge({
+        name: "lodestar_duties_request_next_epoch_proposal_duties_hit_total",
+        help: "Total count of requestNextEpochProposalDuties hit",
+      }),
+      requestNextEpochProposalDutiesMiss: register.gauge({
+        name: "lodestar_duties_request_next_epoch_proposal_duties_miss_total",
+        help: "Total count of requestNextEpochProposalDuties miss",
+      }),
+    },
+
     // Beacon state transition metrics
 
     epochTransitionTime: register.histogram({

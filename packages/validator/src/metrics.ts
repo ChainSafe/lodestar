@@ -236,6 +236,11 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
       help: "Total count of instances the proposer duties dependant root changed",
     }),
 
+    newProposalDutiesDetected: register.gauge({
+      name: "vc_new_proposal_duties_detected_total",
+      help: "Total count of times new proposal duties were detected",
+    }),
+
     // IndicesService
 
     indices: register.gauge({

@@ -98,10 +98,10 @@ export function upgradeLightClientHeader(
 
     // eslint-disable-next-line no-fallthrough
     case ForkName.deneb:
-      (upgradedHeader as deneb.LightClientHeader).execution.dataGasUsed =
-        ssz.deneb.LightClientHeader.fields.execution.fields.dataGasUsed.defaultValue();
-      (upgradedHeader as deneb.LightClientHeader).execution.excessDataGas =
-        ssz.deneb.LightClientHeader.fields.execution.fields.excessDataGas.defaultValue();
+      (upgradedHeader as deneb.LightClientHeader).execution.blobGasUsed =
+        ssz.deneb.LightClientHeader.fields.execution.fields.blobGasUsed.defaultValue();
+      (upgradedHeader as deneb.LightClientHeader).execution.excessBlobGas =
+        ssz.deneb.LightClientHeader.fields.execution.fields.excessBlobGas.defaultValue();
 
       // Break if no further upgradation is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.deneb) break;
@@ -129,10 +129,10 @@ export function isValidLightClientHeader(config: ChainForkConfig, header: allFor
 
   if (epoch < config.DENEB_FORK_EPOCH) {
     if (
-      ((header as deneb.LightClientHeader).execution.dataGasUsed &&
-        (header as deneb.LightClientHeader).execution.dataGasUsed !== BigInt(0)) ||
-      ((header as deneb.LightClientHeader).execution.excessDataGas &&
-        (header as deneb.LightClientHeader).execution.excessDataGas !== BigInt(0))
+      ((header as deneb.LightClientHeader).execution.blobGasUsed &&
+        (header as deneb.LightClientHeader).execution.blobGasUsed !== BigInt(0)) ||
+      ((header as deneb.LightClientHeader).execution.excessBlobGas &&
+        (header as deneb.LightClientHeader).execution.excessBlobGas !== BigInt(0))
     ) {
       return false;
     }

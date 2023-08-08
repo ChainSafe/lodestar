@@ -43,10 +43,10 @@ export async function asyncVerifySignatureSetsMaybeBatch(
     return asyncVerifyMultipleAggregateSignatures(sets);
   }
 
-  // .every on an empty array returns true
-  if (sets.length === 0) {
-    throw Error("Empty signature set");
-  }
+    // .every on an empty array returns true
+    if (sets.length === 0) {
+      throw Error("Empty signature set");
+    }
 
   // If too few signature sets verify them without batching
   logger.debug(`Attempting individual verification of ${sets.length} signature sets`);

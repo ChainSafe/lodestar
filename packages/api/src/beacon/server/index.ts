@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Api} from "../routes/index.js";
-import {ServerInstance, ServerRoute, RouteConfig, registerRoute} from "../../utils/server/index.js";
+import {ApiError, ServerInstance, ServerRoute, RouteConfig, registerRoute} from "../../utils/server/index.js";
 
 import {ServerApi} from "../../interfaces.js";
 import * as beacon from "./beacon.js";
@@ -12,6 +12,9 @@ import * as lodestar from "./lodestar.js";
 import * as node from "./node.js";
 import * as proof from "./proof.js";
 import * as validator from "./validator.js";
+
+// Re-export for usage in beacon-node
+export {ApiError};
 
 // Re-export for convenience
 export {RouteConfig};
