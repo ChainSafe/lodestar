@@ -1,16 +1,19 @@
 import {Root, RootHex, allForks, Wei} from "@lodestar/types";
 import {SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
 import {Logger} from "@lodestar/logger";
-import {isErrorAborted} from "@lodestar/utils";
-import {ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
-import {IJsonRpcHttpClient, ReqOpts} from "../../eth1/provider/jsonRpcHttpClient.js";
+import {
+  ErrorJsonRpcResponse,
+  HttpRpcError,
+  IJsonRpcHttpClient,
+  ReqOpts,
+} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {Metrics} from "../../metrics/index.js";
-import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
+import {JobItemQueue} from "../../util/queue/index.js";
 import {EPOCHS_PER_BATCH} from "../../sync/constants.js";
 import {numToQuantity} from "../../eth1/provider/utils.js";
 import {IJson, RpcPayload} from "../../eth1/interface.js";
 import {
-  ExecutePayloadStatus,
+  ExecutionPayloadStatus,
   ExecutePayloadResponse,
   IExecutionEngine,
   PayloadId,
@@ -131,9 +134,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       this.updateEngineState(ExecutionEngineState.ONLINE);
       return res;
     } catch (err) {
-      if (!isErrorAborted(err)) {
-        this.updateEngineState(getExecutionEngineState({payloadError: err}));
-      }
+      this.updateEngineState(getExecutionEngineState({payloadError: err, oldState: this.state}));
+
+      /*
+       * TODO: For some error cases as abort, we may not want to escalate the error to the caller
+       * But for now the higher level code handles such cases so we can just rethrow the error
+       */
       throw err;
     }
   }
@@ -207,39 +213,34 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     const {status, latestValidHash, validationError} = await (
       this.rpcFetchQueue.push(engineRequest) as Promise<EngineApiRpcReturnTypes[typeof method]>
-    )
-      // If there are errors by EL like connection refused, internal error, they need to be
-      // treated separate from being INVALID. For now, just pass the error upstream.
-      .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
-        if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-          this.updateEngineState(getExecutionEngineState({payloadError: e}));
-        }
-        if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
-          return {status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
-        } else {
-          return {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
-        }
-      });
-    this.updateEngineState(getExecutionEngineState({payloadStatus: status}));
+    ).catch((e: Error) => {
+      if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
+        return {status: ExecutionPayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
+      } else {
+        return {status: ExecutionPayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
+      }
+    });
+
+    this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
 
     switch (status) {
-      case ExecutePayloadStatus.VALID:
+      case ExecutionPayloadStatus.VALID:
         return {status, latestValidHash: latestValidHash ?? "0x0", validationError: null};
 
-      case ExecutePayloadStatus.INVALID:
+      case ExecutionPayloadStatus.INVALID:
         // As per latest specs if latestValidHash can be null and it would mean only
         // invalidate this block
         return {status, latestValidHash, validationError};
 
-      case ExecutePayloadStatus.SYNCING:
-      case ExecutePayloadStatus.ACCEPTED:
+      case ExecutionPayloadStatus.SYNCING:
+      case ExecutionPayloadStatus.ACCEPTED:
         return {status, latestValidHash: null, validationError: null};
 
-      case ExecutePayloadStatus.INVALID_BLOCK_HASH:
+      case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
         return {status, latestValidHash: null, validationError: validationError ?? "Malformed block"};
 
-      case ExecutePayloadStatus.UNAVAILABLE:
-      case ExecutePayloadStatus.ELERROR:
+      case ExecutionPayloadStatus.UNAVAILABLE:
+      case ExecutionPayloadStatus.ELERROR:
         return {
           status,
           latestValidHash: null,
@@ -248,7 +249,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
       default:
         return {
-          status: ExecutePayloadStatus.ELERROR,
+          status: ExecutionPayloadStatus.ELERROR,
           latestValidHash: null,
           validationError: `Invalid EL status on executePayload: ${status}`,
         };
@@ -312,25 +313,15 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       methodOpts: fcUReqOpts,
     }) as Promise<EngineApiRpcReturnTypes[typeof method]>;
 
-    const response = await request
-      // If there are errors by EL like connection refused, internal error, they need to be
-      // treated separate from being INVALID. For now, just pass the error upstream.
-      .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
-        if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-          this.updateEngineState(getExecutionEngineState({payloadError: e}));
-        }
-        throw e;
-      });
-
     const {
       payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
       payloadId,
-    } = response;
+    } = await request;
 
-    this.updateEngineState(getExecutionEngineState({payloadStatus: status}));
+    this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
 
     switch (status) {
-      case ExecutePayloadStatus.VALID:
+      case ExecutionPayloadStatus.VALID:
         // if payloadAttributes are provided, a valid payloadId is expected
         if (payloadAttributesRpc) {
           if (!payloadId || payloadId === "0x") {
@@ -342,7 +333,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         }
         return payloadId !== "0x" ? payloadId : null;
 
-      case ExecutePayloadStatus.SYNCING:
+      case ExecutionPayloadStatus.SYNCING:
         // Throw error on syncing if requested to produce a block, else silently ignore
         if (payloadAttributes) {
           throw Error("Execution Layer Syncing");
@@ -350,7 +341,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           return null;
         }
 
-      case ExecutePayloadStatus.INVALID:
+      case ExecutionPayloadStatus.INVALID:
         throw Error(
           `Invalid ${payloadAttributes ? "prepare payload" : "forkchoice request"}, validationError=${
             validationError ?? ""
@@ -430,29 +421,21 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     if (oldState === newState) return;
 
-    // The ONLINE is initial state and can reached from offline or auth failed error
-    if (
-      newState === ExecutionEngineState.ONLINE &&
-      !(oldState === ExecutionEngineState.OFFLINE || oldState === ExecutionEngineState.AUTH_FAILED)
-    ) {
-      return;
-    }
-
     switch (newState) {
       case ExecutionEngineState.ONLINE:
-        this.logger.info("Execution client became online");
+        this.logger.info("Execution client became online", {oldState, newState});
         break;
       case ExecutionEngineState.OFFLINE:
-        this.logger.error("Execution client went offline");
+        this.logger.error("Execution client went offline", {oldState, newState});
         break;
       case ExecutionEngineState.SYNCED:
-        this.logger.info("Execution client is synced");
+        this.logger.info("Execution client is synced", {oldState, newState});
         break;
       case ExecutionEngineState.SYNCING:
-        this.logger.warn("Execution client is syncing");
+        this.logger.warn("Execution client is syncing", {oldState, newState});
         break;
       case ExecutionEngineState.AUTH_FAILED:
-        this.logger.error("Execution client authentication failed");
+        this.logger.error("Execution client authentication failed", {oldState, newState});
         break;
     }
 

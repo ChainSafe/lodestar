@@ -15,7 +15,7 @@ import {getConfig} from "../../utils/config.js";
 import {TestRunnerFn} from "../utils/types.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
-import {ExecutePayloadStatus} from "../../../src/execution/engine/interface.js";
+import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
@@ -201,7 +201,7 @@ export const forkChoiceTest =
             // Optional step for optimistic sync tests.
             else if (isOnPayloadInfoStep(step)) {
               logger.debug(`Step ${i}/${stepsLen} payload_status`, {blockHash: step.block_hash});
-              const status = ExecutePayloadStatus[step.payload_status.status];
+              const status = ExecutionPayloadStatus[step.payload_status.status];
               if (status === undefined) {
                 throw Error(`Unknown payload_status.status: ${step.payload_status.status}`);
               }
