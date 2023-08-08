@@ -16,7 +16,7 @@ export type BlstBuffer = Uint8Array;
 export type PublicKeyArg = BlstBuffer | PublicKey;
 export type SignatureArg = BlstBuffer | Signature;
 export interface SignatureSet {
-  msg: BlstBuffer;
+  message: BlstBuffer;
   publicKey: PublicKeyArg;
   signature: SignatureArg;
 }

@@ -257,9 +257,9 @@ Napi::Value VerifyMultipleAggregateSignatures(const Napi::CallbackInfo &info) {
             }
             Napi::Object set = set_value.As<Napi::Object>();
 
-            Napi::Value msg_value = set.Get("msg");
+            Napi::Value msg_value = set.Get("message");
             BLST_TS_UNWRAP_UINT_8_ARRAY(
-                msg_value, msg, "msg", scope.Escape(env.Undefined()))
+                msg_value, msg, "message", scope.Escape(env.Undefined()))
 
             Napi::Value pk_val = set.Get("publicKey");
             PointerGroup<blst::P1_Affine> pk_ptr_group;
@@ -364,8 +364,8 @@ class VerifyMultipleAggregateSignaturesWorker : public Napi::AsyncWorker {
                 }
                 Napi::Object set = set_value.As<Napi::Object>();
 
-                Napi::Value msg_value = set.Get("msg");
-                BLST_TS_UNWRAP_UINT_8_ARRAY(msg_value, msg, "msg", )
+                Napi::Value msg_value = set.Get("message");
+                BLST_TS_UNWRAP_UINT_8_ARRAY(msg_value, msg, "message", )
 
                 m_sets.push_back(
                     {PointerGroup<blst::P1_Affine>(),
