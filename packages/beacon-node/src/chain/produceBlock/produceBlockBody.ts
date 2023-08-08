@@ -235,6 +235,8 @@ export async function produceBlockBody<T extends BlockType>(
           blockValue = BigInt(0);
         } else {
           const {prepType, payloadId} = prepareRes;
+          Object.assign(logMeta, {executionPayloadPrepType: prepType});
+
           if (prepType !== PayloadPreparationType.Cached) {
             // Wait for 500ms to allow EL to add some txs to the payload
             // the pitfalls of this have been put forward here, but 500ms delay for block proposal
@@ -330,7 +332,9 @@ export async function produceBlockBody<T extends BlockType>(
     });
   }
 
+  Object.assign(logMeta, {blockValue});
   this.logger.verbose("Produced beacon block body", logMeta);
+
   return {body: blockBody as AssembledBodyType<T>, blobs: blobsResult, blockValue};
 }
 
