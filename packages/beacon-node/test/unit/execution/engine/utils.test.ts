@@ -172,6 +172,49 @@ describe("execution / engine / utils", () => {
       ],
     ];
 
+    const testCasesTargetState: Record<
+      ExecutionEngineState,
+      [oldState: ExecutionEngineState, newState: ExecutionEngineState][]
+    > = {
+      [ExecutionEngineState.ONLINE]: [
+        [ExecutionEngineState.ONLINE, ExecutionEngineState.ONLINE],
+        [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.ONLINE],
+        [ExecutionEngineState.OFFLINE, ExecutionEngineState.ONLINE],
+        // Once start syncing it should not go back to online state
+        // Online is an initial state when execution engine is created
+        [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCED],
+        [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
+      ],
+      [ExecutionEngineState.AUTH_FAILED]: [
+        [ExecutionEngineState.ONLINE, ExecutionEngineState.AUTH_FAILED],
+        [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.AUTH_FAILED],
+        [ExecutionEngineState.OFFLINE, ExecutionEngineState.AUTH_FAILED],
+        [ExecutionEngineState.SYNCED, ExecutionEngineState.AUTH_FAILED],
+        [ExecutionEngineState.SYNCING, ExecutionEngineState.AUTH_FAILED],
+      ],
+      [ExecutionEngineState.OFFLINE]: [
+        [ExecutionEngineState.ONLINE, ExecutionEngineState.OFFLINE],
+        [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.OFFLINE],
+        [ExecutionEngineState.OFFLINE, ExecutionEngineState.OFFLINE],
+        [ExecutionEngineState.SYNCED, ExecutionEngineState.OFFLINE],
+        [ExecutionEngineState.SYNCING, ExecutionEngineState.OFFLINE],
+      ],
+      [ExecutionEngineState.SYNCED]: [
+        [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCED],
+        [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCED],
+        [ExecutionEngineState.OFFLINE, ExecutionEngineState.SYNCED],
+        [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCED],
+        [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCED],
+      ],
+      [ExecutionEngineState.SYNCING]: [
+        [ExecutionEngineState.ONLINE, ExecutionEngineState.SYNCING],
+        [ExecutionEngineState.AUTH_FAILED, ExecutionEngineState.SYNCING],
+        [ExecutionEngineState.OFFLINE, ExecutionEngineState.SYNCING],
+        [ExecutionEngineState.SYNCED, ExecutionEngineState.SYNCING],
+        [ExecutionEngineState.SYNCING, ExecutionEngineState.SYNCING],
+      ],
+    };
+
     for (const payloadStatus of Object.keys(testCasesPayload) as ExecutionPayloadStatus[]) {
       for (const [oldState, newState] of testCasesPayload[payloadStatus]) {
         it(`should transition from "${oldState}" to "${newState}" on payload status "${payloadStatus}"`, () => {
@@ -185,6 +228,14 @@ describe("execution / engine / utils", () => {
       for (const [oldState, newState] of errorCases) {
         it(`should transition from "${oldState}" to "${newState}" on error "${message}"`, () => {
           expect(getExecutionEngineState({payloadError, oldState})).to.equal(newState);
+        });
+      }
+    }
+
+    for (const targetState of Object.keys(testCasesTargetState) as ExecutionEngineState[]) {
+      for (const [oldState, newState] of testCasesTargetState[targetState]) {
+        it(`should transition from "${oldState}" to "${newState}" on when targeting "${targetState}"`, () => {
+          expect(getExecutionEngineState({targetState, oldState})).to.equal(newState);
         });
       }
     }

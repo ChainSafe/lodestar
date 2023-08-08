@@ -131,7 +131,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   protected async fetchWithRetries<R, P = IJson[]>(payload: RpcPayload<P>, opts?: ReqOpts): Promise<R> {
     try {
       const res = await this.rpc.fetchWithRetries<R, P>(payload, opts);
-      this.updateEngineState(ExecutionEngineState.ONLINE);
+      this.updateEngineState(getExecutionEngineState({targetState: ExecutionEngineState.ONLINE, oldState: this.state}));
       return res;
     } catch (err) {
       this.updateEngineState(getExecutionEngineState({payloadError: err, oldState: this.state}));
