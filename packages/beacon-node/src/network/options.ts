@@ -31,9 +31,6 @@ export const defaultNetworkOptions: NetworkOptions = {
   /** disabled by default */
   discv5: null,
   rateLimitMultiplier: 1,
-  // TODO: this value is 12 per spec, however lodestar has performance issue if there are too many mesh peers
-  // see https://github.com/ChainSafe/lodestar/issues/5420
-  gossipsubDHigh: 9,
   // TODO set to false in order to release 1.9.0 in a timely manner
   useWorker: false,
   // subscribe to 2 subnets per node
