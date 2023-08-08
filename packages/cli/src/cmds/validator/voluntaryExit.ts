@@ -87,10 +87,12 @@ If no `pubkeys` are provided, it will exit all validators that have been importe
     const validatorsToExit = await resolveValidatorIndexes(client, signersToExit);
 
     if (!args.yes) {
+      console.log("\nWARNING: THIS IS AN IRREVERSIBLE OPERATION\n");
       const confirmation = await inquirer.prompt<{yes: boolean}>([
         {
           name: "yes",
           type: "confirm",
+          default: false,
           message: `Confirm to exit pubkeys at epoch ${exitEpoch} from network ${network}?
 ${validatorsToExit.map((v) => `${v.pubkey} ${v.index} ${v.status}`).join("\n")}`,
         },
