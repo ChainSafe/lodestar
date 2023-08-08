@@ -6,6 +6,7 @@ export type ChainArgs = {
   suggestedFeeRecipient: string;
   "chain.blsVerifyAllMultiThread"?: boolean;
   "chain.blsVerifyAllMainThread"?: boolean;
+  "chain.blsVerifyAllLibuv"?: boolean;
   "chain.disableBlsBatchVerify"?: boolean;
   "chain.persistInvalidSszObjects"?: boolean;
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
@@ -29,6 +30,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     suggestedFeeRecipient: args["suggestedFeeRecipient"],
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
     blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
+    blsVerifyAllLibuv: args["chain.blsVerifyAllLibuv"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
@@ -68,6 +70,14 @@ export const options: CliCommandOptions<ChainArgs> = {
     type: "boolean",
     description: "Always use worker threads for BLS verification",
     defaultDescription: String(defaultOptions.chain.blsVerifyAllMultiThread),
+    group: "chain",
+  },
+
+  "chain.blsVerifyAllLibuv": {
+    hidden: true,
+    type: "boolean",
+    description: "Always use libuv multi-threading for BLS verification",
+    defaultDescription: String(defaultOptions.chain.blsVerifyAllLibuv),
     group: "chain",
   },
 
