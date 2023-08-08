@@ -250,6 +250,7 @@ export async function produceBlockBody<T extends BlockType>(
           const {executionPayload, blobsBundle} = engineRes;
           (blockBody as allForks.ExecutionBlockBody).executionPayload = executionPayload;
           blockValue = engineRes.blockValue;
+          Object.assign(logMeta, {transactions: executionPayload.transactions.length});
 
           const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
           this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
@@ -326,7 +327,7 @@ export async function produceBlockBody<T extends BlockType>(
   if (ForkSeq[fork] >= ForkSeq.capella) {
     // TODO: blsToExecutionChanges should be passed in the produceBlock call
     (blockBody as capella.BeaconBlockBody).blsToExecutionChanges = blsToExecutionChanges;
-    Object.assign({
+    Object.assign(logMeta, {
       blsToExecutionChanges: blsToExecutionChanges.length,
       withdrawals: (blockBody as capella.BeaconBlockBody).executionPayload.withdrawals.length,
     });
