@@ -94,15 +94,5 @@ export function getExecutionEngineState<S extends ExecutionPayloadStatus | undef
       ? getExecutionEngineStateForPayloadError(payloadError, oldState)
       : getExecutionEngineStateForPayloadStatus(payloadStatus);
 
-  if (newState === oldState) return oldState;
-
-  // The ONLINE is initial state and can reached from offline or auth failed error
-  if (
-    newState === ExecutionEngineState.ONLINE &&
-    !(oldState === ExecutionEngineState.OFFLINE || oldState === ExecutionEngineState.AUTH_FAILED)
-  ) {
-    return oldState;
-  }
-
   return newState;
 }

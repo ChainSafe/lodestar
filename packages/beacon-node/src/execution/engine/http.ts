@@ -421,6 +421,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     if (oldState === newState) return;
 
+    // The ONLINE is initial state and can reached from offline or auth failed error
+    if (
+      newState === ExecutionEngineState.ONLINE &&
+      !(oldState === ExecutionEngineState.OFFLINE || oldState === ExecutionEngineState.AUTH_FAILED)
+    ) {
+      return;
+    }
+
     switch (newState) {
       case ExecutionEngineState.ONLINE:
         this.logger.info("Execution client became online", {oldState, newState});
