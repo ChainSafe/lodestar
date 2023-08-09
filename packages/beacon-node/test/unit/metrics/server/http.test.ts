@@ -1,4 +1,4 @@
-import {fetch} from "@lodestar/api";
+import fetch from "cross-fetch";
 import {getHttpMetricsServer, HttpMetricsServer} from "../../../../src/metrics/index.js";
 import {testLogger} from "../../../utils/logger.js";
 import {createMetricsTest} from "../utils.js";

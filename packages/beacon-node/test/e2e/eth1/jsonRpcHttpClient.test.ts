@@ -2,10 +2,13 @@ import "mocha";
 import crypto from "node:crypto";
 import http from "node:http";
 import {expect} from "chai";
-import {FetchError} from "@lodestar/api";
 import {JsonRpcHttpClient} from "../../../src/eth1/provider/jsonRpcHttpClient.js";
 import {getGoerliRpcUrl} from "../../testParams.js";
 import {RpcPayload} from "../../../src/eth1/interface.js";
+
+type FetchError = {
+  code: string;
+};
 
 describe("eth1 / jsonRpcHttpClient", function () {
   this.timeout("10 seconds");
@@ -35,8 +38,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
       id: "Bad subdomain",
       // Use random bytes to ensure no collisions
       url: `https://${randomHex}.infura.io`,
-      error: "",
-      errorCode: "ENOTFOUND",
+      error: "getaddrinfo ENOTFOUND",
     },
     {
       id: "Bad port",

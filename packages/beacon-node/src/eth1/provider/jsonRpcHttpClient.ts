@@ -1,4 +1,7 @@
-import {fetch} from "@lodestar/api";
+// Uses cross-fetch for browser + NodeJS cross compatibility
+// Note: isomorphic-fetch is not well mantained and does not support abort signals
+import fetch from "cross-fetch";
+
 import {ErrorAborted, TimeoutError, retry} from "@lodestar/utils";
 import {IGauge, IHistogram} from "../../metrics/interface.js";
 import {IJson, RpcPayload} from "../interface.js";
@@ -8,6 +11,16 @@ import {encodeJwtToken} from "./jwt.js";
  */
 const maxStringLengthToPrint = 500;
 const REQUEST_TIMEOUT = 30 * 1000;
+
+// As we are using `cross-fetch` which does not support for types for errors
+// We can't use `node-fetch` for browser compatibility
+export type FetchError = {
+  errno: string;
+  code: string;
+};
+
+export const isFetchError = (error: unknown): error is FetchError =>
+  (error as FetchError) !== undefined && "code" in (error as FetchError) && "errno" in (error as FetchError);
 
 interface RpcResponse<R> extends RpcResponseError {
   result?: R;
@@ -188,7 +201,12 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    * Fetches JSON and throws detailed errors in case the HTTP request is not ok
    */
   private async fetchJsonOneUrl<R, T = unknown>(url: string, json: T, opts?: ReqOpts): Promise<R> {
+    // If url is undefined node-fetch throws with `TypeError: Only absolute URLs are supported`
+    // Throw a better error instead
     if (!url) throw Error(`Empty or undefined JSON RPC HTTP client url: ${url}`);
+
+    // fetch() throws for network errors:
+    // - request to http://missing-url.com/ failed, reason: getaddrinfo ENOTFOUND missing-url.com
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), opts?.timeout ?? this.opts?.timeout ?? REQUEST_TIMEOUT);

@@ -195,7 +195,7 @@ describe("monitoring / service", () => {
 
       await service.send();
 
-      assertError({message: `Request to ${endpoint} failed, reason: connect ECONNREFUSED ${new URL(endpoint).host}`});
+      assertError({message: `request to ${endpoint} failed, reason: connect ECONNREFUSED ${new URL(endpoint).host}`});
     });
 
     it("should abort pending requests if timeout is reached", async () => {

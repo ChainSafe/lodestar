@@ -1,5 +1,5 @@
+import fetch from "cross-fetch";
 import {ContainerType, toHexString, ValueOf} from "@chainsafe/ssz";
-import {fetch} from "@lodestar/api";
 import {phase0, altair, capella} from "@lodestar/types";
 import {ForkSeq} from "@lodestar/params";
 import {ValidatorRegistrationV1} from "@lodestar/types/bellatrix";

@@ -1,7 +1,11 @@
-import {isFetchError} from "@lodestar/api";
 import {isErrorAborted} from "@lodestar/utils";
 import {IJson, RpcPayload} from "../../eth1/interface.js";
-import {IJsonRpcHttpClient, ErrorJsonRpcResponse, HttpRpcError} from "../../eth1/provider/jsonRpcHttpClient.js";
+import {
+  IJsonRpcHttpClient,
+  ErrorJsonRpcResponse,
+  HttpRpcError,
+  isFetchError,
+} from "../../eth1/provider/jsonRpcHttpClient.js";
 import {isQueueErrorAborted} from "../../util/queue/errors.js";
 import {ExecutionPayloadStatus, ExecutionEngineState} from "./interface.js";
 

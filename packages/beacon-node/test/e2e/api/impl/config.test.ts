@@ -1,4 +1,4 @@
-import {fetch} from "@lodestar/api";
+import fetch from "cross-fetch";
 import {ForkName, activePreset} from "@lodestar/params";
 import {chainConfig} from "@lodestar/config/default";
 import {ethereumConsensusSpecsTests} from "../../../spec/specTestVersioning.js";
