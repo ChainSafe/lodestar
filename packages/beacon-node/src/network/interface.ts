@@ -1,5 +1,4 @@
 import {Libp2p as ILibp2p} from "libp2p";
-import {Connection} from "@libp2p/interface-connection";
 import {Components} from "libp2p/components";
 import {Slot, SlotRootHex, allForks, altair, capella, deneb, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
@@ -61,9 +60,6 @@ export interface INetwork extends INetworkCorePublic {
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;
   writeNetworkThreadProfile(durationMs?: number, dirpath?: string): Promise<string>;
 }
-
-export type PeerDirection = Connection["stat"]["direction"];
-export type PeerStatus = Connection["stat"]["status"];
 
 export type LodestarComponents = Pick<
   Components,

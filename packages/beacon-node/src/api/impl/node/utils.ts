@@ -1,6 +1,5 @@
-import {Connection} from "@libp2p/interface-connection";
+import {Connection, StreamStatus} from "@libp2p/interface/connection";
 import {routes} from "@lodestar/api";
-import {PeerStatus} from "../../../network/index.js";
 
 /**
  * Format a list of connections from libp2p connections manager into the API's format NodePeer
@@ -13,8 +12,8 @@ export function formatNodePeer(peerIdStr: string, connections: Connection[]): ro
     // TODO: figure out how to get enr of peer
     enr: "",
     lastSeenP2pAddress: conn ? conn.remoteAddr.toString() : "",
-    direction: conn ? (conn.stat.direction as routes.node.PeerDirection) : null,
-    state: conn ? getPeerState(conn.stat.status) : "disconnected",
+    direction: conn ? (conn.direction as routes.node.PeerDirection) : null,
+    state: conn ? getPeerState(conn.status) : "disconnected",
   };
 }
 
@@ -25,26 +24,26 @@ export function formatNodePeer(peerIdStr: string, connections: Connection[]): ro
  * - Otherwise, the first closed connection
  */
 export function getRelevantConnection(connections: Connection[]): Connection | null {
-  const byStatus = new Map<PeerStatus, Connection>();
+  const byStatus = new Map<StreamStatus, Connection>();
   for (const conn of connections) {
-    if (conn.stat.status === "OPEN") return conn;
-    if (!byStatus.has(conn.stat.status)) byStatus.set(conn.stat.status, conn);
+    if (conn.status === "open") return conn;
+    if (!byStatus.has(conn.status)) byStatus.set(conn.status, conn);
   }
 
-  return byStatus.get("OPEN") || byStatus.get("CLOSING") || byStatus.get("CLOSED") || null;
+  return byStatus.get("open") || byStatus.get("closing") || byStatus.get("closed") || null;
 }
 
 /**
  * Map libp2p connection status to the API's peer state notation
  * @param status
  */
-function getPeerState(status: PeerStatus): routes.node.PeerState {
+function getPeerState(status: StreamStatus): routes.node.PeerState {
   switch (status) {
-    case "OPEN":
+    case "open":
       return "connected";
-    case "CLOSING":
+    case "closing":
       return "disconnecting";
-    case "CLOSED":
+    case "closed":
     default:
       return "disconnected";
   }
