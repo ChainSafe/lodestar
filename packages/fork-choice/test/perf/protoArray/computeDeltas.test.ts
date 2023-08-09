@@ -11,7 +11,8 @@ describe("computeDeltas", () => {
 
   const oldRoot = "0x32dec344944029ba183ac387a7aa1f2068591c00e9bfadcfb238e50fbe9ea38e";
   const newRoot = "0xb59f3a209f639dd6b5645ea9fad8d441df44c3be93bd1bbf50ef90bf124d1238";
-  for (const numValidator of [800_000, 2_100_100]) {
+  // 2 first numbers are respective to number of validators in goerli, mainnet as of Aug 2023
+  for (const numValidator of [500_000, 750_000, 1_400_000, 2_100_000]) {
     before(function () {
       this.timeout(2 * 60 * 1000);
       oldBalances = getEffectiveBalanceIncrementsZeroed(numValidator);
