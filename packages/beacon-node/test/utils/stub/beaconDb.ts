@@ -16,8 +16,6 @@ import {
   BLSToExecutionChangeRepository,
   BlobSidecarsRepository,
   BlobSidecarsArchiveRepository,
-  BlobsSidecarRepository,
-  BlobsSidecarArchiveRepository,
 } from "../../../src/db/repositories/index.js";
 import {createStubInstance} from "../types.js";
 
@@ -29,9 +27,6 @@ export class StubbedBeaconDb extends BeaconDb {
 
   blobSidecars: SinonStubbedInstance<BlobSidecarsRepository> & BlobSidecarsRepository;
   blobSidecarsArchive: SinonStubbedInstance<BlobSidecarsArchiveRepository> & BlobSidecarsArchiveRepository;
-  // TODO DENEB: cleanup following post full migration
-  blobsSidecar: SinonStubbedInstance<BlobsSidecarRepository> & BlobsSidecarRepository;
-  blobsSidecarArchive: SinonStubbedInstance<BlobsSidecarArchiveRepository> & BlobsSidecarArchiveRepository;
 
   stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;
 
@@ -62,8 +57,5 @@ export class StubbedBeaconDb extends BeaconDb {
 
     this.blobSidecars = createStubInstance(BlobSidecarsRepository);
     this.blobSidecarsArchive = createStubInstance(BlobSidecarsArchiveRepository);
-    // TODO DENEB: cleanup below post full migration
-    this.blobsSidecar = createStubInstance(BlobsSidecarRepository);
-    this.blobsSidecarArchive = createStubInstance(BlobsSidecarArchiveRepository);
   }
 }

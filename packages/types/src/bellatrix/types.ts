@@ -2,6 +2,7 @@ import {ValueOf} from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
 
 export type Transaction = ValueOf<typeof ssz.Transaction>;
+export type Transactions = ValueOf<typeof ssz.Transactions>;
 export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadHeader = ValueOf<typeof ssz.ExecutionPayloadHeader>;
 export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;
