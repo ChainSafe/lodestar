@@ -60,7 +60,7 @@ describe("web3_batch_requests", function () {
 
       const invalidHash = "0x9dccb8cd5417e188701e2f36adf8ad17eec7913d34c3517ba74fcfd870bed8e6";
       const errorRequest = batch.add({
-        method: "eth_getBlock",
+        method: "eth_getBlockByHash",
         params: [invalidHash, false],
       });
 
