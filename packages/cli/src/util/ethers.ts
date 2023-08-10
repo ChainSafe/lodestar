@@ -37,7 +37,7 @@ export async function getEthersSigner({
   }
 
   if (ipcPath) {
-    return await new ethers.IpcSocketProvider(ipcPath).getSigner();
+    return new ethers.IpcSocketProvider(ipcPath).getSigner();
   }
 
   throw Error("Must supply either keystorePath, rpcUrl, or ipcPath");
