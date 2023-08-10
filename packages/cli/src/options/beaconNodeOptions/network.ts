@@ -270,7 +270,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   "network.connectToDiscv5Bootnodes": {
     type: "boolean",
-    description: "Attempt direct connection to discv5 bootnodes",
+    description: "Attempt direct libp2p peer connection to discv5 bootnodes",
     hidden: true,
     defaultDescription: String(defaultOptions.network.connectToDiscv5Bootnodes === true),
     group: "network",
