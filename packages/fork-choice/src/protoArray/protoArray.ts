@@ -746,15 +746,13 @@ export class ProtoArray {
 
   /**
    * Return `true` if `node` is equal to or a descendant of the finalized node.
+   * This function helps improve performance of nodeIsViableForHead a lot by avoiding
+   * the loop inside `getAncestors`.
    */
   isFinalizedRootOrDescendant(node: ProtoNode): boolean {
     // The finalized and justified checkpoints represent a list of known
     // ancestors of `node` that are likely to coincide with the store's
     // finalized checkpoint.
-    //
-    // Run this check once, outside of the loop rather than inside the loop.
-    // If the conditions don't match for this node then they're unlikely to
-    // start matching for its ancestors.
     if (node.finalizedEpoch === this.finalizedEpoch && node.finalizedRoot === this.finalizedRoot) {
       return true;
     }
