@@ -2,7 +2,6 @@ import {expect} from "chai";
 import {ethers} from "ethers";
 import Web3 from "web3";
 import {isSendProvider, isWeb3jsProvider, isEthersProvider} from "../../../src/utils/assertion.js";
-import {Web3Provider} from "../../../src/interfaces.js";
 
 describe("utils/assertion", () => {
   describe("isSendProvider", () => {
@@ -22,31 +21,31 @@ describe("utils/assertion", () => {
 
     it("should return false for web3 provider", () => {
       const provider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io");
-      expect(isSendProvider(provider as Web3Provider)).to.be.false;
+      expect(isSendProvider(provider)).to.be.false;
     });
   });
 
   describe("isWeb3jsProvider", () => {
     it("should return true if provider is web3.js provider", () => {
       const provider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io");
-      expect(isWeb3jsProvider(provider as Web3Provider)).to.be.true;
+      expect(isWeb3jsProvider(provider)).to.be.true;
     });
 
     it("should return false if provider is not web3.js provider", () => {
       const provider = new ethers.JsonRpcProvider("https://lodestar-sepoliarpc.chainsafe.io");
-      expect(isWeb3jsProvider(provider as Web3Provider)).to.be.false;
+      expect(isWeb3jsProvider(provider)).to.be.false;
     });
   });
 
   describe("isEthersProvider", () => {
     it("should return false if provider is not ethers provider", () => {
       const provider = new Web3.providers.HttpProvider("https://lodestar-sepoliarpc.chainsafe.io");
-      expect(isEthersProvider(provider as Web3Provider)).to.be.false;
+      expect(isEthersProvider(provider)).to.be.false;
     });
 
     it("should return true if provider is ethers provider", () => {
       const provider = new ethers.JsonRpcProvider("https://lodestar-sepoliarpc.chainsafe.io");
-      expect(isEthersProvider(provider as Web3Provider)).to.be.true;
+      expect(isEthersProvider(provider)).to.be.true;
     });
   });
 });

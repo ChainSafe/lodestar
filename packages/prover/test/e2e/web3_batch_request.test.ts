@@ -30,34 +30,20 @@ describe("web3_batch_requests", function () {
 
       for (const account of accounts) {
         results.push(
-          new Promise((resolve, reject) => {
-            batch.add(
-              // @ts-expect-error web3 types are not up to date
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-              web3.eth.getBalance.request(account, "latest", (err, result) => {
-                if (err) return reject(err);
-
-                resolve(result);
-              })
-            );
+          batch.add({
+            method: "eth_getBalance",
+            params: [account, "latest"],
           })
         );
         results.push(
-          new Promise((resolve, reject) => {
-            batch.add(
-              // @ts-expect-error web3 types are not up to date
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-              web3.eth.getProof.request(account, [], "latest", (err, result) => {
-                if (err) return reject(err);
-
-                resolve(result);
-              })
-            );
+          batch.add({
+            method: "eth_getProof",
+            params: [account, [], "latest"],
           })
         );
       }
 
-      batch.execute();
+      await batch.execute();
 
       expect(results.length).to.be.gt(1);
       await expect(Promise.all(results)).to.be.fulfilled;
@@ -67,32 +53,18 @@ describe("web3_batch_requests", function () {
       const accounts = await web3.eth.getAccounts();
       const batch = new web3.eth.BatchRequest();
 
-      const successRequest = new Promise((resolve, reject) => {
-        batch.add(
-          // @ts-expect-error web3 types are not up to date
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-          web3.eth.getBalance.request(accounts[0], "latest", (err, result) => {
-            if (err) return reject(err);
-
-            resolve(result);
-          })
-        );
+      const successRequest = batch.add({
+        method: "eth_getBalance",
+        params: [accounts[0], "latest"],
       });
 
       const invalidHash = "0x9dccb8cd5417e188701e2f36adf8ad17eec7913d34c3517ba74fcfd870bed8e6";
-      const errorRequest = new Promise((resolve, reject) => {
-        batch.add(
-          // @ts-expect-error web3 types are not up to date
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-          web3.eth.getBlock.request(invalidHash, (err, result) => {
-            if (err) return reject(err);
-
-            resolve(result);
-          })
-        );
+      const errorRequest = batch.add({
+        method: "eth_getBlock",
+        params: [invalidHash, false],
       });
 
-      batch.execute();
+      await batch.execute();
 
       await expect(successRequest).to.be.fulfilled;
       await expect(errorRequest).to.be.rejectedWith(getVerificationFailedMessage("eth_getBlockByHash"));
