@@ -19,12 +19,26 @@ export function computeDeltas(
   newBalances: EffectiveBalanceIncrements,
   equivocatingIndices: Set<ValidatorIndex>
 ): number[] {
-  const deltas = Array.from({length: indices.size}, () => 0);
+  const deltas = Array<number>(indices.size).fill(0);
   const zeroHash = HEX_ZERO_HASH;
   // avoid creating new variables in the loop to potentially reduce GC pressure
   let oldBalance, newBalance: number;
   let currentRoot, nextRoot: string;
   let currentDeltaIndex, nextDeltaIndex: number | undefined;
+  // this function tends to get some very few roots from `indices` so create a small cache to improve performance
+  const cachedIndices = new Map<string, number>();
+
+  const getIndex = (root: string): number | undefined => {
+    let index = cachedIndices.get(root);
+    if (index === undefined) {
+      index = indices.get(root);
+      if (index !== undefined) {
+        cachedIndices.set(root, index);
+      }
+    }
+    return index;
+  };
+
   for (let vIndex = 0; vIndex < votes.length; vIndex++) {
     const vote = votes[vIndex];
     // There is no need to create a score change if the validator has never voted or both of their
@@ -52,7 +66,7 @@ export function computeDeltas(
     if (equivocatingIndices.size > 0 && equivocatingIndices.has(vIndex)) {
       // this function could be called multiple times but we only want to process slashing validator for 1 time
       if (currentRoot !== zeroHash) {
-        currentDeltaIndex = indices.get(currentRoot);
+        currentDeltaIndex = getIndex(currentRoot);
         if (currentDeltaIndex !== undefined) {
           if (currentDeltaIndex >= deltas.length) {
             throw new ProtoArrayError({
@@ -70,7 +84,7 @@ export function computeDeltas(
     if (currentRoot !== nextRoot || oldBalance !== newBalance) {
       // We ignore the vote if it is not known in `indices .
       // We assume that it is outside of our tree (ie: pre-finalization) and therefore not interesting
-      currentDeltaIndex = indices.get(currentRoot);
+      currentDeltaIndex = getIndex(currentRoot);
       if (currentDeltaIndex !== undefined) {
         if (currentDeltaIndex >= deltas.length) {
           throw new ProtoArrayError({
@@ -82,7 +96,7 @@ export function computeDeltas(
       }
       // We ignore the vote if it is not known in `indices .
       // We assume that it is outside of our tree (ie: pre-finalization) and therefore not interesting
-      nextDeltaIndex = indices.get(nextRoot);
+      nextDeltaIndex = getIndex(nextRoot);
       if (nextDeltaIndex !== undefined) {
         if (nextDeltaIndex >= deltas.length) {
           throw new ProtoArrayError({
