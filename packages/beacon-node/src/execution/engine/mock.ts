@@ -315,9 +315,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
         for (let i = 0; i < denebTxCount; i++) {
           const blob = generateRandomBlob();
           const commitment = ckzg.blobToKzgCommitment(blob);
-          // TODO DENEB: this is a dummy proof, to be replaced by ckzg.computeBlobKzgProof
-          // on followup PRs
-          const proof = ckzg.computeAggregateKzgProof([]);
+          const proof = ckzg.computeBlobKzgProof(blob, commitment);
           executionPayload.transactions.push(transactionForKzgCommitment(commitment));
           commitments.push(commitment);
           blobs.push(blob);

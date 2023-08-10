@@ -18,8 +18,6 @@ import {
   BackfilledRanges,
   BlobSidecarsRepository,
   BlobSidecarsArchiveRepository,
-  BlobsSidecarRepository,
-  BlobsSidecarArchiveRepository,
   BLSToExecutionChangeRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
@@ -35,9 +33,6 @@ export class BeaconDb implements IBeaconDb {
 
   blobSidecars: BlobSidecarsRepository;
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
-  // TODO DENEB: cleanup post full migration
-  blobsSidecar: BlobsSidecarRepository;
-  blobsSidecarArchive: BlobsSidecarArchiveRepository;
 
   stateArchive: StateArchiveRepository;
 
@@ -70,9 +65,6 @@ export class BeaconDb implements IBeaconDb {
 
     this.blobSidecars = new BlobSidecarsRepository(config, db);
     this.blobSidecarsArchive = new BlobSidecarsArchiveRepository(config, db);
-    // TODO DENEB: cleanup post full migration
-    this.blobsSidecar = new BlobsSidecarRepository(config, db);
-    this.blobsSidecarArchive = new BlobsSidecarArchiveRepository(config, db);
 
     this.stateArchive = new StateArchiveRepository(config, db);
     this.voluntaryExit = new VoluntaryExitRepository(config, db);
@@ -104,7 +96,7 @@ export class BeaconDb implements IBeaconDb {
 
   async pruneHotDb(): Promise<void> {
     // Prune all hot blobs
-    await this.blobsSidecar.batchDelete(await this.blobsSidecar.keys());
+    await this.blobSidecars.batchDelete(await this.blobSidecars.keys());
     // Prune all hot blocks
     // TODO: Enable once it's deemed safe
     // await this.block.batchDelete(await this.block.keys());

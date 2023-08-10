@@ -1,12 +1,11 @@
 import {expect} from "chai";
-import deepmerge from "deepmerge";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {ELTransaction} from "../../../lib/types.js";
 import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {eth_call} from "../../../src/verified_requests/eth_call.js";
 import ethCallCase1 from "../../fixtures/mainnet/eth_call.json" assert {type: "json"};
-import {generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
+import {cloneTestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 import {JsonRpcRequest, JsonRpcResponseWithResultPayload} from "../../../src/types.js";
 import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";
 
@@ -16,7 +15,7 @@ describe("verified_requests / eth_call", () => {
   for (const t of testCases) {
     describe(t.label, () => {
       it("should return the valid json-rpc response for a valid call", async () => {
-        const testCase = deepmerge({}, t);
+        const testCase = cloneTestFixture(t);
 
         const config = createForkConfig(networksChainConfig[testCase.network as NetworkName]);
         const options = generateReqHandlerOptionsMock(testCase, config);
@@ -33,7 +32,7 @@ describe("verified_requests / eth_call", () => {
       });
 
       it("should return the json-rpc response with error for an invalid call", async () => {
-        const testCase = deepmerge(t, {});
+        const testCase = cloneTestFixture(t);
 
         // Temper the responses to make them invalid
         for (const {payload, response} of testCase.dependentRequests) {

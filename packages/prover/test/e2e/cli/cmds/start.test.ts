@@ -86,7 +86,8 @@ describe("prover/start", () => {
     });
 
     it("should respond to unverified calls", async () => {
-      await expect(web3.eth.getChainId()).eventually.eql(chainId);
+      // Because web3 latest version return numbers as bigint by default
+      await expect(web3.eth.getChainId()).eventually.eql(BigInt(chainId));
     });
   });
 });
