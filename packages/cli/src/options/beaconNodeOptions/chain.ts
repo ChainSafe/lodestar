@@ -79,7 +79,6 @@ export const options: CliCommandOptions<ChainArgs> = {
   "chain.blsPoolType": {
     hidden: true,
     choices: BLS_POOL_TYPES,
-    default: BlsPoolType.workers,
     type: "string",
     description: "Selects between using a Worker pool or using the native libuv thread pool for BLS verification",
     group: "chain",
