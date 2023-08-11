@@ -15,6 +15,7 @@ import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
 import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
 import {asyncVerifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {LinkedList} from "../../../util/array.js";
+import {BlsPoolType} from "../../options.js";
 import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode, WorkResultError} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 import {defaultPoolSize} from "./poolSize.js";
@@ -33,7 +34,8 @@ export type BlsMultiThreadWorkerPoolModules = {
 };
 
 export type BlsMultiThreadWorkerPoolOptions = {
-  blsVerifyAllMultiThread?: boolean;
+  blsVerifyAllInQueue?: boolean;
+  blsPoolType?: BlsPoolType;
 };
 
 /**
@@ -114,7 +116,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     firstPush: number;
     timeout: NodeJS.Timeout;
   } | null = null;
-  private blsVerifyAllMultiThread: boolean;
+  private blsVerifyAllInQueue: boolean;
   private closed = false;
   private workersBusy = 0;
 
@@ -122,7 +124,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     const {logger, metrics} = modules;
     this.logger = logger;
     this.metrics = metrics;
-    this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
+    this.blsVerifyAllInQueue = options.blsVerifyAllInQueue ?? false;
 
     // Use compressed for herumi for now.
     // THe worker is not able to deserialize from uncompressed
@@ -130,10 +132,10 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.workers = this.createWorkers(defaultPoolSize);
 
     if (metrics) {
-      metrics.bls.workerThreadPool.queueLength.addCollect(() => {
-        metrics.bls.workerThreadPool.queueLength.set(this.jobs.length);
-        metrics.bls.workerThreadPool.workersBusy.set(this.workersBusy);
-      });
+      // metrics.bls.workerThreadPool.queueLength.addCollect(() => {
+      //   metrics.bls.workerThreadPool.queueLength.set(this.jobs.length);
+      //   metrics.bls.workerThreadPool.workersBusy.set(this.workersBusy);
+      // });
     }
   }
 
@@ -156,7 +158,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       this.metrics?.bls.batchableSigSets.inc(sets.length);
     }
 
-    if (opts.verifyOnMainThread && !this.blsVerifyAllMultiThread) {
+    if (opts.verifyOnMainThread && !this.blsVerifyAllInQueue) {
       const timer = this.metrics?.bls.mainThread.durationOnThread.startTimer();
       try {
         return await asyncVerifySignatureSetsMaybeBatch(

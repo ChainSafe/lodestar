@@ -7,7 +7,7 @@ export type ChainArgs = {
   suggestedFeeRecipient: string;
   "chain.blsVerifyAllInQueue"?: boolean;
   "chain.blsVerifySingleThreaded"?: boolean;
-  "chain.blsPoolType"?: boolean;
+  "chain.blsPoolType"?: BlsPoolType;
   "chain.blsDisableBatchVerify"?: boolean;
   "chain.persistInvalidSszObjects"?: boolean;
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
