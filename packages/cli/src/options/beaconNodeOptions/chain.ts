@@ -1,12 +1,13 @@
 import * as path from "node:path";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
+import {BlsPoolType, BLS_POOL_TYPES} from "@lodestar/beacon-node/chain/options.js";
 import {CliCommandOptions} from "../../util/index.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
   "chain.blsVerifyAllInQueue"?: boolean;
   "chain.blsVerifySingleThreaded"?: boolean;
-  "chain.blsVerifyAllLibuv"?: boolean;
+  "chain.blsPoolType"?: boolean;
   "chain.disableBlsBatchVerify"?: boolean;
   "chain.persistInvalidSszObjects"?: boolean;
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
@@ -31,7 +32,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     suggestedFeeRecipient: args["suggestedFeeRecipient"],
     blsVerifyAllInQueue: args["chain.blsVerifyAllInQueue"],
     blsVerifySingleThreaded: args["chain.blsVerifySingleThreaded"],
-    blsVerifyAllLibuv: args["chain.blsVerifyAllLibuv"],
+    blsPoolType: args["chain.blsPoolType"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
@@ -75,11 +76,12 @@ export const options: CliCommandOptions<ChainArgs> = {
     group: "chain",
   },
 
-  "chain.blsVerifyAllLibuv": {
+  "chain.blsPoolType": {
     hidden: true,
-    type: "boolean",
-    description: "Always use libuv multi-threading for BLS verification",
-    defaultDescription: String(defaultOptions.chain.blsVerifyAllLibuv),
+    choices: BLS_POOL_TYPES,
+    default: BlsPoolType.workers,
+    type: "string",
+    description: "Selects between using a Worker pool or using the native libuv thread pool for BLS verification",
     group: "chain",
   },
 

@@ -4,6 +4,13 @@ import {ArchiverOpts} from "./archiver/index.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
 
+export enum BlsPoolType {
+  workers = "workers",
+  libuv = "libuv",
+}
+
+export const BLS_POOL_TYPES = Object.values(BlsPoolType);
+
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &
   SeenCacheOpts &
@@ -12,7 +19,7 @@ export type IChainOptions = BlockProcessOpts &
   LightClientServerOpts & {
     blsVerifySingleThreaded?: boolean;
     blsVerifyAllInQueue?: boolean;
-    blsVerifyAllLibuv?: boolean;
+    blsPoolType?: BlsPoolType;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
@@ -72,7 +79,7 @@ export type SeenCacheOpts = {
 export const defaultChainOptions: IChainOptions = {
   blsVerifySingleThreaded: false,
   blsVerifyAllInQueue: false,
-  blsVerifyAllLibuv: false,
+  blsPoolType: BlsPoolType.workers,
   disableBlsBatchVerify: false,
   proposerBoostEnabled: true,
   computeUnrealized: true,

@@ -20,7 +20,7 @@ describe("options / beaconNodeOptions", () => {
 
       "chain.blsVerifyAllInQueue": true,
       "chain.blsVerifySingleThreaded": true,
-      "chain.blsVerifyAllLibuv": true,
+      "chain.blsPoolType": true,
       "chain.disableBlsBatchVerify": true,
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
@@ -118,7 +118,7 @@ describe("options / beaconNodeOptions", () => {
       chain: {
         blsVerifyAllInQueue: true,
         blsVerifySingleThreaded: true,
-        blsVerifyAllLibuv: true,
+        blsPoolType: true,
         disableBlsBatchVerify: true,
         persistInvalidSszObjects: true,
         proposerBoostEnabled: false,
