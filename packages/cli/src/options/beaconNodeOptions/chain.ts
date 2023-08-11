@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
-import {BlsPoolType, BLS_POOL_TYPES} from "@lodestar/beacon-node/chain/options.js";
+import {BlsPoolType, BLS_POOL_TYPES} from "@lodestar/beacon-node/chain";
 import {CliCommandOptions} from "../../util/index.js";
 
 export type ChainArgs = {
