@@ -8,7 +8,7 @@ export type ChainArgs = {
   "chain.blsVerifyAllInQueue"?: boolean;
   "chain.blsVerifySingleThreaded"?: boolean;
   "chain.blsPoolType"?: boolean;
-  "chain.disableBlsBatchVerify"?: boolean;
+  "chain.blsDisableBatchVerify"?: boolean;
   "chain.persistInvalidSszObjects"?: boolean;
   // No need to define chain.persistInvalidSszObjects as part of ChainArgs
   // as this is defined as part of BeaconPaths
@@ -33,7 +33,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     blsVerifyAllInQueue: args["chain.blsVerifyAllInQueue"],
     blsVerifySingleThreaded: args["chain.blsVerifySingleThreaded"],
     blsPoolType: args["chain.blsPoolType"],
-    disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
+    blsDisableBatchVerify: args["chain.blsDisableBatchVerify"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     persistInvalidSszObjectsDir: undefined as any,
@@ -93,7 +93,7 @@ export const options: CliCommandOptions<ChainArgs> = {
     group: "chain",
   },
 
-  "chain.disableBlsBatchVerify": {
+  "chain.blsDisableBatchVerify": {
     hidden: true,
     type: "boolean",
     description:

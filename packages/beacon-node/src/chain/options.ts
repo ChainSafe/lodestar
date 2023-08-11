@@ -41,7 +41,7 @@ export type BlockProcessOpts = {
    * Do not use BLS batch verify to validate all block signatures at once.
    * Will double processing times. Use only for debugging purposes.
    */
-  disableBlsBatchVerify?: boolean;
+  blsDisableBatchVerify?: boolean;
   /**
    * Override SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY
    */
@@ -80,7 +80,7 @@ export const defaultChainOptions: IChainOptions = {
   blsVerifySingleThreaded: false,
   blsVerifyAllInQueue: false,
   blsPoolType: BlsPoolType.workers,
-  disableBlsBatchVerify: false,
+  blsDisableBatchVerify: false,
   proposerBoostEnabled: true,
   computeUnrealized: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
