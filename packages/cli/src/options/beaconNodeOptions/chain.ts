@@ -5,7 +5,7 @@ import {CliCommandOptions} from "../../util/index.js";
 export type ChainArgs = {
   suggestedFeeRecipient: string;
   "chain.blsVerifyAllMultiThread"?: boolean;
-  "chain.blsVerifyAllMainThread"?: boolean;
+  "chain.blsVerifySingleThreaded"?: boolean;
   "chain.blsVerifyAllLibuv"?: boolean;
   "chain.disableBlsBatchVerify"?: boolean;
   "chain.persistInvalidSszObjects"?: boolean;
@@ -30,7 +30,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args["suggestedFeeRecipient"],
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
-    blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
+    blsVerifySingleThreaded: args["chain.blsVerifySingleThreaded"],
     blsVerifyAllLibuv: args["chain.blsVerifyAllLibuv"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
@@ -83,11 +83,11 @@ export const options: CliCommandOptions<ChainArgs> = {
     group: "chain",
   },
 
-  "chain.blsVerifyAllMainThread": {
+  "chain.blsVerifySingleThreaded": {
     hidden: true,
     type: "boolean",
     description: "Always use main threads for BLS verification",
-    defaultDescription: String(defaultOptions.chain.blsVerifyAllMainThread),
+    defaultDescription: String(defaultOptions.chain.blsVerifySingleThreaded),
     group: "chain",
   },
 

@@ -44,7 +44,7 @@ describe("lightclient api", function () {
             api: ["lightclient"],
           },
         },
-        chain: {blsVerifyAllMainThread: true},
+        chain: {blsVerifySingleThreaded: true},
       },
       validatorCount,
       logger: loggerNodeA,

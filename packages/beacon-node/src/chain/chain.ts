@@ -191,7 +191,7 @@ export class BeaconChain implements IBeaconChain {
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
-    const bls = opts.blsVerifyAllMainThread
+    const bls = opts.blsVerifySingleThreaded
       ? new BlsSingleThreadVerifier({metrics})
       : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
