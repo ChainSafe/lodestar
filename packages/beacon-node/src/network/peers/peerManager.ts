@@ -203,10 +203,6 @@ export class PeerManager {
   async close(): Promise<void> {
     await this.discovery?.stop();
     this.libp2p.services.components.events.removeEventListener(Libp2pEvent.connectionOpen, this.onLibp2pPeerConnect);
-    this.libp2p.services.components.events.removeEventListener(
-      Libp2pEvent.connectionClose,
-      this.onLibp2pPeerDisconnect
-    );
     this.networkEventBus.off(NetworkEvent.reqRespRequest, this.onRequest);
     for (const interval of this.intervals) clearInterval(interval);
   }
