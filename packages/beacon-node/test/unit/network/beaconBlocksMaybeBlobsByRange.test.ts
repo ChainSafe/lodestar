@@ -1,11 +1,10 @@
 import {expect} from "chai";
 import {ssz, deneb} from "@lodestar/types";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {BYTES_PER_FIELD_ELEMENT} from "@lodestar/params";
 
 import {beaconBlocksMaybeBlobsByRange} from "../../../src/network/reqresp/index.js";
-import {BlockInput, BlockInputType, BlockSource, blobSidecarsToBlobsSidecar} from "../../../src/chain/blocks/types.js";
-import {ckzg, initCKZG, loadEthereumTrustedSetup, FIELD_ELEMENTS_PER_BLOB_MAINNET} from "../../../src/util/kzg.js";
+import {BlockInputType, BlockSource} from "../../../src/chain/blocks/types.js";
+import {initCKZG, loadEthereumTrustedSetup} from "../../../src/util/kzg.js";
 import {INetwork} from "../../../src/network/interface.js";
 import {ZERO_HASH} from "../../../src/constants/constants.js";
 
@@ -89,22 +88,15 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
         .filter((blobs) => blobs !== undefined)
         .reduce((acc, elem) => acc.concat(elem), []);
 
-      const expectedResponse: BlockInput[] = blocksWithBlobs.map(([block, blobSidecars]) => {
-        const blobs = (blobSidecars !== undefined ? blobSidecars : []).map((bscar) => {
-          // TODO DENEB: cleanup the following generation as its not required to generate
-          // proper field elements for the aggregate proofs compute
-          bscar.blob = generateRandomBlob();
-          (bscar.kzgCommitment = ckzg.blobToKzgCommitment(bscar.blob)),
-            (bscar.kzgProof = ckzg.computeAggregateKzgProof([bscar.blob]));
-          return bscar;
-        });
+      const expectedResponse = blocksWithBlobs.map(([block, blobSidecars]) => {
+        const blobs = blobSidecars !== undefined ? blobSidecars : [];
         return {
           type: BlockInputType.postDeneb,
           block,
           source: BlockSource.byRange,
-          // TODO DENEB: Cleanup the conversion once migration complete
-          blobs: blobSidecarsToBlobsSidecar(chainConfig, block, blobs),
+          blobs,
           blockBytes: null,
+          blobsBytes: blobs.map(() => null),
         };
       });
 
@@ -122,12 +114,3 @@ describe("beaconBlocksMaybeBlobsByRange", () => {
     });
   });
 });
-
-function generateRandomBlob(): deneb.Blob {
-  const blob = new Uint8Array(FIELD_ELEMENTS_PER_BLOB_MAINNET * BYTES_PER_FIELD_ELEMENT);
-  const dv = new DataView(blob.buffer, blob.byteOffset, blob.byteLength);
-  for (let i = 0; i < FIELD_ELEMENTS_PER_BLOB_MAINNET; i++) {
-    dv.setUint32(i * BYTES_PER_FIELD_ELEMENT, i);
-  }
-  return blob;
-}

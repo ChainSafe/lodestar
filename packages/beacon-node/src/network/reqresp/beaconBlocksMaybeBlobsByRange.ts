@@ -3,7 +3,7 @@ import {deneb, Epoch, phase0, allForks, Slot} from "@lodestar/types";
 import {ForkSeq, MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 
-import {BlockInput, BlockSource, getBlockInput, blobSidecarsToBlobsSidecar} from "../../chain/blocks/types.js";
+import {BlockInput, BlockSource, getBlockInput} from "../../chain/blocks/types.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetwork, WithBytes} from "../interface.js";
 
@@ -92,10 +92,17 @@ export function matchBlockWithBlobs(
         );
       }
 
-      // TODO DENEB: cleanup blobSidecars to blobsSidecar conversion on migration of blockInput
-      const blobsSidecar = blobSidecarsToBlobsSidecar(config, block.data, blobSidecars);
       // TODO DENEB: instead of null, pass payload in bytes
-      blockInputs.push(getBlockInput.postDeneb(config, block.data, blockSource, blobsSidecar, null));
+      blockInputs.push(
+        getBlockInput.postDeneb(
+          config,
+          block.data,
+          blockSource,
+          blobSidecars,
+          null,
+          Array.from({length: blobKzgCommitmentsLen}, () => null)
+        )
+      );
     }
   }
 

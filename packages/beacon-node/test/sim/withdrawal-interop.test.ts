@@ -9,7 +9,7 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, capella, Slot} from "@lodestar/types";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 
-import {ExecutePayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
+import {ExecutionPayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
 import {initializeExecutionEngine} from "../../src/execution/index.js";
 import {ClockEvent} from "../../src/util/clock.js";
 import {testLogger, TestLoggerOpts} from "../utils/logger.js";
@@ -171,7 +171,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     // 3. Execute the payload
     const payloadResult = await executionEngine.notifyNewPayload(ForkName.capella, payload);
-    if (payloadResult.status !== ExecutePayloadStatus.VALID) {
+    if (payloadResult.status !== ExecutionPayloadStatus.VALID) {
       throw Error("getPayload returned payload that notifyNewPayload deems invalid");
     }
 

@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
 import {ErrorAborted, Logger} from "@lodestar/utils";
 import {ChainForkConfig} from "@lodestar/config";
-import {BlockInput} from "../../chain/blocks/types.js";
+import {BlockInput, BlockInputType} from "../../chain/blocks/types.js";
 import {PeerAction} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
@@ -400,6 +400,18 @@ export class SyncChain {
 
       if (!res.err) {
         batch.downloadingSuccess(res.result);
+        let hasPostDenebBlocks = false;
+        const blobs = res.result.reduce((acc, blockInput) => {
+          hasPostDenebBlocks ||= blockInput.type === BlockInputType.postDeneb;
+          return hasPostDenebBlocks
+            ? acc + (blockInput.type === BlockInputType.postDeneb ? blockInput.blobs.length : 0)
+            : 0;
+        }, 0);
+        const downloadInfo = {blocks: res.result.length};
+        if (hasPostDenebBlocks) {
+          Object.assign(downloadInfo, {blobs});
+        }
+        this.logger.debug("Downloaded batch", {id: this.logId, ...batch.getMetadata(), ...downloadInfo});
         this.triggerBatchProcessor();
       } else {
         this.logger.verbose("Batch download error", {id: this.logId, ...batch.getMetadata()}, res.err);

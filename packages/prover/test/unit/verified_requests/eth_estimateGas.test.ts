@@ -1,5 +1,4 @@
 import {expect} from "chai";
-import deepmerge from "deepmerge";
 import {createForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {ELTransaction} from "../../../lib/types.js";
@@ -7,7 +6,7 @@ import {VERIFICATION_FAILED_RESPONSE_CODE} from "../../../src/constants.js";
 import {eth_estimateGas} from "../../../src/verified_requests/eth_estimateGas.js";
 import ethEstimateGasCase1 from "../../fixtures/mainnet/eth_estimateGas_simple_transfer.json" assert {type: "json"};
 import ethEstimateGasCase2 from "../../fixtures/mainnet/eth_estimateGas_contract_call.json" assert {type: "json"};
-import {TestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
+import {TestFixture, cloneTestFixture, generateReqHandlerOptionsMock} from "../../mocks/request_handler.js";
 import {JsonRpcRequest, JsonRpcResponseWithResultPayload} from "../../../src/types.js";
 import {getVerificationFailedMessage} from "../../../src/utils/json_rpc.js";
 
@@ -17,10 +16,10 @@ describe("verified_requests / eth_estimateGas", () => {
   for (const t of testCases) {
     describe(t.label, () => {
       it("should return the valid json-rpc response for a valid call", async () => {
-        const testCase = deepmerge({}, t);
+        const testCase = cloneTestFixture(t);
 
         const config = createForkConfig(networksChainConfig[testCase.network as NetworkName]);
-        const options = generateReqHandlerOptionsMock(testCase, config);
+        const options = generateReqHandlerOptionsMock(testCase as any, config);
 
         const response = await eth_estimateGas({
           ...options,
@@ -34,7 +33,7 @@ describe("verified_requests / eth_estimateGas", () => {
       });
 
       it("should return the json-rpc response with error for an invalid call", async () => {
-        const testCase = deepmerge(t, {});
+        const testCase = cloneTestFixture(t);
 
         // Temper the responses to make them invalid
         // Temper the responses to make them invalid
@@ -50,7 +49,7 @@ describe("verified_requests / eth_estimateGas", () => {
         }
 
         const config = createForkConfig(networksChainConfig[testCase.network as NetworkName]);
-        const options = generateReqHandlerOptionsMock(testCase, config);
+        const options = generateReqHandlerOptionsMock(testCase as any, config);
 
         const response = await eth_estimateGas({
           ...options,

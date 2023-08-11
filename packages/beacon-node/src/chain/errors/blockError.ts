@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {allForks, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {ExecutePayloadStatus} from "../../execution/engine/interface.js";
+import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
 import {QueueErrorCode} from "../../util/queue/index.js";
 import {GossipActionError} from "./gossipValidation.js";
 
@@ -66,8 +66,8 @@ export enum BlockErrorCode {
 }
 
 type ExecutionErrorStatus = Exclude<
-  ExecutePayloadStatus,
-  ExecutePayloadStatus.VALID | ExecutePayloadStatus.ACCEPTED | ExecutePayloadStatus.SYNCING
+  ExecutionPayloadStatus,
+  ExecutionPayloadStatus.VALID | ExecutionPayloadStatus.ACCEPTED | ExecutionPayloadStatus.SYNCING
 >;
 
 export type BlockErrorType =

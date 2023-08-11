@@ -1,4 +1,5 @@
 import sinon from "sinon";
+import deepmerge from "deepmerge";
 import {NetworkName} from "@lodestar/config/networks";
 import {ForkConfig} from "@lodestar/config";
 import {PresetName} from "@lodestar/params";
@@ -14,12 +15,25 @@ import {
   JsonRpcRequestPayload,
   JsonRpcResponse,
   JsonRpcResponseOrBatch,
+  JsonRpcVersion,
 } from "../../src/types.js";
 import {isNullish} from "../../src/utils/validation.js";
 import {isBatchRequest, mergeBatchReqResp} from "../../src/utils/json_rpc.js";
 
 type Writeable<T> = {
   -readonly [K in keyof T]?: T[K] extends object ? Writeable<T[K]> : T[K];
+};
+
+export function cloneTestFixture<T extends object>(source: T, ...extra: object[]): GenericTestFixture<T> {
+  return deepmerge.all([{}, source, ...extra]) as GenericTestFixture<T>;
+}
+
+// Because of compatibility of types with web3.js we have to consider "jsonrpc" strictly to be "2.0" | "1.0"
+// not the generic string. The test fixtures are auto-generated which coerce the type of "jsonrpc" to string.
+// So we have to create more flexible types here to avoid type errors.
+// Simple solution for tests could be just use `as any` but it's not a good practice.
+export type GenericTestFixture<T> = {
+  [K in keyof T]: T[K] extends object ? GenericTestFixture<T[K]> : K extends "jsonrpc" ? JsonRpcVersion : T[K];
 };
 
 export interface TestFixture<R = unknown, P = unknown[]> {

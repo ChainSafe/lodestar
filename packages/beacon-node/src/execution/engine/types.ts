@@ -16,7 +16,7 @@ import {
   QUANTITY,
   quantityToBigint,
 } from "../../eth1/provider/utils.js";
-import {ExecutePayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
+import {ExecutionPayloadStatus, BlobsBundle, PayloadAttributes, VersionedHashes} from "./interface.js";
 import {WithdrawalV1} from "./payloadIdCache.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -65,7 +65,7 @@ export type EngineApiRpcParamTypes = {
 };
 
 export type PayloadStatus = {
-  status: ExecutePayloadStatus;
+  status: ExecutionPayloadStatus;
   latestValidHash: DATA | null;
   validationError: string | null;
 };
