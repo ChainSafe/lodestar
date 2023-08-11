@@ -77,7 +77,7 @@ export async function createNodeJsLibp2p(
         maxConnections: networkOpts.maxPeers,
         // socket option: the maximum length of the queue of pending connections
         // https://nodejs.org/dist/latest-v18.x/docs/api/net.html#serverlisten
-        // this is 10% of our target peers
+        // it's not safe if we increase this number
         backlog: 5,
         closeServerOnMaxConnections: {
           closeAbove: networkOpts.maxPeers ?? Infinity,
