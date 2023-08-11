@@ -4,7 +4,7 @@ import {CliCommandOptions} from "../../util/index.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
-  "chain.blsVerifyAllMultiThread"?: boolean;
+  "chain.blsVerifyAllInQueue"?: boolean;
   "chain.blsVerifySingleThreaded"?: boolean;
   "chain.blsVerifyAllLibuv"?: boolean;
   "chain.disableBlsBatchVerify"?: boolean;
@@ -29,7 +29,7 @@ export type ChainArgs = {
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args["suggestedFeeRecipient"],
-    blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
+    blsVerifyAllInQueue: args["chain.blsVerifyAllInQueue"],
     blsVerifySingleThreaded: args["chain.blsVerifySingleThreaded"],
     blsVerifyAllLibuv: args["chain.blsVerifyAllLibuv"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
@@ -67,11 +67,11 @@ export const options: CliCommandOptions<ChainArgs> = {
     group: "chain",
   },
 
-  "chain.blsVerifyAllMultiThread": {
+  "chain.blsVerifyAllInQueue": {
     hidden: true,
     type: "boolean",
     description: "Always use worker threads for BLS verification",
-    defaultDescription: String(defaultOptions.chain.blsVerifyAllMultiThread),
+    defaultDescription: String(defaultOptions.chain.blsVerifyAllInQueue),
     group: "chain",
   },
 
@@ -97,7 +97,7 @@ export const options: CliCommandOptions<ChainArgs> = {
     description:
       "Do not use BLS batch verify to validate all block signatures at once. \
 Will double processing times. Use only for debugging purposes.",
-    defaultDescription: String(defaultOptions.chain.blsVerifyAllMultiThread),
+    defaultDescription: String(defaultOptions.chain.blsVerifyAllInQueue),
     group: "chain",
   },
 

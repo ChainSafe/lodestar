@@ -11,7 +11,7 @@ export type IChainOptions = BlockProcessOpts &
   ArchiverOpts &
   LightClientServerOpts & {
     blsVerifySingleThreaded?: boolean;
-    blsVerifyAllMultiThread?: boolean;
+    blsVerifyAllInQueue?: boolean;
     blsVerifyAllLibuv?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
@@ -71,7 +71,7 @@ export type SeenCacheOpts = {
 
 export const defaultChainOptions: IChainOptions = {
   blsVerifySingleThreaded: false,
-  blsVerifyAllMultiThread: false,
+  blsVerifyAllInQueue: false,
   blsVerifyAllLibuv: false,
   disableBlsBatchVerify: false,
   proposerBoostEnabled: true,
