@@ -171,12 +171,13 @@ export async function beaconHandlerInit(args: BeaconArgs & GlobalArgs) {
   // Add detailed version string for API node/version endpoint
   beaconNodeOptions.set({api: {version}});
 
-  // Fetch extra bootnodes
-  const extraBootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
+  // Combine bootnodes from different sources
+  const bootnodes = (beaconNodeOptions.get().network?.discv5?.bootEnrs ?? []).concat(
     args.bootnodesFile ? readBootnodes(args.bootnodesFile) : [],
     isKnownNetworkName(network) ? await getNetworkBootnodes(network) : []
   );
-  beaconNodeOptions.set({network: {discv5: {bootEnrs: extraBootnodes}}});
+  // Deduplicate and set combined bootnodes
+  beaconNodeOptions.set({network: {discv5: {bootEnrs: [...new Set(bootnodes)]}}});
 
   // Set known depositContractDeployBlock
   if (isKnownNetworkName(network)) {
