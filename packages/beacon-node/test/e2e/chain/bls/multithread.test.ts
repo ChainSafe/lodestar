@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {PublicKey, SecretKey} from "@chainsafe/blst-ts";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
-import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
+import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread.js";
 import {testLogger} from "../../../utils/logger.js";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 

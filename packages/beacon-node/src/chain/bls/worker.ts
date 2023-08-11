@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import worker from "node:worker_threads";
 import {expose} from "@chainsafe/threads/worker";
-import {WorkerData, SerializedBlsWorkReq, BlsWorkResult} from "./types.js";
-import {verifyManySignatureSets} from "./verifyManySignatureSets.js";
+import {WorkerData, BlsWorkReq, BlsWorkResult} from "./types.js";
+import {runWorkRequests} from "./runWorkRequests.js";
 
 // Cloned data from instatiation
 const workerData = worker.workerData as WorkerData;
@@ -10,7 +10,7 @@ if (!workerData) throw Error("workerData must be defined");
 const {workerId} = workerData || {};
 
 expose({
-  async verifyManySignatureSets(workReqArr: SerializedBlsWorkReq[]): Promise<BlsWorkResult> {
-    return verifyManySignatureSets(workerId, workReqArr);
+  async runWorkRequests(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
+    return runWorkRequests(workerId, workReqArr);
   },
 });

@@ -2,7 +2,7 @@ import {CoordType, PublicKey, SecretKey, Signature} from "@chainsafe/blst-ts";
 import {expect} from "chai";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
-import {BlsMultiThreadWorkerPool} from "../../../../lib/chain/bls/multithread/index.js";
+import {BlsMultiThreadWorkerPool} from "../../../../lib/chain/bls/multithread/multithread.js";
 import {testLogger} from "../../../utils/logger.js";
 
 describe("BlsVerifier ", function () {

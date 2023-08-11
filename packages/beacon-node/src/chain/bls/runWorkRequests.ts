@@ -1,14 +1,6 @@
-import {Logger} from "@lodestar/utils";
-import {verifySignatureSetsMaybeBatch, asyncVerifySignatureSetsMaybeBatch} from "../maybeBatch.js";
-import {
-  WorkResult,
-  WorkResultCode,
-  BlsWorkResult,
-  DeserializedSignatureSet,
-  DeserializedBlsWorkReq,
-  SerializedBlsWorkReq,
-  SerializedSignatureSet,
-} from "./types.js";
+import {SignatureSet} from "@chainsafe/blst-ts/*";
+import {verifySignatureSets, asyncVerifySignatureSets} from "./verifySignatureSets.js";
+import {WorkResult, WorkResultCode, BlsWorkResult, BlsWorkReq} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 
 /**
@@ -31,15 +23,15 @@ const BATCHABLE_MIN_PER_CHUNK = 16;
 /**
  * Uses worker thread to verify
  */
-export function verifyManySignatureSets(workerId: number, workReqArr: SerializedBlsWorkReq[]): BlsWorkResult {
+export function runWorkRequests(workerId: number, workReqArr: BlsWorkReq[]): BlsWorkResult {
   const startNs = process.hrtime.bigint();
   const results: WorkResult<boolean>[] = [];
   let batchRetries = 0;
   let batchSigsSuccess = 0;
 
   // If there are multiple batchable sets attempt batch verification with them
-  const batchableSets: {idx: number; sets: SerializedSignatureSet[]}[] = [];
-  const nonBatchableSets: {idx: number; sets: SerializedSignatureSet[]}[] = [];
+  const batchableSets: {idx: number; sets: SignatureSet[]}[] = [];
+  const nonBatchableSets: {idx: number; sets: SignatureSet[]}[] = [];
 
   // Split sets between batchable and non-batchable preserving their original index in the req array
   for (let i = 0; i < workReqArr.length; i++) {
@@ -58,7 +50,7 @@ export function verifyManySignatureSets(workerId: number, workReqArr: Serialized
 
     for (const batchableChunk of batchableChunks) {
       // flatten all sets into a single array for batch verification
-      const allSets: SerializedSignatureSet[] = [];
+      const allSets: SignatureSet[] = [];
       for (const {sets} of batchableChunk) {
         // TODO: speed test in perf for potential switch to allSets.push(...sets);
         for (const set of sets) {
@@ -68,7 +60,7 @@ export function verifyManySignatureSets(workerId: number, workReqArr: Serialized
 
       try {
         // Attempt to verify multiple sets at once
-        const isValid = verifySignatureSetsMaybeBatch(allSets);
+        const isValid = verifySignatureSets(allSets);
 
         if (isValid) {
           // The entire batch is valid, return success to all
@@ -93,7 +85,7 @@ export function verifyManySignatureSets(workerId: number, workReqArr: Serialized
 
   for (const {idx, sets} of nonBatchableSets) {
     try {
-      const isValid = verifySignatureSetsMaybeBatch(sets);
+      const isValid = verifySignatureSets(sets);
       results[idx] = {code: WorkResultCode.success, result: isValid};
     } catch (e) {
       results[idx] = {code: WorkResultCode.error, error: e as Error};
@@ -113,18 +105,15 @@ export function verifyManySignatureSets(workerId: number, workReqArr: Serialized
 /**
  * Same as verifyManySignatureSets but uses libuv thread pool instead of worker threads
  */
-export async function asyncVerifyManySignatureSets(
-  logger: Logger,
-  workReqArr: DeserializedBlsWorkReq[]
-): Promise<BlsWorkResult> {
+export async function asyncRunWorkRequests(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
   const workStartNs = process.hrtime.bigint();
   const results: WorkResult<boolean>[] = [];
   let batchRetries = 0;
   let batchSigsSuccess = 0;
 
   // If there are multiple batchable sets attempt batch verification with them
-  const batchableSets: {idx: number; sets: DeserializedSignatureSet[]}[] = [];
-  const nonBatchableSets: {idx: number; sets: DeserializedSignatureSet[]}[] = [];
+  const batchableSets: {idx: number; sets: SignatureSet[]}[] = [];
+  const nonBatchableSets: {idx: number; sets: SignatureSet[]}[] = [];
 
   // Split sets between batchable and non-batchable preserving their original index in the req array
   for (let i = 0; i < workReqArr.length; i++) {
@@ -142,7 +131,7 @@ export async function asyncVerifyManySignatureSets(
 
     for (const batchableChunk of batchableChunks) {
       // flatten all sets into a single array for batch verification
-      const allSets: DeserializedSignatureSet[] = [];
+      const allSets: SignatureSet[] = [];
       for (const {sets} of batchableChunk) {
         // TODO: speed test in perf for potential switch to allSets.push(...sets);
         for (const set of sets) {
@@ -152,7 +141,7 @@ export async function asyncVerifyManySignatureSets(
 
       try {
         // Attempt to verify multiple sets at once
-        const isValid = await asyncVerifySignatureSetsMaybeBatch(logger, allSets);
+        const isValid = await asyncVerifySignatureSets(allSets);
 
         if (isValid) {
           // The entire batch is valid, return success to all
@@ -177,7 +166,7 @@ export async function asyncVerifyManySignatureSets(
 
   await Promise.all(
     nonBatchableSets.map(({idx, sets}) =>
-      asyncVerifySignatureSetsMaybeBatch(logger, sets)
+      asyncVerifySignatureSets(sets)
         .then((isValid) => {
           results[idx] = {code: WorkResultCode.success, result: isValid};
         })
