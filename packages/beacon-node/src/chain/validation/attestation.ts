@@ -307,7 +307,6 @@ async function validateAttestation(
   if (
     !(await chain.bls.verifySignatureSets([signatureSet], {
       batchable: true,
-      verifyWithLibuvPool: true,
       priority: prioritizeBls,
     }))
   ) {

@@ -207,7 +207,6 @@ async function validateAggregateAndProof(
   if (
     !(await chain.bls.verifySignatureSets(signatureSets, {
       batchable: true,
-      verifyWithLibuvPool: true,
       priority: prioritizeBls,
     }))
   ) {
