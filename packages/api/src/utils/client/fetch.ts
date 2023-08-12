@@ -146,9 +146,9 @@ function isNativeFetchInputError(e: unknown): e is NativeFetchInputError {
 }
 
 function isNativeFetchAbortError(e: unknown): e is NativeFetchAbortError {
-  return e instanceof DOMException && e.name === "AbortError";
+  return e instanceof DOMException && (e as NativeFetchAbortError).name === "AbortError";
 }
 
 function isNativeFetchTimeoutError(e: unknown): e is NativeFetchTimeoutError {
-  return e instanceof DOMException && e.name === "TimeoutError";
+  return e instanceof DOMException && (e as NativeFetchTimeoutError).name === "TimeoutError";
 }
