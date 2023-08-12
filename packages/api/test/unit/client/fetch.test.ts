@@ -117,14 +117,7 @@ describe("FetchError", function () {
         );
       }
 
-      let signal: AbortSignal | undefined;
-      if (abort) {
-        const controller = new AbortController();
-        setTimeout(() => controller.abort(), 0);
-        signal = controller.signal;
-      } else if (timeout) {
-        signal = AbortSignal.timeout(10);
-      }
+      const signal = abort ? AbortSignal.abort() : timeout ? AbortSignal.timeout(1) : null;
       await expect(fetch(url, {signal})).to.be.rejected.then((error: FetchError) => {
         expect(error.type).to.be.equal(testCase.errorType);
         expect(error.code).to.be.equal(testCase.errorCode);
