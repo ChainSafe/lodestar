@@ -3,7 +3,7 @@ import path from "node:path";
 import {sleep, toHex, toHexString} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
-import {AssertionMatch, BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
+import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {getEstimatedTimeInSecForRun, getEstimatedTTD, logFilesDir} from "../utils/simulation/utils/index.js";
 import {
@@ -56,9 +56,60 @@ const env = await SimulationEnvironment.initWithDefaults(
     },
   },
   [
-    {id: "node-1", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Geth, keysCount: 32, mining: true},
-    {id: "node-2", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Nethermind, keysCount: 32, remote: true},
-    {id: "node-3", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Nethermind, keysCount: 32},
+    // put 1 lodestar node on produceBlockV3, and 2nd on produceBlindedBlock and 3rd on produceBlockV2
+    // specifying the useProduceBlockV3 options despite whatever default is set
+    {
+      id: "node-1",
+      beacon: BeaconClient.Lodestar,
+      validator: {
+        type: ValidatorClient.Lodestar,
+        options: {
+          clientOptions: {
+            useProduceBlockV3: true,
+            // default builder selection will cause a race try in beacon even if builder is not set
+            // but not to worry, execution block will be selected as fallback anyway
+          },
+        },
+      },
+      execution: ExecutionClient.Geth,
+      keysCount: 32,
+      mining: true,
+    },
+    {
+      id: "node-2",
+      beacon: BeaconClient.Lodestar,
+      validator: {
+        type: ValidatorClient.Lodestar,
+        options: {
+          clientOptions: {
+            useProduceBlockV3: false,
+            // default builder selection of max profit will make it use produceBlindedBlock
+            // but not to worry, execution block will be selected as fallback anyway
+            // but returned in blinded format for validator to use publish blinded block
+            // which assembles block beacon side from local cache before publishing
+          },
+        },
+      },
+      execution: ExecutionClient.Nethermind,
+      keysCount: 32,
+      remote: true,
+    },
+    {
+      id: "node-3",
+      beacon: BeaconClient.Lodestar,
+      validator: {
+        type: ValidatorClient.Lodestar,
+        options: {
+          clientOptions: {
+            useProduceBlockV3: false,
+            // this builder selection will make it use produceBlockV2
+            "builder.selection": "executiononly",
+          },
+        },
+      },
+      execution: ExecutionClient.Nethermind,
+      keysCount: 32,
+    },
     {id: "node-4", beacon: BeaconClient.Lighthouse, execution: ExecutionClient.Geth, keysCount: 32},
   ]
 );

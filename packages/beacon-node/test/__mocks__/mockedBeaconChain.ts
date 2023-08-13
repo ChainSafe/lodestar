@@ -5,6 +5,7 @@ import {config as defaultConfig} from "@lodestar/config/default";
 import {ChainForkConfig} from "@lodestar/config";
 import {BeaconChain} from "../../src/chain/index.js";
 import {ExecutionEngineHttp} from "../../src/execution/engine/http.js";
+import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
 import {Eth1ForBlockProduction} from "../../src/eth1/index.js";
 import {OpPool} from "../../src/chain/opPools/opPool.js";
 import {AggregatedAttestationPool} from "../../src/chain/opPools/aggregatedAttestationPool.js";
@@ -18,6 +19,7 @@ export type MockedBeaconChain = MockedObject<BeaconChain> & {
   getHeadState: Mock<[]>;
   forkChoice: MockedObject<ForkChoice>;
   executionEngine: MockedObject<ExecutionEngineHttp>;
+  executionBuilder: MockedObject<ExecutionBuilderHttp>;
   eth1: MockedObject<Eth1ForBlockProduction>;
   opPool: MockedObject<OpPool>;
   aggregatedAttestationPool: MockedObject<AggregatedAttestationPool>;
@@ -33,6 +35,7 @@ export type MockedBeaconChain = MockedObject<BeaconChain> & {
 };
 vi.mock("@lodestar/fork-choice");
 vi.mock("../../src/execution/engine/http.js");
+vi.mock("../../src/execution/builder/http.js");
 vi.mock("../../src/eth1/index.js");
 vi.mock("../../src/chain/opPools/opPool.js");
 vi.mock("../../src/chain/opPools/aggregatedAttestationPool.js");
@@ -63,6 +66,9 @@ vi.mock("../../src/chain/index.js", async (requireActual) => {
       executionEngine: new ExecutionEngineHttp(),
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
+      executionBuilder: new ExecutionBuilderHttp(),
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
       eth1: new Eth1ForBlockProduction(),
       opPool: new OpPool(),
       aggregatedAttestationPool: new AggregatedAttestationPool(),
@@ -70,6 +76,7 @@ vi.mock("../../src/chain/index.js", async (requireActual) => {
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),
       produceBlock: vi.fn(),
+      produceBlindedBlock: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),
       recomputeForkChoiceHead: vi.fn(),
       getHeadStateAtCurrentEpoch: vi.fn(),

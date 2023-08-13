@@ -22,7 +22,7 @@ export interface IExecutionBuilder {
     proposerPubKey: BLSPubkey
   ): Promise<{
     header: allForks.ExecutionPayloadHeader;
-    blockValue: Wei;
+    executionPayloadValue: Wei;
     blobKzgCommitments?: deneb.BlobKzgCommitments;
   }>;
   submitBlindedBlock(signedBlock: allForks.SignedBlindedBeaconBlock): Promise<allForks.SignedBeaconBlock>;

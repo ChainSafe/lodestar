@@ -59,4 +59,3 @@ export {ExecutionPayloadStatus, DataAvailableStatus, type BlockExternalData} fro
 export {becomesNewEth1Data} from "./block/processEth1Data.js";
 // Withdrawals for new blocks
 export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
-export {executionPayloadToPayloadHeader} from "./block/processExecutionPayload.js";

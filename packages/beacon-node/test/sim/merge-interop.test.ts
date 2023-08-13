@@ -315,14 +315,13 @@ describe("executionEngine / ExecutionEngineHttp", function () {
           strictFeeRecipientCheck: true,
           feeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           builder: {
-            enabled: false,
             gasLimit: 30000000,
+            builderSelection: "executiononly",
           },
         },
         "0xa4855c83d868f772a579133d9f23818008417b743e8447e235d8eb78b1d8f8a9f63f98c551beb7de254400f89592314d": {
           feeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
           builder: {
-            enabled: true,
             gasLimit: 35000000,
           },
         },
@@ -332,7 +331,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         strictFeeRecipientCheck: true,
         feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
         builder: {
-          enabled: false,
           gasLimit: 30000000,
         },
       },
