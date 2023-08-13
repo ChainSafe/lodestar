@@ -1,5 +1,6 @@
-import {MessagePort, Worker} from "node:worker_threads";
+import {ChildProcess} from "node:child_process";
 import {StrictEventEmitterSingleArg} from "./strictEvents.js";
+import {WorkerProcessContext} from "./workerProcess.js";
 
 export type WorkerBridgeEvent<EventData> = {
   type: string;
@@ -20,10 +21,10 @@ export enum EventDirection {
  * - worker to main
  * - main to worker
  */
-export function wireEventsOnWorkerThread<EventData>(
+export function wireEventsOnWorkerProcess<EventData>(
   mainEventName: string,
   events: StrictEventEmitterSingleArg<EventData>,
-  parentPort: MessagePort,
+  parentPort: WorkerProcessContext,
   isWorkerToMain: {[K in keyof EventData]: EventDirection}
 ): void {
   // Subscribe to events from main thread
@@ -47,7 +48,7 @@ export function wireEventsOnWorkerThread<EventData>(
           event: eventName,
           data,
         };
-        parentPort.postMessage(workerEvent);
+        parentPort.send(workerEvent);
       });
     }
   }
@@ -56,7 +57,7 @@ export function wireEventsOnWorkerThread<EventData>(
 export function wireEventsOnMainThread<EventData>(
   mainEventName: string,
   events: StrictEventEmitterSingleArg<EventData>,
-  worker: Pick<Worker, "on" | "postMessage">,
+  worker: ChildProcess,
   isWorkerToMain: {[K in keyof EventData]: EventDirection}
 ): void {
   // Subscribe to events from main thread
@@ -80,7 +81,7 @@ export function wireEventsOnMainThread<EventData>(
           event: eventName,
           data,
         };
-        worker.postMessage(workerEvent);
+        worker.send(workerEvent);
       });
     }
   }

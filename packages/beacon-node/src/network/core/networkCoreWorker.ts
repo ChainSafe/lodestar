@@ -1,16 +1,14 @@
-import worker from "node:worker_threads";
 import fs from "node:fs";
 import path from "node:path";
 import {createFromProtobuf} from "@libp2p/peer-id-factory";
-import {expose} from "@chainsafe/threads/worker";
-import type {WorkerModule} from "@chainsafe/threads/dist/types/worker.js";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {collectNodeJSMetrics, RegistryMetricCreator} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {Clock} from "../../util/clock.js";
-import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
+import {wireEventsOnWorkerProcess} from "../../util/workerEvents.js";
+import {WorkerProcessContext, exposeWorkerApi, getWorkerData} from "../../util/workerProcess.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {peerIdToString} from "../../util/peerId.js";
 import {profileNodeJS} from "../../util/profile.js";
@@ -26,13 +24,19 @@ import {
   reqRespBridgeEventDirection,
 } from "./events.js";
 
-// Cloned data from instatiation
-const workerData = worker.workerData as NetworkWorkerData;
-const parentPort = worker.parentPort;
+// TODO: move init code to reusable function
+process.on("SIGINT", () => {
+  // TODO: also need to handle SIGTERM, what signal should parent send? other way to capture signals?
+  // Ignore SIGINT to prevent prematurely shutting down child process
+});
+
+// Cloned data from instantiation
+const workerData = getWorkerData() as NetworkWorkerData;
 // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 if (!workerData) throw Error("workerData must be defined");
-// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-if (!parentPort) throw Error("parentPort must be defined");
+if (!process.send) throw Error("process.send must be defined");
+
+const parentPort = process as WorkerProcessContext;
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
 const peerId = await createFromProtobuf(workerData.peerIdProto);
@@ -108,13 +112,13 @@ const core = await NetworkCore.init({
   initialStatus: workerData.initialStatus,
 });
 
-wireEventsOnWorkerThread<NetworkEventData>(
+wireEventsOnWorkerProcess<NetworkEventData>(
   NetworkWorkerThreadEventType.networkEvent,
   events,
   parentPort,
   networkEventDirection
 );
-wireEventsOnWorkerThread<ReqRespBridgeEventData>(
+wireEventsOnWorkerProcess<ReqRespBridgeEventData>(
   NetworkWorkerThreadEventType.reqRespBridgeEvents,
   reqRespBridgeEventBus,
   parentPort,
@@ -161,4 +165,4 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   },
 };
 
-expose(libp2pWorkerApi as WorkerModule<keyof NetworkWorkerApi>);
+exposeWorkerApi(libp2pWorkerApi, parentPort);
