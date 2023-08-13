@@ -1,98 +1,73 @@
+import crypto from "node:crypto";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {expect} from "chai";
-import {
-  CachedBeaconStateAltair,
-  computeStartSlotAtEpoch,
-  EffectiveBalanceIncrements,
-  getEffectiveBalanceIncrementsZeroed,
-} from "@lodestar/state-transition";
-import {TIMELY_SOURCE_FLAG_INDEX} from "@lodestar/params";
-// eslint-disable-next-line import/no-relative-packages
-import {generatePerfTestCachedStateAltair} from "../../../../state-transition/test/perf/util.js";
+import {toHexString} from "@chainsafe/ssz";
+import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {VoteTracker} from "../../../src/protoArray/interface.js";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
 import {computeProposerBoostScoreFromBalances} from "../../../src/forkChoice/forkChoice.js";
 
-/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
-const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
-function flagIsTimelySource(flag: number): boolean {
-  return (flag & TIMELY_SOURCE) === TIMELY_SOURCE;
-}
-
 describe("computeDeltas", () => {
-  let originalState: CachedBeaconStateAltair;
-  const indices: Map<string, number> = new Map<string, number>();
   let oldBalances: EffectiveBalanceIncrements;
   let newBalances: EffectiveBalanceIncrements;
 
   const oldRoot = "0x32dec344944029ba183ac387a7aa1f2068591c00e9bfadcfb238e50fbe9ea38e";
   const newRoot = "0xb59f3a209f639dd6b5645ea9fad8d441df44c3be93bd1bbf50ef90bf124d1238";
+  const oneHourProtoNodes = (60 * 60) / 12;
+  const fourHourProtoNodes = 4 * oneHourProtoNodes;
+  const oneDayProtoNodes = 24 * oneHourProtoNodes;
+  // 2 first numbers are respective to number of validators in goerli, mainnet as of Aug 2023
+  const numValidators = [500_000, 750_000, 1_400_000, 2_100_000];
+  for (const numValidator of numValidators) {
+    before(function () {
+      this.timeout(2 * 60 * 1000);
+      oldBalances = getEffectiveBalanceIncrementsZeroed(numValidator);
+      newBalances = getEffectiveBalanceIncrementsZeroed(numValidator);
 
-  before(function () {
-    this.timeout(2 * 60 * 1000); // Generating the states for the first time is very slow
-
-    originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
-
-    const previousEpochParticipationArr = originalState.previousEpochParticipation.getAll();
-    const currentEpochParticipationArr = originalState.currentEpochParticipation.getAll();
-
-    const numPreviousEpochParticipation = previousEpochParticipationArr.filter(flagIsTimelySource).length;
-    const numCurrentEpochParticipation = currentEpochParticipationArr.filter(flagIsTimelySource).length;
-
-    expect(numPreviousEpochParticipation).to.equal(250000, "Wrong numPreviousEpochParticipation");
-    expect(numCurrentEpochParticipation).to.equal(250000, "Wrong numCurrentEpochParticipation");
-
-    oldBalances = getEffectiveBalanceIncrementsZeroed(numPreviousEpochParticipation);
-    newBalances = getEffectiveBalanceIncrementsZeroed(numPreviousEpochParticipation);
-
-    for (let i = 0; i < numPreviousEpochParticipation; i++) {
-      oldBalances[i] = 32;
-      newBalances[i] = 32;
-    }
-    for (let i = 0; i < 10000; i++) {
-      indices.set("" + i, i);
-    }
-    indices.set(oldRoot, 1001);
-    indices.set(newRoot, 1001);
-  });
-
-  setBenchOpts({
-    minMs: 30 * 1000,
-    maxMs: 40 * 1000,
-  });
-
-  itBench({
-    id: "computeDeltas",
-    beforeEach: () => {
-      const votes: VoteTracker[] = [];
-      const epoch = originalState.epochCtx.currentShuffling.epoch;
-      const committee = originalState.epochCtx.getBeaconCommittee(computeStartSlotAtEpoch(epoch), 0);
-      for (let i = 0; i < 250000; i++) {
-        if (committee.includes(i)) {
-          votes.push({
-            currentRoot: oldRoot,
-            nextRoot: newRoot,
-            nextEpoch: epoch,
-          });
-        } else {
-          votes.push({
-            currentRoot: oldRoot,
-            nextRoot: oldRoot,
-            nextEpoch: epoch - 1,
-          });
-        }
+      for (let i = 0; i < numValidator; i++) {
+        oldBalances[i] = 32;
+        newBalances[i] = 32;
       }
-      return votes;
-    },
-    fn: (votes) => {
-      computeDeltas(indices, votes, oldBalances, newBalances, new Set());
-    },
-  });
+    });
 
-  itBench({
-    id: "computeProposerBoostScoreFromBalances",
-    fn: () => {
-      computeProposerBoostScoreFromBalances(newBalances, {slotsPerEpoch: 32, proposerScoreBoost: 70});
-    },
-  });
+    setBenchOpts({
+      minMs: 30 * 1000,
+      maxMs: 40 * 1000,
+    });
+
+    for (const numProtoNode of [oneHourProtoNodes, fourHourProtoNodes, oneDayProtoNodes]) {
+      const indices: Map<string, number> = new Map<string, number>();
+      for (let i = 0; i < numProtoNode; i++) {
+        indices.set(toHexString(crypto.randomBytes(32)), i);
+      }
+      indices.set(oldRoot, Math.floor(numProtoNode / 2));
+      indices.set(newRoot, Math.floor(numProtoNode / 2) + 1);
+      itBench({
+        id: `computeDeltas ${numValidator} validators ${numProtoNode} proto nodes`,
+        beforeEach: () => {
+          const votes: VoteTracker[] = [];
+          const epoch = 100_000;
+          for (let i = 0; i < numValidator; i++) {
+            votes.push({
+              currentRoot: oldRoot,
+              nextRoot: newRoot,
+              nextEpoch: epoch,
+            });
+          }
+          return votes;
+        },
+        fn: (votes) => {
+          computeDeltas(indices, votes, oldBalances, newBalances, new Set());
+        },
+      });
+    }
+  }
+
+  for (const numValidator of numValidators) {
+    itBench({
+      id: `computeProposerBoostScoreFromBalances ${numValidator} validators`,
+      fn: () => {
+        computeProposerBoostScoreFromBalances(newBalances, {slotsPerEpoch: 32, proposerScoreBoost: 70});
+      },
+    });
+  }
 });
