@@ -137,6 +137,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.metrics = metrics;
     this.blsVerifyAllInQueue = options.blsVerifyAllInQueue ?? false;
     this.blsPoolType = options.blsPoolType ?? BlsPoolType.workers;
+    this.logger.info(`Starting BLS with blsPoolType: ${this.blsPoolType}`);
 
     // Use compressed for herumi for now.
     // THe worker is not able to deserialize from uncompressed
@@ -303,7 +304,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         .then((workerApi) => {
           workerDescriptor.status = {code: WorkerStatusCode.idle, workerApi};
           // Potentially run jobs that were queued before initialization of the first worker
-          setTimeout(this.runJobWorkerPool, 0);
+          setTimeout(this.runJob, 0);
         })
         .catch((error: Error) => {
           workerDescriptor.status = {code: WorkerStatusCode.initializationError, error};
@@ -370,28 +371,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   }
 
   /**
-   * Grab pending work up to a max number of signatures
-   */
-  private prepareWork(): QueuedJob[] {
-    const jobs: QueuedJob[] = [];
-    let totalSigs = 0;
-
-    while (totalSigs < MAX_SIGNATURE_SETS_PER_JOB) {
-      const job = this.jobsForNextRun.shift();
-      if (!job) {
-        // TODO: (matthewkeil) should this pull from buffer.prioritizedJobs and
-        //       then buffer.jobs until full run?
-        break;
-      }
-
-      jobs.push(job);
-      totalSigs += countSignatures(job);
-    }
-
-    return jobs;
-  }
-
-  /**
    * Add all buffered jobs to the job queue and potentially run them immediately
    */
   private runBufferedJobs = (): void => {
@@ -406,19 +385,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       setTimeout(this.runJob, 0);
     }
   };
-
-  private retryJobItemSameMessage(job: QueuedJobSameMessage): void {
-    // Create new jobs for each pubkey set, and Promise.all all the results
-    for (const j of jobItemSameMessageToMultiSet(job)) {
-      if (j.opts.priority) {
-        this.jobsForNextRun.unshift(j);
-      } else {
-        this.jobsForNextRun.push(j);
-      }
-    }
-    this.metrics?.bls.threadPool.sameMessageRetryJobs.inc(1);
-    this.metrics?.bls.threadPool.sameMessageRetrySets.inc(job.sets.length);
-  }
 
   private runJob = async (): Promise<void> => {
     if (this.closed) {
@@ -616,13 +582,15 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       const latencyFromWorkerSec = Number(jobEndNs - workEndNs) / 1e9;
 
       this.metrics?.bls.threadPool.timePerSigSet.observe(workerJobTimeSec / startedSigSets);
-      this.metrics?.bls.threadPool.jobsWorkerTime.inc({workerId}, workerJobTimeSec);
-      this.metrics?.bls.threadPool.latencyToWorker.observe(latencyToWorkerSec);
-      this.metrics?.bls.threadPool.latencyFromWorker.observe(latencyFromWorkerSec);
       this.metrics?.bls.threadPool.successJobsSignatureSetsCount.inc(successCount);
       this.metrics?.bls.threadPool.errorJobsSignatureSetsCount.inc(errorCount);
       this.metrics?.bls.threadPool.batchRetries.inc(batchRetries);
       this.metrics?.bls.threadPool.batchSigsSuccess.inc(batchSigsSuccess);
+      if (this.blsPoolType === BlsPoolType.workers) {
+        this.metrics?.bls.threadPool.jobsWorkerTime.inc({workerId}, workerJobTimeSec);
+        this.metrics?.bls.threadPool.latencyToWorker.observe(latencyToWorkerSec);
+        this.metrics?.bls.threadPool.latencyFromWorker.observe(latencyFromWorkerSec);
+      }
     } catch (e) {
       // Worker communications should never reject
       if (!this.closed) {
@@ -634,6 +602,41 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       }
     }
   };
+
+  /**
+   * Grab pending work up to a max number of signatures
+   */
+  private prepareWork(): QueuedJob[] {
+    const jobs: QueuedJob[] = [];
+    let totalSigs = 0;
+
+    while (totalSigs < MAX_SIGNATURE_SETS_PER_JOB) {
+      const job = this.jobsForNextRun.shift();
+      if (!job) {
+        // TODO: (matthewkeil) should this pull from buffer.prioritizedJobs and
+        //       then buffer.jobs until full run?
+        break;
+      }
+
+      jobs.push(job);
+      totalSigs += countSignatures(job);
+    }
+
+    return jobs;
+  }
+
+  private retryJobItemSameMessage(job: QueuedJobSameMessage): void {
+    // Create new jobs for each pubkey set, and Promise.all all the results
+    for (const j of jobItemSameMessageToMultiSet(job)) {
+      if (j.opts.priority) {
+        this.jobsForNextRun.unshift(j);
+      } else {
+        this.jobsForNextRun.push(j);
+      }
+    }
+    this.metrics?.bls.threadPool.sameMessageRetryJobs.inc(1);
+    this.metrics?.bls.threadPool.sameMessageRetrySets.inc(job.sets.length);
+  }
 
   /** For testing */
   private async waitTillInitialized(): Promise<void> {
