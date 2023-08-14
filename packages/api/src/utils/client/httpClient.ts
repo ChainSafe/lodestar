@@ -276,7 +276,7 @@ export class HttpClient implements IHttpClient {
     const timer = this.metrics?.requestTime.startTimer({routeId});
 
     try {
-      const url = urlJoin(baseUrl, opts.url) + (opts.query ? "?" + stringifyQuery(opts.query) : "");
+      const url = new URL(urlJoin(baseUrl, opts.url) + (opts.query ? "?" + stringifyQuery(opts.query) : ""));
 
       const headers =
         extraHeaders && opts.headers ? {...extraHeaders, ...opts.headers} : opts.headers || extraHeaders || {};
@@ -285,6 +285,12 @@ export class HttpClient implements IHttpClient {
       }
       if (bearerToken && headers["Authorization"] === undefined) {
         headers["Authorization"] = `Bearer ${bearerToken}`;
+      }
+      if ((url.username || url.password) && headers["Authorization"] === undefined) {
+        headers["Authorization"] = `Basic ${toBase64(`${url.username}:${url.password}`)}`;
+        // Remove the username and password from the URL
+        url.username = "";
+        url.password = "";
       }
 
       this.logger?.debug("HttpClient request", {routeId});
@@ -298,7 +304,7 @@ export class HttpClient implements IHttpClient {
 
       if (!res.ok) {
         const errBody = await res.text();
-        throw new HttpError(`${res.statusText}: ${getErrorMessage(errBody)}`, res.status, url);
+        throw new HttpError(`${res.statusText}: ${getErrorMessage(errBody)}`, res.status, url.toString());
       }
 
       const streamTimer = this.metrics?.streamTime.startTimer({routeId});

@@ -135,6 +135,22 @@ describe("httpClient json client", () => {
     }
   });
 
+  it("should set user credentials in URL as Authorization header", async () => {
+    const {baseUrl} = await getServer({
+      ...testRoute,
+      handler: async (req) => {
+        expect(req.headers.authorization).to.equal("Basic dXNlcjpwYXNzd29yZA==");
+        return {};
+      },
+    });
+    const url = new URL(baseUrl);
+    url.username = "user";
+    url.password = "password";
+    const httpClient = new HttpClient({baseUrl: url.toString()});
+
+    await httpClient.json(testRoute);
+  });
+
   it("should handle aborting request with timeout", async () => {
     const {baseUrl} = await getServer({
       ...testRoute,
