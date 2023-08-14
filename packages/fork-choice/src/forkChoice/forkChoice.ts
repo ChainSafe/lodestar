@@ -672,6 +672,11 @@ export class ForkChoice implements IForkChoice {
     const prunedNodes = this.protoArray.maybePrune(finalizedRoot);
     const prunedCount = prunedNodes.length;
     for (const vote of this.votes) {
+      // validator has never voted
+      if (vote === undefined) {
+        continue;
+      }
+
       if (vote.currentIndex !== null) {
         if (vote.currentIndex >= prunedCount) {
           vote.currentIndex -= prunedCount;
@@ -680,6 +685,7 @@ export class ForkChoice implements IForkChoice {
           vote.currentIndex = null;
         }
       }
+
       if (vote.nextIndex !== null) {
         if (vote.nextIndex >= prunedCount) {
           vote.nextIndex -= prunedCount;
