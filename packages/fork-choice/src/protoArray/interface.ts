@@ -10,7 +10,8 @@ export const HEX_ZERO_HASH = "0x000000000000000000000000000000000000000000000000
  */
 export type VoteTracker = {
   currentIndex: number | null;
-  nextIndex: number;
+  // if a vode is out of date (the voted index was in the past while proto array is pruned), it will be set to null
+  nextIndex: number | null;
   nextEpoch: Epoch;
 };
 

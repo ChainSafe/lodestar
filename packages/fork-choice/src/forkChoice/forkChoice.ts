@@ -555,7 +555,7 @@ export class ForkChoice implements IForkChoice {
     }
     return {
       epoch: vote.nextEpoch,
-      root: this.protoArray.nodes[vote.nextIndex].blockRoot,
+      root: vote.nextIndex === null ? HEX_ZERO_HASH : this.protoArray.nodes[vote.nextIndex].blockRoot,
     };
   }
 
@@ -673,9 +673,21 @@ export class ForkChoice implements IForkChoice {
     const prunedCount = prunedNodes.length;
     for (const vote of this.votes) {
       if (vote.currentIndex !== null) {
-        vote.currentIndex -= prunedCount;
+        if (vote.currentIndex >= prunedCount) {
+          vote.currentIndex -= prunedCount;
+        } else {
+          // the vote was for a pruned proto node
+          vote.currentIndex = null;
+        }
       }
-      vote.nextIndex -= prunedCount;
+      if (vote.nextIndex !== null) {
+        if (vote.nextIndex >= prunedCount) {
+          vote.nextIndex -= prunedCount;
+        } else {
+          // the vote was for a pruned proto node
+          vote.nextIndex = null;
+        }
+      }
     }
     return prunedNodes;
   }
