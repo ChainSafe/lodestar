@@ -186,7 +186,7 @@ export class ForkChoice implements IForkChoice {
     const oldBalances = this.balances;
     const newBalances = this.fcStore.justified.balances;
     const deltas = computeDeltas(
-      this.protoArray.indices,
+      this.protoArray.indices.size,
       this.votes,
       oldBalances,
       newBalances,
@@ -555,7 +555,7 @@ export class ForkChoice implements IForkChoice {
     }
     return {
       epoch: vote.nextEpoch,
-      root: vote.nextRoot,
+      root: this.protoArray.nodes[vote.nextIndex].blockRoot,
     };
   }
 
@@ -665,8 +665,19 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.isDescendant(ancestorRoot, descendantRoot);
   }
 
+  /**
+   * All indices in votes are relative to proto array so always keep it up to date
+   */
   prune(finalizedRoot: RootHex): ProtoBlock[] {
-    return this.protoArray.maybePrune(finalizedRoot);
+    const prunedNodes = this.protoArray.maybePrune(finalizedRoot);
+    const prunedCount = prunedNodes.length;
+    for (const vote of this.votes) {
+      if (vote.currentIndex !== null) {
+        vote.currentIndex -= prunedCount;
+      }
+      vote.nextIndex -= prunedCount;
+    }
+    return prunedNodes;
   }
 
   setPruneThreshold(threshold: number): void {
@@ -1091,14 +1102,20 @@ export class ForkChoice implements IForkChoice {
    */
   private addLatestMessage(validatorIndex: ValidatorIndex, nextEpoch: Epoch, nextRoot: RootHex): void {
     const vote = this.votes[validatorIndex];
+    // should not happen, attestation is validated before this step
+    const nextIndex = this.protoArray.indices.get(nextRoot);
+    if (nextIndex === undefined) {
+      throw new Error(`Could not find proto index for nextRoot ${nextRoot}`);
+    }
+
     if (vote === undefined) {
       this.votes[validatorIndex] = {
-        currentRoot: HEX_ZERO_HASH,
-        nextRoot,
+        currentIndex: null,
+        nextIndex,
         nextEpoch,
       };
     } else if (nextEpoch > vote.nextEpoch) {
-      vote.nextRoot = nextRoot;
+      vote.nextIndex = nextIndex;
       vote.nextEpoch = nextEpoch;
     }
     // else its an old vote, don't count it

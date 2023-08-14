@@ -1,15 +1,17 @@
 import {Epoch, Slot, RootHex, UintNum64} from "@lodestar/types";
 
+// TODO: remove
 // RootHex is a root as a hex string
 // Used for lightweight and easy comparison
 export const HEX_ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 /**
  * Simplified 'latest message' with previous message
+ * The index is relative to ProtoArray indices
  */
 export type VoteTracker = {
-  currentRoot: RootHex;
-  nextRoot: RootHex;
+  currentIndex: number | null;
+  nextIndex: number;
   nextEpoch: Epoch;
 };
 
