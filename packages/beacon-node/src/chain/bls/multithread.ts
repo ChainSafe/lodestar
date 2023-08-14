@@ -147,6 +147,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     // `Error: err _wrapDeserialize`
     if (this.blsPoolType === BlsPoolType.workers) {
       this.workers = this.createWorkers(defaultPoolSize);
+      this.logger.info(`BLS worker pool size: ${this.workers.length}`);
     }
 
     if (metrics) {
