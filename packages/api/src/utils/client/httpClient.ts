@@ -286,8 +286,10 @@ export class HttpClient implements IHttpClient {
       if (bearerToken && headers["Authorization"] === undefined) {
         headers["Authorization"] = `Bearer ${bearerToken}`;
       }
-      if ((url.username || url.password) && headers["Authorization"] === undefined) {
-        headers["Authorization"] = `Basic ${toBase64(`${url.username}:${url.password}`)}`;
+      if (url.username || url.password) {
+        if (headers["Authorization"] === undefined) {
+          headers["Authorization"] = `Basic ${toBase64(`${url.username}:${url.password}`)}`;
+        }
         // Remove the username and password from the URL
         url.username = "";
         url.password = "";
