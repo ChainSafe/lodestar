@@ -4,9 +4,9 @@ import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-key
 import {toHexString} from "@chainsafe/ssz";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {externalSignerGetKeys, Signer, SignerType} from "@lodestar/validator";
-import {LogLevel, Logger} from "@lodestar/utils";
+import {LogLevel, Logger, isValidHttpUrl} from "@lodestar/utils";
 import {defaultNetwork, GlobalArgs} from "../../../options/index.js";
-import {assertValidPubkeysHex, isValidHttpUrl, parseRange, YargsError} from "../../../util/index.js";
+import {assertValidPubkeysHex, parseRange, YargsError} from "../../../util/index.js";
 import {getAccountPaths} from "../paths.js";
 import {IValidatorCliArgs} from "../options.js";
 import {PersistedKeysBackend} from "../keymanager/persistedKeys.js";

@@ -15,6 +15,7 @@ export * from "./sleep.js";
 export * from "./sort.js";
 export * from "./timeout.js";
 export {RecursivePartial, bnToNum} from "./types.js";
+export * from "./validation.js";
 export * from "./verifyMerkleBranch.js";
 export * from "./promise.js";
 export * from "./waitFor.js";
