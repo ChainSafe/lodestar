@@ -1,17 +1,7 @@
-import winston, {Logger} from "winston";
-// eslint-disable-next-line import/no-extraneous-dependencies
-import {LEVEL} from "triple-beam";
-import {LogLevel} from "../interface.js";
+import {Logger, transports} from "winston";
+import {LEVEL, LogLevel, WinstonLogInfo} from "../interface.js";
 
-interface DefaultMeta {
-  module: string;
-}
-
-interface LogInfo extends DefaultMeta {
-  [LEVEL]: LogLevel;
-}
-
-export class ConsoleDynamicLevel extends winston.transports.Console {
+export class ConsoleDynamicLevel extends transports.Console {
   private readonly levelByModule = new Map<string, LogLevel>();
   private readonly defaultLevel: LogLevel;
 
@@ -19,7 +9,7 @@ export class ConsoleDynamicLevel extends winston.transports.Console {
   private readonly levels!: Record<LogLevel, number>;
   private parent?: Logger;
 
-  constructor(opts: {defaultLevel: LogLevel} & winston.transports.ConsoleTransportOptions) {
+  constructor(opts: {defaultLevel: LogLevel} & transports.ConsoleTransportOptions) {
     super(opts);
 
     this.defaultLevel = opts.defaultLevel;
@@ -36,7 +26,7 @@ export class ConsoleDynamicLevel extends winston.transports.Console {
     return this.levelByModule.delete(module);
   }
 
-  _write(info: LogInfo, enc: BufferEncoding, callback: (error?: Error | null | undefined) => void): void {
+  _write(info: WinstonLogInfo, enc: BufferEncoding, callback: (error?: Error | null | undefined) => void): void {
     const moduleLevel = this.levelByModule.get(info.module) ?? this.defaultLevel;
 
     // Min number is highest prio log level

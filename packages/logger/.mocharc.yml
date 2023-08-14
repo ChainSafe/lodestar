@@ -1,3 +1,5 @@
 colors: true
 node-option:
   - "loader=ts-node/esm"
+require:
+  - ./test/setup.ts
