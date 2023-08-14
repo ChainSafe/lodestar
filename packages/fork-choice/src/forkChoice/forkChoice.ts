@@ -186,7 +186,7 @@ export class ForkChoice implements IForkChoice {
     const oldBalances = this.balances;
     const newBalances = this.fcStore.justified.balances;
     const deltas = computeDeltas(
-      this.protoArray.indices.size,
+      this.protoArray.nodes.length,
       this.votes,
       oldBalances,
       newBalances,
