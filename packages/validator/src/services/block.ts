@@ -210,7 +210,7 @@ export class BlockProposingService {
       //
       // So if builder is disabled ignore builder selection of builderonly if caused by user mistake
       !isBuilderEnabled || builderSelection !== BuilderSelection.BuilderOnly
-        ? this.produceBlock(slot, randaoReveal, graffiti)
+        ? this.produceBlock(slot, randaoReveal, graffiti, expectedFeeRecipient)
         : null;
 
     let blindedBlock, fullBlock;
@@ -357,7 +357,8 @@ export class BlockProposingService {
   private produceBlock = async (
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: string
+    graffiti: string,
+    expectedFeeRecipient?: string
   ): Promise<{block: allForks.BeaconBlock; blobs?: deneb.BlobSidecars; blockValue: Wei}> => {
     const fork = this.config.getForkName(slot);
     switch (fork) {
@@ -367,11 +368,12 @@ export class BlockProposingService {
         const {data: block, blockValue} = res.response;
         return {block, blockValue};
       }
+
       // All subsequent forks are expected to use v2 too
       case ForkName.altair:
       case ForkName.bellatrix:
       case ForkName.capella: {
-        const res = await this.api.validator.produceBlockV2(slot, randaoReveal, graffiti);
+        const res = await this.api.validator.produceBlockV2(slot, randaoReveal, graffiti, expectedFeeRecipient);
         ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
 
         const {response} = res;
@@ -384,7 +386,7 @@ export class BlockProposingService {
 
       case ForkName.deneb:
       default: {
-        const res = await this.api.validator.produceBlockV2(slot, randaoReveal, graffiti);
+        const res = await this.api.validator.produceBlockV2(slot, randaoReveal, graffiti, expectedFeeRecipient);
         ApiError.assert(res, "Failed to produce block: validator.produceBlockV2");
 
         const {response} = res;

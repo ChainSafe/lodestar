@@ -201,7 +201,8 @@ export type Api = {
   produceBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: string
+    graffiti: string,
+    feeRecipient?: string
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.BeaconBlock; blockValue: Wei}},
@@ -222,7 +223,8 @@ export type Api = {
   produceBlockV2(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: string
+    graffiti: string,
+    feeRecipient?: string
   ): Promise<
     ApiClientResponse<
       {[HttpStatusCode.OK]: {data: allForks.BeaconBlock | BlockContents; version: ForkName; blockValue: Wei}},
@@ -233,7 +235,8 @@ export type Api = {
   produceBlindedBlock(
     slot: Slot,
     randaoReveal: BLSSignature,
-    graffiti: string
+    graffiti: string,
+    feeRecipient?: string
   ): Promise<
     ApiClientResponse<
       {
@@ -428,7 +431,7 @@ export type ReqTypes = {
   getProposerDuties: {params: {epoch: Epoch}};
   getSyncCommitteeDuties: {params: {epoch: Epoch}; body: U64Str[]};
   produceBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
-  produceBlockV2: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
+  produceBlockV2: {params: {slot: number}; query: {randao_reveal: string; graffiti: string; fee_recipient?: string}};
   produceBlindedBlock: {params: {slot: number}; query: {randao_reveal: string; graffiti: string}};
   produceAttestationData: {query: {slot: number; committee_index: number}};
   produceSyncCommitteeContribution: {query: {slot: number; subcommittee_index: number; beacon_block_root: string}};
@@ -484,15 +487,20 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     {jsonCase: "eth2"}
   );
 
-  const produceBlock: ReqSerializers<Api, ReqTypes>["produceBlock"] = {
-    writeReq: (slot, randaoReveal, graffiti) => ({
+  const produceBlock: ReqSerializers<Api, ReqTypes>["produceBlockV2"] = {
+    writeReq: (slot, randaoReveal, graffiti, feeRecipient) => ({
       params: {slot},
-      query: {randao_reveal: toHexString(randaoReveal), graffiti: toGraffitiHex(graffiti)},
+      query: {randao_reveal: toHexString(randaoReveal), graffiti: toGraffitiHex(graffiti), fee_recipient: feeRecipient},
     }),
-    parseReq: ({params, query}) => [params.slot, fromHexString(query.randao_reveal), fromGraffitiHex(query.graffiti)],
+    parseReq: ({params, query}) => [
+      params.slot,
+      fromHexString(query.randao_reveal),
+      fromGraffitiHex(query.graffiti),
+      query.fee_recipient,
+    ],
     schema: {
       params: {slot: Schema.UintRequired},
-      query: {randao_reveal: Schema.StringRequired, graffiti: Schema.String},
+      query: {randao_reveal: Schema.StringRequired, graffiti: Schema.String, fee_recipient: Schema.String},
     },
   };
 
