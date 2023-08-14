@@ -1,7 +1,7 @@
 import {setMaxListeners} from "node:events";
 import {Registry} from "prom-client";
 
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 import {BeaconConfig} from "@lodestar/config";
 import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";

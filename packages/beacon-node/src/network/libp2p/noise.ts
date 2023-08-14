@@ -1,4 +1,4 @@
-import type {ConnectionEncrypter} from "@libp2p/interface-connection-encrypter";
+import type {ConnectionEncrypter} from "@libp2p/interface/connection-encrypter";
 import {newInstance, ChaCha20Poly1305} from "@chainsafe/as-chacha20poly1305";
 import {ICryptoInterface, noise, pureJsCrypto} from "@chainsafe/libp2p-noise";
 import {digest} from "@chainsafe/as-sha256";

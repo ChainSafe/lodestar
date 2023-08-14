@@ -1,6 +1,6 @@
 import {pipe} from "it-pipe";
-import {PeerId} from "@libp2p/interface-peer-id";
-import {Stream} from "@libp2p/interface-connection";
+import {PeerId} from "@libp2p/interface/peer-id";
+import {Stream} from "@libp2p/interface/connection";
 import {Uint8ArrayList} from "uint8arraylist";
 import {Logger, TimeoutError, withTimeout} from "@lodestar/utils";
 import {prettyPrintPeerId} from "../utils/index.js";
@@ -124,7 +124,7 @@ export async function handleRequest({
   // If streak.sink throws, libp2p-mplex will close stream.source
   // If `requestDecode()` throws the stream.source must be closed manually
   // To ensure the stream.source it-pushable instance is always closed, stream.close() is called always
-  stream.close();
+  await stream.close();
 
   // TODO: It may happen that stream.sink returns before returning stream.source first,
   // so you never see "Resp received request" in the logs and the response ends without

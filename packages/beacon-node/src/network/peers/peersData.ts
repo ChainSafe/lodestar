@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 import {altair} from "@lodestar/types";
 import {Encoding} from "@lodestar/reqresp";
 import {ClientKind} from "./client.js";

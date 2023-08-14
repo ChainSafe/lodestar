@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 import {config} from "@lodestar/config/default";
 import {phase0} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";

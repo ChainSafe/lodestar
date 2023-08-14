@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 import all from "it-all";
 import {pipe} from "it-pipe";
 import {expect} from "chai";
