@@ -1,8 +1,10 @@
 import {expect} from "chai";
-import {DropType, GossipQueue, QueueType} from "../../../../src/network/processor/gossipQueues.js";
+import {LinearGossipQueue} from "../../../../../src/network/processor/gossipQueues/linear.js";
+import {DropType} from "../../../../../src/network/processor/gossipQueues/types.js";
+import {QueueType} from "../../../../../src/util/queue/index.js";
 
-describe("GossipQueues - drop by ratio", () => {
-  const gossipQueue = new GossipQueue<number>({
+describe("DefaultGossipQueues - drop by ratio", () => {
+  const gossipQueue = new LinearGossipQueue<number>({
     maxLength: 10,
     type: QueueType.LIFO,
     dropOpts: {type: DropType.ratio, start: 0.1, step: 0.2},
@@ -66,7 +68,7 @@ describe("GossipQueues - drop by ratio", () => {
 });
 
 describe("GossipQueues - drop by count", () => {
-  const gossipQueue = new GossipQueue<number>({
+  const gossipQueue = new LinearGossipQueue<number>({
     maxLength: 10,
     type: QueueType.LIFO,
     dropOpts: {type: DropType.count, count: 1},

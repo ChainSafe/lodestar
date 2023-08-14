@@ -10,7 +10,7 @@ import {ClockEvent} from "../../util/clock.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
 import {GossipHandlers, GossipType, GossipValidatorFn} from "../gossip/interface.js";
 import {PeerIdStr} from "../peers/index.js";
-import {createGossipQueues} from "./gossipQueues.js";
+import {createGossipQueues} from "./gossipQueues/index.js";
 import {PendingGossipsubMessage} from "./types.js";
 import {ValidatorFnsModules, GossipHandlerOpts, getGossipHandlers} from "./gossipHandlers.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
