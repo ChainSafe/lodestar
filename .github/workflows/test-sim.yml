@@ -56,6 +56,10 @@ jobs:
         run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:multifork
         working-directory: packages/cli
 
+      - name: Sim tests multi client
+        run: DEBUG='${{github.event.inputs.debug}}' yarn test:sim:multiclient
+        working-directory: packages/cli
+
       - name: Sim tests endpoints
         run: yarn test:sim:endpoints
         working-directory: packages/cli
