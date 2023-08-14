@@ -1,5 +1,5 @@
 import {fetch} from "@lodestar/api";
-import {ErrorAborted, TimeoutError, retry} from "@lodestar/utils";
+import {ErrorAborted, TimeoutError, isValidHttpUrl, retry} from "@lodestar/utils";
 import {IGauge, IHistogram} from "../../metrics/interface.js";
 import {IJson, RpcPayload} from "../interface.js";
 import {encodeJwtToken} from "./jwt.js";
@@ -91,6 +91,9 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     for (const [i, url] of urls.entries()) {
       if (!url) {
         throw Error(`JsonRpcHttpClient.urls[${i}] is empty or undefined: ${url}`);
+      }
+      if (!isValidHttpUrl(url)) {
+        throw Error(`JsonRpcHttpClient.urls[${i}] must be a valid URL: ${url}`);
       }
     }
 
@@ -188,8 +191,6 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    * Fetches JSON and throws detailed errors in case the HTTP request is not ok
    */
   private async fetchJsonOneUrl<R, T = unknown>(url: string, json: T, opts?: ReqOpts): Promise<R> {
-    if (!url) throw Error(`Empty or undefined JSON RPC HTTP client url: ${url}`);
-
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), opts?.timeout ?? this.opts?.timeout ?? REQUEST_TIMEOUT);
 
