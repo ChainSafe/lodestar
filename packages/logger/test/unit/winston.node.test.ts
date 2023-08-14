@@ -2,9 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import {expect} from "chai";
 import {LogLevel} from "@lodestar/utils";
+import {stubLoggerForProcessStd} from "@lodestar/test-utils/mocha";
 import {TimestampFormatCode} from "../../src/index.js";
 import {getNodeLogger} from "../../src/node.js";
-import {stubLoggerForProcessStd} from "../utils/chai.js";
 import {readFileWhenExists} from "../utils/files.js";
 
 describe("winston logger", () => {

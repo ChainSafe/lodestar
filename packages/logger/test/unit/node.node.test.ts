@@ -1,9 +1,9 @@
 import {expect} from "chai";
 import {LogLevel} from "@lodestar/utils";
+import {stubLoggerForProcessStd} from "@lodestar/test-utils/mocha";
 import {TimestampFormatCode, logFormats} from "../../src/index.js";
 import {getNodeLogger} from "../../src/node.js";
 import {formatsTestCases} from "../fixtures/loggerFormats.js";
-import {stubLoggerForProcessStd} from "../utils/chai.js";
 
 describe("node logger", () => {
   describe("format and options", () => {

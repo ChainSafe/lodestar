@@ -1,8 +1,8 @@
 import {expect} from "chai";
 import {LogLevel} from "@lodestar/utils";
+import {stubLoggerForConsole} from "@lodestar/test-utils/mocha";
 import {TimestampFormatCode, logFormats} from "../../src/index.js";
 import {formatsTestCases} from "../fixtures/loggerFormats.js";
-import {stubLoggerForConsole} from "../utils/chai.js";
 import {getEnvLogger} from "../../src/env.js";
 
 describe("env logger", () => {
