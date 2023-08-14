@@ -2,14 +2,37 @@ import winston from "winston";
 import Transport from "winston-transport";
 import {LogLevel, Logger} from "@lodestar/utils";
 import {createWinstonLogger} from "./winston.js";
+import {LEVEL, MESSAGE, TimestampFormat, WinstonLogInfo} from "./interface.js";
 
 export type BrowserLoggerOpts = {
+  /**
+   * Module prefix for all logs
+   */
   module?: string;
   level: LogLevel;
+  /**
+   * Rendering format for logs, defaults to "human"
+   */
+  format?: "human" | "json";
+  /**
+   * Enables relative to genesis timestamp format
+   * ```
+   * timestampFormat = {
+   *   format: TimestampFormatCode.EpochSlot,
+   *   genesisTime: args.logFormatGenesisTime,
+   *   secondsPerSlot: config.SECONDS_PER_SLOT,
+   *   slotsPerEpoch: SLOTS_PER_EPOCH,
+   * }
+   * ```
+   */
+  timestampFormat?: TimestampFormat;
 };
 
 export function getBrowserLogger(opts: BrowserLoggerOpts): Logger {
-  return createWinstonLogger({level: opts.level, module: opts.module ?? ""}, [new BrowserConsole({level: opts.level})]);
+  return createWinstonLogger(
+    {level: opts.level, module: opts.module ?? "", format: opts.format, timestampFormat: opts.timestampFormat},
+    [new BrowserConsole({level: opts.level})]
+  );
 }
 
 class BrowserConsole extends Transport {
@@ -37,13 +60,14 @@ class BrowserConsole extends Transport {
     this.level = opts?.level && this.levels.hasOwnProperty(opts.level) ? opts.level : "info";
   }
 
-  log(method: string | number, message: unknown): void {
+  log(info: WinstonLogInfo, callback: () => void): void {
     setTimeout(() => {
-      this.emit("logged", method);
+      this.emit("logged", info);
     }, 0);
 
-    const val = this.levels[method as LogLevel];
-    const mappedMethod = this.methods[method as LogLevel];
+    const val = this.levels[info[LEVEL]];
+    const mappedMethod = this.methods[info[LEVEL]];
+    const message = info[MESSAGE];
 
     if (val <= this.levels[this.level as LogLevel]) {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -51,5 +75,7 @@ class BrowserConsole extends Transport {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call, no-console
       console[mappedMethod](message);
     }
+
+    callback();
   }
 }
