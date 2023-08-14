@@ -17,7 +17,7 @@ export function isFetchError(e: unknown): e is FetchError {
   return e instanceof FetchError;
 }
 
-export type FetchErrorType = "failed" | "input" | "aborted" | "unknown";
+export type FetchErrorType = "failed" | "input" | "aborted" | "timeout" | "unknown";
 
 type FetchErrorCause = NativeFetchFailedError["cause"] | NativeFetchInputError["cause"];
 
@@ -42,6 +42,10 @@ export class FetchError extends Error {
       super(`Request to ${url.toString()} was aborted`);
       this.type = "aborted";
       this.code = "ERR_ABORTED";
+    } else if (isNativeFetchTimeoutError(e)) {
+      super(`Request to ${url.toString()} timed out`);
+      this.type = "timeout";
+      this.code = "ERR_TIMEOUT";
     } else {
       super((e as Error).message);
       this.type = "unknown";
@@ -120,6 +124,15 @@ type NativeFetchAbortError = DOMException & {
   name: "AbortError";
 };
 
+/**
+ * ```
+ * DOMException [TimeoutError]: The operation was aborted due to timeout
+ * ```
+ */
+type NativeFetchTimeoutError = DOMException & {
+  name: "TimeoutError";
+};
+
 function isNativeFetchError(e: unknown): e is NativeFetchError {
   return e instanceof TypeError && (e as NativeFetchError).cause instanceof Error;
 }
@@ -133,5 +146,9 @@ function isNativeFetchInputError(e: unknown): e is NativeFetchInputError {
 }
 
 function isNativeFetchAbortError(e: unknown): e is NativeFetchAbortError {
-  return e instanceof DOMException && e.name === "AbortError";
+  return e instanceof DOMException && (e as NativeFetchAbortError).name === "AbortError";
+}
+
+function isNativeFetchTimeoutError(e: unknown): e is NativeFetchTimeoutError {
+  return e instanceof DOMException && (e as NativeFetchTimeoutError).name === "TimeoutError";
 }
