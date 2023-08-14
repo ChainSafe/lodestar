@@ -82,7 +82,8 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     );
   }
 
-  const job = runner.create([
+  const validatorJob = runner.create(validatorClientsJobs);
+  const beaconJob = runner.create([
     {
       id,
       bootstrap: async () => {
@@ -108,7 +109,6 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
           return {ok: false, reason: (err as Error).message, checkId: "eth/v1/node/health query"};
         }
       },
-      children: validatorClientsJobs,
     },
   ]);
 
@@ -119,7 +119,8 @@ export const generateLodestarBeaconNode: CLClientGenerator<CLClient.Lodestar> = 
     keys,
     api: getClient({baseUrl: `http://127.0.0.1:${ports.cl.httpPort}`}, {config}),
     keyManager: keyManagerGetClient({baseUrl: `http://127.0.0.1:${ports.cl.keymanagerPort}`}, {config}),
-    job,
+    beaconJob: opts.beacon ? beaconJob : undefined,
+    validatorJob: opts.validator ? validatorJob : undefined,
   };
 };
 

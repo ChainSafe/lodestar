@@ -132,6 +132,9 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
     );
   }
 
+  const beaconJob = runner.create([{...beaconNodeJob, children: [...validatorClientsJobs]}]);
+  const validatorJob = runner.create(validatorClientsJobs);
+
   const httpClient = new HttpClient({baseUrl: `http://127.0.0.1:${httpPort}`});
   const api = getClient({baseUrl: `http://127.0.0.1:${httpPort}`}, {config}) as unknown as LighthouseAPI;
   api.lighthouse = {
@@ -147,7 +150,8 @@ export const generateLighthouseBeaconNode: CLClientGenerator<CLClient.Lighthouse
     keys,
     api,
     keyManager: keyManagerGetClient({baseUrl: `http://127.0.0.1:${keymanagerPort}`}, {config}),
-    job: runner.create([{...beaconNodeJob, children: [...validatorClientsJobs]}]),
+    beaconJob: opts.beacon ? beaconJob : undefined,
+    validatorJob: opts.validator ? validatorJob : undefined,
   };
 };
 

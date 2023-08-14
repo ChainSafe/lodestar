@@ -8,15 +8,42 @@ import {createCLNodePaths} from "../utils/paths.js";
 import {generateLighthouseBeaconNode} from "./lighthouse.js";
 import {generateLodestarBeaconNode} from "./lodestar.js";
 
-export async function createCLNode<C extends CLClient>(
+type GeneratorRequiredOptions<C extends CLClient> = AtLeast<
+  CLClientGeneratorOptions<C>,
+  "id" | "paths" | "config" | "nodeIndex" | "genesisTime"
+> & {
+  genesisState?: BeaconStateAllForks;
+  runner: IRunner;
+};
+
+export async function createCLNode<B extends CLClient, V extends CLClient>({
+  beacon,
+  beaconOptions,
+  validator,
+  validatorOptions,
+}: {
+  beacon: B;
+  beaconOptions: GeneratorRequiredOptions<B>;
+  validator: V;
+  validatorOptions: GeneratorRequiredOptions<V>;
+}): Promise<CLNode> {
+  const beaconNode = await createCLNodeComponent(beacon, beaconOptions, "beacon");
+  const validatorNode = await createCLNodeComponent(validator, validatorOptions, "validator");
+
+  return {
+    ...beaconNode,
+    beaconJob: beaconNode.beaconJob,
+    validatorJob: validatorNode.validatorJob,
+  };
+}
+
+async function createCLNodeComponent<C extends CLClient>(
   client: C,
-  options: AtLeast<CLClientGeneratorOptions<C>, "id" | "paths" | "config" | "paths" | "nodeIndex" | "genesisTime"> & {
-    genesisState?: BeaconStateAllForks;
-    runner: IRunner;
-  }
+  options: GeneratorRequiredOptions<C>,
+  component: "beacon" | "validator"
 ): Promise<CLNode> {
   const {runner, config, genesisState} = options;
-  const clId = `${options.id}-cl-${client}`;
+  const clId = `${options.id}-cl-${client}-${component}`;
 
   const opts: CLClientGeneratorOptions = {
     ...options,
@@ -27,6 +54,8 @@ export async function createCLNode<C extends CLClient>(
     clientOptions: options.clientOptions ?? {},
     address: "127.0.0.1",
     engineUrls: options.engineUrls ?? [],
+    beacon: component === "beacon",
+    validator: component === "validator",
   };
 
   const metricServer = process.env.SIM_METRIC_SERVER_URL;

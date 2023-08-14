@@ -96,11 +96,11 @@ const checkpointSync = await env.createNodePair({
 });
 
 await rangeSync.el.job.start();
-await rangeSync.cl.job.start();
+await rangeSync.cl.beaconJob.start();
 await connectNewNode(rangeSync, env.nodes);
 
 await checkpointSync.el.job.start();
-await checkpointSync.cl.job.start();
+await checkpointSync.cl.beaconJob.start();
 await connectNewNode(checkpointSync, env.nodes);
 
 await Promise.all([
@@ -114,9 +114,9 @@ await Promise.all([
   }),
 ]);
 
-await rangeSync.cl.job.stop();
+await rangeSync.cl.beaconJob.stop();
 await rangeSync.el.job.stop();
-await checkpointSync.cl.job.stop();
+await checkpointSync.cl.beaconJob.stop();
 await checkpointSync.el.job.stop();
 
 await env.stop();

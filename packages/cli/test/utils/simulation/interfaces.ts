@@ -54,13 +54,28 @@ export type ELClientsOptions = {
   [ELClient.Nethermind]: string[];
 };
 
-export interface NodePairOptions<C extends CLClient = CLClient, E extends ELClient = ELClient> {
+export type ELNodeDefinition<E extends ELClient> = E | {type: E; options: Partial<ELGeneratorGenesisOptions<E>>};
+export type CLNodeDefinition<B extends CLClient, V extends CLClient> =
+  | B
+  | {type: B; options: Partial<CLClientGeneratorOptions<B>>}
+  | {
+      beacon: B;
+      beaconOptions?: Partial<CLClientGeneratorOptions<B>>;
+      validator: V;
+      validatorOptions?: Partial<CLClientGeneratorOptions<V>>;
+    };
+
+export interface NodePairOptions<
+  B extends CLClient = CLClient,
+  V extends CLClient = CLClient,
+  E extends ELClient = ELClient,
+> {
   keysCount: number;
   remote?: boolean;
   mining?: boolean;
   id: string;
-  cl: C | {type: C; options: Partial<CLClientGeneratorOptions<C>>};
-  el: E | {type: E; options: Partial<ELGeneratorGenesisOptions<E>>};
+  cl: CLNodeDefinition<B, V>;
+  el: ELNodeDefinition<E>;
 }
 
 export type CLClientKeys =
@@ -83,6 +98,8 @@ export interface CLClientGeneratorOptions<C extends CLClient = CLClient> {
     host: string;
     port: number;
   };
+  beacon: boolean;
+  validator: boolean;
 }
 
 export interface ELGeneratorGenesisOptions<E extends ELClient = ELClient> {
@@ -133,7 +150,8 @@ export interface CLNode<C extends CLClient = CLClient> {
   readonly api: C extends CLClient.Lodestar ? LodestarAPI : LighthouseAPI;
   readonly keyManager: KeyManagerApi;
   readonly keys: CLClientKeys;
-  readonly job: Job;
+  readonly beaconJob?: Job;
+  readonly validatorJob?: Job;
 }
 
 export interface ELNode<E extends ELClient = ELClient> {

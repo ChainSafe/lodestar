@@ -123,11 +123,11 @@ const checkpointSync = await env.createNodePair({
 });
 
 await rangeSync.el.job.start();
-await rangeSync.cl.job.start();
+await rangeSync.cl.beaconJob.start();
 await connectNewNode(rangeSync, env.nodes);
 
 await checkpointSync.el.job.start();
-await checkpointSync.cl.job.start();
+await checkpointSync.cl.beaconJob.start();
 await connectNewNode(checkpointSync, env.nodes);
 
 await Promise.all([
@@ -141,9 +141,9 @@ await Promise.all([
   }),
 ]);
 
-await rangeSync.cl.job.stop();
+await rangeSync.cl.beaconJob.stop();
 await rangeSync.el.job.stop();
-await checkpointSync.cl.job.stop();
+await checkpointSync.cl.beaconJob.stop();
 await checkpointSync.el.job.stop();
 
 // Unknown block sync
@@ -158,7 +158,7 @@ const unknownBlockSync = await env.createNodePair({
   keysCount: 0,
 });
 await unknownBlockSync.el.job.start();
-await unknownBlockSync.cl.job.start();
+await unknownBlockSync.cl.beaconJob.start();
 const headForUnknownBlockSync = await env.nodes[0].cl.api.beacon.getBlockV2("head");
 ApiError.assert(headForUnknownBlockSync);
 await connectNewNode(unknownBlockSync, env.nodes);

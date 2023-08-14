@@ -160,7 +160,8 @@ export class SimulationEnvironment {
         throw new Error("The genesis state for CL clients is not defined.");
       }
 
-      await Promise.all(this.nodes.map((node) => node.cl.job.start()));
+      await Promise.all(this.nodes.map((node) => node.cl.beaconJob?.start()));
+      await Promise.all(this.nodes.map((node) => node.cl.validatorJob?.start()));
 
       if (this.nodes.some((node) => node.cl.keys.type === "remote")) {
         console.log("Starting external signer...");
@@ -194,8 +195,9 @@ export class SimulationEnvironment {
     process.removeAllListeners("SIGINT");
     console.log(`Simulation environment "${this.options.id}" is stopping: ${message}`);
     await this.tracker.stop();
+    await Promise.all(this.nodes.map((node) => node.cl.validatorJob?.stop()));
+    await Promise.all(this.nodes.map((node) => node.cl.beaconJob?.stop()));
     await Promise.all(this.nodes.map((node) => node.el.job.stop()));
-    await Promise.all(this.nodes.map((node) => node.cl.job.stop()));
     await this.externalSigner.stop();
     await this.runner.stop();
     this.options.controller.abort();
@@ -208,14 +210,14 @@ export class SimulationEnvironment {
     }
   }
 
-  async createNodePair<C extends CLClient, E extends ELClient>({
+  async createNodePair<B extends CLClient, V extends CLClient, E extends ELClient>({
     el,
     cl,
     keysCount,
     id,
     remote,
     mining,
-  }: NodePairOptions<C, E>): Promise<NodePair> {
+  }: NodePairOptions<B, V, E>): Promise<NodePair> {
     if (this.genesisState && keysCount > 0) {
       throw new Error("Genesis state already initialized. Can not add more keys to it.");
     }
@@ -231,9 +233,8 @@ export class SimulationEnvironment {
         ? {type: "local", secretKeys: interopKeys}
         : {type: "no-keys"};
 
+    // Execution Node
     const elType = typeof el === "object" ? el.type : el;
-    const clType = typeof cl === "object" ? cl.type : cl;
-
     const elOptions = typeof el === "object" ? el.options : {};
     const elNode = await createELNode(elType, {
       ...elOptions,
@@ -252,15 +253,21 @@ export class SimulationEnvironment {
       clientOptions: elOptions.clientOptions,
     });
 
-    const clOptions = typeof cl === "object" ? cl.options : {};
+    // Beacon Node
+    const {beacon, beaconOptions, validator, validatorOptions} =
+      typeof cl === "object"
+        ? "type" in cl
+          ? {beacon: cl.type, validator: cl.type, beaconOptions: cl.options, validatorOptions: cl.options}
+          : cl
+        : {beacon: cl, validator: cl, beaconOptions: {}, validatorOptions: {}};
+
     const engineUrls = [
       // As lodestar is running on host machine, need to connect through local exposed ports
-      clType === CLClient.Lodestar ? replaceIpFromUrl(elNode.engineRpcUrl, "127.0.0.1") : elNode.engineRpcUrl,
-      ...(clOptions.engineUrls || []),
+      beacon === CLClient.Lodestar ? replaceIpFromUrl(elNode.engineRpcUrl, "127.0.0.1") : elNode.engineRpcUrl,
+      ...(beaconOptions?.engineUrls ?? []),
     ];
 
-    const clNode = await createCLNode(clType, {
-      ...clOptions,
+    const commonOptions = {
       id,
       keys,
       engineMock: typeof el === "string" ? el === ELClient.Mock : el.type === ELClient.Mock,
@@ -270,13 +277,21 @@ export class SimulationEnvironment {
       runner: this.runner,
       genesisTime: this.options.elGenesisTime,
       genesisState: this.genesisState,
-      paths: getCLNodePaths({
-        root: this.options.rootDir,
-        id,
-        client: clType,
-        logsDir: this.options.logsDir,
-      }),
-      clientOptions: clOptions.clientOptions,
+    };
+
+    const clNode = await createCLNode({
+      beacon,
+      beaconOptions: {
+        ...beaconOptions,
+        ...commonOptions,
+        paths: getCLNodePaths({id, logsDir: this.options.logsDir, client: beacon, root: this.options.rootDir}),
+      },
+      validator,
+      validatorOptions: {
+        ...validatorOptions,
+        ...commonOptions,
+        paths: getCLNodePaths({id, logsDir: this.options.logsDir, client: validator, root: this.options.rootDir}),
+      },
     });
 
     this.nodePairCount += 1;
