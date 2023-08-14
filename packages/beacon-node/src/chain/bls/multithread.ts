@@ -138,6 +138,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.blsVerifyAllInQueue = options.blsVerifyAllInQueue ?? false;
     this.blsPoolType = options.blsPoolType ?? BlsPoolType.workers;
     this.logger.info(`Starting BLS with blsPoolType: ${this.blsPoolType}`);
+    if (this.blsPoolType === BlsPoolType.libuv) {
+      this.logger.info(`BLS libuv pool size: ${process.env.UV_THREADPOOL_SIZE ?? 4}`);
+    }
 
     // Use compressed for herumi for now.
     // THe worker is not able to deserialize from uncompressed
