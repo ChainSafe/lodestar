@@ -83,30 +83,28 @@ export class WorkerProcess {
     });
 
     this.child.on("message", (raw: unknown) => {
-      if (typeof raw === "string") {
-        const data = v8.deserialize(Buffer.from(raw, "base64")) as unknown;
-        if (isWorkerApiResponse(data)) {
-          // eslint-disable-next-line no-console
-          console.log("Received response on main thread", data.id);
-          const {id, result, error} = data;
-          const request = this.pendingRequests.get(id);
-          if (request) {
-            if (error) {
-              // TODO: util.inspect required on child before sending? Are all errors instanceof Error?
-              request.reject(error);
-            } else {
-              request.resolve(result);
-            }
-            this.pendingRequests.delete(id);
+      const data = v8.deserialize(Buffer.from(raw, "base64")) as unknown;
+      if (isWorkerApiResponse(data)) {
+        // eslint-disable-next-line no-console
+        console.log("Received response on main thread", data.id);
+        const {id, result, error} = data;
+        const request = this.pendingRequests.get(id);
+        if (request) {
+          if (error) {
+            // TODO: util.inspect required on child before sending? Are all errors instanceof Error?
+            request.reject(error);
           } else {
-            throw Error(`request for with id was undefined: ${id}`);
+            request.resolve(result);
           }
+          this.pendingRequests.delete(id);
         } else {
-          // console.log("Not API response received on main thread with type", typeof data);
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-          if (!(data as any).type) {
-            console.log("Not an event either", data);
-          }
+          throw Error(`request for with id was undefined: ${id}`);
+        }
+      } else {
+        // console.log("Not API response received on main thread with type", typeof data);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+        if (!(data as any).type) {
+          console.log("Not an event either", data);
         }
       }
     });
@@ -160,26 +158,24 @@ export class WorkerProcess {
 export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void {
   const parentPort = process as WorkerProcessContext;
   parentPort.on("message", async (raw: string) => {
-    if (typeof raw === "string") {
-      const data = v8.deserialize(Buffer.from(raw, "base64")) as unknown;
-      if (isWorkerApiRequest(data)) {
+    const data = v8.deserialize(Buffer.from(raw, "base64")) as unknown;
+    if (isWorkerApiRequest(data)) {
+      // eslint-disable-next-line no-console
+      const {id, method, args = []} = data;
+      // eslint-disable-next-line no-console
+      console.log("Received request on worker", {id, method});
+      try {
+        // TODO: differentiate sync vs async methods, check if result is promise
+        const promise = api[method as keyof Api](...args);
+        // console.log("Result before await", promise);
+        const result = await promise;
+        parentPort.send(Buffer.from(v8.serialize({id, result} as WorkerApiResponse)).toString("base64"));
         // eslint-disable-next-line no-console
-        const {id, method, args = []} = data;
+        console.log("Sent result from worker", {id, method});
+      } catch (error) {
+        parentPort.send(Buffer.from(v8.serialize({id, error} as WorkerApiResponse)).toString("base64"));
         // eslint-disable-next-line no-console
-        console.log("Received request on worker", {id, method});
-        try {
-          // TODO: differentiate sync vs async methods, check if result is promise
-          const promise = api[method as keyof Api](...args);
-          // console.log("Result before await", promise);
-          const result = await promise;
-          parentPort.send(Buffer.from(v8.serialize({id, result} as WorkerApiResponse)).toString("base64"));
-          // eslint-disable-next-line no-console
-          console.log("Sent result from worker", {id, method});
-        } catch (error) {
-          parentPort.send(Buffer.from(v8.serialize({id, error} as WorkerApiResponse)).toString("base64"));
-          // eslint-disable-next-line no-console
-          console.log("Sent error from worker", {id, method});
-        }
+        console.log("Sent error from worker", {id, method});
       }
     }
   });
