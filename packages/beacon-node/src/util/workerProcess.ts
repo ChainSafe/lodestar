@@ -37,6 +37,8 @@ export type WorkerProcessContext = NodeJS.Process & {
 type WorkerData = Record<string, unknown>;
 
 type PendingRequest = {
+  method: string;
+  args: unknown[];
   resolve: (value: unknown) => void;
   reject: (reason?: unknown) => void;
 };
@@ -111,7 +113,7 @@ export class WorkerProcess {
     }
     return new Promise((resolve, reject) => {
       const id = this.requestId++;
-      this.pendingRequests.set(id, {resolve, reject});
+      this.pendingRequests.set(id, {method, args, resolve, reject});
       this.child.send({id, method, args} as WorkerApiRequest);
       // eslint-disable-next-line no-console
       console.log("Sent request from main thread", {id, method, args});
