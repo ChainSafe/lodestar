@@ -11,11 +11,17 @@ export type WorkerApiRequest = {
   args: unknown[];
 };
 
-export type WorkerApiResponse = {
-  id: number;
-  result?: unknown;
-  error?: string;
-};
+export type WorkerApiResponse =
+  | {
+      id: number;
+      result: unknown;
+      error: undefined;
+    }
+  | {
+      id: number;
+      result: undefined;
+      error: Pick<Error, "message" | "stack">;
+    };
 
 export type WorkerProcessContext = NodeJS.Process & {
   send: (message: Serializable) => boolean;
@@ -59,8 +65,14 @@ export class WorkerProcess {
         const {id, result, error} = data;
         const request = this.pendingRequests.get(id);
         if (request) {
-          if (error) request.reject(error);
-          else request.resolve(result);
+          if (error) {
+            const err = new Error(error.message);
+            // TODO: util.inspect required on child before sending?
+            err.stack = error.stack;
+            request.reject(err);
+          } else {
+            request.resolve(result);
+          }
           this.pendingRequests.delete(id);
         }
       }
@@ -91,8 +103,8 @@ export function exposeWorkerApi<Api extends WorkerApi<Api>>(api: Api, parentPort
       // TODO: differentiate sync vs async methods, check if result is promise
       const result = await api[method as keyof Api](...args);
       parentPort.send({id, result} as WorkerApiResponse);
-    } catch (e) {
-      parentPort.send({id, error: (e as Error).message} as WorkerApiResponse);
+    } catch (error) {
+      parentPort.send({id, error} as WorkerApiResponse);
     }
   });
 }
