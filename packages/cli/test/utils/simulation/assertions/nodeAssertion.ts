@@ -11,13 +11,16 @@ export const nodeAssertion: SimulationAssertion<"node", {health: number; keyMana
   match: neverMatcher,
   capture: async ({node}) => {
     const {status: health} = await node.beacon.api.node.getHealth();
-    let keyManagerKeys: string[];
+    if (!node.validator) {
+      return {health, keyManagerKeys: []};
+    }
 
+    let keyManagerKeys: string[];
     // There is an authentication issue with the lighthouse keymanager client
     if (node.beacon.client == BeaconClient.Lighthouse || getAllKeys(node.validator.keys).length === 0) {
       keyManagerKeys = [];
     } else {
-      const res = await node.validator?.keyManager.listKeys();
+      const res = await node.validator.keyManager.listKeys();
       ApiError.assert(res);
       keyManagerKeys = res.response.data.map((k) => k.validatingPubkey);
     }
@@ -36,7 +39,9 @@ export const nodeAssertion: SimulationAssertion<"node", {health: number; keyMana
       errors.push(["node health is neither READY or SYNCING", {node: node.beacon.id}]);
     }
 
-    const expectedPublicKeys = getAllKeys(node.validator?.keys).map((k) => k.toPublicKey().toHex());
+    const expectedPublicKeys = node.validator
+      ? getAllKeys(node.validator.keys).map((k) => k.toPublicKey().toHex())
+      : [];
 
     if (!arrayEquals(keyManagerKeys.sort(), expectedPublicKeys.sort())) {
       errors.push([

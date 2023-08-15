@@ -194,7 +194,7 @@ export interface NodePair {
   readonly id: string;
   readonly beacon: BeaconNode;
   readonly execution: ExecutionNode;
-  readonly validator: ValidatorNode;
+  readonly validator?: ValidatorNode;
 }
 
 export type BeaconNodeGenerator<C extends BeaconClient> = (
