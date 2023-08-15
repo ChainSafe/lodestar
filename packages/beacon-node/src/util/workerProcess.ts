@@ -1,7 +1,12 @@
 import cp, {ChildProcess, Serializable} from "node:child_process";
 import v8 from "node:v8";
 
-type WorkerApi<T> = {
+// TODO: How to ensure passed interface only has async methods?
+type ParentWorkerApi<T> = {
+  [K in keyof T]: T[K] extends (...args: infer A) => infer R ? (...args: A) => R : never;
+};
+
+type ChildWorkerApi<T> = {
   [K in keyof T]: T[K] extends (...args: infer A) => infer R ? (...args: A) => R | Promise<R> : never;
 };
 
@@ -79,7 +84,7 @@ export class WorkerProcess {
     });
   }
 
-  createApi<Api extends WorkerApi<Api>>(): Api {
+  createApi<Api extends ParentWorkerApi<Api>>(): Api {
     return new Proxy({} as Api, {
       get: (_target, method: string) => {
         return (...args: unknown[]) => this.sendRequest(method, args);
@@ -96,7 +101,7 @@ export class WorkerProcess {
   }
 }
 
-export function exposeWorkerApi<Api extends WorkerApi<Api>>(api: Api, parentPort: WorkerProcessContext): void {
+export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api, parentPort: WorkerProcessContext): void {
   parentPort.on("message", async (data: WorkerApiRequest) => {
     const {id, method, args} = data;
     try {
