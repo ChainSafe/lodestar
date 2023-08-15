@@ -118,6 +118,16 @@ export class WorkerProcess {
     this.child.on("close", (e) => console.log("child closed", e));
     this.child.on("error", (e) => console.log("child error", e));
     this.child.on("spawn", () => console.log("child spawned"));
+
+    process.on("unhandledRejection", (reason) => {
+      // eslint-disable-next-line no-console
+      console.error("Unhandled Rejection:", reason);
+    });
+
+    process.on("uncaughtException", (error) => {
+      // eslint-disable-next-line no-console
+      console.error("Uncaught Exception:", error);
+    });
   }
 
   createApi<Api extends ParentWorkerApi<Api>>(): Api {
