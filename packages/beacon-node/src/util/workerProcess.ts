@@ -163,9 +163,9 @@ export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void
   parentPort.on("unhandledRejection", (e) => {
     console.log("unhandledRejection", e);
   });
-  parentPort.on("multipleResolves", (e) => {
-    console.log("multipleResolves", e);
-  });
+  // parentPort.on("multipleResolves", (e) => {
+  //   console.log("multipleResolves", e);
+  // });
 }
 
 export function getWorkerData(): WorkerData {
