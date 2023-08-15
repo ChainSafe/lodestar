@@ -180,6 +180,4 @@ const libp2pWorkerApi: NetworkWorkerApi = {
 
 exposeWorkerApi(libp2pWorkerApi);
 
-setInterval(() => console.log("worker still alive"), 1000);
-
 process.on("exit", () => console.log("child exited"));

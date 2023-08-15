@@ -61,7 +61,7 @@ export class WorkerProcess {
       // https://nodejs.org/api/child_process.html#advanced-serialization
       serialization: "advanced",
       // TODO: is this required?
-      killSignal: "SIGKILL",
+      // killSignal: "SIGKILL",
     });
 
     process.on("exit", () => {
