@@ -85,6 +85,8 @@ export class WorkerProcess {
             request.resolve(result);
           }
           this.pendingRequests.delete(id);
+        } else {
+          throw Error(`request for with id was undefined: ${id}`);
         }
       }
     });
@@ -99,6 +101,9 @@ export class WorkerProcess {
   }
 
   private sendRequest(method: string, args: unknown[]): Promise<unknown> {
+    if (!this.child.connected) {
+      throw new ErrorAborted();
+    }
     return new Promise((resolve, reject) => {
       const id = this.requestId++;
       this.pendingRequests.set(id, {resolve, reject});
