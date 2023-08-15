@@ -15,7 +15,7 @@ export const generateLighthouseValidatorNode: ValidatorNodeGenerator<ValidatorCl
   const isDocker = process.env.LIGHTHOUSE_DOCKER_IMAGE !== undefined;
   const binaryPath = isDocker ? "lighthouse" : `${process.env.LIGHTHOUSE_BINARY_PATH}`;
 
-  const {address, id, forkConfig, keys} = opts;
+  const {id, forkConfig, keys, beaconUrls} = opts;
 
   const {
     rootDir,
@@ -25,9 +25,7 @@ export const generateLighthouseValidatorNode: ValidatorNodeGenerator<ValidatorCl
     validatorsDefinitionFilePath,
     validatorsDefinitionFilePathMounted,
   } = getNodeMountedPaths(opts.paths, "/data", isDocker);
-  const {
-    cl: {httpPort, keymanagerPort},
-  } = getNodePorts(opts.nodeIndex);
+  const ports = getNodePorts(opts.nodeIndex);
 
   if (keys.type === "no-keys") {
     throw Error("Attempting to run a vc with keys.type == 'no-keys'");
@@ -35,14 +33,14 @@ export const generateLighthouseValidatorNode: ValidatorNodeGenerator<ValidatorCl
 
   const params = {
     "testnet-dir": rootDirMounted,
-    "beacon-nodes": `http://${address}:${httpPort}/`,
+    "beacon-nodes": beaconUrls[0],
     "debug-level": "debug",
     "init-slashing-protection": null,
     "allow-unsynced": null,
     http: null,
     "unencrypted-http-transport": null,
     "http-address": "0.0.0.0",
-    "http-port": keymanagerPort,
+    "http-port": ports.validator.keymanagerPort,
     "validators-dir": validatorsDirMounted,
   };
 
@@ -81,7 +79,7 @@ export const generateLighthouseValidatorNode: ValidatorNodeGenerator<ValidatorCl
       },
       health: async () => {
         try {
-          await got.get(`http://127.0.0.1:${keymanagerPort}/lighthouse/health`);
+          await got.get(`http://127.0.0.1:${ports.validator.keymanagerPort}/lighthouse/health`);
           return {ok: true};
         } catch (err) {
           if (err instanceof RequestError) {
@@ -96,9 +94,11 @@ export const generateLighthouseValidatorNode: ValidatorNodeGenerator<ValidatorCl
   return {
     id,
     client: ValidatorClient.Lighthouse,
-    url: `http://127.0.0.1:${httpPort}`,
     keys,
-    keyManager: keyManagerGetClient({baseUrl: `http://127.0.0.1:${keymanagerPort}`}, {config: forkConfig}),
+    keyManager: keyManagerGetClient(
+      {baseUrl: `http://127.0.0.1:${ports.validator.keymanagerPort}`},
+      {config: forkConfig}
+    ),
     job,
   };
 };

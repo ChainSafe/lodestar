@@ -5,7 +5,7 @@ import {getNodePorts} from "../utils/ports.js";
 export const generateMockNode: ExecutionNodeGenerator<ExecutionClient.Mock> = (opts, runner) => {
   const {id, ttd, nodeIndex} = opts;
   const {
-    el: {enginePort, httpPort},
+    execution: {enginePort, httpPort},
   } = getNodePorts(nodeIndex);
   const ethRpcUrl = `http://127.0.0.1:${httpPort}`;
   const engineRpcUrl = `http://127.0.0.1:${enginePort}`;

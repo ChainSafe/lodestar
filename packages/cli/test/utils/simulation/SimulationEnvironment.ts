@@ -164,7 +164,7 @@ export class SimulationEnvironment {
       }
 
       await Promise.all(this.nodes.map((node) => node.beacon.job.start()));
-      await Promise.all(this.nodes.map((node) => node.validator?.job.start()));
+      await Promise.all(this.nodes.map((node) => node.validator.job.start()));
 
       if (this.nodes.some((node) => node.validator?.keys.type === "remote")) {
         console.log("Starting external signer...");
@@ -201,7 +201,7 @@ export class SimulationEnvironment {
     process.removeAllListeners("SIGINT");
     console.log(`Simulation environment "${this.options.id}" is stopping: ${message}`);
     await this.tracker.stop();
-    await Promise.all(this.nodes.map((node) => node.validator?.job.stop()));
+    await Promise.all(this.nodes.map((node) => node.validator.job.stop()));
     await Promise.all(this.nodes.map((node) => node.beacon.job.stop()));
     await Promise.all(this.nodes.map((node) => node.execution.job.stop()));
     await this.externalSigner.stop();

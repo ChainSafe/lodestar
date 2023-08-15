@@ -12,7 +12,7 @@ import {RunnerType, ValidatorClient, ValidatorNodeGenerator} from "../interfaces
 import {getNodePorts} from "../utils/ports.js";
 
 export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClient.Lodestar> = (opts, runner) => {
-  const {paths, id, keys, forkConfig, genesisTime, nodeIndex} = opts;
+  const {paths, id, keys, forkConfig, genesisTime, nodeIndex, beaconUrls} = opts;
   const {rootDir, keystoresDir, keystoresSecretFilePath, logFilePath} = paths;
   const ports = getNodePorts(nodeIndex);
   const rcConfigPath = path.join(rootDir, "rc_config.json");
@@ -26,11 +26,11 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
     network: "dev",
     preset: "minimal",
     dataDir: rootDir,
-    server: `http://0.0.0.0:${ports.cl.httpPort}/`,
+    server: beaconUrls,
     keymanager: true,
     "keymanager.authEnabled": false,
     "keymanager.address": "127.0.0.1",
-    "keymanager.port": ports.cl.keymanagerPort,
+    "keymanager.port": ports.validator.keymanagerPort,
     logPrefix: id,
     logFormatGenesisTime: genesisTime,
     logLevel: LogLevel.debug,
@@ -65,7 +65,7 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
       },
       health: async () => {
         try {
-          await got.get(`http://127.0.0.1:${ports.cl.keymanagerPort}/eth/v1/keystores`);
+          await got.get(`http://127.0.0.1:${ports.validator.keymanagerPort}/eth/v1/keystores`);
           return {ok: true};
         } catch (err) {
           return {ok: false, reason: (err as Error).message, checkId: "eth/v1/keystores query"};
@@ -77,9 +77,11 @@ export const generateLodestarValidatorNode: ValidatorNodeGenerator<ValidatorClie
   return {
     id,
     client: ValidatorClient.Lodestar,
-    url: `http://127.0.0.1:${ports.cl.httpPort}`,
     keys,
-    keyManager: keyManagerGetClient({baseUrl: `http://127.0.0.1:${ports.cl.keymanagerPort}`}, {config: forkConfig}),
+    keyManager: keyManagerGetClient(
+      {baseUrl: `http://127.0.0.1:${ports.validator.keymanagerPort}`},
+      {config: forkConfig}
+    ),
     job,
   };
 };

@@ -38,7 +38,7 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
     genesisStateFile: genesisFilePath,
     rest: true,
     "rest.address": "0.0.0.0",
-    "rest.port": ports.cl.httpPort,
+    "rest.port": ports.beacon.httpPort,
     "rest.namespace": "*",
     "sync.isSingleNode": false,
     "network.allowPublishToZeroPeers": false,
@@ -46,7 +46,7 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
     "network.connectToDiscv5Bootnodes": true,
     "network.rateLimitMultiplier": 0,
     listenAddress: "0.0.0.0",
-    port: ports.cl.port,
+    port: ports.beacon.port,
     bootnodes: [],
     logPrefix: id,
     logFormatGenesisTime: `${genesisTime}`,
@@ -96,7 +96,7 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
       },
       health: async () => {
         try {
-          await got.get(`http://${address}:${ports.cl.httpPort}/eth/v1/node/health`);
+          await got.get(`http://${address}:${ports.beacon.httpPort}/eth/v1/node/health`);
           return {ok: true};
         } catch (err) {
           return {ok: false, reason: (err as Error).message, checkId: "eth/v1/node/health query"};
@@ -108,8 +108,8 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
   return {
     id,
     client: BeaconClient.Lodestar,
-    url: `http://127.0.0.1:${ports.cl.httpPort}`,
-    api: getClient({baseUrl: `http://127.0.0.1:${ports.cl.httpPort}`}, {config}),
+    url: `http://127.0.0.1:${ports.beacon.httpPort}`,
+    api: getClient({baseUrl: `http://127.0.0.1:${ports.beacon.httpPort}`}, {config}),
     job,
   };
 };

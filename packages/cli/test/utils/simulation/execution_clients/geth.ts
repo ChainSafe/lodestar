@@ -20,7 +20,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
 
   const {id, mode, ttd, address, mining, clientOptions, nodeIndex} = opts;
   const {
-    el: {httpPort, enginePort, port},
+    execution: {httpPort, enginePort, port},
   } = getNodePorts(nodeIndex);
 
   const isDocker = process.env.GETH_DOCKER_IMAGE !== undefined;

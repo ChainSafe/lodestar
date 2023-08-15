@@ -20,7 +20,7 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
   const {address, id, forkConfig: config, nodeIndex, metrics} = opts;
   const {engineUrls, engineMock, clientOptions} = opts;
   const {
-    cl: {httpPort, port},
+    beacon: {httpPort, port},
   } = getNodePorts(nodeIndex);
 
   const {rootDir, rootDirMounted, jwtsecretFilePathMounted, logFilePath} = getNodeMountedPaths(

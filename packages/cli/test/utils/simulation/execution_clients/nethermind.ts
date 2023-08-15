@@ -18,7 +18,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
   const {id, mode, ttd, address, mining, clientOptions, nodeIndex, cliqueSealingPeriod, shanghaiTime, genesisTime} =
     opts;
   const {
-    el: {httpPort, enginePort, port},
+    execution: {httpPort, enginePort, port},
   } = getNodePorts(nodeIndex);
 
   const {rootDir, rootDirMounted, logFilePath, jwtsecretFilePathMounted} = getNodeMountedPaths(
