@@ -167,4 +167,4 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   },
 };
 
-exposeWorkerApi(libp2pWorkerApi, parentPort);
+exposeWorkerApi(libp2pWorkerApi);
