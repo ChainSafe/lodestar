@@ -32,6 +32,17 @@ for (const signal of exitSignals) {
     // Ignore exit signals to prevent prematurely shutting down child process
   });
 }
+
+process.on("unhandledRejection", (reason) => {
+  // eslint-disable-next-line no-console
+  console.error("Unhandled Rejection:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  // eslint-disable-next-line no-console
+  console.error("Uncaught Exception:", error);
+});
+
 // Cloned data from instantiation
 const workerData = getWorkerData() as NetworkWorkerData;
 // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
