@@ -24,6 +24,8 @@ import {
   reqRespBridgeEventDirection,
 } from "./events.js";
 
+/* eslint-disable no-console */
+
 // TODO: move init code to reusable function
 const exitSignals = ["SIGTERM", "SIGINT"] as NodeJS.Signals[];
 for (const signal of exitSignals) {
@@ -44,9 +46,11 @@ process.on("uncaughtException", (error) => {
 });
 
 process.on("disconnect", () => {
+  // eslint-disable-next-line no-console
   console.log("Worker disconnect");
 });
 process.on("warning", (e) => {
+  // eslint-disable-next-line no-console
   console.log("Worker warning", e);
 });
 // parentPort.on("multipleResolves", (e) => {

@@ -2,6 +2,8 @@ import cp, {ChildProcess, Serializable} from "node:child_process";
 import v8 from "node:v8";
 import {ErrorAborted} from "@lodestar/utils";
 
+/* eslint-disable no-console */
+
 // TODO: How to ensure passed interface only has async methods?
 type ParentWorkerApi<T> = {
   [K in keyof T]: T[K] extends (...args: infer A) => infer R ? (...args: A) => R : never;
@@ -99,6 +101,7 @@ export class WorkerProcess {
         }
       } else {
         // console.log("Not API response received on main thread with type", typeof data);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (!(data as any).type) {
           console.log("Not an event either", data);
         }
@@ -127,6 +130,7 @@ export class WorkerProcess {
 
   private sendRequest(method: string, args: unknown[]): Promise<unknown> {
     if (!this.child.connected) {
+      // eslint-disable-next-line no-console
       console.log("Child process is no longer connected");
       throw new ErrorAborted();
     }
@@ -146,6 +150,7 @@ export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void
     if (isWorkerApiRequest(data)) {
       // eslint-disable-next-line no-console
       const {id, method, args = []} = data;
+      // eslint-disable-next-line no-console
       console.log("Received request on worker", {id, method});
       try {
         // TODO: differentiate sync vs async methods, check if result is promise
@@ -153,9 +158,11 @@ export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void
         // console.log("Result before await", promise);
         const result = await promise;
         parentPort.send({id, result} as WorkerApiResponse);
+        // eslint-disable-next-line no-console
         console.log("Sent result from worker", {id, method});
       } catch (error) {
         parentPort.send({id, error} as WorkerApiResponse);
+        // eslint-disable-next-line no-console
         console.log("Sent error from worker", {id, method});
       }
     }
