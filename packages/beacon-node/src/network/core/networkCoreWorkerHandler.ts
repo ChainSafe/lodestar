@@ -124,8 +124,7 @@ export class WorkerNetworkCore implements INetworkCore {
   async close(): Promise<void> {
     await this.getApi().close();
     this.modules.logger.debug("terminating network worker");
-    // TODO: Do we need to SIGKILL / force with timeout? see https://github.com/sindresorhus/execa
-    this.modules.worker.kill();
+    this.modules.worker.kill("SIGKILL");
     // TODO: unref needed?
     // this.modules.worker.unref();
     this.modules.logger.debug("terminated network worker");

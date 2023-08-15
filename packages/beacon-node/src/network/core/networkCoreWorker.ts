@@ -25,11 +25,13 @@ import {
 } from "./events.js";
 
 // TODO: move init code to reusable function
-process.on("SIGINT", () => {
-  // TODO: also need to handle SIGTERM, what signal should parent send? other way to capture signals?
-  // Ignore SIGINT to prevent prematurely shutting down child process
-});
-
+const exitSignals = ["SIGTERM", "SIGINT"] as NodeJS.Signals[];
+for (const signal of exitSignals) {
+  process.on(signal, () => {
+    // TODO: Is there another way to achieve this?
+    // Ignore exit signals to prevent prematurely shutting down child process
+  });
+}
 // Cloned data from instantiation
 const workerData = getWorkerData() as NetworkWorkerData;
 // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
