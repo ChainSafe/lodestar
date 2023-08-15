@@ -75,15 +75,15 @@ export class WorkerProcess {
       if (isWorkerApiResponse(data)) {
         // eslint-disable-next-line no-console
         console.log("Received response on main thread", data);
-        const {id, result /*error*/} = data;
+        const {id, result, error} = data;
         const request = this.pendingRequests.get(id);
         if (request) {
-          // if (error) {
-          //   // TODO: util.inspect required on child before sending? Are all errors instanceof Error?
-          //   request.reject(error);
-          // } else {
-          request.resolve(result);
-          // }
+          if (error) {
+            // TODO: util.inspect required on child before sending? Are all errors instanceof Error?
+            request.reject(error);
+          } else {
+            request.resolve(result);
+          }
           this.pendingRequests.delete(id);
         } else {
           throw Error(`request for with id was undefined: ${id}`);
