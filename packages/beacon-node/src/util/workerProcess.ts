@@ -103,13 +103,15 @@ export class WorkerProcess {
 
 export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api, parentPort: WorkerProcessContext): void {
   parentPort.on("message", async (data: WorkerApiRequest) => {
-    const {id, method, args} = data;
-    try {
-      // TODO: differentiate sync vs async methods, check if result is promise
-      const result = await api[method as keyof Api](...args);
-      parentPort.send({id, result} as WorkerApiResponse);
-    } catch (error) {
-      parentPort.send({id, error} as WorkerApiResponse);
+    if (isWorkerApiRequest(data)) {
+      const {id, method, args} = data;
+      try {
+        // TODO: differentiate sync vs async methods, check if result is promise
+        const result = await api[method as keyof Api](...args);
+        parentPort.send({id, result} as WorkerApiResponse);
+      } catch (error) {
+        parentPort.send({id, error} as WorkerApiResponse);
+      }
     }
   });
 }
@@ -118,6 +120,18 @@ export function getWorkerData(): WorkerData {
   return v8.deserialize(Buffer.from(process.argv[2], "base64")) as WorkerData;
 }
 
+function isWorkerApiRequest(data: unknown): data is WorkerApiRequest {
+  return (
+    typeof data === "object" &&
+    (data as WorkerApiRequest).id !== undefined &&
+    (data as WorkerApiRequest).method !== undefined
+  );
+}
+
 function isWorkerApiResponse(data: unknown): data is WorkerApiResponse {
-  return typeof data === "object" && (data as WorkerApiResponse).id !== undefined;
+  return (
+    typeof data === "object" &&
+    (data as WorkerApiResponse).id !== undefined &&
+    ((data as WorkerApiResponse).result !== undefined || (data as WorkerApiResponse).error !== undefined)
+  );
 }
