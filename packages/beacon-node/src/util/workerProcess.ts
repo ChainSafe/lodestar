@@ -103,10 +103,10 @@ export class WorkerProcess {
       }
     });
 
-    this.child.on("disconnect", (e) => console.log("child disconnected", e));
+    this.child.on("disconnect", () => console.log("child disconnected"));
     this.child.on("close", (e) => console.log("child closed", e));
     this.child.on("error", (e) => console.log("child error", e));
-    this.child.on("spawn", (e) => console.log("child spawned", e));
+    this.child.on("spawn", () => console.log("child spawned"));
   }
 
   createApi<Api extends ParentWorkerApi<Api>>(): Api {
@@ -151,8 +151,8 @@ export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void
       }
     }
   });
-  parentPort.on("disconnect", (e) => {
-    console.log("Worker disconnected", e);
+  parentPort.on("disconnect", () => {
+    console.log("Worker disconnected");
   });
   parentPort.on("warning", (e) => {
     console.log("Worker disconnected", e);
