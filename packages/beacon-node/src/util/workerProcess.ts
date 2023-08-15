@@ -106,7 +106,7 @@ export class WorkerProcess {
     });
 
     setInterval(() => {
-      if (this.child.channel) {
+      if (!this.child.channel) {
         console.log("IPC channel is broken");
       }
     }, 1000);
