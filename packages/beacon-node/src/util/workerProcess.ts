@@ -131,12 +131,13 @@ export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void
       try {
         // TODO: differentiate sync vs async methods, check if result is promise
         const promise = api[method as keyof Api](...args);
-        console.log("Result before await", promise);
+        // console.log("Result before await", promise);
         const result = await promise;
         parentPort.send({id, result} as WorkerApiResponse);
-        console.log("Sent request from worker");
+        console.log("Sent request from worker", {id, result});
       } catch (error) {
         parentPort.send({id, error} as WorkerApiResponse);
+        console.log("Sent error from worker", {id});
       }
     }
   });
