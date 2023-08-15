@@ -101,7 +101,7 @@ export class WorkerProcess {
         }
       } else {
         // console.log("Not API response received on main thread with type", typeof data);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
         if (!(data as any).type) {
           console.log("Not an event either", data);
         }
