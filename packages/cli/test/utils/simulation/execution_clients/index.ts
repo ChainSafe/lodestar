@@ -9,7 +9,7 @@ import {
   ExecutionStartMode,
 } from "../interfaces.js";
 import {getEstimatedShanghaiTime} from "../utils/index.js";
-import {getGethGenesisBlock} from "../utils/el_genesis.js";
+import {getGethGenesisBlock} from "../utils/execution_genesis.js";
 import {ensureDirectories} from "../utils/paths.js";
 import {generateGethNode} from "./geth.js";
 import {generateMockNode} from "./mock.js";

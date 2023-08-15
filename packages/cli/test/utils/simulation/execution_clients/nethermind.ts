@@ -5,7 +5,7 @@ import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
 import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../interfaces.js";
-import {getNethermindChainSpec} from "../utils/el_genesis.js";
+import {getNethermindChainSpec} from "../utils/execution_genesis.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
 import {SHARED_JWT_SECRET} from "../constants.js";
 import {getNodePorts} from "../utils/ports.js";

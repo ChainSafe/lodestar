@@ -64,7 +64,10 @@ const node2 = await env.createNodePair({
   id: "node-2",
   // As the Lodestar running on host and the geth running in docker container
   // we have to replace the IP with the local ip to connect to the geth
-  beacon: {type: BeaconClient.Lodestar, options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpcUrl, "127.0.0.1")]}},
+  beacon: {
+    type: BeaconClient.Lodestar,
+    options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpcUrl, "127.0.0.1")]},
+  },
   execution: ExecutionClient.Geth,
   keysCount: 32,
 });
@@ -74,7 +77,10 @@ const node3 = await env.createNodePair({
   id: "node-3",
   // As the Lodestar running on host and the geth running in docker container
   // we have to replace the IP with the local ip to connect to the geth
-  beacon: {type: BeaconClient.Lodestar, options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpcUrl, "127.0.0.1")]}},
+  beacon: {
+    type: BeaconClient.Lodestar,
+    options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpcUrl, "127.0.0.1")]},
+  },
   execution: ExecutionClient.Geth,
   keysCount: 0,
 });

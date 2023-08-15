@@ -56,7 +56,9 @@ export class TableReporter extends SimulationReporter<typeof defaultAssertions> 
         const participation: {head: number; source: number; target: number}[] = [];
 
         for (const node of nodes) {
-          participation.push(stores["attestationParticipation"][node.beacon.id][slot] ?? {head: 0, source: 0, target: 0});
+          participation.push(
+            stores["attestationParticipation"][node.beacon.id][slot] ?? {head: 0, source: 0, target: 0}
+          );
           const syncCommitteeParticipation: number[] = [];
           for (let slot = startSlot; slot <= endSlot; slot++) {
             syncCommitteeParticipation.push(stores["syncCommitteeParticipation"][node.beacon.id][slot] ?? 0);
