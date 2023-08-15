@@ -4,13 +4,13 @@ import path from "node:path";
 import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
-import {ELClient, ELClientGenerator, JobOptions, RunnerType} from "../interfaces.js";
+import {ExecutionClient, ExecutionNodeGenerator, JobOptions, RunnerType} from "../interfaces.js";
 import {getNethermindChainSpec} from "../utils/el_genesis.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
 import {SHARED_JWT_SECRET} from "../constants.js";
 import {getNodePorts} from "../utils/ports.js";
 
-export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (opts, runner) => {
+export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Nethermind> = (opts, runner) => {
   if (!process.env.NETHERMIND_DOCKER_IMAGE) {
     throw Error(`EL ENV must be provided, NETHERMIND_DOCKER_IMAGE: ${process.env.NETHERMIND_DOCKER_IMAGE}`);
   }
@@ -119,7 +119,7 @@ export const generateNethermindNode: ELClientGenerator<ELClient.Nethermind> = (o
   );
 
   return {
-    client: ELClient.Nethermind,
+    client: ExecutionClient.Nethermind,
     id,
     engineRpcUrl,
     ethRpcUrl,

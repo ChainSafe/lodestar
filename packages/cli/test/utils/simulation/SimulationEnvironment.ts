@@ -12,7 +12,8 @@ import {BeaconStateAllForks, interopSecretKey} from "@lodestar/state-transition"
 import {EpochClock, MS_IN_SEC} from "./EpochClock.js";
 import {ExternalSignerServer} from "./ExternalSignerServer.js";
 import {SimulationTracker} from "./SimulationTracker.js";
-import {createCLNode} from "./cl_clients/index.js";
+import {createBeaconNode} from "./beacon_clients/index.js";
+import {createValidatorNode, getValidatorForBeaconNode} from "./validator_clients/index.js";
 import {
   CLIQUE_SEALING_PERIOD,
   MOCK_ETH1_GENESIS_HASH,
@@ -20,20 +21,22 @@ import {
   SIM_ENV_NETWORK_ID,
   SIM_TESTS_SECONDS_PER_SLOT,
 } from "./constants.js";
-import {createELNode} from "./el_clients/index.js";
+import {createExecutionNode} from "./execution_clients/index.js";
 import {
-  CLClient,
-  CLClientKeys,
-  ELClient,
+  BeaconClient,
+  ValidatorClientKeys,
+  ExecutionClient,
   IRunner,
   NodePair,
-  NodePairOptions,
+  NodePairDefinition,
   SimulationInitOptions,
   SimulationOptions,
+  ValidatorClient,
+  GeneratorOptions,
 } from "./interfaces.js";
 import {Runner} from "./runner/index.js";
 import {getEstimatedTTD, registerProcessHandler, replaceIpFromUrl} from "./utils/index.js";
-import {getCLNodePaths, getELNodePaths} from "./utils/paths.js";
+import {getNodePaths} from "./utils/paths.js";
 
 interface StartOpts {
   runTimeoutMs: number;
@@ -80,7 +83,7 @@ export class SimulationEnvironment {
 
   static async initWithDefaults(
     {chainConfig, logsDir, id}: SimulationInitOptions,
-    clients: NodePairOptions[]
+    clients: NodePairDefinition[]
   ): Promise<SimulationEnvironment> {
     const secondsPerSlot = chainConfig.SECONDS_PER_SLOT ?? SIM_TESTS_SECONDS_PER_SLOT;
     const genesisTime = Math.floor(Date.now() / 1000);
@@ -153,26 +156,29 @@ export class SimulationEnvironment {
       }
 
       await this.runner.start();
-      await Promise.all(this.nodes.map((node) => node.el.job.start()));
+      await Promise.all(this.nodes.map((node) => node.execution.job.start()));
 
       await this.initGenesisState();
       if (!this.genesisState) {
         throw new Error("The genesis state for CL clients is not defined.");
       }
 
-      await Promise.all(this.nodes.map((node) => node.cl.beaconJob?.start()));
-      await Promise.all(this.nodes.map((node) => node.cl.validatorJob?.start()));
+      await Promise.all(this.nodes.map((node) => node.beacon.job.start()));
+      await Promise.all(this.nodes.map((node) => node.validator?.job.start()));
 
-      if (this.nodes.some((node) => node.cl.keys.type === "remote")) {
+      if (this.nodes.some((node) => node.validator?.keys.type === "remote")) {
         console.log("Starting external signer...");
         await this.externalSigner.start();
         console.log("Started external signer");
 
         for (const node of this.nodes) {
-          if (node.cl.keys.type === "remote") {
-            this.externalSigner.addKeys(node.cl.keys.secretKeys);
-            await node.cl.keyManager.importRemoteKeys(
-              node.cl.keys.secretKeys.map((sk) => ({pubkey: sk.toPublicKey().toHex(), url: this.externalSigner.url}))
+          if (node.validator?.keys.type === "remote") {
+            this.externalSigner.addKeys(node.validator?.keys.secretKeys);
+            await node.validator.keyManager.importRemoteKeys(
+              node.validator.keys.secretKeys.map((sk) => ({
+                pubkey: sk.toPublicKey().toHex(),
+                url: this.externalSigner.url,
+              }))
             );
             console.log(`Imported remote keys for node ${node.id}`);
           }
@@ -195,9 +201,9 @@ export class SimulationEnvironment {
     process.removeAllListeners("SIGINT");
     console.log(`Simulation environment "${this.options.id}" is stopping: ${message}`);
     await this.tracker.stop();
-    await Promise.all(this.nodes.map((node) => node.cl.validatorJob?.stop()));
-    await Promise.all(this.nodes.map((node) => node.cl.beaconJob?.stop()));
-    await Promise.all(this.nodes.map((node) => node.el.job.stop()));
+    await Promise.all(this.nodes.map((node) => node.validator?.job.stop()));
+    await Promise.all(this.nodes.map((node) => node.beacon.job.stop()));
+    await Promise.all(this.nodes.map((node) => node.execution.job.stop()));
     await this.externalSigner.stop();
     await this.runner.stop();
     this.options.controller.abort();
@@ -210,14 +216,15 @@ export class SimulationEnvironment {
     }
   }
 
-  async createNodePair<B extends CLClient, V extends CLClient, E extends ELClient>({
-    el,
-    cl,
+  async createNodePair<B extends BeaconClient, V extends ValidatorClient, E extends ExecutionClient>({
+    execution,
+    beacon,
+    validator,
     keysCount,
     id,
     remote,
     mining,
-  }: NodePairOptions<B, V, E>): Promise<NodePair> {
+  }: NodePairDefinition<B, E, V>): Promise<NodePair> {
     if (this.genesisState && keysCount > 0) {
       throw new Error("Genesis state already initialized. Can not add more keys to it.");
     }
@@ -226,83 +233,80 @@ export class SimulationEnvironment {
     });
     this.keysCount += keysCount;
 
-    const keys: CLClientKeys =
+    const keys: ValidatorClientKeys =
       interopKeys.length > 0 && remote
         ? {type: "remote", secretKeys: interopKeys}
         : interopKeys.length > 0
         ? {type: "local", secretKeys: interopKeys}
         : {type: "no-keys"};
 
-    // Execution Node
-    const elType = typeof el === "object" ? el.type : el;
-    const elOptions = typeof el === "object" ? el.options : {};
-    const elNode = await createELNode(elType, {
-      ...elOptions,
+    const commonOptions: GeneratorOptions = {
       id,
-      mining,
       nodeIndex: this.nodePairCount,
       forkConfig: this.forkConfig,
       runner: this.runner,
-      paths: getELNodePaths({
+      address: "0.0.0.0",
+      genesisTime: this.options.elGenesisTime,
+    };
+
+    // Execution Node
+    const executionType = typeof execution === "object" ? execution.type : execution;
+    const executionOptions = typeof execution === "object" ? execution.options : {};
+    const executionNode = await createExecutionNode(executionType, {
+      ...executionOptions,
+      ...commonOptions,
+      mining,
+      paths: getNodePaths({
         root: this.options.rootDir,
         id,
-        client: elType,
+        client: executionType,
         logsDir: this.options.logsDir,
       }),
-      genesisTime: this.options.elGenesisTime,
-      clientOptions: elOptions.clientOptions,
+      clientOptions: executionOptions.clientOptions,
     });
 
     // Beacon Node
-    const {beacon, beaconOptions, validator, validatorOptions} =
-      typeof cl === "object"
-        ? "type" in cl
-          ? {beacon: cl.type, validator: cl.type, beaconOptions: cl.options, validatorOptions: cl.options}
-          : cl
-        : {beacon: cl, validator: cl, beaconOptions: {}, validatorOptions: {}};
-
+    const beaconType = typeof beacon === "object" ? beacon.type : beacon;
+    const beaconOptions = typeof beacon === "object" ? beacon.options : {};
     const engineUrls = [
       // As lodestar is running on host machine, need to connect through local exposed ports
-      beacon === CLClient.Lodestar ? replaceIpFromUrl(elNode.engineRpcUrl, "127.0.0.1") : elNode.engineRpcUrl,
+      beaconType === BeaconClient.Lodestar
+        ? replaceIpFromUrl(executionNode.engineRpcUrl, "127.0.0.1")
+        : executionNode.engineRpcUrl,
       ...(beaconOptions?.engineUrls ?? []),
     ];
-
-    const commonOptions = {
-      id,
-      keys,
-      engineMock: typeof el === "string" ? el === ELClient.Mock : el.type === ELClient.Mock,
+    const beaconNode = await createBeaconNode(beaconType, {
+      ...beaconOptions,
+      ...commonOptions,
       engineUrls,
-      nodeIndex: this.nodePairCount,
-      config: this.forkConfig,
-      runner: this.runner,
-      genesisTime: this.options.elGenesisTime,
-      genesisState: this.genesisState,
-    };
+      paths: getNodePaths({id, logsDir: this.options.logsDir, client: beaconType, root: this.options.rootDir}),
+    });
 
-    const clNode = await createCLNode({
-      beacon,
-      beaconOptions: {
-        ...beaconOptions,
-        ...commonOptions,
-        paths: getCLNodePaths({id, logsDir: this.options.logsDir, client: beacon, root: this.options.rootDir}),
-      },
-      validator,
-      validatorOptions: {
-        ...validatorOptions,
-        ...commonOptions,
-        paths: getCLNodePaths({id, logsDir: this.options.logsDir, client: validator, root: this.options.rootDir}),
-      },
+    // If no validator configuration is specified we will consider that beacon type is also same as validator type
+    const validatorType =
+      typeof validator === "object"
+        ? validator.type
+        : validator === undefined
+        ? getValidatorForBeaconNode(beaconType)
+        : validator;
+    const validatorOptions = typeof validator === "object" ? validator.options : {};
+    const validatorNode = await createValidatorNode(validatorType, {
+      ...validatorOptions,
+      ...commonOptions,
+      keys,
+      beaconUrls: [beaconNode.url],
+      paths: getNodePaths({id, logsDir: this.options.logsDir, client: validatorType, root: this.options.rootDir}),
     });
 
     this.nodePairCount += 1;
 
-    return {id, el: elNode, cl: clNode};
+    return {id, execution: executionNode, beacon: beaconNode, validator: validatorNode};
   }
 
   private async initGenesisState(): Promise<void> {
     for (let i = 0; i < this.nodes.length; i++) {
       // Get genesis block hash
-      const el = this.nodes[i].el;
+      const el = this.nodes[i].execution;
 
       // If eth1 is mock then genesis hash would be empty
       const eth1Genesis = el.provider === null ? {hash: MOCK_ETH1_GENESIS_HASH} : await el.provider.getBlockByNumber(0);
@@ -320,11 +324,11 @@ export class SimulationEnvironment {
 
       // Write the genesis state for all nodes
       for (const node of this.nodes) {
-        const {genesisFilePath} = getCLNodePaths({
+        const {genesisFilePath} = getNodePaths({
           root: this.options.rootDir,
           id: node.id,
           logsDir: this.options.logsDir,
-          client: node.cl.client,
+          client: node.beacon.client,
         });
         await writeFile(genesisFilePath, this.genesisState.serialize());
       }

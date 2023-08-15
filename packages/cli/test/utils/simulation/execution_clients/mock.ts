@@ -1,8 +1,8 @@
 import {SHARED_JWT_SECRET} from "../constants.js";
-import {ELClient, ELClientGenerator} from "../interfaces.js";
+import {ExecutionClient, ExecutionNodeGenerator} from "../interfaces.js";
 import {getNodePorts} from "../utils/ports.js";
 
-export const generateMockNode: ELClientGenerator<ELClient.Mock> = (opts, runner) => {
+export const generateMockNode: ExecutionNodeGenerator<ExecutionClient.Mock> = (opts, runner) => {
   const {id, ttd, nodeIndex} = opts;
   const {
     el: {enginePort, httpPort},
@@ -13,7 +13,7 @@ export const generateMockNode: ELClientGenerator<ELClient.Mock> = (opts, runner)
   const job = runner.create([]);
 
   return {
-    client: ELClient.Mock,
+    client: ExecutionClient.Mock,
     id,
     engineRpcUrl,
     ethRpcUrl,

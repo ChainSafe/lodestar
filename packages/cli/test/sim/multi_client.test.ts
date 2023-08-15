@@ -3,7 +3,7 @@ import path from "node:path";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
-import {AssertionMatch, CLClient, ELClient} from "../utils/simulation/interfaces.js";
+import {AssertionMatch, BeaconClient, ExecutionClient, ValidatorClient} from "../utils/simulation/interfaces.js";
 import {getEstimatedTTD, getEstimatedTimeInSecForRun, logFilesDir} from "../utils/simulation/utils/index.js";
 import {connectAllNodes, waitForSlot} from "../utils/simulation/utils/network.js";
 
@@ -48,17 +48,19 @@ const env = await SimulationEnvironment.initWithDefaults(
   [
     {
       id: "node-1",
-      el: ELClient.Geth,
+      execution: ExecutionClient.Geth,
       keysCount: 32,
       mining: true,
-      cl: {beacon: CLClient.Lodestar, validator: CLClient.Lighthouse},
+      beacon: BeaconClient.Lodestar,
+      validator: ValidatorClient.Lighthouse,
     },
     {
       id: "node-2",
-      el: ELClient.Geth,
+      execution: ExecutionClient.Geth,
       keysCount: 32,
       remote: true,
-      cl: {beacon: CLClient.Lighthouse, validator: CLClient.Lodestar},
+      beacon: BeaconClient.Lighthouse,
+      validator: ValidatorClient.Lodestar,
     },
   ]
 );

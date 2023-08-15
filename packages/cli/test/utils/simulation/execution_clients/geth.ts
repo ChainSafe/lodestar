@@ -5,7 +5,7 @@ import got from "got";
 import {ZERO_HASH} from "@lodestar/state-transition";
 import {SHARED_JWT_SECRET, SIM_ENV_NETWORK_ID} from "../constants.js";
 import {Eth1ProviderWithAdmin} from "../Eth1ProviderWithAdmin.js";
-import {ELClient, ELClientGenerator, ELStartMode, JobOptions, RunnerType} from "../interfaces.js";
+import {ExecutionClient, ExecutionNodeGenerator, ExecutionStartMode, JobOptions, RunnerType} from "../interfaces.js";
 import {getNodeMountedPaths} from "../utils/paths.js";
 import {getNodePorts} from "../utils/ports.js";
 
@@ -13,7 +13,7 @@ const SECRET_KEY = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065f
 const PASSWORD = "12345678";
 const GENESIS_ACCOUNT = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
 
-export const generateGethNode: ELClientGenerator<ELClient.Geth> = (opts, runner) => {
+export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (opts, runner) => {
   if (!process.env.GETH_BINARY_DIR && !process.env.GETH_DOCKER_IMAGE) {
     throw new Error("GETH_BINARY_DIR or GETH_DOCKER_IMAGE must be provided");
   }
@@ -143,7 +143,7 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (opts, runner)
         "--verbosity",
         "5",
         ...(mining ? ["--mine", "--miner.etherbase", GENESIS_ACCOUNT] : []),
-        ...(mode == ELStartMode.PreMerge ? ["--nodiscover"] : []),
+        ...(mode == ExecutionStartMode.PreMerge ? ["--nodiscover"] : []),
         ...clientOptions,
       ],
       env: {},
@@ -170,7 +170,7 @@ export const generateGethNode: ELClientGenerator<ELClient.Geth> = (opts, runner)
   );
 
   return {
-    client: ELClient.Geth,
+    client: ExecutionClient.Geth,
     id,
     engineRpcUrl,
     ethRpcUrl,

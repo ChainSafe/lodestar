@@ -2,7 +2,7 @@
 import {ApiError} from "@lodestar/api";
 import {Slot, allForks} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
-import {CLClient, CLNode, ELClient, ELNode, NodePair} from "../interfaces.js";
+import {BeaconClient, BeaconNode, ExecutionClient, ExecutionNode, NodePair} from "../interfaces.js";
 import {SimulationEnvironment} from "../SimulationEnvironment.js";
 import {SimulationTrackerEvent} from "../SimulationTracker.js";
 
@@ -14,16 +14,16 @@ export async function connectAllNodes(nodes: NodePair[]): Promise<void> {
 
 export async function connectNewNode(newNode: NodePair, nodes: NodePair[]): Promise<void> {
   await connectNewELNode(
-    newNode.el,
-    nodes.map((node) => node.el)
+    newNode.execution,
+    nodes.map((node) => node.execution)
   );
   await connectNewCLNode(
-    newNode.cl,
-    nodes.map((node) => node.cl)
+    newNode.beacon,
+    nodes.map((node) => node.beacon)
   );
 }
 
-export async function connectNewCLNode(newNode: CLNode, nodes: CLNode[]): Promise<void> {
+export async function connectNewCLNode(newNode: BeaconNode, nodes: BeaconNode[]): Promise<void> {
   const res = await newNode.api.node.getNetworkIdentity();
   ApiError.assert(res);
   const clIdentity = res.response.data;
@@ -32,8 +32,8 @@ export async function connectNewCLNode(newNode: CLNode, nodes: CLNode[]): Promis
   for (const node of nodes) {
     if (node === newNode) continue;
 
-    if (node.client === CLClient.Lodestar) {
-      const res = await (node as CLNode<CLClient.Lodestar>).api.lodestar.connectPeer(
+    if (node.client === BeaconClient.Lodestar) {
+      const res = await (node as BeaconNode<BeaconClient.Lodestar>).api.lodestar.connectPeer(
         clIdentity.peerId,
         // As the lodestar is always running on host
         // convert the address to local host to connect the container node
@@ -44,7 +44,7 @@ export async function connectNewCLNode(newNode: CLNode, nodes: CLNode[]): Promis
   }
 }
 
-export async function connectNewELNode(newNode: ELNode, nodes: ELNode[]): Promise<void> {
+export async function connectNewELNode(newNode: ExecutionNode, nodes: ExecutionNode[]): Promise<void> {
   const elIdentity = newNode.provider === null ? null : await newNode.provider.admin.nodeInfo();
   if (elIdentity && !elIdentity.enode) return;
 
@@ -53,7 +53,7 @@ export async function connectNewELNode(newNode: ELNode, nodes: ELNode[]): Promis
 
     // Nethermind had a bug in admin_addPeer RPC call
     // https://github.com/NethermindEth/nethermind/issues/4876
-    if (node.provider !== null && node.client !== ELClient.Nethermind && elIdentity) {
+    if (node.provider !== null && node.client !== ExecutionClient.Nethermind && elIdentity) {
       await node.provider.admin.addPeer(elIdentity.enode);
     }
   }
@@ -75,7 +75,7 @@ export async function waitForNodeSync(
 export async function waitForNodeSyncStatus(env: SimulationEnvironment, node: NodePair): Promise<void> {
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const result = await node.cl.api.node.getSyncingStatus();
+    const result = await node.beacon.api.node.getSyncingStatus();
     ApiError.assert(result);
     if (!result.response.data.isSyncing) {
       break;
@@ -125,7 +125,7 @@ export async function waitForSlot(
   {silent, env}: {silent?: boolean; env: SimulationEnvironment}
 ): Promise<void> {
   if (!silent) {
-    console.log(`\nWaiting for slot on "${nodes.map((n) => n.cl.id).join(",")}"`, {
+    console.log(`\nWaiting for slot on "${nodes.map((n) => n.beacon.id).join(",")}"`, {
       target: slot,
       current: env.clock.currentSlot,
     });
@@ -143,7 +143,7 @@ export async function waitForSlot(
             }
 
             if (event.slot >= slot) {
-              reject(new Error(`${node.cl.id} had passed target slot ${slot}. Current slot ${event.slot}`));
+              reject(new Error(`${node.beacon.id} had passed target slot ${slot}. Current slot ${event.slot}`));
             }
           };
           env.tracker.on(node, SimulationTrackerEvent.Slot, cb);
@@ -157,7 +157,7 @@ export async function fetchBlock(
   {tries, delay, slot, signal}: {slot: number; tries: number; delay: number; signal?: AbortSignal}
 ): Promise<allForks.SignedBeaconBlock | undefined> {
   for (let i = 0; i < tries; i++) {
-    const res = await node.cl.api.beacon.getBlockV2(slot);
+    const res = await node.beacon.api.beacon.getBlockV2(slot);
     if (!res.ok) {
       await sleep(delay, signal);
       continue;
