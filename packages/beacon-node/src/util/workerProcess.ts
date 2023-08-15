@@ -81,7 +81,7 @@ export class WorkerProcess {
     this.child.on("message", (data: unknown) => {
       if (isWorkerApiResponse(data)) {
         // eslint-disable-next-line no-console
-        console.log("Received response on main thread", data);
+        console.log("Received response on main thread", data.id);
         const {id, result, error} = data;
         const request = this.pendingRequests.get(id);
         if (request) {
@@ -95,6 +95,8 @@ export class WorkerProcess {
         } else {
           throw Error(`request for with id was undefined: ${id}`);
         }
+      } else {
+        console.log("Not API response received on main thread with type", typeof data);
       }
     });
   }
@@ -116,7 +118,7 @@ export class WorkerProcess {
       this.pendingRequests.set(id, {method, args, resolve, reject});
       this.child.send({id, method, args} as WorkerApiRequest);
       // eslint-disable-next-line no-console
-      console.log("Sent request from main thread", {id, method, args});
+      console.log("Sent request from main thread", {id, method});
     });
   }
 }
@@ -134,10 +136,10 @@ export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void
         // console.log("Result before await", promise);
         const result = await promise;
         parentPort.send({id, result} as WorkerApiResponse);
-        console.log("Sent request from worker", {id, result});
+        console.log("Sent request from worker", {id, method});
       } catch (error) {
         parentPort.send({id, error} as WorkerApiResponse);
-        console.log("Sent error from worker", {id});
+        console.log("Sent error from worker", {id, method});
       }
     }
   });
