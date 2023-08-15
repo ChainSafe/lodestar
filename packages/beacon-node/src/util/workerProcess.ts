@@ -1,5 +1,6 @@
 import cp, {ChildProcess, Serializable} from "node:child_process";
 import v8 from "node:v8";
+import {ErrorAborted} from "@lodestar/utils";
 
 // TODO: How to ensure passed interface only has async methods?
 type ParentWorkerApi<T> = {
@@ -62,6 +63,10 @@ export class WorkerProcess {
     this.child.on("exit", () => {
       // eslint-disable-next-line no-console
       console.log("Pending Requests ", this.pendingRequests.size);
+      for (const request of this.pendingRequests.values()) {
+        // TODO: is this correct?
+        request.reject(new ErrorAborted());
+      }
       // eslint-disable-next-line no-console
       console.log("libp2p worker exited");
     });
