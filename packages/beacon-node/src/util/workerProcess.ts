@@ -97,6 +97,9 @@ export class WorkerProcess {
         }
       } else {
         console.log("Not API response received on main thread with type", typeof data);
+        if ((data as any).type) {
+          console.log("Not an event either", data);
+        }
       }
     });
   }
