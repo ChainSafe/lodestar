@@ -153,28 +153,13 @@ export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void
         // console.log("Result before await", promise);
         const result = await promise;
         parentPort.send({id, result} as WorkerApiResponse);
-        console.log("Sent request from worker", {id, method});
+        console.log("Sent result from worker", {id, method});
       } catch (error) {
         parentPort.send({id, error} as WorkerApiResponse);
         console.log("Sent error from worker", {id, method});
       }
     }
   });
-  parentPort.on("disconnect", () => {
-    console.log("Worker disconnected");
-  });
-  parentPort.on("warning", (e) => {
-    console.log("Worker disconnected", e);
-  });
-  parentPort.on("uncaughtException", (e) => {
-    console.log("uncaughtException", e);
-  });
-  parentPort.on("unhandledRejection", (e) => {
-    console.log("unhandledRejection", e);
-  });
-  // parentPort.on("multipleResolves", (e) => {
-  //   console.log("multipleResolves", e);
-  // });
 }
 
 export function getWorkerData(): WorkerData {

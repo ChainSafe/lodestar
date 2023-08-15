@@ -43,6 +43,16 @@ process.on("uncaughtException", (error) => {
   console.error("Uncaught Exception:", error);
 });
 
+process.on("disconnect", () => {
+  console.log("Worker disconnect");
+});
+process.on("warning", (e) => {
+  console.log("Worker warning", e);
+});
+// parentPort.on("multipleResolves", (e) => {
+//   console.log("multipleResolves", e);
+// });
+
 // Cloned data from instantiation
 const workerData = getWorkerData() as NetworkWorkerData;
 // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
