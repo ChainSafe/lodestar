@@ -82,7 +82,7 @@ export class WorkerProcess {
       console.log("libp2p worker exited");
     });
 
-    this.child.on("message", (raw: unknown) => {
+    this.child.on("message", (raw: string) => {
       const data = v8.deserialize(Buffer.from(raw, "base64")) as unknown;
       if (isWorkerApiResponse(data)) {
         // eslint-disable-next-line no-console
