@@ -131,8 +131,8 @@ export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void
   parentPort.on("message", async (data: WorkerApiRequest) => {
     if (isWorkerApiRequest(data)) {
       // eslint-disable-next-line no-console
-      console.log("Received request on worker", data);
       const {id, method, args = []} = data;
+      console.log("Received request on worker", {id, method});
       try {
         // TODO: differentiate sync vs async methods, check if result is promise
         const promise = api[method as keyof Api](...args);
