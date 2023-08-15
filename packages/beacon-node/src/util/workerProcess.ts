@@ -105,6 +105,12 @@ export class WorkerProcess {
       }
     });
 
+    setInterval(() => {
+      if (this.child.channel) {
+        console.log("IPC channel is broken");
+      }
+    }, 1000);
+
     this.child.on("disconnect", () => console.log("child disconnected"));
     this.child.on("close", (e) => console.log("child closed", e));
     this.child.on("error", (e) => console.log("child error", e));
@@ -121,6 +127,7 @@ export class WorkerProcess {
 
   private sendRequest(method: string, args: unknown[]): Promise<unknown> {
     if (!this.child.connected) {
+      console.log("Child process is no longer connected");
       throw new ErrorAborted();
     }
     return new Promise((resolve, reject) => {
