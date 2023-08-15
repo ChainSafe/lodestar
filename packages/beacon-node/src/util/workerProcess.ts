@@ -102,6 +102,11 @@ export class WorkerProcess {
         }
       }
     });
+
+    this.child.on("disconnect", (e) => console.log("child disconnected", e));
+    this.child.on("close", (e) => console.log("child closed", e));
+    this.child.on("error", (e) => console.log("child error", e));
+    this.child.on("spawn", (e) => console.log("child spawned", e));
   }
 
   createApi<Api extends ParentWorkerApi<Api>>(): Api {
@@ -145,6 +150,21 @@ export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void
         console.log("Sent error from worker", {id, method});
       }
     }
+  });
+  parentPort.on("disconnect", (e) => {
+    console.log("Worker disconnected", e);
+  });
+  parentPort.on("warning", (e) => {
+    console.log("Worker disconnected", e);
+  });
+  parentPort.on("uncaughtException", (e) => {
+    console.log("uncaughtException", e);
+  });
+  parentPort.on("unhandledRejection", (e) => {
+    console.log("unhandledRejection", e);
+  });
+  parentPort.on("multipleResolves", (e) => {
+    console.log("multipleResolves", e);
   });
 }
 
