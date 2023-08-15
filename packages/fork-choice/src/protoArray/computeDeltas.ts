@@ -19,7 +19,11 @@ export function computeDeltas(
   newBalances: EffectiveBalanceIncrements,
   equivocatingIndices: Set<ValidatorIndex>
 ): number[] {
-  const deltas = Array<number>(numProtoNodes).fill(0);
+  const deltas = new Array<number>(numProtoNodes);
+  for (let i = 0; i < numProtoNodes; i++) {
+    deltas[i] = 0;
+  }
+
   // avoid creating new variables in the loop to potentially reduce GC pressure
   let oldBalance, newBalance: number;
   let currentIndex, nextIndex: number | null;
