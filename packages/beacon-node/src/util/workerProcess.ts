@@ -129,9 +129,5 @@ function isWorkerApiRequest(data: unknown): data is WorkerApiRequest {
 }
 
 function isWorkerApiResponse(data: unknown): data is WorkerApiResponse {
-  return (
-    typeof data === "object" &&
-    (data as WorkerApiResponse).id !== undefined &&
-    ((data as WorkerApiResponse).result !== undefined || (data as WorkerApiResponse).error !== undefined)
-  );
+  return typeof data === "object" && (data as WorkerApiResponse).id !== undefined;
 }
