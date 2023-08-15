@@ -60,6 +60,11 @@ export class WorkerProcess {
       serialization: "advanced",
     });
 
+    process.on("exit", () => {
+      // eslint-disable-next-line no-console
+      console.log(this.pendingRequests);
+    });
+
     this.child.on("exit", () => {
       // eslint-disable-next-line no-console
       console.log("Pending Requests ", this.pendingRequests.size);
