@@ -73,8 +73,6 @@ export class WorkerProcess {
 
     this.child.on("message", (data: unknown) => {
       if (isWorkerApiResponse(data)) {
-        // eslint-disable-next-line no-console
-        console.log("Received response on main thread", data);
         const {id, result, error} = data;
         const request = this.pendingRequests.get(id);
         if (request) {
@@ -108,8 +106,6 @@ export class WorkerProcess {
       const id = this.requestId++;
       this.pendingRequests.set(id, {resolve, reject});
       this.child.send({id, method, args} as WorkerApiRequest);
-      // eslint-disable-next-line no-console
-      console.log("Sent request from main thread", {id, method, args});
     });
   }
 }
@@ -118,8 +114,6 @@ export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void
   const parentPort = process as WorkerProcessContext;
   parentPort.on("message", async (data: WorkerApiRequest) => {
     if (isWorkerApiRequest(data)) {
-      // eslint-disable-next-line no-console
-      console.log("Received request on worker", data);
       const {id, method, args} = data;
       try {
         // TODO: differentiate sync vs async methods, check if result is promise
