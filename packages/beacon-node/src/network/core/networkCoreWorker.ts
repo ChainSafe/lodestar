@@ -8,7 +8,6 @@ import {collectNodeJSMetrics, RegistryMetricCreator} from "../../metrics/index.j
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {Clock} from "../../util/clock.js";
 import {wireEventsOnWorkerProcess} from "../../util/workerEvents.js";
-import {getWorkerData} from "../../util/workerProcess.js";
 import {WorkerApi} from "../../util/workerApi.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {peerIdToString} from "../../util/peerId.js";
@@ -27,33 +26,9 @@ import {
 
 /* eslint-disable no-console */
 
-// TODO: move init code to reusable function
-const exitSignals = ["SIGTERM", "SIGINT"] as NodeJS.Signals[];
-for (const signal of exitSignals) {
-  process.on(signal, () => {
-    // TODO: Is there another way to achieve this?
-    // Ignore exit signals to prevent prematurely shutting down child process
-  });
-}
-
-process.on("unhandledRejection", (reason) => {
-  // eslint-disable-next-line no-console
-  console.error("Unhandled Rejection worker process:", reason);
-});
-
-process.on("uncaughtException", (error) => {
-  // eslint-disable-next-line no-console
-  console.error("Uncaught Exception worker process:", error);
-});
-
-process.on("exit", () => console.log("child exited"));
-
-// Cloned data from instantiation
-const workerData = getWorkerData() as NetworkWorkerData;
 const workerApi = new WorkerApi();
-// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-if (!workerData) throw Error("workerData must be defined");
-if (!process.send) throw Error("process.send must be defined");
+// Cloned data from instantiation
+const workerData = workerApi.workerData as NetworkWorkerData;
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
 const peerId = await createFromProtobuf(workerData.peerIdProto);

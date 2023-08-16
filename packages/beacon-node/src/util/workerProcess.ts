@@ -29,8 +29,6 @@ export type WorkerApiResponse =
       error: Error;
     };
 
-type WorkerData = Record<string, unknown>;
-
 type PendingRequest = {
   resolve: (value: unknown) => void;
   reject: (reason?: unknown) => void;
@@ -42,7 +40,7 @@ export class WorkerProcess extends EventEmitter {
   private requestId = 0;
   private pendingRequests = new Map<number, PendingRequest>();
 
-  constructor(modulePath: string, workerData: WorkerData) {
+  constructor(modulePath: string, workerData: Record<string, unknown>) {
     super();
     // TODO: There is likely a better way to send init data
     const serializedWorkerData = serializeData(workerData);
@@ -111,10 +109,6 @@ export class WorkerProcess extends EventEmitter {
       this.child.send(serializeData({id, method, args} as WorkerApiRequest));
     });
   }
-}
-
-export function getWorkerData(): WorkerData {
-  return deserializeData(process.argv[2]);
 }
 
 export function serializeData(data: Record<string, unknown>): string {
