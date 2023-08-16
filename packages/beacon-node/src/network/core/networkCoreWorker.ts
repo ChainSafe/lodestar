@@ -63,6 +63,8 @@ const workerData = getWorkerData() as NetworkWorkerData;
 if (!workerData) throw Error("workerData must be defined");
 if (!process.send) throw Error("process.send must be defined");
 
+const parentPort = process as WorkerProcessContext;
+
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
 const peerId = await createFromProtobuf(workerData.peerIdProto);
 const DEFAULT_PROFILE_DURATION = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000;
@@ -140,13 +142,13 @@ const core = await NetworkCore.init({
 wireEventsOnWorkerProcess<NetworkEventData>(
   NetworkWorkerThreadEventType.networkEvent,
   events,
-  process as WorkerProcessContext,
+  parentPort,
   networkEventDirection
 );
 wireEventsOnWorkerProcess<ReqRespBridgeEventData>(
   NetworkWorkerThreadEventType.reqRespBridgeEvents,
   reqRespBridgeEventBus,
-  process as WorkerProcessContext,
+  parentPort,
   reqRespBridgeEventDirection
 );
 

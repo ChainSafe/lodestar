@@ -155,7 +155,8 @@ export class WorkerProcess {
 }
 
 export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void {
-  process.on("message", async (data: unknown) => {
+  const parentPort = process as WorkerProcessContext;
+  parentPort.on("message", async (data: unknown) => {
     if (isWorkerApiRequest(data)) {
       // eslint-disable-next-line no-console
       const {id, method, args = []} = data;
@@ -166,11 +167,11 @@ export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void
         const promise = api[method as keyof Api](...args);
         // console.log("Result before await", promise);
         const result = await promise;
-        (process as WorkerProcessContext).send({id, result} as WorkerApiResponse);
+        parentPort.send({id, result} as WorkerApiResponse);
         // eslint-disable-next-line no-console
         // console.log("Sent result from worker", {id, method});
       } catch (error) {
-        (process as WorkerProcessContext).send({id, error} as WorkerApiResponse);
+        parentPort.send({id, error} as WorkerApiResponse);
         // eslint-disable-next-line no-console
         // console.log("Sent error from worker", {id, method});
       }
