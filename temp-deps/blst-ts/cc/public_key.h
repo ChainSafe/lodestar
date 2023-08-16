@@ -14,8 +14,8 @@ class PublicKey : public Napi::ObjectWrap<PublicKey> {
    public:
     bool _has_jacobian;
     bool _has_affine;
-    std::shared_ptr<blst::P1> _jacobian;
-    std::shared_ptr<blst::P1_Affine> _affine;
+    std::unique_ptr<blst::P1> _jacobian;
+    std::unique_ptr<blst::P1_Affine> _affine;
 
     static void Init(Napi::Env env, Napi::Object &exports, BlstTsAddon *module);
     static Napi::Value Deserialize(const Napi::CallbackInfo &info);
