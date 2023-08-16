@@ -123,7 +123,7 @@ export class WorkerProcess extends EventEmitter {
 }
 
 export function serializeData(data: Record<string, unknown>): string {
-  return Buffer.from(v8.serialize(data)).toString("base64");
+  return v8.serialize(data).toString("base64");
 }
 
 export function deserializeData(raw: string): Record<string, unknown> {
