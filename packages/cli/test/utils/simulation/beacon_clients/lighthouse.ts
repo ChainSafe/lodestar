@@ -17,11 +17,9 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
 
   const isDocker = process.env.LIGHTHOUSE_DOCKER_IMAGE !== undefined;
 
-  const {address, id, forkConfig: config, nodeIndex, metrics} = opts;
+  const {address, id, forkConfig, nodeIndex, metrics} = opts;
   const {engineUrls, engineMock, clientOptions} = opts;
-  const {
-    beacon: {httpPort, port},
-  } = getNodePorts(nodeIndex);
+  const ports = getNodePorts(nodeIndex);
 
   const {rootDir, rootDirMounted, jwtsecretFilePathMounted, logFilePath} = getNodeMountedPaths(
     opts.paths,
@@ -38,13 +36,13 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
     // stalled. This is useful for very small testnets. TESTING ONLY. DO NOT USE ON MAINNET.
     "http-allow-sync-stalled": null,
     "http-address": "0.0.0.0",
-    "http-port": httpPort,
+    "http-port": ports.beacon.httpPort,
     "http-allow-origin": "*",
     "listen-address": "0.0.0.0",
-    port: port,
+    port: ports.beacon.p2pPort,
     "enr-address": address,
-    "enr-udp-port": port,
-    "enr-tcp-port": port,
+    "enr-udp-port": ports.beacon.p2pPort,
+    "enr-tcp-port": ports.beacon.p2pPort,
     "disable-discovery": null,
     "enable-private-discovery": null,
     "debug-level": "debug",
@@ -72,12 +70,12 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
         ? {
             image: process.env.LIGHTHOUSE_DOCKER_IMAGE as string,
             mounts: [[rootDir, rootDirMounted]],
-            exposePorts: [httpPort, port],
+            exposePorts: [ports.beacon.httpPort, ports.beacon.p2pPort],
             dockerNetworkIp: address,
           }
         : undefined,
       bootstrap: async () => {
-        await writeFile(path.join(rootDir, "config.yaml"), yaml.dump(chainConfigToJson(config)));
+        await writeFile(path.join(rootDir, "config.yaml"), yaml.dump(chainConfigToJson(forkConfig)));
         await writeFile(path.join(rootDir, "deploy_block.txt"), "0");
       },
       cli: {
@@ -95,7 +93,7 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
       },
       health: async () => {
         try {
-          await got.get(`http://127.0.0.1:${httpPort}/eth/v1/node/health`);
+          await got.get(`http://127.0.0.1:${ports.beacon.httpPort}/eth/v1/node/health`);
           return {ok: true};
         } catch (err) {
           if (err instanceof RequestError && err.code !== "ECONNREFUSED") {
@@ -107,8 +105,11 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
     },
   ]);
 
-  const httpClient = new HttpClient({baseUrl: `http://127.0.0.1:${httpPort}`});
-  const api = getClient({baseUrl: `http://127.0.0.1:${httpPort}`}, {config}) as unknown as LighthouseAPI;
+  const httpClient = new HttpClient({baseUrl: `http://127.0.0.1:${ports.beacon.httpPort}`});
+  const api = getClient(
+    {baseUrl: `http://127.0.0.1:${ports.beacon.httpPort}`},
+    {config: forkConfig}
+  ) as unknown as LighthouseAPI;
   api.lighthouse = {
     async getPeers() {
       return httpClient.json({url: "/lighthouse/peers", method: "GET"});
@@ -118,7 +119,8 @@ export const generateLighthouseBeaconNode: BeaconNodeGenerator<BeaconClient.Ligh
   return {
     id,
     client: BeaconClient.Lighthouse,
-    url: `http://127.0.0.1:${httpPort}`,
+    restPublicUrl: `http://127.0.0.1:${ports.beacon.httpPort}`,
+    restPrivateUrl: `http://${address}:${ports.beacon.httpPort}`,
     api,
     job,
   };

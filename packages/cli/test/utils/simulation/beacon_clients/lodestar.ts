@@ -46,7 +46,7 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
     "network.connectToDiscv5Bootnodes": true,
     "network.rateLimitMultiplier": 0,
     listenAddress: "0.0.0.0",
-    port: ports.beacon.port,
+    port: ports.beacon.p2pPort,
     bootnodes: [],
     logPrefix: id,
     logFormatGenesisTime: `${genesisTime}`,
@@ -108,7 +108,9 @@ export const generateLodestarBeaconNode: BeaconNodeGenerator<BeaconClient.Lodest
   return {
     id,
     client: BeaconClient.Lodestar,
-    url: `http://127.0.0.1:${ports.beacon.httpPort}`,
+    restPublicUrl: `http://127.0.0.1:${ports.beacon.httpPort}`,
+    // Lodestar runs on the host machine, so it don't have a private url
+    restPrivateUrl: `http://127.0.0.1:${ports.beacon.httpPort}`,
     api: getClient({baseUrl: `http://127.0.0.1:${ports.beacon.httpPort}`}, {config}),
     job,
   };

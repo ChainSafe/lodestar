@@ -166,7 +166,14 @@ export type LighthouseAPI = Omit<Api, "lodestar"> & {
 export interface BeaconNode<C extends BeaconClient = BeaconClient> {
   readonly client: C;
   readonly id: string;
-  readonly url: string;
+  /**
+   * Beacon Node Rest API URL accessible form the host machine if the process is running in private network inside docker
+   */
+  readonly restPublicUrl: string;
+  /**
+   * Beacon Node Rest API URL accessible within private network
+   */
+  readonly restPrivateUrl: string;
   readonly api: C extends BeaconClient.Lodestar ? LodestarAPI : LighthouseAPI;
   readonly job: Job;
 }
@@ -183,8 +190,22 @@ export interface ExecutionNode<E extends ExecutionClient = ExecutionClient> {
   readonly client: E;
   readonly id: string;
   readonly ttd: bigint;
-  readonly engineRpcUrl: string;
-  readonly ethRpcUrl: string;
+  /**
+   * Engine URL accessible form the host machine if the process is running in private network inside docker
+   */
+  readonly engineRpPublicUrl: string;
+  /**
+   * Engine URL accessible within private network inside docker
+   */
+  readonly engineRpPrivateUrl: string;
+  /**
+   * RPC URL accessible form the host machine if the process is running in private network inside docker
+   */
+  readonly ethRpPublicUrl: string;
+  /**
+   * RPC URL accessible within private network inside docker
+   */
+  readonly ethRpPrivateUrl: string;
   readonly jwtSecretHex: string;
   readonly provider: E extends ExecutionClient.Mock ? null : Eth1ProviderWithAdmin;
   readonly job: Job;

@@ -19,9 +19,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
   }
 
   const {id, mode, ttd, address, mining, clientOptions, nodeIndex} = opts;
-  const {
-    execution: {httpPort, enginePort, port},
-  } = getNodePorts(nodeIndex);
+  const ports = getNodePorts(nodeIndex);
 
   const isDocker = process.env.GETH_DOCKER_IMAGE !== undefined;
   const binaryPath = isDocker ? "" : `${process.env.GETH_BINARY_DIR}/geth`;
@@ -30,8 +28,10 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
     "/data",
     isDocker
   );
-  const ethRpcUrl = `http://127.0.0.1:${httpPort}`;
-  const engineRpcUrl = `http://${address}:${enginePort}`;
+  const engineRpPublicUrl = `http://127.0.0.1:${ports.execution.enginePort}`;
+  const engineRpPrivateUrl = `http://${address}:${ports.execution.enginePort}`;
+  const ethRpPublicUrl = `http://127.0.0.1:${ports.execution.httpPort}`;
+  const ethRpPrivateUrl = `http://${address}:${ports.execution.httpPort}`;
 
   const skPath = path.join(rootDir, "sk.json");
   const skPathMounted = path.join(rootDirMounted, "sk.json");
@@ -104,7 +104,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
       ? {
           image: process.env.GETH_DOCKER_IMAGE as string,
           mounts: [[rootDir, rootDirMounted]],
-          exposePorts: [enginePort, httpPort, port],
+          exposePorts: [ports.execution.enginePort, ports.execution.httpPort, ports.execution.p2pPort],
           dockerNetworkIp: address,
         }
       : undefined,
@@ -115,15 +115,15 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
         "--http.api",
         "engine,net,eth,miner,admin",
         "--http.port",
-        String(httpPort as number),
+        String(ports.execution.httpPort as number),
         "--http.addr",
         "0.0.0.0",
         "--authrpc.port",
-        String(enginePort as number),
+        String(ports.execution.enginePort as number),
         "--authrpc.addr",
         "0.0.0.0",
         "--port",
-        String(port as number),
+        String(ports.execution.p2pPort as number),
         "--nat",
         `extip:${address}`,
         "--authrpc.jwtsecret",
@@ -153,7 +153,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
     },
     health: async () => {
       try {
-        await got.post(ethRpcUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
+        await got.post(ethRpPublicUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
         return {ok: true};
       } catch (err) {
         return {ok: false, reason: (err as Error).message, checkId: "JSON RPC query net_version"};
@@ -166,14 +166,16 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
   const provider = new Eth1ProviderWithAdmin(
     {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},
     // To allow admin_* RPC methods had to add "ethRpcUrl"
-    {providerUrls: [`http://127.0.0.1:${httpPort}`, `http://127.0.0.1:${enginePort}`], jwtSecretHex: SHARED_JWT_SECRET}
+    {providerUrls: [ethRpPublicUrl, engineRpPublicUrl], jwtSecretHex: SHARED_JWT_SECRET}
   );
 
   return {
     client: ExecutionClient.Geth,
     id,
-    engineRpcUrl,
-    ethRpcUrl,
+    engineRpPublicUrl,
+    engineRpPrivateUrl,
+    ethRpPublicUrl,
+    ethRpPrivateUrl,
     ttd,
     jwtSecretHex: SHARED_JWT_SECRET,
     provider,

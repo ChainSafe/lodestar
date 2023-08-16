@@ -271,8 +271,8 @@ export class SimulationEnvironment {
     const engineUrls = [
       // As lodestar is running on host machine, need to connect through local exposed ports
       beaconType === BeaconClient.Lodestar
-        ? replaceIpFromUrl(executionNode.engineRpcUrl, "127.0.0.1")
-        : executionNode.engineRpcUrl,
+        ? replaceIpFromUrl(executionNode.engineRpPublicUrl, "127.0.0.1")
+        : executionNode.engineRpPublicUrl,
       ...(beaconOptions?.engineUrls ?? []),
     ];
     const beaconNode = await createBeaconNode(beaconType, {
@@ -299,7 +299,7 @@ export class SimulationEnvironment {
       ...validatorOptions,
       ...commonOptions,
       keys,
-      beaconUrls: [beaconNode.url],
+      beaconUrls: [beaconNode.restPrivateUrl],
       paths: getNodePaths({id, logsDir: this.options.logsDir, client: validatorType, root: this.options.rootDir}),
     });
 

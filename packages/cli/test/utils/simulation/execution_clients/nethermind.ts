@@ -17,9 +17,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
 
   const {id, mode, ttd, address, mining, clientOptions, nodeIndex, cliqueSealingPeriod, shanghaiTime, genesisTime} =
     opts;
-  const {
-    execution: {httpPort, enginePort, port},
-  } = getNodePorts(nodeIndex);
+  const ports = getNodePorts(nodeIndex);
 
   const {rootDir, rootDirMounted, logFilePath, jwtsecretFilePathMounted} = getNodeMountedPaths(
     opts.paths,
@@ -29,8 +27,10 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
 
   // Docker will be executed on entrypoint automatically
   const binaryPath = "";
-  const ethRpcUrl = `http://127.0.0.1:${httpPort}`;
-  const engineRpcUrl = `http://${address}:${enginePort}`;
+  const engineRpPublicUrl = `http://127.0.0.1:${ports.execution.enginePort}`;
+  const engineRpPrivateUrl = `http://${address}:${ports.execution.enginePort}`;
+  const ethRpPublicUrl = `http://127.0.0.1:${ports.execution.httpPort}`;
+  const ethRpPrivateUrl = `http://${address}:${ports.execution.httpPort}`;
 
   const chainSpecPath = path.join(rootDir, "chain.json");
   const chainSpecContainerPath = path.join(rootDirMounted, "chain.json");
@@ -41,7 +41,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
     options: {
       image: process.env.NETHERMIND_DOCKER_IMAGE as string,
       mounts: [[rootDir, rootDirMounted]],
-      exposePorts: [enginePort, httpPort, port],
+      exposePorts: [ports.execution.enginePort, ports.execution.httpPort, ports.execution.p2pPort],
       dockerNetworkIp: address,
     },
     bootstrap: async () => {
@@ -62,11 +62,11 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
         "--JsonRpc.Host",
         "0.0.0.0",
         "--JsonRpc.Port",
-        String(httpPort as number),
+        String(ports.execution.httpPort as number),
         "--JsonRpc.EngineHost",
         "0.0.0.0",
-        "--JsonRpc.EnginePort",
-        String(enginePort as number),
+        "--JsonRpc.ports.execution.enginePort",
+        String(ports.execution.enginePort as number),
         "--JsonRpc.EngineEnabledModules",
         "Admin,Eth,Subscribe,Trace,TxPool,Web3,Personal,Proof,Net,Parity,Health,Rpc,Debug",
         "--JsonRpc.EnabledModules",
@@ -86,7 +86,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
         "--Network.LocalIp",
         "0.0.0.0",
         "--Network.P2PPort",
-        String(port as number),
+        String(ports.execution.p2pPort as number),
         // OFF|TRACE|DEBUG|INFO|WARN|ERROR
         "--log",
         "DEBUG",
@@ -102,7 +102,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
     },
     health: async () => {
       try {
-        await got.post(ethRpcUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
+        await got.post(ethRpPublicUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
         return {ok: true};
       } catch (err) {
         return {ok: false, reason: (err as Error).message, checkId: "JSON RPC query net_version"};
@@ -115,14 +115,16 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
   const provider = new Eth1ProviderWithAdmin(
     {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},
     // To allow admin_* RPC methods had to add "ethRpcUrl"
-    {providerUrls: [`http://127.0.0.1:${httpPort}`, `http://127.0.0.1:${enginePort}`], jwtSecretHex: SHARED_JWT_SECRET}
+    {providerUrls: [ethRpPublicUrl, engineRpPublicUrl], jwtSecretHex: SHARED_JWT_SECRET}
   );
 
   return {
     client: ExecutionClient.Nethermind,
     id,
-    engineRpcUrl,
-    ethRpcUrl,
+    engineRpPublicUrl,
+    engineRpPrivateUrl,
+    ethRpPublicUrl,
+    ethRpPrivateUrl,
     ttd,
     jwtSecretHex: SHARED_JWT_SECRET,
     provider,

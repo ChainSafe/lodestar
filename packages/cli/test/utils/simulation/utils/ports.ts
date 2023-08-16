@@ -10,19 +10,19 @@ import {
 export const getNodePorts = (
   nodeIndex: number
 ): {
-  beacon: {port: number; httpPort: number};
+  beacon: {p2pPort: number; httpPort: number};
   validator: {keymanagerPort: number};
-  execution: {port: number; enginePort: number; httpPort: number};
+  execution: {p2pPort: number; enginePort: number; httpPort: number};
 } => ({
   beacon: {
-    port: BN_P2P_BASE_PORT + 1 + nodeIndex,
+    p2pPort: BN_P2P_BASE_PORT + 1 + nodeIndex,
     httpPort: BN_REST_BASE_PORT + 1 + nodeIndex,
   },
   validator: {
     keymanagerPort: KEY_MANAGER_BASE_PORT + 1 + nodeIndex,
   },
   execution: {
-    port: EL_P2P_BASE_PORT + 1 + nodeIndex,
+    p2pPort: EL_P2P_BASE_PORT + 1 + nodeIndex,
     httpPort: EL_ETH_BASE_PORT + 1 + nodeIndex,
     enginePort: EL_ENGINE_BASE_PORT + 1 + nodeIndex,
   },
