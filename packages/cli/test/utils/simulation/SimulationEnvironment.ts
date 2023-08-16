@@ -35,7 +35,7 @@ import {
   GeneratorOptions,
 } from "./interfaces.js";
 import {Runner} from "./runner/index.js";
-import {getEstimatedTTD, registerProcessHandler, replaceIpFromUrl} from "./utils/index.js";
+import {getEstimatedTTD, registerProcessHandler} from "./utils/index.js";
 import {getNodePaths} from "./utils/paths.js";
 
 interface StartOpts {
@@ -270,9 +270,7 @@ export class SimulationEnvironment {
     const beaconOptions = typeof beacon === "object" ? beacon.options : {};
     const engineUrls = [
       // As lodestar is running on host machine, need to connect through local exposed ports
-      beaconType === BeaconClient.Lodestar
-        ? replaceIpFromUrl(executionNode.engineRpPublicUrl, "127.0.0.1")
-        : executionNode.engineRpPublicUrl,
+      beaconType === BeaconClient.Lodestar ? executionNode.engineRpPublicUrl : executionNode.engineRpPrivateUrl,
       ...(beaconOptions?.engineUrls ?? []),
     ];
     const beaconNode = await createBeaconNode(beaconType, {

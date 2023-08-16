@@ -57,8 +57,8 @@ const env = await SimulationEnvironment.initWithDefaults(
   },
   [
     {id: "node-1", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Geth, keysCount: 32, mining: true},
-    // {id: "node-2", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Nethermind, keysCount: 32, remote: true},
-    // {id: "node-3", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Nethermind, keysCount: 32},
+    {id: "node-2", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Nethermind, keysCount: 32, remote: true},
+    {id: "node-3", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Nethermind, keysCount: 32},
     {id: "node-4", beacon: BeaconClient.Lighthouse, execution: ExecutionClient.Geth, keysCount: 32},
   ]
 );
