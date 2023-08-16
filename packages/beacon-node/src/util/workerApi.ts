@@ -26,7 +26,6 @@ export class WorkerApi extends EventEmitter {
     }
     this.workerData = deserializeData(workerData);
 
-    // TODO: move init code to reusable function
     const exitSignals = ["SIGTERM", "SIGINT"] as NodeJS.Signals[];
     for (const signal of exitSignals) {
       this.process.on(signal, () => {
