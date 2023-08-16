@@ -1,5 +1,4 @@
 import {ChildProcess} from "node:child_process";
-import v8 from "node:v8";
 import {StrictEventEmitterSingleArg} from "./strictEvents.js";
 import {WorkerProcessContext} from "./workerProcess.js";
 
@@ -29,8 +28,7 @@ export function wireEventsOnWorkerProcess<EventData>(
   isWorkerToMain: {[K in keyof EventData]: EventDirection}
 ): void {
   // Subscribe to events from main thread
-  parentPort.on("message", (raw: string) => {
-    const data = v8.deserialize(Buffer.from(raw, "base64")) as WorkerBridgeEvent<EventData>;
+  parentPort.on("message", (data: WorkerBridgeEvent<EventData>) => {
     if (
       typeof data === "object" &&
       data.type === mainEventName &&
@@ -50,7 +48,7 @@ export function wireEventsOnWorkerProcess<EventData>(
           event: eventName,
           data,
         };
-        parentPort.send(Buffer.from(v8.serialize(workerEvent)).toString("base64"));
+        parentPort.send(workerEvent);
       });
     }
   }
@@ -63,8 +61,7 @@ export function wireEventsOnMainThread<EventData>(
   isWorkerToMain: {[K in keyof EventData]: EventDirection}
 ): void {
   // Subscribe to events from main thread
-  worker.on("message", (raw: string) => {
-    const data = v8.deserialize(Buffer.from(raw, "base64")) as WorkerBridgeEvent<EventData>;
+  worker.on("message", (data: WorkerBridgeEvent<EventData>) => {
     if (
       typeof data === "object" &&
       data.type === mainEventName &&
@@ -84,7 +81,7 @@ export function wireEventsOnMainThread<EventData>(
           event: eventName,
           data,
         };
-        worker.send(Buffer.from(v8.serialize(workerEvent)).toString("base64"));
+        worker.send(workerEvent);
       });
     }
   }
