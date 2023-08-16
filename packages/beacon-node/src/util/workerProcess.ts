@@ -35,8 +35,7 @@ type PendingRequest = {
 };
 
 export class WorkerProcess extends EventEmitter {
-  // TODO: Should not expose child
-  readonly child: ChildProcess;
+  private child: ChildProcess;
   private requestId = 0;
   private pendingRequests = new Map<number, PendingRequest>();
 
