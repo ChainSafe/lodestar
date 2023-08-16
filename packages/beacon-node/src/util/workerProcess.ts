@@ -48,6 +48,7 @@ export class WorkerProcess extends EventEmitter {
     // TODO: pass other exec args, --max-old-space-size? inspect/inspect-brk for debugging? forward process.execArgv?
     this.child = cp.fork(modulePath, [serializedWorkerData], {
       // https://nodejs.org/api/child_process.html#advanced-serialization
+      // TODO: advanced serialization does not work, hard to reproduce in a simple setup, further investigation required
       serialization: "json",
       // TODO: is this required?
       // killSignal: "SIGKILL",
