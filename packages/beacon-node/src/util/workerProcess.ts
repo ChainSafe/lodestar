@@ -51,7 +51,7 @@ export class WorkerProcess {
 
   constructor(modulePath: string, workerData: WorkerData) {
     // TODO: There is likely a better way to send init data
-    const serializedWorkerData = Buffer.from(v8.serialize(workerData)).toString("base64");
+    const serializedWorkerData = serializeData(workerData);
 
     // TODO: how do we know worker is ready? better way to initialize it?
     // TODO: worker on "spawn" was after fork, when is it ready?
@@ -74,7 +74,7 @@ export class WorkerProcess {
     });
 
     this.child.on("message", (raw: string) => {
-      const data = v8.deserialize(Buffer.from(raw, "base64")) as unknown;
+      const data = deserializeData(raw);
       if (isWorkerApiResponse(data)) {
         const {id, result, error} = data;
         const request = this.pendingRequests.get(id);
@@ -103,7 +103,7 @@ export class WorkerProcess {
     return new Promise((resolve, reject) => {
       const id = this.requestId++;
       this.pendingRequests.set(id, {resolve, reject});
-      this.child.send(Buffer.from(v8.serialize({id, method, args} as WorkerApiRequest)).toString("base64"));
+      this.child.send(serializeData({id, method, args} as WorkerApiRequest));
     });
   }
 }
@@ -111,22 +111,30 @@ export class WorkerProcess {
 export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void {
   const parentPort = process as WorkerProcessContext;
   parentPort.on("message", async (raw: string) => {
-    const data = v8.deserialize(Buffer.from(raw, "base64")) as unknown;
+    const data = deserializeData(raw);
     if (isWorkerApiRequest(data)) {
       const {id, method, args = []} = data;
       try {
         // TODO: differentiate sync vs async methods, check if result is promise
         const result = await api[method as keyof Api](...args);
-        parentPort.send(Buffer.from(v8.serialize({id, result} as WorkerApiResponse)).toString("base64"));
+        parentPort.send(serializeData({id, result} as WorkerApiResponse));
       } catch (error) {
-        parentPort.send(Buffer.from(v8.serialize({id, error} as WorkerApiResponse)).toString("base64"));
+        parentPort.send(serializeData({id, error} as WorkerApiResponse));
       }
     }
   });
 }
 
 export function getWorkerData(): WorkerData {
-  return v8.deserialize(Buffer.from(process.argv[2], "base64")) as WorkerData;
+  return deserializeData(process.argv[2]);
+}
+
+export function serializeData(data: Record<string, unknown>): string {
+  return Buffer.from(v8.serialize(data)).toString("base64");
+}
+
+export function deserializeData(raw: string): Record<string, unknown> {
+  return v8.deserialize(Buffer.from(raw, "base64")) as Record<string, unknown>;
 }
 
 function isWorkerApiRequest(data: unknown): data is WorkerApiRequest {
