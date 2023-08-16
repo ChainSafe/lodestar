@@ -39,8 +39,6 @@ export type WorkerProcessContext = NodeJS.Process & {
 type WorkerData = Record<string, unknown>;
 
 type PendingRequest = {
-  method: string;
-  args: unknown[];
   resolve: (value: unknown) => void;
   reject: (reason?: unknown) => void;
 };
@@ -66,10 +64,6 @@ export class WorkerProcess {
       // killSignal: "SIGKILL",
     });
 
-    process.on("exit", () => {
-      console.log(this.pendingRequests);
-    });
-
     this.child.on("exit", () => {
       console.log("Pending Requests ", this.pendingRequests.size);
       for (const request of this.pendingRequests.values()) {
@@ -82,7 +76,6 @@ export class WorkerProcess {
     this.child.on("message", (raw: string) => {
       const data = v8.deserialize(Buffer.from(raw, "base64")) as unknown;
       if (isWorkerApiResponse(data)) {
-        // console.log("Received response on main thread", data.id);
         const {id, result, error} = data;
         const request = this.pendingRequests.get(id);
         if (request) {
@@ -93,37 +86,8 @@ export class WorkerProcess {
             request.resolve(result);
           }
           this.pendingRequests.delete(id);
-        } else {
-          throw Error(`request for with id was undefined: ${id}`);
-        }
-      } else {
-        // console.log("Not API response received on main thread with type", typeof data);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-        if (!(data as any).type) {
-          console.log("Not an event either", data);
         }
       }
-    });
-
-    setInterval(() => {
-      if (!this.child.channel) {
-        console.log("IPC channel is broken");
-      }
-    }, 1000);
-
-    // this.child.on("disconnect", () => console.log("child disconnected"));
-    // this.child.on("close", (e) => console.log("child closed", e));
-    // this.child.on("error", (e) => console.log("child error", e));
-    // this.child.on("spawn", () => console.log("child spawned"));
-
-    process.on("unhandledRejection", (reason) => {
-      // eslint-disable-next-line no-console
-      console.error("Unhandled Rejection main thread:", reason);
-    });
-
-    process.on("uncaughtException", (error) => {
-      // eslint-disable-next-line no-console
-      console.error("Uncaught Exception main thread:", error);
     });
   }
 
@@ -136,15 +100,10 @@ export class WorkerProcess {
   }
 
   private sendRequest(method: string, args: unknown[]): Promise<unknown> {
-    if (!this.child.connected) {
-      console.log("Child process is no longer connected");
-      throw new ErrorAborted();
-    }
     return new Promise((resolve, reject) => {
       const id = this.requestId++;
-      this.pendingRequests.set(id, {method, args, resolve, reject});
+      this.pendingRequests.set(id, {resolve, reject});
       this.child.send(Buffer.from(v8.serialize({id, method, args} as WorkerApiRequest)).toString("base64"));
-      // console.log("Sent request from main thread", {id, method});
     });
   }
 }
@@ -155,17 +114,12 @@ export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void
     const data = v8.deserialize(Buffer.from(raw, "base64")) as unknown;
     if (isWorkerApiRequest(data)) {
       const {id, method, args = []} = data;
-      // console.log("Received request on worker", {id, method});
       try {
         // TODO: differentiate sync vs async methods, check if result is promise
-        const promise = api[method as keyof Api](...args);
-        // console.log("Result before await", promise);
-        const result = await promise;
+        const result = await api[method as keyof Api](...args);
         parentPort.send(Buffer.from(v8.serialize({id, result} as WorkerApiResponse)).toString("base64"));
-        // console.log("Sent result from worker", {id, method});
       } catch (error) {
         parentPort.send(Buffer.from(v8.serialize({id, error} as WorkerApiResponse)).toString("base64"));
-        // console.log("Sent error from worker", {id, method});
       }
     }
   });
