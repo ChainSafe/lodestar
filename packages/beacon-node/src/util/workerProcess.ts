@@ -61,31 +61,28 @@ export class WorkerProcess {
     // TODO: pass other exec args, --max-old-space-size? inspect/inspect-brk for debugging?
     this.child = cp.fork(modulePath, [serializedWorkerData], {
       // https://nodejs.org/api/child_process.html#advanced-serialization
-      serialization: "advanced",
+      serialization: "json",
       // TODO: is this required?
       // killSignal: "SIGKILL",
     });
 
     process.on("exit", () => {
-      // eslint-disable-next-line no-console
       console.log(this.pendingRequests);
     });
 
     this.child.on("exit", () => {
-      // eslint-disable-next-line no-console
       console.log("Pending Requests ", this.pendingRequests.size);
       for (const request of this.pendingRequests.values()) {
         // TODO: is this correct?
         request.reject(new ErrorAborted());
       }
-      // eslint-disable-next-line no-console
       console.log("libp2p worker exited");
     });
 
-    this.child.on("message", (data: unknown) => {
+    this.child.on("message", (raw: string) => {
+      const data = v8.deserialize(Buffer.from(raw, "base64")) as unknown;
       if (isWorkerApiResponse(data)) {
-        // eslint-disable-next-line no-console
-        console.log("Received response on main thread", data.id);
+        // console.log("Received response on main thread", data.id);
         const {id, result, error} = data;
         const request = this.pendingRequests.get(id);
         if (request) {
@@ -114,10 +111,10 @@ export class WorkerProcess {
       }
     }, 1000);
 
-    this.child.on("disconnect", () => console.log("child disconnected"));
-    this.child.on("close", (e) => console.log("child closed", e));
-    this.child.on("error", (e) => console.log("child error", e));
-    this.child.on("spawn", () => console.log("child spawned"));
+    // this.child.on("disconnect", () => console.log("child disconnected"));
+    // this.child.on("close", (e) => console.log("child closed", e));
+    // this.child.on("error", (e) => console.log("child error", e));
+    // this.child.on("spawn", () => console.log("child spawned"));
 
     process.on("unhandledRejection", (reason) => {
       // eslint-disable-next-line no-console
@@ -140,40 +137,35 @@ export class WorkerProcess {
 
   private sendRequest(method: string, args: unknown[]): Promise<unknown> {
     if (!this.child.connected) {
-      // eslint-disable-next-line no-console
       console.log("Child process is no longer connected");
       throw new ErrorAborted();
     }
     return new Promise((resolve, reject) => {
       const id = this.requestId++;
       this.pendingRequests.set(id, {method, args, resolve, reject});
-      this.child.send({id, method, args} as WorkerApiRequest);
-      // eslint-disable-next-line no-console
-      console.log("Sent request from main thread", {id, method});
+      this.child.send(Buffer.from(v8.serialize({id, method, args} as WorkerApiRequest)).toString("base64"));
+      // console.log("Sent request from main thread", {id, method});
     });
   }
 }
 
 export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void {
   const parentPort = process as WorkerProcessContext;
-  parentPort.on("message", async (data: unknown) => {
+  parentPort.on("message", async (raw: string) => {
+    const data = v8.deserialize(Buffer.from(raw, "base64")) as unknown;
     if (isWorkerApiRequest(data)) {
-      // eslint-disable-next-line no-console
       const {id, method, args = []} = data;
-      // eslint-disable-next-line no-console
-      console.log("Received request on worker", {id, method});
+      // console.log("Received request on worker", {id, method});
       try {
         // TODO: differentiate sync vs async methods, check if result is promise
         const promise = api[method as keyof Api](...args);
         // console.log("Result before await", promise);
         const result = await promise;
-        parentPort.send({id, result} as WorkerApiResponse);
-        // eslint-disable-next-line no-console
-        console.log("Sent result from worker", {id, method});
+        parentPort.send(Buffer.from(v8.serialize({id, result} as WorkerApiResponse)).toString("base64"));
+        // console.log("Sent result from worker", {id, method});
       } catch (error) {
-        parentPort.send({id, error} as WorkerApiResponse);
-        // eslint-disable-next-line no-console
-        console.log("Sent error from worker", {id, method});
+        parentPort.send(Buffer.from(v8.serialize({id, error} as WorkerApiResponse)).toString("base64"));
+        // console.log("Sent error from worker", {id, method});
       }
     }
   });

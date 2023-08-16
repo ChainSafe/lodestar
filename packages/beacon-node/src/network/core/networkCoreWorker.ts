@@ -45,14 +45,14 @@ process.on("uncaughtException", (error) => {
   console.error("Uncaught Exception worker process:", error);
 });
 
-process.on("disconnect", () => {
-  // eslint-disable-next-line no-console
-  console.log("Worker disconnect");
-});
-process.on("warning", (e) => {
-  // eslint-disable-next-line no-console
-  console.log("Worker warning", e);
-});
+// process.on("disconnect", () => {
+//   // eslint-disable-next-line no-console
+//   console.log("Worker disconnect");
+// });
+// process.on("warning", (e) => {
+//   // eslint-disable-next-line no-console
+//   console.log("Worker warning", e);
+// });
 // parentPort.on("multipleResolves", (e) => {
 //   console.log("multipleResolves", e);
 // });
@@ -194,4 +194,4 @@ const libp2pWorkerApi: NetworkWorkerApi = {
 
 exposeWorkerApi(libp2pWorkerApi);
 
-process.on("exit", () => console.log("child exited"));
+// process.on("exit", () => console.log("child exited"));
