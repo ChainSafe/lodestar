@@ -28,7 +28,7 @@ expose({
 });
 
 function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
-  const startNs = process.hrtime.bigint();
+  const startMs = Date.now();
   const results: WorkResult<boolean>[] = [];
   let batchRetries = 0;
   let batchSigsSuccess = 0;
@@ -99,8 +99,8 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
     workerId,
     batchRetries,
     batchSigsSuccess,
-    workerStartNs: startNs,
-    workerEndNs: process.hrtime.bigint(),
+    workerStartMs: startMs,
+    workerEndMs: Date.now(),
     results,
   };
 }
