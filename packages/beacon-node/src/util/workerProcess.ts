@@ -57,6 +57,7 @@ export class WorkerProcess extends EventEmitter {
       // eslint-disable-next-line no-console
       console.log("Pending Requests ", this.pendingRequests.size);
       for (const request of this.pendingRequests.values()) {
+        // This can cause `error: uncaughtException: Aborted` on shutdown, needs be handled differently
         // TODO: is this correct?
         request.reject(new ErrorAborted());
       }
