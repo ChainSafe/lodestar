@@ -155,7 +155,7 @@ export class WorkerProcess {
 }
 
 export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void {
-  process.on("message", async (data: WorkerApiRequest) => {
+  process.on("message", async (data: unknown) => {
     if (isWorkerApiRequest(data)) {
       // eslint-disable-next-line no-console
       const {id, method, args = []} = data;
