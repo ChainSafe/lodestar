@@ -85,7 +85,7 @@ export class WorkerProcess {
     this.child.on("message", (data: unknown) => {
       if (isWorkerApiResponse(data)) {
         // eslint-disable-next-line no-console
-        // console.log("Received response on main thread", data.id);
+        console.log("Received response on main thread", data.id);
         const {id, result, error} = data;
         const request = this.pendingRequests.get(id);
         if (request) {
@@ -149,7 +149,7 @@ export class WorkerProcess {
       this.pendingRequests.set(id, {method, args, resolve, reject});
       this.child.send({id, method, args} as WorkerApiRequest);
       // eslint-disable-next-line no-console
-      // console.log("Sent request from main thread", {id, method});
+      console.log("Sent request from main thread", {id, method});
     });
   }
 }
@@ -161,7 +161,7 @@ export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void
       // eslint-disable-next-line no-console
       const {id, method, args = []} = data;
       // eslint-disable-next-line no-console
-      // console.log("Received request on worker", {id, method});
+      console.log("Received request on worker", {id, method});
       try {
         // TODO: differentiate sync vs async methods, check if result is promise
         const promise = api[method as keyof Api](...args);
@@ -169,11 +169,11 @@ export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void
         const result = await promise;
         parentPort.send({id, result} as WorkerApiResponse);
         // eslint-disable-next-line no-console
-        // console.log("Sent result from worker", {id, method});
+        console.log("Sent result from worker", {id, method});
       } catch (error) {
         parentPort.send({id, error} as WorkerApiResponse);
         // eslint-disable-next-line no-console
-        // console.log("Sent error from worker", {id, method});
+        console.log("Sent error from worker", {id, method});
       }
     }
   });
