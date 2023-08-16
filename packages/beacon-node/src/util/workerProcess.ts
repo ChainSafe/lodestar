@@ -27,6 +27,7 @@ export type WorkerApiResponse =
       error: Error;
     };
 
+// TODO: Do we want to time out pending requests at some point and throw error?
 type PendingRequest = {
   resolve: (value: unknown) => void;
   reject: (reason?: unknown) => void;
