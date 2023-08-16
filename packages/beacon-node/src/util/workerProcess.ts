@@ -3,8 +3,6 @@ import {EventEmitter} from "node:events";
 import v8 from "node:v8";
 import {ErrorAborted} from "@lodestar/utils";
 
-/* eslint-disable no-console */
-
 // TODO: How to ensure passed interface only has async methods?
 type ParentWorkerApi<T> = {
   [K in keyof T]: T[K] extends (...args: infer A) => infer R ? (...args: A) => R : never;
@@ -41,13 +39,13 @@ export class WorkerProcess extends EventEmitter {
 
   constructor(modulePath: string, workerData: Record<string, unknown>) {
     super();
-    // TODO: There is likely a better way to send init data
+    // TODO: There is likely a better way to send init data, use init message instead
     const serializedWorkerData = serializeData(workerData);
 
     // TODO: how do we know worker is ready? better way to initialize it?
-    // TODO: worker on "spawn" was after fork, when is it ready?
+    // TODO: listen on child "spawn" after fork, when is it ready?
     // TODO: resolve module path here, see Worker class in thread.js
-    // TODO: pass other exec args, --max-old-space-size? inspect/inspect-brk for debugging?
+    // TODO: pass other exec args, --max-old-space-size? inspect/inspect-brk for debugging? forward process.execArgv?
     this.child = cp.fork(modulePath, [serializedWorkerData], {
       // https://nodejs.org/api/child_process.html#advanced-serialization
       serialization: "json",
@@ -56,11 +54,13 @@ export class WorkerProcess extends EventEmitter {
     });
 
     this.child.on("exit", () => {
+      // eslint-disable-next-line no-console
       console.log("Pending Requests ", this.pendingRequests.size);
       for (const request of this.pendingRequests.values()) {
         // TODO: is this correct?
         request.reject(new ErrorAborted());
       }
+      // eslint-disable-next-line no-console
       console.log("libp2p worker exited");
     });
 
@@ -81,9 +81,20 @@ export class WorkerProcess extends EventEmitter {
         }
       }
     });
+
+    // TODO: remove
+    process.on("exit", () => {
+      // eslint-disable-next-line no-console
+      console.log(this.pendingRequests);
+    });
   }
 
   send(data: Record<string, unknown>): boolean {
+    if (!this.child.connected) {
+      // TODO: If we consider restarting cp if it crashed this needs to be handled differently
+      // Send data must be buffered and resend once cp is up again or another error must be thrown
+      throw new ErrorAborted();
+    }
     return this.child.send(serializeData(data));
   }
 
@@ -105,7 +116,7 @@ export class WorkerProcess extends EventEmitter {
     return new Promise((resolve, reject) => {
       const id = this.requestId++;
       this.pendingRequests.set(id, {resolve, reject});
-      this.child.send(serializeData({id, method, args} as WorkerApiRequest));
+      this.send({id, method, args} as WorkerApiRequest);
     });
   }
 }

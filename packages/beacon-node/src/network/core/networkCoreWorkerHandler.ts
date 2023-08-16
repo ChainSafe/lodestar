@@ -109,6 +109,7 @@ export class WorkerNetworkCore implements INetworkCore {
     };
 
     const worker = new WorkerProcess(
+      // TODO: can the relative path be resolved inside WorkerProcess?
       path.join(path.dirname(fileURLToPath(import.meta.url)), "./networkCoreWorker.js"),
       workerData
     );
