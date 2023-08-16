@@ -59,6 +59,7 @@ export class WorkerProcess extends EventEmitter {
       for (const request of this.pendingRequests.values()) {
         // This can cause `error: uncaughtException: Aborted` on shutdown, needs be handled differently
         // TODO: is this correct?
+        // There should never be pendingRequests..must be ensured all request are sent before child closes, re-test this
         request.reject(new ErrorAborted());
       }
       // eslint-disable-next-line no-console
@@ -94,7 +95,7 @@ export class WorkerProcess extends EventEmitter {
     if (!this.child.connected) {
       // TODO: If we consider restarting cp if it crashed this needs to be handled differently
       // Send data must be buffered and resend once cp is up again or another error must be thrown
-      throw new ErrorAborted();
+      return false;
     }
     return this.child.send(serializeData(data));
   }
