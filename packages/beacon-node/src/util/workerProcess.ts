@@ -1,4 +1,5 @@
-import cp, {ChildProcess, Serializable} from "node:child_process";
+import cp, {ChildProcess} from "node:child_process";
+import {EventEmitter} from "node:events";
 import v8 from "node:v8";
 import {ErrorAborted} from "@lodestar/utils";
 
@@ -7,10 +8,6 @@ import {ErrorAborted} from "@lodestar/utils";
 // TODO: How to ensure passed interface only has async methods?
 type ParentWorkerApi<T> = {
   [K in keyof T]: T[K] extends (...args: infer A) => infer R ? (...args: A) => R : never;
-};
-
-type ChildWorkerApi<T> = {
-  [K in keyof T]: T[K] extends (...args: infer A) => infer R ? (...args: A) => R | Promise<R> : never;
 };
 
 export type WorkerApiRequest = {
@@ -32,10 +29,6 @@ export type WorkerApiResponse =
       error: Error;
     };
 
-export type WorkerProcessContext = NodeJS.Process & {
-  send: (message: Serializable) => boolean;
-};
-
 type WorkerData = Record<string, unknown>;
 
 type PendingRequest = {
@@ -43,13 +36,14 @@ type PendingRequest = {
   reject: (reason?: unknown) => void;
 };
 
-export class WorkerProcess {
+export class WorkerProcess extends EventEmitter {
   // TODO: Should not expose child
   readonly child: ChildProcess;
   private requestId = 0;
   private pendingRequests = new Map<number, PendingRequest>();
 
   constructor(modulePath: string, workerData: WorkerData) {
+    super();
     // TODO: There is likely a better way to send init data
     const serializedWorkerData = serializeData(workerData);
 
@@ -75,6 +69,7 @@ export class WorkerProcess {
 
     this.child.on("message", (raw: string) => {
       const data = deserializeData(raw);
+      this.emit("message", data);
       if (isWorkerApiResponse(data)) {
         const {id, result, error} = data;
         const request = this.pendingRequests.get(id);
@@ -89,6 +84,16 @@ export class WorkerProcess {
         }
       }
     });
+  }
+
+  send(data: Record<string, unknown>): boolean {
+    return this.child.send(serializeData(data));
+  }
+
+  terminate(): void {
+    this.child.kill("SIGKILL");
+    // TODO: unref needed?
+    // this.modules.worker.unref();
   }
 
   createApi<Api extends ParentWorkerApi<Api>>(): Api {
@@ -108,23 +113,6 @@ export class WorkerProcess {
   }
 }
 
-export function exposeWorkerApi<Api extends ChildWorkerApi<Api>>(api: Api): void {
-  const parentPort = process as WorkerProcessContext;
-  parentPort.on("message", async (raw: string) => {
-    const data = deserializeData(raw);
-    if (isWorkerApiRequest(data)) {
-      const {id, method, args = []} = data;
-      try {
-        // TODO: differentiate sync vs async methods, check if result is promise
-        const result = await api[method as keyof Api](...args);
-        parentPort.send(serializeData({id, result} as WorkerApiResponse));
-      } catch (error) {
-        parentPort.send(serializeData({id, error} as WorkerApiResponse));
-      }
-    }
-  });
-}
-
 export function getWorkerData(): WorkerData {
   return deserializeData(process.argv[2]);
 }
@@ -135,14 +123,6 @@ export function serializeData(data: Record<string, unknown>): string {
 
 export function deserializeData(raw: string): Record<string, unknown> {
   return v8.deserialize(Buffer.from(raw, "base64")) as Record<string, unknown>;
-}
-
-function isWorkerApiRequest(data: unknown): data is WorkerApiRequest {
-  return (
-    typeof data === "object" &&
-    (data as WorkerApiRequest).id !== undefined &&
-    (data as WorkerApiRequest).method !== undefined
-  );
 }
 
 function isWorkerApiResponse(data: unknown): data is WorkerApiResponse {

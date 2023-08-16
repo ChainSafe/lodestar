@@ -8,7 +8,8 @@ import {collectNodeJSMetrics, RegistryMetricCreator} from "../../metrics/index.j
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {Clock} from "../../util/clock.js";
 import {wireEventsOnWorkerProcess} from "../../util/workerEvents.js";
-import {WorkerProcessContext, exposeWorkerApi, getWorkerData} from "../../util/workerProcess.js";
+import {getWorkerData} from "../../util/workerProcess.js";
+import {WorkerApi} from "../../util/workerApi.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {peerIdToString} from "../../util/peerId.js";
 import {profileNodeJS} from "../../util/profile.js";
@@ -49,11 +50,10 @@ process.on("exit", () => console.log("child exited"));
 
 // Cloned data from instantiation
 const workerData = getWorkerData() as NetworkWorkerData;
+const workerApi = new WorkerApi();
 // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
 if (!workerData) throw Error("workerData must be defined");
 if (!process.send) throw Error("process.send must be defined");
-
-const parentPort = process as WorkerProcessContext;
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
 const peerId = await createFromProtobuf(workerData.peerIdProto);
@@ -132,13 +132,13 @@ const core = await NetworkCore.init({
 wireEventsOnWorkerProcess<NetworkEventData>(
   NetworkWorkerThreadEventType.networkEvent,
   events,
-  parentPort,
+  workerApi,
   networkEventDirection
 );
 wireEventsOnWorkerProcess<ReqRespBridgeEventData>(
   NetworkWorkerThreadEventType.reqRespBridgeEvents,
   reqRespBridgeEventBus,
-  parentPort,
+  workerApi,
   reqRespBridgeEventDirection
 );
 
@@ -182,4 +182,4 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   },
 };
 
-exposeWorkerApi(libp2pWorkerApi);
+workerApi.expose(libp2pWorkerApi);

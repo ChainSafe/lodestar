@@ -1,4 +1,3 @@
-import {ChildProcess} from "node:child_process";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
@@ -50,7 +49,7 @@ export type WorkerNetworkCoreInitModules = {
 
 type WorkerNetworkCoreModules = WorkerNetworkCoreInitModules & {
   workerApi: NetworkWorkerApi;
-  worker: ChildProcess;
+  worker: WorkerProcess;
 };
 
 /**
@@ -117,16 +116,14 @@ export class WorkerNetworkCore implements INetworkCore {
     return new WorkerNetworkCore({
       ...modules,
       workerApi: worker.createApi(),
-      worker: worker.child,
+      worker: worker,
     });
   }
 
   async close(): Promise<void> {
     await this.getApi().close();
     this.modules.logger.debug("terminating network worker");
-    this.modules.worker.kill("SIGKILL");
-    // TODO: unref needed?
-    // this.modules.worker.unref();
+    this.modules.worker.terminate();
     this.modules.logger.debug("terminated network worker");
   }
 

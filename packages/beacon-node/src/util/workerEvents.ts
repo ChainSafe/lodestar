@@ -1,6 +1,6 @@
-import {ChildProcess} from "node:child_process";
 import {StrictEventEmitterSingleArg} from "./strictEvents.js";
-import {WorkerProcessContext, deserializeData, serializeData} from "./workerProcess.js";
+import {WorkerProcess} from "./workerProcess.js";
+import {WorkerApi} from "./workerApi.js";
 
 export type WorkerBridgeEvent<EventData> = {
   type: string;
@@ -24,12 +24,11 @@ export enum EventDirection {
 export function wireEventsOnWorkerProcess<EventData>(
   mainEventName: string,
   events: StrictEventEmitterSingleArg<EventData>,
-  parentPort: WorkerProcessContext,
+  workerApi: WorkerApi,
   isWorkerToMain: {[K in keyof EventData]: EventDirection}
 ): void {
   // Subscribe to events from main thread
-  parentPort.on("message", (raw: string) => {
-    const data = deserializeData(raw) as WorkerBridgeEvent<EventData>;
+  workerApi.on("message", (data: WorkerBridgeEvent<EventData>) => {
     if (
       typeof data === "object" &&
       data.type === mainEventName &&
@@ -49,7 +48,7 @@ export function wireEventsOnWorkerProcess<EventData>(
           event: eventName,
           data,
         };
-        parentPort.send(serializeData(workerEvent));
+        workerApi.send(workerEvent);
       });
     }
   }
@@ -58,12 +57,11 @@ export function wireEventsOnWorkerProcess<EventData>(
 export function wireEventsOnMainThread<EventData>(
   mainEventName: string,
   events: StrictEventEmitterSingleArg<EventData>,
-  worker: ChildProcess,
+  worker: WorkerProcess,
   isWorkerToMain: {[K in keyof EventData]: EventDirection}
 ): void {
   // Subscribe to events from main thread
-  worker.on("message", (raw: string) => {
-    const data = deserializeData(raw) as WorkerBridgeEvent<EventData>;
+  worker.on("message", (data: WorkerBridgeEvent<EventData>) => {
     if (
       typeof data === "object" &&
       data.type === mainEventName &&
@@ -83,7 +81,7 @@ export function wireEventsOnMainThread<EventData>(
           event: eventName,
           data,
         };
-        worker.send(serializeData(workerEvent));
+        worker.send(workerEvent);
       });
     }
   }
