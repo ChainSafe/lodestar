@@ -37,12 +37,12 @@ for (const signal of exitSignals) {
 
 process.on("unhandledRejection", (reason) => {
   // eslint-disable-next-line no-console
-  console.error("Unhandled Rejection:", reason);
+  console.error("Unhandled Rejection worker process:", reason);
 });
 
 process.on("uncaughtException", (error) => {
   // eslint-disable-next-line no-console
-  console.error("Uncaught Exception:", error);
+  console.error("Uncaught Exception worker process:", error);
 });
 
 process.on("disconnect", () => {
