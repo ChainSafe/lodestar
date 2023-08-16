@@ -51,8 +51,6 @@ export class WorkerProcess extends EventEmitter {
       // https://nodejs.org/api/child_process.html#advanced-serialization
       // TODO: advanced serialization does not work, hard to reproduce in a simple setup, further investigation required
       serialization: "json",
-      // TODO: is this required?
-      // killSignal: "SIGKILL",
     });
 
     this.child.on("exit", () => {
