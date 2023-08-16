@@ -35,7 +35,7 @@ import {
   GeneratorOptions,
 } from "./interfaces.js";
 import {Runner} from "./runner/index.js";
-import {getEstimatedTTD, registerProcessHandler} from "./utils/index.js";
+import {getEstimatedTTD, registerProcessHandler, replaceIpFromUrl} from "./utils/index.js";
 import {getNodePaths} from "./utils/paths.js";
 
 interface StartOpts {
@@ -294,11 +294,19 @@ export class SimulationEnvironment {
         ? getValidatorForBeaconNode(beaconType)
         : validator;
     const validatorOptions = typeof validator === "object" ? validator.options : {};
+    const beaconUrls = [
+      // As lodestar is running on host machine, need to connect through docker named host
+      beaconType === BeaconClient.Lodestar && validatorType !== ValidatorClient.Lodestar
+        ? replaceIpFromUrl(beaconNode.restPrivateUrl, "host.docker.internal")
+        : beaconNode.restPrivateUrl,
+      ...(validatorOptions?.beaconUrls ?? []),
+    ];
+
     const validatorNode = await createValidatorNode(validatorType, {
       ...validatorOptions,
       ...commonOptions,
       keys,
-      beaconUrls: [beaconNode.restPrivateUrl],
+      beaconUrls,
       paths: getNodePaths({id, logsDir: this.options.logsDir, client: validatorType, root: this.options.rootDir}),
     });
 

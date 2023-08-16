@@ -1,7 +1,7 @@
 import type {SecretKey} from "@chainsafe/bls/types";
 import {routes} from "@lodestar/api/beacon";
 import {ApiError} from "@lodestar/api";
-import {AssertionResult, BeaconClient, ValidatorClientKeys, SimulationAssertion} from "../interfaces.js";
+import {AssertionResult, ValidatorClientKeys, SimulationAssertion, ValidatorClient} from "../interfaces.js";
 import {arrayEquals} from "../utils/index.js";
 import {neverMatcher} from "./matchers.js";
 
@@ -17,7 +17,7 @@ export const nodeAssertion: SimulationAssertion<"node", {health: number; keyMana
 
     let keyManagerKeys: string[];
     // There is an authentication issue with the lighthouse keymanager client
-    if (node.beacon.client == BeaconClient.Lighthouse || getAllKeys(node.validator.keys).length === 0) {
+    if (node.validator.client == ValidatorClient.Lighthouse || getAllKeys(node.validator.keys).length === 0) {
       keyManagerKeys = [];
     } else {
       const res = await node.validator.keyManager.listKeys();
@@ -31,7 +31,7 @@ export const nodeAssertion: SimulationAssertion<"node", {health: number; keyMana
     const errors: AssertionResult[] = [];
 
     // There is an authentication issue with the lighthouse keymanager client
-    if (node.beacon.client == BeaconClient.Lighthouse) return errors;
+    if (node.validator?.client == ValidatorClient.Lighthouse) return errors;
 
     const {health, keyManagerKeys} = store[slot];
 
