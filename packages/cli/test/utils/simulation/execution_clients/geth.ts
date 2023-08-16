@@ -28,10 +28,10 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
     "/data",
     isDocker
   );
-  const engineRpPublicUrl = `http://127.0.0.1:${ports.execution.enginePort}`;
-  const engineRpPrivateUrl = `http://${address}:${ports.execution.enginePort}`;
-  const ethRpPublicUrl = `http://127.0.0.1:${ports.execution.httpPort}`;
-  const ethRpPrivateUrl = `http://${address}:${ports.execution.httpPort}`;
+  const engineRpcPublicUrl = `http://127.0.0.1:${ports.execution.enginePort}`;
+  const engineRpcPrivateUrl = `http://${address}:${ports.execution.enginePort}`;
+  const ethRpcPublicUrl = `http://127.0.0.1:${ports.execution.httpPort}`;
+  const ethRpcPrivateUrl = `http://${address}:${ports.execution.httpPort}`;
 
   const skPath = path.join(rootDir, "sk.json");
   const skPathMounted = path.join(rootDirMounted, "sk.json");
@@ -153,7 +153,7 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
     },
     health: async () => {
       try {
-        await got.post(ethRpPublicUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
+        await got.post(ethRpcPublicUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
         return {ok: true};
       } catch (err) {
         return {ok: false, reason: (err as Error).message, checkId: "JSON RPC query net_version"};
@@ -166,16 +166,16 @@ export const generateGethNode: ExecutionNodeGenerator<ExecutionClient.Geth> = (o
   const provider = new Eth1ProviderWithAdmin(
     {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},
     // To allow admin_* RPC methods had to add "ethRpcUrl"
-    {providerUrls: [ethRpPublicUrl, engineRpPublicUrl], jwtSecretHex: SHARED_JWT_SECRET}
+    {providerUrls: [ethRpcPublicUrl, engineRpcPublicUrl], jwtSecretHex: SHARED_JWT_SECRET}
   );
 
   return {
     client: ExecutionClient.Geth,
     id,
-    engineRpPublicUrl,
-    engineRpPrivateUrl,
-    ethRpPublicUrl,
-    ethRpPrivateUrl,
+    engineRpcPublicUrl,
+    engineRpcPrivateUrl,
+    ethRpcPublicUrl,
+    ethRpcPrivateUrl,
     ttd,
     jwtSecretHex: SHARED_JWT_SECRET,
     provider,

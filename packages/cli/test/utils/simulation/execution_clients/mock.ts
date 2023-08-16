@@ -5,20 +5,20 @@ import {getNodePorts} from "../utils/ports.js";
 export const generateMockNode: ExecutionNodeGenerator<ExecutionClient.Mock> = (opts, runner) => {
   const {id, ttd, nodeIndex} = opts;
   const ports = getNodePorts(nodeIndex);
-  const engineRpPublicUrl = `http://127.0.0.1:${ports.execution.enginePort}`;
-  const engineRpPrivateUrl = engineRpPublicUrl;
-  const ethRpPublicUrl = `http://127.0.0.1:${ports.execution.httpPort}`;
-  const ethRpPrivateUrl = ethRpPublicUrl;
+  const engineRpcPublicUrl = `http://127.0.0.1:${ports.execution.enginePort}`;
+  const engineRpcPrivateUrl = engineRpcPublicUrl;
+  const ethRpcPublicUrl = `http://127.0.0.1:${ports.execution.httpPort}`;
+  const ethRpcPrivateUrl = ethRpcPublicUrl;
 
   const job = runner.create([]);
 
   return {
     client: ExecutionClient.Mock,
     id,
-    engineRpPublicUrl,
-    engineRpPrivateUrl,
-    ethRpPublicUrl,
-    ethRpPrivateUrl,
+    engineRpcPublicUrl,
+    engineRpcPrivateUrl,
+    ethRpcPublicUrl,
+    ethRpcPrivateUrl,
     ttd,
     jwtSecretHex: SHARED_JWT_SECRET,
     provider: null,

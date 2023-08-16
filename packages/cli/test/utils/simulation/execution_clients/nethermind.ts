@@ -27,10 +27,10 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
 
   // Docker will be executed on entrypoint automatically
   const binaryPath = "";
-  const engineRpPublicUrl = `http://127.0.0.1:${ports.execution.enginePort}`;
-  const engineRpPrivateUrl = `http://${address}:${ports.execution.enginePort}`;
-  const ethRpPublicUrl = `http://127.0.0.1:${ports.execution.httpPort}`;
-  const ethRpPrivateUrl = `http://${address}:${ports.execution.httpPort}`;
+  const engineRpcPublicUrl = `http://127.0.0.1:${ports.execution.enginePort}`;
+  const engineRpcPrivateUrl = `http://${address}:${ports.execution.enginePort}`;
+  const ethRpcPublicUrl = `http://127.0.0.1:${ports.execution.httpPort}`;
+  const ethRpcPrivateUrl = `http://${address}:${ports.execution.httpPort}`;
 
   const chainSpecPath = path.join(rootDir, "chain.json");
   const chainSpecContainerPath = path.join(rootDirMounted, "chain.json");
@@ -65,7 +65,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
         String(ports.execution.httpPort as number),
         "--JsonRpc.EngineHost",
         "0.0.0.0",
-        "--JsonRpc.ports.execution.enginePort",
+        "--JsonRpc.EnginePort",
         String(ports.execution.enginePort as number),
         "--JsonRpc.EngineEnabledModules",
         "Admin,Eth,Subscribe,Trace,TxPool,Web3,Personal,Proof,Net,Parity,Health,Rpc,Debug",
@@ -102,7 +102,7 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
     },
     health: async () => {
       try {
-        await got.post(ethRpPublicUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
+        await got.post(ethRpcPublicUrl, {json: {jsonrpc: "2.0", method: "net_version", params: [], id: 67}});
         return {ok: true};
       } catch (err) {
         return {ok: false, reason: (err as Error).message, checkId: "JSON RPC query net_version"};
@@ -115,16 +115,16 @@ export const generateNethermindNode: ExecutionNodeGenerator<ExecutionClient.Neth
   const provider = new Eth1ProviderWithAdmin(
     {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},
     // To allow admin_* RPC methods had to add "ethRpcUrl"
-    {providerUrls: [ethRpPublicUrl, engineRpPublicUrl], jwtSecretHex: SHARED_JWT_SECRET}
+    {providerUrls: [ethRpcPublicUrl, engineRpcPublicUrl], jwtSecretHex: SHARED_JWT_SECRET}
   );
 
   return {
     client: ExecutionClient.Nethermind,
     id,
-    engineRpPublicUrl,
-    engineRpPrivateUrl,
-    ethRpPublicUrl,
-    ethRpPrivateUrl,
+    engineRpcPublicUrl,
+    engineRpcPrivateUrl,
+    ethRpcPublicUrl,
+    ethRpcPrivateUrl,
     ttd,
     jwtSecretHex: SHARED_JWT_SECRET,
     provider,

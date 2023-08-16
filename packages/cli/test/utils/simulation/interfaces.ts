@@ -193,19 +193,19 @@ export interface ExecutionNode<E extends ExecutionClient = ExecutionClient> {
   /**
    * Engine URL accessible form the host machine if the process is running in private network inside docker
    */
-  readonly engineRpPublicUrl: string;
+  readonly engineRpcPublicUrl: string;
   /**
    * Engine URL accessible within private network inside docker
    */
-  readonly engineRpPrivateUrl: string;
+  readonly engineRpcPrivateUrl: string;
   /**
    * RPC URL accessible form the host machine if the process is running in private network inside docker
    */
-  readonly ethRpPublicUrl: string;
+  readonly ethRpcPublicUrl: string;
   /**
    * RPC URL accessible within private network inside docker
    */
-  readonly ethRpPrivateUrl: string;
+  readonly ethRpcPrivateUrl: string;
   readonly jwtSecretHex: string;
   readonly provider: E extends ExecutionClient.Mock ? null : Eth1ProviderWithAdmin;
   readonly job: Job;

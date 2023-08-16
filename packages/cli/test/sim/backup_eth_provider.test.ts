@@ -66,7 +66,7 @@ const node2 = await env.createNodePair({
   // we have to replace the IP with the local ip to connect to the geth
   beacon: {
     type: BeaconClient.Lodestar,
-    options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpPublicUrl, "127.0.0.1")]},
+    options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpcPublicUrl, "127.0.0.1")]},
   },
   execution: ExecutionClient.Geth,
   keysCount: 32,
@@ -79,7 +79,7 @@ const node3 = await env.createNodePair({
   // we have to replace the IP with the local ip to connect to the geth
   beacon: {
     type: BeaconClient.Lodestar,
-    options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpPublicUrl, "127.0.0.1")]},
+    options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpcPublicUrl, "127.0.0.1")]},
   },
   execution: ExecutionClient.Geth,
   keysCount: 0,
