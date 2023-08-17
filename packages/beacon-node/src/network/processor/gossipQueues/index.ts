@@ -29,7 +29,7 @@ export const MIN_SIGNATURE_SETS_TO_BATCH_VERIFY = 32;
 /**
  * Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
  */
-const gossipQueueOpts: {
+const defaultGossipQueueOpts: {
   [K in GossipType]: GossipQueueOpts<PendingGossipsubMessage>;
 } = {
   // validation gossip block asap
@@ -52,9 +52,8 @@ const gossipQueueOpts: {
   // start with dropping 1% of the queue, then increase 1% more each time. Reset when queue is empty
   [GossipType.beacon_attestation]: {
     maxLength: 24576,
-    indexFn: (item: PendingGossipsubMessage) => getAttDataBase64FromAttestationSerialized(item.msg.data),
-    minChunkSize: MIN_SIGNATURE_SETS_TO_BATCH_VERIFY,
-    maxChunkSize: MAX_GOSSIP_ATTESTATION_BATCH_SIZE,
+    type: QueueType.LIFO,
+    dropOpts: {type: DropType.ratio, start: 0.01, step: 0.01},
   },
   [GossipType.voluntary_exit]: {maxLength: 4096, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
   [GossipType.proposer_slashing]: {maxLength: 4096, type: QueueType.FIFO, dropOpts: {type: DropType.count, count: 1}},
@@ -83,6 +82,17 @@ const gossipQueueOpts: {
   },
 };
 
+const indexedGossipQueueOpts: {
+  [K in GossipType]?: GossipQueueOpts<PendingGossipsubMessage>;
+} = {
+  [GossipType.beacon_attestation]: {
+    maxLength: 24576,
+    indexFn: (item: PendingGossipsubMessage) => getAttDataBase64FromAttestationSerialized(item.msg.data),
+    minChunkSize: MIN_SIGNATURE_SETS_TO_BATCH_VERIFY,
+    maxChunkSize: MAX_GOSSIP_ATTESTATION_BATCH_SIZE,
+  },
+};
+
 /**
  * Wraps a GossipValidatorFn with a queue, to limit the processing of gossip objects by type.
  *
@@ -99,7 +109,12 @@ const gossipQueueOpts: {
  * By topic is too specific, so by type groups all similar objects in the same queue. All in the same won't allow
  * to customize different queue behaviours per object type (see `gossipQueueOpts`).
  */
-export function createGossipQueues(): {[K in GossipType]: GossipQueue<PendingGossipsubMessage>} {
+export function createGossipQueues(beaconAttestationBatchValidation = false): {
+  [K in GossipType]: GossipQueue<PendingGossipsubMessage>;
+} {
+  const gossipQueueOpts = beaconAttestationBatchValidation
+    ? {...defaultGossipQueueOpts, ...indexedGossipQueueOpts}
+    : defaultGossipQueueOpts;
   return mapValues(gossipQueueOpts, (opts) => {
     if (isIndexedGossipQueueMinSizeOpts(opts)) {
       return new IndexedGossipQueueMinSize(opts);

@@ -93,6 +93,9 @@ describe("validateGossipAttestationsSameAttData", () => {
     chain = {
       bls: new BlsSingleThreadVerifier({metrics: null}),
       seenAttesters: new SeenAttesters(),
+      opts: {
+        minSameMessageSignatureSetsToBatch: 2,
+      } as IBeaconChain["opts"],
     } as Partial<IBeaconChain> as IBeaconChain;
   });
 

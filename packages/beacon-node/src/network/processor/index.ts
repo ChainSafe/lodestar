@@ -149,8 +149,8 @@ export class NetworkProcessor {
   private readonly metrics: Metrics | null;
   private readonly gossipValidatorFn: GossipValidatorFn;
   private readonly gossipValidatorBatchFn: GossipValidatorBatchFn;
-  private readonly gossipQueues = createGossipQueues();
-  private readonly gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
+  private readonly gossipQueues: ReturnType<typeof createGossipQueues>;
+  private readonly gossipTopicConcurrency: {[K in GossipType]: number};
   private readonly extractBlockSlotRootFns = createExtractBlockSlotRootFns();
   // we may not receive the block for Attestation and SignedAggregateAndProof messages, in that case PendingGossipsubMessage needs
   // to be stored in this Map and reprocessed once the block comes
@@ -169,6 +169,8 @@ export class NetworkProcessor {
     this.metrics = metrics;
     this.logger = logger;
     this.events = events;
+    this.gossipQueues = createGossipQueues(this.chain.opts.beaconAttestationBatchValidation);
+    this.gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
     this.gossipValidatorFn = getGossipValidatorFn(modules.gossipHandlers ?? getGossipHandlers(modules, opts), modules);
     this.gossipValidatorBatchFn = getGossipValidatorBatchFn(
       modules.gossipHandlers ?? getGossipHandlers(modules, opts),

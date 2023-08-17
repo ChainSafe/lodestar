@@ -23,6 +23,7 @@ export type ChainArgs = {
   "chain.archiveStateEpochFrequency": number;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
+  "chain.beaconAttestationBatchValidation"?: boolean;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
 };
 
@@ -47,6 +48,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     emitPayloadAttributes: args["emitPayloadAttributes"],
     broadcastValidationStrictness: args["broadcastValidationStrictness"],
+    beaconAttestationBatchValidation: args["chain.beaconAttestationBatchValidation"],
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
   };
@@ -184,6 +186,13 @@ Will double processing times. Use only for debugging purposes.",
       "'warn' or 'error' - options to either throw error or to log warning when broadcast validation can't be performed",
     type: "string",
     default: "warn",
+  },
+
+  "chain.beaconAttestationBatchValidation": {
+    hidden: true,
+    description: "Enable beacon attestation batch validation",
+    type: "boolean",
+    group: "chain",
   },
 
   "chain.minSameMessageSignatureSetsToBatch": {
