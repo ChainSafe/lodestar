@@ -575,9 +575,10 @@ export function createLodestarMetrics(
         labelNames: ["caller"],
         buckets: [0, 1, 2, 4, 8, 16, 32, 64],
       }),
-      attestationBatchCount: register.gauge({
+      attestationBatchCount: register.histogram({
         name: "lodestar_gossip_attestation_verified_in_batch_count",
         help: "Count of attestations verified in batch",
+        buckets: [1, 2, 4, 8, 16, 32, 64, 128],
       }),
       attestationNonBatchCount: register.gauge({
         name: "lodestar_gossip_attestation_verified_non_batch_count",
@@ -586,10 +587,6 @@ export function createLodestarMetrics(
       totalBatch: register.gauge({
         name: "lodestar_gossip_attestation_total_batch_count",
         help: "Total number of attestation batches",
-      }),
-      totalBatchFallbackBlsCheck: register.gauge({
-        name: "lodestar_gossip_attestation_total_batch_fallback_bls_check_count",
-        help: "Total number of attestation batches that fallback to checking each signature separately",
       }),
     },
 

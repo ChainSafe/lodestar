@@ -2,7 +2,8 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {expect} from "chai";
 import {ssz} from "@lodestar/types";
-import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test/perf/util.js";
+// eslint-disable-next-line import/no-relative-packages
+import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {validateAttestation, validateGossipAttestationsSameAttData} from "../../../../src/chain/validation/index.js";
 import {getAttestationValidData} from "../../../utils/validationData/attestation.js";
 import {getAttDataBase64FromAttestationSerialized} from "../../../../src/util/sszBytes.js";

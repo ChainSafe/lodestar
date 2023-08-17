@@ -353,11 +353,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         attSlot: param.gossipData.msgSlot,
         attDataBase64: param.gossipData.indexed,
       })) as AttestationOrBytes[];
-      const {
-        results: validationResults,
-        batchableBls,
-        fallbackBls,
-      } = await validateGossipAttestationsSameAttData(fork, chain, validationParams, subnet);
+      const {results: validationResults, batchableBls} = await validateGossipAttestationsSameAttData(
+        fork,
+        chain,
+        validationParams,
+        subnet
+      );
       for (const [i, validationResult] of validationResults.entries()) {
         if (validationResult.err) {
           results.push(validationResult.err as AttestationError);
@@ -394,13 +395,9 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       if (batchableBls) {
         metrics?.gossipAttestation.totalBatch.inc();
-        metrics?.gossipAttestation.attestationBatchCount.inc(gossipHandlerParams.length);
+        metrics?.gossipAttestation.attestationBatchCount.observe(gossipHandlerParams.length);
       } else {
         metrics?.gossipAttestation.attestationNonBatchCount.inc(gossipHandlerParams.length);
-      }
-
-      if (fallbackBls) {
-        metrics?.gossipAttestation.totalBatchFallbackBlsCheck.inc();
       }
 
       return results;

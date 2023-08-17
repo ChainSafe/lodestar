@@ -23,12 +23,10 @@ import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
 import {sszDeserializeAttestation} from "../../network/gossip/topic.js";
 import {Result, wrapError} from "../../util/wrapError.js";
 import {MIN_SIGNATURE_SETS_TO_BATCH_VERIFY} from "../../network/processor/gossipQueues/index.js";
-import {signatureFromBytesNoCheck} from "../opPools/utils.js";
 
 export type BatchResult = {
   results: Result<AttestationValidationResult>[];
   batchableBls: boolean;
-  fallbackBls: boolean;
 };
 
 export type AttestationValidationResult = {
@@ -91,7 +89,7 @@ export async function validateGossipAttestationsSameAttData(
   phase0ValidationFn = validateGossipAttestationNoSignatureCheck
 ): Promise<BatchResult> {
   if (attestationOrBytesArr.length === 0) {
-    return {results: [], batchableBls: false, fallbackBls: false};
+    return {results: [], batchableBls: false};
   }
 
   // phase0: do all verifications except for signature verification
@@ -118,26 +116,14 @@ export async function validateGossipAttestationsSameAttData(
   }
 
   let signatureValids: boolean[];
-  let batchableBls = false;
-  let fallbackBls = false;
-  if (signatureSets.length >= MIN_SIGNATURE_SETS_TO_BATCH_VERIFY) {
+  const batchableBls = signatureSets.length >= MIN_SIGNATURE_SETS_TO_BATCH_VERIFY;
+  if (batchableBls) {
     // all signature sets should have same signing root since we filtered in network processor
-    const aggregatedPubkey = bls.PublicKey.aggregate(signatureSets.map((set) => set.pubkey));
-    const aggregatedSignature = bls.Signature.aggregate(
-      // no need to check signature, will do a final verify later
-      signatureSets.map((set) => signatureFromBytesNoCheck(set.signature))
+    signatureValids = await chain.bls.verifySignatureSetsSameMessage(
+      signatureSets.map((set) => ({publicKey: set.pubkey, signature: set.signature})),
+      signatureSets[0].signingRoot
     );
-
-    // quick check, it's likely this is valid most of the time
-    batchableBls = true;
-    const isAllValid = aggregatedSignature.verify(aggregatedPubkey, signatureSets[0].signingRoot);
-    fallbackBls = !isAllValid;
-    signatureValids = isAllValid
-      ? new Array<boolean>(signatureSets.length).fill(true)
-      : // batchable is false because one of the signature is invalid
-        await Promise.all(signatureSets.map((set) => chain.bls.verifySignatureSets([set], {batchable: false})));
   } else {
-    batchableBls = false;
     // don't want to block the main thread if there are too few signatures
     signatureValids = await Promise.all(
       signatureSets.map((set) => chain.bls.verifySignatureSets([set], {batchable: true}))
@@ -145,7 +131,7 @@ export async function validateGossipAttestationsSameAttData(
   }
 
   // phase0 post validation
-  for (const [i, isValid] of signatureValids.entries()) {
+  for (const [i, sigValid] of signatureValids.entries()) {
     const oldIndex = newIndexToOldIndex.get(i);
     if (oldIndex == null) {
       // should not happen
@@ -154,7 +140,7 @@ export async function validateGossipAttestationsSameAttData(
 
     const {validatorIndex, attestation} = phase0Results[i];
     const targetEpoch = attestation.data.target.epoch;
-    if (isValid) {
+    if (sigValid) {
       // Now that the attestation has been fully verified, store that we have received a valid attestation from this validator.
       //
       // It's important to double check that the attestation still hasn't been observed, since
@@ -184,7 +170,6 @@ export async function validateGossipAttestationsSameAttData(
   return {
     results: phase0ResultOrErrors,
     batchableBls,
-    fallbackBls,
   };
 }
 
