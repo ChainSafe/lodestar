@@ -2,50 +2,57 @@ import path from "node:path";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {Discv5} from "@chainsafe/discv5";
 import {ErrorAborted} from "@lodestar/utils";
-import {ChainForkConfig} from "@lodestar/config";
-import {ACTIVE_PRESET, FAR_FUTURE_EPOCH, PresetName} from "@lodestar/params";
-import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {HttpMetricsServer, RegistryMetricCreator, getHttpMetricsServer} from "@lodestar/beacon-node";
-import {computeForkDataRoot} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
 
 import {GlobalArgs} from "../../options/index.js";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {getNetworkBootnodes, isKnownNetworkName, readBootnodes} from "../../networks/index.js";
-import {onGracefulShutdown, mkdir, writeFile600Perm, cleanOldLogFiles, parseLoggerArgs} from "../../util/index.js";
+import {onGracefulShutdown, mkdir, writeFile600Perm} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {initPeerIdAndEnr} from "../beacon/initPeerIdAndEnr.js";
 import {parseArgs as parseMetricsArgs} from "../../options/beaconNodeOptions/metrics.js";
 import {parseArgs as parseNetworkArgs} from "../../options/beaconNodeOptions/network.js";
 import {getBeaconPaths} from "../beacon/paths.js";
 import {BeaconArgs} from "../beacon/options.js";
+import {initLogger} from "../beacon/handler.js";
 import {BootnodeArgs} from "./options.js";
 
 /**
  * Runs a bootnode.
  */
 export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<void> {
-  const {discv5Args, metricsArgs, beaconPaths, network, version, commit, peerId, enr, logger} =
+  const {discv5Args, metricsArgs, bootnodeDir, network, version, commit, peerId, enr, logger} =
     await bootnodeHandlerInit(args);
-
-  // initialize directories
-  mkdir(beaconPaths.dataDir);
-  mkdir(beaconPaths.beaconDir);
 
   const abortController = new AbortController();
   const bindAddrs = discv5Args.bindAddrs;
 
-  logger.info("Bootnode", {network, version, commit});
-  if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
-
-  // additional metrics registries
-  let metricsRegistry;
-  if (metricsArgs.enabled) {
-    metricsRegistry = new RegistryMetricCreator();
-  }
+  logger.info("Lodestar Bootnode", {network, version, commit});
+  logger.info("Bind address", bindAddrs);
+  const advertisedAddrs = Object.fromEntries(
+    [
+      ["ip4", enr.getLocationMultiaddr("udp4")?.toString()],
+      ["ip6", enr.getLocationMultiaddr("udp6")?.toString()],
+    ].filter(([_, v]) => v)
+  ) as Record<string, string>;
+  logger.info("Advertised address", advertisedAddrs);
+  logger.info("Identity", {peerId: peerId.toString(), nodeId: enr.nodeId});
+  logger.info("ENR", {enr: enr.encodeTxt()});
 
   // bootnode setup
   try {
+    let metricsRegistry: RegistryMetricCreator | undefined;
+    let metricsServer: HttpMetricsServer | undefined;
+    if (metricsArgs.enabled) {
+      metricsRegistry = new RegistryMetricCreator();
+      metricsRegistry.static({
+        name: "bootnode_version",
+        help: "Bootnode version",
+        value: {version, commit, network},
+      });
+      metricsServer = await getHttpMetricsServer(metricsArgs, {register: metricsRegistry, logger});
+    }
+
     const discv5 = Discv5.create({
       enr,
       peerId,
@@ -53,23 +60,18 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
         ip4: (bindAddrs.ip4 ? multiaddr(bindAddrs.ip4) : undefined) as Multiaddr,
         ip6: bindAddrs.ip6 ? multiaddr(bindAddrs.ip6) : undefined,
       },
-      config: undefined,
+      config: {enrUpdate: !enr.ip && !enr.ip6},
       metricsRegistry,
     });
     for (const bootEnr of discv5Args.bootEnrs) {
       discv5.addEnr(bootEnr);
     }
 
-    let metricsServer: HttpMetricsServer | undefined;
-    if (metricsArgs.enabled && metricsRegistry) {
-      metricsServer = await getHttpMetricsServer(metricsArgs, {register: metricsRegistry, logger});
-    }
-
     // Intercept SIGINT signal, to perform final ops before exiting
     onGracefulShutdown(async () => {
       if (args.persistNetworkIdentity) {
         try {
-          const enrPath = path.join(beaconPaths.beaconDir, "enr");
+          const enrPath = path.join(bootnodeDir, "enr");
           writeFile600Perm(enrPath, enr);
         } catch (e) {
           logger.warn("Unable to persist enr", {}, e as Error);
@@ -109,15 +111,20 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export async function bootnodeHandlerInit(args: BootnodeArgs & GlobalArgs) {
   const {config, network} = getBeaconConfigFromArgs(args);
-
   const {version, commit} = getVersionData();
   const beaconPaths = getBeaconPaths(args, network);
+  // Use a separate directory to store bootnode enr + peer-id
+  const bootnodeDir = path.join(beaconPaths.dataDir, "bootnode");
   const {discv5: discv5Args} = parseNetworkArgs(args);
   const metricsArgs = parseMetricsArgs(args);
   if (!discv5Args) {
-    throw new Error("unreachable");
+    // Unreachable because bootnode requires discv5 to be enabled - duh
+    throw new Error("unreachable - bootnode requires discv5 to be enabled");
   }
-  // const metricsOptions = {metadata: {version, commit, network}};
+
+  // initialize directories
+  mkdir(beaconPaths.dataDir);
+  mkdir(bootnodeDir);
 
   // Fetch extra bootnodes
   discv5Args.bootEnrs = (discv5Args.bootEnrs ?? []).concat(
@@ -125,35 +132,8 @@ export async function bootnodeHandlerInit(args: BootnodeArgs & GlobalArgs) {
     isKnownNetworkName(network) ? await getNetworkBootnodes(network) : []
   );
 
-  const logger = initLogger(args, beaconPaths.dataDir, config);
-  const {peerId, enr} = await initPeerIdAndEnr(args as unknown as BeaconArgs, beaconPaths.beaconDir, logger);
-  if (!enr.kvs.get("eth2")) enr.set("eth2", bootnodeENRForkId(config));
+  const logger = initLogger(args, beaconPaths.dataDir, config, "bootnode.log");
+  const {peerId, enr} = await initPeerIdAndEnr(args as unknown as BeaconArgs, bootnodeDir, logger);
 
-  return {config, discv5Args, metricsArgs, beaconPaths, network, version, commit, peerId, enr, logger};
-}
-
-function bootnodeENRForkId(config: ChainForkConfig): Uint8Array {
-  // For simplicity and by convention
-  // Use the genesis fork version, a zeroed genesisValidatorsRoot, and the far future epoch
-  // This is allowable considering the bootnode is not meant to be directly connected to beacon nodes
-  const version = config.GENESIS_FORK_VERSION;
-  const genesisValidatorsRoot = new Uint8Array(32);
-
-  return ssz.phase0.ENRForkID.serialize({
-    forkDigest: computeForkDataRoot(version, genesisValidatorsRoot).slice(0, 4),
-    nextForkVersion: version,
-    nextForkEpoch: FAR_FUTURE_EPOCH,
-  });
-}
-
-export function initLogger(args: BootnodeArgs, dataDir: string, config: ChainForkConfig): LoggerNode {
-  const defaultLogFilepath = path.join(dataDir, "bootnode.log");
-  const logger = getNodeLogger(parseLoggerArgs(args, {defaultLogFilepath}, config));
-  try {
-    cleanOldLogFiles(args, {defaultLogFilepath});
-  } catch (e) {
-    logger.debug("Not able to delete log files", {}, e as Error);
-  }
-
-  return logger;
+  return {discv5Args, metricsArgs, bootnodeDir, network, version, commit, peerId, enr, logger};
 }
