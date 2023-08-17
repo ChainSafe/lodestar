@@ -33,6 +33,7 @@ describe("options / beaconNodeOptions", () => {
       "safe-slots-to-import-optimistically": 256,
       "chain.archiveStateEpochFrequency": 1024,
       "chain.trustedSetup": "",
+      "chain.minSameMessageSignatureSetsToBatch": 32,
       emitPayloadAttributes: false,
 
       eth1: true,
@@ -131,6 +132,7 @@ describe("options / beaconNodeOptions", () => {
         archiveStateEpochFrequency: 1024,
         emitPayloadAttributes: false,
         trustedSetup: "",
+        minSameMessageSignatureSetsToBatch: 32,
       },
       eth1: {
         enabled: true,

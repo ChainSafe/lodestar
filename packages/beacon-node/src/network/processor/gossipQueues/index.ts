@@ -23,7 +23,6 @@ const MAX_GOSSIP_ATTESTATION_BATCH_SIZE = 128;
 /**
  * Batching signatures have the cost of signature aggregation which blocks the main thread.
  * We should only batch verify when there are at least 32 signatures.
- * TODO: make this configurable
  */
 export const MIN_SIGNATURE_SETS_TO_BATCH_VERIFY = 32;
 

@@ -23,6 +23,7 @@ export type ChainArgs = {
   "chain.archiveStateEpochFrequency": number;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
+  "chain.minSameMessageSignatureSetsToBatch"?: number;
 };
 
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
@@ -46,6 +47,8 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     emitPayloadAttributes: args["emitPayloadAttributes"],
     broadcastValidationStrictness: args["broadcastValidationStrictness"],
+    minSameMessageSignatureSetsToBatch:
+      args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
   };
 }
 
@@ -181,5 +184,13 @@ Will double processing times. Use only for debugging purposes.",
       "'warn' or 'error' - options to either throw error or to log warning when broadcast validation can't be performed",
     type: "string",
     default: "warn",
+  },
+
+  "chain.minSameMessageSignatureSetsToBatch": {
+    hidden: true,
+    description: "Minimum number of same message signature sets to batch",
+    type: "number",
+    default: defaultOptions.chain.minSameMessageSignatureSetsToBatch,
+    group: "chain",
   },
 };

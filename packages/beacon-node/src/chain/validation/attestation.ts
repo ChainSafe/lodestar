@@ -116,7 +116,7 @@ export async function validateGossipAttestationsSameAttData(
   }
 
   let signatureValids: boolean[];
-  const batchableBls = signatureSets.length >= MIN_SIGNATURE_SETS_TO_BATCH_VERIFY;
+  const batchableBls = signatureSets.length >= chain.opts.minSameMessageSignatureSetsToBatch;
   if (batchableBls) {
     // all signature sets should have same signing root since we filtered in network processor
     signatureValids = await chain.bls.verifySignatureSetsSameMessage(
