@@ -1,6 +1,4 @@
-import crypto from "node:crypto";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {toHexString} from "@chainsafe/ssz";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {VoteTracker} from "../../../src/protoArray/interface.js";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
@@ -10,8 +8,6 @@ describe("computeDeltas", () => {
   let oldBalances: EffectiveBalanceIncrements;
   let newBalances: EffectiveBalanceIncrements;
 
-  const oldRoot = "0x32dec344944029ba183ac387a7aa1f2068591c00e9bfadcfb238e50fbe9ea38e";
-  const newRoot = "0xb59f3a209f639dd6b5645ea9fad8d441df44c3be93bd1bbf50ef90bf124d1238";
   const oneHourProtoNodes = (60 * 60) / 12;
   const fourHourProtoNodes = 4 * oneHourProtoNodes;
   const oneDayProtoNodes = 24 * oneHourProtoNodes;
@@ -35,12 +31,6 @@ describe("computeDeltas", () => {
     });
 
     for (const numProtoNode of [oneHourProtoNodes, fourHourProtoNodes, oneDayProtoNodes]) {
-      const indices: Map<string, number> = new Map<string, number>();
-      for (let i = 0; i < numProtoNode; i++) {
-        indices.set(toHexString(crypto.randomBytes(32)), i);
-      }
-      indices.set(oldRoot, Math.floor(numProtoNode / 2));
-      indices.set(newRoot, Math.floor(numProtoNode / 2) + 1);
       itBench({
         id: `computeDeltas ${numValidator} validators ${numProtoNode} proto nodes`,
         beforeEach: () => {
@@ -48,15 +38,15 @@ describe("computeDeltas", () => {
           const epoch = 100_000;
           for (let i = 0; i < numValidator; i++) {
             votes.push({
-              currentRoot: oldRoot,
-              nextRoot: newRoot,
+              currentIndex: Math.floor(numProtoNode / 2),
+              nextIndex: Math.floor(numProtoNode / 2) + 1,
               nextEpoch: epoch,
             });
           }
           return votes;
         },
         fn: (votes) => {
-          computeDeltas(indices, votes, oldBalances, newBalances, new Set());
+          computeDeltas(numProtoNode, votes, oldBalances, newBalances, new Set());
         },
       });
     }
