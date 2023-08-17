@@ -395,9 +395,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
 
       if (batchableBls) {
-        metrics?.gossipAttestation.totalBatch.inc();
-        metrics?.gossipAttestation.attestationBatchCount.inc(attestationCount);
-        metrics?.gossipAttestation.attestationBatchHistogram.observe(gossipHandlerParams.length);
+        metrics?.gossipAttestation.attestationBatchHistogram.observe(attestationCount);
       } else {
         metrics?.gossipAttestation.attestationNonBatchCount.inc(attestationCount);
       }

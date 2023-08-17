@@ -1,5 +1,4 @@
 import {toHexString} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls";
 import {phase0, Epoch, Root, Slot, RootHex, ssz} from "@lodestar/types";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, ForkName, ForkSeq} from "@lodestar/params";
@@ -22,7 +21,6 @@ import {
 import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
 import {sszDeserializeAttestation} from "../../network/gossip/topic.js";
 import {Result, wrapError} from "../../util/wrapError.js";
-import {MIN_SIGNATURE_SETS_TO_BATCH_VERIFY} from "../../network/processor/gossipQueues/index.js";
 
 export type BatchResult = {
   results: Result<AttestationValidationResult>[];

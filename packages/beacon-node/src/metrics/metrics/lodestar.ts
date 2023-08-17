@@ -580,17 +580,9 @@ export function createLodestarMetrics(
         help: "Number of attestations verified in batch",
         buckets: [1, 2, 4, 8, 16, 32, 64, 128],
       }),
-      attestationBatchCount: register.gauge({
-        name: "lodestar_gossip_attestation_verified_in_batch_count",
-        help: "Count of attestations verified in batch",
-      }),
       attestationNonBatchCount: register.gauge({
         name: "lodestar_gossip_attestation_verified_non_batch_count",
         help: "Count of attestations NOT verified in batch",
-      }),
-      totalBatch: register.gauge({
-        name: "lodestar_gossip_attestation_total_batch_count",
-        help: "Total number of attestation batches",
       }),
     },
 
