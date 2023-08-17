@@ -73,6 +73,7 @@ export class SimulationTracker {
   private nodes: NodePair[];
   private clock: EpochClock;
   private forkConfig: ChainForkConfig;
+  private running: boolean = false;
 
   private errors: SimulationAssertionError[] = [];
   private stores: Stores;
@@ -153,6 +154,7 @@ export class SimulationTracker {
 
   async start(): Promise<void> {
     debug("starting tracker");
+    this.running = true;
     for (const node of this.nodes) {
       this.initEventStreamForNode(node);
     }
@@ -165,11 +167,11 @@ export class SimulationTracker {
   }
 
   async stop(): Promise<void> {
-    // Do nothing;
+    this.running = false;
   }
 
   async clockLoop(slot: number): Promise<void> {
-    while (!this.signal.aborted) {
+    while (this.running && !this.signal.aborted) {
       // Wait for 2/3 of the slot to consider it missed
       await this.clock.waitForStartOfSlot(slot + 2 / 3, slot > 0).catch((e) => {
         console.error("error on waitForStartOfSlot", e);
