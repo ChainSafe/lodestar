@@ -15,6 +15,8 @@ export enum EventDirection {
   none,
 }
 
+// TODO: wire events in WorkerProcess and WorkerApi respectively, expose methods that call those functions internally?
+
 /**
  * Bridges events from worker to main thread
  * Each event can only have one direction:

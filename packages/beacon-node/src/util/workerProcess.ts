@@ -53,6 +53,8 @@ export class WorkerProcess extends EventEmitter {
       serialization: "json",
     });
 
+    // TODO: listen on child "error" event?
+
     this.child.on("exit", () => {
       // eslint-disable-next-line no-console
       console.log("Pending Requests ", this.pendingRequests.size);
@@ -68,6 +70,7 @@ export class WorkerProcess extends EventEmitter {
 
     this.child.on("message", (raw: string) => {
       const data = deserializeData(raw);
+      // TODO: only emit events if not worker api response or move worker events to WorkerProcess class?
       this.emit("message", data);
       if (isWorkerApiResponse(data)) {
         const {id, result, error} = data;
