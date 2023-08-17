@@ -342,7 +342,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       gossipHandlerParams: GossipHandlerParamGeneric<GossipType.beacon_attestation>[]
     ) => {
       const results: (null | AttestationError)[] = [];
-      if (gossipHandlerParams.length === 0) {
+      const attestationCount = gossipHandlerParams.length;
+      if (attestationCount === 0) {
         return results;
       }
       // all attestations should have same attestation data as filtered by network processor
@@ -395,9 +396,10 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       if (batchableBls) {
         metrics?.gossipAttestation.totalBatch.inc();
-        metrics?.gossipAttestation.attestationBatchCount.observe(gossipHandlerParams.length);
+        metrics?.gossipAttestation.attestationBatchCount.inc(attestationCount);
+        metrics?.gossipAttestation.attestationBatchHistogram.observe(gossipHandlerParams.length);
       } else {
-        metrics?.gossipAttestation.attestationNonBatchCount.inc(gossipHandlerParams.length);
+        metrics?.gossipAttestation.attestationNonBatchCount.inc(attestationCount);
       }
 
       return results;
