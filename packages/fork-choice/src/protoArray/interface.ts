@@ -6,10 +6,12 @@ export const HEX_ZERO_HASH = "0x000000000000000000000000000000000000000000000000
 
 /**
  * Simplified 'latest message' with previous message
+ * The index is relative to ProtoArray indices
  */
 export type VoteTracker = {
-  currentRoot: RootHex;
-  nextRoot: RootHex;
+  currentIndex: number | null;
+  // if a vode is out of date (the voted index was in the past while proto array is pruned), it will be set to null
+  nextIndex: number | null;
   nextEpoch: Epoch;
 };
 
