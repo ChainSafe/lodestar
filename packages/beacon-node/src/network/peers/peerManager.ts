@@ -1,5 +1,5 @@
-import {Connection} from "@libp2p/interface-connection";
-import {PeerId} from "@libp2p/interface-peer-id";
+import {Connection} from "@libp2p/interface/connection";
+import {PeerId} from "@libp2p/interface/peer-id";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {BeaconConfig} from "@lodestar/config";
@@ -324,7 +324,7 @@ export class PeerManager {
     this.metrics?.peerGoodbyeReceived.inc({reason});
 
     const conn = getConnection(this.libp2p, peer.toString());
-    if (conn && Date.now() - conn.stat.timeline.open > LONG_PEER_CONNECTION_MS) {
+    if (conn && Date.now() - conn.timeline.open > LONG_PEER_CONNECTION_MS) {
       this.metrics?.peerLongConnectionDisconnect.inc({reason});
     }
 
@@ -570,15 +570,13 @@ export class PeerManager {
    * dialed or connecting to us.
    */
   private onLibp2pPeerConnect = async (evt: CustomEvent<Connection>): Promise<void> => {
-    const libp2pConnection = evt.detail;
-    const {direction, status} = libp2pConnection.stat;
-    const peer = libp2pConnection.remotePeer;
-    this.logger.verbose("peer connected", {peer: prettyPrintPeerId(peer), direction, status});
+    const {direction, status, remotePeer} = evt.detail;
+    this.logger.verbose("peer connected", {peer: prettyPrintPeerId(remotePeer), direction, status});
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
     this.metrics?.peerConnectedEvent.inc({direction, status});
     // libp2p may emit closed connection, we don't want to handle it
     // see https://github.com/libp2p/js-libp2p/issues/1565
-    if (this.connectedPeers.has(peer.toString()) || status !== "OPEN") {
+    if (this.connectedPeers.has(remotePeer.toString()) || status !== "open") {
       return;
     }
 
@@ -595,18 +593,18 @@ export class PeerManager {
       connectedUnixTsMs: now,
       relevantStatus: RelevantPeerStatus.Unknown,
       direction,
-      peerId: peer,
+      peerId: remotePeer,
       metadata: null,
       agentVersion: null,
       agentClient: null,
       encodingPreference: null,
     };
-    this.connectedPeers.set(peer.toString(), peerData);
+    this.connectedPeers.set(remotePeer.toString(), peerData);
 
     if (direction === "outbound") {
       //this.pingAndStatusTimeouts();
-      void this.requestPing(peer);
-      void this.requestStatus(peer, this.statusCache.get());
+      void this.requestPing(remotePeer);
+      void this.requestStatus(remotePeer, this.statusCache.get());
     }
 
     // AgentVersion was set in libp2p IdentifyService, 'peer:connect' event handler
@@ -626,19 +624,17 @@ export class PeerManager {
    * The libp2p Upgrader has ended a connection
    */
   private onLibp2pPeerDisconnect = (evt: CustomEvent<Connection>): void => {
-    const libp2pConnection = evt.detail;
-    const {direction, status} = libp2pConnection.stat;
-    const peer = libp2pConnection.remotePeer;
+    const {direction, status, remotePeer} = evt.detail;
 
     // remove the ping and status timer for the peer
-    this.connectedPeers.delete(peer.toString());
+    this.connectedPeers.delete(remotePeer.toString());
 
-    this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(peer), direction, status});
-    this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: peer.toString()});
+    this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(remotePeer), direction, status});
+    this.networkEventBus.emit(NetworkEvent.peerDisconnected, {peer: remotePeer.toString()});
     this.metrics?.peerDisconnectedEvent.inc({direction});
     this.libp2p.peerStore
-      .merge(peer, {tags: {[PEER_RELEVANT_TAG]: undefined}})
-      .catch((e) => this.logger.verbose("cannot untag peer", {peerId: peer.toString()}, e as Error));
+      .merge(remotePeer, {tags: {[PEER_RELEVANT_TAG]: undefined}})
+      .catch((e) => this.logger.verbose("cannot untag peer", {peerId: remotePeer.toString()}, e as Error));
   };
 
   private async disconnect(peer: PeerId): Promise<void> {
@@ -655,7 +651,7 @@ export class PeerManager {
       this.metrics?.peerGoodbyeSent.inc({reason});
 
       const conn = getConnection(this.libp2p, peer.toString());
-      if (conn && Date.now() - conn.stat.timeline.open > LONG_PEER_CONNECTION_MS) {
+      if (conn && Date.now() - conn.timeline.open > LONG_PEER_CONNECTION_MS) {
         this.metrics?.peerLongConnectionDisconnect.inc({reason});
       }
 
@@ -688,9 +684,9 @@ export class PeerManager {
     }
 
     for (const connections of getConnectionsMap(this.libp2p).values()) {
-      const openCnx = connections.find((cnx) => cnx.stat.status === "OPEN");
+      const openCnx = connections.find((cnx) => cnx.status === "open");
       if (openCnx) {
-        const direction = openCnx.stat.direction;
+        const direction = openCnx.direction;
         peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));
         const peerId = openCnx.remotePeer;
         const peerData = this.connectedPeers.get(peerId.toString());
@@ -703,7 +699,7 @@ export class PeerManager {
         metrics.peerLongLivedAttnets.observe(attnets ? attnets.getTrueBitIndexes().length : 0);
         metrics.peerScoreByClient.observe({client}, this.peerRpcScores.getScore(peerId));
         metrics.peerGossipScoreByClient.observe({client}, this.peerRpcScores.getGossipScore(peerId));
-        metrics.peerConnectionLength.observe((now - openCnx.stat.timeline.open) / 1000);
+        metrics.peerConnectionLength.observe((now - openCnx.timeline.open) / 1000);
         total++;
       }
     }

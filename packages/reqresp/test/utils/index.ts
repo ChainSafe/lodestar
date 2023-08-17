@@ -1,4 +1,4 @@
-import {Stream, StreamStat} from "@libp2p/interface-connection";
+import {Direction, ReadStatus, Stream, StreamStatus, WriteStatus} from "@libp2p/interface/connection";
 import {expect} from "chai";
 import {Uint8ArrayList} from "uint8arraylist";
 import {toHexString} from "@chainsafe/ssz";
@@ -35,13 +35,15 @@ export function expectInEqualByteChunks(chunks: Uint8Array[], expectedChunks: Ui
  * and capture the response with a sink accessible via `this.resultChunks`
  */
 export class MockLibP2pStream implements Stream {
+  protocol: string;
   id = "mock";
-  stat = {
-    direction: "inbound",
-    timeline: {
-      open: Date.now(),
-    },
-  } as StreamStat;
+  direction: Direction = "inbound";
+  status: StreamStatus = "open";
+  readStatus: ReadStatus = "ready";
+  writeStatus: WriteStatus = "ready";
+  timeline = {
+    open: Date.now(),
+  };
   metadata = {};
   source: Stream["source"];
   resultChunks: Uint8Array[] = [];
@@ -50,7 +52,7 @@ export class MockLibP2pStream implements Stream {
     this.source = Array.isArray(requestChunks)
       ? arrToSource(requestChunks)
       : (requestChunks as AsyncGenerator<Uint8ArrayList>);
-    this.stat.protocol = protocol ?? "mock";
+    this.protocol = protocol ?? "mock";
   }
 
   sink: Stream["sink"] = async (source) => {
@@ -60,12 +62,11 @@ export class MockLibP2pStream implements Stream {
   };
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  close: Stream["close"] = () => {};
+  close: Stream["close"] = async () => {};
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  closeRead = (): void => {};
+  closeRead = async (): Promise<void> => {};
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  closeWrite = (): void => {};
-  reset: Stream["reset"] = () => this.close();
+  closeWrite = async (): Promise<void> => {};
   abort: Stream["abort"] = () => this.close();
 }
 

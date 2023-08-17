@@ -1,5 +1,5 @@
-import {Connection} from "@libp2p/interface-connection";
-import {PeerId} from "@libp2p/interface-peer-id";
+import {Connection} from "@libp2p/interface/connection";
+import {PeerId} from "@libp2p/interface/peer-id";
 import {Libp2p} from "../../interface.js";
 import {getConnectionsMap} from "../../util.js";
 
@@ -30,5 +30,5 @@ export function hasSomeConnectedPeer(libp2p: Libp2p): boolean {
 }
 
 function isConnectionOpen(connection: Connection): boolean {
-  return connection.stat.status === "OPEN";
+  return connection.status === "open";
 }

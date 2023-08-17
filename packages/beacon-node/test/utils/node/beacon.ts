@@ -1,6 +1,6 @@
 import deepmerge from "deepmerge";
 import tmp from "tmp";
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {createBeaconConfig, createChainForkConfig, ChainConfig} from "@lodestar/config";

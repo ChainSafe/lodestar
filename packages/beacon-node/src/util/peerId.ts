@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 import {base58btc} from "multiformats/bases/base58";
 import {peerIdFromString} from "@libp2p/peer-id";
 

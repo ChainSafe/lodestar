@@ -1,5 +1,5 @@
 import {pipe} from "it-pipe";
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 import type {Libp2p} from "libp2p";
 import {Uint8ArrayList} from "uint8arraylist";
 import {ErrorAborted, Logger, withTimeout, TimeoutError} from "@lodestar/utils";
@@ -116,7 +116,7 @@ export async function* sendRequest(
     const timerTTFB = metrics?.outgoingResponseTTFB.startTimer({method});
 
     // Parse protocol selected by the responder
-    const protocolId = stream.stat.protocol ?? "unknown";
+    const protocolId = stream.protocol ?? "unknown";
     const protocol = protocolsMap.get(protocolId);
     if (!protocol) throw Error(`dialProtocol selected unknown protocolId ${protocolId}`);
 
@@ -203,7 +203,7 @@ export async function* sendRequest(
       // Necessary to call `stream.close()` since collectResponses() may break out of the source before exhausting it
       // `stream.close()` libp2p-mplex will .end() the source (it-pushable instance)
       // If collectResponses() exhausts the source, it-pushable.end() can be safely called multiple times
-      stream.close();
+      await stream.close();
     }
   } catch (e) {
     logger.verbose("Req  error", logCtx, e as Error);

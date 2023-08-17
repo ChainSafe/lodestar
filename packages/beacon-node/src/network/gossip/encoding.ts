@@ -1,6 +1,6 @@
 import {compress, uncompress} from "snappyjs";
 import xxhashFactory from "xxhash-wasm";
-import {Message} from "@libp2p/interface-pubsub";
+import {Message} from "@libp2p/interface/pubsub";
 import {digest} from "@chainsafe/as-sha256";
 import {RPC} from "@chainsafe/libp2p-gossipsub/message";
 import {intToBytes, toHex} from "@lodestar/utils";

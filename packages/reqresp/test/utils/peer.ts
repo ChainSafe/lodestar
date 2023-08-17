@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 import {peerIdFromBytes} from "@libp2p/peer-id";
 
 /**
