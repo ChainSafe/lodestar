@@ -1,7 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {Uint8ArrayList} from "uint8arraylist";
-import varint from "varint";
+import {encode as varintEncode} from "uint8-varint";
 import {readSszSnappyPayload} from "../../../../src/encodingStrategies/sszSnappy/index.js";
 import {BufferedSource} from "../../../../src/utils/index.js";
 import {
@@ -25,7 +25,7 @@ describe("encodingStrategies / sszSnappy / decode", () => {
   describe("mainnet cases", () => {
     for (const {id, payload, type: serializer, streamedBody} of encodingStrategiesMainnetTestCases) {
       const bodySize = payload.data.length;
-      const streamedBytes = new Uint8ArrayList(Buffer.concat([Buffer.from(varint.encode(bodySize)), streamedBody]));
+      const streamedBytes = new Uint8ArrayList(Buffer.concat([Buffer.from(varintEncode(bodySize)), streamedBody]));
 
       it(id, async () => {
         const bufferedSource = new BufferedSource(arrToSource([streamedBytes]));
