@@ -262,7 +262,6 @@ export class SimulationEnvironment {
         client: executionType,
         logsDir: this.options.logsDir,
       }),
-      clientOptions: executionOptions.clientOptions,
     });
 
     // Beacon Node
@@ -279,7 +278,6 @@ export class SimulationEnvironment {
       genesisState: this.genesisState,
       engineUrls,
       paths: getNodePaths({id, logsDir: this.options.logsDir, client: beaconType, root: this.options.rootDir}),
-      clientOptions: beaconOptions.clientOptions,
     });
 
     if (keys.type === "no-keys") {
@@ -309,7 +307,6 @@ export class SimulationEnvironment {
       keys,
       beaconUrls,
       paths: getNodePaths({id, logsDir: this.options.logsDir, client: validatorType, root: this.options.rootDir}),
-      clientOptions: validatorOptions.clientOptions,
     });
 
     this.nodePairCount += 1;
