@@ -1,15 +1,13 @@
-import worker from "node:worker_threads";
 import fs from "node:fs";
 import path from "node:path";
 import {createFromProtobuf} from "@libp2p/peer-id-factory";
-import {expose} from "@chainsafe/threads/worker";
-import type {WorkerModule} from "@chainsafe/threads/dist/types/worker.js";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {collectNodeJSMetrics, RegistryMetricCreator} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {Clock} from "../../util/clock.js";
-import {wireEventsOnWorkerThread} from "../../util/workerEvents.js";
+import {wireEventsOnWorkerProcess} from "../../util/workerEvents.js";
+import {WorkerApi} from "../../util/workerApi.js";
 import {NetworkEventBus, NetworkEventData, networkEventDirection} from "../events.js";
 import {peerIdToString} from "../../util/peerId.js";
 import {profileNodeJS} from "../../util/profile.js";
@@ -25,13 +23,11 @@ import {
   reqRespBridgeEventDirection,
 } from "./events.js";
 
-// Cloned data from instatiation
-const workerData = worker.workerData as NetworkWorkerData;
-const parentPort = worker.parentPort;
-// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-if (!workerData) throw Error("workerData must be defined");
-// eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-if (!parentPort) throw Error("parentPort must be defined");
+/* eslint-disable no-console */
+
+const workerApi = new WorkerApi();
+// Cloned data from instantiation
+const workerData = workerApi.workerData as NetworkWorkerData;
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
 const peerId = await createFromProtobuf(workerData.peerIdProto);
@@ -106,16 +102,16 @@ const core = await NetworkCore.init({
   initialStatus: workerData.initialStatus,
 });
 
-wireEventsOnWorkerThread<NetworkEventData>(
+wireEventsOnWorkerProcess<NetworkEventData>(
   NetworkWorkerThreadEventType.networkEvent,
   events,
-  parentPort,
+  workerApi,
   networkEventDirection
 );
-wireEventsOnWorkerThread<ReqRespBridgeEventData>(
+wireEventsOnWorkerProcess<ReqRespBridgeEventData>(
   NetworkWorkerThreadEventType.reqRespBridgeEvents,
   reqRespBridgeEventBus,
-  parentPort,
+  workerApi,
   reqRespBridgeEventDirection
 );
 
@@ -162,4 +158,4 @@ const libp2pWorkerApi: NetworkWorkerApi = {
   },
 };
 
-expose(libp2pWorkerApi as WorkerModule<keyof NetworkWorkerApi>);
+workerApi.expose(libp2pWorkerApi);

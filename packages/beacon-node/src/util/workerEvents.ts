@@ -1,5 +1,6 @@
-import {MessagePort, Worker} from "node:worker_threads";
 import {StrictEventEmitterSingleArg} from "./strictEvents.js";
+import {WorkerProcess} from "./workerProcess.js";
+import {WorkerApi} from "./workerApi.js";
 
 export type WorkerBridgeEvent<EventData> = {
   type: string;
@@ -14,20 +15,22 @@ export enum EventDirection {
   none,
 }
 
+// TODO: wire events in WorkerProcess and WorkerApi respectively, expose methods that call those functions internally?
+
 /**
  * Bridges events from worker to main thread
  * Each event can only have one direction:
  * - worker to main
  * - main to worker
  */
-export function wireEventsOnWorkerThread<EventData>(
+export function wireEventsOnWorkerProcess<EventData>(
   mainEventName: string,
   events: StrictEventEmitterSingleArg<EventData>,
-  parentPort: MessagePort,
+  workerApi: WorkerApi,
   isWorkerToMain: {[K in keyof EventData]: EventDirection}
 ): void {
   // Subscribe to events from main thread
-  parentPort.on("message", (data: WorkerBridgeEvent<EventData>) => {
+  workerApi.on("message", (data: WorkerBridgeEvent<EventData>) => {
     if (
       typeof data === "object" &&
       data.type === mainEventName &&
@@ -47,7 +50,7 @@ export function wireEventsOnWorkerThread<EventData>(
           event: eventName,
           data,
         };
-        parentPort.postMessage(workerEvent);
+        workerApi.send(workerEvent);
       });
     }
   }
@@ -56,7 +59,7 @@ export function wireEventsOnWorkerThread<EventData>(
 export function wireEventsOnMainThread<EventData>(
   mainEventName: string,
   events: StrictEventEmitterSingleArg<EventData>,
-  worker: Pick<Worker, "on" | "postMessage">,
+  worker: WorkerProcess,
   isWorkerToMain: {[K in keyof EventData]: EventDirection}
 ): void {
   // Subscribe to events from main thread
@@ -80,7 +83,7 @@ export function wireEventsOnMainThread<EventData>(
           event: eventName,
           data,
         };
-        worker.postMessage(workerEvent);
+        worker.send(workerEvent);
       });
     }
   }

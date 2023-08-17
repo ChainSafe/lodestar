@@ -1,15 +1,16 @@
-import worker_threads from "node:worker_threads";
+import path from "node:path";
+import {fileURLToPath} from "node:url";
 import {exportToProtobuf} from "@libp2p/peer-id-factory";
 import {PeerId} from "@libp2p/interface/peer-id";
 import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/dist/src/score/peer-score.js";
 import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
-import {spawn, Thread, Worker} from "@chainsafe/threads";
 import {routes} from "@lodestar/api";
 import {phase0} from "@lodestar/types";
 import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
 import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
+import {WorkerProcess} from "../../util/workerProcess.js";
 import {wireEventsOnMainThread} from "../../util/workerEvents.js";
 import {Metrics} from "../../metrics/index.js";
 import {IncomingRequestArgs, OutgoingRequestArgs, GetReqRespHandlerFn} from "../reqresp/types.js";
@@ -48,7 +49,7 @@ export type WorkerNetworkCoreInitModules = {
 
 type WorkerNetworkCoreModules = WorkerNetworkCoreInitModules & {
   workerApi: NetworkWorkerApi;
-  worker: Worker;
+  worker: WorkerProcess;
 };
 
 /**
@@ -71,13 +72,13 @@ export class WorkerNetworkCore implements INetworkCore {
     wireEventsOnMainThread<NetworkEventData>(
       NetworkWorkerThreadEventType.networkEvent,
       modules.events,
-      modules.worker as unknown as worker_threads.Worker,
+      modules.worker,
       networkEventDirection
     );
     wireEventsOnMainThread<ReqRespBridgeEventData>(
       NetworkWorkerThreadEventType.reqRespBridgeEvents,
       this.reqRespBridgeEventBus,
-      modules.worker as unknown as worker_threads.Worker,
+      modules.worker,
       reqRespBridgeEventDirection
     );
 
@@ -107,41 +108,23 @@ export class WorkerNetworkCore implements INetworkCore {
       loggerOpts: modules.logger.toOpts(),
     };
 
-    const worker = new Worker("./networkCoreWorker.js", {
-      workerData,
-      /**
-       * maxYoungGenerationSizeMb defaults to 152mb through the cli option defaults.
-       * That default value was determined via https://github.com/ChainSafe/lodestar/issues/2115 and
-       * should be tuned further as needed.  If we update network code and see substantial
-       * difference in the quantity of garbage collected this should get updated.  A value that is
-       * too low will result in too much GC time and a value that is too high causes increased mark
-       * and sweep for some reason (which is much much slower than scavenge).  A marginally too high
-       * number causes detrimental slowdown from increased variable lookup time.  Empirical evidence
-       * showed that there is a pretty big window of "correct" values but we can always tune as
-       * necessary
-       */
-      resourceLimits: {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb},
-    } as ConstructorParameters<typeof Worker>[1]);
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const workerApi = (await spawn<any>(worker, {
-      // A Lodestar Node may do very expensive task at start blocking the event loop and causing
-      // the initialization to timeout. The number below is big enough to almost disable the timeout
-      timeout: 5 * 60 * 1000,
-      // TODO: types are broken on spawn, which claims that `NetworkWorkerApi` does not satifies its contrains
-    })) as unknown as NetworkWorkerApi;
+    const worker = new WorkerProcess(
+      // TODO: can the relative path be resolved inside WorkerProcess?
+      path.join(path.dirname(fileURLToPath(import.meta.url)), "./networkCoreWorker.js"),
+      workerData
+    );
 
     return new WorkerNetworkCore({
       ...modules,
-      workerApi,
-      worker,
+      workerApi: worker.createApi(),
+      worker: worker,
     });
   }
 
   async close(): Promise<void> {
     await this.getApi().close();
     this.modules.logger.debug("terminating network worker");
-    await Thread.terminate(this.modules.workerApi as unknown as Thread);
+    this.modules.worker.terminate();
     this.modules.logger.debug("terminated network worker");
   }
 
