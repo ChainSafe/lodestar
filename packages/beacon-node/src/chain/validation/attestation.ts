@@ -9,7 +9,6 @@ import {
   createSingleSignatureSetFromComponents,
   SingleSignatureSet,
 } from "@lodestar/state-transition";
-import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
 import {RegenCaller} from "../regen/index.js";
@@ -21,6 +20,7 @@ import {
 import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
 import {sszDeserializeAttestation} from "../../network/gossip/topic.js";
 import {Result, wrapError} from "../../util/wrapError.js";
+import {IBeaconChain} from "../interface.js";
 
 export type BatchResult = {
   results: Result<AttestationValidationResult>[];
@@ -59,15 +59,6 @@ export type Phase0Result = AttestationValidationResult & {
  */
 const SHUFFLING_LOOK_AHEAD_EPOCHS = 1;
 
-/**
- * Verify gossip attestations of the same attestation data.
- *   - If there are less than 32 signatures, verify each signature individually with batchable = true
- *   - If there are not less than 32 signatures
- *     - do a quick verify by aggregate all signatures and pubkeys, this takes 4.6ms for 32 signatures and 7.6ms for 64 signatures
- *     - if one of the signature is invalid, do a fallback verify by verify each signature individually with batchable = false
- *   - subnet is required
- *   - do not prioritize bls signature set
- */
 export async function validateGossipAttestation(
   fork: ForkName,
   chain: IBeaconChain,
@@ -78,6 +69,12 @@ export async function validateGossipAttestation(
   return validateAttestation(fork, chain, attestationOrBytes, subnet);
 }
 
+/**
+ * Verify gossip attestations of the same attestation data. The main advantage is we can batch verify bls signatures
+ * through verifySignatureSetsSameMessage bls api to improve performance.
+ *   - If there are less than 2 signatures (minSameMessageSignatureSetsToBatch), verify each signature individually with batchable = true
+ *   - do not prioritize bls signature set
+ */
 export async function validateGossipAttestationsSameAttData(
   fork: ForkName,
   chain: IBeaconChain,

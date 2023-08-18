@@ -26,7 +26,6 @@ export type IChainOptions = BlockProcessOpts &
     /** Option to load a custom kzg trusted setup in txt format */
     trustedSetup?: string;
     broadcastValidationStrictness?: string;
-    beaconAttestationBatchValidation?: boolean;
     minSameMessageSignatureSetsToBatch: number;
   };
 
