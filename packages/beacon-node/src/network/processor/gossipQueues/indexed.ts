@@ -3,6 +3,18 @@ import {OrderedSet} from "../../../util/set.js";
 import {OrderedMap} from "../../../util/map.js";
 import {GossipQueue, IndexedGossipQueueMinSizeOpts} from "./types.js";
 
+type QueueItem<T> = {
+  listItems: LinkedList<T>;
+  firstSeenMs: number;
+};
+
+/**
+ * Enforce minimum wait time for each key. On a mainnet node, wait time for beacon_attestation
+ * is more than 500ms, it's worth to take 1/10 of that to help batch more items.
+ * This is only needed for key item < minChunkSize.
+ */
+const MINIMUM_WAIT_TIME_MS = 50;
+
 /**
  * This implementation tries to get the most items with same key:
  *   - index items by indexFn using a map
@@ -18,16 +30,22 @@ import {GossipQueue, IndexedGossipQueueMinSizeOpts} from "./types.js";
  */
 export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements GossipQueue<T> {
   private _length = 0;
-  private indexedItems: OrderedMap<string, LinkedList<T>>;
+  // TODO: may switch to regular map if we don't need to get last key
+  private indexedItems: OrderedMap<string, QueueItem<T>>;
   // keys with at least minChunkSize items
   // we want to process the last key with minChunkSize first, similar to LIFO
   private minChunkSizeKeys = new OrderedSet<string>();
+  // wait time for the next() function to prevent having to search for items >=MINIMUM_WAIT_TIME_MS old repeatedly
+  // this value is <= MINIMUM_WAIT_TIME_MS
+  private nextWaitTimeMs: number | null = null;
+  // the last time we checked for items >=MINIMUM_WAIT_TIME_MS old
+  private lastWaitTimeCheckedMs = 0;
   constructor(private readonly opts: IndexedGossipQueueMinSizeOpts<T>) {
     const {minChunkSize, maxChunkSize} = opts;
     if (minChunkSize < 0 || maxChunkSize < 0 || minChunkSize > maxChunkSize) {
       throw Error(`Unexpected min chunk size ${minChunkSize}, max chunk size ${maxChunkSize}}`);
     }
-    this.indexedItems = new OrderedMap<string, LinkedList<T>>();
+    this.indexedItems = new OrderedMap<string, QueueItem<T>>();
   }
 
   get length(): number {
@@ -56,13 +74,13 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements 
       return 0;
     }
     item.indexed = key;
-    let list = this.indexedItems.get(key);
-    if (list == null) {
-      list = new LinkedList<T>();
-      this.indexedItems.set(key, list);
+    let queueItem = this.indexedItems.get(key);
+    if (queueItem == null) {
+      queueItem = {firstSeenMs: Date.now(), listItems: new LinkedList<T>()};
+      this.indexedItems.set(key, queueItem);
     }
-    list.push(item);
-    if (list.length >= this.opts.minChunkSize) {
+    queueItem.listItems.push(item);
+    if (queueItem.listItems.length >= this.opts.minChunkSize) {
       this.minChunkSizeKeys.add(key);
     }
     this._length++;
@@ -76,19 +94,19 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements 
     if (firstKey == null) {
       return 0;
     }
-    const firstList = this.indexedItems.get(firstKey);
+    const firstQueueItem = this.indexedItems.get(firstKey);
     // should not happen
-    if (firstList == null) {
+    if (firstQueueItem == null) {
       return 0;
     }
-    const deletedItem = firstList.shift();
+    const deletedItem = firstQueueItem.listItems.shift();
     if (deletedItem != null) {
       this._length--;
-      if (firstList.length === 0) {
+      if (firstQueueItem.listItems.length === 0) {
         // it's faster to search for deleted item from the head in this case
         this.indexedItems.delete(firstKey, true);
       }
-      if (firstList.length < this.opts.minChunkSize) {
+      if (firstQueueItem.listItems.length < this.opts.minChunkSize) {
         // it's faster to search for deleted item from the head in this case
         this.minChunkSizeKeys.delete(firstKey, true);
       }
@@ -100,24 +118,25 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements 
 
   /**
    * Try to get items of last key with minChunkSize first.
-   * If not, pick the last key
+   * If not, pick the last key with MINIMUM_WAIT_TIME_MS old
    */
   next(): T[] | null {
     let key: string | null = this.minChunkSizeKeys.last();
     if (key == null) {
-      key = this.indexedItems.lastKey();
+      key = this.lastMinWaitKey();
     }
 
     if (key == null) {
       return null;
     }
 
-    const list = this.indexedItems.get(key);
-    if (list == null) {
+    const queueItem = this.indexedItems.get(key);
+    if (queueItem == null) {
       // should not happen
       return null;
     }
 
+    const list = queueItem.listItems;
     const result: T[] = [];
     while (list.length > 0 && result.length < this.opts.maxChunkSize) {
       const t = list.pop();
@@ -142,12 +161,54 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements 
   getAll(): T[] {
     const result: T[] = [];
     for (const key of this.indexedItems.keys()) {
-      const array = this.indexedItems.get(key)?.toArray();
+      const array = this.indexedItems.get(key)?.listItems.toArray();
       if (array) {
         result.push(...array);
       }
     }
 
     return result;
+  }
+
+  /**
+   * `indexedItems` is already sorted by key, so we can just iterate through it
+   * Search for the last key with >= MINIMUM_WAIT_TIME_MS old
+   * Do not search again if we already searched recently
+   */
+  private lastMinWaitKey(): string | null {
+    const now = Date.now();
+    // searched recently, skip
+    if (this.nextWaitTimeMs != null && now - this.lastWaitTimeCheckedMs < this.nextWaitTimeMs) {
+      return null;
+    }
+
+    this.lastWaitTimeCheckedMs = now;
+    this.nextWaitTimeMs = null;
+    let resultedKey: string | null = null;
+    for (const key of this.indexedItems.keys()) {
+      const queueItem = this.indexedItems.get(key);
+      if (queueItem == null) {
+        // should not happen
+        continue;
+      }
+      if (now - queueItem.firstSeenMs >= MINIMUM_WAIT_TIME_MS) {
+        // found, do not return to find the last key with >= MINIMUM_WAIT_TIME_MS old
+        this.nextWaitTimeMs = null;
+        resultedKey = key;
+      } else {
+        // if a key is not at least MINIMUM_WAIT_TIME_MS old, all remaining keys are not either
+        break;
+      }
+    }
+
+    if (resultedKey == null) {
+      // all items are not old enough, set nextWaitTimeMs to avoid searching again
+      const firstValue = this.indexedItems.firstValue();
+      if (firstValue != null) {
+        this.nextWaitTimeMs = Math.max(0, MINIMUM_WAIT_TIME_MS - (now - firstValue.firstSeenMs));
+      }
+    }
+
+    return resultedKey;
   }
 }
