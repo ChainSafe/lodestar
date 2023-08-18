@@ -1,4 +1,4 @@
-import {decode, encodingLength} from "uint8-varint";
+import {decode as varintDecode, encodingLength as varintEncodingLength} from "uint8-varint";
 import {Uint8ArrayList} from "uint8arraylist";
 import {BufferedSource} from "../../utils/index.js";
 import {TypeSizes} from "../../types.js";
@@ -34,14 +34,14 @@ export async function readSszSnappyHeader(bufferedSource: BufferedSource, type: 
 
     let sszDataLength: number;
     try {
-      sszDataLength = decode(buffer.subarray());
+      sszDataLength = varintDecode(buffer.subarray());
     } catch (e) {
       throw new SszSnappyError({code: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: Infinity});
     }
 
     // MUST validate: the unsigned protobuf varint used for the length-prefix MUST not be longer than 10 bytes
     // encodingLength function only returns 1-8 inclusive
-    const varintBytes = encodingLength(sszDataLength);
+    const varintBytes = varintEncodingLength(sszDataLength);
     buffer.consume(varintBytes);
 
     // MUST validate: the length-prefix is within the expected size bounds derived from the payload SSZ type.
