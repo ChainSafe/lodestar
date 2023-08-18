@@ -24,9 +24,9 @@ describe("IndexedGossipQueueMinSize", () => {
   });
 
   const sandbox = sinon.createSandbox();
-  sandbox.useFakeTimers();
 
   beforeEach(() => {
+    sandbox.useFakeTimers();
     gossipQueue.clear();
     for (const letter of ["a", "b", "c"]) {
       for (let i = 0; i < 4; i++) {
