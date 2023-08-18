@@ -9,10 +9,17 @@ import {
   BeaconStateCapella,
   BeaconStateDeneb,
 } from "./types.js";
+import {UnfinalizedPubkeyIndexMap, UnfinanlizedIndex2PubkeyCache} from "./pubkeyCache";
+import {PublicKey} from "@chainsafe/bls/types";
+import {ValidatorIndex} from "@lodestar/types";
 
 export type BeaconStateCache = {
   config: BeaconConfig;
   epochCtx: EpochCache;
+  /** Unfinalized cache for current state */
+  unfinalizedPubkeyCache: UnfinanlizedIndex2PubkeyCache;
+  unfinalizedPubkeyIndexMap: UnfinalizedPubkeyIndexMap;
+
   /** Count of clones created from this BeaconStateCache instance. readonly to prevent accidental usage downstream */
   readonly clonedCount: number;
   readonly clonedCountWithTransferCache: number;
@@ -140,6 +147,8 @@ export function createCachedBeaconState<T extends BeaconStateAllForks>(
   return getCachedBeaconState(state, {
     config: immutableData.config,
     epochCtx: EpochCache.createFromState(state, immutableData, opts),
+    unfinalizedPubkeyCache: new UnfinanlizedIndex2PubkeyCache(),
+    unfinalizedPubkeyIndexMap: new UnfinalizedPubkeyIndexMap(),
     clonedCount: 0,
     clonedCountWithTransferCache: 0,
     createdWithTransferCache: false,
@@ -177,6 +186,8 @@ export function getCachedBeaconState<T extends BeaconStateAllForks>(
     return getCachedBeaconState(viewDUCloned, {
       config: this.config,
       epochCtx: this.epochCtx.clone(),
+      unfinalizedPubkeyCache: this.unfinalizedPubkeyCache,
+      unfinalizedPubkeyIndexMap: new UnfinalizedPubkeyIndexMap(),
       clonedCount: 0,
       clonedCountWithTransferCache: 0,
       createdWithTransferCache: !dontTransferCache,
@@ -206,4 +217,14 @@ export function isStateValidatorsNodesPopulated(state: CachedBeaconStateAllForks
 
 export function isStateBalancesNodesPopulated(state: CachedBeaconStateAllForks): boolean {
   return state.balances["nodesPopulated"] === true;
+}
+
+export function getPubkeyForAggregation(state: CachedBeaconStateAllForks, index: ValidatorIndex): PublicKey {
+}
+
+export function getPubkeyIndex(state: CachedBeaconStateAllForks, pubkey: Uint8Array): ValidatorIndex | null {
+}
+
+export function addPubkey(state: CachedBeaconStateAllForks, pubkey: Uint8Array, index: ValidatorIndex): void {
+
 }

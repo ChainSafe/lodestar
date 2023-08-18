@@ -34,6 +34,11 @@ export function processRegistryUpdates(state: CachedBeaconStateAllForks, cache: 
   // set new activation eligibilities
   for (const index of cache.indicesEligibleForActivationQueue) {
     validators.get(index).activationEligibilityEpoch = epochCtx.epoch + 1;
+    // TODO: For all new validators that are eligible to be in the activation queue, we need to move its cache from unfinalized to finalized queue
+    // const validator = validators.get(index);
+    // const pubkey = validator.pubkey;
+    // state.epochCtx.addPubkey(index, pubkey);
+
   }
 
   const finalityEpoch = state.finalizedCheckpoint.epoch;
