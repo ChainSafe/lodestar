@@ -1,6 +1,5 @@
 import {LinkedList} from "../../../util/array.js";
 import {OrderedSet} from "../../../util/set.js";
-import {OrderedMap} from "../../../util/map.js";
 import {GossipQueue, IndexedGossipQueueMinSizeOpts} from "./types.js";
 
 type QueueItem<T> = {
@@ -30,8 +29,7 @@ const MINIMUM_WAIT_TIME_MS = 50;
  */
 export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements GossipQueue<T> {
   private _length = 0;
-  // TODO: may switch to regular map if we don't need to get last key
-  private indexedItems: OrderedMap<string, QueueItem<T>>;
+  private indexedItems: Map<string, QueueItem<T>>;
   // keys with at least minChunkSize items
   // we want to process the last key with minChunkSize first, similar to LIFO
   private minChunkSizeKeys = new OrderedSet<string>();
@@ -45,7 +43,7 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements 
     if (minChunkSize < 0 || maxChunkSize < 0 || minChunkSize > maxChunkSize) {
       throw Error(`Unexpected min chunk size ${minChunkSize}, max chunk size ${maxChunkSize}}`);
     }
-    this.indexedItems = new OrderedMap<string, QueueItem<T>>();
+    this.indexedItems = new Map<string, QueueItem<T>>();
   }
 
   get length(): number {
@@ -53,11 +51,11 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements 
   }
 
   get keySize(): number {
-    return this.indexedItems.size();
+    return this.indexedItems.size;
   }
 
   clear(): void {
-    this.indexedItems = new OrderedMap();
+    this.indexedItems = new Map();
     this._length = 0;
     this.minChunkSizeKeys = new OrderedSet();
   }
@@ -89,7 +87,7 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements 
     }
 
     // overload, need to drop more items
-    const firstKey = this.indexedItems.firstKey();
+    const firstKey = this.indexedItems.keys().next().value as string | undefined;
     // there should be at least 1 key
     if (firstKey == null) {
       return 0;
@@ -103,8 +101,7 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements 
     if (deletedItem != null) {
       this._length--;
       if (firstQueueItem.listItems.length === 0) {
-        // it's faster to search for deleted item from the head in this case
-        this.indexedItems.delete(firstKey, true);
+        this.indexedItems.delete(firstKey);
       }
       if (firstQueueItem.listItems.length < this.opts.minChunkSize) {
         // it's faster to search for deleted item from the head in this case
@@ -146,8 +143,7 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements 
     }
 
     if (list.length === 0) {
-      // it's faster to search for deleted item from the tail in this case
-      this.indexedItems.delete(key, false);
+      this.indexedItems.delete(key);
     }
     if (list.length < this.opts.minChunkSize) {
       // it's faster to search for deleted item from the tail in this case
@@ -203,7 +199,7 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements 
 
     if (resultedKey == null) {
       // all items are not old enough, set nextWaitTimeMs to avoid searching again
-      const firstValue = this.indexedItems.firstValue();
+      const firstValue = this.indexedItems.values().next().value as QueueItem<T> | undefined;
       if (firstValue != null) {
         this.nextWaitTimeMs = Math.max(0, MINIMUM_WAIT_TIME_MS - (now - firstValue.firstSeenMs));
       }
