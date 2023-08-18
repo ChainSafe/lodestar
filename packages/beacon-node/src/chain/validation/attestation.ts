@@ -15,6 +15,7 @@ import {RegenCaller} from "../regen/index.js";
 import {
   AttDataBase64,
   getAggregationBitsFromAttestationSerialized,
+  getAttDataBase64FromAttestationSerialized,
   getSignatureFromAttestationSerialized,
 } from "../../util/sszBytes.js";
 import {AttestationDataCacheEntry} from "../seenCache/seenAttestationData.js";
@@ -233,16 +234,14 @@ async function validateGossipAttestationNoSignatureCheck(
   let attestationOrCache:
     | {attestation: phase0.Attestation; cache: null}
     | {attestation: null; cache: AttestationDataCacheEntry; serializedData: Uint8Array};
-  let attDataBase64: AttDataBase64 | null;
+  let attDataBase64: AttDataBase64 | null = null;
   if (attestationOrBytes.serializedData) {
     // gossip
     const attSlot = attestationOrBytes.attSlot;
-    if (!attestationOrBytes.attDataBase64) {
-      throw new AttestationError(GossipAction.IGNORE, {
-        code: AttestationErrorCode.NO_INDEXED_DATA,
-      });
-    }
-    attDataBase64 = attestationOrBytes.attDataBase64;
+    // for old LIFO linear gossip queue we don't have attDataBase64
+    // for indexed gossip queue we have attDataBase64
+    attDataBase64 =
+      attestationOrBytes.attDataBase64 ?? getAttDataBase64FromAttestationSerialized(attestationOrBytes.serializedData);
     const cachedAttData = attDataBase64 !== null ? chain.seenAttestationDatas.get(attSlot, attDataBase64) : null;
     if (cachedAttData === null) {
       const attestation = sszDeserializeAttestation(attestationOrBytes.serializedData);
