@@ -89,6 +89,7 @@ export function processDeposit(fork: ForkSeq, state: CachedBeaconStateAllForks, 
     epochCtx.effectiveBalanceIncrementsSet(validatorIndex, effectiveBalance);
 
     // now that there is a new validator, update the epoch context with the new pubkey
+    // TODO: Here we should populate unfinalized cache instead
     epochCtx.addPubkey(validatorIndex, pubkey);
 
     // Only after altair:

@@ -27,21 +27,6 @@ function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
   return Buffer.from(hex).toString("hex");
 }
 
-export class UnfinanlizedIndex2PubkeyCache {
-  private list = immutable.List<PubkeyHex | null>();
-
-  get(i: number): PubkeyHex | null {
-  }
-
-  push(element: PubkeyHex): void {
-
-  }
-
-  length(): number {
-
-  }
-
-}
 
 export class PubkeyIndexMap {
   // We don't really need the full pubkey. We could just use the first 20 bytes like an Ethereum address
