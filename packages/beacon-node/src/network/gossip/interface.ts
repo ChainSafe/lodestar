@@ -7,7 +7,8 @@ import {BeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
-import {AttestationError} from "../../chain/errors/attestationError.js";
+import {AttestationError, AttestationErrorType} from "../../chain/errors/attestationError.js";
+import {GossipActionError} from "../../chain/errors/gossipValidation.js";
 
 export enum GossipType {
   beacon_block = "beacon_block",
@@ -169,10 +170,23 @@ export type GossipHandlerParamGeneric<T extends GossipType> = {
 };
 
 export type GossipHandlers = {
-  [K in GossipType]:
-    | ((gossipHandlerParam: GossipHandlerParamGeneric<K>) => Promise<void>)
-    // TODO: make it generic
-    | ((gossipHandlerParams: GossipHandlerParamGeneric<K>[]) => Promise<(null | AttestationError)[]>);
+  [K in GossipType]: DefaultGossipHandler<K> | BatchGossipHandler<K>;
+};
+
+export type DefaultGossipHandler<K extends GossipType> = (
+  gossipHandlerParam: GossipHandlerParamGeneric<K>
+) => Promise<void>;
+
+export type DefaultGossipHandlers = {
+  [K in GossipType]: DefaultGossipHandler<K>;
+};
+
+export type BatchGossipHandler<K extends GossipType> = (
+  gossipHandlerParams: GossipHandlerParamGeneric<K>[]
+) => Promise<(null | GossipActionError<AttestationErrorType>)[]>;
+
+export type BatchGossipHandlers = {
+  [K in GossipType]?: BatchGossipHandler<K>;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

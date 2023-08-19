@@ -16,7 +16,13 @@ import {
   GossipActionError,
   SyncCommitteeError,
 } from "../../chain/errors/index.js";
-import {GossipHandlerParamGeneric, GossipHandlers, GossipType} from "../gossip/interface.js";
+import {
+  BatchGossipHandlers,
+  DefaultGossipHandlers,
+  GossipHandlerParamGeneric,
+  GossipHandlers,
+  GossipType,
+} from "../gossip/interface.js";
 import {
   validateGossipAggregateAndProof,
   validateGossipAttesterSlashing,
@@ -93,7 +99,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
  * Default handlers validate gossip messages one by one.
  * We only have a choice to do batch validation for beacon_attestation topic.
  */
-function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
+function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): DefaultGossipHandlers {
   const {chain, config, metrics, events, logger, core, aggregatorTracker} = modules;
 
   async function validateBeaconBlock(
@@ -553,7 +559,7 @@ function getDefaultHandlers(modules: ValidatorFnsModules, options: GossipHandler
 /**
  * For now, only beacon_attestation topic is batched.
  */
-function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): Partial<GossipHandlers> {
+function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): Partial<BatchGossipHandlers> {
   const {chain, metrics, logger, aggregatorTracker} = modules;
   return {
     [GossipType.beacon_attestation]: async (
