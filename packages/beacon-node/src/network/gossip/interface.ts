@@ -171,6 +171,7 @@ export type GossipHandlerParamGeneric<T extends GossipType> = {
 export type GossipHandlers = {
   [K in GossipType]:
     | ((gossipHandlerParam: GossipHandlerParamGeneric<K>) => Promise<void>)
+    // TODO: make it generic
     | ((gossipHandlerParams: GossipHandlerParamGeneric<K>[]) => Promise<(null | AttestationError)[]>);
 };
 
