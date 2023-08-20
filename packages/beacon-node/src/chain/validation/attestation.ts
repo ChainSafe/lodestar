@@ -89,11 +89,14 @@ export async function validateGossipAttestationsSameAttData(
   }
 
   // phase0: do all verifications except for signature verification
-  const phase0ResultOrErrors = await Promise.all(
-    attestationOrBytesArr.map((attestationOrBytes) =>
-      wrapError(phase0ValidationFn(fork, chain, attestationOrBytes, subnet))
-    )
-  );
+  // this for await pattern below seems to be bad but it's not
+  // for seen AttestationData, it's the same to await Promise.all() pattern
+  // for unseen AttestationData, the 1st call will be cached and the rest will be fast
+  const phase0ResultOrErrors: Result<Phase0Result>[] = [];
+  for (const attestationOrBytes of attestationOrBytesArr) {
+    const resultOrError = await wrapError(phase0ValidationFn(fork, chain, attestationOrBytes, subnet));
+    phase0ResultOrErrors.push(resultOrError);
+  }
 
   // phase1: verify signatures of all valid attestations
   // map new index to index in resultOrErrors
