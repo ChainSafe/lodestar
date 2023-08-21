@@ -73,6 +73,7 @@ export class SimulationTracker {
   private nodes: NodePair[];
   private clock: EpochClock;
   private forkConfig: ChainForkConfig;
+  private running: boolean = false;
 
   private errors: SimulationAssertionError[] = [];
   private stores: Stores;
@@ -145,7 +146,7 @@ export class SimulationTracker {
   }
 
   track(node: NodePair): void {
-    debug("track", node.cl.id);
+    debug("track", node.beacon.id);
     this.initDataForNode(node);
     this.initEventStreamForNode(node);
     this.nodes.push(node);
@@ -153,6 +154,7 @@ export class SimulationTracker {
 
   async start(): Promise<void> {
     debug("starting tracker");
+    this.running = true;
     for (const node of this.nodes) {
       this.initEventStreamForNode(node);
     }
@@ -165,11 +167,11 @@ export class SimulationTracker {
   }
 
   async stop(): Promise<void> {
-    // Do nothing;
+    this.running = false;
   }
 
   async clockLoop(slot: number): Promise<void> {
-    while (!this.signal.aborted) {
+    while (this.running && !this.signal.aborted) {
       // Wait for 2/3 of the slot to consider it missed
       await this.clock.waitForStartOfSlot(slot + 2 / 3, slot > 0).catch((e) => {
         console.error("error on waitForStartOfSlot", e);
@@ -184,7 +186,7 @@ export class SimulationTracker {
   }
 
   onSlot(slot: Slot, node: NodePair, cb: (slot: Slot) => void): void {
-    this.emitter.once(`${node.cl.id}:slot:${slot}`, cb);
+    this.emitter.once(`${node.beacon.id}:slot:${slot}`, cb);
   }
 
   register(assertion: SimulationAssertion): void {
@@ -203,7 +205,7 @@ export class SimulationTracker {
 
     this.stores[assertion.id] = {};
     for (const node of this.nodes) {
-      this.stores[assertion.id][node.cl.id] = {};
+      this.stores[assertion.id][node.beacon.id] = {};
     }
   }
 
@@ -228,9 +230,9 @@ export class SimulationTracker {
   }
 
   private initDataForNode(node: NodePair): void {
-    this.lastSeenSlot.set(node.cl.id, 0);
+    this.lastSeenSlot.set(node.beacon.id, 0);
     for (const assertion of this.assertions) {
-      this.stores[assertion.id][node.cl.id] = {};
+      this.stores[assertion.id][node.beacon.id] = {};
     }
   }
 
@@ -240,11 +242,11 @@ export class SimulationTracker {
   ): Promise<void> {
     const slot = event.slot;
     const epoch = this.clock.getEpochForSlot(slot);
-    const lastSeenSlot = this.lastSeenSlot.get(node.cl.id);
-    debug(`processing block node=${node.cl.id} slot=${slot} lastSeenSlot=${lastSeenSlot}`);
+    const lastSeenSlot = this.lastSeenSlot.get(node.beacon.id);
+    debug(`processing block node=${node.beacon.id} slot=${slot} lastSeenSlot=${lastSeenSlot}`);
 
     if (lastSeenSlot !== undefined && slot > lastSeenSlot) {
-      this.lastSeenSlot.set(node.cl.id, slot);
+      this.lastSeenSlot.set(node.beacon.id, slot);
     } else {
       // We don't need to process old blocks
       return;
@@ -271,14 +273,14 @@ export class SimulationTracker {
   }
 
   private async processCapture({slot, epoch}: {slot: Slot; epoch: Epoch}, node: NodePair): Promise<void> {
-    debug(`processing capture node=${node.cl.id} slot=${slot}`);
+    debug(`processing capture node=${node.beacon.id} slot=${slot}`);
 
     // It is observed that sometimes block is received on the node event stream
     // But the http-api does not respond with the block
     // This is a workaround to fetch the block with retries
     const block = await fetchBlock(node, {slot, tries: 2, delay: 250, signal: this.signal});
     if (!block) {
-      debug(`block could not be found node=${node.cl.id} slot=${slot}`);
+      debug(`block could not be found node=${node.beacon.id} slot=${slot}`);
       // Incase of reorg the block may not be available
       return;
     }
@@ -311,12 +313,12 @@ export class SimulationTracker {
       });
 
       if (!isNullish(value)) {
-        this.stores[assertion.id][node.cl.id][slot] = value;
+        this.stores[assertion.id][node.beacon.id][slot] = value;
       }
     }
 
     const capturedSlot = this.slotCapture.get(slot) ?? [];
-    capturedSlot.push(node.cl.id);
+    capturedSlot.push(node.beacon.id);
     this.slotCapture.set(slot, capturedSlot);
   }
 
@@ -351,20 +353,20 @@ export class SimulationTracker {
             nodes: this.nodes,
             clock: this.clock,
             forkConfig: this.forkConfig,
-            store: this.stores[assertion.id][node.cl.id],
+            store: this.stores[assertion.id][node.beacon.id],
             dependantStores: getStoresForAssertions(this.stores, [assertion, ...(assertion.dependencies ?? [])]),
           });
 
           for (const err of errors) {
             const message = typeof err === "string" ? err : err[0];
             const data = typeof err === "string" ? {} : {...err[1]};
-            this.errors.push({slot, epoch, assertionId: assertion.id, nodeId: node.cl.id, message, data});
+            this.errors.push({slot, epoch, assertionId: assertion.id, nodeId: node.beacon.id, message, data});
           }
         } catch (err: unknown) {
           this.errors.push({
             slot,
             epoch,
-            nodeId: node.cl.id,
+            nodeId: node.beacon.id,
             assertionId: assertion.id,
             message: (err as Error).message,
           });
@@ -390,11 +392,11 @@ export class SimulationTracker {
     ],
     signal?: AbortSignal
   ): void {
-    debug("event stream initialized for", node.cl.id);
-    void node.cl.api.events.eventstream(events, signal ?? this.signal, async (event) => {
+    debug("event stream initialized for", node.beacon.id);
+    void node.beacon.api.events.eventstream(events, signal ?? this.signal, async (event) => {
       switch (event.type) {
         case routes.events.EventType.block:
-          debug(`block received node=${node.cl.id} slot=${event.message.slot}`);
+          debug(`block received node=${node.beacon.id} slot=${event.message.slot}`);
           await this.processOnBlock(event.message, node);
           return;
         case routes.events.EventType.head:

@@ -7,7 +7,7 @@ export const finalizedAssertion: SimulationAssertion<"finalized", Slot> = {
   id: "finalized",
   match: everySlotMatcher,
   async capture({node}) {
-    const finalized = await node.cl.api.beacon.getBlockHeader("finalized");
+    const finalized = await node.beacon.api.beacon.getBlockHeader("finalized");
     ApiError.assert(finalized);
     return finalized.response.data.header.message.slot ?? 0;
   },

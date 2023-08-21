@@ -1,107 +1,79 @@
 import path from "node:path";
 import fs from "node:fs";
 import {mkdir} from "node:fs/promises";
-import {CLClient, CLPaths, ELClient, ELPaths, MountedPaths} from "../interfaces.js";
+import {
+  BeaconClient,
+  BeaconPaths,
+  ExecutionClient,
+  ExecutionPaths,
+  MountedPaths,
+  ValidatorClient,
+  ValidatorPaths,
+} from "../interfaces.js";
 
-export const getCLNodePaths = ({
-  root,
-  id,
-  client,
-  logsDir,
-}: {
-  root: string;
-  id: string;
-  client: CLClient;
-  logsDir: string;
-}): CLPaths => {
-  const clRootDir = path.join(root, id, `cl_${client}`);
-  const dataDir = path.join(clRootDir, "data");
-  const genesisFilePath = path.join(clRootDir, "genesis.ssz");
-  const jwtsecretFilePath = path.join(clRootDir, "jwtsecret.txt");
-  const validatorsDir = path.join(clRootDir, "validators");
-  const keystoresDir = path.join(clRootDir, "validators", "keystores");
-  const keystoresSecretsDir = path.join(clRootDir, "validators", "secretts");
-  const keystoresSecretFilePath = path.join(clRootDir, "validators", "password.txt");
-  const validatorsDefinitionFilePath = path.join(clRootDir, "validators", "validator_definitions.yml");
-  const logFilePath = path.join(logsDir, `${id}-cl-${client}.log`);
+export function getNodePaths<
+  C extends BeaconClient | ValidatorClient | ExecutionClient,
+  R = C extends BeaconClient ? BeaconPaths : C extends ValidatorClient ? ValidatorPaths : ExecutionPaths,
+  // Mount path will be used when running the node in docker
+>(opts: {root: string; id: string; logsDir: string; client: C; mountPath?: string}): R {
+  const {root, id, client, logsDir, mountPath} = opts;
 
-  return {
-    rootDir: clRootDir,
-    dataDir,
-    genesisFilePath,
-    jwtsecretFilePath,
-    validatorsDir,
-    keystoresDir,
-    keystoresSecretsDir,
-    validatorsDefinitionFilePath,
-    keystoresSecretFilePath,
-    logFilePath,
-  };
-};
+  if (Object.values(ExecutionClient).includes(client as ExecutionClient)) {
+    const executionRootDir = path.join(mountPath ?? root, id, client);
+    return {
+      rootDir: executionRootDir,
+      dataDir: path.join(executionRootDir, "data"),
+      genesisFilePath: path.join(executionRootDir, "genesis.ssz"),
+      jwtsecretFilePath: path.join(executionRootDir, "jwtsecret.txt"),
+      logFilePath: path.join(logsDir, `${id}-${client}.log`),
+    } as R;
+  }
 
-export const getCLNodePathsForDocker = (paths: CLPaths, mountPath: string): CLPaths => {
-  const {
-    rootDir,
-    dataDir,
-    genesisFilePath,
-    jwtsecretFilePath,
-    validatorsDefinitionFilePath,
-    validatorsDir,
-    keystoresDir,
-    keystoresSecretFilePath,
-    keystoresSecretsDir,
-    logFilePath,
-  } = paths;
+  if (Object.values(BeaconClient).includes(client as BeaconClient)) {
+    const beaconRootDir = path.join(mountPath ?? root, id, client);
+    return {
+      rootDir: beaconRootDir,
+      dataDir: path.join(beaconRootDir, "data"),
+      genesisFilePath: path.join(beaconRootDir, "genesis.ssz"),
+      jwtsecretFilePath: path.join(beaconRootDir, "jwtsecret.txt"),
+      logFilePath: path.join(logsDir, `${id}-${client}.log`),
+    } as R;
+  }
 
-  return {
-    rootDir: mountPath,
-    dataDir: dataDir.replace(rootDir, mountPath),
-    genesisFilePath: genesisFilePath.replace(rootDir, mountPath),
-    jwtsecretFilePath: jwtsecretFilePath.replace(rootDir, mountPath),
-    validatorsDir: validatorsDir.replace(rootDir, mountPath),
-    keystoresDir: keystoresDir.replace(rootDir, mountPath),
-    keystoresSecretsDir: keystoresSecretsDir.replace(rootDir, mountPath),
-    validatorsDefinitionFilePath: validatorsDefinitionFilePath.replace(rootDir, mountPath),
-    keystoresSecretFilePath: keystoresSecretFilePath.replace(rootDir, mountPath),
-    logFilePath,
-  };
-};
+  if (Object.values(ValidatorClient).includes(client as ValidatorClient)) {
+    const validatorRootDir = path.join(mountPath ?? root, id, client);
+    return {
+      rootDir: validatorRootDir,
+      dataDir: path.join(validatorRootDir, "data"),
+      jwtsecretFilePath: path.join(validatorRootDir, "jwtsecret.txt"),
+      keystoresDir: path.join(validatorRootDir, "validators", "keystores"),
+      keystoresSecretsDir: path.join(validatorRootDir, "validators", "secretts"),
+      keystoresSecretFilePath: path.join(validatorRootDir, "validators", "password.txt"),
+      validatorsDefinitionFilePath: path.join(validatorRootDir, "validators", "validator_definitions.yml"),
+      validatorsDir: path.join(validatorRootDir, "validators"),
+      logFilePath: path.join(logsDir, `${id}-${client}.log`),
+    } as R;
+  }
 
-export const createCLNodePaths = async (paths: CLPaths): Promise<CLPaths> => {
-  const {dataDir, keystoresDir, keystoresSecretsDir} = paths;
+  throw new Error(`Unknown client type: ${client}`);
+}
 
-  if (!fs.existsSync(dataDir)) await mkdir(dataDir, {recursive: true});
-  if (!fs.existsSync(keystoresDir)) await mkdir(keystoresDir, {recursive: true});
-  if (!fs.existsSync(keystoresSecretsDir)) await mkdir(keystoresSecretsDir, {recursive: true});
+export const ensureDirectories = async <T extends object>(paths: T): Promise<T> => {
+  for (const dirName of Object.values(paths)) {
+    if (fs.existsSync(dirName)) continue;
+
+    if (path.extname(dirName) === "") {
+      await mkdir(dirName, {recursive: true});
+    } else {
+      const parentDir = path.dirname(dirName);
+      await mkdir(parentDir, {recursive: true});
+    }
+  }
 
   return paths;
 };
 
-export const getELNodePaths = ({
-  root,
-  id,
-  client,
-  logsDir,
-}: {
-  root: string;
-  id: string;
-  client: ELClient;
-  logsDir: string;
-}): ELPaths => {
-  const elRootDir = path.join(root, id, `el_${client}`);
-  const dataDir = path.join(elRootDir, "data");
-  const logFilePath = path.join(logsDir, `${id}-el-${client}.log`);
-
-  return {
-    rootDir: elRootDir,
-    dataDir,
-    genesisFilePath: path.join(elRootDir, "genesis.json"),
-    jwtsecretFilePath: path.join(elRootDir, "jwtsecret.txt"),
-    logFilePath,
-  };
-};
-
-export const getNodeMountedPaths = <T extends ELPaths | CLPaths>(
+export const getNodeMountedPaths = <T extends ExecutionPaths | BeaconPaths | ValidatorPaths>(
   paths: T,
   mountPath: string,
   mount: boolean
@@ -113,12 +85,4 @@ export const getNodeMountedPaths = <T extends ELPaths | CLPaths>(
     ])
     .flat()
     .reduce((o, [key, value]) => ({...o, [key]: value as string}), {}) as MountedPaths<T>;
-};
-
-export const createELNodePaths = async (paths: ELPaths): Promise<ELPaths> => {
-  const {dataDir} = paths;
-
-  if (!fs.existsSync(dataDir)) await mkdir(dataDir, {recursive: true});
-
-  return paths;
 };

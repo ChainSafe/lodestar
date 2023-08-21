@@ -10,7 +10,7 @@ export const mergeAssertion: SimulationAssertion<"merge", string> = {
   async assert({node}) {
     const errors: AssertionResult[] = [];
 
-    const res = await node.cl.api.debug.getStateV2("head");
+    const res = await node.beacon.api.debug.getStateV2("head");
     ApiError.assert(res);
     const state = res.response.data as unknown as BeaconStateAllForks;
 

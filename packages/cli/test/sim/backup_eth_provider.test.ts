@@ -3,7 +3,7 @@ import path from "node:path";
 import {activePreset} from "@lodestar/params";
 import {nodeAssertion} from "../utils/simulation/assertions/nodeAssertion.js";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
-import {AssertionMatch, CLClient, ELClient} from "../utils/simulation/interfaces.js";
+import {AssertionMatch, BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {
   getEstimatedTimeInSecForRun,
@@ -49,7 +49,7 @@ const env = await SimulationEnvironment.initWithDefaults(
       TERMINAL_TOTAL_DIFFICULTY: ttd,
     },
   },
-  [{id: "node-1", cl: CLClient.Lodestar, el: ELClient.Geth, keysCount: 32, mining: true}]
+  [{id: "node-1", beacon: BeaconClient.Lodestar, execution: ExecutionClient.Geth, keysCount: 32, mining: true}]
 );
 
 env.tracker.register({
@@ -64,8 +64,11 @@ const node2 = await env.createNodePair({
   id: "node-2",
   // As the Lodestar running on host and the geth running in docker container
   // we have to replace the IP with the local ip to connect to the geth
-  cl: {type: CLClient.Lodestar, options: {engineUrls: [replaceIpFromUrl(env.nodes[0].el.engineRpcUrl, "127.0.0.1")]}},
-  el: ELClient.Geth,
+  beacon: {
+    type: BeaconClient.Lodestar,
+    options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpcPublicUrl, "127.0.0.1")]},
+  },
+  execution: ExecutionClient.Geth,
   keysCount: 32,
 });
 
@@ -74,8 +77,11 @@ const node3 = await env.createNodePair({
   id: "node-3",
   // As the Lodestar running on host and the geth running in docker container
   // we have to replace the IP with the local ip to connect to the geth
-  cl: {type: CLClient.Lodestar, options: {engineUrls: [replaceIpFromUrl(env.nodes[0].el.engineRpcUrl, "127.0.0.1")]}},
-  el: ELClient.Geth,
+  beacon: {
+    type: BeaconClient.Lodestar,
+    options: {engineUrls: [replaceIpFromUrl(env.nodes[0].execution.engineRpcPublicUrl, "127.0.0.1")]},
+  },
+  execution: ExecutionClient.Geth,
   keysCount: 0,
 });
 
@@ -88,8 +94,8 @@ await connectAllNodes(env.nodes);
 await waitForSlot(env.clock.getLastSlotOfEpoch(1), env.nodes, {silent: true, env});
 
 // Stop node2, node3 EL, so the only way they produce blocks is via node1 EL
-await node2.el.job.stop();
-await node3.el.job.stop();
+await node2.execution.job.stop();
+await node3.execution.job.stop();
 
 // node2 and node3 will successfully reach TTD if they can communicate to an EL on node1
 await waitForSlot(env.clock.getLastSlotOfEpoch(bellatrixForkEpoch) + activePreset.SLOTS_PER_EPOCH / 2, env.nodes, {

@@ -1,7 +1,10 @@
 import {SIM_ENV_CHAIN_ID, SIM_ENV_NETWORK_ID} from "../constants.js";
-import {ELGeneratorGenesisOptions, ELStartMode, Eth1GenesisBlock} from "../interfaces.js";
+import {ExecutionGenesisOptions, ExecutionStartMode, Eth1GenesisBlock} from "../interfaces.js";
 
-export const getGethGenesisBlock = (mode: ELStartMode, options: ELGeneratorGenesisOptions): Record<string, unknown> => {
+export const getGethGenesisBlock = (
+  mode: ExecutionStartMode,
+  options: ExecutionGenesisOptions
+): Record<string, unknown> => {
   const {ttd, cliqueSealingPeriod, shanghaiTime, genesisTime} = options;
 
   const genesis = {
@@ -49,7 +52,7 @@ export const getGethGenesisBlock = (mode: ELStartMode, options: ELGeneratorGenes
     baseFeePerGas: "0x0",
   };
 
-  if (mode === ELStartMode.PreMerge) {
+  if (mode === ExecutionStartMode.PreMerge) {
     return genesis;
   }
 
@@ -58,8 +61,8 @@ export const getGethGenesisBlock = (mode: ELStartMode, options: ELGeneratorGenes
 };
 
 export const getNethermindChainSpec = (
-  mode: ELStartMode,
-  options: ELGeneratorGenesisOptions
+  mode: ExecutionStartMode,
+  options: ExecutionGenesisOptions
 ): Record<string, unknown> => {
   const {ttd, shanghaiTime} = options;
   const genesis = getGethGenesisBlock(mode, options) as Eth1GenesisBlock;
