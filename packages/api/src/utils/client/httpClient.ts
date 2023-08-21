@@ -1,4 +1,4 @@
-import {ErrorAborted, Logger, TimeoutError} from "@lodestar/utils";
+import {ErrorAborted, Logger, TimeoutError, isValidHttpUrl, toBase64} from "@lodestar/utils";
 import {ReqGeneric, RouteDef} from "../index.js";
 import {ApiClientResponse, ApiClientSuccessResponse} from "../../interfaces.js";
 import {fetch, isFetchError} from "./fetch.js";
@@ -123,8 +123,15 @@ export class HttpClient implements IHttpClient {
 
     // opts.baseUrl is equivalent to `urls: [{baseUrl}]`
     // unshift opts.baseUrl to urls, without mutating opts.urls
-    for (const urlOrOpts of [...(baseUrl ? [baseUrl] : []), ...urls]) {
+    for (const [i, urlOrOpts] of [...(baseUrl ? [baseUrl] : []), ...urls].entries()) {
       const urlOpts: URLOpts = typeof urlOrOpts === "string" ? {baseUrl: urlOrOpts, ...allUrlOpts} : urlOrOpts;
+
+      if (!urlOpts.baseUrl) {
+        throw Error(`HttpClient.urls[${i}] is empty or undefined: ${urlOpts.baseUrl}`);
+      }
+      if (!isValidHttpUrl(urlOpts.baseUrl)) {
+        throw Error(`HttpClient.urls[${i}] must be a valid URL: ${urlOpts.baseUrl}`);
+      }
       // De-duplicate by baseUrl, having two baseUrls with different token or timeouts does not make sense
       if (!this.urlsOpts.some((opt) => opt.baseUrl === urlOpts.baseUrl)) {
         this.urlsOpts.push(urlOpts);
@@ -269,7 +276,7 @@ export class HttpClient implements IHttpClient {
     const timer = this.metrics?.requestTime.startTimer({routeId});
 
     try {
-      const url = urlJoin(baseUrl, opts.url) + (opts.query ? "?" + stringifyQuery(opts.query) : "");
+      const url = new URL(urlJoin(baseUrl, opts.url) + (opts.query ? "?" + stringifyQuery(opts.query) : ""));
 
       const headers =
         extraHeaders && opts.headers ? {...extraHeaders, ...opts.headers} : opts.headers || extraHeaders || {};
@@ -278,6 +285,14 @@ export class HttpClient implements IHttpClient {
       }
       if (bearerToken && headers["Authorization"] === undefined) {
         headers["Authorization"] = `Bearer ${bearerToken}`;
+      }
+      if (url.username || url.password) {
+        if (headers["Authorization"] === undefined) {
+          headers["Authorization"] = `Basic ${toBase64(`${url.username}:${url.password}`)}`;
+        }
+        // Remove the username and password from the URL
+        url.username = "";
+        url.password = "";
       }
 
       this.logger?.debug("HttpClient request", {routeId});
@@ -291,7 +306,7 @@ export class HttpClient implements IHttpClient {
 
       if (!res.ok) {
         const errBody = await res.text();
-        throw new HttpError(`${res.statusText}: ${getErrorMessage(errBody)}`, res.status, url);
+        throw new HttpError(`${res.statusText}: ${getErrorMessage(errBody)}`, res.status, url.toString());
       }
 
       const streamTimer = this.metrics?.streamTime.startTimer({routeId});

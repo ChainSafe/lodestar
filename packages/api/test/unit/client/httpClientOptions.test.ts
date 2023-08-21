@@ -67,4 +67,20 @@ describe("HTTPClient options", () => {
       {baseUrl: baseUrl2, bearerToken: bearerToken2},
     ]);
   });
+
+  it("Throw if empty baseUrl", () => {
+    expect(() => new HttpClient({baseUrl: ""})).to.throw(Error);
+  });
+
+  it("Throw if invalid baseUrl", () => {
+    expect(() => new HttpClient({baseUrl: "invalid"})).to.throw(Error);
+  });
+
+  it("Throw if empty value in urls option", () => {
+    expect(() => new HttpClient({urls: [""]})).to.throw(Error);
+  });
+
+  it("Throw if invalid value in urls option", () => {
+    expect(() => new HttpClient({urls: ["invalid"]})).to.throw(Error);
+  });
 });

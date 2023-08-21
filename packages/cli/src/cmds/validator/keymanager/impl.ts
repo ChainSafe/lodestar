@@ -15,7 +15,8 @@ import {
 } from "@lodestar/api/keymanager";
 import {Interchange, SignerType, Validator} from "@lodestar/validator";
 import {ServerApi} from "@lodestar/api";
-import {getPubkeyHexFromKeystore, isValidatePubkeyHex, isValidHttpUrl} from "../../../util/format.js";
+import {isValidHttpUrl} from "@lodestar/utils";
+import {getPubkeyHexFromKeystore, isValidatePubkeyHex} from "../../../util/format.js";
 import {parseFeeRecipient} from "../../../util/index.js";
 import {DecryptKeystoresThreadPool} from "./decryptKeystores/index.js";
 import {IPersistedKeysBackend} from "./interface.js";
