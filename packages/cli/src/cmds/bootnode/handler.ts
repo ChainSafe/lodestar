@@ -1,6 +1,6 @@
 import path from "node:path";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
-import {Discv5} from "@chainsafe/discv5";
+import {Discv5, ENR} from "@chainsafe/discv5";
 import {ErrorAborted} from "@lodestar/utils";
 import {HttpMetricsServer, RegistryMetricCreator, getHttpMetricsServer} from "@lodestar/beacon-node";
 
@@ -29,13 +29,10 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
 
   logger.info("Lodestar Bootnode", {network, version, commit});
   logger.info("Bind address", bindAddrs);
-  const advertisedAddrs = Object.fromEntries(
-    [
-      ["ip4", enr.getLocationMultiaddr("udp4")?.toString()],
-      ["ip6", enr.getLocationMultiaddr("udp6")?.toString()],
-    ].filter(([_, v]) => v)
-  ) as Record<string, string>;
-  logger.info("Advertised address", advertisedAddrs);
+  logger.info("Advertised address", {
+    ip4: enr.getLocationMultiaddr("udp4")?.toString(),
+    ip6: enr.getLocationMultiaddr("udp6")?.toString(),
+  });
   logger.info("Identity", {peerId: peerId.toString(), nodeId: enr.nodeId});
   logger.info("ENR", {enr: enr.encodeTxt()});
 
@@ -63,16 +60,66 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
       config: {enrUpdate: !enr.ip && !enr.ip6},
       metricsRegistry,
     });
-    for (const bootEnr of discv5Args.bootEnrs) {
+
+    // If there are any bootnodes, add them to the routing table
+    for (const bootEnrStr of Array.from(new Set(discv5Args.bootEnrs).values())) {
+      const bootEnr = ENR.decodeTxt(bootEnrStr);
+      logger.info("Adding bootnode", {
+        ip4: bootEnr.getLocationMultiaddr("udp4")?.toString(),
+        ip6: bootEnr.getLocationMultiaddr("udp6")?.toString(),
+        peerId: (await bootEnr.peerId()).toString(),
+        nodeId: enr.nodeId,
+      });
       discv5.addEnr(bootEnr);
     }
+
+    // start the server
+    await discv5.start();
+
+    // if there are peers in the local routing table, establish a session by running a query
+    if (discv5.kadValues().length) {
+      void discv5.findRandomNode();
+    }
+
+    discv5.on("multiaddrUpdated", (addr) => {
+      logger.info("Advertised socket address updated", {addr: addr.toString()});
+    });
+
+    // respond with metrics every 10 seconds
+    const printInterval = setInterval(() => {
+      let ip4Only = 0;
+      let ip6Only = 0;
+      let ip4ip6 = 0;
+      let unreachable = 0;
+      for (const kadEnr of discv5.kadValues()) {
+        const hasIp4 = kadEnr.getLocationMultiaddr("udp4");
+        const hasIp6 = kadEnr.getLocationMultiaddr("udp6");
+        if (hasIp4 && hasIp6) {
+          ip4ip6++;
+        } else if (hasIp4) {
+          ip4Only++;
+        } else if (hasIp6) {
+          ip6Only++;
+        } else {
+          unreachable++;
+        }
+      }
+      logger.info("Server metrics", {
+        connectedPeers: discv5.connectedPeerCount,
+        activeSessions: discv5.sessionService.sessionsSize(),
+        ip4Nodes: ip4Only,
+        ip6Nodes: ip6Only,
+        ip4AndIp6Nodes: ip4ip6,
+        unreachableNodes: unreachable,
+      });
+    }, 10_000);
 
     // Intercept SIGINT signal, to perform final ops before exiting
     onGracefulShutdown(async () => {
       if (args.persistNetworkIdentity) {
         try {
           const enrPath = path.join(bootnodeDir, "enr");
-          writeFile600Perm(enrPath, enr);
+          writeFile600Perm(enrPath, enr.encodeTxt());
         } catch (e) {
           logger.warn("Unable to persist enr", {}, e as Error);
         }
@@ -84,12 +131,12 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
       "abort",
       async () => {
         try {
+          discv5.removeAllListeners();
+          clearInterval(printInterval);
+
           await metricsServer?.close();
           await discv5.stop();
           logger.debug("Bootnode closed");
-          // Explicitly exit until active handles issue is resolved
-          // See https://github.com/ChainSafe/lodestar/issues/5642
-          process.exit(0);
         } catch (e) {
           logger.error("Error closing bootnode", {}, e as Error);
           // Must explicitly exit process due to potential active handles
