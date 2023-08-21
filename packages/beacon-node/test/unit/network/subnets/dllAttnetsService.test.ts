@@ -39,6 +39,7 @@ describe("DLLAttnetsService", () => {
   beforeEach(function () {
     sandbox.useFakeTimers(Date.now());
     gossipStub = sandbox.createStubInstance(Eth2Gossipsub) as SinonStubbedInstance<Eth2Gossipsub> & Eth2Gossipsub;
+    Object.defineProperty(gossipStub, "mesh", {value: new Map()});
     clock = new Clock({
       genesisTime: Math.floor(Date.now() / 1000),
       config,
