@@ -23,7 +23,7 @@ import {
   GossipAttestation,
   getStateForAttestationVerification,
   validateApiAttestation,
-  Phase0Result,
+  Step0Result,
   validateAttestation,
   validateGossipAttestationsSameAttData,
 } from "../../../../src/chain/validation/index.js";
@@ -102,7 +102,7 @@ describe("validateGossipAttestationsSameAttData", () => {
   for (const [testCaseIndex, testCase] of testCases.entries()) {
     const {phase0Result, phase1Result, seenAttesters} = testCase;
     it(`test case ${testCaseIndex}`, async () => {
-      const phase0Results: Promise<Phase0Result>[] = [];
+      const phase0Results: Promise<Step0Result>[] = [];
       for (const [i, isValid] of phase0Result.entries()) {
         const signatureSet = {
           type: SignatureSetType.single,
@@ -120,7 +120,7 @@ describe("validateGossipAttestationsSameAttData", () => {
               attestation: ssz.phase0.Attestation.defaultValue(),
               signatureSet,
               validatorIndex: i,
-            } as Partial<Phase0Result> as Phase0Result)
+            } as Partial<Step0Result> as Step0Result)
           );
         } else {
           phase0Results.push(
@@ -134,7 +134,7 @@ describe("validateGossipAttestationsSameAttData", () => {
       }
 
       let callIndex = 0;
-      const phase0ValidationFn = (): Promise<Phase0Result> => {
+      const phase0ValidationFn = (): Promise<Step0Result> => {
         const result = phase0Results[callIndex];
         callIndex++;
         return result;

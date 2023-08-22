@@ -49,7 +49,7 @@ export type GossipAttestation = {
   attDataBase64?: string | null;
 };
 
-export type Phase0Result = AttestationValidationResult & {
+export type Step0Result = AttestationValidationResult & {
   signatureSet: SingleSignatureSet;
   validatorIndex: number;
 };
@@ -60,6 +60,9 @@ export type Phase0Result = AttestationValidationResult & {
  */
 const SHUFFLING_LOOK_AHEAD_EPOCHS = 1;
 
+/**
+ * Validate a single gossip attestation, do not prioritize bls signature set
+ */
 export async function validateGossipAttestation(
   fork: ForkName,
   chain: IBeaconChain,
@@ -67,7 +70,8 @@ export async function validateGossipAttestation(
   /** Optional, to allow verifying attestations through API with unknown subnet */
   subnet: number
 ): Promise<AttestationValidationResult> {
-  return validateAttestation(fork, chain, attestationOrBytes, subnet);
+  const prioritizeBls = false;
+  return validateAttestation(fork, chain, attestationOrBytes, subnet, prioritizeBls);
 }
 
 /**
@@ -82,33 +86,33 @@ export async function validateGossipAttestationsSameAttData(
   attestationOrBytesArr: AttestationOrBytes[],
   subnet: number,
   // for unit test, consumers do not need to pass this
-  phase0ValidationFn = validateGossipAttestationNoSignatureCheck
+  step0ValidationFn = validateGossipAttestationNoSignatureCheck
 ): Promise<BatchResult> {
   if (attestationOrBytesArr.length === 0) {
     return {results: [], batchableBls: false};
   }
 
-  // phase0: do all verifications except for signature verification
+  // step0: do all verifications except for signature verification
   // this for await pattern below seems to be bad but it's not
   // for seen AttestationData, it's the same to await Promise.all() pattern
   // for unseen AttestationData, the 1st call will be cached and the rest will be fast
-  const phase0ResultOrErrors: Result<Phase0Result>[] = [];
+  const step0ResultOrErrors: Result<Step0Result>[] = [];
   for (const attestationOrBytes of attestationOrBytesArr) {
-    const resultOrError = await wrapError(phase0ValidationFn(fork, chain, attestationOrBytes, subnet));
-    phase0ResultOrErrors.push(resultOrError);
+    const resultOrError = await wrapError(step0ValidationFn(fork, chain, attestationOrBytes, subnet));
+    step0ResultOrErrors.push(resultOrError);
   }
 
-  // phase1: verify signatures of all valid attestations
+  // step1: verify signatures of all valid attestations
   // map new index to index in resultOrErrors
   const newIndexToOldIndex = new Map<number, number>();
   const signatureSets: SingleSignatureSet[] = [];
   let newIndex = 0;
-  const phase0Results: Phase0Result[] = [];
-  for (const [i, resultOrError] of phase0ResultOrErrors.entries()) {
+  const step0Results: Step0Result[] = [];
+  for (const [i, resultOrError] of step0ResultOrErrors.entries()) {
     if (resultOrError.err) {
       continue;
     }
-    phase0Results.push(resultOrError.result);
+    step0Results.push(resultOrError.result);
     newIndexToOldIndex.set(newIndex, i);
     signatureSets.push(resultOrError.result.signatureSet);
     newIndex++;
@@ -137,7 +141,7 @@ export async function validateGossipAttestationsSameAttData(
       throw Error(`Cannot get old index for index ${i}`);
     }
 
-    const {validatorIndex, attestation} = phase0Results[i];
+    const {validatorIndex, attestation} = step0Results[i];
     const targetEpoch = attestation.data.target.epoch;
     if (sigValid) {
       // Now that the attestation has been fully verified, store that we have received a valid attestation from this validator.
@@ -146,7 +150,7 @@ export async function validateGossipAttestationsSameAttData(
       // there can be a race-condition if we receive two attestations at the same time and
       // process them in different threads.
       if (chain.seenAttesters.isKnown(targetEpoch, validatorIndex)) {
-        phase0ResultOrErrors[oldIndex] = {
+        step0ResultOrErrors[oldIndex] = {
           err: new AttestationError(GossipAction.IGNORE, {
             code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN,
             targetEpoch,
@@ -158,7 +162,7 @@ export async function validateGossipAttestationsSameAttData(
       // valid
       chain.seenAttesters.add(targetEpoch, validatorIndex);
     } else {
-      phase0ResultOrErrors[oldIndex] = {
+      step0ResultOrErrors[oldIndex] = {
         err: new AttestationError(GossipAction.IGNORE, {
           code: AttestationErrorCode.INVALID_SIGNATURE,
         }),
@@ -167,7 +171,7 @@ export async function validateGossipAttestationsSameAttData(
   }
 
   return {
-    results: phase0ResultOrErrors,
+    results: step0ResultOrErrors,
     batchableBls,
   };
 }
@@ -198,14 +202,14 @@ export async function validateAttestation(
   subnet: number | null,
   prioritizeBls = false
 ): Promise<AttestationValidationResult> {
-  const phase0Result = await validateGossipAttestationNoSignatureCheck(fork, chain, attestationOrBytes, subnet);
-  const {attestation, signatureSet, validatorIndex} = phase0Result;
+  const step0Result = await validateGossipAttestationNoSignatureCheck(fork, chain, attestationOrBytes, subnet);
+  const {attestation, signatureSet, validatorIndex} = step0Result;
   const isValid = await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls});
 
   if (isValid) {
     const targetEpoch = attestation.data.target.epoch;
     chain.seenAttesters.add(targetEpoch, validatorIndex);
-    return phase0Result;
+    return step0Result;
   } else {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.INVALID_SIGNATURE,
@@ -223,7 +227,7 @@ async function validateGossipAttestationNoSignatureCheck(
   attestationOrBytes: AttestationOrBytes,
   /** Optional, to allow verifying attestations through API with unknown subnet */
   subnet: number | null
-): Promise<Phase0Result> {
+): Promise<Step0Result> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot
@@ -439,8 +443,7 @@ async function validateGossipAttestationNoSignatureCheck(
     }
   }
 
-  // no signature check, leave that for phase1
-
+  // no signature check, leave that for step1
   const indexedAttestation: phase0.IndexedAttestation = {
     attestingIndices,
     data: attData,
