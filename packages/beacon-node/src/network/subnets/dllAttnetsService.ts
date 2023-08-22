@@ -32,7 +32,7 @@ type AggregatorDutyInfo = Map<Subnet, number | null>;
 /**
  * This value means node is not able to form stable mesh.
  */
-const MAX_TIME_TO_STABLE_MESH_SEC = 120;
+const NOT_ABLE_TO_FORM_STABLE_MESH_SEC = -1;
 
 /**
  * Manage deleterministic long lived (DLL) subnets and short lived subnets.
@@ -210,10 +210,10 @@ export class DLLAttnetsService implements IAttnetsService {
       // aggregator duty is expired, set timeToStableMesh to some big value so we know this value is not good
       for (const [subnet, timeToFormMesh] of dutiedInfo.entries()) {
         if (timeToFormMesh === null) {
-          dutiedInfo.set(subnet, MAX_TIME_TO_STABLE_MESH_SEC);
+          dutiedInfo.set(subnet, NOT_ABLE_TO_FORM_STABLE_MESH_SEC);
           this.metrics?.attnetsService.subscriptionsCommitteeTimeToStableMesh.observe(
             {subnet},
-            MAX_TIME_TO_STABLE_MESH_SEC
+            NOT_ABLE_TO_FORM_STABLE_MESH_SEC
           );
         }
       }
@@ -228,7 +228,9 @@ export class DLLAttnetsService implements IAttnetsService {
           });
           const numMeshPeers = this.gossip.mesh.get(topicStr)?.size ?? 0;
           if (numMeshPeers >= GOSSIP_D_LOW) {
-            const timeToStableMeshSec = this.clock.secFromSlot(dutiedSlot);
+            const timeToStableMeshSec = this.clock.secFromSlot(
+              dutiedSlot - this.opts.slotsToSubscribeBeforeAggregatorDuty
+            );
             // set to dutiedInfo so we'll not set to metrics again
             dutiedInfo.set(subnet, timeToStableMeshSec);
             this.metrics?.attnetsService.subscriptionsCommitteeTimeToStableMesh.observe({subnet}, timeToStableMeshSec);
