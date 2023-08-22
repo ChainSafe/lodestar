@@ -21,8 +21,11 @@ export type IChainOptions = BlockProcessOpts &
     sanityCheckExecutionEngineBlobs?: boolean;
     /** Max number of produced blobs by local validators to cache */
     maxCachedBlobSidecars?: number;
+    /** Max number of produced block roots (blinded or full) cached for broadcast validations */
+    maxCachedProducedRoots?: number;
     /** Option to load a custom kzg trusted setup in txt format */
     trustedSetup?: string;
+    broadcastValidationStrictness?: string;
   };
 
 export type BlockProcessOpts = {
@@ -79,4 +82,5 @@ export const defaultChainOptions: IChainOptions = {
   // for gossip block validation, it's unlikely we see a reorg with 32 slots
   // for attestation validation, having this value ensures we don't have to regen states most of the time
   maxSkipSlots: 32,
+  broadcastValidationStrictness: "warn",
 };

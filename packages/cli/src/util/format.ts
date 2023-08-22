@@ -79,7 +79,7 @@ export function parseBootnodesFile(bootnodesFile: string): string[] {
       const sanitizedEntry = entry.replace(/['",[\]{}.]+/g, "").trim();
 
       if (sanitizedEntry.includes("enr:-")) {
-        const parsedEnr = `enr:-${sanitizedEntry.split("enr:-")[1]}`;
+        const parsedEnr = `enr:-${sanitizedEntry.split("enr:-")[1].split("#")[0].trim()}`;
         enrs.push(parsedEnr);
       }
     }

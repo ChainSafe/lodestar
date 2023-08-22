@@ -270,7 +270,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   "network.connectToDiscv5Bootnodes": {
     type: "boolean",
-    description: "Attempt direct connection to discv5 bootnodes from network.discv5.bootEnrs option",
+    description: "Attempt direct connection to discv5 bootnodes",
     hidden: true,
     defaultDescription: String(defaultOptions.network.connectToDiscv5Bootnodes === true),
     group: "network",
@@ -310,7 +310,7 @@ export const options: CliCommandOptions<NetworkArgs> = {
 
   "network.rateTrackerTimeoutMs": {
     type: "number",
-    description: "Time window to track rate limit in milli seconds",
+    description: "Time window to track rate limit in milliseconds",
     hidden: true,
     group: "network",
     deprecated: true,

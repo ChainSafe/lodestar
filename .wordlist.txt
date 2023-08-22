@@ -59,6 +59,7 @@ TOC
 TTD
 TypeScript
 UI
+UID
 UTF
 VM
 Vitalik

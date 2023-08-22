@@ -44,6 +44,13 @@ export type BlockHeaderResponse = {
   header: phase0.SignedBeaconBlockHeader;
 };
 
+export enum BroadcastValidation {
+  none = "none",
+  gossip = "gossip",
+  consensus = "consensus",
+  consensusAndEquivocation = "consensus_and_equivocation",
+}
+
 export type Api = {
   /**
    * Get block
@@ -167,11 +174,38 @@ export type Api = {
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
     >
   >;
+
+  publishBlockV2(
+    blockOrContents: allForks.SignedBeaconBlock | SignedBlockContents,
+    opts: {broadcastValidation?: BroadcastValidation}
+  ): Promise<
+    ApiClientResponse<
+      {
+        [HttpStatusCode.OK]: void;
+        [HttpStatusCode.ACCEPTED]: void;
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
+
   /**
    * Publish a signed blinded block by submitting it to the mev relay and patching in the block
    * transactions beacon node gets in response.
    */
   publishBlindedBlock(blindedBlockOrContents: allForks.SignedBlindedBeaconBlock | SignedBlindedBlockContents): Promise<
+    ApiClientResponse<
+      {
+        [HttpStatusCode.OK]: void;
+        [HttpStatusCode.ACCEPTED]: void;
+      },
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.SERVICE_UNAVAILABLE
+    >
+  >;
+
+  publishBlindedBlockV2(
+    blindedBlockOrContents: allForks.SignedBlindedBeaconBlock | SignedBlindedBlockContents,
+    opts: {broadcastValidation?: BroadcastValidation}
+  ): Promise<
     ApiClientResponse<
       {
         [HttpStatusCode.OK]: void;
@@ -204,7 +238,9 @@ export const routesData: RoutesData<Api> = {
   getBlockHeaders: {url: "/eth/v1/beacon/headers", method: "GET"},
   getBlockRoot: {url: "/eth/v1/beacon/blocks/{block_id}/root", method: "GET"},
   publishBlock: {url: "/eth/v1/beacon/blocks", method: "POST"},
+  publishBlockV2: {url: "/eth/v2/beacon/blocks", method: "POST"},
   publishBlindedBlock: {url: "/eth/v1/beacon/blinded_blocks", method: "POST"},
+  publishBlindedBlockV2: {url: "/eth/v2/beacon/blinded_blocks", method: "POST"},
   getBlobSidecars: {url: "/eth/v1/beacon/blob_sidecars/{block_id}", method: "GET"},
 };
 
@@ -220,7 +256,9 @@ export type ReqTypes = {
   getBlockHeaders: {query: {slot?: number; parent_root?: string}};
   getBlockRoot: BlockIdOnlyReq;
   publishBlock: {body: unknown};
+  publishBlockV2: {body: unknown; query: {broadcast_validation?: string}};
   publishBlindedBlock: {body: unknown};
+  publishBlindedBlockV2: {body: unknown; query: {broadcast_validation?: string}};
   getBlobSidecars: BlockIdOnlyReq;
 };
 
@@ -277,7 +315,35 @@ export function getReqSerializers(config: ChainForkConfig): ReqSerializers<Api, 
     },
     getBlockRoot: blockIdOnlyReq,
     publishBlock: reqOnlyBody(AllForksSignedBlockOrContents, Schema.Object),
+    publishBlockV2: {
+      writeReq: (item, {broadcastValidation}) => ({
+        body: AllForksSignedBlockOrContents.toJson(item),
+        query: {broadcast_validation: broadcastValidation},
+      }),
+      parseReq: ({body, query}) => [
+        AllForksSignedBlockOrContents.fromJson(body),
+        {broadcastValidation: query.broadcast_validation as BroadcastValidation},
+      ],
+      schema: {
+        body: Schema.Object,
+        query: {broadcast_validation: Schema.String},
+      },
+    },
     publishBlindedBlock: reqOnlyBody(AllForksSignedBlindedBlockOrContents, Schema.Object),
+    publishBlindedBlockV2: {
+      writeReq: (item, {broadcastValidation}) => ({
+        body: AllForksSignedBlindedBlockOrContents.toJson(item),
+        query: {broadcast_validation: broadcastValidation},
+      }),
+      parseReq: ({body, query}) => [
+        AllForksSignedBlindedBlockOrContents.fromJson(body),
+        {broadcastValidation: query.broadcast_validation as BroadcastValidation},
+      ],
+      schema: {
+        body: Schema.Object,
+        query: {broadcast_validation: Schema.String},
+      },
+    },
     getBlobSidecars: blockIdOnlyReq,
   };
 }
