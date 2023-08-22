@@ -27,7 +27,7 @@ const MINIMUM_WAIT_TIME_MS = 50;
  *
  * This is a special gossip queue for beacon_attestation topic
  */
-export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements GossipQueue<T> {
+export class IndexedGossipQueueMinSize<T extends {indexed?: string; queueAddedMs?: number}> implements GossipQueue<T> {
   private _length = 0;
   private indexedItems: Map<string, QueueItem<T>>;
   // keys with at least minChunkSize items
@@ -61,6 +61,18 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements 
   }
 
   /**
+   * Get age of each key in ms.
+   */
+  getDataAgeMs(): number[] {
+    const now = Date.now();
+    const result: number[] = [];
+    for (const queueItem of this.indexedItems.values()) {
+      result.push(now - queueItem.firstSeenMs);
+    }
+    return result;
+  }
+
+  /**
    * Add item to gossip queue. If queue is full, drop first item of first key.
    * Return number of items dropped
    */
@@ -71,10 +83,12 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements 
       // should not happen
       return 0;
     }
+    const now = Date.now();
     item.indexed = key;
+    item.queueAddedMs = now;
     let queueItem = this.indexedItems.get(key);
     if (queueItem == null) {
-      queueItem = {firstSeenMs: Date.now(), listItems: new LinkedList<T>()};
+      queueItem = {firstSeenMs: now, listItems: new LinkedList<T>()};
       this.indexedItems.set(key, queueItem);
     }
     queueItem.listItems.push(item);

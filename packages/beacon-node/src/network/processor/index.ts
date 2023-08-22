@@ -196,6 +196,11 @@ export class NetworkProcessor {
           metrics.gossipValidationQueue.concurrency.set({topic}, this.gossipTopicConcurrency[topic]);
         }
         metrics.reprocessGossipAttestations.countPerSlot.set(this.unknownBlockGossipsubMessagesCount);
+        // specific metric for beacon_attestation topic
+        metrics.gossipValidationQueue.keyAge.reset();
+        for (const ageMs of this.gossipQueues.beacon_attestation.getDataAgeMs()) {
+          metrics.gossipValidationQueue.keyAge.observe(ageMs / 1000);
+        }
       });
     }
 
@@ -403,8 +408,14 @@ export class NetworkProcessor {
   ): Promise<void> {
     const nowSec = Date.now() / 1000;
     if (Array.isArray(messageOrArray)) {
-      messageOrArray.forEach((msg) => (msg.startProcessUnixSec = nowSec));
+      for (const msg of messageOrArray) {
+        msg.startProcessUnixSec = nowSec;
+        if (msg.queueAddedMs !== undefined) {
+          this.metrics?.gossipValidationQueue.queueTime.observe(nowSec - msg.queueAddedMs / 1000);
+        }
+      }
     } else {
+      // indexed queue is not used here
       messageOrArray.startProcessUnixSec = nowSec;
     }
 

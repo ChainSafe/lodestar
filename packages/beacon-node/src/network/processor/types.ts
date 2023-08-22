@@ -12,12 +12,13 @@ export type PendingGossipsubMessage = {
   msg: Message;
   // only available for beacon_attestation and aggregate_and_proof
   msgSlot?: Slot;
-  // indexed data if any, only available for beacon_attestation as a result of getAttDataBase64FromAttestationSerialized
-  indexed?: string;
   msgId: string;
   propagationSource: PeerIdStr;
   seenTimestampSec: number;
   startProcessUnixSec: number | null;
+  // specific properties for IndexedGossipQueueMinSize, for beacon_attestation topic only
+  indexed?: string;
+  queueAddedMs?: number;
 };
 
 export type ExtractSlotRootFns = {

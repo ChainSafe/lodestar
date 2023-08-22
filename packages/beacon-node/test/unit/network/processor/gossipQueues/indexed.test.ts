@@ -5,6 +5,7 @@ import {IndexedGossipQueueMinSize} from "../../../../../src/network/processor/go
 type Item = {
   key: string;
   indexed?: string;
+  queueAddedMs?: number;
 };
 
 function toItem(key: string): Item {
@@ -12,7 +13,7 @@ function toItem(key: string): Item {
 }
 
 function toIndexedItem(key: string): Item {
-  return {key, indexed: key.substring(0, 1)};
+  return {key, indexed: key.substring(0, 1), queueAddedMs: 0};
 }
 
 describe("IndexedGossipQueueMinSize", () => {

@@ -65,6 +65,17 @@ export function createLodestarMetrics(
         help: "Current count of jobs being run on network processor for topic",
         labelNames: ["topic"],
       }),
+      // this metric links to the beacon_attestation topic only as this is the only topics that are batch
+      keyAge: register.histogram({
+        name: "lodestar_gossip_validation_queue_key_age_seconds",
+        help: "Age of the first item of each key in the indexed queues in seconds",
+        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 5],
+      }),
+      queueTime: register.histogram({
+        name: "lodestar_gossip_validation_queue_time_seconds",
+        help: "Total time an item stays in queue until it is processed in seconds",
+        buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 5],
+      }),
     },
 
     networkProcessor: {
