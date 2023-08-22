@@ -109,7 +109,7 @@ export class WorkerNetworkCore implements INetworkCore {
 
     const worker = new Worker("./networkCoreWorker.js", {
       workerData,
-      resourceLimits: {maxYoungGenerationSizeMb: 128},
+      resourceLimits: {maxYoungGenerationSizeMb: 152},
     } as ConstructorParameters<typeof Worker>[1]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
