@@ -82,6 +82,7 @@ export async function getNetworkForTest(
       disableArchiveOnCheckpoint: true,
       disableLightClientServerOnImportBlockHead: true,
       disablePrepareNextSlot: true,
+      minSameMessageSignatureSetsToBatch: 32,
     },
     {
       config: beaconConfig,

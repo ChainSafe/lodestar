@@ -37,6 +37,9 @@ export type BlsMultiThreadWorkerPoolOptions = {
   blsVerifyAllMultiThread?: boolean;
 };
 
+// 1 worker for the main thread
+const blsPoolSize = Math.max(defaultPoolSize - 1, 1);
+
 /**
  * Split big signature sets into smaller sets so they can be sent to multiple workers.
  *
@@ -133,7 +136,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     // THe worker is not able to deserialize from uncompressed
     // `Error: err _wrapDeserialize`
     this.format = implementation === "blst-native" ? PointFormat.uncompressed : PointFormat.compressed;
-    this.workers = this.createWorkers(implementation, defaultPoolSize);
+    this.workers = this.createWorkers(implementation, blsPoolSize);
 
     if (metrics) {
       metrics.blsThreadPool.queueLength.addCollect(() => {
@@ -145,7 +148,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
   canAcceptWork(): boolean {
     return (
-      this.workersBusy < defaultPoolSize &&
+      this.workersBusy < blsPoolSize &&
       // TODO: Should also bound the jobs queue?
       this.jobs.length < MAX_JOBS_CAN_ACCEPT_WORK
     );

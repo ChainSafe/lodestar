@@ -8,13 +8,19 @@ import {Metrics} from "../../metrics/metrics.js";
 import {IBeaconDb} from "../../db/interface.js";
 import {ClockEvent} from "../../util/clock.js";
 import {NetworkEvent, NetworkEventBus} from "../events.js";
-import {GossipHandlers, GossipType, GossipValidatorFn} from "../gossip/interface.js";
+import {
+  GossipHandlers,
+  GossipMessageInfo,
+  GossipType,
+  GossipValidatorBatchFn,
+  GossipValidatorFn,
+} from "../gossip/interface.js";
 import {PeerIdStr} from "../peers/index.js";
 import {createGossipQueues} from "./gossipQueues/index.js";
 import {PendingGossipsubMessage} from "./types.js";
 import {ValidatorFnsModules, GossipHandlerOpts, getGossipHandlers} from "./gossipHandlers.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
-import {ValidatorFnModules, getGossipValidatorFn} from "./gossipValidatorFn.js";
+import {ValidatorFnModules, getGossipValidatorBatchFn, getGossipValidatorFn} from "./gossipValidatorFn.js";
 
 export * from "./types.js";
 
@@ -142,8 +148,9 @@ export class NetworkProcessor {
   private readonly logger: Logger;
   private readonly metrics: Metrics | null;
   private readonly gossipValidatorFn: GossipValidatorFn;
-  private readonly gossipQueues = createGossipQueues<PendingGossipsubMessage>();
-  private readonly gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
+  private readonly gossipValidatorBatchFn: GossipValidatorBatchFn;
+  private readonly gossipQueues: ReturnType<typeof createGossipQueues>;
+  private readonly gossipTopicConcurrency: {[K in GossipType]: number};
   private readonly extractBlockSlotRootFns = createExtractBlockSlotRootFns();
   // we may not receive the block for Attestation and SignedAggregateAndProof messages, in that case PendingGossipsubMessage needs
   // to be stored in this Map and reprocessed once the block comes
@@ -162,7 +169,13 @@ export class NetworkProcessor {
     this.metrics = metrics;
     this.logger = logger;
     this.events = events;
+    this.gossipQueues = createGossipQueues(this.opts.beaconAttestationBatchValidation);
+    this.gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
     this.gossipValidatorFn = getGossipValidatorFn(modules.gossipHandlers ?? getGossipHandlers(modules, opts), modules);
+    this.gossipValidatorBatchFn = getGossipValidatorBatchFn(
+      modules.gossipHandlers ?? getGossipHandlers(modules, opts),
+      modules
+    );
 
     events.on(NetworkEvent.pendingGossipsubMessage, this.onPendingGossipsubMessage.bind(this));
     this.chain.emitter.on(routes.events.EventType.block, this.onBlockProcessed.bind(this));
@@ -179,10 +192,15 @@ export class NetworkProcessor {
       metrics.gossipValidationQueue.length.addCollect(() => {
         for (const topic of executeGossipWorkOrder) {
           metrics.gossipValidationQueue.length.set({topic}, this.gossipQueues[topic].length);
-          metrics.gossipValidationQueue.dropRatio.set({topic}, this.gossipQueues[topic].dropRatio);
+          metrics.gossipValidationQueue.keySize.set({topic}, this.gossipQueues[topic].keySize);
           metrics.gossipValidationQueue.concurrency.set({topic}, this.gossipTopicConcurrency[topic]);
         }
         metrics.reprocessGossipAttestations.countPerSlot.set(this.unknownBlockGossipsubMessagesCount);
+        // specific metric for beacon_attestation topic
+        metrics.gossipValidationQueue.keyAge.reset();
+        for (const ageMs of this.gossipQueues.beacon_attestation.getDataAgeMs()) {
+          metrics.gossipValidationQueue.keyAge.observe(ageMs / 1000);
+        }
       });
     }
 
@@ -363,13 +381,14 @@ export class NetworkProcessor {
         }
 
         const item = this.gossipQueues[topic].next();
+        const numMessages = Array.isArray(item) ? item.length : 1;
         if (item) {
-          this.gossipTopicConcurrency[topic]++;
+          this.gossipTopicConcurrency[topic] += numMessages;
           this.processPendingGossipsubMessage(item)
-            .finally(() => this.gossipTopicConcurrency[topic]--)
+            .finally(() => (this.gossipTopicConcurrency[topic] -= numMessages))
             .catch((e) => this.logger.error("processGossipAttestations must not throw", {}, e));
 
-          jobsSubmitted++;
+          jobsSubmitted += numMessages;
           // Attempt to find more work, but check canAcceptWork() again and run executeGossipWorkOrder priorization
           continue job_loop;
         }
@@ -384,40 +403,74 @@ export class NetworkProcessor {
     }
   }
 
-  private async processPendingGossipsubMessage(message: PendingGossipsubMessage): Promise<void> {
-    message.startProcessUnixSec = Date.now() / 1000;
+  private async processPendingGossipsubMessage(
+    messageOrArray: PendingGossipsubMessage | PendingGossipsubMessage[]
+  ): Promise<void> {
+    const nowSec = Date.now() / 1000;
+    if (Array.isArray(messageOrArray)) {
+      for (const msg of messageOrArray) {
+        msg.startProcessUnixSec = nowSec;
+        if (msg.queueAddedMs !== undefined) {
+          this.metrics?.gossipValidationQueue.queueTime.observe(nowSec - msg.queueAddedMs / 1000);
+        }
+      }
+    } else {
+      // indexed queue is not used here
+      messageOrArray.startProcessUnixSec = nowSec;
+    }
 
-    const acceptance = await this.gossipValidatorFn(
-      message.topic,
-      message.msg,
-      message.propagationSource,
-      message.seenTimestampSec,
-      message.msgSlot ?? null
-    );
+    const acceptanceArr = Array.isArray(messageOrArray)
+      ? // for beacon_attestation topic, process attestations with same attestation data
+        // we always have msgSlot in beaccon_attestation topic so the type conversion is safe
+        await this.gossipValidatorBatchFn(messageOrArray as GossipMessageInfo[])
+      : [
+          // for other topics
+          await this.gossipValidatorFn({...messageOrArray, msgSlot: messageOrArray.msgSlot ?? null}),
+        ];
 
-    if (message.startProcessUnixSec !== null) {
-      this.metrics?.gossipValidationQueue.jobWaitTime.observe(
-        {topic: message.topic.type},
-        message.startProcessUnixSec - message.seenTimestampSec
-      );
-      this.metrics?.gossipValidationQueue.jobTime.observe(
-        {topic: message.topic.type},
-        Date.now() / 1000 - message.startProcessUnixSec
-      );
+    if (Array.isArray(messageOrArray)) {
+      messageOrArray.forEach((msg) => this.trackJobTime(msg, messageOrArray.length));
+    } else {
+      this.trackJobTime(messageOrArray, 1);
     }
 
     // Use setTimeout to yield to the macro queue
     // This is mostly due to too many attestation messages, and a gossipsub RPC may
     // contain multiple of them. This helps avoid the I/O lag issue.
-    setTimeout(
-      () =>
+
+    if (Array.isArray(messageOrArray)) {
+      for (const [i, msg] of messageOrArray.entries()) {
+        setTimeout(() => {
+          this.events.emit(NetworkEvent.gossipMessageValidationResult, {
+            msgId: msg.msgId,
+            propagationSource: msg.propagationSource,
+            acceptance: acceptanceArr[i],
+          });
+        }, 0);
+      }
+    } else {
+      setTimeout(() => {
         this.events.emit(NetworkEvent.gossipMessageValidationResult, {
-          msgId: message.msgId,
-          propagationSource: message.propagationSource,
-          acceptance,
-        }),
-      0
-    );
+          msgId: messageOrArray.msgId,
+          propagationSource: messageOrArray.propagationSource,
+          acceptance: acceptanceArr[0],
+        });
+      }, 0);
+    }
+  }
+
+  private trackJobTime(message: PendingGossipsubMessage, numJob: number): void {
+    if (message.startProcessUnixSec !== null) {
+      this.metrics?.gossipValidationQueue.jobWaitTime.observe(
+        {topic: message.topic.type},
+        message.startProcessUnixSec - message.seenTimestampSec
+      );
+      // if it takes 64ms to process 64 jobs, the average job time is 1ms
+      this.metrics?.gossipValidationQueue.jobTime.observe(
+        {topic: message.topic.type},
+        (Date.now() / 1000 - message.startProcessUnixSec) / numJob
+      );
+    }
   }
 
   /**

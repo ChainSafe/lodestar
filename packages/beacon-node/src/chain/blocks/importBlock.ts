@@ -89,11 +89,14 @@ export async function importBlock(
 
   this.metrics?.importBlock.bySource.inc({source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: block.message.slot, root: blockRootHex});
-  this.emitter.emit(routes.events.EventType.block, {
-    block: toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),
-    slot: block.message.slot,
-    executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
-  });
+  // We want to import block asap so call all event handler in the next event loop
+  setTimeout(() => {
+    this.emitter.emit(routes.events.EventType.block, {
+      block: toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),
+      slot: block.message.slot,
+      executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
+    });
+  }, 0);
 
   // 3. Import attestations to fork choice
   //

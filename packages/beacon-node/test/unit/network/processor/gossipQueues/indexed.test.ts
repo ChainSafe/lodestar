@@ -1,9 +1,11 @@
 import {expect} from "chai";
+import sinon from "sinon";
 import {IndexedGossipQueueMinSize} from "../../../../../src/network/processor/gossipQueues/indexed.js";
 
 type Item = {
   key: string;
   indexed?: string;
+  queueAddedMs?: number;
 };
 
 function toItem(key: string): Item {
@@ -11,10 +13,10 @@ function toItem(key: string): Item {
 }
 
 function toIndexedItem(key: string): Item {
-  return {key, indexed: key.substring(0, 1)};
+  return {key, indexed: key.substring(0, 1), queueAddedMs: 0};
 }
 
-describe("IndexedGossipQueues", () => {
+describe("IndexedGossipQueueMinSize", () => {
   const gossipQueue = new IndexedGossipQueueMinSize<Item>({
     maxLength: 12,
     indexFn: (item: Item) => item.key.substring(0, 1),
@@ -22,13 +24,20 @@ describe("IndexedGossipQueues", () => {
     maxChunkSize: 3,
   });
 
+  const sandbox = sinon.createSandbox();
+
   beforeEach(() => {
+    sandbox.useFakeTimers();
     gossipQueue.clear();
     for (const letter of ["a", "b", "c"]) {
       for (let i = 0; i < 4; i++) {
         gossipQueue.add(toItem(`${letter}${i}`));
       }
     }
+  });
+
+  afterEach(() => {
+    sandbox.restore();
   });
 
   it("should return items with minChunkSize", () => {
@@ -38,7 +47,12 @@ describe("IndexedGossipQueues", () => {
     expect(gossipQueue.length).to.be.equal(6);
     expect(gossipQueue.next()).to.be.deep.equal(["a3", "a2", "a1"].map(toIndexedItem));
     expect(gossipQueue.length).to.be.equal(3);
-    // no more keys with min chunk size, pick the last key
+    // no more keys with min chunk size but not enough wait time
+    expect(gossipQueue.next()).to.be.null;
+    sandbox.clock.tick(20);
+    expect(gossipQueue.next()).to.be.null;
+    sandbox.clock.tick(30);
+    // should pick items of the last key
     expect(gossipQueue.next()).to.be.deep.equal(["c0"].map(toIndexedItem));
     expect(gossipQueue.length).to.be.equal(2);
     expect(gossipQueue.next()).to.be.deep.equal(["b0"].map(toIndexedItem));
