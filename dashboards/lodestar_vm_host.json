@@ -148,7 +148,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(process_resident_memory_bytes{job=~\"beacon|validator\"})",
+          "expr": "sum(process_resident_memory_bytes{job=~\"$beacon_job|beacon|$validator_job|validator\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "rss",
@@ -162,7 +162,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(process_heap_bytes{job=~\"validator|beacon\"})",
+          "expr": "sum(process_heap_bytes{job=~\"$beacon_job|beacon|$validator_job|validator\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "process_heap_bytes",
@@ -176,7 +176,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(nodejs_heap_size_total_bytes) + sum(network_worker_nodejs_heap_size_total_bytes) + sum(discv5_worker_nodejs_heap_size_total_bytes)",
+          "expr": "(sum(nodejs_heap_size_total_bytes) + sum(discv5_worker_nodejs_heap_size_total_bytes) + sum(network_worker_nodejs_heap_size_total_bytes))\nor\n(sum(nodejs_heap_size_total_bytes) + sum(discv5_worker_nodejs_heap_size_total_bytes))",
           "hide": false,
           "interval": "",
           "legendFormat": "node allocated heap",
@@ -190,7 +190,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(nodejs_heap_size_used_bytes) + sum(network_worker_nodejs_heap_size_used_bytes) + sum(discv5_worker_nodejs_heap_size_used_bytes)",
+          "expr": "(sum(nodejs_heap_size_used_bytes) + sum(discv5_worker_nodejs_heap_size_used_bytes) + sum(network_worker_nodejs_heap_size_used_bytes)) \nor\n(sum(nodejs_heap_size_used_bytes) + sum(discv5_worker_nodejs_heap_size_used_bytes)) ",
           "hide": false,
           "interval": "",
           "legendFormat": "node used heap",
@@ -204,7 +204,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(nodejs_external_memory_bytes) + sum(network_worker_nodejs_external_memory_bytes) + sum(discv5_worker_nodejs_external_memory_bytes)",
+          "expr": "(sum(nodejs_external_memory_bytes) + sum(discv5_worker_nodejs_external_memory_bytes) + sum(network_worker_nodejs_external_memory_bytes))\nor\n(sum(nodejs_external_memory_bytes) + sum(discv5_worker_nodejs_external_memory_bytes))",
           "hide": false,
           "interval": "",
           "legendFormat": "node external memory",
@@ -303,7 +303,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + network_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + discv5_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"}",
+          "expr": "(nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + discv5_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + network_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"})\nor\n(nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"} + discv5_worker_nodejs_external_memory_bytes{job=~\"$beacon_job|beacon\"})",
           "hide": false,
           "interval": "",
           "legendFormat": "external_memory",
@@ -422,7 +422,7 @@
           "refId": "B"
         }
       ],
-      "title": "Heap Allocations - Main Thread",
+      "title": "Main Thread - Heap Allocations",
       "type": "timeseries"
     },
     {
@@ -538,7 +538,7 @@
           "refId": "C"
         }
       ],
-      "title": "GC pause time rate + reclaimed bytes - Main Thread",
+      "title": "Main Thread - GC pause time rate + reclaimed bytes",
       "type": "timeseries"
     },
     {
@@ -636,7 +636,7 @@
           "refId": "B"
         }
       ],
-      "title": "Heap Allocations - Network Worker Thread",
+      "title": "Network Worker Thread - Heap Allocations",
       "type": "timeseries"
     },
     {
@@ -752,7 +752,7 @@
           "refId": "C"
         }
       ],
-      "title": "GC pause time rate + reclaimed bytes - Network Worker Thread",
+      "title": "Network Worker Thread - GC pause time rate + reclaimed bytes",
       "type": "timeseries"
     },
     {
@@ -850,7 +850,7 @@
           "refId": "B"
         }
       ],
-      "title": "Heap Allocations - Discv5 Worker Thread",
+      "title": "Discv5 Worker Thread - Heap Allocations",
       "type": "timeseries"
     },
     {
@@ -966,7 +966,7 @@
           "refId": "C"
         }
       ],
-      "title": "GC pause time rate + reclaimed bytes - Discv5 Worker Thread",
+      "title": "Discv5 Worker Thread - GC pause time rate + reclaimed bytes",
       "type": "timeseries"
     },
     {
@@ -1042,8 +1042,8 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "editorMode": "code",
           "expr": "nodejs_heap_space_size_used_bytes{job=~\"$validator_job|validator\"}",
+          "editorMode": "code",
           "interval": "",
           "legendFormat": "{{space}}",
           "range": true,
@@ -1064,7 +1064,7 @@
           "refId": "B"
         }
       ],
-      "title": "Heap Allocations - Validator",
+      "title": "Validator - Heap Allocations",
       "type": "timeseries"
     },
     {
@@ -1180,7 +1180,7 @@
           "refId": "C"
         }
       ],
-      "title": "GC pause time rate + reclaimed bytes - Validator",
+      "title": "Validator - GC pause time rate + reclaimed bytes",
       "type": "timeseries"
     },
     {
@@ -1301,9 +1301,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "nodejs_eventloop_lag_seconds{job=~\"$beacon_job|beacon\"}",
+          "expr": "nodejs_eventloop_lag_seconds",
           "interval": "",
-          "legendFormat": "main_thread",
+          "legendFormat": "{{job}}",
           "range": true,
           "refId": "A"
         },
@@ -1332,7 +1332,7 @@
           "refId": "C"
         }
       ],
-      "title": "prom-client Event Loop Lag",
+      "title": "Event Loop Lag",
       "type": "timeseries"
     },
     {
@@ -1427,9 +1427,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "avg_over_time(nodejs_eventloop_lag_seconds{job=~\"beacon\"}[$rate_interval])",
+          "expr": "avg_over_time(nodejs_eventloop_lag_seconds[$rate_interval])",
           "interval": "",
-          "legendFormat": "main_thread",
+          "legendFormat": "{{job}}",
           "range": true,
           "refId": "A"
         },
@@ -1458,676 +1458,8 @@
           "refId": "C"
         }
       ],
-      "title": "Average prom-client Event Loop Lag",
+      "title": "Average Event Loop Lag",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 30,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "graph": false,
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "decbytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 18
-      },
-      "id": 543,
-      "options": {
-        "graph": {},
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "7.4.5",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "network_worker_nodejs_heap_space_size_used_bytes",
-          "interval": "",
-          "legendFormat": "{{space}}",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "network_worker_nodejs_external_memory_bytes",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "external_memory",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "Heap Allocations - Network Worker Thread",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "GC Time",
-            "axisPlacement": "left",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "percentunit"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "C"
-            },
-            "properties": [
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "custom.axisLabel",
-                "value": "GC Bytes"
-              },
-              {
-                "id": "unit",
-                "value": "decbytes"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 18
-      },
-      "id": 546,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.4.0-beta1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(network_worker_nodejs_gc_pause_seconds_total[$rate_interval])",
-          "hide": false,
-          "legendFormat": "{{gctype}}",
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(network_worker_nodejs_gc_reclaimed_bytes_total[$rate_interval])",
-          "format": "time_series",
-          "hide": false,
-          "legendFormat": "{{gctype}}",
-          "range": true,
-          "refId": "C"
-        }
-      ],
-      "title": "GC pause time rate + reclaimed bytes - Network Worker Thread",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 30,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "graph": false,
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "decbytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 26
-      },
-      "id": 545,
-      "options": {
-        "graph": {},
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "7.4.5",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "discv5_worker_nodejs_heap_space_size_used_bytes",
-          "interval": "",
-          "legendFormat": "{{space}}",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "discv5_worker_nodejs_external_memory_bytes",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "external_memory",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "Heap Allocations - Discv5 Worker Thread",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "GC Time",
-            "axisPlacement": "left",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "percentunit"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "C"
-            },
-            "properties": [
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "custom.axisLabel",
-                "value": "GC Bytes"
-              },
-              {
-                "id": "unit",
-                "value": "decbytes"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 26
-      },
-      "id": 547,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.4.0-beta1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(discv5_worker_nodejs_gc_pause_seconds_total[$rate_interval])",
-          "hide": false,
-          "legendFormat": "{{gctype}}",
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(discv5_worker_nodejs_gc_reclaimed_bytes_total[$rate_interval])",
-          "format": "time_series",
-          "hide": false,
-          "legendFormat": "{{gctype}}",
-          "range": true,
-          "refId": "C"
-        }
-      ],
-      "title": "GC pause time rate + reclaimed bytes - Discv5 Worker Thread",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 30,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "graph": false,
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "decbytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 34
-      },
-      "id": 542,
-      "options": {
-        "graph": {},
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "7.4.5",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "nodejs_heap_space_size_used_bytes{job=~\"$validator_job|validator\"}",
-          "interval": "",
-          "legendFormat": "{{space}}",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "nodejs_external_memory_bytes{job=~\"$validator_job|validator\"}",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "external_memory",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "Heap Allocations - Validator",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "GC Time",
-            "axisPlacement": "left",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "percentunit"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "C"
-            },
-            "properties": [
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "custom.axisLabel",
-                "value": "GC Bytes"
-              },
-              {
-                "id": "unit",
-                "value": "decbytes"
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 34
-      },
-      "id": 548,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "8.4.0-beta1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(nodejs_gc_pause_seconds_total{job=~\"$validator_job|validator\"}[$rate_interval])",
-          "hide": false,
-          "legendFormat": "{{gctype}}",
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(nodejs_gc_reclaimed_bytes_total{job=~\"$validator_job|validator\"}[$rate_interval])",
-          "format": "time_series",
-          "hide": false,
-          "legendFormat": "{{gctype}}",
-          "range": true,
-          "refId": "C"
-        }
-      ],
-      "title": "GC pause time rate + reclaimed bytes - Validator",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 42
-      },
-      "id": 12,
-      "panels": [],
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "refId": "A"
-        }
-      ],
-      "title": "VM Stats",
-      "type": "row"
     },
     {
       "datasource": {
@@ -2179,90 +1511,6 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 51
-      },
-      "id": 64,
-      "options": {
-        "graph": {},
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "7.4.5",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "nodejs_active_requests or network_worker_nodejs_active_requests",
-          "interval": "",
-          "legendFormat": "{{type}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Active requests",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 30,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "graph": false,
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
         "y": 51
       },
       "id": 6,
@@ -2319,6 +1567,131 @@
         }
       ],
       "title": "Active Handles",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "log": 2,
+              "type": "log"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "event loop lag"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 51
+      },
+      "id": 40,
+      "options": {
+        "graph": {},
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "nodejs_eventloop_lag_seconds{job=~\"$beacon_job|beacon\"}",
+          "interval": "",
+          "legendFormat": "main_thread",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "network_worker_nodejs_eventloop_lag_seconds",
+          "hide": false,
+          "legendFormat": "network_worker",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "discv5_worker_nodejs_eventloop_lag_seconds",
+          "hide": false,
+          "legendFormat": "discv5_worker",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Event Loop Lag - (metric A) eventloop_lag_seconds",
       "type": "timeseries"
     },
     {
