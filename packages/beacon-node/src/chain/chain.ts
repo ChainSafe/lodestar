@@ -615,7 +615,7 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  async blindedBlockToFullBytes(block: Uint8Array): Uint8Array {
+  async blindedBlockToFullBytes(block: Uint8Array): Promise<Uint8Array> {
     // TODO: Same code as `blindedBlockToFull`, but without de-serializing block.. looks really annoying..
     // We should review if the optimization to stream only bytes on ReqResp is worth the complexity, an alternative
     // is to implement more restrictive rate-limiting overall such that the load of serdes is acceptable.
