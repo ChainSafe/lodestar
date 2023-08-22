@@ -1,7 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {ResponseOutgoing} from "@lodestar/reqresp";
 import {Slot, phase0} from "@lodestar/types";
-import {ForkSeq} from "@lodestar/params";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";

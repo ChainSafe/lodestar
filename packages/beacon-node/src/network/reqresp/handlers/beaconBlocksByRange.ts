@@ -26,7 +26,7 @@ export async function* onBeaconBlocksByRange(
       // It's a bis sus that deleting this line will still let the code compile..
       // This code MUST include tests to ensure ReqResp works with full or blinded blocks
       yield {
-        data: await this.blindedBlockToFullBytes(value),
+        data: await chain.blindedBlockToFullBytes(value),
         fork: chain.config.getForkName(finalized.decodeKey(key)),
       };
     }
