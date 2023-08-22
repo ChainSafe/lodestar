@@ -15,7 +15,6 @@ export type PendingGossipsubMessage = {
   // indexed data if any, only available for beacon_attestation as a result of getAttDataBase64FromAttestationSerialized
   indexed?: string;
   msgId: string;
-  // TODO: Refactor into accepting string (requires gossipsub changes) for easier multi-threading
   propagationSource: PeerIdStr;
   seenTimestampSec: number;
   startProcessUnixSec: number | null;

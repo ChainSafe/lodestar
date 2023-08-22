@@ -589,7 +589,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
           results.push(validationResult.err as AttestationError);
           continue;
         }
-
+        // null means no error
         results.push(null);
 
         // Handler

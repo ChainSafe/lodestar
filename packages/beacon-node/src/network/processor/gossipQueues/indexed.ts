@@ -181,12 +181,7 @@ export class IndexedGossipQueueMinSize<T extends {indexed?: string}> implements 
     this.lastWaitTimeCheckedMs = now;
     this.nextWaitTimeMs = null;
     let resultedKey: string | null = null;
-    for (const key of this.indexedItems.keys()) {
-      const queueItem = this.indexedItems.get(key);
-      if (queueItem == null) {
-        // should not happen
-        continue;
-      }
+    for (const [key, queueItem] of this.indexedItems.entries()) {
       if (now - queueItem.firstSeenMs >= MINIMUM_WAIT_TIME_MS) {
         // found, do not return to find the last key with >= MINIMUM_WAIT_TIME_MS old
         this.nextWaitTimeMs = null;
