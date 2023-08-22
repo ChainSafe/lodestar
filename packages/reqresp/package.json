@@ -55,8 +55,7 @@
   },
   "dependencies": {
     "@chainsafe/fast-crc32c": "^4.1.1",
-    "@libp2p/interface-connection": "^5.1.0",
-    "@libp2p/interface-peer-id": "^2.0.2",
+    "@libp2p/interface": "^0.1.1",
     "@lodestar/config": "^1.10.0",
     "@lodestar/params": "^1.10.0",
     "@lodestar/utils": "^1.10.0",
@@ -64,16 +63,16 @@
     "it-pipe": "^3.0.1",
     "snappy": "^7.2.2",
     "snappyjs": "^0.7.0",
-    "uint8arraylist": "^2.4.3",
-    "varint": "^6.0.0"
+    "uint8-varint": "^2.0.1",
+    "uint8arraylist": "^2.4.3"
   },
   "devDependencies": {
     "@lodestar/logger": "^1.10.0",
     "@lodestar/types": "^1.10.0",
-    "libp2p": "0.45.9"
+    "libp2p": "0.46.3"
   },
   "peerDependencies": {
-    "libp2p": "~0.45.0"
+    "libp2p": "~0.46.3"
   },
   "keywords": [
     "ethereum",

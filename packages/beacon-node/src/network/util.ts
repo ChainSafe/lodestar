@@ -1,5 +1,5 @@
-import type {PeerId} from "@libp2p/interface-peer-id";
-import type {Connection} from "@libp2p/interface-connection";
+import type {PeerId} from "@libp2p/interface/peer-id";
+import type {Connection} from "@libp2p/interface/connection";
 import type {DefaultConnectionManager} from "libp2p/connection-manager/index.js";
 import type {PeerIdStr} from "../util/peerId.js";
 import type {Libp2p} from "./interface.js";

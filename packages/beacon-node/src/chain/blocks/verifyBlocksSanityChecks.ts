@@ -5,8 +5,6 @@ import {Slot, deneb} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
-// TODO freetheblobs: disable the following exception once blockinput changes
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import {validateBlobSidecars} from "../validation/blobSidecar.js";
 import {BlockInput, BlockInputType, ImportBlockOpts} from "./types.js";
 
@@ -137,8 +135,7 @@ function maybeValidateBlobs(
       const {blobKzgCommitments} = (block as deneb.SignedBeaconBlock).message.body;
       const beaconBlockRoot = config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block.message);
       // TODO Deneb: This function throws un-typed errors
-      // TODO freetheblobs: enable the following validation once blockinput is migrated
-      // validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs);
+      validateBlobSidecars(blockSlot, beaconBlockRoot, blobKzgCommitments, blobs);
 
       return DataAvailableStatus.available;
     }

@@ -1,4 +1,4 @@
-import varint from "varint";
+import {decode as varintDecode, encodingLength as varintEncodingLength} from "uint8-varint";
 import {Uint8ArrayList} from "uint8arraylist";
 import {BufferedSource} from "../../utils/index.js";
 import {TypeSizes} from "../../types.js";
@@ -32,23 +32,16 @@ export async function readSszSnappyHeader(bufferedSource: BufferedSource, type: 
       continue;
     }
 
-    // Use Number.MAX_SAFE_INTEGER to guard against this check https://github.com/chrisdickinson/varint/pull/20
-    // On varint v6 if the number is > Number.MAX_SAFE_INTEGER `varint.decode` throws.
-    // Since MAX_VARINT_BYTES = 10, this will always be the case for the condition below.
-    // The check for MAX_VARINT_BYTES is kept for completeness
     let sszDataLength: number;
     try {
-      sszDataLength = varint.decode(buffer.slice());
+      sszDataLength = varintDecode(buffer.subarray());
     } catch (e) {
       throw new SszSnappyError({code: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: Infinity});
     }
 
     // MUST validate: the unsigned protobuf varint used for the length-prefix MUST not be longer than 10 bytes
-    // Check for varintBytes > 0 to guard against NaN, or 0 values
-    const varintBytes = varint.decode.bytes;
-    if (varintBytes === undefined || varintBytes > MAX_VARINT_BYTES || !(varintBytes > 0)) {
-      throw new SszSnappyError({code: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: varintBytes ?? 0});
-    }
+    // encodingLength function only returns 1-8 inclusive
+    const varintBytes = varintEncodingLength(sszDataLength);
     buffer.consume(varintBytes);
 
     // MUST validate: the length-prefix is within the expected size bounds derived from the payload SSZ type.

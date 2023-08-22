@@ -1,33 +1,28 @@
 import {writeFile} from "node:fs/promises";
-import {ChainForkConfig} from "@lodestar/config";
 import {SHARED_JWT_SECRET, CLIQUE_SEALING_PERIOD} from "../constants.js";
 import {
   AtLeast,
-  ELClient,
-  ELGeneratorClientOptions,
-  ELGeneratorGenesisOptions,
-  ELNode,
-  ELStartMode,
-  IRunner,
+  ExecutionClient,
+  ExecutionGeneratorOptions,
+  ExecutionGenesisOptions,
+  ExecutionNode,
+  ExecutionStartMode,
 } from "../interfaces.js";
 import {getEstimatedShanghaiTime} from "../utils/index.js";
-import {getGethGenesisBlock} from "../utils/el_genesis.js";
-import {createELNodePaths} from "../utils/paths.js";
+import {getGethGenesisBlock} from "../utils/execution_genesis.js";
+import {ensureDirectories} from "../utils/paths.js";
 import {generateGethNode} from "./geth.js";
 import {generateMockNode} from "./mock.js";
 import {generateNethermindNode} from "./nethermind.js";
 
-export async function createELNode<E extends ELClient>(
+export async function createExecutionNode<E extends ExecutionClient>(
   client: E,
-  options: AtLeast<ELGeneratorClientOptions<E>, "genesisTime" | "paths" | "nodeIndex"> & {
-    forkConfig: ChainForkConfig;
-    runner: IRunner;
-  }
-): Promise<ELNode> {
+  options: AtLeast<ExecutionGeneratorOptions<E>, "genesisTime" | "paths" | "nodeIndex" | "forkConfig" | "runner">
+): Promise<ExecutionNode> {
   const {forkConfig, runner} = options;
-  const elId = `${options.id}-el-${client}`;
+  const elId = `${options.id}-${client}`;
 
-  const genesisOptions: ELGeneratorGenesisOptions<E> = {
+  const genesisOptions: ExecutionGenesisOptions<E> = {
     ...options,
     ttd: options.ttd ?? forkConfig.TERMINAL_TOTAL_DIFFICULTY,
     cliqueSealingPeriod: options.cliqueSealingPeriod ?? CLIQUE_SEALING_PERIOD,
@@ -43,30 +38,32 @@ export async function createELNode<E extends ELClient>(
     clientOptions: options.clientOptions ?? [],
   };
 
-  const opts: ELGeneratorClientOptions<E> = {
+  const opts: ExecutionGeneratorOptions<E> = {
     ...options,
     ...genesisOptions,
     id: elId,
-    mode: options.mode ?? (forkConfig.BELLATRIX_FORK_EPOCH > 0 ? ELStartMode.PreMerge : ELStartMode.PostMerge),
+    mode:
+      options.mode ??
+      (forkConfig.BELLATRIX_FORK_EPOCH > 0 ? ExecutionStartMode.PreMerge : ExecutionStartMode.PostMerge),
     address: runner.getNextIp(),
     mining: options.mining ?? false,
   };
 
-  await createELNodePaths(opts.paths);
+  await ensureDirectories(opts.paths);
   await writeFile(opts.paths.jwtsecretFilePath, SHARED_JWT_SECRET);
   await writeFile(opts.paths.genesisFilePath, JSON.stringify(getGethGenesisBlock(opts.mode, genesisOptions)));
 
   switch (client) {
-    case ELClient.Mock: {
-      return generateMockNode(opts as ELGeneratorClientOptions<ELClient.Mock>, runner);
+    case ExecutionClient.Mock: {
+      return generateMockNode(opts as ExecutionGeneratorOptions<ExecutionClient.Mock>, runner);
     }
-    case ELClient.Geth: {
-      return generateGethNode(opts as ELGeneratorClientOptions<ELClient.Geth>, runner);
+    case ExecutionClient.Geth: {
+      return generateGethNode(opts as ExecutionGeneratorOptions<ExecutionClient.Geth>, runner);
     }
-    case ELClient.Nethermind: {
-      return generateNethermindNode(opts as ELGeneratorClientOptions<ELClient.Nethermind>, runner);
+    case ExecutionClient.Nethermind: {
+      return generateNethermindNode(opts as ExecutionGeneratorOptions<ExecutionClient.Nethermind>, runner);
     }
     default:
-      throw new Error(`EL Client "${client}" not supported`);
+      throw new Error(`Execution Client "${client}" not supported`);
   }
 }

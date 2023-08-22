@@ -33,6 +33,7 @@ describe("options / beaconNodeOptions", () => {
       "safe-slots-to-import-optimistically": 256,
       "chain.archiveStateEpochFrequency": 1024,
       "chain.trustedSetup": "",
+      "chain.minSameMessageSignatureSetsToBatch": 32,
       emitPayloadAttributes: false,
 
       eth1: true,
@@ -86,6 +87,7 @@ describe("options / beaconNodeOptions", () => {
       "network.blockCountPeerLimit": 500,
       "network.rateTrackerTimeoutMs": 60000,
       "network.dontSendGossipAttestationsToForkchoice": true,
+      "network.beaconAttestationBatchValidation": true,
       "network.allowPublishToZeroPeers": true,
       "network.gossipsubD": 4,
       "network.gossipsubDLow": 2,
@@ -131,6 +133,7 @@ describe("options / beaconNodeOptions", () => {
         archiveStateEpochFrequency: 1024,
         emitPayloadAttributes: false,
         trustedSetup: "",
+        minSameMessageSignatureSetsToBatch: 32,
       },
       eth1: {
         enabled: true,
@@ -186,6 +189,7 @@ describe("options / beaconNodeOptions", () => {
         connectToDiscv5Bootnodes: true,
         discv5FirstQueryDelayMs: 1000,
         dontSendGossipAttestationsToForkchoice: true,
+        beaconAttestationBatchValidation: true,
         allowPublishToZeroPeers: true,
         gossipsubD: 4,
         gossipsubDLow: 2,

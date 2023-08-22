@@ -4,7 +4,7 @@ import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ApiError} from "@lodestar/api";
-import {CLClient, ELClient} from "../utils/simulation/interfaces.js";
+import {BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
 import {getEstimatedTimeInSecForRun, logFilesDir} from "../utils/simulation/utils/index.js";
 import {waitForSlot} from "../utils/simulation/utils/network.js";
@@ -36,8 +36,8 @@ const env = await SimulationEnvironment.initWithDefaults(
   [
     {
       id: "node-1",
-      cl: {type: CLClient.Lodestar, options: {clientOptions: {"sync.isSingleNode": true}}},
-      el: ELClient.Geth,
+      beacon: {type: BeaconClient.Lodestar, options: {clientOptions: {"sync.isSingleNode": true}}},
+      execution: ExecutionClient.Geth,
       keysCount: validatorCount,
       mining: true,
     },
@@ -45,7 +45,7 @@ const env = await SimulationEnvironment.initWithDefaults(
 );
 await env.start({runTimeoutMs});
 
-const node = env.nodes[0].cl;
+const node = env.nodes[0].beacon;
 await waitForSlot(2, env.nodes, {env, silent: true});
 
 const res = await node.api.beacon.getStateValidators("head");

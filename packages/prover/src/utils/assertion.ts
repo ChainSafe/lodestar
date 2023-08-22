@@ -14,8 +14,19 @@ export function assertLightClient(client?: Lightclient): asserts client is Light
   }
 }
 
+/**
+ * Checks if the provider is a web3.js version 4x.
+ */
+export function isWeb3jsProvider(provider: Web3Provider): provider is EIP1193Provider {
+  return (
+    "isWeb3Provider" in provider.constructor &&
+    (provider.constructor as {isWeb3Provider: (provider: Web3Provider) => boolean}).isWeb3Provider(provider)
+  );
+}
+
 export function isSendProvider(provider: Web3Provider): provider is SendProvider {
   return (
+    !isWeb3jsProvider(provider) &&
     "send" in provider &&
     typeof provider.send === "function" &&
     provider.send.length > 1 &&
@@ -25,6 +36,7 @@ export function isSendProvider(provider: Web3Provider): provider is SendProvider
 
 export function isEthersProvider(provider: Web3Provider): provider is EthersProvider {
   return (
+    !isWeb3jsProvider(provider) &&
     "send" in provider &&
     typeof provider.send === "function" &&
     provider.send.length > 1 &&
@@ -33,7 +45,12 @@ export function isEthersProvider(provider: Web3Provider): provider is EthersProv
 }
 
 export function isRequestProvider(provider: Web3Provider): provider is RequestProvider {
-  return "request" in provider && typeof provider.request === "function" && provider.request.length > 1;
+  return (
+    !isWeb3jsProvider(provider) &&
+    "request" in provider &&
+    typeof provider.request === "function" &&
+    provider.request.length > 1
+  );
 }
 
 export function isSendAsyncProvider(provider: Web3Provider): provider is SendAsyncProvider {
@@ -46,6 +63,7 @@ export function isSendAsyncProvider(provider: Web3Provider): provider is SendAsy
 
 export function isEIP1193Provider(provider: Web3Provider): provider is EIP1193Provider {
   return (
+    !isWeb3jsProvider(provider) &&
     "request" in provider &&
     typeof provider.request === "function" &&
     provider.request.constructor.name === "AsyncFunction"

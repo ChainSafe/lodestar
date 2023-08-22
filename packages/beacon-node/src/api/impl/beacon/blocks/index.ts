@@ -4,13 +4,7 @@ import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
 import {allForks, deneb} from "@lodestar/types";
-import {
-  BlockSource,
-  getBlockInput,
-  ImportBlockOpts,
-  BlockInput,
-  blobSidecarsToBlobsSidecar,
-} from "../../../../chain/blocks/types.js";
+import {BlockSource, getBlockInput, ImportBlockOpts, BlockInput} from "../../../../chain/blocks/types.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
@@ -52,13 +46,10 @@ export function getBeaconBlockApi({
         config,
         signedBlock,
         BlockSource.api,
-        // The blobsSidecar will be replaced in the followup PRs with just blobs
-        blobSidecarsToBlobsSidecar(
-          config,
-          signedBlock,
-          signedBlobs.map((sblob) => sblob.message)
-        ),
-        null
+        signedBlobs.map((sblob) => sblob.message),
+        // don't bundle any bytes for block and blobs
+        null,
+        signedBlobs.map(() => null)
       );
     } else {
       signedBlock = signedBlockOrContents;

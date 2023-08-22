@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {TopicValidatorResult} from "@libp2p/interface-pubsub";
+import {TopicValidatorResult} from "@libp2p/interface/pubsub";
 import {BitArray} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {routes} from "@lodestar/api";

@@ -8,7 +8,7 @@ import {allForks} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {ZERO_ADDRESS} from "../constants.js";
 import {ProofProvider} from "../proof_provider/proof_provider.js";
-import {ELBlock, ELProof, ELTransaction} from "../types.js";
+import {ELBlock, ELProof, ELTransaction, JsonRpcVersion} from "../types.js";
 import {bufferToHex, chunkIntoN, cleanObject, hexToBigInt, hexToBuffer, numberToHex, padLeft} from "./conversion.js";
 import {getChainCommon, getTxType} from "./execution.js";
 import {isValidResponse} from "./json_rpc.js";
@@ -85,14 +85,14 @@ export async function getVMWithState({
   const batchRequests = [];
   for (const [address, storageKeys] of Object.entries(storageKeysMap)) {
     batchRequests.push({
-      jsonrpc: "2.0",
+      jsonrpc: "2.0" as JsonRpcVersion,
       id: rpc.getRequestId(),
       method: "eth_getProof",
       params: [address, storageKeys, blockHashHex],
     });
 
     batchRequests.push({
-      jsonrpc: "2.0",
+      jsonrpc: "2.0" as JsonRpcVersion,
       id: rpc.getRequestId(),
       method: "eth_getCode",
       params: [address, blockHashHex],

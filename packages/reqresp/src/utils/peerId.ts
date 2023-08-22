@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 
 export function prettyPrintPeerId(peerId: PeerId): string {
   const id = peerId.toString();

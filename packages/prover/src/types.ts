@@ -1,5 +1,5 @@
 export type JsonRpcId = number | string;
-export type JsonRpcVersion = string | ("2.0" | "1.0");
+export type JsonRpcVersion = string & ("2.0" | "1.0");
 
 export interface JsonRpcRequestPayload<T = unknown[]> {
   readonly jsonrpc: JsonRpcVersion;
@@ -25,8 +25,8 @@ export type JsonRpcRequestOrBatch<T = unknown[]> = JsonRpcRequest<T> | JsonRpcBa
 
 // Make the response compatible with different libraries, we don't use the readonly modifier
 export interface JsonRpcResponseWithResultPayload<T> {
-  readonly id: number | string;
-  jsonrpc: string;
+  readonly id?: JsonRpcId;
+  jsonrpc: JsonRpcVersion;
   result: T;
   error?: never;
 }
@@ -38,8 +38,8 @@ export interface JsonRpcErrorPayload<T> {
 }
 
 export interface JsonRpcResponseWithErrorPayload<T> {
-  readonly id: number | string;
-  jsonrpc: string;
+  readonly id?: JsonRpcId;
+  jsonrpc: JsonRpcVersion;
   result?: never;
   error: JsonRpcErrorPayload<T>;
 }

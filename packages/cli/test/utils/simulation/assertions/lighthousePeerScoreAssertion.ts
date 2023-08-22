@@ -1,5 +1,5 @@
 import {ApiError} from "@lodestar/api";
-import {AssertionResult, CLClient, LighthouseAPI, NodePair, SimulationAssertion} from "../interfaces.js";
+import {AssertionResult, BeaconClient, LighthouseAPI, NodePair, SimulationAssertion} from "../interfaces.js";
 import {neverMatcher} from "./matchers.js";
 
 const MIN_GOSSIPSUB_SCORE = 10;
@@ -13,7 +13,7 @@ export const lighthousePeerScoreAssertion: SimulationAssertion<"lighthousePeerSc
     // We want to run this only once, not every node
     if (node.id !== nodes[0].id) return [];
 
-    const lighthousePeer = nodes.find((n) => n.cl.client === CLClient.Lighthouse);
+    const lighthousePeer = nodes.find((n) => n.beacon.client === BeaconClient.Lighthouse);
     if (peersIdMapCache === undefined) {
       peersIdMapCache = await getLodestarPeerIds(nodes);
     }
@@ -21,7 +21,7 @@ export const lighthousePeerScoreAssertion: SimulationAssertion<"lighthousePeerSc
     const errors: AssertionResult[] = [];
 
     try {
-      const peerScores = await (lighthousePeer?.cl.api as LighthouseAPI).lighthouse.getPeers();
+      const peerScores = await (lighthousePeer?.beacon.api as LighthouseAPI).lighthouse.getPeers();
       for (const peerScore of peerScores.body) {
         const {
           peer_id,
@@ -47,13 +47,13 @@ export const lighthousePeerScoreAssertion: SimulationAssertion<"lighthousePeerSc
 };
 
 async function getLodestarPeerIds(nodes: NodePair[]): Promise<Record<string, string>> {
-  const lodestartPeers = nodes.filter((n) => n.cl.client === CLClient.Lodestar);
+  const lodestartPeers = nodes.filter((n) => n.beacon.client === BeaconClient.Lodestar);
   const peerIdMap: Record<string, string> = {};
 
   for (const p of lodestartPeers) {
-    const res = await p.cl.api.node.getNetworkIdentity();
+    const res = await p.beacon.api.node.getNetworkIdentity();
     ApiError.assert(res);
-    peerIdMap[res.response.data.peerId] = p.cl.id;
+    peerIdMap[res.response.data.peerId] = p.beacon.id;
   }
 
   return peerIdMap;

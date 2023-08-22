@@ -8,7 +8,7 @@ describe("httpClient fallback", () => {
 
   // Using fetchSub instead of actually setting up servers because there are some strange
   // race conditions, where the server stub doesn't count the call in time before the test is over.
-  const fetchStub = Sinon.stub<[string], ReturnType<typeof fetch>>();
+  const fetchStub = Sinon.stub<[URL], ReturnType<typeof fetch>>();
 
   let httpClient: HttpClient;
 
@@ -21,10 +21,10 @@ describe("httpClient fallback", () => {
   const serverErrors = new Map<number, boolean>();
 
   // With baseURLs above find the server index associated with that URL
-  function getServerIndex(url: string): number {
-    const i = baseUrls.findIndex((baseUrl) => url.startsWith(baseUrl));
+  function getServerIndex(url: URL): number {
+    const i = baseUrls.findIndex((baseUrl) => url.toString().startsWith(baseUrl));
     if (i < 0) {
-      throw Error(`fetch called with unknown url ${url}`);
+      throw Error(`fetch called with unknown url ${url.toString()}`);
     }
     return i;
   }
