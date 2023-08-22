@@ -14,12 +14,12 @@ export async function storeParentRootIndex(db: Db, slot: Slot, parentRoot: Root)
 export async function deleteRootIndex(
   db: Db,
   beaconBlockType: allForks.AllForksSSZTypes["BeaconBlock"],
-  block: allForks.SignedBeaconBlock
+  block: allForks.FullOrBlindedSignedBeaconBlock
 ): Promise<void> {
   return db.delete(getRootIndexKey(beaconBlockType.hashTreeRoot(block.message)));
 }
 
-export async function deleteParentRootIndex(db: Db, block: allForks.SignedBeaconBlock): Promise<void> {
+export async function deleteParentRootIndex(db: Db, block: allForks.FullOrBlindedSignedBeaconBlock): Promise<void> {
   return db.delete(getParentRootIndexKey(block.message.parentRoot));
 }
 
