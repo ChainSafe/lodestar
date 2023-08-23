@@ -2414,10 +2414,12 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "(sum(rate(gossipsub_async_validation_result_total{acceptance=\"ignore\"} [32m])) by (topic))\n/\n(sum(rate(gossipsub_async_validation_result_total[32m])) by (topic))",
+          "expr": "(sum(rate(gossipsub_ignored_messages_total[32m])) by (topic))\n/\n(\n    sum(rate(gossipsub_msg_received_prevalidation_total[32m])) by (topic)\n)",
           "interval": "",
           "legendFormat": "IGNORE {{topic}}",
+          "range": true,
           "refId": "A"
         },
         {
@@ -2425,12 +2427,26 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
-          "expr": "(sum(rate(gossipsub_async_validation_result_total{acceptance=\"reject\"} [32m])) by (topic))\n/\n(sum(rate(gossipsub_async_validation_result_total[32m])) by (topic))",
+          "expr": "(sum(rate(gossipsub_rejected_messages_total[32m])) by (topic))\n/\n(\n    sum(rate(gossipsub_msg_received_prevalidation_total[32m])) by (topic)\n)",
           "hide": false,
           "interval": "",
           "legendFormat": "REJECT {{topic}}",
+          "range": true,
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(gossipsub_unknown_validation_results_total[32m])) by (topic))\n/\n(\n    sum(rate(gossipsub_msg_received_prevalidation_total[32m])) by (topic)\n)",
+          "hide": false,
+          "legendFormat": "UNKNOWN {{topic}}",
+          "range": true,
+          "refId": "C"
         }
       ],
       "title": "Async validation result - IGNORE / REJECT rates",
