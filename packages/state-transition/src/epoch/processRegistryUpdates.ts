@@ -49,9 +49,5 @@ export function processRegistryUpdates(state: CachedBeaconStateAllForks, cache: 
       break;
     }
     validator.activationEpoch = computeActivationExitEpoch(cache.currentEpoch);
-    // TODO: For all new validators that are eligible to be in the activation queue, we need to move its cache from unfinalized to finalized queue
-    // const validator = validators.get(index);
-    // const pubkey = validator.pubkey;
-    // state.epochCtx.addPubkey(index, pubkey);
   }
 }

@@ -487,6 +487,18 @@ export class EpochCache {
       nextEpoch
     );
 
+    // To populate finalized cache with validators that just became pending activated in processEpoch
+    const expectedActivationEpoch = computeActivationExitEpoch(prevEpoch);
+    const validators = state.validators;
+    for (const index of epochTransitionCache.indicesEligibleForActivation) {
+      const validator = validators.get(index);
+      if (validator.activationEpoch == expectedActivationEpoch) {
+        this.addPubkey(validator.pubkey, index);
+      } else {
+        break;
+      }
+    }
+
     // Roll current proposers into previous proposers for metrics
     this.proposersPrevEpoch = this.proposers;
 
