@@ -477,7 +477,7 @@ export class EpochCache {
   afterProcessEpoch(
     state: BeaconStateAllForks,
     epochTransitionCache: {
-      indicesEligibleForActivation: ValidatorIndex[];
+      indicesEligibleForActivationQueue: ValidatorIndex[];
       nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
       nextEpochTotalActiveBalanceByIncrement: number;
     }
@@ -494,12 +494,12 @@ export class EpochCache {
       nextEpoch
     );
 
-    // To populate finalized cache and prune unfinalized cache with validators that just became pending activated in processEpoch
-    const expectedActivationEpoch = computeActivationExitEpoch(prevEpoch);
+    // To populate finalized cache and prune unfinalized cache with validators that just entered the activation queue
+    const expectedActivationEligibilityEpoch = prevEpoch + 1;
     const validators = state.validators;
-    for (const index of epochTransitionCache.indicesEligibleForActivation) {
+    for (const index of epochTransitionCache.indicesEligibleForActivationQueue) {
       const validator = validators.getReadonly(index);
-      if (validator.activationEpoch == expectedActivationEpoch) {
+      if (validator.activationEpoch == expectedActivationEligibilityEpoch) {
         this.addFinalizedPubkey(validator.pubkey, index);
       } else {
         break;
