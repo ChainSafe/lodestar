@@ -21,6 +21,7 @@ export interface NetworkOptions
   version?: string;
   private?: boolean;
   useWorker?: boolean;
+  maxYoungGenerationSizeMb?: number;
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
@@ -33,6 +34,8 @@ export const defaultNetworkOptions: NetworkOptions = {
   rateLimitMultiplier: 1,
   // TODO set to false in order to release 1.9.0 in a timely manner
   useWorker: false,
+  // default set via research in https://github.com/ChainSafe/lodestar/issues/2115
+  maxYoungGenerationSizeMb: 152,
   // subscribe to 2 subnets per node
   deterministicLongLivedAttnets: true,
   // subscribe 2 slots before aggregator dutied slot to get stable mesh peers as monitored on goerli

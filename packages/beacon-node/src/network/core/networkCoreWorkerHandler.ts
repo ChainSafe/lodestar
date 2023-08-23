@@ -109,7 +109,18 @@ export class WorkerNetworkCore implements INetworkCore {
 
     const worker = new Worker("./networkCoreWorker.js", {
       workerData,
-      resourceLimits: {maxYoungGenerationSizeMb: 152},
+      /** 
+       * maxYoungGenerationSizeMb defaults to 152mb through the cli option defaults.
+       * That default value was determined via https://github.com/ChainSafe/lodestar/issues/2115 and
+       * should be tuned further as needed.  If we update network code and see substantial
+       * difference in the quantity of garbage collected this should get updated.  A value that is
+       * too low will result in too much GC time and a value that is too high causes increased mark
+       * and sweep for some reason (which is much much slower than scavenge).  A marginally too high
+       * number causes detrimental slowdown from increased variable lookup time.  Empirical evidence
+       * showed that there is a pretty big window of "correct" values but we can always tune as
+       * necessary
+       */ 
+      resourceLimits: {maxYoungGenerationSizeMb: opts.maxYoungGenerationSizeMb},
     } as ConstructorParameters<typeof Worker>[1]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
