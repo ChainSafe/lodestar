@@ -160,6 +160,8 @@
     "@types/supertest": "^2.0.12",
     "@types/tmp": "^0.2.3",
     "eventsource": "^2.0.2",
+    "it-pair": "^2.0.6",
+    "it-drain": "^3.0.3",
     "leveldown": "^6.1.1",
     "rewiremock": "^3.14.5",
     "rimraf": "^4.4.1",
