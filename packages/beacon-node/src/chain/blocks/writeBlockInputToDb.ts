@@ -1,5 +1,6 @@
 import {toHex} from "@lodestar/utils";
 import {BeaconChain} from "../chain.js";
+import {blindedOrFullSignedBlockToBlinded, blindedOrFullSignedBlockToBlindedBytes} from "../../util/multifork.js";
 import {BlockInput, BlockInputType} from "./types.js";
 
 /**

@@ -596,21 +596,20 @@ export class BeaconChain implements IBeaconChain {
         }
         if (isBlindedBeaconBlock(block.message)) {
           // Use `eth_getBlockByNumber`, bellatrix should always be finalized and the payload does not include hash
-          return await injectBellatrixPayload(block);
-        } else {
-          return block;
+          return this.injectBellatrixPayload(block);
         }
+        return block;
       }
 
       case ForkName.capella:
-      // Deneb adds new fixed fiels but not blinded lists
+      // Deneb adds new fixed fields but not blinded lists
+      // eslint-disable-next-line no-fallthrough
       case ForkName.deneb: {
         if (isBlindedBeaconBlock(block.message)) {
           // Use `eth_getBlockByHash`, capella payload includes hash
-          return await injectCapellaPayload(block);
-        } else {
-          return block;
+          return this.injectCapellaPayload(block);
         }
+        return block;
       }
     }
   }
@@ -619,6 +618,9 @@ export class BeaconChain implements IBeaconChain {
     // TODO: Same code as `blindedBlockToFull`, but without de-serializing block.. looks really annoying..
     // We should review if the optimization to stream only bytes on ReqResp is worth the complexity, an alternative
     // is to implement more restrictive rate-limiting overall such that the load of serdes is acceptable.
+
+    // TODO: (matthewkeil) Temp to get build working
+    return block;
   }
 
   async produceBlockWrapper<T extends BlockType>(
@@ -848,6 +850,22 @@ export class BeaconChain implements IBeaconChain {
     if (this.opts.persistInvalidSszObjects) {
       void this.persistSszObject(view.type.typeName, view.serialize(), view.hashTreeRoot(), suffix);
     }
+  }
+
+  /** */
+  private async injectBellatrixPayload(
+    block: allForks.FullOrBlindedSignedBeaconBlock
+  ): Promise<allForks.SignedBeaconBlock> {
+    // TODO: (matthewkeil) Temp to get build working
+    return block as allForks.SignedBeaconBlock;
+  }
+
+  /** */
+  private async injectCapellaPayload(
+    block: allForks.FullOrBlindedSignedBeaconBlock
+  ): Promise<allForks.SignedBeaconBlock> {
+    // TODO: (matthewkeil) Temp to get build working
+    return block as allForks.SignedBeaconBlock;
   }
 
   /**

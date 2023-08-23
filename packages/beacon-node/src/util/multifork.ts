@@ -87,3 +87,19 @@ export function deserializeFullOrBlindedSignedBeaconBlock(
   bytes;
   return {} as allForks.FullOrBlindedSignedBeaconBlock;
 }
+
+export function blindedOrFullSignedBlockToBlinded(
+  block: allForks.FullOrBlindedSignedBeaconBlock
+): allForks.SignedBlindedBeaconBlock {
+  // TODO: (matthewkeil) Temp to get build working
+  return block as allForks.SignedBlindedBeaconBlock;
+}
+
+export function blindedOrFullSignedBlockToBlindedBytes(
+  block: allForks.FullOrBlindedSignedBeaconBlock,
+  blockBytes: Uint8Array
+): Uint8Array {
+  // TODO: (matthewkeil) Temp to get build working
+  block;
+  return blockBytes;
+}
