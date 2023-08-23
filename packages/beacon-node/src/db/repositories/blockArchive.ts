@@ -7,7 +7,7 @@ import {blindedOrFullBlockHashTreeRoot} from "@lodestar/state-transition";
 import {
   deserializeFullOrBlindedSignedBeaconBlock,
   serializeFullOrBlindedSignedBeaconBlock,
-} from "../../util/multifork.js";
+} from "../../util/fullOrBlindedBlock.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex.js";
 import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./blockArchiveIndex.js";

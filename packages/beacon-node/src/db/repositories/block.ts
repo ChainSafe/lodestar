@@ -5,7 +5,7 @@ import {blindedOrFullBlockHashTreeRoot} from "@lodestar/state-transition";
 import {
   deserializeFullOrBlindedSignedBeaconBlock,
   serializeFullOrBlindedSignedBeaconBlock,
-} from "../../util/multifork.js";
+} from "../../util/fullOrBlindedBlock.js";
 import {Bucket, getBucketNameByValue} from "../buckets.js";
 
 /**
