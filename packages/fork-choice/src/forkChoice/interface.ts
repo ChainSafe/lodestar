@@ -162,10 +162,6 @@ export interface IForkChoice {
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;
   /**
-   * Return `true` if `block_root` is equal to the finalized root, or a known descendant of it.
-   */
-  isDescendantOfFinalized(blockRoot: RootHex): boolean;
-  /**
    * Returns true if the `descendantRoot` has an ancestor with `ancestorRoot`.
    *
    * Always returns `false` if either input roots are unknown.
