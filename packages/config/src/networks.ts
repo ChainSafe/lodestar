@@ -4,6 +4,7 @@ import {gnosisChainConfig} from "./chainConfig/networks/gnosis.js";
 import {goerliChainConfig} from "./chainConfig/networks/goerli.js";
 import {ropstenChainConfig} from "./chainConfig/networks/ropsten.js";
 import {sepoliaChainConfig} from "./chainConfig/networks/sepolia.js";
+import {holeskyChainConfig} from "./chainConfig/networks/holesky.js";
 import {chiadoChainConfig} from "./chainConfig/networks/chiado.js";
 
 export {
@@ -12,16 +13,18 @@ export {
   goerliChainConfig,
   ropstenChainConfig,
   sepoliaChainConfig,
+  holeskyChainConfig,
   chiadoChainConfig,
 };
 
-export type NetworkName = "mainnet" | "gnosis" | "goerli" | "ropsten" | "sepolia" | "chiado";
+export type NetworkName = "mainnet" | "gnosis" | "goerli" | "ropsten" | "sepolia" | "holesky" | "chiado";
 export const networksChainConfig: Record<NetworkName, ChainConfig> = {
   mainnet: mainnetChainConfig,
   gnosis: gnosisChainConfig,
   goerli: goerliChainConfig,
   ropsten: ropstenChainConfig,
   sepolia: sepoliaChainConfig,
+  holesky: holeskyChainConfig,
   chiado: chiadoChainConfig,
 };
 
@@ -50,6 +53,10 @@ export const genesisData: Record<NetworkName, GenesisData> = {
   sepolia: {
     genesisTime: 1655733600,
     genesisValidatorsRoot: "0xd8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078",
+  },
+  holesky: {
+    genesisTime: 1694786400,
+    genesisValidatorsRoot: "0x9143aa7c615a7f7115e2b6aac319c03529df8242ae705fba9df39b79c59fa8b1",
   },
   chiado: {
     genesisTime: 1665396300,
