@@ -3,7 +3,7 @@ import {ENR} from "@chainsafe/discv5";
 import {defaultOptions, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions, YargsError} from "../../util/index.js";
 
-const defaultListenAddress = "0.0.0.0";
+export const defaultListenAddress = "0.0.0.0";
 export const defaultP2pPort = 9000;
 export const defaultP2pPort6 = 9090;
 
