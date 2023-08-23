@@ -29,7 +29,7 @@ import {computeEpochShuffling, EpochShuffling} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
-import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
+import {Index2PubkeyCache, PubkeyIndexMap, UnfinalizedPubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
 import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
 import {
   computeSyncCommitteeCache,
@@ -85,19 +85,26 @@ export class EpochCache {
    * TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
    * or handle non finalized data differently, or use an immutable.js structure for cheap copies
    * 
-   * New: This would only validators whose activation_eligibility_epoch is finalized and hence it is insert only. Validators may still be in the activation queue.
+   * New: This would include only validators whose activation_eligibility_epoch is finalized and hence it is insert only. Validators may still be in the activation queue.
    *
    * $VALIDATOR_COUNT x 192 char String -> Number Map
    */
-  pubkey2index: PubkeyIndexMap;
+  globalPubkey2index: PubkeyIndexMap;
   /**
    * Unique globally shared pubkey registry. There should only exist one for the entire application.
    *
-   * New: This would only validators whose activation_eligibility_epoch is finalized and hence it is insert only. Validators may still be in the activation queue.
+   * New: This would include only validators whose activation_eligibility_epoch is finalized and hence it is insert only. Validators may still be in the activation queue.
    * 
    * $VALIDATOR_COUNT x BLST deserialized pubkey (Jacobian coordinates)
    */
-  index2pubkey: Index2PubkeyCache;
+  globalIndex2pubkey: Index2PubkeyCache;
+  /**
+   * Unique pubkey registry shared in the same fork. There should only exist one for the fork.
+   * 
+   */
+  unfinalizedIndex2pubkey: UnfinalizedPubkeyIndexMap;
+
+
   /**
    * Indexes of the block proposers for the current epoch.
    *
@@ -463,12 +470,14 @@ export class EpochCache {
   afterProcessEpoch(
     state: BeaconStateAllForks,
     epochTransitionCache: {
+      indicesEligibleForActivation: ValidatorIndex[];
       nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
       nextEpochTotalActiveBalanceByIncrement: number;
     }
   ): void {
     this.previousShuffling = this.currentShuffling;
     this.currentShuffling = this.nextShuffling;
+    const prevEpoch = this.previousShuffling.epoch;
     const currEpoch = this.currentShuffling.epoch;
     const nextEpoch = currEpoch + 1;
 
@@ -715,9 +724,19 @@ export class EpochCache {
     return isAggregatorFromCommitteeLength(committee.length, slotSignature);
   }
 
-  addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-    this.pubkey2index.set(pubkey, index);
-    this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); // Optimize for aggregation
+  // addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
+  //   this.pubkey2index.set(pubkey, index);
+  //   this.index2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); // Optimize for aggregation
+  // }
+
+  getPubkey(index: ValidatorIndex): PublicKey {
+  }
+
+  getPubkeyIndex(pubkey: Uint8Array): ValidatorIndex | null {
+  }
+
+  addPubkey(pubkey: Uint8Array, index: ValidatorIndex): void {
+
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {
@@ -799,6 +818,7 @@ export class EpochCache {
 
     this.effectiveBalanceIncrements[index] = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
   }
+
 }
 
 function getEffectiveBalanceIncrementsByteLen(validatorCount: number): number {
