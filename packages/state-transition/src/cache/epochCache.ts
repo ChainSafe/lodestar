@@ -441,7 +441,7 @@ export class EpochCache {
       // Common append-only structures shared with all states, no need to clone
       pubkey2index: this.pubkey2index,
       index2pubkey: this.index2pubkey,
-      // Fork-aware cache needs to be cloned. But due to it being persistent, we don't need to do anything here
+      // Fork-aware cache needs to be cloned. But by the virtue of it being persistent, we don't need to do anything here
       unfinalizedIndex2pubkey: this.unfinalizedPubkey2Index,
       // Immutable data
       proposers: this.proposers,
