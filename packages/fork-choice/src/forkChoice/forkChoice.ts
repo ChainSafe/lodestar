@@ -671,7 +671,8 @@ export class ForkChoice implements IForkChoice {
   prune(finalizedRoot: RootHex): ProtoBlock[] {
     const prunedNodes = this.protoArray.maybePrune(finalizedRoot);
     const prunedCount = prunedNodes.length;
-    for (const vote of this.votes) {
+    for (let i = 0; i < this.votes.length; i++) {
+      const vote = this.votes[i];
       // validator has never voted
       if (vote === undefined) {
         continue;
