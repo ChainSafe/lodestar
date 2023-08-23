@@ -393,6 +393,6 @@ export const options: CliCommandOptions<NetworkArgs> = {
     hidden: true,
     group: "network",
     description: "Max size of young generation in megabytes. Defaults to 152mb",
-    defaultDescription: String(defaultOptions.network.maxYoungGenerationSizeMb)
+    defaultDescription: String(defaultOptions.network.maxYoungGenerationSizeMb),
   },
 };

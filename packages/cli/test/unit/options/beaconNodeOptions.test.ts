@@ -200,7 +200,7 @@ describe("options / beaconNodeOptions", () => {
         rateLimitMultiplier: 1,
         maxGossipTopicConcurrency: 64,
         useWorker: true,
-        maxYoungGenerationSizeMb: 152
+        maxYoungGenerationSizeMb: 152,
       },
       sync: {
         isSingleNode: true,
