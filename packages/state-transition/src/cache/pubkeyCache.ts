@@ -1,8 +1,8 @@
 import {CoordType, PublicKey} from "@chainsafe/bls/types";
 import bls from "@chainsafe/bls";
+import * as immutable from "immutable";
 import {ValidatorIndex} from "@lodestar/types";
 import {BeaconStateAllForks} from "./types.js";
-import * as immutable from "immutable";
 
 export type Index2PubkeyCache = PublicKey[];
 
