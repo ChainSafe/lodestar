@@ -29,7 +29,7 @@ import {computeEpochShuffling, EpochShuffling} from "../util/epochShuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
-import {Index2PubkeyCache, PubkeyIndexMap, UnfinalizedIndex2PubkeyCache, syncPubkeys} from "./pubkeyCache.js";
+import {Index2PubkeyCache, PubkeyIndexMap, UnfinalizedPubkeyIndexMap, syncPubkeys} from "./pubkeyCache.js";
 import {BeaconStateAllForks, BeaconStateAltair} from "./types.js";
 import {
   computeSyncCommitteeCache,
@@ -102,7 +102,7 @@ export class EpochCache {
    * Unique pubkey registry shared in the same fork. There should only exist one for the fork.
    * 
    */
-  unfinalizedIndex2pubkey: UnfinalizedIndex2PubkeyCache;
+  unfinalizedPubkey2Index: UnfinalizedPubkeyIndexMap;
 
 
   /**
@@ -200,7 +200,7 @@ export class EpochCache {
     config: BeaconConfig;
     pubkey2index: PubkeyIndexMap;
     index2pubkey: Index2PubkeyCache;
-    unfinalizedIndex2pubkey: UnfinalizedIndex2PubkeyCache;
+    unfinalizedIndex2pubkey: UnfinalizedPubkeyIndexMap;
     proposers: number[];
     proposersPrevEpoch: number[] | null;
     proposersNextEpoch: ProposersDeferred;
@@ -225,7 +225,7 @@ export class EpochCache {
     this.config = data.config;
     this.pubkey2index = data.pubkey2index;
     this.index2pubkey = data.index2pubkey;
-    this.unfinalizedIndex2pubkey = data.unfinalizedIndex2pubkey;
+    this.unfinalizedPubkey2Index = data.unfinalizedIndex2pubkey;
     this.proposers = data.proposers;
     this.proposersPrevEpoch = data.proposersPrevEpoch;
     this.proposersNextEpoch = data.proposersNextEpoch;
@@ -265,7 +265,7 @@ export class EpochCache {
       syncPubkeys(state, pubkey2index, index2pubkey);
     }
 
-    const unfinalizedIndex2pubkey = new UnfinalizedIndex2PubkeyCache();
+    const unfinalizedIndex2pubkey = new UnfinalizedPubkeyIndexMap();
 
     const currentEpoch = computeEpochAtSlot(state.slot);
     const isGenesis = currentEpoch === GENESIS_EPOCH;
@@ -442,7 +442,7 @@ export class EpochCache {
       pubkey2index: this.pubkey2index,
       index2pubkey: this.index2pubkey,
       // Fork-aware cache needs to be cloned. But due to it being persistent, we don't need to do anything here
-      unfinalizedIndex2pubkey: this.unfinalizedIndex2pubkey,
+      unfinalizedIndex2pubkey: this.unfinalizedPubkey2Index,
       // Immutable data
       proposers: this.proposers,
       proposersPrevEpoch: this.proposersPrevEpoch,
@@ -769,10 +769,9 @@ export class EpochCache {
    */
   addFinalizedPubkey(pubkey: Uint8Array, index: ValidatorIndex): void {
     this.globalPubkey2index.set(pubkey, index);
-    // TODO: Verify if we need to re-compute pubkey here or we can grab dirrectly from unfinalizedIndex2pubkey[index]
     this.globalIndex2pubkey[index] = bls.PublicKey.fromBytes(pubkey, CoordType.jacobian); 
 
-    this.unfinalizedIndex2pubkey.delete(index);
+    this.unfinalizedPubkey2Index.delete(pubkey);
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {

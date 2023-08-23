@@ -48,20 +48,21 @@ export class PubkeyIndexMap {
   }
 }
 
-export class UnfinalizedIndex2PubkeyCache {
-  private list = immutable.List<PublicKey>();
+export class UnfinalizedPubkeyIndexMap {
+   private map = immutable.Map<PubkeyHex, ValidatorIndex>();
 
-  get(index: number): PublicKey | undefined {
-    return this.list.get(index);
-  }
+   get(key: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
+     return this.map.get(toMemoryEfficientHexStr(key));
+   }
 
-  push(pubkey: PublicKey): void {
-    this.list = this.list.push(pubkey);
-  }
+   set(key: Uint8Array, value: ValidatorIndex): void {
+     this.map = this.map.set(toMemoryEfficientHexStr(key), value);
+   }
 
-  delete(index: number): void {
-    this.list = this.list.delete(index);
-  }
+   delete(key: Uint8Array): void {
+    this.map = this.map.delete(toMemoryEfficientHexStr(key));
+   }
+
 }
 
 /**

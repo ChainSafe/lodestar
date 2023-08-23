@@ -34,7 +34,7 @@ export {EpochCache, EpochCacheImmutableData, createEmptyEpochCacheImmutableData}
 export {EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
 
 // Aux data-structures
-export {PubkeyIndexMap, Index2PubkeyCache, UnfinalizedIndex2PubkeyCache} from "./cache/pubkeyCache.js";
+export {PubkeyIndexMap, Index2PubkeyCache, UnfinalizedPubkeyIndexMap} from "./cache/pubkeyCache.js";
 
 export {
   EffectiveBalanceIncrements,
