@@ -541,6 +541,10 @@ export class Network implements INetwork {
     return this.core.writeNetworkThreadProfile(durationMs, dirpath);
   }
 
+  async writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string> {
+    return this.core.writeDiscv5Profile(durationMs, dirpath);
+  }
+
   private onLightClientFinalityUpdate = async (finalityUpdate: allForks.LightClientFinalityUpdate): Promise<void> => {
     // TODO: Review is OK to remove if (this.hasAttachedSyncCommitteeMember())
 

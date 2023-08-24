@@ -157,6 +157,9 @@ const libp2pWorkerApi: NetworkWorkerApi = {
     fs.writeFileSync(filePath, profile);
     return filePath;
   },
+  writeDiscv5Profile: async (durationMs: number, dirpath: string) => {
+    return core.writeDiscv5Profile(durationMs, dirpath);
+  },
 };
 
 expose(libp2pWorkerApi as WorkerModule<keyof NetworkWorkerApi>);

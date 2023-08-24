@@ -1,4 +1,6 @@
 import worker from "node:worker_threads";
+import path from "node:path";
+import fs from "node:fs";
 import {createFromProtobuf} from "@libp2p/peer-id-factory";
 import {Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {Gauge} from "prom-client";
@@ -9,6 +11,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {collectNodeJSMetrics} from "../../metrics/nodeJsMetrics.js";
+import {profileNodeJS} from "../../util/profile.js";
 import {Discv5WorkerApi, Discv5WorkerData} from "./types.js";
 import {enrRelevance, ENRRelevance} from "./utils.js";
 
@@ -97,6 +100,12 @@ const module: Discv5WorkerApi = {
   },
   async scrapeMetrics(): Promise<string> {
     return (await metricsRegistry?.metrics()) ?? "";
+  },
+  writeProfile: async (durationMs: number, dirpath: string) => {
+    const profile = await profileNodeJS(durationMs);
+    const filePath = path.join(dirpath, `discv5_thread_${new Date().toISOString()}.cpuprofile`);
+    fs.writeFileSync(filePath, profile);
+    return filePath;
   },
   async close() {
     closeMetrics?.();

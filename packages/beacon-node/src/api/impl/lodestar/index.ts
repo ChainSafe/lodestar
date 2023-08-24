@@ -67,7 +67,9 @@ export function getLodestarApi({
           case "network":
             filepath = await network.writeNetworkThreadProfile(durationMs, dirpath);
             break;
-          // TODO: discv5
+          case "discv5":
+            filepath = await network.writeDiscv5Profile(durationMs, dirpath);
+            break;
           default:
             // main thread
             profile = await profileNodeJS(durationMs);
