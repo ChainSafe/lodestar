@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import {toHexString} from "@chainsafe/ssz";
 import {routes, ServerApi} from "@lodestar/api";
 import {Repository} from "@lodestar/db";
@@ -5,11 +7,14 @@ import {toHex} from "@lodestar/utils";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {ssz} from "@lodestar/types";
+import {LodestarThreadType} from "@lodestar/api/lib/beacon/routes/lodestar.js";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
 import {GossipType} from "../../../network/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
 import {ApiModules} from "../types.js";
+import {profileNodeJS} from "../../../util/profile.js";
 
 export function getLodestarApi({
   chain,
@@ -19,7 +24,8 @@ export function getLodestarApi({
   sync,
 }: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): ServerApi<routes.lodestar.Api> {
   let writingHeapdump = false;
-  let writingNetworkProfile = false;
+  let writingProfile = false;
+  const defaultProfileMs = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000;
 
   return {
     async writeHeapdump(dirpath = ".") {
@@ -48,16 +54,32 @@ export function getLodestarApi({
       }
     },
 
-    async writeNetworkThreadProfile(durationMs?: number, dirpath?: string) {
-      if (writingNetworkProfile) {
+    async writeProfile(thread: LodestarThreadType = "network", durationMs = defaultProfileMs, dirpath = ".") {
+      if (writingProfile) {
         throw Error("Already writing network profile");
       }
+      writingProfile = true;
 
       try {
-        const filepath = await network.writeNetworkThreadProfile(durationMs, dirpath);
+        let filepath: string;
+        let profile: string;
+        switch (thread) {
+          case "network":
+            filepath = await network.writeNetworkThreadProfile(durationMs, dirpath);
+            break;
+          case "discv5":
+            filepath = await network.writeDiscv5Profile(durationMs, dirpath);
+            break;
+          default:
+            // main thread
+            profile = await profileNodeJS(durationMs);
+            filepath = path.join(dirpath, `main_thread_${new Date().toISOString()}.cpuprofile`);
+            fs.writeFileSync(filepath, profile);
+            break;
+        }
         return {data: {filepath}};
       } finally {
-        writingNetworkProfile = false;
+        writingProfile = false;
       }
     },
 

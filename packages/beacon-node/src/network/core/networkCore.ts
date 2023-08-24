@@ -421,6 +421,10 @@ export class NetworkCore implements INetworkCore {
     throw new Error("Method not implemented, please configure network thread");
   }
 
+  async writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string> {
+    return this.peerManager["discovery"]?.discv5.writeProfile(durationMs, dirpath) ?? "no discv5";
+  }
+
   /**
    * Handle subscriptions through fork transitions, @see FORK_EPOCH_LOOKAHEAD
    */

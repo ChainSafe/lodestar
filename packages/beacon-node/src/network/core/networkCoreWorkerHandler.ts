@@ -210,8 +210,11 @@ export class WorkerNetworkCore implements INetworkCore {
   dumpMeshPeers(): Promise<Record<string, string[]>> {
     return this.getApi().dumpMeshPeers();
   }
-  writeNetworkThreadProfile(durationMs?: number, dirpath?: string): Promise<string> {
+  writeNetworkThreadProfile(durationMs: number, dirpath: string): Promise<string> {
     return this.getApi().writeProfile(durationMs, dirpath);
+  }
+  writeDiscv5Profile(durationMs: number, dirpath: string): Promise<string> {
+    return this.getApi().writeDiscv5Profile(durationMs, dirpath);
   }
 
   private getApi(): NetworkWorkerApi {
