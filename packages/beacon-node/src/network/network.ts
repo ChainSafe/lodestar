@@ -537,7 +537,7 @@ export class Network implements INetwork {
     return this.networkProcessor.dumpGossipQueue(gossipType);
   }
 
-  async writeNetworkThreadProfile(durationMs?: number, dirpath?: string): Promise<string> {
+  async writeNetworkThreadProfile(durationMs: number, dirpath: string): Promise<string> {
     return this.core.writeNetworkThreadProfile(durationMs, dirpath);
   }
 
