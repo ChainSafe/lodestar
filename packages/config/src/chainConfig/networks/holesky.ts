@@ -30,7 +30,7 @@ export const holeskyChainConfig: ChainConfig = {
   TERMINAL_TOTAL_DIFFICULTY: BigInt("0"),
   // Capella
   CAPELLA_FORK_VERSION: b("0x30017000"),
-  CAPELLA_FORK_EPOCH: 10,
+  CAPELLA_FORK_EPOCH: 256,
 
   // # 28,000,000,000 Gwei to ensure quicker ejection
   EJECTION_BALANCE: 28000000000,
