@@ -28,6 +28,8 @@ import {
   Wei,
   bellatrix,
   isBlindedBeaconBlock,
+  ssz,
+  capella,
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -43,6 +45,7 @@ import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {BufferPool} from "../util/bufferPool.js";
+import {reassembleBlindedBlockToFullBytes} from "../util/fullOrBlindedBlock.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {
@@ -614,13 +617,22 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  async blindedBlockToFullBytes(block: Uint8Array): Promise<Uint8Array> {
+  async blindedBlockToFullBytes(forkSeq: ForkSeq, block: Uint8Array): Promise<Uint8Array> {
     // TODO: Same code as `blindedBlockToFull`, but without de-serializing block.. looks really annoying..
     // We should review if the optimization to stream only bytes on ReqResp is worth the complexity, an alternative
     // is to implement more restrictive rate-limiting overall such that the load of serdes is acceptable.
 
-    // TODO: (matthewkeil) Temp to get build working
-    return block;
+    let transactions: Uint8Array | undefined;
+    if (forkSeq >= ForkSeq.bellatrix) {
+      transactions = ssz.bellatrix.Transactions.serialize(await this.getTransactions());
+    }
+
+    let withdrawals: Uint8Array | undefined;
+    if (forkSeq >= ForkSeq.capella) {
+      withdrawals = ssz.capella.Withdrawals.serialize(await this.getWithdrawals());
+    }
+
+    return reassembleBlindedBlockToFullBytes(forkSeq, block, transactions, withdrawals);
   }
 
   async produceBlockWrapper<T extends BlockType>(
@@ -852,7 +864,11 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  /** */
+  private async getTransactions(): Promise<bellatrix.Transactions> {
+    // TODO: (matthewkeil) Temp to get build working
+    return ssz.bellatrix.Transactions.defaultValue();
+  }
+
   private async injectBellatrixPayload(
     block: allForks.FullOrBlindedSignedBeaconBlock
   ): Promise<allForks.SignedBeaconBlock> {
@@ -860,7 +876,11 @@ export class BeaconChain implements IBeaconChain {
     return block as allForks.SignedBeaconBlock;
   }
 
-  /** */
+  private async getWithdrawals(): Promise<capella.Withdrawals> {
+    // TODO: (matthewkeil) Temp to get build working
+    return ssz.capella.Withdrawals.defaultValue();
+  }
+
   private async injectCapellaPayload(
     block: allForks.FullOrBlindedSignedBeaconBlock
   ): Promise<allForks.SignedBeaconBlock> {
