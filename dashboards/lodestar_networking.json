@@ -837,7 +837,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "lodestar_attnets_service_committee_subscriptions_time_to_stable_mesh_seconds_bucket",
+          "expr": "rate(lodestar_attnets_service_committee_subscriptions_time_to_stable_mesh_seconds_bucket[$rate_interval]) * 1000",
           "format": "heatmap",
           "legendFormat": "{{le}}",
           "range": true,
