@@ -331,11 +331,11 @@ export function blindedOrFullSignedBlockToBlindedBytes(
   throw new Error("unknown forkSeq, cannot un-blind");
 }
 
-export function reassembleBlindedBlockToFullBytes(
+export function reassembleBlindedBlockBytesToFullBytes(
   forkSeq: ForkSeq,
   block: Uint8Array,
-  transactions?: Uint8Array,
-  withdrawals?: Uint8Array
+  transactions?: Uint8Array[],
+  withdrawals?: capella.Withdrawals
 ): Uint8Array {
   /**
    * Phase0:
@@ -356,13 +356,13 @@ export function reassembleBlindedBlockToFullBytes(
 
   // fields that are common to forks after Bellatrix
   if (!transactions) {
-    throw new Error("must supply transaction");
+    throw new Error("must supply transactions");
   }
 
   // data for reassembly
   const preamble = Uint8Array.prototype.slice.call(block, 0, transactionsFixedOffset);
   const preambleDataView = new DataView(preamble.buffer, preamble.byteOffset, preamble.byteLength);
-
+  const serializedTransactions = ssz.bellatrix.Transactions.serialize(transactions);
   /**
    * Bellatrix:
    *   preamble: Fixed Length Data
@@ -387,7 +387,7 @@ export function reassembleBlindedBlockToFullBytes(
       ...preamble,
       ...buildVariableOffset(extraDataVariableOffset + extraData.length),
       ...extraData,
-      ...transactions,
+      ...serializedTransactions,
     ]);
   }
 
@@ -400,7 +400,7 @@ export function reassembleBlindedBlockToFullBytes(
   let blsToExecutionChangeVariableOffset = dv.getUint32(LOCATION_OF_BLS_TO_EXECUTION_CHANGE_OFFSET, true);
   const extraData = Uint8Array.prototype.slice.call(block, extraDataVariableOffset, blsToExecutionChangeVariableOffset);
   const blsChangeAndMaybeCommitmentsData = Uint8Array.prototype.slice.call(block, blsToExecutionChangeVariableOffset);
-
+  const serializedWithdrawals = ssz.capella.Withdrawals.serialize(withdrawals);
   /**
    * Capella:
    *   preamble: Fixed Length Data
@@ -434,8 +434,8 @@ export function reassembleBlindedBlockToFullBytes(
       ...buildVariableOffset(transactionsVariableOffset),
       ...buildVariableOffset(withdrawalsVariableOffset),
       ...extraData,
-      ...transactions,
-      ...withdrawals,
+      ...serializedTransactions,
+      ...serializedWithdrawals,
       ...blsChangeAndMaybeCommitmentsData
     );
   }
@@ -495,8 +495,8 @@ export function reassembleBlindedBlockToFullBytes(
       ...buildVariableOffset(withdrawalsVariableOffset),
       ...dataGasUsedAndExcessDataGas,
       ...extraData,
-      ...transactions,
-      ...withdrawals,
+      ...serializedTransactions,
+      ...serializedWithdrawals,
       ...blsChangeAndMaybeCommitmentsData
     );
   }
