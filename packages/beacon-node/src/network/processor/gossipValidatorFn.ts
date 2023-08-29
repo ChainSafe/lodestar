@@ -1,15 +1,84 @@
-import {TopicValidatorResult} from "@libp2p/interface-pubsub";
+import {TopicValidatorResult} from "@libp2p/interface/pubsub";
 import {ChainForkConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
-import {GossipValidatorFn, GossipHandlers, GossipHandlerFn} from "../gossip/interface.js";
-import {GossipActionError, GossipAction} from "../../chain/errors/index.js";
+import {
+  GossipValidatorFn,
+  GossipHandlers,
+  GossipHandlerFn,
+  GossipValidatorBatchFn,
+  BatchGossipHandlerFn,
+  GossipMessageInfo,
+} from "../gossip/interface.js";
+import {GossipActionError, GossipAction, AttestationError} from "../../chain/errors/index.js";
 
 export type ValidatorFnModules = {
   config: ChainForkConfig;
   logger: Logger;
   metrics: Metrics | null;
 };
+
+/**
+ * Similar to getGossipValidatorFn but return a function to accept a batch of beacon_attestation messages
+ * with the same attestation data
+ */
+export function getGossipValidatorBatchFn(
+  gossipHandlers: GossipHandlers,
+  modules: ValidatorFnModules
+): GossipValidatorBatchFn {
+  const {logger, metrics} = modules;
+
+  return async function gossipValidatorBatchFn(messageInfos: GossipMessageInfo[]) {
+    // all messageInfos have same topic
+    const {topic} = messageInfos[0];
+    const type = topic.type;
+    try {
+      const results = await (gossipHandlers[type] as BatchGossipHandlerFn)(
+        messageInfos.map((messageInfo) => ({
+          gossipData: {
+            serializedData: messageInfo.msg.data,
+            msgSlot: messageInfo.msgSlot,
+            indexed: messageInfo.indexed,
+          },
+          topic,
+          peerIdStr: messageInfo.propagationSource,
+          seenTimestampSec: messageInfo.seenTimestampSec,
+        }))
+      );
+
+      return results.map((e) => {
+        if (e == null) {
+          return TopicValidatorResult.Accept;
+        }
+
+        if (!(e instanceof AttestationError)) {
+          logger.debug(`Gossip batch validation ${type} threw a non-AttestationError`, {}, e as Error);
+          metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
+          return TopicValidatorResult.Ignore;
+        }
+
+        switch (e.action) {
+          case GossipAction.IGNORE:
+            metrics?.networkProcessor.gossipValidationIgnore.inc({topic: type});
+            return TopicValidatorResult.Ignore;
+
+          case GossipAction.REJECT:
+            metrics?.networkProcessor.gossipValidationReject.inc({topic: type});
+            logger.debug(`Gossip validation ${type} rejected`, {}, e);
+            return TopicValidatorResult.Reject;
+        }
+      });
+    } catch (e) {
+      // Don't expect error here
+      logger.debug(`Gossip batch validation ${type} threw an error`, {}, e as Error);
+      const results: TopicValidatorResult[] = [];
+      for (let i = 0; i < messageInfos.length; i++) {
+        results.push(TopicValidatorResult.Ignore);
+      }
+      return results;
+    }
+  };
+}
 
 /**
  * Returns a GossipSub validator function from a GossipHandlerFn. GossipHandlerFn may throw GossipActionError if one
@@ -28,16 +97,16 @@ export type ValidatorFnModules = {
 export function getGossipValidatorFn(gossipHandlers: GossipHandlers, modules: ValidatorFnModules): GossipValidatorFn {
   const {logger, metrics} = modules;
 
-  return async function gossipValidatorFn(topic, msg, propagationSource, seenTimestampSec, msgSlot) {
+  return async function gossipValidatorFn({topic, msg, propagationSource, seenTimestampSec, msgSlot}) {
     const type = topic.type;
 
     try {
-      await (gossipHandlers[type] as GossipHandlerFn)(
-        {serializedData: msg.data, msgSlot},
+      await (gossipHandlers[type] as GossipHandlerFn)({
+        gossipData: {serializedData: msg.data, msgSlot},
         topic,
-        propagationSource,
-        seenTimestampSec
-      );
+        peerIdStr: propagationSource,
+        seenTimestampSec,
+      });
 
       metrics?.networkProcessor.gossipValidationAccept.inc({topic: type});
 

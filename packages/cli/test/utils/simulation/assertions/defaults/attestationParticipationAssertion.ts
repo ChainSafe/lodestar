@@ -26,7 +26,7 @@ export const attestationParticipationAssertion: SimulationAssertion<
   },
 
   async capture({node, epoch}) {
-    const res = await node.cl.api.debug.getStateV2("head");
+    const res = await node.beacon.api.debug.getStateV2("head");
     ApiError.assert(res);
     const state = res.response.data as altair.BeaconState;
 

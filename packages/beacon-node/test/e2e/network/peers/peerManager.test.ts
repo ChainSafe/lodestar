@@ -1,5 +1,5 @@
-import {Connection} from "@libp2p/interface-connection";
-import {CustomEvent} from "@libp2p/interfaces/events";
+import {Connection} from "@libp2p/interface/connection";
+import {CustomEvent} from "@libp2p/interface/events";
 import sinon from "sinon";
 import {expect} from "chai";
 import {BitArray} from "@chainsafe/ssz";
@@ -111,7 +111,8 @@ describe("network / peers / PeerManager", function () {
     await peerManager["onLibp2pPeerConnect"](
       new CustomEvent("evt", {
         detail: {
-          stat: {direction: "inbound", status: "OPEN"},
+          direction: "inbound",
+          status: "open",
           remotePeer: peerId1,
         } as Connection,
       })
@@ -146,7 +147,8 @@ describe("network / peers / PeerManager", function () {
   });
 
   const libp2pConnectionOutboud = {
-    stat: {direction: "outbound", status: "OPEN"},
+    direction: "outbound",
+    status: "open",
     remotePeer: peerId1,
   } as Connection;
 

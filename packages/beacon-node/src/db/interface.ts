@@ -16,9 +16,6 @@ import {
   BackfilledRanges,
   BlobSidecarsRepository,
   BlobSidecarsArchiveRepository,
-  // TODO DENEB: cleanup once fully migrated from blobsSidecar to blobSidecars
-  BlobsSidecarRepository,
-  BlobsSidecarArchiveRepository,
   BLSToExecutionChangeRepository,
 } from "./repositories/index.js";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single/index.js";
@@ -36,10 +33,6 @@ export interface IBeaconDb {
 
   blobSidecars: BlobSidecarsRepository;
   blobSidecarsArchive: BlobSidecarsArchiveRepository;
-
-  // TODO DENEB: cleanup following two blobs... repos once BlobsSidecar fully migrated to BlobSidecars
-  blobsSidecar: BlobsSidecarRepository;
-  blobsSidecarArchive: BlobsSidecarArchiveRepository;
 
   // finalized states
   stateArchive: StateArchiveRepository;

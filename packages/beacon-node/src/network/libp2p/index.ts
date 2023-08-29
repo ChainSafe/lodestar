@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 import {Registry} from "prom-client";
 import {ENR} from "@chainsafe/discv5";
 import type {Components} from "libp2p/components";
@@ -75,6 +75,10 @@ export async function createNodeJsLibp2p(
     transports: [
       tcp({
         maxConnections: networkOpts.maxPeers,
+        // socket option: the maximum length of the queue of pending connections
+        // https://nodejs.org/dist/latest-v18.x/docs/api/net.html#serverlisten
+        // it's not safe if we increase this number
+        backlog: 5,
         closeServerOnMaxConnections: {
           closeAbove: networkOpts.maxPeers ?? Infinity,
           listenBelow: networkOpts.maxPeers ?? Infinity,
@@ -101,6 +105,9 @@ export async function createNodeJsLibp2p(
       //maxConnections: options.maxConnections,
       // DOCS: There is no way to turn off autodial other than setting minConnections to 0
       minConnections: 0,
+      // the maximum number of pending connections libp2p will accept before it starts rejecting incoming connections.
+      // make it the same to backlog option above
+      maxIncomingPendingConnections: 5,
     },
     datastore,
     services: {

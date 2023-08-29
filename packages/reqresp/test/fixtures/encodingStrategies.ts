@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import varint from "varint";
+import {encode as varintEncode} from "uint8-varint";
 import {ssz} from "@lodestar/types";
 import {ForkName} from "@lodestar/params";
 import {SszSnappyErrorCode} from "../../src/encodingStrategies/sszSnappy/errors.js";
@@ -72,12 +72,12 @@ export const encodingStrategiesDecodingErrorCases: {
     id: "if it read more than maxEncodedLen",
     type: ssz.phase0.Ping,
     error: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
-    chunks: [Buffer.from(varint.encode(ssz.phase0.Ping.minSize)), Buffer.alloc(100)],
+    chunks: [Buffer.from(varintEncode(ssz.phase0.Ping.minSize)), Buffer.alloc(100)],
   },
   {
     id: "if failed ssz snappy input malformed",
     type: ssz.phase0.Status,
     error: SszSnappyErrorCode.DECOMPRESSOR_ERROR,
-    chunks: [Buffer.from(varint.encode(ssz.phase0.Status.minSize)), Buffer.from("wrong snappy data")],
+    chunks: [Buffer.from(varintEncode(ssz.phase0.Status.minSize)), Buffer.from("wrong snappy data")],
   },
 ];

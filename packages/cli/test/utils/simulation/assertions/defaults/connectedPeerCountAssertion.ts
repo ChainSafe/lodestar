@@ -6,7 +6,7 @@ export const connectedPeerCountAssertion: SimulationAssertion<"connectedPeerCoun
   id: "connectedPeerCount",
   match: everySlotMatcher,
   async capture({node}) {
-    const res = await node.cl.api.node.getPeerCount();
+    const res = await node.beacon.api.node.getPeerCount();
     ApiError.assert(res);
     return res.response.data.connected;
   },

@@ -7,19 +7,21 @@ export enum SignatureSetType {
   aggregate = "aggregate",
 }
 
-export type ISignatureSet =
-  | {
-      type: SignatureSetType.single;
-      pubkey: PublicKey;
-      signingRoot: Root;
-      signature: Uint8Array;
-    }
-  | {
-      type: SignatureSetType.aggregate;
-      pubkeys: PublicKey[];
-      signingRoot: Root;
-      signature: Uint8Array;
-    };
+export type SingleSignatureSet = {
+  type: SignatureSetType.single;
+  pubkey: PublicKey;
+  signingRoot: Root;
+  signature: Uint8Array;
+};
+
+export type AggregatedSignatureSet = {
+  type: SignatureSetType.aggregate;
+  pubkeys: PublicKey[];
+  signingRoot: Root;
+  signature: Uint8Array;
+};
+
+export type ISignatureSet = SingleSignatureSet | AggregatedSignatureSet;
 
 export function verifySignatureSet(signatureSet: ISignatureSet): boolean {
   // All signatures are not trusted and must be group checked (p2.subgroup_check)
@@ -41,7 +43,7 @@ export function createSingleSignatureSetFromComponents(
   pubkey: PublicKey,
   signingRoot: Root,
   signature: Uint8Array
-): ISignatureSet {
+): SingleSignatureSet {
   return {
     type: SignatureSetType.single,
     pubkey,
@@ -54,7 +56,7 @@ export function createAggregateSignatureSetFromComponents(
   pubkeys: PublicKey[],
   signingRoot: Root,
   signature: Uint8Array
-): ISignatureSet {
+): AggregatedSignatureSet {
   return {
     type: SignatureSetType.aggregate,
     pubkeys,

@@ -1,6 +1,6 @@
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 import {Multiaddr} from "@multiformats/multiaddr";
-import type {PeerInfo} from "@libp2p/interface-peer-info";
+import type {PeerInfo} from "@libp2p/interface/peer-info";
 import {ENR} from "@chainsafe/discv5";
 import {BeaconConfig} from "@lodestar/config";
 import {pruneSetToMax, sleep} from "@lodestar/utils";
@@ -465,7 +465,7 @@ export class PeerDiscovery {
   /** Check if there is 1+ open connection with this peer */
   private isPeerConnected(peerIdStr: PeerIdStr): boolean {
     const connections = getConnectionsMap(this.libp2p).get(peerIdStr);
-    return Boolean(connections && connections.some((connection) => connection.stat.status === "OPEN"));
+    return Boolean(connections && connections.some((connection) => connection.status === "open"));
   }
 }
 

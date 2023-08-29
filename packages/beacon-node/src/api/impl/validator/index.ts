@@ -277,7 +277,8 @@ export function getValidatorApi({
   const produceBlockV2: ServerApi<routes.validator.Api>["produceBlockV2"] = async function produceBlockV2(
     slot,
     randaoReveal,
-    graffiti
+    graffiti,
+    feeRecipient
   ) {
     const source = ProducedBlockSource.engine;
     let timer;
@@ -297,6 +298,7 @@ export function getValidatorApi({
         slot,
         randaoReveal,
         graffiti: toGraffitiBuffer(graffiti || ""),
+        feeRecipient,
       });
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
@@ -326,7 +328,7 @@ export function getValidatorApi({
     randaoReveal,
     graffiti
   ) {
-    const {data, version, blockValue} = await produceBlockV2(slot, randaoReveal, graffiti);
+    const {data, version, blockValue} = await produceBlockV2(slot, randaoReveal, graffiti, undefined);
     if ((data as BlockContents).block !== undefined) {
       throw Error(`Invalid block contents for produceBlock at fork=${version}`);
     } else {

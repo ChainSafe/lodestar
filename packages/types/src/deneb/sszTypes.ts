@@ -4,7 +4,6 @@ import {
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
   FIELD_ELEMENTS_PER_BLOB,
   MAX_BLOBS_PER_BLOCK,
-  MAX_REQUEST_BLOCKS,
   MAX_REQUEST_BLOB_SIDECARS,
   BYTES_PER_FIELD_ELEMENT,
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
@@ -52,6 +51,7 @@ export const Blob = new ByteVectorType(BYTES_PER_FIELD_ELEMENT * FIELD_ELEMENTS_
 export const Blobs = new ListCompositeType(Blob, MAX_BLOBS_PER_BLOCK);
 export const BlindedBlob = Bytes32;
 export const BlindedBlobs = new ListCompositeType(BlindedBlob, MAX_BLOBS_PER_BLOCK);
+
 export const VersionedHash = Bytes32;
 export const BlobKzgCommitments = new ListCompositeType(KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK);
 export const KZGProofs = new ListCompositeType(KZGProof, MAX_BLOBS_PER_BLOCK);
@@ -106,18 +106,6 @@ export const BlobIdentifier = new ContainerType(
 );
 
 export const BlobSidecarsByRootRequest = new ListCompositeType(BlobIdentifier, MAX_REQUEST_BLOB_SIDECARS);
-
-// TODO DENEB: cleanup the following types once blob migration is complete
-
-export const BlobsSidecarsByRangeRequest = new ContainerType(
-  {
-    startSlot: Slot,
-    count: UintNum64,
-  },
-  {typeName: "BlobsSidecarsByRangeRequest", jsonCase: "eth2"}
-);
-
-export const BeaconBlockAndBlobsSidecarByRootRequest = new ListCompositeType(Root, MAX_REQUEST_BLOCKS);
 
 // Beacon Chain types
 // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#containers
@@ -218,23 +206,14 @@ export const SignedBlindedBlobSidecar = new ContainerType(
 
 export const SignedBlindedBlobSidecars = new ListCompositeType(SignedBlindedBlobSidecar, MAX_BLOBS_PER_BLOCK);
 
-// TODO: replace and cleanup previous types when other parts integrated seamlessly
-export const BlobsSidecar = new ContainerType(
-  {
-    beaconBlockRoot: Root,
-    beaconBlockSlot: Slot,
-    blobs: Blobs,
-    kzgAggregatedProof: KZGProof,
-  },
-  {typeName: "BlobsSidecar", jsonCase: "eth2"}
-);
-
-export const SignedBeaconBlockAndBlobsSidecar = new ContainerType(
+// TODO: deneb cleanup once the builder-api gets rectified for deneb
+// as the type might be used in builder getHeader responses
+export const SignedBeaconBlockAndBlobSidecars = new ContainerType(
   {
     beaconBlock: SignedBeaconBlock,
-    blobsSidecar: BlobsSidecar,
+    blobSidecars: BlobSidecars,
   },
-  {typeName: "SignedBeaconBlockAndBlobsSidecar", jsonCase: "eth2"}
+  {typeName: "SignedBeaconBlockAndBlobSidecars", jsonCase: "eth2"}
 );
 
 export const BlindedBeaconBlockBody = new ContainerType(

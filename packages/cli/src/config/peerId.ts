@@ -1,4 +1,4 @@
-import type {PeerId} from "@libp2p/interface-peer-id";
+import type {PeerId} from "@libp2p/interface/peer-id";
 import {peerIdFromBytes} from "@libp2p/peer-id";
 import {createFromPrivKey, createFromPubKey} from "@libp2p/peer-id-factory";
 import {unmarshalPrivateKey, unmarshalPublicKey} from "@libp2p/crypto/keys";

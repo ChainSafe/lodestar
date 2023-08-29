@@ -21,6 +21,7 @@ export interface NetworkOptions
   version?: string;
   private?: boolean;
   useWorker?: boolean;
+  maxYoungGenerationSizeMb?: number;
 }
 
 export const defaultNetworkOptions: NetworkOptions = {
@@ -31,13 +32,13 @@ export const defaultNetworkOptions: NetworkOptions = {
   /** disabled by default */
   discv5: null,
   rateLimitMultiplier: 1,
-  // TODO: this value is 12 per spec, however lodestar has performance issue if there are too many mesh peers
-  // see https://github.com/ChainSafe/lodestar/issues/5420
-  gossipsubDHigh: 9,
-  // TODO set to false in order to release 1.9.0 in a timely manner
-  useWorker: false,
-  // subscribe to 2 subnets per node
+  useWorker: true,
+  // default set via research in https://github.com/ChainSafe/lodestar/issues/2115
+  maxYoungGenerationSizeMb: 152,
+  // subscribe to 2 subnets per node since v1.10
   deterministicLongLivedAttnets: true,
   // subscribe 2 slots before aggregator dutied slot to get stable mesh peers as monitored on goerli
   slotsToSubscribeBeforeAggregatorDuty: 2,
+  // this should only be set to true if useWorker is true
+  beaconAttestationBatchValidation: true,
 };

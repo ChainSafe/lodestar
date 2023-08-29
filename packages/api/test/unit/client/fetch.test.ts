@@ -11,8 +11,7 @@ describe("FetchError", function () {
     id: string;
     url?: string;
     requestListener?: http.RequestListener;
-    abort?: true;
-    timeout?: number;
+    signalHandler?: () => AbortSignal;
     errorType: FetchErrorType;
     errorCode: string;
     expectCause: boolean;
@@ -66,12 +65,22 @@ describe("FetchError", function () {
     },
     {
       id: "Aborted request",
-      abort: true,
       requestListener: () => {
         // leave the request open until aborted
       },
+      signalHandler: () => AbortSignal.abort(),
       errorType: "aborted",
       errorCode: "ERR_ABORTED",
+      expectCause: false,
+    },
+    {
+      id: "Timeout request",
+      requestListener: () => {
+        // leave the request open until timeout
+      },
+      signalHandler: () => AbortSignal.timeout(10),
+      errorType: "timeout",
+      errorCode: "ERR_TIMEOUT",
       expectCause: false,
     },
   ];
@@ -90,7 +99,7 @@ describe("FetchError", function () {
   });
 
   for (const testCase of testCases) {
-    const {id, url = `http://localhost:${port}`, requestListener, abort} = testCase;
+    const {id, url = `http://localhost:${port}`, requestListener, signalHandler} = testCase;
 
     it(id, async function () {
       if (requestListener) {
@@ -107,9 +116,7 @@ describe("FetchError", function () {
         );
       }
 
-      const controller = new AbortController();
-      if (abort) setTimeout(() => controller.abort(), 20);
-      await expect(fetch(url, {signal: controller.signal})).to.be.rejected.then((error: FetchError) => {
+      await expect(fetch(url, {signal: signalHandler?.()})).to.be.rejected.then((error: FetchError) => {
         expect(error.type).to.be.equal(testCase.errorType);
         expect(error.code).to.be.equal(testCase.errorCode);
         if (testCase.expectCause) {

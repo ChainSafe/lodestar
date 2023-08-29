@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 import {createSecp256k1PeerId} from "@libp2p/peer-id-factory";
 import {BitArray} from "@chainsafe/ssz";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
@@ -82,6 +82,7 @@ export async function getNetworkForTest(
       disableArchiveOnCheckpoint: true,
       disableLightClientServerOnImportBlockHead: true,
       disablePrepareNextSlot: true,
+      minSameMessageSignatureSetsToBatch: 32,
     },
     {
       config: beaconConfig,

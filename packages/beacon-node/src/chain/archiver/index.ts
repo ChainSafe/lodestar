@@ -106,12 +106,13 @@ export class Archiver {
       this.chain.regen.pruneOnFinalized(finalizedEpoch);
 
       // tasks rely on extended fork choice
-      this.chain.forkChoice.prune(finalized.rootHex);
+      const prunedBlocks = this.chain.forkChoice.prune(finalized.rootHex);
       await this.updateBackfillRange(finalized);
 
       this.logger.verbose("Finish processing finalized checkpoint", {
         epoch: finalizedEpoch,
         rootHex: finalized.rootHex,
+        prunedBlocks: prunedBlocks.length,
       });
     } catch (e) {
       this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e as Error);

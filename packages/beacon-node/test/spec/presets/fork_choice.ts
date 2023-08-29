@@ -3,7 +3,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateAllForks, isExecutionStateType} from "@lodestar/state-transition";
 import {InputType} from "@lodestar/spec-test-util";
 import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
-import {phase0, allForks, bellatrix, ssz, RootHex, deneb} from "@lodestar/types";
+import {phase0, allForks, bellatrix, ssz, RootHex} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {createBeaconConfig} from "@lodestar/config";
 import {ForkSeq, isForkBlobs} from "@lodestar/params";
@@ -15,13 +15,12 @@ import {getConfig} from "../../utils/config.js";
 import {TestRunnerFn} from "../utils/types.js";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
-import {ExecutePayloadStatus} from "../../../src/execution/engine/interface.js";
+import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {getStubbedBeaconDb} from "../../utils/mocks/db.js";
 import {ClockStopped} from "../../utils/mocks/clock.js";
 import {getBlockInput, AttestationImportOpt, BlockSource} from "../../../src/chain/blocks/types.js";
-import {getEmptyBlobsSidecar} from "../../../src/util/blobs.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
@@ -165,8 +164,9 @@ export const forkChoiceTest =
                       config,
                       signedBlock,
                       BlockSource.gossip,
-                      getEmptyBlobsSidecar(config, signedBlock as deneb.SignedBeaconBlock),
-                      null
+                      ssz.deneb.BlobSidecars.defaultValue(),
+                      null,
+                      [null]
                     );
 
               try {
@@ -201,7 +201,7 @@ export const forkChoiceTest =
             // Optional step for optimistic sync tests.
             else if (isOnPayloadInfoStep(step)) {
               logger.debug(`Step ${i}/${stepsLen} payload_status`, {blockHash: step.block_hash});
-              const status = ExecutePayloadStatus[step.payload_status.status];
+              const status = ExecutionPayloadStatus[step.payload_status.status];
               if (status === undefined) {
                 throw Error(`Unknown payload_status.status: ${step.payload_status.status}`);
               }

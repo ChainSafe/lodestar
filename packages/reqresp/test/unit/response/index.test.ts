@@ -1,4 +1,4 @@
-import {PeerId} from "@libp2p/interface-peer-id";
+import {PeerId} from "@libp2p/interface/peer-id";
 import {expect} from "chai";
 import {LodestarError, fromHex} from "@lodestar/utils";
 import {getEmptyLogger} from "@lodestar/logger/empty";

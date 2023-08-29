@@ -186,7 +186,7 @@ export class ForkChoice implements IForkChoice {
     const oldBalances = this.balances;
     const newBalances = this.fcStore.justified.balances;
     const deltas = computeDeltas(
-      this.protoArray.indices,
+      this.protoArray.nodes.length,
       this.votes,
       oldBalances,
       newBalances,
@@ -555,7 +555,7 @@ export class ForkChoice implements IForkChoice {
     }
     return {
       epoch: vote.nextEpoch,
-      root: vote.nextRoot,
+      root: vote.nextIndex === null ? HEX_ZERO_HASH : this.protoArray.nodes[vote.nextIndex].blockRoot,
     };
   }
 
@@ -592,7 +592,12 @@ export class ForkChoice implements IForkChoice {
    * Returns `true` if the block is known **and** a descendant of the finalized root.
    */
   hasBlockHex(blockRoot: RootHex): boolean {
-    return this.protoArray.hasBlock(blockRoot) && this.isDescendantOfFinalized(blockRoot);
+    const node = this.protoArray.getNode(blockRoot);
+    if (node === undefined) {
+      return false;
+    }
+
+    return this.protoArray.isFinalizedRootOrDescendant(node);
   }
 
   /**
@@ -610,20 +615,21 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
+   * Returns a MUTABLE `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
   getBlockHex(blockRoot: RootHex): ProtoBlock | null {
-    const block = this.protoArray.getBlock(blockRoot);
-    if (!block) {
+    const node = this.protoArray.getNode(blockRoot);
+    if (!node) {
       return null;
     }
-    // If available, use the parent_root to perform the lookup since it will involve one
-    // less lookup. This involves making the assumption that the finalized block will
-    // always have `block.parent_root` of `None`.
-    if (!this.isDescendantOfFinalized(blockRoot)) {
+
+    if (!this.protoArray.isFinalizedRootOrDescendant(node)) {
       return null;
     }
-    return block;
+
+    return {
+      ...node,
+    };
   }
 
   getJustifiedBlock(): ProtoBlock {
@@ -649,13 +655,6 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Return `true` if `block_root` is equal to the finalized root, or a known descendant of it.
-   */
-  isDescendantOfFinalized(blockRoot: RootHex): boolean {
-    return this.protoArray.isDescendant(this.fcStore.finalizedCheckpoint.rootHex, blockRoot);
-  }
-
-  /**
    * Returns true if the `descendantRoot` has an ancestor with `ancestorRoot`.
    *
    * Always returns `false` if either input roots are unknown.
@@ -665,8 +664,38 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.isDescendant(ancestorRoot, descendantRoot);
   }
 
+  /**
+   * All indices in votes are relative to proto array so always keep it up to date
+   */
   prune(finalizedRoot: RootHex): ProtoBlock[] {
-    return this.protoArray.maybePrune(finalizedRoot);
+    const prunedNodes = this.protoArray.maybePrune(finalizedRoot);
+    const prunedCount = prunedNodes.length;
+    for (let i = 0; i < this.votes.length; i++) {
+      const vote = this.votes[i];
+      // validator has never voted
+      if (vote === undefined) {
+        continue;
+      }
+
+      if (vote.currentIndex !== null) {
+        if (vote.currentIndex >= prunedCount) {
+          vote.currentIndex -= prunedCount;
+        } else {
+          // the vote was for a pruned proto node
+          vote.currentIndex = null;
+        }
+      }
+
+      if (vote.nextIndex !== null) {
+        if (vote.nextIndex >= prunedCount) {
+          vote.nextIndex -= prunedCount;
+        } else {
+          // the vote was for a pruned proto node
+          vote.nextIndex = null;
+        }
+      }
+    }
+    return prunedNodes;
   }
 
   setPruneThreshold(threshold: number): void {
@@ -1091,14 +1120,20 @@ export class ForkChoice implements IForkChoice {
    */
   private addLatestMessage(validatorIndex: ValidatorIndex, nextEpoch: Epoch, nextRoot: RootHex): void {
     const vote = this.votes[validatorIndex];
+    // should not happen, attestation is validated before this step
+    const nextIndex = this.protoArray.indices.get(nextRoot);
+    if (nextIndex === undefined) {
+      throw new Error(`Could not find proto index for nextRoot ${nextRoot}`);
+    }
+
     if (vote === undefined) {
       this.votes[validatorIndex] = {
-        currentRoot: HEX_ZERO_HASH,
-        nextRoot,
+        currentIndex: null,
+        nextIndex,
         nextEpoch,
       };
     } else if (nextEpoch > vote.nextEpoch) {
-      vote.nextRoot = nextRoot;
+      vote.nextIndex = nextIndex;
       vote.nextEpoch = nextEpoch;
     }
     // else its an old vote, don't count it

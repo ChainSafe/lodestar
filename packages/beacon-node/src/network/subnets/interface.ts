@@ -38,9 +38,13 @@ export type SubnetsServiceTestOpts = {
   shuffleFn?: ShuffleFn;
 };
 
+type TopicStr = string;
+type PeerIdStr = string;
+
 export type GossipSubscriber = {
   subscribeTopic(topic: GossipTopic): void;
   unsubscribeTopic(topic: GossipTopic): void;
+  mesh: Map<TopicStr, Set<PeerIdStr>>;
 };
 
 // uint256 in the spec

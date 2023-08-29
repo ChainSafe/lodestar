@@ -770,6 +770,246 @@
     },
     {
       "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "id": 608,
+      "panels": [],
+      "title": "Network Worker",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Async time to send a message across the worker/parent port",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 23,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "log": 2,
+              "type": "log"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 31
+      },
+      "id": 148,
+      "options": {
+        "graph": {},
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "(\n  sum(rate(\n    lodestar_network_worker_wire_events_on_worker_thread_latency_sum[$rate_interval]\n  )) \n  +\n  sum(rate(\n    lodestar_network_worker_wire_events_on_main_thread_latency_sum[$rate_interval]\n  ))\n)\n/\n(\n  sum(rate(\n    lodestar_network_worker_wire_events_on_worker_thread_latency_count[$rate_interval]\n  ))\n  +\n  sum(rate(\n    lodestar_network_worker_wire_events_on_main_thread_latency_count[$rate_interval]\n  ))\n)",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Average",
+          "range": true,
+          "refId": "average"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "avg(rate(lodestar_network_worker_wire_events_on_worker_thread_latency_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_worker_thread_latency_count[$rate_interval]))",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Worker to Main",
+          "range": true,
+          "refId": "by eventName"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "avg(rate(lodestar_network_worker_wire_events_on_main_thread_latency_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_main_thread_latency_count[$rate_interval]))",
+          "hide": false,
+          "legendFormat": "Main to Worker",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Network Worker Message  Latency - Main to Worker",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Async time to send a message across the worker/parent port",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 23,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "graph": false,
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "log": 2,
+              "type": "log"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 31
+      },
+      "id": 609,
+      "options": {
+        "graph": {},
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "7.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "avg(rate(lodestar_network_worker_wire_events_on_main_thread_latency_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_main_thread_latency_count[$rate_interval]))",
+          "hide": true,
+          "interval": "",
+          "legendFormat": "Average to Main",
+          "range": true,
+          "refId": "average"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rate(lodestar_network_worker_wire_events_on_main_thread_latency_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_main_thread_latency_count[$rate_interval])",
+          "interval": "",
+          "legendFormat": "{{eventName}}",
+          "range": true,
+          "refId": "by eventName"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_network_worker_wire_events_on_worker_thread_latency_sum[$rate_interval])/rate(lodestar_network_worker_wire_events_on_worker_thread_latency_count[$rate_interval])",
+          "hide": false,
+          "legendFormat": "{{eventName}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Network Worker Message  Latency - Worker to Main",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -778,7 +1018,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 37
       },
       "id": 28,
       "panels": [],
@@ -845,7 +1085,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 31
+        "y": 38
       },
       "id": 30,
       "options": {
@@ -930,7 +1170,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 31
+        "y": 38
       },
       "id": 507,
       "options": {
@@ -1018,7 +1258,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 39
+        "y": 46
       },
       "id": 32,
       "options": {
@@ -1085,7 +1325,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 39
+        "y": 46
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -1215,7 +1455,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 47
+        "y": 54
       },
       "id": 506,
       "options": {
@@ -1283,7 +1523,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 47
+        "y": 54
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -1395,7 +1635,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 55
+        "y": 62
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -1540,7 +1780,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 55
+        "y": 62
       },
       "id": 34,
       "options": {
@@ -1638,7 +1878,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 63
+        "y": 70
       },
       "id": 508,
       "options": {
@@ -1721,7 +1961,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 63
+        "y": 70
       },
       "id": 38,
       "options": {
@@ -1765,7 +2005,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 70
+        "y": 77
       },
       "id": 512,
       "panels": [],
@@ -1802,7 +2042,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 71
+        "y": 78
       },
       "hiddenSeries": false,
       "id": 294,
@@ -1912,7 +2152,7 @@
         "h": 7,
         "w": 6,
         "x": 12,
-        "y": 71
+        "y": 78
       },
       "hiddenSeries": false,
       "id": 296,
@@ -1957,7 +2197,7 @@
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Requested subnets to query (rate / min)",
+      "title": "Peer Manager - Requested subnets to query (rate / min)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2008,7 +2248,7 @@
         "h": 7,
         "w": 6,
         "x": 18,
-        "y": 71
+        "y": 78
       },
       "hiddenSeries": false,
       "id": 297,
@@ -2053,7 +2293,7 @@
       ],
       "thresholds": [],
       "timeRegions": [],
-      "title": "Requested total peers in subnets (rate / min)",
+      "title": "Peer Manager - Requested total peers in subnets (rate / min)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2084,6 +2324,189 @@
       }
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 85
+      },
+      "id": 611,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "lodestar_discovery_subnet_peers_to_connect",
+          "legendFormat": "{{type}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Peer Discovery - Subnet peers to connect",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "attnets"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 85
+      },
+      "id": 613,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "lodestar_discovery_subnets_to_connect",
+          "legendFormat": "{{type}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Peer Discovery - Subnets to connect",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
@@ -2093,7 +2516,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 78
+        "y": 93
       },
       "id": 75,
       "panels": [],
@@ -2159,7 +2582,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 79
+        "y": 94
       },
       "id": 77,
       "options": {
@@ -2242,7 +2665,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 79
+        "y": 94
       },
       "id": 80,
       "options": {
@@ -2325,7 +2748,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 87
+        "y": 102
       },
       "id": 79,
       "options": {
@@ -2409,7 +2832,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 87
+        "y": 102
       },
       "id": 78,
       "options": {
@@ -2491,7 +2914,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 95
+        "y": 110
       },
       "id": 88,
       "options": {
@@ -2574,7 +2997,7 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 96
+        "y": 111
       },
       "id": 82,
       "options": {
@@ -2658,7 +3081,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 105
+        "y": 120
       },
       "id": 333,
       "options": {
@@ -2754,7 +3177,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 106
+        "y": 121
       },
       "id": 244,
       "options": {
@@ -2815,7 +3238,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 114
+        "y": 129
       },
       "id": 524,
       "panels": [],
@@ -2895,7 +3318,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 115
+        "y": 130
       },
       "id": 514,
       "options": {
@@ -2999,7 +3422,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 115
+        "y": 130
       },
       "id": 520,
       "options": {
@@ -3080,7 +3503,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 120
+        "y": 135
       },
       "id": 522,
       "options": {
@@ -3136,7 +3559,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 123
+        "y": 138
       },
       "id": 518,
       "options": {
@@ -3241,7 +3664,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 125
+        "y": 140
       },
       "id": 521,
       "options": {
@@ -3322,7 +3745,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 131
+        "y": 146
       },
       "id": 540,
       "options": {
@@ -3401,7 +3824,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 131
+        "y": 146
       },
       "id": 542,
       "options": {
@@ -3438,7 +3861,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 139
+        "y": 154
       },
       "id": 528,
       "panels": [],
@@ -3487,38 +3910,13 @@
           },
           "mappings": []
         },
-        "overrides": [
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "GOSSIP_ERROR_PAST_SLOT"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 140
+        "y": 155
       },
       "id": 526,
       "options": {
@@ -3615,7 +4013,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 140
+        "y": 155
       },
       "id": 530,
       "options": {
@@ -3719,7 +4117,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 148
+        "y": 163
       },
       "id": 534,
       "options": {
@@ -3810,7 +4208,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 148
+        "y": 163
       },
       "id": 532,
       "options": {
@@ -3906,7 +4304,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 156
+        "y": 171
       },
       "id": 536,
       "options": {
@@ -4014,7 +4412,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 156
+        "y": 171
       },
       "id": 538,
       "options": {
@@ -4058,12 +4456,384 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 179
+      },
+      "id": 615,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_attestation_use_head_block_state_count{caller=\"validateGossipAttestation\"}[$rate_interval])",
+          "legendFormat": "head_state",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_attestation_use_head_block_state_dialed_to_target_epoch_count{caller=\"validateGossipAttestation\"}[$rate_interval])",
+          "hide": false,
+          "legendFormat": "head_state_dialed_to_target_epoch",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Used States",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "key_size"
+            },
+            "properties": [
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "none"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 179
+      },
+      "id": 617,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_validation_queue_key_age_seconds_sum[$rate_interval])\n/\nrate(lodestar_gossip_validation_queue_key_age_seconds_count[$rate_interval])",
+          "legendFormat": "key_age",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_validation_queue_time_seconds_sum[$rate_interval])\n/\nrate(lodestar_gossip_validation_queue_time_seconds_count[$rate_interval])",
+          "hide": false,
+          "legendFormat": "queue_time",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "lodestar_gossip_validation_queue_key_size{topic=\"beacon_attestation\"}",
+          "hide": false,
+          "legendFormat": "key_size",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Indexed Gossip Queue",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 187
+      },
+      "id": 619,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_attestation_verified_in_batch_histogram_sum[$rate_interval])\n/\n(\n    rate(lodestar_gossip_attestation_verified_in_batch_histogram_sum[$rate_interval]) +\n    rate(lodestar_gossip_attestation_verified_non_batch_count[$rate_interval])\n)",
+          "legendFormat": "batch_percentage",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Batch Percentage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 187
+      },
+      "id": 621,
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "exponent": 0.5,
+          "fill": "dark-orange",
+          "mode": "scheme",
+          "reverse": false,
+          "scale": "exponential",
+          "scheme": "Magma",
+          "steps": 64
+        },
+        "exemplars": {
+          "color": "rgba(255,0,255,0.7)"
+        },
+        "filterValues": {
+          "le": 1e-9
+        },
+        "legend": {
+          "show": true
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "tooltip": {
+          "show": true,
+          "yHistogram": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "reverse": false
+        }
+      },
+      "pluginVersion": "9.3.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "lodestar_gossip_attestation_verified_in_batch_histogram_bucket",
+          "format": "heatmap",
+          "instant": false,
+          "legendFormat": "{{le}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Batch Histogram",
+      "type": "heatmap"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 164
+        "y": 195
       },
       "id": 600,
       "panels": [],
@@ -4119,7 +4889,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 165
+        "y": 196
       },
       "id": 602,
       "options": {
@@ -4247,7 +5017,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 165
+        "y": 196
       },
       "id": 604,
       "options": {
@@ -4399,7 +5169,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 173
+        "y": 204
       },
       "id": 603,
       "options": {
@@ -4478,7 +5248,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 173
+        "y": 204
       },
       "id": 601,
       "options": {
@@ -4519,7 +5289,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 181
+        "y": 212
       },
       "id": 188,
       "panels": [],
@@ -4584,7 +5354,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 182
+        "y": 213
       },
       "id": 180,
       "options": {
@@ -4665,7 +5435,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 182
+        "y": 213
       },
       "id": 176,
       "options": {
@@ -4746,7 +5516,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 190
+        "y": 221
       },
       "id": 182,
       "options": {
@@ -4827,7 +5597,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 190
+        "y": 221
       },
       "id": 178,
       "options": {
@@ -4908,7 +5678,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 198
+        "y": 229
       },
       "id": 605,
       "options": {
@@ -4991,7 +5761,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 198
+        "y": 229
       },
       "id": 606,
       "options": {
@@ -5074,7 +5844,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 206
+        "y": 237
       },
       "id": 498,
       "options": {
@@ -5155,7 +5925,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 206
+        "y": 237
       },
       "id": 500,
       "options": {
@@ -5236,7 +6006,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 214
+        "y": 245
       },
       "id": 184,
       "options": {
@@ -5317,7 +6087,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 214
+        "y": 245
       },
       "id": 501,
       "options": {

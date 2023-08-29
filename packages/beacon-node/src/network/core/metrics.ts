@@ -237,6 +237,20 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         name: "lodestar_attnets_service_committee_subscriptions_total",
         help: "Count of committee subscriptions",
       }),
+      subscriptionsCommitteeMeshPeers: register.histogram<"subnet">({
+        name: "lodestar_attnets_service_committee_subscriptions_mesh_peers",
+        help: "Histogram of mesh peers per committee subscription",
+        labelNames: ["subnet"],
+        // Dlow = 6, D = 8, DHi = 12 plus 2 more buckets
+        buckets: [0, 4, 6, 8, 12],
+      }),
+      subscriptionsCommitteeTimeToStableMesh: register.histogram<"subnet">({
+        name: "lodestar_attnets_service_committee_subscriptions_time_to_stable_mesh_seconds",
+        help: "Histogram of time until committee subscription is considered healthy (>= 6 mesh peers)",
+        labelNames: ["subnet"],
+        // we subscribe 2 slots = 24s before aggregator duty
+        buckets: [0, 6, 12, 18, 24],
+      }),
       subscriptionsRandom: register.gauge({
         name: "lodestar_attnets_service_random_subscriptions_total",
         help: "Count of random subscriptions",

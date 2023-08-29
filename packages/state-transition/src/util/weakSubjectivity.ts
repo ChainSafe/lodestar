@@ -111,6 +111,19 @@ export function isWithinWeakSubjectivityPeriod(
   wsState: BeaconStateAllForks,
   wsCheckpoint: Checkpoint
 ): boolean {
+  try {
+    ensureWithinWeakSubjectivityPeriod(config, wsState, wsCheckpoint);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+export function ensureWithinWeakSubjectivityPeriod(
+  config: BeaconConfig,
+  wsState: BeaconStateAllForks,
+  wsCheckpoint: Checkpoint
+): void {
   const wsStateEpoch = computeCheckpointEpochAtStateSlot(wsState.slot);
   const blockRoot = getLatestBlockRoot(wsState);
   if (!ssz.Root.equals(blockRoot, wsCheckpoint.root)) {
@@ -123,5 +136,9 @@ export function isWithinWeakSubjectivityPeriod(
   }
   const wsPeriod = computeWeakSubjectivityPeriod(config, wsState);
   const clockEpoch = computeEpochAtSlot(getCurrentSlot(config, wsState.genesisTime));
-  return clockEpoch <= wsStateEpoch + wsPeriod;
+  if (clockEpoch > wsStateEpoch + wsPeriod) {
+    throw new Error(
+      `The downloaded state with epoch ${wsStateEpoch} is not within weak subjectivity period of ${wsPeriod} from the current epoch ${clockEpoch}. Please verify your checkpoint source`
+    );
+  }
 }

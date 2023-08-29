@@ -8,7 +8,7 @@ import {ExecutionPayloadBody} from "./types.js";
 
 export {PayloadIdCache, PayloadId, WithdrawalV1};
 
-export enum ExecutePayloadStatus {
+export enum ExecutionPayloadStatus {
   /** given payload is valid */
   VALID = "VALID",
   /** given payload is invalid */
@@ -39,19 +39,26 @@ export enum ExecutionEngineState {
 }
 
 export type ExecutePayloadResponse =
-  | {status: ExecutePayloadStatus.SYNCING | ExecutePayloadStatus.ACCEPTED; latestValidHash: null; validationError: null}
-  | {status: ExecutePayloadStatus.VALID; latestValidHash: RootHex; validationError: null}
-  | {status: ExecutePayloadStatus.INVALID; latestValidHash: RootHex | null; validationError: string | null}
   | {
-      status: ExecutePayloadStatus.INVALID_BLOCK_HASH | ExecutePayloadStatus.ELERROR | ExecutePayloadStatus.UNAVAILABLE;
+      status: ExecutionPayloadStatus.SYNCING | ExecutionPayloadStatus.ACCEPTED;
+      latestValidHash: null;
+      validationError: null;
+    }
+  | {status: ExecutionPayloadStatus.VALID; latestValidHash: RootHex; validationError: null}
+  | {status: ExecutionPayloadStatus.INVALID; latestValidHash: RootHex | null; validationError: string | null}
+  | {
+      status:
+        | ExecutionPayloadStatus.INVALID_BLOCK_HASH
+        | ExecutionPayloadStatus.ELERROR
+        | ExecutionPayloadStatus.UNAVAILABLE;
       latestValidHash: null;
       validationError: string;
     };
 
 export type ForkChoiceUpdateStatus =
-  | ExecutePayloadStatus.VALID
-  | ExecutePayloadStatus.INVALID
-  | ExecutePayloadStatus.SYNCING;
+  | ExecutionPayloadStatus.VALID
+  | ExecutionPayloadStatus.INVALID
+  | ExecutionPayloadStatus.SYNCING;
 
 export type PayloadAttributes = {
   timestamp: number;

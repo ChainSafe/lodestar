@@ -2,7 +2,6 @@ import path from "node:path";
 import fs from "node:fs";
 import {fileURLToPath} from "node:url";
 import {fromHex, toHex} from "@lodestar/utils";
-import {ssz} from "@lodestar/types";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -20,14 +19,6 @@ export let ckzg: {
   computeBlobKzgProof(blob: Uint8Array, commitment: Uint8Array): Uint8Array;
   verifyBlobKzgProof(blob: Uint8Array, commitment: Uint8Array, proof: Uint8Array): boolean;
   verifyBlobKzgProofBatch(blobs: Uint8Array[], expectedKzgCommitments: Uint8Array[], kzgProofs: Uint8Array[]): boolean;
-
-  // TODO DENEB: Add these dummy methods to be removed on full transition to blobsidecars
-  computeAggregateKzgProof(blobs: Uint8Array[]): Uint8Array;
-  verifyAggregateKzgProof(
-    blobs: Uint8Array[],
-    expectedKzgCommitments: Uint8Array[],
-    kzgAggregatedProof: Uint8Array
-  ): boolean;
 } = {
   freeTrustedSetup: ckzgNotLoaded,
   loadTrustedSetup: ckzgNotLoaded,
@@ -35,10 +26,6 @@ export let ckzg: {
   computeBlobKzgProof: ckzgNotLoaded,
   verifyBlobKzgProof: ckzgNotLoaded,
   verifyBlobKzgProofBatch: ckzgNotLoaded,
-
-  // TODO DENEB: Add these dummy methods to be removed on full transition to blobsidecars
-  computeAggregateKzgProof: ckzgNotLoaded,
-  verifyAggregateKzgProof: ckzgNotLoaded,
 };
 
 // Global variable __dirname no longer available in ES6 modules.
@@ -60,18 +47,6 @@ export async function initCKZG(): Promise<void> {
   // @ts-ignore
   ckzg = (await import("c-kzg")).default as typeof ckzg;
   /* eslint-enable import/no-extraneous-dependencies, @typescript-eslint/ban-ts-comment */
-
-  // TODO DENEB: Add this dummy methods to be removed on full transition to blobsidecars
-  ckzg.computeAggregateKzgProof = (_blobs: Uint8Array[]) => {
-    return ssz.deneb.KZGProof.defaultValue();
-  };
-  ckzg.verifyAggregateKzgProof = (
-    _blobs: Uint8Array[],
-    _expectedKzgCommitments: Uint8Array[],
-    _kzgAggregatedProof: Uint8Array
-  ) => {
-    return true;
-  };
 }
 
 export enum TrustedFileMode {

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {TopicValidatorResult} from "@libp2p/interface-pubsub";
+import {TopicValidatorResult} from "@libp2p/interface/pubsub";
 import {BitArray} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
 import {routes} from "@lodestar/api";
@@ -142,6 +142,7 @@ describe("data serialization through worker boundary", function () {
     close: [],
     scrapeMetrics: [],
     writeProfile: [0, ""],
+    writeDiscv5Profile: [0, ""],
   };
 
   const lodestarPeer: routes.lodestar.LodestarNodePeer = {
@@ -204,6 +205,7 @@ describe("data serialization through worker boundary", function () {
     close: null,
     scrapeMetrics: "test-metrics",
     writeProfile: "",
+    writeDiscv5Profile: "",
   };
 
   type TestCase = {id: string; data: unknown; shouldFail?: boolean};

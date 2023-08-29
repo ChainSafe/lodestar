@@ -18,6 +18,7 @@ import {
   isRequestProvider,
   isSendAsyncProvider,
   isSendProvider,
+  isWeb3jsProvider,
 } from "./utils/assertion.js";
 import {processAndVerifyRequest} from "./utils/process.js";
 import {isBatchRequest} from "./utils/json_rpc.js";
@@ -184,19 +185,38 @@ function handleEthersProvider(
 
   return {provider: Object.assign(provider, {send: newSend}), rpc};
 }
-
+/**
+ *
+ *
+ * @export
+ * @template T
+ * @param {T} provider
+ * @param {Logger} logger
+ * @return {*}  {Web3ProviderTypeHandler<T>}
+ */
 export function getProviderTypeHandler<T extends Web3Provider>(
   provider: T,
   logger: Logger
 ): Web3ProviderTypeHandler<T> {
-  if (isSendProvider(provider)) {
-    logger.debug("Provider is recognized as legacy provider with 'send' method.");
-    return handleSendProvider as unknown as Web3ProviderTypeHandler<T>;
+  if (isWeb3jsProvider(provider)) {
+    logger.debug("Provider is recognized as 'web3.js' provider.");
+    // EIP-1193 provider is fully compatible with web3.js#4x provider interface
+    return handleEIP1193Provider as unknown as Web3ProviderTypeHandler<T>;
   }
 
   if (isEthersProvider(provider)) {
     logger.debug("Provider is recognized as 'ethers' provider.");
     return handleEthersProvider as unknown as Web3ProviderTypeHandler<T>;
+  }
+
+  if (isEIP1193Provider(provider)) {
+    logger.debug("Provider is recognized as 'EIP1193' provider.");
+    return handleEIP1193Provider as unknown as Web3ProviderTypeHandler<T>;
+  }
+
+  if (isSendProvider(provider)) {
+    logger.debug("Provider is recognized as legacy provider with 'send' method.");
+    return handleSendProvider as unknown as Web3ProviderTypeHandler<T>;
   }
 
   if (isRequestProvider(provider)) {
@@ -207,11 +227,6 @@ export function getProviderTypeHandler<T extends Web3Provider>(
   if (isSendAsyncProvider(provider)) {
     logger.debug("Provider is recognized as legacy provider with 'sendAsync' method.");
     return handleSendAsyncProvider as unknown as Web3ProviderTypeHandler<T>;
-  }
-
-  if (isEIP1193Provider(provider)) {
-    logger.debug("Provider is recognized as 'EIP1193' provider.");
-    return handleEIP1193Provider as unknown as Web3ProviderTypeHandler<T>;
   }
 
   throw new Error("Unsupported provider type");

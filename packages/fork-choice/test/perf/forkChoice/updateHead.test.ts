@@ -13,8 +13,8 @@ describe("forkchoice updateHead", () => {
     10 * 32,
     // 4 hours of blocks
     (4 * 60 * 60) / 12,
-    // // 1 day of blocks
-    // (24 * 60 * 60) / 12,
+    // 1 day of blocks
+    (24 * 60 * 60) / 12,
     // // 20 days of blocks
     // (20 * 24 * 60 * 60) / 12,
   ]) {

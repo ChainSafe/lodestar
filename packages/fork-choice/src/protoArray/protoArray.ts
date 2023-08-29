@@ -740,10 +740,30 @@ export class ProtoArray {
       correctJustified = node.unrealizedJustifiedEpoch >= previousEpoch && votingSourceEpoch + 2 >= currentEpoch;
     }
 
-    const finalizedSlot = computeStartSlotAtEpoch(this.finalizedEpoch);
-    const correctFinalized =
-      this.finalizedRoot === this.getAncestorOrNull(node.blockRoot, finalizedSlot) || this.finalizedEpoch === 0;
+    const correctFinalized = this.finalizedEpoch === 0 || this.isFinalizedRootOrDescendant(node);
     return correctJustified && correctFinalized;
+  }
+
+  /**
+   * Return `true` if `node` is equal to or a descendant of the finalized node.
+   * This function helps improve performance of nodeIsViableForHead a lot by avoiding
+   * the loop inside `getAncestors`.
+   */
+  isFinalizedRootOrDescendant(node: ProtoNode): boolean {
+    // The finalized and justified checkpoints represent a list of known
+    // ancestors of `node` that are likely to coincide with the store's
+    // finalized checkpoint.
+    if (
+      (node.finalizedEpoch === this.finalizedEpoch && node.finalizedRoot === this.finalizedRoot) ||
+      (node.justifiedEpoch === this.finalizedEpoch && node.justifiedRoot === this.finalizedRoot) ||
+      (node.unrealizedFinalizedEpoch === this.finalizedEpoch && node.unrealizedFinalizedRoot === this.finalizedRoot) ||
+      (node.unrealizedJustifiedEpoch === this.finalizedEpoch && node.unrealizedJustifiedRoot === this.finalizedRoot)
+    ) {
+      return true;
+    }
+
+    const finalizedSlot = computeStartSlotAtEpoch(this.finalizedEpoch);
+    return this.finalizedEpoch === 0 || this.finalizedRoot === this.getAncestorOrNull(node.blockRoot, finalizedSlot);
   }
 
   /**
