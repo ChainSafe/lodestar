@@ -28,13 +28,12 @@ import {
   Wei,
   bellatrix,
   isBlindedBeaconBlock,
-  ssz,
   capella,
 } from "@lodestar/types";
 import {CheckpointWithHex, ExecutionStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {Logger, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toHex} from "@lodestar/utils";
-import {ForkSeq, SLOTS_PER_EPOCH, MAX_BLOBS_PER_BLOCK, ForkName} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
@@ -45,7 +44,11 @@ import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {BufferPool} from "../util/bufferPool.js";
-import {reassembleBlindedBlockToFullBytes} from "../util/fullOrBlindedBlock.js";
+import {
+  blindedOrFullToFull,
+  reassembleBlindedBlockBytesToFullBytes,
+  TransactionsAndWithdrawals,
+} from "../util/fullOrBlindedBlock.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {ChainEventEmitter, ChainEvent} from "./emitter.js";
 import {
@@ -582,57 +585,15 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async blindedBlockToFull(block: allForks.FullOrBlindedSignedBeaconBlock): Promise<allForks.SignedBeaconBlock> {
-    // Figure out fork
-    // Figure out merge or not
-    // Figure out
-    switch (this.config.getForkName(block.message.slot)) {
-      // Before bellatrix blocks have no execution payload
-      case ForkName.phase0:
-      case ForkName.altair:
-        return block;
-
-      case ForkName.bellatrix: {
-        // On bellatrix fork, handle pre-merge and post-merge
-        if ((block.message as bellatrix.BeaconBlock).body.executionPayload.timestamp === 0) {
-          // pre-merge
-          return block;
-        }
-        if (isBlindedBeaconBlock(block.message)) {
-          // Use `eth_getBlockByNumber`, bellatrix should always be finalized and the payload does not include hash
-          return this.injectBellatrixPayload(block);
-        }
-        return block;
-      }
-
-      case ForkName.capella:
-      // Deneb adds new fixed fields but not blinded lists
-      // eslint-disable-next-line no-fallthrough
-      case ForkName.deneb: {
-        if (isBlindedBeaconBlock(block.message)) {
-          // Use `eth_getBlockByHash`, capella payload includes hash
-          return this.injectCapellaPayload(block);
-        }
-        return block;
-      }
-    }
+    const info = this.config.getForkInfo(block.message.slot);
+    return blindedOrFullToFull(this.config, info.seq, block, await this.getTransactionsAndWithdrawals(seq, slot));
   }
 
-  async blindedBlockToFullBytes(forkSeq: ForkSeq, block: Uint8Array): Promise<Uint8Array> {
+  blindedBlockToFullBytes(forkSeq: ForkSeq, block: Uint8Array): AsyncGenerator<Uint8Array> {
     // TODO: Same code as `blindedBlockToFull`, but without de-serializing block.. looks really annoying..
     // We should review if the optimization to stream only bytes on ReqResp is worth the complexity, an alternative
     // is to implement more restrictive rate-limiting overall such that the load of serdes is acceptable.
-
-    let transactions: Uint8Array | undefined;
-    if (forkSeq >= ForkSeq.bellatrix) {
-      transactions = ssz.bellatrix.Transactions.serialize(await this.getTransactions());
-    }
-
-    let withdrawals: Uint8Array | undefined;
-    if (forkSeq >= ForkSeq.capella) {
-      withdrawals = ssz.capella.Withdrawals.serialize(await this.getWithdrawals());
-    }
-
-    return reassembleBlindedBlockToFullBytes(forkSeq, block, transactions, withdrawals);
+    return reassembleBlindedBlockBytesToFullBytes(forkSeq, block, this.getTransactionsAndWithdrawals(seq, slot));
   }
 
   async produceBlockWrapper<T extends BlockType>(
@@ -864,28 +825,22 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  private async getTransactions(): Promise<bellatrix.Transactions> {
-    // TODO: (matthewkeil) Temp to get build working
-    return ssz.bellatrix.Transactions.defaultValue();
-  }
+  private async getTransactionsAndWithdrawals(): Promise<TransactionsAndWithdrawals> {
+    let transactions: Uint8Array[] | undefined;
+    let withdrawals: capella.Withdrawals | undefined;
 
-  private async injectBellatrixPayload(
-    block: allForks.FullOrBlindedSignedBeaconBlock
-  ): Promise<allForks.SignedBeaconBlock> {
-    // TODO: (matthewkeil) Temp to get build working
-    return block as allForks.SignedBeaconBlock;
-  }
+    if (seq >= ForkSeq.bellatrix) {
+      transactions = await this.getTransactions();
+    }
 
-  private async getWithdrawals(): Promise<capella.Withdrawals> {
+    if (seq >= ForkSeq.capella) {
+      withdrawals = await this.getWithdrawals();
+    }
     // TODO: (matthewkeil) Temp to get build working
-    return ssz.capella.Withdrawals.defaultValue();
-  }
-
-  private async injectCapellaPayload(
-    block: allForks.FullOrBlindedSignedBeaconBlock
-  ): Promise<allForks.SignedBeaconBlock> {
-    // TODO: (matthewkeil) Temp to get build working
-    return block as allForks.SignedBeaconBlock;
+    return {
+      transactions,
+      withdrawals,
+    };
   }
 
   /**
