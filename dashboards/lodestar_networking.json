@@ -4895,7 +4895,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "lodestar_gossip_attestation_verified_in_batch_histogram_bucket",
+          "expr": "rate(lodestar_gossip_attestation_verified_in_batch_histogram_bucket[$rate_interval])",
           "format": "heatmap",
           "instant": false,
           "legendFormat": "{{le}}",
