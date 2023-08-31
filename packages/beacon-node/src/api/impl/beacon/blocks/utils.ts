@@ -1,23 +1,38 @@
 import {allForks} from "@lodestar/types";
 import {routes} from "@lodestar/api";
-import {blockToHeader} from "@lodestar/state-transition";
 import {ChainForkConfig} from "@lodestar/config";
 import {GENESIS_SLOT} from "../../../../constants/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
 import {IBeaconChain} from "../../../../chain/interface.js";
 import {rootHexRegex} from "../../../../eth1/provider/utils.js";
+import {isBlinded} from "../../../../util/fullOrBlindedBlock.js";
 
 export function toBeaconHeaderResponse(
   config: ChainForkConfig,
-  block: allForks.SignedBeaconBlock,
+  block: allForks.FullOrBlindedSignedBeaconBlock,
   canonical = false
 ): routes.beacon.BlockHeaderResponse {
+  const types = isBlinded(block)
+    ? config.getBlindedForkTypes(block.message.slot)
+    : config.getForkTypes(block.message.slot);
   return {
-    root: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
+    // there is no way to get this error to go away in a typesafe way without
+    // pulling the type twice
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    root: types.BeaconBlock.hashTreeRoot(block.message),
     canonical,
     header: {
-      message: blockToHeader(config, block.message),
       signature: block.signature,
+      message: {
+        stateRoot: block.message.stateRoot,
+        proposerIndex: block.message.proposerIndex,
+        slot: block.message.slot,
+        parentRoot: block.message.parentRoot,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        bodyRoot: types.BeaconBlockBody.hashTreeRoot(block.message.body),
+      },
     },
   };
 }

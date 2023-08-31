@@ -184,7 +184,7 @@ function buildVariableOffset(value: number): Uint8Array {
 }
 
 // same as isBlindedSignedBeaconBlock but without type narrowing
-function isBlinded(block: allForks.FullOrBlindedSignedBeaconBlock): boolean {
+export function isBlinded(block: allForks.FullOrBlindedSignedBeaconBlock): boolean {
   return (block as bellatrix.SignedBlindedBeaconBlock).message.body.executionPayloadHeader !== undefined;
 }
 
