@@ -65,7 +65,7 @@ export type Api = {
   getBlock(
     blockId: BlockId,
     format?: BlockFormat
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlock}}>>;
+  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array | {data: allForks.SignedBeaconBlock}}>>;
 
   /**
    * Get block
@@ -79,11 +79,13 @@ export type Api = {
   ): Promise<
     ApiClientResponse<
       {
-        [HttpStatusCode.OK]: {
-          data: allForks.SignedBeaconBlock;
-          executionOptimistic: ExecutionOptimistic;
-          version: ForkName;
-        };
+        [HttpStatusCode.OK]:
+          | Uint8Array
+          | {
+              data: allForks.SignedBeaconBlock;
+              executionOptimistic: ExecutionOptimistic;
+              version: ForkName;
+            };
       },
       HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
     >
