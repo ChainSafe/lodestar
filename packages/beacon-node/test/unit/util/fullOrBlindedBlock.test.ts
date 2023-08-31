@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {ForkInfo, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {allForks, capella} from "@lodestar/types";
+import {isForkExecution} from "@lodestar/params";
 import {
   blindedOrFullSignedBlockToBlinded,
   blindedOrFullSignedBlockToBlindedBytes,
@@ -22,7 +23,7 @@ const fullOrBlindedBlocks = [
 describe("isSerializedBlinded", () => {
   for (const [fullOrBlinded, {seq, name}, block] of fullOrBlindedBlocks) {
     it(`should return ${fullOrBlinded === "blinded"} for ${fullOrBlinded} ${name} blocks`, () => {
-      expect(isSerializedBlinded(seq, block)).to.equal(fullOrBlinded === "blinded");
+      expect(isSerializedBlinded(seq, block)).to.equal(isForkExecution(name) && fullOrBlinded === "blinded");
     });
   }
 });
@@ -41,29 +42,30 @@ describe("deserializeFullOrBlindedSignedBeaconBlock", () => {
     it(`should deserialize ${fullOrBlinded} ${name} block`, () => {
       const deserialized = deserializeFullOrBlindedSignedBeaconBlock(config, serialized);
       const type =
-        fullOrBlinded === "full"
-          ? config.getForkTypes(block.message.slot).SignedBeaconBlock
-          : config.getBlindedForkTypes(block.message.slot).SignedBeaconBlock;
+        isForkExecution(name) && fullOrBlinded === "blinded"
+          ? config.getBlindedForkTypes(block.message.slot).SignedBeaconBlock
+          : config.getForkTypes(block.message.slot).SignedBeaconBlock;
       expect(type.equals(deserialized, block)).to.be.true;
     });
   }
 });
 
 describe("blindedOrFullSignedBlockToBlinded", () => {
-  for (const [{name}, , block, , blinded] of mockBlocks) {
+  for (const [{name}, , block, , expected] of mockBlocks) {
     it(`should convert full ${name} to blinded block`, () => {
-      expect(
-        config
-          .getForkTypes(block.message.slot)
-          .SignedBeaconBlock.equals(blindedOrFullSignedBlockToBlinded(config, block), blinded)
-      ).to.be.true;
+      const blinded = blindedOrFullSignedBlockToBlinded(config, block);
+      const isEqual = isForkExecution(name)
+        ? config.getBlindedForkTypes(block.message.slot).SignedBeaconBlock.equals(blinded, expected)
+        : config.
+        getForkTypes(block.message.slot).SignedBeaconBlock.equals(blinded, expected);
+      expect(isEqual).to.be.true;
     });
     it(`should convert blinded ${name} to blinded block`, () => {
-      expect(
-        config
-          .getForkTypes(block.message.slot)
-          .SignedBeaconBlock.equals(blindedOrFullSignedBlockToBlinded(config, blinded), blinded)
-      ).to.be.true;
+      const blinded = blindedOrFullSignedBlockToBlinded(config, expected);
+      const isEqual = isForkExecution(name)
+        ? config.getBlindedForkTypes(block.message.slot).SignedBeaconBlock.equals(blinded, expected)
+        : config.getForkTypes(block.message.slot).SignedBeaconBlock.equals(blinded, expected);
+      expect(isEqual).to.be.true;
     });
   }
 });
@@ -86,13 +88,16 @@ describe("reassembleBlindedBlockBytesToFullBytes", () => {
   for (const [{name, seq}, serializedFull, full, serializedBlinded] of mockBlocks) {
     const transactions = (full as capella.SignedBeaconBlock).message.body.executionPayload?.transactions;
     const withdrawals = (full as capella.SignedBeaconBlock).message.body.executionPayload?.withdrawals;
-    it(`should reassemble serialized blinded ${name} to serialized full block`, () => {
-      expect(
-        byteArrayEquals(
-          reassembleBlindedBlockBytesToFullBytes(seq, serializedBlinded, transactions, withdrawals),
-          serializedFull
-        )
-      ).to.be.true;
+    let result: Buffer = Buffer.from([]);
+    it(`should reassemble serialized blinded ${name} to serialized full block`, async () => {
+      for await (const chunk of reassembleBlindedBlockBytesToFullBytes(
+        seq,
+        serializedBlinded,
+        Promise.resolve({transactions, withdrawals})
+      )) {
+        result = Buffer.concat([result, chunk]);
+      }
+      expect(byteArrayEquals(result, serializedFull)).to.be.true;
     });
   }
 });

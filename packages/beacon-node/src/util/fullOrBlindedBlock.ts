@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ssz, allForks, bellatrix, capella, deneb} from "@lodestar/types";
-import {BYTES_PER_LOGS_BLOOM, ForkSeq, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {BYTES_PER_LOGS_BLOOM, ForkSeq, SYNC_COMMITTEE_SIZE, isForkExecution} from "@lodestar/params";
 import {executionPayloadToPayloadHeader} from "@lodestar/state-transition";
 import {ROOT_SIZE, VARIABLE_FIELD_OFFSET, getSlotFromSignedBeaconBlockSerialized} from "./sszBytes.js";
 
@@ -13,15 +13,18 @@ export interface TransactionsAndWithdrawals {
  *  * class SignedBeaconBlock(Container):
  *   message: BeaconBlock [offset - 4 bytes]
  *   signature: BLSSignature [fixed - 96 bytes]
- *
+ */
+const SIGNED_BEACON_BLOCK_COMPENSATION_LENGTH = 4 + 96;
+/**
  * class BeaconBlock(Container) or class BlindedBeaconBlock(Container):
  *   slot: Slot                      [fixed - 8 bytes]
  *   proposer_index: ValidatorIndex  [fixed - 8 bytes]
  *   parent_root: Root               [fixed - 32 bytes]
  *   state_root: Root                [fixed - 32 bytes]
  *   body: MaybeBlindBeaconBlockBody [offset - 4 bytes]
- *
- *
+ */
+const BEACON_BLOCK_COMPENSATION_LENGTH = 8 + 8 + 32 + 32 + 4;
+/**
  * class BeaconBlockBody(Container) or class BlindedBeaconBlockBody(Container):
  *
  * Phase 0:
@@ -50,12 +53,29 @@ export interface TransactionsAndWithdrawals {
  * Deneb:
  *   blobKzgCommitments             [offset -  4 bytes]
  */
-const LOCATION_OF_EXECUTION_PAYLOAD_OFFSET =
-  4 + 96 + 8 + 8 + 32 + 32 + 4 + 96 + 32 + 8 + 32 + 32 + 4 + 4 + 4 + 4 + 4 + SYNC_COMMITTEE_SIZE / 8 + 96;
+function getOffsetWithinBeaconBlockBody(blockBytes: DataView, offset: number): number {
+  const readAt = offset + SIGNED_BEACON_BLOCK_COMPENSATION_LENGTH + BEACON_BLOCK_COMPENSATION_LENGTH;
+  return (
+    blockBytes.getUint32(readAt, true) + SIGNED_BEACON_BLOCK_COMPENSATION_LENGTH + BEACON_BLOCK_COMPENSATION_LENGTH
+  );
+}
+
+const LOCATION_OF_EXECUTION_PAYLOAD_OFFSET = 96 + 32 + 8 + 32 + 32 + 4 + 4 + 4 + 4 + 4 + SYNC_COMMITTEE_SIZE / 8 + 96;
+function getExecutionPayloadOffset(blockBytes: DataView): number {
+  return getOffsetWithinBeaconBlockBody(blockBytes, LOCATION_OF_EXECUTION_PAYLOAD_OFFSET);
+}
 
 const LOCATION_OF_BLS_TO_EXECUTION_CHANGE_OFFSET = LOCATION_OF_EXECUTION_PAYLOAD_OFFSET + VARIABLE_FIELD_OFFSET;
+function getBlsToExecutionChangeOffset(blockBytes: DataView): number {
+  return getOffsetWithinBeaconBlockBody(blockBytes, LOCATION_OF_BLS_TO_EXECUTION_CHANGE_OFFSET);
+}
 
 const LOCATION_OF_BLOB_KZG_COMMITMENTS_OFFSET = LOCATION_OF_BLS_TO_EXECUTION_CHANGE_OFFSET + VARIABLE_FIELD_OFFSET;
+function getBlobKzgCommitmentsOffset(blockBytes: DataView): number {
+  return getOffsetWithinBeaconBlockBody(blockBytes, LOCATION_OF_BLOB_KZG_COMMITMENTS_OFFSET);
+}
+
+const BEACON_BLOCK_BODY_COMPENSATION_LENGTH = LOCATION_OF_BLOB_KZG_COMMITMENTS_OFFSET + VARIABLE_FIELD_OFFSET;
 /**
  * class ExecutionPayload(Container) or class ExecutionPayloadHeader(Container)
  *     parentHash:                  [fixed -  32 bytes]
@@ -85,18 +105,24 @@ const LOCATION_OF_BLOB_KZG_COMMITMENTS_OFFSET = LOCATION_OF_BLS_TO_EXECUTION_CHA
  *     dataGasUsed:                 [fixed -   8 bytes]
  *     excessDataGas:               [fixed -   8 bytes]
  */
+function getOffsetWithinExecutionPayload(blockBytes: DataView, offset: number): number {
+  const executionPayloadOffset = getExecutionPayloadOffset(blockBytes);
+  const readAt = offset + executionPayloadOffset;
+  return blockBytes.getUint32(readAt, true) + executionPayloadOffset;
+}
 
 const LOCATION_OF_EXTRA_DATA_OFFSET_WITHIN_EXECUTION_PAYLOAD =
   32 + 20 + 32 + 32 + BYTES_PER_LOGS_BLOOM + 32 + 8 + 8 + 8 + 8;
+function getExtraDataOffset(blockBytes: DataView): number {
+  return getOffsetWithinExecutionPayload(blockBytes, LOCATION_OF_EXTRA_DATA_OFFSET_WITHIN_EXECUTION_PAYLOAD);
+}
 
 const LOCATION_OF_TRANSACTIONS_OFFSET_WITHIN_EXECUTION_PAYLOAD =
   LOCATION_OF_EXTRA_DATA_OFFSET_WITHIN_EXECUTION_PAYLOAD + VARIABLE_FIELD_OFFSET + 32 + 32;
 
-const BLINDED_BLOCK_EXTRA_DATA_OFFSET_PRE_DENEB = 32 + 32 + 32 + 32;
-const BLINDED_BLOCK_EXTRA_DATA_OFFSET_POST_DENEB = BLINDED_BLOCK_EXTRA_DATA_OFFSET_PRE_DENEB + 8 + 8;
-
-const FULL_BLOCK_EXTRA_DATA_OFFSET_PRE_DENEB = 32 + 32 + VARIABLE_FIELD_OFFSET + VARIABLE_FIELD_OFFSET;
-const FULL_BLOCK_EXTRA_DATA_OFFSET_POST_DENEB = FULL_BLOCK_EXTRA_DATA_OFFSET_PRE_DENEB + 8 + 8;
+function getTransactionsOffset(blockBytes: DataView): number {
+  return getOffsetWithinExecutionPayload(blockBytes, LOCATION_OF_TRANSACTIONS_OFFSET_WITHIN_EXECUTION_PAYLOAD);
+}
 
 /**
  * Bellatrix:
@@ -152,29 +178,10 @@ export function isSerializedBlinded(forkSeq: ForkSeq, blockBytes: Uint8Array): b
   }
 
   const dv = new DataView(blockBytes.buffer, blockBytes.byteOffset, blockBytes.byteLength);
-  const executionPayloadOffset = dv.getUint32(LOCATION_OF_EXECUTION_PAYLOAD_OFFSET, true);
-  const extraDataOffset = dv.getUint32(
-    executionPayloadOffset + LOCATION_OF_EXTRA_DATA_OFFSET_WITHIN_EXECUTION_PAYLOAD,
-    true
-  );
-
-  if (forkSeq < ForkSeq.deneb) {
-    if (extraDataOffset === BLINDED_BLOCK_EXTRA_DATA_OFFSET_PRE_DENEB) {
-      return true;
-    }
-    if (extraDataOffset === FULL_BLOCK_EXTRA_DATA_OFFSET_PRE_DENEB) {
-      return false;
-    }
-  } else {
-    if (extraDataOffset === BLINDED_BLOCK_EXTRA_DATA_OFFSET_POST_DENEB) {
-      return true;
-    }
-    if (extraDataOffset === FULL_BLOCK_EXTRA_DATA_OFFSET_POST_DENEB) {
-      return false;
-    }
-  }
-
-  throw new Error("isSerializedBlindedBlock: invalid blockBytes");
+  const executionPayloadOffset = getExecutionPayloadOffset(dv);
+  const readAt = LOCATION_OF_EXTRA_DATA_OFFSET_WITHIN_EXECUTION_PAYLOAD + executionPayloadOffset;
+  const firstByte = dv.getUint32(readAt, true) + executionPayloadOffset;
+  return firstByte - readAt > 93;
 }
 
 function buildVariableOffset(value: number): Uint8Array {
@@ -205,9 +212,8 @@ export function deserializeFullOrBlindedSignedBeaconBlock(
   if (slot === null) {
     throw Error("getSignedBlockTypeFromBytes: invalid bytes");
   }
-  const forkSeq = config.getForkSeq(slot);
 
-  return isSerializedBlinded(forkSeq, bytes)
+  return isSerializedBlinded(config.getForkSeq(slot), bytes)
     ? config.getBlindedForkTypes(slot).SignedBeaconBlock.deserialize(bytes)
     : config.getForkTypes(slot).SignedBeaconBlock.deserialize(bytes);
 }
@@ -225,19 +231,27 @@ export function blindedOrFullSignedBlockToBlinded(
     return block;
   }
 
-  return config.getBlindedForkTypes(block.message.slot).SignedBeaconBlock.clone({
+  return {
     signature: block.signature,
     message: {
       ...block.message,
       body: {
-        ...(block.message.body as bellatrix.BeaconBlockBody),
+        randaoReveal: block.message.body.randaoReveal,
+        eth1Data: block.message.body.eth1Data,
+        graffiti: block.message.body.graffiti,
+        proposerSlashings: block.message.body.proposerSlashings,
+        attesterSlashings: block.message.body.attesterSlashings,
+        attestations: block.message.body.attestations,
+        deposits: block.message.body.deposits,
+        voluntaryExits: block.message.body.voluntaryExits,
+        syncAggregate: (block.message.body as bellatrix.BeaconBlockBody).syncAggregate,
         executionPayloadHeader: executionPayloadToPayloadHeader(
           forkSeq,
           (block.message.body as bellatrix.BeaconBlockBody).executionPayload
         ),
       },
     },
-  });
+  };
 }
 
 function executionPayloadHeaderToPayload(
