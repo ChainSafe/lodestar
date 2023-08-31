@@ -73,6 +73,7 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat): BlsWorkR
               // cpu profile on main thread has 250s idle so this only works until we reach 3M validators
               // However, for normal node with only 2 to 7 subnet subscriptions per epoch this works until 27M validators
               // and not a problem in the near future
+              // this is monitored on v1.11.0 https://github.com/ChainSafe/lodestar/pull/5912#issuecomment-1700320307
               job.sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, true))
             ).toBytes(format),
             message: job.message,
