@@ -243,15 +243,25 @@ export function getBeaconBlockApi({
       };
     },
 
-    async getBlock(blockId) {
+    async getBlock(blockId, format?: routes.beacon.block.BlockFormat) {
       const {block} = await resolveBlockId(chain, blockId);
+      if (format === "ssz") {
+        // Casting to any otherwise Typescript doesn't like the multi-type return
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
+        return config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block) as any;
+      }
       return {
         data: block,
       };
     },
 
-    async getBlockV2(blockId) {
+    async getBlockV2(blockId, format?: routes.beacon.block.BlockFormat) {
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
+      if (format === "ssz") {
+        // Casting to any otherwise Typescript doesn't like the multi-type return
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
+        return config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block) as any;
+      }
       return {
         executionOptimistic,
         data: block,
