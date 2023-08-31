@@ -67,7 +67,12 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat): BlsWorkR
           {
             publicKey: bls.PublicKey.aggregate(job.sets.map((set) => set.publicKey)).toBytes(format),
             signature: bls.Signature.aggregate(
-              // validate signature = true
+              // validate signature = true, this is slow code on main thread so should only run with network thread mode (useWorker=true)
+              // For a node subscribing to all subnets, with 1 signature per validator per epoch it takes around 80s
+              // to deserialize 750_000 signatures per epoch
+              // cpu profile on main thread has 250s idle so this only works until we reach 3M validators
+              // However, for normal node with only 2 to 7 subnet subscriptions per epoch this works until 27M validators
+              // and not a problem in the near future
               job.sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, true))
             ).toBytes(format),
             message: job.message,
