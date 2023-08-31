@@ -163,7 +163,7 @@ export async function fetchBlock(
       continue;
     }
 
-    return res.response.data;
+    return (res.response as {data: allForks.SignedBeaconBlock}).data;
   }
 
   return;

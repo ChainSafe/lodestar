@@ -2,6 +2,7 @@
 import path from "node:path";
 import {sleep, toHex, toHexString} from "@lodestar/utils";
 import {ApiError} from "@lodestar/api";
+import {allForks} from "@lodestar/types";
 import {CLIQUE_SEALING_PERIOD, SIM_TESTS_SECONDS_PER_SLOT} from "../utils/simulation/constants.js";
 import {AssertionMatch, BeaconClient, ExecutionClient} from "../utils/simulation/interfaces.js";
 import {SimulationEnvironment} from "../utils/simulation/SimulationEnvironment.js";
@@ -161,13 +162,14 @@ await unknownBlockSync.execution.job.start();
 await unknownBlockSync.beacon.job.start();
 const headForUnknownBlockSync = await env.nodes[0].beacon.api.beacon.getBlockV2("head");
 ApiError.assert(headForUnknownBlockSync);
+const headResponse = headForUnknownBlockSync.response as {data: allForks.SignedBeaconBlock};
 await connectNewNode(unknownBlockSync, env.nodes);
 
 // Wait for EL node to start and sync
 await sleep(5000);
 
 try {
-  ApiError.assert(await unknownBlockSync.beacon.api.beacon.publishBlock(headForUnknownBlockSync.response.data));
+  ApiError.assert(await unknownBlockSync.beacon.api.beacon.publishBlock(headResponse.data));
 
   env.tracker.record({
     message: "Publishing unknown block should fail",
@@ -185,11 +187,9 @@ try {
 }
 await waitForHead(env, unknownBlockSync, {
   head: toHexString(
-    env.forkConfig
-      .getForkTypes(headForUnknownBlockSync.response.data.message.slot)
-      .BeaconBlock.hashTreeRoot(headForUnknownBlockSync.response.data.message)
+    env.forkConfig.getForkTypes(headResponse.data.message.slot).BeaconBlock.hashTreeRoot(headResponse.data.message)
   ),
-  slot: headForUnknownBlockSync.response.data.message.slot,
+  slot: headResponse.data.message.slot,
 });
 
 await env.stop();
