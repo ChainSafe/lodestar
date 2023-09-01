@@ -432,10 +432,19 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       // If the job, metrics or any code below throws: the job will reject never going stale.
       // Only downside is the the job promise may be resolved twice, but that's not an issue
 
-      const jobStartNs = process.hrtime.bigint();
+      const [jobStartSec, jobStartNs] = process.hrtime();
       const workResult = await workerApi.verifyManySignatureSets(workReqs);
-      const jobEndNs = process.hrtime.bigint();
-      const {workerId, batchRetries, batchSigsSuccess, workerStartNs, workerEndNs, results} = workResult;
+      const [jobEndSec, jobEndNs] = process.hrtime();
+      const {
+        workerId,
+        batchRetries,
+        batchSigsSuccess,
+        workerStartSec,
+        workerStartNs,
+        workerEndSec,
+        workerEndNs,
+        results,
+      } = workResult;
 
       let successCount = 0;
       let errorCount = 0;
@@ -477,9 +486,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         }
       }
 
-      const workerJobTimeSec = Number(workerEndNs - workerStartNs) / 1e9;
-      const latencyToWorkerSec = Number(workerStartNs - jobStartNs) / 1e9;
-      const latencyFromWorkerSec = Number(jobEndNs - workerEndNs) / 1e9;
+      const workerJobTimeSec = workerEndSec - workerStartSec + (workerEndNs - workerStartNs) / 1e9;
+      const latencyToWorkerSec = workerStartSec - jobStartSec + (workerStartNs - jobStartNs) / 1e9;
+      const latencyFromWorkerSec = jobEndSec - workerEndSec + Number(jobEndNs - workerEndNs) / 1e9;
 
       this.metrics?.blsThreadPool.timePerSigSet.observe(workerJobTimeSec / startedSigSets);
       this.metrics?.blsThreadPool.jobsWorkerTime.inc({workerId}, workerJobTimeSec);

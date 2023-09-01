@@ -31,9 +31,11 @@ export type BlsWorkResult = {
   batchRetries: number;
   /** Total num of sigs that have been successfully verified with batching */
   batchSigsSuccess: number;
-  /** Time worker function starts - UNIX timestamp in nanoseconds */
-  workerStartNs: bigint;
-  /** Time worker function ends - UNIX timestamp in nanoseconds */
-  workerEndNs: bigint;
+  /** Time worker function starts - UNIX timestamp in seconds and nanoseconds */
+  workerStartNs: number;
+  workerStartSec: number;
+  /** Time worker function ends - UNIX timestamp in seconds and nanoseconds */
+  workerEndSec: number;
+  workerEndNs: number;
   results: WorkResult<boolean>[];
 };
