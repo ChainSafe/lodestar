@@ -90,9 +90,7 @@ export async function getNetworkCachedBlock(
             ? await client.beacon.getBlock(String(slot))
             : await client.beacon.getBlockV2(String(slot));
         ApiError.assert(res);
-        return config
-          .getForkTypes(slot)
-          .SignedBeaconBlock.serialize((res.response as {data: allForks.SignedBeaconBlock}).data);
+        return config.getForkTypes(slot).SignedBeaconBlock.serialize(res.response.data);
       },
     ]);
 

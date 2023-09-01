@@ -56,7 +56,7 @@ export class LightClientRestTransport extends (EventEmitter as {new (): RestEven
   async fetchBlock(blockRootAsString: string): Promise<{version: ForkName; data: allForks.SignedBeaconBlock}> {
     const res = await this.api.beacon.getBlockV2(blockRootAsString);
     ApiError.assert(res);
-    return res.response as {version: ForkName; data: allForks.SignedBeaconBlock};
+    return res.response;
   }
 
   onOptimisticUpdate(handler: (optimisticUpdate: allForks.LightClientOptimisticUpdate) => void): void {

@@ -1,6 +1,5 @@
 import {getClient, ApiError} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
-import {allForks} from "@lodestar/types";
 import {getInfuraBeaconUrl} from "../utils/infura.js";
 
 // Analyze how Ethereum Consensus blocks are in a target network to prepare accurate performance states and blocks
@@ -53,7 +52,7 @@ async function run(): Promise<void> {
       }
       ApiError.assert(result.value);
 
-      const block = (result.value.response as {data: allForks.SignedBeaconBlock}).data;
+      const block = result.value.response.data;
 
       blocks++;
       attestations += block.message.body.attestations.length;
