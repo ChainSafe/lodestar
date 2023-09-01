@@ -38,8 +38,11 @@ export class ApiError extends Error {
     this.operationId = operationId;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static assert(res: ApiClientResponse, message?: string): asserts res is ApiClientSuccessResponse<any, unknown> {
+  static assert(
+    res: ApiClientResponse,
+    message?: string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): asserts res is ApiClientSuccessResponse<any, unknown, unknown> {
     if (!res.ok) {
       throw new ApiError([message, res.error.message].join(" - "), res.error.code, res.error.operationId);
     }

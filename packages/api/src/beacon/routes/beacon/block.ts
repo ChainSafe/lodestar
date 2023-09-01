@@ -18,7 +18,7 @@ import {
   ContainerData,
 } from "../../../utils/index.js";
 import {HttpStatusCode} from "../../../utils/client/httpStatusCode.js";
-import {ApiClientResponse} from "../../../interfaces.js";
+import {ApiClientResponse, ResponseFormat} from "../../../interfaces.js";
 import {
   SignedBlockContents,
   SignedBlindedBlockContents,
@@ -31,7 +31,6 @@ import {
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export type BlockId = RootHex | Slot | "head" | "genesis" | "finalized";
-export type BlockFormat = "json" | "ssz";
 export const mimeTypeSSZ = "application/octet-stream";
 
 /**
@@ -62,10 +61,16 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlock(
+  getBlock<T extends ResponseFormat = "json">(
     blockId: BlockId,
-    format?: BlockFormat
-  ): Promise<ApiClientResponse<{[HttpStatusCode.OK]: Uint8Array | {data: allForks.SignedBeaconBlock}}>>;
+    format?: T
+  ): Promise<
+    ApiClientResponse<
+      {[HttpStatusCode.OK]: {data: allForks.SignedBeaconBlock}},
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND,
+      T
+    >
+  >;
 
   /**
    * Get block
@@ -73,21 +78,20 @@ export type Api = {
    * @param blockId Block identifier.
    * Can be one of: "head" (canonical head in node's view), "genesis", "finalized", \<slot\>, \<hex encoded blockRoot with 0x prefix\>.
    */
-  getBlockV2(
+  getBlockV2<T extends ResponseFormat = "json">(
     blockId: BlockId,
-    format?: BlockFormat
+    format?: T
   ): Promise<
     ApiClientResponse<
       {
-        [HttpStatusCode.OK]:
-          | Uint8Array
-          | {
-              data: allForks.SignedBeaconBlock;
-              executionOptimistic: ExecutionOptimistic;
-              version: ForkName;
-            };
+        [HttpStatusCode.OK]: {
+          data: allForks.SignedBeaconBlock;
+          executionOptimistic: ExecutionOptimistic;
+          version: ForkName;
+        };
       },
-      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND
+      HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND,
+      T
     >
   >;
 

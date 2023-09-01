@@ -1,5 +1,5 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {routes, ServerApi, isSignedBlockContents, isSignedBlindedBlockContents} from "@lodestar/api";
+import {routes, ServerApi, isSignedBlockContents, isSignedBlindedBlockContents, ResponseFormat} from "@lodestar/api";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {sleep, toHex} from "@lodestar/utils";
@@ -243,7 +243,7 @@ export function getBeaconBlockApi({
       };
     },
 
-    async getBlock(blockId, format?: routes.beacon.block.BlockFormat) {
+    async getBlock(blockId, format?: ResponseFormat) {
       const {block} = await resolveBlockId(chain, blockId);
       if (format === "ssz") {
         // Casting to any otherwise Typescript doesn't like the multi-type return
@@ -255,7 +255,7 @@ export function getBeaconBlockApi({
       };
     },
 
-    async getBlockV2(blockId, format?: routes.beacon.block.BlockFormat) {
+    async getBlockV2(blockId, format?: ResponseFormat) {
       const {block, executionOptimistic} = await resolveBlockId(chain, blockId);
       if (format === "ssz") {
         // Casting to any otherwise Typescript doesn't like the multi-type return
