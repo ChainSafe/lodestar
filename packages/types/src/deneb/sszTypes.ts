@@ -178,16 +178,6 @@ export const SignedBlindedBlobSidecars = new ListCompositeType(
   MAX_BLOB_COMMITMENTS_PER_BLOCK
 );
 
-// TODO: deneb cleanup once the builder-api gets rectified for deneb
-// as the type might be used in builder getHeader responses
-export const SignedBeaconBlockAndBlobSidecars = new ContainerType(
-  {
-    beaconBlock: SignedBeaconBlock,
-    blobSidecars: BlobSidecars,
-  },
-  {typeName: "SignedBeaconBlockAndBlobSidecars", jsonCase: "eth2"}
-);
-
 export const BlindedBeaconBlockBody = new ContainerType(
   {
     ...altairSsz.BeaconBlockBody.fields,
