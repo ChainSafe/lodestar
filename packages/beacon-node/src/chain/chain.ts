@@ -131,6 +131,7 @@ export class BeaconChain implements IBeaconChain {
   readonly checkpointBalancesCache: CheckpointBalancesCache;
   /** Map keyed by executionPayload.blockHash of the block for those blobs */
   readonly producedBlobSidecarsCache = new Map<BlockHash, deneb.BlobSidecars>();
+  readonly producedBlindedBlobSidecarsCache = new Map<BlockHash, deneb.BlindedBlobSidecars>();
 
   // Cache payload from the local execution so that produceBlindedBlock or produceBlockV3 and
   // send and get signed/published blinded versions which beacon can assemble into full before
@@ -522,7 +523,7 @@ export class BeaconChain implements IBeaconChain {
     // publishing the blinded block's full version
     if (blobs.type === BlobsResultType.produced) {
       // body is of full type here
-      const blockHash = toHex((block as bellatrix.BeaconBlock).body.executionPayload.blockHash);
+      const blockHash = blobs.blockHash;
       const blobSidecars = blobs.blobSidecars.map((blobSidecar) => ({
         ...blobSidecar,
         blockRoot,
@@ -533,6 +534,21 @@ export class BeaconChain implements IBeaconChain {
 
       this.producedBlobSidecarsCache.set(blockHash, blobSidecars);
       this.metrics?.blockProductionCaches.producedBlobSidecarsCache.set(this.producedBlobSidecarsCache.size);
+    } else if (blobs.type === BlobsResultType.blinded) {
+      // body is of blinded type here
+      const blockHash = blobs.blockHash;
+      const blindedBlobSidecars = blobs.blobSidecars.map((blindedBlobSidecar) => ({
+        ...blindedBlobSidecar,
+        blockRoot,
+        slot,
+        blockParentRoot: parentBlockRoot,
+        proposerIndex,
+      }));
+
+      this.producedBlindedBlobSidecarsCache.set(blockHash, blindedBlobSidecars);
+      this.metrics?.blockProductionCaches.producedBlindedBlobSidecarsCache.set(
+        this.producedBlindedBlobSidecarsCache.size
+      );
     }
 
     return {block, executionPayloadValue};
@@ -792,6 +808,14 @@ export class BeaconChain implements IBeaconChain {
         this.opts.maxCachedBlobSidecars ?? DEFAULT_MAX_CACHED_BLOB_SIDECARS
       );
       this.metrics?.blockProductionCaches.producedBlobSidecarsCache.set(this.producedBlobSidecarsCache.size);
+
+      pruneSetToMax(
+        this.producedBlindedBlobSidecarsCache,
+        this.opts.maxCachedBlobSidecars ?? DEFAULT_MAX_CACHED_BLOB_SIDECARS
+      );
+      this.metrics?.blockProductionCaches.producedBlindedBlobSidecarsCache.set(
+        this.producedBlindedBlobSidecarsCache.size
+      );
     }
 
     const metrics = this.metrics;

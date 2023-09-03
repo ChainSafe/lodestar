@@ -310,14 +310,17 @@ export function getValidatorApi({
 
       const version = config.getForkName(block.slot);
       if (isForkBlobs(version)) {
-        if (!isBlindedBlockContents(block)) {
-          throw Error(`Expected BlockContents response at fork=${version}`);
+        const blockHash = toHex((block as bellatrix.BlindedBeaconBlock).body.executionPayloadHeader.blockHash);
+        const blindedBlobSidecars = chain.producedBlindedBlobSidecarsCache.get(blockHash);
+        if (blindedBlobSidecars === undefined) {
+          throw Error("blobSidecars missing in cache");
         }
-        return {data: block, version, executionPayloadValue};
+        return {
+          data: {blindedBlock: block, blindedBlobSidecars} as allForks.BlindedBlockContents,
+          version,
+          executionPayloadValue,
+        };
       } else {
-        if (isBlindedBlockContents(block)) {
-          throw Error(`Invalid BlockContents response at fork=${version}`);
-        }
         return {data: block, version, executionPayloadValue};
       }
     } finally {

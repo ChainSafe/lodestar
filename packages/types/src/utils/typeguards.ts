@@ -16,6 +16,8 @@ import {
   SignedBlockContents,
   SignedBeaconBlock,
   SignedBlindedBeaconBlockOrContents,
+  ExecutionPayload,
+  ExecutionPayloadAndBlobsBundle,
 } from "../allForks/types.js";
 import {ts as deneb} from "../deneb/index.js";
 
@@ -66,4 +68,10 @@ export function isSignedBlindedBlockContents(
   data: SignedBlindedBeaconBlockOrContents
 ): data is SignedBlindedBlockContents {
   return (data as SignedBlindedBlockContents).signedBlindedBlobSidecars !== undefined;
+}
+
+export function isExecutionPayloadAndBlobsBundle(
+  data: ExecutionPayload | ExecutionPayloadAndBlobsBundle
+): data is ExecutionPayloadAndBlobsBundle {
+  return (data as ExecutionPayloadAndBlobsBundle).blobsBundle !== undefined;
 }

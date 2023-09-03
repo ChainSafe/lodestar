@@ -1,4 +1,4 @@
-import {allForks} from "@lodestar/types";
+import {allForks, deneb} from "@lodestar/types";
 import {BlobsBundle} from "../../execution/index.js";
 
 /**
@@ -10,6 +10,18 @@ export function validateBlobsAndKzgCommitments(payload: allForks.ExecutionPayloa
   if (blobsBundle.blobs.length !== blobsBundle.commitments.length) {
     throw Error(
       `Blobs bundle blobs len ${blobsBundle.blobs.length} != commitments len ${blobsBundle.commitments.length}`
+    );
+  }
+}
+
+export function validateBlindedBlobsAndKzgCommitments(
+  payload: allForks.ExecutionPayloadHeader,
+  blindedBlobsBundle: deneb.BlindedBlobsBundle
+): void {
+  // sanity-check that the KZG commitments match the blobs (as produced by the execution engine)
+  if (blindedBlobsBundle.blobRoots.length !== blindedBlobsBundle.commitments.length) {
+    throw Error(
+      `BlindedBlobs bundle blobs len ${blindedBlobsBundle.blobRoots.length} != commitments len ${blindedBlobsBundle.commitments.length}`
     );
   }
 }
