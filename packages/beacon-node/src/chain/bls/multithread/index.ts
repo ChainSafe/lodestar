@@ -435,16 +435,10 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       const [jobStartSec, jobStartNs] = process.hrtime();
       const workResult = await workerApi.verifyManySignatureSets(workReqs);
       const [jobEndSec, jobEndNs] = process.hrtime();
-      const {
-        workerId,
-        batchRetries,
-        batchSigsSuccess,
-        workerStartSec,
-        workerStartNs,
-        workerEndSec,
-        workerEndNs,
-        results,
-      } = workResult;
+      const {workerId, batchRetries, batchSigsSuccess, workerStartTime, workerEndTime, results} = workResult;
+
+      const [workerStartSec, workerStartNs] = workerStartTime;
+      const [workerEndSec, workerEndNs] = workerEndTime;
 
       let successCount = 0;
       let errorCount = 0;

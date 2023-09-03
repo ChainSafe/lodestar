@@ -101,10 +101,8 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
     workerId,
     batchRetries,
     batchSigsSuccess,
-    workerStartSec: startSec,
-    workerStartNs: startNs,
-    workerEndSec,
-    workerEndNs,
+    workerStartTime: [startSec, startNs],
+    workerEndTime: [workerEndSec, workerEndNs],
     results,
   };
 }
