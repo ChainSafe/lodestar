@@ -71,9 +71,7 @@ export function jobItemWorkReq(job: JobQueueItem, format: PointFormat, metrics: 
       // this is monitored on v1.11.0 https://github.com/ChainSafe/lodestar/pull/5912#issuecomment-1700320307
       const timer = metrics?.blsThreadPool.signatureDeserializationMainThreadDuration.startTimer();
       const signatures = job.sets.map((set) => bls.Signature.fromBytes(set.signature, CoordType.affine, true));
-      if (timer) {
-        timer();
-      }
+      timer?.();
 
       return {
         opts: job.opts,
