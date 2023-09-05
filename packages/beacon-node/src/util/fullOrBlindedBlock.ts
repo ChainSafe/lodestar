@@ -110,11 +110,19 @@ function getOffsetWithinExecutionPayload(blockBytes: DataView, offset: number): 
   const readAt = offset + executionPayloadOffset;
   return blockBytes.getUint32(readAt, true) + executionPayloadOffset;
 }
+function setOffsetWithinExecutionPayload(blockBytes: DataView, offsetLocation: number, newOffset: number): void {
+  const executionPayloadOffset = getExecutionPayloadOffset(blockBytes);
+  const writeAt = offsetLocation + executionPayloadOffset;
+  blockBytes.setUint32(writeAt, newOffset - executionPayloadOffset, true);
+}
 
 const LOCATION_OF_EXTRA_DATA_OFFSET_WITHIN_EXECUTION_PAYLOAD =
   32 + 20 + 32 + 32 + BYTES_PER_LOGS_BLOOM + 32 + 8 + 8 + 8 + 8;
 function getExtraDataOffset(blockBytes: DataView): number {
   return getOffsetWithinExecutionPayload(blockBytes, LOCATION_OF_EXTRA_DATA_OFFSET_WITHIN_EXECUTION_PAYLOAD);
+}
+function setExtraDataOffset(blockBytes: DataView, newOffset: number): void {
+  return setOffsetWithinExecutionPayload(blockBytes, LOCATION_OF_EXTRA_DATA_OFFSET_WITHIN_EXECUTION_PAYLOAD, newOffset);
 }
 
 const LOCATION_OF_TRANSACTIONS_OFFSET_WITHIN_EXECUTION_PAYLOAD =
@@ -122,6 +130,10 @@ const LOCATION_OF_TRANSACTIONS_OFFSET_WITHIN_EXECUTION_PAYLOAD =
 
 function getTransactionsOffset(blockBytes: DataView): number {
   return getOffsetWithinExecutionPayload(blockBytes, LOCATION_OF_TRANSACTIONS_OFFSET_WITHIN_EXECUTION_PAYLOAD);
+}
+
+function getTransactionsRootOffset(executionPayloadOffset: number): number {
+  return executionPayloadOffset + LOCATION_OF_TRANSACTIONS_OFFSET_WITHIN_EXECUTION_PAYLOAD;
 }
 
 /**
@@ -335,7 +347,7 @@ export function blindedOrFullSignedBlockToBlindedBytes(
    * Altair:
    *   return same data
    */
-  if (forkSeq === ForkSeq.phase0 || forkSeq === ForkSeq.altair) {
+  if (forkSeq < ForkSeq.bellatrix || isBlinded(block)) {
     return blockBytes;
   }
 
@@ -481,26 +493,26 @@ export function blindedOrFullSignedBlockToBlindedBytes(
  * chunk is from the start of the blsToExecutionChanges offset to the end of the
  * block.
  */
-export async function* reassembleBlindedBlockBytesToFullBytes(
+export async function* reassembleBlindedOrFullToFullBytes(
   forkSeq: ForkSeq,
   block: Uint8Array,
   transactionsAndWithdrawals: Promise<TransactionsAndWithdrawals>
-): AsyncGenerator<Uint8Array> {
+): AsyncIterable<Uint8Array> {
   /**
    * Phase0:
    *   return same data
    * Altair:
    *   return same data
    */
-  if (forkSeq < ForkSeq.bellatrix) {
-    return block;
+  if (forkSeq < ForkSeq.bellatrix || !isSerializedBlinded(forkSeq, block)) {
+    yield block;
+    return;
   }
 
   // take apart the block to get the offsets
   const dv = new DataView(block.buffer, block.byteOffset, block.byteLength);
-  const executionPayloadOffset = dv.getUint32(LOCATION_OF_EXECUTION_PAYLOAD_OFFSET, true);
-  const locationOfExtraDataOffset = executionPayloadOffset + LOCATION_OF_EXTRA_DATA_OFFSET_WITHIN_EXECUTION_PAYLOAD;
-  const extraDataOffset = dv.getUint32(locationOfExtraDataOffset, true);
+  const executionPayloadOffset = getExecutionPayloadOffset(dv);
+  const extraDataOffset = getExtraDataOffset(dv);
   const transactionsRootOffset = executionPayloadOffset + LOCATION_OF_TRANSACTIONS_OFFSET_WITHIN_EXECUTION_PAYLOAD;
 
   // capella and after the blsToExecutionChanges offset changes. can send to end of executionPayload offset
@@ -518,16 +530,22 @@ export async function* reassembleBlindedBlockBytesToFullBytes(
   if (forkSeq < ForkSeq.capella) {
     extraData = Uint8Array.prototype.slice.call(block, extraDataOffset);
   } else {
-    blsToExecutionChangeOffset = dv.getUint32(LOCATION_OF_BLS_TO_EXECUTION_CHANGE_OFFSET, true);
+    blsToExecutionChangeOffset = getBlsToExecutionChangeOffset(dv);
     extraData = Uint8Array.prototype.slice.call(block, extraDataOffset, blsToExecutionChangeOffset);
   }
 
   // start sending data across the wire
   const firstChunk = Uint8Array.prototype.slice.call(block, 0, lengthOfFirstChunk);
   if (forkSeq === ForkSeq.bellatrix) {
+    // update extraData offset to be 28 bytes closer to start (32 byte root - 4 byte offset = 28 byte difference)
+    setExtraDataOffset(
+      new DataView(firstChunk.buffer, firstChunk.byteOffset, firstChunk.byteLength),
+      extraDataOffset - 28
+    );
+
     yield Uint8Array.of(
       ...firstChunk,
-      ...buildVariableOffset(firstChunk.length + VARIABLE_FIELD_OFFSET + extraData.length),
+      ...buildVariableOffset(lengthOfFirstChunk + VARIABLE_FIELD_OFFSET + extraData.length - executionPayloadOffset),
       ...extraData
     );
   } else {
@@ -544,7 +562,8 @@ export async function* reassembleBlindedBlockBytesToFullBytes(
   const serializedTransactions = ssz.bellatrix.Transactions.serialize(transactionsAndWithdrawalsData.transactions);
   // already calculated the offset and sent extraData. just need to send transactions
   if (forkSeq === ForkSeq.bellatrix) {
-    return serializedTransactions;
+    yield serializedTransactions;
+    return;
   }
 
   // only capella blocks and after past here
@@ -608,7 +627,7 @@ export async function* reassembleBlindedBlockBytesToFullBytes(
   }
 
   // for post-bellatrix already sent executionPayload offset. start with newBlsToExecutionChangeOffset
-  return Uint8Array.of(
+  yield Uint8Array.of(
     ...buildVariableOffset(newBlsToExecutionChangeOffset),
     ...(newBlobKzgCommitmentsOffset !== undefined ? buildVariableOffset(newBlobKzgCommitmentsOffset) : []),
     ...executionPayload,
