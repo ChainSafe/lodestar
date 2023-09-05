@@ -77,6 +77,21 @@ describe("BLS ops", function () {
     });
   }
 
+  // this is total time we deserialize all signatures of validators per epoch
+  // ideally we want to track 700_000, 1_400_000, 2_100_000 validators but it takes too long
+  for (const numValidators of [10_000, 100_000]) {
+    const signatures = linspace(0, numValidators - 1).map((i) => getSet(i % 256).signature);
+    itBench({
+      id: `BLS deserializing ${numValidators} signatures`,
+      fn: () => {
+        for (const signature of signatures) {
+          // true = validate signature
+          bls.Signature.fromBytes(signature, CoordType.affine, true);
+        }
+      },
+    });
+  }
+
   // An aggregate and proof object has 3 signatures.
   // We may want to bundle up to 32 sets in a single batch.
   // TODO: figure out why it does not work with 256 or more

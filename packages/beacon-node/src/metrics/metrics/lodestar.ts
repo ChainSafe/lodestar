@@ -447,6 +447,10 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
         help: "Count of total batchable signature sets",
       }),
+      signatureDeserializationMainThreadDuration: register.gauge({
+        name: "lodestar_bls_thread_pool_signature_deserialization_main_thread_time_seconds",
+        help: "Total time spent deserializing signatures on main thread",
+      }),
     },
 
     // BLS time on single thread mode
