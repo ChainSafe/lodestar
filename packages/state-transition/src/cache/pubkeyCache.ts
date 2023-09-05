@@ -37,6 +37,8 @@ export function newUnfinalizedPubkeyIndexMap(): UnfinalizedPubkeyIndexMap {
   return immutable.Map<PubkeyHex, ValidatorIndex>();
 }
 
+
+
 export class PubkeyIndexMap {
   // We don't really need the full pubkey. We could just use the first 20 bytes like an Ethereum address
   readonly map = new Map<PubkeyHex, ValidatorIndex>();
@@ -55,6 +57,7 @@ export class PubkeyIndexMap {
   set(key: Uint8Array, value: ValidatorIndex): void {
     this.map.set(toMemoryEfficientHexStr(key), value);
   }
+
 }
 
 /**
